@@ -5076,6 +5076,16 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "deleteLabel", TLuaInterpreter::deleteLabel);
     lua_register(pGlobalLua, "deleteMiniConsole", TLuaInterpreter::deleteMiniConsole);
     lua_register(pGlobalLua, "deleteCommandLine", TLuaInterpreter::deleteCommandLine);
+    lua_register(pGlobalLua, "createTextEdit", TLuaInterpreter::createTextEdit);
+    lua_register(pGlobalLua, "deleteTextEdit", TLuaInterpreter::deleteTextEdit);
+    lua_register(pGlobalLua, "getTextEditText", TLuaInterpreter::getTextEditText);
+    lua_register(pGlobalLua, "setTextEditText", TLuaInterpreter::setTextEditText);
+    lua_register(pGlobalLua, "clearTextEdit", TLuaInterpreter::clearTextEdit);
+    lua_register(pGlobalLua, "setTextEditReadOnly", TLuaInterpreter::setTextEditReadOnly);
+    lua_register(pGlobalLua, "setTextEditPlaceholder", TLuaInterpreter::setTextEditPlaceholder);
+    lua_register(pGlobalLua, "setTextEditStyleSheet", TLuaInterpreter::setTextEditStyleSheet);
+    lua_register(pGlobalLua, "setTextEditFont", TLuaInterpreter::setTextEditFont);
+    lua_register(pGlobalLua, "setTextEditFontSize", TLuaInterpreter::setTextEditFontSize);
     lua_register(pGlobalLua, "deleteScrollBox", TLuaInterpreter::deleteScrollBox);
     lua_register(pGlobalLua, "setLabelToolTip", TLuaInterpreter::setLabelToolTip);
     lua_register(pGlobalLua, "setLabelCursor", TLuaInterpreter::setLabelCursor);

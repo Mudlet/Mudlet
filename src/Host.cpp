@@ -43,6 +43,7 @@
 #include "TLabel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TTextBox.h"
 #include "TMapViewManager.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
@@ -3653,6 +3654,7 @@ bool Host::showWindow(const QString& name)
     auto pL = mpConsole->mLabelMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
     // check labels first as they are shown/hidden more often
     if (pL) {
         pL->show();
@@ -3678,6 +3680,11 @@ bool Host::showWindow(const QString& name)
         return true;
     }
 
+    if (pT) {
+        pT->show();
+        return true;
+    }
+
     return false;
 }
 
@@ -3691,6 +3698,7 @@ bool Host::hideWindow(const QString& name)
     auto pL = mpConsole->mLabelMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
 
     // check labels first as they are shown/hidden more often
     if (pL) {
@@ -3715,6 +3723,11 @@ bool Host::hideWindow(const QString& name)
         return true;
     }
 
+    if (pT) {
+        pT->hide();
+        return true;
+    }
+
     return false;
 }
 
@@ -3729,6 +3742,7 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
     auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
 
     if (pL) {
         pL->resize(x1, y1);
@@ -3761,6 +3775,11 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
         return true;
     }
 
+    if (pT) {
+        pT->resize(x1, y1);
+        return true;
+    }
+
     return false;
 }
 
@@ -3775,6 +3794,7 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
     auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
 
     if (pL) {
         pL->move(x1, y1);
@@ -3809,6 +3829,11 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
         return true;
     }
 
+    if (pT) {
+        pT->move(x1, y1);
+        return true;
+    }
+
     return false;
 }
 
@@ -3837,6 +3862,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     auto pM = mpConsole->mpMapper;
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
     //parents
     auto pW = mpConsole->mpMainFrame;
     auto pD = mpConsole->mDockWidgetMap.value(windowname);
@@ -3884,6 +3910,13 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         pN->move(x1, y1);
         if (show) {
             pN->show();
+        }
+        return {true, QString()};
+    } else if (pT) {
+        pT->setParent(pW);
+        pT->move(x1, y1);
+        if (show) {
+            pT->show();
         }
         return {true, QString()};
     } else if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
