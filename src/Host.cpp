@@ -4612,6 +4612,10 @@ std::optional<QString> Host::windowType(const QString& name) const
         return {qsl("commandline")};
     }
 
+    if (mpConsole->mTextBoxMap.contains(name)) {
+        return {qsl("textedit")};
+    }
+
     return {};
 }
 
