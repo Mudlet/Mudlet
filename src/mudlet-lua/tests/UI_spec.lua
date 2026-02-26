@@ -1283,8 +1283,9 @@ describe("Tests UI functions", function()
     setup(function()
       -- autoDock=false, dockPosition="floating" to prevent docking affecting size
       openUserWindow("testMinSizeWindow", false, false, "floating")
-      -- Remove border/frame so getUserWindowSize returns the exact dock widget size
-      setUserWindowStyleSheet("testMinSizeWindow", "border: 0px; margin: 0px; padding: 0px;")
+      -- Remove border/frame and title bar so getUserWindowSize matches the dock widget size
+      setUserWindowStyleSheet("testMinSizeWindow",
+        "QDockWidget { border: 0px; margin: 0px; padding: 0px; } QDockWidget::title { height: 0px; margin: 0px; padding: 0px; }")
     end)
 
     teardown(function()
