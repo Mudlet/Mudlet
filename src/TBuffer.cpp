@@ -1436,9 +1436,10 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
             mpHost->mpConsole->runTriggers(line);
         }
 
-        // Only use of TBuffer::wrap(), breaks up new text
+        // Only use of TBuffer::wrapLine(), breaks up new text
         // NOTE: it MAY have been clobbered by the trigger engine!
-        const int addedLines = wrapLine(line, mWrapAt, mWrapIndent, mWrapHangingIndent);
+        // If deleteLine shrinks the buffer, wrap last line
+        const int addedLines = wrapLine(std::min(line, static_cast<int>(lineBuffer.size()) - 1), mWrapAt, mWrapIndent, mWrapHangingIndent);
 
         // Start a new, but empty line in the various buffers
         log(lineBuffer.size() - 1, lineBuffer.size() - 1);
