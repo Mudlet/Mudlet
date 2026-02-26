@@ -112,3 +112,27 @@ describe("Tests per-room border functions", function()
   end)
 
 end)
+
+describe("Tests mapper config functions", function()
+
+  describe("Tests mapCenterSmallAreas config", function()
+    it("should default to true", function()
+      local result = getConfig("mapCenterSmallAreas")
+      assert.is_true(result)
+    end)
+
+    it("should set and get false", function()
+      setConfig("mapCenterSmallAreas", false)
+      assert.is_false(getConfig("mapCenterSmallAreas"))
+      -- Restore default
+      setConfig("mapCenterSmallAreas", true)
+    end)
+
+    it("should set and get true", function()
+      setConfig("mapCenterSmallAreas", false)
+      setConfig("mapCenterSmallAreas", true)
+      assert.is_true(getConfig("mapCenterSmallAreas"))
+    end)
+  end)
+
+end)
