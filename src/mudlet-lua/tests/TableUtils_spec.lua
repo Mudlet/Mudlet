@@ -11,6 +11,17 @@ describe("Tests TableUtils.lua functions", function()
       assert.are.equal(expected,actual)
     end)
 
+    it("should sort mixed keys by default", function()
+      local tbl = { [1] = 30, Tom = 40, Mary = 50, Joe = 24 }
+      local expected_key_order = { 1, "Joe", "Mary", "Tom" }
+
+      local i = 1
+      for k, _ in spairs(tbl) do
+        assert.are.equal(k, expected_key_order[i])
+        i = i + 1;
+      end
+    end)
+
     it("should sort based on a given function", function()
       local tbl = { Tom = 40, Mary = 50, Joe = 23 }
       local expected = "Joe has 23 thingies\nTom has 40 thingies\nMary has 50 thingies\n"
