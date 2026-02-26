@@ -1280,12 +1280,16 @@ describe("Tests UI functions", function()
   end)
 
   describe("setUserWindowMinSize and resetUserWindowMinSize", function()
+    -- getUserWindowSize reports inner widget size which may be smaller than
+    -- the dock widget by up to the title bar height (0-16px depending on OS)
+    local titleBarTolerance = 16
+
     setup(function()
       -- autoDock=false, dockPosition="floating" to prevent docking affecting size
       openUserWindow("testMinSizeWindow", false, false, "floating")
-      -- Remove border/frame and title bar so getUserWindowSize matches the dock widget size
+      -- Remove border/frame so only the title bar (if any) causes offset
       setUserWindowStyleSheet("testMinSizeWindow",
-        "QDockWidget { border: 0px; margin: 0px; padding: 0px; } QDockWidget::title { height: 0px; margin: 0px; padding: 0px; }")
+        "QDockWidget { border: 0px; margin: 0px; padding: 0px; }")
     end)
 
     teardown(function()
@@ -1315,7 +1319,7 @@ describe("Tests UI functions", function()
       resizeWindow("testMinSizeWindow", 200, 200)
       local w, h = getUserWindowSize("testMinSizeWindow")
       assert.is_true(w >= 400, "width should be at least 400, got " .. tostring(w))
-      assert.is_true(h >= 300, "height should be at least 300, got " .. tostring(h))
+      assert.is_true(h >= 300 - titleBarTolerance, "height should be at least ~300, got " .. tostring(h))
     end)
 
     it("Should allow resizing larger than minimum", function()
