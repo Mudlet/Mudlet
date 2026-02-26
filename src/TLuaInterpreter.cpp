@@ -5337,6 +5337,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setRoomBorderThickness", TLuaInterpreter::setRoomBorderThickness);
     lua_register(pGlobalLua, "getRoomBorderThickness", TLuaInterpreter::getRoomBorderThickness);
     lua_register(pGlobalLua, "clearRoomBorderThickness", TLuaInterpreter::clearRoomBorderThickness);
+    lua_register(pGlobalLua, "setRoomBorderStyle", TLuaInterpreter::setRoomBorderStyle);
+    lua_register(pGlobalLua, "getRoomBorderStyle", TLuaInterpreter::getRoomBorderStyle);
+    lua_register(pGlobalLua, "clearRoomBorderStyle", TLuaInterpreter::clearRoomBorderStyle);
     lua_register(pGlobalLua, "registerAnonymousEventHandler", TLuaInterpreter::registerAnonymousEventHandler);
     lua_register(pGlobalLua, "saveMap", TLuaInterpreter::saveMap);
     lua_register(pGlobalLua, "loadMap", TLuaInterpreter::loadMap);

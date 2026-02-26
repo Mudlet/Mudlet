@@ -4390,6 +4390,95 @@ int TLuaInterpreter::clearRoomBorderThickness(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomBorderStyle
+int TLuaInterpreter::setRoomBorderStyle(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+    const QString style = getVerifiedString(L, __func__, 2, "style");
+
+    Qt::PenStyle penStyle;
+    if (style == QLatin1String("solid")) {
+        penStyle = Qt::SolidLine;
+    } else if (style == QLatin1String("dashed") || style == QLatin1String("dash line")) {
+        penStyle = Qt::DashLine;
+    } else if (style == QLatin1String("dotted") || style == QLatin1String("dot line")) {
+        penStyle = Qt::DotLine;
+    } else {
+        return warnArgumentValue(L, __func__, qsl("invalid style '%1' (expected: solid, dashed, dotted)").arg(style));
+    }
+
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    pR->mRoomBorderStyle = penStyle;
+    host.mpMap->setUnsaved(__func__);
+    host.mpMap->updateArea(pR->getArea());
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomBorderStyle
+int TLuaInterpreter::getRoomBorderStyle(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    if (pR->mRoomBorderStyle == Qt::SolidLine) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    QString styleStr;
+    switch (pR->mRoomBorderStyle) {
+    case Qt::DashLine:
+        styleStr = qsl("dashed");
+        break;
+    case Qt::DotLine:
+        styleStr = qsl("dotted");
+        break;
+    default:
+        lua_pushnil(L);
+        return 1;
+    }
+
+    lua_pushstring(L, styleStr.toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearRoomBorderStyle
+int TLuaInterpreter::clearRoomBorderStyle(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    pR->mRoomBorderStyle = Qt::SolidLine;
+    host.mpMap->setUnsaved(__func__);
+    host.mpMap->updateArea(pR->getArea());
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#updateMap
 int TLuaInterpreter::updateMap(lua_State* L)
 {
