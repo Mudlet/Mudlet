@@ -1340,3 +1340,4 @@ describe("Tests UI functions", function()
     end)
   end)
 end)
+
