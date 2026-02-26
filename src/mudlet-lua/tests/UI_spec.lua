@@ -1280,12 +1280,11 @@ describe("Tests UI functions", function()
   end)
 
   describe("setUserWindowMinSize and resetUserWindowMinSize", function()
-    -- getUserWindowSize returns the inner widget size, which is slightly smaller
-    -- than the dock widget size due to border/frame (typically 2px per axis)
-    local borderTolerance = 5
-
     setup(function()
-      openUserWindow("testMinSizeWindow")
+      -- autoDock=false, dockPosition="floating" to prevent docking affecting size
+      openUserWindow("testMinSizeWindow", false, false, "floating")
+      -- Remove border/frame so getUserWindowSize returns the exact dock widget size
+      setUserWindowStyleSheet("testMinSizeWindow", "border: 0px; margin: 0px; padding: 0px;")
     end)
 
     teardown(function()
@@ -1314,8 +1313,8 @@ describe("Tests UI functions", function()
       setUserWindowMinSize("testMinSizeWindow", 400, 300)
       resizeWindow("testMinSizeWindow", 200, 200)
       local w, h = getUserWindowSize("testMinSizeWindow")
-      assert.is_true(w >= 400 - borderTolerance, "width should be at least ~400, got " .. tostring(w))
-      assert.is_true(h >= 300 - borderTolerance, "height should be at least ~300, got " .. tostring(h))
+      assert.is_true(w >= 400, "width should be at least 400, got " .. tostring(w))
+      assert.is_true(h >= 300, "height should be at least 300, got " .. tostring(h))
     end)
 
     it("Should allow resizing larger than minimum", function()
@@ -1331,8 +1330,8 @@ describe("Tests UI functions", function()
       resetUserWindowMinSize("testMinSizeWindow")
       resizeWindow("testMinSizeWindow", 200, 200)
       local w, h = getUserWindowSize("testMinSizeWindow")
-      assert.is_true(w <= 200 + borderTolerance, "width should be at most ~200 after reset, got " .. tostring(w))
-      assert.is_true(h <= 200 + borderTolerance, "height should be at most ~200 after reset, got " .. tostring(h))
+      assert.is_true(w <= 200, "width should be at most 200 after reset, got " .. tostring(w))
+      assert.is_true(h <= 200, "height should be at most 200 after reset, got " .. tostring(h))
     end)
   end)
 end)
