@@ -172,7 +172,7 @@ jobs:
     - name: (Windows) Upload unsigned binaries for signing
       id: upload-unsigned-binaries
       if: steps.prepare-signing.outcome == 'success'
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: unsigned-binaries
         path: ${{env.SIGNING_DIR}}
@@ -242,7 +242,7 @@ jobs:
         env.SIGNPATH_SIGNING_ENABLED == 'true' &&
         (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') &&
         contains(env.ARTIFACT_NAME, 'installer')
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: unsigned-installer
         path: ${{env.ARTIFACT_WINPATHORFILE}}
@@ -283,7 +283,7 @@ jobs:
         fi
 
     - name: Create intermediate artifact for debugging
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       if: env.INTERMEDIATE_ARTIFACT_NAME
       with:
         name: ${{env.INTERMEDIATE_ARTIFACT_NAME}}
@@ -295,7 +295,7 @@ jobs:
       # Uploads the zipped contents of ARTIFACT_WINPATHORFILE as an "artifact" with
       # the given name - the Environmental variables are created by the
       # deploy-mudlet-for-windows.sh script:
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       if: env.ARTIFACT_NAME
       with:
         name: ${{env.ARTIFACT_NAME}}
