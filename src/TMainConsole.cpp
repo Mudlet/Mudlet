@@ -460,13 +460,6 @@ void TMainConsole::resetMainConsole()
         itCommandLine.remove();
     }
 
-    QMutableMapIterator<QString, TTextBox*> itTextBox(mTextBoxMap);
-    while (itTextBox.hasNext()) {
-        itTextBox.next();
-        itTextBox.value()->deleteLater();
-        itTextBox.remove();
-    }
-
     QMutableMapIterator<QString, TConsole*> itSubConsole(mSubConsoleMap);
     while (itSubConsole.hasNext()) {
         itSubConsole.next();
@@ -487,6 +480,13 @@ void TMainConsole::resetMainConsole()
         itScrollBox.next();
         itScrollBox.value()->close();
         itScrollBox.remove();
+    }
+
+    QMutableMapIterator<QString, TTextBox*> itTextBox(mTextBoxMap);
+    while (itTextBox.hasNext()) {
+        itTextBox.next();
+        itTextBox.value()->deleteLater();
+        itTextBox.remove();
     }
 }
 

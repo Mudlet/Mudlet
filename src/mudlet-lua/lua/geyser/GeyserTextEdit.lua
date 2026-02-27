@@ -66,7 +66,7 @@ function Geyser.TextEdit:setTabMovesFocus(bool)
 end
 
 -- Overridden constructor
-function Geyser.TextEdit:new(cons, container)
+function Geyser.TextEdit:new (cons, container)
   cons = cons or {}
   cons.type = cons.type or "textEdit"
 
@@ -74,7 +74,7 @@ function Geyser.TextEdit:new(cons, container)
   local me = self.parent:new(cons, container)
   me.windowname = me.windowname or me.container.windowname or "main"
 
-  -- Set the metatable
+  -- Set the metatable.
   setmetatable(me, self)
   self.__index = self
 
@@ -82,6 +82,7 @@ function Geyser.TextEdit:new(cons, container)
   if me.stylesheet then
     me:setStyleSheet()
   end
+  -- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
   if me.hidden or me.auto_hidden then
     hideWindow(me.name)
   end

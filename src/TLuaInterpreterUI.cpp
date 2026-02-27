@@ -522,6 +522,7 @@ int TLuaInterpreter::createTextEdit(lua_State* L)
         windowName = lua_tostring(L, 1);
         counter++;
         if (isMain(windowName)) {
+            // createTextEdit only accepts the empty name as the main window
             windowName.clear();
         }
     }
@@ -539,6 +540,7 @@ int TLuaInterpreter::createTextEdit(lua_State* L)
     const int width = getVerifiedInt(L, __func__, counter, "text edit width");
     counter++;
     const int height = getVerifiedInt(L, __func__, counter, "text edit height");
+    counter++;
 
     const Host& host = getHostFromLua(L);
     if (auto [success, message] = host.mpConsole->createTextBox(windowName, textEditName, x, y, width, height); !success) {
