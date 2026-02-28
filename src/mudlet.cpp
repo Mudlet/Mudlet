@@ -5306,7 +5306,8 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
 void mudlet::checkUpdatesOnStart()
 {
     if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE") && (releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER"))) {
-        // Only try and create an updater (which checks for updates online) if
+        // Doesn't check for updates during test runs.
+        // Otherwise, try and create an updater (which checks for updates online) if
         // this is a release/public test version, or if you are testing Sparkle (env flag set).
         pUpdater->checkUpdatesOnStart();
     }
