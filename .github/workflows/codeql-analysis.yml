@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     concurrency:
-      group: ${{github.workflow}}-${{matrix.buildname}}
+      group: ${{github.workflow}}-${{matrix.buildname}}-${{github.ref_name}}
       cancel-in-progress: true
 
     permissions:
