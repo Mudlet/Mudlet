@@ -116,10 +116,11 @@ jobs:
         QT_FORCE_STDERR_LOGGING: 1
 
     - name: (Windows) Run Lua tests
-      timeout-minutes: 5
+      timeout-minutes: 1
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        MUDLET_TEST_MODE: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
       run: |
