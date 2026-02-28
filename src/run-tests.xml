@@ -501,7 +501,9 @@ describe("should always pass", function()
   local quitMudlet = os.getenv("QUIT_MUDLET_AFTER_TESTS")
   if quitMudlet then
     ioprint("All tests complete, shutting down Mudlet")
-    closeMudlet();
+    -- It's safe to close mudlet outside of a timer.
+    -- As the internal logic is wrapped in an internal timer already.
+    closeMudlet()
   end
 end
 			</script>
@@ -552,13 +554,6 @@ function autoRunTests()
     function(element, parent, message)
       logTestError()
       return nil, true
-    end
-  )
-
-  busted.subscribe(
-    {'exit'},
-    function(element, parent, message)
-      quitMudletAfterTests()
     end
   )
 
