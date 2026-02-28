@@ -16,9 +16,6 @@ jobs:
   analyze:
     name: ${{matrix.buildname}}
     runs-on: ubuntu-latest
-    concurrency:
-      group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.ref }}
-      cancel-in-progress: true
 
     permissions:
       security-events: write
