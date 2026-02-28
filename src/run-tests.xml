@@ -538,6 +538,7 @@ function autoRunTests()
   local testLocation = os.getenv("TESTS_DIRECTORY")
   if not testLocation then
     ioprint("No location for the tests provided, don't know what to run.")
+    quitMudletAfterTests()
     return
   end
 
