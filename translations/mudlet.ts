@@ -124,72 +124,72 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="1064"/>
+        <location filename="../src/Host.cpp" line="1062"/>
         <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
         <comment>%1 will be a random happy emoji</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="1065"/>
+        <location filename="../src/Host.cpp" line="1063"/>
         <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
         <comment>%1 will be a random happy emoji</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="1944"/>
+        <location filename="../src/Host.cpp" line="1942"/>
         <source>Module &quot;%1&quot; is already installed. Please uninstall it first or choose a different name.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="1987"/>
+        <location filename="../src/Host.cpp" line="1985"/>
         <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="1989"/>
+        <location filename="../src/Host.cpp" line="1987"/>
         <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="1993"/>
+        <location filename="../src/Host.cpp" line="1991"/>
         <source>Unpacking</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="2066"/>
-        <location filename="../src/Host.cpp" line="2093"/>
+        <location filename="../src/Host.cpp" line="2064"/>
+        <location filename="../src/Host.cpp" line="2091"/>
         <source>[ WARN ]  - Failed to load module &quot;%1&quot;: %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="2842"/>
+        <location filename="../src/Host.cpp" line="2840"/>
         <source>Playing %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="2845"/>
-        <location filename="../src/Host.cpp" line="2852"/>
+        <location filename="../src/Host.cpp" line="2843"/>
+        <location filename="../src/Host.cpp" line="2850"/>
         <source>%1 at %2:%3</source>
         <extracomment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="3240"/>
-        <location filename="../src/Host.cpp" line="4415"/>
+        <location filename="../src/Host.cpp" line="3238"/>
+        <location filename="../src/Host.cpp" line="4413"/>
         <source>Map - %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="4427"/>
+        <location filename="../src/Host.cpp" line="4425"/>
         <source>Pre-Map loading(3) report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="4437"/>
+        <location filename="../src/Host.cpp" line="4435"/>
         <source>Loading map(3) at %1 report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -233,20 +233,20 @@ please wait...</source>
 <context>
     <name>MapInfoContributorManager</name>
     <message>
-        <location filename="../src/mapInfoContributorManager.cpp" line="129"/>
+        <location filename="../src/mapInfoContributorManager.cpp" line="127"/>
         <source>Area:&#xa0;%1 ID:&#xa0;%2 x:&#xa0;%3&#xa0;&lt;‑&gt;&#xa0;%4 y:&#xa0;%5&#xa0;&lt;‑&gt;&#xa0;%6 z:&#xa0;%7&#xa0;&lt;‑&gt;&#xa0;%8</source>
         <extracomment>%1 is the (text) name of the area, %2 is the area ID number, %3 and %4 are the minimum and maximum x coordinates, %5 and %6 for y, and %7 and %8 for z. This text uses non-breaking spaces (Unicode U+00A0) and non-breaking hyphens which are used to prevent the line being split at some places it might otherwise be. When translating, please consider at which points the text may be divided to fit onto more than one line.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mapInfoContributorManager.cpp" line="144"/>
+        <location filename="../src/mapInfoContributorManager.cpp" line="142"/>
         <source>Room Name: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mapInfoContributorManager.cpp" line="167"/>
-        <location filename="../src/mapInfoContributorManager.cpp" line="190"/>
-        <location filename="../src/mapInfoContributorManager.cpp" line="214"/>
+        <location filename="../src/mapInfoContributorManager.cpp" line="163"/>
+        <location filename="../src/mapInfoContributorManager.cpp" line="184"/>
+        <location filename="../src/mapInfoContributorManager.cpp" line="206"/>
         <source>Room&#xa0;ID:&#xa0;%1 Position&#xa0;on&#xa0;Map: (%2,%3,%4) ‑&#xa0;%5</source>
         <extracomment>This text is shown when room(s) are (not) selected in mapper. %1 is the room ID number, and %2, %3, %4 are the x, y, and z coordinates of the current/selected room, or a room near the middle of the selection. %5 is a description like: Current player room. This text uses non-breaking spaces (Unicode &#xa0;) and a non-breaking hyphen (‑). They are used to prevent the line being split at unexpected places. When translating, please consider at which points the text may be divided to fit onto more than one line.
 ----------
@@ -254,19 +254,19 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mapInfoContributorManager.cpp" line="173"/>
+        <location filename="../src/mapInfoContributorManager.cpp" line="169"/>
         <source>Current player location</source>
         <extracomment>This description is shown when NO room is selected.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mapInfoContributorManager.cpp" line="196"/>
+        <location filename="../src/mapInfoContributorManager.cpp" line="190"/>
         <source>Selected room</source>
         <extracomment>This description is shown when EXACTLY ONE room is selected.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/mapInfoContributorManager.cpp" line="220"/>
+        <location filename="../src/mapInfoContributorManager.cpp" line="212"/>
         <source>Center of %n selected rooms</source>
         <extracomment>This description is shown when MORE THAN ONE room is selected.</extracomment>
         <translation type="unfinished">
@@ -1664,7 +1664,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
     <name>TCommandLine</name>
     <message>
         <location filename="../src/TCommandLine.cpp" line="68"/>
-        <location filename="../src/TCommandLine.cpp" line="1854"/>
+        <location filename="../src/TCommandLine.cpp" line="1856"/>
         <source>Show password</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1709,15 +1709,15 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="1468"/>
+        <location filename="../src/TCommandLine.cpp" line="1470"/>
         <source>Input line for &quot;%1&quot; profile.</source>
         <extracomment>Accessibility-friendly name to describe the main command line for a Mudlet profile when more than one profile is loaded, %1 is the profile name. Because this is likely to be used often it should be kept as short as possible.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="1475"/>
-        <location filename="../src/TCommandLine.cpp" line="1508"/>
-        <location filename="../src/TCommandLine.cpp" line="1542"/>
+        <location filename="../src/TCommandLine.cpp" line="1477"/>
+        <location filename="../src/TCommandLine.cpp" line="1510"/>
+        <location filename="../src/TCommandLine.cpp" line="1544"/>
         <source>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</source>
         <extracomment>Accessibility-friendly description for the main command line for a Mudlet profile when more than one profile is loaded, %1 is the profile name. Because this is likely to be used often it should be kept as short as possible.
 ----------
@@ -1727,15 +1727,15 @@ Accessibility-friendly description for the built-in command line of a console/wi
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="1484"/>
+        <location filename="../src/TCommandLine.cpp" line="1486"/>
         <source>Input line.</source>
         <extracomment>Accessibility-friendly name to describe the main command line for a Mudlet profile when only one profile is loaded. Because this is likely to be used often it should be kept as short as possible.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="1490"/>
-        <location filename="../src/TCommandLine.cpp" line="1523"/>
-        <location filename="../src/TCommandLine.cpp" line="1557"/>
+        <location filename="../src/TCommandLine.cpp" line="1492"/>
+        <location filename="../src/TCommandLine.cpp" line="1525"/>
+        <location filename="../src/TCommandLine.cpp" line="1559"/>
         <source>Type in text to send to the game server, or enter an alias to run commands locally.</source>
         <extracomment>Accessibility-friendly description for the main command line for a Mudlet profile when only one profile is loaded. Because this is likely to be used often it should be kept as short as possible.
 ----------
@@ -1745,31 +1745,31 @@ Accessibility-friendly description for the built-in command line of a console/wi
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="1502"/>
+        <location filename="../src/TCommandLine.cpp" line="1504"/>
         <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window of &quot;%3&quot;profile.</source>
         <extracomment>Accessibility-friendly name to describe an extra command line on top of console/window when more than one profile is loaded, %1 is the command line name, %2 is the name of the window/console that it is on and %3 is the name of the profile.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="1518"/>
+        <location filename="../src/TCommandLine.cpp" line="1520"/>
         <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window.</source>
         <extracomment>Accessibility-friendly name to describe an extra command line on top of console/window when only one profile is loaded, %1 is the command line name and %2 is the name of the window/console that it is on.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="1536"/>
+        <location filename="../src/TCommandLine.cpp" line="1538"/>
         <source>Input line of &quot;%1&quot; window of &quot;%2&quot; profile.</source>
         <extracomment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when more than one profile is loaded, %1 is the name of the window/console and %2 is the name of the profile.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="1551"/>
+        <location filename="../src/TCommandLine.cpp" line="1553"/>
         <source>Input line of &quot;%1&quot; window.</source>
         <extracomment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when only one profile is loaded, %1 is the name of the window/console.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="1850"/>
+        <location filename="../src/TCommandLine.cpp" line="1852"/>
         <source>Hide password</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5354,26 +5354,26 @@ and this one cannot read it, you need a newer Mudlet!</source>
 <context>
     <name>cTelnet</name>
     <message>
-        <location filename="../src/ctelnet.cpp" line="655"/>
+        <location filename="../src/ctelnet.cpp" line="653"/>
         <source>hh:mm:ss.zzz</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="681"/>
-        <location filename="../src/ctelnet.cpp" line="739"/>
+        <location filename="../src/ctelnet.cpp" line="678"/>
+        <location filename="../src/ctelnet.cpp" line="732"/>
         <source>User Disconnected</source>
-        <extracomment>A reason why a connection to a game server ended, could be * one of several to be listed. This text used in two places, * ensure the same text is used in both.</extracomment>
+        <extracomment>A reason why a connection to a game server ended, could be one of several to be listed. This text used in two places, ensure the same text is used in both.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="687"/>
-        <location filename="../src/ctelnet.cpp" line="748"/>
+        <location filename="../src/ctelnet.cpp" line="683"/>
+        <location filename="../src/ctelnet.cpp" line="740"/>
         <source>Connection/login attempt rejected by server</source>
-        <extracomment>A reason why a connection to a game server ended, could be * one of several to be listed. This text used in two places, * ensure the same text is used in both.</extracomment>
+        <extracomment>A reason why a connection to a game server ended, could be one of several to be listed. This text used in two places, ensure the same text is used in both.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="1215"/>
+        <location filename="../src/ctelnet.cpp" line="1179"/>
         <source>[ ERROR ] - Internal error, no codec found for current setting of {&quot;%1&quot;}
 so Mudlet cannot send data in that format to the Game Server. Please
 check to see if there is an alternative that the MUD and Mudlet can
@@ -5384,395 +5384,399 @@ changed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="1401"/>
+        <location filename="../src/ctelnet.cpp" line="1365"/>
         <source>[ INFO ]  - Package download cancelled.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="1404"/>
+        <location filename="../src/ctelnet.cpp" line="1368"/>
         <source>[ WARN ]  - Package download failed from &apos;%1&apos;, reason: %2</source>
         <extracomment>%1 is the URL, %2 is the error message</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="1408"/>
+        <location filename="../src/ctelnet.cpp" line="1372"/>
         <source>
 The package is hosted on a server with an SSL certificate problem. The URL may be using HTTPS when it should use HTTP, or the server&apos;s security certificate is not trusted by your system.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="1424"/>
+        <location filename="../src/ctelnet.cpp" line="1388"/>
         <source>[ WARN ]  - Package download failed: could not open file &apos;%1&apos; for writing, reason: %2</source>
         <extracomment>%1 is the file path, %2 is the error message</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="1433"/>
+        <location filename="../src/ctelnet.cpp" line="1397"/>
         <source>[ WARN ]  - Package download failed: could not save file, reason: %1</source>
         <extracomment>%1 is the error message</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="1444"/>
+        <location filename="../src/ctelnet.cpp" line="1408"/>
         <source>[ WARN ]  - Package installation failed for &apos;%1&apos;, reason: %2</source>
         <extracomment>%1 is the package file path, %2 is the error message</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="2334"/>
+        <location filename="../src/ctelnet.cpp" line="2298"/>
         <source>[ INFO ]  - This game appears to use KaVir&apos;s protocol handler, which works best when Mudlet reports its version number during connection. Version reporting in terminal type has been automatically enabled for improved color support. Reconnecting...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ctelnet.cpp" line="450"/>
-        <location filename="../src/ctelnet.cpp" line="1121"/>
+        <location filename="../src/ctelnet.cpp" line="1093"/>
         <source>[%1]</source>
-        <extracomment>For an IPv6 address (which is composed of hex-digits and colons) if we * want to show it with a port number appended (as a colon and then an * integer between 1 and 65535) we need to wrap it with &apos;[&apos;...&apos;]&apos; to * separate the latter from the former, however some Far-East locales may * expect to use the wide versions of these character here.</extracomment>
+        <extracomment>For an IPv6 address (which is composed of hex-digits and colons) if we want to show it with a port number appended (as a colon and then an integer between 1 and 65535) we need to wrap it with &apos;[&apos;...&apos;]&apos; to separate the latter from the former, however some Far-East locales may expect to use the wide versions of these character here.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="454"/>
+        <location filename="../src/ctelnet.cpp" line="453"/>
         <source>Looking up the details of server: %1:%2 ...</source>
-        <extracomment>%1 is the URL or an IP address (suitably wrapped if it is an IPv6 one) * of the Game Server (or Proxy); %2 is the port number.</extracomment>
+        <extracomment>%1 is the URL or an IP address (suitably wrapped if it is an IPv6 one) of the Game Server (or Proxy); %2 is the port number.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="588"/>
+        <location filename="../src/ctelnet.cpp" line="587"/>
         <source>[  OK  ]  - Secure connection made (IPv6).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="590"/>
+        <location filename="../src/ctelnet.cpp" line="589"/>
         <source>[  OK  ]  - Secure connection made (IPv4).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="594"/>
+        <location filename="../src/ctelnet.cpp" line="593"/>
         <source>[  OK  ]  - Open connection made (IPv6).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="596"/>
+        <location filename="../src/ctelnet.cpp" line="595"/>
         <source>[  OK  ]  - Open connection made (IPv4).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="601"/>
+        <location filename="../src/ctelnet.cpp" line="600"/>
         <source>[  OK  ]  - Connection made (IPv6).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="603"/>
+        <location filename="../src/ctelnet.cpp" line="602"/>
         <source>[  OK  ]  - Connection made (IPv4).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="649"/>
+        <location filename="../src/ctelnet.cpp" line="648"/>
         <source>[ INFO ]  - Connection time: %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ctelnet.cpp" line="713"/>
+        <location filename="../src/ctelnet.cpp" line="708"/>
         <source>[ ALERT ] - Socket got disconnected, for %n reason(s):
 %1</source>
-        <extracomment>This message is used when we have been trying to connect or * we were connected securely, but the connection has been lost. * It is possible with a secure connection that there is MORE * than one error message to show, but for English or other * locales where the singular case (%n==1) is distinct it would * be perfectly feasible to replace &quot;for %n reason(s)&quot; with * &quot;because&quot; for that number (1) of errors - however the text * should then be repeated in the corresponding situation for * an &quot;open&quot; connection which is different in that it only ever * has one &quot;reason&quot; to report.</extracomment>
+        <extracomment>This message is used when we have been trying to connect or we were connected securely, but the connection has been lost. It is possible with a secure connection that there is MORE than one error message to show, but for English or other locales where the singular case (%n==1) is distinct it would be perfectly feasible to replace &quot;for %n reason(s)&quot; with &quot;because&quot; for that number (1) of errors - however the text should then be repeated in the corresponding situation for an &quot;open&quot; connection which is different in that it only ever has one &quot;reason&quot; to report.</extracomment>
         <translation type="unfinished">
             <numerusform></numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="727"/>
-        <location filename="../src/ctelnet.cpp" line="761"/>
+        <location filename="../src/ctelnet.cpp" line="721"/>
+        <location filename="../src/ctelnet.cpp" line="752"/>
         <source>[ ALERT ] - Socket got disconnected.</source>
-        <extracomment>This message is used when we have been trying to connect or * we were connected securely or in an open manner, but the * connection has been lost and we do not have any explaination * to give to the user as to why. Anyhow, in this case we do not * have anything more to say about it. This text used in two * places, ensure the same translation is used in both of them.</extracomment>
+        <extracomment>This message is used when we have been trying to connect or we were connected securely or in an open manner, but the connection has been lost and we do not have any explaination to give to the user as to why. Anyhow, in this case we do not have anything more to say about it. This text used in two places, ensure the same translation is used in both of them.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="742"/>
+        <location filename="../src/ctelnet.cpp" line="735"/>
         <source>Secure connections not supported by this game on this port; try turning the option off</source>
         <extracomment>A reason why a connection to a game server ended.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="772"/>
+        <location filename="../src/ctelnet.cpp" line="762"/>
         <source>[ ALERT ] - Socket got disconnected, for reason:
 %1</source>
-        <extracomment>This message is used when we have been trying to connect or * we were connected in an open, insecure manner, but the * connection has been lost. Unlike the secure connection case * there is only one error message to show; it would be * desirable to use the same text for this message as the &quot;one * reason&quot; (%n==1) situation for locales such as English (with * a distinct form for the singular) use for the secure type * of connection.</extracomment>
+        <extracomment>This message is used when we have been trying to connect or we were connected in an open, insecure manner, but the connection has been lost. Unlike the secure connection case there is only one error message to show; it would be desirable to use the same text for this message as the &quot;one reason&quot; (%n==1) situation for locales such as English (with a distinct form for the singular) use for the secure type of connection.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="894"/>
+        <location filename="../src/ctelnet.cpp" line="883"/>
         <source>Host name lookup Failure! A connection cannot be established.
 The server name is not correct, or your nameservers are not
 working properly.
 </source>
-        <extracomment>This text is used in the (expected) case when the user has provided * a URL for the Game Server rather than (unusually) an IP address. * After a DNS lookup however, we have NOT found any IP addresses which * means that we cannot proceed further to connect to the Game server.</extracomment>
+        <extracomment>This text is used in the (expected) case when the user has provided a URL for the Game Server rather than (unusually) an IP address. After a DNS lookup however, we have NOT found any IP addresses which means that we cannot proceed further to connect to the Game server.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="899"/>
+        <location filename="../src/ctelnet.cpp" line="888"/>
         <source>[ ERROR ] - Unable to connect to &quot;%1&quot;.
 Check your internet connection and the details entered for the game server.</source>
         <extracomment>%1 is the URL of the Game Server</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="912"/>
+        <location filename="../src/ctelnet.cpp" line="900"/>
         <source>%1 (IPv6)</source>
-        <extracomment>Used to add an IPv6 address line to the list displayed during * connecting to a Host. Some, e.g. Far Eastern locales may require a * different text here if they do not use spaces, or need &quot;wide&quot; &apos;(&apos; &apos;)&apos;s</extracomment>
+        <extracomment>Used to add an IPv6 address line to the list displayed during connecting to a Host. Some, e.g. Far Eastern locales may require a different text here if they do not use spaces, or need &quot;wide&quot; &apos;(&apos; &apos;)&apos;s</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="919"/>
+        <location filename="../src/ctelnet.cpp" line="906"/>
         <source>%1 (IPv4)</source>
-        <extracomment>Used to add an IPv4 address line to the list displayed during * connecting to a Host. Some, e.g. Far Eastern locales may require a * different text here if they do not use spaces, or &quot;wide&quot; &apos;(&apos;...&apos;)&apos;</extracomment>
+        <extracomment>Used to add an IPv4 address line to the list displayed during connecting to a Host. Some, e.g. Far Eastern locales may require a different text here if they do not use spaces, or &quot;wide&quot; &apos;(&apos;...&apos;)&apos;</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="934"/>
+        <location filename="../src/ctelnet.cpp" line="920"/>
         <source>A host name could not be found for the given IP address.</source>
-        <extracomment>This text is used when the user has provided a raw IP address * for the Game Server rather than a URL. In this case we try to * perform a &quot;reverse-lookup&quot; to see if we can identify the URL that * matches it - but nothing useful was found.</extracomment>
+        <extracomment>This text is used when the user has provided a raw IP address for the Game Server rather than a URL. In this case we try to perform a &quot;reverse-lookup&quot; to see if we can identify the URL that matches it - but nothing useful was found.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="942"/>
+        <location filename="../src/ctelnet.cpp" line="927"/>
         <source>A host name for the IP address has been found.
 It is: &quot;%1&quot;
 </source>
-        <extracomment>This text is used when the user has provided a raw IP address * for the Game Server rather than a URL. In this case we try to * perform a &quot;reverse-lookup&quot; to see if we can identify the URL that * matches it - and this is used when we have something (%1) to * show.</extracomment>
+        <extracomment>This text is used when the user has provided a raw IP address for the Game Server rather than a URL. In this case we try to perform a &quot;reverse-lookup&quot; to see if we can identify the URL that matches it - and this is used when we have something (%1) to show.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ctelnet.cpp" line="954"/>
+        <location filename="../src/ctelnet.cpp" line="938"/>
         <source>The %n IP address(es) of %1 has/have been found. It/They are:</source>
-        <extracomment>This text is used in the (expected) case when the user has provided * a URL (%1) for the Game Server rather than (unusually) an IP address. * After a DNS lookup we have found at least one but possibly more (%n) * IP addresses, which will be listed (one per line) immediately * afterwards.</extracomment>
+        <extracomment>This text is used in the (expected) case when the user has provided a URL (%1) for the Game Server rather than (unusually) an IP address. After a DNS lookup we have found at least one but possibly more (%n) IP addresses, which will be listed (one per line) immediately afterwards.</extracomment>
         <translation type="unfinished">
             <numerusform></numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="992"/>
+        <location filename="../src/ctelnet.cpp" line="975"/>
         <source>Trying secure (IPv4 and IPv6) connections to proxy %1:%2 ...</source>
-        <extracomment>Happy-Eyeballs (both IPv4 and IPv6 addresses available) * case. %1 is the URL for the server and %2 is the port number * (on BOTH addresses) for the connection.</extracomment>
+        <extracomment>Happy-Eyeballs (both IPv4 and IPv6 addresses available) case. %1 is the URL for the server and %2 is the port number (on BOTH addresses) for the connection.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="998"/>
-        <location filename="../src/ctelnet.cpp" line="1035"/>
-        <location filename="../src/ctelnet.cpp" line="1065"/>
+        <location filename="../src/ctelnet.cpp" line="980"/>
+        <location filename="../src/ctelnet.cpp" line="1013"/>
+        <location filename="../src/ctelnet.cpp" line="1040"/>
         <source>[ INFO ]  - Attempting a secure connection to %1:%2 via proxy...</source>
-        <extracomment>%1 is a URL for the Game Server; %2 is the port number.</extracomment>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ctelnet.cpp" line="1005"/>
-        <location filename="../src/ctelnet.cpp" line="1041"/>
-        <source>Trying secure (IPv4 and IPv6) connections to %1:%2 ...</source>
-        <extracomment>Happy-Eyeballs (both IPv4 and IPv6 addresses available) * case. %1 is the URL for the Server and %2 is the port number * (on BOTH addresses) for the connection.
+        <extracomment>We don&apos;t need to worry about %1 being a raw IPv6 address here as we prohibit IP addresses for secure connections so it is a URL; %2 is the port number.
 ----------
-%1 is the URL for the Server and %2 is the port number * for the connection.</extracomment>
+%1 is a URL for the Game Server; %2 is the port number.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="1011"/>
-        <location filename="../src/ctelnet.cpp" line="1047"/>
-        <location filename="../src/ctelnet.cpp" line="1074"/>
+        <location filename="../src/ctelnet.cpp" line="986"/>
+        <location filename="../src/ctelnet.cpp" line="1018"/>
+        <source>Trying secure (IPv4 and IPv6) connections to %1:%2 ...</source>
+        <extracomment>Happy-Eyeballs (both IPv4 and IPv6 addresses available) case. %1 is the URL for the Server and %2 is the port number (on BOTH addresses) for the connection.
+----------
+%1 is the URL for the Server and %2 is the port number for the connection.</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ctelnet.cpp" line="991"/>
+        <location filename="../src/ctelnet.cpp" line="1023"/>
+        <location filename="../src/ctelnet.cpp" line="1048"/>
         <source>[ INFO ]  - Attempting a secure connection to %1:%2 ...</source>
-        <extracomment>%1 is a URL for the Game Server; %2 is the port number.</extracomment>
+        <extracomment>We don&apos;t need to worry about %1 being a raw IPv6 address here as we prohibit IP addresses for secure connections so it is a URL; %2 is the port number.
+----------
+%1 is a URL for the Game Server; %2 is the port number.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="1029"/>
+        <location filename="../src/ctelnet.cpp" line="1008"/>
         <source>Trying secure (IPv6) connection to %1:%2 via proxy...</source>
-        <extracomment>%1 is the URL for the Server and %2 is the port number * for the connection.</extracomment>
+        <extracomment>%1 is the URL for the Server and %2 is the port number for the connection.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="1062"/>
+        <location filename="../src/ctelnet.cpp" line="1037"/>
         <source>Trying secure (IPv4) connection to %1:%2 via proxy...</source>
-        <extracomment>%1 is the URL for the Server and %2 is the port number * for the connection.</extracomment>
+        <extracomment>%1 is the URL for the Server and %2 is the port number for the connection.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="1071"/>
+        <location filename="../src/ctelnet.cpp" line="1045"/>
         <source>Trying secure (IPv4) connection to %1:%2 ...</source>
-        <extracomment>%1 is the URL for the Server and %2 is the port number * for the connection.</extracomment>
+        <extracomment>%1 is the URL for the Server and %2 is the port number for the connection.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="1096"/>
+        <location filename="../src/ctelnet.cpp" line="1069"/>
         <source>Trying open (IPv4 and IPv6) connections to %1:%2 via proxy...</source>
-        <extracomment>Happy-Eyeballs (both IPv4 and IPv6 addresses available) * case. %1 is the URL for the proxy and %2 is the port number * (on BOTH addresses) for the connection.</extracomment>
+        <extracomment>Happy-Eyeballs (both IPv4 and IPv6 addresses available) case. %1 is the URL for the proxy and %2 is the port number (on BOTH addresses) for the connection.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="1099"/>
-        <location filename="../src/ctelnet.cpp" line="1132"/>
-        <location filename="../src/ctelnet.cpp" line="1162"/>
+        <location filename="../src/ctelnet.cpp" line="1072"/>
+        <location filename="../src/ctelnet.cpp" line="1102"/>
+        <location filename="../src/ctelnet.cpp" line="1128"/>
         <source>[ INFO ]  - Attempting an open connection to %1:%2 via proxy...</source>
         <extracomment>%1 is a URL for the Game Server; %2 is the port number.
 ----------
-%1 is the URL or IPv6 address (suitably wrapped) for the * Game Server and %2 is the port number.
+%1 is the URL or IPv6 address (suitably wrapped) for the Game Server and %2 is the port number.
 ----------
-%1 is the URL or IPv4 address for the Game Server and %2 * is the port number for the connection.</extracomment>
+%1 is the URL or IPv4 address for the Game Server and %2 is the port number for the connection.</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ctelnet.cpp" line="1078"/>
+        <source>Trying open (IPv4 and IPv6) connections to %1:%2 ...</source>
+        <extracomment>Happy-Eyeballs (both IPv4 and IPv6 addresses available) case. %1 is the URL for the Server and %2 is the port number (on BOTH addresses) for the connection.</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ctelnet.cpp" line="1081"/>
+        <location filename="../src/ctelnet.cpp" line="1110"/>
+        <location filename="../src/ctelnet.cpp" line="1138"/>
+        <source>[ INFO ]  - Attempting an open connection to %1:%2 ...</source>
+        <extracomment>%1 is a URL for the Game Server; %2 is the port number.
+----------
+%1 is the URL or IPv6 address (suitably wrapped) for the Game Server and %2 is the port number for the connection.
+----------
+%1 is the URL or IPv4 address for the Game Server and %2 is the port number for the connection.</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ctelnet.cpp" line="1098"/>
+        <source>Trying open (IPv6) connection to %1:%2 via proxy...</source>
+        <extracomment>%1 is the URL or IPv6 address (suitably wrapped) for the Game Server and %2 is the port number for the connection.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ctelnet.cpp" line="1106"/>
-        <source>Trying open (IPv4 and IPv6) connections to %1:%2 ...</source>
-        <extracomment>Happy-Eyeballs (both IPv4 and IPv6 addresses available) * case. %1 is the URL for the Server and %2 is the port number * (on BOTH addresses) for the connection.</extracomment>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ctelnet.cpp" line="1109"/>
-        <location filename="../src/ctelnet.cpp" line="1142"/>
-        <location filename="../src/ctelnet.cpp" line="1174"/>
-        <source>[ INFO ]  - Attempting an open connection to %1:%2 ...</source>
-        <extracomment>%1 is a URL for the Game Server; %2 is the port number.
-----------
-%1 is the URL or IPv6 address (suitably wrapped) for the * Game Server and %2 is the port number for the connection.
-----------
-%1 is the URL or IPv4 address for the Game Server and %2 * is the port number for the connection.</extracomment>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ctelnet.cpp" line="1127"/>
-        <source>Trying open (IPv6) connection to %1:%2 via proxy...</source>
-        <extracomment>%1 is the URL or IPv6 address (suitably wrapped) for the * Game Server and %2 is the port number for the connection.</extracomment>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ctelnet.cpp" line="1137"/>
         <source>Trying open (IPv6) connection to %1:%2 ...</source>
-        <extracomment>%1 is the URL or IPv6 address (suitably wrapped) for the * Game Server and %2 is the port number for the connection.</extracomment>
+        <extracomment>%1 is the URL or IPv6 address (suitably wrapped) for the Game Server and %2 is the port number for the connection.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="1157"/>
+        <location filename="../src/ctelnet.cpp" line="1124"/>
         <source>Trying open (IPv4) connection to %1:%2 via proxy...</source>
-        <extracomment>%1 is the URL or IPv4 address for the Game Server and %2 * is the port number for the connection.</extracomment>
+        <extracomment>%1 is the URL or IPv4 address for the Game Server and %2 is the port number for the connection.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="1169"/>
+        <location filename="../src/ctelnet.cpp" line="1134"/>
         <source>Trying open (IPv4) connection to %1:%2 ...</source>
-        <extracomment>%1 is the URL or IPv4 address for the Game Server and %2 * is the port number for the connection.</extracomment>
+        <extracomment>%1 is the URL or IPv4 address for the Game Server and %2 is the port number for the connection.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="2353"/>
+        <location filename="../src/ctelnet.cpp" line="2317"/>
         <source>[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but has not turned it on properly. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can disable this setting in Settings &gt; Special Options.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="3404"/>
-        <location filename="../src/ctelnet.cpp" line="3782"/>
+        <location filename="../src/ctelnet.cpp" line="3368"/>
+        <location filename="../src/ctelnet.cpp" line="3758"/>
         <source>[ INFO ]  - Upgrading the GUI to new version &apos;%1&apos; from version &apos;%2&apos;
 (url=&apos;%3&apos;).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="3728"/>
+        <location filename="../src/ctelnet.cpp" line="3704"/>
         <source>[ INFO ]  - Downloading and installing package &apos;%1&apos;
 (url=&apos;%2&apos;).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="3739"/>
+        <location filename="../src/ctelnet.cpp" line="3715"/>
         <source>Cancel</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="3739"/>
+        <location filename="../src/ctelnet.cpp" line="3715"/>
         <source>Downloading game GUI from server...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="4045"/>
+        <location filename="../src/ctelnet.cpp" line="4021"/>
         <source>[ INFO ]  - A more secure connection on port %1 is available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="4052"/>
+        <location filename="../src/ctelnet.cpp" line="4028"/>
         <source>For data transfer protection and privacy, this connection advertises a secure port.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="4053"/>
+        <location filename="../src/ctelnet.cpp" line="4029"/>
         <source>Update to port %1 and connect with encryption?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="4205"/>
+        <location filename="../src/ctelnet.cpp" line="4181"/>
         <source>ERROR</source>
         <extracomment>Keep the capitalisation, the translated text at 7 letters max so it aligns nicely</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="4218"/>
+        <location filename="../src/ctelnet.cpp" line="4194"/>
         <source>LUA</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="4230"/>
+        <location filename="../src/ctelnet.cpp" line="4206"/>
         <source>WARN</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="4242"/>
+        <location filename="../src/ctelnet.cpp" line="4218"/>
         <source>ALERT</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="4254"/>
+        <location filename="../src/ctelnet.cpp" line="4230"/>
         <source>INFO</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="4266"/>
+        <location filename="../src/ctelnet.cpp" line="4242"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="4523"/>
+        <location filename="../src/ctelnet.cpp" line="4499"/>
         <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="4547"/>
+        <location filename="../src/ctelnet.cpp" line="4523"/>
         <source>Cannot replay file &quot;%1&quot;, error message was: &quot;replay file seems to be corrupt&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="4549"/>
+        <location filename="../src/ctelnet.cpp" line="4525"/>
         <source>[ WARN ]  - The replay has been aborted as the file seems to be corrupt.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="4558"/>
+        <location filename="../src/ctelnet.cpp" line="4534"/>
         <source>Cannot perform replay, another one may already be in progress. Try again when it has finished.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="4560"/>
+        <location filename="../src/ctelnet.cpp" line="4536"/>
         <source>[ WARN ]  - Cannot perform replay, another one may already be in progress.
 Try again when it has finished.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="4568"/>
+        <location filename="../src/ctelnet.cpp" line="4544"/>
         <source>Cannot read file &quot;%1&quot;, error message was: &quot;%2&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="4570"/>
+        <location filename="../src/ctelnet.cpp" line="4546"/>
         <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ctelnet.cpp" line="4609"/>
+        <location filename="../src/ctelnet.cpp" line="4585"/>
         <source>[  OK  ]  - The replay has ended.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6834,80 +6838,61 @@ Count</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgAboutDialog.cpp" line="1148"/>
-        <source>You are using the 32-Bit version of Mudlet on a 64-Bit version of Windows. You may wish to upgrade (by downloading and then installing the 64-Bit version now available from Mudlet&apos;s website).</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/dlgAboutDialog.cpp" line="1151"/>
-        <source>This is a 32-Bit build of Mudlet running on a 64-Bit version of Windows.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/dlgAboutDialog.cpp" line="1164"/>
-        <location filename="../src/dlgAboutDialog.cpp" line="1210"/>
-        <location filename="../src/dlgAboutDialog.cpp" line="1251"/>
-        <location filename="../src/dlgAboutDialog.cpp" line="1281"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1134"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1162"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1185"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1213"/>
         <source>Technical information:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgAboutDialog.cpp" line="1165"/>
-        <location filename="../src/dlgAboutDialog.cpp" line="1211"/>
-        <location filename="../src/dlgAboutDialog.cpp" line="1252"/>
-        <location filename="../src/dlgAboutDialog.cpp" line="1282"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1135"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1163"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1186"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1214"/>
         <source>Version</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgAboutDialog.cpp" line="1167"/>
-        <location filename="../src/dlgAboutDialog.cpp" line="1213"/>
-        <location filename="../src/dlgAboutDialog.cpp" line="1254"/>
-        <location filename="../src/dlgAboutDialog.cpp" line="1284"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1137"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1165"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1188"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1216"/>
         <source>OS</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgAboutDialog.cpp" line="1172"/>
-        <location filename="../src/dlgAboutDialog.cpp" line="1218"/>
-        <source>CPU (WoW64)</source>
-        <extracomment>This is shown for 32-Bit Windows builds when run on a *64-Bit OS. &quot;WoW64&quot; stands for WindowOnWindows64.</extracomment>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/dlgAboutDialog.cpp" line="1179"/>
-        <location filename="../src/dlgAboutDialog.cpp" line="1225"/>
-        <source>CPU (%1-bits)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/dlgAboutDialog.cpp" line="1184"/>
-        <location filename="../src/dlgAboutDialog.cpp" line="1231"/>
-        <location filename="../src/dlgAboutDialog.cpp" line="1257"/>
-        <location filename="../src/dlgAboutDialog.cpp" line="1287"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1191"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1219"/>
         <source>CPU</source>
         <extracomment>This is shown for all other OSes than Windows.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgAboutDialog.cpp" line="1190"/>
-        <location filename="../src/dlgAboutDialog.cpp" line="1263"/>
-        <source>Qt version (compilation)</source>
-        <extracomment>This is shown when the Qt version used at run-time *is different to that used during compilation - it not *the usual case.</extracomment>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
+        <location filename="../src/dlgAboutDialog.cpp" line="1145"/>
         <location filename="../src/dlgAboutDialog.cpp" line="1196"/>
-        <location filename="../src/dlgAboutDialog.cpp" line="1269"/>
-        <source>Qt version (run-time)</source>
-        <extracomment>This is shown when the Qt version used at run-time *is different to that used during compilation - it not *the usual case.</extracomment>
+        <source>Qt version (compilation)</source>
+        <extracomment>This is shown when the Qt version used at run-time is different to that used during compilation - it is not the usual case.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgAboutDialog.cpp" line="1236"/>
-        <location filename="../src/dlgAboutDialog.cpp" line="1292"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1139"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1167"/>
+        <source>CPU (64-bits)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/dlgAboutDialog.cpp" line="1150"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1201"/>
+        <source>Qt version (run-time)</source>
+        <extracomment>This is shown when the Qt version used at run-time is different to that used during compilation - it is not the usual case.</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/dlgAboutDialog.cpp" line="1172"/>
+        <location filename="../src/dlgAboutDialog.cpp" line="1223"/>
         <source>Qt version</source>
-        <extracomment>This is shown when the same Qt version is used at run-time *as was used during compilation - it is the usual case.</extracomment>
+        <extracomment>This is shown when the same Qt version is used at run-time as was used during compilation - it is the usual case.</extracomment>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -7107,233 +7092,233 @@ Count</source>
 <context>
     <name>dlgConnectionProfiles</name>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="92"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="93"/>
         <source>Connect</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="212"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="213"/>
         <source>Characters password. Note that the password is not encrypted in storage</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="286"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="287"/>
         <source>Game name: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="288"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="289"/>
         <source>Button to select a mud game to play, double-click it to connect and start playing it.</source>
         <extracomment>Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1106"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1193"/>
         <source>This profile is currently loaded - close it before changing the connection parameters.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1420"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1507"/>
         <source>Reset icon</source>
         <extracomment>Reset the custom picture for this profile in the connection dialog and show the default one instead</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1424"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1511"/>
         <source>Set custom icon</source>
         <extracomment>Set a custom picture to show for the profile in the connection dialog</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1429"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1516"/>
         <source>Set custom color</source>
         <extracomment>Set a custom color to show for the profile in the connection dialog</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1807"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1894"/>
         <source>The %1 character is not permitted. Use one of the following:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1830"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1917"/>
         <source>You have to enter a number. Other characters are not permitted.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1819"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1906"/>
         <source>This profile name is already in use.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="692"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="766"/>
         <source>Could not rename your profile data on the computer.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="94"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="95"/>
         <source>Offline</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="115"/>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1545"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="116"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1632"/>
         <source>Copy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="117"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="118"/>
         <source>Copy settings only</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="134"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="135"/>
         <source>copy profile</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="135"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="136"/>
         <source>copy the entire profile to new one that will require a different new name.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="147"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="148"/>
         <source>copy profile settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="148"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="149"/>
         <source>copy the settings and some other parts of the profile to a new one that will require a different new name.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="210"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="211"/>
         <source>Characters password, stored securely in the computer&apos;s credential manager</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="283"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="284"/>
         <source>Click to load but not connect the selected profile.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="284"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="285"/>
         <source>Click to load and connect the selected profile.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="285"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="286"/>
         <source>Need to have a valid profile name, game server address and port before this button can be enabled.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="700"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="774"/>
         <source>Could not create the new profile folder on your computer.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="621"/>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="746"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="622"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="820"/>
         <source>new profile name</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="104"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="105"/>
         <source>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Welcome to Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;To get started, double-click on &lt;/b&gt;Mudlet Tutorial&lt;b&gt; or select a game from the list.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;Want to play a game that’s not listed?&lt;/p&gt;&lt;p&gt;Click %1 &lt;span style=&quot; color:#555753;&quot;&gt;New&lt;/span&gt;, then enter the &lt;i&gt;Profile Name&lt;/i&gt;, &lt;i&gt;Server Address&lt;/i&gt;, and &lt;i&gt;Port&lt;/i&gt; in the required fields.&lt;/p&gt;&lt;p&gt;Once you&apos;re ready, click %2 &lt;span style=&quot; color:#555753;&quot;&gt;Connect&lt;/span&gt; to begin your adventure.&lt;/p&gt;&lt;p&gt;Have fun!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;The Mudlet Team &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</source>
         <comment>Welcome message. Both %1 and %2 may be replaced by icons when this text is used.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="889"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="976"/>
         <source>Deleting &apos;%1&apos;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1110"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1197"/>
         <source>A profile that is in use cannot be removed</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1160"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1247"/>
         <source>Discord integration not available on this platform</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1166"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1253"/>
         <source>Discord integration not supported by game</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1169"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1256"/>
         <source>Check to enable Discord integration</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1444"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1531"/>
         <source>Select custom image for profile (should be 120x30)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1444"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1531"/>
         <source>Images (%1)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1522"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1609"/>
         <source>Copying...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1840"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1927"/>
         <source>Port number must be above zero and below 65535.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1860"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1947"/>
         <source>Mudlet can not load support for secure connections.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1882"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1969"/>
         <source>Please enter the URL or IP address of the Game server.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1902"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1988"/>
         <source>Please enter the URL of the Game server.
 
 &lt;i&gt;SSL/TLS connections require a URL, as an IP address is not a suitable identifier for the certification of the Game Server.&lt;/i&gt;</source>
-        <extracomment>Please use two line-feeds after the first line so the second * line can be italicised and spaced out - if appropriate for * the locale.</extracomment>
+        <extracomment>Please use two line-feeds after the first line so the second line can be italicised and spaced out - if appropriate for the locale.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1921"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2007"/>
         <source>Load profile without connecting.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1937"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2023"/>
         <source>Please set a valid profile name, game server address and the game port before loading.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1942"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2028"/>
         <source>Please set a valid profile name, game server address and the game port before connecting.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1996"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2082"/>
         <source>Click to hide the password; it will also hide if another profile is selected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="2000"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2086"/>
         <source>Click to reveal the password for this profile.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1848"/>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1851"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1935"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1938"/>
         <source>Mudlet is not configured for secure connections.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8124,25 +8109,25 @@ Further reading material, e.g., links to documentation or forum posts.
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="1324"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="1323"/>
         <source>Failed to open package file. Error is: &quot;%1&quot;.</source>
-        <extracomment>This zipError message is shown when the libzip library code is unable * to open the file that was to be the end result of the export process. * As this may be an existing file anywhere in the computer&apos;s * file-system(s) it is possible that permissions on the directory or an * existing file that is to be overwritten may be a source of problems * here.</extracomment>
+        <extracomment>This zipError message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere in the computer&apos;s file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="1489"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="1487"/>
         <source>Failed to zip up the package. Error is: &quot;%1&quot;.</source>
-        <extracomment>This error message is displayed at the final stage of exporting * a package when all the sourced files are finally put into the * archive. Unfortunately this may be the point at which something * breaks because a problem was not spotted/detected in the process * earlier...</extracomment>
+        <extracomment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="1919"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="1917"/>
         <source>Why not &lt;a href=&quot;https://packages.mudlet.org/upload&quot;&gt;upload&lt;/a&gt; your package for other Mudlet users?</source>
         <extracomment>Only the text outside of the &apos;a&apos; (HTML anchor) tags PLUS the verb &apos;upload&apos; in between them in the source text, (associated with uploading the resulting package to the Mudlet forums) should be translated.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/dlgPackageExporter.cpp" line="1936"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="1934"/>
         <source>Select what to export (%n item(s))</source>
         <extracomment>This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.</extracomment>
         <translation type="unfinished">
@@ -8150,7 +8135,7 @@ Further reading material, e.g., links to documentation or forum posts.
         </translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="1939"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="1937"/>
         <source>Select what to export</source>
         <extracomment>This is the text shown at the top of a groupbox initially and when there is NO items to export in the Package exporter dialogue.</extracomment>
         <translation type="unfinished"></translation>
@@ -8214,12 +8199,12 @@ Further reading material, e.g., links to documentation or forum posts.
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="1406"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="1405"/>
         <source>Failed to add directory &quot;%1&quot; to package. Error is: &quot;%2&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="1449"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="1448"/>
         <source>Required file &quot;%1&quot; was not found in the staging area. This area contains the Mudlet items chosen for the package, which you selected to be included in the package file. This suggests there may be a problem with that directory: &quot;%2&quot; - Do you have the necessary permissions and free disk-space?</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8229,12 +8214,12 @@ Further reading material, e.g., links to documentation or forum posts.
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="1480"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="1479"/>
         <source>Export cancelled.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="1558"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="1556"/>
         <source>Where do you want to save the package?</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8317,7 +8302,7 @@ Package manager: network error, package couldn&apos;t be downloaded</extracommen
     <message numerus="yes">
         <location filename="../src/dlgPackageManager.cpp" line="799"/>
         <source>Update (%n)</source>
-        <extracomment>Message on button in package manager to update multiple (%n is the count of) selected packages.</extracomment>
+        <extracomment>Message on button in package manager to update one or multiple (%n is the count) selected packages.</extracomment>
         <translation type="unfinished">
             <numerusform></numerusform>
         </translation>
@@ -8325,7 +8310,7 @@ Package manager: network error, package couldn&apos;t be downloaded</extracommen
     <message>
         <location filename="../src/dlgPackageManager.cpp" line="802"/>
         <source>Update</source>
-        <extracomment>Message on button in package manager for updates view when zero or one package is selected</extracomment>
+        <extracomment>Message on button in package manager when there are no selected packages - button will also be disabled.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -8337,7 +8322,7 @@ Package manager: network error, package couldn&apos;t be downloaded</extracommen
     <message numerus="yes">
         <location filename="../src/dlgPackageManager.cpp" line="809"/>
         <source>Install (%n)</source>
-        <extracomment>Message on button in package manager to install multiple (%n is the count of) selected packages.</extracomment>
+        <extracomment>Message on button in package manager to install one or multiple (%n is the count) selected packages.</extracomment>
         <translation type="unfinished">
             <numerusform></numerusform>
         </translation>
@@ -8346,9 +8331,9 @@ Package manager: network error, package couldn&apos;t be downloaded</extracommen
         <location filename="../src/dlgPackageManager.cpp" line="812"/>
         <location filename="../src/dlgPackageManager.cpp" line="819"/>
         <source>Install</source>
-        <extracomment>Message on button in package manager initially and when zero or one package is selected
+        <extracomment>Message on button in package manager when there are no selected packages - button will also be disabled.
 ----------
-Message on button in package manager initially and when there is no packages to install</extracomment>
+Message on button in package manager initially and when the view is the &quot;Installed&quot; one</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -8361,7 +8346,7 @@ Message on button in package manager initially and when there is no packages to 
     <message numerus="yes">
         <location filename="../src/dlgPackageManager.cpp" line="834"/>
         <source>Remove (%n)</source>
-        <extracomment>Message on button in package manager to remove multiple (%n is the count of) selected packages.</extracomment>
+        <extracomment>Message on button in package manager to remove one or multiple (%n is the count) selected packages.</extracomment>
         <translation type="unfinished">
             <numerusform></numerusform>
         </translation>
@@ -8370,21 +8355,21 @@ Message on button in package manager initially and when there is no packages to 
         <location filename="../src/dlgPackageManager.cpp" line="837"/>
         <location filename="../src/dlgPackageManager.cpp" line="841"/>
         <source>Remove</source>
-        <extracomment>Message on button in package manager initially and when zero or one package is selected
+        <extracomment>Message on button in package manager when there are no selected packages - button will also be disabled.
 ----------
-Message on button in package manager initially and when there is no packages to remove</extracomment>
+Message on button in package manager initially and when the view is NOT the &quot;Installed&quot; one</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/dlgPackageManager.cpp" line="859"/>
         <source>Updates (%1)</source>
-        <extracomment>Package manager - navigation button showing number of available updates</extracomment>
+        <extracomment>Package manager - navigation button showing one or more available updates</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/dlgPackageManager.cpp" line="862"/>
         <source>Updates</source>
-        <extracomment>Package manager - navigation button for updates view</extracomment>
+        <extracomment>Package manager - navigation button for when there are no updates</extracomment>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -8477,44 +8462,44 @@ Message on button in package manager initially and when there is no packages to 
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="978"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="982"/>
         <source>Other profiles to Map to:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="1042"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="1046"/>
         <source>2D Map Room Symbol scaling factor:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="1063"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="1067"/>
         <source>Show &quot;%1&quot; in the map area selection</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="1113"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="1117"/>
         <source>%1 (*Error, report to Mudlet Makers*)</source>
         <comment>The encoder code name is not in the mudlet class mEncodingNamesMap when it should be and the Mudlet Makers need to fix it!</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="1260"/>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4262"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="1264"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4274"/>
         <source>Profile preferences - %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="1585"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="1601"/>
         <source>Profile preferences</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2486"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2502"/>
         <source>Load Mudlet map</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2427"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2443"/>
         <source>Loading map - please wait...</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8526,7 +8511,7 @@ Message on button in package manager initially and when there is no packages to 
     </message>
     <message numerus="yes">
         <location filename="../src/dlgProfilePreferences.cpp" line="162"/>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3191"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3207"/>
         <source>copy to %n destination(s)</source>
         <extracomment>text on button to put the map from this profile into the other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will be zero or more. The button will also be disabled (greyed out) in the zero case but the text will still be visible.</extracomment>
         <translation type="unfinished">
@@ -8572,27 +8557,27 @@ Message on button in package manager initially and when there is no packages to 
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="932"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="934"/>
         <source>MSDP: Mud Server Data Protocol</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="942"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="944"/>
         <source>MSSP: Mud Server Status Protocol</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="937"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="939"/>
         <source>MSP: Mud Sound Protocol</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="952"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="954"/>
         <source>MXP: Mud eXtension Protocol</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="947"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="949"/>
         <source>MTTS: Mud Terminal Type Standard</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8607,88 +8592,100 @@ Message on button in package manager initially and when there is no packages to 
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="957"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="931"/>
+        <source>MNES uses the same telnet option as NEW-ENVIRON, so only one can be active. MNES sends a minimal set of variables, while NEW-ENVIRON sends extended variables including OSC link support.</source>
+        <extracomment>Tooltip for MNES protocol option explaining mutual exclusivity with NEW-ENVIRON</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/dlgProfilePreferences.cpp" line="959"/>
         <source>NAWS: Negotiate About Window Size</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="962"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="964"/>
         <source>NEW-ENVIRON: Client Variables Standard</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="1019"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="968"/>
+        <source>NEW-ENVIRON uses the same telnet option as MNES, so only one can be active. NEW-ENVIRON sends extended variables including OSC link support, while MNES sends a minimal set.</source>
+        <extracomment>Tooltip for NEW-ENVIRON protocol option explaining mutual exclusivity with MNES</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/dlgProfilePreferences.cpp" line="1023"/>
         <source>%1 {Default}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="1031"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="1035"/>
         <source>%1 {Experimental}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="1033"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="1037"/>
         <source>%1 {For older versions}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="1223"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="1227"/>
         <source>unknown error</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="1224"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="1228"/>
         <source>This profile could not be loaded correctly (%1). Settings cannot be saved. Close the profile and try loading an older version from &apos;Connect - Options - Profile history&apos;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="1879"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="1895"/>
         <source>Pick color</source>
         <extracomment>Generic pick color dialog title</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2451"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2467"/>
         <source>Loaded map from %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2453"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2469"/>
         <source>Could not load map from %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2517"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2533"/>
         <source>Save Mudlet map</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2545"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2561"/>
         <source>Saving map - please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2562"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2578"/>
         <source>Saved map to %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2564"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2580"/>
         <source>Could not save map to %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2595"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2611"/>
         <source>Migrating passwords to secure storage...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2602"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2618"/>
         <source>Migrating passwords to profiles...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2634"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2650"/>
         <source>[ ERROR ] - Unable to use or create directory to store map for other profile &quot;%1&quot;.
 Please check that you have permissions/access to:
 &quot;%2&quot;
@@ -8696,52 +8693,52 @@ and there is enough space. The copying operation has failed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2641"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2657"/>
         <source>Creating a destination directory failed...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2710"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2726"/>
         <source>Backing up current map - please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2720"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2736"/>
         <source>Could not backup the map - saving it failed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2745"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2761"/>
         <source>Could not copy the map - failed to work out which map file we just saved the map as!</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2757"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2773"/>
         <source>Copying over map to %1 - please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2763"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2779"/>
         <source>Could not copy the map to %1 - unable to copy the new map file over.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2767"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2783"/>
         <source>Map copied successfully to other profile %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2779"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2795"/>
         <source>Map copied, now signalling other profiles to reload it.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2817"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2833"/>
         <source>Where should Mudlet save log files?</source>
         <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/dlgProfilePreferences.cpp" line="3198"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3212"/>
         <source>%n selected - change destinations...</source>
         <extracomment>text on button to select other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will always be 1 or more</extracomment>
         <translation type="unfinished">
@@ -8749,130 +8746,130 @@ and there is enough space. The copying operation has failed.</source>
         </translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3205"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3217"/>
         <source>pick destinations...</source>
         <extracomment>text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3442"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3454"/>
         <source>Could not update themes: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3445"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3457"/>
         <source>Updating themes from colorsublime.github.io...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3574"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3586"/>
         <source>{missing, possibly recently deleted trigger item}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3577"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3589"/>
         <source>{missing, possibly recently deleted alias item}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3580"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3592"/>
         <source>{missing, possibly recently deleted script item}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3583"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3595"/>
         <source>{missing, possibly recently deleted timer item}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3586"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3598"/>
         <source>{missing, possibly recently deleted key item}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3589"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3601"/>
         <source>{missing, possibly recently deleted button item}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3711"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3723"/>
         <source>The room symbol will appear like this if only symbols (glyphs) from the specific font are used.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3716"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3728"/>
         <source>The room symbol will appear like this if symbols (glyphs) from any font can be used.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3756"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3768"/>
         <source>How many rooms in the whole map have this symbol.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3774"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3786"/>
         <source>The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3782"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3794"/>
         <source>The symbol can be made entirely from glyphs in the specified font.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3800"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3812"/>
         <source>The symbol cannot be drawn using any of the fonts in the system, either an invalid string was entered as the symbol for the indicated rooms or the map was created on a different systems with a different set of fonts available to use. You may be able to correct this by installing an additional font using whatever method is appropriate for this system or by editing the map to use a different symbol. It may be possible to do the latter via a lua script using the &lt;i&gt;getRoomChar&lt;/i&gt; and &lt;i&gt;setRoomChar&lt;/i&gt; functions.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3893"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3905"/>
         <source>Large icon</source>
         <extracomment>Discord Rich Presence large icon</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3895"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3907"/>
         <source>Detail</source>
         <extracomment>Discord Rich Presence detail</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3898"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3910"/>
         <source>Small icon</source>
         <extracomment>Discord Rich Presence small icon&quot;</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3900"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3912"/>
         <source>State</source>
         <extracomment>Discord Rich Presence state</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3903"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3915"/>
         <source>Party size</source>
         <extracomment>Discord Rich Presence party size</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3905"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3917"/>
         <source>Party max</source>
         <extracomment>Discord Rich Presence maximum party size</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3907"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3919"/>
         <source>Time</source>
         <extracomment>Discord Rich Presence time until or time elapsed</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4394"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4406"/>
         <source>Set outer color of player room mark.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4394"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4406"/>
         <source>Set inner color of player room mark.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8917,110 +8914,110 @@ and there is enough space. The copying operation has failed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2438"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2454"/>
         <source>[ ERROR ] - Unable to load JSON map file: %1
 reason: %2.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2478"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2494"/>
         <source>Any map file (*.dat *.json *.xml)</source>
         <comment>Do not change extensions (in braces) as they are used programmatically</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2479"/>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2512"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2495"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2528"/>
         <source>Mudlet binary map (*.dat)</source>
         <comment>Do not change extensions (in braces) as they are used programmatically</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2480"/>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2513"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2496"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2529"/>
         <source>Mudlet JSON map (*.json)</source>
         <comment>Do not change extensions (in braces) as they are used programmatically</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2481"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2497"/>
         <source>Mudlet XML map (*.xml)</source>
         <comment>Do not change extensions (in braces) as they are used programmatically</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2482"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2498"/>
         <source>Any file (*)</source>
         <comment>Do not change extensions (in braces) as they are used programmatically</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3744"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3756"/>
         <source>&lt;p&gt;These are the sequence of hexadecimal numbers that are used by the Unicode consortium to identify the graphemes needed to create the symbol.  These numbers can be utilised to determine precisely what is to be drawn even if some fonts have glyphs that are the same for different codepoints or combination of codepoints.&lt;/p&gt;&lt;p&gt;Character entry utilities such as &lt;i&gt;charmap.exe&lt;/i&gt; on &lt;i&gt;Windows&lt;/i&gt; or &lt;i&gt;gucharmap&lt;/i&gt; on many Unix type operating systems will also use these numbers which cover everything from U+0020 {Space} to U+10FFFD the last usable number in the &lt;i&gt;Private Use Plane 16&lt;/i&gt; via most of the written marks that humanity has ever made.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3768"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3780"/>
         <source>more - not shown...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3791"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3803"/>
         <source>&lt;p&gt;The symbol cannot be made entirely from glyphs in the specified font, but, using other fonts in the system, it can. Either un-check the &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; option or try and choose another font that does have the needed glyphs.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You need not close this table to try another font, changing it on the main preferences dialogue will update this table after a slight delay.&lt;/i&gt;&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3945"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3957"/>
         <source>Map symbol usage - %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4026"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4038"/>
         <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4027"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4039"/>
         <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4028"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4040"/>
         <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4029"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4041"/>
         <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.html)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4032"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4044"/>
         <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4033"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4045"/>
         <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4034"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4046"/>
         <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4035"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4047"/>
         <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4526"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4538"/>
         <source>Deleting map - please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4535"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4547"/>
         <source>Deleted map.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9326,37 +9323,37 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
         </translation>
     </message>
     <message>
-        <location filename="../src/dlgRoomProperties.cpp" line="599"/>
+        <location filename="../src/dlgRoomProperties.cpp" line="595"/>
         <source>Delete room color</source>
         <extracomment>This action deletes a color from the list of all room colors</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgRoomProperties.cpp" line="627"/>
+        <location filename="../src/dlgRoomProperties.cpp" line="623"/>
         <source>OK</source>
         <extracomment>confirm room color selection dialog</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgRoomProperties.cpp" line="633"/>
+        <location filename="../src/dlgRoomProperties.cpp" line="629"/>
         <source>Cancel</source>
         <extracomment>cancel room color selection dialog</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgRoomProperties.cpp" line="682"/>
+        <location filename="../src/dlgRoomProperties.cpp" line="678"/>
         <source>Set a custom border color and thickness for the selected room(s). Leave at default to use the global map settings.</source>
         <extracomment>Instruction text shown in room properties dialog for the border customization section</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgRoomProperties.cpp" line="695"/>
+        <location filename="../src/dlgRoomProperties.cpp" line="691"/>
         <source>Set border color</source>
         <extracomment>Title for the color picker dialog when selecting a room border color</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgRoomProperties.cpp" line="522"/>
+        <location filename="../src/dlgRoomProperties.cpp" line="518"/>
         <source>Set symbol color</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9382,8 +9379,8 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
         </translation>
     </message>
     <message>
-        <location filename="../src/dlgRoomProperties.cpp" line="302"/>
-        <location filename="../src/dlgRoomProperties.cpp" line="339"/>
+        <location filename="../src/dlgRoomProperties.cpp" line="300"/>
+        <location filename="../src/dlgRoomProperties.cpp" line="335"/>
         <source>%1 (count: %2)</source>
         <extracomment>Format for showing a room symbol with its usage count. %1 is the symbol itself (e.g., &quot;★&quot; or &quot;!&quot;), %2 is the number of rooms using this symbol. Example output: &quot;★ (count: 5)&quot; or &quot;! (count: 12)&quot;. The word &quot;count&quot; and the format can be translated, but ensure the numbers remain clearly associated.
 ----------
@@ -9391,13 +9388,13 @@ Format for showing a room weight with its usage count. %1 is the weight value (e
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgRoomProperties.cpp" line="561"/>
-        <location filename="../src/dlgRoomProperties.cpp" line="618"/>
+        <location filename="../src/dlgRoomProperties.cpp" line="557"/>
+        <location filename="../src/dlgRoomProperties.cpp" line="614"/>
         <source>Define new room color</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgRoomProperties.cpp" line="584"/>
+        <location filename="../src/dlgRoomProperties.cpp" line="580"/>
         <source>Set room color</source>
         <translation type="unfinished"></translation>
     </message>
@@ -12749,15 +12746,15 @@ There is NO WARRANTY, to the extent permitted by law.</source>
         <location filename="../src/mudlet.cpp" line="386"/>
         <location filename="../src/mudlet.cpp" line="388"/>
         <location filename="../src/mudlet.cpp" line="710"/>
-        <location filename="../src/mudlet.cpp" line="4540"/>
-        <location filename="../src/mudlet.cpp" line="4543"/>
+        <location filename="../src/mudlet.cpp" line="4538"/>
+        <location filename="../src/mudlet.cpp" line="4541"/>
         <source>Mute all media</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/mudlet.cpp" line="392"/>
         <location filename="../src/mudlet.cpp" line="394"/>
-        <location filename="../src/mudlet.cpp" line="4572"/>
+        <location filename="../src/mudlet.cpp" line="4570"/>
         <source>Mute sounds from Mudlet (triggers, scripts, etc.)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -13298,72 +13295,72 @@ There is NO WARRANTY, to the extent permitted by law.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="1334"/>
+        <location filename="../src/mudlet.cpp" line="1333"/>
         <source>hh:mm:ss.zzz </source>
-        <extracomment>This represents the format of the timestamps shown alongside the texts * in a console and might require translation for a few locales; the content * is as per QDateTime::toString(...) and needs to follow the rules for that * function as well as being suitable for the translation locale.</extracomment>
+        <extracomment>This represents the format of the timestamps shown alongside the texts in a console and might require translation for a few locales; the content is as per QDateTime::toString(...) and needs to follow the rules for that function as well as being suitable for the translation locale.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="1339"/>
+        <location filename="../src/mudlet.cpp" line="1337"/>
         <source>------------ </source>
-        <extracomment>This represents the format of the timestamps shown for lines that do not * have a timestamp in a console that is showing them. If localised this * should be set to the same format and length as the smTimeStampFormat:</extracomment>
+        <extracomment>This represents the format of the timestamps shown for lines that do not have a timestamp in a console that is showing them. If localised this should be set to the same format and length as the smTimeStampFormat:</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="1815"/>
+        <location filename="../src/mudlet.cpp" line="1813"/>
         <source>%1 (Main Window)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="1842"/>
+        <location filename="../src/mudlet.cpp" line="1840"/>
         <source>%1 (Detached)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="3821"/>
+        <location filename="../src/mudlet.cpp" line="3819"/>
         <source>Map - %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4540"/>
-        <location filename="../src/mudlet.cpp" line="4543"/>
+        <location filename="../src/mudlet.cpp" line="4538"/>
+        <location filename="../src/mudlet.cpp" line="4541"/>
         <source>Unmute all media</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4557"/>
+        <location filename="../src/mudlet.cpp" line="4555"/>
         <source>[ INFO ]  - Mudlet and game sounds are muted. Use &quot;%1&quot; to unmute.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4558"/>
+        <location filename="../src/mudlet.cpp" line="4556"/>
         <source>[ INFO ]  - Mudlet and game sounds are unmuted. Use &quot;%1&quot; to mute.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4617"/>
+        <location filename="../src/mudlet.cpp" line="4615"/>
         <source>[ INFO ]  - Compact input line set. Press &quot;%1&quot; to show bottom-right buttons again.</source>
         <extracomment>Here %1 will be replaced with the keyboard shortcut, default is ALT+L.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4708"/>
-        <location filename="../src/mudlet.cpp" line="4772"/>
+        <location filename="../src/mudlet.cpp" line="4706"/>
+        <location filename="../src/mudlet.cpp" line="4770"/>
         <source>Profile Toolbar</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4761"/>
+        <location filename="../src/mudlet.cpp" line="4759"/>
         <source>Detach Tab &quot;%1&quot;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4780"/>
+        <location filename="../src/mudlet.cpp" line="4778"/>
         <source>Show Connection Indicators on Tabs</source>
         <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/mudlet.cpp" line="5365"/>
+        <location filename="../src/mudlet.cpp" line="5363"/>
         <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
         <extracomment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</extracomment>
         <translation type="unfinished">
@@ -13371,7 +13368,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/mudlet.cpp" line="5383"/>
+        <location filename="../src/mudlet.cpp" line="5381"/>
         <source>Review %n update(s)...</source>
         <extracomment>Review update(s) menu item, %n is the count of how many updates are available</extracomment>
         <translation type="unfinished">
@@ -13379,7 +13376,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/mudlet.cpp" line="5385"/>
+        <location filename="../src/mudlet.cpp" line="5383"/>
         <source>Review the update(s) available...</source>
         <extracomment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</extracomment>
         <translation type="unfinished">
@@ -13394,7 +13391,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
         <location filename="../src/mudlet.cpp" line="398"/>
         <location filename="../src/mudlet.cpp" line="400"/>
-        <location filename="../src/mudlet.cpp" line="4577"/>
+        <location filename="../src/mudlet.cpp" line="4575"/>
         <source>Mute sounds from the game (MCMP, MSP)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -14169,59 +14166,59 @@ There is NO WARRANTY, to the extent permitted by law.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="5465"/>
+        <location filename="../src/mudlet.cpp" line="5463"/>
         <source>Could not open profile file: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="5474"/>
+        <location filename="../src/mudlet.cpp" line="5472"/>
         <source>[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.
 Try loading an older version in &apos;Connect - Options - Profile history&apos; or double-check that %1 looks correct.</source>
         <extracomment>%1 is the path and file name (i.e. the location) of the problem fil</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4560"/>
+        <location filename="../src/mudlet.cpp" line="4558"/>
         <source>[ INFO ]  - Mudlet and game sounds are muted.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4560"/>
+        <location filename="../src/mudlet.cpp" line="4558"/>
         <source>[ INFO ]  - Mudlet and game sounds are unmuted.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4572"/>
+        <location filename="../src/mudlet.cpp" line="4570"/>
         <source>Unmute sounds from Mudlet (Triggers, Scripts, etc.)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4577"/>
+        <location filename="../src/mudlet.cpp" line="4575"/>
         <source>Unmute sounds from the game (MCMP, MSP)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4809"/>
+        <location filename="../src/mudlet.cpp" line="4807"/>
         <source>Cannot load a replay as one is already in progress in this or another profile.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4828"/>
+        <location filename="../src/mudlet.cpp" line="4826"/>
         <source>Replay each step with a shorter time interval between steps.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4834"/>
+        <location filename="../src/mudlet.cpp" line="4832"/>
         <source>Replay each step with a longer time interval between steps.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="6594"/>
+        <location filename="../src/mudlet.cpp" line="6592"/>
         <source>Hide tray icon</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="6599"/>
+        <location filename="../src/mudlet.cpp" line="6597"/>
         <source>Quit Mudlet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -14416,13 +14413,13 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     </message>
     <message>
         <location filename="../src/mudlet.cpp" line="528"/>
-        <location filename="../src/mudlet.cpp" line="5370"/>
+        <location filename="../src/mudlet.cpp" line="5368"/>
         <source>About</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/mudlet.cpp" line="530"/>
-        <location filename="../src/mudlet.cpp" line="5353"/>
+        <location filename="../src/mudlet.cpp" line="5351"/>
         <source>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</source>
         <extracomment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</extracomment>
         <translation type="unfinished"></translation>
@@ -14463,14 +14460,14 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="2353"/>
-        <location filename="../src/mudlet.cpp" line="2461"/>
-        <location filename="../src/mudlet.cpp" line="4904"/>
+        <location filename="../src/mudlet.cpp" line="2351"/>
+        <location filename="../src/mudlet.cpp" line="2459"/>
+        <location filename="../src/mudlet.cpp" line="4902"/>
         <source>Load a Mudlet replay.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4296"/>
+        <location filename="../src/mudlet.cpp" line="4294"/>
         <source>Central Debug Console</source>
         <translation type="unfinished"></translation>
     </message>
@@ -14486,61 +14483,61 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="2270"/>
-        <location filename="../src/mudlet.cpp" line="2358"/>
+        <location filename="../src/mudlet.cpp" line="2268"/>
+        <location filename="../src/mudlet.cpp" line="2356"/>
         <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Disabled until a profile is loaded.&lt;/i&gt;&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4002"/>
+        <location filename="../src/mudlet.cpp" line="4000"/>
         <source>%1 - notes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4105"/>
+        <location filename="../src/mudlet.cpp" line="4103"/>
         <source>Select Replay</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4105"/>
+        <location filename="../src/mudlet.cpp" line="4103"/>
         <source>*.dat</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4412"/>
+        <location filename="../src/mudlet.cpp" line="4410"/>
         <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4826"/>
+        <location filename="../src/mudlet.cpp" line="4824"/>
         <source>Faster</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4832"/>
+        <location filename="../src/mudlet.cpp" line="4830"/>
         <source>Slower</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4844"/>
-        <location filename="../src/mudlet.cpp" line="4912"/>
-        <location filename="../src/mudlet.cpp" line="4921"/>
+        <location filename="../src/mudlet.cpp" line="4842"/>
+        <location filename="../src/mudlet.cpp" line="4910"/>
+        <location filename="../src/mudlet.cpp" line="4919"/>
         <source>Speed: X%1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4851"/>
-        <location filename="../src/mudlet.cpp" line="4867"/>
+        <location filename="../src/mudlet.cpp" line="4849"/>
+        <location filename="../src/mudlet.cpp" line="4865"/>
         <source>Time: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="5407"/>
+        <location filename="../src/mudlet.cpp" line="5405"/>
         <source>Update installed - restart to apply</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="5525"/>
+        <location filename="../src/mudlet.cpp" line="5523"/>
         <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
         <translation type="unfinished"></translation>
