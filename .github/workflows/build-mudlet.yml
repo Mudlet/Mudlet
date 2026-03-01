@@ -472,6 +472,7 @@ jobs:
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --run-undo-tests
       env:
         ASAN_OPTIONS: detect_leaks=0
+        MUDLET_TEST_MODE: 1
 
     - name: Passed C++ undo/redo tests
       if: matrix.run_tests == 'true'
@@ -481,3 +482,5 @@ jobs:
           echo "C++ undo/redo tests failed - see the action called 'Run C++ undo/redo tests' above for detailed output."
           exit 1
         fi
+      env:
+        MUDLET_TEST_MODE: 1
