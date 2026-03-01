@@ -74,6 +74,7 @@ jobs:
       run: ccache --zero-stats --show-stats
 
     - name: Get sentry-native commit hash
+      shell: msys2 {0}
       id: sentry-hash
       run: echo "SENTRY_HASH=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
