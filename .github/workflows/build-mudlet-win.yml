@@ -24,6 +24,9 @@ jobs:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
     if: ${{ github.repository_owner == 'Mudlet' }}
+    concurrency:
+      group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
     env:
       SIGNPATH_SIGNING_ENABLED: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
     strategy:
@@ -116,10 +119,11 @@ jobs:
         QT_FORCE_STDERR_LOGGING: 1
 
     - name: (Windows) Run Lua tests
-      timeout-minutes: 5
+      timeout-minutes: 1
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        MUDLET_TEST_MODE: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
       run: |
