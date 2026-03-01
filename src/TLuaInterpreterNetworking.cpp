@@ -735,7 +735,7 @@ int TLuaInterpreter::getTelnetOptionsStatus(lua_State* L)
 
     lua_newtable(L);
     // qDebug().nospace().noquote() << "TLuaInterpreter::getTelnetOptionsStatus() INFO - bitset values:";
-    for (size_t i; i < heAnnounced.size(); ++i) {
+    for (size_t i = 0; i < heAnnounced.size(); ++i) {
         // The options start at zero which is not ideal for an index table
         // but since we are producting an associative array here with lots of
         // gaps in the keys that isn't really a problem:
