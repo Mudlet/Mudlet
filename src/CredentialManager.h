@@ -81,9 +81,10 @@ public:
 
 private:
     // Low-level async keychain methods (internal use only - use hybrid *Password methods instead)
-    void storeCredential(const QString& service, const QString& account, const QString& password, CredentialCallback callback);
-    void retrieveCredential(const QString& service, const QString& account, CredentialRetrievalCallback callback);
-    void removeCredential(const QString& service, const QString& account, CredentialCallback callback);
+    // profileName is used for file storage fallback (the service name is a hash that can't be reversed)
+    void storeCredential(const QString& service, const QString& account, const QString& password, const QString& profileName, CredentialCallback callback);
+    void retrieveCredential(const QString& service, const QString& account, const QString& profileName, CredentialRetrievalCallback callback);
+    void removeCredential(const QString& service, const QString& account, const QString& profileName, CredentialCallback callback);
 
     // Check if QtKeychain is available and working (asynchronous)
     void isKeychainAvailable(AvailabilityCallback callback);
@@ -108,6 +109,7 @@ private:
     // Static utility methods for fallback storage
     static QString generateFilePath(const QString& profileName, const QString& key);
     static QString generateServiceName(const QString& profileName, const QString& key);
+    static QString generateLegacyServiceName(const QString& profileName, const QString& key);
     static bool isValidKeyName(const QString& key);
     static bool storeCredentialToFile(const QString& profileName, const QString& key, const QString& credential);
     static QString retrieveCredentialFromFile(const QString& profileName, const QString& key);
@@ -116,6 +118,11 @@ private:
     // Legacy keychain migration support
     void checkLegacyKeychainFormat(const QString& profileName, std::function<void(bool, const QString&)> callback);
     void deleteLegacyKeychainEntry(const QString& profileName);
+
+    // Password retrieval fallback helpers (extracted from retrievePassword for readability)
+    void attemptCollidingMigration(const QString& profileName, const QString& key, const QString& legacyService, const QString& password, CredentialRetrievalCallback callback);
+    void attemptLegacyKeychainMigration(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
+    void fallbackFileRetrieval(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
 
     // Current operation state
     QPointer<QKeychain::Job> mCurrentJob{nullptr};

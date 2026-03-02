@@ -308,6 +308,12 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
 dlgConnectionProfiles::~dlgConnectionProfiles()
 {
+    // Stop any pending password save timer to prevent late updates
+    if (mPasswordSaveTimer) {
+        mPasswordSaveTimer->stop();
+    }
+    mPendingPasswordSaveProfile.clear();
+
     // Clear any pending operation flags
     mKeychainOperationInProgress = false;
     mPendingProfileLoad.clear();
@@ -1839,9 +1845,11 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
         if (!character_password_entry->text().trimmed().isEmpty()) {
             pHost->setPass(character_password_entry->text().trimmed());
-        } else {
-            slot_updatePassword(pHost->getPass());
         }
+        // Note: If password field is empty, we don't call slot_updatePassword() because:
+        // 1. The host's password was already loaded via Host::loadSecuredPassword()
+        // 2. Calling slot_updatePassword with empty password would delete the stored password
+        // 3. slot_updatePassword reads profile from list widget which could mismatch
 
         if (!login_entry->text().trimmed().isEmpty()) {
             pHost->setLogin(login_entry->text().trimmed());
@@ -2457,6 +2465,13 @@ void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name
 
 void dlgConnectionProfiles::slot_passwordTextChanged()
 {
+    // Capture the current profile name - this is the profile we want to save the password for
+    QListWidgetItem* pItem = listWidget_profiles->currentItem();
+    if (!pItem) {
+        return;
+    }
+    mPendingPasswordSaveProfile = pItem->data(csmNameRole).toString();
+
     // Cancel any pending password save
     if (mPasswordSaveTimer) {
         mPasswordSaveTimer->stop();
@@ -2465,9 +2480,14 @@ void dlgConnectionProfiles::slot_passwordTextChanged()
         mPasswordSaveTimer->setSingleShot(true);
         mPasswordSaveTimer->setInterval(500); // 500ms debounce
         connect(mPasswordSaveTimer, &QTimer::timeout, this, [this]() {
-            QListWidgetItem* pItem = listWidget_profiles->currentItem();
-            if (pItem) {
-                slot_updatePassword(character_password_entry->text());
+            // Use the captured profile name, not the current selection
+            if (!mPendingPasswordSaveProfile.isEmpty()) {
+                // Check if this profile is STILL selected - if not, don't save
+                // (user switched away, so the password field content is for a different profile)
+                QListWidgetItem* currentItem = listWidget_profiles->currentItem();
+                if (currentItem && currentItem->data(csmNameRole).toString() == mPendingPasswordSaveProfile) {
+                    slot_updatePassword(character_password_entry->text());
+                }
             }
         });
     }
