@@ -121,7 +121,7 @@ private:
     void setItemName(QListWidgetItem*, const QString&) const;
     QIcon customIcon(const QString&, const std::optional<QColor>&) const;
     void addLetterToProfileSearch(const int);
-    inline void clearNotificationArea();
+    void clearNotificationArea();
     void loadPasswordAsync(const QString& profileName);
 
     // split into 3 properties so each one can be checked individually
@@ -151,9 +151,9 @@ private:
     QTimer mSearchTextTimer;
     QString mSearchText;
     QTimer* mPasswordSaveTimer = nullptr;
-    QString mPendingPasswordSaveProfile;
 
-    // Async connection handling
+    // Async connection and password handling
+    QString mPendingPasswordSaveProfile;
     QString mPendingProfileLoad;               // Profile name waiting for password load
     bool mPendingConnect = false;              // Whether to connect (true) or just load (false)
     bool mKeychainOperationInProgress = false; // Track if keychain op is active

@@ -36,7 +36,6 @@
 #include <QDir>
 #include <QSaveFile>
 #include <QTemporaryDir>
-#include <QVersionNumber>
 #include <QtTest/QtTest>
 
 class PasswordMigrationTest : public QObject {
