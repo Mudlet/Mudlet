@@ -7336,23 +7336,10 @@ int TLuaInterpreter::setConfig(lua_State* L)
             host.mpMap->mpMapper->slot_setMapperPanelVisible(getVerifiedBool(L, __func__, 2, "value"));
             return success();
         }
-        if (key == qsl("mapShowRoomBorders")) {
-            host.mMapperShowRoomBorders = getVerifiedBool(L, __func__, 2, "value");
-            return success();
-        }
         if (key == qsl("mapShowGrid")) {
             const bool showGrid = getVerifiedBool(L, __func__, 2, "value");
             host.mMapperShowGrid = showGrid;
             host.mpMap->mpMapper->slot_setShowGrid(showGrid);
-            return success();
-        }
-        if (key == qsl("mapCenterSmallAreas")) {
-            host.mMapCenterOnArea = getVerifiedBool(L, __func__, 2, "value");
-
-            if (host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
-                host.mpMap->mpMapper->mp2dMap->update();
-            }
-
             return success();
         }
         if (key == qsl("showUpperLowerLevels")) {
@@ -7422,6 +7409,20 @@ int TLuaInterpreter::setConfig(lua_State* L)
             updateMap(L);
             return success();
         }
+    }
+
+    if (key == qsl("mapShowRoomBorders")) {
+        host.mMapperShowRoomBorders = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("mapCenterSmallAreas")) {
+        host.mMapCenterOnArea = getVerifiedBool(L, __func__, 2, "value");
+
+        if (host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
+            host.mpMap->mpMapper->mp2dMap->update();
+        }
+
+        return success();
     }
 
     if (key == qsl("enableGMCP")) {
