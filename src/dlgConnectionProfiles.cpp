@@ -2365,23 +2365,22 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
 
             // Check if profile selection has changed while we were waiting
             if (listWidget_profiles->currentItem() && listWidget_profiles->currentItem()->data(csmNameRole).toString() == profile_name) {
-                if (success) {
-                    // Keychain operation succeeded - set the password (even if empty)
-                    // Temporarily block textChanged signal to avoid triggering save on programmatic setText
+                if (success && !retrievedPassword.isEmpty()) {
+                    // Keychain returned a non-empty password
                     {
                         const QSignalBlocker blocker(character_password_entry);
                         character_password_entry->setText(retrievedPassword);
                     }
-
-                    if (retrievedPassword.isEmpty()) {
-                        qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profile_name;
-                    } else {
-                        qDebug() << "dlgConnectionProfiles: Successfully loaded password from keychain for" << profile_name;
-                    }
+                    qDebug() << "dlgConnectionProfiles: Successfully loaded password from keychain for" << profile_name;
                 } else {
-                    // Fallback to QSettings only if credential retrieval failed
+                    // Keychain either failed or returned empty - fall back
+                    // to QSettings and then the portable password file
                     loadPasswordFromSettings(profile_name);
-                    qDebug() << "dlgConnectionProfiles: Credential retrieval unsuccessful for" << profile_name << "-" << errorMessage;
+                    if (!success) {
+                        qDebug() << "dlgConnectionProfiles: Credential retrieval unsuccessful for" << profile_name << "-" << errorMessage;
+                    } else {
+                        qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profile_name << ", checked fallback sources";
+                    }
                 }
             }
 
@@ -2443,7 +2442,13 @@ void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name
             settings.setValue(qsl("password"), oldPassword);
             settings.remove(qsl("login"));
         } else {
-            character_password_entry->setText(QString());
+            // Final fallback: check the portable password file on disk.
+            // This file predates the keychain/QSettings migration and may
+            // still contain a password if migration hasn't run yet (e.g.
+            // dialog opened before the deferred migration timer fires) or
+            // if migration failed.
+            const QString portablePassword = readProfileData(profile_name, qsl("password"));
+            character_password_entry->setText(portablePassword);
         }
     }
 
