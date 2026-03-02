@@ -190,7 +190,7 @@ jobs:
         api-token: ${{secrets.SIGNPATH_API_TOKEN}}
         organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}
         project-slug: 'mudlet'
-        signing-policy-slug: ${{secrets.SIGNPATH_SIGNING_POLICY_SLUG}}
+        signing-policy-slug: ${{ (github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && 'test-signing' || 'release-signing' }}
         artifact-configuration-slug: 'binaries'
         github-artifact-id: ${{steps.upload-unsigned-binaries.outputs.artifact-id}}
         wait-for-completion: true
@@ -260,7 +260,7 @@ jobs:
         api-token: ${{secrets.SIGNPATH_API_TOKEN}}
         organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}
         project-slug: 'mudlet'
-        signing-policy-slug: ${{secrets.SIGNPATH_SIGNING_POLICY_SLUG}}
+        signing-policy-slug: ${{ (github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && 'test-signing' || 'release-signing' }}
         artifact-configuration-slug: 'installer'
         github-artifact-id: ${{steps.upload-unsigned-installer.outputs.artifact-id}}
         wait-for-completion: true
