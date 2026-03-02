@@ -39,183 +39,203 @@
 #include <QVersionNumber>
 #include <QtTest/QtTest>
 
-class PasswordMigrationTest : public QObject
-{
-    Q_OBJECT
+class PasswordMigrationTest : public QObject {
+  Q_OBJECT
 
 private:
-    QTemporaryDir mTempDir;
+  QTemporaryDir mTempDir;
 
-    // Mirrors the portable password file write logic from
-    // dlgConnectionProfiles::writeProfileData / mudlet::writeProfileData
-    bool writePortablePasswordFile(const QString& profileDir, const QString& item, const QString& password)
-    {
-        const QString filePath = qsl("%1/%2").arg(profileDir, item);
-        QSaveFile file(filePath);
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-            return false;
-        }
-        QDataStream ofs(&file);
-        // Match the version used by Mudlet for Qt >= 5.13
-        ofs.setVersion(QDataStream::Qt_5_12);
-        ofs << password;
-        return file.commit();
+  // Mirrors the portable password file write logic from
+  // dlgConnectionProfiles::writeProfileData / mudlet::writeProfileData
+  bool writePortablePasswordFile(const QString &profileDir, const QString &item,
+                                 const QString &password) {
+    const QString filePath = QStringLiteral("%1/%2").arg(profileDir, item);
+    QSaveFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+      return false;
     }
+    QDataStream ofs(&file);
+    // Match the version used by Mudlet for Qt >= 5.13
+    ofs.setVersion(QDataStream::Qt_5_12);
+    ofs << password;
+    return file.commit();
+  }
 
-    // Mirrors the portable password file read logic from
-    // dlgConnectionProfiles::readProfileData / mudlet::readProfileData
-    QString readPortablePasswordFile(const QString& profileDir, const QString& item)
-    {
-        const QString filePath = qsl("%1/%2").arg(profileDir, item);
-        QFile file(filePath);
-        if (!file.open(QIODevice::ReadOnly)) {
-            return QString();
-        }
-        QDataStream ifs(&file);
-        ifs.setVersion(QDataStream::Qt_5_12);
-        QString ret;
-        ifs >> ret;
-        file.close();
-        return ret;
+  // Mirrors the portable password file read logic from
+  // dlgConnectionProfiles::readProfileData / mudlet::readProfileData
+  QString readPortablePasswordFile(const QString &profileDir,
+                                   const QString &item) {
+    const QString filePath = QStringLiteral("%1/%2").arg(profileDir, item);
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+      return QString();
     }
+    QDataStream ifs(&file);
+    ifs.setVersion(QDataStream::Qt_5_12);
+    QString ret;
+    ifs >> ret;
+    file.close();
+    return ret;
+  }
 
 private slots:
-    void initTestCase()
-    {
-        qputenv("MUDLET_TEST_MODE", "1");
-        QVERIFY(mTempDir.isValid());
-    }
+  void initTestCase() {
+    qputenv("MUDLET_TEST_MODE", "1");
+    QVERIFY(mTempDir.isValid());
+  }
 
-    // Verify the portable file round-trip: write → read is lossless
-    void testPortableFileRoundTrip()
-    {
-        const QString profile = qsl("RoundTripProfile");
-        const QString profileDir = qsl("%1/%2").arg(mTempDir.path(), profile);
-        QVERIFY(QDir().mkpath(profileDir));
+  // Verify the portable file round-trip: write → read is lossless
+  void testPortableFileRoundTrip() {
+    const QString profile = QStringLiteral("RoundTripProfile");
+    const QString profileDir =
+        QStringLiteral("%1/%2").arg(mTempDir.path(), profile);
+    QVERIFY(QDir().mkpath(profileDir));
 
-        const QString password = qsl("s3cret!P@ss");
-        QVERIFY(writePortablePasswordFile(profileDir, qsl("password"), password));
+    const QString password = QStringLiteral("s3cret!P@ss");
+    QVERIFY(writePortablePasswordFile(profileDir, QStringLiteral("password"),
+                                      password));
 
-        const QString retrieved = readPortablePasswordFile(profileDir, qsl("password"));
-        QCOMPARE(retrieved, password);
-    }
+    const QString retrieved =
+        readPortablePasswordFile(profileDir, QStringLiteral("password"));
+    QCOMPARE(retrieved, password);
+  }
 
-    // Verify empty file → empty string (no crash, no garbage)
-    void testPortableFileEmptyPassword()
-    {
-        const QString profile = qsl("EmptyPassProfile");
-        const QString profileDir = qsl("%1/%2").arg(mTempDir.path(), profile);
-        QVERIFY(QDir().mkpath(profileDir));
+  // Verify empty file → empty string (no crash, no garbage)
+  void testPortableFileEmptyPassword() {
+    const QString profile = QStringLiteral("EmptyPassProfile");
+    const QString profileDir =
+        QStringLiteral("%1/%2").arg(mTempDir.path(), profile);
+    QVERIFY(QDir().mkpath(profileDir));
 
-        // Write an empty password
-        QVERIFY(writePortablePasswordFile(profileDir, qsl("password"), QString()));
+    // Write an empty password
+    QVERIFY(writePortablePasswordFile(profileDir, QStringLiteral("password"),
+                                      QString()));
 
-        const QString retrieved = readPortablePasswordFile(profileDir, qsl("password"));
-        QVERIFY(retrieved.isEmpty());
-    }
+    const QString retrieved =
+        readPortablePasswordFile(profileDir, QStringLiteral("password"));
+    QVERIFY(retrieved.isEmpty());
+  }
 
-    // Verify no file → empty string (graceful fallback)
-    void testPortableFileMissing()
-    {
-        const QString profile = qsl("MissingPassProfile");
-        const QString profileDir = qsl("%1/%2").arg(mTempDir.path(), profile);
-        QVERIFY(QDir().mkpath(profileDir));
+  // Verify no file → empty string (graceful fallback)
+  void testPortableFileMissing() {
+    const QString profile = QStringLiteral("MissingPassProfile");
+    const QString profileDir =
+        QStringLiteral("%1/%2").arg(mTempDir.path(), profile);
+    QVERIFY(QDir().mkpath(profileDir));
 
-        // Don't create a password file
-        const QString retrieved = readPortablePasswordFile(profileDir, qsl("password"));
-        QVERIFY(retrieved.isEmpty());
-    }
+    // Don't create a password file
+    const QString retrieved =
+        readPortablePasswordFile(profileDir, QStringLiteral("password"));
+    QVERIFY(retrieved.isEmpty());
+  }
 
-    // Simulate the migration path: portable file exists, CredentialManager
-    // is empty, migration reads portable file and stores into CredentialManager.
-    void testMigrationPattern()
-    {
-        const QString profile = qsl("MigrationTestProfile");
-        const QString profileDir = qsl("%1/%2").arg(mTempDir.path(), profile);
-        QVERIFY(QDir().mkpath(profileDir));
+  // Simulate the migration path: portable file exists, CredentialManager
+  // is empty, migration reads portable file and stores into CredentialManager.
+  void testMigrationPattern() {
+    const QString profile = QStringLiteral("MigrationTestProfile");
+    const QString profileDir =
+        QStringLiteral("%1/%2").arg(mTempDir.path(), profile);
+    QVERIFY(QDir().mkpath(profileDir));
 
-        const QString password = qsl("migr@t1on_P@ss");
+    const QString password = QStringLiteral("migr@t1on_P@ss");
 
-        // Step 1: CredentialManager has nothing for this profile
-        const QString beforeMigration = CredentialManager::retrieveCredential(profile, qsl("character"));
-        QVERIFY(beforeMigration.isEmpty());
+    // Step 1: CredentialManager has nothing for this profile
+    const QString beforeMigration = CredentialManager::retrieveCredential(
+        profile, QStringLiteral("character"));
+    QVERIFY(beforeMigration.isEmpty());
 
-        // Step 2: Write password to the portable file (simulating legacy state)
-        QVERIFY(writePortablePasswordFile(profileDir, qsl("password"), password));
+    // Step 2: Write password to the portable file (simulating legacy state)
+    QVERIFY(writePortablePasswordFile(profileDir, QStringLiteral("password"),
+                                      password));
 
-        // Step 3: Read from portable file (simulating what migration does)
-        const QString portablePassword = readPortablePasswordFile(profileDir, qsl("password"));
-        QCOMPARE(portablePassword, password);
+    // Step 3: Read from portable file (simulating what migration does)
+    const QString portablePassword =
+        readPortablePasswordFile(profileDir, QStringLiteral("password"));
+    QCOMPARE(portablePassword, password);
 
-        // Step 4: Store into CredentialManager (simulating migratePasswordsToSecureStorage)
-        QVERIFY(CredentialManager::storeCredential(profile, qsl("character"), portablePassword));
+    // Step 4: Store into CredentialManager (simulating
+    // migratePasswordsToSecureStorage)
+    QVERIFY(CredentialManager::storeCredential(
+        profile, QStringLiteral("character"), portablePassword));
 
-        // Step 5: Now CredentialManager has it
-        const QString afterMigration = CredentialManager::retrieveCredential(profile, qsl("character"));
-        QCOMPARE(afterMigration, password);
+    // Step 5: Now CredentialManager has it
+    const QString afterMigration = CredentialManager::retrieveCredential(
+        profile, QStringLiteral("character"));
+    QCOMPARE(afterMigration, password);
 
-        // Cleanup
-        CredentialManager::removeCredential(profile, qsl("character"));
-    }
+    // Cleanup
+    CredentialManager::removeCredential(profile, QStringLiteral("character"));
+  }
 
-    // The core regression scenario: CredentialManager is empty, QSettings is
-    // empty, but the portable file exists.  The fallback should find it.
-    void testFallbackToPortableFile()
-    {
-        const QString profile = qsl("FallbackTestProfile");
-        const QString profileDir = qsl("%1/%2").arg(mTempDir.path(), profile);
-        QVERIFY(QDir().mkpath(profileDir));
+  // The core regression scenario: CredentialManager is empty, QSettings is
+  // empty, but the portable file exists.  The fallback should find it.
+  void testFallbackToPortableFile() {
+    const QString profile = QStringLiteral("FallbackTestProfile");
+    const QString profileDir =
+        QStringLiteral("%1/%2").arg(mTempDir.path(), profile);
+    QVERIFY(QDir().mkpath(profileDir));
 
-        const QString password = qsl("f@llb@ck_P@ss!");
+    const QString password = QStringLiteral("f@llb@ck_P@ss!");
 
-        // Credential manager has nothing
-        QVERIFY(CredentialManager::retrieveCredential(profile, qsl("character")).isEmpty());
+    // Credential manager has nothing
+    QVERIFY(CredentialManager::retrieveCredential(profile,
+                                                  QStringLiteral("character"))
+                .isEmpty());
 
-        // QSettings has nothing (we don't set anything)
+    // QSettings has nothing (we don't set anything)
 
-        // Portable file has the password
-        QVERIFY(writePortablePasswordFile(profileDir, qsl("password"), password));
+    // Portable file has the password
+    QVERIFY(writePortablePasswordFile(profileDir, QStringLiteral("password"),
+                                      password));
 
-        // The fallback logic should: check CredentialManager → empty,
-        // check QSettings → empty, check portable file → found.
-        // Here we verify each step of the chain independently.
+    // The fallback logic should: check CredentialManager → empty,
+    // check QSettings → empty, check portable file → found.
+    // Here we verify each step of the chain independently.
 
-        // CredentialManager: empty
-        const QString fromCredMgr = CredentialManager::retrieveCredential(profile, qsl("character"));
-        QVERIFY(fromCredMgr.isEmpty());
+    // CredentialManager: empty
+    const QString fromCredMgr = CredentialManager::retrieveCredential(
+        profile, QStringLiteral("character"));
+    QVERIFY(fromCredMgr.isEmpty());
 
-        // Portable file: has password (this is what the fix restores)
-        const QString fromFile = readPortablePasswordFile(profileDir, qsl("password"));
-        QCOMPARE(fromFile, password);
+    // Portable file: has password (this is what the fix restores)
+    const QString fromFile =
+        readPortablePasswordFile(profileDir, QStringLiteral("password"));
+    QCOMPARE(fromFile, password);
 
-        // After finding it, the migration should store it for next time
-        QVERIFY(CredentialManager::storeCredential(profile, qsl("character"), fromFile));
-        QCOMPARE(CredentialManager::retrieveCredential(profile, qsl("character")), password);
+    // After finding it, the migration should store it for next time
+    QVERIFY(CredentialManager::storeCredential(
+        profile, QStringLiteral("character"), fromFile));
+    QCOMPARE(CredentialManager::retrieveCredential(profile,
+                                                   QStringLiteral("character")),
+             password);
 
-        // Cleanup
-        CredentialManager::removeCredential(profile, qsl("character"));
-    }
+    // Cleanup
+    CredentialManager::removeCredential(profile, QStringLiteral("character"));
+  }
 
-    // Verify that Unicode passwords survive the portable file round-trip
-    void testPortableFileUnicodePassword()
-    {
-        const QString profile = qsl("UnicodePassProfile");
-        const QString profileDir = qsl("%1/%2").arg(mTempDir.path(), profile);
-        QVERIFY(QDir().mkpath(profileDir));
+  // Verify that Unicode passwords survive the portable file round-trip
+  void testPortableFileUnicodePassword() {
+    const QString profile = QStringLiteral("UnicodePassProfile");
+    const QString profileDir =
+        QStringLiteral("%1/%2").arg(mTempDir.path(), profile);
+    QVERIFY(QDir().mkpath(profileDir));
 
-        const QString password = qsl("пароль密码パスワード🔑");
-        QVERIFY(writePortablePasswordFile(profileDir, qsl("password"), password));
+    const QString password = QStringLiteral("пароль密码パスワード🔑");
+    QVERIFY(writePortablePasswordFile(profileDir, QStringLiteral("password"),
+                                      password));
 
-        const QString retrieved = readPortablePasswordFile(profileDir, qsl("password"));
-        QCOMPARE(retrieved, password);
-    }
+    const QString retrieved =
+        readPortablePasswordFile(profileDir, QStringLiteral("password"));
+    QCOMPARE(retrieved, password);
+  }
 
-    void cleanupTestCase()
-    {
-        // Defensive cleanup
-        CredentialManager::removeCredential(qsl("MigrationTestProfile"), qsl("character"));
-        CredentialManager::removeCredential(qsl("FallbackTestProfile"), qsl("character"));
-    }
+  void cleanupTestCase() {
+    // Defensive cleanup
+    CredentialManager::removeCredential(QStringLiteral("MigrationTestProfile"),
+                                        QStringLiteral("character"));
+    CredentialManager::removeCredential(QStringLiteral("FallbackTestProfile"),
+                                        QStringLiteral("character"));
+  }
 };
 
 #include "PasswordMigrationTest.moc"
