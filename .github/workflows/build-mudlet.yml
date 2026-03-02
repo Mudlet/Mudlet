@@ -18,6 +18,9 @@ jobs:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
     if: ${{ github.repository_owner == 'Mudlet' }}
+    concurrency:
+      group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
     env:
       LUA_VERSION: '5.1.5'
     strategy:
@@ -98,6 +101,7 @@ jobs:
         HOMEBREW_NO_AUTO_UPDATE: "ON"
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
+      timeout-minutes: 3
       run: |
         # Install all required dependencies
         brew install libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost
@@ -201,12 +205,13 @@ jobs:
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
     - name: (Linux) Build xcb-util-cursor 0.1.5
+      timeout-minutes: 3
       if: runner.os == 'Linux'
       run: |
         # Download and extract xcb-util-cursor 0.1.5
         # This version fixes the off-by-one heap buffer overflow in _XcursorThemeInherits
         # that causes PTB builds to crash with AddressSanitizer
-        wget -q https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz
+        wget -q --read-timeout=10 --retry-connrefused --retry-on-host-error --waitretry=60 https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz
         tar xf xcb-util-cursor-0.1.5.tar.xz
         cd xcb-util-cursor-0.1.5
 
@@ -408,7 +413,6 @@ jobs:
     - name: (Linux) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os =='Linux'
       run: cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
-      shell: bash
 
     - name: (macOS) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
@@ -422,14 +426,14 @@ jobs:
         fi
         cd ~/Desktop
         sudo codesign --remove-signature ~/Desktop/Mudlet.app
-      shell: bash
 
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
-      timeout-minutes: 5
+      timeout-minutes: 1
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        MUDLET_TEST_MODE: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
@@ -437,11 +441,11 @@ jobs:
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      timeout-minutes: 5
-      shell: bash
+      timeout-minutes: 1
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        MUDLET_TEST_MODE: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: detect_leaks=0
@@ -465,7 +469,6 @@ jobs:
     - name: (macOS) Run C++ undo/redo tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
       timeout-minutes: 5
-      shell: bash
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --run-undo-tests
       env:
         ASAN_OPTIONS: detect_leaks=0
