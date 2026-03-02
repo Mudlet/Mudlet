@@ -308,7 +308,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
 dlgConnectionProfiles::~dlgConnectionProfiles()
 {
-    // Stop any pending password save timer to prevent late updates
     if (mPasswordSaveTimer) {
         mPasswordSaveTimer->stop();
     }
@@ -2374,15 +2373,12 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
             // Check if profile selection has changed while we were waiting
             if (listWidget_profiles->currentItem() && listWidget_profiles->currentItem()->data(csmNameRole).toString() == profile_name) {
                 if (success && !retrievedPassword.isEmpty()) {
-                    // Keychain returned a non-empty password
                     {
                         const QSignalBlocker blocker(character_password_entry);
                         character_password_entry->setText(retrievedPassword);
                     }
                     qDebug() << "dlgConnectionProfiles: Successfully loaded password from keychain for" << profile_name;
                 } else {
-                    // Keychain either failed or returned empty - fall back
-                    // to QSettings and then the portable password file
                     loadPasswordFromSettings(profile_name);
                     if (!success) {
                         qDebug() << "dlgConnectionProfiles: Credential retrieval unsuccessful for" << profile_name << "-" << errorMessage;
@@ -2465,7 +2461,6 @@ void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name
 
 void dlgConnectionProfiles::slot_passwordTextChanged()
 {
-    // Capture the current profile name - this is the profile we want to save the password for
     QListWidgetItem* pItem = listWidget_profiles->currentItem();
     if (!pItem) {
         return;
@@ -2480,7 +2475,6 @@ void dlgConnectionProfiles::slot_passwordTextChanged()
         mPasswordSaveTimer->setSingleShot(true);
         mPasswordSaveTimer->setInterval(500); // 500ms debounce
         connect(mPasswordSaveTimer, &QTimer::timeout, this, [this]() {
-            // Use the captured profile name, not the current selection
             if (!mPendingPasswordSaveProfile.isEmpty()) {
                 // Check if this profile is STILL selected - if not, don't save
                 // (user switched away, so the password field content is for a different profile)

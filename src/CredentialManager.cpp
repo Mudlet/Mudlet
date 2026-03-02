@@ -272,31 +272,26 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
         QString service = generateServiceName(profileName, key);
         QString legacyService = generateLegacyServiceName(profileName, key);
 
-        // Helper to try old colliding format and migrate if found
         auto tryCollidingFormat = [this, profileName, key, legacyService, callback]() {
             retrieveCredential(legacyService, key, profileName, [this, profileName, key, legacyService, callback](bool oldSuccess, const QString& oldPassword, const QString& oldError) {
                 if (oldSuccess && !oldPassword.isEmpty()) {
                     attemptCollidingMigration(profileName, key, legacyService, oldPassword, callback);
                 } else {
-                    // Old format not found, try legacy keychain format
                     if (key == "password" || key == "character") {
                         attemptLegacyKeychainMigration(profileName, key, callback);
                     } else {
-                        // Not a password request, use encrypted file storage directly
                         fallbackFileRetrieval(profileName, key, callback);
                     }
                 }
             });
         };
 
-        // First try new hash-based format
         auto newFormatCallback = [this, profileName, key, callback, tryCollidingFormat](bool keychainSuccess, const QString& keychainPassword, const QString& keychainError) {
             if (keychainSuccess && !keychainPassword.isEmpty()) {
                 if (callback) {
                     callback(true, keychainPassword, QString());
                 }
             } else {
-                // New format not found, try old colliding format
                 tryCollidingFormat();
             }
         };
@@ -318,7 +313,6 @@ void CredentialManager::attemptCollidingMigration(const QString& profileName, co
 {
     qDebug() << "CredentialManager: Migrating password from colliding format for" << profileName;
 
-    // Migrate to new format
     storePassword(profileName, key, password, [this, legacyService, key, profileName, callback, password](bool migrationSuccess, const QString& migrationError) {
         if (migrationSuccess) {
             // Only clean up old colliding entry if version > 4.20.1
@@ -373,7 +367,6 @@ void CredentialManager::attemptLegacyKeychainMigration(const QString& profileNam
                 }
             });
         } else {
-            // Try encrypted file storage as final fallback
             fallbackFileRetrieval(profileName, key, callback);
         }
     });
@@ -413,14 +406,11 @@ void CredentialManager::removePassword(const QString& profileName, const QString
     }
 
     if (shouldUseKeychain(profileName)) {
-        // Remove from both new and old keychain formats, plus SecureStringUtils for complete cleanup
         QString service = generateServiceName(profileName, key);
         QString legacyService = generateLegacyServiceName(profileName, key);
 
         auto combinedCallback = [this, profileName, key, legacyService, callback](bool keychainSuccess, const QString& keychainError) {
-            // Also remove from old colliding format (ignore result as it might not exist)
             removeCredential(legacyService, key, profileName, [this, profileName, key, callback, keychainSuccess, keychainError](bool oldSuccess, const QString&) {
-                // Also remove from SecureStringUtils (ignore result as it might not exist there)
                 bool fileSuccess = removeCredentialFromFile(profileName, key);
 
                 if (callback) {
@@ -529,7 +519,6 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
                 if (!success) {
                     qDebug() << "CredentialManager: Keychain storage failed, using encrypted file storage:" << errorMessage;
 
-                    // Use actual profile name (not service name) for file storage
                     bool fileSuccess = storeCredentialToFile(profileName, account, password);
 
                     if (fileSuccess) {
@@ -717,7 +706,6 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                             } else {
                                 qDebug() << "CredentialManager: No legacy password found for profile" << profileName;
 
-                                // No legacy password, try file storage using actual profile name
                                 QString filePassword = retrieveCredentialFromFile(profileName, account);
                                 bool fileSuccess = !filePassword.isNull();
                                 QString finalError = fileSuccess ? QString() : qsl("Both keychain and encrypted file storage failed for credentials. Keychain: %1").arg(keychainError);
@@ -741,8 +729,6 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                         return;
                     }
 
-                    // Not a character password or not new format, try file storage directly
-                    // Use actual profile name (not service name) for file storage path
                     password = retrieveCredentialFromFile(profileName, account);
 
                     if (!password.isNull()) {
@@ -821,8 +807,6 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
 
                 bool keychainSuccess = (deleteJob->error() == QKeychain::NoError || deleteJob->error() == QKeychain::EntryNotFound);
 
-                // Always try to remove from file storage as well (for cleanup)
-                // Use actual profile name (not service name) for file storage path
                 bool fileSuccess = removeCredentialFromFile(profileName, account);
 
                 // Consider success if either method succeeded

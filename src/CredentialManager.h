@@ -119,7 +119,6 @@ private:
     void checkLegacyKeychainFormat(const QString& profileName, std::function<void(bool, const QString&)> callback);
     void deleteLegacyKeychainEntry(const QString& profileName);
 
-    // Password retrieval fallback helpers (extracted from retrievePassword for readability)
     void attemptCollidingMigration(const QString& profileName, const QString& key, const QString& legacyService, const QString& password, CredentialRetrievalCallback callback);
     void attemptLegacyKeychainMigration(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
     void fallbackFileRetrieval(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
