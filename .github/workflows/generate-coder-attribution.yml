@@ -73,7 +73,7 @@ jobs:
         echo $authors
 
     - name: Upload authors as txt
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: authors.txt
         path: authors.txt
