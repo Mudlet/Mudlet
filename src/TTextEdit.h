@@ -223,11 +223,8 @@ private:
     QPointer<QAction> mpContextMenuAnalyser;
     bool mWideAmbigousWidthGlyphs;
     bool mEnableBlinkText = false;
-    // Tracks whether we have any blinking content to animate (mutable for use in const drawing methods)
     mutable bool mHasBlinkingContent = false;
-    // Tracks whether this TTextEdit is registered as a blink client with the global timer
     mutable bool mIsBlinkClientRegistered = false;
-    // Timer to detect when scrolling has stopped, for re-checking blinking content
     QPointer<QTimer> mpScrollStoppedTimer;
     std::chrono::high_resolution_clock::time_point mCopyImageStartTime;
     // How many "normal" width "characters" are each tab stop apart, while

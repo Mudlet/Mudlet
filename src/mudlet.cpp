@@ -786,11 +786,8 @@ void mudlet::init()
 
     initializeAI();
 
-    // Initialize global blink timer for SGR codes 5 and 6 (flashing text)
-    // Uses 200ms base interval to comply with WCAG 2.3.1 (max 3 Hz):
-    // 4-state counter per ISO/IEC 8613-6:
-    // - Fast blink (SGR 6) toggles every tick = 2.5 Hz (> 150 cycles/min)
-    // - Slow blink (SGR 5) toggles every 2nd tick = 1.25 Hz (< 150 cycles/min)
+    // 200ms interval for WCAG 2.3.1 compliance (max 3 Hz)
+    // 4-state counter per ISO/IEC 8613-6: slow blink < 150 cycles/min, fast > 150
     mpBlinkTimer = new QTimer(this);
     mpBlinkTimer->setInterval(200);
     connect(mpBlinkTimer, &QTimer::timeout, this, [this]() {

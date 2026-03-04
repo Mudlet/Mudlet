@@ -101,12 +101,9 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     setAttribute(Qt::WA_OpaquePaintEvent, false);
     setAttribute(Qt::WA_DeleteOnClose);
 
-    // Connect to the shared blink timer in the mudlet singleton for SGR 5/6 flashing text
     connect(mudlet::self(), &mudlet::signal_blinkStateChanged, this, &TTextEdit::slot_blinkStateChanged);
 
-    // Setup a timer to detect when scrolling has stopped, for re-checking blinking content
-    // This is needed because scroll optimizations may use cached screen data without
-    // redrawing lines, which could miss blinking content detection
+    // Scroll optimizations may use cached screen data, missing blinking content detection
     mpScrollStoppedTimer = new QTimer(this);
     mpScrollStoppedTimer->setSingleShot(true);
     mpScrollStoppedTimer->setInterval(150);
@@ -871,26 +868,19 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     const bool isBold = attributes & TChar::Bold;
     const bool isBlinking = attributes & (TChar::Blink | TChar::FastBlink);
 
-    // Handle blinking text: if blinking is enabled and we're in the invisible phase,
-    // don't draw the text. If blinking is disabled, fall back to showing as italics.
     bool isItalics = attributes & TChar::Italic;
     if (isBlinking) {
         mHasBlinkingContent = true;
         if (mEnableBlinkText) {
-            // Blinking is enabled - check visibility state from global timer
-            // Use appropriate blink state based on SGR code (5 = slow, 6 = fast)
             const bool isFastBlink = attributes & TChar::FastBlink;
             const bool isVisible = isFastBlink ? mudlet::self()->fastBlinkState() : mudlet::self()->slowBlinkState();
             if (!isVisible) {
-                // Invisible phase - don't draw the character
-                // Still draw custom decorations but skip the text itself
                 if (!textRect.isNull()) {
                     drawCustomDecorations(painter, fgColor, textRect, charStyle);
                 }
                 return;
             }
         } else {
-            // Blinking is disabled - display as italics instead
             isItalics = true;
         }
     }
@@ -1121,7 +1111,6 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
 }
 void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
-    // Reset blink content tracking - will be set to true if we draw any blinking text
     mHasBlinkingContent = false;
 
     qreal dpr = devicePixelRatioF();
@@ -3241,16 +3230,11 @@ void TTextEdit::slot_blinkStateChanged(bool slowState, bool fastState)
 {
     Q_UNUSED(slowState);
     Q_UNUSED(fastState);
-    // Must use forceUpdate() to bypass the screen caching optimization,
-    // otherwise blinking text may not be redrawn
     forceUpdate();
 }
 
 void TTextEdit::slot_scrollStoppedTimeout()
 {
-    // When scrolling stops, force a full redraw to properly detect any blinking
-    // content that may now be visible. This is necessary because scroll
-    // optimizations can use cached screen data without redrawing all lines.
     forceUpdate();
 }
 

@@ -707,10 +707,8 @@ private:
     QPointer<QShortcut> mpShortcutToggleLogging;
     QPointer<QShortcut> mpShortcutToggleEmergencyStop;
     QPointer<QTimer> mpTimerReplay;
-    // Blink timer state - see documentation above slowBlinkState()/fastBlinkState()
     QPointer<QTimer> mpBlinkTimer;
     int mBlinkState = 0;
-    // Count of TTextEdit instances with blinking content (invariant: >= 0, guarded in unregisterBlinkClient)
     int mBlinkClientCount = 0;
     QPointer<QToolBar> mpToolBarReplay;
     QWidget* mpWidget_profileContainer = nullptr;
