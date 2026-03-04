@@ -737,6 +737,7 @@ void mudlet::init()
 #if defined(INCLUDE_UPDATER)
     pUpdater = new Updater(this, mpSettings, publicTestVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
+    connect(pUpdater, &Updater::signal_updateCheckFailed, this, &mudlet::slot_updateCheckFailed);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
     connect(dactionChangelog, &QAction::triggered, this, &mudlet::slot_showFullChangelog);
 #if defined(Q_OS_MACOS)
@@ -5325,6 +5326,14 @@ void mudlet::checkUpdatesOnStart()
 void mudlet::slot_manualUpdateCheck()
 {
     pUpdater->manuallyCheckUpdates();
+}
+
+void mudlet::slot_updateCheckFailed(const QString& error)
+{
+    auto* pHost = getActiveHost();
+    if (pHost && pHost->mpConsole) {
+        pHost->mpConsole->printSystemMessage(tr("Update check failed - please check your internet connection. Error: %1\n").arg(error));
+    }
 }
 
 void mudlet::slot_showFullChangelog()

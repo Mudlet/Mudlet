@@ -182,7 +182,10 @@ void Updater::manuallyCheckUpdates()
     msparkleUpdater->checkForUpdates();
 #else
     feed->load();
-    connect(feed, &dblsqd::Feed::ready, this, &Updater::showDialogManually);
+    KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, this, &Updater::showDialogManually);
+    KDToolBox::connectSingleShot(feed, &dblsqd::Feed::loadError, this, [this](const QString& error) {
+        emit signal_updateCheckFailed(error);
+    });
 #endif
 }
 
