@@ -1599,7 +1599,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </widget>
           </item>
-          <item row="3" column="0">
+          <item row="3" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_showTabConnectionIndicators">
             <property name="toolTip">
              <string>Display whenever a tab is connected or a disconnected</string>
@@ -4352,6 +4352,16 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="6" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_enableBlinkText">
+            <property name="toolTip">
+             <string>&lt;p&gt;When enabled, text with blinking attribute (SGR codes 5 and 6) will flash on and off. When disabled, blinking text will display as italics.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable blinking text</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -4953,6 +4963,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>comboBox_blankLinesBehaviour</tabstop>
   <tabstop>comboBox_caretModeKey</tabstop>
   <tabstop>checkBox_f3SearchEnabled</tabstop>
+  <tabstop>checkBox_enableBlinkText</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
   <tabstop>mFORCE_GA_OFF</tabstop>
   <tabstop>checkBox_mVersionInTTYPE</tabstop>

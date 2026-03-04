@@ -68,6 +68,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mpConsole(pC)
 , mpHost(pH)
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
+, mEnableBlinkText(pH->getEnableBlinkText())
 , mMouseWheelRemainder()
 {
     mLastClickTimer.start();
@@ -100,11 +101,31 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     setAttribute(Qt::WA_OpaquePaintEvent, false);
     setAttribute(Qt::WA_DeleteOnClose);
 
+    connect(mudlet::self(), &mudlet::signal_blinkStateChanged, this, &TTextEdit::slot_blinkStateChanged);
+
+    // Scroll optimizations may use cached screen data, missing blinking content detection
+    mpScrollStoppedTimer = new QTimer(this);
+    mpScrollStoppedTimer->setSingleShot(true);
+    mpScrollStoppedTimer->setInterval(150);
+    connect(mpScrollStoppedTimer, &QTimer::timeout, this, &TTextEdit::slot_scrollStoppedTimeout);
+
     showNewLines();
     setMouseTracking(true); // test fix for MAC
     setEnabled(true);       //test fix for MAC
 
     connect(mpHost, &Host::signal_changeIsAmbigousWidthGlyphsToBeWide, this, &TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide, Qt::UniqueConnection);
+    connect(mpHost, &Host::signal_changeEnableBlinkText, this, &TTextEdit::slot_changeEnableBlinkText, Qt::UniqueConnection);
+}
+
+TTextEdit::~TTextEdit()
+{
+    if (mIsBlinkClientRegistered) {
+        if (auto* pMudlet = mudlet::self()) {
+            pMudlet->unregisterBlinkClient();
+        }
+
+        mIsBlinkClientRegistered = false;
+    }
 }
 
 void TTextEdit::forceUpdate()
@@ -367,6 +388,10 @@ void TTextEdit::scrollTo(int line)
 
         mScrollVector = 0;
         update();
+
+        if (mpScrollStoppedTimer) {
+            mpScrollStoppedTimer->start();
+        }
     }
 }
 
@@ -387,6 +412,10 @@ void TTextEdit::scrollUp(int lines)
     mIsTailMode = false;
     updateScrollBar(mpBuffer->mCursorY);
     update();
+
+    if (mpScrollStoppedTimer) {
+        mpScrollStoppedTimer->start();
+    }
 }
 
 void TTextEdit::scrollDown(int lines)
@@ -399,6 +428,10 @@ void TTextEdit::scrollDown(int lines)
         mScrollVector = 0;
         updateScrollBar(mpBuffer->mCursorY);
         update();
+
+        if (mpScrollStoppedTimer) {
+            mpScrollStoppedTimer->start();
+        }
     }
 }
 
@@ -833,11 +866,25 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
 {
     TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
-    // At present we cannot display flashing text - and we just make it italic
-    // (we ought to eventually add knobs for them so they can be shown in a user
-    // preferred style - which might be static for some users) - anyhow Mudlet
-    // will still detect the difference between the options:
-    const bool isItalics = attributes & (TChar::Italic | TChar::Blink | TChar::FastBlink);
+    const bool isBlinking = attributes & (TChar::Blink | TChar::FastBlink);
+
+    bool isItalics = attributes & TChar::Italic;
+    if (isBlinking) {
+        mHasBlinkingContent = true;
+        if (mEnableBlinkText) {
+            const bool isFastBlink = attributes & TChar::FastBlink;
+            const bool isVisible = isFastBlink ? mudlet::self()->fastBlinkState() : mudlet::self()->slowBlinkState();
+            if (!isVisible) {
+                if (!textRect.isNull()) {
+                    drawCustomDecorations(painter, fgColor, textRect, charStyle);
+                }
+                return;
+            }
+        } else {
+            isItalics = true;
+        }
+    }
+
     const bool isOverline = attributes & TChar::Overline;
     const bool isStrikeOut = attributes & TChar::StrikeOut;
     const bool isUnderline = attributes & TChar::Underline;
@@ -1064,6 +1111,8 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
 }
 void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
+    mHasBlinkingContent = false;
+
     qreal dpr = devicePixelRatioF();
     QPixmap screenPixmap;
     QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * dpr, mScreenHeight * mFontHeight * dpr);
@@ -1153,6 +1202,15 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     mScrollVector = 0;
     mLastRenderedOffset = lineOffset;
     mForceUpdate = false;
+
+    const bool shouldBeRegistered = mEnableBlinkText && mHasBlinkingContent;
+    if (shouldBeRegistered && !mIsBlinkClientRegistered) {
+        mudlet::self()->registerBlinkClient();
+        mIsBlinkClientRegistered = true;
+    } else if (!shouldBeRegistered && mIsBlinkClientRegistered) {
+        mudlet::self()->unregisterBlinkClient();
+        mIsBlinkClientRegistered = false;
+    }
 }
 
 void TTextEdit::paintEvent(QPaintEvent* e)
@@ -1939,7 +1997,16 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     text.append(",");
     text.append(QString::number(mpHost->mBgColor.blue()));
     text.append(");}\n");
-    text.append("        span { white-space: pre-wrap; } -->\n");
+    text.append("        span { white-space: pre-wrap; }\n");
+
+    if (mEnableBlinkText) {
+        text.append("        @keyframes blink-slow { 50% { opacity: 0; } }\n");
+        text.append("        @keyframes blink-fast { 50% { opacity: 0; } }\n");
+        text.append("        .blink-slow { animation: blink-slow 0.8s step-end infinite; }\n");
+        text.append("        .blink-fast { animation: blink-fast 0.4s step-end infinite; }\n");
+    }
+
+    text.append("     -->\n");
     text.append("  </style>\n");
     text.append("  </head>\n");
     text.append("  <body><div>");
@@ -3145,6 +3212,30 @@ void TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide(const bool state)
         mWideAmbigousWidthGlyphs = state;
         update();
     }
+}
+
+void TTextEdit::slot_changeEnableBlinkText(const bool state)
+{
+    if (mEnableBlinkText != state) {
+        mEnableBlinkText = state;
+        if (!mEnableBlinkText && mIsBlinkClientRegistered) {
+            mudlet::self()->unregisterBlinkClient();
+            mIsBlinkClientRegistered = false;
+        }
+        update();
+    }
+}
+
+void TTextEdit::slot_blinkStateChanged(bool slowState, bool fastState)
+{
+    Q_UNUSED(slowState);
+    Q_UNUSED(fastState);
+    forceUpdate();
+}
+
+void TTextEdit::slot_scrollStoppedTimeout()
+{
+    forceUpdate();
 }
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)

@@ -1252,6 +1252,7 @@ function getConfig(...)
       "compactInputLine",
       "controlCharacterHandling",
       "editorAutoComplete",
+      "enableBlinkText",
       "enableClosedCaption",
       "enableGMCP",
       "enableMNES",
