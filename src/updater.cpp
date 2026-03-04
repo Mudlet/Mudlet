@@ -181,6 +181,9 @@ void Updater::manuallyCheckUpdates()
 #if defined(Q_OS_MACOS)
     msparkleUpdater->checkForUpdates();
 #else
+    disconnect(feed, &dblsqd::Feed::ready, this, nullptr);
+    disconnect(feed, &dblsqd::Feed::loadError, this, nullptr);
+
     feed->load();
     KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, this, &Updater::showDialogManually);
     KDToolBox::connectSingleShot(feed, &dblsqd::Feed::loadError, this, [this](const QString& error) {
