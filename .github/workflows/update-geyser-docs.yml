@@ -34,7 +34,7 @@ jobs:
     - name: Remove previous docs
       uses: appleboy/ssh-action@master
       with:
-        host: mudlet.org
+        host: 45.33.14.76
         username: ${{secrets.UPLOAD_USERNAME}}
         key: ${{secrets.UPLOAD_PRIVATEKEY}}
         script: "rm -rf /home/${{secrets.UPLOAD_USERNAME}}/geyser/"
@@ -42,7 +42,7 @@ jobs:
     - name: Upload docs
       uses: appleboy/scp-action@master
       with:
-        host: mudlet.org
+        host: 45.33.14.76
         username: ${{secrets.UPLOAD_USERNAME}}
         key: ${{secrets.UPLOAD_PRIVATEKEY}}
         source: "${{github.workspace}}/src/mudlet-lua/mudlet-lua-doc/files/"
