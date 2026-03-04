@@ -20,23 +20,20 @@
 #include "TTextBox.h"
 
 #include "Host.h"
+#include "utils.h"
 
 #include <QTextOption>
 
 TTextBox::TTextBox(Host* pHost, const QString& name, QWidget* parent)
     : QPlainTextEdit(parent)
-    , mName(name)
     , mpHost(pHost)
 {
-    const QString hostName = mpHost ? mpHost->getName() : qsl("unknown");
-    setObjectName(qsl("textEdit_%1_%2").arg(hostName, name));
+    setObjectName(qsl("textEdit_%1_%2").arg(mpHost->getName(), name));
     setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
     setFrameShape(QFrame::StyledPanel);
 
-    if (mpHost) {
-        QPalette palette;
-        palette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
-        palette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
-        setPalette(palette);
-    }
+    QPalette palette;
+    palette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
+    palette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
+    setPalette(palette);
 }

@@ -646,7 +646,6 @@ int TLuaInterpreter::setTextEditPlaceholder(lua_State* L)
     }
 
     pT->setPlaceholderText(placeholder);
-    pT->viewport()->update();
     lua_pushboolean(L, true);
     return 1;
 }

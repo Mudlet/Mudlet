@@ -26,7 +26,6 @@
 
 #include "Host.h"
 #include "TCommandLine.h"
-#include "TTextBox.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
@@ -34,6 +33,7 @@
 #include "TLabel.h"
 #include "TMap.h"
 #include "TRoomDB.h"
+#include "TTextBox.h"
 #include "TTextEdit.h"
 #include "dlgMapper.h"
 #include "mudlet.h"

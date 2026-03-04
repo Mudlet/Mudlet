@@ -20,8 +20,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "utils.h"
-
 #include <QPlainTextEdit>
 #include <QPointer>
 
@@ -34,8 +32,6 @@ class TTextBox : public QPlainTextEdit
 public:
     Q_DISABLE_COPY(TTextBox)
     explicit TTextBox(Host* pHost, const QString& name, QWidget* parent = nullptr);
-
-    QString mName;
 
 private:
     QPointer<Host> mpHost;
