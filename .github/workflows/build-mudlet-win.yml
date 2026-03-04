@@ -24,6 +24,9 @@ jobs:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
     if: ${{ github.repository_owner == 'Mudlet' }}
+    concurrency:
+      group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
     env:
       SIGNPATH_SIGNING_ENABLED: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
     strategy:
@@ -71,8 +74,9 @@ jobs:
       run: ccache --zero-stats --show-stats
 
     - name: Get sentry-native commit hash
+      shell: msys2 {0}
       id: sentry-hash
-      run: echo "hash=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> $GITHUB_OUTPUT
+      run: echo "SENTRY_HASH=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
     - name: Cache sentry-native
       id: cache-sentry
@@ -81,7 +85,7 @@ jobs:
         path: |
           3rdparty/sentry-native/install_without_transport
           3rdparty/sentry-native/install_with_transport
-        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.hash }}
+        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
 
     - name: (Windows) Build
       shell: msys2 {0}
@@ -116,10 +120,11 @@ jobs:
         QT_FORCE_STDERR_LOGGING: 1
 
     - name: (Windows) Run Lua tests
-      timeout-minutes: 5
+      timeout-minutes: 1
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        MUDLET_TEST_MODE: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
       run: |
@@ -172,7 +177,7 @@ jobs:
     - name: (Windows) Upload unsigned binaries for signing
       id: upload-unsigned-binaries
       if: steps.prepare-signing.outcome == 'success'
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: unsigned-binaries
         path: ${{env.SIGNING_DIR}}
@@ -242,7 +247,7 @@ jobs:
         env.SIGNPATH_SIGNING_ENABLED == 'true' &&
         (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') &&
         contains(env.ARTIFACT_NAME, 'installer')
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: unsigned-installer
         path: ${{env.ARTIFACT_WINPATHORFILE}}
@@ -283,7 +288,7 @@ jobs:
         fi
 
     - name: Create intermediate artifact for debugging
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       if: env.INTERMEDIATE_ARTIFACT_NAME
       with:
         name: ${{env.INTERMEDIATE_ARTIFACT_NAME}}
@@ -295,7 +300,7 @@ jobs:
       # Uploads the zipped contents of ARTIFACT_WINPATHORFILE as an "artifact" with
       # the given name - the Environmental variables are created by the
       # deploy-mudlet-for-windows.sh script:
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       if: env.ARTIFACT_NAME
       with:
         name: ${{env.ARTIFACT_NAME}}
