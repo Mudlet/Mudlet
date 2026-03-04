@@ -195,7 +195,7 @@ jobs:
         github-artifact-id: ${{steps.upload-unsigned-binaries.outputs.artifact-id}}
         wait-for-completion: true
         output-artifact-directory: ${{steps.prepare-signing.outputs.signing_dir}}
-        wait-for-completion-timeout-in-seconds: 600
+        wait-for-completion-timeout-in-seconds: 3600
 
     - name: (Windows) Replace binaries with signed versions
       if: steps.sign-binaries.outcome == 'success'
@@ -265,7 +265,7 @@ jobs:
         github-artifact-id: ${{steps.upload-unsigned-installer.outputs.artifact-id}}
         wait-for-completion: true
         output-artifact-directory: ${{github.workspace}}/signed-installer
-        wait-for-completion-timeout-in-seconds: 600
+        wait-for-completion-timeout-in-seconds: 3600
 
     - name: (Windows) Replace installer with signed version
       if: steps.sign-installer.outcome == 'success'
