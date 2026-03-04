@@ -52,6 +52,7 @@ private:
     dblsqd::UpdateDialog* updateDialog{nullptr};
     QPushButton* mpInstallOrRestart;
     bool mUpdateInstalled;
+    bool mManualCheckInProgress{false};
     QSettings* settings;
     std::unique_ptr<QTimer> mDailyCheck;
 
