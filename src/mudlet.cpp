@@ -786,6 +786,15 @@ void mudlet::init()
 
     initializeAI();
 
+    // 200ms interval for WCAG 2.3.1 compliance (max 3 Hz)
+    // 4-state counter per ISO/IEC 8613-6: slow blink < 150 cycles/min, fast > 150
+    mpBlinkTimer = new QTimer(this);
+    mpBlinkTimer->setInterval(200);
+    connect(mpBlinkTimer, &QTimer::timeout, this, [this]() {
+        mBlinkState = (mBlinkState + 1) % 4;
+        emit signal_blinkStateChanged(slowBlinkState(), fastBlinkState());
+    });
+
     // Initialize the window menu on startup
     updateWindowMenu();
 
@@ -6584,6 +6593,25 @@ void mudlet::setGlobalStyleSheet(const QString& styleSheet)
     mpMainToolBar->setStyleSheet(styleSheet);
     mpTabBar->setStyleSheet(styleSheet);
     menuBar()->setStyleSheet(styleSheet);
+}
+
+void mudlet::registerBlinkClient()
+{
+    ++mBlinkClientCount;
+    if (mBlinkClientCount == 1 && mpBlinkTimer && !mpBlinkTimer->isActive()) {
+        mpBlinkTimer->start();
+    }
+}
+
+void mudlet::unregisterBlinkClient()
+{
+    if (mBlinkClientCount > 0) {
+        --mBlinkClientCount;
+    }
+    if (mBlinkClientCount == 0 && mpBlinkTimer && mpBlinkTimer->isActive()) {
+        mpBlinkTimer->stop();
+        mBlinkState = 0;
+    }
 }
 
 void mudlet::setupTrayIcon()
