@@ -29,6 +29,7 @@ jobs:
       cancel-in-progress: true
     env:
       SIGNPATH_SIGNING_ENABLED: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+      SIGNPATH_POLICY_SLUG: ${{ startsWith(github.ref, 'refs/tags/') && 'release-signing' || 'test-signing' }}
     strategy:
       fail-fast: false
       matrix:
@@ -191,7 +192,7 @@ jobs:
         api-token: ${{secrets.SIGNPATH_API_TOKEN}}
         organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}
         project-slug: 'mudlet'
-        signing-policy-slug: ${{secrets.SIGNPATH_SIGNING_POLICY_SLUG}}
+        signing-policy-slug: ${{env.SIGNPATH_POLICY_SLUG}}
         artifact-configuration-slug: 'binaries'
         github-artifact-id: ${{steps.upload-unsigned-binaries.outputs.artifact-id}}
         wait-for-completion: true
@@ -261,7 +262,7 @@ jobs:
         api-token: ${{secrets.SIGNPATH_API_TOKEN}}
         organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}
         project-slug: 'mudlet'
-        signing-policy-slug: ${{secrets.SIGNPATH_SIGNING_POLICY_SLUG}}
+        signing-policy-slug: ${{env.SIGNPATH_POLICY_SLUG}}
         artifact-configuration-slug: 'installer'
         github-artifact-id: ${{steps.upload-unsigned-installer.outputs.artifact-id}}
         wait-for-completion: true
