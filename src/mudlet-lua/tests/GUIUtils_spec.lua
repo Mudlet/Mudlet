@@ -1010,7 +1010,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should call the function once for a single match on the current line", function()
-      echo("hello world\n")
+      echo("hello world")
       selectCurrentLine()
       local funcCalls = 0
       selectAll("hello", function() funcCalls = funcCalls + 1 end)
@@ -1018,7 +1018,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should call the function for each match on the current line", function()
-      echo("cat dog cat dog cat\n")
+      echo("\ncat dog cat dog cat")
       selectCurrentLine()
       local funcCalls = 0
       selectAll("cat", function() funcCalls = funcCalls + 1 end)
