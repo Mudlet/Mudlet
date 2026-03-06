@@ -459,24 +459,27 @@ int main(int argc, char* argv[])
         commandLineTranslator.clear();
     }
 
-    // Needed for Qt6 on Windows (at least) - and does not work in mudlet class c'tor
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    // Configure the media backend - does not work in mudlet class c'tor.
+    // On Windows, use FFmpeg which supports .ogg/.opus (native backend doesn't).
+    // On macOS, use darwin (AVFoundation) which works better than FFmpeg.
 #if defined(Q_OS_WINDOWS)
-    if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
-        // This variable is not set - and later versions of Qt 6.x need it for
-        // sound to work - the alternative to "ffmpeg" is "windows" but that
-        // is a less capable backend (it doesn't support ".ogg" or ".opus"
-        // audio files):
-        if (qputenv("QT_MEDIA_BACKEND", QByteArray("ffmpeg"))) {
-            qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to: \"ffmpeg\".";
+    const QByteArray defaultMediaBackend("ffmpeg");
+#elif defined(Q_OS_MACOS)
+    const QByteArray defaultMediaBackend("darwin");
+#else
+    const QByteArray defaultMediaBackend;
+#endif
+    if (!defaultMediaBackend.isEmpty()) {
+        if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
+            if (qputenv("QT_MEDIA_BACKEND", defaultMediaBackend)) {
+                qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to:" << defaultMediaBackend;
+            } else {
+                qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to:" << defaultMediaBackend << ", sound may not work.";
+            }
         } else {
-            qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to: \"ffmpeg\", sound may not work.";
+            qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND enviromental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
         }
-    } else {
-        qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND enviromental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
     }
-#endif
-#endif
 
     QStringList cliProfiles = parser.values(profileToOpen);
 
