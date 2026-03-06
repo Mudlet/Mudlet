@@ -770,10 +770,9 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
     //: This is an item in the context menu when clicked on a detached tab.
     auto connectionIndicatorToggleAction = contextMenu.addAction(tr("Show Connection Indicators on Tabs"));
     connectionIndicatorToggleAction->setCheckable(true);
-    auto pMudlet = mudlet::self();
-    if (pMudlet) {
+    if (auto pMudlet = mudlet::self()) {
         connectionIndicatorToggleAction->setChecked(pMudlet->showTabConnectionIndicators());
-        connect(connectionIndicatorToggleAction, &QAction::triggered, this, [pMudlet](bool checked) {
+        connect(connectionIndicatorToggleAction, &QAction::triggered, pMudlet, [pMudlet](bool checked) {
             pMudlet->setShowTabConnectionIndicators(checked);
         });
     }

@@ -2660,6 +2660,21 @@ void mudlet::closeEvent(QCloseEvent* event)
         return;
     }
 
+    // Close detached windows after shutdown is confirmed; deduplicate since windows can be shared
+    QSet<TDetachedWindow*> uniqueDetachedWindows;
+
+    for (const auto& window : mDetachedWindows) {
+        if (window) {
+            uniqueDetachedWindows.insert(window.data());
+        }
+    }
+
+    for (auto* window : uniqueDetachedWindows) {
+        window->close();
+    }
+
+    mDetachedWindows.clear();
+
     // Since we are here the close is to be completed:
     writeSettings();
 
