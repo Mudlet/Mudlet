@@ -574,11 +574,12 @@ void TDetachedWindow::closeEvent(QCloseEvent* event)
         QStringList profilesToClose = mProfileConsoleMap.keys();
 
         // Properly close each profile - this ensures proper cleanup and save prompts
+        auto pMudlet = mudlet::self();
         for (const QString& profileName : profilesToClose) {
 #if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "TDetachedWindow::closeEvent() - Properly closing profile:" << profileName;
 #endif
-            if (auto pMudlet = mudlet::self()) {
+            if (pMudlet) {
                 pMudlet->slot_closeProfileByName(profileName);
             }
         }
@@ -775,6 +776,8 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
         connect(connectionIndicatorToggleAction, &QAction::triggered, pMudlet, [pMudlet](bool checked) {
             pMudlet->setShowTabConnectionIndicators(checked);
         });
+    } else {
+        connectionIndicatorToggleAction->setVisible(false);
     }
 
     contextMenu.exec(mpTabBar->mapToGlobal(position));
@@ -1255,9 +1258,10 @@ void TDetachedWindow::updateToolBarActions()
 void TDetachedWindow::updateDiscordNamedIcon()
 {
     Host* pHost = nullptr;
+    auto pMudlet = mudlet::self();
 
-    if (!mCurrentProfileName.isEmpty()) {
-        pHost = mudlet::self()->getHostManager().getHost(mCurrentProfileName);
+    if (!mCurrentProfileName.isEmpty() && pMudlet) {
+        pHost = pMudlet->getHostManager().getHost(mCurrentProfileName);
     }
 
     if (!pHost) {
@@ -1301,7 +1305,9 @@ void TDetachedWindow::updateWindowTitle()
         Host* pHost = nullptr;
 
         if (!mCurrentProfileName.isEmpty()) {
-            pHost = mudlet::self()->getHostManager().getHost(mCurrentProfileName);
+            if (auto pMudlet = mudlet::self()) {
+                pHost = pMudlet->getHostManager().getHost(mCurrentProfileName);
+            }
             //: This is the title of a Mudlet window which was detached from the main Mudlet window, and %1 is the name of the profile.
             title = tr("Mudlet - %1 (Detached)").arg(mCurrentProfileName);
         } else {
@@ -1489,17 +1495,19 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
                 }
 
                 // Ensure the map's active mapper points to our detached instance (if visible)
-                if (auto pHost = mudlet::self()->getHostManager().getHost(profileName)) {
-                    if (auto pMap = pHost->mpMap.data()) {
-                        auto mapWidget = dockWidget->widget();
+                if (auto pMudlet = mudlet::self()) {
+                    if (auto pHost = pMudlet->getHostManager().getHost(profileName)) {
+                        if (auto pMap = pHost->mpMap.data()) {
+                            auto mapWidget = dockWidget->widget();
 
-                        if (auto detachedMapper = qobject_cast<dlgMapper*>(mapWidget)) {
-                            // Only set as active mapper if the dock widget should be visible
-                            if (shouldBeVisible) {
-                                pMap->mpMapper = detachedMapper;
+                            if (auto detachedMapper = qobject_cast<dlgMapper*>(mapWidget)) {
+                                // Only set as active mapper if the dock widget should be visible
+                                if (shouldBeVisible) {
+                                    pMap->mpMapper = detachedMapper;
 #if defined(DEBUG_WINDOW_HANDLING)
-                                qDebug() << "TDetachedWindow: Set active mapper for profile" << profileName;
+                                    qDebug() << "TDetachedWindow: Set active mapper for profile" << profileName;
 #endif
+                                }
                             }
                         }
                     }
@@ -1515,16 +1523,18 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
                 dockWidget->blockSignals(false);
 
                 // Restore main mapper for the other profile
-                if (auto pHost = mudlet::self()->getHostManager().getHost(dockProfileName)) {
-                    if (auto pMap = pHost->mpMap.data()) {
-                        if (pHost->mpDockableMapWidget) {
-                            auto mainMapWidget = pHost->mpDockableMapWidget->widget();
+                if (auto pMudlet = mudlet::self()) {
+                    if (auto pHost = pMudlet->getHostManager().getHost(dockProfileName)) {
+                        if (auto pMap = pHost->mpMap.data()) {
+                            if (pHost->mpDockableMapWidget) {
+                                auto mainMapWidget = pHost->mpDockableMapWidget->widget();
 
-                            if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
-                                pMap->mpMapper = mainMapper;
+                                if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
+                                    pMap->mpMapper = mainMapper;
 #if defined(DEBUG_WINDOW_HANDLING)
-                                qDebug() << "TDetachedWindow: Restored main mapper for profile" << dockProfileName;
+                                    qDebug() << "TDetachedWindow: Restored main mapper for profile" << dockProfileName;
 #endif
+                                }
                             }
                         }
                     }
@@ -1631,7 +1641,12 @@ void TDetachedWindow::slot_saveProfile()
         return;
     }
 
-    Host* pHost = mudlet::self()->getHostManager().getHost(mCurrentProfileName);
+    auto pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return;
+    }
+
+    Host* pHost = pMudlet->getHostManager().getHost(mCurrentProfileName);
 
     if (pHost) {
         pHost->saveProfile();
@@ -1640,8 +1655,9 @@ void TDetachedWindow::slot_saveProfile()
 
 void TDetachedWindow::slot_exportProfile()
 {
-    // Use the main mudlet's package exporter functionality
-    mudlet::self()->slot_packageExporter();
+    if (auto pMudlet = mudlet::self()) {
+        pMudlet->slot_packageExporter();
+    }
 }
 
 void TDetachedWindow::updateWindowMenu()
@@ -1764,7 +1780,12 @@ void TDetachedWindow::slot_activateDetachedWindow()
     }
 
     QString profileName = action->data().toString();
-    const auto& detachedWindows = mudlet::self()->getDetachedWindows();
+    auto pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return;
+    }
+
+    const auto& detachedWindows = pMudlet->getDetachedWindows();
 
     if (detachedWindows.contains(profileName)) {
         TDetachedWindow* detachedWindow = detachedWindows[profileName];
@@ -1830,7 +1851,12 @@ void TDetachedWindow::slot_activateDetachedWindowProfile()
     QString profileName = action->data().toString();
 
     // Find which detached window contains this profile
-    const auto& detachedWindows = mudlet::self()->getDetachedWindows();
+    auto pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return;
+    }
+
+    const auto& detachedWindows = pMudlet->getDetachedWindows();
 
     for (const auto& detachedWindow : detachedWindows) {
         if (detachedWindow && detachedWindow->getProfileNames().contains(profileName)) {
@@ -1963,16 +1989,18 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
             QMainWindow::removeDockWidget(mapDockWidget);
 
             // Restore the main window's mapper before deleting our dock widget
-            if (auto pHost = mudlet::self()->getHostManager().getHost(profileName)) {
-                if (auto pMap = pHost->mpMap.data()) {
-                    if (pHost->mpDockableMapWidget) {
-                        auto mainMapWidget = pHost->mpDockableMapWidget->widget();
+            if (auto pMudlet = mudlet::self()) {
+                if (auto pHost = pMudlet->getHostManager().getHost(profileName)) {
+                    if (auto pMap = pHost->mpMap.data()) {
+                        if (pHost->mpDockableMapWidget) {
+                            auto mainMapWidget = pHost->mpDockableMapWidget->widget();
 
-                        if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
-                            pMap->mpMapper = mainMapper;
+                            if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
+                                pMap->mpMapper = mainMapper;
 #if defined(DEBUG_WINDOW_HANDLING)
-                            qDebug() << "TDetachedWindow::removeProfile: Restored main mapper for profile" << profileName;
+                                qDebug() << "TDetachedWindow::removeProfile: Restored main mapper for profile" << profileName;
 #endif
+                            }
                         }
                     }
                 }
@@ -2312,7 +2340,9 @@ void TDetachedWindow::closeProfileByIndex(int index)
     }
 
     // Close the specific profile
-    mudlet::self()->slot_closeProfileByName(profileName);
+    if (auto pMudlet = mudlet::self()) {
+        pMudlet->slot_closeProfileByName(profileName);
+    }
 
     // Remove the profile from this detached window
     removeProfile(profileName);
@@ -2621,7 +2651,12 @@ void TDetachedWindow::slot_showMapperDialog()
         return;
     }
 
-    Host* pHost = mudlet::self()->getHostManager().getHost(mCurrentProfileName);
+    auto mudletInstance = mudlet::self();
+    if (!mudletInstance) {
+        return;
+    }
+
+    Host* pHost = mudletInstance->getHostManager().getHost(mCurrentProfileName);
     if (!pHost) {
         return;
     }
@@ -2632,7 +2667,6 @@ void TDetachedWindow::slot_showMapperDialog()
     }
 
     // Close any existing map for this profile in other windows first
-    auto mudletInstance = mudlet::self();
     QString mapKey = qsl("map_%1").arg(mCurrentProfileName);
 
     // Check if main window has a map for this profile and close it
@@ -3066,7 +3100,8 @@ void TDetachedWindow::refreshTabBar()
 
             // Apply CDC identifier prefix if debug mode is active
             if (mudlet::smDebugMode) {
-                Host* pHost = mudlet::self()->getHostManager().getHost(profileName);
+                auto pMudlet = mudlet::self();
+                Host* pHost = pMudlet ? pMudlet->getHostManager().getHost(profileName) : nullptr;
                 if (pHost) {
                     QString debugTag = TDebug::getTag(pHost);
                     if (!debugTag.isEmpty()) {
@@ -3088,9 +3123,12 @@ void TDetachedWindow::slot_closeAllProfiles()
 
     qDebug() << "TDetachedWindow::slot_closeAllProfiles() - Closing" << profilesToClose.size() << "profiles";
 
+    auto pMudlet = mudlet::self();
     for (const QString& profileName : profilesToClose) {
         qDebug() << "TDetachedWindow::slot_closeAllProfiles() - Closing profile:" << profileName;
-        mudlet::self()->slot_closeProfileByName(profileName);
+        if (pMudlet) {
+            pMudlet->slot_closeProfileByName(profileName);
+        }
     }
 
     // After all profiles are closed, close the window

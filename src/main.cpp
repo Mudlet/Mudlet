@@ -472,12 +472,12 @@ int main(int argc, char* argv[])
     if (!defaultMediaBackend.isEmpty()) {
         if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
             if (qputenv("QT_MEDIA_BACKEND", defaultMediaBackend)) {
-                qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to:" << defaultMediaBackend;
+                qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend;
             } else {
-                qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to:" << defaultMediaBackend << ", sound may not work.";
+                qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend << ", sound may not work.";
             }
         } else {
-            qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND enviromental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
+            qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND environmental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
         }
     }
 
