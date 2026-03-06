@@ -578,7 +578,7 @@ void TDetachedWindow::closeEvent(QCloseEvent* event)
 #if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "TDetachedWindow::closeEvent() - Properly closing profile:" << profileName;
 #endif
-            if (auto pMudlet = mudlet::self(); pMudlet) {
+            if (auto pMudlet = mudlet::self()) {
                 pMudlet->slot_closeProfileByName(profileName);
             }
         }
