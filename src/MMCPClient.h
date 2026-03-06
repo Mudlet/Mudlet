@@ -61,7 +61,7 @@ public:
 
     void snoop();
 
-    const QString getInfoString();
+    const QString getInfoString(int colName, int colAddr, int colPort, int colGroup, int colFlags);
     const QString getFlagsString();
     const QString& getVersion() const { return mPeerVersion; }
     QString host();

@@ -1124,17 +1124,17 @@ const QString MMCPClient::getFlagsString()
             .arg(QLatin1Char(' '));
 }
 
-const QString MMCPClient::getInfoString()
+const QString MMCPClient::getInfoString(int colName, int colAddr, int colPort, int colGroup, int colFlags)
 {
     using namespace AnsiColors;
 
-    const QString groupStr = (mGroup == csDefaultMMCPGroupName) ? QString(QChar::Space).repeated(15) : mGroup;
+    const QString groupStr = (mGroup == csDefaultMMCPGroupName) ? QString(QChar::Space).repeated(colGroup) : mGroup;
 
     return qsl("%1%6 %2 %3 %4 %5")
-            .arg(mPeerName, -20)
-            .arg(convertToIPv4(mTcpSocket.peerAddress()), -20)
-            .arg(mTcpSocket.peerPort(), 5)
-            .arg(groupStr, -15)
-            .arg(getFlagsString(), -8)
+            .arg(mPeerName, -colName)
+            .arg(convertToIPv4(mTcpSocket.peerAddress()), -colAddr)
+            .arg(mTcpSocket.peerPort(), colPort)
+            .arg(groupStr, -colGroup)
+            .arg(getFlagsString(), -colFlags)
             .arg(RST);
 }

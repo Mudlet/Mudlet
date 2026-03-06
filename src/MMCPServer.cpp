@@ -378,6 +378,40 @@ QPair<bool, QString> MMCPServer::displayClientList()
 {
     using namespace AnsiColors;
 
+    // Translated column headers 
+    const QString hdrId      = tr("Id");
+    const QString hdrName    = tr("Name");
+    const QString hdrAddress = tr("Address");
+    const QString hdrPort    = tr("Port");
+    const QString hdrGroup   = tr("Group");
+    const QString hdrFlags   = tr("Flags");
+    const QString hdrClient  = tr("ChatClient");
+
+    // Compute column widths as max of translated header and minimum data width
+    const int colId      = qMax(4,  hdrId.length());
+    const int colName    = qMax(20, hdrName.length());
+    const int colAddress = qMax(20, hdrAddress.length());
+    const int colPort    = qMax(5,  hdrPort.length());
+    const int colGroup   = qMax(15, hdrGroup.length());
+    const int colFlags   = qMax(8,  hdrFlags.length());
+    const int colClient  = qMax(16, hdrClient.length());
+
+    auto sep = [](int w) { return QString(w, QChar('=')); };
+
+    const QString header  = qsl("%1%2 %3 %4 %5 %6 %7 %8")
+                                .arg(RST)
+                                .arg(hdrId, -colId)
+                                .arg(hdrName, -colName)
+                                .arg(hdrAddress, -colAddress)
+                                .arg(hdrPort, colPort)
+                                .arg(hdrGroup, -colGroup)
+                                .arg(hdrFlags, -colFlags)
+                                .arg(hdrClient);
+
+    const QString divider = qsl("%1 %2 %3 %4 %5 %6 %7")
+                                .arg(sep(colId), sep(colName), sep(colAddress), sep(colPort),
+                                     sep(colGroup), sep(colFlags), sep(colClient));
+
     QStringList peersList;
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
@@ -385,26 +419,34 @@ QPair<bool, QString> MMCPServer::displayClientList()
         if (!pClient) {
             continue;
         }
-       
+
         peersList << qsl("%1%2 %3%4 %5")
                             .arg(pClient->isPending() ? FBLDYEL : FBLDGRN)
-                            .arg(pClient->id(), 4)
-                            .arg(RST, pClient->getInfoString(), pClient->getVersion());
+                            .arg(pClient->id(), colId)
+                            .arg(RST, pClient->getInfoString(colName, colAddress, colPort, colGroup, colFlags), pClient->getVersion());
     }
 
     // Maybe one day we'll implement Transfers, although there are other/better ways of
     // sharing scripts with Mudlet
 
-    const QString strMessage = tr("%1Id   Name                 Address              Port  Group           Flags    ChatClient\n"
-                                  "==== ==================== ==================== ===== =============== ======== ================\n"
-                                  "%2"
-                                  "==== ==================== ==================== ===== =============== ======== ================\n"
-                                  "Color Key: %3Connected  %4Pending%1\n"
-                                  "Flags:  F - Firewall,       I - Ignored,  P - Private,  S - Serving\n"
-                                  "        n - Allow Snooping, N - Being Snooped%1")
-                                       .arg(RST,
-                                            peersList.isEmpty() ? QString() : qsl("%1\n").arg(peersList.join(QChar::LineFeed)),
-                                            FBLDGRN, FBLDYEL);
+    const QString strMessage = qsl("%1\n%2\n%3%4\n"
+        // Label in chat client list and color key for connected peers
+        "%5%6  %7%8%9\n"
+        // Flags legend in chat client list
+        "%10%9")
+        .arg(header, divider,
+            peersList.isEmpty() ? QString() : qsl("%1\n").arg(peersList.join(QChar::LineFeed)),
+            divider,
+            qsl("%1: ").arg(tr("Color Key")), qsl("%1%2").arg(FBLDGRN, tr("Connected")),
+            qsl("%1%2").arg(FBLDYEL, tr("Pending")),
+            RST,
+            RST,
+            // %1 is the translated word for "Flags". The letters F, I, P, S, n, N are
+            // fixed flag codes and must NOT be translated. Only translate the descriptions.
+            tr("%1:  F - %2,  I - %3,  P - %4,  S - %5\n"
+               "        n - %6,  N - %7")
+                .arg(tr("Flags"), tr("Firewall"), tr("Ignored"), tr("Private"),
+                     tr("Serving"), tr("Allow Snooping"), tr("Being Snooped")));
 
     clientMessage(strMessage);
     return {true, QString()};
