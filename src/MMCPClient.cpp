@@ -705,7 +705,7 @@ void MMCPClient::handleIncomingConnectionList(const QString& list)
  */
 void MMCPClient::handleIncomingConnectionsRequest()
 {
-    if (mIsIgnored) {
+    if (mIgnored) {
         const QString infoMsg = tr("[ CHAT ]  - %1 is trying to request your connections!").arg(mPeerName);
         mpHost->postMessage(infoMsg);
         return;
@@ -729,20 +729,20 @@ void MMCPClient::handleIncomingConnectionsRequest()
 void MMCPClient::handleIncomingChatEveryone(const QString& msg)
 {
     // We're ignoring chats from this person
-    if (mIsIgnored) {
+    if (mIgnored) {
         return;
     }
 
     mpMMCPServer->clientMessage(this, msg);
 
-    // If mIsServed is true:
+    // If mServed is true:
     // We are serving this client, forward their message to everyone
     // except them and ourself
-    // If mIsServed is false:
+    // If mServed is false:
     // Echo message to other clients we might be serving
 
     // sendServedMessage expects an onlyToServed boolean
-    mpMMCPServer->sendServedMessage(this, msg, !mIsServed);
+    mpMMCPServer->sendServedMessage(this, msg, !mServed);
 }
 
 /**
@@ -790,7 +790,7 @@ void MMCPClient::handleIncomingNameChange(const QString& newName)
 void MMCPClient::handleIncomingPeekConnections()
 {
     //check if this client is ignored before doing anything drastic
-    if (mIsIgnored) {
+    if (mIgnored) {
         const QString infoMsg = tr("[ CHAT ]  - %1 is trying to peek your connections!").arg(mPeerName);
         mpHost->postMessage(infoMsg);
         return;
@@ -1116,11 +1116,11 @@ const QString MMCPClient::getFlagsString()
     return qsl("%1%2%3%4%5%6%7%8")
             .arg(QLatin1Char(' '))
             .arg(QLatin1Char(' '))
-            .arg(QLatin1Char(mIsPrivate ? 'P' : ' ')) // "Private"
-            .arg(QLatin1Char(mIsIgnored ? 'I' : ' ')) // "Ignored"
-            .arg(QLatin1Char(mIsServed ? 'S' : ' ')) // "Serving"
+            .arg(QLatin1Char(mPrivate ? 'P' : ' ')) // "Private"
+            .arg(QLatin1Char(mIgnored ? 'I' : ' ')) // "Ignored"
+            .arg(QLatin1Char(mServed ? 'S' : ' ')) // "Serving"
             .arg(QLatin1Char((convertToIPv4(mTcpSocket.peerAddress()) != mPeerAddress) ? 'F' : ' ')) // "Firewall" - Humm?
-            .arg(QLatin1Char(mIsSnooping ? 'N' : (mEnableSnooping ? 'n' : ' ')))
+            .arg(QLatin1Char(mSnooping ? 'N' : (mEnableSnooping ? 'n' : ' ')))
             .arg(QLatin1Char(' '));
 }
 

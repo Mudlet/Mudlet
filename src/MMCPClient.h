@@ -76,23 +76,23 @@ public:
 
     const QString& chatName() const { return mPeerName; }
 
-    bool isIgnored() const { return mIsIgnored; }
-    void setIgnore(const bool val) { mIsIgnored = val; }
+    bool isIgnored() const { return mIgnored; }
+    void setIgnore(const bool val) { mIgnored = val; }
 
-    bool isPrivate() const { return mIsPrivate; }
-    void setPrivate(const bool val) { mIsPrivate = val; }
+    bool isPrivate() const { return mPrivate; }
+    void setPrivate(const bool val) { mPrivate = val; }
 
-    bool isServed() const { return mIsServed; }
-    void setServed(const bool val) { mIsServed = val; }
+    bool isServed() const { return mServed; }
+    void setServed(const bool val) { mServed = val; }
 
-    bool isServing() const { return mIsServing; }
-    void setServing(const bool val) { mIsServing = val; }
+    bool isServing() const { return mServing; }
+    void setServing(const bool val) { mServing = val; }
 
-    bool isSnooped() const { return mIsSnooped; }
-    void setSnooped(const bool val) { mIsSnooped = val; }
+    bool isSnooped() const { return mSnooped; }
+    void setSnooped(const bool val) { mSnooped = val; }
 
-    bool isSnooping() const { return mIsSnooping; }
-    void setSnooping(const bool val) { mIsSnooping = val; }
+    bool isSnooping() const { return mSnooping; }
+    void setSnooping(const bool val) { mSnooping = val; }
 
     const QString& getGroup() const { return mGroup; }
     bool setGroup(const QString&);
@@ -124,17 +124,17 @@ private:
     bool mEnableSnooping = false;
     QString mPeerName;
     //auto ignore or ignorelist match?
-    bool mIsIgnored = false;
+    bool mIgnored = false;
     //auto private or privatelist match?
-    bool mIsPrivate = false;
+    bool mPrivate = false;
     //auto serve or servelist match?
-    bool mIsServed = false;
+    bool mServed = false;
     // do we actually know this?
-    bool mIsServing = false;
+    bool mServing = false;
     // are we snooping THEM?
-    bool mIsSnooped = false;
+    bool mSnooped = false;
     // is this client snooping US?
-    bool mIsSnooping = false;
+    bool mSnooping = false;
     QString mPeerAddress;
     quint16 mPeerPort = 0;
     QByteArray mPeerBuffer;
