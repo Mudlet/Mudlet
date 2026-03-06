@@ -521,6 +521,7 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_announceIncomingText->setEnabled(false);
     checkBox_advertiseScreenReader->setEnabled(false);
     checkBox_enableClosedCaption->setEnabled(false);
+    checkBox_enableBlinkText->setEnabled(false);
     comboBox_blankLinesBehaviour->setEnabled(false);
     comboBox_caretModeKey->setEnabled(false);
 
@@ -635,6 +636,7 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_announceIncomingText->setEnabled(true);
     checkBox_advertiseScreenReader->setEnabled(true);
     checkBox_enableClosedCaption->setEnabled(true);
+    checkBox_enableBlinkText->setEnabled(true);
     comboBox_blankLinesBehaviour->setEnabled(true);
     comboBox_caretModeKey->setEnabled(true);
 
@@ -808,6 +810,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // Now connect the signal
     connect(checkBox_f3SearchEnabled, &QCheckBox::toggled, pHost, &Host::setF3SearchEnabled);
 
+    checkBox_enableBlinkText->setChecked(pHost->getEnableBlinkText());
+
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();
 
@@ -950,6 +954,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableMNES = new QAction(tr("MNES: Mud New-Environ Standard"), nullptr);
     mEnableMNES->setCheckable(true);
     mEnableMNES->setChecked(pHost->mEnableMNES);
+    //: Tooltip for MNES protocol option explaining mutual exclusivity with NEW-ENVIRON
+    mEnableMNES->setToolTip(tr("MNES uses the same telnet option as NEW-ENVIRON, so only one can be active. MNES sends a minimal set of variables, while NEW-ENVIRON sends extended variables "
+                               "including OSC link support."));
     protocolMenu->addAction(mEnableMNES);
 
     mEnableMSDP = new QAction(tr("MSDP: Mud Server Data Protocol"), nullptr);
@@ -985,6 +992,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableNEWENVIRON = new QAction(tr("NEW-ENVIRON: Client Variables Standard"), nullptr);
     mEnableNEWENVIRON->setCheckable(true);
     mEnableNEWENVIRON->setChecked(pHost->mEnableNEWENVIRON);
+    //: Tooltip for NEW-ENVIRON protocol option explaining mutual exclusivity with MNES
+    mEnableNEWENVIRON->setToolTip(
+            tr("NEW-ENVIRON uses the same telnet option as MNES, so only one can be active. NEW-ENVIRON sends extended variables including OSC link support, while MNES sends a minimal set."));
     protocolMenu->addAction(mEnableNEWENVIRON);
 
     pushButton_chooseProtocols->setMenu(protocolMenu);
@@ -1231,7 +1241,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
@@ -1347,6 +1357,18 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(mEnableNAWS, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableCHARSET, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableNEWENVIRON, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+
+    // MNES and NEW-ENVIRON both use telnet option 39, so they are mutually exclusive
+    connect(mEnableMNES, &QAction::toggled, this, [this](bool checked) {
+        if (checked && mEnableNEWENVIRON->isChecked()) {
+            mEnableNEWENVIRON->setChecked(false);
+        }
+    });
+    connect(mEnableNEWENVIRON, &QAction::toggled, this, [this](bool checked) {
+        if (checked && mEnableMNES->isChecked()) {
+            mEnableMNES->setChecked(false);
+        }
+    });
 
     connect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
     connect(mFORCE_GA_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
@@ -1599,6 +1621,7 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_announceIncomingText->setChecked(false);
     checkBox_advertiseScreenReader->setChecked(false);
     checkBox_enableClosedCaption->setChecked(false);
+    checkBox_enableBlinkText->setChecked(false);
     comboBox_blankLinesBehaviour->setCurrentIndex(0);
 
     groupBox_ssl_certificate->hide();
@@ -3055,6 +3078,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
         pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
+        pHost->setEnableBlinkText(checkBox_enableBlinkText->isChecked());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();

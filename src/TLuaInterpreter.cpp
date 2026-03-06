@@ -7719,6 +7719,10 @@ int TLuaInterpreter::setConfig(lua_State* L)
         mudlet::self()->slot_muteGame(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
+    if (key == qsl("enableBlinkText")) {
+        host.setEnableBlinkText(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
 
     // Handle experiment keys
     if (key.startsWith(qsl("experiment."))) {
@@ -8101,6 +8105,10 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("enableClosedCaption"),
              [&]() {
                  lua_pushboolean(L, host.mEnableClosedCaption);
+             }},
+            {qsl("enableBlinkText"),
+             [&]() {
+                 lua_pushboolean(L, host.getEnableBlinkText());
              }},
             {qsl("showUpperLowerLevels"),
              [&]() {

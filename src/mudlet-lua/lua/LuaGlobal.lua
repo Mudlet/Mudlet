@@ -86,9 +86,11 @@ function handleWindowResizeEvent()
 end
 
 local packages = {
+  "3rdparty/Inspect.lua",
+
   "StringUtils.lua",
   "TableUtils.lua",
-  -- "Logging.lua", -- never documented and fails to load now
+
   "DebugTools.lua",
   "DateTime.lua",
   "DB.lua",

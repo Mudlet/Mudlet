@@ -379,7 +379,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
             mMxpProcessor.enable();
             // When force-enabling MXP (typically for games like IRE MUDs that don't
             // negotiate properly), lock to secure mode for compatibility
-            mMxpProcessor.setMode(6); // Lock secure mode
+            mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
             qDebug() << "MXP enabled (forced)";
         }
     });
@@ -391,7 +391,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
                 // When force-enabling MXP (typically for games like IRE MUDs that don't
                 // negotiate properly), lock to secure mode for compatibility with games
                 // that use secure tags without sending mode switches
-                mMxpProcessor.setMode(6); // Lock secure mode
+                mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
                 qDebug() << "MXP enabled (forced)";
             }
         } else if (mMxpProcessor.isEnabled() && !mTelnet.isMXPEnabled()) {
@@ -1002,9 +1002,7 @@ void Host::waitForProfileSave()
     while (currentlySavingProfile()) {
         if (++iterations > 1000) {
             qWarning().nospace() << "Host::waitForProfileSave() WARNING - save did not complete after 1000 event loop iterations. "
-                                 << "State: mWritingHostAndModules=" << mWritingHostAndModules
-                                 << ", writers pending=" << writers.size()
-                                 << ". Continuing without waiting.";
+                                 << "State: mWritingHostAndModules=" << mWritingHostAndModules << ", writers pending=" << writers.size() << ". Continuing without waiting.";
             break;
         }
         qApp->processEvents();
@@ -2682,6 +2680,14 @@ void Host::refreshPackageFonts()
     }
 }
 
+void Host::setEnableBlinkText(const bool enabled)
+{
+    if (mEnableBlinkText != enabled) {
+        mEnableBlinkText = enabled;
+        emit signal_changeEnableBlinkText(enabled);
+    }
+}
+
 void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
 {
     bool localState = false;
@@ -3257,7 +3263,7 @@ void Host::loadSecuredPassword()
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager(this);
 
-    credManager->retrieveCredential(getName(), "character", [this, credManager](bool success, const QString& password, const QString& errorMessage) {
+    credManager->retrievePassword(getName(), "character", [this, credManager](bool success, const QString& password, const QString& errorMessage) {
         if (success && !password.isEmpty()) {
             setPass(password);
             QString passwordCopy = password; // Make a copy for secure clearing
