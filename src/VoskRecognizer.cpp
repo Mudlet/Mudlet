@@ -286,11 +286,15 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     // Apply optional settings if available
     if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != EndpointerMode::Default) {
         s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
+#ifdef DEBUG_STT
         qDebug() << "VoskRecognizer: Applied endpointer mode" << static_cast<int>(mEndpointerMode);
+#endif
     }
     if (s_vosk_recognizer_set_words && mWordsEnabled) {
         s_vosk_recognizer_set_words(mVoskRecognizer, 1);
+#ifdef DEBUG_STT
         qDebug() << "VoskRecognizer: Enabled word-level results";
+#endif
     }
 
     // Try to determine language from model path (convention: vosk-model-small-en-us-0.15)
@@ -513,7 +517,9 @@ void VoskRecognizer::stopListening()
                 const bool shouldFilter = isSingleWord && isHallucinationWord && !hasHighConfidence;
 
                 if (shouldFilter) {
+#ifdef DEBUG_STT
                     qDebug() << "VoskRecognizer: Filtered hallucination on stop:" << text;
+#endif
                 } else {
                     // Strip leading hallucination words from multi-word results
                     text.replace(*kLeadingHallucinationRx, QString());
@@ -726,14 +732,18 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
                 const bool shouldFilter = isSingleWord && isHallucinationWord && (mRecentAudioLevel < SILENCE_THRESHOLD * 5.0f || hasLowConfidence);
 
                 if (shouldFilter) {
+#ifdef DEBUG_STT
                     qDebug() << "VoskRecognizer: Filtered hallucination (final):" << text << "(level:" << mRecentAudioLevel << ", lowConf:" << hasLowConfidence << ")";
+#endif
                 } else {
                     // Strip leading hallucination words from multi-word results
                     text.replace(*kLeadingHallucinationRx, QString());
                     text = text.trimmed();
 
                     if (!text.isEmpty()) {
+#ifdef DEBUG_STT
                         qDebug() << "VoskRecognizer: Final result:" << text;
+#endif
                         emit finalResult(text);
 
                         // Emit word-level results with confidence if available and enabled
@@ -775,7 +785,9 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
                 const bool isStuckHallucination = (text == mLastPartialResult) && isSingleWord && isHallucinationWord;
 
                 if (shouldFilter || isStuckHallucination) {
+#ifdef DEBUG_STT
                     qDebug() << "VoskRecognizer: Filtered hallucination:" << text << "(level:" << mRecentAudioLevel << ", onset:" << mSpeechOnsetFrames << ")";
+#endif
                 } else {
                     // Strip leading hallucination words from multi-word results
                     QString cleanText = text;
@@ -783,7 +795,9 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
                     cleanText = cleanText.trimmed();
 
                     if (!cleanText.isEmpty()) {
+#ifdef DEBUG_STT
                         qDebug() << "VoskRecognizer: Partial result:" << cleanText << "(level:" << mRecentAudioLevel << ", onset:" << mSpeechOnsetFrames << ")";
+#endif
                         emit partialResult(cleanText);
                     }
                 }
@@ -1085,7 +1099,9 @@ void VoskRecognizer::setEndpointerMode(EndpointerMode mode)
     // Apply to recognizer if it exists
     if (mVoskRecognizer && s_vosk_recognizer_set_endpointer_mode) {
         s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, modeInt);
+#ifdef DEBUG_STT
         qDebug() << "VoskRecognizer: Set endpointer mode to" << modeInt;
+#endif
     }
 }
 
@@ -1096,7 +1112,9 @@ void VoskRecognizer::setWordsEnabled(bool enabled)
     // Apply to recognizer if it exists
     if (mVoskRecognizer && s_vosk_recognizer_set_words) {
         s_vosk_recognizer_set_words(mVoskRecognizer, mWordsEnabled ? 1 : 0);
+#ifdef DEBUG_STT
         qDebug() << "VoskRecognizer: Set words enabled to" << mWordsEnabled;
+#endif
     }
 }
 
