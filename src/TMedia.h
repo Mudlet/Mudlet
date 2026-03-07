@@ -63,7 +63,14 @@ public:
         }
         return mMediaPlayer->playbackState();
     }
-    void setVolume(int volume) const { return mMediaPlayer->audioOutput()->setVolume(volume / 100.0f); }
+    void setVolume(int volume) const
+    {
+        if (!mMediaPlayer) {
+            qWarning() << "TMediaPlayer::setVolume() - mMediaPlayer is nullptr!";
+            return;
+        }
+        mMediaPlayer->audioOutput()->setVolume(volume / 100.0f);
+    }
     TMediaPlaylist* playlist() const { return mPlaylist; }
     void setPlaylist(TMediaPlaylist* playlist)
     {
@@ -77,8 +84,8 @@ public:
 private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
-    QMediaPlayer* mMediaPlayer;
-    TMediaPlaylist* mPlaylist;
+    QMediaPlayer* mMediaPlayer = nullptr;
+    TMediaPlaylist* mPlaylist = nullptr;
     bool initialized = false;
 };
 
