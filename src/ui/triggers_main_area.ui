@@ -541,7 +541,7 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string comment="Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button">keep</string>
+            <string comment="Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button">keep color</string>
            </property>
           </widget>
          </item>
@@ -564,7 +564,27 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string comment="Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button">keep</string>
+            <string comment="Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button">keep color</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QToolButton" name="toolButton_clearFgColor">
+           <property name="toolTip">
+            <string>&lt;p&gt;Click to reset the foreground color to keep the existing text color on matches.&lt;/p&gt;</string>
+           </property>
+           <property name="text">
+            <string>keep</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QToolButton" name="toolButton_clearBgColor">
+           <property name="toolTip">
+            <string>&lt;p&gt;Click to reset the background color to keep the existing text color on matches.&lt;/p&gt;</string>
+           </property>
+           <property name="text">
+            <string>keep</string>
            </property>
           </widget>
          </item>

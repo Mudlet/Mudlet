@@ -352,6 +352,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     layoutColumn->addWidget(mpTriggersMainArea, 1);
     connect(mpTriggersMainArea->pushButtonFgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorizeTriggerSetFgColor);
     connect(mpTriggersMainArea->pushButtonBgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorizeTriggerSetBgColor);
+    connect(mpTriggersMainArea->toolButton_clearFgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorizeTriggerClearFgColor);
+    connect(mpTriggersMainArea->toolButton_clearBgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorizeTriggerClearBgColor);
     connect(mpTriggersMainArea->pushButtonSound, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_soundTrigger);
     connect(mpTriggersMainArea->groupBox_triggerColorizer, &QGroupBox::clicked, this, &dlgTriggerEditor::slot_toggleGroupBoxColorizeTrigger);
     connect(mpTriggersMainArea->toolButton_clearSoundFile, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_clearSoundFile);
@@ -8245,11 +8247,15 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
         mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(fgColor, pT->isColorizerTrigger()));
         mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, transparentFg ? qsl("transparent") : fgColor.name());
         //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
-        mpTriggersMainArea->pushButtonFgColor->setText(transparentFg ? tr("keep") : QString());
+        mpTriggersMainArea->pushButtonFgColor->setText(transparentFg ? tr("keep color") : QString());
         mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(pT->getBgColor(), pT->isColorizerTrigger()));
         mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, transparentBg ? qsl("transparent") : bgColor.name());
         //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
-        mpTriggersMainArea->pushButtonBgColor->setText(transparentBg ? tr("keep") : QString());
+        mpTriggersMainArea->pushButtonBgColor->setText(transparentBg ? tr("keep color") : QString());
+
+        const bool useAlphaChannel = mpHost->experimentEnabled(qsl("experiment.ui.highlight-keep-alpha"));
+        mpTriggersMainArea->toolButton_clearFgColor->setVisible(!useAlphaChannel);
+        mpTriggersMainArea->toolButton_clearBgColor->setVisible(!useAlphaChannel);
 
         checkForMoreThanOneTriggerItem();
 
@@ -13019,13 +13025,28 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
         return;
     }
 
-    const auto color = QColorDialog::getColor(QColor(mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString()), this, tr("Select foreground color to apply to matches"));
+    const bool useAlphaChannel = mpHost->experimentEnabled(qsl("experiment.ui.highlight-keep-alpha"));
+    QColorDialog::ColorDialogOptions options;
+    if (useAlphaChannel) {
+        options |= QColorDialog::ShowAlphaChannel;
+    }
+
+    const auto currentColor = QColor(mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString());
+    const auto color = QColorDialog::getColor(currentColor, this, tr("Select foreground color to apply to matches"), options);
     if (!color.isValid()) {
         return;
     }
-    mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(color));
-    mpTriggersMainArea->pushButtonFgColor->setText(QString());
-    mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, color.name());
+
+    if (useAlphaChannel && color.alpha() == 0) {
+        mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(QColorConstants::Transparent));
+        //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+        mpTriggersMainArea->pushButtonFgColor->setText(tr("keep color"));
+        mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, qsl("transparent"));
+    } else {
+        mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(color));
+        mpTriggersMainArea->pushButtonFgColor->setText(QString());
+        mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, color.name());
+    }
 }
 
 // Set the background color that will be applied to text that matches the trigger pattern(s)
@@ -13039,13 +13060,44 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
         return;
     }
 
-    const auto color = QColorDialog::getColor(QColor(mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString()), this, tr("Select background color to apply to matches"));
+    const bool useAlphaChannel = mpHost->experimentEnabled(qsl("experiment.ui.highlight-keep-alpha"));
+    QColorDialog::ColorDialogOptions options;
+    if (useAlphaChannel) {
+        options |= QColorDialog::ShowAlphaChannel;
+    }
+
+    const auto currentColor = QColor(mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString());
+    const auto color = QColorDialog::getColor(currentColor, this, tr("Select background color to apply to matches"), options);
     if (!color.isValid()) {
         return;
     }
-    mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(color));
-    mpTriggersMainArea->pushButtonBgColor->setText(QString());
-    mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, color.name());
+
+    if (useAlphaChannel && color.alpha() == 0) {
+        mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(QColorConstants::Transparent));
+        //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+        mpTriggersMainArea->pushButtonBgColor->setText(tr("keep color"));
+        mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, qsl("transparent"));
+    } else {
+        mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(color));
+        mpTriggersMainArea->pushButtonBgColor->setText(QString());
+        mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, color.name());
+    }
+}
+
+void dlgTriggerEditor::slot_colorizeTriggerClearFgColor()
+{
+    mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(QColorConstants::Transparent));
+    //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+    mpTriggersMainArea->pushButtonFgColor->setText(tr("keep color"));
+    mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, qsl("transparent"));
+}
+
+void dlgTriggerEditor::slot_colorizeTriggerClearBgColor()
+{
+    mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(QColorConstants::Transparent));
+    //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+    mpTriggersMainArea->pushButtonBgColor->setText(tr("keep color"));
+    mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, qsl("transparent"));
 }
 
 void dlgTriggerEditor::slot_soundTrigger()
@@ -13690,6 +13742,10 @@ void dlgTriggerEditor::slot_toggleGroupBoxColorizeTrigger(const bool state)
         mpTriggersMainArea->groupBox_triggerColorizer->setChecked(state);
     }
 
+    const bool useAlphaChannel = mpHost->experimentEnabled(qsl("experiment.ui.highlight-keep-alpha"));
+    mpTriggersMainArea->toolButton_clearFgColor->setVisible(!useAlphaChannel);
+    mpTriggersMainArea->toolButton_clearBgColor->setVisible(!useAlphaChannel);
+
     if (state) {
         // Enabled so make buttons have full colour:
         const QString fgColor = mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString();
@@ -13697,9 +13753,9 @@ void dlgTriggerEditor::slot_toggleGroupBoxColorizeTrigger(const bool state)
         mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(fgColor, true));
         mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(bgColor, true));
         //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
-        mpTriggersMainArea->pushButtonFgColor->setText(fgColor == QLatin1String("transparent") ? tr("keep") : QString());
+        mpTriggersMainArea->pushButtonFgColor->setText(fgColor == QLatin1String("transparent") ? tr("keep color") : QString());
         //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
-        mpTriggersMainArea->pushButtonBgColor->setText(bgColor == QLatin1String("transparent") ? tr("keep") : QString());
+        mpTriggersMainArea->pushButtonBgColor->setText(bgColor == QLatin1String("transparent") ? tr("keep color") : QString());
     } else {
         // Disabled so make buttons greyed out a bit:
         mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString(), false));

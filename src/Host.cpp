@@ -1001,8 +1001,8 @@ void Host::waitForProfileSave()
     int iterations = 0;
     while (currentlySavingProfile()) {
         if (++iterations > 1000) {
-            qWarning().nospace() << "Host::waitForProfileSave() WARNING - save did not complete after 1000 event loop iterations. "
-                                 << "State: mWritingHostAndModules=" << mWritingHostAndModules << ", writers pending=" << writers.size() << ". Continuing without waiting.";
+            qWarning().nospace() << "Host::waitForProfileSave() WARNING - save did not complete after 1000 event loop iterations. " << "State: mWritingHostAndModules=" << mWritingHostAndModules
+                                 << ", writers pending=" << writers.size() << ". Continuing without waiting.";
             break;
         }
         qApp->processEvents();
@@ -4890,7 +4890,8 @@ const QSet<QString> Host::mValidExperiments = {qsl("experiment.rendering.origina
                                                qsl("experiment.rendering.more-transparent"),
                                                qsl("experiment.3dmap.modernmapper"),
                                                qsl("experiment.render-in-out-exits"),
-                                               qsl("experiment.3d-player-icon")};
+                                               qsl("experiment.3d-player-icon"),
+                                               qsl("experiment.ui.highlight-keep-alpha")};
 
 bool Host::experimentEnabled(const QString& experimentKey) const
 {
