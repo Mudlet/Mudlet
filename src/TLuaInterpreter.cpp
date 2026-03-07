@@ -3582,7 +3582,16 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
                 lua_remove(L, -2);
             }
             lua_pushstring(L, tokenList.at(i).toUtf8().constData());
-            lua_pcall(L, 2, 0, 0);
+            if (lua_pcall(L, 2, 0, 0)) {
+                std::string e;
+                if (lua_isstring(L, -1)) {
+                    e = "GMCP merge error: ";
+                    e += lua_tostring(L, -1);
+                }
+                const QString _n = qsl("GMCP merge");
+                const QString _f = qsl("__gmcp_merge_gmcp_sub_tables");
+                logError(e, _n, _f);
+            }
         }
     } else {
         {
