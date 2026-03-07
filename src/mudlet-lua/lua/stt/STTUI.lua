@@ -26,47 +26,47 @@ STT.UI._styles = {
 }
 
 -- Available Vosk models for download
--- Format: { name, identifier, language, url, sizeBytes, isSmall }
+-- Format: { name, identifier, language, url, size (in MB) }
 STT.UI._availableModels = {
   -- English models
   { name = "English (US) - Small", identifier = "vosk-model-small-en-us-0.15", language = "en",
-    url = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip", size = 40, isSmall = true },
+    url = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip", size = 40 },
   { name = "English (US) - Large", identifier = "vosk-model-en-us-0.22", language = "en",
-    url = "https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip", size = 1800, isSmall = false },
+    url = "https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip", size = 1800 },
   -- German models
   { name = "German - Small", identifier = "vosk-model-small-de-0.15", language = "de",
-    url = "https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip", size = 45, isSmall = true },
+    url = "https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip", size = 45 },
   { name = "German - Large", identifier = "vosk-model-de-0.21", language = "de",
-    url = "https://alphacephei.com/vosk/models/vosk-model-de-0.21.zip", size = 1900, isSmall = false },
+    url = "https://alphacephei.com/vosk/models/vosk-model-de-0.21.zip", size = 1900 },
   -- Spanish models
   { name = "Spanish - Small", identifier = "vosk-model-small-es-0.42", language = "es",
-    url = "https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip", size = 39, isSmall = true },
+    url = "https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip", size = 39 },
   -- French models
   { name = "French - Small", identifier = "vosk-model-small-fr-0.22", language = "fr",
-    url = "https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip", size = 41, isSmall = true },
+    url = "https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip", size = 41 },
   { name = "French - Large", identifier = "vosk-model-fr-0.22", language = "fr",
-    url = "https://alphacephei.com/vosk/models/vosk-model-fr-0.22.zip", size = 1400, isSmall = false },
+    url = "https://alphacephei.com/vosk/models/vosk-model-fr-0.22.zip", size = 1400 },
   -- Italian models
   { name = "Italian - Small", identifier = "vosk-model-small-it-0.22", language = "it",
-    url = "https://alphacephei.com/vosk/models/vosk-model-small-it-0.22.zip", size = 48, isSmall = true },
+    url = "https://alphacephei.com/vosk/models/vosk-model-small-it-0.22.zip", size = 48 },
   -- Portuguese models
   { name = "Portuguese - Small", identifier = "vosk-model-small-pt-0.3", language = "pt",
-    url = "https://alphacephei.com/vosk/models/vosk-model-small-pt-0.3.zip", size = 31, isSmall = true },
+    url = "https://alphacephei.com/vosk/models/vosk-model-small-pt-0.3.zip", size = 31 },
   -- Russian models
   { name = "Russian - Small", identifier = "vosk-model-small-ru-0.22", language = "ru",
-    url = "https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip", size = 45, isSmall = true },
+    url = "https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip", size = 45 },
   -- Chinese models
   { name = "Chinese - Small", identifier = "vosk-model-small-cn-0.22", language = "zh",
-    url = "https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip", size = 42, isSmall = true },
+    url = "https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip", size = 42 },
   -- Japanese models
   { name = "Japanese - Small", identifier = "vosk-model-small-ja-0.22", language = "ja",
-    url = "https://alphacephei.com/vosk/models/vosk-model-small-ja-0.22.zip", size = 48, isSmall = true },
+    url = "https://alphacephei.com/vosk/models/vosk-model-small-ja-0.22.zip", size = 48 },
   -- Polish models
   { name = "Polish - Small", identifier = "vosk-model-small-pl-0.22", language = "pl",
-    url = "https://alphacephei.com/vosk/models/vosk-model-small-pl-0.22.zip", size = 47, isSmall = true },
+    url = "https://alphacephei.com/vosk/models/vosk-model-small-pl-0.22.zip", size = 47 },
   -- Dutch models
   { name = "Dutch - Small", identifier = "vosk-model-small-nl-0.22", language = "nl",
-    url = "https://alphacephei.com/vosk/models/vosk-model-small-nl-0.22.zip", size = 39, isSmall = true },
+    url = "https://alphacephei.com/vosk/models/vosk-model-small-nl-0.22.zip", size = 39 },
 }
 
 --- Create the microphone toolbar button.
@@ -253,104 +253,101 @@ function STT.UI.showMicButton(show)
 end
 
 --- Create and show the setup dialog for selecting and downloading Vosk models.
--- @return Geyser.Container the dialog container
+-- @return Adjustable.Container the dialog container
 function STT.UI.showSetupDialog()
   -- Always recreate the dialog to ensure the model list is fresh
   if STT.UI._setupDialog then
     STT.UI._cleanupSetupDialog()
   end
 
-  -- Create dialog container - make it taller to fit both sections
-  STT.UI._setupDialog = Geyser.Container:new({
+  -- Create main container using Adjustable.Container (provides title bar with close button)
+  STT.UI._setupDialog = Adjustable.Container:new({
     name = "STT_SetupDialog",
-    x = "15%", y = "10%",
-    width = "70%", height = "80%",
+    x = "10%", y = "2%",
+    width = "80%", height = "96%",
+    titleText = "Speech Recognition Setup",
+    autoLoad = false,
+    autoSave = false,
+    adjLabelstyle = [[
+      background-color: #1e1e1e;
+      border: 2px solid #555;
+    ]],
   })
 
-  -- Background
-  local bg = Geyser.Label:new({
-    name = "STT_SetupDialog_BG",
-    x = 0, y = 0,
-    width = "100%", height = "100%",
-  }, STT.UI._setupDialog)
-  bg:setStyleSheet([[
-    background-color: rgba(30, 30, 30, 245);
-    border: 2px solid #555;
-    border-radius: 8px;
-  ]])
-
-  -- Title
-  local title = Geyser.Label:new({
-    name = "STT_SetupDialog_Title",
-    x = 0, y = 10,
-    width = "100%", height = 30,
-  }, STT.UI._setupDialog)
-  title:echo("<center><b>Speech Recognition Setup</b></center>", "white", "c14")
+  -- Content goes inside the container's Inside element
+  local inside = STT.UI._setupDialog.Inside
+  local yOffset = 5
 
   -- Status message area (for showing progress/errors)
   STT.UI._dialogStatus = Geyser.Label:new({
     name = "STT_SetupDialog_Status",
-    x = 10, y = 45,
-    width = "95%", height = 25,
-  }, STT.UI._setupDialog)
-  STT.UI._dialogStatus:setStyleSheet([[
-    background-color: transparent;
-  ]])
-  STT.UI._dialogStatus:echo("", "white", "c")
+    x = 10, y = yOffset,
+    width = "95%", height = 22,
+    fgColor = "white",
+    fontSize = 10,
+  }, inside)
+  STT.UI._dialogStatus:setStyleSheet([[background-color: #323232;]])
+  STT.UI._dialogStatus:echo("")
+  yOffset = yOffset + 25
 
   -- Progress bar (hidden by default)
   STT.UI._progressBar = Geyser.Gauge:new({
     name = "STT_SetupDialog_Progress",
-    x = 10, y = 70,
-    width = "95%", height = 20,
-  }, STT.UI._setupDialog)
+    x = 10, y = yOffset,
+    width = "95%", height = 18,
+  }, inside)
   STT.UI._progressBar:setStyleSheet([[
-    background-color: rgba(50, 50, 50, 200);
+    background-color: #323232;
     border: 1px solid #666;
     border-radius: 3px;
   ]], [[
-    background-color: rgba(60, 140, 60, 255);
+    background-color: #3c8c3c;
     border-radius: 3px;
   ]], [[]])
   STT.UI._progressBar:setValue(0)
   STT.UI._progressBar:hide()
 
-  local yOffset = 75
-
   -- Section: Installed Models
   local installedTitle = Geyser.Label:new({
     name = "STT_SetupDialog_InstalledTitle",
     x = 10, y = yOffset,
-    width = "95%", height = 25,
-  }, STT.UI._setupDialog)
-  installedTitle:echo("<b>Installed Models</b> (click to use)", "#aaa", "l")
-  yOffset = yOffset + 30
+    width = "95%", height = 22,
+    fgColor = "#cccccc",
+    fontSize = 10,
+  }, inside)
+  installedTitle:setStyleSheet([[background-color: #3c3c3c;]])
+  installedTitle:echo("<b>Installed Models</b> (click to use)")
+  yOffset = yOffset + 25
 
-  -- Scroll area for installed models
+  -- List installed models
   local installedModels = STT.listModels()
-  local installedAreaHeight = math.min(#installedModels * 35 + 10, 120)
 
   if #installedModels == 0 then
     local noModels = Geyser.Label:new({
       name = "STT_SetupDialog_NoInstalled",
       x = 10, y = yOffset,
-      width = "95%", height = 35,
-    }, STT.UI._setupDialog)
-    noModels:echo("<i>No models installed yet. Download one below.</i>", "#888", "c")
-    yOffset = yOffset + 40
+      width = "95%", height = 26,
+      fgColor = "#999999",
+      fontSize = 10,
+    }, inside)
+    noModels:setStyleSheet([[background-color: #323232;]])
+    noModels:echo("<center><i>No models installed yet. Download one below.</i></center>")
+    yOffset = yOffset + 30
   else
     for i, model in ipairs(installedModels) do
       local modelBtn = Geyser.Label:new({
         name = "STT_SetupDialog_Installed_" .. i,
         x = 10, y = yOffset,
-        width = "95%", height = 30,
-      }, STT.UI._setupDialog)
+        width = "95%", height = 26,
+        fgColor = "white",
+        fontSize = 10,
+      }, inside)
       modelBtn:setStyleSheet([[
-        background-color: rgba(40, 80, 40, 200);
+        background-color: #285028;
         border: 1px solid #4a4;
         border-radius: 4px;
       ]])
-      modelBtn:echo(string.format("  %s", model.name or model.path), "white", "l")
+      modelBtn:echo(string.format("  %s", model.name or model.path))
       modelBtn:setClickCallback(function()
         local success, errorMsg = STT.init(model.path)
         if success then
@@ -362,77 +359,68 @@ function STT.UI.showSetupDialog()
           STT.UI._setDialogStatus("Failed: " .. (errorMsg or "Unknown error"), "red")
         end
       end)
-      yOffset = yOffset + 35
+      yOffset = yOffset + 30
     end
   end
 
-  yOffset = yOffset + 15
+  yOffset = yOffset + 10
 
   -- Section: Download Models
   local downloadTitle = Geyser.Label:new({
     name = "STT_SetupDialog_DownloadTitle",
     x = 10, y = yOffset,
-    width = "95%", height = 25,
-  }, STT.UI._setupDialog)
-  downloadTitle:echo("<b>Download New Model</b> (click to download)", "#aaa", "l")
-  yOffset = yOffset + 30
+    width = "95%", height = 22,
+    fgColor = "#cccccc",
+    fontSize = 10,
+  }, inside)
+  downloadTitle:setStyleSheet([[background-color: #3c3c3c;]])
+  downloadTitle:echo("<b>Download New Model</b> (click to download)")
+  yOffset = yOffset + 25
 
-  -- Create scrollable area for downloadable models
-  local scrollContainer = Geyser.Container:new({
-    name = "STT_SetupDialog_ScrollArea",
-    x = 10, y = yOffset,
-    width = "95%", height = -100,  -- Leave room for close button
-  }, STT.UI._setupDialog)
-
-  -- Add downloadable models
-  local scrollY = 0
+  -- Add downloadable models directly
   for i, model in ipairs(STT.UI._availableModels) do
     -- Check if already installed
     local isInstalled = STT.UI._isModelInstalled(model.identifier)
     local sizeStr = model.size < 100 and string.format("~%d MB", model.size) or string.format("~%.1f GB", model.size / 1024)
 
-    local modelBtn = Geyser.Label:new({
-      name = "STT_SetupDialog_Download_" .. i,
-      x = 0, y = scrollY,
-      width = "100%", height = 35,
-    }, scrollContainer)
-
     if isInstalled then
+      local modelBtn = Geyser.Label:new({
+        name = "STT_SetupDialog_Download_" .. i,
+        x = 10, y = yOffset,
+        width = "95%", height = 28,
+        fgColor = "#777777",
+        fontSize = 10,
+      }, inside)
       modelBtn:setStyleSheet([[
-        background-color: rgba(60, 60, 60, 150);
+        background-color: #3c3c3c;
         border: 1px solid #555;
         border-radius: 4px;
       ]])
-      modelBtn:echo(string.format("  %s (%s) <i>[installed]</i>", model.name, sizeStr), "#777", "l")
+      modelBtn:echo(string.format("  %s (%s) <i>[installed]</i>", model.name, sizeStr))
     else
+      local modelBtn = Geyser.Label:new({
+        name = "STT_SetupDialog_Download_" .. i,
+        x = 10, y = yOffset,
+        width = "95%", height = 28,
+        fgColor = "white",
+        fontSize = 10,
+      }, inside)
       modelBtn:setStyleSheet([[
-        background-color: rgba(50, 50, 80, 200);
+        background-color: #323250;
         border: 1px solid #668;
         border-radius: 4px;
       ]])
-      modelBtn:echo(string.format("  %s (%s)", model.name, sizeStr), "white", "l")
+      modelBtn:echo(string.format("  %s (%s)", model.name, sizeStr))
       modelBtn:setClickCallback(function()
         STT.UI._downloadModel(model)
       end)
     end
-    scrollY = scrollY + 40
+    yOffset = yOffset + 32
   end
 
-  -- Close button
-  local closeBtn = Geyser.Label:new({
-    name = "STT_SetupDialog_Close",
-    x = "40%", y = -50,
-    width = "20%", height = 35,
-  }, STT.UI._setupDialog)
-  closeBtn:setStyleSheet([[
-    background-color: rgba(80, 80, 80, 200);
-    border: 1px solid #888;
-    border-radius: 4px;
-  ]])
-  closeBtn:echo("<center>Close</center>", "white", "c")
-  closeBtn:setClickCallback(function()
-    STT.UI.hideSetupDialog()
-  end)
+  -- Ensure dialog is visible and raised to front
+  STT.UI._setupDialog:show()
+  raiseWindow("STT_SetupDialog")
 
   return STT.UI._setupDialog
 end
@@ -447,8 +435,21 @@ function STT.UI._cleanupSetupDialog()
     killAnonymousEventHandler(STT.UI._progressHandlerId)
     STT.UI._progressHandlerId = nil
   end
-  if STT.UI._setupDialog and STT.UI._setupDialog.name then
-    deleteLabel(STT.UI._setupDialog.name)
+  if STT.UI._unzipDoneHandlerId then
+    killAnonymousEventHandler(STT.UI._unzipDoneHandlerId)
+    STT.UI._unzipDoneHandlerId = nil
+  end
+  if STT.UI._unzipErrorHandlerId then
+    killAnonymousEventHandler(STT.UI._unzipErrorHandlerId)
+    STT.UI._unzipErrorHandlerId = nil
+  end
+  if STT.UI._errorHandlerId then
+    killAnonymousEventHandler(STT.UI._errorHandlerId)
+    STT.UI._errorHandlerId = nil
+  end
+  if STT.UI._setupDialog then
+    -- Hide the Adjustable.Container
+    STT.UI._setupDialog:hide()
   end
   STT.UI._setupDialog = nil
   STT.UI._dialogStatus = nil
@@ -474,7 +475,8 @@ end
 -- @param color string optional color name
 function STT.UI._setDialogStatus(message, color)
   if STT.UI._dialogStatus then
-    STT.UI._dialogStatus:echo(message, color or "white", "c")
+    STT.UI._dialogStatus.fgColor = color or "white"
+    STT.UI._dialogStatus:echo("<center>" .. message .. "</center>")
   end
 end
 
@@ -500,16 +502,25 @@ function STT.UI._downloadModel(model)
     modelDir = getMudletHomeDir() .. "/speech-models"
   end
 
-  -- Create directory if needed
-  lfs.mkdir(modelDir)
+  -- Create directory if needed (check if it exists first since mkdir fails on existing dirs)
+  local dirAttr = lfs.attributes(modelDir, "mode")
+  if not dirAttr then
+    local ok, errMsg = lfs.mkdir(modelDir)
+    if not ok then
+      STT.UI._setDialogStatus("Failed to create model directory: " .. (errMsg or "unknown error"), "red")
+      STT.UI._downloading = false
+      return
+    end
+  elseif dirAttr ~= "directory" then
+    STT.UI._setDialogStatus("Model path exists but is not a directory: " .. modelDir, "red")
+    STT.UI._downloading = false
+    return
+  end
 
   local zipPath = modelDir .. "/" .. model.identifier .. ".zip"
   local extractPath = modelDir
 
   -- Register download completion handler
-  local unzipDoneHandlerId = nil
-  local unzipErrorHandlerId = nil
-
   STT.UI._downloadHandlerId = registerAnonymousEventHandler("sysDownloadDone", function(event, path, bytesWritten)
     if path ~= zipPath then return end
 
@@ -526,16 +537,16 @@ function STT.UI._downloadModel(model)
     STT.UI._setDialogStatus("Extracting model...", "cyan")
 
     -- Register unzip completion handler
-    unzipDoneHandlerId = registerAnonymousEventHandler("sysUnzipDone", function(evt, zip, dest)
+    STT.UI._unzipDoneHandlerId = registerAnonymousEventHandler("sysUnzipDone", function(evt, zip, dest)
       if zip ~= zipPath then return end
 
-      if unzipDoneHandlerId then
-        killAnonymousEventHandler(unzipDoneHandlerId)
-        unzipDoneHandlerId = nil
+      if STT.UI._unzipDoneHandlerId then
+        killAnonymousEventHandler(STT.UI._unzipDoneHandlerId)
+        STT.UI._unzipDoneHandlerId = nil
       end
-      if unzipErrorHandlerId then
-        killAnonymousEventHandler(unzipErrorHandlerId)
-        unzipErrorHandlerId = nil
+      if STT.UI._unzipErrorHandlerId then
+        killAnonymousEventHandler(STT.UI._unzipErrorHandlerId)
+        STT.UI._unzipErrorHandlerId = nil
       end
 
       -- Clean up zip file
@@ -556,16 +567,16 @@ function STT.UI._downloadModel(model)
       end)
     end)
 
-    unzipErrorHandlerId = registerAnonymousEventHandler("sysUnzipError", function(evt, zip, dest)
+    STT.UI._unzipErrorHandlerId = registerAnonymousEventHandler("sysUnzipError", function(evt, zip, dest)
       if zip ~= zipPath then return end
 
-      if unzipDoneHandlerId then
-        killAnonymousEventHandler(unzipDoneHandlerId)
-        unzipDoneHandlerId = nil
+      if STT.UI._unzipDoneHandlerId then
+        killAnonymousEventHandler(STT.UI._unzipDoneHandlerId)
+        STT.UI._unzipDoneHandlerId = nil
       end
-      if unzipErrorHandlerId then
-        killAnonymousEventHandler(unzipErrorHandlerId)
-        unzipErrorHandlerId = nil
+      if STT.UI._unzipErrorHandlerId then
+        killAnonymousEventHandler(STT.UI._unzipErrorHandlerId)
+        STT.UI._unzipErrorHandlerId = nil
       end
 
       STT.UI._setDialogStatus("Failed to extract model archive", "red")
@@ -578,7 +589,7 @@ function STT.UI._downloadModel(model)
   end)
 
   -- Register download error handler
-  local errorHandlerId = registerAnonymousEventHandler("sysDownloadError", function(event, errorMsg, path)
+  STT.UI._errorHandlerId = registerAnonymousEventHandler("sysDownloadError", function(event, errorMsg, path)
     if path ~= zipPath then return end
 
     if STT.UI._downloadHandlerId then
@@ -598,7 +609,10 @@ function STT.UI._downloadModel(model)
     end
 
     -- Unregister this error handler
-    killAnonymousEventHandler(errorHandlerId)
+    if STT.UI._errorHandlerId then
+      killAnonymousEventHandler(STT.UI._errorHandlerId)
+      STT.UI._errorHandlerId = nil
+    end
   end)
 
   -- Track download progress (uses URL, not path)

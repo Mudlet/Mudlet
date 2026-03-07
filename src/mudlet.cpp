@@ -5088,7 +5088,8 @@ void mudlet::slot_toggleSpeechRecognition()
     // Check if any backend is available first
     if (!SpeechRecognizerFactory::isBackendAvailable(SpeechRecognizerFactory::Backend::Auto)) {
         // Raise sysSTTSetupNeeded event for Lua UI to show setup dialog
-        Host* pHost = getActiveHost();
+        TCommandLine* pCmdLine = focusedCommandLine();
+        Host* pHost = (pCmdLine && pCmdLine->console()) ? pCmdLine->console()->getHost() : getActiveHost();
         if (pHost) {
             TEvent event{};
             event.mArgumentList.append(qsl("sysSTTSetupNeeded"));
@@ -5107,7 +5108,8 @@ void mudlet::slot_toggleSpeechRecognition()
 
     if (!mpSpeechRecognizer) {
         // Failed to initialize - raise error event
-        Host* pHost = getActiveHost();
+        TCommandLine* pCmdLine = focusedCommandLine();
+        Host* pHost = (pCmdLine && pCmdLine->console()) ? pCmdLine->console()->getHost() : getActiveHost();
         if (pHost) {
             TEvent event{};
             event.mArgumentList.append(qsl("sysSTTError"));
@@ -5121,7 +5123,8 @@ void mudlet::slot_toggleSpeechRecognition()
 
     if (!mpSpeechRecognizer->isInitialized()) {
         // Model not loaded - raise setup needed event
-        Host* pHost = getActiveHost();
+        TCommandLine* pCmdLine = focusedCommandLine();
+        Host* pHost = (pCmdLine && pCmdLine->console()) ? pCmdLine->console()->getHost() : getActiveHost();
         if (pHost) {
             TEvent event{};
             event.mArgumentList.append(qsl("sysSTTSetupNeeded"));
@@ -5138,12 +5141,15 @@ void mudlet::slot_toggleSpeechRecognition()
         mpSpeechRecognizer->stopListening();
         mSpeechRecognitionActive = false;
         mCurrentPartialResult.clear();
+        mPreSpeechSnapshot.clear();
     } else {
         // Save current text from focused command line before starting speech recognition
         TCommandLine* pCommandLine = focusedCommandLine();
         if (pCommandLine) {
-            mTextBeforeSpeech = pCommandLine->toPlainText();
+            mPreSpeechSnapshot = pCommandLine->toPlainText();
+            mTextBeforeSpeech = mPreSpeechSnapshot;
         } else {
+            mPreSpeechSnapshot.clear();
             mTextBeforeSpeech.clear();
         }
 
@@ -5350,17 +5356,16 @@ void mudlet::slot_handleSpeechError(const QString& errorMessage)
     // Restore original text if there was a partial result in progress
     TCommandLine* pCommandLine = focusedCommandLine();
 
-    if (pCommandLine && (!mTextBeforeSpeech.isEmpty() || !mTextAfterSpeech.isEmpty() || !pCommandLine->toPlainText().isEmpty())) {
-        // Reconstruct the full original buffer from before + after parts
-        QString restoredText = mTextBeforeSpeech;
-        if (!mTextAfterSpeech.isEmpty()) {
-            restoredText += mTextAfterSpeech;
-        }
-        pCommandLine->setPlainText(restoredText);
+    if (pCommandLine && !mPreSpeechSnapshot.isEmpty()) {
+        // Restore the complete original text from before speech recognition started
+        pCommandLine->setPlainText(mPreSpeechSnapshot);
         QTextCursor cursor = pCommandLine->textCursor();
         cursor.movePosition(QTextCursor::End);
         pCommandLine->setTextCursor(cursor);
     }
+
+    // Clear the snapshot after restoring
+    mPreSpeechSnapshot.clear();
 
     // Get the host from the focused command line for the error message
     Host* pHost = (pCommandLine && pCommandLine->console()) ? pCommandLine->console()->getHost() : getActiveHost();

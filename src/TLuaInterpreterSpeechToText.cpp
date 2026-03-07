@@ -258,7 +258,8 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
 // Returns the path as a string.
 int TLuaInterpreter::sttGetModelPath(lua_State* L)
 {
-    const QString modelPath = mudlet::getMudletPath(enums::profileDataItemPath, qsl("speech-models"));
+    // Use the same global vosk-models directory as VoskRecognizer
+    const QString modelPath = mudlet::getMudletPath(enums::mainDataItemPath, qsl("vosk-models"));
     lua_pushstring(L, modelPath.toUtf8().constData());
     return 1;
 }
@@ -268,7 +269,8 @@ int TLuaInterpreter::sttGetModelPath(lua_State* L)
 // Returns a table of model names/paths.
 int TLuaInterpreter::sttListModels(lua_State* L)
 {
-    const QString modelBasePath = mudlet::getMudletPath(enums::profileDataItemPath, qsl("speech-models"));
+    // Use the same global vosk-models directory as VoskRecognizer
+    const QString modelBasePath = mudlet::getMudletPath(enums::mainDataItemPath, qsl("vosk-models"));
     QDir modelDir(modelBasePath);
 
     lua_newtable(L);
@@ -281,9 +283,10 @@ int TLuaInterpreter::sttListModels(lua_State* L)
     int index = 1;
     for (const QString& entry : entries) {
         const QString fullPath = modelDir.filePath(entry);
-        // Check if this looks like a valid model (has required files)
+        // Check if this looks like a valid Vosk model directory
+        // Vosk models typically have am/, conf/, graph/, ivector/ subdirectories
         QDir entryDir(fullPath);
-        if (entryDir.exists(qsl("am/final.mdl")) || entryDir.exists(qsl("model")) || entryDir.exists(qsl("conf/model.conf"))) {
+        if (entryDir.exists(qsl("am")) || entryDir.exists(qsl("conf")) || entryDir.exists(qsl("graph")) || entryDir.exists(qsl("ivector"))) {
             lua_pushinteger(L, index++);
             lua_newtable(L);
 

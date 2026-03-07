@@ -723,6 +723,7 @@ private:
     // Global speech-to-text singleton
     QPointer<SpeechRecognizer> mpSpeechRecognizer;
     bool mSpeechRecognitionActive = false;
+    QString mPreSpeechSnapshot; // Complete text snapshot before speech started (for error recovery)
     QString mTextBeforeSpeech;
     QString mTextAfterSpeech;
     QString mCurrentPartialResult;
@@ -790,7 +791,8 @@ private:
     QAction* mWindowListSeparator = nullptr;
 
     // Addon toolbar button management
-    struct AddonButton {
+    struct AddonButton
+    {
         QPointer<QToolButton> button;
         QPointer<QTimer> pulseTimer;
         QString name;
@@ -804,7 +806,8 @@ private:
     QAction* mpAddonToolbarSeparator = nullptr;
 
     // Addon menu item management
-    struct AddonMenuItem {
+    struct AddonMenuItem
+    {
         QPointer<QAction> action;
         QString menuPath;
         QString name;
