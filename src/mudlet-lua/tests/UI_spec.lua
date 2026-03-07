@@ -1245,6 +1245,98 @@ describe("Tests UI functions", function()
     deselect()
   end)
 
+  -- https://github.com/Mudlet/Mudlet/issues/8945
+  -- insertText with newlines should create new lines, not insert literal \n
+  describe("Tests the functionality of insertText", function()
+    local consoleName = "insertTextTest"
+
+    setup(function()
+      createMiniConsole(consoleName, 0, 0, 800, 200)
+      setBackgroundColor(consoleName, 0, 0, 0, 255)
+      setMiniConsoleFontSize(consoleName, 12)
+      setWindowWrap(consoleName, 60)
+    end)
+
+    before_each(function()
+      clearWindow(consoleName)
+    end)
+
+    teardown(function()
+      hideWindow(consoleName)
+    end)
+
+    it("should create new lines when text contains newlines", function()
+      -- echo two lines of initial content
+      echo(consoleName, "line1\n")
+      echo(consoleName, "line2\n")
+
+      local lineCountBefore = getLineCount(consoleName)
+
+      -- move cursor to beginning and insert text with a newline
+      moveCursor(consoleName, 0, 0)
+      insertText(consoleName, "inserted line\n")
+
+      local lineCountAfter = getLineCount(consoleName)
+
+      -- inserting text with \n should increase the line count
+      assert.is_true(lineCountAfter > lineCountBefore,
+        "insertText with \\n should create a new line, but line count went from "
+        .. lineCountBefore .. " to " .. lineCountAfter)
+    end)
+
+    it("should split content correctly when inserting newline in the middle of a line", function()
+      echo(consoleName, "HelloWorld\n")
+
+      -- move cursor to position 5 (between "Hello" and "World")
+      moveCursor(consoleName, 5, 0)
+      insertText(consoleName, "\n")
+
+      -- line 0 should now be "Hello" and line 1 should start with "World"
+      moveCursor(consoleName, 0, 0)
+      selectCurrentLine(consoleName)
+      local firstLine = getCurrentLine(consoleName)
+      deselect(consoleName)
+
+      moveCursor(consoleName, 0, 1)
+      selectCurrentLine(consoleName)
+      local secondLine = getCurrentLine(consoleName)
+      deselect(consoleName)
+
+      assert.are.equal("Hello", firstLine,
+        "First line should be 'Hello' after inserting newline, got '" .. tostring(firstLine) .. "'")
+      assert.are.equal("World", secondLine,
+        "Second line should be 'World' after inserting newline, got '" .. tostring(secondLine) .. "'")
+    end)
+
+    it("should handle the sample code from issue 8945", function()
+      -- Simplified reproduction from the issue report
+      echo(consoleName, "test1---line1\n")
+      echo(consoleName, "test1---line2\n")
+      echo(consoleName, "test1---line3\n")
+
+      local lineCountBefore = getLineCount(consoleName)
+
+      -- insert a line at pos 0,0 with a trailing newline (from the issue)
+      moveCursor(consoleName, 0, 0)
+      insertText(consoleName, "------- line inserted at: 0/0 -----\n")
+
+      local lineCountAfter = getLineCount(consoleName)
+
+      assert.is_true(lineCountAfter > lineCountBefore,
+        "insertText with \\n from issue sample should create a new line, but line count went from "
+        .. lineCountBefore .. " to " .. lineCountAfter)
+
+      -- the inserted text should be on its own line, not concatenated with line1
+      moveCursor(consoleName, 0, 0)
+      selectCurrentLine(consoleName)
+      local firstLine = getCurrentLine(consoleName)
+      deselect(consoleName)
+
+      assert.are.equal("------- line inserted at: 0/0 -----", firstLine,
+        "First line should be the inserted text, got '" .. tostring(firstLine) .. "'")
+    end)
+  end)
+
   -- Tests for label callback functions accepting nil to clear callbacks
   -- See: https://github.com/Mudlet/Mudlet/issues/823
   describe("label callback functions accept nil", function()

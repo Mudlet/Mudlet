@@ -4481,6 +4481,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
     int totalWidth = 0;
     int firstChar = 0;
     bool needsIndent = isNewline;
+    bool hasNewline = false;
 
     // find all the appropriate wrap points assuming (hanging-)indentation prepended to each line
     for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total and indexOfChar >= 0;) {
@@ -4494,6 +4495,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         }
         // handle embedded linefeed
         if (c == QChar::LineFeed) {
+            hasNewline = true;
             output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
             indexOfChar++;
             boundaryFinder.setPosition(indexOfChar);
@@ -4538,7 +4540,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         indexOfChar = nextBoundary;
     }
     // it's possible that no wrapping is needed
-    if (totalWidth <= mWrapAt) {
+    if (totalWidth <= mWrapAt && !hasNewline) {
         output.clear();
         return output;
     }
