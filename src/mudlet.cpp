@@ -4684,6 +4684,11 @@ void mudlet::slot_muteMedia()
     }
 }
 
+SpeechRecognizer* mudlet::speechRecognizer() const
+{
+    return mpSpeechRecognizer;
+}
+
 void mudlet::initSpeechRecognition()
 {
     if (mpSpeechRecognizer) {
@@ -4850,6 +4855,17 @@ void mudlet::slot_handlePartialSpeechResult(const QString& text)
         return;
     }
 
+    // Raise sysSTTPartialResult event for Lua scripts to handle
+    Host* pHost = getActiveHost();
+    if (pHost) {
+        TEvent event{};
+        event.mArgumentList.append(qsl("sysSTTPartialResult"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(text);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        pHost->raiseEvent(event);
+    }
+
     // Get the focused command line to route the text to (respects window focus)
     TCommandLine* pCommandLine = focusedCommandLine();
     if (!pCommandLine) {
@@ -4911,6 +4927,17 @@ void mudlet::slot_handleFinalSpeechResult(const QString& text)
 {
     if (text.isEmpty()) {
         return;
+    }
+
+    // Raise sysSTTResult event for Lua scripts to handle
+    Host* pHost = getActiveHost();
+    if (pHost) {
+        TEvent event{};
+        event.mArgumentList.append(qsl("sysSTTResult"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(text);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        pHost->raiseEvent(event);
     }
 
     // Get the focused command line to route the text to (respects window focus)
@@ -4995,6 +5022,16 @@ void mudlet::slot_handleSpeechError(const QString& errorMessage)
     // Get the host from the focused command line for the error message
     Host* pHost = (pCommandLine && pCommandLine->console()) ? pCommandLine->console()->getHost() : getActiveHost();
 
+    // Raise sysSTTError event for Lua scripts to handle
+    if (pHost) {
+        TEvent event{};
+        event.mArgumentList.append(qsl("sysSTTError"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(errorMessage);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        pHost->raiseEvent(event);
+    }
+
     if (pHost) {
         pHost->postMessage(tr("[Speech Recognition] Error: %1").arg(errorMessage));
     }
@@ -5004,6 +5041,36 @@ void mudlet::slot_handleSpeechStateChanged(int newState)
 {
     if (newState == static_cast<int>(SpeechRecognizer::State::Error)) {
         mSpeechRecognitionActive = false;
+    }
+
+    // Raise sysSTTStateChanged event for Lua scripts to handle
+    Host* pHost = getActiveHost();
+    if (pHost) {
+        TEvent event{};
+        event.mArgumentList.append(qsl("sysSTTStateChanged"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        // Map state to string for Lua
+        QString stateString;
+        switch (static_cast<SpeechRecognizer::State>(newState)) {
+        case SpeechRecognizer::State::Ready:
+            stateString = qsl("ready");
+            break;
+        case SpeechRecognizer::State::Listening:
+            stateString = qsl("listening");
+            break;
+        case SpeechRecognizer::State::Processing:
+            stateString = qsl("processing");
+            break;
+        case SpeechRecognizer::State::Error:
+            stateString = qsl("error");
+            break;
+        default:
+            stateString = qsl("unknown");
+            break;
+        }
+        event.mArgumentList.append(stateString);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        pHost->raiseEvent(event);
     }
 
     updateAllSpeechButtons();

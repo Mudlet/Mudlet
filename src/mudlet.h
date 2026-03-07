@@ -300,6 +300,8 @@ public:
     bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
     bool isSpeechRecognitionActive() const { return mSpeechRecognitionActive; }
+    void setSpeechRecognitionActive(bool active) { mSpeechRecognitionActive = active; }
+    SpeechRecognizer* speechRecognizer() const;
     int speechDetectionTiming() const { return static_cast<int>(mSpeechDetectionTiming); }
     void setSpeechDetectionTiming(int timing) { mSpeechDetectionTiming = static_cast<SpeechDetectionTiming>(timing); }
     bool highlightLowConfidenceWords() const { return mHighlightLowConfidenceWords; }
