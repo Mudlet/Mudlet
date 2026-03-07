@@ -266,8 +266,10 @@ public:
     bool mMapGraphNeedsUpdate = true;
     bool mNewMove = true;
 
-    // Replaced CURRENT_MAP_VERSION, default map version that new maps will get:
-    const int mDefaultVersion = 22;
+    // WARNING: Do not change this value without careful consideration - increasing
+    // the default map format makes it difficult for players to share maps with
+    // others who may be using older Mudlet versions.
+    const int mDefaultVersion = 20;
 
     // Normally the same as mDefaultVersion but can be higher for development
     // builds and is the maximum version the development build can parse, it is
@@ -291,7 +293,7 @@ public:
      * * Version 22 adds the 'hidden' property to rooms, allowing rooms and their
      *   exits to be hidden from display in the mapper.
      */
-    const int mMaxVersion = 22;
+    const int mMaxVersion = 20;
 
     // Ideally would be the same as mDefaultVersion but we have it lower,
     // particularly for release builds and is the minimum version allowed for

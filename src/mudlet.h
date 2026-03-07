@@ -206,7 +206,7 @@ public:
     void attachDebugArea(const QString&);
     void checkUpdatesOnStart();
     void commitLayoutUpdates(bool flush = false);
-    void deleteProfileData(const QString &profile, const QString &item);
+    void deleteProfileData(const QString& profile, const QString& item);
     void disableToolbarButtons();
     void doAutoLogin(const QString&);
     void enableToolbarButtons();
@@ -333,7 +333,7 @@ public:
     // entries in their system if they do not appear in this and thus get
     // reported in the dictionary selection as the hunspell dictionary/affix
     // filename (e.g. a "xx" or "xx_YY" form rather than "words"):
-    QHash<QString, QString>mDictionaryLanguageCodeMap;
+    QHash<QString, QString> mDictionaryLanguageCodeMap;
     Discord mDiscord;
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
@@ -390,6 +390,19 @@ public:
     int mMinLengthForSpellCheck = 3;
     bool mDrawUpperLowerLevels = true;
     bool mShowTabConnectionIndicators = true; // Global preference for showing connection status indicators on tabs
+
+    // Global blink timer for SGR codes 5 and 6 (flashing text)
+    // Shared across all TTextEdit instances for synchronized blinking
+    // Uses 200ms base interval (WCAG 2.3.1 compliant - max 3 Hz)
+    // 4-state counter per ISO/IEC 8613-6: slow blink < 150 cycles/min, fast > 150
+    //   state 0: slow=on,  fast=on
+    //   state 1: slow=on,  fast=off
+    //   state 2: slow=off, fast=on
+    //   state 3: slow=off, fast=off
+    bool slowBlinkState() const { return mBlinkState < 2; }
+    bool fastBlinkState() const { return (mBlinkState % 2) == 0; }
+    void registerBlinkClient();
+    void unregisterBlinkClient();
 
     // AI integration methods
     LlamafileManager* getAIManager() const { return mpLlamafileManager.get(); }
@@ -468,7 +481,7 @@ public slots:
     static QIcon createConnectionStatusIcon(bool isConnected, bool isConnecting, bool hasError);
     void updateMainWindowTabIndicators();
     void updateMainWindowTabBarAutoHide();
-    void updateTabIndicators(); // Update all tab indicators (main window)
+    void updateTabIndicators();               // Update all tab indicators (main window)
     void updateDetachedWindowTabIndicators(); // Update all detached window tab indicators
     void slot_showActionDialog();
     void slot_showAliasDialog();
@@ -513,7 +526,7 @@ signals:
     void signal_passwordsMigratedToProfiles();
     void signal_passwordsMigratedToSecure();
     void signal_characterPasswordsMigrated();
-    void signal_profileActivated(Host *, quint8);
+    void signal_profileActivated(Host*, quint8);
     void signal_profileMapReloadRequested(QList<QString>);
     void signal_setToolBarIconSize(int);
     void signal_setTreeIconSize(int);
@@ -526,6 +539,7 @@ signals:
     void signal_aiStatusChanged(bool running);
     void signal_aiModelChanged(const QString& modelPath);
     void signal_showTabConnectionIndicatorsChanged(bool);
+    void signal_blinkStateChanged(bool slowState, bool fastState);
     void signal_profileLoaded();
 
 private slots:
@@ -550,13 +564,11 @@ private slots:
 
 
 private:
-
-
     void assignKeySequences();
     QString autodetectPreferredLanguage();
     static bool needsCustomDarkTheme();
     void closeHost(const QString&);
-    int getDictionaryWordCount(const QString &dictionaryPath);
+    int getDictionaryWordCount(const QString& dictionaryPath);
     void goingDown() { mIsGoingDown = true; }
     void initEdbee();
     void installModulesList(Host*, QStringList);
@@ -695,6 +707,9 @@ private:
     QPointer<QShortcut> mpShortcutToggleLogging;
     QPointer<QShortcut> mpShortcutToggleEmergencyStop;
     QPointer<QTimer> mpTimerReplay;
+    QPointer<QTimer> mpBlinkTimer;
+    int mBlinkState = 0;
+    int mBlinkClientCount = 0;
     QPointer<QToolBar> mpToolBarReplay;
     QWidget* mpWidget_profileContainer = nullptr;
     // read-only value to see if the interface is light or dark. To set the value,
@@ -720,10 +735,10 @@ private:
     QAction* mWindowListSeparator = nullptr;
 
     // amount of times the shortcut has been shown help educate new users
-    int mScrollbackTutorialsShown = 0; // Cancel split screen
+    int mScrollbackTutorialsShown = 0;   // Cancel split screen
     int mMuteAllMediaTutorialsShown = 0; // Mute all media
     // show the tutorial maximum 3 times on a new Mudlet
-    static const int mScrollbackTutorialsMax = 3; // Split screen
+    static const int mScrollbackTutorialsMax = 3;   // Split screen
     static const int mMuteAllMediaTutorialsMax = 3; // Mute all media
 
     // AI/LlamaFile integration
@@ -762,7 +777,6 @@ private:
 };
 
 
-
 class TConsoleMonitor : public QObject
 {
     Q_OBJECT
@@ -771,7 +785,8 @@ public:
     Q_DISABLE_COPY(TConsoleMonitor)
     explicit TConsoleMonitor(QObject* parent)
     : QObject(parent)
-    {}
+    {
+    }
 
 protected:
     bool eventFilter(QObject*, QEvent*) override;
@@ -790,7 +805,8 @@ class translation
 public:
     explicit translation(const int translationPercent = -1)
     : mTranslatedPercentage(translationPercent)
-    {}
+    {
+    }
 
     const QString& getNativeName() const { return mNativeName; }
     const QString& getMudletTranslationFileName() const { return mMudletTranslationFileName; }

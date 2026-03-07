@@ -34,6 +34,8 @@
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
 #include "LuaInterface.h"
+#include "MMCP.h"
+#include "MMCPServer.h"
 #include "mudlet.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
@@ -232,6 +234,21 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpAuth(new GMCPAuthenticator(this))
 , mpDockableMapWidget()
 , mTimerDebugOutputSuppressionInterval(QTime())
+, mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
+, mBufferSearchOptions(TConsole::SearchOption::SearchOptionNone)
+, mpDlgIRC(nullptr)
+, mMMCPServer(nullptr)
+, mpDlgProfilePreferences(nullptr)
+, mMMCPChatPort(csDefaultMMCPHostPort)
+, mMMCPChatPrefix(qsl("<CHAT>"))
+, mMMCPAutostartServer(false)
+, mMMCPAllowPeekRequests(false)
+, mMMCPPrefixEmotes(false)
+, mMMCPAddChatMessageNewline(true)
+, mMMCPAutoAcceptCalls(true)
+, mMMCPShowSnoopInMainConsole(true)
+, mTutorialForCompactLineAlreadyShown(false)
+, mLuaInterface(nullptr)
 , mTriggerUnit(this)
 , mTimerUnit(this)
 , mScriptUnit(this)
@@ -362,7 +379,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
             mMxpProcessor.enable();
             // When force-enabling MXP (typically for games like IRE MUDs that don't
             // negotiate properly), lock to secure mode for compatibility
-            mMxpProcessor.setMode(6); // Lock secure mode
+            mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
             qDebug() << "MXP enabled (forced)";
         }
     });
@@ -374,7 +391,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
                 // When force-enabling MXP (typically for games like IRE MUDs that don't
                 // negotiate properly), lock to secure mode for compatibility with games
                 // that use secure tags without sending mode switches
-                mMxpProcessor.setMode(6); // Lock secure mode
+                mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
                 qDebug() << "MXP enabled (forced)";
             }
         } else if (mMxpProcessor.isEnabled() && !mTelnet.isMXPEnabled()) {
@@ -686,11 +703,11 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
         zip_error_t zipError;
         zip_error_init_with_code(&zipError, err);
         /*: This zipError message is shown when the libzip library code is unable
-         * to open the file that was to be the end result of the export process.
-         * As this may be an existing file anywhere in the computer's
-         * file-system(s) it is possible that permissions on the directory or an
-         * existing file that is to be overwritten may be a source of problems
-         * here.
+ to open the file that was to be the end result of the export process.
+ As this may be an existing file anywhere in the computer's
+ file-system(s) it is possible that permissions on the directory or an
+ existing file that is to be overwritten may be a source of problems
+ here.
         */
         qWarning().noquote().nospace() << "Host::updateModuleZips(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to open module to update it, error: \""
                                        << zip_error_strerror(&zipError) << "\"";
@@ -985,9 +1002,7 @@ void Host::waitForProfileSave()
     while (currentlySavingProfile()) {
         if (++iterations > 1000) {
             qWarning().nospace() << "Host::waitForProfileSave() WARNING - save did not complete after 1000 event loop iterations. "
-                                 << "State: mWritingHostAndModules=" << mWritingHostAndModules
-                                 << ", writers pending=" << writers.size()
-                                 << ". Continuing without waiting.";
+                                 << "State: mWritingHostAndModules=" << mWritingHostAndModules << ", writers pending=" << writers.size() << ". Continuing without waiting.";
             break;
         }
         qApp->processEvents();
@@ -2665,6 +2680,14 @@ void Host::refreshPackageFonts()
     }
 }
 
+void Host::setEnableBlinkText(const bool enabled)
+{
+    if (mEnableBlinkText != enabled) {
+        mEnableBlinkText = enabled;
+        emit signal_changeEnableBlinkText(enabled);
+    }
+}
+
 void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
 {
     bool localState = false;
@@ -3019,6 +3042,74 @@ bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscri
     return true;
 }
 
+void Host::initMMCPServer()
+{
+    if (mMMCPServer) {
+        return;
+    }
+
+    mMMCPServer = new MMCPServer(this);
+}
+
+/**
+ * Get the current chat name from the MMCPServer if it exists, otherwise
+ * read it from our saved profile information
+ * There is also the mMMCPChatname read from the xml package, where should we
+ * use that?
+ */
+QString Host::getMMCPChatName()
+{
+    return mMMCPChatName;
+}
+
+void Host::setMMCPChatName(const QString& name, bool shouldSignal)
+{
+    mMMCPChatName = name;
+    if (shouldSignal) {
+        emit mmcpChatNameChanged(name);
+    }
+}
+
+quint16 Host::getMMCPPort()
+{
+    return mMMCPChatPort;
+}
+
+QString Host::getMMCPChatPrefix()
+{
+    return mMMCPChatPrefix;
+}
+
+bool Host::getMMCPAutoStartServer()
+{
+    return mMMCPAutostartServer;
+}
+
+bool Host::getMMCPAllowPeekRequests()
+{
+    return mMMCPAllowPeekRequests;
+}
+
+bool Host::getMMCPPrefixEmotes()
+{
+    return mMMCPPrefixEmotes;
+}
+
+bool Host::getMMCPAddChatMessageNewline()
+{
+    return mMMCPAddChatMessageNewline;
+}
+
+bool Host::getMMCPAutoAcceptCalls()
+{
+    return mMMCPAutoAcceptCalls;
+}
+
+bool Host::getMMCPShowSnoopInMainConsole()
+{
+    return mMMCPShowSnoopInMainConsole;
+}
+
 QString Host::getSpellDic()
 {
     if (!mSpellDic.isEmpty()) {
@@ -3172,7 +3263,7 @@ void Host::loadSecuredPassword()
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager(this);
 
-    credManager->retrieveCredential(getName(), "character", [this, credManager](bool success, const QString& password, const QString& errorMessage) {
+    credManager->retrievePassword(getName(), "character", [this, credManager](bool success, const QString& password, const QString& errorMessage) {
         if (success && !password.isEmpty()) {
             setPass(password);
             QString passwordCopy = password; // Make a copy for secure clearing
