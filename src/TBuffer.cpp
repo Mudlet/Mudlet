@@ -5273,8 +5273,9 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
             // clang-format off
             // Determine blink class if any (only when blink is enabled in settings)
             QString blinkClass;
+            const bool enableBlink = (mpHost != nullptr) && mpHost->getEnableBlinkText();
 
-            if (mpHost->getEnableBlinkText()) {
+            if (enableBlink) {
                 if (currentFlags & TChar::FastBlink) {
                     blinkClass = qsl(" class='blink-fast'");
                 } else if (currentFlags & TChar::Blink) {

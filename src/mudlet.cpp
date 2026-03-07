@@ -2650,6 +2650,14 @@ void mudlet::closeEvent(QCloseEvent* event)
         break;
     }
 
+    // Snapshot detached windows before closeHost() mutates mDetachedWindows
+    QSet<TDetachedWindow*> uniqueDetachedWindows;
+    for (const auto& window : mDetachedWindows) {
+        if (window) {
+            uniqueDetachedWindows.insert(window.data());
+        }
+    }
+
     // Clean up the profiles that are being closed
     for (auto const& hostName : hostsToDestroy) {
         closeHost(hostName);
@@ -2660,6 +2668,12 @@ void mudlet::closeEvent(QCloseEvent* event)
         event->ignore();
         return;
     }
+
+    for (auto* window : uniqueDetachedWindows) {
+        window->close();
+    }
+
+    mDetachedWindows.clear();
 
     // Since we are here the close is to be completed:
     writeSettings();
@@ -6627,6 +6641,7 @@ void mudlet::unregisterBlinkClient()
     if (mBlinkClientCount == 0 && mpBlinkTimer && mpBlinkTimer->isActive()) {
         mpBlinkTimer->stop();
         mBlinkState = 0;
+        emit signal_blinkStateChanged(slowBlinkState(), fastBlinkState());
     }
 }
 
