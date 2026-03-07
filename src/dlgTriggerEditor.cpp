@@ -13019,13 +13019,13 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
         return;
     }
 
-    auto color = QColorDialog::getColor(QColor(mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString()), this, tr("Select foreground color to apply to matches"));
-    color = color.isValid() ? color : QColorConstants::Transparent;
-    const bool keepColor = color == QColorConstants::Transparent;
+    const auto color = QColorDialog::getColor(QColor(mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString()), this, tr("Select foreground color to apply to matches"));
+    if (!color.isValid()) {
+        return;
+    }
     mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(color));
-    //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
-    mpTriggersMainArea->pushButtonFgColor->setText(keepColor ? tr("keep") : QString());
-    mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, keepColor ? qsl("transparent") : color.name());
+    mpTriggersMainArea->pushButtonFgColor->setText(QString());
+    mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, color.name());
 }
 
 // Set the background color that will be applied to text that matches the trigger pattern(s)
@@ -13039,13 +13039,13 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
         return;
     }
 
-    auto color = QColorDialog::getColor(QColor(mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString()), this, tr("Select background color to apply to matches"));
-    color = color.isValid() ? color : QColorConstants::Transparent;
-    const bool keepColor = color == QColorConstants::Transparent;
+    const auto color = QColorDialog::getColor(QColor(mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString()), this, tr("Select background color to apply to matches"));
+    if (!color.isValid()) {
+        return;
+    }
     mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(color));
-    //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
-    mpTriggersMainArea->pushButtonBgColor->setText(keepColor ? tr("keep") : QString());
-    mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, keepColor ? qsl("transparent") : color.name());
+    mpTriggersMainArea->pushButtonBgColor->setText(QString());
+    mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, color.name());
 }
 
 void dlgTriggerEditor::slot_soundTrigger()
