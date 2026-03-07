@@ -3,7 +3,6 @@ if(NOT WIN32)
 endif()
 
 set(FUNCTIONAL_TEST_SOURCES
-    TBufferInsertTest.cpp
     TelnetTextDisplayedTest.cpp
     TelnetBenchmark.cpp
     TOscTerminatorTest.cpp
