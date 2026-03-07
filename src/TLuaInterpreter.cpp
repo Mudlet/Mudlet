@@ -2552,7 +2552,7 @@ int TLuaInterpreter::getTime(lua_State* L)
     } else {
         const QDate dt = time.date();
         const QTime tm = time.time();
-        lua_createtable(L, 0, 4);
+        lua_createtable(L, 0, 7);
         lua_pushstring(L, "hour");
         lua_pushinteger(L, tm.hour());
         lua_rawset(L, n + 1);
