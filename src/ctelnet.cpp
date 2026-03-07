@@ -193,9 +193,6 @@ cTelnet::~cTelnet()
     disconnect();
 
     if (loadingReplay) {
-        // If we are doing a replay we had better abort it so that if we are
-        // NOT the "last profile standing" the replay system gets reset for
-        // another profile to use:
         loadingReplay = false;
         replayFile.close();
         qDebug() << "cTelnet::~cTelnet() INFO - A replay was in progress on this profile but has been aborted.";

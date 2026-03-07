@@ -4660,9 +4660,6 @@ void mudlet::slot_compactInputLine(const bool state)
 
 mudlet::~mudlet()
 {
-    // There may be a corner case if a replay is running AND the application is
-    // closing down AND the updater on a particular platform pauses the
-    // application destruction...?
     delete (mpTimerReplay);
     mpTimerReplay = nullptr;
 
