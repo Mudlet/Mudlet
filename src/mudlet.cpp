@@ -61,6 +61,7 @@
 #include "dlgTriggerEditor.h"
 #include "TMediaData.h"
 #include "VarUnit.h"
+#include "MMCPServer.h"
 
 #include "edbee/models/textautocompleteprovider.h"
 #include "edbee/views/texttheme.h"
@@ -785,6 +786,15 @@ void mudlet::init()
     });
 
     initializeAI();
+
+    // 200ms interval for WCAG 2.3.1 compliance (max 3 Hz)
+    // 4-state counter per ISO/IEC 8613-6: slow blink < 150 cycles/min, fast > 150
+    mpBlinkTimer = new QTimer(this);
+    mpBlinkTimer->setInterval(200);
+    connect(mpBlinkTimer, &QTimer::timeout, this, [this]() {
+        mBlinkState = (mBlinkState + 1) % 4;
+        emit signal_blinkStateChanged(slowBlinkState(), fastBlinkState());
+    });
 
     // Initialize the window menu on startup
     updateWindowMenu();
@@ -2640,6 +2650,14 @@ void mudlet::closeEvent(QCloseEvent* event)
         break;
     }
 
+    // Snapshot detached windows before closeHost() mutates mDetachedWindows
+    QSet<TDetachedWindow*> uniqueDetachedWindows;
+    for (const auto& window : mDetachedWindows) {
+        if (window) {
+            uniqueDetachedWindows.insert(window.data());
+        }
+    }
+
     // Clean up the profiles that are being closed
     for (auto const& hostName : hostsToDestroy) {
         closeHost(hostName);
@@ -2650,6 +2668,12 @@ void mudlet::closeEvent(QCloseEvent* event)
         event->ignore();
         return;
     }
+
+    for (auto* window : uniqueDetachedWindows) {
+        window->close();
+    }
+
+    mDetachedWindows.clear();
 
     // Since we are here the close is to be completed:
     writeSettings();
@@ -3485,6 +3509,7 @@ void mudlet::showOptionsDialog(const QString& tab)
         connect(pPrefs, &dlgProfilePreferences::signal_preferencesSaved, this, [=, this]() {
             slot_assignShortcutsFromProfile(getActiveHost());
         });
+        connect(pHost, &Host::mmcpChatNameChanged, pPrefs, &dlgProfilePreferences::slot_setMMCPChatName);
         pPrefs->setAttribute(Qt::WA_DeleteOnClose);
     }
 
@@ -4416,6 +4441,20 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         activateWindow();
     }
 
+    // Now check if we should auto-start the MMCP server, and do so
+    if (pHost->getMMCPAutoStartServer()) {
+        if (!pHost->mMMCPServer) {
+            pHost->initMMCPServer();
+        }
+
+        quint16 port = pHost->getMMCPPort();
+
+        const QString infoMsg = tr("[ CHAT ]  - Auto-starting MMCP Server on port %1.").arg(port);
+        pHost->postMessage(infoMsg);
+
+        pHost->mMMCPServer->startServer(port);
+    }
+
     TEvent event{};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -5305,8 +5344,9 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
 #if defined(INCLUDE_UPDATER)
 void mudlet::checkUpdatesOnStart()
 {
-    if (releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER")) {
-        // Only try and create an updater (which checks for updates online) if
+    if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE") && (releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER"))) {
+        // Doesn't check for updates during test runs.
+        // Otherwise, try and create an updater (which checks for updates online) if
         // this is a release/public test version, or if you are testing Sparkle (env flag set).
         pUpdater->checkUpdatesOnStart();
     }
@@ -6583,6 +6623,26 @@ void mudlet::setGlobalStyleSheet(const QString& styleSheet)
     mpMainToolBar->setStyleSheet(styleSheet);
     mpTabBar->setStyleSheet(styleSheet);
     menuBar()->setStyleSheet(styleSheet);
+}
+
+void mudlet::registerBlinkClient()
+{
+    ++mBlinkClientCount;
+    if (mBlinkClientCount == 1 && mpBlinkTimer && !mpBlinkTimer->isActive()) {
+        mpBlinkTimer->start();
+    }
+}
+
+void mudlet::unregisterBlinkClient()
+{
+    if (mBlinkClientCount > 0) {
+        --mBlinkClientCount;
+    }
+    if (mBlinkClientCount == 0 && mpBlinkTimer && mpBlinkTimer->isActive()) {
+        mpBlinkTimer->stop();
+        mBlinkState = 0;
+        emit signal_blinkStateChanged(slowBlinkState(), fastBlinkState());
+    }
 }
 
 void mudlet::setupTrayIcon()
