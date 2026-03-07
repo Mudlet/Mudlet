@@ -711,7 +711,7 @@ void dlgPackageManager::slot_setPackageList()
         return;
     }
 
-    if (lineEdit_searchBar->text().length() > 0) {
+    if (!lineEdit_searchBar->text().isEmpty()) {
         slot_searchTextChanged(lineEdit_searchBar->text());
         return;
     }
@@ -794,28 +794,28 @@ void dlgPackageManager::slot_toggleInstallRepoButton()
         pushButton_installRepo->setEnabled(selectionCount);
 
         if (mCurrentView == NavigationView::Updates) {
-            if (selectionCount > 1) {
-                //: Message on button in package manager to update multiple (%n is the count of) selected packages.
+            if (selectionCount) {
+                //: Message on button in package manager to update one or multiple (%n is the count) selected packages.
                 pushButton_installRepo->setText(tr("Update (%n)", nullptr, selectionCount));
             } else {
-                //: Message on button in package manager for updates view when zero or one package is selected
+                //: Message on button in package manager when there are no selected packages - button will also be disabled.
                 pushButton_installRepo->setText(tr("Update"));
             }
             //: Tooltip for button in package manager when in Updates view
             pushButton_installRepo->setToolTip(tr("Update selected packages"));
         } else {
-            if (selectionCount > 1) {
-                //: Message on button in package manager to install multiple (%n is the count of) selected packages.
+            if (selectionCount) {
+                //: Message on button in package manager to install one or multiple (%n is the count) selected packages.
                 pushButton_installRepo->setText(tr("Install (%n)", nullptr, selectionCount));
             } else {
-                //: Message on button in package manager initially and when zero or one package is selected
+                //: Message on button in package manager when there are no selected packages - button will also be disabled.
                 pushButton_installRepo->setText(tr("Install"));
             }
             //: Tooltip for button in package manager when in Explore view
             pushButton_installRepo->setToolTip(tr("Install package from repository"));
         }
     } else {
-        //: Message on button in package manager initially and when there is no packages to install
+        //: Message on button in package manager initially and when the view is the "Installed" one
         pushButton_installRepo->setText(tr("Install"));
         pushButton_installRepo->setEnabled(false);
         //: Tooltip for button in package manager when in Explore view
@@ -829,15 +829,15 @@ void dlgPackageManager::slot_toggleRemoveButton()
         const QList selection = packageList->selectedItems();
         const int selectionCount = selection.size();
         pushButton_remove->setEnabled(selectionCount);
-        if (selectionCount > 1) {
-            //: Message on button in package manager to remove multiple (%n is the count of) selected packages.
+        if (selectionCount) {
+            //: Message on button in package manager to remove one or multiple (%n is the count) selected packages.
             pushButton_remove->setText(tr("Remove (%n)", nullptr, selectionCount));
         } else {
-            //: Message on button in package manager initially and when zero or one package is selected
+            //: Message on button in package manager when there are no selected packages - button will also be disabled.
             pushButton_remove->setText(tr("Remove"));
         }
     } else {
-        //: Message on button in package manager initially and when there is no packages to remove
+        //: Message on button in package manager initially and when the view is NOT the "Installed" one
         pushButton_remove->setText(tr("Remove"));
         pushButton_remove->setEnabled(false);
     }
@@ -854,11 +854,11 @@ void dlgPackageManager::showImportStatus(const QString& message)
 void dlgPackageManager::updateUpdatesBadge()
 {
     const int count = mPackagesWithUpdates.size();
-    if (count > 0) {
-        //: Package manager - navigation button showing number of available updates
+    if (count) {
+        //: Package manager - navigation button showing one or more available updates
         pushButton_updates->setText(tr("Updates (%1)").arg(count));
     } else {
-        //: Package manager - navigation button for updates view
+        //: Package manager - navigation button for when there are no updates
         pushButton_updates->setText(tr("Updates"));
     }
 }

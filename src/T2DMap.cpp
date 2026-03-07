@@ -1720,7 +1720,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             if (mpMap->mpRoomDB->isEmpty()) {
                 message = tr("No rooms in the map - load another one, or start mapping from scratch to begin.");
             } else {
-                message = tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size());
+                message = tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", nullptr, mpMap->mpRoomDB->size());
             }
         } else {
             message = tr("You do not have a map yet - load one, or start mapping from scratch to begin.");
@@ -1801,12 +1801,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
         const qreal areaMinY = -pDrawnArea->ymaxForZ.value(zLevel, pDrawnArea->max_y);
         const qreal areaMaxY = -pDrawnArea->yminForZ.value(zLevel, pDrawnArea->min_y);
 
-        if (areaMaxX - areaMinX <= xspan) {
-            mMapCenterX = (areaMinX + areaMaxX) / 2.0;
-        }
+        const qreal areaWidth = areaMaxX - areaMinX;
+        const qreal areaHeight = areaMaxY - areaMinY;
 
-        if (areaMaxY - areaMinY <= yspan) {
-            // Negate because areaMinY/areaMaxY are in room coords, but mMapCenterY uses screen coords (-room.y())
+        if (areaWidth <= xspan && areaHeight <= yspan) {
+            mMapCenterX = (areaMinX + areaMaxX) / 2.0;
             mMapCenterY = -((areaMinY + areaMaxY) / 2.0);
         }
     }

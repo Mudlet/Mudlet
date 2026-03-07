@@ -852,6 +852,14 @@ void XMLimport::readHost(Host* pHost)
         pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
     }
 
+    if (attributes().hasAttribute("mEnableBlinkText")) {
+        pHost->setEnableBlinkText(attributes().value(qsl("mEnableBlinkText")) == YES);
+    } else {
+        // Default to disabled for safety in a backwards compatible manner
+        // - so it doesn't start flashing unexpectedly:
+        pHost->setEnableBlinkText(false);
+    }
+
     if (attributes().hasAttribute("logFileNameFormat")) {
         // We previously mixed "yyyy-MM-dd{#|T}hh-MM-ss" with "yyyy-MM-dd{#|T}HH-MM-ss"
         // which is slightly different {always use 24-hour clock even if AM/PM is
@@ -1153,6 +1161,8 @@ void XMLimport::readHost(Host* pHost)
                 readProfileShortcut();
             } else if (name() == qsl("stopwatches")) {
                 readStopWatchMap();
+            } else if (name() == qsl("MMCP")) {
+                readMMCPOptions();
             } else if (name() == qsl("experiment")) {
                 QString key = attributes().value(qsl("key")).toString();
                 bool enabled = attributes().value(qsl("enabled")) == YES;
@@ -1177,7 +1187,6 @@ bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
             {qsl("mCommandLineFgColor"), &Host::mCommandLineFgColor},
             {qsl("mCommandLineBgColor"), &Host::mCommandLineBgColor},
             {qsl("mFgColor"), &Host::mFgColor},
-            {qsl("mBgColor"), &Host::mBgColor},
             {qsl("mCommandFgColor"), &Host::mCommandFgColor},
             {qsl("mCommandBgColor"), &Host::mCommandBgColor},
             {qsl("mBlack"), &Host::mBlack},
@@ -1221,6 +1230,7 @@ bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
 
     // Colors that support alpha channel
     static const QHash<QString, QColor Host::*> alphaColors = {
+            {qsl("mBgColor"), &Host::mBgColor},
             {qsl("mBgColor2"), &Host::mBgColor_2},
             {qsl("mMapGridColor"), &Host::mMapGridColor},
             {qsl("mMapInfoBg"), &Host::mMapInfoBg},
@@ -2043,6 +2053,22 @@ void XMLimport::readStopWatchMap()
             }
         }
     }
+}
+
+void XMLimport::readMMCPOptions() {
+
+    mpHost->mMMCPChatName = attributes().value(qsl("chatName")).toString();
+    mpHost->mMMCPChatPort = attributes().value(qsl("chatPort")).toUShort();
+    mpHost->mMMCPChatPrefix = attributes().value(qsl("chatPrefix")).toString();
+    mpHost->mMMCPAutostartServer = attributes().value(qsl("autostartServer")) == YES;
+    mpHost->mMMCPAllowPeekRequests = attributes().value(qsl("allowPeekRequests")) == YES;
+    mpHost->mMMCPPrefixEmotes = attributes().value(qsl("prefixEmotes")) == YES;
+    mpHost->mMMCPAddChatMessageNewline = attributes().value(qsl("chatMessageNewline")) == YES;
+    mpHost->mMMCPAutoAcceptCalls = attributes().value(qsl("autoAcceptCalls")) == YES;
+    mpHost->mMMCPShowSnoopInMainConsole = attributes().value(qsl("snoopInMain")) == YES;
+
+    // MMCP is a self-closing tag, need to call readNext to move along..
+    readNext();
 }
 
 void XMLimport::readMapInfoContributor()

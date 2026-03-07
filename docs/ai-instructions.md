@@ -163,6 +163,11 @@ After editing any C++ files (`.cpp`, `.h`), run clang-format before committing:
 clang-format -i path/to/edited/file.cpp path/to/edited/file.h
 ```
 
+On macOS, use the Homebrew-installed LLVM version to ensure compatibility:
+```bash
+$(brew --prefix llvm)/bin/clang-format -i path/to/edited/file.cpp path/to/edited/file.h
+```
+
 The project uses the `.clang-format` configuration in `src/`. This ensures consistent code style across the codebase.
 
 ### Static analysis
