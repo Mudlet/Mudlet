@@ -58,7 +58,6 @@
 #include "dlgPackageExporter.h"
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
-#include "dlgSpeechRecognitionSetup.h"
 #include "dlgTriggerEditor.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
@@ -5088,35 +5087,16 @@ void mudlet::slot_toggleSpeechRecognition()
 {
     // Check if any backend is available first
     if (!SpeechRecognizerFactory::isBackendAvailable(SpeechRecognizerFactory::Backend::Auto)) {
-        // Show the setup wizard
-        dlgSpeechRecognitionSetup setupDialog(this);
-
-        if (setupDialog.exec() == QDialog::Accepted) {
-            // Setup completed successfully, try to initialize and start listening
-            initSpeechRecognition();
-
-            if (mpSpeechRecognizer && mpSpeechRecognizer->isInitialized()) {
-                // Save current text from active command line before starting
-                Host* pHost = getActiveHost();
-                TCommandLine* pCommandLine = pHost ? pHost->activeCommandLine() : nullptr;
-
-                if (pCommandLine) {
-                    mTextBeforeSpeech = pCommandLine->toPlainText();
-                } else {
-                    mTextBeforeSpeech.clear();
-                }
-
-                // Reset all session state to prevent stale data leaking into new session
-                mCurrentPartialResult.clear();
-                mTextAfterSpeech.clear();
-                mSpeechNeedsReset = false;
-
-                mpSpeechRecognizer->startListening();
-                mSpeechRecognitionActive = true;
-                updateAllSpeechButtons();
-            }
+        // Raise sysSTTSetupNeeded event for Lua UI to show setup dialog
+        Host* pHost = getActiveHost();
+        if (pHost) {
+            TEvent event{};
+            event.mArgumentList.append(qsl("sysSTTSetupNeeded"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            event.mArgumentList.append(qsl("backend_unavailable"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            pHost->raiseEvent(event);
         }
-
         return;
     }
 
@@ -5126,42 +5106,30 @@ void mudlet::slot_toggleSpeechRecognition()
     }
 
     if (!mpSpeechRecognizer) {
-        // Failed to initialize - show error to user
-        QMessageBox::warning(this, tr("Speech Recognition Error"), tr("Failed to initialize speech recognition. The speech recognition library may not be properly installed."));
+        // Failed to initialize - raise error event
+        Host* pHost = getActiveHost();
+        if (pHost) {
+            TEvent event{};
+            event.mArgumentList.append(qsl("sysSTTError"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            event.mArgumentList.append(tr("Failed to initialize speech recognition. The speech recognition library may not be properly installed."));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            pHost->raiseEvent(event);
+        }
         return;
     }
 
     if (!mpSpeechRecognizer->isInitialized()) {
-        // Model not loaded - show the setup wizard
-        dlgSpeechRecognitionSetup setupDialog(this);
-
-        if (setupDialog.exec() == QDialog::Accepted) {
-            // Setup completed successfully, re-initialize and start listening
-            delete mpSpeechRecognizer;
-            initSpeechRecognition();
-
-            if (mpSpeechRecognizer && mpSpeechRecognizer->isInitialized()) {
-                // Save current text from active command line before starting
-                Host* pHost = getActiveHost();
-                TCommandLine* pCommandLine = pHost ? pHost->activeCommandLine() : nullptr;
-
-                if (pCommandLine) {
-                    mTextBeforeSpeech = pCommandLine->toPlainText();
-                } else {
-                    mTextBeforeSpeech.clear();
-                }
-
-                // Reset all session state to prevent stale data leaking into new session
-                mCurrentPartialResult.clear();
-                mTextAfterSpeech.clear();
-                mSpeechNeedsReset = false;
-
-                mpSpeechRecognizer->startListening();
-                mSpeechRecognitionActive = true;
-                updateAllSpeechButtons();
-            }
+        // Model not loaded - raise setup needed event
+        Host* pHost = getActiveHost();
+        if (pHost) {
+            TEvent event{};
+            event.mArgumentList.append(qsl("sysSTTSetupNeeded"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            event.mArgumentList.append(qsl("model_not_loaded"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            pHost->raiseEvent(event);
         }
-
         return;
     }
 

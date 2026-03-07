@@ -66,7 +66,6 @@ set(mudlet_SRCS
     dlgScriptsMainArea.cpp
     dlgSourceEditorArea.cpp
     dlgSourceEditorFindArea.cpp
-    dlgSpeechRecognitionSetup.cpp
     dlgSystemMessageArea.cpp
     dlgTimersMainArea.cpp
     dlgTriggerEditor.cpp
@@ -301,7 +300,6 @@ set(mudlet_HDRS
     dlgScriptsMainArea.h
     dlgSourceEditorArea.h
     dlgSourceEditorFindArea.h
-    dlgSpeechRecognitionSetup.h
     dlgSystemMessageArea.h
     dlgTimersMainArea.h
     dlgTriggerEditor.h

@@ -336,9 +336,38 @@ function STT.UI._setupDefaultCallbacks()
   return true
 end
 
+--- Handle sysSTTSetupNeeded event to show setup dialog.
+-- @param event string event name
+-- @param reason string why setup is needed ("backend_unavailable" or "model_not_loaded")
+function STT.UI._handleSetupNeeded(event, reason)
+  -- Show the setup dialog when setup is needed
+  STT.UI.showSetupDialog()
+end
+
+-- Register event handler for setup needed
+STT.UI._setupNeededHandlerId = nil
+
+function STT.UI._registerSetupNeededHandler()
+  -- Clean up existing handler if present
+  if STT.UI._setupNeededHandlerId and killAnonymousEventHandler then
+    killAnonymousEventHandler(STT.UI._setupNeededHandlerId)
+    STT.UI._setupNeededHandlerId = nil
+  end
+
+  if registerAnonymousEventHandler then
+    STT.UI._setupNeededHandlerId = registerAnonymousEventHandler(
+      "sysSTTSetupNeeded",
+      STT.UI._handleSetupNeeded
+    )
+  end
+end
+
 -- Auto-setup callbacks when this module loads (defer to ensure STT core is loaded)
 if not STT.UI._setupDefaultCallbacks() then
   tempTimer(0, function()
     STT.UI._setupDefaultCallbacks()
   end)
 end
+
+-- Register setup needed handler
+STT.UI._registerSetupNeededHandler()
