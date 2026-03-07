@@ -781,10 +781,7 @@ if(APPLE)
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AppKit")
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AVFoundation")
 
-  # need to specifically call out macOS microphone permission sources
-  target_sources(${LIB_MUDLET_TARGET} PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/MacMicrophonePermission.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/MacMicrophonePermission.mm")
+  # Microphone permission sources are already added via mudlet_SRCS/mudlet_HDRS
   target_link_libraries(${LIB_MUDLET_TARGET} "-framework AVFoundation")
 
   if(USE_UPDATER)

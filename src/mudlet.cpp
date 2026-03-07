@@ -387,7 +387,7 @@ void mudlet::init()
     mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone.png")));
     mpButtonSpeechToText->setToolTip(utils::richText(tr("Speech to text (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
     mpButtonSpeechToText->setAutoRaise(true);
-    mpButtonSpeechToText->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    mpButtonSpeechToText->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
     mpButtonSpeechToText->setEnabled(false);
     mpMainToolBar->addWidget(mpButtonSpeechToText);
     connect(mpButtonSpeechToText, &QToolButton::clicked, this, &mudlet::slot_toggleSpeechRecognition);
@@ -2040,6 +2040,28 @@ void mudlet::closeHost(const QString& name)
         mDetachedWindows.remove(name);
     }
 
+    // Clean up addon toolbar buttons belonging to this host
+    QList<int> buttonIdsToRemove;
+    for (auto it = mAddonButtons.constBegin(); it != mAddonButtons.constEnd(); ++it) {
+        if (it.value().pHost == pH) {
+            buttonIdsToRemove.append(it.key());
+        }
+    }
+    for (int buttonId : buttonIdsToRemove) {
+        removeAddonToolbarButton(buttonId);
+    }
+
+    // Clean up addon menu items belonging to this host
+    QList<int> menuItemIdsToRemove;
+    for (auto it = mAddonMenuItems.constBegin(); it != mAddonMenuItems.constEnd(); ++it) {
+        if (it.value().pHost == pH) {
+            menuItemIdsToRemove.append(it.key());
+        }
+    }
+    for (int itemId : menuItemIdsToRemove) {
+        removeAddonMenuItem(itemId);
+    }
+
     mpTabBar->removeTab(name);
     // PLACEMARKER: Host destruction (1) - from all sources
     int hostCount = mHostManager.getHostCount();
@@ -2902,24 +2924,27 @@ void mudlet::setToolBarIconSize(const int s)
 
     mToolbarIconSize = s;
     mpMainToolBar->setIconSize(QSize(s * 8, s * 8));
-    if (mToolbarIconSize > 2) {
-        mpMainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-        mpButtonConnect->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-        mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-        mpButtonMute->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-        if (!mpButtonAbout.isNull()) {
-            mpButtonAbout->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    const Qt::ToolButtonStyle buttonStyle = (mToolbarIconSize > 2) ? Qt::ToolButtonTextUnderIcon : Qt::ToolButtonIconOnly;
+
+    mpMainToolBar->setToolButtonStyle(buttonStyle);
+    mpButtonConnect->setToolButtonStyle(buttonStyle);
+    mpButtonDiscord->setToolButtonStyle(buttonStyle);
+    mpButtonMute->setToolButtonStyle(buttonStyle);
+    if (!mpButtonAbout.isNull()) {
+        mpButtonAbout->setToolButtonStyle(buttonStyle);
+    }
+    mpButtonPackageManagers->setToolButtonStyle(buttonStyle);
+
+    // Apply to speech-to-text button
+    if (mpButtonSpeechToText) {
+        mpButtonSpeechToText->setToolButtonStyle(buttonStyle);
+    }
+
+    // Apply to addon buttons so they stay visually consistent
+    for (auto& addonButton : mAddonButtons) {
+        if (addonButton.button) {
+            addonButton.button->setToolButtonStyle(buttonStyle);
         }
-        mpButtonPackageManagers->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    } else {
-        mpMainToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
-        mpButtonConnect->setToolButtonStyle(Qt::ToolButtonIconOnly);
-        mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonIconOnly);
-        mpButtonMute->setToolButtonStyle(Qt::ToolButtonIconOnly);
-        if (!mpButtonAbout.isNull()) {
-            mpButtonAbout->setToolButtonStyle(Qt::ToolButtonIconOnly);
-        }
-        mpButtonPackageManagers->setToolButtonStyle(Qt::ToolButtonIconOnly);
     }
 
     if (mpToolBarReplay) {
@@ -4716,7 +4741,7 @@ int mudlet::addAddonToolbarButton(const QString& name, const QString& icon, cons
 
     button->setToolTip(utils::richText(tooltip));
     button->setAutoRaise(true);
-    button->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    button->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
     mpMainToolBar->addWidget(button);
 
     const int buttonId = mNextAddonButtonId++;
@@ -4726,15 +4751,19 @@ int mudlet::addAddonToolbarButton(const QString& name, const QString& icon, cons
     addonButton.pHost = pHost;
     mAddonButtons[buttonId] = addonButton;
 
-    // Connect click to raise event
-    connect(button, &QToolButton::clicked, this, [this, buttonId, pHost]() {
-        if (pHost) {
+    // Connect click to raise event - resolve Host at click time to avoid use-after-free
+    connect(button, &QToolButton::clicked, this, [this, buttonId]() {
+        if (!mAddonButtons.contains(buttonId)) {
+            return;
+        }
+        Host* pH = mAddonButtons[buttonId].pHost;
+        if (pH) {
             TEvent event{};
             event.mArgumentList.append(qsl("sysToolbarButtonClicked"));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             event.mArgumentList.append(QString::number(buttonId));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-            pHost->raiseEvent(event);
+            pH->raiseEvent(event);
         }
     });
 
@@ -4944,15 +4973,19 @@ int mudlet::addAddonMenuItem(const QString& menuPath, const QString& name, const
     menuItem.pHost = pHost;
     mAddonMenuItems[itemId] = menuItem;
 
-    // Connect to raise event
-    connect(action, &QAction::triggered, this, [this, itemId, pHost]() {
-        if (pHost) {
+    // Connect to raise event - resolve Host at click time to avoid use-after-free
+    connect(action, &QAction::triggered, this, [this, itemId]() {
+        if (!mAddonMenuItems.contains(itemId)) {
+            return;
+        }
+        Host* pH = mAddonMenuItems[itemId].pHost;
+        if (pH) {
             TEvent event{};
             event.mArgumentList.append(qsl("sysMenuItemClicked"));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             event.mArgumentList.append(QString::number(itemId));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-            pHost->raiseEvent(event);
+            pH->raiseEvent(event);
         }
     });
 
@@ -5069,9 +5102,15 @@ void mudlet::slot_toggleSpeechRecognition()
 
                 if (pCommandLine) {
                     mTextBeforeSpeech = pCommandLine->toPlainText();
+                } else {
+                    mTextBeforeSpeech.clear();
                 }
 
+                // Reset all session state to prevent stale data leaking into new session
                 mCurrentPartialResult.clear();
+                mTextAfterSpeech.clear();
+                mSpeechNeedsReset = false;
+
                 mpSpeechRecognizer->startListening();
                 mSpeechRecognitionActive = true;
                 updateAllSpeechButtons();
@@ -5108,9 +5147,15 @@ void mudlet::slot_toggleSpeechRecognition()
 
                 if (pCommandLine) {
                     mTextBeforeSpeech = pCommandLine->toPlainText();
+                } else {
+                    mTextBeforeSpeech.clear();
                 }
 
+                // Reset all session state to prevent stale data leaking into new session
                 mCurrentPartialResult.clear();
+                mTextAfterSpeech.clear();
+                mSpeechNeedsReset = false;
+
                 mpSpeechRecognizer->startListening();
                 mSpeechRecognitionActive = true;
                 updateAllSpeechButtons();
@@ -5134,7 +5179,11 @@ void mudlet::slot_toggleSpeechRecognition()
             mTextBeforeSpeech.clear();
         }
 
+        // Reset all session state to prevent stale data leaking into new session
         mCurrentPartialResult.clear();
+        mTextAfterSpeech.clear();
+        mSpeechNeedsReset = false;
+
         // Start listening
         mpSpeechRecognizer->startListening();
         mSpeechRecognitionActive = true;
@@ -5241,6 +5290,11 @@ void mudlet::slot_handlePartialSpeechResult(const QString& text)
 
 void mudlet::slot_handleFinalSpeechResult(const QString& text)
 {
+    // Drop late callbacks that arrive after speech recognition has stopped
+    if (!mSpeechRecognitionActive) {
+        return;
+    }
+
     if (text.isEmpty()) {
         return;
     }
@@ -5328,8 +5382,13 @@ void mudlet::slot_handleSpeechError(const QString& errorMessage)
     // Restore original text if there was a partial result in progress
     TCommandLine* pCommandLine = focusedCommandLine();
 
-    if (pCommandLine && (!mTextBeforeSpeech.isEmpty() || !pCommandLine->toPlainText().isEmpty())) {
-        pCommandLine->setPlainText(mTextBeforeSpeech);
+    if (pCommandLine && (!mTextBeforeSpeech.isEmpty() || !mTextAfterSpeech.isEmpty() || !pCommandLine->toPlainText().isEmpty())) {
+        // Reconstruct the full original buffer from before + after parts
+        QString restoredText = mTextBeforeSpeech;
+        if (!mTextAfterSpeech.isEmpty()) {
+            restoredText += mTextAfterSpeech;
+        }
+        pCommandLine->setPlainText(restoredText);
         QTextCursor cursor = pCommandLine->textCursor();
         cursor.movePosition(QTextCursor::End);
         pCommandLine->setTextCursor(cursor);

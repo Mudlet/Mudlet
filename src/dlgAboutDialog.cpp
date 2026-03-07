@@ -926,9 +926,11 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                             "All rights reserved.</h3>"));
 #endif
 
+#if defined(WITH_VOSK) || defined(DEBUG_SHOWALL)
     QString VoskHeader(tr("<h2><u>Vosk Speech Recognition Toolkit</u></h2>"
                           "<h3>Copyright © 2019-2024 Alpha Cephei Inc.<br>"
                           "<a href=\"https://alphacephei.com/vosk\">https://alphacephei.com/vosk</a></h3>"));
+#endif
 
     // Now start to assemble the fragments above:
     QStringList license_3rdParty_texts;
@@ -1044,9 +1046,11 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     license_3rdParty_texts.append(qsl("<hr>%43")
                                   .arg(swordModelHeader));                      // 43 - sword model attribution - translatable
 
+#if defined(WITH_VOSK) || defined(DEBUG_SHOWALL)
     license_3rdParty_texts.append(qsl("<hr>%1%2")
                                   .arg(VoskHeader,                             // Vosk header - translatable
                                        APACHE2_Body));                         // Vosk body APACHE2 - not translatable
+#endif
 
     license_3rdParty_texts.append(qsl("</body></html>"));
 

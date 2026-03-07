@@ -108,8 +108,11 @@ end
 -- @param enabled boolean enabled state
 -- @return boolean success
 function Toolbar.Button:setEnabled(enabled)
-  self._enabled = enabled
-  return setToolbarButtonEnabled(self._id, enabled)
+  local result = setToolbarButtonEnabled(self._id, enabled)
+  if result then
+    self._enabled = enabled
+  end
+  return result
 end
 
 --- Check if the button is enabled.
@@ -122,8 +125,11 @@ end
 -- @param state string custom state value
 -- @return boolean success
 function Toolbar.Button:setState(state)
-  self._state = state
-  return setToolbarButtonState(self._id, state)
+  local result = setToolbarButtonState(self._id, state)
+  if result then
+    self._state = state
+  end
+  return result
 end
 
 --- Get the button's custom state.
@@ -141,15 +147,21 @@ function Toolbar.Button:startPulse(color1, color2, interval)
   color1 = color1 or "#ff4444"
   color2 = color2 or "#cc0000"
   interval = interval or 500
-  self._pulsing = true
-  return setToolbarButtonPulse(self._id, true, color1, color2, interval)
+  local success = setToolbarButtonPulse(self._id, true, color1, color2, interval)
+  if success then
+    self._pulsing = true
+  end
+  return success
 end
 
 --- Stop pulsing animation on the button.
 -- @return boolean success
 function Toolbar.Button:stopPulse()
-  self._pulsing = false
-  return setToolbarButtonPulse(self._id, false)
+  local success = setToolbarButtonPulse(self._id, false)
+  if success then
+    self._pulsing = false
+  end
+  return success
 end
 
 --- Check if the button is pulsing.

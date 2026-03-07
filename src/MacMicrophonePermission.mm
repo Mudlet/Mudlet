@@ -28,14 +28,14 @@ MacMicrophonePermission::AuthorizationStatus MacMicrophonePermission::checkStatu
     
     switch (status) {
         case AVAuthorizationStatusAuthorized:
-            return Authorized;
+            return AuthorizationStatus::Authorized;
         case AVAuthorizationStatusDenied:
-            return Denied;
+            return AuthorizationStatus::Denied;
         case AVAuthorizationStatusRestricted:
-            return Restricted;
+            return AuthorizationStatus::Restricted;
         case AVAuthorizationStatusNotDetermined:
         default:
-            return NotDetermined;
+            return AuthorizationStatus::NotDetermined;
     }
 }
 
@@ -43,10 +43,11 @@ void MacMicrophonePermission::requestAccess(std::function<void(bool)> callback)
 {
     [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler:^(BOOL granted) {
         // The completion handler is called on an arbitrary queue,
-        // so we need to be careful about thread safety.
-        // The callback will be called from this arbitrary queue.
+        // so dispatch to main thread for UI-safe callback invocation.
         if (callback) {
-            callback(granted == YES);
+            dispatch_async(dispatch_get_main_queue(), ^{
+                callback(granted);
+            });
         }
     }];
 }

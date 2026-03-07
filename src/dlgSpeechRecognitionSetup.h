@@ -20,18 +20,18 @@
 #ifndef MUDLET_DLGSPEECHRECOGNITIONSETUP_H
 #define MUDLET_DLGSPEECHRECOGNITIONSETUP_H
 
-#include <QComboBox>
 #include <QDialog>
 #include <QFile>
-#include <QLabel>
-#include <QNetworkAccessManager>
 #include <QPointer>
-#include <QProgressBar>
-#include <QPushButton>
-#include <QStackedWidget>
-#include <QTextEdit>
 
+class QComboBox;
+class QLabel;
+class QNetworkAccessManager;
 class QNetworkReply;
+class QProgressBar;
+class QPushButton;
+class QStackedWidget;
+class QTextEdit;
 
 // Wizard dialog for setting up speech recognition.
 // Guides the user through:

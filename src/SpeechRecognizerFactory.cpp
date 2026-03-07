@@ -34,6 +34,10 @@ SpeechRecognizer* SpeechRecognizerFactory::create(Backend backend, QObject* pare
 
     switch (backend) {
     case Backend::Vosk:
+        if (!VoskRecognizer::isVoskAvailable()) {
+            qWarning() << "SpeechRecognizerFactory: Vosk backend requested but not available";
+            return nullptr;
+        }
         return new VoskRecognizer(parent);
 
     case Backend::Whisper:

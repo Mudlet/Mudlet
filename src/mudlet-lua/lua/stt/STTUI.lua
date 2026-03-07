@@ -11,6 +11,7 @@ STT.UI._statusLabel = nil    -- Geyser.Label for overlay text
 STT.UI._setupDialog = nil    -- Geyser-based setup dialog
 STT.UI._isVisible = false
 STT.UI._menuItem = nil       -- Menu.Item
+STT.UI._hideTimerId = nil    -- Timer ID for auto-hiding status label
 
 -- Default styles for Geyser elements (status label, setup dialog)
 STT.UI._styles = {
@@ -81,6 +82,10 @@ function STT.UI.createStatusLabel(cons, container)
 
   if STT.UI._statusLabel then
     STT.UI._statusLabel:hide()
+    -- Properly destroy the Geyser label by deleting the underlying window
+    if STT.UI._statusLabel.name then
+      deleteLabel(STT.UI._statusLabel.name)
+    end
     STT.UI._statusLabel = nil
   end
 
@@ -142,9 +147,15 @@ end
 -- @param message string error message to show
 function STT.UI._showError(message)
   if STT.UI._statusLabel then
+    -- Cancel any existing hide timer to prevent race condition
+    if STT.UI._hideTimerId then
+      killTimer(STT.UI._hideTimerId)
+      STT.UI._hideTimerId = nil
+    end
     STT.UI._statusLabel:show()
     STT.UI._statusLabel:echo(message, "red", "c")
-    tempTimer(3, function()
+    STT.UI._hideTimerId = tempTimer(3, function()
+      STT.UI._hideTimerId = nil
       if STT.UI._statusLabel then
         STT.UI._statusLabel:hide()
       end
@@ -158,10 +169,16 @@ end
 -- @param text string text to show
 function STT.UI._showText(text)
   if STT.UI._statusLabel and text and text ~= "" then
+    -- Cancel any existing hide timer to prevent race condition
+    if STT.UI._hideTimerId then
+      killTimer(STT.UI._hideTimerId)
+      STT.UI._hideTimerId = nil
+    end
     STT.UI._statusLabel:show()
     STT.UI._statusLabel:echo(text, "white", "c")
     -- Hide after a delay
-    tempTimer(5, function()
+    STT.UI._hideTimerId = tempTimer(5, function()
+      STT.UI._hideTimerId = nil
       if STT.UI._statusLabel then
         STT.UI._statusLabel:hide()
       end
@@ -191,9 +208,13 @@ end
 --- Create and show a simple setup dialog for selecting Vosk models.
 -- @return Geyser.Container the dialog container
 function STT.UI.showSetupDialog()
+  -- Always recreate the dialog to ensure the model list is fresh
   if STT.UI._setupDialog then
-    STT.UI._setupDialog:show()
-    return STT.UI._setupDialog
+    -- Destroy the existing dialog
+    if STT.UI._setupDialog.name then
+      deleteLabel(STT.UI._setupDialog.name)
+    end
+    STT.UI._setupDialog = nil
   end
 
   -- Create dialog container
@@ -250,9 +271,14 @@ function STT.UI.showSetupDialog()
       ]])
       modelBtn:echo(string.format("<center>%s</center>", model.name or model.path), "white", "c")
       modelBtn:setClickCallback(function()
-        STT.init(model.path)
-        STT.UI._setupDialog:hide()
-        cecho("\n<green>[STT] Model loaded: " .. (model.name or model.path) .. "\n")
+        local success, errorMsg = STT.init(model.path)
+        if success then
+          STT.UI._setupDialog:hide()
+          cecho("\n<green>[STT] Model loaded: " .. (model.name or model.path) .. "\n")
+        else
+          -- Keep dialog open and show error
+          cecho("\n<red>[STT] Failed to load model: " .. (errorMsg or "Unknown error") .. "\n")
+        end
       end)
       yPos = yPos + 50
     end
@@ -286,6 +312,11 @@ end
 
 --- Set up default callbacks to update UI on events.
 function STT.UI._setupDefaultCallbacks()
+  -- Guard against STT core module not being loaded yet
+  if not STT.setOnStateChanged or not STT.setOnPartial or not STT.setOnError then
+    return false
+  end
+
   -- Update button state when state changes
   STT.setOnStateChanged(function(state)
     STT.UI._updateMicButtonState()
@@ -301,7 +332,13 @@ function STT.UI._setupDefaultCallbacks()
     STT.UI._showError(message)
     STT.UI._updateMicButtonState()
   end)
+
+  return true
 end
 
--- Auto-setup callbacks when this module loads
-STT.UI._setupDefaultCallbacks()
+-- Auto-setup callbacks when this module loads (defer to ensure STT core is loaded)
+if not STT.UI._setupDefaultCallbacks() then
+  tempTimer(0, function()
+    STT.UI._setupDefaultCallbacks()
+  end)
+end

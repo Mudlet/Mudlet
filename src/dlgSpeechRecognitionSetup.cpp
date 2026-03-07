@@ -23,9 +23,16 @@
 #include "VoskRecognizer.h"
 
 #include <QApplication>
+#include <QComboBox>
 #include <QDesktopServices>
 #include <QDir>
 #include <QFile>
+#include <QLabel>
+#include <QNetworkAccessManager>
+#include <QProgressBar>
+#include <QPushButton>
+#include <QStackedWidget>
+#include <QTextEdit>
 #include <QFileInfo>
 #include <QGridLayout>
 #include <QGroupBox>

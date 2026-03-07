@@ -164,9 +164,10 @@ local function handleMenuItemClick(event, itemId)
   itemId = tonumber(itemId)
   if itemId and Menu._items[itemId] then
     local item = Menu._items[itemId]
-    -- Toggle checked state for checkable items
+    -- Toggle checked state for checkable items and sync with host UI
     if item._checkable then
       item._checked = not item._checked
+      setMenuItemChecked(itemId, item._checked)
     end
     if item._onClick then
       item._onClick(item)

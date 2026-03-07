@@ -81,7 +81,7 @@ public:
     // Convenience methods
     bool isListening() const { return state() == State::Listening; }
     bool isReady() const { return state() == State::Ready; }
-    bool isInitialized() const { return state() != State::Uninitialized && state() != State::Error; }
+    bool isInitialized() const { auto s = state(); return s != State::Uninitialized && s != State::Error; }
 
     // === Language/Model Support ===
 

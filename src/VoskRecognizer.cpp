@@ -354,7 +354,7 @@ void VoskRecognizer::startListening()
     auto status = MacMicrophonePermission::checkStatus();
 
     switch (status) {
-    case MacMicrophonePermission::NotDetermined: {
+    case MacMicrophonePermission::AuthorizationStatus::NotDetermined: {
         // Request permission - callback is called on background thread
         // Use QPointer to safely handle the case where VoskRecognizer is destroyed
         // before the permission callback or timer fires
@@ -376,13 +376,13 @@ void VoskRecognizer::startListening()
         });
         return;
     }
-    case MacMicrophonePermission::Denied:
-    case MacMicrophonePermission::Restricted:
+    case MacMicrophonePermission::AuthorizationStatus::Denied:
+    case MacMicrophonePermission::AuthorizationStatus::Restricted:
         qWarning() << "VoskRecognizer: Microphone permission denied or restricted";
         emit errorOccurred(tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
         setState(State::Error);
         return;
-    case MacMicrophonePermission::Authorized:
+    case MacMicrophonePermission::AuthorizationStatus::Authorized:
         break;
     }
 #endif

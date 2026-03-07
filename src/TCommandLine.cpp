@@ -629,11 +629,17 @@ bool TCommandLine::event(QEvent* event)
 void TCommandLine::focusInEvent(QFocusEvent* event)
 {
     // Restore any previous selection - must use setTextCursor() to apply changes
+    // Guard against text changes by validating bounds and content
     if (!mSelectedText.isEmpty()) {
-        QTextCursor cursor = textCursor();
-        cursor.movePosition(QTextCursor::Start);
-        cursor.movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, mSelectedText.length());
-        setTextCursor(cursor);
+        const QString currentText = toPlainText();
+        const int safeLength = qMin(mSelectedText.length(), currentText.length());
+        // Only restore selection if text still matches what was selected
+        if (safeLength > 0 && currentText.left(safeLength) == mSelectedText.left(safeLength)) {
+            QTextCursor cursor = textCursor();
+            cursor.movePosition(QTextCursor::Start);
+            cursor.movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, safeLength);
+            setTextCursor(cursor);
+        }
     }
 
     mpConsole->mUpperPane->forceUpdate();

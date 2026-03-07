@@ -303,7 +303,7 @@ public:
     void setSpeechRecognitionActive(bool active) { mSpeechRecognitionActive = active; }
     SpeechRecognizer* speechRecognizer() const;
     int speechDetectionTiming() const { return static_cast<int>(mSpeechDetectionTiming); }
-    void setSpeechDetectionTiming(int timing) { mSpeechDetectionTiming = static_cast<SpeechDetectionTiming>(timing); }
+    void setSpeechDetectionTiming(int timing) { mSpeechDetectionTiming = (timing >= 0 && timing <= 2) ? static_cast<SpeechDetectionTiming>(timing) : SpeechDetectionTiming::Default; }
     bool highlightLowConfidenceWords() const { return mHighlightLowConfidenceWords; }
     void setHighlightLowConfidenceWords(bool enabled) { mHighlightLowConfidenceWords = enabled; }
 

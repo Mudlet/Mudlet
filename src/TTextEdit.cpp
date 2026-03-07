@@ -1207,12 +1207,14 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     mForceUpdate = false;
 
     const bool shouldBeRegistered = mEnableBlinkText && mHasBlinkingContent;
-    if (shouldBeRegistered && !mIsBlinkClientRegistered) {
-        mudlet::self()->registerBlinkClient();
-        mIsBlinkClientRegistered = true;
-    } else if (!shouldBeRegistered && mIsBlinkClientRegistered) {
-        mudlet::self()->unregisterBlinkClient();
-        mIsBlinkClientRegistered = false;
+    if (auto* pMudlet = mudlet::self()) {
+        if (shouldBeRegistered && !mIsBlinkClientRegistered) {
+            pMudlet->registerBlinkClient();
+            mIsBlinkClientRegistered = true;
+        } else if (!shouldBeRegistered && mIsBlinkClientRegistered) {
+            pMudlet->unregisterBlinkClient();
+            mIsBlinkClientRegistered = false;
+        }
     }
 }
 

@@ -145,6 +145,12 @@ function STT.setDefaultModelPath(path)
 end
 
 -- Internal event handlers
+local function handleResult(event, text)
+  if STT._callbacks.onResult then
+    STT._callbacks.onResult(text)
+  end
+end
+
 local function handlePartialResult(event, text)
   if STT._callbacks.onPartial then
     STT._callbacks.onPartial(text)
@@ -166,12 +172,22 @@ end
 --- Initialize event handlers (called automatically on load).
 -- Users typically don't need to call this directly.
 function STT._setupEventHandlers()
+  -- Clean up existing handlers on reload to avoid stale references
   if STT._initialized then
-    return
+    if killAnonymousEventHandler then
+      for _, handlerId in pairs(STT._eventHandlerIds) do
+        if handlerId then
+          killAnonymousEventHandler(handlerId)
+        end
+      end
+    end
+    STT._eventHandlerIds = {}
+    STT._initialized = false
   end
 
   -- Register event handlers
   if registerAnonymousEventHandler then
+    STT._eventHandlerIds.result = registerAnonymousEventHandler("sysSTTResult", handleResult)
     STT._eventHandlerIds.partial = registerAnonymousEventHandler("sysSTTPartialResult", handlePartialResult)
     STT._eventHandlerIds.state = registerAnonymousEventHandler("sysSTTStateChanged", handleStateChanged)
     STT._eventHandlerIds.error = registerAnonymousEventHandler("sysSTTError", handleError)

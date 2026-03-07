@@ -29,12 +29,17 @@
 class MacMicrophonePermission
 {
 public:
-    enum AuthorizationStatus {
+    enum class AuthorizationStatus {
         NotDetermined,  // User has not yet been asked for permission
         Restricted,     // User cannot change this setting (parental controls, etc.)
         Denied,         // User explicitly denied permission
         Authorized      // User granted permission
     };
+
+    // Prevent instantiation - this is a static-only utility class
+    MacMicrophonePermission() = delete;
+    MacMicrophonePermission(const MacMicrophonePermission&) = delete;
+    MacMicrophonePermission& operator=(const MacMicrophonePermission&) = delete;
 
     // Check current authorization status without prompting the user
     static AuthorizationStatus checkStatus();
