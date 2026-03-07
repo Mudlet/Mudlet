@@ -70,6 +70,7 @@ class TConsole;
 class TMainConsole;
 class dlgNotepad;
 class TMap;
+class MMCPServer;
 class dlgIRC;
 class dlgPackageManager;
 class dlgModuleManager;
@@ -336,6 +337,15 @@ public:
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
+    QString getMMCPChatName();
+    quint16 getMMCPPort();
+    QString getMMCPChatPrefix();
+    bool getMMCPAutoStartServer();
+    bool getMMCPAllowPeekRequests();
+    bool getMMCPPrefixEmotes();
+    bool getMMCPAddChatMessageNewline();
+    bool getMMCPAutoAcceptCalls();
+    bool getMMCPShowSnoopInMainConsole();
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     void setMediaLocationGMCP(const QString& mediaUrl);
@@ -450,6 +460,8 @@ public:
     int getCommandLineHistorySaveSize() const { return mCommandLineHistorySaveSize; }
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
+    void initMMCPServer();
+    void setMMCPChatName(const QString&, bool shouldSignal = true);
     void setShowIdsInEditor(const bool isShown)
     {
         mShowIDsInEditor = isShown;
@@ -774,6 +786,7 @@ public:
     dlgTriggerEditor::SearchOptions mSearchOptions = dlgTriggerEditor::SearchOptionNone;
     TConsole::SearchOptions mBufferSearchOptions = TConsole::SearchOption::SearchOptionNone;
     QPointer<dlgIRC> mpDlgIRC;
+    QPointer<MMCPServer> mMMCPServer;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     QList<QString> mDockLayoutChanges;
     QList<QPointer<TToolBar>> mToolbarLayoutChanges;
@@ -819,6 +832,7 @@ signals:
     void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
     // Tells all command lines to save their history:
     void signal_saveCommandLinesHistory();
+    void mmcpChatNameChanged(const QString&);
     void signal_editorThemeChanged();
     void signal_remoteEchoChanged(bool enabled);
     void signal_forceMXPProcessorOnChanged(bool enabled);
@@ -931,6 +945,16 @@ private:
     // we won't use Discord functions.
     QString mRequiredDiscordUserName;
     QString mRequiredDiscordUserDiscriminator;
+    
+    QString mMMCPChatName;
+    QString mMMCPChatPrefix;
+    quint16 mMMCPChatPort;
+    bool mMMCPAutostartServer;
+    bool mMMCPAllowPeekRequests;
+    bool mMMCPPrefixEmotes;
+    bool mMMCPAddChatMessageNewline;
+    bool mMMCPAutoAcceptCalls;
+    bool mMMCPShowSnoopInMainConsole;
 
     // Handles whether to treat 16M-Colour ANSI SGR codes which only use
     // semi-colons as separator have the initial Colour Space Id parameter

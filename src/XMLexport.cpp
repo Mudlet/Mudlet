@@ -703,6 +703,19 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
     }
+    {
+        // Store MMCP related attributes in the MMCP child node
+        auto mmcpNode = host.append_child("MMCP");
+        mmcpNode.append_attribute("chatName") = pHost->mMMCPChatName.toUtf8().constData();
+        mmcpNode.append_attribute("chatPort") = QString::number(pHost->mMMCPChatPort).toUtf8().constData();
+        mmcpNode.append_attribute("chatPrefix") = pHost->mMMCPChatPrefix.toUtf8().constData();
+        mmcpNode.append_attribute("autostartServer") = pHost->mMMCPAutostartServer ? "yes" : "no";
+        mmcpNode.append_attribute("allowPeekRequests") = pHost->mMMCPAllowPeekRequests ? "yes" : "no";
+        mmcpNode.append_attribute("prefixEmotes") = pHost->mMMCPPrefixEmotes ? "yes" : "no";
+        mmcpNode.append_attribute("chatMessageNewline") = pHost->mMMCPAddChatMessageNewline ? "yes" : "no";
+        mmcpNode.append_attribute("autoAcceptCalls") = pHost->mMMCPAutoAcceptCalls ? "yes" : "no";
+        mmcpNode.append_attribute("snoopInMain") = pHost->mMMCPShowSnoopInMainConsole ? "yes" : "no";
+    }
 
     // Write experiments
     {
@@ -715,6 +728,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
     }
+
 
     writeTriggerPackage(pHost, mudletPackage, true);
     writeTimerPackage(pHost, mudletPackage, true);

@@ -89,6 +89,8 @@ set(mudlet_SRCS
     LuaInterface.cpp
     main.cpp
     mapInfoContributorManager.cpp
+    MMCPClient.cpp
+    MMCPServer.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
     EditorUndoStack.cpp
@@ -150,6 +152,7 @@ set(mudlet_SRCS
     TLuaInterpreterNetworking.cpp
     TLuaInterpreterTextToSpeech.cpp
     TLuaInterpreterUI.cpp
+    TLuaInterpreterMMCP.cpp
     TMainConsole.cpp
     TMap.cpp
     TMapLabel.cpp
@@ -318,6 +321,9 @@ set(mudlet_HDRS
     LlamaFileManager.h
     LuaInterface.h
     mapInfoContributorManager.h
+    MMCP.h
+    MMCPClient.h
+    MMCPServer.h
     mudlet.h
     EditorCommand.h
     MudletInstanceCoordinator.h
