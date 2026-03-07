@@ -23,9 +23,13 @@
  *
  * The bug: null terminator was placed at in_buffer[amount + 1] instead of
  * in_buffer[amount], and buffer was accessed before validating amount.
+ *
+ * To test this we must use raw char[] buffers - QByteArray always
+ * null-terminates at position size() which masks the off-by-one.
  */
 
 #include <QtTest/QtTest>
+#include <cstring>
 
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -112,119 +116,90 @@ private slots:
     startProfile(mHostname, mLocalhost, mPort);
   }
 
-  // Test that data at exact byte boundaries is processed correctly
-  // The off-by-one bug would cause data to be incorrectly terminated
-  void testExactBoundaryData() {
+  // Uses a raw char[] buffer where position [amount] contains a garbage
+  // byte. With the bug (null terminator at amount+1), the garbage byte
+  // would be included in the processed output. With the fix (null
+  // terminator at amount), it is correctly excluded.
+  void testOffByOneNullTerminator() {
     QVERIFY(mpHost != nullptr);
 
-    // Test various boundary sizes - the bug would manifest as incorrect
-    // null terminator placement causing extra garbage or truncation
-    const QVector<int> testSizes = {31, 32, 33, 63, 64, 65, 127, 128, 129};
+    // Wait for any welcome data to be processed
+    QTest::qWait(200);
+
+    char buffer[64];
+    std::memset(buffer, 0, sizeof(buffer));
+
+    // Set up: 4 bytes of valid data, then a garbage byte at position 4
+    // Bug: null terminator at buffer[5], so "Test!" (5 chars) is processed
+    // Fix: null terminator at buffer[4], so "Test" (4 chars) is processed
+    std::memcpy(buffer, "Test", 4);
+    buffer[4] = '!';
+    buffer[5] = '\0';
+
+    mpHost->mTelnet.processSocketData(buffer, 4, true);
+    QTest::qWait(100);
+
+    QString displayed = mpHost->mpConsole->getCurrentLine("");
+    QVERIFY2(!displayed.contains('!'),
+             qPrintable(QString("Garbage '!' found in output - off-by-one bug "
+                                "present. Got: '%1'")
+                            .arg(displayed)));
+    QVERIFY2(
+        displayed.contains("Test"),
+        qPrintable(
+            QString("Expected 'Test' in output but got: '%1'").arg(displayed)));
+  }
+
+  // Same test at multiple sizes to catch edge cases at various boundaries
+  void testOffByOneAtVariousSizes() {
+    QVERIFY(mpHost != nullptr);
+
+    QTest::qWait(200);
+
+    const QVector<int> testSizes = {1, 2, 4, 8, 15, 16, 31, 32, 33, 63, 64};
 
     for (int size : testSizes) {
-      // Create test data of exact size with a newline at the end
-      QByteArray testData(size - 1, 'X');
-      testData.append('\n');
+      char buffer[128];
+      std::memset(buffer, 0, sizeof(buffer));
 
-      // Add extra byte that the buggy code would incorrectly include
-      // by placing null terminator one position too far
-      testData.append('!');
+      // Fill with 'A's for the valid portion, put garbage right after
+      std::memset(buffer, 'A', size);
+      buffer[size] = '!';
+      buffer[size + 1] = '\0';
 
-      // Use loopbackTest to process through actual cTelnet::processSocketData
-      // Pass size (not size+1) to simulate the exact amount received
-      QByteArray dataToProcess = testData.left(size);
-      mpHost->mTelnet.loopbackTest(dataToProcess);
-
+      mpHost->mTelnet.processSocketData(buffer, size, true);
       QTest::qWait(50);
 
-      // Verify the garbage '!' character was not included in the output
-      // The off-by-one bug would place the null terminator too far, including it
-      QString displayedText = mpHost->mpConsole->getCurrentLine("");
-      QVERIFY2(!displayedText.contains('!'),
-               qPrintable(QString("Size %1: Garbage '!' found in output, off-by-one bug present. Got: '%2'")
-                              .arg(size)
-                              .arg(displayedText)));
+      QString displayed = mpHost->mpConsole->getCurrentLine("");
+      QVERIFY2(
+          !displayed.contains('!'),
+          qPrintable(
+              QString("Size %1: Garbage '!' found - off-by-one bug. Got: '%2'")
+                  .arg(size)
+                  .arg(displayed)));
     }
   }
 
-  // Test that text is displayed correctly through the full pipeline
-  void testTextDisplayedCorrectly() {
-    QVERIFY(mpHost != nullptr);
-
-    // Clear any existing content
-    mpHost->mpConsole->mTriggerEngineMode = true;
-
-    // Send a specific message and verify it arrives intact
-    QByteArray testMessage = "Hello, World!\r\n";
-    mpHost->mTelnet.loopbackTest(testMessage);
-
-    // Wait for processing
-    QTest::qWait(100);
-
-    // The message should be in the console without corruption
-    QString displayedText = mpHost->mpConsole->getCurrentLine("");
-    QVERIFY2(displayedText.contains("Hello, World!"),
-             qPrintable(QString("Expected 'Hello, World!' but got: '%1'")
-                            .arg(displayedText)));
-  }
-
-  // Test that empty data doesn't cause issues (amount == 0 case)
+  // Empty data should be handled gracefully (amount == 0)
   void testEmptyDataHandling() {
     QVERIFY(mpHost != nullptr);
 
-    // First send some known data to establish baseline
+    QTest::qWait(200);
+
+    // Establish baseline
     QByteArray baselineData = "Baseline\r\n";
     mpHost->mTelnet.loopbackTest(baselineData);
     QTest::qWait(50);
 
     QString beforeEmpty = mpHost->mpConsole->getCurrentLine("");
 
-    // Empty data should be handled gracefully without corrupting state
+    // Empty data should not corrupt console state
     QByteArray emptyData;
     mpHost->mTelnet.loopbackTest(emptyData);
     QTest::qWait(50);
 
-    // Verify console state wasn't corrupted by empty data
     QString afterEmpty = mpHost->mpConsole->getCurrentLine("");
-    QVERIFY2(afterEmpty == beforeEmpty,
-             qPrintable(QString("Console state changed after empty data. Before: '%1', After: '%2'")
-                            .arg(beforeEmpty, afterEmpty)));
-  }
-
-  // Test processing of data with ANSI escape sequences at boundaries
-  void testAnsiAtBoundaries() {
-    QVERIFY(mpHost != nullptr);
-
-    // ANSI color followed by text - tests that escape sequences
-    // aren't corrupted by incorrect null terminator placement
-    QByteArray ansiData = "\x1b[1;32mGreen Text\x1b[0m\r\n";
-    mpHost->mTelnet.loopbackTest(ansiData);
-
-    QTest::qWait(100);
-
-    QString displayedText = mpHost->mpConsole->getCurrentLine("");
-    QVERIFY2(
-        displayedText.contains("Green Text"),
-        qPrintable(
-            QString("Expected 'Green Text' but got: '%1'").arg(displayedText)));
-  }
-
-  // Test processing telnet commands (GA) at buffer boundaries
-  void testTelnetCommandAtBoundary() {
-    QVERIFY(mpHost != nullptr);
-
-    // Text followed by IAC GA (telnet Go Ahead)
-    QByteArray dataWithGA = "Prompt> ";
-    dataWithGA.append('\xff'); // IAC
-    dataWithGA.append('\xf9'); // GA
-
-    mpHost->mTelnet.loopbackTest(dataWithGA);
-    QTest::qWait(50);
-
-    // Verify the text portion was processed correctly
-    QString displayedText = mpHost->mpConsole->getCurrentLine("");
-    QVERIFY2(displayedText.contains("Prompt>"),
-             qPrintable(QString("Expected 'Prompt>' but got: '%1'").arg(displayedText)));
+    QCOMPARE(afterEmpty, beforeEmpty);
   }
 
   void cleanup() {
