@@ -124,6 +124,10 @@ local packages = {
   "CursorShapes.lua",
   "TTSValues.lua",
   "IDManager.lua",
+
+  -- Speech-to-Text module
+  "stt/STT.lua",
+  "stt/STTUI.lua",
 }
 
 -- Set to true (possibly via code in the C++ TLuaInterpreter::loadGlobal()
