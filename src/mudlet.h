@@ -306,6 +306,22 @@ public:
     void setSpeechDetectionTiming(int timing) { mSpeechDetectionTiming = static_cast<SpeechDetectionTiming>(timing); }
     bool highlightLowConfidenceWords() const { return mHighlightLowConfidenceWords; }
     void setHighlightLowConfidenceWords(bool enabled) { mHighlightLowConfidenceWords = enabled; }
+
+    // Addon toolbar button management
+    int addAddonToolbarButton(const QString& name, const QString& icon, const QString& tooltip, Host* pHost);
+    bool removeAddonToolbarButton(int buttonId);
+    bool setAddonToolbarButtonState(int buttonId, const QString& state);
+    bool setAddonToolbarButtonIcon(int buttonId, const QString& icon);
+    bool setAddonToolbarButtonTooltip(int buttonId, const QString& tooltip);
+    bool setAddonToolbarButtonEnabled(int buttonId, bool enabled);
+    bool setAddonToolbarButtonPulse(int buttonId, bool enabled, const QString& color1, const QString& color2, int interval);
+
+    // Addon menu item management
+    int addAddonMenuItem(const QString& menuPath, const QString& name, const QString& shortcut, Host* pHost);
+    bool removeAddonMenuItem(int itemId);
+    bool setAddonMenuItemEnabled(int itemId, bool enabled);
+    bool setAddonMenuItemChecked(int itemId, bool checked);
+
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied:
     void showOptionsDialog(const QString&);
@@ -772,6 +788,31 @@ private:
     // Window menu management for multiple windows
     QList<QAction*> mWindowListActions;
     QAction* mWindowListSeparator = nullptr;
+
+    // Addon toolbar button management
+    struct AddonButton {
+        QPointer<QToolButton> button;
+        QPointer<QTimer> pulseTimer;
+        QString name;
+        Host* pHost = nullptr;
+        bool pulseState = false;
+        QString pulseColor1;
+        QString pulseColor2;
+    };
+    QMap<int, AddonButton> mAddonButtons;
+    int mNextAddonButtonId = 1;
+    QAction* mpAddonToolbarSeparator = nullptr;
+
+    // Addon menu item management
+    struct AddonMenuItem {
+        QPointer<QAction> action;
+        QString menuPath;
+        QString name;
+        Host* pHost = nullptr;
+    };
+    QMap<int, AddonMenuItem> mAddonMenuItems;
+    int mNextAddonMenuItemId = 1;
+    QPointer<QMenu> mpAddonsMenu;
 
     // amount of times the shortcut has been shown help educate new users
     int mScrollbackTutorialsShown = 0;   // Cancel split screen

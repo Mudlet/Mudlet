@@ -5654,6 +5654,19 @@ void TLuaInterpreter::initLuaGlobals()
     lua_setfield(pGlobalLua, -2, "close");
     lua_setglobal(pGlobalLua, "stt");
 
+    // Register toolbar and menu addon functions as global functions
+    lua_register(pGlobalLua, "addToolbarButton", TLuaInterpreter::addToolbarButton);
+    lua_register(pGlobalLua, "removeToolbarButton", TLuaInterpreter::removeToolbarButton);
+    lua_register(pGlobalLua, "setToolbarButtonState", TLuaInterpreter::setToolbarButtonState);
+    lua_register(pGlobalLua, "setToolbarButtonIcon", TLuaInterpreter::setToolbarButtonIcon);
+    lua_register(pGlobalLua, "setToolbarButtonTooltip", TLuaInterpreter::setToolbarButtonTooltip);
+    lua_register(pGlobalLua, "setToolbarButtonEnabled", TLuaInterpreter::setToolbarButtonEnabled);
+    lua_register(pGlobalLua, "setToolbarButtonPulse", TLuaInterpreter::setToolbarButtonPulse);
+    lua_register(pGlobalLua, "addMenuItem", TLuaInterpreter::addMenuItem);
+    lua_register(pGlobalLua, "removeMenuItem", TLuaInterpreter::removeMenuItem);
+    lua_register(pGlobalLua, "setMenuItemEnabled", TLuaInterpreter::setMenuItemEnabled);
+    lua_register(pGlobalLua, "setMenuItemChecked", TLuaInterpreter::setMenuItemChecked);
+
 
     QStringList additionalLuaPaths;
     QStringList additionalCPaths;

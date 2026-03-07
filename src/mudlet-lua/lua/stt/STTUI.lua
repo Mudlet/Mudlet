@@ -1,40 +1,19 @@
 --- Speech-to-Text UI Components for Mudlet
--- Provides Geyser-based UI for speech recognition control.
+-- Provides UI for speech recognition control using toolbar buttons.
 -- @module STT.UI
 
 STT = STT or {}
 STT.UI = STT.UI or {}
 
 -- UI state
-STT.UI._micButton = nil
-STT.UI._statusLabel = nil
-STT.UI._setupDialog = nil
+STT.UI._micButton = nil      -- Toolbar.Button
+STT.UI._statusLabel = nil    -- Geyser.Label for overlay text
+STT.UI._setupDialog = nil    -- Geyser-based setup dialog
 STT.UI._isVisible = false
+STT.UI._menuItem = nil       -- Menu.Item
 
--- Default styles
+-- Default styles for Geyser elements (status label, setup dialog)
 STT.UI._styles = {
-  micButton = {
-    idle = [[
-      background-color: rgba(60, 60, 60, 200);
-      border-radius: 20px;
-      border: 2px solid #666;
-    ]],
-    listening = [[
-      background-color: rgba(200, 60, 60, 200);
-      border-radius: 20px;
-      border: 2px solid #ff4444;
-    ]],
-    listeningPulse = [[
-      background-color: rgba(255, 80, 80, 200);
-      border-radius: 20px;
-      border: 2px solid #ff6666;
-    ]],
-    unavailable = [[
-      background-color: rgba(40, 40, 40, 150);
-      border-radius: 20px;
-      border: 2px solid #333;
-    ]],
-  },
   statusLabel = [[
     background-color: rgba(40, 40, 40, 180);
     border-radius: 4px;
@@ -42,43 +21,48 @@ STT.UI._styles = {
   ]],
 }
 
--- Pulse timer for listening animation
-STT.UI._pulseTimer = nil
-STT.UI._pulseState = false
-
---- Create the microphone button.
--- @param cons table of constraints for positioning
--- @param container optional parent container
--- @return Geyser.Label the created button
-function STT.UI.createMicButton(cons, container)
-  cons = cons or {}
-
-  -- Default position: bottom right corner
-  cons.name = cons.name or "STT_MicButton"
-  cons.x = cons.x or -60
-  cons.y = cons.y or -60
-  cons.width = cons.width or 40
-  cons.height = cons.height or 40
-
+--- Create the microphone toolbar button.
+-- Uses the Toolbar module for native Qt toolbar integration.
+-- @return Toolbar.Button the created button object
+function STT.UI.createMicButton()
   if STT.UI._micButton then
-    STT.UI._micButton:hide()
+    STT.UI._micButton:remove()
     STT.UI._micButton = nil
   end
 
-  STT.UI._micButton = Geyser.Label:new(cons, container)
+  STT.UI._micButton = Toolbar.addButton({
+    name = "Speech",
+    icon = ":/icons/microphone.png",
+    tooltip = "Toggle speech recognition\n(Speech-to-Text)",
+    onClick = function()
+      STT.UI.toggleListening()
+    end,
+    enabled = STT.isAvailable(),
+  })
 
   -- Set initial state
   STT.UI._updateMicButtonState()
 
-  -- Set up click handler
-  STT.UI._micButton:setClickCallback(function()
-    STT.UI.toggleListening()
-  end)
-
-  -- Set tooltip
-  STT.UI._micButton:setToolTip("Click to toggle speech recognition", 3)
-
   return STT.UI._micButton
+end
+
+--- Create a menu item for STT settings.
+-- @return Menu.Item the created menu item
+function STT.UI.createMenuItem()
+  if STT.UI._menuItem then
+    STT.UI._menuItem:remove()
+    STT.UI._menuItem = nil
+  end
+
+  STT.UI._menuItem = Menu.addItem({
+    name = "Speech Recognition Setup...",
+    menu = "Tools",
+    onClick = function()
+      STT.UI.showSetupDialog()
+    end,
+  })
+
+  return STT.UI._menuItem
 end
 
 --- Create a status label to show recognized text.
@@ -136,51 +120,22 @@ function STT.UI._updateMicButtonState()
     return
   end
 
-  local micIcon = "🎤" -- Unicode microphone
-
   if not STT.isAvailable() then
-    STT.UI._micButton:setStyleSheet(STT.UI._styles.micButton.unavailable)
-    STT.UI._micButton:echo("<center>" .. micIcon .. "</center>", "#666", "c")
-    STT.UI._stopPulse()
+    STT.UI._micButton:setEnabled(false)
+    STT.UI._micButton:setTooltip("Speech recognition not available")
+    STT.UI._micButton:stopPulse()
   elseif STT.isListening() then
-    STT.UI._micButton:echo("<center>" .. micIcon .. "</center>", "white", "c")
-    STT.UI._startPulse()
+    STT.UI._micButton:setEnabled(true)
+    STT.UI._micButton:setTooltip("Click to stop listening\n(Speech-to-Text)")
+    STT.UI._micButton:setState("listening")
+    -- Start pulse with red colors for "recording" indication
+    STT.UI._micButton:startPulse("#ff4444", "#cc0000", 500)
   else
-    STT.UI._micButton:setStyleSheet(STT.UI._styles.micButton.idle)
-    STT.UI._micButton:echo("<center>" .. micIcon .. "</center>", "white", "c")
-    STT.UI._stopPulse()
+    STT.UI._micButton:setEnabled(true)
+    STT.UI._micButton:setTooltip("Click to start speech recognition\n(Speech-to-Text)")
+    STT.UI._micButton:setState("idle")
+    STT.UI._micButton:stopPulse()
   end
-end
-
---- Start the pulsing animation for the listening state.
-function STT.UI._startPulse()
-  if STT.UI._pulseTimer then
-    return -- Already pulsing
-  end
-
-  STT.UI._pulseState = true
-  STT.UI._pulseTimer = tempTimer(0.5, function()
-    if not STT.UI._micButton then
-      STT.UI._stopPulse()
-      return
-    end
-
-    STT.UI._pulseState = not STT.UI._pulseState
-    if STT.UI._pulseState then
-      STT.UI._micButton:setStyleSheet(STT.UI._styles.micButton.listening)
-    else
-      STT.UI._micButton:setStyleSheet(STT.UI._styles.micButton.listeningPulse)
-    end
-  end, true) -- true for repeating timer
-end
-
---- Stop the pulsing animation.
-function STT.UI._stopPulse()
-  if STT.UI._pulseTimer then
-    killTimer(STT.UI._pulseTimer)
-    STT.UI._pulseTimer = nil
-  end
-  STT.UI._pulseState = false
 end
 
 --- Show an error message briefly.
@@ -217,13 +172,19 @@ end
 --- Show or hide the mic button.
 -- @param show boolean true to show, false to hide
 function STT.UI.showMicButton(show)
-  if STT.UI._micButton then
-    if show then
-      STT.UI._micButton:show()
-    else
-      STT.UI._micButton:hide()
+  if show then
+    -- Create the button if it doesn't exist
+    if not STT.UI._micButton then
+      STT.UI.createMicButton()
     end
-    STT.UI._isVisible = show
+    STT.UI._isVisible = true
+  else
+    -- Remove the button if it exists
+    if STT.UI._micButton then
+      STT.UI._micButton:remove()
+      STT.UI._micButton = nil
+    end
+    STT.UI._isVisible = false
   end
 end
 

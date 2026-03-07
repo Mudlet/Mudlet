@@ -4689,6 +4689,322 @@ SpeechRecognizer* mudlet::speechRecognizer() const
     return mpSpeechRecognizer;
 }
 
+int mudlet::addAddonToolbarButton(const QString& name, const QString& icon, const QString& tooltip, Host* pHost)
+{
+    if (!mpMainToolBar) {
+        return -1;
+    }
+
+    // Add separator before first addon button if not present
+    if (!mpAddonToolbarSeparator) {
+        mpAddonToolbarSeparator = mpMainToolBar->addSeparator();
+    }
+
+    auto* button = new QToolButton(this);
+    button->setText(name);
+    button->setObjectName(qsl("addon_%1").arg(name));
+
+    // Handle icon - can be a path or a built-in icon name
+    if (icon.startsWith(qsl(":/"))) {
+        button->setIcon(QIcon(icon));
+    } else if (QFile::exists(icon)) {
+        button->setIcon(QIcon(icon));
+    } else {
+        // Try as a standard icon
+        button->setIcon(QIcon::fromTheme(icon));
+    }
+
+    button->setToolTip(utils::richText(tooltip));
+    button->setAutoRaise(true);
+    button->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    mpMainToolBar->addWidget(button);
+
+    const int buttonId = mNextAddonButtonId++;
+    AddonButton addonButton;
+    addonButton.button = button;
+    addonButton.name = name;
+    addonButton.pHost = pHost;
+    mAddonButtons[buttonId] = addonButton;
+
+    // Connect click to raise event
+    connect(button, &QToolButton::clicked, this, [this, buttonId, pHost]() {
+        if (pHost) {
+            TEvent event{};
+            event.mArgumentList.append(qsl("sysToolbarButtonClicked"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            event.mArgumentList.append(QString::number(buttonId));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            pHost->raiseEvent(event);
+        }
+    });
+
+    return buttonId;
+}
+
+bool mudlet::removeAddonToolbarButton(int buttonId)
+{
+    if (!mAddonButtons.contains(buttonId)) {
+        return false;
+    }
+
+    AddonButton& addonButton = mAddonButtons[buttonId];
+
+    if (addonButton.pulseTimer) {
+        addonButton.pulseTimer->stop();
+        delete addonButton.pulseTimer;
+    }
+
+    if (addonButton.button) {
+        mpMainToolBar->removeAction(mpMainToolBar->actionAt(addonButton.button->pos()));
+        delete addonButton.button;
+    }
+
+    mAddonButtons.remove(buttonId);
+
+    // Remove separator if no more addon buttons
+    if (mAddonButtons.isEmpty() && mpAddonToolbarSeparator) {
+        mpMainToolBar->removeAction(mpAddonToolbarSeparator);
+        mpAddonToolbarSeparator = nullptr;
+    }
+
+    return true;
+}
+
+bool mudlet::setAddonToolbarButtonState(int buttonId, const QString& state)
+{
+    if (!mAddonButtons.contains(buttonId)) {
+        return false;
+    }
+
+    AddonButton& addonButton = mAddonButtons[buttonId];
+    if (!addonButton.button) {
+        return false;
+    }
+
+    // State can be used to store custom state for the button
+    addonButton.button->setProperty("state", state);
+
+    return true;
+}
+
+bool mudlet::setAddonToolbarButtonIcon(int buttonId, const QString& icon)
+{
+    if (!mAddonButtons.contains(buttonId)) {
+        return false;
+    }
+
+    AddonButton& addonButton = mAddonButtons[buttonId];
+    if (!addonButton.button) {
+        return false;
+    }
+
+    if (icon.startsWith(qsl(":/"))) {
+        addonButton.button->setIcon(QIcon(icon));
+    } else if (QFile::exists(icon)) {
+        addonButton.button->setIcon(QIcon(icon));
+    } else {
+        addonButton.button->setIcon(QIcon::fromTheme(icon));
+    }
+
+    return true;
+}
+
+bool mudlet::setAddonToolbarButtonTooltip(int buttonId, const QString& tooltip)
+{
+    if (!mAddonButtons.contains(buttonId)) {
+        return false;
+    }
+
+    AddonButton& addonButton = mAddonButtons[buttonId];
+    if (!addonButton.button) {
+        return false;
+    }
+
+    addonButton.button->setToolTip(utils::richText(tooltip));
+    return true;
+}
+
+bool mudlet::setAddonToolbarButtonEnabled(int buttonId, bool enabled)
+{
+    if (!mAddonButtons.contains(buttonId)) {
+        return false;
+    }
+
+    AddonButton& addonButton = mAddonButtons[buttonId];
+    if (!addonButton.button) {
+        return false;
+    }
+
+    addonButton.button->setEnabled(enabled);
+    return true;
+}
+
+bool mudlet::setAddonToolbarButtonPulse(int buttonId, bool enabled, const QString& color1, const QString& color2, int interval)
+{
+    if (!mAddonButtons.contains(buttonId)) {
+        return false;
+    }
+
+    AddonButton& addonButton = mAddonButtons[buttonId];
+    if (!addonButton.button) {
+        return false;
+    }
+
+    if (enabled) {
+        addonButton.pulseColor1 = color1;
+        addonButton.pulseColor2 = color2;
+        addonButton.pulseState = true;
+
+        if (!addonButton.pulseTimer) {
+            addonButton.pulseTimer = new QTimer(this);
+            connect(addonButton.pulseTimer, &QTimer::timeout, this, [this, buttonId]() {
+                if (!mAddonButtons.contains(buttonId)) {
+                    return;
+                }
+                AddonButton& btn = mAddonButtons[buttonId];
+                if (!btn.button) {
+                    return;
+                }
+                btn.pulseState = !btn.pulseState;
+                const QString& color = btn.pulseState ? btn.pulseColor1 : btn.pulseColor2;
+                btn.button->setStyleSheet(qsl("QToolButton { background-color: %1; border-radius: 4px; }").arg(color));
+            });
+        }
+
+        addonButton.pulseTimer->setInterval(interval);
+        addonButton.pulseTimer->start();
+        addonButton.button->setStyleSheet(qsl("QToolButton { background-color: %1; border-radius: 4px; }").arg(color1));
+    } else {
+        if (addonButton.pulseTimer) {
+            addonButton.pulseTimer->stop();
+        }
+        addonButton.button->setStyleSheet(QString());
+    }
+
+    return true;
+}
+
+int mudlet::addAddonMenuItem(const QString& menuPath, const QString& name, const QString& shortcut, Host* pHost)
+{
+    // Find or create the Addons menu
+    if (!mpAddonsMenu) {
+        // Find Options menu to add Addons submenu
+        QMenuBar* menuBar = this->menuBar();
+        QMenu* optionsMenu = nullptr;
+
+        for (QAction* action : menuBar->actions()) {
+            if (action->menu() && action->text().contains(tr("Options"))) {
+                optionsMenu = action->menu();
+                break;
+            }
+        }
+
+        if (optionsMenu) {
+            mpAddonsMenu = optionsMenu->addMenu(tr("Addons"));
+        } else {
+            // Create as top-level menu
+            mpAddonsMenu = menuBar->addMenu(tr("Addons"));
+        }
+    }
+
+    if (!mpAddonsMenu) {
+        return -1;
+    }
+
+    // Parse menu path to support submenus like "Speech/Settings"
+    QStringList pathParts = menuPath.split(qsl("/"), Qt::SkipEmptyParts);
+    QMenu* targetMenu = mpAddonsMenu;
+
+    for (const QString& part : pathParts) {
+        // Look for existing submenu
+        QMenu* submenu = nullptr;
+        for (QAction* action : targetMenu->actions()) {
+            if (action->menu() && action->text() == part) {
+                submenu = action->menu();
+                break;
+            }
+        }
+        if (!submenu) {
+            submenu = targetMenu->addMenu(part);
+        }
+        targetMenu = submenu;
+    }
+
+    // Add the action
+    QAction* action = targetMenu->addAction(name);
+    if (!shortcut.isEmpty()) {
+        action->setShortcut(QKeySequence(shortcut));
+    }
+
+    const int itemId = mNextAddonMenuItemId++;
+    AddonMenuItem menuItem;
+    menuItem.action = action;
+    menuItem.menuPath = menuPath;
+    menuItem.name = name;
+    menuItem.pHost = pHost;
+    mAddonMenuItems[itemId] = menuItem;
+
+    // Connect to raise event
+    connect(action, &QAction::triggered, this, [this, itemId, pHost]() {
+        if (pHost) {
+            TEvent event{};
+            event.mArgumentList.append(qsl("sysMenuItemClicked"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            event.mArgumentList.append(QString::number(itemId));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            pHost->raiseEvent(event);
+        }
+    });
+
+    return itemId;
+}
+
+bool mudlet::removeAddonMenuItem(int itemId)
+{
+    if (!mAddonMenuItems.contains(itemId)) {
+        return false;
+    }
+
+    AddonMenuItem& menuItem = mAddonMenuItems[itemId];
+    if (menuItem.action) {
+        delete menuItem.action;
+    }
+
+    mAddonMenuItems.remove(itemId);
+    return true;
+}
+
+bool mudlet::setAddonMenuItemEnabled(int itemId, bool enabled)
+{
+    if (!mAddonMenuItems.contains(itemId)) {
+        return false;
+    }
+
+    AddonMenuItem& menuItem = mAddonMenuItems[itemId];
+    if (!menuItem.action) {
+        return false;
+    }
+
+    menuItem.action->setEnabled(enabled);
+    return true;
+}
+
+bool mudlet::setAddonMenuItemChecked(int itemId, bool checked)
+{
+    if (!mAddonMenuItems.contains(itemId)) {
+        return false;
+    }
+
+    AddonMenuItem& menuItem = mAddonMenuItems[itemId];
+    if (!menuItem.action) {
+        return false;
+    }
+
+    menuItem.action->setCheckable(true);
+    menuItem.action->setChecked(checked);
+    return true;
+}
+
 void mudlet::initSpeechRecognition()
 {
     if (mpSpeechRecognizer) {

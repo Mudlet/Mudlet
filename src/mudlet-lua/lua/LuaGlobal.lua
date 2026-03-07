@@ -125,6 +125,10 @@ local packages = {
   "TTSValues.lua",
   "IDManager.lua",
 
+  -- Addon infrastructure (toolbar/menu from Lua)
+  "addon/Toolbar.lua",
+  "addon/Menu.lua",
+
   -- Speech-to-Text module
   "stt/STT.lua",
   "stt/STTUI.lua",
