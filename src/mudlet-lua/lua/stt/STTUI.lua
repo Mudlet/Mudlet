@@ -475,8 +475,7 @@ end
 -- @param color string optional color name
 function STT.UI._setDialogStatus(message, color)
   if STT.UI._dialogStatus then
-    STT.UI._dialogStatus.fgColor = color or "white"
-    STT.UI._dialogStatus:echo("<center>" .. message .. "</center>")
+    STT.UI._dialogStatus:echo("<center>" .. message .. "</center>", color or "white")
   end
 end
 

@@ -5356,7 +5356,7 @@ void mudlet::slot_handleSpeechError(const QString& errorMessage)
     // Restore original text if there was a partial result in progress
     TCommandLine* pCommandLine = focusedCommandLine();
 
-    if (pCommandLine && !mPreSpeechSnapshot.isEmpty()) {
+    if (pCommandLine) {
         // Restore the complete original text from before speech recognition started
         pCommandLine->setPlainText(mPreSpeechSnapshot);
         QTextCursor cursor = pCommandLine->textCursor();

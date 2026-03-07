@@ -2956,6 +2956,9 @@ void dlgProfilePreferences::slot_openSpeechRecognitionSetup()
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         pHost->raiseEvent(event);
     }
+
+    // Close the preferences dialog so the setup dialog is visible
+    close();
 }
 
 void dlgProfilePreferences::slot_saveAndClose()
