@@ -6588,6 +6588,12 @@ void mudlet::activateProfile(Host* pHost)
     QResizeEvent event(s, s);
     QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
 
+    // Defer command line height adjustment to ensure geometry is correct after profile switch.
+    // When switching profiles, Qt widget geometry isn't updated until the event loop processes
+    // show/hide events. Calling adjustHeight() immediately would use incorrect document width,
+    // causing the input bar to have the wrong height.
+    QTimer::singleShot(0, mpCurrentActiveHost->mpConsole->mpCommandLine, &TCommandLine::adjustHeight);
+
     // Update the main application window title based on active profiles in main window
     updateMainWindowTitle();
 
