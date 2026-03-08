@@ -41,11 +41,11 @@ class TMediaPlayer
 public:
     TMediaPlayer() = default;
     TMediaPlayer(Host* pHost, TMediaData& mediaData)
-    : mpHost(pHost),
-      mMediaData(mediaData),
-      mMediaPlayer(new QMediaPlayer(pHost)),
-      mPlaylist(new TMediaPlaylist),
-      initialized(true)
+    : mpHost(pHost)
+    , mMediaData(mediaData)
+    , mMediaPlayer(new QMediaPlayer(pHost))
+    , mPlaylist(new TMediaPlaylist)
+    , initialized(true)
     {
         mMediaPlayer->setAudioOutput(new QAudioOutput());
     }
@@ -55,22 +55,21 @@ public:
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
     QMediaPlayer* mediaPlayer() const { return mMediaPlayer; }
     bool isInitialized() const { return initialized; }
-    QMediaPlayer::PlaybackState getPlaybackState() const {
+    QMediaPlayer::PlaybackState getPlaybackState() const
+    {
         if (!mMediaPlayer) {
             qWarning() << "TMediaPlayer::getPlaybackState() - mMediaPlayer is nullptr!";
             return QMediaPlayer::StoppedState; // Safe default state
         }
         return mMediaPlayer->playbackState();
     }
-    void setVolume(int volume) const {
-        return mMediaPlayer->audioOutput()->setVolume(volume / 100.0f);
-    }
-    TMediaPlaylist* playlist() const {
-        return mPlaylist;
-    }
-    void setPlaylist(TMediaPlaylist* playlist) {
+    void setVolume(int volume) const { return mMediaPlayer->audioOutput()->setVolume(volume / 100.0f); }
+    TMediaPlaylist* playlist() const { return mPlaylist; }
+    void setPlaylist(TMediaPlaylist* playlist)
+    {
         if (mPlaylist != playlist) {
-            if (mPlaylist) delete mPlaylist;
+            if (mPlaylist)
+                delete mPlaylist;
             mPlaylist = playlist;
         }
     }
@@ -131,7 +130,7 @@ private:
     QString setupMediaAbsolutePathFileName(TMediaData& mediaData);
     void connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player);
     static void purgeStoppedMediaPlayers(QList<std::shared_ptr<TMediaPlayer>>& mediaList);
-    template<typename T>
+    template <typename T>
     static void updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_ptr<T> player, TMedia* mediaInstance);
     void updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player);
     std::shared_ptr<TMediaPlayer> getMediaPlayer(TMediaData& mediaData);
@@ -140,6 +139,7 @@ private:
     void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName);
     void handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const std::shared_ptr<TMediaPlayer>& player);
     bool setupVideo(const std::shared_ptr<TMediaPlayer>& player);
+    static QString mediaTypeToString(int mediaType);
 
     void play(TMediaData& mediaData);
 
