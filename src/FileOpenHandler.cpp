@@ -27,6 +27,13 @@ FileOpenHandler::FileOpenHandler(QObject* parent)
     QCoreApplication::instance()->installEventFilter(this);
 }
 
+FileOpenHandler::~FileOpenHandler()
+{
+    if (QCoreApplication::instance()) {
+        QCoreApplication::instance()->removeEventFilter(this);
+    }
+}
+
 bool FileOpenHandler::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::FileOpen) {
@@ -35,7 +42,7 @@ bool FileOpenHandler::eventFilter(QObject* obj, QEvent* event)
             qWarning() << "FileOpenHandler::eventFilter() - mudlet instance not available, cannot process file open event";
             return false;
         }
-        
+
         // Check for Telnet URI
         const QUrl url = openEvent->url();
         if (!url.isEmpty() && url.scheme().compare(qsl("telnet"), Qt::CaseInsensitive) == 0) {

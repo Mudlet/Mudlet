@@ -3009,6 +3009,13 @@ void mudlet::writeSettings()
 
 void mudlet::slot_showConnectionDialog()
 {
+    // Don't show connection dialog if we're processing a telnet:// URI
+    // as that workflow bypasses the dialog entirely
+    if (mProcessingTelnetUri) {
+        qDebug() << "slot_showConnectionDialog() - Skipping dialog, processing telnet:// URI";
+        return;
+    }
+
     if (mpConnectionDialog) {
         // If dialog already exists, bring it to the front of the main window
         mpConnectionDialog->raise();
@@ -4228,7 +4235,7 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
         }
     }
 
-    if (loadedProfiles == 0) {
+    if (loadedProfiles == 0 && !mProcessingTelnetUri) {
         slot_showConnectionDialog();
     } else {
         qDebug() << "All" << loadedProfiles << "profiles loaded in" << timer.elapsed() / 1000.0 << "seconds";
@@ -4460,12 +4467,12 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
 // Main entry point for handling telnet:// URIs
 void mudlet::handleTelnetUri(const QString& uri)
 {
-    if (mpConnectionDialog) {
-        mpConnectionDialog->hide();
-    }
+    // Set flag to prevent connection dialog from opening during this workflow
+    mProcessingTelnetUri = true;
 
     if (uri.isEmpty()) {
         qDebug() << "mudlet::handleTelnetUri() - Called with empty URI";
+        mProcessingTelnetUri = false;
         return;
     }
 
@@ -4474,6 +4481,7 @@ void mudlet::handleTelnetUri(const QString& uri)
     auto uriData = parseTelnetUri(uri);
     if (!uriData) {
         qWarning() << "mudlet::handleTelnetUri() - Invalid telnet URI (credentials redacted)";
+        mProcessingTelnetUri = false;
         slot_showConnectionDialog();
         return;
     }
@@ -4484,6 +4492,7 @@ void mudlet::handleTelnetUri(const QString& uri)
         profileName = createProfileForUri(*uriData);
         if (profileName.isEmpty()) {
             qWarning() << "mudlet::handleTelnetUri() - Failed to create profile";
+            mProcessingTelnetUri = false;
             slot_showConnectionDialog();
             return;
         }
@@ -4491,6 +4500,9 @@ void mudlet::handleTelnetUri(const QString& uri)
 
     qDebug() << "mudlet::handleTelnetUri() - Auto-loading profile:" << profileName;
     doAutoLogin(profileName);
+
+    // Reset flag after telnet:// URI processing is complete
+    mProcessingTelnetUri = false;
 }
 
 

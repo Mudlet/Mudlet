@@ -356,6 +356,8 @@ public:
     QPointer<Host> mpCurrentActiveHost;
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
+    // Flag to prevent connection dialog from opening during telnet:// URI processing
+    bool mProcessingTelnetUri = false;
     QToolBar* mpMainToolBar = nullptr;
     QPointer<QSettings> mpSettings;
     QPointer<ShortcutsManager> mpShortcutsManager;
@@ -762,7 +764,8 @@ private:
     void setupAIConfig();
 
     // Telnet URI handling structures and methods
-    struct TelnetUriData {
+    struct TelnetUriData
+    {
         QString host;
         int port = 23;
         QString username;
