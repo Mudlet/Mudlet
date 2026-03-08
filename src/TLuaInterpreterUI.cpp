@@ -3135,8 +3135,27 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
         }
     }
 
+    QString blinkMode = qsl("none");
+
+    if (s < n) {
+        // s has not been incremented yet so this means we still have another argument!
+        if (lua_isstring(L, ++s)) {
+            blinkMode = lua_tostring(L, s);
+            if (blinkMode != qsl("none") && blinkMode != qsl("slow") && blinkMode != qsl("fast")) {
+                return warnArgumentValue(L, __func__, qsl("blink mode must be \"none\", \"slow\", or \"fast\", got \"%1\"").arg(blinkMode));
+            }
+        } else {
+            lua_pushfstring(L, "setTextFormat: bad argument #%d type (blink mode as string {\"none\"/\"slow\"/\"fast\"} is optional, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
+        }
+    }
+
+    const bool slowBlink = (blinkMode == qsl("slow"));
+    const bool fastBlink = (blinkMode == qsl("fast"));
+
     TChar::AttributeFlags const flags = (bold ? TChar::Bold : TChar::None) | (italics ? TChar::Italic : TChar::None) | (overline ? TChar::Overline : TChar::None)
-                                        | (reverse ? TChar::Reverse : TChar::None) | (strikeout ? TChar::StrikeOut : TChar::None) | (underline ? TChar::Underline : TChar::None);
+                                        | (reverse ? TChar::Reverse : TChar::None) | (strikeout ? TChar::StrikeOut : TChar::None) | (underline ? TChar::Underline : TChar::None)
+                                        | (fastBlink ? TChar::FastBlink : (slowBlink ? TChar::Blink : TChar::None));
 
     if (!host.mpConsole->setTextFormat(
                 windowName, QColor(colorComponents.at(3), colorComponents.at(4), colorComponents.at(5)), QColor(colorComponents.at(0), colorComponents.at(1), colorComponents.at(2)), flags)) {

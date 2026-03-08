@@ -1222,11 +1222,17 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
 
     if (playbackState == QMediaPlayer::StoppedState) {
         TEvent mediaFinished{};
-        mediaFinished.mArgumentList.append("sysMediaFinished");
+        mediaFinished.mArgumentList.append(qsl("sysMediaFinished"));
 
         const QUrl mediaUrl = player->mediaPlayer()->source();
         mediaFinished.mArgumentList.append(mediaUrl.fileName());
         mediaFinished.mArgumentList.append(mediaUrl.path());
+        mediaFinished.mArgumentList.append(mediaTypeToString(player->mediaData().mediaType()));
+        mediaFinished.mArgumentList.append(player->mediaData().mediaKey());
+        mediaFinished.mArgumentList.append(player->mediaData().mediaTag());
+        mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -1252,11 +1258,17 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
         return;
     } else if (playbackState == QMediaPlayer::PlayingState && player->mediaData().mediaVolume() != TMediaData::MediaVolumePreload) {
         TEvent mediaStarted{};
-        mediaStarted.mArgumentList.append("sysMediaStarted");
+        mediaStarted.mArgumentList.append(qsl("sysMediaStarted"));
 
         const QUrl mediaUrl = player->mediaPlayer()->source();
         mediaStarted.mArgumentList.append(mediaUrl.fileName());
         mediaStarted.mArgumentList.append(mediaUrl.path());
+        mediaStarted.mArgumentList.append(mediaTypeToString(player->mediaData().mediaType()));
+        mediaStarted.mArgumentList.append(player->mediaData().mediaKey());
+        mediaStarted.mArgumentList.append(player->mediaData().mediaTag());
+        mediaStarted.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mediaStarted.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mediaStarted.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mediaStarted.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mediaStarted.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mediaStarted.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -1270,11 +1282,17 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
         return;
     } else if (playbackState == QMediaPlayer::PausedState) {
         TEvent mediaPaused{};
-        mediaPaused.mArgumentList.append("sysMediaPaused");
+        mediaPaused.mArgumentList.append(qsl("sysMediaPaused"));
 
         const QUrl mediaUrl = player->mediaPlayer()->source();
         mediaPaused.mArgumentList.append(mediaUrl.fileName());
         mediaPaused.mArgumentList.append(mediaUrl.path());
+        mediaPaused.mArgumentList.append(mediaTypeToString(player->mediaData().mediaType()));
+        mediaPaused.mArgumentList.append(player->mediaData().mediaKey());
+        mediaPaused.mArgumentList.append(player->mediaData().mediaTag());
+        mediaPaused.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mediaPaused.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mediaPaused.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mediaPaused.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mediaPaused.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mediaPaused.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -1643,6 +1661,20 @@ TMediaData::MediaType TMedia::parseJSONByMediaType(QJsonObject& json)
     }
 
     return mediaType;
+}
+
+QString TMedia::mediaTypeToString(int mediaType)
+{
+    switch (mediaType) {
+    case TMediaData::MediaTypeSound:
+        return qsl("sound");
+    case TMediaData::MediaTypeMusic:
+        return qsl("music");
+    case TMediaData::MediaTypeVideo:
+        return qsl("video");
+    default:
+        return QString();
+    }
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#input
