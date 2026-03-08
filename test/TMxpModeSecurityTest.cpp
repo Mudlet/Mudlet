@@ -169,10 +169,16 @@ private slots:
     QCOMPARE(processor.mode(), MXP_MODE_OPEN);
 
     // Process formatting tags - these should all work in OPEN mode
-    processAndCollectOutput(processor, "<B>bold</B>");
+    QString output = processAndCollectOutput(processor, "<B>bold</B>");
 
-    // Bold should have been activated (not rejected)
-    // The stub client tracks bold state
+    // Bold tags should have been handled (not rejected as literal text)
+    // When tags are rejected, the helper captures them as entity values
+    QVERIFY2(!output.contains(qsl("<B>")),
+             "Opening <B> tag should not appear as literal text");
+    QVERIFY2(!output.contains(qsl("</B>")),
+             "Closing </B> tag should not appear as literal text");
+
+    // Bold should have been activated and then deactivated
     // After </B>, boldCounter should be back to 0
     QCOMPARE(client.boldCounter, static_cast<unsigned int>(0));
   }
@@ -353,7 +359,7 @@ private slots:
     // When ESC is encountered after '<', we should get
     // HANDLER_INSERT_AND_REPROCESS with entity value "<" (just the less-than,
     // not the ESC)
-    QVERIFY(output == qsl("<"));
+    QCOMPARE(output, qsl("<"));
 
     // The ESC triggers HANDLER_INSERT_AND_REPROCESS (results[1])
     QCOMPARE(results[1], HANDLER_INSERT_AND_REPROCESS);

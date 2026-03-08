@@ -48,7 +48,7 @@ bool TMxpElementRegistry::isOpenElement(const QString& name) const
 bool TMxpElementRegistry::hasElementWithPrefix(const QString& prefix) const
 {
     const QString upper = prefix.toUpper();
-    for (const auto& [key, element] : mMXP_Elements.asKeyValueRange()) {
+    for (const QString& key : mMXP_Elements.keys()) {
         if (key.startsWith(upper)) {
             return true;
         }

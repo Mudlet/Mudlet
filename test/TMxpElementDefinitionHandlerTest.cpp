@@ -77,6 +77,7 @@ private slots:
         << "Enemy_123"
         << R"(<!ELEMENT Enemy_123 FLAG="Dangerous">)" << attrs7
         << QString("Dangerous") << false << false << 0;
+
     QStringList attrs8;
     QTest::newRow("Test8_FlagWithChevronsAndAmpersand")
         << "Weird"
@@ -170,7 +171,8 @@ private slots:
     mxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
     QFETCH(QString, inputString);
 
-    for (char c : inputString.toUtf8()) {
+    const QByteArray utf8Data = inputString.toUtf8();
+    for (char c : utf8Data) {
       mxpProcessor.processMxpInput(c, true);
     }
     QCOMPARE(

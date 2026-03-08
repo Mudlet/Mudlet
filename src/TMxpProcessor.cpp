@@ -464,20 +464,26 @@ TMxpProcessingResult TMxpProcessor::rejectCurrentTag()
     // instead of being output as literal text.
     std::string validPrefix = rawBytes.empty() ? "" : rawBytes.substr(0, rawBytes.length() - 1);
 
+    const QByteArray encoding = mpMxpClient->getEncoding();
+
     // Trim any trailing UTF-8 continuation bytes to avoid passing an incomplete
     // multi-byte sequence to decodeRawBytes. UTF-8 continuation bytes have the
     // pattern 10xxxxxx (0x80-0xBF). Walk backwards until we reach a valid
     // sequence start (ASCII 0x00-0x7F or multi-byte start 0xC0+).
-    while (!validPrefix.empty()) {
-        unsigned char lastByte = static_cast<unsigned char>(validPrefix.back());
-        if ((lastByte & 0xC0) == 0x80) {
-            validPrefix.pop_back();
-        } else {
-            break;
+    // Only apply this for UTF-8; single-byte encodings like ISO-8859-1 use
+    // 0x80-0xBF for valid characters.
+    if (encoding == QByteArrayLiteral("UTF-8")) {
+        while (!validPrefix.empty()) {
+            unsigned char lastByte = static_cast<unsigned char>(validPrefix.back());
+            if ((lastByte & 0xC0) == 0x80) {
+                validPrefix.pop_back();
+            } else {
+                break;
+            }
         }
     }
 
-    const QString decoded = decodeRawBytes(validPrefix, mpMxpClient->getEncoding());
+    const QString decoded = decodeRawBytes(validPrefix, encoding);
 
     lastEntityValue = qsl("<") + decoded;
     mMxpTagBuilder.reset();
