@@ -3021,7 +3021,7 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             if (baseUrl.startsWith(qsl("send:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
-                command = {qsl("send([[%1]])").arg(innerCommand)};
+                command = {qsl("send([[%1]], false)").arg(innerCommand)};
                 hint = {qsl("%1: %2").arg(QObject::tr("Send"), innerCommand)};
             } else if (baseUrl.startsWith(qsl("prompt:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
@@ -3067,7 +3067,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     // Determine command type based on prefix
                     if (menuCommand.startsWith(qsl("send:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(5).toUtf8());
-                        menuCommands.append(qsl("send([[%1]])").arg(innerCommand));
+                        menuCommands.append(qsl("send([[%1]], false)").arg(innerCommand));
                         menuHints.append(menuLabel);
                     } else if (menuCommand.startsWith(qsl("prompt:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
@@ -3079,7 +3079,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                         menuHints.append(QString());
                     } else {
                         // Treat as direct command
-                        menuCommands.append(qsl("send([[%1]])").arg(menuCommand));
+                        menuCommands.append(qsl("send([[%1]], false)").arg(menuCommand));
                         menuHints.append(menuLabel);
                     }
                 }
