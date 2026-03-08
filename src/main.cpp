@@ -959,6 +959,16 @@ int main(int argc, char* argv[])
     }
 
     QTimer::singleShot(0, qApp, [cliProfiles, telnetUri, shouldRunUndoTests]() {
+        // Migrate portable password files to secure storage before any
+        // profile dialog or auto-login code runs.  The migration is
+        // synchronous (uses static CredentialManager helpers) so it is
+        // safe to call here.  Previously this ran on a 2-second timer,
+        // which created a race: the connection dialog could open and
+        // attempt to load passwords before migration had a chance to run.
+        if (mudlet::self()->storingPasswordsSecurely()) {
+            mudlet::self()->migratePasswordsToSecureStorage();
+        }
+
         // Always load auto-login profiles first
         mudlet::self()->startAutoLogin(cliProfiles);
 
@@ -1012,12 +1022,6 @@ int main(int argc, char* argv[])
     mudlet::self()->showChangelogIfUpdated();
 #endif // Q_OS_LINUX
 #endif // INCLUDE_UPDATER
-
-    QTimer::singleShot(2s, qApp, []() {
-        if (mudlet::self()->storingPasswordsSecurely()) {
-            mudlet::self()->migratePasswordsToSecureStorage();
-        }
-    });
 
     app->restoreOverrideCursor();
 
