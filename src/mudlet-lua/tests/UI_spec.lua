@@ -670,7 +670,8 @@ describe("Tests UI functions", function()
       -- Try complex formatting if available
       decho("formattest", "<b><i><u>complex<reset>\n")
       
-      -- Test the complex formatted text
+      -- Move cursor back to line 0 since decho's \n moved it to line 1
+      moveCursor("formattest", 0, 0)
       selectSection("formattest", 24, 1) -- Something in "complex"
       local complexFormat = getTextFormat("formattest")
       
