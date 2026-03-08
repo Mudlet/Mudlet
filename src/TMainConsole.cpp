@@ -273,7 +273,16 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
             logStream << "   <!-- body { font-family: '" << fontsList.join("', '") << "'; font-size: 100%; line-height: 1.125em; white-space: nowrap; color:rgb(" << mpHost->mFgColor.red() << ","
                       << mpHost->mFgColor.green() << "," << mpHost->mFgColor.blue() << "); background-color:rgb(" << mpHost->mBgColor.red() << "," << mpHost->mBgColor.green() << ","
                       << mpHost->mBgColor.blue() << ");}\n";
-            logStream << "        span { white-space: pre-wrap; } -->\n";
+            logStream << "        span { white-space: pre-wrap; }\n";
+
+            if (mpHost->getEnableBlinkText()) {
+                logStream << "        @keyframes blink-slow { 50% { opacity: 0; } }\n";
+                logStream << "        @keyframes blink-fast { 50% { opacity: 0; } }\n";
+                logStream << "        .blink-slow { animation: blink-slow 0.8s step-end infinite; }\n";
+                logStream << "        .blink-fast { animation: blink-fast 0.4s step-end infinite; }\n";
+            }
+
+            logStream << "     -->\n";
             logStream << "  </style>\n";
             logStream << "  </head>\n";
             bool isAtBody = false;

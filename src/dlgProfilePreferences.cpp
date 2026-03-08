@@ -43,6 +43,8 @@
 #include "dlgTriggerEditor.h"
 #include "edbee/views/texteditorscrollarea.h"
 #include "edbee/models/textdocumentscopes.h"
+#include "MMCP.h"
+#include "MMCPServer.h"
 
 #include <chrono>
 #include <QtConcurrent>
@@ -249,7 +251,15 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
                                              "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
                                              "<p><i>This setting is only processed when individual menus are created and changes may not "
                                              "propagate everywhere until Mudlet is restarted.</i></p>"));
+    lineEdit_mmcpPort->setPlaceholderText(QString::number(csDefaultMMCPHostPort));
+    lineEdit_mmcpChatName->setPlaceholderText(csDefaultMMCPChatName);
+    connect(lineEdit_mmcpChatName, &QLineEdit::editingFinished, this, &dlgProfilePreferences::slot_mmcpChatNameChanged);
+    lineEdit_mmcpChatMessagePrefix->setPlaceholderText(csDefaultChatPrefix);
 
+    // Add validator for MMCP Chatname, disallow ~ and , characters
+    QRegularExpression rx("^[^~,]*$");
+    QValidator *validator = new QRegularExpressionValidator(rx, this);
+    lineEdit_mmcpChatName->setValidator(validator);
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
@@ -511,6 +521,7 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_announceIncomingText->setEnabled(false);
     checkBox_advertiseScreenReader->setEnabled(false);
     checkBox_enableClosedCaption->setEnabled(false);
+    checkBox_enableBlinkText->setEnabled(false);
     comboBox_blankLinesBehaviour->setEnabled(false);
     comboBox_caretModeKey->setEnabled(false);
 
@@ -625,6 +636,7 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_announceIncomingText->setEnabled(true);
     checkBox_advertiseScreenReader->setEnabled(true);
     checkBox_enableClosedCaption->setEnabled(true);
+    checkBox_enableBlinkText->setEnabled(true);
     comboBox_blankLinesBehaviour->setEnabled(true);
     comboBox_caretModeKey->setEnabled(true);
 
@@ -798,6 +810,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // Now connect the signal
     connect(checkBox_f3SearchEnabled, &QCheckBox::toggled, pHost, &Host::setF3SearchEnabled);
 
+    checkBox_enableBlinkText->setChecked(pHost->getEnableBlinkText());
+
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();
 
@@ -859,7 +873,20 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
         lineEdit_discordUserDiscriminator->setText(pHost->mRequiredDiscordUserDiscriminator);
     }
+    
+    lineEdit_mmcpChatName->setText(pHost->getMMCPChatName());
+    lineEdit_mmcpPort->setText(QString::number(pHost->getMMCPPort()));
+    lineEdit_mmcpChatMessagePrefix->setText(pHost->getMMCPChatPrefix());
 
+    /* Possible inclusion in 4.20.1
+    checkBox_mmcpAutostartServer->setChecked(pHost->mMMCPAutostartServer);
+    checkBox_mmcpAllowPeekReq->setChecked(pHost->mMMCPAllowPeekRequests);
+    checkBox_mmcpAutoAcceptCalls->setChecked(pHost->getMMCPAutoAcceptCalls());
+    */
+    
+    checkBox_mmcpAddChatMessageNewline->setChecked(pHost->getMMCPAddChatMessageNewline());
+    checkBox_mmcpPrefixEmotes->setChecked(pHost->getMMCPPrefixEmotes());
+    checkBox_mmcpSnoopInMainConsole->setChecked(pHost->getMMCPShowSnoopInMainConsole());
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
 
     auto originalBorders = pHost->borders();
@@ -928,7 +955,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableMNES->setCheckable(true);
     mEnableMNES->setChecked(pHost->mEnableMNES);
     //: Tooltip for MNES protocol option explaining mutual exclusivity with NEW-ENVIRON
-    mEnableMNES->setToolTip(tr("MNES uses the same telnet option as NEW-ENVIRON, so only one can be active. MNES sends a minimal set of variables, while NEW-ENVIRON sends extended variables including OSC link support."));
+    mEnableMNES->setToolTip(tr("MNES uses the same telnet option as NEW-ENVIRON, so only one can be active. MNES sends a minimal set of variables, while NEW-ENVIRON sends extended variables "
+                               "including OSC link support."));
     protocolMenu->addAction(mEnableMNES);
 
     mEnableMSDP = new QAction(tr("MSDP: Mud Server Data Protocol"), nullptr);
@@ -965,7 +993,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableNEWENVIRON->setCheckable(true);
     mEnableNEWENVIRON->setChecked(pHost->mEnableNEWENVIRON);
     //: Tooltip for NEW-ENVIRON protocol option explaining mutual exclusivity with MNES
-    mEnableNEWENVIRON->setToolTip(tr("NEW-ENVIRON uses the same telnet option as MNES, so only one can be active. NEW-ENVIRON sends extended variables including OSC link support, while MNES sends a minimal set."));
+    mEnableNEWENVIRON->setToolTip(
+            tr("NEW-ENVIRON uses the same telnet option as MNES, so only one can be active. NEW-ENVIRON sends extended variables including OSC link support, while MNES sends a minimal set."));
     protocolMenu->addAction(mEnableNEWENVIRON);
 
     pushButton_chooseProtocols->setMenu(protocolMenu);
@@ -1212,7 +1241,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
@@ -1585,11 +1614,14 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_discordServerAccessToTimerInfo->setChecked(false);
     lineEdit_discordUserName->clear();
     lineEdit_discordUserDiscriminator->clear();
+    
+    lineEdit_mmcpChatName->clear();
 
     checkBox_debugShowAllCodepointProblems->setChecked(false);
     checkBox_announceIncomingText->setChecked(false);
     checkBox_advertiseScreenReader->setChecked(false);
     checkBox_enableClosedCaption->setChecked(false);
+    checkBox_enableBlinkText->setChecked(false);
     comboBox_blankLinesBehaviour->setCurrentIndex(0);
 
     groupBox_ssl_certificate->hide();
@@ -3046,6 +3078,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
         pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
+        pHost->setEnableBlinkText(checkBox_enableBlinkText->isChecked());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
@@ -3105,7 +3138,28 @@ void dlgProfilePreferences::slot_saveAndClose()
         } else {
             pHost->mRequiredDiscordUserDiscriminator.clear();
         }
-
+        
+        // Save chat options so they are written to XML upon export
+        pHost->mMMCPChatName = lineEdit_mmcpChatName->text().trimmed();
+        pHost->mMMCPChatPrefix = lineEdit_mmcpChatMessagePrefix->text().trimmed();
+        bool ok;
+        quint16 port = lineEdit_mmcpPort->text().toUShort(&ok);
+        pHost->mMMCPChatPort = ok ? port : csDefaultMMCPHostPort;
+        
+        /* Possible inclusion in 4020.1
+        pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
+        pHost->mMMCPAutoAcceptCalls = checkBox_mmcpAutoAcceptCalls->isChecked();
+        pHost->mMMCPAllowPeekRequests = checkBox_mmcpAllowPeekReq->isChecked();
+        */
+        // remove these when the above is restored
+        pHost->mMMCPAutostartServer = false;
+        pHost->mMMCPAutoAcceptCalls = false;
+        pHost->mMMCPAllowPeekRequests = false;
+        
+        pHost->mMMCPPrefixEmotes = checkBox_mmcpPrefixEmotes->isChecked();
+        pHost->mMMCPAddChatMessageNewline = checkBox_mmcpAddChatMessageNewline->isChecked();
+        
+        pHost->mMMCPShowSnoopInMainConsole = checkBox_mmcpSnoopInMainConsole->isChecked();
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
         pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
         pHost->mEnableClosedCaption = checkBox_enableClosedCaption->isChecked();
@@ -4046,6 +4100,26 @@ void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
         comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(qsl("yyyy-MM-dd")), tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)"));
         comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(qsl("yyyy-MM")), tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)"));
         label_logFileNameExtension->setText(qsl(".txt"));
+    }
+}
+
+/**
+ * Update the chatname lineEdit if the user changes their chat name while
+ * the preferences dialog is open
+ */
+void dlgProfilePreferences::slot_setMMCPChatName(const QString& name) {
+    lineEdit_mmcpChatName->setText(name);
+}
+
+/**
+ * Notify connected clients that our chatname has been changed (via GUI)
+ * 
+ */
+void dlgProfilePreferences::slot_mmcpChatNameChanged() {
+    const QString& chatName = lineEdit_mmcpChatName->text();
+
+    if (mpHost) {
+        mpHost->setMMCPChatName(chatName, false);
     }
 }
 
