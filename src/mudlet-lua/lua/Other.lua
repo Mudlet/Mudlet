@@ -5,6 +5,7 @@
 mudlet = mudlet or {}
 mudlet.supports = {
   coroutines = true,
+  mmcp = true,
   namedPatterns = true,
   osVersion = true
 }
@@ -1252,6 +1253,7 @@ function getConfig(...)
       "compactInputLine",
       "controlCharacterHandling",
       "editorAutoComplete",
+      "enableBlinkText",
       "enableClosedCaption",
       "enableGMCP",
       "enableMNES",
