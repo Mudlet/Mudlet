@@ -369,7 +369,8 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
 }
 
 // user-defined literal to represent megabytes
-auto operator""_MB(unsigned long long const x) -> int64_t
+// C++ standard requires unsigned long long parameter for integer literal operators
+auto operator""_MB(unsigned long long const x) -> int64_t  // NOLINT(runtime/int)
 {
     return 1024LL * 1024LL * x;
 }
@@ -3478,6 +3479,7 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
 #endif
         }
 #if defined(DEBUG_OSC_PROCESSING)
+        // NOLINTNEXTLINE(readability/braces) - else is conditional on DEBUG_OSC_PROCESSING
         else {
             qDebug() << "[OSC] Spoiler link has explicit tooltip:" << parameters.value(qsl("tooltip"));
         }
@@ -5486,7 +5488,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
 
             // Fall-through
             [[fallthrough]];
-        case 2:
+        case 2: {
             // Check the 2nd byte is a valid continuation byte (2 MS-Bits are 10)
             if ((static_cast<quint8>(bufferData.at(pos + 1)) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
@@ -5515,6 +5517,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
                 isToUseReplacementMark = true;
             }
             break;
+        }
 
         default:
 #if defined(DEBUG_UTF8_PROCESSING)
