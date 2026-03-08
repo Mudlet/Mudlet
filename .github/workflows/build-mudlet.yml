@@ -20,7 +20,7 @@ jobs:
     if: ${{ github.repository_owner == 'Mudlet' }}
     concurrency:
       group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.event.pull_request.number || github.ref }}
-      cancel-in-progress: true
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
       LUA_VERSION: '5.1.5'
     strategy:
@@ -239,8 +239,8 @@ jobs:
       uses: actions/cache/restore@v5
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ github.sha }}
-        restore-keys: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}
+        key: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ github.ref_name }}
+        restore-keys: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-development
 
     - name: (Linux) Set build info
       if: runner.os == 'Linux'
@@ -299,7 +299,7 @@ jobs:
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     - name: Save ccache
-      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
+      if: always()
       uses: actions/cache/save@v5
       with:
         path: ${{runner.workspace}}/ccache
