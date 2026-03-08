@@ -3049,19 +3049,18 @@ void Host::initMMCPServer()
     }
 
     mMMCPServer = new MMCPServer(this);
+    connect(this, &Host::mmcpChatNameChanged, mMMCPServer, &MMCPServer::slot_chatNameChanged);
 }
 
-/**
- * Get the current chat name from the MMCPServer if it exists, otherwise
- * read it from our saved profile information
- * There is also the mMMCPChatname read from the xml package, where should we
- * use that?
- */
+
+// Return the MMCP chat name for this host
 QString Host::getMMCPChatName()
 {
     return mMMCPChatName;
 }
 
+// Set the MMCP chat name for this host
+// Optionally emit a signal so listeners (GUI, MMCPServer) can respond
 void Host::setMMCPChatName(const QString& name, bool shouldSignal)
 {
     mMMCPChatName = name;

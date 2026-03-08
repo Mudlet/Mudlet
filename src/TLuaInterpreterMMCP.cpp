@@ -256,6 +256,9 @@ int TLuaInterpreter::mmcpChatName(lua_State* L)
             return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
         }
 
+        // Persist to Host without signal since chatName() already sent NameChange
+        pHost->setMMCPChatName(name, false);
+
         lua_pushboolean(L, true);
     } else {
         name = pHost->mMMCPServer->getChatName();

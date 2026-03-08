@@ -4104,8 +4104,10 @@ void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
 }
 
 /**
- * Update the chatname lineEdit if the user changes their chat name while
- * the preferences dialog is open
+ * Update the chatname lineEdit when the chat name changes.
+ * This may be called redundantly when the change originates from this
+ * dialog (since the signal is emitted after the lineEdit was already
+ * edited), but setText() does not emit editingFinished so no loop occurs.
  */
 void dlgProfilePreferences::slot_setMMCPChatName(const QString& name) {
     lineEdit_mmcpChatName->setText(name);
@@ -4119,7 +4121,7 @@ void dlgProfilePreferences::slot_mmcpChatNameChanged() {
     const QString& chatName = lineEdit_mmcpChatName->text();
 
     if (mpHost) {
-        mpHost->setMMCPChatName(chatName, false);
+        mpHost->setMMCPChatName(chatName);
     }
 }
 
