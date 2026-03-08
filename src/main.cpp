@@ -384,7 +384,7 @@ int main(int argc, char* argv[])
 
         texts << appendLF.arg(QCoreApplication::translate("main", "       --stylesheet stylesheet      is the same as listed above."));
 // Not sure about MacOS case as that does not use X
-#if defined(Q_OS_UNIX) && (! defined(Q_OS_MACOS))
+#if defined(Q_OS_UNIX) && (!defined(Q_OS_MACOS))
         texts << appendLF.arg(QCoreApplication::translate("main", "       --sync                       forces the X server to perform each X client request\n"
                                                                   "                                    immediately and not use buffer optimization. It makes the\n"
                                                                   "                                    program easier to debug and often much slower. The --sync\n"
