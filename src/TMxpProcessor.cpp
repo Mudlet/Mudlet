@@ -317,7 +317,6 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     // Newline while inside a tag: MXP tags cannot span lines
     // Reject the partial tag as literal text, then let the newline trigger line commit
     if ((ch == '\n' || ch == '\r') && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag() && !mMxpTagBuilder.isInsideComment()) {
-        // Get the partial tag content and output it
         const std::string rawBytes = mMxpTagBuilder.getRawTagContent();
         const QString decoded = decodeRawBytes(rawBytes, mpMxpClient->getEncoding());
 
@@ -472,10 +471,8 @@ TMxpProcessingResult TMxpProcessor::rejectCurrentTag()
     while (!validPrefix.empty()) {
         unsigned char lastByte = static_cast<unsigned char>(validPrefix.back());
         if ((lastByte & 0xC0) == 0x80) {
-            // This is a continuation byte (10xxxxxx), remove it
             validPrefix.pop_back();
         } else {
-            // This is either ASCII or a multi-byte start byte - valid ending
             break;
         }
     }

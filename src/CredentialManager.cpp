@@ -266,12 +266,10 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
         // Use keychain storage - but also try SecureStringUtils as fallback
         QString service = generateServiceName(profileName, key);
 
-        // First try keychain
         auto fallbackCallback = [this, profileName, key, callback](bool keychainSuccess, const QString& keychainPassword, const QString& keychainError) {
             qDebug() << "CredentialManager: Keychain result for profile" << profileName << "- success:" << keychainSuccess << "password empty:" << keychainPassword.isEmpty();
 
             if (keychainSuccess && !keychainPassword.isEmpty()) {
-                // Keychain succeeded
                 if (callback) {
                     callback(true, keychainPassword, QString());
                 }

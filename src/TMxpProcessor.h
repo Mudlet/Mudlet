@@ -107,15 +107,8 @@ public:
     static const QSet<QString>& openModeTags();
 
 private:
-    // Helper to reject the current tag being built and output accumulated
-    // content as literal text
     TMxpProcessingResult rejectCurrentTag();
-
-    // Helper to decode raw bytes using the appropriate encoding
     QString decodeRawBytes(const std::string& raw, const QByteArray& encoding) const;
-
-    // Helper to check if a string contains only valid MXP tag name characters
-    // Valid: A-Z, a-z, 0-9, hyphen, slash (for closing tags)
     bool isValidTagName(const std::string& tagName) const;
 
     // State of MXP system:

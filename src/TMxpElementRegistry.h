@@ -55,14 +55,8 @@ public:
 
     bool containsElement(const QString& name) const;
     TMxpElement getElement(const QString& name) const;
-
-    // Check if a registered element is marked as OPEN
     bool isOpenElement(const QString& name) const;
-
-    // Check if any registered element name starts with the given prefix
     bool hasElementWithPrefix(const QString& prefix) const;
-
-    // Check if any OPEN element name starts with the given prefix
     bool hasOpenElementWithPrefix(const QString& prefix) const;
 };
 
