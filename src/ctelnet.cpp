@@ -149,7 +149,7 @@ void cTelnet::reset()
 
     mServerRequestedSGA = false;
     mEchoToggleCount = 0;
-    mEchoAbuseDetected = false;
+    mEchoAnomalyDetected = false;
 
     mNegotiationOrder.clear();
 }
@@ -2710,10 +2710,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 //unless explicitly requested)
 
                 if (option == OPT_ECHO) {
-                    if (checkEchoAbusePattern()) {
+                    if (checkEchoAnomalyPattern()) {
                         sendTelnetOption(TN_DONT, option);
                         hisOptionState[idxOption] = false;
-                        qDebug() << "ECHO: Rejecting due to abuse pattern detection";
+                        qDebug() << "ECHO: Rejecting due to anomaly pattern detection";
                     } else {
                         sendTelnetOption(TN_DO, option);
                         hisOptionState[idxOption] = true;
@@ -2874,10 +2874,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 hisOptionState[idxOption] = false;
 
                 if (option == OPT_ECHO) {
-                    if (mEchoAbuseDetected) {
-                        qDebug() << "ECHO: Ignoring WONT due to abuse pattern";
+                    if (mEchoAnomalyDetected) {
+                        qDebug() << "ECHO: Ignoring WONT due to anomaly pattern";
                     } else {
-                        checkEchoAbusePattern();
+                        checkEchoAnomalyPattern();
                         // Cancel any pending password mode timeout since we got the proper WONT ECHO
                         if (mTimerPasswordModeTimeout) {
                             mTimerPasswordModeTimeout->stop();
@@ -4295,8 +4295,8 @@ void cTelnet::postMessage(QString msg)
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orange-ish
                 }
             } else if (prefix.contains(tr("CHAT")) || prefix.contains(QLatin1String("CHAT"))) {
-                mpHost->mpConsole->print(prefix, QColor(255, 255, 50), mpHost->mBgColor);                   // Bright yellow
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(0, 160, 0), mpHost->mBgColor);  // Light Green
+                mpHost->mpConsole->print(prefix, QColor(255, 255, 50), mpHost->mBgColor);                  // Bright yellow
+                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
                 for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
@@ -5271,28 +5271,20 @@ void cTelnet::checkCharacterModePattern()
     }
 }
 
-bool cTelnet::checkEchoAbusePattern()
+bool cTelnet::checkEchoAnomalyPattern()
 {
-    if (mEchoAbuseDetected) {
+    if (mEchoAnomalyDetected) {
         return true;
     }
 
-    if (mEchoToggleTimer.isValid() && mEchoToggleTimer.elapsed() < ECHO_ABUSE_WINDOW_MS) {
+    if (mEchoToggleTimer.isValid() && mEchoToggleTimer.elapsed() < ECHO_ANOMALY_WINDOW_MS) {
         mEchoToggleCount++;
 
-        if (mEchoToggleCount >= ECHO_ABUSE_THRESHOLD) {
-            mEchoAbuseDetected = true;
+        if (mEchoToggleCount >= ECHO_ANOMALY_THRESHOLD) {
+            mEchoAnomalyDetected = true;
 
-            raiseProtocolEvent("sysEchoAbuseDetected", "");
-            qWarning() << "ECHO abuse pattern detected - disabling ECHO response to protect TCommandLine";
-
-            if (mudlet::self()->showEchoAbuseWarning()) {
-                mudlet::self()->showedEchoAbuseWarning();
-                //: Warning shown when server rapidly toggles ECHO mode abnormally
-                postMessage(tr("[ WARN ]  - Unusual ECHO negotiation pattern detected. "
-                               "This game may be using character mode or have compatibility issues. "
-                               "Password masking has been disabled to prevent input disruption."));
-            }
+            raiseProtocolEvent("sysEchoAnomalyDetected", "");
+            qWarning() << "ECHO anomaly pattern detected - disabling ECHO response to protect TCommandLine";
             return true;
         }
     } else {

@@ -2792,7 +2792,6 @@ void mudlet::readLateSettings(const QSettings& settings)
     setEditorTreeWidgetIconSize(settings.value("tefoldericonsize", QVariant(3)).toInt());
     mScrollbackTutorialsShown = qBound(0, settings.value("scrollbackTutorialsShown", QVariant(0)).toInt(), mScrollbackTutorialsMax);
     mCharacterModeWarningsShown = qBound(0, settings.value("characterModeWarningsShown", QVariant(0)).toInt(), mCharacterModeWarningsMax);
-    mEchoAbuseWarningsShown = qBound(0, settings.value("echoAbuseWarningsShown", QVariant(0)).toInt(), mEchoAbuseWarningsMax);
     // We have abandoned previous "showMenuBar" / "showToolBar" booleans
     // although we provide a backwards compatible value
     // of: (bool) showXXXXBar = (XXXXBarVisibilty != visibleNever) for, until,
@@ -2966,7 +2965,6 @@ void mudlet::writeSettings()
     settings.setValue("tefoldericonsize", mEditorTreeWidgetIconSize);
     settings.setValue("scrollbackTutorialsShown", mScrollbackTutorialsShown);
     settings.setValue("characterModeWarningsShown", mCharacterModeWarningsShown);
-    settings.setValue("echoAbuseWarningsShown", mEchoAbuseWarningsShown);
     // This pair are only for backwards compatibility and will be ignored for
     // this and future Mudlet versions - suggest they get removed in Mudlet 4.x
     settings.setValue("showMenuBar", mMenuBarVisibility != enums::visibleNever);
@@ -6880,16 +6878,6 @@ bool mudlet::showCharacterModeWarning()
 void mudlet::showedCharacterModeWarning()
 {
     mCharacterModeWarningsShown = std::min(mCharacterModeWarningsShown + 1, mCharacterModeWarningsMax);
-}
-
-bool mudlet::showEchoAbuseWarning()
-{
-    return !experiencedMudletPlayer() && mEchoAbuseWarningsShown < mEchoAbuseWarningsMax;
-}
-
-void mudlet::showedEchoAbuseWarning()
-{
-    mEchoAbuseWarningsShown = std::min(mEchoAbuseWarningsShown + 1, mEchoAbuseWarningsMax);
 }
 
 // returns true if the Mudlet player is considered 'experienced' and doesn't need to be shown the basic

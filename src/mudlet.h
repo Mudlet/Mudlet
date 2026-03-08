@@ -319,8 +319,6 @@ public:
     void showedMuteAllMediaTutorial();
     bool showCharacterModeWarning();
     void showedCharacterModeWarning();
-    bool showEchoAbuseWarning();
-    void showedEchoAbuseWarning();
     bool experiencedMudletPlayer();
 
     enums::Appearance mAppearance = enums::Appearance::systemSetting;
@@ -742,13 +740,11 @@ private:
     int mScrollbackTutorialsShown = 0;   // Cancel split screen
     int mMuteAllMediaTutorialsShown = 0; // Mute all media
     int mCharacterModeWarningsShown = 0; // Character-at-a-time mode detection
-    int mEchoAbuseWarningsShown = 0;     // ECHO abuse detection
 
     // show the tutorial maximum 3 times on a new Mudlet
     static constexpr int mScrollbackTutorialsMax = 3;   // Split screen
     static constexpr int mMuteAllMediaTutorialsMax = 3; // Mute all media
     static constexpr int mCharacterModeWarningsMax = 3; // Character mode
-    static constexpr int mEchoAbuseWarningsMax = 3;     // ECHO abuse
 
     // AI/LlamaFile integration
     std::unique_ptr<LlamafileManager> mpLlamafileManager;

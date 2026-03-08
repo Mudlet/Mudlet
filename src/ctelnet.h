@@ -476,15 +476,15 @@ private:
     bool mServerRequestedSGA = false;
     QElapsedTimer mEchoToggleTimer;
     int mEchoToggleCount = 0;
-    bool mEchoAbuseDetected = false;
-    static constexpr int ECHO_ABUSE_THRESHOLD = 5;
-    static constexpr int ECHO_ABUSE_WINDOW_MS = 5000;
+    bool mEchoAnomalyDetected = false;
+    static constexpr int ECHO_ANOMALY_THRESHOLD = 5;
+    static constexpr int ECHO_ANOMALY_WINDOW_MS = 5000;
 
     // KaVir protocol negotiation tracking
     QVector<unsigned char> mNegotiationOrder;
 
     void checkCharacterModePattern();
-    bool checkEchoAbusePattern();
+    bool checkEchoAnomalyPattern();
 };
 
 #endif // MUDLET_CTELNET_H
