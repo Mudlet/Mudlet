@@ -530,6 +530,7 @@ public:
     static int pauseMusic(lua_State*);
     static int pauseVideos(lua_State*);
     static int purgeMediaCache(lua_State*);
+    static int refreshMediaDevices(lua_State*);
     static int setBorderSizes(lua_State*);
     static int setBorderTop(lua_State*);
     static int setBorderBottom(lua_State*);

@@ -388,6 +388,21 @@ bool TMedia::purgeMediaCache()
     return true;
 }
 
+void TMedia::refreshAudioDevices()
+{
+    TMediaData mediaData{};
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolNotSet);
+    mediaData.setMediaType(TMediaData::MediaTypeNotSet);
+
+    QList<std::shared_ptr<TMediaPlayer>> mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
+
+    for (const auto& player : mTMediaPlayerList) {
+        if (player) {
+            player->refreshAudioOutput();
+        }
+    }
+}
+
 void TMedia::muteMedia(const TMediaData::MediaProtocol mediaProtocol)
 {
     setMediaPlayersMuted(mediaProtocol, true);

@@ -5180,6 +5180,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "pauseMusic", TLuaInterpreter::pauseMusic);
     lua_register(pGlobalLua, "pauseVideos", TLuaInterpreter::pauseVideos);
     lua_register(pGlobalLua, "purgeMediaCache", TLuaInterpreter::purgeMediaCache);
+    lua_register(pGlobalLua, "refreshMediaDevices", TLuaInterpreter::refreshMediaDevices);
     lua_register(pGlobalLua, "setBorderSizes", TLuaInterpreter::setBorderSizes);
     lua_register(pGlobalLua, "setBorderTop", TLuaInterpreter::setBorderTop);
     lua_register(pGlobalLua, "setBorderRight", TLuaInterpreter::setBorderRight);

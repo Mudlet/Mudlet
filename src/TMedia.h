@@ -73,6 +73,21 @@ public:
             mPlaylist = playlist;
         }
     }
+    void refreshAudioOutput()
+    {
+        if (!mMediaPlayer) {
+            return;
+        }
+        QAudioOutput* oldOutput = mMediaPlayer->audioOutput();
+        float volume = oldOutput ? oldOutput->volume() : 1.0f;
+        bool muted = oldOutput ? oldOutput->isMuted() : false;
+
+        auto* newOutput = new QAudioOutput();
+        newOutput->setVolume(volume);
+        newOutput->setMuted(muted);
+        mMediaPlayer->setAudioOutput(newOutput);
+        delete oldOutput;
+    }
 
 private:
     QPointer<Host> mpHost;
@@ -103,6 +118,7 @@ public:
     void stopMedia(TMediaData& mediaData);
     void parseGMCP(QString& packageMessage, QString& gmcp);
     bool purgeMediaCache();
+    void refreshAudioDevices();
     void muteMedia(const TMediaData::MediaProtocol mediaProtocol);
     void unmuteMedia(const TMediaData::MediaProtocol mediaProtocol);
     void printClosedCaption(const TMediaData& mediaData, const QString& action) const;
