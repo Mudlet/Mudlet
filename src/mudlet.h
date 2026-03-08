@@ -317,6 +317,8 @@ public:
     void showedSplitscreenTutorial();
     bool showMuteAllMediaTutorial();
     void showedMuteAllMediaTutorial();
+    bool showCharacterModeWarning();
+    void showedCharacterModeWarning();
     bool experiencedMudletPlayer();
 
     enums::Appearance mAppearance = enums::Appearance::systemSetting;
@@ -737,9 +739,12 @@ private:
     // amount of times the shortcut has been shown help educate new users
     int mScrollbackTutorialsShown = 0;   // Cancel split screen
     int mMuteAllMediaTutorialsShown = 0; // Mute all media
+    int mCharacterModeWarningsShown = 0; // Character-at-a-time mode detection
+
     // show the tutorial maximum 3 times on a new Mudlet
-    static const int mScrollbackTutorialsMax = 3;   // Split screen
-    static const int mMuteAllMediaTutorialsMax = 3; // Mute all media
+    static constexpr int mScrollbackTutorialsMax = 3;   // Split screen
+    static constexpr int mMuteAllMediaTutorialsMax = 3; // Mute all media
+    static constexpr int mCharacterModeWarningsMax = 3; // Character mode
 
     // AI/LlamaFile integration
     std::unique_ptr<LlamafileManager> mpLlamafileManager;
