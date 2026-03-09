@@ -56,10 +56,10 @@ jobs:
         $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
   
-    - name: Acquire ccache lock 1
+    - name: Acquire ccache lock
       uses: guibranco/github-artifact-lock-action@v2.0.5
       with:
-        lock-name: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.ref_name }}-lock-1
+        lock-name: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.ref_name }}-lock
 
     - name: Restore ccache
       id: restore-ccache
@@ -69,11 +69,11 @@ jobs:
         key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.ref_name }}
         restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}-development
 
-    - name: Release ccache lock 1
+    - name: Release ccache lock
       if: always()
       uses: guibranco/github-artifact-lock-action/release-lock@v2.0.5
       with:
-        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock-1
+        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
 
     - name: check ccache stats prior to build
       shell: msys2 {0}
@@ -152,10 +152,10 @@ jobs:
           exit 1
         fi
   
-    - name: Acquire ccache lock 2
+    - name: Acquire ccache lock
       uses: guibranco/github-artifact-lock-action@v2.0.5
       with:
-        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock-2
+        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
 
     - name: Save ccache
       if: always()
@@ -164,11 +164,11 @@ jobs:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
   
-    - name: Release ccache lock 2
+    - name: Release ccache lock
       if: always()
       uses: guibranco/github-artifact-lock-action/release-lock@v2.0.5
       with:
-        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock-2
+        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
 
     - name: (Windows) Prepare binaries for signing
       id: prepare-signing
