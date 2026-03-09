@@ -924,7 +924,7 @@ int TLuaInterpreter::getBgColor(lua_State* L)
 int TLuaInterpreter::getBorderBottom(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    lua_pushnumber(L, host.borders().bottom());
+    lua_pushnumber(L, host.userBorders().bottom());
     return 1;
 }
 
@@ -932,7 +932,7 @@ int TLuaInterpreter::getBorderBottom(lua_State* L)
 int TLuaInterpreter::getBorderLeft(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    lua_pushnumber(L, host.borders().left());
+    lua_pushnumber(L, host.userBorders().left());
     return 1;
 }
 
@@ -940,7 +940,7 @@ int TLuaInterpreter::getBorderLeft(lua_State* L)
 int TLuaInterpreter::getBorderRight(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    lua_pushnumber(L, host.borders().right());
+    lua_pushnumber(L, host.userBorders().right());
     return 1;
 }
 
@@ -948,7 +948,7 @@ int TLuaInterpreter::getBorderRight(lua_State* L)
 int TLuaInterpreter::getBorderSizes(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    auto sizes = host.borders();
+    auto sizes = host.userBorders();
     lua_createtable(L, 0, 4);
     lua_pushinteger(L, sizes.top());
     lua_setfield(L, -2, "top");
@@ -965,7 +965,7 @@ int TLuaInterpreter::getBorderSizes(lua_State* L)
 int TLuaInterpreter::getBorderTop(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    lua_pushnumber(L, host.borders().top());
+    lua_pushnumber(L, host.userBorders().top());
     return 1;
 }
 
@@ -2406,9 +2406,9 @@ int TLuaInterpreter::setBold(lua_State* L)
 int TLuaInterpreter::setBorderBottom(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    auto sizes = host.borders();
+    auto sizes = host.userBorders();
     sizes.setBottom(getVerifiedInt(L, __func__, 1, "new size"));
-    host.setBorders(sizes);
+    host.setUserBorders(sizes);
     return 0;
 }
 
@@ -2431,9 +2431,9 @@ int TLuaInterpreter::setBorderColor(lua_State* L)
 int TLuaInterpreter::setBorderLeft(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    auto sizes = host.borders();
+    auto sizes = host.userBorders();
     sizes.setLeft(getVerifiedInt(L, __func__, 1, "new size"));
-    host.setBorders(sizes);
+    host.setUserBorders(sizes);
     return 0;
 }
 
@@ -2441,9 +2441,9 @@ int TLuaInterpreter::setBorderLeft(lua_State* L)
 int TLuaInterpreter::setBorderRight(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    auto sizes = host.borders();
+    auto sizes = host.userBorders();
     sizes.setRight(getVerifiedInt(L, __func__, 1, "new size"));
-    host.setBorders(sizes);
+    host.setUserBorders(sizes);
     return 0;
 }
 
@@ -2457,20 +2457,20 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
         break;
     case 1: {
         auto value = getVerifiedInt(L, __func__, 1, "new size");
-        host.setBorders({value, value, value, value});
+        host.setUserBorders({value, value, value, value});
         break;
     }
     case 2: {
         auto height = getVerifiedInt(L, __func__, 1, "new height");
         auto width = getVerifiedInt(L, __func__, 2, "new width");
-        host.setBorders({width, height, width, height});
+        host.setUserBorders({width, height, width, height});
         break;
     }
     case 3: {
         auto top = getVerifiedInt(L, __func__, 1, "new top size");
         auto width = getVerifiedInt(L, __func__, 2, "new width");
         auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
-        host.setBorders({width, top, width, bottom});
+        host.setUserBorders({width, top, width, bottom});
         break;
     }
     default: {
@@ -2478,7 +2478,7 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
         auto right = getVerifiedInt(L, __func__, 2, "new right size");
         auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
         auto left = getVerifiedInt(L, __func__, 4, "new left size");
-        host.setBorders({left, top, right, bottom});
+        host.setUserBorders({left, top, right, bottom});
         break;
     }
     }
@@ -2489,9 +2489,9 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
 int TLuaInterpreter::setBorderTop(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    auto sizes = host.borders();
+    auto sizes = host.userBorders();
     sizes.setTop(getVerifiedInt(L, __func__, 1, "new size"));
-    host.setBorders(sizes);
+    host.setUserBorders(sizes);
     return 0;
 }
 
