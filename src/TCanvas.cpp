@@ -30,8 +30,9 @@ TCanvas::TCanvas(QWidget* parent)
     setAutoFillBackground(false);
 }
 
-void TCanvas::paintEvent(QPaintEvent*)
+void TCanvas::paintEvent(QPaintEvent* event)
 {
+    Q_UNUSED(event)
     if (mDrawCmds.isEmpty()) {
         return;
     }
