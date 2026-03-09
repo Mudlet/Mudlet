@@ -1,16 +1,6 @@
-name: 🔨 Build Mudlet (windows)
+name: 🔨 Build Mudlet - PR (windows)
 on:
-  push:
-    branches: [master, development, release-*]
-    tags: [Mudlet-*]
-  workflow_dispatch:
-    inputs:
-      scheduled:
-        description: 'Imitate a PTB'
-        required: false
-        default: 'false'
-  schedule:
-    - cron: '0 2 * * *'
+  pull_request:
 
 # Permissions required for SignPath trusted build verification
 permissions:
@@ -23,6 +13,9 @@ jobs:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
     if: ${{ github.repository_owner == 'Mudlet' }}
+    concurrency:
+      group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
       SIGNPATH_SIGNING_ENABLED: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
       SIGNPATH_POLICY_SLUG: ${{ startsWith(github.ref, 'refs/tags/') && 'release-signing' || 'test-signing' }}
@@ -32,6 +25,8 @@ jobs:
         include:
           - os: windows-2022
             buildname: 'windows64'
+    with:
+      BUILD_TASK: 'PR'
 
     steps:
     - name: Checkout Mudlet source code
@@ -55,25 +50,14 @@ jobs:
       run: |
         $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
-  
-    - name: Acquire ccache lock 1
-      uses: guibranco/github-artifact-lock-action@v2.0.5
-      with:
-        lock-name: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.ref_name }}-lock-1
 
     - name: Restore ccache
       id: restore-ccache
       uses: actions/cache/restore@v5
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.ref_name }}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}-development
-
-    - name: Release ccache lock 1
-      if: always()
-      uses: guibranco/github-artifact-lock-action/release-lock@v2.0.5
-      with:
-        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock-1
+        key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.sha }}
+        restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}
 
     - name: check ccache stats prior to build
       shell: msys2 {0}
@@ -151,24 +135,13 @@ jobs:
           echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
           exit 1
         fi
-  
-    - name: Acquire ccache lock 2
-      uses: guibranco/github-artifact-lock-action@v2.0.5
-      with:
-        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock-2
 
     - name: Save ccache
-      if: always()
+      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
       uses: actions/cache/save@v5
       with:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
-  
-    - name: Release ccache lock 2
-      if: always()
-      uses: guibranco/github-artifact-lock-action/release-lock@v2.0.5
-      with:
-        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock-2
 
     - name: (Windows) Prepare binaries for signing
       id: prepare-signing
