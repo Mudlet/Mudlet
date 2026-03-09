@@ -2216,8 +2216,8 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     break;
                 }
                 case SearchResultIsName:
-                    mpTriggersMainArea->lineEdit_trigger_name->setFocus(Qt::OtherFocusReason);
-                    mpTriggersMainArea->lineEdit_trigger_name->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    mpKeysMainArea->lineEdit_key_name->setFocus(Qt::OtherFocusReason);
+                    mpKeysMainArea->lineEdit_key_name->setCursorPosition(pItem->data(0, PositionRole).toInt());
                     break;
                 case SearchResultIsPattern: {
                     dlgTriggerPatternEdit* pTriggerPattern = mTriggerPatternEdit.at(pItem->data(0, PatternOrLineRole).toInt());
@@ -2230,8 +2230,8 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     break;
                 }
                 case SearchResultIsCommand:
-                    mpTriggersMainArea->lineEdit_trigger_command->setFocus(Qt::OtherFocusReason);
-                    mpTriggersMainArea->lineEdit_trigger_command->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    mpKeysMainArea->lineEdit_key_command->setFocus(Qt::OtherFocusReason);
+                    mpKeysMainArea->lineEdit_key_command->setCursorPosition(pItem->data(0, PositionRole).toInt());
                     break;
                 default:
                     qDebug() << "dlgTriggerEditor::slot_item_selected_list(...) Called for a KEY type item but handler for element of type:" << treeWidgetItem->data(0, TypeRole).toInt()
