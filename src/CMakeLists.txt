@@ -139,11 +139,13 @@ set(mudlet_SRCS
     THyperlinkVisibilityManager.cpp
     TimerUnit.cpp
     TKey.cpp
+    TCanvas.cpp
     TLabel.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
     TLuaInterpreterAI.cpp
     TLuaInterpreterDiscord.cpp
+    TLuaInterpreterCanvas.cpp
     TLuaInterpreterMapper.cpp
     TLuaInterpreterMedia.cpp
     TLuaInterpreterMudletObjects.cpp
@@ -356,6 +358,7 @@ set(mudlet_HDRS
     TForkedProcess.h
     TimerUnit.h
     TKey.h
+    TCanvas.h
     TLabel.h
     THyperlinkCompactManager.h
     THyperlinkSelectionManager.h

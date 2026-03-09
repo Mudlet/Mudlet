@@ -760,6 +760,20 @@ public:
     static int aiPrompt(lua_State*);
     static int aiPromptStream(lua_State*);
     static int setActiveProfile(lua_State*);
+    // Canvas functions
+    static int createCanvas(lua_State*);
+    static int deleteCanvas(lua_State*);
+    static int canvasDrawLine(lua_State*);
+    static int canvasDrawRect(lua_State*);
+    static int canvasDrawEllipse(lua_State*);
+    static int canvasClear(lua_State*);
+    static int canvasSetClickThrough(lua_State*);
+    static int moveCanvas(lua_State*);
+    static int resizeCanvas(lua_State*);
+    static int showCanvas(lua_State*);
+    static int hideCanvas(lua_State*);
+    static int raiseCanvas(lua_State*);
+    static int lowerCanvas(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
