@@ -217,7 +217,7 @@ private slots:
 
         store.removeUnreferencedLinks(referencedIds, nullptr);
 
-        // id1 should be removed (freeReference is a no-op in test builds)
+        // id1 should be removed (freeReference is a no-op when pH is nullptr)
         QVERIFY(store.getLinksConst(id1).isEmpty());
         QVERIFY(store.getHintsConst(id1).isEmpty());
 
