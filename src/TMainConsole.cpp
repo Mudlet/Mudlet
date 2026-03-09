@@ -25,6 +25,7 @@
 
 
 #include "Host.h"
+#include "TCanvas.h"
 #include "TCommandLine.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
@@ -924,6 +925,12 @@ bool TMainConsole::raiseWindow(const QString& name)
         return true;
     }
 
+    auto pCanvas = mCanvasMap.value(name);
+    if (pCanvas) {
+        pCanvas->raise();
+        return true;
+    }
+
     return false;
 }
 
@@ -960,6 +967,14 @@ bool TMainConsole::lowerWindow(const QString& name)
         mpMainDisplay->lower();
         return true;
     }
+
+    auto pCanvas = mCanvasMap.value(name);
+    if (pCanvas) {
+        pCanvas->lower();
+        mpMainDisplay->lower();
+        return true;
+    }
+
     return false;
 }
 
