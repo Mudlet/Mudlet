@@ -21,6 +21,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "THyperlinkStyling.h"
+
 #include <QMap>
 #include <QMultiHash>
 #include <QSet>
@@ -28,12 +30,6 @@
 #include <QVector>
 
 class Host;
-
-// Forward declarations - HyperlinkStyling is defined in TBuffer.h
-// but we need to refer to it here, so we use a namespace-level forward declaration
-namespace Mudlet {
-struct HyperlinkStyling;
-}
 
 // Keep together lists of links and hints associated
 class TLinkStore {
@@ -64,16 +60,14 @@ public:
 
     void removeUnreferencedLinks(const QSet<int>& referencedIds, Host* pH = nullptr);
 
-#if !defined(LinkStore_Test)
     // OSC 8 hyperlink styling storage and retrieval
     void setStyling(int id, const Mudlet::HyperlinkStyling& styling);
     Mudlet::HyperlinkStyling getStyling(int id) const;
     bool hasStyling(int id) const;
-    
+
     // Selection group index for efficient exclusive group updates
     // Returns list of link IDs that have the specified group and value
     QList<int> getLinkIdsByGroupValue(const QString& group, const QString& value) const;
-#endif
 
 private:
     void freeReference(Host* pH, const QVector<int>& luaReference);
@@ -86,9 +80,7 @@ private:
     QMap<int, QStringList> mLinkStore;
     QMap<int, QStringList> mHintStore;
     QMap<int, QVector<int>> mReferenceStore;
-#if !defined(LinkStore_Test)
     QMap<int, Mudlet::HyperlinkStyling> mStylingStore;
-#endif
     QMap<int, QString> mExpireStore;
     QMultiHash<QString, int> mExpireToLinks;
     
