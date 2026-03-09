@@ -109,6 +109,8 @@ public:
     bool saveMap(const QString&, int saveVersion = 0);
     bool loadMap(const QString&);
     bool importMap(const QString&, QString* errMsg = nullptr);
+    void setHTMLFileNeedsBlinkingTextControl() { mHTMLLogFileNeedsBlinkingTextControl = true; }
+    bool doesHTMLFileNeedBlinkingTextControl() const { return mHTMLLogFileNeedsBlinkingTextControl; }
 
 
     QMap<QString, TConsole*> mSubConsoleMap;
@@ -122,6 +124,10 @@ public:
     QTextStream mLogStream;
     bool mLogToLogFile = false;
 
+    const static QString csmHeaderStart;
+    const static QString csmBlinkingHeader;
+    const static QString csmHeaderEnd;
+    const static QString csmBlinkingBody;
 
 public slots:
     // Used by mudlet class as told by "Profile Preferences"
@@ -138,10 +144,20 @@ signals:
 
 
 private:
+    void insertBlinkingTextFeaturesIntoExisitingLog();
+
     // Was public in Host class but made private there and cloned to here
     // (for main TConsole) to prevent it being changed without going through the
     // process to load in the changed dictionary:
     QString mSpellDic;
+
+    // Track whether we need to/or have added the blinking control "header" to
+    // the HTML log file:
+    bool mHTMLLogFileAlreadyHasBlinkingText = false;
+    // Set as soon as blinking text is added to the HTML log - if the prior
+    // flag is NOT set - to note that we need to rewrite the file when it is
+    // closed to put the "header" back in at the beginning:
+    bool mHTMLLogFileNeedsBlinkingTextControl = false;
 
     // Cloned from Host
     bool mEnableUserDictionary = true;
