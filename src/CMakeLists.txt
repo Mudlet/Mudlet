@@ -358,6 +358,7 @@ set(mudlet_HDRS
     TLabel.h
     THyperlinkCompactManager.h
     THyperlinkSelectionManager.h
+    THyperlinkStyling.h
     THyperlinkVisibilityManager.h
     TLinkStore.h
     TLuaInterpreter.h
