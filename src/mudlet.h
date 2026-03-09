@@ -431,6 +431,7 @@ public slots:
     void slot_handleToolbarVisibilityChanged(bool);
 #if defined(INCLUDE_UPDATER)
     void slot_manualUpdateCheck();
+    void slot_updateCheckFailed(const QString& error);
     void slot_showFullChangelog();
 #endif
     void slot_mapper();

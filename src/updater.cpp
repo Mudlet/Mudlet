@@ -181,15 +181,26 @@ void Updater::manuallyCheckUpdates()
 #if defined(Q_OS_MACOS)
     msparkleUpdater->checkForUpdates();
 #else
+    if (mManualCheckInProgress) {
+        return;
+    }
+    mManualCheckInProgress = true;
+
     feed->load();
-    connect(feed, &dblsqd::Feed::ready, this, &Updater::showDialogManually);
+    KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, this, [this]() {
+        mManualCheckInProgress = false;
+        showDialogManually();
+    });
+    KDToolBox::connectSingleShot(feed, &dblsqd::Feed::loadError, this, [this](const QString& error) {
+        mManualCheckInProgress = false;
+        emit signal_updateCheckFailed(error);
+    });
 #endif
 }
 
 void Updater::showDialogManually() const
 {
     updateDialog->show();
-    QObject::disconnect(feed, &dblsqd::Feed::ready, this, &Updater::showDialogManually);
 }
 
 // only shows the changelog since the last version

@@ -1176,7 +1176,7 @@ void XMLimport::readHost(Host* pHost)
         }
     }
 
-    pHost->setBorders(borders);
+    pHost->setUserBorders(borders);
     pHost->loadPackageInfo();
 }
 
@@ -2055,8 +2055,8 @@ void XMLimport::readStopWatchMap()
     }
 }
 
-void XMLimport::readMMCPOptions() {
-
+void XMLimport::readMMCPOptions()
+{
     mpHost->mMMCPChatName = attributes().value(qsl("chatName")).toString();
     mpHost->mMMCPChatPort = attributes().value(qsl("chatPort")).toUShort();
     mpHost->mMMCPChatPrefix = attributes().value(qsl("chatPrefix")).toString();
