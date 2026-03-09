@@ -370,7 +370,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
 
 // user-defined literal to represent megabytes
 // C++ standard requires unsigned long long parameter for integer literal operators
-auto operator""_MB(unsigned long long const x) -> int64_t  // NOLINT(runtime/int)
+auto operator""_MB(unsigned long long const x) -> int64_t // NOLINT(runtime/int)
 {
     return 1024LL * 1024LL * x;
 }
@@ -875,9 +875,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             }
 
             // Determine what terminated the loop
-            bool const foundBEL = (spanEnd < localBufferLength && localBuffer[spanEnd] == '\x07');
-            bool const foundST = (spanEnd < localBufferLength && spanEnd > 0 && localBuffer[spanEnd - 1] == '\033' && localBuffer[spanEnd] == '\\');
-            bool const exceededLength = ((spanEnd - spanStart) >= MAX_OSC_SEQUENCE_LENGTH);
+            const bool foundBEL = (spanEnd < localBufferLength && localBuffer[spanEnd] == '\x07');
+            const bool foundST = (spanEnd < localBufferLength && spanEnd > 0 && localBuffer[spanEnd - 1] == '\033' && localBuffer[spanEnd] == '\\');
+            const bool exceededLength = ((spanEnd - spanStart) >= MAX_OSC_SEQUENCE_LENGTH);
 
             if (foundBEL) {
                 // BEL terminator - sequence content excludes the BEL
@@ -2636,7 +2636,7 @@ void TBuffer::decodeOSC(const QString& sequence)
         qDebug().nospace().noquote() << "    Consider the OSC sequence: \"" << sequence << "\"";
     }
 #endif
-    uint16_t const character = sequence.at(0).unicode();
+    const uint16_t character = sequence.at(0).unicode();
     switch (character) {
     case static_cast<quint8>('P'):
         if (serverMayRedefineDefaultColors) {
@@ -5503,13 +5503,13 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             const auto firstByte = static_cast<quint8>(bufferData.at(pos));
             const auto secondByte = static_cast<quint8>(bufferData.at(pos + 1));
             // Overlong 2-byte: C0/C1 xx (could be encoded in 1 byte)
-            const bool is2ByteOverlong = ((firstByte & 0xFE) == 0xC0) && ((secondByte & 0xC0) == 0x80);
+            const bool twoByteOverlong = ((firstByte & 0xFE) == 0xC0) && ((secondByte & 0xC0) == 0x80);
             // Overlong 3-byte: E0 80-9F xx (could be encoded in 2 bytes)
-            const bool is3ByteOverlong = (firstByte == 0xE0) && ((secondByte & 0xE0) == 0x80);
+            const bool threeByteOverlong = (firstByte == 0xE0) && ((secondByte & 0xE0) == 0x80);
             // Overlong 4-byte: F0 80-8F xx xx (could be encoded in 3 bytes)
-            const bool is4ByteOverlong = (firstByte == 0xF0) && ((secondByte & 0xF0) == 0x80);
+            const bool fourByteOverlong = (firstByte == 0xF0) && ((secondByte & 0xF0) == 0x80);
 
-            if (is2ByteOverlong || is3ByteOverlong || is4ByteOverlong) {
+            if (twoByteOverlong || threeByteOverlong || fourByteOverlong) {
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug().nospace() << "TBuffer::processUtf8Sequence(...) Overlong " << utf8SequenceLength << "-byte sequence as UTF-8 rejected!";
 #endif
@@ -5636,64 +5636,64 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             const auto byte2 = static_cast<quint8>(bufferData.at(pos + 1));
 
             // GBK Area 3: byte1 81-A0, byte2 40-FE (excluding 7F)
-            const bool isGBKArea3 = (byte1 >= 0x81) && (byte1 <= 0xA0) && (byte2 >= 0x40) && (byte2 <= 0xFE) && (byte2 != 0x7F);
+            const bool gbkArea3 = (byte1 >= 0x81) && (byte1 <= 0xA0) && (byte2 >= 0x40) && (byte2 <= 0xFE) && (byte2 != 0x7F);
             // GBK Area 1 (& GB2312): byte1 A1-A9, byte2 A1-FE
-            const bool isGBKArea1 = (byte1 >= 0xA1) && (byte1 <= 0xA9) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+            const bool gbkArea1 = (byte1 >= 0xA1) && (byte1 <= 0xA9) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
             // GBK Area 2 (& GB2312): byte1 B0-F7, byte2 A1-FE
-            const bool isGBKArea2 = (byte1 >= 0xB0) && (byte1 <= 0xF7) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+            const bool gbkArea2 = (byte1 >= 0xB0) && (byte1 <= 0xF7) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
             // GBK Area 5: byte1 A8-A9, byte2 40-A0 (excluding 7F)
-            const bool isGBKArea5 = (byte1 >= 0xA8) && (byte1 <= 0xA9) && (byte2 >= 0x40) && (byte2 <= 0xA0) && (byte2 != 0x7F);
+            const bool gbkArea5 = (byte1 >= 0xA8) && (byte1 <= 0xA9) && (byte2 >= 0x40) && (byte2 <= 0xA0) && (byte2 != 0x7F);
             // GBK Area 4: byte1 AA-FE, byte2 40-A0 (excluding 7F)
-            const bool isGBKArea4 = (byte1 >= 0xAA) && (byte1 <= 0xFE) && (byte2 >= 0x40) && (byte2 <= 0xA0) && (byte2 != 0x7F);
+            const bool gbkArea4 = (byte1 >= 0xAA) && (byte1 <= 0xFE) && (byte2 >= 0x40) && (byte2 <= 0xA0) && (byte2 != 0x7F);
             // User Defined (PU) Area 1: byte1 AA-AF, byte2 A1-FE
-            const bool isUserArea1 = (byte1 >= 0xAA) && (byte1 <= 0xAF) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+            const bool userArea1 = (byte1 >= 0xAA) && (byte1 <= 0xAF) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
             // User Defined (PU) Area 2: byte1 F8-FE, byte2 A1-FE
-            const bool isUserArea2 = (byte1 >= 0xF8) && (byte1 <= 0xFE) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+            const bool userArea2 = (byte1 >= 0xF8) && (byte1 <= 0xFE) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
             // User Defined (PU) Area 3: byte1 A1-A7, byte2 A1-FE (excluding 7F)
-            const bool isUserArea3 = (byte1 >= 0xA1) && (byte1 <= 0xA7) && (byte2 >= 0xA1) && (byte2 <= 0xFE) && (byte2 != 0x7F);
+            const bool userArea3 = (byte1 >= 0xA1) && (byte1 <= 0xA7) && (byte2 >= 0xA1) && (byte2 <= 0xFE) && (byte2 != 0x7F);
             // Looks like first pair of 4-byte GB18030 non-BMP sequence: byte1 90-E3, byte2 30-39
             const bool looksLikeGB18030NonBMP = (byte1 >= 0x90) && (byte1 <= 0xE3) && (byte2 >= 0x30) && (byte2 <= 0x39);
             // Looks like first pair of 4-byte GB18030 Private Use sequence: byte1 FD-FE, byte2 30-39
             const bool looksLikeGB18030PrivateUse = (byte1 >= 0xFD) && (byte1 <= 0xFE) && (byte2 >= 0x30) && (byte2 <= 0x39);
 
-            if (isGBKArea3) {
+            if (gbkArea3) {
                 // GBK Area 3 sequence
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 3";
 #endif
-            } else if (isGBKArea1) {
+            } else if (gbkArea1) {
                 // GBK Area 1 (& GB2312) sequence
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 1 (or GB2312)";
 #endif
-            } else if (isGBKArea2) {
+            } else if (gbkArea2) {
                 // GBK Area 2 (& GB2312) sequence
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 2 (or GB2312)";
 #endif
-            } else if (isGBKArea5) {
+            } else if (gbkArea5) {
                 // GBK/5 sequence
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 5";
 #endif
-            } else if (isGBKArea4) {
+            } else if (gbkArea4) {
                 // GBK/4 sequence
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 4";
 #endif
-            } else if (isUserArea1) {
+            } else if (userArea1) {
                 // User Defined 1 sequence - possibly invalid for us but if the
                 // MUD supplies their own font it could be used:
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "User Defined (PU) Area 1";
 #endif
-            } else if (isUserArea2) {
+            } else if (userArea2) {
                 // User Defined 2 sequence - possibly invalid for us but if the
                 // MUD supplies their own font it could be used:
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "User Defined (PU) Area 2";
 #endif
-            } else if (isUserArea3) {
+            } else if (userArea3) {
                 // User Defined 3 sequence - possibly invalid for us but if the
                 // MUD supplies their own font it could be used:
 #if defined(DEBUG_GB_PROCESSING)
@@ -5759,9 +5759,9 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             const auto byte2 = static_cast<quint8>(bufferData.at(pos + 1));
 
             // Check if this is a 4-byte sequence: byte1 81-FE, byte2 30-39
-            const bool isFourByteSequence = (byte1 >= 0x81) && (byte1 <= 0xFE) && (byte2 >= 0x30) && (byte2 <= 0x39);
+            const bool fourByteSequence = (byte1 >= 0x81) && (byte1 <= 0xFE) && (byte2 >= 0x30) && (byte2 <= 0x39);
 
-            if (isFourByteSequence) {
+            if (fourByteSequence) {
                 // This IS a 4-byte sequence
                 gbSequenceLength = 4;
 
@@ -5786,11 +5786,11 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 
                 // Valid 4-byte: byte1 in (81-84 or 90-E3), byte2 30-39 (already checked),
                 // byte3 81-FE, byte4 30-39
-                const bool isByte1InValidRange = (byte1 <= 0x84) || ((byte1 >= 0x90) && (byte1 <= 0xE3));
-                const bool isByte3Valid = (byte3 >= 0x81) && (byte3 <= 0xFE);
-                const bool isByte4Valid = (byte4 >= 0x30) && (byte4 <= 0x39);
+                const bool byte1InValidRange = (byte1 <= 0x84) || ((byte1 >= 0x90) && (byte1 <= 0xE3));
+                const bool byte3Valid = (byte3 >= 0x81) && (byte3 <= 0xFE);
+                const bool byte4Valid = (byte4 >= 0x30) && (byte4 <= 0x39);
 
-                if (isByte1InValidRange && isByte3Valid && isByte4Valid) {
+                if (byte1InValidRange && byte3Valid && byte4Valid) {
                     // Okay we should have a valid four byte sequence now
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "Non-BMP mapped Unicode";
