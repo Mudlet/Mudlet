@@ -259,7 +259,7 @@ void TMxpFrameManager::resetAllFrames()
     mMxpBorders = QMargins();
 
     if (mpHost) {
-        mpHost->setBorders(QMargins());
+        mpHost->setMxpBorders(QMargins());
     }
 
     clearDestination();
@@ -525,7 +525,7 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
             y = containerY;
         }
 
-        mpHost->setBorders(mMxpBorders);
+        mpHost->setMxpBorders(mMxpBorders);
     }
 
     // FLOATING attribute, no explicit title, or very small height = borderless frame without header
@@ -1029,7 +1029,7 @@ void TMxpFrameManager::recalculateBorders()
     mMxpBorders = QMargins();
 
     if (!mpHost->mpConsole) {
-        mpHost->setBorders(mMxpBorders);
+        mpHost->setMxpBorders(mMxpBorders);
         return;
     }
 
@@ -1065,5 +1065,5 @@ void TMxpFrameManager::recalculateBorders()
     }
 
     // Apply the recalculated borders
-    mpHost->setBorders(mMxpBorders);
+    mpHost->setMxpBorders(mMxpBorders);
 }
