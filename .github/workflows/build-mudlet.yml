@@ -327,7 +327,7 @@ jobs:
       run: ccache --show-stats
 
     - name: (Linux) Run C++ tests
-      if: runner.os == 'Linux' && matrix.run_tests == 'cpp'
+      if: runner.os == 'Linux' && matrix.run_tests == 'true'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
       env:
