@@ -3005,7 +3005,7 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             if (baseUrl.startsWith(qsl("send:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
-                command = {qsl("send([[%1]])").arg(innerCommand)};
+                command = {qsl("send([[%1]], false)").arg(innerCommand)};
                 hint = {qsl("%1: %2").arg(QObject::tr("Send"), innerCommand)};
             } else if (baseUrl.startsWith(qsl("prompt:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
@@ -3051,7 +3051,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     // Determine command type based on prefix
                     if (menuCommand.startsWith(qsl("send:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(5).toUtf8());
-                        menuCommands.append(qsl("send([[%1]])").arg(innerCommand));
+                        menuCommands.append(qsl("send([[%1]], false)").arg(innerCommand));
                         menuHints.append(menuLabel);
                     } else if (menuCommand.startsWith(qsl("prompt:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
@@ -3063,7 +3063,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                         menuHints.append(QString());
                     } else {
                         // Treat as direct command
-                        menuCommands.append(qsl("send([[%1]])").arg(menuCommand));
+                        menuCommands.append(qsl("send([[%1]], false)").arg(menuCommand));
                         menuHints.append(menuLabel);
                     }
                 }
@@ -5271,9 +5271,21 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
             currentFlags = buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask;
 
             // clang-format off
+            // Determine blink class if any (only when blink is enabled in settings)
+            QString blinkClass;
+            const bool enableBlink = (mpHost != nullptr) && mpHost->getEnableBlinkText();
+
+            if (enableBlink) {
+                if (currentFlags & TChar::FastBlink) {
+                    blinkClass = qsl(" class='blink-fast'");
+                } else if (currentFlags & TChar::Blink) {
+                    blinkClass = qsl(" class='blink-slow'");
+                }
+            }
+
             if (currentFlags & TChar::Reverse) {
                 // Swap the fore and background colours:
-                s.append(qsl("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
+                s.append(qsl("<span%10 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
                          .arg(QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 1 to 3
                               QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
@@ -5283,9 +5295,10 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
                                 .arg(currentFlags & TChar::Underline ? QLatin1String(" underline") : QString(),
                                      currentFlags & TChar::StrikeOut ? QLatin1String(" line-through") : QString(),
                                      currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
-                              : QString()));
+                              : QString(),
+                              blinkClass)); // arg 10
             } else {
-                s.append(qsl("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
+                s.append(qsl("<span%10 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
                          .arg(QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 1 to 3
                               QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
@@ -5295,7 +5308,8 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
                                 .arg(currentFlags & TChar::Underline ? QLatin1String(" underline") : QString(),
                                      currentFlags & TChar::StrikeOut ? QLatin1String(" line-through") : QString(),
                                      currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
-                              : QString()));
+                              : QString(),
+                              blinkClass)); // arg 10
             }
             // clang-format on
         }

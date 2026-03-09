@@ -70,13 +70,15 @@ class TConsole;
 class TMainConsole;
 class dlgNotepad;
 class TMap;
+class MMCPServer;
 class dlgIRC;
 class dlgPackageManager;
 class dlgModuleManager;
 class dlgProfilePreferences;
 class cTelnet;
 
-class stopWatch {
+class stopWatch
+{
     friend class XMLimport;
 
 public:
@@ -85,20 +87,20 @@ public:
     bool start();
     bool stop();
     bool reset();
-    bool running() const {return mIsRunning;}
+    bool running() const { return mIsRunning; }
     void adjustMilliSeconds(const qint64);
     qint64 getElapsedMilliSeconds() const;
     QString getElapsedDayTimeString() const;
-    void setPersistent(const bool state) {mIsPersistent = state;}
-    bool persistent() const {return mIsPersistent;}
-    void setName(const QString& name) {mName = name;}
-    const QString& name() const {return mName;}
+    void setPersistent(const bool state) { mIsPersistent = state; }
+    bool persistent() const { return mIsPersistent; }
+    void setName(const QString& name) { mName = name; }
+    const QString& name() const { return mName; }
 
 #ifndef QT_NO_DEBUG_STREAM
     // Only used for debugging:
-    bool initialised() const {return mIsInitialised;}
-    qint64 elapsed() const {return mElapsedTime;}
-    QDateTime effectiveStartDateTime() const {return mEffectiveStartDateTime;}
+    bool initialised() const { return mIsInitialised; }
+    qint64 elapsed() const { return mElapsedTime; }
+    QDateTime effectiveStartDateTime() const { return mEffectiveStartDateTime; }
 #endif // QT_NO_DEBUG_STREAM
 
 private:
@@ -131,11 +133,11 @@ inline QDebug& operator<<(QDebug& debug, const stopWatch& stopwatch)
     const QDebugStateSaver saver(debug);
     Q_UNUSED(saver)
     debug.nospace() << qsl("stopwatch(mIsRunning: %1 mInitialised: %2 mIsPersistent: %3 mEffectiveStartDateTime: %4 mElapsedTime: %5)")
-                       .arg((stopwatch.running() ? QLatin1String("true") : QLatin1String("false")),
-                            (stopwatch.initialised() ? QLatin1String("true") : QLatin1String("false")),
-                            (stopwatch.persistent() ? QLatin1String("true") : QLatin1String("false")),
-                            stopwatch.effectiveStartDateTime().toString(),
-                            QString::number(stopwatch.elapsed()));
+                               .arg((stopwatch.running() ? QLatin1String("true") : QLatin1String("false")),
+                                    (stopwatch.initialised() ? QLatin1String("true") : QLatin1String("false")),
+                                    (stopwatch.persistent() ? QLatin1String("true") : QLatin1String("false")),
+                                    stopwatch.effectiveStartDateTime().toString(),
+                                    QString::number(stopwatch.elapsed()));
     return debug;
 }
 #endif // QT_NO_DEBUG_STREAM
@@ -168,90 +170,83 @@ public:
     Q_DECLARE_FLAGS(DiscordOptionFlags, DiscordOptionFlag)
 
 
-
-
-    QString         getName()                        { return mHostName; }
-    QString         getCommandSeparator()            { return mCommandSeparator; }
-    void            setName(const QString& name);
-    QString         getUrl()                         { return mUrl; }
-    void            setUrl(const QString& url)       { mUrl = url; }
-    QString         getDiscordGameName()             { return mDiscordGameName; }
-    void            setDiscordGameName(const QString& name) { mDiscordGameName = name; }
-    int             getPort()                        { return mPort; }
-    void            setPort(const int port)          { mPort = port; }
-    void            setAutoReconnect(const bool reconnect) { mTelnet.setAutoReconnect(reconnect); }
-    QString &       getLogin()                       { return mLogin; }
-    void            setLogin(const QString& login)       { mLogin = login; }
-    QString &       getPass()                        { return mPass; }
-    void            setPass(const QString& password) { mPass = password; }
-    bool            hasAutoLoginCredentials() const  { return !mLogin.isEmpty() && !mPass.isEmpty(); }
-    int             getRetries()                     { return mRetries;}
-    void            setRetries(const int retries)    { mRetries = retries; }
-    int             getTimeout()                     { return mTimeout; }
-    void            setTimeout(const int seconds)    { mTimeout = seconds; }
-    bool            wideAmbiguousEAsianGlyphs() { return mWideAmbigousWidthGlyphs; }
+    QString getName() { return mHostName; }
+    QString getCommandSeparator() { return mCommandSeparator; }
+    void setName(const QString& name);
+    QString getUrl() { return mUrl; }
+    void setUrl(const QString& url) { mUrl = url; }
+    QString getDiscordGameName() { return mDiscordGameName; }
+    void setDiscordGameName(const QString& name) { mDiscordGameName = name; }
+    int getPort() { return mPort; }
+    void setPort(const int port) { mPort = port; }
+    void setAutoReconnect(const bool reconnect) { mTelnet.setAutoReconnect(reconnect); }
+    QString& getLogin() { return mLogin; }
+    void setLogin(const QString& login) { mLogin = login; }
+    QString& getPass() { return mPass; }
+    void setPass(const QString& password) { mPass = password; }
+    bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && !mPass.isEmpty(); }
+    int getRetries() { return mRetries; }
+    void setRetries(const int retries) { mRetries = retries; }
+    int getTimeout() { return mTimeout; }
+    void setTimeout(const int seconds) { mTimeout = seconds; }
+    bool wideAmbiguousEAsianGlyphs() { return mWideAmbigousWidthGlyphs; }
     // Uses PartiallyChecked to set the automatic mode, otherwise Checked/Unchecked means use wide/narrow ambiguous glyphs
-    void            setWideAmbiguousEAsianGlyphs(Qt::CheckState state);
+    void setWideAmbiguousEAsianGlyphs(Qt::CheckState state);
     // Is used to set preference dialog control directly:
-    Qt::CheckState  getWideAmbiguousEAsianGlyphsControlState() {
-                           return mAutoAmbigousWidthGlyphsSetting
-                                  ? Qt::PartiallyChecked
-                                  : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
-    void            setHaveColorSpaceId(const bool state) { mSGRCodeHasColSpaceId = state; }
-    bool            getHaveColorSpaceId() { return mSGRCodeHasColSpaceId; }
-    void            setMayRedefineColors(const bool state) { mServerMayRedefineColors = state; }
-    bool            getMayRedefineColors() { return mServerMayRedefineColors; }
-    void            setDiscordApplicationID(const QString& s);
-    const QString&  getDiscordApplicationID();
-    void            setDiscordInviteURL(const QString& s);
-    const QString&  getDiscordInviteURL() const { return mDiscordInviteURL; }
-    void            setSpellDic(const QString&);
-    QString         getSpellDic();
-    void            setUserDictionaryOptions(const bool useDictionary, const bool useShared);
-    void            getUserDictionaryOptions(bool& useDictionary, bool& useShared) {
-                        useDictionary = mEnableUserDictionary;
-                        useShared = mUseSharedDictionary; }
-    void            setControlCharacterMode(const ControlCharacterMode mode);
-    ControlCharacterMode  getControlCharacterMode() const { return mControlCharacter; }
-    bool            getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
-    void            setLargeAreaExitArrows(const bool);
-    bool            getUseModern3DMapper() const { return experimentEnabled(qsl("experiment.3dmap.modernmapper")); }
+    Qt::CheckState getWideAmbiguousEAsianGlyphsControlState() { return mAutoAmbigousWidthGlyphsSetting ? Qt::PartiallyChecked : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
+    bool getEnableBlinkText() const { return mEnableBlinkText; }
+    void setEnableBlinkText(const bool enabled);
+    void setHaveColorSpaceId(const bool state) { mSGRCodeHasColSpaceId = state; }
+    bool getHaveColorSpaceId() { return mSGRCodeHasColSpaceId; }
+    void setMayRedefineColors(const bool state) { mServerMayRedefineColors = state; }
+    bool getMayRedefineColors() { return mServerMayRedefineColors; }
+    void setDiscordApplicationID(const QString& s);
+    const QString& getDiscordApplicationID();
+    void setDiscordInviteURL(const QString& s);
+    const QString& getDiscordInviteURL() const { return mDiscordInviteURL; }
+    void setSpellDic(const QString&);
+    QString getSpellDic();
+    void setUserDictionaryOptions(const bool useDictionary, const bool useShared);
+    void getUserDictionaryOptions(bool& useDictionary, bool& useShared)
+    {
+        useDictionary = mEnableUserDictionary;
+        useShared = mUseSharedDictionary;
+    }
+    void setControlCharacterMode(const ControlCharacterMode mode);
+    ControlCharacterMode getControlCharacterMode() const { return mControlCharacter; }
+    bool getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
+    void setLargeAreaExitArrows(const bool);
+    bool getUseModern3DMapper() const { return experimentEnabled(qsl("experiment.3dmap.modernmapper")); }
 
     // Experiment system methods
-    bool            experimentEnabled(const QString& experimentKey) const;
+    bool experimentEnabled(const QString& experimentKey) const;
     std::pair<bool, QString> setExperimentEnabled(const QString& experimentKey, bool enabled);
-    QString         getActiveExperimentInGroup(const QString& group) const;
-    QStringList     getAllExperiments() const;
-    QStringList     getValidExperiments() const;
+    QString getActiveExperimentInGroup(const QString& group) const;
+    QStringList getAllExperiments() const;
+    QStringList getValidExperiments() const;
 
-    void            forceClose();
-    bool            isClosingDown() const { return mIsClosingDown; }
-    bool            isClosingForced() const { return mForcedClose; }
-    bool            requestClose();
+    void forceClose();
+    bool isClosingDown() const { return mIsClosingDown; }
+    bool isClosingForced() const { return mForcedClose; }
+    bool requestClose();
 
     unsigned int assemblePath();
     bool checkForMappingScript();
     bool checkForCustomSpeedwalk();
 
     TriggerUnit* getTriggerUnit() { return &mTriggerUnit; }
-    TimerUnit*   getTimerUnit()   { return &mTimerUnit; }
-    AliasUnit*   getAliasUnit()   { return &mAliasUnit; }
-    ActionUnit*  getActionUnit()  { return &mActionUnit; }
-    KeyUnit*     getKeyUnit()     { return &mKeyUnit; }
-    ScriptUnit*  getScriptUnit()  { return &mScriptUnit; }
-    GifTracker*  getGifTracker()  { return &mGifTracker; }
+    TimerUnit* getTimerUnit() { return &mTimerUnit; }
+    AliasUnit* getAliasUnit() { return &mAliasUnit; }
+    ActionUnit* getActionUnit() { return &mActionUnit; }
+    KeyUnit* getKeyUnit() { return &mKeyUnit; }
+    ScriptUnit* getScriptUnit() { return &mScriptUnit; }
+    GifTracker* getGifTracker() { return &mGifTracker; }
 
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
 
-    int getHostID()
-    {
-        return mHostID;
-    }
+    int getHostID() { return mHostID; }
 
-    void setHostID(int id)
-    {
-        mHostID = id;
-    }
+    void setHostID(int id) { mHostID = id; }
 
     TLuaInterpreter* getLuaInterpreter() { return &mLuaInterpreter; }
     LuaInterface* getLuaInterface() { return mLuaInterface.data(); }
@@ -289,7 +284,7 @@ public:
     void startSpeedWalk();
     void startSpeedWalk(int sourceRoom, int targetRoom);
     void reloadModule(const QString& reloadModuleName, const QString& syncingFromHost = QString());
-    std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String &value);
+    std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String& value);
     std::pair<bool, QString> getModuleSync(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
     void refreshPackageFonts();
@@ -342,6 +337,15 @@ public:
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
+    QString getMMCPChatName();
+    quint16 getMMCPPort();
+    QString getMMCPChatPrefix();
+    bool getMMCPAutoStartServer();
+    bool getMMCPAllowPeekRequests();
+    bool getMMCPPrefixEmotes();
+    bool getMMCPAddChatMessageNewline();
+    bool getMMCPAutoAcceptCalls();
+    bool getMMCPShowSnoopInMainConsole();
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     void setMediaLocationGMCP(const QString& mediaUrl);
@@ -433,7 +437,11 @@ public:
     void setDockLayoutUpdated(const QString&);
     void setToolbarLayoutUpdated(TToolBar*);
     bool commitLayoutUpdates(bool flush = false);
-    void setScreenDimensions(const int width, const int height) { mScreenWidth = width; mScreenHeight = height; }
+    void setScreenDimensions(const int width, const int height)
+    {
+        mScreenWidth = width;
+        mScreenHeight = height;
+    }
     std::optional<QString> windowType(const QString& name) const;
     bool getEditorShowBidi() const { return mEditorShowBidi; }
     void setEditorShowBidi(const bool);
@@ -451,16 +459,26 @@ public:
     int getCommandLineHistorySaveSize() const { return mCommandLineHistorySaveSize; }
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
-    void setShowIdsInEditor(const bool isShown) { mShowIDsInEditor = isShown; if (mpEditorDialog) {mpEditorDialog->showIDLabels(isShown);} }
+    void initMMCPServer();
+    void setMMCPChatName(const QString&, bool shouldSignal = true);
+    void setShowIdsInEditor(const bool isShown)
+    {
+        mShowIDsInEditor = isShown;
+        if (mpEditorDialog) {
+            mpEditorDialog->showIDLabels(isShown);
+        }
+    }
     bool getF3SearchEnabled() const { return mF3SearchEnabled; }
-    void setF3SearchEnabled(const bool enabled) {
+    void setF3SearchEnabled(const bool enabled)
+    {
         mF3SearchEnabled = enabled;
         if (mpConsole) {
             mpConsole->setF3SearchEnabled(enabled);
         }
     }
     bool getForceMXPProcessorOn() const { return mForceMXPProcessorOn; }
-    void setForceMXPProcessorOn(bool value) {
+    void setForceMXPProcessorOn(bool value)
+    {
         if (mForceMXPProcessorOn != value) {
             mForceMXPProcessorOn = value;
             emit signal_forceMXPProcessorOnChanged(value);
@@ -556,9 +574,9 @@ public:
 
     // Controls how sent commands are displayed on the main TConsole:
     enum class CommandEchoMode {
-        Never = 0,       // Never show sent commands regardless of script preferences
+        Never = 0,         // Never show sent commands regardless of script preferences
         ScriptControl = 1, // Let scripts control via send() wantPrint parameter (default)
-        Always = 2       // Always show sent commands regardless of script preferences
+        Always = 2         // Always show sent commands regardless of script preferences
     };
     CommandEchoMode mCommandEchoMode = CommandEchoMode::ScriptControl;
 
@@ -580,9 +598,7 @@ public:
 
     // Backward compatibility methods - for existing code that expects boolean behavior
     bool getPrintCommand() const { return mCommandEchoMode != CommandEchoMode::Never; }
-    void setPrintCommand(bool print) {
-        mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never;
-    }
+    void setPrintCommand(bool print) { mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never; }
 
 public:
     void setRemoteEchoingActive(bool active);
@@ -768,6 +784,7 @@ public:
     dlgTriggerEditor::SearchOptions mSearchOptions = dlgTriggerEditor::SearchOptionNone;
     TConsole::SearchOptions mBufferSearchOptions = TConsole::SearchOption::SearchOptionNone;
     QPointer<dlgIRC> mpDlgIRC;
+    QPointer<MMCPServer> mMMCPServer;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     QList<QString> mDockLayoutChanges;
     QList<QPointer<TToolBar>> mToolbarLayoutChanges;
@@ -783,21 +800,12 @@ public:
     bool mAdvertiseScreenReader = false;
     bool mEnableClosedCaption = false;
 
-    enum class BlankLineBehaviour {
-        Show,
-        Hide,
-        ReplaceWithSpace
-    };
+    enum class BlankLineBehaviour { Show, Hide, ReplaceWithSpace };
     Q_ENUM(BlankLineBehaviour)
     BlankLineBehaviour mBlankLineBehaviour = BlankLineBehaviour::Show;
 
     // shortcuts options visually impaired players have to switch between the input line and the main window
-    enum class CaretShortcut {
-        None,
-        Tab,
-        CtrlTab,
-        F6
-    };
+    enum class CaretShortcut { None, Tab, CtrlTab, F6 };
     Q_ENUM(CaretShortcut)
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
@@ -809,6 +817,8 @@ signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
     void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
+    // Tells TTextEdit instances for this profile whether to animate blinking text:
+    void signal_changeEnableBlinkText(const bool);
     void profileSaveStarted();
     void profileSaveFinished();
     void signal_changeSpellDict(const QString&);
@@ -820,6 +830,7 @@ signals:
     void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
     // Tells all command lines to save their history:
     void signal_saveCommandLinesHistory();
+    void mmcpChatNameChanged(const QString&);
     void signal_editorThemeChanged();
     void signal_remoteEchoChanged(bool enabled);
     void signal_forceMXPProcessorOnChanged(bool enabled);
@@ -828,7 +839,7 @@ private slots:
     void slot_purgeTemps();
 
 private:
-    void installPackageFonts(const QString &packageName);
+    void installPackageFonts(const QString& packageName);
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void loadSecuredPassword();
@@ -837,15 +848,15 @@ private:
     void thankForUsingPTB();
     void toggleMapperVisibility();
     void createMapper(const bool);
-    void removePackageInfo(const QString &packageName, const bool);
-    static void createModuleBackup(const QString &filename, const QString& saveName);
-    void writeModule(const QString &moduleName, const QString &filename);
+    void removePackageInfo(const QString& packageName, const bool);
+    static void createModuleBackup(const QString& filename, const QString& saveName);
+    void writeModule(const QString& moduleName, const QString& filename);
     void waitForAsyncXmlSave();
     void saveModules(bool backup = true);
-    void updateModuleZips(const QString &zipName, const QString &moduleName);
+    void updateModuleZips(const QString& zipName, const QString& moduleName);
     void reloadModules();
     void startMapAutosave(const int interval);
-    void timerEvent(QTimerEvent *event) override;
+    void timerEvent(QTimerEvent* event) override;
     void autoSaveMap();
     QString sanitizePackageName(const QString packageName) const;
     TCommandLine* activeCommandLine();
@@ -912,6 +923,9 @@ private:
     // in the TTextEdit classes are only made when necessary:
     bool mWideAmbigousWidthGlyphs = false;
 
+    // Whether to animate blinking text (SGR codes 5 and 6) - if false, displays as italics
+    bool mEnableBlinkText = false;
+
     // keeps track of all of the array writers we're currently operating with
     QHash<QString, std::shared_ptr<XMLexport>> writers;
 
@@ -930,6 +944,16 @@ private:
     // we won't use Discord functions.
     QString mRequiredDiscordUserName;
     QString mRequiredDiscordUserDiscriminator;
+    
+    QString mMMCPChatName;
+    QString mMMCPChatPrefix;
+    quint16 mMMCPChatPort;
+    bool mMMCPAutostartServer;
+    bool mMMCPAllowPeekRequests;
+    bool mMMCPPrefixEmotes;
+    bool mMMCPAddChatMessageNewline;
+    bool mMMCPAutoAcceptCalls;
+    bool mMMCPShowSnoopInMainConsole;
 
     // Handles whether to treat 16M-Colour ANSI SGR codes which only use
     // semi-colons as separator have the initial Colour Space Id parameter

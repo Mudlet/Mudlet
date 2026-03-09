@@ -110,4 +110,11 @@ if(USE_OWN_QTKEYCHAIN)
 endif()
 add_test(NAME CredentialManagerTest COMMAND CredentialManagerTest)
 
+add_executable(PasswordMigrationTest PasswordMigrationTest.cpp ../src/CredentialManager.cpp ../src/SecureStringUtils.cpp)
+target_link_libraries(PasswordMigrationTest ${KEYCHAIN_LIBRARY})
+if(USE_OWN_QTKEYCHAIN)
+    target_compile_definitions(PasswordMigrationTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+endif()
+add_test(NAME PasswordMigrationTest COMMAND PasswordMigrationTest)
+
 add_subdirectory(functional_tests)
