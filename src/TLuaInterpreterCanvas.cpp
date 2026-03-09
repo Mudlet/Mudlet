@@ -21,7 +21,10 @@
 
 #include "Host.h"
 #include "TCanvas.h"
+#include "TDockWidget.h"
+#include "TLabel.h"
 #include "TMainConsole.h"
+#include "TScrollBox.h"
 
 // createCanvas(parentName, canvasName, x, y, width, height)
 // parentName: name of parent label, dock widget, or "main" for main window
