@@ -48,33 +48,27 @@ int TLuaInterpreter::createCanvas(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("canvas '%1' already exists").arg(canvasName), true);
     }
 
-    // Resolve parent widget
+    // Resolve parent widget — match createLabel's resolution order:
+    // dock widget → scroll box → mpMainFrame (labels also end up on mpMainFrame)
     QWidget* parentWidget = nullptr;
 
     if (parentName == QLatin1String("main") || parentName.isEmpty()) {
         parentWidget = host.mpConsole->mpMainFrame;
     } else {
-        // Try label map first
-        auto pL = host.mpConsole->mLabelMap.value(parentName);
-        if (pL) {
-            parentWidget = pL;
+        auto pW = host.mpConsole->mDockWidgetMap.value(parentName);
+        if (pW) {
+            parentWidget = pW->widget();
         } else {
-            // Try dock widget map
-            auto pW = host.mpConsole->mDockWidgetMap.value(parentName);
-            if (pW) {
-                parentWidget = pW->widget();
+            auto pS = host.mpConsole->mScrollBoxMap.value(parentName);
+            if (pS) {
+                parentWidget = pS->widget();
             } else {
-                // Try scroll box map
-                auto pS = host.mpConsole->mScrollBoxMap.value(parentName);
-                if (pS) {
-                    parentWidget = pS->widget();
-                }
+                // Labels created with a label parent also land on mpMainFrame
+                // (createLabel doesn't check mLabelMap for parent resolution)
+                // so we do the same to ensure canvas and labels are siblings
+                parentWidget = host.mpConsole->mpMainFrame;
             }
         }
-    }
-
-    if (!parentWidget) {
-        return warnArgumentValue(L, __func__, qsl("parent '%1' not found (not a label, user window, or scroll box)").arg(parentName), true);
     }
 
     auto* canvas = new TCanvas(parentWidget);
