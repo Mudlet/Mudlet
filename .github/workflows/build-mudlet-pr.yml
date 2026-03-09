@@ -11,6 +11,7 @@ jobs:
       group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
+      BUILD_TASK: 'PR'
       LUA_VERSION: '5.1.5'
     strategy:
       fail-fast: false
@@ -53,8 +54,6 @@ jobs:
             qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
-    with:
-      BUILD_TASK: 'PR'
 
     steps:
     - name: Checkout Mudlet source code
