@@ -295,6 +295,7 @@ jobs:
           -DSENTRY_DSN=${{ secrets.SENTRY_DSN }}
       env:
         CCACHE_COMPRESSLEVEL: 5
+        CCACHE_MAXSIZE: "80M"
         NINJA_STATUS: '[%f/%t %o/sec] '
         MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
