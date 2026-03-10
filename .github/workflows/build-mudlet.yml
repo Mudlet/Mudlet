@@ -18,6 +18,9 @@ jobs:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
     if: ${{ github.repository_owner == 'Mudlet' }}
+    concurrency:
+      group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
       LUA_VERSION: '5.1.5'
     strategy:
@@ -75,7 +78,7 @@ jobs:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         cache: true
-        modules: qt5compat qtmultimedia
+        modules: qt5compat qtmultimedia qtspeech
 
     - name: Use CMake 3.30.3
       uses: lukka/get-cmake@v4.2.3
@@ -98,6 +101,7 @@ jobs:
         HOMEBREW_NO_AUTO_UPDATE: "ON"
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
+      timeout-minutes: 3
       run: |
         # Install all required dependencies
         brew install libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost
@@ -201,12 +205,13 @@ jobs:
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
     - name: (Linux) Build xcb-util-cursor 0.1.5
+      timeout-minutes: 5
       if: runner.os == 'Linux'
       run: |
         # Download and extract xcb-util-cursor 0.1.5
         # This version fixes the off-by-one heap buffer overflow in _XcursorThemeInherits
         # that causes PTB builds to crash with AddressSanitizer
-        wget -q https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz
+        wget -q --connect-timeout=10 --read-timeout=30 --tries=3 --waitretry=5 https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz
         tar xf xcb-util-cursor-0.1.5.tar.xz
         cd xcb-util-cursor-0.1.5
 
@@ -234,8 +239,8 @@ jobs:
       uses: actions/cache/restore@v5
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}
+        key: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ github.ref_name }}
+        restore-keys: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-development
 
     - name: (Linux) Set build info
       if: runner.os == 'Linux'
@@ -263,7 +268,7 @@ jobs:
 
     - name: Get sentry-native commit hash
       id: sentry-hash
-      run: echo "hash=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> $GITHUB_OUTPUT
+      run: echo "SENTRY_HASH=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
     - name: Cache sentry-native
       id: cache-sentry
@@ -272,7 +277,7 @@ jobs:
         path: |
           3rdparty/sentry-native/install_without_transport
           3rdparty/sentry-native/install_with_transport
-        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.hash }}
+        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
@@ -294,7 +299,7 @@ jobs:
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     - name: Save ccache
-      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
+      if: always()
       uses: actions/cache/save@v5
       with:
         path: ${{runner.workspace}}/ccache
@@ -392,7 +397,7 @@ jobs:
         GITHUB_FORCE_BUILD: ${{ github.event.inputs.scheduled == 'true' }}
 
     - name: Upload packaged Mudlet
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       if: env.UPLOAD_FILENAME
       with:
         name: ${{env.UPLOAD_FILENAME}}
@@ -408,7 +413,6 @@ jobs:
     - name: (Linux) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os =='Linux'
       run: cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
-      shell: bash
 
     - name: (macOS) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
@@ -422,14 +426,14 @@ jobs:
         fi
         cd ~/Desktop
         sudo codesign --remove-signature ~/Desktop/Mudlet.app
-      shell: bash
 
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
-      timeout-minutes: 5
+      timeout-minutes: 1
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        MUDLET_TEST_MODE: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
@@ -437,11 +441,11 @@ jobs:
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      timeout-minutes: 5
-      shell: bash
+      timeout-minutes: 1
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        MUDLET_TEST_MODE: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: detect_leaks=0
@@ -461,14 +465,15 @@ jobs:
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --run-undo-tests
       env:
         ASAN_OPTIONS: detect_leaks=0
+        MUDLET_TEST_MODE: 1
 
     - name: (macOS) Run C++ undo/redo tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
       timeout-minutes: 5
-      shell: bash
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --run-undo-tests
       env:
         ASAN_OPTIONS: detect_leaks=0
+        MUDLET_TEST_MODE: 1
 
     - name: Passed C++ undo/redo tests
       if: matrix.run_tests == 'true'
