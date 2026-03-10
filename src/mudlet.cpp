@@ -2679,6 +2679,13 @@ void mudlet::closeEvent(QCloseEvent* event)
     writeSettings();
 
     goingDown();
+
+    // Close connection dialog if it's open to prevent cleanup issues during shutdown
+    if (mpConnectionDialog) {
+        mpConnectionDialog->close();
+        mpConnectionDialog = nullptr;
+    }
+
     if (smpDebugArea) {
         smpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
         smpDebugArea->close();

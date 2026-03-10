@@ -317,7 +317,10 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
     mKeychainOperationInProgress = false;
     mPendingProfileLoad.clear();
 
-    QCoreApplication::instance()->removeEventFilter(this);
+    // Check if QCoreApplication is still valid during shutdown
+    if (QCoreApplication::instance()) {
+        QCoreApplication::instance()->removeEventFilter(this);
+    }
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
