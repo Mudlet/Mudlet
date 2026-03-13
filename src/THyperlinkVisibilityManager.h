@@ -26,12 +26,9 @@
 #include <QPointer>
 #include <QString>
 
-class TConsole;
+#include "THyperlinkStyling.h"
 
-// Forward declaration for visibility settings
-namespace Mudlet {
-struct HyperlinkStyling;
-}
+class TConsole;
 
 struct TrackedHyperlink {
     int linkId = 0;

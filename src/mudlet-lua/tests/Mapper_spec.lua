@@ -1,3 +1,87 @@
+describe("Tests custom map event and menu functions", function()
+
+  setup(function()
+    openMapWidget()
+  end)
+
+  after_each(function()
+    removeMapEvent("testEvent1")
+    removeMapEvent("testEvent2")
+    removeMapMenu("TestMenu")
+    removeMapMenu("TestSubMenu")
+  end)
+
+  describe("Tests addMapEvent and getMapEvents", function()
+    it("should add a top-level map event", function()
+      addMapEvent("testEvent1", "myEvent", "", "Test Event 1")
+
+      local events = getMapEvents()
+      assert.is_not_nil(events.testEvent1)
+      assert.are.equal("myEvent", events.testEvent1["event name"])
+      assert.are.equal("", events.testEvent1["parent"])
+      assert.are.equal("Test Event 1", events.testEvent1["display name"])
+    end)
+
+    it("should add a map event under a menu", function()
+      addMapMenu("TestMenu")
+      addMapEvent("testEvent1", "myEvent", "TestMenu", "Test Event 1")
+
+      local events = getMapEvents()
+      assert.is_not_nil(events.testEvent1)
+      assert.are.equal("TestMenu", events.testEvent1["parent"])
+    end)
+
+    it("should use unique name as display text when not provided", function()
+      addMapEvent("testEvent1", "myEvent")
+
+      local events = getMapEvents()
+      assert.is_not_nil(events.testEvent1)
+      assert.are.equal("testEvent1", events.testEvent1["display name"])
+    end)
+  end)
+
+  describe("Tests addMapMenu and getMapMenus", function()
+    it("should add a top-level menu", function()
+      addMapMenu("TestMenu")
+
+      local menus = getMapMenus()
+      assert.are.equal("top-level", menus["TestMenu"])
+    end)
+
+    it("should add a nested submenu", function()
+      addMapMenu("TestMenu")
+      addMapMenu("TestSubMenu", "TestMenu")
+
+      local menus = getMapMenus()
+      assert.are.equal("top-level", menus["TestMenu"])
+      assert.are.equal("TestMenu", menus["TestSubMenu"])
+    end)
+  end)
+
+  describe("Tests removeMapEvent", function()
+    it("should remove an event", function()
+      addMapEvent("testEvent1", "myEvent", "", "Test Event 1")
+      removeMapEvent("testEvent1")
+
+      local events = getMapEvents()
+      assert.is_nil(events.testEvent1)
+    end)
+  end)
+
+  describe("Tests removeMapMenu", function()
+    it("should remove a menu and its children", function()
+      addMapMenu("TestMenu")
+      addMapMenu("TestSubMenu", "TestMenu")
+      removeMapMenu("TestMenu")
+
+      local menus = getMapMenus()
+      assert.is_nil(menus["TestMenu"])
+      assert.is_nil(menus["TestSubMenu"])
+    end)
+  end)
+
+end)
+
 describe("Tests per-room border functions", function()
 
   local testRoomId
