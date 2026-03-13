@@ -102,7 +102,7 @@ jobs:
         # Install all required dependencies
         # brew install can hang indefinitely during bottle pouring, so timeout and retry
         for attempt in 1 2 3; do
-          if timeout 120 brew install libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost; then
+          if timeout 120 brew install --verbose libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost; then
             break
           fi
           echo "::warning::brew install attempt $attempt failed, retrying..."
