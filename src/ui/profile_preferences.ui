@@ -2709,31 +2709,6 @@ you can use it but there could be issues with aligning columns of text</string>
                </property>
               </widget>
              </item>
-             <item row="0" column="3" rowspan="2">
-              <widget class="QLabel" name="label_playerRoomPreview">
-               <property name="minimumSize">
-                <size>
-                 <width>80</width>
-                 <height>80</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>80</width>
-                 <height>80</height>
-                </size>
-               </property>
-               <property name="frameShape">
-                <enum>QFrame::Shape::StyledPanel</enum>
-               </property>
-               <property name="frameShadow">
-                <enum>QFrame::Shadow::Sunken</enum>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignmentFlag::AlignCenter</set>
-               </property>
-              </widget>
-             </item>
             </layout>
            </widget>
           </item>

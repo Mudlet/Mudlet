@@ -1126,7 +1126,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         spinBox_playerRoomInnerDiameter->setEnabled(pHost->mpMap->mPlayerRoomStyle != 0);
         setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor, true);
         setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
-        updatePlayerRoomPreview();
 
         connect(pushButton_deleteMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_deleteMap);
         connect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changePlayerRoomStyle);
@@ -1153,7 +1152,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 return;
             }
             pHost->mMapperShowRoomBorders = checked;
-            updatePlayerRoomPreview();
             if (pHost->mpMap && pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
                 pHost->mpMap->mpMapper->mp2dMap->update();
             }
@@ -4447,7 +4445,6 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
     setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
     pHost->mpMap->mPlayerRoomStyle = static_cast<quint8>(style);
     pHost->mPlayerRoomStyle = static_cast<quint8>(style);
-    updatePlayerRoomPreview();
     if (!pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
         return;
     }
@@ -4465,7 +4462,6 @@ void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
 
     setPlayerRoomColor(pushButton_playerRoomPrimaryColor, mpHost->mpMap->mPlayerRoomOuterColor);
     pHost->mPlayerRoomOuterColor = mpHost->mpMap->mPlayerRoomOuterColor;
-    updatePlayerRoomPreview();
     if (comboBox_playerRoomStyle->currentIndex() != 3) {
         return;
     }
@@ -4487,7 +4483,6 @@ void dlgProfilePreferences::slot_setPlayerRoomSecondaryColor()
 
     setPlayerRoomColor(pushButton_playerRoomSecondaryColor, mpHost->mpMap->mPlayerRoomInnerColor);
     pHost->mPlayerRoomInnerColor = mpHost->mpMap->mPlayerRoomInnerColor;
-    updatePlayerRoomPreview();
     if (comboBox_playerRoomStyle->currentIndex() != 3) {
         return;
     }
@@ -4510,7 +4505,6 @@ void dlgProfilePreferences::slot_setPlayerRoomOuterDiameter(const int value)
     if (value < 256 && pHost->mpMap->mPlayerRoomOuterDiameterPercentage != value) {
         pHost->mpMap->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
         pHost->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
-        updatePlayerRoomPreview();
         if (pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
             // And update the displayed map:
             pHost->mpMap->mpMapper->mp2dMap->update();
@@ -4534,7 +4528,6 @@ void dlgProfilePreferences::slot_setPlayerRoomInnerDiameter(const int value)
             // And update the displayed map:
             pHost->mpMap->mpMapper->mp2dMap->update();
         }
-        updatePlayerRoomPreview();
     }
 }
 
@@ -4554,84 +4547,6 @@ void dlgProfilePreferences::setPlayerRoomColor(QPushButton* b, QColor& c)
         // visible and adjusts the saturation of a disabled button:
         setButtonColor(b, color, true);
     }
-}
-
-void dlgProfilePreferences::updatePlayerRoomPreview()
-{
-    Host* pHost = mpHost;
-    if (!pHost || !pHost->mpMap) {
-        return;
-    }
-
-    // Cell size chosen so the center room is prominent and neighbor rooms
-    // are partially visible at the edges, clipped by the pixmap boundary
-    const int previewSize = label_playerRoomPreview->width();
-    const double cellSize = previewSize / 2.0;
-    const double rSize = pHost->mRoomSize;
-    const double roomFillSize = cellSize * rSize;
-    const double eSize = pHost->mLineSize;
-    const double bSize = pHost->mRoomBorderSize;
-    const int borderWidth = qMax(1, static_cast<int>(1.0 / bSize * cellSize * rSize));
-    const double roomVisualSize = roomFillSize + 2.0 * borderWidth;
-    const bool showBorder = pHost->mMapperShowRoomBorders;
-    QPixmap pixmap(previewSize, previewSize);
-    pixmap.fill(QColor(42, 42, 42));
-
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing);
-
-    const QPointF center(previewSize / 2.0, previewSize / 2.0);
-    const double exitWidth = qMax(1.0, 1.0 / eSize * cellSize * rSize);
-    const double borderInset = borderWidth / 2.0;
-
-    // Draw exit lines connecting center room to neighbors
-    QPen exitPen(QColor(190, 190, 190));
-    exitPen.setWidthF(exitWidth);
-    painter.setPen(exitPen);
-    painter.drawLine(QPointF(center.x(), center.y() - cellSize), QPointF(center.x(), center.y() + cellSize));
-    painter.drawLine(QPointF(center.x() - cellSize, center.y()), QPointF(center.x() + cellSize, center.y()));
-
-    // Helper to draw a room square with optional border
-    auto drawRoom = [&](double cx, double cy, const QColor& fillColor) {
-        const double offset = roomFillSize / 2.0;
-        painter.fillRect(QRectF(cx - offset, cy - offset, roomFillSize, roomFillSize), fillColor);
-        if (showBorder) {
-            QPen bPen(QColor(190, 190, 190));
-            bPen.setWidth(borderWidth);
-            bPen.setJoinStyle(Qt::MiterJoin);
-            painter.setPen(bPen);
-            painter.setBrush(Qt::NoBrush);
-            painter.drawRect(QRectF(cx - offset - borderInset, cy - offset - borderInset,
-                                    roomFillSize + borderWidth, roomFillSize + borderWidth));
-        }
-    };
-
-    // Draw neighbor rooms (N, S, E, W)
-    const QColor neighborColor(0, 128, 0);
-    drawRoom(center.x(), center.y() - cellSize, neighborColor);
-    drawRoom(center.x(), center.y() + cellSize, neighborColor);
-    drawRoom(center.x() - cellSize, center.y(), neighborColor);
-    drawRoom(center.x() + cellSize, center.y(), neighborColor);
-
-    // Draw center room on top
-    drawRoom(center.x(), center.y(), QColor(96, 96, 96));
-
-    const int style = comboBox_playerRoomStyle->currentIndex();
-    const QGradientStops stops = T2DMap::buildPlayerRoomGradientStops(
-            style, pHost->mpMap->mPlayerRoomInnerDiameterPercentage, pHost->mpMap->mPlayerRoomInnerColor, pHost->mpMap->mPlayerRoomOuterColor);
-
-    const double roomRadius = (pHost->mpMap->mPlayerRoomOuterDiameterPercentage / 200.0) * roomVisualSize * M_SQRT2;
-    QRadialGradient gradient(center, roomRadius);
-    gradient.setStops(stops);
-
-    QPainterPath path;
-    path.addEllipse(center, roomRadius, roomRadius);
-    painter.setPen(Qt::transparent);
-    painter.setBrush(gradient);
-    painter.drawPath(path);
-    painter.end();
-
-    label_playerRoomPreview->setPixmap(pixmap);
 }
 
 void dlgProfilePreferences::slot_setPostingTimeout(const double timeout)
@@ -4883,7 +4798,6 @@ void dlgProfilePreferences::slot_roomSizeChanged(int size)
 {
     if (mpHost) {
         mpHost->mRoomSize = static_cast<float>(size) / 10.0f;
-        updatePlayerRoomPreview();
         if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
             mpHost->mpMap->mpMapper->mp2dMap->setRoomSize(static_cast<float>(size) / 10.0f);
             mpHost->mpMap->mpMapper->mp2dMap->update();
@@ -4902,7 +4816,6 @@ void dlgProfilePreferences::slot_exitSizeChanged(int size)
     if (mpHost) {
         const double internalSize = 50.0 / size;
         mpHost->mLineSize = internalSize;
-        updatePlayerRoomPreview();
         if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
             mpHost->mpMap->mpMapper->mp2dMap->setExitSize(internalSize);
         }
@@ -4914,7 +4827,6 @@ void dlgProfilePreferences::slot_borderSizeChanged(int size)
     if (mpHost) {
         const double internalSize = 50.0 / size;
         mpHost->mRoomBorderSize = internalSize;
-        updatePlayerRoomPreview();
         if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
             mpHost->mpMap->mpMapper->mp2dMap->setBorderSize(internalSize);
         }
