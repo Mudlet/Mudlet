@@ -453,7 +453,9 @@ public:
     TCommandLine* activeCommandLine();
     QPointer<TConsole> parentTConsole(QObject*) const;
     QMargins borders() const { return mBorders; }
-    void setBorders(const QMargins);
+    QMargins userBorders() const { return mUserBorders; }
+    void setUserBorders(const QMargins);
+    void setMxpBorders(const QMargins);
     void loadMap();
     std::tuple<QString, bool> getCmdLineSettings(const TCommandLine::CommandLineType, const QString&);
     void setCmdLineSettings(const TCommandLine::CommandLineType, const bool, const QString&);
@@ -841,6 +843,7 @@ private slots:
     void slot_purgeTemps();
 
 private:
+    void setBorders(const QMargins);
     void installPackageFonts(const QString& packageName);
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
@@ -945,7 +948,7 @@ private:
     // we won't use Discord functions.
     QString mRequiredDiscordUserName;
     QString mRequiredDiscordUserDiscriminator;
-    
+
     QString mMMCPChatName;
     QString mMMCPChatPrefix;
     quint16 mMMCPChatPort;
@@ -1031,6 +1034,8 @@ private:
     bool mFocusTimerRunning = false;
 
     QMargins mBorders;
+    QMargins mUserBorders;
+    QMargins mMxpBorders;
 
     // The range - applied to ALL command lines - is 0 to 10000, with the knob
     // on the profile preferences having a log-step action with multiples

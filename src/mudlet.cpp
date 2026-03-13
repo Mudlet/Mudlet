@@ -771,6 +771,7 @@ void mudlet::init()
 #if defined(INCLUDE_UPDATER)
     pUpdater = new Updater(this, mpSettings, publicTestVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
+    connect(pUpdater, &Updater::signal_updateCheckFailed, this, &mudlet::slot_updateCheckFailed);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
     connect(dactionChangelog, &QAction::triggered, this, &mudlet::slot_showFullChangelog);
 #if defined(Q_OS_MACOS)
@@ -2861,7 +2862,8 @@ void mudlet::readLateSettings(const QSettings& settings)
         setToolBarIconSize(settings.value(qsl("mainiconsize")).toInt());
     }
     setEditorTreeWidgetIconSize(settings.value("tefoldericonsize", QVariant(3)).toInt());
-    mScrollbackTutorialsShown = settings.value("scrollbackTutorialsShown", QVariant(0)).toInt();
+    mScrollbackTutorialsShown = qBound(0, settings.value("scrollbackTutorialsShown", QVariant(0)).toInt(), mScrollbackTutorialsMax);
+    mCharacterModeWarningsShown = qBound(0, settings.value("characterModeWarningsShown", QVariant(0)).toInt(), mCharacterModeWarningsMax);
     // We have abandoned previous "showMenuBar" / "showToolBar" booleans
     // although we provide a backwards compatible value
     // of: (bool) showXXXXBar = (XXXXBarVisibilty != visibleNever) for, until,
@@ -3039,6 +3041,7 @@ void mudlet::writeSettings()
     settings.setValue("mainiconsize", mToolbarIconSize);
     settings.setValue("tefoldericonsize", mEditorTreeWidgetIconSize);
     settings.setValue("scrollbackTutorialsShown", mScrollbackTutorialsShown);
+    settings.setValue("characterModeWarningsShown", mCharacterModeWarningsShown);
     // This pair are only for backwards compatibility and will be ignored for
     // this and future Mudlet versions - suggest they get removed in Mudlet 4.x
     settings.setValue("showMenuBar", mMenuBarVisibility != enums::visibleNever);
@@ -6204,6 +6207,14 @@ void mudlet::slot_manualUpdateCheck()
     pUpdater->manuallyCheckUpdates();
 }
 
+void mudlet::slot_updateCheckFailed(const QString& error)
+{
+    auto* pHost = getActiveHost();
+    if (pHost && pHost->mpConsole) {
+        pHost->mpConsole->printSystemMessage(tr("Update check failed - please check your internet connection. Error: %1\n").arg(error));
+    }
+}
+
 void mudlet::slot_showFullChangelog()
 {
     pUpdater->showFullChangelog();
@@ -7727,6 +7738,16 @@ bool mudlet::showMuteAllMediaTutorial()
 void mudlet::showedMuteAllMediaTutorial()
 {
     mMuteAllMediaTutorialsShown++;
+}
+
+bool mudlet::showCharacterModeWarning()
+{
+    return !experiencedMudletPlayer() && mCharacterModeWarningsShown < mCharacterModeWarningsMax;
+}
+
+void mudlet::showedCharacterModeWarning()
+{
+    mCharacterModeWarningsShown = std::min(mCharacterModeWarningsShown + 1, mCharacterModeWarningsMax);
 }
 
 // returns true if the Mudlet player is considered 'experienced' and doesn't need to be shown the basic

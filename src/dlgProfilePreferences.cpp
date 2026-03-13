@@ -911,7 +911,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_mmcpSnoopInMainConsole->setChecked(pHost->getMMCPShowSnoopInMainConsole());
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
 
-    auto originalBorders = pHost->borders();
+    auto originalBorders = pHost->userBorders();
     topBorderHeight->setValue(originalBorders.top());
     bottomBorderHeight->setValue(originalBorders.bottom());
     leftBorderWidth->setValue(originalBorders.left());
@@ -1263,7 +1263,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -3074,7 +3074,7 @@ void dlgProfilePreferences::slot_saveAndClose()
             }
         }
         const QMargins newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
-        pHost->setBorders(newBorders);
+        pHost->setUserBorders(newBorders);
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mVersionInTTYPE = checkBox_mVersionInTTYPE->isChecked();
         pHost->setForceMXPProcessorOn(checkBox_mForceMXPProcessorOn->isChecked());
