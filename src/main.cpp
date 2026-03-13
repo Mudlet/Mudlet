@@ -935,7 +935,9 @@ int main(int argc, char* argv[])
     mudlet::self()->takeOwnershipOfInstanceCoordinator(std::move(instanceCoordinator));
 
     // Handle "QEvent::FileOpen" events.
-    FileOpenHandler fileOpenHandler;
+    // FileOpenHandler must be owned by mudlet so it gets destroyed before Qt's
+    // global cleanup runs, avoiding crashes in QThreadStorageData::finish
+    mudlet::self()->takeOwnershipOfFileOpenHandler(std::make_unique<FileOpenHandler>());
 
     if (first_launch) {
         // give Mudlet window decent size - most of the screen on non-HiDPI

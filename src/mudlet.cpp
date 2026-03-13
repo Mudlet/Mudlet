@@ -51,6 +51,7 @@
 #include "XMLimport.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
+#include "FileOpenHandler.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
@@ -6791,6 +6792,11 @@ void mudlet::takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCo
 MudletInstanceCoordinator* mudlet::getInstanceCoordinator()
 {
     return mInstanceCoordinator.get();
+}
+
+void mudlet::takeOwnershipOfFileOpenHandler(std::unique_ptr<FileOpenHandler> fileOpenHandler)
+{
+    mFileOpenHandler = std::move(fileOpenHandler);
 }
 void mudlet::setGlobalStyleSheet(const QString& styleSheet)
 {
