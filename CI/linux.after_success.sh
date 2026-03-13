@@ -121,7 +121,7 @@ then
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
     else
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
 
       DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
       if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
@@ -130,7 +130,7 @@ then
       fi
 
       # upload an unzipped, unversioned release for appimage.github.io
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
       DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
 
       SHA256SUM=$(shasum -a 256 "Mudlet-${VERSION}-linux-x64.AppImage.tar" | awk '{print $1}')
@@ -156,7 +156,7 @@ then
 
       echo "=== Uploading portable version ==="
       PORTABLE_NAME="Mudlet-${VERSION}-linux-x64-portable"
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PORTABLE_NAME}.tar.gz" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PORTABLE_NAME}.tar.gz" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
       PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
 
       if ! curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; then
@@ -216,7 +216,7 @@ then
       chmod +x "${HOME}/git-archive-all.sh"
       "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
       xz "Mudlet-${VERSION}.tar"
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
       FILE_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.tar.xz"
       SHA256SUM=$(shasum -a 256 "Mudlet-${VERSION}.tar.xz" | awk '{print $1}')
       current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
