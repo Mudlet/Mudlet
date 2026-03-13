@@ -114,7 +114,7 @@ QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri
         const int suffixLength = sendSuffix.length();
         QString command = baseUri.mid(prefixLength, baseUri.length() - prefixLength - suffixLength);
         QString cleanCommand = addSelectedParameter(command, isSelected);
-        QString result = qsl("send([[%1]])").arg(cleanCommand);
+        QString result = qsl("send([[%1]], false)").arg(cleanCommand);
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "Modified to:" << result;
 #endif
