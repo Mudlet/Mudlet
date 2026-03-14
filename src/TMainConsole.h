@@ -67,8 +67,8 @@ public:
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
     bool setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags);
     TLabel* createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
-    std::pair<bool, QString> createMapper(const QString &windowname, int, int, int, int);
-    std::pair<bool, QString> createCommandLine(const QString &windowname, const QString &name, int, int, int, int);
+    std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int);
+    std::pair<bool, QString> createCommandLine(const QString& windowname, const QString& name, int, int, int, int);
     QSize getUserWindowSize(const QString& windowname) const;
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
     std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet);
@@ -92,12 +92,7 @@ public:
     // Either returns the handle of the per profile or the shared Mudlet one or
     // nullptr depending on the state of the flags mEnableUserDictionary and
     // mUseSharedDictionary:
-    Hunhandle* getHunspellHandle_user() const {
-        return mEnableUserDictionary
-                ? (mUseSharedDictionary
-                   ? mpHunspell_shared
-                   : mpHunspell_profile)
-                : nullptr; }
+    Hunhandle* getHunspellHandle_user() const { return mEnableUserDictionary ? (mUseSharedDictionary ? mpHunspell_shared : mpHunspell_profile) : nullptr; }
     QSet<QString> getWordSet() const;
     QPair<bool, QString> addWordToSet(const QString&);
     QPair<bool, QString> removeWordFromSet(const QString&);
@@ -117,6 +112,7 @@ public:
     QMap<QString, TCommandLine*> mSubCommandLineMap;
     QMap<QString, TLabel*> mLabelMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
+    mutable QMap<QString, QSize> mCachedWindowSizes;
     TBuffer mClipboard;
     QFile mLogFile;
     QString mLogFileName;
@@ -168,4 +164,3 @@ private:
 };
 
 #endif // MUDLET_TMAINCONSOLE_H
-
