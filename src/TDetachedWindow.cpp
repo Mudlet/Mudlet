@@ -561,6 +561,10 @@ void TDetachedWindow::createMenus()
     mpActionToggleToolBar->setStatusTip(tr("Show or hide the toolbar"));
     connect(mpActionToggleToolBar, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
 
+    // Disable Qt's default context menu on the menu bar so users don't see
+    // a toolbar toggle that bypasses our visibility persistence
+    menuBar()->setContextMenuPolicy(Qt::PreventContextMenu);
+
     // Connect the Window menu's aboutToShow signal to update the window list
     connect(mpWindowMenu, &QMenu::aboutToShow, this, &TDetachedWindow::updateWindowMenu);
 }

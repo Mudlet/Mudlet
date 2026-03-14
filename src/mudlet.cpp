@@ -259,6 +259,10 @@ void mudlet::init()
     // Add context menu to toolbar for show/hide functionality
     mpMainToolBar->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(mpMainToolBar, &QWidget::customContextMenuRequested, this, &mudlet::slot_showMainToolBarContextMenu);
+
+    // Disable Qt's default context menu on the menu bar so users don't see
+    // a toolbar toggle that bypasses our visibility persistence
+    menuBar()->setContextMenuPolicy(Qt::PreventContextMenu);
     addToolBarBreak();
     auto frame = new QWidget(this);
     setCentralWidget(frame);
@@ -2799,6 +2803,13 @@ void mudlet::readLateSettings(const QSettings& settings)
     // it is suggested Mudlet 4.x:
     setMenuBarVisibility(static_cast<enums::controlsVisibilityFlag>(settings.value("menuBarVisibility", static_cast<int>(enums::visibleAlways)).toInt()));
     setToolBarVisibility(static_cast<enums::controlsVisibilityFlag>(settings.value("toolBarVisibility", static_cast<int>(enums::visibleNever)).toInt()));
+
+    // Prevent a lockout where both menu bar and toolbar are hidden, leaving
+    // the user with no way to access settings on next startup
+    if (mMenuBarVisibility == enums::visibleNever && mToolbarVisibility == enums::visibleNever) {
+        setToolBarVisibility(enums::visibleOnlyWithoutLoadedProfile);
+    }
+
     mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
 
     mShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
