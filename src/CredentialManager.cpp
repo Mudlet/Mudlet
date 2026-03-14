@@ -424,7 +424,6 @@ void CredentialManager::attemptOldFormatMigration(const QString& service, const 
                 if (migrateJob->error() == QKeychain::NoError) {
                     qDebug() << "CredentialManager: Migration to new format successful, cleaning up old entry";
 
-                    // Delete old format entry
                     auto* cleanupJob = new QKeychain::DeletePasswordJob(service);
                     cleanupJob->setKey(account); // Old format key
                     cleanupJob->setAutoDelete(true);
@@ -447,7 +446,8 @@ void CredentialManager::attemptOldFormatMigration(const QString& service, const 
         } else {
             qDebug() << "CredentialManager: Old format not found, trying other fallbacks";
             // Continue with existing legacy format checks
-            if (account == "character") {
+            // The legacy "Mudlet profile" keychain format was only used for character and password keys
+            if (account == "character" || account == "password") {
                 attemptLegacyKeychainMigration(profileName, account, callback);
             } else {
                 fallbackFileRetrieval(profileName, account, callback);
@@ -711,9 +711,10 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                     qDebug() << "CredentialManager:" << errorContext << ", trying fallback storage";
 
                     // Try old format first (before Windows keychain fix), then legacy formats
-                    // Clear callback to prevent it being called twice (the migration function will call it)
+                    // Clear state to prevent callback being called twice and keep member state consistent
                     auto originalCallback = mCurrentRetrievalCallback;
                     mCurrentRetrievalCallback = nullptr;
+                    mCurrentJob = nullptr;
                     attemptOldFormatMigration(service, account, profileName, originalCallback);
                     readJob->deleteLater();
                     return;
