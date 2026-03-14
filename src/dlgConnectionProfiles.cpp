@@ -815,7 +815,11 @@ void dlgConnectionProfiles::slot_addProfile()
 {
     profile_name_entry->setReadOnly(false);
     // while normally handled by fillout_form, due to it's asynchronous nature it is better UX to reset it here
-    character_password_entry->setText(QString());
+    // Block signals to prevent triggering password save for the previously selected profile
+    {
+        const QSignalBlocker blocker(character_password_entry);
+        character_password_entry->setText(QString());
+    }
     fillout_form();
     welcome_message->hide();
 
