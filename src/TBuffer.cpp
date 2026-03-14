@@ -107,12 +107,6 @@ TChar::TChar(const TChar& copy)
 , mFlags(copy.mFlags)
 , mIsSelected(false)
 , mLinkIndex(copy.mLinkIndex)
-, mUnderlineColor(copy.mUnderlineColor)
-, mOverlineColor(copy.mOverlineColor)
-, mStrikeoutColor(copy.mStrikeoutColor)
-, mHasCustomUnderlineColor(copy.mHasCustomUnderlineColor)
-, mHasCustomOverlineColor(copy.mHasCustomOverlineColor)
-, mHasCustomStrikeoutColor(copy.mHasCustomStrikeoutColor)
 {
 }
 
@@ -1198,15 +1192,6 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 if (effectiveStyling.isStrikeOut) {
                     c.mFlags |= TChar::StrikeOut;
                 }
-                if (effectiveStyling.hasUnderlineColor && effectiveStyling.isUnderlined) {
-                    c.setUnderlineColor(effectiveStyling.underlineColor);
-                }
-                if (effectiveStyling.hasOverlineColor && effectiveStyling.isOverlined) {
-                    c.setOverlineColor(effectiveStyling.overlineColor);
-                }
-                if (effectiveStyling.hasStrikeoutColor && effectiveStyling.isStrikeOut) {
-                    c.setStrikeoutColor(effectiveStyling.strikeoutColor);
-                }
             }
 
             // Only re-apply base styling if effective pseudo-class styling is not present
@@ -1238,18 +1223,6 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
                 if (mCurrentHyperlinkStyling.isStrikeOut) {
                     c.mFlags |= TChar::StrikeOut;
-                }
-
-                if (mCurrentHyperlinkStyling.hasUnderlineColor && mCurrentHyperlinkStyling.isUnderlined) {
-                    c.setUnderlineColor(mCurrentHyperlinkStyling.underlineColor);
-                }
-
-                if (mCurrentHyperlinkStyling.hasOverlineColor && mCurrentHyperlinkStyling.isOverlined) {
-                    c.setOverlineColor(mCurrentHyperlinkStyling.overlineColor);
-                }
-
-                if (mCurrentHyperlinkStyling.hasStrikeoutColor && mCurrentHyperlinkStyling.isStrikeOut) {
-                    c.setStrikeoutColor(mCurrentHyperlinkStyling.strikeoutColor);
                 }
 
                 if (mCurrentHyperlinkStyling.isBold) {
@@ -7038,12 +7011,6 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                     tchar.mBgColor = originalChar.mBgColor;
                     tchar.mFlags = originalChar.mFlags; // Restore ALL ANSI formatting flags including decorations
 
-                    // Clear any custom decoration colors that were applied by pseudo-classes
-                    // ANSI doesn't support custom decoration colors, so we clear them when restoring ANSI base
-                    tchar.clearCustomUnderlineColor();
-                    tchar.clearCustomOverlineColor();
-                    tchar.clearCustomStrikeoutColor();
-
                     // DON'T continue here - let the pseudo-class styling below override the ANSI base
                     // This allows e.g. :visited{color:#bb66dd} to work with ANSI base formatting
                 }
@@ -7105,17 +7072,6 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                     tchar.mFlags |= TChar::StrikeOut;
                 } else {
                     tchar.mFlags &= ~TChar::StrikeOut;
-                }
-
-                // Apply decoration colors
-                if (effectiveStyling.hasUnderlineColor && effectiveStyling.isUnderlined) {
-                    tchar.setUnderlineColor(effectiveStyling.underlineColor);
-                }
-                if (effectiveStyling.hasOverlineColor && effectiveStyling.isOverlined) {
-                    tchar.setOverlineColor(effectiveStyling.overlineColor);
-                }
-                if (effectiveStyling.hasStrikeoutColor && effectiveStyling.isStrikeOut) {
-                    tchar.setStrikeoutColor(effectiveStyling.strikeoutColor);
                 }
 
                 // Update bold and italic

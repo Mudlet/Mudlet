@@ -874,9 +874,7 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
         if (mEnableBlinkText) {
             const bool isFastBlink = attributes & TChar::FastBlink;
             auto pMudlet = mudlet::self();
-            const bool isVisible = pMudlet
-                ? (isFastBlink ? pMudlet->fastBlinkState() : pMudlet->slowBlinkState())
-                : true;
+            const bool isVisible = pMudlet ? (isFastBlink ? pMudlet->fastBlinkState() : pMudlet->slowBlinkState()) : true;
             if (!isVisible) {
                 if (!textRect.isNull()) {
                     drawCustomDecorations(painter, fgColor, textRect, charStyle);
@@ -892,17 +890,18 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     const bool isStrikeOut = attributes & TChar::StrikeOut;
     const bool isUnderline = attributes & TChar::Underline;
 
-    // Check for advanced underline styles or custom decoration colors
+    // Check for advanced underline styles
     const bool isUnderlineWavy = attributes & TChar::UnderlineWavy;
     const bool isUnderlineDotted = attributes & TChar::UnderlineDotted;
     const bool isUnderlineDashed = attributes & TChar::UnderlineDashed;
     const bool hasAdvancedUnderline = isUnderlineWavy || isUnderlineDotted || isUnderlineDashed;
 
-    // If we have advanced underline styles or custom decoration colors, disable Qt's built-in decorations
-    // and draw them manually later
-    const bool useQtUnderline = isUnderline && !hasAdvancedUnderline && !charStyle.hasCustomUnderlineColor();
-    const bool useQtOverline = isOverline && !charStyle.hasCustomOverlineColor();
-    const bool useQtStrikeOut = isStrikeOut && !charStyle.hasCustomStrikeoutColor();
+    // For linked characters, we draw decorations manually to support custom colors from TLinkStore
+    // For non-linked characters, we can use Qt's built-in decorations
+    const bool hasLink = charStyle.linkIndex() > 0;
+    const bool useQtUnderline = isUnderline && !hasAdvancedUnderline && !hasLink;
+    const bool useQtOverline = isOverline && !hasLink;
+    const bool useQtStrikeOut = isStrikeOut && !hasLink;
 
     // const bool isConcealed = attributes & TChar::Concealed;
     // const int altFontIndex = charStyle.alternateFont();
@@ -941,15 +940,44 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
     int strikeoutY = textRect.top() + textRect.height() / 2;
     int lineWidth = 1;
 
+    // Look up decoration colors from TLinkStore if this character has a link
+    const int linkIndex = charStyle.linkIndex();
+    bool hasUnderlineColor = false;
+    bool hasOverlineColor = false;
+    bool hasStrikeoutColor = false;
+    QColor underlineColor = defaultColor;
+    QColor overlineColor = defaultColor;
+    QColor strikeoutColor = defaultColor;
+
+    if (linkIndex > 0 && mpBuffer->mLinkStore.hasStyling(linkIndex)) {
+        Mudlet::HyperlinkStyling styling = mpBuffer->mLinkStore.getStyling(linkIndex);
+        Mudlet::HyperlinkStyling::StateStyle effectiveStyle = styling.getEffectiveStyle();
+
+        if (effectiveStyle.hasUnderlineColor) {
+            underlineColor = effectiveStyle.underlineColor;
+            hasUnderlineColor = true;
+        }
+
+        if (effectiveStyle.hasOverlineColor) {
+            overlineColor = effectiveStyle.overlineColor;
+            hasOverlineColor = true;
+        }
+
+        if (effectiveStyle.hasStrikeoutColor) {
+            strikeoutColor = effectiveStyle.strikeoutColor;
+            hasStrikeoutColor = true;
+        }
+    }
+
     // Draw underline decorations
     if (attributes & TChar::Underline) {
-        QColor underlineColor = charStyle.hasCustomUnderlineColor() ? charStyle.underlineColor() : defaultColor;
         QPen pen(underlineColor);
         pen.setWidth(lineWidth);
 
         bool isWavy = attributes & TChar::UnderlineWavy;
         bool isDotted = attributes & TChar::UnderlineDotted;
         bool isDashed = attributes & TChar::UnderlineDashed;
+        bool isLinked = linkIndex > 0;
 
         if (isWavy) {
             // Draw wavy underline
@@ -985,8 +1013,8 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
             painter.drawLine(textRect.left(), underlineY, textRect.right(), underlineY);
 
         } else {
-            // Solid underline (only draw if we have custom color or advanced style)
-            if (charStyle.hasCustomUnderlineColor() || isWavy || isDotted || isDashed) {
+            // Solid underline - draw for linked characters (Qt didn't draw them) or if we have custom color
+            if (isLinked || hasUnderlineColor) {
                 pen.setStyle(Qt::SolidLine);
                 painter.setPen(pen);
                 painter.drawLine(textRect.left(), underlineY, textRect.right(), underlineY);
@@ -994,9 +1022,8 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
         }
     }
 
-    // Draw overline decorations
-    if (attributes & TChar::Overline) {
-        QColor overlineColor = charStyle.hasCustomOverlineColor() ? charStyle.overlineColor() : defaultColor;
+    // Draw overline decorations (only for linked characters since Qt draws them for non-linked)
+    if ((attributes & TChar::Overline) && linkIndex > 0) {
         QPen pen(overlineColor);
         pen.setWidth(lineWidth);
         pen.setStyle(Qt::SolidLine);
@@ -1004,9 +1031,8 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
         painter.drawLine(textRect.left(), overlineY, textRect.right(), overlineY);
     }
 
-    // Draw strikethrough decorations
-    if (attributes & TChar::StrikeOut) {
-        QColor strikeoutColor = charStyle.hasCustomStrikeoutColor() ? charStyle.strikeoutColor() : defaultColor;
+    // Draw strikethrough decorations (only for linked characters since Qt draws them for non-linked)
+    if ((attributes & TChar::StrikeOut) && linkIndex > 0) {
         QPen pen(strikeoutColor);
         pen.setWidth(lineWidth);
         pen.setStyle(Qt::SolidLine);
