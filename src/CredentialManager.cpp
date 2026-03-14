@@ -320,8 +320,19 @@ void CredentialManager::attemptCollidingMigration(const QString& profileName, co
             // Preserving the entry allows users to switch back to those versions
 #ifdef APP_VERSION
             const QString currentVersion = QString(APP_VERSION);
-            const QVersionNumber appVersion = QVersionNumber::fromString(currentVersion);
+            QVersionNumber appVersion = QVersionNumber::fromString(currentVersion);
             const QVersionNumber collidingFormatVersion = QVersionNumber(4, 20, 1);
+
+            // Dev/test/PTB builds represent the "next release", so bump version for comparison
+            QFile buildFile(qsl(":/app-build.txt"));
+
+            if (buildFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                const QString buildSuffix = QString::fromUtf8(buildFile.readAll()).trimmed();
+
+                if (buildSuffix.startsWith(qsl("-dev")) || buildSuffix.startsWith(qsl("-test")) || buildSuffix.startsWith(qsl("-ptb"))) {
+                    appVersion = QVersionNumber(appVersion.majorVersion(), appVersion.minorVersion(), appVersion.microVersion() + 1);
+                }
+            }
 
             if (appVersion > collidingFormatVersion) {
                 removeCredential(legacyService, key, profileName, [](bool, const QString&) {});
