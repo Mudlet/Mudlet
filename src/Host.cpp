@@ -34,6 +34,8 @@
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
 #include "LuaInterface.h"
+#include "MMCP.h"
+#include "MMCPServer.h"
 #include "mudlet.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
@@ -232,6 +234,21 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpAuth(new GMCPAuthenticator(this))
 , mpDockableMapWidget()
 , mTimerDebugOutputSuppressionInterval(QTime())
+, mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
+, mBufferSearchOptions(TConsole::SearchOption::SearchOptionNone)
+, mpDlgIRC(nullptr)
+, mMMCPServer(nullptr)
+, mpDlgProfilePreferences(nullptr)
+, mMMCPChatPort(csDefaultMMCPHostPort)
+, mMMCPChatPrefix(qsl("<CHAT>"))
+, mMMCPAutostartServer(false)
+, mMMCPAllowPeekRequests(false)
+, mMMCPPrefixEmotes(false)
+, mMMCPAddChatMessageNewline(true)
+, mMMCPAutoAcceptCalls(true)
+, mMMCPShowSnoopInMainConsole(true)
+, mTutorialForCompactLineAlreadyShown(false)
+, mLuaInterface(nullptr)
 , mTriggerUnit(this)
 , mTimerUnit(this)
 , mScriptUnit(this)
@@ -984,8 +1001,8 @@ void Host::waitForProfileSave()
     int iterations = 0;
     while (currentlySavingProfile()) {
         if (++iterations > 1000) {
-            qWarning().nospace() << "Host::waitForProfileSave() WARNING - save did not complete after 1000 event loop iterations. "
-                                 << "State: mWritingHostAndModules=" << mWritingHostAndModules << ", writers pending=" << writers.size() << ". Continuing without waiting.";
+            qWarning().nospace() << "Host::waitForProfileSave() WARNING - save did not complete after 1000 event loop iterations. " << "State: mWritingHostAndModules=" << mWritingHostAndModules
+                                 << ", writers pending=" << writers.size() << ". Continuing without waiting.";
             break;
         }
         qApp->processEvents();
@@ -2663,6 +2680,14 @@ void Host::refreshPackageFonts()
     }
 }
 
+void Host::setEnableBlinkText(const bool enabled)
+{
+    if (mEnableBlinkText != enabled) {
+        mEnableBlinkText = enabled;
+        emit signal_changeEnableBlinkText(enabled);
+    }
+}
+
 void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
 {
     bool localState = false;
@@ -3015,6 +3040,74 @@ bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscri
         return false;
     }
     return true;
+}
+
+void Host::initMMCPServer()
+{
+    if (mMMCPServer) {
+        return;
+    }
+
+    mMMCPServer = new MMCPServer(this);
+}
+
+/**
+ * Get the current chat name from the MMCPServer if it exists, otherwise
+ * read it from our saved profile information
+ * There is also the mMMCPChatname read from the xml package, where should we
+ * use that?
+ */
+QString Host::getMMCPChatName()
+{
+    return mMMCPChatName;
+}
+
+void Host::setMMCPChatName(const QString& name, bool shouldSignal)
+{
+    mMMCPChatName = name;
+    if (shouldSignal) {
+        emit mmcpChatNameChanged(name);
+    }
+}
+
+quint16 Host::getMMCPPort()
+{
+    return mMMCPChatPort;
+}
+
+QString Host::getMMCPChatPrefix()
+{
+    return mMMCPChatPrefix;
+}
+
+bool Host::getMMCPAutoStartServer()
+{
+    return mMMCPAutostartServer;
+}
+
+bool Host::getMMCPAllowPeekRequests()
+{
+    return mMMCPAllowPeekRequests;
+}
+
+bool Host::getMMCPPrefixEmotes()
+{
+    return mMMCPPrefixEmotes;
+}
+
+bool Host::getMMCPAddChatMessageNewline()
+{
+    return mMMCPAddChatMessageNewline;
+}
+
+bool Host::getMMCPAutoAcceptCalls()
+{
+    return mMMCPAutoAcceptCalls;
+}
+
+bool Host::getMMCPShowSnoopInMainConsole()
+{
+    return mMMCPShowSnoopInMainConsole;
 }
 
 QString Host::getSpellDic()
@@ -4843,6 +4936,18 @@ void Host::setBorders(QMargins borders)
     QResizeEvent event(s, s);
     QApplication::sendEvent(mpConsole, &event);
     mpConsole->raiseMudletSysWindowResizeEvent(x, y);
+}
+
+void Host::setUserBorders(const QMargins borders)
+{
+    mUserBorders = borders;
+    setBorders(mUserBorders + mMxpBorders);
+}
+
+void Host::setMxpBorders(const QMargins borders)
+{
+    mMxpBorders = borders;
+    setBorders(mUserBorders + mMxpBorders);
 }
 
 void Host::setCommandLineHistorySaveSize(const int lines)
