@@ -396,6 +396,70 @@ void CredentialManager::fallbackFileRetrieval(const QString& profileName, const 
     }
 }
 
+void CredentialManager::attemptOldFormatMigration(const QString& service, const QString& account, const QString& profileName, CredentialRetrievalCallback callback)
+{
+    // Before the Windows keychain fix, credentials were stored with key=account instead of key=service
+    // On Windows, only setKey() value is used as the TargetName, causing all profiles to share "character"
+    // This function tries to read from the old format and migrate to the new format
+    qDebug() << "CredentialManager: Checking for old format (key=account) for service:" << service;
+
+    auto* oldFormatJob = new QKeychain::ReadPasswordJob(service, this);
+    oldFormatJob->setKey(account); // Old format used account as key
+    oldFormatJob->setAutoDelete(false);
+
+    connect(oldFormatJob, &QKeychain::ReadPasswordJob::finished, this, [this, oldFormatJob, service, account, profileName, callback]() {
+        bool found = (oldFormatJob->error() == QKeychain::NoError);
+        QString password = found ? oldFormatJob->textData() : QString();
+
+        if (found && !password.isEmpty()) {
+            qDebug() << "CredentialManager: Found password in old format, migrating to new format";
+
+            // Store in new format (key=service) for future use
+            auto* migrateJob = new QKeychain::WritePasswordJob(service, this);
+            migrateJob->setKey(service); // New format
+            migrateJob->setTextData(password);
+            migrateJob->setAutoDelete(false);
+
+            connect(migrateJob, &QKeychain::WritePasswordJob::finished, this, [migrateJob, service, account, password, callback]() {
+                if (migrateJob->error() == QKeychain::NoError) {
+                    qDebug() << "CredentialManager: Migration to new format successful, cleaning up old entry";
+
+                    // Delete old format entry
+                    auto* cleanupJob = new QKeychain::DeletePasswordJob(service);
+                    cleanupJob->setKey(account); // Old format key
+                    cleanupJob->setAutoDelete(true);
+                    connect(cleanupJob, &QKeychain::DeletePasswordJob::finished, cleanupJob, [service]() {
+                        qDebug() << "CredentialManager: Old format entry cleaned up for service:" << service;
+                    });
+                    cleanupJob->start();
+                } else {
+                    qWarning() << "CredentialManager: Migration to new format failed:" << migrateJob->errorString();
+                }
+
+                // Return password regardless of migration success
+                if (callback) {
+                    callback(true, password, QString());
+                }
+                migrateJob->deleteLater();
+            });
+
+            migrateJob->start();
+        } else {
+            qDebug() << "CredentialManager: Old format not found, trying other fallbacks";
+            // Continue with existing legacy format checks
+            if (account == "character") {
+                attemptLegacyKeychainMigration(profileName, account, callback);
+            } else {
+                fallbackFileRetrieval(profileName, account, callback);
+            }
+        }
+
+        oldFormatJob->deleteLater();
+    });
+
+    oldFormatJob->start();
+}
+
 void CredentialManager::removePassword(const QString& profileName, const QString& key, CredentialCallback callback)
 {
     if (profileName.isEmpty() || key.isEmpty()) {
@@ -496,7 +560,9 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
     cleanupCurrentOperation();
 
     auto* writeJob = new QKeychain::WritePasswordJob(service, this);
-    writeJob->setKey(account);
+    // Use service as the key - on Windows, only setKey() value is used as the credential target,
+    // so using account ("character") would cause all profiles to share the same credential
+    writeJob->setKey(service);
 
     // Store password directly in keychain (keychain handles encryption)
     writeJob->setTextData(password);
@@ -584,7 +650,9 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
     cleanupCurrentOperation();
 
     auto* readJob = new QKeychain::ReadPasswordJob(service, this);
-    readJob->setKey(account);
+    // Use service as the key - on Windows, only setKey() value is used as the credential target,
+    // so using account ("character") would cause all profiles to share the same credential
+    readJob->setKey(service);
     readJob->setAutoDelete(false);
 
     mCurrentJob = readJob;
@@ -642,113 +710,13 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                     }
                     qDebug() << "CredentialManager:" << errorContext << ", trying fallback storage";
 
-                    // Try legacy keychain format if this is a character password and service follows new format
-                    if (account == "character" && service.startsWith("Mudlet-") && service.endsWith("-character")) {
-                        // Extract profile name from service (format: "Mudlet-ProfileName-character")
-                        QString profileName = service.mid(7); // Remove "Mudlet-" prefix
-                        profileName.chop(10);                 // Remove "-character" suffix
-
-                        qDebug() << "CredentialManager: Checking for legacy keychain format for profile" << profileName;
-
-                        // Capture the error string now while readJob is still valid
-                        QString keychainError = readJob->errorString();
-
-                        // Check legacy keychain format asynchronously
-                        auto* legacyReadJob = new QKeychain::ReadPasswordJob("Mudlet profile", this);
-                        legacyReadJob->setKey(profileName);
-                        legacyReadJob->setAutoDelete(false);
-
-                        // Store the current callback and clear it to prevent double-calling
-                        auto originalCallback = mCurrentRetrievalCallback;
-                        mCurrentRetrievalCallback = nullptr;
-
-                        connect(legacyReadJob, &QKeychain::ReadPasswordJob::finished, this, [this, legacyReadJob, profileName, service, account, originalCallback, keychainError]() {
-                            bool legacyFound = (legacyReadJob->error() == QKeychain::NoError);
-                            QString legacyPassword = legacyFound ? legacyReadJob->textData() : QString();
-
-                            if (legacyFound && !legacyPassword.isEmpty()) {
-                                qDebug() << "CredentialManager: Found legacy password for profile" << profileName;
-
-                                // Migrate to new format asynchronously
-                                qDebug() << "CredentialManager: Migrating legacy password to new format for profile" << profileName;
-
-                                // Extract original profile name and key from service name for migration
-                                QString originalProfileName = service.mid(7); // Remove "Mudlet-" prefix
-                                originalProfileName.chop(10);                 // Remove "-character" suffix
-
-                                // Store in new format
-                                auto* migrationManager = new CredentialManager();
-                                migrationManager->storePassword(originalProfileName,
-                                                                account,
-                                                                legacyPassword,
-                                                                [migrationManager, profileName, originalCallback, legacyPassword](bool migrationSuccess, const QString& migrationError) {
-                                                                    if (migrationSuccess) {
-                                                                        qDebug() << "CredentialManager: Legacy migration successful for profile" << profileName;
-
-                                // Clean up legacy entry if migration succeeded
-#ifdef APP_VERSION
-                                                                        const QString currentVersion = QString(APP_VERSION);
-                                                                        const QVersionNumber appVersion = QVersionNumber::fromString(currentVersion);
-                                                                        const QVersionNumber secureStorageVersion = QVersionNumber(4, 20, 0);
-
-                                                                        if (appVersion >= secureStorageVersion) {
-                                                                            // Clean up legacy entry asynchronously
-                                                                            auto* cleanupManager = new CredentialManager();
-                                                                            cleanupManager->deleteLegacyKeychainEntry(profileName);
-                                                                            cleanupManager->deleteLater();
-                                                                            qDebug() << "CredentialManager: Legacy cleanup initiated for version" << currentVersion;
-                                                                        } else {
-                                                                            qDebug() << "CredentialManager: Legacy cleanup skipped for version" << currentVersion;
-                                                                        }
-#else
-                                    qDebug() << "CredentialManager: Legacy cleanup skipped (test mode)";
-#endif
-                                                                    } else {
-                                                                        qWarning() << "CredentialManager: Legacy migration failed for profile" << profileName << ":" << migrationError;
-                                                                    }
-
-                                                                    // Return the legacy password regardless of migration result
-                                                                    if (originalCallback) {
-                                                                        originalCallback(true, legacyPassword, QString());
-                                                                    }
-
-                                                                    migrationManager->deleteLater();
-                                                                });
-                            } else {
-                                qDebug() << "CredentialManager: No legacy password found for profile" << profileName;
-
-                                QString filePassword = retrieveCredentialFromFile(profileName, account);
-                                bool fileSuccess = !filePassword.isNull();
-                                QString finalError = fileSuccess ? QString() : qsl("Both keychain and encrypted file storage failed for credentials. Keychain: %1").arg(keychainError);
-
-                                if (fileSuccess) {
-                                    qDebug() << "CredentialManager: Retrieved password from encrypted file storage";
-                                }
-
-                                if (originalCallback) {
-                                    originalCallback(fileSuccess, filePassword, finalError);
-                                }
-                            }
-
-                            legacyReadJob->deleteLater();
-                        });
-
-                        legacyReadJob->start();
-
-                        // Early return to avoid the file storage check below
-                        readJob->deleteLater();
-                        return;
-                    }
-
-                    password = retrieveCredentialFromFile(profileName, account);
-
-                    if (!password.isNull()) {
-                        success = true;
-                        errorMessage = QString(); // Clear error message on successful fallback
-                        qDebug() << "CredentialManager: Retrieved password from encrypted file storage";
-                    } else {
-                        errorMessage = qsl("Both keychain and encrypted file storage failed for credentials. Keychain: %1").arg(readJob->errorString());
-                    }
+                    // Try old format first (before Windows keychain fix), then legacy formats
+                    // Clear callback to prevent it being called twice (the migration function will call it)
+                    auto originalCallback = mCurrentRetrievalCallback;
+                    mCurrentRetrievalCallback = nullptr;
+                    attemptOldFormatMigration(service, account, profileName, originalCallback);
+                    readJob->deleteLater();
+                    return;
                 }
 
                 // Final validity check before calling callback
@@ -792,7 +760,9 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
     cleanupCurrentOperation();
 
     auto* deleteJob = new QKeychain::DeletePasswordJob(service, this);
-    deleteJob->setKey(account);
+    // Use service as the key - on Windows, only setKey() value is used as the credential target,
+    // so using account ("character") would cause all profiles to share the same credential
+    deleteJob->setKey(service);
     deleteJob->setAutoDelete(false);
 
     mCurrentJob = deleteJob;
