@@ -88,7 +88,7 @@ else()
 endif()
 
 # Set APP_VERSION
-set(APP_VERSION 4.20.0)
+set(APP_VERSION 4.20.1)
 
 # Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD or default
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
