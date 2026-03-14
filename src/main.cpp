@@ -1046,7 +1046,15 @@ int main(int argc, char* argv[])
     // click something in a parent process to the application when you are stuck
     // with some OS's choice of wait cursor - you might wish to temporarily disable
     // the earlier setOverrideCursor() line and this one.
-    return app->exec();
+    int result = app->exec();
+
+    // Explicitly delete QApplication BEFORE main() returns to ensure Qt cleanup
+    // happens before __cxa_finalize_ranges runs static destructors. This prevents
+    // crashes in QThreadStorageData::finish where thread-local storage cleanup
+    // can encounter memory that was freed during static destructor ordering issues.
+    delete app;
+
+    return result;
 }
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
