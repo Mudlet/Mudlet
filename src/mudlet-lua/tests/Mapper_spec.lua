@@ -151,12 +151,4 @@ describe("Tests map info functions", function()
     end)
   end)
 
-  describe("Tests getConfig mapInfo", function()
-    it("should return a table of enabled contributors", function()
-      enableMapInfo("Short")
-      local enabled = getConfig("mapInfo")
-      assert.is_table(enabled)
-    end)
-  end)
-
 end)

@@ -7804,16 +7804,6 @@ int TLuaInterpreter::getConfig(lua_State* L)
              [&]() {
                  lua_pushboolean(L, host.mMapperShowRoomBorders);
              }},
-            {qsl("mapInfo"),
-             [&]() {
-                 const auto& contributors = host.mMapInfoContributors;
-                 lua_createtable(L, contributors.size(), 0);
-                 int i = 0;
-                 for (const auto& name : contributors) {
-                     lua_pushstring(L, name.toUtf8().constData());
-                     lua_rawseti(L, -2, ++i);
-                 }
-             }},
             {qsl("mapInfoColor"),
              [&]() {
                  lua_newtable(L);
