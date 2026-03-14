@@ -256,13 +256,7 @@ void mudlet::init()
     addToolBar(mpMainToolBar);
     mpMainToolBar->setMovable(false);
 
-    // Add context menu to toolbar for show/hide functionality
-    mpMainToolBar->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(mpMainToolBar, &QWidget::customContextMenuRequested, this, &mudlet::slot_showMainToolBarContextMenu);
 
-    // Disable Qt's default context menu on the menu bar so users don't see
-    // a toolbar toggle that bypasses our visibility persistence
-    menuBar()->setContextMenuPolicy(Qt::PreventContextMenu);
     addToolBarBreak();
     auto frame = new QWidget(this);
     setCentralWidget(frame);
@@ -562,7 +556,7 @@ void mudlet::init()
     connect(mpActionVariables.data(), &QAction::triggered, this, &mudlet::slot_showVariableDialog);
     connect(mpActionButtons.data(), &QAction::triggered, this, &mudlet::slot_showActionDialog);
     connect(mpActionOptions.data(), &QAction::triggered, this, &mudlet::slot_showPreferencesDialog);
-    connect(mpActionToggleMainToolBar.data(), &QAction::triggered, this, &mudlet::slot_toggleMainToolBar);
+    connect(mpActionToggleMainToolBar.data(), &QAction::triggered, this, &mudlet::slot_toolbarToggleActionTriggered);
     connect(mpActionAbout.data(), &QAction::triggered, this, &mudlet::slot_showAboutDialog);
     connect(mpActionMultiView.data(), &QAction::triggered, this, &mudlet::slot_multiView);
     connect(mpActionReconnect.data(), &QAction::triggered, this, &mudlet::slot_reconnect);
@@ -724,6 +718,7 @@ void mudlet::init()
     readLateSettings(*mpSettings);
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
+    connect(mpMainToolBar->toggleViewAction(), &QAction::triggered, this, &mudlet::slot_toolbarToggleActionTriggered);
 
     dactionToggleFullScreen->setToolTip(utils::richText(tr("Toggle Full Screen View")));
 
@@ -2949,6 +2944,17 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
     }
 }
 
+void mudlet::slot_toolbarToggleActionTriggered(bool checked)
+{
+    if (!checked && mMenuBarVisibility == enums::visibleNever) {
+        // Prevent lockout: don't hide the toolbar when the menu bar is hidden
+        mpMainToolBar->toggleViewAction()->setChecked(true);
+        return;
+    }
+
+    synchronizeToolBarVisibility(checked);
+}
+
 void mudlet::adjustToolBarVisibility()
 {
     const int hostCount = mHostManager.getHostCount();
@@ -4741,32 +4747,6 @@ void mudlet::slot_windowStateChanged(const Qt::WindowStates newState)
     }
 }
 
-void mudlet::slot_toggleMainToolBar()
-{
-    // Toggle the toolbar visibility
-    enums::controlsVisibility currentState = toolBarVisibility();
-    bool newVisibility = (currentState == enums::visibleNever);
-
-    // Synchronize toolbar visibility across all windows
-    synchronizeToolBarVisibility(newVisibility);
-}
-
-void mudlet::slot_showMainToolBarContextMenu(const QPoint& position)
-{
-    QMenu contextMenu(this);
-
-    // Create a copy of the toggle action for the context menu
-    QAction* toggleAction = new QAction(tr("Profile Toolbar"), &contextMenu);
-    toggleAction->setCheckable(true);
-    toggleAction->setChecked(mpMainToolBar->isVisible());
-    connect(toggleAction, &QAction::triggered, this, &mudlet::slot_toggleMainToolBar);
-
-    contextMenu.addAction(toggleAction);
-
-    // Show the context menu at the global position
-    contextMenu.exec(mpMainToolBar->mapToGlobal(position));
-}
-
 void mudlet::synchronizeToolBarVisibility(bool visible)
 {
     // Update main window toolbar
@@ -4820,10 +4800,15 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
     }
 
     // Add toolbar visibility toggle
-    QAction* toggleToolbarAction = new QAction(tr("Profile Toolbar"), &contextMenu);
+    QAction* toggleToolbarAction = new QAction(tr("Main Toolbar"), &contextMenu);
     toggleToolbarAction->setCheckable(true);
     toggleToolbarAction->setChecked(mpMainToolBar->isVisible());
-    connect(toggleToolbarAction, &QAction::triggered, this, &mudlet::slot_toggleMainToolBar);
+    connect(toggleToolbarAction, &QAction::triggered, this, [this](bool checked) {
+        if (!checked && mMenuBarVisibility == enums::visibleNever) {
+            return;
+        }
+        synchronizeToolBarVisibility(checked);
+    });
 
     contextMenu.addAction(toggleToolbarAction);
 

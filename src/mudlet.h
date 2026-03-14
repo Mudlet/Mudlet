@@ -428,6 +428,7 @@ public slots:
     void slot_connectionDialogueFinished(const QString&, bool);
     void slot_disconnect();
     void slot_handleToolbarVisibilityChanged(bool);
+    void slot_toolbarToggleActionTriggered(bool);
 #if defined(INCLUDE_UPDATER)
     void slot_manualUpdateCheck();
     void slot_updateCheckFailed(const QString& error);
@@ -502,8 +503,6 @@ public slots:
     void setupPreferencesFocusRestoration(dlgProfilePreferences* pPreferences);
     void slot_showTimerDialog();
     void slot_showTabContextMenu(const QPoint& position);
-    void slot_toggleMainToolBar();
-    void slot_showMainToolBarContextMenu(const QPoint& position);
     void synchronizeToolBarVisibility(bool visible);
     void slot_showTriggerDialog();
     void slot_showVariableDialog();

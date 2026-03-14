@@ -766,7 +766,7 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
 
     // Add toolbar visibility toggle to the context menu
     //: This is an item in the context menu when clicked on a detached tab.
-    auto toolbarToggleAction = contextMenu.addAction(tr("Profile Toolbar"));
+    auto toolbarToggleAction = contextMenu.addAction(tr("Main Toolbar"));
     toolbarToggleAction->setCheckable(true);
     toolbarToggleAction->setChecked(mpToolBar && mpToolBar->isVisible());
     connect(toolbarToggleAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
@@ -831,10 +831,24 @@ void TDetachedWindow::createToolBar()
 {
     mpToolBar = new QToolBar(this);
     mpToolBar->setObjectName(qsl("detachedMainToolBar"));
-    mpToolBar->setWindowTitle(tr("Profile Toolbar"));
+    mpToolBar->setWindowTitle(tr("Main Toolbar"));
     addToolBar(mpToolBar);
     mpToolBar->setMovable(false);
     mpToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+
+    // Intercept the toggle action that Qt's default menu bar context menu uses,
+    // so we can persist visibility and prevent lockout
+    connect(mpToolBar->toggleViewAction(), &QAction::triggered, this, [this](bool checked) {
+        auto pMudlet = mudlet::self();
+        if (!pMudlet) {
+            return;
+        }
+        if (!checked && pMudlet->menuBarVisibility() == enums::visibleNever) {
+            mpToolBar->toggleViewAction()->setChecked(true);
+            return;
+        }
+        pMudlet->synchronizeToolBarVisibility(checked);
+    });
 
     // Reattach action - placed first in the toolbar for prominence
     //: This is an item in the toolbar of a detached Mudlet window. It will reattach the profile to the main Mudlet window.
@@ -1613,8 +1627,8 @@ void TDetachedWindow::slot_showDetachedToolBarContextMenu(const QPoint& position
 
     QMenu menu(this);
 
-    // Create "Profile Toolbar" toggle action
-    QAction* toolbarToggleAction = menu.addAction(tr("Profile Toolbar"));
+    // Create "Main Toolbar" toggle action
+    QAction* toolbarToggleAction = menu.addAction(tr("Main Toolbar"));
     toolbarToggleAction->setCheckable(true);
     toolbarToggleAction->setChecked(mpToolBar->isVisible());
     connect(toolbarToggleAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
