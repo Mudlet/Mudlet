@@ -170,6 +170,7 @@ jobs:
           libpulse-dev \
           libpugixml-dev \
           libsecret-1-dev \
+          libspeechd-dev \
           libsqlite3-dev \
           qtkeychain-qt6-dev \
           libxkbcommon-x11-0 \
