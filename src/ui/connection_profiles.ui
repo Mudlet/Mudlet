@@ -111,6 +111,19 @@
           </widget>
          </item>
          <item>
+          <widget class="QCheckBox" name="show_only_my_profiles">
+           <property name="text">
+            <string>Show my profiles only</string>
+           </property>
+           <property name="accessibleName">
+            <string>show my profiles only</string>
+           </property>
+           <property name="accessibleDescription">
+            <string>Hide default game profiles that have not been used yet</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QFrame" name="notificationArea">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -948,6 +961,7 @@
  </customwidgets>
  <tabstops>
   <tabstop>listWidget_profiles</tabstop>
+  <tabstop>show_only_my_profiles</tabstop>
   <tabstop>welcome_message</tabstop>
   <tabstop>profile_name_entry</tabstop>
   <tabstop>host_name_entry</tabstop>

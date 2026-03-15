@@ -37,6 +37,8 @@
 
 #include <QtConcurrent>
 #include <QtUiTools>
+#include <QAccessible>
+#include <QAccessibleAnnouncementEvent>
 #include <QColorDialog>
 #include <QDir>
 #include <QPointer>
@@ -302,6 +304,14 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mSearchTextTimer.setSingleShot(true);
     QCoreApplication::instance()->installEventFilter(this);
     connect(&mSearchTextTimer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_reenableAllProfileItems);
+
+    auto& settings = *mudlet::self()->mpSettings;
+    show_only_my_profiles->setChecked(settings.value(qsl("showOnlyMyProfiles"), false).toBool());
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    connect(show_only_my_profiles, &QCheckBox::checkStateChanged, this, &dlgConnectionProfiles::slot_toggleShowMyProfiles);
+#else
+    connect(show_only_my_profiles, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_toggleShowMyProfiles);
+#endif
 
     profile_history->view()->setTextElideMode(Qt::ElideNone);
 }
@@ -1299,10 +1309,14 @@ void dlgConnectionProfiles::fillout_form()
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
+    const bool showOnlyMyProfiles = show_only_my_profiles->isChecked();
     if (onlyShownPredefinedProfiles.isEmpty()) {
         const auto defaultGames = TGameDetails::keys();
         for (auto& game : defaultGames) {
             if (!deletedDefaultMuds.contains(game)) {
+                if (showOnlyMyProfiles && !mProfileList.contains(game, Qt::CaseInsensitive)) {
+                    continue;
+                }
                 pItem = new QListWidgetItem();
                 auto details = TGameDetails::findGame(game);
                 setupMudProfile(pItem, game, (*details).description, (*details).icon);
@@ -2195,6 +2209,22 @@ void dlgConnectionProfiles::clearNotificationArea()
     notificationAreaIconLabelError->hide();
     notificationAreaIconLabelInformation->hide();
     notificationAreaMessageBox->clear();
+}
+
+void dlgConnectionProfiles::slot_toggleShowMyProfiles(int state)
+{
+    Q_UNUSED(state);
+    auto& settings = *mudlet::self()->mpSettings;
+    settings.setValue(qsl("showOnlyMyProfiles"), show_only_my_profiles->isChecked());
+    fillout_form();
+
+    if (QAccessible::isActive()) {
+        //: Accessibility announcement when the profile filter checkbox is toggled, %n is the number of profiles shown
+        const QString announcement = tr("Showing %n profile(s)", "", listWidget_profiles->count());
+        QAccessibleAnnouncementEvent event(listWidget_profiles, announcement);
+        event.setPoliteness(QAccessible::AnnouncementPoliteness::Polite);
+        QAccessible::updateAccessibility(&event);
+    }
 }
 
 void dlgConnectionProfiles::slot_reenableAllProfileItems()
