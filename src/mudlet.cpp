@@ -2515,6 +2515,9 @@ bool mudlet::saveWindowLayout()
         if (!layoutFile.commit()) {
             qDebug() << "mudlet::saveWindowLayout: error saving window layout: " << layoutFile.errorString();
         }
+
+        saveFloatingDockGeometries();
+
         mHasSavedLayout = true;
         return true;
     }
@@ -2546,6 +2549,8 @@ bool mudlet::loadWindowLayout()
 
             const bool rv = restoreState(layoutData);
 
+            restoreFloatingDockGeometries();
+
             commitLayoutUpdates(true);
             mIsLoadingLayout = false;
 
@@ -2560,6 +2565,78 @@ void mudlet::commitLayoutUpdates(bool flush)
     for (auto pHost : mHostManager) {
         if (pHost->commitLayoutUpdates(flush)) {
             mHasSavedLayout = false;
+        }
+    }
+}
+
+void mudlet::saveFloatingDockGeometries()
+{
+    const QString geoFilePath = getMudletPath(enums::mainDataItemPath, qsl("windowLayoutGeometry.dat"));
+
+    QSaveFile geoFile(geoFilePath);
+    if (!geoFile.open(QIODevice::WriteOnly)) {
+        qDebug() << "mudlet::saveFloatingDockGeometries: error opening geometry file for writing";
+        return;
+    }
+
+    QDataStream ofs(&geoFile);
+    if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ofs.setVersion(scmQDataStreamFormat_5_12);
+    }
+
+    // Collect all floating dock widget geometries across all profiles
+    QMap<QString, QByteArray> geometries;
+    for (auto pHost : mHostManager) {
+        if (!pHost || !pHost->mpConsole) {
+            continue;
+        }
+        for (auto it = pHost->mpConsole->mDockWidgetMap.constBegin(); it != pHost->mpConsole->mDockWidgetMap.constEnd(); ++it) {
+            auto pDockWidget = it.value();
+            if (pDockWidget && pDockWidget->isFloating()) {
+                const QString key = qsl("%1/%2").arg(pHost->getName(), it.key());
+                geometries[key] = pDockWidget->saveGeometry();
+            }
+        }
+    }
+
+    ofs << geometries;
+
+    if (!geoFile.commit()) {
+        qDebug() << "mudlet::saveFloatingDockGeometries: error saving geometry file:" << geoFile.errorString();
+    }
+}
+
+void mudlet::restoreFloatingDockGeometries()
+{
+    const QString geoFilePath = getMudletPath(enums::mainDataItemPath, qsl("windowLayoutGeometry.dat"));
+
+    QFile geoFile(geoFilePath);
+    if (!geoFile.exists() || !geoFile.open(QIODevice::ReadOnly)) {
+        return;
+    }
+
+    QDataStream ifs(&geoFile);
+    if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(scmQDataStreamFormat_5_12);
+    }
+
+    QMap<QString, QByteArray> geometries;
+    ifs >> geometries;
+    geoFile.close();
+
+    for (auto pHost : mHostManager) {
+        if (!pHost || !pHost->mpConsole) {
+            continue;
+        }
+        for (auto it = pHost->mpConsole->mDockWidgetMap.constBegin(); it != pHost->mpConsole->mDockWidgetMap.constEnd(); ++it) {
+            auto pDockWidget = it.value();
+            if (!pDockWidget || !pDockWidget->isFloating()) {
+                continue;
+            }
+            const QString key = qsl("%1/%2").arg(pHost->getName(), it.key());
+            if (geometries.contains(key)) {
+                pDockWidget->restoreGeometry(geometries.value(key));
+            }
         }
     }
 }
