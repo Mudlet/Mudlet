@@ -2584,7 +2584,6 @@ void mudlet::saveFloatingDockGeometries()
         ofs.setVersion(scmQDataStreamFormat_5_12);
     }
 
-    // Collect all floating dock widget geometries across all profiles
     QMap<QString, QByteArray> geometries;
     for (auto pHost : mHostManager) {
         if (!pHost || !pHost->mpConsole) {
