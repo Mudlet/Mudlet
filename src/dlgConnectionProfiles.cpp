@@ -318,15 +318,17 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     QCoreApplication::instance()->installEventFilter(this);
     connect(&mSearchTextTimer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_reenableAllProfileItems);
 
+    connect(this, &QDialog::finished, this, [this]() {
+        if (mpProfileSplitter && mudlet::self() && mudlet::self()->mpSettings) {
+            mudlet::self()->mpSettings->setValue(qsl("connectionDialog/profileSplitterState"), mpProfileSplitter->saveState());
+        }
+    });
+
     profile_history->view()->setTextElideMode(Qt::ElideNone);
 }
 
 dlgConnectionProfiles::~dlgConnectionProfiles()
 {
-    if (mpProfileSplitter && mudlet::self() && mudlet::self()->mpSettings) {
-        mudlet::self()->mpSettings->setValue(qsl("connectionDialog/profileSplitterState"), mpProfileSplitter->saveState());
-    }
-
     if (mPasswordSaveTimer) {
         mPasswordSaveTimer->stop();
     }
@@ -337,6 +339,14 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
     mPendingProfileLoad.clear();
 
     QCoreApplication::instance()->removeEventFilter(this);
+}
+
+void dlgConnectionProfiles::closeEvent(QCloseEvent* event)
+{
+    if (mpProfileSplitter && mudlet::self() && mudlet::self()->mpSettings) {
+        mudlet::self()->mpSettings->setValue(qsl("connectionDialog/profileSplitterState"), mpProfileSplitter->saveState());
+    }
+    QDialog::closeEvent(event);
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it

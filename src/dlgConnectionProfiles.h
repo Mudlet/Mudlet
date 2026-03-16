@@ -92,6 +92,7 @@ public slots:
 
 
 protected:
+    void closeEvent(QCloseEvent* event) override;
     bool eventFilter(QObject*, QEvent*) override;
     void loadPasswordFromSettings(const QString& profile_name);
     void ensurePasswordLoadedThenConnect(bool alsoConnect);
