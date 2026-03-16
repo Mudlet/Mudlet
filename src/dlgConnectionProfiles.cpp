@@ -108,6 +108,12 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     setupProfileListWidget(listWidget_customProfiles);
     setupProfileListWidget(listWidget_defaultProfiles);
 
+    connect(mpProfileSplitter, &QSplitter::splitterMoved, this, [this]() {
+        if (mudlet::self() && mudlet::self()->mpSettings) {
+            mudlet::self()->mpSettings->setValue(qsl("connectionDialog/profileSplitterState"), mpProfileSplitter->saveState());
+        }
+    });
+
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
     connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
