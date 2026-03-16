@@ -25,10 +25,12 @@
 
 #include "ui_connection_profiles.h"
 #include <optional>
+#include <QListWidget>
 #include <QTimer>
 #include <QKeyEvent>
 
 class QDir;
+class QSplitter;
 
 namespace pugi {
 class xml_document;
@@ -48,7 +50,8 @@ public:
     QString readProfileData(const QString& profile, const QString& item) const;
     void accept() override;
     QList<QListWidgetItem*> findData(const QListWidget& listWidget, const QVariant& what, const int role = Qt::UserRole) const;
-    QList<int> findProfilesBeginningWith(const QString&) const;
+    QList<QListWidgetItem*> findDataInAllProfiles(const QVariant& what, int role = Qt::UserRole) const;
+    QList<QListWidgetItem*> findProfilesBeginningWith(const QString&) const;
     static const int csmNameRole{Qt::UserRole};
 
     QString btn_connect_enabled_accessDesc;
@@ -104,7 +107,7 @@ private:
     void copyProfileSettingsOnly(const QString& oldname, const QString& newname);
     bool extractSettingsFromProfile(pugi::xml_document& newProfile, const QString& copySettingsFrom);
     void saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const;
-    bool copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const;
+    bool copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem);
     bool hasCustomIcon(const QString&) const;
     void setProfileIcon() const;
     void loadCustomProfile(const QString&) const;
@@ -122,6 +125,9 @@ private:
     QIcon customIcon(const QString&, const std::optional<QColor>&) const;
     void addLetterToProfileSearch(const int);
     void clearNotificationArea();
+    QListWidgetItem* currentProfileItem() const;
+    void setCurrentProfileItem(QListWidgetItem* pItem);
+    void setupProfileListWidget(QListWidget* listWidget);
     void loadPasswordAsync(const QString& profileName);
 
     // split into 3 properties so each one can be checked individually
@@ -130,6 +136,11 @@ private:
     bool validName = false;
     bool validUrl = false;
     bool validPort = false;
+
+    QSplitter* mpProfileSplitter = nullptr;
+    QListWidget* listWidget_customProfiles = nullptr;
+    QListWidget* listWidget_defaultProfiles = nullptr;
+    bool mChangingSelection = false;
 
     QStringList mProfileList;
     QPalette mRegularPalette;

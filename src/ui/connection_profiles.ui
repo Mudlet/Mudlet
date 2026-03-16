@@ -95,18 +95,18 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QListWidget" name="listWidget_profiles">
+          <widget class="QWidget" name="profileListContainer" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>1</verstretch>
+            </sizepolicy>
+           </property>
            <property name="minimumSize">
             <size>
              <width>365</width>
              <height>0</height>
             </size>
-           </property>
-           <property name="accessibleName">
-            <string>profiles list</string>
-           </property>
-           <property name="resizeMode">
-            <enum>QListView::Adjust</enum>
            </property>
           </widget>
          </item>
@@ -947,7 +947,7 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>listWidget_profiles</tabstop>
+  <tabstop>profileListContainer</tabstop>
   <tabstop>welcome_message</tabstop>
   <tabstop>profile_name_entry</tabstop>
   <tabstop>host_name_entry</tabstop>
