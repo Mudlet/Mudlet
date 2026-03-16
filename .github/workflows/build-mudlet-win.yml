@@ -16,7 +16,7 @@ on:
 permissions:
   id-token: write
   contents: read
-  actions: read
+  actions: write
 
 jobs:
   compile-mudlet:
@@ -57,7 +57,7 @@ jobs:
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
   
     - name: Acquire ccache lock
-      uses: guibranco/github-artifact-lock-action@v2.0.5
+      uses: guibranco/github-artifact-lock-action@v3.0.9
       with:
         lock-name: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.ref_name }}-lock
 
@@ -71,7 +71,7 @@ jobs:
 
     - name: Release ccache lock
       if: always()
-      uses: guibranco/github-artifact-lock-action/release-lock@v2.0.5
+      uses: guibranco/github-artifact-lock-action/release-lock@v3.0.9
       with:
         lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
 
@@ -153,7 +153,7 @@ jobs:
         fi
   
     - name: Acquire ccache lock
-      uses: guibranco/github-artifact-lock-action@v2.0.5
+      uses: guibranco/github-artifact-lock-action@v3.0.9
       with:
         lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
 
@@ -166,7 +166,7 @@ jobs:
   
     - name: Release ccache lock
       if: always()
-      uses: guibranco/github-artifact-lock-action/release-lock@v2.0.5
+      uses: guibranco/github-artifact-lock-action/release-lock@v3.0.9
       with:
         lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
 
