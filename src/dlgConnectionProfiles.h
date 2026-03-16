@@ -25,11 +25,12 @@
 
 #include "ui_connection_profiles.h"
 #include <optional>
-#include <QListWidget>
 #include <QTimer>
 #include <QKeyEvent>
 
 class QDir;
+class QListWidget;
+class QListWidgetItem;
 class QSplitter;
 
 namespace pugi {

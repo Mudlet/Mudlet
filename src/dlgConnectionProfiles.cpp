@@ -39,14 +39,15 @@
 #include <QtUiTools>
 #include <QColorDialog>
 #include <QDir>
+#include <QListWidget>
 #include <QPointer>
 #include <QRandomGenerator>
 #include <QSet>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QSplitter>
-#include <QVBoxLayout>
 #include <QTime>
+#include <QVBoxLayout>
 #include <chrono>
 #include <sstream>
 
@@ -84,17 +85,15 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     holdPixmap.setDevicePixelRatio(5.3);
     notificationAreaIconLabelInformation->setPixmap(holdPixmap);
 
-    // Build the two profile lists with a vertical splitter
+    // Build the two profile lists with a vertical splitter.
+    // Creating widgets with the splitter as parent automatically adds them.
     mpProfileSplitter = new QSplitter(Qt::Vertical, this);
     listWidget_customProfiles = new QListWidget(mpProfileSplitter);
     listWidget_customProfiles->setAccessibleName(tr("custom profiles list"));
     listWidget_defaultProfiles = new QListWidget(mpProfileSplitter);
     listWidget_defaultProfiles->setAccessibleName(tr("default game profiles list"));
-    mpProfileSplitter->addWidget(listWidget_customProfiles);
-    mpProfileSplitter->addWidget(listWidget_defaultProfiles);
     mpProfileSplitter->setCollapsible(0, false);
     mpProfileSplitter->setCollapsible(1, true);
-    mpProfileSplitter->setChildrenCollapsible(true);
 
     auto* containerLayout = new QVBoxLayout(profileListContainer);
     containerLayout->setContentsMargins(0, 0, 0, 0);
@@ -296,8 +295,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mReadOnlyPalette.setColor(QPalette::Base, QColor(125, 125, 125, 25));
     mOKPalette.setColor(QPalette::Base, QColor(150, 255, 150, 50));
     mErrorPalette.setColor(QPalette::Base, QColor(255, 150, 150, 50));
-
-    // ViewMode is set in setupProfileListWidget()
 
     btn_load_enabled_accessDesc = tr("Click to load but not connect the selected profile.");
     btn_connect_enabled_accessDesc = tr("Click to load and connect the selected profile.");
@@ -1363,8 +1360,7 @@ void dlgConnectionProfiles::fillout_form()
 
     setProfileIcon();
 
-    QDateTime test_date;
-    QString toselectProfileName;
+    QDateTime mostRecentDate;
     QListWidgetItem* pToselectItem = nullptr;
     QListWidgetItem* pPredefinedItem = nullptr;
     bool firstMudletLaunch = true;
@@ -1376,9 +1372,8 @@ void dlgConnectionProfiles::fillout_form()
         if (fileinfo.exists()) {
             firstMudletLaunch = false;
             const QDateTime profile_lastRead = fileinfo.lastModified();
-            if ((!test_date.isValid()) || profile_lastRead > test_date) {
-                test_date = profile_lastRead;
-                toselectProfileName = profileName;
+            if (!mostRecentDate.isValid() || profile_lastRead > mostRecentDate) {
+                mostRecentDate = profile_lastRead;
                 pToselectItem = profile;
             }
         }
