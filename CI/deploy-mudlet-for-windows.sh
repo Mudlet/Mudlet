@@ -1,6 +1,6 @@
 #!/bin/bash
 ###########################################################################
-#   Copyright (C) 2024-2024  by John McKisson - john.mckisson@gmail.com   #
+#   Copyright (C) 2024-2026  by John McKisson - john.mckisson@gmail.com   #
 #   Copyright (C) 2023-2025  by Stephen Lyons - slysven@virginmedia.com   #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
@@ -21,7 +21,8 @@
 
 set -x
 
-# Version: 2.3.0    Add build counter suffix for multiple builds from same commit
+# Version: 2.4.0    Switch from MINGW64 to CLANG64
+#          2.3.0    Add build counter suffix for multiple builds from same commit
 #          2.2.0    Skip commit date check when build is manually forced
 #          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow

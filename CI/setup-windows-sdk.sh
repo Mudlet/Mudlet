@@ -1,6 +1,6 @@
 #!/bin/bash
 ###########################################################################
-#   Copyright (C) 2024-2024  by John McKisson - john.mckisson@gmail.com   #
+#   Copyright (C) 2024-2026  by John McKisson - john.mckisson@gmail.com   #
 #   Copyright (C) 2023-2025  by Stephen Lyons - slysven@virginmedia.com   #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
@@ -19,7 +19,8 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 2.2.0    Add CMake package for CMake-based builds
+# Version: 2.3.0    Switch from MINGW64 to CLANG64 
+#          2.2.0    Add CMake package for CMake-based builds
 #          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
 #          1.5.0    No change
