@@ -2267,10 +2267,10 @@ void dlgConnectionProfiles::setCurrentProfileItem(QListWidgetItem* pItem)
         return;
     }
     mChangingSelection = true;
-    ownerList->setCurrentItem(pItem);
     QListWidget* otherList = (ownerList == listWidget_customProfiles) ? listWidget_defaultProfiles : listWidget_customProfiles;
     otherList->clearSelection();
     otherList->setCurrentItem(nullptr);
+    ownerList->setCurrentItem(pItem);
     mChangingSelection = false;
 }
 
