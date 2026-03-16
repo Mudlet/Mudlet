@@ -91,7 +91,7 @@ jobs:
         HOMEBREW_NO_AUTO_UPDATE: "ON"
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
-      timeout-minutes: 10
+      timeout-minutes: 7
       run: |
         # Install all required dependencies
         # brew install can hang indefinitely during bottle pouring, so timeout and retry
