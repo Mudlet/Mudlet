@@ -53,24 +53,26 @@
 
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
+  echo "Please run this script from a CLANG64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
+elif [ "${MSYSTEM}" = "CLANG64" ]; then
   export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="x86_64"
+  export BUILDCOMPONENT="clang-x86_64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
-  echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
+  echo "CLANG64 is currently supported. Please rerun this in a bash terminal of"
   echo "that type."
   exit 2
 fi
 
 # We use this internally - but it is actually the same as ${MINGW_PREFIX}
+# Win builds use CLANG64 now, but Mac and Linux still use this define
 export MINGW_BASE_DIR=${MSYSTEM_PREFIX}
 # A more compact - but not necessarily understood by other than MSYS/MINGW
 # executables - path:
-export MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
+#export MINGW_INTERNAL_BASE_DIR="/clang${BUILD_BITNESS}"
+export MINGW_INTERNAL_BASE_DIR=${MSYSTEM_PREFIX}
 #
 # FIXME: don't add duplicates but rearrange instead to put them in the "right" order:
 #
@@ -156,6 +158,7 @@ if [ "${SENTRY_SEND_DEBUG}" = "1" ]; then
   pacman_attempts=0
   while true; do
     if /usr/bin/pacman -S --needed --noconfirm \
+      # Need to check if this is correct
       "${MINGW_PACKAGE_PREFIX}-qt6-base-debug" \
       "${MINGW_PACKAGE_PREFIX}-qt6-multimedia-debug" \
       "${MINGW_PACKAGE_PREFIX}-qt6-svg-debug" \

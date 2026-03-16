@@ -31,7 +31,7 @@
 #          1.0.0    Original version
 
 # Script to build the Mudlet code currently checked out in
-# ${GITHUB_WORKSPACE} in a MINGW64 shell
+# ${GITHUB_WORKSPACE} in a CLANG64 shell
 
 # To be used AFTER setup-windows-sdk.sh has been run; once this has completed
 # successfully, package-mudlet-for-windows.sh is run by the workflow
@@ -43,15 +43,15 @@
 # 3 - Unsupported build type
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
+  echo "Please run this script from a CLANG64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
+elif [ "${MSYSTEM}" = "CLANG64" ]; then
   export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="x86_64"
+  export BUILDCOMPONENT="clang-x86_64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
-  echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
+  echo "CLANG64 is currently supported. Please rerun this in a bash terminal of"
   echo "that type."
   exit 2
 fi
@@ -88,9 +88,11 @@ fi
 export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD,,}"
 export BUILD_COMMIT="${BUILD_COMMIT,,}"
 
-MINGW_BASE_DIR="${GHCUP_MSYS2}\mingw32"
+#MINGW_BASE_DIR="${GHCUP_MSYS2}\mingw32"
+MINGW_BASE_DIR="${MSYSTEM_PREFIX}"
 export MINGW_BASE_DIR
-MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
+#MINGW_INTERNAL_BASE_DIR="/clang${BUILD_BITNESS}"
+MINGW_INTERNAL_BASE_DIR="${MINGW_BASE_DIR}"
 export MINGW_INTERNAL_BASE_DIR
 PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
 export PATH
@@ -98,9 +100,14 @@ RUNNER_WORKSPACE_UNIX_PATH=$(echo "${RUNNER_WORKSPACE}" | sed 's|\\|/|g' | sed '
 export CCACHE_DIR=${RUNNER_WORKSPACE_UNIX_PATH}/ccache
 
 echo "MSYSTEM is: ${MSYSTEM}"
+echo "MSYSTEM_PREFIX is: ${MSYSTEM_PREFIX}"
 echo "CCACHE_DIR is: ${CCACHE_DIR}"
 echo "PATH is now:"
 echo "${PATH}"
+echo "which clang: $(which clang)"
+echo "which clang++: $(which clang++)"
+clang --version
+clang++ --version
 echo ""
 
 cd "${GITHUB_WORKSPACE}" || exit 1
@@ -142,6 +149,8 @@ CMAKE_ARGS=(
   -DCMAKE_BUILD_TYPE=Release
   -DCMAKE_PREFIX_PATH="${MINGW_INTERNAL_BASE_DIR}"
   -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${GITHUB_WORKSPACE}/build-${MSYSTEM}/release"
+  -DCMAKE_C_COMPILER=clang
+  -DCMAKE_CXX_COMPILER=clang++
 )
 
 if [ "${WITH_SENTRY}" = "ON" ]; then
