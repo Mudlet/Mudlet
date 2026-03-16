@@ -72,7 +72,6 @@ fi
 export MINGW_BASE_DIR=${MSYSTEM_PREFIX}
 # A more compact - but not necessarily understood by other than MSYS/MINGW
 # executables - path:
-#export MINGW_INTERNAL_BASE_DIR="/clang${BUILD_BITNESS}"
 export MINGW_INTERNAL_BASE_DIR=${MSYSTEM_PREFIX}
 #
 # FIXME: don't add duplicates but rearrange instead to put them in the "right" order:
@@ -159,7 +158,6 @@ if [ "${SENTRY_SEND_DEBUG}" = "1" ]; then
   pacman_attempts=0
   while true; do
     if /usr/bin/pacman -S --needed --noconfirm \
-      # Need to check if this is correct
       "${MINGW_PACKAGE_PREFIX}-qt6-base-debug" \
       "${MINGW_PACKAGE_PREFIX}-qt6-multimedia-debug" \
       "${MINGW_PACKAGE_PREFIX}-qt6-svg-debug" \
