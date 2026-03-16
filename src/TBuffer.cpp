@@ -4581,7 +4581,7 @@ void TBuffer::log(int fromLine, int toLine)
 
     QStringList linesToLog;
     if (mpHost->mIsCurrentLogFileInHtmlFormat
-            && ! mpHost->mpConsole->doesHTMLFileNeedBlinkingTextControl()
+            && !mpHost->mpConsole->doesHTMLFileNeedBlinkingTextControl()
             && pB->blinkingTextInSelection(fromLine, toLine)) {
         mpHost->mpConsole->setHTMLFileNeedsBlinkingTextControl();
     }

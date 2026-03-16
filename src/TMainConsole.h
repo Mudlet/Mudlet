@@ -124,10 +124,10 @@ public:
     QTextStream mLogStream;
     bool mLogToLogFile = false;
 
-    const static QString csmHeaderStart;
-    const static QString csmBlinkingHeader;
-    const static QString csmHeaderEnd;
-    const static QString csmBlinkingBody;
+    static const QString csmHeaderStart;
+    static const QString csmBlinkingHeader;
+    static const QString csmHeaderEnd;
+    static const QString csmBlinkingBody;
 
 public slots:
     // Used by mudlet class as told by "Profile Preferences"

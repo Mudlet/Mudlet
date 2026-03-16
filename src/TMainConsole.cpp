@@ -327,7 +327,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
             bool foundBody = false;
             while (!mLogStream.atEnd()) {
                 QString line = mLogStream.readLine();
-                if (! hasOldBlinkingText && (line.contains(qsl(" class='blink-fast' ")) || line.contains(qsl(" class='blink-slow' ")))) {
+                if (!hasOldBlinkingText && (line.contains(qsl(" class='blink-fast' ")) || line.contains(qsl(" class='blink-slow' ")))) {
                     // Will need to convert the prior blinking text entries:
                     hasOldBlinkingText = true;
                     mHTMLLogFileAlreadyHasBlinkingText = true;
