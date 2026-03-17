@@ -97,10 +97,23 @@ jobs:
         HOMEBREW_NO_AUTO_UPDATE: "ON"
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
-      timeout-minutes: 3
+      timeout-minutes: 7
       run: |
         # Install all required dependencies
-        brew install libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost
+        # brew install can hang indefinitely during bottle pouring, so timeout and retry
+        for attempt in 1 2 3; do
+          brew install libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost &
+          brew_pid=$!
+          ( sleep 120 && kill $brew_pid 2>/dev/null ) &
+          watcher_pid=$!
+          wait $brew_pid && { kill $watcher_pid 2>/dev/null || true; wait $watcher_pid 2>/dev/null || true; break; }
+          kill $watcher_pid 2>/dev/null || true; wait $watcher_pid 2>/dev/null || true
+          echo "::warning::brew install attempt $attempt failed or timed out, retrying..."
+          if [ "$attempt" -eq 3 ]; then
+            echo "::error::brew install failed after 3 attempts"
+            exit 1
+          fi
+        done
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
@@ -231,7 +244,7 @@ jobs:
          echo "WITH_FONTS=no" >> $GITHUB_ENV
   
     - name: Acquire ccache lock
-      uses: guibranco/github-artifact-lock-action@v2.0.5
+      uses: guibranco/github-artifact-lock-action@v3.0.9
       with:
         lock-name: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ github.ref_name }}-lock
 
@@ -245,7 +258,7 @@ jobs:
 
     - name: Release ccache lock
       if: always()
-      uses: guibranco/github-artifact-lock-action/release-lock@v2.0.5
+      uses: guibranco/github-artifact-lock-action/release-lock@v3.0.9
       with:
         lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
 
@@ -306,7 +319,7 @@ jobs:
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
   
     - name: Acquire ccache lock
-      uses: guibranco/github-artifact-lock-action@v2.0.5
+      uses: guibranco/github-artifact-lock-action@v3.0.9
       with:
         lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
 
@@ -319,7 +332,7 @@ jobs:
   
     - name: Release ccache lock
       if: always()
-      uses: guibranco/github-artifact-lock-action/release-lock@v2.0.5
+      uses: guibranco/github-artifact-lock-action/release-lock@v3.0.9
       with:
         lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
 
