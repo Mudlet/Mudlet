@@ -44,15 +44,16 @@
 # 3 - Unsupported build type
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from a CLANG64 type bash terminal as the MSYS one"
+  echo "Please run this script from a MINGW64 or CLANG64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
+elif [ "${MSYSTEM}" = "MINGW64" ]; then
+  export BUILDCOMPONENT="x86_64"
 elif [ "${MSYSTEM}" = "CLANG64" ]; then
-  export BUILD_BITNESS="64"
   export BUILDCOMPONENT="clang-x86_64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
-  echo "CLANG64 is currently supported. Please rerun this in a bash terminal of"
+  echo "MINGW64 and CLANG64 are currently supported. Please rerun this in a bash terminal of"
   echo "that type."
   exit 2
 fi
@@ -103,10 +104,6 @@ echo "MSYSTEM_PREFIX is: ${MSYSTEM_PREFIX}"
 echo "CCACHE_DIR is: ${CCACHE_DIR}"
 echo "PATH is now:"
 echo "${PATH}"
-echo "which clang: $(which clang)"
-echo "which clang++: $(which clang++)"
-clang --version
-clang++ --version
 echo ""
 
 cd "${GITHUB_WORKSPACE}" || exit 1

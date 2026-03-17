@@ -36,16 +36,16 @@ set -x
 # 5 - squirrel error
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
+  echo "Please run this script from a MINGW64 or CLANG64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
+elif [ "${MSYSTEM}" = "MINGW64" ]; then
+  export BUILDCOMPONENT="x86_64"
 elif [ "${MSYSTEM}" = "CLANG64" ]; then
   export BUILDCOMPONENT="clang-x86_64"
-  # We only support "x86_64" architecture now but we used to do "x86" (32-bit)
-  # as well and exported this value as ARCH for use here and in other scripts
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
-  echo "CLANG64 is currently supported. Please rerun this in a bash terminal of"
+  echo "MINGW64 and CLANG64 are currently supported. Please rerun this in a bash terminal of"
   echo "that type."
   exit 2
 fi
@@ -420,7 +420,7 @@ EOF
       powershell.exe -Command "icacls.exe temp_key_file_portable /inheritance:r"
 
       # Upload portable ZIP via SCP with proper naming
-      PORTABLE_REMOTE_NAME="Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
+      PORTABLE_REMOTE_NAME="Mudlet-${VERSION}-windows-64-portable.zip"
       powershell.exe <<EOF
 \$portableZipPath = "${PORTABLE_ZIP_PATH}"
 \$DEPLOY_PATH = "${DEPLOY_PATH}"
@@ -431,7 +431,7 @@ EOF
       shred -u temp_key_file_portable
 
       # Define portable ZIP URL - should match the naming convention
-      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
+      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-64-portable.zip"
 
       # Verify portable ZIP was uploaded
       if ! curl --output /dev/null --silent --head --fail "${PORTABLE_DEPLOY_URL}"; then
@@ -450,7 +450,7 @@ EOF
       -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
       -F "file_type=2" \
       -F "file_remote=${PORTABLE_DEPLOY_URL}" \
-      -F "file_name=Mudlet ${VERSION} Portable (windows-${BUILD_BITNESS})" \
+      -F "file_name=Mudlet ${VERSION} Portable (windows-64)" \
       -F "file_des=sha256: ${PORTABLE_SHA256SUM}" \
       -F "file_cat=${FILE_CATEGORY}" \
       -F "file_permission=-1" \

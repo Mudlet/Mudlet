@@ -48,21 +48,22 @@
 # 6 - No Mudlet.exe file found to work with
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
+  echo "Please run this script from a MINGW64 or CLANG64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
+elif [ "${MSYSTEM}" = "MINGW64" ]; then
+  export BUILDCOMPONENT="x86_64"
 elif [ "${MSYSTEM}" = "CLANG64" ]; then
-  export BUILD_BITNESS="64"
   export BUILDCOMPONENT="clang-x86_64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
-  echo "CLANG64 is currently supported. Please rerun this in a bash terminal of"
+  echo "MINGW64 and CLANG64 are currently supported. Please rerun this in a bash terminal of"
   echo "that type."
   exit 2
 fi
 
 BUILD_CONFIG="release"
-MINGW_INTERNAL_BASE_DIR="/clang${BUILD_BITNESS}"
+MINGW_INTERNAL_BASE_DIR=${MSYSTEM_PREFIX}
 export MINGW_INTERNAL_BASE_DIR
 GITHUB_WORKSPACE_UNIX_PATH=$(echo "${GITHUB_WORKSPACE}" | sed 's|\\|/|g' | sed 's|D:|/d|g' | sed 's|C:|/c|g')
 PACKAGE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/package-${MSYSTEM}-${BUILD_CONFIG}"
