@@ -111,7 +111,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QCheckBox" name="show_only_my_profiles">
+          <widget class="QCheckBox" name="checkBox_showOnlyMyProfiles">
            <property name="text">
             <string>Show my profiles only</string>
            </property>
@@ -961,7 +961,7 @@
  </customwidgets>
  <tabstops>
   <tabstop>listWidget_profiles</tabstop>
-  <tabstop>show_only_my_profiles</tabstop>
+  <tabstop>checkBox_showOnlyMyProfiles</tabstop>
   <tabstop>welcome_message</tabstop>
   <tabstop>profile_name_entry</tabstop>
   <tabstop>host_name_entry</tabstop>

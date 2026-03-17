@@ -85,7 +85,7 @@ public slots:
     void slot_copyProfile();
     void slot_copyOnlySettingsOfProfile();
     void indicatePackagesInstallOnConnect(QStringList packages);
-    void slot_toggleShowMyProfiles(int state);
+    void slot_toggleShowMyProfiles(const Qt::CheckState state);
 
 
 protected:

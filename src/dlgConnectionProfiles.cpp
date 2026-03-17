@@ -306,12 +306,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(&mSearchTextTimer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_reenableAllProfileItems);
 
     auto& settings = *mudlet::self()->mpSettings;
-    show_only_my_profiles->setChecked(settings.value(qsl("showOnlyMyProfiles"), false).toBool());
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    connect(show_only_my_profiles, &QCheckBox::checkStateChanged, this, &dlgConnectionProfiles::slot_toggleShowMyProfiles);
-#else
-    connect(show_only_my_profiles, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_toggleShowMyProfiles);
-#endif
+    checkBox_showOnlyMyProfiles->setChecked(settings.value(qsl("showOnlyMyProfiles"), false).toBool());
+    connect(checkBox_showOnlyMyProfiles, &QCheckBox::checkStateChanged, this, &dlgConnectionProfiles::slot_toggleShowMyProfiles);
 
     profile_history->view()->setTextElideMode(Qt::ElideNone);
 }
@@ -1309,7 +1305,7 @@ void dlgConnectionProfiles::fillout_form()
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
-    const bool showOnlyMyProfiles = show_only_my_profiles->isChecked();
+    const bool showOnlyMyProfiles = checkBox_showOnlyMyProfiles->isChecked();
     if (onlyShownPredefinedProfiles.isEmpty()) {
         const auto defaultGames = TGameDetails::keys();
         for (auto& game : defaultGames) {
@@ -2211,16 +2207,15 @@ void dlgConnectionProfiles::clearNotificationArea()
     notificationAreaMessageBox->clear();
 }
 
-void dlgConnectionProfiles::slot_toggleShowMyProfiles(int state)
+void dlgConnectionProfiles::slot_toggleShowMyProfiles(const Qt::CheckState state)
 {
-    Q_UNUSED(state);
     auto& settings = *mudlet::self()->mpSettings;
-    settings.setValue(qsl("showOnlyMyProfiles"), show_only_my_profiles->isChecked());
+    settings.setValue(qsl("showOnlyMyProfiles"), Qt::Checked == state);
     fillout_form();
 
     if (QAccessible::isActive()) {
         //: Accessibility announcement when the profile filter checkbox is toggled, %n is the number of profiles shown
-        const QString announcement = tr("Showing %n profile(s)", "", listWidget_profiles->count());
+        const QString announcement = tr("Showing %n profile(s)", nullptr, listWidget_profiles->count());
         QAccessibleAnnouncementEvent event(listWidget_profiles, announcement);
         event.setPoliteness(QAccessible::AnnouncementPoliteness::Polite);
         QAccessible::updateAccessibility(&event);
