@@ -405,61 +405,6 @@ private slots:
   }
 
   // ---------------------------------------------------------------
-  // Prefix validation (early rejection during tag name accumulation)
-  // ---------------------------------------------------------------
-
-  void testValidPrefixNotRejected() {
-    TMxpStubClient client;
-    TMxpProcessor processor(&client);
-
-    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
-
-    // "B" is a valid OPEN tag prefix
-    QVERIFY(processor.couldBeValidMxpTag(qsl("B")));
-
-    // "CO" is a prefix of "COLOR" (OPEN tag)
-    QVERIFY(processor.couldBeValidMxpTag(qsl("CO")));
-
-    // "FO" is a prefix of "FONT" (OPEN tag)
-    QVERIFY(processor.couldBeValidMxpTag(qsl("FO")));
-  }
-
-  void testInvalidPrefixRejected() {
-    TMxpStubClient client;
-    TMxpProcessor processor(&client);
-
-    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
-
-    // "X" doesn't start any OPEN mode tag
-    QVERIFY(!processor.couldBeValidMxpTag(qsl("X")));
-
-    // "VIL" doesn't start any OPEN mode tag
-    QVERIFY(!processor.couldBeValidMxpTag(qsl("VIL")));
-
-    // "S" starts "S", "SMALL", "SBR", "STRIKEOUT" in OPEN mode
-    QVERIFY(processor.couldBeValidMxpTag(qsl("S")));
-    // But "SE" doesn't start any OPEN mode tag
-    QVERIFY(!processor.couldBeValidMxpTag(qsl("SE")));
-  }
-
-  void testPrefixValidationInSecureMode() {
-    TMxpStubClient client;
-    TMxpProcessor processor(&client);
-
-    processor.setMode(MXP_MODE_CODE_SECURE);
-    QCOMPARE(processor.mode(), MXP_MODE_SECURE);
-
-    // "SE" starts "SEND" in SECURE mode
-    QVERIFY(processor.couldBeValidMxpTag(qsl("SE")));
-
-    // "IM" starts "IMAGE" in SECURE mode
-    QVERIFY(processor.couldBeValidMxpTag(qsl("IM")));
-
-    // "ZZ" doesn't start any tag
-    QVERIFY(!processor.couldBeValidMxpTag(qsl("ZZ")));
-  }
-
-  // ---------------------------------------------------------------
   // Integration: MXP spec example should work in SECURE mode
   // ---------------------------------------------------------------
 
@@ -483,6 +428,159 @@ private slots:
     // The user-defined elements should be recognized
     QVERIFY(processor.isRecognizedMxpTag(qsl("RName")));
     QVERIFY(processor.isRecognizedMxpTag(qsl("Ex")));
+  }
+
+  // ---------------------------------------------------------------
+  // Newline inside a partial tag rejects as literal text
+  // ---------------------------------------------------------------
+
+  void testNewlineInsideTagRejectsAsLiteral() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+    processor.enable();
+
+    processor.setMode(MXP_MODE_CODE_SECURE);
+
+    // Feed '<B' then a newline - the tag cannot span lines
+    char ch = '<';
+    processor.processMxpInput(ch, true);
+    ch = 'B';
+    processor.processMxpInput(ch, true);
+    ch = '\n';
+    TMxpProcessingResult result = processor.processMxpInput(ch, true);
+
+    QCOMPARE(result, HANDLER_INSERT_AND_REPROCESS);
+    QCOMPARE(processor.getEntityValue(), qsl("<B"));
+  }
+
+  void testCarriageReturnInsideTagRejectsAsLiteral() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+    processor.enable();
+
+    processor.setMode(MXP_MODE_CODE_SECURE);
+
+    char ch = '<';
+    processor.processMxpInput(ch, true);
+    ch = 'S';
+    processor.processMxpInput(ch, true);
+    ch = '\r';
+    TMxpProcessingResult result = processor.processMxpInput(ch, true);
+
+    QCOMPARE(result, HANDLER_INSERT_AND_REPROCESS);
+    QCOMPARE(processor.getEntityValue(), qsl("<S"));
+  }
+
+  // ---------------------------------------------------------------
+  // Invalid tag name characters cause immediate rejection
+  // ---------------------------------------------------------------
+
+  void testInvalidTagNameCharPercent() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+    processor.enable();
+
+    processor.setMode(MXP_MODE_CODE_SECURE);
+
+    // Feed '<%' - percent is not a valid tag name character
+    char ch = '<';
+    processor.processMxpInput(ch, true);
+    ch = '%';
+    TMxpProcessingResult result = processor.processMxpInput(ch, true);
+
+    QCOMPARE(result, HANDLER_INSERT_AND_REPROCESS);
+    QCOMPARE(processor.getEntityValue(), qsl("<"));
+  }
+
+  void testInvalidTagNameCharCaret() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+    processor.enable();
+
+    processor.setMode(MXP_MODE_CODE_SECURE);
+
+    char ch = '<';
+    processor.processMxpInput(ch, true);
+    ch = '^';
+    TMxpProcessingResult result = processor.processMxpInput(ch, true);
+
+    QCOMPARE(result, HANDLER_INSERT_AND_REPROCESS);
+    QCOMPARE(processor.getEntityValue(), qsl("<"));
+  }
+
+  void testInvalidTagNameCharAt() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+    processor.enable();
+
+    processor.setMode(MXP_MODE_CODE_SECURE);
+
+    char ch = '<';
+    processor.processMxpInput(ch, true);
+    ch = '@';
+    TMxpProcessingResult result = processor.processMxpInput(ch, true);
+
+    QCOMPARE(result, HANDLER_INSERT_AND_REPROCESS);
+    QCOMPARE(processor.getEntityValue(), qsl("<"));
+  }
+
+  // ---------------------------------------------------------------
+  // abortCurrentTag() unit test
+  // ---------------------------------------------------------------
+
+  void testAbortCurrentTagReturnsLiteralText() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+    processor.enable();
+
+    processor.setMode(MXP_MODE_CODE_SECURE);
+
+    // Build a partial tag '<SEND'
+    char ch = '<';
+    processor.processMxpInput(ch, true);
+    ch = 'S';
+    processor.processMxpInput(ch, true);
+    ch = 'E';
+    processor.processMxpInput(ch, true);
+    ch = 'N';
+    processor.processMxpInput(ch, true);
+    ch = 'D';
+    processor.processMxpInput(ch, true);
+
+    QVERIFY(processor.getMxpTagBuilder().isInsideTag());
+
+    QString literal = processor.abortCurrentTag();
+    QCOMPARE(literal, qsl("<SEND"));
+
+    // After abort, the builder should be reset
+    QVERIFY(!processor.getMxpTagBuilder().isInsideTag());
+  }
+
+  // ---------------------------------------------------------------
+  // Underscore is valid in tag names (MXP/XML element names)
+  // ---------------------------------------------------------------
+
+  void testUnderscoreValidInTagName() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+    processor.enable();
+
+    processor.setMode(MXP_MODE_CODE_SECURE);
+
+    // Register a user-defined element with underscore
+    processAndCollectOutput(processor,
+                            "<!ELEMENT Enemy_123 '<FONT COLOR=Red>'>");
+
+    QVERIFY(processor.isRecognizedMxpTag(qsl("Enemy_123")));
+
+    // Feeding <Enemy_123> should not reject during tag name building
+    // (underscore must be accepted as a valid tag name character)
+    QString output = processAndCollectOutput(processor, "<Enemy_123>");
+
+    // The tag should be processed, not rejected as literal text
+    QVERIFY2(
+        output.isEmpty() || !output.contains(qsl("<Enemy_123>")),
+        "Tag with underscore should be processed, not rejected as literal");
   }
 };
 

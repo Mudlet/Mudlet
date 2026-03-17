@@ -44,25 +44,3 @@ bool TMxpElementRegistry::isOpenElement(const QString& name) const
     }
     return false;
 }
-
-bool TMxpElementRegistry::hasElementWithPrefix(const QString& prefix) const
-{
-    const QString upper = prefix.toUpper();
-    for (const QString& key : mMXP_Elements.keys()) {
-        if (key.startsWith(upper)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool TMxpElementRegistry::hasOpenElementWithPrefix(const QString& prefix) const
-{
-    const QString upper = prefix.toUpper();
-    for (const auto& [key, element] : mMXP_Elements.asKeyValueRange()) {
-        if (key.startsWith(upper) && element.open) {
-            return true;
-        }
-    }
-    return false;
-}

@@ -93,10 +93,6 @@ public:
     // In SECURE/TEMP_SECURE mode, all recognized tags are allowed
     bool isTagAllowedInCurrentMode(const QString& tagName) const;
 
-    // Prefix check: could this partial tag name eventually match a known tag?
-    // Used for early rejection during character-by-character tag building
-    bool couldBeValidMxpTag(const QString& partialName) const;
-
     // Abort the current tag being built (e.g., when ANSI escape interrupts it)
     // Returns the literal text that should be output ("<" + accumulated content)
     QString abortCurrentTag();

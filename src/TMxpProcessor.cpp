@@ -137,33 +137,11 @@ bool TMxpProcessor::isTagAllowedInCurrentMode(const QString& tagName) const
         return isRecognizedMxpTag(tagName);
     }
 
-    // OPEN mode: only allow OPEN tags and user-defined OPEN elements
     const QString upper = tagName.toUpper();
     if (openModeTags().contains(upper)) {
         return true;
     }
     return mMxpTagProcessor.getElementRegistry().isOpenElement(upper);
-}
-
-bool TMxpProcessor::couldBeValidMxpTag(const QString& partialName) const
-{
-    if (partialName.isEmpty()) {
-        return true;
-    }
-
-    const QString upper = partialName.toUpper();
-    const QSet<QString>& validTags = (mMXP_MODE == MXP_MODE_OPEN) ? openModeTags() : allMxpTags();
-    for (const QString& tag : validTags) {
-        if (tag.startsWith(upper)) {
-            return true;
-        }
-    }
-
-    // Also check user-defined elements
-    if (mMXP_MODE == MXP_MODE_OPEN) {
-        return mMxpTagProcessor.getElementRegistry().hasOpenElementWithPrefix(upper);
-    }
-    return mMxpTagProcessor.getElementRegistry().hasElementWithPrefix(upper);
 }
 
 bool TMxpProcessor::setMode(const QString& code)
@@ -374,8 +352,6 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
 
         QScopedPointer<MxpTag> const tag(mMxpTagBuilder.buildTag());
 
-        // Validate tag against current mode before dispatching to handlers
-        // This prevents non-MXP text like <test> from being treated as tags
         if (!isTagAllowedInCurrentMode(tag->getName())) {
             lastEntityValue = rawTagContent;
             return HANDLER_INSERT_ENTITY_SYS;
@@ -424,7 +400,7 @@ QString TMxpProcessor::decodeRawBytes(const std::string& raw, const QByteArray& 
 {
     if (encoding == QByteArrayLiteral("UTF-8")) {
         return QString::fromStdString(raw);
-    } else if (encoding == QByteArrayLiteral("ISO-8859-1")) {
+    } else if (encoding == QByteArrayLiteral("ISO 8859-1")) {
         return QString::fromLatin1(raw.c_str(), static_cast<int>(raw.length()));
     } else {
         return TEncodingHelper::decode(QByteArray::fromRawData(raw.c_str(), raw.length()), encoding);
@@ -437,8 +413,8 @@ bool TMxpProcessor::isValidTagName(const std::string& tagName) const
         return true;
     }
     for (char ch : tagName) {
-        // Valid tag name characters: A-Z, a-z, 0-9, hyphen, slash (for closing tags), exclamation mark (for !ELEMENT)
-        if (!((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '/' || ch == '!')) {
+        // Valid tag name characters: A-Z, a-z, 0-9, underscore, hyphen, slash (for closing tags), exclamation mark (for !ELEMENT)
+        if (!((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_' || ch == '-' || ch == '/' || ch == '!')) {
             return false;
         }
     }
@@ -458,7 +434,7 @@ TMxpProcessingResult TMxpProcessor::rejectCurrentTag()
 {
     const std::string rawBytes = mMxpTagBuilder.getRawTagContent();
 
-    // Remove the last byte (the invalid character that triggered rejection).
+    // Remove the last byte (the character that triggered or followed rejection).
     // That character will be re-processed through HANDLER_INSERT_AND_REPROCESS,
     // allowing ANSI escape sequences starting with ESC to be properly handled
     // instead of being output as literal text.
@@ -470,7 +446,7 @@ TMxpProcessingResult TMxpProcessor::rejectCurrentTag()
     // multi-byte sequence to decodeRawBytes. UTF-8 continuation bytes have the
     // pattern 10xxxxxx (0x80-0xBF). Walk backwards until we reach a valid
     // sequence start (ASCII 0x00-0x7F or multi-byte start 0xC0+).
-    // Only apply this for UTF-8; single-byte encodings like ISO-8859-1 use
+    // Only apply this for UTF-8; single-byte encodings like ISO 8859-1 use
     // 0x80-0xBF for valid characters.
     if (encoding == QByteArrayLiteral("UTF-8")) {
         while (!validPrefix.empty()) {
