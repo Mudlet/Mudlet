@@ -30,19 +30,17 @@ set -x
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
-# 2 - Unsupported fork
-# 3 - Not used
+# 2 - Unsupported MSYS2 shell type
+# 3 - Unsupported fork
 # 4 - nuget error
 # 5 - squirrel error
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
+  echo "Please run this script from a CLANG64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
 elif [ "${MSYSTEM}" = "CLANG64" ]; then
   echo "Building with CLANG64"
-  # We only support "x86_64" architecture now but we used to do "x86" (32-bit)
-  # as well and exported this value as ARCH for use here and in other scripts
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
   echo "CLANG64 is currently supported. Please rerun this in a bash terminal of"
@@ -145,7 +143,7 @@ fi
 
 # Check if we're building from the Mudlet/Mudlet repository and not a fork
 if [[ "${GITHUB_REPO_NAME}" != "Mudlet/Mudlet" ]]; then
-  exit 2
+  exit 3
 fi
 
 # This will change to end in "-debug" if we ever do that type of build:

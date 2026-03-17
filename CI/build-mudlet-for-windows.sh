@@ -40,7 +40,7 @@
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
-# 2 - Unsupported MSYS2/MINGGW shell type
+# 2 - Unsupported MSYS2 shell type
 # 3 - Unsupported build type
 
 if [ "${MSYSTEM}" = "MSYS" ]; then

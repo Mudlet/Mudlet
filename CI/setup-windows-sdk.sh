@@ -47,7 +47,7 @@
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
-# 2 - Unsupported MSYS2/MINGGW shell type
+# 2 - Unsupported MSYS2 shell type
 # 5 - Invalid command line argument
 # 6 - One or more Luarocks could not be installed
 # 7 - One of more packages failed to install

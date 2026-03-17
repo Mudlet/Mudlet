@@ -42,18 +42,17 @@
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
-# 2 - Unsupported MSYS2/MINGGW shell type
+# 2 - Unsupported MSYS2 shell type
 # 3 - Unsupported build type
 # 4 - Directory to be used to assemble the package is NOT empty
 # 6 - No Mudlet.exe file found to work with
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
+  echo "Please run this script from a CLANG64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
 elif [ "${MSYSTEM}" = "CLANG64" ]; then
-  export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="clang-x86_64"
+  echo "Building with CLANG64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
   echo "CLANG64 is currently supported. Please rerun this in a bash terminal of"
