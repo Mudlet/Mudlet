@@ -36,6 +36,7 @@
 
 #include <list>
 
+class TCanvas;
 class TMainConsole : public TConsole
 {
     Q_OBJECT
@@ -116,6 +117,7 @@ public:
     QMap<QString, TCommandLine*> mSubCommandLineMap;
     QMap<QString, TLabel*> mLabelMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
+    QMap<QString, TCanvas*> mCanvasMap;
     TBuffer mClipboard;
     QFile mLogFile;
     QString mLogFileName;
