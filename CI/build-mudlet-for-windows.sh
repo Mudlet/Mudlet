@@ -48,8 +48,7 @@ if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "does not supported what is needed."
   exit 2
 elif [ "${MSYSTEM}" = "CLANG64" ]; then
-  export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="clang-x86_64"
+  echo "Building with CLANG64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
   echo "CLANG64 is currently supported. Please rerun this in a bash terminal of"
@@ -91,9 +90,7 @@ export BUILD_COMMIT="${BUILD_COMMIT,,}"
 
 MINGW_BASE_DIR="${MSYSTEM_PREFIX}"
 export MINGW_BASE_DIR
-MINGW_INTERNAL_BASE_DIR="${MINGW_BASE_DIR}"
-export MINGW_INTERNAL_BASE_DIR
-PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
+PATH="${MINGW_BASE_DIR}/usr/local/bin:${MINGW_BASE_DIR}/bin:/usr/bin:${PATH}"
 export PATH
 RUNNER_WORKSPACE_UNIX_PATH=$(echo "${RUNNER_WORKSPACE}" | sed 's|\\|/|g' | sed 's|D:|/d|g')
 export CCACHE_DIR=${RUNNER_WORKSPACE_UNIX_PATH}/ccache
@@ -146,7 +143,7 @@ fi
 CMAKE_ARGS=(
   -G Ninja
   -DCMAKE_BUILD_TYPE=Release
-  -DCMAKE_PREFIX_PATH="${MINGW_INTERNAL_BASE_DIR}"
+  -DCMAKE_PREFIX_PATH="${MINGW_BASE_DIR}"
   -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${GITHUB_WORKSPACE}/build-${MSYSTEM}/release"
 )
 

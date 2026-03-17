@@ -40,7 +40,7 @@ if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "does not supported what is needed."
   exit 2
 elif [ "${MSYSTEM}" = "CLANG64" ]; then
-  export BUILDCOMPONENT="clang-x86_64"
+  echo "Building with CLANG64"
   # We only support "x86_64" architecture now but we used to do "x86" (32-bit)
   # as well and exported this value as ARCH for use here and in other scripts
 else
@@ -420,7 +420,7 @@ EOF
       powershell.exe -Command "icacls.exe temp_key_file_portable /inheritance:r"
 
       # Upload portable ZIP via SCP with proper naming
-      PORTABLE_REMOTE_NAME="Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
+      PORTABLE_REMOTE_NAME="Mudlet-${VERSION}-windows-64-portable.zip"
       powershell.exe <<EOF
 \$portableZipPath = "${PORTABLE_ZIP_PATH}"
 \$DEPLOY_PATH = "${DEPLOY_PATH}"
@@ -431,7 +431,7 @@ EOF
       shred -u temp_key_file_portable
 
       # Define portable ZIP URL - should match the naming convention
-      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
+      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-64-portable.zip"
 
       # Verify portable ZIP was uploaded
       if ! curl --output /dev/null --silent --head --fail "${PORTABLE_DEPLOY_URL}"; then
@@ -450,7 +450,7 @@ EOF
       -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
       -F "file_type=2" \
       -F "file_remote=${PORTABLE_DEPLOY_URL}" \
-      -F "file_name=Mudlet ${VERSION} Portable (windows-${BUILD_BITNESS})" \
+      -F "file_name=Mudlet ${VERSION} Portable (windows-64)" \
       -F "file_des=sha256: ${PORTABLE_SHA256SUM}" \
       -F "file_cat=${FILE_CATEGORY}" \
       -F "file_permission=-1" \

@@ -62,8 +62,8 @@ else
 fi
 
 BUILD_CONFIG="release"
-MINGW_INTERNAL_BASE_DIR="/clang${BUILD_BITNESS}"
-export MINGW_INTERNAL_BASE_DIR
+MINGW_BASE_DIR="${MSYSTEM_PREFIX}"
+export MINGW_BASE_DIR
 GITHUB_WORKSPACE_UNIX_PATH=$(echo "${GITHUB_WORKSPACE}" | sed 's|\\|/|g' | sed 's|D:|/d|g' | sed 's|C:|/c|g')
 PACKAGE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/package-${MSYSTEM}-${BUILD_CONFIG}"
 
@@ -134,11 +134,11 @@ WINDEPLOY_ARGS=( \
   "--no-system-dxc-compiler" \
   "--force-openssl")
 
-echo "Running ${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt-qt6.exe..."
+echo "Running ${MINGW_BASE_DIR}/bin/windeployqt-qt6.exe..."
 echo "  With options: \"" "${WINDEPLOY_ARGS[@]}" "\""
 echo ""
 
-"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "${WINDEPLOY_ARGS[@]}" "./mudlet.exe"
+"${MINGW_BASE_DIR}/bin/windeployqt6" "${WINDEPLOY_ARGS[@]}" "./mudlet.exe"
 
 # Copy in all the other known to be needed .dlls BEFORE we analyse the WHOLE lot
 # for any dependencies - otherwise we'd have to add any of the dependencies for
@@ -157,25 +157,25 @@ cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/discord/rpc/lib/discord-rpc64.d
 echo ""
 echo "Copying lua C libraries in..."
 cp -v -p -t . \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lfs.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lpeg.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lsqlite3.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lua-utf8.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/rex_pcre2.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/yajl.dll"
+    "${MINGW_BASE_DIR}/lib/lua/5.1/lfs.dll" \
+    "${MINGW_BASE_DIR}/lib/lua/5.1/lpeg.dll" \
+    "${MINGW_BASE_DIR}/lib/lua/5.1/lsqlite3.dll" \
+    "${MINGW_BASE_DIR}/lib/lua/5.1/lua-utf8.dll" \
+    "${MINGW_BASE_DIR}/lib/lua/5.1/rex_pcre2.dll" \
+    "${MINGW_BASE_DIR}/lib/lua/5.1/yajl.dll"
 
 mkdir ./luasql
-cp -v -p "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/luasql/sqlite3.dll" ./luasql/sqlite3.dll
+cp -v -p "${MINGW_BASE_DIR}/lib/lua/5.1/luasql/sqlite3.dll" ./luasql/sqlite3.dll
 mkdir ./brimworks
-cp -v -p "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/brimworks/zip.dll" ./brimworks/zip.dll
+cp -v -p "${MINGW_BASE_DIR}/lib/lua/5.1/brimworks/zip.dll" ./brimworks/zip.dll
 echo ""
 
 echo "Copying OpenSSL libraries in..."
 # The openSSL libraries has a different name depending on the bitness - but we
 # only do 64-bits now:
 cp -v -p -t . \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-3-x64.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libssl-3-x64.dll"
+    "${MINGW_BASE_DIR}/bin/libcrypto-3-x64.dll" \
+    "${MINGW_BASE_DIR}/bin/libssl-3-x64.dll"
 
 echo ""
 echo "Examining the Mudlet application and all the libraries and Qt plugins to identify other needed libraries..."
@@ -188,9 +188,6 @@ echo "Examining the Mudlet application and all the libraries and Qt plugins to i
 # The cuts ensures we only get the file and path to the library after the =>
 # in the lines that match:
 case "${MSYSTEM}" in
-  *MINGW64*)
-    NEEDED_LIBS_ARG=mingw64
-    ;;
   *CLANG64*)
     NEEDED_LIBS_ARG=clang64
     ;;
@@ -203,7 +200,7 @@ case "${MSYSTEM}" in
     ;;
 esac
 
-mapfile -t NEEDED_LIBS < <(${MINGW_INTERNAL_BASE_DIR}/bin/ntldd --recursive \
+mapfile -t NEEDED_LIBS < <(${MINGW_BASE_DIR}/bin/ntldd --recursive \
   ./mudlet.exe \
   ./*.dll \
   ./*/*.dll \
