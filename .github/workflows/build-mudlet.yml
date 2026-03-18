@@ -1,4 +1,4 @@
-# ⚠️ DUPLICATE WORKFLOW: This file is paired with build-mudlet-pr.yml
+# DUPLICATE WORKFLOW: This file is paired with build-mudlet-pr.yml
 # Changes here likely need to be mirrored there as well.
 name: 🔨 Build Mudlet
 on:
