@@ -442,10 +442,9 @@ TMxpProcessingResult TMxpProcessor::rejectCurrentTag()
 
     const QByteArray encoding = mpMxpClient->getEncoding();
 
-    // Trim any trailing UTF-8 continuation bytes to avoid passing an incomplete
-    // multi-byte sequence to decodeRawBytes. UTF-8 continuation bytes have the
-    // pattern 10xxxxxx (0x80-0xBF). Walk backwards until we reach a valid
-    // sequence start (ASCII 0x00-0x7F or multi-byte start 0xC0+).
+    // Trim any incomplete trailing UTF-8 sequence to avoid passing it to
+    // decodeRawBytes. First strip continuation bytes (10xxxxxx, 0x80-0xBF),
+    // then remove any orphaned leading byte (0xC0+) left behind.
     // Only apply this for UTF-8; single-byte encodings like ISO 8859-1 use
     // 0x80-0xBF for valid characters.
     if (encoding == QByteArrayLiteral("UTF-8")) {
@@ -455,6 +454,14 @@ TMxpProcessingResult TMxpProcessor::rejectCurrentTag()
                 validPrefix.pop_back();
             } else {
                 break;
+            }
+        }
+
+        if (!validPrefix.empty()) {
+            unsigned char lastByte = static_cast<unsigned char>(validPrefix.back());
+
+            if (lastByte >= 0xC0) {
+                validPrefix.pop_back();
             }
         }
     }
