@@ -203,6 +203,7 @@ set(mudlet_SRCS
     TDetachedWindow.cpp
     TTextCodec.cpp
     TEncodingHelper.cpp
+    TTextBox.cpp
     TTextEdit.cpp
     TTimer.cpp
     TToolBar.cpp
@@ -415,6 +416,7 @@ set(mudlet_HDRS
     TTabBar.h
     TDetachedWindow.h
     TTextCodec.h
+    TTextBox.h
     TTextEdit.h
     TTimer.h
     TToolBar.h
