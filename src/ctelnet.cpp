@@ -1,8 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2019, 2021-2022, 2025 by Stephen Lyons  *
- *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2013-2014, 2017-2019, 2021-2022, 2025-2026              *
+ *                              by Stephen Lyons - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
@@ -913,15 +913,20 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
     if (addressesToReport.count() > 1) {
         std::sort(addressesToReport.begin(), addressesToReport.end());
     }
+    bool usingRawIPAddress = false;
     if (isRawIPv4Address(mHostUrl) || isRawIPv6Address(mHostUrl)) {
         // We've been given a raw IP address - so instead of repeating it show
         // what the reverse lookup gave us - but if it is the same thing then
-        // there isn't much we can say
+        // there isn't much we can say - we also need to remember it so we
+        // can use it rather than what ever the reverse lookup gave us:
+        usingRawIPAddress = true;
+
         if (!mHostUrl.compare(hostInfo.hostName())) {
             /*: This text is used when the user has provided a raw IP address
  for the Game Server rather than a URL. In this case we try to
  perform a "reverse-lookup" to see if we can identify the URL that
- matches it - but nothing useful was found.*/
+ matches it - but nothing useful was found and we've got the original
+ address back.*/
             TDebug(QColorConstants::Svg::orange, QColorConstants::White) << tr("A host name could not be found for the given IP address.").append(QChar::LineFeed) >> mpHost;
         } else {
             /*: This text is used when the user has provided a raw IP address
@@ -1115,7 +1120,18 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                     postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)));
                 }
 
-                mSocket_ipV6.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
+                // If a proxy IS being used it is not clear to me how a raw IP
+                // address would work - but hey lets let the user find out for
+                // themselves - SlySven 2026/03
+                if (usingRawIPAddress) {
+                    // In fact if the reverse lookup failed we still have the
+                    // raw IP address in hostInfo.hostName() but this handles
+                    // the situation where something else was found:
+                    mSocket_ipV6.connectToHost(mHostUrl, mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
+                } else {
+                    mSocket_ipV6.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
+                }
+
             }
             if (hasIPv4_address) {
                 connect(&mSocket_ipV4, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected, Qt::UniqueConnection);
@@ -1143,7 +1159,11 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                     postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort)));
                 }
 
-                mSocket_ipV4.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
+                if (usingRawIPAddress) {
+                    mSocket_ipV4.connectToHost(mHostUrl, mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
+                } else {
+                    mSocket_ipV4.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
+                }
             }
         }
 #if !defined(QT_NO_SSL)
