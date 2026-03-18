@@ -272,7 +272,13 @@ void Updater::setupOnWindows()
         } else if (!updateAutomatically()) {
             emit signal_updateAvailable(updates.size());
         } else {
-            feed->downloadRelease(updates.first());
+            const auto& release = updates.first();
+            const QUrl downloadUrl = release.getDownloadUrl();
+            if (!downloadUrl.isValid() || downloadUrl.isEmpty()) {
+                qWarning() << "Update check: invalid download URL for release" << release.getVersion();
+                return;
+            }
+            feed->downloadRelease(release);
         }
     });
 
@@ -336,7 +342,13 @@ void Updater::setupOnLinux()
             emit signal_updateAvailable(updates.size());
             return;
         } else {
-            feed->downloadRelease(updates.first());
+            const auto& release = updates.first();
+            const QUrl downloadUrl = release.getDownloadUrl();
+            if (!downloadUrl.isValid() || downloadUrl.isEmpty()) {
+                qWarning() << "Update check: invalid download URL for release" << release.getVersion();
+                return;
+            }
+            feed->downloadRelease(release);
         }
     });
 
