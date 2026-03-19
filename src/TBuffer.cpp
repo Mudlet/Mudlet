@@ -2970,14 +2970,11 @@ void TBuffer::decodeOSC(const QString& sequence)
                 customTooltip = queryParams.value(qsl("tooltip"));
             }
 
-            // Remove Mudlet-reserved query parameters from URL for command processing
             QString baseUrl = rawUrl;
 
-            // For web URLs, preserve original parameters except Mudlet-reserved ones
             if (rawUrl.startsWith(qsl("http://")) || rawUrl.startsWith(qsl("https://")) || rawUrl.startsWith(qsl("ftp://"))) {
                 int queryStart = baseUrl.indexOf('?');
                 if (queryStart != -1) {
-                    // Parse the original query string to preserve all non-reserved parameters
                     QUrlQuery originalQuery(baseUrl.mid(queryStart + 1));
                     originalQuery.removeQueryItem(qsl("config"));
                     originalQuery.removeQueryItem(qsl("preset"));
