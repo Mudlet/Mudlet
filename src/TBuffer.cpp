@@ -6270,7 +6270,11 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "\x1b]8;;send:look\x1b\\\x1b[34mLook\x1b[0m\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;prompt:cast%20fireball\x1b\\\x1b[33mCast Spell\x1b[0m\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;https://mudlet.org\x1b\\\x1b[36mWebsite\x1b[0m\x1b]8;;\x1b\\\n";
-    output += "       send:CMD  prompt:CMD (editable)  https://URL (browser)\n\n";
+    output += "       send:CMD  prompt:CMD (editable)  https://URL (browser)\n";
+    output += "URLs:  ";
+    output += "\x1b]8;;https://mudlet.org/?id=42&lang=en\x1b\\\x1b[36mWith params\x1b[0m\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;https://mudlet.org/?%63%6F%6E%66%69%67=value\x1b\\\x1b[36mEncoded config\x1b[0m\x1b]8;;\x1b\\\n";
+    output += "       query params preserved (?id=42&lang=en)  percent-encoded reserved names kept\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
     // 2. JSON CONFIGURATION - Show the structure early
