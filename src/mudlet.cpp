@@ -2514,9 +2514,12 @@ bool mudlet::saveWindowLayout()
         ofs << layoutData;
         if (!layoutFile.commit()) {
             qDebug() << "mudlet::saveWindowLayout: error saving window layout: " << layoutFile.errorString();
+            return false;
         }
 
-        saveFloatingDockGeometries();
+        if (!saveFloatingDockGeometries()) {
+            return false;
+        }
 
         mHasSavedLayout = true;
         return true;
@@ -2549,9 +2552,10 @@ bool mudlet::loadWindowLayout()
 
             const bool rv = restoreState(layoutData);
 
-            restoreFloatingDockGeometries();
-
-            commitLayoutUpdates(true);
+            if (rv) {
+                restoreFloatingDockGeometries();
+                commitLayoutUpdates(true);
+            }
             mIsLoadingLayout = false;
 
             return rv;
@@ -2569,14 +2573,14 @@ void mudlet::commitLayoutUpdates(bool flush)
     }
 }
 
-void mudlet::saveFloatingDockGeometries()
+bool mudlet::saveFloatingDockGeometries()
 {
     const QString geoFilePath = getMudletPath(enums::mainDataItemPath, qsl("windowLayoutGeometry.dat"));
 
     QSaveFile geoFile(geoFilePath);
     if (!geoFile.open(QIODevice::WriteOnly)) {
         qDebug() << "mudlet::saveFloatingDockGeometries: error opening geometry file for writing";
-        return;
+        return false;
     }
 
     QDataStream ofs(&geoFile);
@@ -2589,10 +2593,11 @@ void mudlet::saveFloatingDockGeometries()
         if (!pHost || !pHost->mpConsole) {
             continue;
         }
+        const auto hostName = pHost->getName();
         for (auto it = pHost->mpConsole->mDockWidgetMap.constBegin(); it != pHost->mpConsole->mDockWidgetMap.constEnd(); ++it) {
             auto pDockWidget = it.value();
             if (pDockWidget && pDockWidget->isFloating()) {
-                const QString key = qsl("%1/%2").arg(pHost->getName(), it.key());
+                const QString key = qsl("%1/%2").arg(hostName, it.key());
                 geometries[key] = pDockWidget->saveGeometry();
             }
         }
@@ -2602,7 +2607,9 @@ void mudlet::saveFloatingDockGeometries()
 
     if (!geoFile.commit()) {
         qDebug() << "mudlet::saveFloatingDockGeometries: error saving geometry file:" << geoFile.errorString();
+        return false;
     }
+    return true;
 }
 
 void mudlet::restoreFloatingDockGeometries()
@@ -2627,12 +2634,13 @@ void mudlet::restoreFloatingDockGeometries()
         if (!pHost || !pHost->mpConsole) {
             continue;
         }
+        const auto hostName = pHost->getName();
         for (auto it = pHost->mpConsole->mDockWidgetMap.constBegin(); it != pHost->mpConsole->mDockWidgetMap.constEnd(); ++it) {
             auto pDockWidget = it.value();
             if (!pDockWidget || !pDockWidget->isFloating()) {
                 continue;
             }
-            const QString key = qsl("%1/%2").arg(pHost->getName(), it.key());
+            const QString key = qsl("%1/%2").arg(hostName, it.key());
             if (geometries.contains(key)) {
                 pDockWidget->restoreGeometry(geometries.value(key));
             }
