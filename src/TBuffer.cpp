@@ -2970,27 +2970,22 @@ void TBuffer::decodeOSC(const QString& sequence)
                 customTooltip = queryParams.value(qsl("tooltip"));
             }
 
-            // Remove styling/menu/tooltip query parameters from URL for command processing
+            // Remove Mudlet-reserved query parameters from URL for command processing
             QString baseUrl = rawUrl;
-            // Reuse the already parsed params for URL reconstruction
-            QMap<QString, QString> allParams = queryParams;
 
-            // For web URLs, preserve original parameters except our special ones
+            // For web URLs, preserve original parameters except Mudlet-reserved ones
             if (rawUrl.startsWith(qsl("http://")) || rawUrl.startsWith(qsl("https://")) || rawUrl.startsWith(qsl("ftp://"))) {
-                // Remove our special parameters
-                allParams.remove(qsl("style"));
-                allParams.remove(qsl("menu"));
-                allParams.remove(qsl("tooltip"));
-
-                // Rebuild URL with only non-special parameters
                 int queryStart = baseUrl.indexOf('?');
                 if (queryStart != -1) {
-                    baseUrl = baseUrl.left(queryStart);
-                }
+                    // Parse the original query string to preserve all non-reserved parameters
+                    QUrlQuery originalQuery(baseUrl.mid(queryStart + 1));
+                    originalQuery.removeQueryItem(qsl("config"));
+                    originalQuery.removeQueryItem(qsl("preset"));
 
-                // Only append parameters if there are any left
-                if (!allParams.isEmpty()) {
-                    baseUrl = appendQueryParameters(baseUrl, allParams);
+                    baseUrl = baseUrl.left(queryStart);
+                    if (!originalQuery.isEmpty()) {
+                        baseUrl += '?' + originalQuery.toString(QUrl::FullyEncoded);
+                    }
                 }
             } else {
                 // For send: and prompt: commands, remove all query parameters
