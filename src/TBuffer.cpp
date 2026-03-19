@@ -2975,13 +2975,20 @@ void TBuffer::decodeOSC(const QString& sequence)
             if (rawUrl.startsWith(qsl("http://")) || rawUrl.startsWith(qsl("https://")) || rawUrl.startsWith(qsl("ftp://"))) {
                 int queryStart = baseUrl.indexOf('?');
                 if (queryStart != -1) {
-                    QUrlQuery originalQuery(baseUrl.mid(queryStart + 1));
-                    originalQuery.removeQueryItem(qsl("config"));
-                    originalQuery.removeQueryItem(qsl("preset"));
+                    // Split on raw query string so percent-encoded variants of
+                    // "config"/"preset" (e.g. %63%6F%6E%66%69%67) are preserved
+                    const QStringList rawPairs = baseUrl.mid(queryStart + 1).split('&');
+                    QStringList kept;
+                    for (const auto& pair : rawPairs) {
+                        const auto key = pair.left(pair.indexOf('='));
+                        if (key != qsl("config") && key != qsl("preset")) {
+                            kept.append(pair);
+                        }
+                    }
 
                     baseUrl = baseUrl.left(queryStart);
-                    if (!originalQuery.isEmpty()) {
-                        baseUrl += '?' + originalQuery.toString(QUrl::FullyEncoded);
+                    if (!kept.isEmpty()) {
+                        baseUrl += '?' + kept.join('&');
                     }
                 }
             } else {
