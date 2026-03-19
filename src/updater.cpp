@@ -268,7 +268,8 @@ void Updater::setupOnWindows()
 
     // Setup to automatically download the new release when an update is available
     connect(feed, &dblsqd::Feed::ready, feed, [=, this]() {
-        if (mudlet::self()->developmentVersion) {
+        auto* pMudlet = mudlet::self();
+        if (!pMudlet || pMudlet->developmentVersion) {
             return;
         }
 
@@ -331,7 +332,8 @@ void Updater::setupOnLinux()
     connect(feed, &dblsqd::Feed::ready, this, [=, this]() {
         // don't update development builds to prevent auto-update from overwriting your
         // compiled binary while in development
-        if (mudlet::self()->developmentVersion) {
+        auto* pMudlet = mudlet::self();
+        if (!pMudlet || pMudlet->developmentVersion) {
             return;
         }
 
