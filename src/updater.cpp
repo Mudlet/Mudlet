@@ -138,14 +138,7 @@ void Updater::checkUpdatesOnStart()
                 return;
             }
 
-            const auto& release = updates.first();
-            const QUrl downloadUrl = release.getDownloadUrl();
-            if (!downloadUrl.isValid() || downloadUrl.isEmpty()) {
-                qWarning() << "Bi-daily update check: invalid download URL for release" << release.getVersion();
-                return;
-            }
-
-            feed->downloadRelease(release);
+            downloadReleaseIfValid(updates.first());
         });
         KDToolBox::connectSingleShot(feed, &dblsqd::Feed::loadError, this, [](const QString& error) {
             qWarning() << "Bi-daily update check: failed to load feed:" << error;
@@ -230,6 +223,20 @@ void Updater::showFullChangelog() const
     changelogDialog->show();
 }
 
+bool Updater::downloadReleaseIfValid(const dblsqd::Release& release)
+{
+    const QUrl downloadUrl = release.getDownloadUrl();
+    if (!downloadUrl.isValid() || downloadUrl.isEmpty()) {
+        qWarning() << "Update check: invalid download URL for release" << release.getVersion();
+        if (mManualCheckInProgress) {
+            emit signal_updateCheckFailed(tr("Invalid download URL for version %1").arg(release.getVersion()));
+        }
+        return false;
+    }
+    feed->downloadRelease(release);
+    return true;
+}
+
 void Updater::finishSetup()
 {
 #if defined(Q_OS_LINUX)
@@ -272,13 +279,7 @@ void Updater::setupOnWindows()
         } else if (!updateAutomatically()) {
             emit signal_updateAvailable(updates.size());
         } else {
-            const auto& release = updates.first();
-            const QUrl downloadUrl = release.getDownloadUrl();
-            if (!downloadUrl.isValid() || downloadUrl.isEmpty()) {
-                qWarning() << "Update check: invalid download URL for release" << release.getVersion();
-                return;
-            }
-            feed->downloadRelease(release);
+            downloadReleaseIfValid(updates.first());
         }
     });
 
@@ -342,13 +343,7 @@ void Updater::setupOnLinux()
             emit signal_updateAvailable(updates.size());
             return;
         } else {
-            const auto& release = updates.first();
-            const QUrl downloadUrl = release.getDownloadUrl();
-            if (!downloadUrl.isValid() || downloadUrl.isEmpty()) {
-                qWarning() << "Update check: invalid download URL for release" << release.getVersion();
-                return;
-            }
-            feed->downloadRelease(release);
+            downloadReleaseIfValid(updates.first());
         }
     });
 
