@@ -101,8 +101,7 @@ void MudletInstanceCoordinator::handleReadyRead()
     QByteArray& buffer = mSocketBuffers[socket];
 
     // Process complete newline-terminated messages
-    int newlineIdx;
-    while ((newlineIdx = buffer.indexOf('\n')) != -1) {
+    for (int newlineIdx = buffer.indexOf('\n'); newlineIdx != -1; newlineIdx = buffer.indexOf('\n')) {
         const QString message = QString::fromUtf8(buffer.left(newlineIdx));
         buffer.remove(0, newlineIdx + 1);
 
