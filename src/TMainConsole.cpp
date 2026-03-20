@@ -49,6 +49,36 @@
 #include <QTextStream>
 #include <QPainter>
 
+/*static*/ const QString TMainConsole::csmHeaderStart = qsl("<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'>\n"
+                                                            "<html>\n"
+                                                            " <head>\n"
+                                                            "  <meta http-equiv='content-type' content='text/html; charset=utf-8'>\n"
+                                                            // put the charset as early as possible as the
+                                                            // parser MUST restart when it switches away
+                                                            // from the ASCII default
+                                                            // Nice to identify what made the file,
+                                                            "  <meta name='generator' content='%1%2'>\n"
+                                                            // Web-page title:
+                                                            "  <title>%3</title>\n"
+                                                            "  <style type='text/css'>\n"
+                                                            "   <!-- \n"
+                                                            "    body { font-family: '%4'; font-size: 100%; line-height: 1.125em; white-space: nowrap; color:rgb(%5, %6, %7); background-color:rgb(%8, %9, %10); }\n"
+                                                            "    span { white-space: pre-wrap; }\n");
+
+/*static*/ const QString TMainConsole::csmBlinkingHeader = qsl("    /* The following is required to allow blinking text to be enabled/disabled by the viewer of the HTML. */ \n"
+                                                               "    [blink='slow'] { font-style: italic; } \n"
+                                                               "    [blink='fast'] { font-style: italic; } \n"
+                                                               "    @keyframes blink { 50% { opacity: 0; } } \n"
+                                                               "    /* Select all siblings of blink-toggle (when it is checked) that have the attribute 'blink' set to 'slow':*/ \n"
+                                                               "    #blink-toggle:checked ~ * [blink='slow'] { font-style: normal; animation: blink 0.8s step-end infinite; } \n"
+                                                               "    /* Select all siblings of blink-toggle (when it is checked) that have the attribute 'blink' set to 'fast':*/ \n"
+                                                               "    #blink-toggle:checked ~ * [blink='fast'] { font-style: normal; animation: blink 0.4s step-end infinite; } \n");
+
+/*static*/ const QString TMainConsole::csmHeaderEnd = qsl("   -->\n"
+                                                          "  </style>\n"
+                                                          "  </head>\n");
+
+/*static*/ const QString TMainConsole::csmBlinkingBody = qsl("<input type=\"checkbox\" id=\"blink-toggle\" /><label for=\"blink-toggle\"> X / <span style=\"opacity: 20%;\">X</span> / X / <span style=\"opacity: 20%;\">X</span></label><br><hr>");
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 : TConsole(pH, qsl("main"), TConsole::MainConsole, parent)
@@ -159,6 +189,12 @@ std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name,
 
 void TMainConsole::toggleLogging(bool isMessageEnabled)
 {
+    // Capture the background colour separately in prior blinking text sections
+    // so we can split it out into a preceding span:
+    //                            Capture groups                                                           |-----------1-------------|  |-------------2---------------|  ||-3  ||-4
+    static const auto oldSlowBlinkRegexp = QRegularExpression(qsl(R"REGEX(<span class='blink-slow' style="(color: rgb\(\d+,\d+,\d+\); )(background: rgb\(\d+,\d+,\d+\);)(.*)">(.*)</span>)REGEX"));
+    static const auto oldFastBlinkRegexp = QRegularExpression(qsl(R"REGEX(<span class='blink-fast' style="(color: rgb\(\d+,\d+,\d+\); )(background: rgb\(\d+,\d+,\d+\);)(.*)">(.*)</span>)REGEX"));
+
     const auto loggingPath = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"));
     QFile file(loggingPath);
     const QDateTime logDateTime = QDateTime::currentDateTime();
@@ -214,12 +250,16 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
         // implies Truncate."
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             if (!mLogFile.open(QIODevice::ReadWrite)) {
-                qWarning() << "TMainConsole: failed to open log file for reading/writing:" << mLogFile.errorString();
+                //: Failure to open HTML log file, as the message %1 could be long it is placed on the next line:
+                mpHost->postMessage(tr("[ WARN ]  - Failed to open HTML log file for reading or writing, reason:\n"
+                                       "%1").arg(mLogFile.errorString()));
                 return;
             }
         } else {
             if (!mLogFile.open(QIODevice::Append)) {
-                qWarning() << "TMainConsole: failed to open log file for appending:" << mLogFile.errorString();
+                //: Failure to open text log file, as the message %1 could be long it is placed on the next line:
+                mpHost->postMessage(tr("[ WARN ]  - Failed to open text log file for appending, reason:\n"
+                                       "%1").arg(mLogFile.errorString()));
                 return;
             }
         }
@@ -246,8 +286,17 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
     if (mLogToLogFile) {
         // Logging is being turned on
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
-            QString log;
-            QTextStream logStream(&log);
+            // Unfortunately this process can take bit of time (for a large
+            // existing log file in debug builds):
+            qApp->setOverrideCursor(Qt::WaitCursor);
+            // This forms the temporary store for the existing log file whilst
+            // we scan it:
+            QStringList logLines;
+            // We alos need to build the header to prepend onto the above:
+            QStringList headerLines;
+
+            mHTMLLogFileAlreadyHasBlinkingText = false;
+            mHTMLLogFileNeedsBlinkingTextControl = false;
             // No setting a QTextCodec here, they don't work on QString based QTextStreams
             QStringList fontsList;                  // List of fonts to become the font-family entry for
                                                     // the master css in the header
@@ -260,69 +309,108 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
             fontsList << qsl("Courier");
             fontsList.removeDuplicates(); // In case the actual one is one of the defaults here
 
-            logStream << "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'>\n";
-            logStream << "<html>\n";
-            logStream << " <head>\n";
-            logStream << "  <meta http-equiv='content-type' content='text/html; charset=utf-8'>";
-            // put the charset as early as possible as the parser MUST restart when it
-            // switches away from the ASCII default
-            logStream << "  <meta name='generator' content='" << tr("Mudlet MUD Client version: %1%2").arg(APP_VERSION, mudlet::self()->mAppBuild) << "'>\n";
-            // Nice to identify what made the file!
-            logStream << "  <title>" << tr("Mudlet, log from %1 profile").arg(mProfileName) << "</title>\n";
-            // Web-page title
-            logStream << "  <style type='text/css'>\n";
-            logStream << "   <!-- body { font-family: '" << fontsList.join("', '") << "'; font-size: 100%; line-height: 1.125em; white-space: nowrap; color:rgb(" << mpHost->mFgColor.red() << ","
-                      << mpHost->mFgColor.green() << "," << mpHost->mFgColor.blue() << "); background-color:rgb(" << mpHost->mBgColor.red() << "," << mpHost->mBgColor.green() << ","
-                      << mpHost->mBgColor.blue() << ");}\n";
-            logStream << "        span { white-space: pre-wrap; }\n";
+            headerLines << csmHeaderStart.arg(APP_VERSION, // %1 = Mudlet main version number
+                                              mudlet::self()->mAppBuild, // %2 = build suffix
+                                              //: Title for the HTML file - translatable text including %1 the profile name
+                                              tr("Mudlet, log from %1 profile").arg(mProfileName), // Whole thing is %3 = HTML <TITLE> element text
+                                              fontsList.join(qsl("', '")), // %4 = Fonts for HTML
+                                              QString::number(mpHost->mFgColor.red()), // %5 = Default Foreground Red component
+                                              QString::number(mpHost->mFgColor.green()), // %6 = Default Foreground Green component
+                                              QString::number(mpHost->mFgColor.blue())) // %7 = Default Foreground Blue component
+                                   .arg(QString::number(mpHost->mBgColor.red()), // %8 = Default Background Red component
+                                        QString::number(mpHost->mBgColor.green()), // %9 = Default Background Greencomponent
+                                        QString::number(mpHost->mBgColor.blue())); // %10 = Default Background Blue component
 
-            if (mpHost->getEnableBlinkText()) {
-                logStream << "        @keyframes blink-slow { 50% { opacity: 0; } }\n";
-                logStream << "        @keyframes blink-fast { 50% { opacity: 0; } }\n";
-                logStream << "        .blink-slow { animation: blink-slow 0.8s step-end infinite; }\n";
-                logStream << "        .blink-fast { animation: blink-fast 0.4s step-end infinite; }\n";
-            }
-
-            logStream << "     -->\n";
-            logStream << "  </style>\n";
-            logStream << "  </head>\n";
-            bool isAtBody = false;
+            // Look for evidence of blinking text in the existing log file,
+            // If we have the old format ones we'll have to convert them.
+            bool hasOldBlinkingText = false;
+            bool isInBody = false;
             bool foundBody = false;
             while (!mLogStream.atEnd()) {
-                const QString line = mLogStream.readLine();
-                if (line.contains("<body><div>")) {
-                    // Begin writing old log to the current log when the body is
-                    // found.
-                    isAtBody = true;
-                    foundBody = true;
-                } else if (line.contains("</div></body>")) {
-                    // Stop writing to current log once the end of the old log's
-                    // <body> is reached.
-                    isAtBody = false;
+                QString line = mLogStream.readLine();
+                if (!hasOldBlinkingText && (line.contains(qsl(" class='blink-fast' ")) || line.contains(qsl(" class='blink-slow' ")))) {
+                    // Will need to convert the prior blinking text entries:
+                    hasOldBlinkingText = true;
+                    mHTMLLogFileAlreadyHasBlinkingText = true;
                 }
 
-                if (isAtBody) {
-                    logStream << line << "\n";
+                if (!mHTMLLogFileAlreadyHasBlinkingText && (line.contains(qsl(" blink='fast'")) || line.contains(qsl(" blink='slow'")))) {
+                    // Has text with newer style blinking text "attribute":
+                    mHTMLLogFileAlreadyHasBlinkingText = true;
+                }
+
+                if (line.contains(QLatin1String("<body>"))) {
+                    // Begin writing old log to the current log when the body is
+                    // found - this line could already have the checkbox for
+                    // controlling blinking!
+                    isInBody = true;
+                    foundBody = true;
+                    // We don't won't THIS line to be copied so go to the next
+                    // interation:
+                    continue;
+                }
+
+                if (line.contains(qsl("</div></body>"))) {
+                    // Stop writing to current log once the end of the old log's
+                    // <body> is reached.
+                    isInBody = false;
+                }
+
+                if (isInBody && hasOldBlinkingText) {
+                    if (line.contains(qsl(" class='blink-fast' "))) {
+                        line = line.replace(oldFastBlinkRegexp, qsl(R"REGEX(<span style='\2'><span style='\1\3' blink='fast'>\4</span></span>)REGEX"));
+                    }
+                    if (line.contains(qsl(" class='blink-slow' "))) {
+                        line = line.replace(oldSlowBlinkRegexp, qsl(R"REGEX(<span style='\2'><span style='\1\3' blink='slow'>\4</span></span>)REGEX"));
+                    }
+                }
+
+                if (isInBody) {
+                    logLines << line;
                 }
             }
-            if (!foundBody) {
-                logStream << "  <body><div>\n";
-            } else {
-                // Put a horizontal line between separate log sessions
-                logStream << "  </div><hr><div>\n";
+
+            if (mHTMLLogFileAlreadyHasBlinkingText) {
+                headerLines << csmBlinkingHeader;
             }
-            logStream
-                    << qsl("<p>%1</p>\n")
-                               //: This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale
-                               .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.")));
+
+            headerLines << csmHeaderEnd;
+
+            // May need to insert the control for blinking:
+            headerLines << qsl("  <body>%1<div>\n").arg(mHTMLLogFileAlreadyHasBlinkingText ? csmBlinkingBody : QString());
+
+            if (foundBody) {
+                // Put a horizontal line between separate log sessions, i.e.
+                // what has already been recorded and what we are about to start
+                // to log - but only if we have some prior log:
+                logLines << "</div><hr><div>";
+            }
+
+            logLines  << qsl("<p>%1</p>")
+                                /*: This is the format argument to QDateTime::toString(...) and needs to follow
+                                    the rules for that function {literal text must be single quoted} as well as
+                                    being suitable for the translation locale.*/
+                                   .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.")));
             // <div></div> tags required around outside of the body <span></spans> for
             // strict HTML 4 as we do not use <p></p>s or anything else
 
             if (!mLogFile.resize(0)) {
-                qWarning() << "TConsole::toggleLogging(...) ERROR - Failed to resize HTML Logfile - it may now be corrupted...!";
+                /*: An error has occurred whilst doing some manipulation of a HTML type log
+                    - the error message maybe long so is displayed on a new line.*/
+                mpHost->postMessage(tr("[ WARN ]  - Unable to resize the LogFile to refresh the beginning, reason:\n"
+                                       "%1\n"
+                                       "it may now be corrupted.")
+                                            .arg(mLogFile.errorString()));
             }
-            mLogStream << log;
+
+            // Now we overwrite the existing file with modified content ready
+            // for the appending of new data:
+            mLogStream << headerLines.join(QString());
+            mLogStream << logLines.join(QChar::LineFeed);
             mLogFile.flush();
+
+            qApp->restoreOverrideCursor();
+
         } else {
             // File is NOT an HTML one but pure text:
             // Put a horizontal line between separate log sessions
@@ -334,26 +422,34 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
                 // file to not trigger the insertion of this line:
                 mLogStream << qsl("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯").repeated(8).append(QChar::LineFeed);
             }
-            mLogStream
-                    << qsl("%1\n")
-                               //: This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale
-                               .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.")));
+
+            mLogStream << qsl("%1\n")
+                                /*: This is the format argument to QDateTime::toString(...) and needs to follow
+                                    the rules for that function {literal text must be single quoted} as well as
+                                    being suitable for the translation locale.*/
+                                  .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.")));
         }
         logButton->setToolTip(utils::richText(tr("Stop logging game output to log file.")));
     } else {
-        // Logging is being turned off
+        // Logging is being turned off - this does also do a mLogFile.flush():
         buffer.logRemainingOutput();
-        //: This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale
+        /*: This is the format argument to QDateTime::toString(...) and needs to follow
+            the rules for that function {literal text must be single quoted} as well as
+            being suitable for the translation locale.*/
         const QString endDateTimeLine = logDateTime.toString(tr("'Log session ending at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'."));
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             mLogStream << qsl("<p>%1</p>\n").arg(endDateTimeLine);
             mLogStream << "  </div></body>\n";
             mLogStream << "</html>\n";
+            mLogStream.flush();
+            if (mHTMLLogFileNeedsBlinkingTextControl) {
+                insertBlinkingTextFeaturesIntoExisitingLog();
+            }
         } else {
             // File is NOT an HTML one but pure text:
             mLogStream << endDateTimeLine << "\n";
+            mLogStream.flush();
         }
-        mLogFile.flush();
         mLogFile.close();
         logButton->setToolTip(utils::richText(tr("Start logging game output to log file.")));
     }
@@ -1828,4 +1924,74 @@ bool TMainConsole::clear(const QString& name)
     }
 
     return false;
+}
+
+void TMainConsole::insertBlinkingTextFeaturesIntoExisitingLog()
+{
+    // Unfortunately this process can take bit of time (for a large
+    // existing log file in debug builds):
+    qApp->setOverrideCursor(Qt::WaitCursor);
+    // Rewind to start of file:
+    mLogStream.seek(0);
+
+    // This forms the temporary store for the existing log file whilst
+    // we rescan it:
+    QString log;
+    QTextStream logStream(&log);
+    QStringList fontsList; // List of fonts to become the font-family entry for
+    // the master css in the header
+    fontsList << this->fontInfo().family(); // Seems to be the best way to get the
+    // font in use, as different TConsole
+    // instances within the same profile
+    // might have different fonts
+    fontsList << qsl("Courier New");
+    fontsList << qsl("Monospace");
+    fontsList << qsl("Courier");
+    fontsList.removeDuplicates(); // In case the actual one is one of the defaults here
+
+    logStream << csmHeaderStart.arg(APP_VERSION, // %1 = Mudlet main version number
+                                    mudlet::self()->mAppBuild, // %2 = build suffix
+                                    //: Title for the HTML file - translatable text including %1 the profile name
+                                    tr("Mudlet, log from %1 profile").arg(mProfileName), // %3 = HTML <TITLE> element text
+                                    fontsList.join(qsl("', '")), // %4 = Fonts for HTML
+                                    QString::number(mpHost->mFgColor.red()), // %5 = Default Foreground Red component
+                                    QString::number(mpHost->mFgColor.green()), // %6 = Default Foreground Green component
+                                    QString::number(mpHost->mFgColor.blue())) // %7 = Default Foreground Blue component
+                         .arg(QString::number(mpHost->mBgColor.red()), // %8 = Default Background Red component
+                              QString::number(mpHost->mBgColor.green()), // %9 = Default Background Greencomponent
+                              QString::number(mpHost->mBgColor.blue())); // %10 = Default Background Blue component
+    logStream << csmBlinkingHeader;
+    logStream << csmHeaderEnd;
+    logStream << qsl("  <body>%1<div>\n").arg(csmBlinkingBody);
+
+    bool foundBody = false;
+    while (!mLogStream.atEnd()) {
+        const QString line = mLogStream.readLine();
+        if (line.contains(QLatin1String("<body>"))) {
+            // Begin copying existing log to the temporary log when the body
+            // is found.
+            foundBody = true;
+            // Don't include this line, as it is to be replaced with the one
+            // already inserted into "logstream" with the checkbox for blinking
+            continue;
+        }
+
+        if (foundBody) {
+            // Copy this line verbatum
+            logStream << line << QLatin1Char(QChar::LineFeed);
+        }
+    }
+
+    // Clear the underlying log file:
+    mLogFile.resize(0);
+    // Also reset the position of the associated QTextStream:
+    mLogStream.seek(0);
+    // Store the revised content back into the log file:
+    mLogStream << log;
+    mLogStream.flush();
+
+    // Reset the flag that caused this method to have been called:
+    mHTMLLogFileNeedsBlinkingTextControl = false;
+
+    qApp->restoreOverrideCursor();
 }

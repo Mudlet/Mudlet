@@ -1945,6 +1945,12 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
         return;
     }
 
+    // Is this a single line then we do NOT need to pad the first (and thus
+    // only) line to the right:
+    // CHECKME: how come we are using mDragStart.y() and mDragSelectionEnd.y()
+    // here - yet the rest of the method uses mPA.y() and mPB.y()?
+    bool isSingleLine = (mDragStart.y() == mDragSelectionEnd.y());
+
     QString title;
     if (mpConsole->getType() == TConsole::CentralDebugConsole) {
         title = tr("Mudlet, debug console extract");
@@ -1955,6 +1961,9 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     } else {
         title = tr("Mudlet, main console extract from %1 profile").arg(mpHost->getName());
     }
+
+    // Does this selection include blinking text?
+    bool hasBlinkingText = mpBuffer->blinkingTextInSelection(static_cast<std::size_t>(mPA.y()), static_cast<std::size_t>(mPB.y()));
 
     QStringList fontsList;                  // List of fonts to become the font-family entry for
                                             // the master css in the header
@@ -1970,55 +1979,29 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     fontsList << qsl("Courier");
     fontsList.removeDuplicates(); // In case the actual one is one of the defaults here
 
-    QString text = "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'>\n";
-    text.append("<html>\n");
-    text.append(" <head>\n");
-    text.append("  <meta http-equiv='content-type' content='text/html; charset=utf-8'>");
-    // put the charset as early as possible as the parser MUST restart when it
-    // switches away from the ASCII default
-    text.append("  <meta name='generator' content='Mudlet MUD Client version: ");
-    text.append(APP_VERSION);
-    text.append(mudlet::self()->mAppBuild);
-    text.append("'>\n");
-    // Nice to identify what made the file!
-    text.append("  <title>");
-    text.append(title);
-    text.append("</title>\n");
-    // Web-page title
-    text.append("  <style type='text/css'>\n");
-    text.append("   <!-- body { font-family: '");
-    text.append(fontsList.join("', '"));
-    text.append("'; font-size: 100%; line-height: 1.125em; white-space: nowrap; color:rgb(255,255,255); background-color:rgb(");
-    // Line height, I think, should be equal to 18 point for a 16 point default
-    // font size by default but this seems to work even when the size is not 16
-    // Use a "%age" for a IE compatible font size, 16 point is the default for
-    // web-pages, but 14 seems to produce a more reasonable size but that could
-    // just be the browsers I tested it on! - Slysven
-    text.append(QString::number(mpHost->mBgColor.red()));
-    text.append(",");
-    text.append(QString::number(mpHost->mBgColor.green()));
-    text.append(",");
-    text.append(QString::number(mpHost->mBgColor.blue()));
-    text.append(");}\n");
-    text.append("        span { white-space: pre-wrap; }\n");
+    QString text = TMainConsole::csmHeaderStart
+                           .arg(APP_VERSION,
+                                mudlet::self()->mAppBuild,
+                                title,
+                                fontsList.join(qsl("', '")),
+                                QString::number(255),
+                                QString::number(255),
+                                QString::number(255))
+                           .arg(QString::number(mpHost->mBgColor.red()),
+                                QString::number(mpHost->mBgColor.green()),
+                                QString::number(mpHost->mBgColor.blue()));
 
-    if (mEnableBlinkText) {
-        text.append("        @keyframes blink-slow { 50% { opacity: 0; } }\n");
-        text.append("        @keyframes blink-fast { 50% { opacity: 0; } }\n");
-        text.append("        .blink-slow { animation: blink-slow 0.8s step-end infinite; }\n");
-        text.append("        .blink-fast { animation: blink-fast 0.4s step-end infinite; }\n");
+    if (hasBlinkingText) {
+        text.append(TMainConsole::csmBlinkingHeader);
     }
 
-    text.append("     -->\n");
-    text.append("  </style>\n");
-    text.append("  </head>\n");
-    text.append("  <body><div>");
+    text.append(TMainConsole::csmHeaderEnd);
+
+    text.append(qsl("  <body>%1<div>\n").arg(hasBlinkingText ? TMainConsole::csmBlinkingBody : QString()));
+
     // <div></div> tags required around outside of the body <span></spans> for
     // strict HTML 4 as we do not use <p></p>s or anything else
 
-    // Is this a single line then we do NOT need to pad the first (and thus
-    // only) line to the right:
-    bool isSingleLine = (mDragStart.y() == mDragSelectionEnd.y());
     for (int y = mPA.y(), total = mPB.y(); y <= total; ++y) {
         if (y >= static_cast<int>(mpBuffer->buffer.size())) {
             return;
@@ -2037,7 +2020,6 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     }
     text.append(qsl(" </div></body>\n"
                     "</html>"));
-    // The last two of these tags were missing and meant the HTML was not terminated properly
     QClipboard* clipboard = QApplication::clipboard();
     clipboard->setText(text);
     mSelectedRegion = QRegion(0, 0, 0, 0);

@@ -4580,6 +4580,12 @@ void TBuffer::log(int fromLine, int toLine)
     }
 
     QStringList linesToLog;
+    if (mpHost->mIsCurrentLogFileInHtmlFormat
+            && !mpHost->mpConsole->doesHTMLFileNeedBlinkingTextControl()
+            && pB->blinkingTextInSelection(fromLine, toLine)) {
+        mpHost->mpConsole->setHTMLFileNeedsBlinkingTextControl();
+    }
+
     for (int i = fromLine; i <= toLine; ++i) {
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             // This only handles a single line of logged text at a time:
@@ -5260,46 +5266,49 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
 
     for (auto cookedPos = static_cast<size_t>(pos); pos < lastPos; ++cookedPos, ++pos) {
         // Do we need to start a new span?
-        if (firstSpan || buffer.at(cookedRow).at(cookedPos).mFgColor != currentFgColor || buffer.at(cookedRow).at(cookedPos).mBgColor != currentBgColor
-            || (buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask) != currentFlags) {
+        const auto currentAttributes = buffer.at(cookedRow).at(cookedPos);
+        if (firstSpan
+                || currentAttributes.mFgColor != currentFgColor
+                || currentAttributes.mBgColor != currentBgColor
+                || currentAttributes.allDisplayAttributes() != currentFlags) {
+
             if (firstSpan) {
                 firstSpan = false; // The first span - won't need to close the previous one
             } else {
                 s.append(QLatin1String("</span>"));
             }
-            currentFgColor = buffer.at(cookedRow).at(cookedPos).mFgColor;
-            currentBgColor = buffer.at(cookedRow).at(cookedPos).mBgColor;
-            currentFlags = buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask;
+            currentFgColor = currentAttributes.mFgColor;
+            currentBgColor = currentAttributes.mBgColor;
+            currentFlags = currentAttributes.allDisplayAttributes();
 
             // clang-format off
-            // Determine blink class if any (only when blink is enabled in settings)
-            QString blinkClass;
-            const bool enableBlink = (mpHost != nullptr) && mpHost->getEnableBlinkText();
-
-            if (enableBlink) {
-                if (currentFlags & TChar::FastBlink) {
-                    blinkClass = qsl(" class='blink-fast'");
-                } else if (currentFlags & TChar::Blink) {
-                    blinkClass = qsl(" class='blink-slow'");
-                }
+            QString blinkAttribute;
+            if (currentFlags & TChar::FastBlink) {
+                blinkAttribute = qsl(" blink='fast'");
+            } else if (currentFlags & TChar::Blink) {
+                blinkAttribute = qsl(" blink='slow'");
             }
 
+            // In the following we have to nest the foreground (and text
+            // formatting effects) inside a separate background <span> otherwise
+            // the background also turns black (or to the body background color)
+            // when the foreground blinks "off":
             if (currentFlags & TChar::Reverse) {
                 // Swap the fore and background colours:
-                s.append(qsl("<span%10 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
+                s.append(qsl("<span style='background: rgb(%4,%5,%6);'><span style='color: rgb(%1,%2,%3); %7%8%9'%10>")
                          .arg(QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 1 to 3
                               QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
-                              currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline ) // remainder is arg 9
+                              currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline )
                               ? qsl(" text-decoration:%1%2%3")
                                 .arg(currentFlags & TChar::Underline ? QLatin1String(" underline") : QString(),
                                      currentFlags & TChar::StrikeOut ? QLatin1String(" line-through") : QString(),
-                                     currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
-                              : QString(),
-                              blinkClass)); // arg 10
+                                     currentFlags & TChar::Overline ? QLatin1String(" overline") : QString()) // arg 9
+                              : QString())
+                         .arg(blinkAttribute)); // arg 10 - No more than 9 args per QString::arg(...)
             } else {
-                s.append(qsl("<span%10 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
+                s.append(qsl("<span style='background: rgb(%4,%5,%6);'><span style='color: rgb(%1,%2,%3); %7%8%9'%10>")
                          .arg(QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 1 to 3
                               QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
@@ -5309,8 +5318,8 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
                                 .arg(currentFlags & TChar::Underline ? QLatin1String(" underline") : QString(),
                                      currentFlags & TChar::StrikeOut ? QLatin1String(" line-through") : QString(),
                                      currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
-                              : QString(),
-                              blinkClass)); // arg 10
+                              : QString())
+                         .arg(blinkAttribute)); // arg 10
             }
             // clang-format on
         }
@@ -5323,10 +5332,9 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
         }
     }
     if (!s.isEmpty()) {
-        s.append(QLatin1String("</span>"));
-        // Needed to balance the very first open <span>, but only if we have
-        // included anything. the previously appearing <br /> is an XML tag, NOT
-        // a (strict) HTML 4 one
+        // We now need two spans to format the background colour separately from
+        // the foreground and text formatting effects:
+        s.append(QLatin1String("</span></span>"));
     }
 
     s.append(QLatin1String("<br>\n"));
@@ -7147,4 +7155,31 @@ void TBuffer::updateLinkCharacters(int linkIndex)
         mpConsole->mLowerPane->updateScreenView();
         mpConsole->mLowerPane->repaint();
     }
+}
+
+bool TBuffer::blinkingTextInSelection(const std::size_t startRow, const std::size_t endRow) const
+{
+    if (startRow > endRow || buffer.empty() || endRow >= buffer.size()) {
+        return false;
+    }
+    for (std::size_t row = startRow; row <= endRow; ++row) {
+        if (blinkingTextInLine(row)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool TBuffer::blinkingTextInLine(const std::size_t row) const
+{
+    if (row >= buffer.size() || buffer.empty() || buffer.at(row).empty()) {
+        return false;
+    }
+    static const TChar::AttributeFlags blinkFlags = TChar::AttributeFlag::FastBlink | TChar::AttributeFlag::FastBlink;
+    for (std::size_t col = 0, lastCol = buffer.at(row).size(); col < lastCol; ++col) {
+        if (buffer.at(row).at(col).allDisplayAttributes() & blinkFlags) {
+            return true;
+        }
+    }
+    return false;
 }

@@ -171,6 +171,7 @@ public:
     bool isReversed() const { return mFlags & Reverse; }
     bool isConcealed() const { return mFlags & Concealed; }
     bool isFound() const { return mFlags & Found; }
+    bool hasBlinking() const { return mFlags & BlinkMask; }
     // Extended underline style accessors for enhanced OSC 8 hyperlink support
     bool isUnderlineWavy() const { return mFlags & UnderlineWavy; }
     bool isUnderlineDotted() const { return mFlags & UnderlineDotted; }
@@ -360,6 +361,8 @@ public:
     // is apparently incompatible with using a default constructor - sigh!
     void encodingChanged(const QByteArray &);
     void clearSearchHighlights();
+    bool blinkingTextInSelection(const std::size_t startRow, const std::size_t endRow) const;
+    bool blinkingTextInLine(const std::size_t row) const;
 
     static int lengthInGraphemes(const QString& text);
 
