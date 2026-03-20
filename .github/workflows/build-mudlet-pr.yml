@@ -68,7 +68,7 @@ jobs:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         cache: true
-        modules: qt5compat qtmultimedia
+        modules: qt5compat qtmultimedia qtspeech
 
     - name: Use CMake 3.30.3
       uses: lukka/get-cmake@v4.2.3
@@ -91,10 +91,23 @@ jobs:
         HOMEBREW_NO_AUTO_UPDATE: "ON"
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
-      timeout-minutes: 3
+      timeout-minutes: 7
       run: |
         # Install all required dependencies
-        brew install libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost
+        # brew install can hang indefinitely during bottle pouring, so timeout and retry
+        for attempt in 1 2 3; do
+          brew install libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost &
+          brew_pid=$!
+          ( sleep 120 && kill $brew_pid 2>/dev/null ) &
+          watcher_pid=$!
+          wait $brew_pid && { kill $watcher_pid 2>/dev/null || true; wait $watcher_pid 2>/dev/null || true; break; }
+          kill $watcher_pid 2>/dev/null || true; wait $watcher_pid 2>/dev/null || true
+          echo "::warning::brew install attempt $attempt failed or timed out, retrying..."
+          if [ "$attempt" -eq 3 ]; then
+            echo "::error::brew install failed after 3 attempts"
+            exit 1
+          fi
+        done
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
@@ -164,6 +177,7 @@ jobs:
           libpulse-dev \
           libpugixml-dev \
           libsecret-1-dev \
+          libspeechd-dev \
           libsqlite3-dev \
           qtkeychain-qt6-dev \
           libxkbcommon-x11-0 \
