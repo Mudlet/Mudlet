@@ -333,11 +333,20 @@ bool T2DMap::eventFilter(QObject* watched, QEvent* event)
             if (button == Qt::LeftButton || button == Qt::RightButton) {
                 const QPoint globalPos = mouseEvent->globalPosition().toPoint();
 
-                // Check if the click is on the menu itself using global coordinates
+                // Check if the click is on the menu or any of its visible submenus
                 if (auto* activeMenu = mActiveContextMenu.data()) {
                     const QRect menuGlobalGeometry(activeMenu->mapToGlobal(QPoint(0, 0)), activeMenu->size());
                     if (menuGlobalGeometry.contains(globalPos)) {
                         return QObject::eventFilter(watched, event);
+                    }
+
+                    for (const auto* action : activeMenu->actions()) {
+                        if (auto* subMenu = action->menu(); subMenu && subMenu->isVisible()) {
+                            const QRect subMenuGeometry(subMenu->mapToGlobal(QPoint(0, 0)), subMenu->size());
+                            if (subMenuGeometry.contains(globalPos)) {
+                                return QObject::eventFilter(watched, event);
+                            }
+                        }
                     }
                 }
 
@@ -1720,7 +1729,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             if (mpMap->mpRoomDB->isEmpty()) {
                 message = tr("No rooms in the map - load another one, or start mapping from scratch to begin.");
             } else {
-                message = tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size());
+                message = tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", nullptr, mpMap->mpRoomDB->size());
             }
         } else {
             message = tr("You do not have a map yet - load one, or start mapping from scratch to begin.");
@@ -1812,6 +1821,16 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     mRoomWidth = widgetWidth / xspan;
     mRoomHeight = widgetHeight / yspan;
+
+    static float oldRoomWidth = 0.0f;
+    static float oldRoomHeight = 0.0f;
+    if (!qFuzzyCompare(1.0f + oldRoomWidth, 1.0f + mRoomWidth) || !qFuzzyCompare(1.0f + oldRoomHeight, 1.0f + mRoomHeight)) {
+        flushSymbolPixmapCache();
+        flushTextLabelPixmapCache();
+        oldRoomWidth = mRoomWidth;
+        oldRoomHeight = mRoomHeight;
+    }
+
     mRX = qRound(mRoomWidth * ((xspan / 2.0) - mMapCenterX));
     mRY = qRound(mRoomHeight * ((yspan / 2.0) - mMapCenterY));
     QFont roomVNumFont = mpMap->mMapSymbolFont;
