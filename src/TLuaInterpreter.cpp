@@ -2552,7 +2552,7 @@ int TLuaInterpreter::getTime(lua_State* L)
     } else {
         const QDate dt = time.date();
         const QTime tm = time.time();
-        lua_createtable(L, 0, 4);
+        lua_createtable(L, 0, 7);
         lua_pushstring(L, "hour");
         lua_pushinteger(L, tm.hour());
         lua_rawset(L, n + 1);
@@ -3582,7 +3582,16 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
                 lua_remove(L, -2);
             }
             lua_pushstring(L, tokenList.at(i).toUtf8().constData());
-            lua_pcall(L, 2, 0, 0);
+            if (lua_pcall(L, 2, 0, 0)) {
+                std::string e;
+                if (lua_isstring(L, -1)) {
+                    e = "GMCP merge error: ";
+                    e += lua_tostring(L, -1);
+                }
+                const QString _n = qsl("GMCP merge");
+                const QString _f = qsl("__gmcp_merge_gmcp_sub_tables");
+                logError(e, _n, _f);
+            }
         }
     } else {
         {
@@ -5076,6 +5085,17 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "deleteLabel", TLuaInterpreter::deleteLabel);
     lua_register(pGlobalLua, "deleteMiniConsole", TLuaInterpreter::deleteMiniConsole);
     lua_register(pGlobalLua, "deleteCommandLine", TLuaInterpreter::deleteCommandLine);
+    lua_register(pGlobalLua, "createTextEdit", TLuaInterpreter::createTextEdit);
+    lua_register(pGlobalLua, "deleteTextEdit", TLuaInterpreter::deleteTextEdit);
+    lua_register(pGlobalLua, "getTextEditText", TLuaInterpreter::getTextEditText);
+    lua_register(pGlobalLua, "setTextEditText", TLuaInterpreter::setTextEditText);
+    lua_register(pGlobalLua, "clearTextEdit", TLuaInterpreter::clearTextEdit);
+    lua_register(pGlobalLua, "setTextEditReadOnly", TLuaInterpreter::setTextEditReadOnly);
+    lua_register(pGlobalLua, "setTextEditPlaceholder", TLuaInterpreter::setTextEditPlaceholder);
+    lua_register(pGlobalLua, "setTextEditStyleSheet", TLuaInterpreter::setTextEditStyleSheet);
+    lua_register(pGlobalLua, "setTextEditFont", TLuaInterpreter::setTextEditFont);
+    lua_register(pGlobalLua, "setTextEditFontSize", TLuaInterpreter::setTextEditFontSize);
+    lua_register(pGlobalLua, "setTextEditTabMovesFocus", TLuaInterpreter::setTextEditTabMovesFocus);
     lua_register(pGlobalLua, "deleteScrollBox", TLuaInterpreter::deleteScrollBox);
     lua_register(pGlobalLua, "setLabelToolTip", TLuaInterpreter::setLabelToolTip);
     lua_register(pGlobalLua, "setLabelCursor", TLuaInterpreter::setLabelCursor);

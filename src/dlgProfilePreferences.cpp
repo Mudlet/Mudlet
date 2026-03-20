@@ -257,7 +257,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
 
     // Add validator for MMCP Chatname, disallow ~ and , characters
     QRegularExpression rx("^[^~,]*$");
-    QValidator *validator = new QRegularExpressionValidator(rx, this);
+    QValidator* validator = new QRegularExpressionValidator(rx, this);
     lineEdit_mmcpChatName->setValidator(validator);
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
@@ -872,7 +872,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
         lineEdit_discordUserDiscriminator->setText(pHost->mRequiredDiscordUserDiscriminator);
     }
-    
+
     lineEdit_mmcpChatName->setText(pHost->getMMCPChatName());
     lineEdit_mmcpPort->setText(QString::number(pHost->getMMCPPort()));
     lineEdit_mmcpChatMessagePrefix->setText(pHost->getMMCPChatPrefix());
@@ -882,13 +882,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_mmcpAllowPeekReq->setChecked(pHost->mMMCPAllowPeekRequests);
     checkBox_mmcpAutoAcceptCalls->setChecked(pHost->getMMCPAutoAcceptCalls());
     */
-    
+
     checkBox_mmcpAddChatMessageNewline->setChecked(pHost->getMMCPAddChatMessageNewline());
     checkBox_mmcpPrefixEmotes->setChecked(pHost->getMMCPPrefixEmotes());
     checkBox_mmcpSnoopInMainConsole->setChecked(pHost->getMMCPShowSnoopInMainConsole());
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
 
-    auto originalBorders = pHost->borders();
+    auto originalBorders = pHost->userBorders();
     topBorderHeight->setValue(originalBorders.top());
     bottomBorderHeight->setValue(originalBorders.bottom());
     leftBorderWidth->setValue(originalBorders.left());
@@ -1240,7 +1240,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -1613,7 +1613,7 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_discordServerAccessToTimerInfo->setChecked(false);
     lineEdit_discordUserName->clear();
     lineEdit_discordUserDiscriminator->clear();
-    
+
     lineEdit_mmcpChatName->clear();
     lineEdit_mmcpPort->clear();
     lineEdit_mmcpChatMessagePrefix->clear();
@@ -3034,7 +3034,7 @@ void dlgProfilePreferences::slot_saveAndClose()
             }
         }
         const QMargins newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
-        pHost->setBorders(newBorders);
+        pHost->setUserBorders(newBorders);
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mVersionInTTYPE = checkBox_mVersionInTTYPE->isChecked();
         pHost->setForceMXPProcessorOn(checkBox_mForceMXPProcessorOn->isChecked());
@@ -3142,7 +3142,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         } else {
             pHost->mRequiredDiscordUserDiscriminator.clear();
         }
-        
+
         // Save chat options so they are written to XML upon export
         pHost->setMMCPChatName(lineEdit_mmcpChatName->text().trimmed());
         pHost->mMMCPChatPrefix = lineEdit_mmcpChatMessagePrefix->text().trimmed();
@@ -3159,10 +3159,10 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mMMCPAutostartServer = false;
         pHost->mMMCPAutoAcceptCalls = false;
         pHost->mMMCPAllowPeekRequests = false;
-        
+
         pHost->mMMCPPrefixEmotes = checkBox_mmcpPrefixEmotes->isChecked();
         pHost->mMMCPAddChatMessageNewline = checkBox_mmcpAddChatMessageNewline->isChecked();
-        
+
         pHost->mMMCPShowSnoopInMainConsole = checkBox_mmcpSnoopInMainConsole->isChecked();
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
         pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
@@ -4113,7 +4113,8 @@ void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
  * dialog (since the signal is emitted after the lineEdit was already
  * edited), but setText() does not emit editingFinished so no loop occurs.
  */
-void dlgProfilePreferences::slot_setMMCPChatName(const QString& name) {
+void dlgProfilePreferences::slot_setMMCPChatName(const QString& name)
+{
     lineEdit_mmcpChatName->setText(name);
 }
 
@@ -4121,7 +4122,8 @@ void dlgProfilePreferences::slot_setMMCPChatName(const QString& name) {
  * Notify connected clients that our chatname has been changed (via GUI)
  * 
  */
-void dlgProfilePreferences::slot_mmcpChatNameChanged() {
+void dlgProfilePreferences::slot_mmcpChatNameChanged()
+{
     if (mpHost) {
         if (!mpHost->setMMCPChatName(lineEdit_mmcpChatName->text().trimmed())) {
             // Validation failed — revert lineEdit to the current stored name

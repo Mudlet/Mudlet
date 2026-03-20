@@ -873,7 +873,10 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
         mHasBlinkingContent = true;
         if (mEnableBlinkText) {
             const bool isFastBlink = attributes & TChar::FastBlink;
-            const bool isVisible = isFastBlink ? mudlet::self()->fastBlinkState() : mudlet::self()->slowBlinkState();
+            auto pMudlet = mudlet::self();
+            const bool isVisible = pMudlet
+                ? (isFastBlink ? pMudlet->fastBlinkState() : pMudlet->slowBlinkState())
+                : true;
             if (!isVisible) {
                 if (!textRect.isNull()) {
                     drawCustomDecorations(painter, fgColor, textRect, charStyle);

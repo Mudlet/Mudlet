@@ -472,12 +472,12 @@ int main(int argc, char* argv[])
     if (!defaultMediaBackend.isEmpty()) {
         if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
             if (qputenv("QT_MEDIA_BACKEND", defaultMediaBackend)) {
-                qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to:" << defaultMediaBackend;
+                qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend;
             } else {
-                qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to:" << defaultMediaBackend << ", sound may not work.";
+                qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend << ", sound may not work.";
             }
         } else {
-            qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND enviromental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
+            qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND environmental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
         }
     }
 
@@ -730,6 +730,16 @@ int main(int argc, char* argv[])
     }
 
     QTimer::singleShot(0, qApp, [cliProfiles, shouldRunUndoTests]() {
+        // Migrate portable password files to secure storage before any
+        // profile dialog or auto-login code runs.  The migration is
+        // synchronous (uses static CredentialManager helpers) so it is
+        // safe to call here.  Previously this ran on a 2-second timer,
+        // which created a race: the connection dialog could open and
+        // attempt to load passwords before migration had a chance to run.
+        if (mudlet::self()->storingPasswordsSecurely()) {
+            mudlet::self()->migratePasswordsToSecureStorage();
+        }
+
         // ensure Mudlet singleton is initialised before calling profile loading
         mudlet::self()->startAutoLogin(cliProfiles);
 
@@ -777,12 +787,6 @@ int main(int argc, char* argv[])
     mudlet::self()->showChangelogIfUpdated();
 #endif // Q_OS_LINUX
 #endif // INCLUDE_UPDATER
-
-    QTimer::singleShot(2s, qApp, []() {
-        if (mudlet::self()->storingPasswordsSecurely()) {
-            mudlet::self()->migratePasswordsToSecureStorage();
-        }
-    });
 
     app->restoreOverrideCursor();
 
