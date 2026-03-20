@@ -49,7 +49,6 @@
 #include <QProcess>
 #endif
 
-
 #include "utils.h"
 #include <QPointer>
 #include <QScreen>
@@ -186,12 +185,13 @@ int main(int argc, char* argv[])
     for (int i = 1; i < argc; ++i) {
         const QString arg = QString::fromLocal8Bit(argv[i]);
         if (arg.startsWith(qsl("--squirrel-")) && arg != qsl("--squirrel-firstrun")) {
-            const QString appDir = QCoreApplication::applicationDirPath();
-            const QString updateExe = QDir(appDir).filePath(qsl("../Update.exe"));
-            const QString exeName = QFileInfo(QCoreApplication::applicationFilePath()).fileName();
+            // Use argv[0] directly since QCoreApplication isn't instantiated yet
+            const QFileInfo appInfo(QString::fromLocal8Bit(argv[0]));
+            const QString updateExe = QDir(appInfo.absolutePath()).filePath(qsl("../Update.exe"));
+            const QString exeName = appInfo.fileName();
 
             if (arg.startsWith(qsl("--squirrel-install")) || arg.startsWith(qsl("--squirrel-updated"))) {
-                QProcess::execute(updateExe, {qsl("--createShortcut"), exeName, qsl("--shortcut-locations"), qsl("StartMenu")});
+                QProcess::execute(updateExe, {qsl("--createShortcut"), exeName, qsl("--shortcut-locations"), qsl("StartMenu,Desktop")});
             } else if (arg.startsWith(qsl("--squirrel-uninstall"))) {
                 QProcess::execute(updateExe, {qsl("--removeShortcut"), exeName});
             }
@@ -200,14 +200,9 @@ int main(int argc, char* argv[])
     }
 #endif
 
-
 #ifdef WITH_SENTRY
     initSentry();
     auto sentryClose = qScopeGuard([] {
-        // Restore default Qt message handler before closing Sentry to prevent
-        // crashes during Qt shutdown when warnings are logged through the
-        // already-freed Sentry message handler
-        qInstallMessageHandler(nullptr);
         sentry_close();
     });
 #endif
@@ -245,13 +240,6 @@ int main(int argc, char* argv[])
     QAccessible::installFactory(TAccessibleConsole::consoleFactory);
     QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
 
-#if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
-    auto abortLaunch = runUpdate();
-    if (abortLaunch) {
-        return 0;
-    }
-#endif
-
     // Turn the cursor into the waiting one during startup, so something shows
     // activity even if the quiet, no splashscreen startup has been used
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
@@ -280,6 +268,13 @@ int main(int argc, char* argv[])
     mudlet::start();
     // Detect config path before any files are read
     mudlet::self()->setupConfig();
+
+#if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
+    auto abortLaunch = runUpdate();
+    if (abortLaunch) {
+        return 0;
+    }
+#endif
 
     QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
     QCommandLineParser parser;
@@ -434,7 +429,7 @@ int main(int argc, char* argv[])
 #endif // ! defined(QT_DEBUG)
         texts << appendLF.arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)", "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
         // PLACEMARKER: Date-stamp needing annual update
-        texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2025  Mudlet developers"));
+        texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2026  Mudlet developers"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html"));
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "This is free software: you are free to change and redistribute it.\n"
@@ -469,7 +464,6 @@ int main(int argc, char* argv[])
         if (firstArg.startsWith(qsl("telnet://"), Qt::CaseInsensitive)) {
             telnetUri = firstArg;
             instanceCoordinator->queueTelnetUri(telnetUri);
-            qDebug() << "main: Detected telnet URI:" << QUrl(telnetUri).toDisplayString(QUrl::RemoveUserInfo);
 
             if (!firstInstanceOfMudlet) {
                 // Forward to existing instance
@@ -508,7 +502,6 @@ int main(int argc, char* argv[])
     // On Windows, use FFmpeg which supports .ogg/.opus (native backend doesn't).
     // On macOS, use darwin (AVFoundation) which works better than FFmpeg.
 #if defined(Q_OS_WINDOWS)
-
     const QByteArray defaultMediaBackend("ffmpeg");
 #elif defined(Q_OS_MACOS)
     const QByteArray defaultMediaBackend("darwin");
@@ -518,11 +511,12 @@ int main(int argc, char* argv[])
     if (!defaultMediaBackend.isEmpty()) {
         if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
             if (qputenv("QT_MEDIA_BACKEND", defaultMediaBackend)) {
-                qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend;
+                qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to:" << defaultMediaBackend;
             } else {
-                qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend << ", sound may not work.";
+                qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to:" << defaultMediaBackend << ", sound may not work.";
             }
-            qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND environmental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
+        } else {
+            qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND enviromental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
         }
     }
 
@@ -582,7 +576,7 @@ int main(int argc, char* argv[])
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2025");
+        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2026");
         QFont font(qsl("Bitstream Vera Serif"), 16, 75);
         font.setStyleHint(QFont::Serif, QFont::StyleStrategy(QFont::PreferMatch | QFont::PreferAntialias));
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
@@ -740,8 +734,7 @@ int main(int argc, char* argv[])
     QSettings* appSettings = mudlet::getQSettings();
     bool shouldRegisterTelnet = false;
 
-    bool headlessMode =
-            qEnvironmentVariableIsSet("CI") || qEnvironmentVariableIsSet("GITHUB_ACTIONS") || QCoreApplication::arguments().contains("--profile") || QCoreApplication::arguments().contains("--mirror");
+    bool headlessMode = qEnvironmentVariableIsSet("CI") || qEnvironmentVariableIsSet("GITHUB_ACTIONS") || QCoreApplication::arguments().contains("--profile") || QCoreApplication::arguments().contains("--mirror");
 
     bool forceAsk = false;
 #if defined(Q_OS_MACOS)
@@ -931,13 +924,12 @@ int main(int argc, char* argv[])
     }
 
 
+
     // Pass ownership of MudletInstanceCoordinator to mudlet.
     mudlet::self()->takeOwnershipOfInstanceCoordinator(std::move(instanceCoordinator));
 
     // Handle "QEvent::FileOpen" events.
-    // FileOpenHandler must be owned by mudlet so it gets destroyed before Qt's
-    // global cleanup runs, avoiding crashes in QThreadStorageData::finish
-    mudlet::self()->takeOwnershipOfFileOpenHandler(std::make_unique<FileOpenHandler>());
+    FileOpenHandler fileOpenHandler;
 
     if (first_launch) {
         // give Mudlet window decent size - most of the screen on non-HiDPI
@@ -1030,7 +1022,6 @@ int main(int argc, char* argv[])
         }
     });
 
-
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();
 #if !defined(Q_OS_MACOS)
@@ -1038,6 +1029,12 @@ int main(int argc, char* argv[])
     mudlet::self()->showChangelogIfUpdated();
 #endif // Q_OS_LINUX
 #endif // INCLUDE_UPDATER
+
+    QTimer::singleShot(2s, qApp, []() {
+        if (mudlet::self()->storingPasswordsSecurely()) {
+            mudlet::self()->migratePasswordsToSecureStorage();
+        }
+    });
 
     app->restoreOverrideCursor();
 
@@ -1125,6 +1122,13 @@ bool runUpdate()
     QDir updateDir;
 
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
+        QSettings* settings = mudlet::getQSettings();
+        if (!settings->value(qsl("DBLSQD/autoDownload"), true).toBool()) {
+            qDebug() << "Auto-download disabled, removing downloaded installer:" << updatedInstaller.absoluteFilePath();
+            updateDir.remove(updatedInstaller.absoluteFilePath());
+            return false;
+        }
+
         // Verify the new installer is accessible before trying to move it
         if (!isFileAccessible(updatedInstaller.absoluteFilePath())) {
             qWarning() << "New installer exists but is locked, cannot proceed with update:" << updatedInstaller.absoluteFilePath();
