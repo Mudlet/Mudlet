@@ -2717,8 +2717,10 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         // We don't delete the progress dialog until here as we now use it to inform
         // about post-download operations
 
-        mpProgressDialog->deleteLater();
-        mpProgressDialog = nullptr; // Must reset this so it can be reused
+        if (mpProgressDialog) {
+            mpProgressDialog->deleteLater();
+            mpProgressDialog = nullptr; // Must reset this so it can be reused
+        }
 
         mLocalMapFileName.clear();
         mExpectedFileSize = 0;
@@ -2771,7 +2773,9 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
     // Since the download is complete but we do not offer to
     // cancel the required post-processing we should now hide
     // the cancel/abort button:
-    mpProgressDialog->setCancelButton(nullptr);
+    if (mpProgressDialog) {
+        mpProgressDialog->setCancelButton(nullptr);
+    }
 
     bool parsingWasSuccessful;
     QString parsingFileName;
