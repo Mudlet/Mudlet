@@ -117,7 +117,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              false,
              qsl("<a href='http://www.achaea.com/'>Website</a><br>"
                  "<a href='https://discord.gg/2v2upFTj8G'>Discord</a>"),
-             qsl(":/icons/achaea_120_30.png"),
+             qsl(":/icons/achaea.png"),
              qsl("In Achaea, your name carries weight."
                  "\n\n"
                  "Some worlds are easy to leave behind. Achaea is not one of them. The cities, the Houses, the rivalries, "
@@ -163,7 +163,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              false,
              qsl("<a href='http://www.lusternia.com/'>Website</a><br>"
                  "<a href='https://discord.gg/d8PECxD739'>Discord</a>"),
-             qsl(":/icons/lusternia_120_30.png"),
+             qsl(":/icons/lusternia.png"),
              qsl("Lusternia feels like nowhere else."
                  "\n\n"
                  "Not because it tries to be strange for its own sake, but because it never settled for ordinary. "
@@ -307,7 +307,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              false,
              qsl("<a href='http://www.aetolia.com/'>Website</a><br>"
                  "<a href='https://discord.gg/x2s7fY6'>Discord</a>"),
-             qsl(":/icons/aetolia_120_30.png"),
+             qsl(":/icons/aetolia.png"),
              qsl("Aetolia does not do safe fantasy."
                  "\n\n"
                  "It never did."
@@ -334,7 +334,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              false,
              qsl("<a href='http://www.imperian.com/'>Website</a><br>"
                  "<a href='https://discord.gg/QX42sY8E7U'>Discord</a>"),
-             qsl(":/icons/imperian_120_30.png"),
+             qsl(":/icons/imperian.png"),
              qsl("Imperian was made for conflict."
                  "\n\n"
                  "Rivalry matters here. Pressure matters. Momentum matters. Nothing feels softened, "
@@ -402,7 +402,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              false,
              qsl("<a href='http://www.starmourn.com/'>Website</a><br>"
                  "<a href='https://discord.gg/H8m7pFV'>Discord</a>"),
-             qsl(":/icons/starmourn_120_30.png"),
+             qsl(":/icons/starmourn.png"),
              qsl("Starmourn offers a galaxy with real edge."
                  "\n\n"
                  "Factions, syndicates, aliens, cybernetics, advanced tech, and a style all its own make "
