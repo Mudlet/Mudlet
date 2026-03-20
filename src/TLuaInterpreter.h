@@ -452,6 +452,17 @@ public:
     static int deleteLabel(lua_State*);
     static int deleteMiniConsole(lua_State*);
     static int deleteCommandLine(lua_State*);
+    static int createTextEdit(lua_State*);
+    static int deleteTextEdit(lua_State*);
+    static int getTextEditText(lua_State*);
+    static int setTextEditText(lua_State*);
+    static int clearTextEdit(lua_State*);
+    static int setTextEditReadOnly(lua_State*);
+    static int setTextEditPlaceholder(lua_State*);
+    static int setTextEditStyleSheet(lua_State*);
+    static int setTextEditFont(lua_State*);
+    static int setTextEditFontSize(lua_State*);
+    static int setTextEditTabMovesFocus(lua_State*);
     static int deleteScrollBox(lua_State*);
     static int setLabelToolTip(lua_State*);
     static int setLabelCursor(lua_State*);
