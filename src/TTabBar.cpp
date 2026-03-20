@@ -39,12 +39,12 @@
 #include <QDateTime>
 
 // Constants for improved drag detection
-static const int DETACH_DISTANCE_THRESHOLD = 80;  // Pixels to drag before tab detaches
-static const int DETACH_PIXEL_BUFFER = 20;        // Drag tolerance buffer
-static const int VERTICAL_MOVEMENT_RATIO_THRESHOLD = 60;  // Percentage of movement that must be vertical
-static const int TAB_REORDER_DELAY_MS = 150;  // Delay before allowing tab detachment
+static const int DETACH_DISTANCE_THRESHOLD = 80;         // Pixels to drag before tab detaches
+static const int DETACH_PIXEL_BUFFER = 20;               // Drag tolerance buffer
+static const int VERTICAL_MOVEMENT_RATIO_THRESHOLD = 60; // Percentage of movement that must be vertical
+static const int TAB_REORDER_DELAY_MS = 150;             // Delay before allowing tab detachment
 
-void TStyle::drawControl(ControlElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget) const
+void TStyle::drawControl(ControlElement element, const QStyleOption* option, QPainter* painter, const QWidget* widget) const
 {
     if (element == QStyle::CE_TabBarTab) {
         QString tabName = mpTabBar->tabData(mpTabBar->tabAt(option->rect.center())).toString();

@@ -15,6 +15,7 @@ uniform mat4 uModel;
 uniform mat3 uNormalMatrix;
 uniform bool uUseInstancing = false;
 uniform bool uUseTexture = false;
+uniform bool uDisableLighting = false;
 
 uniform vec3 uLight0Pos = vec3(5000.0, 4000.0, 1000.0);
 uniform vec3 uLight1Pos = vec3(5000.0, 1000.0, 1000.0);
@@ -42,28 +43,33 @@ void main()
     
     vec3 worldPos = vec3(uModel * finalPos);
     vec3 worldNormal = normalize(uNormalMatrix * vec3(finalNormal));
-    
-    vec3 ambient = uLight0Ambient + uLight1Ambient;
-    
-    vec3 lightDir0 = normalize(uLight0Pos - worldPos);
-    float diff0 = max(dot(worldNormal, lightDir0), 0.0);
-    vec3 diffuse0 = diff0 * uLight0Diffuse;
-    
-    vec3 lightDir1 = normalize(uLight1Pos - worldPos);
-    float diff1 = max(dot(worldNormal, lightDir1), 0.0);
-    vec3 diffuse1 = diff1 * uLight1Diffuse;
-    
-    vec3 lighting = ambient + diffuse0 + diffuse1;
-    lighting = clamp(lighting, 0.0, 1.0);
-    
-    vec3 materialAmbientDiffuse = finalColor.rgb;
-    
-    vec3 ambientContrib = (uLight0Ambient + uLight1Ambient) * materialAmbientDiffuse;
-    vec3 diffuseContrib = (diffuse0 + diffuse1) * materialAmbientDiffuse;
-    
-    vec3 finalColorRGB = ambientContrib + diffuseContrib;
-    
-    vertexColor = vec4(finalColorRGB, finalColor.a);
+
+    if (uDisableLighting) {
+        // Pass through color without lighting (for labels/billboards)
+        vertexColor = finalColor;
+    } else {
+        vec3 ambient = uLight0Ambient + uLight1Ambient;
+
+        vec3 lightDir0 = normalize(uLight0Pos - worldPos);
+        float diff0 = max(dot(worldNormal, lightDir0), 0.0);
+        vec3 diffuse0 = diff0 * uLight0Diffuse;
+
+        vec3 lightDir1 = normalize(uLight1Pos - worldPos);
+        float diff1 = max(dot(worldNormal, lightDir1), 0.0);
+        vec3 diffuse1 = diff1 * uLight1Diffuse;
+
+        vec3 lighting = ambient + diffuse0 + diffuse1;
+        lighting = clamp(lighting, 0.0, 1.0);
+
+        vec3 materialAmbientDiffuse = finalColor.rgb;
+
+        vec3 ambientContrib = (uLight0Ambient + uLight1Ambient) * materialAmbientDiffuse;
+        vec3 diffuseContrib = (diffuse0 + diffuse1) * materialAmbientDiffuse;
+
+        vec3 finalColorRGB = ambientContrib + diffuseContrib;
+
+        vertexColor = vec4(finalColorRGB, finalColor.a);
+    }
     
     // Pass texture coordinates to fragment shader
     texCoord = aTexCoord;

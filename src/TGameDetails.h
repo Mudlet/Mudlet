@@ -115,9 +115,17 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl("achaea.com"),
              23,
              false,
-             qsl("<a href='http://www.achaea.com/'>http://www.achaea.com</a>"),
-             qsl(":/icons/achaea_120_30.png"),
-             QString()},
+             qsl("<a href='http://www.achaea.com/'>Website</a><br>"
+                 "<a href='https://discord.gg/2v2upFTj8G'>Discord</a>"),
+             qsl(":/icons/achaea.png"),
+             qsl("In Achaea, your name carries weight."
+                 "\n\n"
+                 "Some worlds are easy to leave behind. Achaea is not one of them. The cities, the Houses, the rivalries, "
+                 "the faith, the politics all create the social gravity veterans remember."
+                 "\n\n"
+                 "Reputation matters here. History lingers. What you do shapes how people know you."
+                 "\n\n"
+                 "Come back to a world where identity means more than a build.")},
 
             {qsl("3Kingdoms"),
              qsl("3k.org"),
@@ -153,9 +161,18 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl("lusternia.com"),
              5000,
              false,
-             qsl("<a href='http://www.lusternia.com/'>http://www.lusternia.com</a>"),
-             qsl(":/icons/lusternia_120_30.png"),
-             QString()},
+             qsl("<a href='http://www.lusternia.com/'>Website</a><br>"
+                 "<a href='https://discord.gg/d8PECxD739'>Discord</a>"),
+             qsl(":/icons/lusternia.png"),
+             qsl("Lusternia feels like nowhere else."
+                 "\n\n"
+                 "Not because it tries to be strange for its own sake, but because it never settled for ordinary. "
+                 "The planes are stranger. The lore runs deeper. The factions feel less familiar, and the world keeps "
+                 "opening up long after the first impression."
+                 "\n\n"
+                 "Veterans do not come back to Lusternia for comfort. They come back for discovery."
+                 "\n\n"
+                 "Enter a world that keeps revealing more of itself.")},
 
             {qsl("BatMUD"),
              qsl("batmud.bat.org"),
@@ -288,9 +305,17 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl("aetolia.com"),
              23,
              false,
-             qsl("<a href='http://www.aetolia.com/'>http://www.aetolia.com</a>"),
-             qsl(":/icons/aetolia_120_30.png"),
-             QString()},
+             qsl("<a href='http://www.aetolia.com/'>Website</a><br>"
+                 "<a href='https://discord.gg/x2s7fY6'>Discord</a>"),
+             qsl(":/icons/aetolia.png"),
+             qsl("Aetolia does not do safe fantasy."
+                 "\n\n"
+                 "It never did."
+                 "\n\n"
+                 "This is a world of darkness, pressure, factional loyalty, and choices that leave scars. "
+                 "Allegiance matters. Hostility kills. The atmosphere is not decoration. It is part of the threat."
+                 "\n\n"
+                 "Step back into a world that does not let you stay comfortable.")},
 
             {qsl("Astaria"),
              qsl("astaria.net"),
@@ -307,9 +332,17 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl("imperian.com"),
              4000,
              false,
-             qsl("<a href='http://www.imperian.com/'>http://www.imperian.com</a>"),
-             qsl(":/icons/imperian_120_30.png"),
-             QString()},
+             qsl("<a href='http://www.imperian.com/'>Website</a><br>"
+                 "<a href='https://discord.gg/QX42sY8E7U'>Discord</a>"),
+             qsl(":/icons/imperian.png"),
+             qsl("Imperian was made for conflict."
+                 "\n\n"
+                 "Rivalry matters here. Pressure matters. Momentum matters. Nothing feels softened, "
+                 "and very little is handed to you. That harder edge is exactly what veterans remember."
+                 "\n\n"
+                 "Imperian has always been about conflict with teeth and reputation earned the hard way."
+                 "\n\n"
+                 "If you want fantasy that hits harder and asks more of you, start here.")},
 
             {qsl("WoTMUD"),
              qsl("game.wotmud.org"),
@@ -362,6 +395,21 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "destruction are rising from a long slumber to again wreak havoc on the realm.  "
                  "The gameplay of Luminari will be familiar to anyone who has played Dungeons and "
                  "Dragons, Pathfinder or any of the many RPG systems based on the d20 ruleset.")},
+
+            {qsl("Starmourn"),
+             qsl("starmourn.com"),
+             3000,
+             false,
+             qsl("<a href='http://www.starmourn.com/'>Website</a><br>"
+                 "<a href='https://discord.gg/H8m7pFV'>Discord</a>"),
+             qsl(":/icons/starmourn.png"),
+             qsl("Starmourn offers a galaxy with real edge."
+                 "\n\n"
+                 "Factions, syndicates, aliens, cybernetics, advanced tech, and a style all its own make "
+                 "Starmourn feel different from the usual fantasy loop. It is a universe built around danger, "
+                 "ambition, and the chance to carve out a name where safety was never promised."
+                 "\n\n"
+                 "The future is open. Take your place in it.")},
 
             {qsl("StickMUD"),
              qsl("stickmud.com"),

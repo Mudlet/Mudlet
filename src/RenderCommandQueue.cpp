@@ -22,9 +22,7 @@
 #include <QDebug>
 #include <cstring>
 
-RenderCommandQueue::RenderCommandQueue()
-{
-}
+RenderCommandQueue::RenderCommandQueue() {}
 
 RenderCommandQueue::~RenderCommandQueue()
 {
@@ -55,14 +53,14 @@ void RenderCommandQueue::addCommand(std::unique_ptr<RenderCommand> command)
 }
 
 void RenderCommandQueue::executeAll(QOpenGLShaderProgram* shader,
-                                   GeometryManager* geometryManager,
-                                   ResourceManager* resourceManager,
-                                   QOpenGLVertexArrayObject& vao,
-                                   QOpenGLBuffer& vertexBuffer,
-                                   QOpenGLBuffer& colorBuffer,
-                                   QOpenGLBuffer& normalBuffer,
-                                   QOpenGLBuffer& indexBuffer,
-                                   QOpenGLBuffer& texCoordBuffer)
+                                    GeometryManager* geometryManager,
+                                    ResourceManager* resourceManager,
+                                    QOpenGLVertexArrayObject& vao,
+                                    QOpenGLBuffer& vertexBuffer,
+                                    QOpenGLBuffer& colorBuffer,
+                                    QOpenGLBuffer& normalBuffer,
+                                    QOpenGLBuffer& indexBuffer,
+                                    QOpenGLBuffer& texCoordBuffer)
 {
     if (!mInitialized) {
         qWarning() << "RenderCommandQueue: Not initialized";

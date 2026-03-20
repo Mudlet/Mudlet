@@ -43,22 +43,22 @@ Discord::Discord(QObject* parent)
 // "midmud"  is "460618737712889858", has "server-icon", "exventure" and "mudlet" icons
 // "carinus" is "438335628942376960", has "server-icon" and "mudlet" icons
 // "wotmud"  is "464945517156106240", has "mudlet", "ajar_(red|green|yellow|blue|white|grey|brown)"
-, mHostApplicationIDs{{nullptr, mMudletApplicationId}}
-// lowercase list of known games
+, mHostApplicationIDs{{nullptr, mMudletApplicationId}} // lowercase list of known games
 // {game name, {game addresses}}
-, mKnownGames{{"midmud", {"midmud.com"}},
-              {"wotmud", {"game.wotmud.org"}},
-              {"luminari", {"luminarimud.com"}},
-              {"achaea", {"achaea.com", "iron-ach.ironrealms.com"}},
-              {"aetolia", {"aetolia.com", "iron-aet.ironrealms.com"}},
-              {"imperian", {"imperian.com", "iron-imp.ironrealms.com"}},
-              {"lusternia", {"lusternia.com", "iron-lus.ironrealms.com"}},
-              {"starmourn", {"starmourn.com"}},
-              {"stickmud", {"stickmud.com"}},
-              {"clessidra", {"clessidra.it", "mud.clessidra.it"}},
-              {"mume", {"mume.org"}},
-              {"asteria", {"asteriamud.com"}},
-            }
+, mKnownGames{
+          {"midmud", {"midmud.com"}},
+          {"wotmud", {"game.wotmud.org"}},
+          {"luminari", {"luminarimud.com"}},
+          {"achaea", {"achaea.com", "iron-ach.ironrealms.com"}},
+          {"aetolia", {"aetolia.com", "iron-aet.ironrealms.com"}},
+          {"imperian", {"imperian.com", "iron-imp.ironrealms.com"}},
+          {"lusternia", {"lusternia.com", "iron-lus.ironrealms.com"}},
+          {"starmourn", {"starmourn.com"}},
+          {"stickmud", {"stickmud.com"}},
+          {"clessidra", {"clessidra.it", "mud.clessidra.it"}},
+          {"mume", {"mume.org"}},
+          {"asteria", {"asteriamud.com"}},
+  }
 {
 #if defined(Q_OS_WIN64)
     // Only defined on 64 bit Windows
@@ -378,7 +378,8 @@ void Discord::UpdatePresence()
         // It has changed - must shutdown and reopen the library instance with
         // the alternate application id:
 #if defined(DEBUG_DISCORD)
-        qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - mCurrentApplicationId (\"" << mCurrentApplicationId << "\") does not match the one for this Host instance (\"" << applicationID << "\"), restarting RPC library with the latter.";
+        qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - mCurrentApplicationId (\"" << mCurrentApplicationId << "\") does not match the one for this Host instance (\""
+                                     << applicationID << "\"), restarting RPC library with the latter.";
 #endif
         Discord_Shutdown();
 
@@ -588,7 +589,8 @@ bool Discord::setApplicationID(Host* pHost, const QString& text)
     return false;
 }
 
-void Discord::resetData(Host* pHost){
+void Discord::resetData(Host* pHost)
+{
     mStartTimes.remove(pHost);
     mEndTimes.remove(pHost);
     mDetailTexts[pHost] = qsl("www.mudlet.org");
