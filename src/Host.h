@@ -460,7 +460,7 @@ public:
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void initMMCPServer();
-    void setMMCPChatName(const QString&, bool shouldSignal = true);
+    bool setMMCPChatName(const QString&);
     void setShowIdsInEditor(const bool isShown)
     {
         mShowIDsInEditor = isShown;

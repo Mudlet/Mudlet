@@ -240,7 +240,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mMMCPServer(nullptr)
 , mpDlgProfilePreferences(nullptr)
 , mMMCPChatPort(csDefaultMMCPHostPort)
-, mMMCPChatPrefix(qsl("<CHAT>"))
+, mMMCPChatPrefix(csDefaultChatPrefix)
 , mMMCPAutostartServer(false)
 , mMMCPAllowPeekRequests(false)
 , mMMCPPrefixEmotes(false)
@@ -3049,7 +3049,6 @@ void Host::initMMCPServer()
     }
 
     mMMCPServer = new MMCPServer(this);
-    connect(this, &Host::mmcpChatNameChanged, mMMCPServer, &MMCPServer::slot_chatNameChanged);
 }
 
 
@@ -3059,14 +3058,28 @@ QString Host::getMMCPChatName()
     return mMMCPChatName;
 }
 
-// Set the MMCP chat name for this host
-// Optionally emit a signal so listeners (GUI, MMCPServer) can respond
-void Host::setMMCPChatName(const QString& name, bool shouldSignal)
+// Validate and set the MMCP chat name, notify connected peers, and update GUI.
+// Returns false if the name is invalid (contains ~ or ,).
+bool Host::setMMCPChatName(const QString& name)
 {
-    mMMCPChatName = name;
-    if (shouldSignal) {
-        emit mmcpChatNameChanged(name);
+    static const QRegularExpression rx(qsl("~|,"));
+    if (rx.match(name).hasMatch()) {
+        return false;
     }
+
+    // If the name is unchanged, no need to update or emit signals
+    if (mMMCPChatName == name) {
+        return true;
+    }
+
+    mMMCPChatName = name;
+
+    if (mMMCPServer) {
+        mMMCPServer->chatName(name);
+    }
+
+    emit mmcpChatNameChanged(name);
+    return true;
 }
 
 quint16 Host::getMMCPPort()

@@ -764,9 +764,10 @@ void MMCPClient::handleIncomingChatGroup(const QString& msg)
     using namespace AnsiColors;
 
     //: Incoming group message
-    const QString groupMsg = tr("%1%2<CHAT>%3(%4)%1%2%5%1")
+    const QString groupMsg = tr("%1%2%3%4(%5)%1%2%6%1")
                                      .arg(RST)
                                      .arg(FBLDRED)
+                                     .arg(mpHost->getMMCPChatPrefix())
                                      .arg(FBLDCYN)
                                      .arg(groupStr)
                                      .arg(trimmedMsg);

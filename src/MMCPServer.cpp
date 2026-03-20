@@ -1099,24 +1099,7 @@ QString MMCPServer::getChatName() const
         return mpHost->getMMCPChatName();
     }
 
-    return "MudletUser";
+    return csDefaultMMCPChatName;
 }
 
-/**
- * Persist chat name to the Host profile without sending NameChange to peers.
- * Used by the Lua path after chatName() has already handled validation and
- * peer notification.
- */
-void MMCPServer::setChatName(const QString& val)
-{
-    mpHost->setMMCPChatName(val, false);
-}
 
-/**
- * Slot connected to Host::mmcpChatNameChanged signal.
- * Validates and sends NameChange to connected MMCP peers.
- */
-void MMCPServer::slot_chatNameChanged(const QString& name)
-{
-    chatName(name);
-}

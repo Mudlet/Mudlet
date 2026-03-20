@@ -20,15 +20,16 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+ #include "utils.h"
 
 inline const uint16_t csDefaultMMCPHostPort{4050};
-inline const QLatin1String csDefaultMMCPChatName{"Mudlet"};
-inline const QLatin1String csDefaultMMCPGroupName{"<none>"};
-inline const QLatin1String csDefaultChatPrefix{"<CHAT>"};
-inline const QLatin1String csMMCPChatChannelEvent{"sysMMCPChatMessage"};
-inline const QLatin1String csMMCPChatSideChannelEvent{"sysMMCPSideChannelMessage"};
-inline const QLatin1String csMMCPIncomingSnoopEvent{"sysMMCPIncomingSnoopMessage"};
-inline const QLatin1String csMMCPPeerUpdateEvent{"sysMMCPPeerUpdateEvent"};
+inline const auto csDefaultMMCPChatName{qsl("MudletUser")};
+inline const auto csDefaultMMCPGroupName{qsl("<none>")};
+inline const auto csDefaultChatPrefix{qsl("<CHAT>")};
+inline const auto csMMCPChatChannelEvent{qsl("sysMMCPChatMessage")};
+inline const auto csMMCPChatSideChannelEvent{qsl("sysMMCPSideChannelMessage")};
+inline const auto csMMCPIncomingSnoopEvent{qsl("sysMMCPIncomingSnoopMessage")};
+inline const auto csMMCPPeerUpdateEvent{qsl("sysMMCPPeerUpdateEvent")};
 
 enum MMCPChatCommand {
     NameChange = 1,
