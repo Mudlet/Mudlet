@@ -819,6 +819,10 @@ std::pair<bool, QString> Host::getModuleSync(const QString& moduleName)
 
 void Host::resetProfile_phase1()
 {
+    if (mResetProfile) {
+        return;
+    }
+
     mAliasUnit.stopAllTriggers();
     mTriggerUnit.stopAllTriggers();
     mTimerUnit.stopAllTriggers();
@@ -837,6 +841,7 @@ void Host::resetProfile_phase2()
     getTriggerUnit()->removeAllTempTriggers();
     getKeyUnit()->removeAllTempKeys();
     removeAllNonPersistentStopWatches();
+    mpMedia->stopAllMediaPlayers();
 
     mAliasUnit.doCleanup();
     mTimerUnit.doCleanup();
@@ -844,6 +849,7 @@ void Host::resetProfile_phase2()
     mKeyUnit.doCleanup();
     mpConsole->resetMainConsole();
     mEventHandlerMap.clear();
+    mAnonymousEventHandlerFunctions.clear();
     mEventMap.clear();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();

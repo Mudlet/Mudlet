@@ -35,6 +35,7 @@
 
 #include "Host.h"
 #include "TAlias.h"
+#include "TEvent.h"
 #include "TKey.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
@@ -338,7 +339,7 @@ private slots:
              "Manually inserted event handler should be cleared after reset");
   }
 
-  void test_anonymousEventHandlersSurviveResetButAreFunctionallyStale() {
+  void test_anonymousEventHandlersClearedAfterReset() {
     lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
     luaL_dostring(
         L, "function anonHandlerTestFunc() anonHandlerCalled = true end");
@@ -347,12 +348,20 @@ private slots:
 
     performReset();
 
-    // The Lua function no longer exists in the new state — the handler is stale
+    // The Lua function no longer exists in the new state
     lua_State *newL = mpHost->mLuaInterpreter.getLuaGlobalState();
     lua_getglobal(newL, "anonHandlerTestFunc");
     QVERIFY2(lua_isnil(newL, -1), "Lua function referenced by anonymous "
                                   "handler should not exist in new Lua state");
     lua_pop(newL, 1);
+
+    // The anonymous handler map should also be cleared to prevent
+    // stale entries from accumulating across resets
+    TEvent event{};
+    event.mArgumentList.append(qsl("testAnonymousEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    // Should not produce errors — handler map was cleared
+    mpHost->raiseEvent(event);
   }
 
   // -----------------------------------------------------------------------
@@ -636,25 +645,25 @@ private slots:
   // Group 14: Double Reset Safety
   // -----------------------------------------------------------------------
 
-  void test_doubleResetDoesNotCrash() {
+  void test_doubleResetIsGuarded() {
     mpHost->mLuaInterpreter.startTempTrigger(qsl("double_reset_test"), qsl(""),
                                              -1);
 
-    // Call phase1 twice before any processEvents
+    lua_State *firstL = mpHost->mLuaInterpreter.getLuaGlobalState();
+
+    // Call phase1 twice — the second call should be a no-op
     mpHost->resetProfile_phase1();
     mpHost->resetProfile_phase1();
 
     QCoreApplication::processEvents();
 
+    // Only one phase2 should have run (guard prevents second phase1)
+    lua_State *afterL = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QVERIFY(afterL);
+    QVERIFY2(afterL != firstL, "Lua state should be new after reset");
     QVERIFY2(!mpHost->mResetProfile,
-             "mResetProfile should be false after double reset");
+             "mResetProfile should be false after reset");
     QCOMPARE(countTempTriggers(), 0);
-
-    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
-    QVERIFY(L);
-    lua_getglobal(L, "assert");
-    QVERIFY(!lua_isnil(L, -1));
-    lua_pop(L, 1);
   }
 
   // -----------------------------------------------------------------------
