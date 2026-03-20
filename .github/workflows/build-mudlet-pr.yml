@@ -93,6 +93,10 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       timeout-minutes: 7
       run: |
+        # Remove Homebrew LLVM to prevent it from shadowing AppleClang.
+        # Upstream LLVM can't compile Objective-C++ against Apple SDK headers.
+        brew uninstall --ignore-dependencies llvm@15 2>/dev/null || true
+
         # Install all required dependencies
         # brew install can hang indefinitely during bottle pouring, so timeout and retry
         for attempt in 1 2 3; do
@@ -264,10 +268,8 @@ jobs:
         ${{github.workspace}}/CI/validate_deployment.sh
         ${{github.workspace}}/CI/set-build-info.sh
         # ccache can't reliably detect that the compiler is clang on macOS, so just say so explicitly.
-        # Use absolute paths to ensure AppleClang is used, not Homebrew's upstream LLVM clang
-        # which can't compile Objective-C++ files against Apple SDK headers.
-        echo "CXX=/usr/bin/clang++" >> $GITHUB_ENV
-        echo "CC=/usr/bin/clang" >> $GITHUB_ENV
+        echo "CXX=clang++" >> $GITHUB_ENV
+        echo "CC=clang" >> $GITHUB_ENV
 
     - name: check ccache stats prior to build
       run: ccache --zero-stats --show-stats
