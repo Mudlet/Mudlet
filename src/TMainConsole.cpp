@@ -33,6 +33,7 @@
 #include "TLabel.h"
 #include "TMap.h"
 #include "TRoomDB.h"
+#include "TTextBox.h"
 #include "TTextEdit.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
@@ -273,7 +274,16 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
             logStream << "   <!-- body { font-family: '" << fontsList.join("', '") << "'; font-size: 100%; line-height: 1.125em; white-space: nowrap; color:rgb(" << mpHost->mFgColor.red() << ","
                       << mpHost->mFgColor.green() << "," << mpHost->mFgColor.blue() << "); background-color:rgb(" << mpHost->mBgColor.red() << "," << mpHost->mBgColor.green() << ","
                       << mpHost->mBgColor.blue() << ");}\n";
-            logStream << "        span { white-space: pre-wrap; } -->\n";
+            logStream << "        span { white-space: pre-wrap; }\n";
+
+            if (mpHost->getEnableBlinkText()) {
+                logStream << "        @keyframes blink-slow { 50% { opacity: 0; } }\n";
+                logStream << "        @keyframes blink-fast { 50% { opacity: 0; } }\n";
+                logStream << "        .blink-slow { animation: blink-slow 0.8s step-end infinite; }\n";
+                logStream << "        .blink-fast { animation: blink-fast 0.4s step-end infinite; }\n";
+            }
+
+            logStream << "     -->\n";
             logStream << "  </style>\n";
             logStream << "  </head>\n";
             bool isAtBody = false;
@@ -480,6 +490,13 @@ void TMainConsole::resetMainConsole()
         itScrollBox.value()->close();
         itScrollBox.remove();
     }
+
+    QMutableMapIterator<QString, TTextBox*> itTextBox(mTextBoxMap);
+    while (itTextBox.hasNext()) {
+        itTextBox.next();
+        itTextBox.value()->deleteLater();
+        itTextBox.remove();
+    }
 }
 
 // This is a sub-console overlaid on to the main or other console
@@ -661,6 +678,28 @@ std::pair<bool, QString> TMainConsole::deleteCommandLine(const QString& name)
 
     // Message is of the form needed for a Lua API function call run-time error
     return {false, qsl("command line name '%1' not found").arg(name)};
+}
+
+std::pair<bool, QString> TMainConsole::deleteTextBox(const QString& name)
+{
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a text edit cannot have an empty string as its name")};
+    }
+
+    auto pTextBox = mTextBoxMap.take(name);
+    if (pTextBox) {
+        pTextBox->deleteLater();
+
+        TEvent mudletEvent{};
+        mudletEvent.mArgumentList.append(QLatin1String("sysTextEditDeleted"));
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mudletEvent.mArgumentList.append(name);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(mudletEvent);
+        return {true, QString()};
+    }
+
+    return {false, qsl("text edit name '%1' not found").arg(name)};
 }
 
 std::pair<bool, QString> TMainConsole::deleteScrollBox(const QString& name)
@@ -845,6 +884,33 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
     return {false, QLatin1String("couldn't create commandLine")};
 }
 
+std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
+{
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a text edit cannot have an empty string as its name")};
+    }
+
+    auto pT = mTextBoxMap.value(name);
+    auto pW = mDockWidgetMap.value(windowname);
+    auto pS = mScrollBoxMap.value(windowname);
+
+    if (!pT) {
+        if (pS) {
+            pT = new TTextBox(mpHost, name, pS->widget());
+        } else if (pW) {
+            pT = new TTextBox(mpHost, name, pW->widget());
+        } else {
+            pT = new TTextBox(mpHost, name, mpMainFrame);
+        }
+        mTextBoxMap[name] = pT;
+        pT->resize(width, height);
+        pT->move(x, y);
+        pT->show();
+        return {true, QString()};
+    }
+    return {false, QLatin1String("couldn't create text edit")};
+}
+
 bool TMainConsole::setBackgroundImage(const QString& name, const QString& path)
 {
     auto pL = mLabelMap.value(name);
@@ -893,6 +959,7 @@ bool TMainConsole::raiseWindow(const QString& name)
     auto pM = mpMapper;
     auto pN = mSubCommandLineMap.value(name);
     auto pS = mScrollBoxMap.value(name);
+    auto pT = mTextBoxMap.value(name);
 
     if (pC) {
         pC->raise();
@@ -914,6 +981,10 @@ bool TMainConsole::raiseWindow(const QString& name)
         pN->raise();
         return true;
     }
+    if (pT) {
+        pT->raise();
+        return true;
+    }
 
     return false;
 }
@@ -925,6 +996,7 @@ bool TMainConsole::lowerWindow(const QString& name)
     auto pM = mpMapper;
     auto pN = mSubCommandLineMap.value(name);
     auto pS = mScrollBoxMap.value(name);
+    auto pT = mTextBoxMap.value(name);
 
     if (pC) {
         pC->lower();
@@ -948,6 +1020,11 @@ bool TMainConsole::lowerWindow(const QString& name)
     }
     if (pN) {
         pN->lower();
+        mpMainDisplay->lower();
+        return true;
+    }
+    if (pT) {
+        pT->lower();
         mpMainDisplay->lower();
         return true;
     }

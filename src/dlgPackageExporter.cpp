@@ -122,8 +122,6 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
     dlgPackageExporter* te_parent = static_cast<dlgPackageExporter*>(topLevelWidget());
     te_parent->mPlainDescription = ui->textEdit_description->toPlainText();
 
-    ui->packageList->addItem(tr("update installed package"));
-
     populateDependencies();
 
     listTriggers();
@@ -428,12 +426,23 @@ void dlgPackageExporter::populateDependencies()
 {
     ui->DependencyList->clear();
     ui->DependencyList->addItem(tr("add dependencies"));
+    const QSignalBlocker blocker(ui->packageList);
+    const QString previousSelection = ui->packageList->currentText();
+    ui->packageList->clear();
+    //: First item in package selection dropdown - when selected, allows updating an existing installed package
+    ui->packageList->addItem(tr("update installed package"));
     ui->packageList->addItems(mpHost->mInstalledPackages);
+
     ui->DependencyList->addItems(mpHost->mInstalledPackages);
     auto modules = mpHost->mInstalledModules;
     for (const auto& [moduleName, moduleData] : modules.asKeyValueRange()) {
         ui->packageList->addItem(moduleName);
         ui->DependencyList->addItem(moduleName);
+    }
+
+    const int previousIndex = ui->packageList->findText(previousSelection);
+    if (previousIndex >= 0) {
+        ui->packageList->setCurrentIndex(previousIndex);
     }
 }
 
