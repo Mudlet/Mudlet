@@ -27,6 +27,9 @@
 
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QTimer>
+
+using namespace std::chrono_literals;
 
 
 dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
@@ -127,28 +130,41 @@ void dlgModuleManager::slot_installModule()
     }
 
     QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+    QString lastDir = settings.value(qsl("lastFileDialogLocation"), QDir::homePath()).toString();
 
-    const QString fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet Module"), lastDir);
-    if (fileName.isEmpty()) {
+    //: Module manager - import modules from file dialog (multi-select enabled)
+    //: Module manager - file filter for supported module types (mpackage, zip, xml)
+    const QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Load Mudlet Module"), lastDir, tr("Mudlet Packages (*.mpackage *.zip *.xml)"));
+    if (fileNames.isEmpty()) {
         return;
     }
 
-    lastDir = QFileInfo(fileName).absolutePath();
-    settings.setValue("lastFileDialogLocation", lastDir);
+    lastDir = QFileInfo(fileNames.first()).absolutePath();
+    settings.setValue(qsl("lastFileDialogLocation"), lastDir);
 
-    QFile file(fileName);
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Load Mudlet Module:"), tr("Cannot read file %1:\n%2.").arg(fileName.toHtmlEscaped(), file.errorString()));
-        return;
+    QStringList failedModules;
+
+    for (const QString& fileName : fileNames) {
+        auto [success, errorMsg] = mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI);
+        if (success) {
+            mpHost->waitForProfileSave();
+        } else {
+            const QString baseName = QFileInfo(fileName).fileName();
+            failedModules << baseName;
+            qWarning() << "dlgModuleManager::slot_installModule() ERROR - failed to import" << baseName << ":" << errorMsg;
+        }
     }
 
-    mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI);
     for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
         moduleTable->removeRow(i);
     }
 
     layoutModules();
+
+    if (!failedModules.isEmpty()) {
+        //: Module manager - status message shown when some modules failed to import. %1 is a comma-separated list of module names
+        showImportStatus(tr("Failed to import: %1").arg(failedModules.join(qsl(", "))));
+    }
 }
 
 void dlgModuleManager::slot_uninstallModule()
@@ -249,6 +265,14 @@ void dlgModuleManager::slot_helpModule()
             }
         }
     }
+}
+
+void dlgModuleManager::showImportStatus(const QString& message)
+{
+    label_importStatus->setText(message);
+    label_importStatus->setStyleSheet(qsl("QLabel { padding: 8px; }"));
+    label_importStatus->show();
+    QTimer::singleShot(4s, label_importStatus, &QWidget::hide);
 }
 
 void dlgModuleManager::closeEvent(QCloseEvent* event)

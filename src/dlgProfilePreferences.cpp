@@ -43,6 +43,8 @@
 #include "dlgTriggerEditor.h"
 #include "edbee/views/texteditorscrollarea.h"
 #include "edbee/models/textdocumentscopes.h"
+#include "MMCP.h"
+#include "MMCPServer.h"
 
 #include <chrono>
 #include <QtConcurrent>
@@ -249,7 +251,15 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
                                              "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
                                              "<p><i>This setting is only processed when individual menus are created and changes may not "
                                              "propagate everywhere until Mudlet is restarted.</i></p>"));
+    lineEdit_mmcpPort->setPlaceholderText(QString::number(csDefaultMMCPHostPort));
+    lineEdit_mmcpChatName->setPlaceholderText(csDefaultMMCPChatName);
+    connect(lineEdit_mmcpChatName, &QLineEdit::editingFinished, this, &dlgProfilePreferences::slot_mmcpChatNameChanged);
+    lineEdit_mmcpChatMessagePrefix->setPlaceholderText(csDefaultChatPrefix);
 
+    // Add validator for MMCP Chatname, disallow ~ and , characters
+    QRegularExpression rx("^[^~,]*$");
+    QValidator* validator = new QRegularExpressionValidator(rx, this);
+    lineEdit_mmcpChatName->setValidator(validator);
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
@@ -511,6 +521,7 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_announceIncomingText->setEnabled(false);
     checkBox_advertiseScreenReader->setEnabled(false);
     checkBox_enableClosedCaption->setEnabled(false);
+    checkBox_enableBlinkText->setEnabled(false);
     comboBox_blankLinesBehaviour->setEnabled(false);
     comboBox_caretModeKey->setEnabled(false);
 
@@ -625,6 +636,7 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_announceIncomingText->setEnabled(true);
     checkBox_advertiseScreenReader->setEnabled(true);
     checkBox_enableClosedCaption->setEnabled(true);
+    checkBox_enableBlinkText->setEnabled(true);
     comboBox_blankLinesBehaviour->setEnabled(true);
     comboBox_caretModeKey->setEnabled(true);
 
@@ -798,6 +810,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // Now connect the signal
     connect(checkBox_f3SearchEnabled, &QCheckBox::toggled, pHost, &Host::setF3SearchEnabled);
 
+    checkBox_enableBlinkText->setChecked(pHost->getEnableBlinkText());
+
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();
 
@@ -860,9 +874,22 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         lineEdit_discordUserDiscriminator->setText(pHost->mRequiredDiscordUserDiscriminator);
     }
 
+    lineEdit_mmcpChatName->setText(pHost->getMMCPChatName());
+    lineEdit_mmcpPort->setText(QString::number(pHost->getMMCPPort()));
+    lineEdit_mmcpChatMessagePrefix->setText(pHost->getMMCPChatPrefix());
+
+    /* Possible inclusion in 4.20.1
+    checkBox_mmcpAutostartServer->setChecked(pHost->mMMCPAutostartServer);
+    checkBox_mmcpAllowPeekReq->setChecked(pHost->mMMCPAllowPeekRequests);
+    checkBox_mmcpAutoAcceptCalls->setChecked(pHost->getMMCPAutoAcceptCalls());
+    */
+
+    checkBox_mmcpAddChatMessageNewline->setChecked(pHost->getMMCPAddChatMessageNewline());
+    checkBox_mmcpPrefixEmotes->setChecked(pHost->getMMCPPrefixEmotes());
+    checkBox_mmcpSnoopInMainConsole->setChecked(pHost->getMMCPShowSnoopInMainConsole());
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
 
-    auto originalBorders = pHost->borders();
+    auto originalBorders = pHost->userBorders();
     topBorderHeight->setValue(originalBorders.top());
     bottomBorderHeight->setValue(originalBorders.bottom());
     leftBorderWidth->setValue(originalBorders.left());
@@ -927,6 +954,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableMNES = new QAction(tr("MNES: Mud New-Environ Standard"), nullptr);
     mEnableMNES->setCheckable(true);
     mEnableMNES->setChecked(pHost->mEnableMNES);
+    //: Tooltip for MNES protocol option explaining mutual exclusivity with NEW-ENVIRON
+    mEnableMNES->setToolTip(tr("MNES uses the same telnet option as NEW-ENVIRON, so only one can be active. MNES sends a minimal set of variables, while NEW-ENVIRON sends extended variables "
+                               "including OSC link support."));
     protocolMenu->addAction(mEnableMNES);
 
     mEnableMSDP = new QAction(tr("MSDP: Mud Server Data Protocol"), nullptr);
@@ -962,6 +992,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableNEWENVIRON = new QAction(tr("NEW-ENVIRON: Client Variables Standard"), nullptr);
     mEnableNEWENVIRON->setCheckable(true);
     mEnableNEWENVIRON->setChecked(pHost->mEnableNEWENVIRON);
+    //: Tooltip for NEW-ENVIRON protocol option explaining mutual exclusivity with MNES
+    mEnableNEWENVIRON->setToolTip(
+            tr("NEW-ENVIRON uses the same telnet option as MNES, so only one can be active. NEW-ENVIRON sends extended variables including OSC link support, while MNES sends a minimal set."));
     protocolMenu->addAction(mEnableNEWENVIRON);
 
     pushButton_chooseProtocols->setMenu(protocolMenu);
@@ -1208,7 +1241,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                      // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -1324,6 +1357,18 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(mEnableNAWS, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableCHARSET, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableNEWENVIRON, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+
+    // MNES and NEW-ENVIRON both use telnet option 39, so they are mutually exclusive
+    connect(mEnableMNES, &QAction::toggled, this, [this](bool checked) {
+        if (checked && mEnableNEWENVIRON->isChecked()) {
+            mEnableNEWENVIRON->setChecked(false);
+        }
+    });
+    connect(mEnableNEWENVIRON, &QAction::toggled, this, [this](bool checked) {
+        if (checked && mEnableMNES->isChecked()) {
+            mEnableMNES->setChecked(false);
+        }
+    });
 
     connect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
     connect(mFORCE_GA_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
@@ -1570,10 +1615,13 @@ void dlgProfilePreferences::clearHostDetails()
     lineEdit_discordUserName->clear();
     lineEdit_discordUserDiscriminator->clear();
 
+    lineEdit_mmcpChatName->clear();
+
     checkBox_debugShowAllCodepointProblems->setChecked(false);
     checkBox_announceIncomingText->setChecked(false);
     checkBox_advertiseScreenReader->setChecked(false);
     checkBox_enableClosedCaption->setChecked(false);
+    checkBox_enableBlinkText->setChecked(false);
     comboBox_blankLinesBehaviour->setCurrentIndex(0);
 
     groupBox_ssl_certificate->hide();
@@ -1710,22 +1758,22 @@ void dlgProfilePreferences::setColors2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonColor(pushButton_black_2, pHost->mBlack_2, true);
-        setButtonColor(pushButton_Lblack_2, pHost->mLightBlack_2, true);
-        setButtonColor(pushButton_green_2, pHost->mGreen_2, true);
-        setButtonColor(pushButton_Lgreen_2, pHost->mLightGreen_2, true);
-        setButtonColor(pushButton_red_2, pHost->mRed_2, true);
-        setButtonColor(pushButton_Lred_2, pHost->mLightRed_2, true);
-        setButtonColor(pushButton_blue_2, pHost->mBlue_2, true);
-        setButtonColor(pushButton_Lblue_2, pHost->mLightBlue_2, true);
-        setButtonColor(pushButton_yellow_2, pHost->mYellow_2, true);
-        setButtonColor(pushButton_Lyellow_2, pHost->mLightYellow_2, true);
-        setButtonColor(pushButton_cyan_2, pHost->mCyan_2, true);
-        setButtonColor(pushButton_Lcyan_2, pHost->mLightCyan_2, true);
-        setButtonColor(pushButton_magenta_2, pHost->mMagenta_2, true);
-        setButtonColor(pushButton_Lmagenta_2, pHost->mLightMagenta_2, true);
-        setButtonColor(pushButton_white_2, pHost->mWhite_2, true);
-        setButtonColor(pushButton_Lwhite_2, pHost->mLightWhite_2, true);
+        setButtonColor(pushButton_black_2, pHost->mBlack_2);
+        setButtonColor(pushButton_Lblack_2, pHost->mLightBlack_2);
+        setButtonColor(pushButton_green_2, pHost->mGreen_2);
+        setButtonColor(pushButton_Lgreen_2, pHost->mLightGreen_2);
+        setButtonColor(pushButton_red_2, pHost->mRed_2);
+        setButtonColor(pushButton_Lred_2, pHost->mLightRed_2);
+        setButtonColor(pushButton_blue_2, pHost->mBlue_2);
+        setButtonColor(pushButton_Lblue_2, pHost->mLightBlue_2);
+        setButtonColor(pushButton_yellow_2, pHost->mYellow_2);
+        setButtonColor(pushButton_Lyellow_2, pHost->mLightYellow_2);
+        setButtonColor(pushButton_cyan_2, pHost->mCyan_2);
+        setButtonColor(pushButton_Lcyan_2, pHost->mLightCyan_2);
+        setButtonColor(pushButton_magenta_2, pHost->mMagenta_2);
+        setButtonColor(pushButton_Lmagenta_2, pHost->mLightMagenta_2);
+        setButtonColor(pushButton_white_2, pHost->mWhite_2);
+        setButtonColor(pushButton_Lwhite_2, pHost->mLightWhite_2);
 
         setButtonColor(pushButton_foreground_color_2, pHost->mFgColor_2);
         setButtonColor(pushButton_background_color_2, pHost->mBgColor_2);
@@ -1934,7 +1982,7 @@ void dlgProfilePreferences::slot_setBgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_background_color, pHost->mBgColor);
+        setButtonAndProfileColor(pushButton_background_color, pHost->mBgColor, true);
     }
 }
 
@@ -2182,7 +2230,7 @@ void dlgProfilePreferences::slot_setMapColorBlack()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_black_2, pHost->mBlack_2, true);
+        setButtonAndProfileColor(pushButton_black_2, pHost->mBlack_2);
     }
 }
 
@@ -2190,7 +2238,7 @@ void dlgProfilePreferences::slot_setMapColorLightBlack()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lblack_2, pHost->mLightBlack_2, true);
+        setButtonAndProfileColor(pushButton_Lblack_2, pHost->mLightBlack_2);
     }
 }
 
@@ -2198,7 +2246,7 @@ void dlgProfilePreferences::slot_setMapColorRed()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_red_2, pHost->mRed_2, true);
+        setButtonAndProfileColor(pushButton_red_2, pHost->mRed_2);
     }
 }
 
@@ -2206,7 +2254,7 @@ void dlgProfilePreferences::slot_setMapColorLightRed()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lred_2, pHost->mLightRed_2, true);
+        setButtonAndProfileColor(pushButton_Lred_2, pHost->mLightRed_2);
     }
 }
 
@@ -2214,7 +2262,7 @@ void dlgProfilePreferences::slot_setMapColorGreen()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_green_2, pHost->mGreen_2, true);
+        setButtonAndProfileColor(pushButton_green_2, pHost->mGreen_2);
     }
 }
 
@@ -2222,7 +2270,7 @@ void dlgProfilePreferences::slot_setMapColorLightGreen()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lgreen_2, pHost->mLightGreen_2, true);
+        setButtonAndProfileColor(pushButton_Lgreen_2, pHost->mLightGreen_2);
     }
 }
 
@@ -2230,7 +2278,7 @@ void dlgProfilePreferences::slot_setMapColorBlue()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_blue_2, pHost->mBlue_2, true);
+        setButtonAndProfileColor(pushButton_blue_2, pHost->mBlue_2);
     }
 }
 
@@ -2238,7 +2286,7 @@ void dlgProfilePreferences::slot_setMapColorLightBlue()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lblue_2, pHost->mLightBlue_2, true);
+        setButtonAndProfileColor(pushButton_Lblue_2, pHost->mLightBlue_2);
     }
 }
 
@@ -2246,7 +2294,7 @@ void dlgProfilePreferences::slot_setMapColorYellow()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_yellow_2, pHost->mYellow_2, true);
+        setButtonAndProfileColor(pushButton_yellow_2, pHost->mYellow_2);
     }
 }
 
@@ -2254,7 +2302,7 @@ void dlgProfilePreferences::slot_setMapColorLightYellow()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lyellow_2, pHost->mLightYellow_2, true);
+        setButtonAndProfileColor(pushButton_Lyellow_2, pHost->mLightYellow_2);
     }
 }
 
@@ -2262,7 +2310,7 @@ void dlgProfilePreferences::slot_setMapColorCyan()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_cyan_2, pHost->mCyan_2, true);
+        setButtonAndProfileColor(pushButton_cyan_2, pHost->mCyan_2);
     }
 }
 
@@ -2270,7 +2318,7 @@ void dlgProfilePreferences::slot_setMapColorLightCyan()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lcyan_2, pHost->mLightCyan_2, true);
+        setButtonAndProfileColor(pushButton_Lcyan_2, pHost->mLightCyan_2);
     }
 }
 
@@ -2278,7 +2326,7 @@ void dlgProfilePreferences::slot_setMapColorMagenta()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_magenta_2, pHost->mMagenta_2, true);
+        setButtonAndProfileColor(pushButton_magenta_2, pHost->mMagenta_2);
     }
 }
 
@@ -2286,7 +2334,7 @@ void dlgProfilePreferences::slot_setMapColorLightMagenta()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lmagenta_2, pHost->mLightMagenta_2, true);
+        setButtonAndProfileColor(pushButton_Lmagenta_2, pHost->mLightMagenta_2);
     }
 }
 
@@ -2294,7 +2342,7 @@ void dlgProfilePreferences::slot_setMapColorWhite()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_white_2, pHost->mWhite_2, true);
+        setButtonAndProfileColor(pushButton_white_2, pHost->mWhite_2);
     }
 }
 
@@ -2302,7 +2350,7 @@ void dlgProfilePreferences::slot_setMapColorLightWhite()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lwhite_2, pHost->mLightWhite_2, true);
+        setButtonAndProfileColor(pushButton_Lwhite_2, pHost->mLightWhite_2);
     }
 }
 
@@ -2982,7 +3030,7 @@ void dlgProfilePreferences::slot_saveAndClose()
             }
         }
         const QMargins newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
-        pHost->setBorders(newBorders);
+        pHost->setUserBorders(newBorders);
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mVersionInTTYPE = checkBox_mVersionInTTYPE->isChecked();
         pHost->setForceMXPProcessorOn(checkBox_mForceMXPProcessorOn->isChecked());
@@ -3030,6 +3078,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
         pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
+        pHost->setEnableBlinkText(checkBox_enableBlinkText->isChecked());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
@@ -3090,6 +3139,27 @@ void dlgProfilePreferences::slot_saveAndClose()
             pHost->mRequiredDiscordUserDiscriminator.clear();
         }
 
+        // Save chat options so they are written to XML upon export
+        pHost->mMMCPChatName = lineEdit_mmcpChatName->text().trimmed();
+        pHost->mMMCPChatPrefix = lineEdit_mmcpChatMessagePrefix->text().trimmed();
+        bool ok;
+        quint16 port = lineEdit_mmcpPort->text().toUShort(&ok);
+        pHost->mMMCPChatPort = ok ? port : csDefaultMMCPHostPort;
+
+        /* Possible inclusion in 4020.1
+        pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
+        pHost->mMMCPAutoAcceptCalls = checkBox_mmcpAutoAcceptCalls->isChecked();
+        pHost->mMMCPAllowPeekRequests = checkBox_mmcpAllowPeekReq->isChecked();
+        */
+        // remove these when the above is restored
+        pHost->mMMCPAutostartServer = false;
+        pHost->mMMCPAutoAcceptCalls = false;
+        pHost->mMMCPAllowPeekRequests = false;
+
+        pHost->mMMCPPrefixEmotes = checkBox_mmcpPrefixEmotes->isChecked();
+        pHost->mMMCPAddChatMessageNewline = checkBox_mmcpAddChatMessageNewline->isChecked();
+
+        pHost->mMMCPShowSnoopInMainConsole = checkBox_mmcpSnoopInMainConsole->isChecked();
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
         pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
         pHost->mEnableClosedCaption = checkBox_enableClosedCaption->isChecked();
@@ -3191,17 +3261,13 @@ void dlgProfilePreferences::slot_chosenProfilesChanged(QAction* _action)
     pushButton_copyMap->setText(tr("copy to %n destination(s)", nullptr, selectionCount));
     if (selectionCount) {
         pushButton_copyMap->setEnabled(true);
-        /*:
-        text on button to select other profiles to receive the map from this profile,
-        %n is the number of other profiles that have already been selected to receive it and will always be 1 or more
-        */
+        /*: text on button to select other profiles to receive the map from this profile,
+ %n is the number of other profiles that have already been selected to receive it and will always be 1 or more*/
         pushButton_chooseProfiles->setText(tr("%n selected - change destinations...", nullptr, selectionCount));
     } else {
         pushButton_copyMap->setEnabled(false);
-        /*:
-        text on button to select other profiles to receive the map from this profile,
-        this is used when no profiles have been selected
-        */
+        /*: text on button to select other profiles to receive the map from this profile,
+ this is used when no profiles have been selected*/
         pushButton_chooseProfiles->setText(tr("pick destinations..."));
     }
 }
@@ -4034,6 +4100,28 @@ void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
         comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(qsl("yyyy-MM-dd")), tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)"));
         comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(qsl("yyyy-MM")), tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)"));
         label_logFileNameExtension->setText(qsl(".txt"));
+    }
+}
+
+/**
+ * Update the chatname lineEdit if the user changes their chat name while
+ * the preferences dialog is open
+ */
+void dlgProfilePreferences::slot_setMMCPChatName(const QString& name)
+{
+    lineEdit_mmcpChatName->setText(name);
+}
+
+/**
+ * Notify connected clients that our chatname has been changed (via GUI)
+ * 
+ */
+void dlgProfilePreferences::slot_mmcpChatNameChanged()
+{
+    const QString& chatName = lineEdit_mmcpChatName->text();
+
+    if (mpHost) {
+        mpHost->setMMCPChatName(chatName, false);
     }
 }
 

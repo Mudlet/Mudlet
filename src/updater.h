@@ -22,7 +22,7 @@
 
 // FreeBSD does not support the updater and these missing files upset
 // clang-tidy / Clazy when they are run in an environment without them:
-#if defined (INCLUDE_UPDATER)
+#if defined(INCLUDE_UPDATER)
 #include "dblsqd/feed.h"
 #include "dblsqd/update_dialog.h"
 #include "sparkleupdater.h"
@@ -52,6 +52,7 @@ private:
     dblsqd::UpdateDialog* updateDialog{nullptr};
     QPushButton* mpInstallOrRestart;
     bool mUpdateInstalled;
+    bool mManualCheckInProgress{false};
     QSettings* settings;
     std::unique_ptr<QTimer> mDailyCheck;
 
@@ -69,6 +70,7 @@ private:
     void recordUpdateTime() const;
     void recordUpdatedVersion() const;
     QString getPreviousVersion() const;
+    bool downloadReleaseIfValid(const dblsqd::Release& release);
     void finishSetup();
     void showDialogManually() const;
 
@@ -86,6 +88,7 @@ signals:
     // Argument is a count of updates available
     void signal_updateAvailable(const int);
     void signal_automaticUpdatesChanged(const bool);
+    void signal_updateCheckFailed(const QString& error);
 
 public slots:
     void slot_installOrRestartClicked(QAbstractButton* button, const QString& filePath);

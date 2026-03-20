@@ -88,6 +88,8 @@ set(mudlet_SRCS
     LuaInterface.cpp
     main.cpp
     mapInfoContributorManager.cpp
+    MMCPClient.cpp
+    MMCPServer.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
     EditorUndoStack.cpp
@@ -148,6 +150,7 @@ set(mudlet_SRCS
     TLuaInterpreterNetworking.cpp
     TLuaInterpreterTextToSpeech.cpp
     TLuaInterpreterUI.cpp
+    TLuaInterpreterMMCP.cpp
     TMainConsole.cpp
     TMap.cpp
     TMapLabel.cpp
@@ -179,6 +182,7 @@ set(mudlet_SRCS
     TMxpProcessor.cpp
     TMxpSendTagHandler.cpp
     TMxpSoundTagHandler.cpp
+    TMxpStatTagHandler.cpp
     TMxpSupportTagHandler.cpp
     TMxpTagHandler.cpp
     TMxpTagParser.cpp
@@ -199,6 +203,7 @@ set(mudlet_SRCS
     TDetachedWindow.cpp
     TTextCodec.cpp
     TEncodingHelper.cpp
+    TTextBox.cpp
     TTextEdit.cpp
     TTimer.cpp
     TToolBar.cpp
@@ -302,6 +307,9 @@ set(mudlet_HDRS
     LlamaFileManager.h
     LuaInterface.h
     mapInfoContributorManager.h
+    MMCP.h
+    MMCPClient.h
+    MMCPServer.h
     mudlet.h
     EditorCommand.h
     MudletInstanceCoordinator.h
@@ -352,6 +360,7 @@ set(mudlet_HDRS
     TLabel.h
     THyperlinkCompactManager.h
     THyperlinkSelectionManager.h
+    THyperlinkStyling.h
     THyperlinkVisibilityManager.h
     TLinkStore.h
     TLuaInterpreter.h
@@ -386,7 +395,8 @@ set(mudlet_HDRS
     TMxpProcessor.h
     TMxpSendTagHandler.h
     TMxpSoundTagHandler.h
-    TMxpSupportTagHandler.cpp
+    TMxpStatTagHandler.h
+    TMxpSupportTagHandler.h
     TMxpTagHandler.h
     TMxpTagParser.h
     TMxpTagProcessor.h
@@ -406,6 +416,7 @@ set(mudlet_HDRS
     TTabBar.h
     TDetachedWindow.h
     TTextCodec.h
+    TTextBox.h
     TTextEdit.h
     TTimer.h
     TToolBar.h
@@ -529,11 +540,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
 endif()
 
 if(NOT USE_OWN_QTKEYCHAIN)
-  # Only use this when we are using a system package and NOT our own local build
   find_package(Qt${QT_MAJOR_VERSION}Keychain REQUIRED)
-
-  # No need to test for it being found as the REQUIRED will make it error out
-  # if it is NOT found!
   message(STATUS "Using system QtKeyChain (Qt${QT_MAJOR_VERSION}) library (found version \"${Qt${QT_MAJOR_VERSION}Keychain_VERSION}\").")
 endif()
 
