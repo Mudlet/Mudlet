@@ -3,7 +3,6 @@ on:
   push:
     branches: [master, development, release-*]
     tags: [Mudlet-*]
-  pull_request:
   workflow_dispatch:
     inputs:
       scheduled:
@@ -17,18 +16,16 @@ on:
 permissions:
   id-token: write
   contents: read
-  actions: read
+  actions: write
 
 jobs:
   compile-mudlet:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
     if: ${{ github.repository_owner == 'Mudlet' }}
-    concurrency:
-      group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.event.pull_request.number || github.ref }}
-      cancel-in-progress: true
     env:
       SIGNPATH_SIGNING_ENABLED: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+      SIGNPATH_POLICY_SLUG: ${{ startsWith(github.ref, 'refs/tags/') && 'release-signing' || 'test-signing' }}
     strategy:
       fail-fast: false
       matrix:
@@ -47,7 +44,7 @@ jobs:
       if: matrix.buildname == 'windows64'
       uses: msys2/setup-msys2@v2
       with:
-        msystem: MINGW64
+        msystem: CLANG64
         update: true
 
     - name: (Windows) Build Environment Setup
@@ -64,8 +61,8 @@ jobs:
       uses: actions/cache/restore@v5
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.sha }}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}
+        key: ccache-${{matrix.os}}-${{matrix.buildname}}-clang-${{ github.ref_name }}
+        restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}-clang-development
 
     - name: check ccache stats prior to build
       shell: msys2 {0}
@@ -145,7 +142,7 @@ jobs:
         fi
 
     - name: Save ccache
-      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
+      if: always()
       uses: actions/cache/save@v5
       with:
         path: ${{runner.workspace}}/ccache
@@ -191,12 +188,12 @@ jobs:
         api-token: ${{secrets.SIGNPATH_API_TOKEN}}
         organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}
         project-slug: 'mudlet'
-        signing-policy-slug: ${{secrets.SIGNPATH_SIGNING_POLICY_SLUG}}
+        signing-policy-slug: ${{env.SIGNPATH_POLICY_SLUG}}
         artifact-configuration-slug: 'binaries'
         github-artifact-id: ${{steps.upload-unsigned-binaries.outputs.artifact-id}}
         wait-for-completion: true
         output-artifact-directory: ${{steps.prepare-signing.outputs.signing_dir}}
-        wait-for-completion-timeout-in-seconds: 600
+        wait-for-completion-timeout-in-seconds: 3600
 
     - name: (Windows) Replace binaries with signed versions
       if: steps.sign-binaries.outcome == 'success'
@@ -261,12 +258,12 @@ jobs:
         api-token: ${{secrets.SIGNPATH_API_TOKEN}}
         organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}
         project-slug: 'mudlet'
-        signing-policy-slug: ${{secrets.SIGNPATH_SIGNING_POLICY_SLUG}}
+        signing-policy-slug: ${{env.SIGNPATH_POLICY_SLUG}}
         artifact-configuration-slug: 'installer'
         github-artifact-id: ${{steps.upload-unsigned-installer.outputs.artifact-id}}
         wait-for-completion: true
         output-artifact-directory: ${{github.workspace}}/signed-installer
-        wait-for-completion-timeout-in-seconds: 600
+        wait-for-completion-timeout-in-seconds: 3600
 
     - name: (Windows) Replace installer with signed version
       if: steps.sign-installer.outcome == 'success'
