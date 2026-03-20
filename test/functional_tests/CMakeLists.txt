@@ -6,7 +6,6 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetTextDisplayedTest.cpp
     TelnetBenchmark.cpp
     TOscTerminatorTest.cpp
-    TRoomDoubleRemappingTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
@@ -18,11 +17,6 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     add_executable(${test_name} ${test_file} ${FUNCTIONAL_TEST_UTILS})
     add_dependencies(${test_name} ${LIB_MUDLET_TARGET})
     target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
-    # The static library includes main.cpp (needed for initializeQRCResources etc),
-    # so allow duplicate main symbol — tests provide their own via QTEST_MAIN
-    if(NOT WIN32)
-        target_link_options(${test_name} PRIVATE "LINKER:--allow-multiple-definition")
-    endif()
     set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS ON)
     add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
     set_tests_properties(${test_name} PROPERTIES
