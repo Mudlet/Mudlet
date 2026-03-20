@@ -817,10 +817,11 @@ std::pair<bool, QString> Host::getModuleSync(const QString& moduleName)
     return {false, qsl("module name '%1' not found").arg(moduleName)};
 }
 
-void Host::resetProfile_phase1()
+bool Host::resetProfile_phase1()
 {
     if (mResetProfile) {
-        return;
+        qWarning() << "Host::resetProfile_phase1() called while reset is already in progress, ignoring";
+        return false;
     }
 
     mAliasUnit.stopAllTriggers();
@@ -832,6 +833,7 @@ void Host::resetProfile_phase1()
     QTimer::singleShot(0, this, [this]() {
         resetProfile_phase2();
     });
+    return true;
 }
 
 void Host::resetProfile_phase2()

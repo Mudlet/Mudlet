@@ -27,6 +27,6 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     )
 endforeach()
 
-# ResetProfileTest creates a full profile per test method (30 tests),
+# ResetProfileTest resets a full profile per test,
 # so it needs a longer timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)

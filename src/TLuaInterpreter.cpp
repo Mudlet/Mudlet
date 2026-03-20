@@ -753,8 +753,8 @@ int TLuaInterpreter::getCommandSeparator(lua_State* L)
 int TLuaInterpreter::resetProfile(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    host.resetProfile_phase1();
-    lua_pushboolean(L, true);
+    const bool result = host.resetProfile_phase1();
+    lua_pushboolean(L, result);
     return 1;
 }
 
