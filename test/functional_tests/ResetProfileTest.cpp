@@ -684,6 +684,110 @@ private slots:
   }
 
   // -----------------------------------------------------------------------
+  // Group 16: Border Size Preservation (#8871)
+  // -----------------------------------------------------------------------
+
+  void test_borderSizesPreservedAfterReset() {
+    QMargins bordersBefore = mpHost->borders();
+
+    performReset();
+
+    QMargins bordersAfter = mpHost->borders();
+    QCOMPARE(bordersAfter, bordersBefore);
+  }
+
+  // -----------------------------------------------------------------------
+  // Group 17: Multiple Temp Items Cleanup
+  // -----------------------------------------------------------------------
+
+  void test_multipleTempTriggersAllRemovedAfterReset() {
+    for (int i = 0; i < 10; ++i) {
+      int id = mpHost->mLuaInterpreter.startTempTrigger(
+          qsl("multi_test_%1").arg(i), qsl(""), -1);
+      QVERIFY(id > 0);
+    }
+    QVERIFY(countTempTriggers() >= 10);
+
+    performReset();
+
+    QCOMPARE(countTempTriggers(), 0);
+  }
+
+  // -----------------------------------------------------------------------
+  // Group 18: Lua C Functions Re-registered
+  // -----------------------------------------------------------------------
+
+  void test_mudletLuaCFunctionsAvailableAfterReset() {
+    performReset();
+
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QVERIFY(L);
+
+    // Verify key Mudlet Lua API functions registered by initLuaGlobals()
+    const char *functions[] = {
+        "send",      "echo",       "tempTrigger",
+        "tempAlias", "tempTimer",  "permSubstringTrigger",
+        "permAlias", "permTimer",  "exists",
+        "isActive",  "raiseEvent", "resetProfile"};
+
+    for (const char *func : functions) {
+      lua_getglobal(L, func);
+      QVERIFY2(!lua_isnil(L, -1),
+               qPrintable(qsl("Lua C function '%1' should be available after "
+                              "reset")
+                              .arg(func)));
+      lua_pop(L, 1);
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Group 19: Permanent Script Execution After Reset
+  // -----------------------------------------------------------------------
+
+  void test_permanentScriptExecutesAfterReset() {
+    auto *pScript = new TScript(qsl("execTestScript"), mpHost);
+    pScript->setScript(qsl("permScriptExecuted = true"));
+    mpHost->getScriptUnit()->registerScript(pScript);
+    pScript->setIsActive(true);
+    pScript->compile();
+
+    // Verify the script ran during compilation
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_getglobal(L, "permScriptExecuted");
+    QVERIFY(!lua_isnil(L, -1));
+    lua_pop(L, 1);
+
+    performReset();
+
+    // After reset, the script should have been recompiled and re-executed
+    lua_State *newL = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_getglobal(newL, "permScriptExecuted");
+    QVERIFY2(!lua_isnil(newL, -1),
+             "Permanent script body should execute after reset");
+    lua_pop(newL, 1);
+  }
+
+  // -----------------------------------------------------------------------
+  // Group 20: Echo Flag Not Auto-Reset
+  // -----------------------------------------------------------------------
+
+  void test_echoFlagPreservedAcrossReset() {
+    // The echo flag is telnet connection state — it should persist
+    // across resetProfile since the connection stays alive
+    mpHost->setRemoteEchoingActive(true);
+    QVERIFY(mpHost->isRemoteEchoingActive());
+
+    performReset();
+
+    QVERIFY2(mpHost->isRemoteEchoingActive(),
+             "Remote echoing flag should persist across reset (connection "
+             "state, not profile state)");
+
+    // Clean up
+    mpHost->setRemoteEchoingActive(false);
+  }
+
+  // -----------------------------------------------------------------------
   // Helpers (reused from TOscTerminatorTest pattern)
   // -----------------------------------------------------------------------
 
