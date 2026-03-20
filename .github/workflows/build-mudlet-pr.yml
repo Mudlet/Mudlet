@@ -1,23 +1,17 @@
-name: 🔨 Build Mudlet
+name: 🔨 Build Mudlet - PR
 on:
-  push:
-    branches: [master, development, release-*]
-    tags: [Mudlet-*]
-  workflow_dispatch:
-    inputs:
-      scheduled:
-        description: 'Imitate a PTB'
-        required: false
-        default: 'false'
-  schedule:
-    - cron: '0 2 * * *'
+  pull_request:
 
 jobs:
   compile-mudlet:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
     if: ${{ github.repository_owner == 'Mudlet' }}
+    concurrency:
+      group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
+      BUILD_TASK: 'PR'
       LUA_VERSION: '5.1.5'
     strategy:
       fail-fast: false
@@ -219,13 +213,13 @@ jobs:
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
     - name: (Linux) Build xcb-util-cursor 0.1.5
-      timeout-minutes: 5
+      timeout-minutes: 3
       if: runner.os == 'Linux'
       run: |
         # Download and extract xcb-util-cursor 0.1.5
         # This version fixes the off-by-one heap buffer overflow in _XcursorThemeInherits
         # that causes PTB builds to crash with AddressSanitizer
-        wget -q --connect-timeout=10 --read-timeout=30 --tries=3 --waitretry=5 https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz
+        wget -q --read-timeout=10 --retry-connrefused --retry-on-host-error --waitretry=60 https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz
         tar xf xcb-util-cursor-0.1.5.tar.xz
         cd xcb-util-cursor-0.1.5
 
@@ -253,8 +247,8 @@ jobs:
       uses: actions/cache/restore@v5
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ github.ref_name }}
-        restore-keys: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-development
+        key: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ github.sha }}
+        restore-keys: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}
 
     - name: (Linux) Set build info
       if: runner.os == 'Linux'
@@ -313,12 +307,12 @@ jobs:
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     - name: Save ccache
-      if: always()
+      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
       uses: actions/cache/save@v5
       with:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
-  
+
     - name: check ccache stats post build
       run: ccache --show-stats
 

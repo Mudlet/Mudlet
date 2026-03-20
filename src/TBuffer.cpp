@@ -369,9 +369,10 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
 }
 
 // user-defined literal to represent megabytes
-auto operator""_MB(unsigned long long const x) -> long
+// C++ standard requires unsigned long long parameter for integer literal operators
+auto operator""_MB(unsigned long long const x) -> int64_t // NOLINT(runtime/int)
 {
-    return 1024L * 1024L * x;
+    return 1024LL * 1024LL * x;
 }
 
 void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
@@ -593,7 +594,6 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         "longer be usable!";
 #endif
             mIncompleteSequenceBytes.clear();
-            ;
         }
     }
 
@@ -875,9 +875,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             }
 
             // Determine what terminated the loop
-            bool const foundBEL = (spanEnd < localBufferLength && localBuffer[spanEnd] == '\x07');
-            bool const foundST = (spanEnd < localBufferLength && spanEnd > 0 && localBuffer[spanEnd - 1] == '\033' && localBuffer[spanEnd] == '\\');
-            bool const exceededLength = ((spanEnd - spanStart) >= MAX_OSC_SEQUENCE_LENGTH);
+            const bool foundBEL = (spanEnd < localBufferLength && localBuffer[spanEnd] == '\x07');
+            const bool foundST = (spanEnd < localBufferLength && spanEnd > 0 && localBuffer[spanEnd - 1] == '\033' && localBuffer[spanEnd] == '\\');
+            const bool exceededLength = ((spanEnd - spanStart) >= MAX_OSC_SEQUENCE_LENGTH);
 
             if (foundBEL) {
                 // BEL terminator - sequence content excludes the BEL
@@ -1897,17 +1897,17 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += 2;
                         break;
                     case 4: // Not handled but we still should skip its arguments
-                            // Uses four or five depending on whether there is
-                            // the colour space id first
-                            // Move the index to consume the used values
+                        // Uses four or five depending on whether there is
+                        // the colour space id first
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 6 : 5);
                         break;
                     case 3: // Not handled but we still should skip its arguments
-                            // Move the index to consume the used values
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 2: // Need three or four depending on whether there is
-                            // the colour space id first
+                        // the colour space id first
                         if (haveColorSpaceId) {
                             if (paraIndex + 2 < total) {
                                 // We have the color space id
@@ -1947,7 +1947,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 1: // This uses no extra arguments and, as it means
-                            // transparent, is no use to us
+                        // transparent, is no use to us
                         [[fallthrough]];
                     default:
                         break;
@@ -1993,17 +1993,17 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += 2;
                         break;
                     case 4: // Not handled but we still should skip its arguments
-                            // Uses four or five depending on whether there is
-                            // the colour space id first
-                            // Move the index to consume the used values
+                        // Uses four or five depending on whether there is
+                        // the colour space id first
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 6 : 5);
                         break;
                     case 3: // Not handled but we still should skip its arguments
-                            // Move the index to consume the used values
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 2: // Need three or four depending on whether there is
-                            // the colour space id first
+                        // the colour space id first
                         if (haveColorSpaceId) {
                             if (paraIndex + 2 < total) {
                                 // We have the color space id
@@ -2043,7 +2043,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 1: // This uses no extra arguments and, as it means
-                            // transparent, is no use to us
+                        // transparent, is no use to us
                         [[fallthrough]];
                     default:
                         break;
@@ -2342,17 +2342,17 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += 2;
                         break;
                     case 4: // Not handled but we still should skip its arguments
-                            // Uses four or five depending on whether there is
-                            // the colour space id first
-                            // Move the index to consume the used values
+                        // Uses four or five depending on whether there is
+                        // the colour space id first
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 6 : 5);
                         break;
                     case 3: // Not handled but we still should skip its arguments
-                            // Move the index to consume the used values
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 2: // Need three or four depending on whether there is
-                            // the colour space id first
+                        // the colour space id first
                         if (haveColorSpaceId) {
                             if (paraIndex + 2 < total) {
                                 // We have the color space id
@@ -2394,7 +2394,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 1: // This uses no extra arguments and, as it means
-                            // transparent, is no use to us
+                        // transparent, is no use to us
                         [[fallthrough]];
                     default:
                         break;
@@ -2460,17 +2460,17 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += 2;
                         break;
                     case 4: // Not handled but we still should skip its arguments
-                            // Uses four or five depending on whether there is
-                            // the colour space id first
-                            // Move the index to consume the used values
+                        // Uses four or five depending on whether there is
+                        // the colour space id first
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 6 : 5);
                         break;
                     case 3: // Not handled but we still should skip its arguments
-                            // Move the index to consume the used values
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 2: // Need three or four depending on whether there is
-                            // the colour space id first
+                        // the colour space id first
                         if (haveColorSpaceId) {
                             if (paraIndex + 2 < total) {
                                 // We have the color space id
@@ -2510,7 +2510,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 1: // This uses no extra arguments and, as it means
-                            // transparent, is no use to us
+                        // transparent, is no use to us
                         [[fallthrough]];
                     default:
                         break;
@@ -2636,7 +2636,7 @@ void TBuffer::decodeOSC(const QString& sequence)
         qDebug().nospace().noquote() << "    Consider the OSC sequence: \"" << sequence << "\"";
     }
 #endif
-    unsigned short const character = sequence.at(0).unicode();
+    const uint16_t character = sequence.at(0).unicode();
     switch (character) {
     case static_cast<quint8>('P'):
         if (serverMayRedefineDefaultColors) {
@@ -3005,7 +3005,7 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             if (baseUrl.startsWith(qsl("send:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
-                command = {qsl("send([[%1]])").arg(innerCommand)};
+                command = {qsl("send([[%1]], false)").arg(innerCommand)};
                 hint = {qsl("%1: %2").arg(QObject::tr("Send"), innerCommand)};
             } else if (baseUrl.startsWith(qsl("prompt:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
@@ -3051,7 +3051,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     // Determine command type based on prefix
                     if (menuCommand.startsWith(qsl("send:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(5).toUtf8());
-                        menuCommands.append(qsl("send([[%1]])").arg(innerCommand));
+                        menuCommands.append(qsl("send([[%1]], false)").arg(innerCommand));
                         menuHints.append(menuLabel);
                     } else if (menuCommand.startsWith(qsl("prompt:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
@@ -3063,7 +3063,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                         menuHints.append(QString());
                     } else {
                         // Treat as direct command
-                        menuCommands.append(qsl("send([[%1]])").arg(menuCommand));
+                        menuCommands.append(qsl("send([[%1]], false)").arg(menuCommand));
                         menuHints.append(menuLabel);
                     }
                 }
@@ -3479,6 +3479,7 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
 #endif
         }
 #if defined(DEBUG_OSC_PROCESSING)
+        // NOLINTNEXTLINE(readability/braces) - else is conditional on DEBUG_OSC_PROCESSING
         else {
             qDebug() << "[OSC] Spoiler link has explicit tooltip:" << parameters.value(qsl("tooltip"));
         }
@@ -5202,9 +5203,9 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
         return s;
     }
 
-    // std:deque uses std::deque:size_type as index type which is an unsigned
-    // long int, but row (and pos) are signed ints...!
-    auto cookedRow = static_cast<unsigned long>(row);
+    // std:deque uses std::deque:size_type as index type which is unsigned,
+    // but row (and pos) are signed ints...!
+    auto cookedRow = static_cast<size_t>(row);
 
     if ((pos < 0) || (pos >= static_cast<int>(buffer.at(cookedRow).size()))) {
         pos = 0;
@@ -5257,7 +5258,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
         s.append(qsl("<span>%1").arg(QString(spacePadding, QChar::Space)));
     }
 
-    for (auto cookedPos = static_cast<unsigned long>(pos); pos < lastPos; ++cookedPos, ++pos) {
+    for (auto cookedPos = static_cast<size_t>(pos); pos < lastPos; ++cookedPos, ++pos) {
         // Do we need to start a new span?
         if (firstSpan || buffer.at(cookedRow).at(cookedPos).mFgColor != currentFgColor || buffer.at(cookedRow).at(cookedPos).mBgColor != currentBgColor
             || (buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask) != currentFlags) {
@@ -5487,7 +5488,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
 
             // Fall-through
             [[fallthrough]];
-        case 2:
+        case 2: {
             // Check the 2nd byte is a valid continuation byte (2 MS-Bits are 10)
             if ((static_cast<quint8>(bufferData.at(pos + 1)) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
@@ -5497,16 +5498,18 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
                 isToUseReplacementMark = true;
             }
 
-            // clang-format off
-            // Disable code reformatting as it would destroy layout that helps
-            // to explain the grouping of the tests
-            // Also test for (and reject) overlong sequences - don't
-            // need to check 5 or 6 ones as those are already rejected:
-            if (  ( ((static_cast<quint8>(bufferData.at(pos    )) & 0xFE) == 0xC0) && ( ( static_cast<quint8>(bufferData.at(pos + 1)) & 0xC0) == 0x80) )
-                ||( ( static_cast<quint8>(bufferData.at(pos    )        ) == 0xE0) && ( ( static_cast<quint8>(bufferData.at(pos + 1)) & 0xE0) == 0x80) )
-                ||( ( static_cast<quint8>(bufferData.at(pos    )        ) == 0xF0) && ( ( static_cast<quint8>(bufferData.at(pos + 1)) & 0xF0) == 0x80) ) ) {
-                // clang-format on
+            // Also test for (and reject) overlong sequences - don't need to check
+            // 5 or 6 byte ones as those are already rejected above
+            const auto firstByte = static_cast<quint8>(bufferData.at(pos));
+            const auto secondByte = static_cast<quint8>(bufferData.at(pos + 1));
+            // Overlong 2-byte: C0/C1 xx (could be encoded in 1 byte)
+            const bool twoByteOverlong = ((firstByte & 0xFE) == 0xC0) && ((secondByte & 0xC0) == 0x80);
+            // Overlong 3-byte: E0 80-9F xx (could be encoded in 2 bytes)
+            const bool threeByteOverlong = (firstByte == 0xE0) && ((secondByte & 0xE0) == 0x80);
+            // Overlong 4-byte: F0 80-8F xx xx (could be encoded in 3 bytes)
+            const bool fourByteOverlong = (firstByte == 0xF0) && ((secondByte & 0xF0) == 0x80);
 
+            if (twoByteOverlong || threeByteOverlong || fourByteOverlong) {
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug().nospace() << "TBuffer::processUtf8Sequence(...) Overlong " << utf8SequenceLength << "-byte sequence as UTF-8 rejected!";
 #endif
@@ -5514,6 +5517,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
                 isToUseReplacementMark = true;
             }
             break;
+        }
 
         default:
 #if defined(DEBUG_UTF8_PROCESSING)
@@ -5628,99 +5632,76 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         if ((pos + gbSequenceLength - 1) < len) {
             // We have enough bytes to look at the second one - let's see which
             // range it is in:
-            // clang-format off
-            if        (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x81) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA0)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-                // clang-format on
-                // GBK Area 3 sequence
+            const auto byte1 = static_cast<quint8>(bufferData.at(pos));
+            const auto byte2 = static_cast<quint8>(bufferData.at(pos + 1));
 
+            // GBK Area 3: byte1 81-A0, byte2 40-FE (excluding 7F)
+            const bool gbkArea3 = (byte1 >= 0x81) && (byte1 <= 0xA0) && (byte2 >= 0x40) && (byte2 <= 0xFE) && (byte2 != 0x7F);
+            // GBK Area 1 (& GB2312): byte1 A1-A9, byte2 A1-FE
+            const bool gbkArea1 = (byte1 >= 0xA1) && (byte1 <= 0xA9) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+            // GBK Area 2 (& GB2312): byte1 B0-F7, byte2 A1-FE
+            const bool gbkArea2 = (byte1 >= 0xB0) && (byte1 <= 0xF7) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+            // GBK Area 5: byte1 A8-A9, byte2 40-A0 (excluding 7F)
+            const bool gbkArea5 = (byte1 >= 0xA8) && (byte1 <= 0xA9) && (byte2 >= 0x40) && (byte2 <= 0xA0) && (byte2 != 0x7F);
+            // GBK Area 4: byte1 AA-FE, byte2 40-A0 (excluding 7F)
+            const bool gbkArea4 = (byte1 >= 0xAA) && (byte1 <= 0xFE) && (byte2 >= 0x40) && (byte2 <= 0xA0) && (byte2 != 0x7F);
+            // User Defined (PU) Area 1: byte1 AA-AF, byte2 A1-FE
+            const bool userArea1 = (byte1 >= 0xAA) && (byte1 <= 0xAF) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+            // User Defined (PU) Area 2: byte1 F8-FE, byte2 A1-FE
+            const bool userArea2 = (byte1 >= 0xF8) && (byte1 <= 0xFE) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+            // User Defined (PU) Area 3: byte1 A1-A7, byte2 A1-FE (excluding 7F)
+            const bool userArea3 = (byte1 >= 0xA1) && (byte1 <= 0xA7) && (byte2 >= 0xA1) && (byte2 <= 0xFE) && (byte2 != 0x7F);
+            // Looks like first pair of 4-byte GB18030 non-BMP sequence: byte1 90-E3, byte2 30-39
+            const bool looksLikeGB18030NonBMP = (byte1 >= 0x90) && (byte1 <= 0xE3) && (byte2 >= 0x30) && (byte2 <= 0x39);
+            // Looks like first pair of 4-byte GB18030 Private Use sequence: byte1 FD-FE, byte2 30-39
+            const bool looksLikeGB18030PrivateUse = (byte1 >= 0xFD) && (byte1 <= 0xFE) && (byte2 >= 0x30) && (byte2 <= 0x39);
+
+            if (gbkArea3) {
+                // GBK Area 3 sequence
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 3";
 #endif
-
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA9)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-                // clang-format on
+            } else if (gbkArea1) {
                 // GBK Area 1 (& GB2312) sequence
-
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 1 (or GB2312)";
 #endif
-
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xB0) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xF7)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-                // clang-format on
+            } else if (gbkArea2) {
                 // GBK Area 2 (& GB2312) sequence
-
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 2 (or GB2312)";
 #endif
-
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA8) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA9)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xA0)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-                // clang-format on
+            } else if (gbkArea5) {
                 // GBK/5 sequence
-
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 5";
 #endif
-
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xAA) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xA0)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-                // clang-format on
+            } else if (gbkArea4) {
                 // GBK/4 sequence
-
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 4";
 #endif
-
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xAA) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xAF)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-                // clang-format on
+            } else if (userArea1) {
                 // User Defined 1 sequence - possibly invalid for us but if the
                 // MUD supplies their own font it could be used:
-
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "User Defined (PU) Area 1";
 #endif
-
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xF8) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-                // clang-format on
+            } else if (userArea2) {
                 // User Defined 2 sequence - possibly invalid for us but if the
                 // MUD supplies their own font it could be used:
-
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "User Defined (PU) Area 2";
 #endif
-
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA7)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-                // clang-format on
+            } else if (userArea3) {
                 // User Defined 3 sequence - possibly invalid for us but if the
                 // MUD supplies their own font it could be used:
-
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "User Defined (PU) Area 3";
 #endif
-
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x90) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xE3)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x30) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0x39) ) {
-                // clang-format on
+            } else if (looksLikeGB18030NonBMP) {
                 // First two bytes of a 4-byte GB18030 sequence - for a non-BMP mapped Unicode
-                // codepoint if byte 3 is within 0x81-00xFE and byte 4 is within 0x30-0x39
+                // codepoint if byte 3 is within 0x81-0xFE and byte 4 is within 0x30-0x39
                 isValid = false;
                 isToUseReplacementMark = true;
 #if defined(DEBUG_GB_PROCESSING)
@@ -5728,12 +5709,9 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                                       "GB2312/GBK rejected because it is seems to be the "
                                       "first pair of a 4-byte GB18030 non-BMP Unicode sequence!";
 #endif
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xFD) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x30) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0x39) ) {
-                // clang-format on
+            } else if (looksLikeGB18030PrivateUse) {
                 // First two bytes of a 4-byte GB18030 sequence - for a non-BMP mapped Unicode
-                // codepoint if byte 3 is within 0x81-00xFE and byte 4 is within 0x30-0x39
+                // codepoint if byte 3 is within 0x81-0xFE and byte 4 is within 0x30-0x39
                 isValid = false;
                 isToUseReplacementMark = true;
 #if defined(DEBUG_GB_PROCESSING)
@@ -5743,7 +5721,6 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 #endif
             } else {
                 // Outside expected ranges
-
                 isValid = false;
                 isToUseReplacementMark = true;
 #if defined(DEBUG_GB_PROCESSING)
@@ -5778,12 +5755,14 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         if ((pos + gbSequenceLength - 1) < len) {
             // We have enough bytes to look at the second one - let's see which
             // range it is in:
-            // clang-format off
-            if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x81) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
-               && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x30) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0x39) ) {
-                // clang-format on
-                // This IS a 4-byte sequence
+            const auto byte1 = static_cast<quint8>(bufferData.at(pos));
+            const auto byte2 = static_cast<quint8>(bufferData.at(pos + 1));
 
+            // Check if this is a 4-byte sequence: byte1 81-FE, byte2 30-39
+            const bool fourByteSequence = (byte1 >= 0x81) && (byte1 <= 0xFE) && (byte2 >= 0x30) && (byte2 <= 0x39);
+
+            if (fourByteSequence) {
+                // This IS a 4-byte sequence
                 gbSequenceLength = 4;
 
                 if ((pos + gbSequenceLength - 1) >= len) {
@@ -5800,18 +5779,18 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     return false; // Bail out
                 }
 
-                // clang-format off
                 // Continue with four-byte sequence validation processing as we
                 // have all four bytes to work with:
-                if (   ((  /* 1st group low limit 0x81 is already done*/        (static_cast<quint8>(bufferData.at(pos    )) <= 0x84))
-                        ||((static_cast<quint8>(bufferData.at(pos)) >= 0x90) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xE3)))
-                    /*
-                     * Only the above 1st byte ranges are currently used - others are reserved
-                     * Second byte range is 0x30-0x39 for all and has already been checked
-                     */
-                    && (static_cast<quint8>(bufferData.at(pos + 2)) >= 0x81) && (static_cast<quint8>(bufferData.at(pos + 2)) <= 0xFE)
-                    && (static_cast<quint8>(bufferData.at(pos + 3)) >= 0x30) && (static_cast<quint8>(bufferData.at(pos + 3)) <= 0x39) ) {
+                const auto byte3 = static_cast<quint8>(bufferData.at(pos + 2));
+                const auto byte4 = static_cast<quint8>(bufferData.at(pos + 3));
 
+                // Valid 4-byte: byte1 in (81-84 or 90-E3), byte2 30-39 (already checked),
+                // byte3 81-FE, byte4 30-39
+                const bool byte1InValidRange = (byte1 <= 0x84) || ((byte1 >= 0x90) && (byte1 <= 0xE3));
+                const bool byte3Valid = (byte3 >= 0x81) && (byte3 <= 0xFE);
+                const bool byte4Valid = (byte4 >= 0x30) && (byte4 <= 0x39);
+
+                if (byte1InValidRange && byte3Valid && byte4Valid) {
                     // Okay we should have a valid four byte sequence now
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "Non-BMP mapped Unicode";
@@ -5821,8 +5800,6 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     // unicode codepoint but it is academic as it is not
                     // currently defined as a valid codepoint value and will be
                     // substituted with the replacement character anyway:
-                    // clang-format on
-
                     isValid = false;
                     isToUseReplacementMark = true;
 
@@ -5837,96 +5814,69 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             } else {
                 // Looks as though it is a two-byte sequence after all - so
                 // validate it as that:
-                // clang-format off
-                if        (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x81) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA0)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-                    // clang-format on
-                    // GBK/3 sequence
 
+                // GBK Area 3: byte1 81-A0, byte2 40-FE (excluding 7F)
+                const bool isGBKArea3 = (byte1 >= 0x81) && (byte1 <= 0xA0) && (byte2 >= 0x40) && (byte2 <= 0xFE) && (byte2 != 0x7F);
+                // GBK Area 1 (& GB2312): byte1 A1-A9, byte2 A1-FE
+                const bool isGBKArea1 = (byte1 >= 0xA1) && (byte1 <= 0xA9) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+                // GBK Area 2 (& GB2312): byte1 B0-F7, byte2 A1-FE
+                const bool isGBKArea2 = (byte1 >= 0xB0) && (byte1 <= 0xF7) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+                // GBK Area 5: byte1 A8-A9, byte2 40-A0 (excluding 7F)
+                const bool isGBKArea5 = (byte1 >= 0xA8) && (byte1 <= 0xA9) && (byte2 >= 0x40) && (byte2 <= 0xA0) && (byte2 != 0x7F);
+                // GBK Area 4: byte1 AA-FE, byte2 40-A0 (excluding 7F)
+                const bool isGBKArea4 = (byte1 >= 0xAA) && (byte1 <= 0xFE) && (byte2 >= 0x40) && (byte2 <= 0xA0) && (byte2 != 0x7F);
+                // User Defined (PU) Area 1: byte1 AA-AF, byte2 A1-FE
+                const bool isUserArea1 = (byte1 >= 0xAA) && (byte1 <= 0xAF) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+                // User Defined (PU) Area 2: byte1 F8-FE, byte2 A1-FE
+                const bool isUserArea2 = (byte1 >= 0xF8) && (byte1 <= 0xFE) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+                // User Defined (PU) Area 3: byte1 A1-A7, byte2 A1-FE (excluding 7F)
+                const bool isUserArea3 = (byte1 >= 0xA1) && (byte1 <= 0xA7) && (byte2 >= 0xA1) && (byte2 <= 0xFE) && (byte2 != 0x7F);
+
+                if (isGBKArea3) {
+                    // GBK/3 sequence
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "GBK Area 3";
 #endif
-
-                    // clang-format off
-                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA9)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-                    // clang-format on
+                } else if (isGBKArea1) {
                     // GBK/1 (& GB2312) sequence
-
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "GBK Area 1";
 #endif
-
-                    // clang-format off
-                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xB0) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xF7)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-                    // clang-format on
+                } else if (isGBKArea2) {
                     // GBK/2 (& GB2312) sequence
-
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "GBK Area 2";
 #endif
-
-                    // clang-format off
-                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA8) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA9)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xA0)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-                    // clang-format on
+                } else if (isGBKArea5) {
                     // GBK/5 sequence
-
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "GBK Area 5";
 #endif
-
-                    // clang-format off
-                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xAA) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xA0)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-                    // clang-format on
+                } else if (isGBKArea4) {
                     // GBK/4 sequence
-
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "GBK Area 4";
 #endif
-
-                    // clang-format off
-                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xAA) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xAF)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-                    // clang-format on
+                } else if (isUserArea1) {
                     // User Defined 1 sequence - possibly invalid for us but if the
                     // MUD supplies their own font it could be used:
-
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "User Defined (PU) Area 1";
 #endif
-
-                    // clang-format off
-                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xF8) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-                    // clang-format on
+                } else if (isUserArea2) {
                     // User Defined 2 sequence - possibly invalid for us but if the
                     // MUD supplies their own font it could be used:
-
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "User Defined (PU) Area 2";
 #endif
-
-                    // clang-format off
-                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA7)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-                    // clang-format on
+                } else if (isUserArea3) {
                     // User Defined 3 sequence - possibly invalid for us but if the
                     // MUD supplies their own font it could be used:
-
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "User Defined (PU) Area 3";
 #endif
-
                 } else {
                     // Outside expected range
-
                     isValid = false;
                     isToUseReplacementMark = true;
 #if defined(DEBUG_GB_PROCESSING)
