@@ -2567,7 +2567,7 @@ int TLuaInterpreter::getTime(lua_State* L)
     } else {
         const QDate dt = time.date();
         const QTime tm = time.time();
-        lua_createtable(L, 0, 4);
+        lua_createtable(L, 0, 7);
         lua_pushstring(L, "hour");
         lua_pushinteger(L, tm.hour());
         lua_rawset(L, n + 1);
@@ -3597,7 +3597,16 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
                 lua_remove(L, -2);
             }
             lua_pushstring(L, tokenList.at(i).toUtf8().constData());
-            lua_pcall(L, 2, 0, 0);
+            if (lua_pcall(L, 2, 0, 0)) {
+                std::string e;
+                if (lua_isstring(L, -1)) {
+                    e = "GMCP merge error: ";
+                    e += lua_tostring(L, -1);
+                }
+                const QString _n = qsl("GMCP merge");
+                const QString _f = qsl("__gmcp_merge_gmcp_sub_tables");
+                logError(e, _n, _f);
+            }
         }
     } else {
         {
@@ -5091,6 +5100,17 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "deleteLabel", TLuaInterpreter::deleteLabel);
     lua_register(pGlobalLua, "deleteMiniConsole", TLuaInterpreter::deleteMiniConsole);
     lua_register(pGlobalLua, "deleteCommandLine", TLuaInterpreter::deleteCommandLine);
+    lua_register(pGlobalLua, "createTextEdit", TLuaInterpreter::createTextEdit);
+    lua_register(pGlobalLua, "deleteTextEdit", TLuaInterpreter::deleteTextEdit);
+    lua_register(pGlobalLua, "getTextEditText", TLuaInterpreter::getTextEditText);
+    lua_register(pGlobalLua, "setTextEditText", TLuaInterpreter::setTextEditText);
+    lua_register(pGlobalLua, "clearTextEdit", TLuaInterpreter::clearTextEdit);
+    lua_register(pGlobalLua, "setTextEditReadOnly", TLuaInterpreter::setTextEditReadOnly);
+    lua_register(pGlobalLua, "setTextEditPlaceholder", TLuaInterpreter::setTextEditPlaceholder);
+    lua_register(pGlobalLua, "setTextEditStyleSheet", TLuaInterpreter::setTextEditStyleSheet);
+    lua_register(pGlobalLua, "setTextEditFont", TLuaInterpreter::setTextEditFont);
+    lua_register(pGlobalLua, "setTextEditFontSize", TLuaInterpreter::setTextEditFontSize);
+    lua_register(pGlobalLua, "setTextEditTabMovesFocus", TLuaInterpreter::setTextEditTabMovesFocus);
     lua_register(pGlobalLua, "deleteScrollBox", TLuaInterpreter::deleteScrollBox);
     lua_register(pGlobalLua, "setLabelToolTip", TLuaInterpreter::setLabelToolTip);
     lua_register(pGlobalLua, "setLabelCursor", TLuaInterpreter::setLabelCursor);
@@ -5585,6 +5605,64 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setActiveProfile", TLuaInterpreter::setActiveProfile);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
+
+    // Create MMCP Chat Library
+    lua_newtable(pGlobalLua);
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpChatTo);
+    lua_setfield(pGlobalLua, -2, "chatTo");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpChatAll);
+    lua_setfield(pGlobalLua, -2, "chatAll");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpAllowSnoop);
+    lua_setfield(pGlobalLua, -2, "allowSnoop");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpCall);
+    lua_setfield(pGlobalLua, -2, "call");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpEmoteAll);
+    lua_setfield(pGlobalLua, -2, "emoteAll");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpChatGroup);
+    lua_setfield(pGlobalLua, -2, "chatGroup");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpIgnore);
+    lua_setfield(pGlobalLua, -2, "ignore");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpDisplayClientList);
+    lua_setfield(pGlobalLua, -2, "displayClientList");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpChatName);
+    lua_setfield(pGlobalLua, -2, "chatName");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpPing);
+    lua_setfield(pGlobalLua, -2, "ping");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpPrivate);
+    lua_setfield(pGlobalLua, -2, "setPrivate");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpServe);
+    lua_setfield(pGlobalLua, -2, "serve");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpSetGroup);
+    lua_setfield(pGlobalLua, -2, "setGroup");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpSendSideChannel);
+    lua_setfield(pGlobalLua, -2, "sendSideChannel");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpSnoop);
+    lua_setfield(pGlobalLua, -2, "snoop");
+    // Tagging for possible 4.21.1 inclusion
+    /*
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpAccept);
+    lua_setfield(pGlobalLua, -2, "accept");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpDeny);
+    lua_setfield(pGlobalLua, -2, "deny");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpDoNotDisturb);
+    lua_setfield(pGlobalLua, -2, "setDoNotDisturb");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpStartServer);
+    lua_setfield(pGlobalLua, -2, "startServer");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpStopServer);
+    lua_setfield(pGlobalLua, -2, "stopServer");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpRequestConnections);
+    lua_setfield(pGlobalLua, -2, "request");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpPeekConnections);
+    lua_setfield(pGlobalLua, -2, "peek");
+    */
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpDisconnect);
+    lua_setfield(pGlobalLua, -2, "disconnect");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpGetClientFlags);
+    lua_setfield(pGlobalLua, -2, "getClientFlags");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpGetClientList);
+    lua_setfield(pGlobalLua, -2, "getClientList");
+    lua_setglobal(pGlobalLua, "mmcp");
+
 
     QStringList additionalLuaPaths;
     QStringList additionalCPaths;
@@ -7676,6 +7754,10 @@ int TLuaInterpreter::setConfig(lua_State* L)
         mudlet::self()->slot_muteGame(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
+    if (key == qsl("enableBlinkText")) {
+        host.setEnableBlinkText(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
 
     // Handle experiment keys
     if (key.startsWith(qsl("experiment."))) {
@@ -8058,6 +8140,10 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("enableClosedCaption"),
              [&]() {
                  lua_pushboolean(L, host.mEnableClosedCaption);
+             }},
+            {qsl("enableBlinkText"),
+             [&]() {
+                 lua_pushboolean(L, host.getEnableBlinkText());
              }},
             {qsl("showUpperLowerLevels"),
              [&]() {
