@@ -121,6 +121,7 @@ private:
 
     void attemptCollidingMigration(const QString& profileName, const QString& key, const QString& legacyService, const QString& password, CredentialRetrievalCallback callback);
     void attemptLegacyKeychainMigration(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
+    void attemptOldFormatMigration(const QString& service, const QString& account, const QString& profileName, CredentialRetrievalCallback callback);
     void fallbackFileRetrieval(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
 
     // Current operation state
