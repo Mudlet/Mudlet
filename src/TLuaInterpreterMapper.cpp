@@ -28,25 +28,24 @@
 // mapper-specific functions of TLuaInterpreter, split out separately
 // for convenience and to keep TLuaInterpreter.cpp size reasonable
 
-// any call that that modifies the map visually needs to call host.mpMap->update();
+// any call that modifies the map visually needs to call host.mpMap->updateArea(areaId);
 
 #include "TLuaInterpreter.h"
 
 #include "EAction.h"
 #include "Host.h"
-#include "TAlias.h"
 #include "TArea.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TFlipButton.h"
-#include "TForkedProcess.h"
 #include "TLabel.h"
+#include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
+#include "TMapView.h"
+#include "TMapViewManager.h"
 #include "TRoomDB.h"
-#include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
 #include "dlgComposer.h"
@@ -220,7 +219,7 @@ int TLuaInterpreter::getCustomLines1(lua_State* L)
             // we need to start the numbering from the Lua standard of 1 and
             // NOT the C/C++ standard of 0 - otherwise the end-user has to
             // fiddle with the zero-th entry to keep the points in order:
-            lua_pushinteger(L, k+1);
+            lua_pushinteger(L, k + 1);
             lua_newtable(L); //customLines[direction]["points"][3 x coordinates]
             lua_pushinteger(L, 1);
             lua_pushnumber(L, pointL.at(k).x());
@@ -260,11 +259,11 @@ int TLuaInterpreter::getExitWeights(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteMapLabel
 int TLuaInterpreter::deleteMapLabel(lua_State* L)
 {
-    int area = getVerifiedInt(L, __func__, 1, "areaID");
-    int labelID = getVerifiedInt(L, __func__, 2, "labelID");
+    const int area = getVerifiedInt(L, __func__, 1, "areaID");
+    const int labelID = getVerifiedInt(L, __func__, 2, "labelID");
     Host& host = getHostFromLua(L);
     host.mpMap->deleteMapLabel(area, labelID);
-    host.mpMap->update();
+    host.mpMap->updateArea(area);
     return 0;
 }
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addAreaName
@@ -280,19 +279,20 @@ int TLuaInterpreter::addAreaName(lua_State* L)
         return warnArgumentValue(L, __func__, "area names may not be empty strings (and spaces are trimmed from the ends)");
     } else if (host.mpMap->mpRoomDB->getAreaNamesMap().values().count(name) > 0) {
         // That name is already IN the areaNamesMap
-        return warnArgumentValue(L, __func__, qsl("area names may not be duplicated and areaID %1 already has the name '%2'")
-            .arg(QString::number(host.mpMap->mpRoomDB->getAreaNamesMap().key(name)), name));
+        return warnArgumentValue(
+                L, __func__, qsl("area names may not be duplicated and areaID %1 already has the name '%2'").arg(QString::number(host.mpMap->mpRoomDB->getAreaNamesMap().key(name)), name));
     }
 
     // Note that adding an area name implicitly creates an underlying TArea instance
-    lua_pushnumber(L, host.mpMap->mpRoomDB->addArea(name));
+    const int areaId = host.mpMap->mpRoomDB->addArea(name);
+    lua_pushnumber(L, areaId);
 
     if (host.mpMap->mpMapper) {
         host.mpMap->mpMapper->updateAreaComboBox();
     }
 
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(areaId);
 
     return 1;
 }
@@ -331,10 +331,11 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         const int area = pR->getArea();
         const int area_to = pR_to->getArea();
         if (area != area_to) {
-            return warnArgumentValue(L, __func__, qsl(
-                "target room is in area '%1' (ID: %2) which is not the one '%3' (ID: %4) in which this custom line is to be drawn")
-                .arg((host.mpMap->mpRoomDB->getAreaNamesMap()).value(area_to), QString::number(area_to),
-                        (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area), QString::number(area)));
+            return warnArgumentValue(
+                    L,
+                    __func__,
+                    qsl("target room is in area '%1' (ID: %2) which is not the one '%3' (ID: %4) in which this custom line is to be drawn")
+                            .arg((host.mpMap->mpRoomDB->getAreaNamesMap()).value(area_to), QString::number(area_to), (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area), QString::number(area)));
         }
 
         x.append(static_cast<qreal>(pR_to->x()));
@@ -406,7 +407,10 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
             return warnArgumentValue(L, __func__, "missing coordinates to create the line to");
         }
         if (x.count() != y.count() || x.count() != z.count()) {
-            return warnArgumentValue(L, __func__, "mismatch in numbers of coordinates for the points for the custom line given in table as second argument; each must contain three coordinates, i.e. x, y AND z numeric values as a sub-table");
+            return warnArgumentValue(L,
+                                     __func__,
+                                     "mismatch in numbers of coordinates for the points for the custom line given in table as second argument; each must contain three coordinates, i.e. x, y AND z "
+                                     "numeric values as a sub-table");
         }
     }
 
@@ -416,8 +420,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         return lua_error(L);
     }
     if (!pR->hasExitOrSpecialExit(direction)) {
-        return warnArgumentValue(L, __func__, qsl("roomID %1 does not have an exit in a direction that can be identified from '%2'")
-            .arg(QString::number(id_from), lua_tostring(L, 3)));
+        return warnArgumentValue(L, __func__, qsl("roomID %1 does not have an exit in a direction that can be identified from '%2'").arg(QString::number(id_from), lua_tostring(L, 3)));
     }
 
     const QString lineStyleString = getVerifiedString(L, __func__, 4, "line style");
@@ -432,9 +435,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     } else if (!lineStyleString.compare(QLatin1String("dash dot dot line"))) {
         line_style = Qt::DashDotDotLine;
     } else {
-        return warnArgumentValue(L, __func__, qsl(
-                "invalid line style '%1', only use one of: 'solid line', 'dot line', 'dash line', 'dash dot line' or 'dash dot dot line'")
-                .arg(lineStyleString));
+        return warnArgumentValue(L, __func__, qsl("invalid line style '%1', only use one of: 'solid line', 'dot line', 'dash line', 'dash dot line' or 'dash dot dot line'").arg(lineStyleString));
     }
 
     if (!lua_istable(L, 5)) {
@@ -456,9 +457,10 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
 
                 qint64 const component = lua_tointeger(L, -1);
                 if (component < 0 || component > 255) {
-                    return warnArgumentValue(L, __func__, qsl(
-                        "%1 color component in the table of the fifth argument is %2 which is out of the valid range (0 to 255)")
-                        .arg((tind == 1 ? "red" : (tind == 2 ? "green" : "blue")), QString::number(component)));
+                    return warnArgumentValue(L,
+                                             __func__,
+                                             qsl("%1 color component in the table of the fifth argument is %2 which is out of the valid range (0 to 255)")
+                                                     .arg((tind == 1 ? "red" : (tind == 2 ? "green" : "blue")), QString::number(component)));
                 }
                 switch (tind) {
                 case 1:
@@ -484,9 +486,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     points.append(QPointF(x.at(0), y.at(0)));
     for (int i = 1, total = z.size(); i < total; ++i) {
         if (lz != z.at(i)) {
-            return warnArgumentValue(L, __func__, qsl(
-                "the z values are not all on the same level (first wrong value is %1 at index %2)")
-                .arg(QString::number(z.at(i)), QString::number(i + 1)));
+            return warnArgumentValue(L, __func__, qsl("the z values are not all on the same level (first wrong value is %1 at index %2)").arg(QString::number(z.at(i)), QString::number(i + 1)));
         }
         points.append(QPointF(x.at(i), y.at(i)));
     }
@@ -503,7 +503,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     pR->calcRoomDimensions();
 
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
 
     lua_pushboolean(L, true);
     return 1;
@@ -588,8 +588,9 @@ int TLuaInterpreter::addRoom(lua_State* L)
             // failure reason) so stuff the room in the "Default Area" instead
             host.mpMap->setRoomArea(id, -1, true);
             issueBadAreaWarning = true;
+            areaID = -1;
         }
-        host.mpMap->update();
+        host.mpMap->updateArea(areaID);
 
         if (issueBadAreaWarning) {
             lua_pushnil(L);
@@ -624,7 +625,7 @@ int TLuaInterpreter::addSpecialExit(lua_State* L)
     }
 
     pR_from->setSpecialExit(toRoomID, dir);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR_from->getArea());
     lua_pushboolean(L, true);
     return 1;
 }
@@ -652,7 +653,7 @@ int TLuaInterpreter::shiftMapPerspective(lua_State* L)
 
     if (host.mpMap->mpM) {
         if (auto* modernWidget = dynamic_cast<ModernGLWidget*>(host.mpMap->mpM.data())) {
-        modernWidget->shiftCamera(verticalAngle, horizontalAngle, rotationAngle);
+            modernWidget->shiftCamera(verticalAngle, horizontalAngle, rotationAngle);
         }
     }
     return 0;
@@ -671,7 +672,7 @@ int TLuaInterpreter::setMapPerspective(lua_State* L)
 
     if (host.mpMap->mpM) {
         if (auto* modernWidget = dynamic_cast<ModernGLWidget*>(host.mpMap->mpM.data())) {
-        modernWidget->setCameraPosition(r, theta, phi);
+            modernWidget->setCameraPosition(r, theta, phi);
         }
     }
     return 0;
@@ -683,32 +684,61 @@ int TLuaInterpreter::centerview(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mpMapper) {
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
 
     const int roomId = getVerifiedInt(L, __func__, 1, "roomID");
 
-    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
-    if (pR) {
-        host.mpMap->mRoomIdHash[host.getName()] = roomId;
-        host.mpMap->mNewMove = true;
-#if defined(INCLUDE_3DMAPPER)
-        if (host.mpMap->mpM) {
-            host.mpMap->mpM->update();
-        }
-#endif
+    // Optional viewId parameter for secondary views
+    int viewId = 0;
+    if (lua_gettop(L) >= 2) {
+        viewId = getVerifiedInt(L, __func__, 2, "view id", true);
+    }
 
-        if (host.mpMap->mpMapper->mp2dMap) {
-            host.mpMap->mpMapper->mp2dMap->isCenterViewCall = true;
-            host.mpMap->mpMapper->mp2dMap->update();
-            host.mpMap->mpMapper->mp2dMap->isCenterViewCall = false;
-            host.mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
+    }
+
+    // If viewId is specified, center that specific view
+    if (viewId > 0) {
+        auto* viewManager = host.mpMap->getViewManager();
+        if (!viewManager) {
+            return warnArgumentValue(L, __func__, "no view manager available");
+        }
+
+        TMapView* view = viewManager->getView(viewId);
+        if (!view) {
+            return warnArgumentValue(L, __func__, qsl("view %1 not found").arg(viewId));
+        }
+
+        auto [success, errorMsg] = view->centerOnRoom(roomId);
+        if (!success) {
+            return warnArgumentValue(L, __func__, errorMsg);
         }
         lua_pushboolean(L, true);
         return 1;
     }
-    return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
+
+    // Primary mapper behavior (original code)
+    if (!host.mpMap->mpMapper) {
+        return warnArgumentValue(L, __func__, "you haven't opened a map yet");
+    }
+
+    host.mpMap->mRoomIdHash[host.getName()] = roomId;
+    host.mpMap->mNewMove = true;
+
+    if (host.mpMap->mpMapper->mp2dMap) {
+        host.mpMap->mpMapper->mp2dMap->isCenterViewCall = true;
+    }
+    host.mpMap->updateArea(pR->getArea());
+    if (host.mpMap->mpMapper->mp2dMap) {
+        host.mpMap->mpMapper->mp2dMap->isCenterViewCall = false;
+        host.mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearAreaUserData
@@ -772,7 +802,7 @@ int TLuaInterpreter::clearMapSelection(lua_State* L)
         host.mpMap->mpMapper->mp2dMap->clearSelection();
         lua_pushboolean(L, true);
     }
-    host.mpMap->update();
+    host.mpMap->updateArea(host.mpMap->mpMapper->mp2dMap->mAreaID);
     return 1;
 }
 
@@ -830,7 +860,7 @@ int TLuaInterpreter::clearRoomUserData(lua_State* L)
     } else {
         lua_pushboolean(L, false);
     }
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
     return 1;
 }
 
@@ -861,7 +891,7 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
     } else {
         lua_pushboolean(L, false);
     }
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
     return 1;
 }
 
@@ -873,8 +903,8 @@ int TLuaInterpreter::clearSpecialExits(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id_from);
     if (pR) {
         pR->clearSpecialExits();
+        host.mpMap->updateArea(pR->getArea());
     }
-    host.mpMap->update();
     return 0;
 }
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#closeMapWidget
@@ -926,7 +956,10 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
                 if (hasRoomWithNumberAsId) {
                     if (hasExitStubWithNumberAsDirection) {
                         return warnArgumentValue(
-                                L, __func__, qsl("%1 is too ambiguous a number to parse into a toID or a direction code as both are valid in this case. If this is a direction, try providing it as a string").arg(lua_tonumber(L, 2)));
+                                L,
+                                __func__,
+                                qsl("%1 is too ambiguous a number to parse into a toID or a direction code as both are valid in this case. If this is a direction, try providing it as a string")
+                                        .arg(lua_tonumber(L, 2)));
                     }
                     // else - usable as only one of the two flags is set:
                     hasToRoomId = true;
@@ -987,7 +1020,9 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
 
     host.mpMap->mMapGraphNeedsUpdate = true;
 
-    host.mpMap->update();
+    if (auto* pR = host.mpMap->mpRoomDB->getRoom(fromRoom)) {
+        host.mpMap->updateArea(pR->getArea());
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -1049,8 +1084,22 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
-    lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, QColor(fgr, fgg, fgb, foregroundTransparency), QColor(bgr, bgg, bgb, backgroundTransparency), showOnTop, noScaling, temporary, zoom, fontSize, fontName, QColor(olr, olg, olb, foregroundTransparency)));
-    host.mpMap->update();
+    lua_pushinteger(L,
+                    host.mpMap->createMapLabel(area,
+                                               text,
+                                               posx,
+                                               posy,
+                                               posz,
+                                               QColor(fgr, fgg, fgb, foregroundTransparency),
+                                               QColor(bgr, bgg, bgb, backgroundTransparency),
+                                               showOnTop,
+                                               noScaling,
+                                               temporary,
+                                               zoom,
+                                               fontSize,
+                                               fontName,
+                                               QColor(olr, olg, olb, foregroundTransparency)));
+    host.mpMap->updateArea(area);
     return 1;
 }
 
@@ -1074,7 +1123,7 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
 
     const Host& host = getHostFromLua(L);
     lua_pushinteger(L, host.mpMap->createMapImageLabel(area, imagePathFileName, posx, posy, posz, width, height, zoom, showOnTop, temporary));
-    host.mpMap->update();
+    host.mpMap->updateArea(area);
     return 1;
 }
 
@@ -1126,8 +1175,7 @@ int TLuaInterpreter::createRoomID(lua_State* L)
     if (lua_gettop(L) > 0) {
         const int minId = getVerifiedInt(L, __func__, 1, "minimum room Id", true);
         if (minId < 1) {
-            return warnArgumentValue(L, __func__, qsl(
-                "minimum roomID %1 is an optional value but if provided it must be greater than zero").arg(minId));
+            return warnArgumentValue(L, __func__, qsl("minimum roomID %1 is an optional value but if provided it must be greater than zero").arg(minId));
         }
         lua_pushnumber(L, host.mpMap->createNewRoomID(lua_tointeger(L, 1)));
     } else {
@@ -1184,7 +1232,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
             host.mpMap->mpMapper->updateAreaComboBox();
         }
         host.mpMap->setUnsaved(__func__);
-        host.mpMap->update();
+        host.mpMap->updateArea(id);
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
     lua_pushboolean(L, result);
@@ -1205,7 +1253,7 @@ int TLuaInterpreter::deleteMap(lua_State* L)
 
     host.mpMap->mapClear();
 
-    host.mpMap->update();
+    host.mpMap->updateArea(-1);
 
     lua_pushboolean(L, true);
     return 1;
@@ -1219,9 +1267,13 @@ int TLuaInterpreter::deleteRoom(lua_State* L)
         return 0;
     }
     const Host& host = getHostFromLua(L);
+    int areaId = -1;
+    if (auto* pR = host.mpMap->mpRoomDB->getRoom(id)) {
+        areaId = pR->getArea();
+    }
     lua_pushboolean(L, host.mpMap->mpRoomDB->removeRoom(id));
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(areaId);
     return 1;
 }
 
@@ -1234,7 +1286,7 @@ int TLuaInterpreter::disableMapInfo(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("map info '%1' does not exist").arg(name));
     }
 
-    host.mpMap->update();
+    host.mpMap->updateArea(-1);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -1248,7 +1300,7 @@ int TLuaInterpreter::enableMapInfo(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("map info '%1' does not exist").arg(name));
     }
 
-    host.mpMap->update();
+    host.mpMap->updateArea(-1);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -1628,10 +1680,7 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getExitStubsNames
 int TLuaInterpreter::getExitStubsNames(lua_State* L)
 {
-    const QStringList stubmap = { "north", "northeast", "northwest", "east", "west",
-                                  "south", "southeast", "southwest", "up", "down", "in",
-                                  "out", "other"
-    };
+    const QStringList stubmap = {"north", "northeast", "northwest", "east", "west", "south", "southeast", "southwest", "up", "down", "in", "out", "other"};
 
     const Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
@@ -1745,8 +1794,7 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
 
     if (labelId >= 0) {
         if (!pA->mMapLabels.contains(labelId)) {
-            return warnArgumentValue(L, __func__, qsl("labelID %1 does not exist in area with areaID %2")
-                .arg(QString::number(labelId), QString::number(areaId)));
+            return warnArgumentValue(L, __func__, qsl("labelID %1 does not exist in area with areaID %2").arg(QString::number(labelId), QString::number(areaId)));
         }
         lua_newtable(L);
         auto label = pA->mMapLabels.value(labelId);
@@ -1806,7 +1854,7 @@ int TLuaInterpreter::getMapMenus(lua_State* L)
         display = menuInfo[1];
         qDebug() << it.key() << parent << display;
         lua_pushstring(L, display.toUtf8().constData());
-        lua_pushstring(L, parent.isEmpty() ? "top-level" :parent.toUtf8().constData());
+        lua_pushstring(L, parent.isEmpty() ? "top-level" : parent.toUtf8().constData());
         lua_settable(L, -3);
     }
 
@@ -1822,8 +1870,7 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
     }
 
     lua_newtable(L);
-    QList<int> selectionRoomsList{pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.begin(),
-                                  pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.end()};
+    QList<int> selectionRoomsList{pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.begin(), pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.end()};
     if (!selectionRoomsList.isEmpty()) {
         if (selectionRoomsList.count() > 1) {
             std::sort(selectionRoomsList.begin(), selectionRoomsList.end());
@@ -1842,7 +1889,6 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
         }
 
         lua_settable(L, -3);
-
     }
 
     return 1;
@@ -1868,12 +1914,39 @@ int TLuaInterpreter::getMapUserData(lua_State* L)
 int TLuaInterpreter::getMapZoom(lua_State* L)
 {
     std::optional<int> areaID;
-    if (lua_gettop(L)) {
+    int viewId = 0;
+
+    if (lua_gettop(L) > 0) {
         areaID = getVerifiedInt(L, __func__, 1, "area id", true);
     }
+    if (lua_gettop(L) > 1) {
+        viewId = getVerifiedInt(L, __func__, 2, "view id", true);
+    }
+
     const Host& host = getHostFromLua(L);
-    if (host.mpMap.isNull() || host.mpMap->mpMapper.isNull()) {
-        return warnArgumentValue(L, __func__, "no map loaded or no active mapper");
+    if (host.mpMap.isNull()) {
+        return warnArgumentValue(L, __func__, "no map loaded");
+    }
+
+    // If viewId is specified, get zoom from that specific view
+    if (viewId > 0) {
+        auto* viewManager = host.mpMap->getViewManager();
+        if (!viewManager) {
+            return warnArgumentValue(L, __func__, "no view manager available");
+        }
+
+        TMapView* view = viewManager->getView(viewId);
+        if (!view) {
+            return warnArgumentValue(L, __func__, qsl("view %1 not found").arg(viewId));
+        }
+
+        lua_pushnumber(L, view->getZoom());
+        return 1;
+    }
+
+    // Primary mapper behavior
+    if (host.mpMap->mpMapper.isNull()) {
+        return warnArgumentValue(L, __func__, "no active mapper");
     }
 
     if (areaID.has_value()) {
@@ -2260,8 +2333,7 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
     }
     if (!pR->userData.contains(key)) {
         if (!isBackwardCompatibilityRequired) {
-            return warnArgumentValue(L, __func__, qsl(
-                "no user data with key '%1' in room with ID %2").arg(key, QString::number(roomId)));
+            return warnArgumentValue(L, __func__, qsl("no user data with key '%1' in room with ID %2").arg(key, QString::number(roomId)));
         }
         lua_pushstring(L, "");
         return 1;
@@ -2379,7 +2451,6 @@ int TLuaInterpreter::getSpecialExits(lua_State* L)
                         bestUnlockedExitIndex = j;
                         bestUnlockedExitWeight = thisExitWeight;
                     }
-
                 }
             }
 
@@ -2442,7 +2513,9 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
     }
     host.startSpeedWalk();
     lua_pushboolean(L, true);
-    host.mpMap->update();
+    if (auto* pR = host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
+        host.mpMap->updateArea(pR->getArea());
+    }
     return 1;
 }
 
@@ -2482,8 +2555,7 @@ int TLuaInterpreter::hasSpecialExitLock(lua_State* L)
         return warnArgumentValue(L, __func__, csmInvalidExitRoomID.arg(fromRoomID));
     }
     if (!pR->getSpecialExits().contains(dir)) {
-        return warnArgumentValue(L, __func__, qsl("the special exit name/command '%1' does not exist in roomID %2")
-            .arg(dir, QString::number(fromRoomID)));
+        return warnArgumentValue(L, __func__, qsl("the special exit name/command '%1' does not exist in roomID %2").arg(dir, QString::number(fromRoomID)));
     }
 
     lua_pushboolean(L, pR->hasSpecialExitLock(dir));
@@ -2514,7 +2586,7 @@ int TLuaInterpreter::highlightRoom(lua_State* L)
         pR->highlightColor2 = bg;
         pR->highlightRadius = radius;
 
-        host.mpMap->update();
+        host.mpMap->updateArea(pR->getArea());
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -2531,7 +2603,7 @@ int TLuaInterpreter::killMapInfo(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("map info '%1' does not exist").arg(name));
     }
 
-    host.mpMap->update();
+    host.mpMap->updateArea(-1);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2615,7 +2687,7 @@ int TLuaInterpreter::lockExit(lua_State* L)
     if (pR) {
         pR->setExitLock(dir, b);
         host.mpMap->setUnsaved(__func__);
-        host.mpMap->update();
+        host.mpMap->updateArea(pR->getArea());
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
@@ -2631,7 +2703,7 @@ int TLuaInterpreter::lockRoom(lua_State* L)
     if (pR) {
         pR->isLocked = b;
         host.mpMap->setUnsaved(__func__);
-        host.mpMap->update();
+        host.mpMap->updateArea(pR->getArea());
         host.mpMap->mMapGraphNeedsUpdate = true;
         lua_pushboolean(L, true);
     } else {
@@ -2657,13 +2729,12 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
         return warnArgumentValue(L, __func__, csmInvalidExitRoomID.arg(fromRoomID));
     }
     if (!pR->setSpecialExitLock(dir, b)) {
-        return warnArgumentValue(L, __func__, qsl("the special exit name/command %1 does not exist in roomID %2")
-            .arg(dir, QString::number(fromRoomID)));
+        return warnArgumentValue(L, __func__, qsl("the special exit name/command %1 does not exist in roomID %2").arg(dir, QString::number(fromRoomID)));
     }
 
     lua_pushboolean(L, true);
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
     host.mpMap->mMapGraphNeedsUpdate = true;
     return 1;
 }
@@ -2761,10 +2832,10 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
             color = QColor(r, g, b);
         }
         lua_pop(L, nResult);
-        return MapInfoProperties{ isBold, isItalic, text, color };
+        return MapInfoProperties{isBold, isItalic, text, color};
     });
 
-    host.mpMap->update();
+    host.mpMap->updateArea(-1);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2787,20 +2858,16 @@ int TLuaInterpreter::removeCustomLine(lua_State* L)
         return lua_error(L);
     }
     if (!pR->hasExitOrSpecialExit(direction)) {
-        return warnArgumentValue(L, __func__, qsl(
-            "roomID %1 does not have an exit that can be identified from '%2'").arg(QString::number(roomId), lua_tostring(L, 2)));
+        return warnArgumentValue(L, __func__, qsl("roomID %1 does not have an exit that can be identified from '%2'").arg(QString::number(roomId), lua_tostring(L, 2)));
     }
 
-    if (0 >= (pR->customLines.remove(direction) + pR->customLinesArrow.remove(direction)
-        + pR->customLinesStyle.remove(direction) + pR->customLinesColor.remove(direction))) {
-        return warnArgumentValue(L, __func__, qsl(
-            "roomID %1 does not appear to have a custom exit line for the exit indentifed from '%2'")
-            .arg(QString::number(roomId), lua_tostring(L, 2)));
+    if (0 >= (pR->customLines.remove(direction) + pR->customLinesArrow.remove(direction) + pR->customLinesStyle.remove(direction) + pR->customLinesColor.remove(direction))) {
+        return warnArgumentValue(L, __func__, qsl("roomID %1 does not appear to have a custom exit line for the exit indentifed from '%2'").arg(QString::number(roomId), lua_tostring(L, 2)));
     }
     // Need to update the TRoom {min|max}_{x|y} settings as they are used during
     // the painting process:
     pR->calcRoomDimensions();
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
 
     lua_pushboolean(L, true);
     return 1;
@@ -2884,11 +2951,10 @@ int TLuaInterpreter::removeSpecialExit(lua_State* L)
     }
 
     if (!pR->getSpecialExits().contains(dir)) {
-        return warnArgumentValue(L, __func__, qsl(
-            "the special exit name/command '%1' does not exist in exit roomID %2").arg(dir, QString::number(fromRoomID)));
+        return warnArgumentValue(L, __func__, qsl("the special exit name/command '%1' does not exist in exit roomID %2").arg(dir, QString::number(fromRoomID)));
     }
     pR->setSpecialExit(-1, dir);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2907,7 +2973,7 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
     }
     const bool result = host.mpMap->setRoomArea(id, -1, false);
     if (result) {
-        host.mpMap->update();
+        host.mpMap->updateArea(-1);
     }
     lua_pushboolean(L, result);
     return 1;
@@ -3288,8 +3354,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         } else if (!host.mpMap->mpRoomDB->getAreaNamesMap().values().contains(existingName)) {
             return warnArgumentValue(L, __func__, csmInvalidAreaName.arg(existingName));
         } else if (host.mpMap->mpRoomDB->getAreaNamesMap().value(-1).contains(existingName)) {
-            return warnArgumentValue(L, __func__, qsl(
-                "area name '%1' is reserved and protected - it cannot be changed").arg(existingName));
+            return warnArgumentValue(L, __func__, qsl("area name '%1' is reserved and protected - it cannot be changed").arg(existingName));
         }
     } else {
         lua_pushfstring(L,
@@ -3311,9 +3376,8 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         // problem or just pointless quite easily...!
         if (host.mpMap->mpRoomDB->getAreaNamesMap().value(id) != newName) {
             // And it isn't the trivial case, where the given areaID already IS that name
-            return warnArgumentValue(L, __func__, qsl(
-                "area names may not be duplicated and areaID %1 already has the name '%2'")
-                .arg(QString::number(host.mpMap->mpRoomDB->getAreaNamesMap().key(newName)), newName));
+            return warnArgumentValue(
+                    L, __func__, qsl("area names may not be duplicated and areaID %1 already has the name '%2'").arg(QString::number(host.mpMap->mpRoomDB->getAreaNamesMap().key(newName)), newName));
         }
         // Renaming an area to the same name is pointlessly successful!
         lua_pushboolean(L, true);
@@ -3330,7 +3394,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
     const bool result = host.mpMap->mpRoomDB->setAreaName(id, newName);
     if (result) {
         host.mpMap->setUnsaved(__func__);
-        host.mpMap->update();
+        host.mpMap->updateArea(id);
         if (host.mpMap->mpMapper) {
             host.mpMap->mpMapper->updateAreaComboBox();
             if (isCurrentAreaRenamed) {
@@ -3363,7 +3427,7 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
     }
     pA->mUserData[key] = value;
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(areaId);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3404,27 +3468,60 @@ int TLuaInterpreter::setCustomEnvColor(lua_State* L)
     Host& host = getHostFromLua(L);
     host.mpMap->mCustomEnvColors[id] = newColor;
     switch (id) { // See TMap::restore16ColorSet() for mapping of indexes:
-    case 257:   host.mRed_2 = newColor;             break;
-    case 258:   host.mGreen_2 = newColor;           break;
-    case 259:   host.mYellow_2 = newColor;          break;
-    case 260:   host.mBlue_2 = newColor;            break;
-    case 261:   host.mMagenta_2 = newColor;         break;
-    case 262:   host.mCyan_2 = newColor;            break;
-    case 263:   host.mWhite_2 = newColor;           break;
-    case 264:   host.mBlack_2 = newColor;           break;
-    case 265:   host.mLightRed_2 = newColor;        break;
-    case 266:   host.mLightGreen_2 = newColor;      break;
-    case 267:   host.mLightYellow_2 = newColor;     break;
-    case 268:   host.mLightBlue_2 = newColor;       break;
-    case 269:   host.mLightMagenta_2 = newColor;    break;
-    case 270:   host.mLightCyan_2 = newColor;       break;
-    case 271:   host.mLightWhite_2 = newColor;      break;
-    case 272:   host.mLightBlack_2 = newColor;      break;
-    default: {} // No-op
+    case 257:
+        host.mRed_2 = newColor;
+        break;
+    case 258:
+        host.mGreen_2 = newColor;
+        break;
+    case 259:
+        host.mYellow_2 = newColor;
+        break;
+    case 260:
+        host.mBlue_2 = newColor;
+        break;
+    case 261:
+        host.mMagenta_2 = newColor;
+        break;
+    case 262:
+        host.mCyan_2 = newColor;
+        break;
+    case 263:
+        host.mWhite_2 = newColor;
+        break;
+    case 264:
+        host.mBlack_2 = newColor;
+        break;
+    case 265:
+        host.mLightRed_2 = newColor;
+        break;
+    case 266:
+        host.mLightGreen_2 = newColor;
+        break;
+    case 267:
+        host.mLightYellow_2 = newColor;
+        break;
+    case 268:
+        host.mLightBlue_2 = newColor;
+        break;
+    case 269:
+        host.mLightMagenta_2 = newColor;
+        break;
+    case 270:
+        host.mLightCyan_2 = newColor;
+        break;
+    case 271:
+        host.mLightWhite_2 = newColor;
+        break;
+    case 272:
+        host.mLightBlack_2 = newColor;
+        break;
+    default: {
+    } // No-op
     }
 
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(-1);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3444,57 +3541,45 @@ int TLuaInterpreter::setDoor(lua_State* L)
     }
     const QString exitCmd = getVerifiedString(L, __func__, 2, "door command");
 
-    if (exitCmd.compare(qsl("n")) && exitCmd.compare(qsl("e")) && exitCmd.compare(qsl("s")) && exitCmd.compare(qsl("w"))
-        && exitCmd.compare(qsl("ne"))
-        && exitCmd.compare(qsl("se"))
-        && exitCmd.compare(qsl("sw"))
-        && exitCmd.compare(qsl("nw"))
-        && exitCmd.compare(qsl("up"))
-        && exitCmd.compare(qsl("down"))
-        && exitCmd.compare(qsl("in"))
-        && exitCmd.compare(qsl("out"))) {
+    if (exitCmd.compare(qsl("n")) && exitCmd.compare(qsl("e")) && exitCmd.compare(qsl("s")) && exitCmd.compare(qsl("w")) && exitCmd.compare(qsl("ne")) && exitCmd.compare(qsl("se"))
+        && exitCmd.compare(qsl("sw")) && exitCmd.compare(qsl("nw")) && exitCmd.compare(qsl("up")) && exitCmd.compare(qsl("down")) && exitCmd.compare(qsl("in")) && exitCmd.compare(qsl("out"))) {
         // One of the above WILL BE ZERO if the exitCmd is ONE of the above qsls
         // So the above will be TRUE if NONE of above strings match - which
         // means we must treat the exitCmd as a SPECIAL exit
         if (!(pR->getSpecialExits().contains(exitCmd))) {
             // And NOT a special one either
-            return warnArgumentValue(L, __func__, qsl(
-                "roomID %1 does not have a special exit in direction '%2'")
-                .arg(QString::number(roomId), exitCmd));
+            return warnArgumentValue(L, __func__, qsl("roomID %1 does not have a special exit in direction '%2'").arg(QString::number(roomId), exitCmd));
         }
         // else IS a valid special exit - so fall out of if and continue
     } else {
         // Is a normal exit so see if it is valid
         if (!(((!exitCmd.compare(qsl("n"))) && (pR->getExit(DIR_NORTH) > 0 || pR->exitStubs.contains(DIR_NORTH)))
-                || ((!exitCmd.compare(qsl("e"))) && (pR->getExit(DIR_EAST) > 0 || pR->exitStubs.contains(DIR_EAST)))
-                || ((!exitCmd.compare(qsl("s"))) && (pR->getExit(DIR_SOUTH) > 0 || pR->exitStubs.contains(DIR_SOUTH)))
-                || ((!exitCmd.compare(qsl("w"))) && (pR->getExit(DIR_WEST) > 0 || pR->exitStubs.contains(DIR_WEST)))
-                || ((!exitCmd.compare(qsl("ne"))) && (pR->getExit(DIR_NORTHEAST) > 0 || pR->exitStubs.contains(DIR_NORTHEAST)))
-                || ((!exitCmd.compare(qsl("se"))) && (pR->getExit(DIR_SOUTHEAST) > 0 || pR->exitStubs.contains(DIR_SOUTHEAST)))
-                || ((!exitCmd.compare(qsl("sw"))) && (pR->getExit(DIR_SOUTHWEST) > 0 || pR->exitStubs.contains(DIR_SOUTHWEST)))
-                || ((!exitCmd.compare(qsl("nw"))) && (pR->getExit(DIR_NORTHWEST) > 0 || pR->exitStubs.contains(DIR_NORTHWEST)))
-                || ((!exitCmd.compare(qsl("up"))) && (pR->getExit(DIR_UP) > 0 || pR->exitStubs.contains(DIR_UP)))
-                || ((!exitCmd.compare(qsl("down"))) && (pR->getExit(DIR_DOWN) > 0 || pR->exitStubs.contains(DIR_DOWN)))
-                || ((!exitCmd.compare(qsl("in"))) && (pR->getExit(DIR_IN) > 0 || pR->exitStubs.contains(DIR_IN)))
-                || ((!exitCmd.compare(qsl("out"))) && (pR->getExit(DIR_OUT) > 0 || pR->exitStubs.contains(DIR_OUT))))) {
+              || ((!exitCmd.compare(qsl("e"))) && (pR->getExit(DIR_EAST) > 0 || pR->exitStubs.contains(DIR_EAST)))
+              || ((!exitCmd.compare(qsl("s"))) && (pR->getExit(DIR_SOUTH) > 0 || pR->exitStubs.contains(DIR_SOUTH)))
+              || ((!exitCmd.compare(qsl("w"))) && (pR->getExit(DIR_WEST) > 0 || pR->exitStubs.contains(DIR_WEST)))
+              || ((!exitCmd.compare(qsl("ne"))) && (pR->getExit(DIR_NORTHEAST) > 0 || pR->exitStubs.contains(DIR_NORTHEAST)))
+              || ((!exitCmd.compare(qsl("se"))) && (pR->getExit(DIR_SOUTHEAST) > 0 || pR->exitStubs.contains(DIR_SOUTHEAST)))
+              || ((!exitCmd.compare(qsl("sw"))) && (pR->getExit(DIR_SOUTHWEST) > 0 || pR->exitStubs.contains(DIR_SOUTHWEST)))
+              || ((!exitCmd.compare(qsl("nw"))) && (pR->getExit(DIR_NORTHWEST) > 0 || pR->exitStubs.contains(DIR_NORTHWEST)))
+              || ((!exitCmd.compare(qsl("up"))) && (pR->getExit(DIR_UP) > 0 || pR->exitStubs.contains(DIR_UP)))
+              || ((!exitCmd.compare(qsl("down"))) && (pR->getExit(DIR_DOWN) > 0 || pR->exitStubs.contains(DIR_DOWN)))
+              || ((!exitCmd.compare(qsl("in"))) && (pR->getExit(DIR_IN) > 0 || pR->exitStubs.contains(DIR_IN)))
+              || ((!exitCmd.compare(qsl("out"))) && (pR->getExit(DIR_OUT) > 0 || pR->exitStubs.contains(DIR_OUT))))) {
             // No there IS NOT a stub or real exit in the exitCmd direction
-            return warnArgumentValue(L, __func__, qsl(
-                "roomID %1 does not have a normal exit or a stub exit in direction '%2'")
-                .arg(QString::number(roomId), exitCmd));
+            return warnArgumentValue(L, __func__, qsl("roomID %1 does not have a normal exit or a stub exit in direction '%2'").arg(QString::number(roomId), exitCmd));
         }
         // else IS a valid stub or real normal exit -fall through to continue
     }
 
     const int doorStatus = getVerifiedInt(L, __func__, 3, "door type  {0='none', 1='open', 2='closed' or 3='locked'}");
     if (doorStatus < 0 || doorStatus > 3) {
-        return warnArgumentValue(L, __func__, qsl(
-            "door type %1 is not one of 0='none', 1='open', 2='closed' or 3='locked'").arg(doorStatus));
+        return warnArgumentValue(L, __func__, qsl("door type %1 is not one of 0='none', 1='open', 2='closed' or 3='locked'").arg(doorStatus));
     }
 
     const bool result = pR->setDoor(exitCmd, doorStatus);
     if (result) {
         host.mpMap->setUnsaved(__func__);
-        host.mpMap->update();
+        host.mpMap->updateArea(pR->getArea());
     }
     lua_pushboolean(L, result);
     return 1;
@@ -3515,7 +3600,9 @@ int TLuaInterpreter::setExit(lua_State* L)
     const Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpMap->setExit(from, to, dir));
     host.mpMap->mMapGraphNeedsUpdate = true;
-    host.mpMap->update();
+    if (auto* pR = host.mpMap->mpRoomDB->getRoom(from)) {
+        host.mpMap->updateArea(pR->getArea());
+    }
     return 1;
 }
 
@@ -3546,7 +3633,7 @@ int TLuaInterpreter::setExitStub(lua_State* L)
         return lua_error(L);
     }
     pR->setExitStub(dir, status);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
     return 0;
 }
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setExitWeightFilter
@@ -3568,9 +3655,7 @@ int TLuaInterpreter::setExitWeightFilter(lua_State* L)
     }
 
     if (!lua_isfunction(L, 1)) {
-        lua_pushfstring(L,
-                        "setExitWeightFilter: bad argument #1 type (callback as function expected, got %s!)",
-                        luaL_typename(L, 1));
+        lua_pushfstring(L, "setExitWeightFilter: bad argument #1 type (callback as function expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
@@ -3604,8 +3689,7 @@ TLuaInterpreter::ExitWeightFilterResult TLuaInterpreter::applyExitWeightFilter(i
         if (mudlet::smDebugMode && lua_isstring(L, -1)) {
             const char* errorMessage = lua_tostring(L, -1);
             if (errorMessage) {
-                TDebug(QColor(Qt::white), QColor(Qt::red))
-                    << "LUA ERROR: when running exit weight filter\nreason: " << errorMessage << "\n" >> 0;
+                TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: when running exit weight filter\nreason: " << errorMessage << "\n" >> 0;
             }
         }
         lua_pop(L, 1);
@@ -3616,8 +3700,7 @@ TLuaInterpreter::ExitWeightFilterResult TLuaInterpreter::applyExitWeightFilter(i
         if (!lua_toboolean(L, -1)) {
             result.blocked = true;
         } else if (mudlet::smDebugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::red))
-                << "LUA WARNING: exit weight filter returned boolean 'true', expected numeric weight. Ignoring.\n" >> 0;
+            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA WARNING: exit weight filter returned boolean 'true', expected numeric weight. Ignoring.\n" >> 0;
         }
     } else if (lua_isnil(L, -1)) {
         // nothing to do
@@ -3636,14 +3719,11 @@ TLuaInterpreter::ExitWeightFilterResult TLuaInterpreter::applyExitWeightFilter(i
         if (value.compare(qsl("block"), Qt::CaseInsensitive) == 0) {
             result.blocked = true;
         } else if (mudlet::smDebugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::red))
-                << "LUA WARNING: exit weight filter returned unexpected string '" << value
-                << "', expected numeric weight. Ignoring.\n" >> 0;
+            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA WARNING: exit weight filter returned unexpected string '" << value << "', expected numeric weight. Ignoring.\n" >> 0;
         }
     } else {
         if (mudlet::smDebugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::red))
-                << "LUA WARNING: exit weight filter returned unexpected type '" << luaL_typename(L, -1) << "', ignoring.\n" >> 0;
+            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA WARNING: exit weight filter returned unexpected type '" << luaL_typename(L, -1) << "', ignoring.\n" >> 0;
         }
     }
 
@@ -3693,19 +3773,20 @@ int TLuaInterpreter::setExitWeight(lua_State* L)
         return lua_error(L);
     }
     if (!pR->hasExitOrSpecialExit(direction)) {
-        return warnArgumentValue(L, __func__, qsl("roomID %1 does not have an exit that can be identified from '%2'")
-            .arg(QString::number(roomID), lua_tostring(L, 2)));
+        return warnArgumentValue(L, __func__, qsl("roomID %1 does not have an exit that can be identified from '%2'").arg(QString::number(roomID), lua_tostring(L, 2)));
     }
 
     const int weight = getVerifiedInt(L, __func__, 3, "exit weight");
     if (weight < 0) {
-        return warnArgumentValue(L, __func__, qsl("weight %1 is outside of the usable range of 0 (which resets the weight back to that of the destination room) to %2")
-            .arg(QString::number(weight), QString::number(std::numeric_limits<int>::max())));
+        return warnArgumentValue(L,
+                                 __func__,
+                                 qsl("weight %1 is outside of the usable range of 0 (which resets the weight back to that of the destination room) to %2")
+                                         .arg(QString::number(weight), QString::number(std::numeric_limits<int>::max())));
     }
 
     pR->setExitWeight(direction, weight);
     lua_pushboolean(L, true);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
     return 1;
 }
 
@@ -3722,7 +3803,7 @@ int TLuaInterpreter::setGridMode(lua_State* L)
     } else {
         pA->gridMode = gridMode;
         pA->calcSpan();
-        host.mpMap->update();
+        host.mpMap->updateArea(area);
     }
     host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
@@ -3754,12 +3835,44 @@ int TLuaInterpreter::setMapZoom(lua_State* L)
 {
     const qreal zoom = getVerifiedDouble(L, __func__, 1, "zoom");
     int areaID = 0;
+    int viewId = 0;
+
     if (lua_gettop(L) > 1) {
         areaID = getVerifiedInt(L, __func__, 2, "area id", true);
     }
+    if (lua_gettop(L) > 2) {
+        viewId = getVerifiedInt(L, __func__, 3, "view id", true);
+    }
+
     const Host& host = getHostFromLua(L);
-    if (host.mpMap.isNull() || host.mpMap->mpMapper.isNull()) {
-        return warnArgumentValue(L, __func__, "no map loaded or no active mapper");
+    if (host.mpMap.isNull()) {
+        return warnArgumentValue(L, __func__, "no map loaded");
+    }
+
+    // If viewId is specified, set zoom for that specific view
+    if (viewId > 0) {
+        auto* viewManager = host.mpMap->getViewManager();
+        if (!viewManager) {
+            return warnArgumentValue(L, __func__, "no view manager available");
+        }
+
+        TMapView* view = viewManager->getView(viewId);
+        if (!view) {
+            return warnArgumentValue(L, __func__, qsl("view %1 not found").arg(viewId));
+        }
+
+        auto [success, errMsg] = view->setZoom(zoom);
+        if (!success) {
+            return warnArgumentValue(L, __func__, errMsg.toUtf8().constData());
+        }
+
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // Primary mapper behavior
+    if (host.mpMap->mpMapper.isNull()) {
+        return warnArgumentValue(L, __func__, "no active mapper");
     }
 
     auto [success, errMsg] = host.mpMap->mpMapper->mp2dMap->setMapZoom(zoom, areaID);
@@ -3768,7 +3881,7 @@ int TLuaInterpreter::setMapZoom(lua_State* L)
     }
 
     lua_pushboolean(L, true);
-    host.mpMap->update();
+    host.mpMap->updateArea(-1);
     return 1;
 }
 
@@ -3810,9 +3923,11 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
     if (lua_isnumber(L, 2)) {
         areaId = static_cast<int>(lua_tonumber(L, 2));
         if (areaId < 1) {
-            return warnArgumentValue(L, __func__, qsl(
-                "number %1 is not a valid areaID greater than zero. "
-                "To remove a room's area, use resetRoomArea(roomID)").arg(areaId));
+            return warnArgumentValue(L,
+                                     __func__,
+                                     qsl("number %1 is not a valid areaID greater than zero. "
+                                         "To remove a room's area, use resetRoomArea(roomID)")
+                                             .arg(areaId));
         }
         if (!host.mpMap->mpRoomDB->getAreaNamesMap().contains(areaId)) {
             return warnArgumentValue(L, __func__, csmInvalidAreaID.arg(areaId));
@@ -3841,7 +3956,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
     });
 
     if (result) {
-        host.mpMap->update();
+        host.mpMap->updateArea(-1);
     }
     lua_pushboolean(L, result);
     return 1;
@@ -3868,7 +3983,7 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
         pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_10_0);
     }
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3901,7 +4016,7 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
 
     pR->mSymbolColor = QColor(r, g, b);
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3915,7 +4030,8 @@ int TLuaInterpreter::setRoomCoordinates(lua_State* L)
     const int z = getVerifiedInt(L, __func__, 4, "z");
     const Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpMap->setRoomCoordinates(id, x, y, z));
-    host.mpMap->update();
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    host.mpMap->updateArea(pR ? pR->getArea() : -1);
     return 1;
 }
 
@@ -3932,7 +4048,7 @@ int TLuaInterpreter::setRoomEnv(lua_State* L)
     }
     pR->environment = env;
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3971,7 +4087,7 @@ int TLuaInterpreter::setRoomName(lua_State* L)
     }
     pR->name = name;
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3995,7 +4111,7 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
     }
     pR->userData[key] = value;
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
     lua_pushboolean(L, true);
     return 1;
 }
@@ -4014,9 +4130,70 @@ int TLuaInterpreter::setRoomWeight(lua_State* L)
 
     pR->setWeight(w);
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
     host.mpMap->mMapGraphNeedsUpdate = true;
     lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomHidden
+int TLuaInterpreter::setRoomHidden(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+    const bool hidden = getVerifiedBool(L, __func__, 2, "hidden");
+
+    const Host& host = getHostFromLua(L);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    pR->setHidden(hidden);
+    host.mpMap->setUnsaved(__func__);
+    host.mpMap->updateArea(pR->getArea());
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomHidden
+int TLuaInterpreter::getRoomHidden(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    int roomId;
+    if (lua_gettop(L) > 0) {
+        roomId = getVerifiedInt(L, __func__, 1, "roomID");
+    } else {
+        roomId = host.mpMap->mRoomIdHash.value(host.getName());
+    }
+
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
+    if (pR) {
+        lua_pushboolean(L, pR->isHidden());
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getHiddenRooms
+int TLuaInterpreter::getHiddenRooms(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+
+    lua_newtable(L);
+    int i = 0;
+    QHashIterator<int, TRoom*> it(host.mpMap->mpRoomDB->getRoomMap());
+    while (it.hasNext()) {
+        it.next();
+        if (it.value()->isHidden()) {
+            lua_pushnumber(L, ++i);
+            lua_pushnumber(L, it.key());
+            lua_settable(L, -3);
+        }
+    }
     return 1;
 }
 
@@ -4029,7 +4206,7 @@ int TLuaInterpreter::unHighlightRoom(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->highlight = false;
-        host.mpMap->update();
+        host.mpMap->updateArea(pR->getArea());
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -4051,7 +4228,164 @@ int TLuaInterpreter::unsetRoomCharColor(lua_State* L)
     // Reset it to the default (and invalid) QColor:
     pR->mSymbolColor = {};
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomBorderColor
+int TLuaInterpreter::setRoomBorderColor(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+    const int r = getVerifiedInt(L, __func__, 2, "red component");
+    if (r < 0 || r > 255) {
+        return warnArgumentValue(L, __func__, qsl("red component value %1 out of range (0 to 255)").arg(r));
+    }
+    const int g = getVerifiedInt(L, __func__, 3, "green component");
+    if (g < 0 || g > 255) {
+        return warnArgumentValue(L, __func__, qsl("green component value %1 out of range (0 to 255)").arg(g));
+    }
+    const int b = getVerifiedInt(L, __func__, 4, "blue component");
+    if (b < 0 || b > 255) {
+        return warnArgumentValue(L, __func__, qsl("blue component value %1 out of range (0 to 255)").arg(b));
+    }
+
+    int a = 255;
+    if (lua_gettop(L) >= 5) {
+        a = getVerifiedInt(L, __func__, 5, "alpha component");
+        if (a < 0 || a > 255) {
+            return warnArgumentValue(L, __func__, qsl("alpha component value %1 out of range (0 to 255)").arg(a));
+        }
+    }
+
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    pR->mBorderColor = QColor(r, g, b, a);
+
+    host.mpMap->setUnsaved(__func__);
+    host.mpMap->updateArea(pR->getArea());
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomBorderColor
+int TLuaInterpreter::getRoomBorderColor(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    if (!pR->mBorderColor.isValid()) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    lua_pushnumber(L, pR->mBorderColor.red());
+    lua_pushnumber(L, pR->mBorderColor.green());
+    lua_pushnumber(L, pR->mBorderColor.blue());
+    lua_pushnumber(L, pR->mBorderColor.alpha());
+    return 4;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearRoomBorderColor
+int TLuaInterpreter::clearRoomBorderColor(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    pR->mBorderColor = QColor();
+
+    host.mpMap->setUnsaved(__func__);
+    host.mpMap->updateArea(pR->getArea());
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomBorderThickness
+int TLuaInterpreter::setRoomBorderThickness(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+    const int thickness = getVerifiedInt(L, __func__, 2, "thickness");
+    if (thickness < 1 || thickness > 10) {
+        return warnArgumentValue(L, __func__, qsl("thickness %1 is out of range (must be 1 to 10)").arg(thickness));
+    }
+
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    pR->mBorderThickness = thickness;
+    host.mpMap->setUnsaved(__func__);
+    host.mpMap->updateArea(pR->getArea());
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomBorderThickness
+int TLuaInterpreter::getRoomBorderThickness(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    if (pR->mBorderThickness <= 0) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    lua_pushnumber(L, pR->mBorderThickness);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearRoomBorderThickness
+int TLuaInterpreter::clearRoomBorderThickness(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    pR->mBorderThickness = 0;
+    host.mpMap->setUnsaved(__func__);
+    host.mpMap->updateArea(pR->getArea());
     lua_pushboolean(L, true);
     return 1;
 }
@@ -4061,7 +4395,7 @@ int TLuaInterpreter::updateMap(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     if (host.mpMap) {
-        host.mpMap->update();
+        host.mpMap->updateArea(-1);
     }
     return 0;
 }
@@ -4103,7 +4437,6 @@ int TLuaInterpreter::getCollisionLocationsInArea(lua_State* L)
         lua_settable(L, -3);
     }
     return 1;
-
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exportAreaImage
@@ -4169,5 +4502,118 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
         lua_pushstring(L, message.toUtf8().constData());
         return 2;
     }
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapView
+int TLuaInterpreter::createMapView(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    int areaId = 0;
+    if (lua_gettop(L) >= 1) {
+        areaId = getVerifiedInt(L, __func__, 1, "area id", true);
+    }
+
+    auto [viewId, errorMsg] = host.createMapView(areaId);
+    if (viewId > 0) {
+        lua_pushinteger(L, viewId);
+        return 1;
+    }
+    return warnArgumentValue(L, __func__, errorMsg);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#closeMapView
+int TLuaInterpreter::closeMapView(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    const int viewId = getVerifiedInt(L, __func__, 1, "view id");
+
+    auto [success, errorMsg] = host.closeMapView(viewId);
+    if (success) {
+        lua_pushboolean(L, true);
+        return 1;
+    }
+    return warnArgumentValue(L, __func__, errorMsg);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#closeAllMapViews
+int TLuaInterpreter::closeAllMapViews(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    auto [count, errorMsg] = host.closeAllMapViews();
+    if (!errorMsg.isEmpty()) {
+        return warnArgumentValue(L, __func__, errorMsg);
+    }
+    lua_pushinteger(L, count);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapViewIds
+int TLuaInterpreter::getMapViewIds(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    if (!host.mpMap) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+
+    auto* viewManager = host.mpMap->getViewManager();
+    if (!viewManager) {
+        return warnArgumentValue(L, __func__, "no view manager available");
+    }
+
+    const QList<int> viewIds = viewManager->getViewIds();
+
+    lua_newtable(L);
+    int luaIndex = 1;
+    for (int viewId : viewIds) {
+        lua_pushinteger(L, viewId);
+        lua_rawseti(L, -2, luaIndex++);
+    }
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapViewInfo
+int TLuaInterpreter::getMapViewInfo(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    const int viewId = getVerifiedInt(L, __func__, 1, "view id");
+
+    if (!host.mpMap) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+
+    auto* viewManager = host.mpMap->getViewManager();
+    if (!viewManager) {
+        return warnArgumentValue(L, __func__, "no view manager available");
+    }
+
+    TMapView* view = viewManager->getView(viewId);
+    if (!view) {
+        return warnArgumentValue(L, __func__, qsl("view %1 not found").arg(viewId));
+    }
+
+    lua_newtable(L);
+
+    lua_pushstring(L, "areaId");
+    lua_pushinteger(L, view->getCurrentAreaId());
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "centeredRoomId");
+    lua_pushinteger(L, view->getCenteredRoomId());
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "zoom");
+    lua_pushnumber(L, view->getZoom());
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "zLevel");
+    lua_pushinteger(L, view->getZLevel());
+    lua_settable(L, -3);
+
     return 1;
 }

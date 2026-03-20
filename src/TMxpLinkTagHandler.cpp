@@ -25,7 +25,7 @@
 TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
     Q_UNUSED(ctx)
-    
+
     // Extract expire name if present
     QString expireName;
     if (tag->hasAttribute(qsl("expire"))) {
@@ -47,7 +47,7 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     } else {
         mLinkId = client.setLink(QStringList(href), QStringList(hint));
     }
-    
+
     client.setLinkMode(true);
     return MXP_TAG_HANDLED;
 }

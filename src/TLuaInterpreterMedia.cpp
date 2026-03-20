@@ -329,11 +329,11 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L, const char* func
             QString value = getVerifiedString(L,
                                               func,
                                               -1,
-                                              key == QLatin1String("name")  ? "value for name"
-                                              : key == QLatin1String("key") ? "value for key"
-                                              : key == QLatin1String("tag") ? "value for tag"
+                                              key == QLatin1String("name")      ? "value for name"
+                                              : key == QLatin1String("key")     ? "value for key"
+                                              : key == QLatin1String("tag")     ? "value for tag"
                                               : key == QLatin1String("caption") ? "value for caption"
-                                                                            : "value for url");
+                                                                                : "value for url");
 
             if (key == QLatin1String("name") && !value.isEmpty()) {
                 if (QDir::homePath().contains('\\')) {
@@ -352,7 +352,8 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L, const char* func
             } else if (key == QLatin1String("caption") && !value.isEmpty()) {
                 mediaData.setMediaCaption(value);
             }
-        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("finish") || key == QLatin1String("loops")) {
+        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("finish")
+                   || key == QLatin1String("loops")) {
             int value = getVerifiedInt(L,
                                        func,
                                        -1,
@@ -589,11 +590,11 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L, const char* func
             QString value = getVerifiedString(L,
                                               func,
                                               -1,
-                                              key == QLatin1String("name")  ? "value for name"
-                                              : key == QLatin1String("key") ? "value for key"
-                                              : key == QLatin1String("tag") ? "value for tag"
+                                              key == QLatin1String("name")      ? "value for name"
+                                              : key == QLatin1String("key")     ? "value for key"
+                                              : key == QLatin1String("tag")     ? "value for tag"
                                               : key == QLatin1String("caption") ? "value for caption"
-                                                                            : "value for url");
+                                                                                : "value for url");
 
             if (key == QLatin1String("name") && !value.isEmpty()) {
                 if (QDir::homePath().contains('\\')) {
@@ -612,8 +613,8 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L, const char* func
             } else if (key == QLatin1String("caption") && !value.isEmpty()) {
                 mediaData.setMediaCaption(value);
             }
-        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("finish") || key == QLatin1String("loops")
-                   || key == QLatin1String("priority")) {
+        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("finish")
+                   || key == QLatin1String("loops") || key == QLatin1String("priority")) {
             int value = getVerifiedInt(L,
                                        func,
                                        -1,
@@ -724,8 +725,8 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
         // key at index -2 and value at index -1
         QString key = getVerifiedString(L, func, -2, "table keys");
 
-        if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("url"), Qt::CaseInsensitive)
-            || !key.compare(QLatin1String("key"), Qt::CaseInsensitive) || !key.compare(QLatin1String("tag"), Qt::CaseInsensitive)) {
+        if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("url"), Qt::CaseInsensitive) || !key.compare(QLatin1String("key"), Qt::CaseInsensitive)
+            || !key.compare(QLatin1String("tag"), Qt::CaseInsensitive)) {
             QString value = getVerifiedString(L,
                                               func,
                                               -1,
@@ -749,13 +750,13 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
             } else if (!key.compare(QLatin1String("tag"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
             }
-        } else if (!key.compare(QLatin1String("volume"), Qt::CaseInsensitive) || !key.compare(QLatin1String("start"), Qt::CaseInsensitive)
-            || !key.compare(QLatin1String("finish"), Qt::CaseInsensitive) || !key.compare(QLatin1String("loops"), Qt::CaseInsensitive)) {
+        } else if (!key.compare(QLatin1String("volume"), Qt::CaseInsensitive) || !key.compare(QLatin1String("start"), Qt::CaseInsensitive) || !key.compare(QLatin1String("finish"), Qt::CaseInsensitive)
+                   || !key.compare(QLatin1String("loops"), Qt::CaseInsensitive)) {
             int value = getVerifiedInt(L,
                                        func,
                                        -1,
-                                       !key.compare(QLatin1String("volume"), Qt::CaseInsensitive)  ? "value for volume"
-                                       : !key.compare(QLatin1String("start"), Qt::CaseInsensitive) ? "value for start"
+                                       !key.compare(QLatin1String("volume"), Qt::CaseInsensitive)   ? "value for volume"
+                                       : !key.compare(QLatin1String("start"), Qt::CaseInsensitive)  ? "value for start"
                                        : !key.compare(QLatin1String("finish"), Qt::CaseInsensitive) ? "value for finish"
                                                                                                     : "value for loops");
 

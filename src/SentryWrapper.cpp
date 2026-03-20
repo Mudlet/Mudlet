@@ -17,7 +17,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "SentryWrapper.h"
+#include "utils.h"
+
 #ifdef WITH_SENTRY
+#include <QFile>
 #include <QStandardPaths>
 #include "sentry.h"
 #endif
@@ -36,8 +40,6 @@
 #include <cstdlib>
 #include <algorithm>
 
-#include "SentryWrapper.h"
-
 // Initializes Sentry options for crash/error reporting.
 // Crashes are first stored in a local cache folder, then automatically sent.
 //
@@ -47,30 +49,38 @@
 //   Windows : C:\Users\...\AppData\Local\Cache\Mudlet\sentry
 void initSentry()
 {
-    #ifdef WITH_SENTRY
-        sentry_options_t*   options = sentry_options_new();
-        std::string         runtimeAppDir = getExeDir();
-        QString             path = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/mudlet/sentry";
+#ifdef WITH_SENTRY
+    sentry_options_t* options = sentry_options_new();
+    std::string runtimeAppDir = getExeDir();
+    QString path = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/mudlet/sentry";
 
-        if (!options) {
-            return;
-        }
-        sentry_options_set_database_path(options, path.toUtf8().constData());
-        sentry_options_set_release(options, "mudlet@" APP_VERSION);
-        sentry_options_set_handler_path(options, makeExecutablePath(runtimeAppDir, "crashpad_handler").c_str());
-        sentry_options_set_external_crash_reporter_path(options, makeExecutablePath(runtimeAppDir, "MudletCrashReporter").c_str());
+    if (!options) {
+        return;
+    }
 
-        sentry_init(options);
-    #endif
+    QString appBuild;
+    QFile gitShaFile(qsl(":/app-build.txt"));
+    if (gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
+    }
+    const std::string release = qsl("mudlet@%1%2").arg(APP_VERSION, appBuild).toStdString();
+
+    sentry_options_set_database_path(options, path.toUtf8().constData());
+    sentry_options_set_release(options, release.c_str());
+    sentry_options_set_handler_path(options, makeExecutablePath(runtimeAppDir, "crashpad_handler").c_str());
+    sentry_options_set_external_crash_reporter_path(options, makeExecutablePath(runtimeAppDir, "MudletCrashReporter").c_str());
+
+    sentry_init(options);
+#endif
 }
 
 std::string makeExecutablePath(const std::string& dir, const std::string& name)
 {
-    #ifdef Q_OS_WIN
-        return dir + "/" + name + ".exe";
-    #else
-        return dir + "/" + name;
-    #endif
+#ifdef Q_OS_WIN
+    return dir + "/" + name + ".exe";
+#else
+    return dir + "/" + name;
+#endif
 }
 
 // Returns the directory containing the current executable
@@ -118,7 +128,7 @@ void crashIfRequested()
 {
     const char* environmentVariable = std::getenv("MUDLET_CRASH_TEST");
 
-     if (environmentVariable && *environmentVariable == '1') {
+    if (environmentVariable && *environmentVariable == '1') {
         int* p = nullptr;
         *p = 42;
     }

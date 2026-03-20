@@ -1,6 +1,6 @@
 #!/bin/bash
 ###########################################################################
-#   Copyright (C) 2024-2024  by John McKisson - john.mckisson@gmail.com   #
+#   Copyright (C) 2024-2026  by John McKisson - john.mckisson@gmail.com   #
 #   Copyright (C) 2023-2025  by Stephen Lyons - slysven@virginmedia.com   #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
@@ -21,7 +21,8 @@
 
 set -x
 
-# Version: 2.3.0    Add build counter suffix for multiple builds from same commit
+# Version: 2.4.0    Switch from MINGW64 to CLANG64
+#          2.3.0    Add build counter suffix for multiple builds from same commit
 #          2.2.0    Skip commit date check when build is manually forced
 #          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
@@ -29,22 +30,20 @@ set -x
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
-# 2 - Unsupported fork
-# 3 - Not used
+# 2 - Unsupported MSYS2 shell type
+# 3 - Unsupported fork
 # 4 - nuget error
 # 5 - squirrel error
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
+  echo "Please run this script from a CLANG64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
-  export BUILDCOMPONENT="x86_64"
-  # We only support "x86_64" architecture now but we used to do "x86" (32-bit)
-  # as well and exported this value as ARCH for use here and in other scripts
+elif [ "${MSYSTEM}" = "CLANG64" ]; then
+  echo "Building with CLANG64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
-  echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
+  echo "CLANG64 is currently supported. Please rerun this in a bash terminal of"
   echo "that type."
   exit 2
 fi
@@ -91,9 +90,9 @@ fi
 export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD,,}"
 export BUILD_COMMIT="${BUILD_COMMIT,,}"
 
-# Extract version from the mudlet.pro file
-VERSION_LINE=$(grep "VERSION =" "${GITHUB_WORKSPACE}/src/mudlet.pro")
-VERSION_REGEX='= {1}(.+)$'
+# Extract version from CMakeLists.txt
+VERSION_LINE=$(grep "set(APP_VERSION" "${GITHUB_WORKSPACE}/CMakeLists.txt")
+VERSION_REGEX='set\(APP_VERSION (.+)\)'
 
 # Use Bash regex matching to extract version - don't double-quote these as that
 # can mess things up!
@@ -144,7 +143,7 @@ fi
 
 # Check if we're building from the Mudlet/Mudlet repository and not a fork
 if [[ "${GITHUB_REPO_NAME}" != "Mudlet/Mudlet" ]]; then
-  exit 2
+  exit 3
 fi
 
 # This will change to end in "-debug" if we ever do that type of build:
@@ -220,26 +219,7 @@ else
   git clone https://github.com/Mudlet/installers.git "${GITHUB_WORKSPACE}/installers"
   cd "${GITHUB_WORKSPACE}/installers/windows" || exit 1
 
-  echo "=== Setting up Java 21 for signing ==="
-  # Java is installed by default, we just need to select which version to use:
-  JAVA_HOME="$(cygpath -au "${JAVA_HOME_21_X64}")"
-  export JAVA_HOME
-  export PATH="${JAVA_HOME}/bin:${PATH}"
-  JAVA_JAR_WINPATHFILE="$(cygpath -aw "${GITHUB_WORKSPACE}/installers/windows/jsign-7.0-SNAPSHOT.jar")"
-
-  if [ -z "${AZURE_ACCESS_TOKEN}" ]; then
-    echo "=== Code signing of Mudlet application and bundled libraries skipped - no Azure token provided ==="
-  else
-    echo "=== Signing Mudlet executable and bundled libraries ==="
-    java.exe -jar "${JAVA_JAR_WINPATHFILE}" \
-      --storetype TRUSTEDSIGNING \
-      --keystore eus.codesigning.azure.net \
-      --storepass "${AZURE_ACCESS_TOKEN}" \
-      --alias Mudlet/Mudlet \
-      "${PACKAGE_EXE_WINPATHFILE}" "${PACKAGE_WINPATH}\\**\\*.dll"
-  fi
-
-  echo "=== Preparing an intermediate artifact of the (signed) code ==="
+  echo "=== Preparing an intermediate artifact of the code ==="
   # What will it be called:
   if [[ -z "${MUDLET_VERSION_BUILD}" ]]; then
     INTERMEDIATE_ARTIFACT_NAME="Mudlet-${VERSION}-windows-64"
@@ -273,7 +253,7 @@ else
     NAME_SUFFIX='_64_-PublicTestBuild'
     INSTALLER_ICON_WINFILE=$(cygpath -aw "${GITHUB_WORKSPACE}/src/icons/mudlet_ptb.ico")
     ID='Mudlet_64_-PublicTestBuild'
-    TITLE='Mudlet x64 (Public Test Build)'
+    TITLE='Mudlet (Public Test Build)'
     LOADING_GIF="$(cygpath -aw "${GITHUB_WORKSPACE}/installers/windows/splash-installing-ptb-2x.png")"
     # Because the packaging tools use "Semantic Versioning" it makes sense
     # use the date in a number year-first form rather than the SHA1 as
@@ -345,19 +325,6 @@ else
   INSTALLER_EXE_PATHFILE="$(cygpath -au "${RELEASE_DIR}/${INSTALLER_EXE}")"
   echo "Renaming \"Mudlet${NAME_SUFFIX}Setup.exe\" to \"${INSTALLER_EXE}\""
   mv "${RELEASE_DIR}/Mudlet${NAME_SUFFIX}Setup.exe" "${INSTALLER_EXE_PATHFILE}"
-
-  # Sign the final installer
-  if [ -z "${AZURE_ACCESS_TOKEN}" ]; then
-    echo "=== Code signing of Mudlet installer skipped - no Azure token provided ==="
-  else
-    echo "=== Signing installer ==="
-    java.exe -jar "${JAVA_JAR_WINPATHFILE}" \
-      --storetype TRUSTEDSIGNING \
-      --keystore eus.codesigning.azure.net \
-      --storepass "${AZURE_ACCESS_TOKEN}" \
-      --alias Mudlet/Mudlet \
-      "${INSTALLER_EXE_WINPATHFILE}"
-  fi
 
   if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
     echo "=== Preparing artifact for PTB for upload to make.mudlet.org ==="
@@ -451,7 +418,7 @@ EOF
       powershell.exe -Command "icacls.exe temp_key_file_portable /inheritance:r"
 
       # Upload portable ZIP via SCP with proper naming
-      PORTABLE_REMOTE_NAME="Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
+      PORTABLE_REMOTE_NAME="Mudlet-${VERSION}-windows-64-portable.zip"
       powershell.exe <<EOF
 \$portableZipPath = "${PORTABLE_ZIP_PATH}"
 \$DEPLOY_PATH = "${DEPLOY_PATH}"
@@ -462,7 +429,7 @@ EOF
       shred -u temp_key_file_portable
 
       # Define portable ZIP URL - should match the naming convention
-      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
+      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-64-portable.zip"
 
       # Verify portable ZIP was uploaded
       if ! curl --output /dev/null --silent --head --fail "${PORTABLE_DEPLOY_URL}"; then
@@ -481,7 +448,7 @@ EOF
       -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
       -F "file_type=2" \
       -F "file_remote=${PORTABLE_DEPLOY_URL}" \
-      -F "file_name=Mudlet ${VERSION} Portable (windows-${BUILD_BITNESS})" \
+      -F "file_name=Mudlet ${VERSION} Portable (windows-64)" \
       -F "file_des=sha256: ${PORTABLE_SHA256SUM}" \
       -F "file_cat=${FILE_CATEGORY}" \
       -F "file_permission=-1" \

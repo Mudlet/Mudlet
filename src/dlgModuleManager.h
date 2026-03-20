@@ -23,11 +23,11 @@
  ***************************************************************************/
 
 
-#include "Host.h"
-
 #include "ui_module_manager.h"
 #include <QDialog>
-#include <QCloseEvent>
+
+class Host;
+class QCloseEvent;
 
 class dlgModuleManager : public QDialog, public Ui::module_manager
 {
@@ -54,6 +54,8 @@ protected:
     void closeEvent(QCloseEvent* event) override;
 
 private:
+    void showImportStatus(const QString& message);
+
     Host* mpHost = nullptr;
 };
 

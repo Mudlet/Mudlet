@@ -98,7 +98,7 @@ jobs:
         queries: security-extended, security-and-quality
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v3.30.3
+      uses: lukka/get-cmake@v4.2.3
 
     - name: (Linux) Install Lua via GitHub Actions
       uses: leafo/gh-actions-lua@v12
@@ -119,7 +119,7 @@ jobs:
         # Install all required dependencies
         # liblua5.1-0-dev is needed for CMake to find Lua headers/library
         sudo apt-get install libsecret-1-dev ccache pkg-config pcre2-utils expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
-          libassimp-dev libpcre2-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libboost-dev -y
+          libassimp-dev libpcre2-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libboost-dev qtkeychain-qt6-dev -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
@@ -140,8 +140,8 @@ jobs:
     - name: (Linux/macOS) Set build info
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: |
-        ${{github.workspace}}/CI/travis.validate_deployment.sh
-        ${{github.workspace}}/CI/travis.set-build-info.sh
+        ${{github.workspace}}/CI/validate_deployment.sh
+        ${{github.workspace}}/CI/set-build-info.sh
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v3

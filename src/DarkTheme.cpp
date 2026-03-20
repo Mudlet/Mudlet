@@ -24,11 +24,13 @@
 //DarkTheme only works with Fusion style
 DarkTheme::DarkTheme()
 : DarkTheme(new AltFocusMenuBarDisable(qsl("Fusion")))
-{}
+{
+}
 
 DarkTheme::DarkTheme(QStyle* style)
 : QProxyStyle(style)
-{}
+{
+}
 
 void DarkTheme::polish(QPalette& palette)
 {

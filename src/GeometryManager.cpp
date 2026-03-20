@@ -24,9 +24,7 @@
 #include <QFile>
 #include <QImage>
 
-GeometryManager::GeometryManager()
-{
-}
+GeometryManager::GeometryManager() {}
 
 GeometryManager::~GeometryManager()
 {
@@ -71,53 +69,83 @@ void GeometryManager::generateCubeTemplate()
     // Define 24 unique vertices + normals for a unit cube
     // Vertex order: front face (counter-clockwise from bottom-left), then back face
     // Front bottom-left
-    mCubeTemplate.vertices << -1.0f << -1.0f <<  1.0f << 0.0 << 0.0 << 1.0;   // 0: Front bottom-left (normal:front)
-    mCubeTemplate.vertices << -1.0f << -1.0f <<  1.0f << 0.0 << -1.0 << 0.0;  // 1: Front bottom-left (normal:bottom)
-    mCubeTemplate.vertices << -1.0f << -1.0f <<  1.0f << -1.0 << 0.0 << 0.0;  // 2: Front bottom-left (normal:left)
+    mCubeTemplate.vertices << -1.0f << -1.0f << 1.0f << 0.0 << 0.0 << 1.0;  // 0: Front bottom-left (normal:front)
+    mCubeTemplate.vertices << -1.0f << -1.0f << 1.0f << 0.0 << -1.0 << 0.0; // 1: Front bottom-left (normal:bottom)
+    mCubeTemplate.vertices << -1.0f << -1.0f << 1.0f << -1.0 << 0.0 << 0.0; // 2: Front bottom-left (normal:left)
     // Front bottom-right
-    mCubeTemplate.vertices <<  1.0f << -1.0f <<  1.0f << 0.0 << 0.0 << 1.0;   // 3: Front bottom-right (normal:front)
-    mCubeTemplate.vertices <<  1.0f << -1.0f <<  1.0f << 0.0 << -1.0 << 0.0;  // 4: Front bottom-right (normal:bottom)
-    mCubeTemplate.vertices <<  1.0f << -1.0f <<  1.0f << 1.0 << 0.0 << 0.0;   // 5: Front bottom-right (normal:right)
+    mCubeTemplate.vertices << 1.0f << -1.0f << 1.0f << 0.0 << 0.0 << 1.0;  // 3: Front bottom-right (normal:front)
+    mCubeTemplate.vertices << 1.0f << -1.0f << 1.0f << 0.0 << -1.0 << 0.0; // 4: Front bottom-right (normal:bottom)
+    mCubeTemplate.vertices << 1.0f << -1.0f << 1.0f << 1.0 << 0.0 << 0.0;  // 5: Front bottom-right (normal:right)
     // Front top-right
-    mCubeTemplate.vertices <<  1.0f <<  1.0f <<  1.0f << 0.0 << 0.0 << 1.0;   // 6: Front top-right (normal:front)
-    mCubeTemplate.vertices <<  1.0f <<  1.0f <<  1.0f << 0.0 << 1.0 << 0.0;   // 7: Front top-right (normal:top)
-    mCubeTemplate.vertices <<  1.0f <<  1.0f <<  1.0f << 1.0 << 0.0 << 0.0;   // 8: Front top-right (normal:right)
+    mCubeTemplate.vertices << 1.0f << 1.0f << 1.0f << 0.0 << 0.0 << 1.0; // 6: Front top-right (normal:front)
+    mCubeTemplate.vertices << 1.0f << 1.0f << 1.0f << 0.0 << 1.0 << 0.0; // 7: Front top-right (normal:top)
+    mCubeTemplate.vertices << 1.0f << 1.0f << 1.0f << 1.0 << 0.0 << 0.0; // 8: Front top-right (normal:right)
     // Front top-left
-    mCubeTemplate.vertices << -1.0f <<  1.0f <<  1.0f << 0.0 << 0.0 << 1.0;   // 9: Front top-left (normal:front)
-    mCubeTemplate.vertices << -1.0f <<  1.0f <<  1.0f << 0.0 << 1.0 << 0.0;   // 10: Front top-left (normal:top)
-    mCubeTemplate.vertices << -1.0f <<  1.0f <<  1.0f << -1.0 << 0.0 << 0.0;  // 11: Front top-left (normal:left)
+    mCubeTemplate.vertices << -1.0f << 1.0f << 1.0f << 0.0 << 0.0 << 1.0;  // 9: Front top-left (normal:front)
+    mCubeTemplate.vertices << -1.0f << 1.0f << 1.0f << 0.0 << 1.0 << 0.0;  // 10: Front top-left (normal:top)
+    mCubeTemplate.vertices << -1.0f << 1.0f << 1.0f << -1.0 << 0.0 << 0.0; // 11: Front top-left (normal:left)
     // Back bottom-left
-    mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f << 0.0 << 0.0 << -1.0;  // 12: Back bottom-left (normal:back)
-    mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f << 0.0 << -1.0 << 0.0;  // 13: Back bottom-left (normal:bottom)
-    mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f << -1.0 << 0.0 << 0.0;  // 14: Back bottom-left (normal:left)
+    mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f << 0.0 << 0.0 << -1.0; // 12: Back bottom-left (normal:back)
+    mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f << 0.0 << -1.0 << 0.0; // 13: Back bottom-left (normal:bottom)
+    mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f << -1.0 << 0.0 << 0.0; // 14: Back bottom-left (normal:left)
     // Back bottom-right
-    mCubeTemplate.vertices <<  1.0f << -1.0f << -1.0f << 0.0 << 0.0 << -1.0;  // 15: Back bottom-right (normal:back)
-    mCubeTemplate.vertices <<  1.0f << -1.0f << -1.0f << 0.0 << -1.0 << 0.0;  // 16: Back bottom-right (normal:bottom)
-    mCubeTemplate.vertices <<  1.0f << -1.0f << -1.0f << 1.0 << 0.0 << 0.0;   // 17: Back bottom-right (normal:right)
+    mCubeTemplate.vertices << 1.0f << -1.0f << -1.0f << 0.0 << 0.0 << -1.0; // 15: Back bottom-right (normal:back)
+    mCubeTemplate.vertices << 1.0f << -1.0f << -1.0f << 0.0 << -1.0 << 0.0; // 16: Back bottom-right (normal:bottom)
+    mCubeTemplate.vertices << 1.0f << -1.0f << -1.0f << 1.0 << 0.0 << 0.0;  // 17: Back bottom-right (normal:right)
     // Back top-right
-    mCubeTemplate.vertices <<  1.0f <<  1.0f << -1.0f << 0.0 << 0.0 << -1.0;  // 18: Back top-right (normal:back)
-    mCubeTemplate.vertices <<  1.0f <<  1.0f << -1.0f << 0.0 << 1.0 << 0.0;   // 19: Back top-right (normal:top)
-    mCubeTemplate.vertices <<  1.0f <<  1.0f << -1.0f << 1.0 << 0.0 << 0.0;   // 20: Back top-right (normal:right)
+    mCubeTemplate.vertices << 1.0f << 1.0f << -1.0f << 0.0 << 0.0 << -1.0; // 18: Back top-right (normal:back)
+    mCubeTemplate.vertices << 1.0f << 1.0f << -1.0f << 0.0 << 1.0 << 0.0;  // 19: Back top-right (normal:top)
+    mCubeTemplate.vertices << 1.0f << 1.0f << -1.0f << 1.0 << 0.0 << 0.0;  // 20: Back top-right (normal:right)
     // Back top-left
-    mCubeTemplate.vertices << -1.0f <<  1.0f << -1.0f << 0.0 << 0.0 << -1.0;  // 21: Back top-left (normal:back)
-    mCubeTemplate.vertices << -1.0f <<  1.0f << -1.0f << 0.0 << 1.0 << 0.0;   // 22: Back top-left (normal:top)
-    mCubeTemplate.vertices << -1.0f <<  1.0f << -1.0f << -1.0 << 0.0 << 0.0;  // 23: Back top-left (normal:left)
+    mCubeTemplate.vertices << -1.0f << 1.0f << -1.0f << 0.0 << 0.0 << -1.0; // 21: Back top-left (normal:back)
+    mCubeTemplate.vertices << -1.0f << 1.0f << -1.0f << 0.0 << 1.0 << 0.0;  // 22: Back top-left (normal:top)
+    mCubeTemplate.vertices << -1.0f << 1.0f << -1.0f << -1.0 << 0.0 << 0.0; // 23: Back top-left (normal:left)
 
     // Define indices for the 12 triangles (6 faces × 2 triangles each)
     // Counter-clockwise winding order for front-facing triangles
     QVector<unsigned int> indices = {
-        // Front face
-        0, 3, 6,  0, 6, 9,
-        // Back face
-        12, 15, 18,  12, 18, 21,
-        // Left face
-        2, 11, 23,  2, 23, 14,
-        // Right face
-        5, 8, 20,  5, 20, 17,
-        // Bottom face
-        1, 4, 16,  1, 13, 16,
-        // Top face
-        7, 10, 22,  7, 22, 19,
+            // Front face
+            0,
+            3,
+            6,
+            0,
+            6,
+            9,
+            // Back face
+            12,
+            15,
+            18,
+            12,
+            18,
+            21,
+            // Left face
+            2,
+            11,
+            23,
+            2,
+            23,
+            14,
+            // Right face
+            5,
+            8,
+            20,
+            5,
+            20,
+            17,
+            // Bottom face
+            1,
+            4,
+            16,
+            1,
+            13,
+            16,
+            // Top face
+            7,
+            10,
+            22,
+            7,
+            22,
+            19,
     };
 
     mCubeTemplate.indices = indices;
@@ -132,14 +160,14 @@ GeometryData GeometryManager::transformCubeTemplate(QMatrix4x4 transform, float 
     // Transform vertices and copy normals
     for (int i = 0; i < mCubeTemplate.vertices.size(); i += 6) {
         // Scale and translate vertex
-        QVector3D vertex = QVector3D(mCubeTemplate.vertices[i], mCubeTemplate.vertices[i+1], mCubeTemplate.vertices[i+2]);
+        QVector3D vertex = QVector3D(mCubeTemplate.vertices[i], mCubeTemplate.vertices[i + 1], mCubeTemplate.vertices[i + 2]);
         vertex = transform.map(vertex);
         result.vertices << vertex.x();
         result.vertices << vertex.y();
         result.vertices << vertex.z();
 
         // Copy normal (no transformation needed since it's a uniform scale)
-        vertex = QVector3D(mCubeTemplate.vertices[i+3], mCubeTemplate.vertices[i+4], mCubeTemplate.vertices[i+5]);
+        vertex = QVector3D(mCubeTemplate.vertices[i + 3], mCubeTemplate.vertices[i + 4], mCubeTemplate.vertices[i + 5]);
         vertex = transform.map(vertex) - transform.map(QVector3D());
         vertex.normalize();
         result.vertices << vertex.x();
@@ -200,8 +228,8 @@ GeometryData GeometryManager::generateTriangleGeometry(const QVector<float>& ver
     result.colors = colors;
 
     // add normals pointing up
-    for (int i=0; i < vertices.size(); i+=3) {
-        result.vertices << vertices[i] << vertices[i+1] << vertices[i+2] << 0.0f << 0.0f << 1.0f;
+    for (int i = 0; i < vertices.size(); i += 3) {
+        result.vertices << vertices[i] << vertices[i + 1] << vertices[i + 2] << 0.0f << 0.0f << 1.0f;
     }
 
     return result;
@@ -232,6 +260,70 @@ GeometryData GeometryManager::generatePlayerIconGeometry(float scale, float rotX
 void GeometryManager::clearPlayerIconTemplate()
 {
     mPlayerIconTemplate.reset();
+}
+
+GeometryData GeometryManager::generateBillboardGeometry(float centerX, float centerY, float centerZ,
+                                                        float width, float height,
+                                                        const QVector3D& cameraRight,
+                                                        const QVector3D& cameraUp,
+                                                        GLuint textureId)
+{
+    GeometryData result;
+
+    // Calculate half dimensions
+    float halfWidth = width / 2.0f;
+    float halfHeight = height / 2.0f;
+
+    // Calculate the four corners of the billboard quad using camera vectors
+    // This makes the quad always face the camera
+    QVector3D center(centerX, centerY, centerZ);
+    QVector3D bottomLeft = center - cameraRight * halfWidth - cameraUp * halfHeight;
+    QVector3D bottomRight = center + cameraRight * halfWidth - cameraUp * halfHeight;
+    QVector3D topRight = center + cameraRight * halfWidth + cameraUp * halfHeight;
+    QVector3D topLeft = center - cameraRight * halfWidth + cameraUp * halfHeight;
+
+    // Calculate normal pointing toward camera
+    // cross(up, right) points toward viewer in right-handed coordinate system
+    QVector3D normal = QVector3D::crossProduct(cameraUp, cameraRight).normalized();
+
+    // Add vertices (positions only, 3 floats per vertex)
+    // Two triangles forming a quad, CCW winding order when viewed from front
+    // Triangle 1: bottomLeft, topLeft, topRight
+    result.vertices << bottomLeft.x() << bottomLeft.y() << bottomLeft.z();
+    result.vertices << topLeft.x() << topLeft.y() << topLeft.z();
+    result.vertices << topRight.x() << topRight.y() << topRight.z();
+
+    // Triangle 2: bottomLeft, topRight, bottomRight
+    result.vertices << bottomLeft.x() << bottomLeft.y() << bottomLeft.z();
+    result.vertices << topRight.x() << topRight.y() << topRight.z();
+    result.vertices << bottomRight.x() << bottomRight.y() << bottomRight.z();
+
+    // Add normals (separate array, 3 floats per vertex)
+    for (int i = 0; i < 6; ++i) {
+        result.normals << normal.x() << normal.y() << normal.z();
+    }
+
+    // Add texture coordinates (UV)
+    // Mirror horizontally (1-u) so text reads correctly
+    // Triangle 1: bottomLeft, topLeft, topRight
+    result.textureCoords << 1.0f << 0.0f;  // bottomLeft (mirrored: was 0,0)
+    result.textureCoords << 1.0f << 1.0f;  // topLeft (mirrored: was 0,1)
+    result.textureCoords << 0.0f << 1.0f;  // topRight (mirrored: was 1,1)
+
+    // Triangle 2: bottomLeft, topRight, bottomRight
+    result.textureCoords << 1.0f << 0.0f;  // bottomLeft (mirrored: was 0,0)
+    result.textureCoords << 0.0f << 1.0f;  // topRight (mirrored: was 1,1)
+    result.textureCoords << 0.0f << 0.0f;  // bottomRight (mirrored: was 1,0)
+
+    // Add white color for all vertices (texture will provide actual color)
+    for (int i = 0; i < 6; ++i) {
+        result.colors << 1.0f << 1.0f << 1.0f << 1.0f;
+    }
+
+    // Set texture ID
+    result.textureId = textureId;
+
+    return result;
 }
 
 void GeometryManager::loadPlayerIconTemplate(float scale, float rotX, float rotY, float rotZ)
@@ -485,13 +577,8 @@ void GeometryManager::loadPlayerIconTemplate(float scale, float rotX, float rotY
     mPlayerIconTemplate = std::move(result);
 }
 
-void GeometryManager::renderGeometry(const GeometryData& geometry,
-                                   QOpenGLVertexArrayObject& vao,
-                                   QOpenGLBuffer& vertexBuffer,
-                                   QOpenGLBuffer& colorBuffer,
-                                   QOpenGLBuffer& normalBuffer,
-                                   QOpenGLBuffer& indexBuffer,
-                                   GLenum drawMode)
+void GeometryManager::renderGeometry(
+        const GeometryData& geometry, QOpenGLVertexArrayObject& vao, QOpenGLBuffer& vertexBuffer, QOpenGLBuffer& colorBuffer, QOpenGLBuffer& normalBuffer, QOpenGLBuffer& indexBuffer, GLenum drawMode)
 {
     if (geometry.isEmpty()) {
         return;
@@ -500,6 +587,7 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     QOpenGLVertexArrayObject::Binder vaoBinder(&vao);
 
     // Upload vertex data (cached)
+    // Shader layout: location 0 = aPos (vec3)
     vertexBuffer.bind();
     if (!geometry.verticesUploaded) {
         vertexBuffer.allocate(geometry.vertices.data(), geometry.vertices.size() * sizeof(float));
@@ -508,22 +596,24 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(0);
 
-    // Upload color data (cached)
-    colorBuffer.bind();
-    if (!geometry.colorsUploaded) {
-        colorBuffer.allocate(geometry.colors.data(), geometry.colors.size() * sizeof(float));
-        geometry.colorsUploaded = true;
-    }
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glEnableVertexAttribArray(1);
-
     // Upload normal data (cached)
+    // Shader layout: location 1 = aNormal (vec3)
     normalBuffer.bind();
     if (!geometry.normalsUploaded) {
         normalBuffer.allocate(geometry.normals.data(), geometry.normals.size() * sizeof(float));
         geometry.normalsUploaded = true;
     }
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(1);
+
+    // Upload color data (cached)
+    // Shader layout: location 2 = aColor (vec4)
+    colorBuffer.bind();
+    if (!geometry.colorsUploaded) {
+        colorBuffer.allocate(geometry.colors.data(), geometry.colors.size() * sizeof(float));
+        geometry.colorsUploaded = true;
+    }
+    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(2);
 
     // Draw the geometry - use indexed rendering if indices are available
@@ -544,13 +634,13 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
 }
 
 void GeometryManager::renderGeometry(const GeometryData& geometry,
-                                   QOpenGLVertexArrayObject& vao,
-                                   QOpenGLBuffer& vertexBuffer,
-                                   QOpenGLBuffer& colorBuffer,
-                                   QOpenGLBuffer& normalBuffer,
-                                   QOpenGLBuffer& indexBuffer,
-                                   ResourceManager* resourceManager,
-                                   GLenum drawMode)
+                                     QOpenGLVertexArrayObject& vao,
+                                     QOpenGLBuffer& vertexBuffer,
+                                     QOpenGLBuffer& colorBuffer,
+                                     QOpenGLBuffer& normalBuffer,
+                                     QOpenGLBuffer& indexBuffer,
+                                     ResourceManager* resourceManager,
+                                     GLenum drawMode)
 {
     if (geometry.isEmpty()) {
         return;
@@ -570,13 +660,13 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
 }
 
 void GeometryManager::renderGeometry(const GeometryData& geometry,
-                                   QOpenGLVertexArrayObject& vao,
-                                   QOpenGLBuffer& vertexBuffer,
-                                   QOpenGLBuffer& colorBuffer,
-                                   QOpenGLBuffer& normalBuffer,
-                                   QOpenGLBuffer& indexBuffer,
-                                   QOpenGLBuffer& texCoordBuffer,
-                                   GLenum drawMode)
+                                     QOpenGLVertexArrayObject& vao,
+                                     QOpenGLBuffer& vertexBuffer,
+                                     QOpenGLBuffer& colorBuffer,
+                                     QOpenGLBuffer& normalBuffer,
+                                     QOpenGLBuffer& indexBuffer,
+                                     QOpenGLBuffer& texCoordBuffer,
+                                     GLenum drawMode)
 {
     if (geometry.isEmpty()) {
         return;
@@ -586,7 +676,6 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
 
     // Bind PBR textures if available
     if (geometry.hasPBRTextures()) {
-
         // Bind base color texture to unit 0
         if (geometry.baseColorTextureId != 0) {
             glActiveTexture(GL_TEXTURE0);
@@ -617,6 +706,7 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     }
 
     // Upload vertex data (cached)
+    // Shader layout: location 0 = aPos (vec3)
     vertexBuffer.bind();
     if (!geometry.verticesUploaded) {
         vertexBuffer.allocate(geometry.vertices.data(), geometry.vertices.size() * sizeof(float));
@@ -625,22 +715,24 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(0);
 
-    // Upload color data (cached)
-    colorBuffer.bind();
-    if (!geometry.colorsUploaded) {
-        colorBuffer.allocate(geometry.colors.data(), geometry.colors.size() * sizeof(float));
-        geometry.colorsUploaded = true;
-    }
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glEnableVertexAttribArray(1);
-
     // Upload normal data (cached)
+    // Shader layout: location 1 = aNormal (vec3)
     normalBuffer.bind();
     if (!geometry.normalsUploaded) {
         normalBuffer.allocate(geometry.normals.data(), geometry.normals.size() * sizeof(float));
         geometry.normalsUploaded = true;
     }
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(1);
+
+    // Upload color data (cached)
+    // Shader layout: location 2 = aColor (vec4)
+    colorBuffer.bind();
+    if (!geometry.colorsUploaded) {
+        colorBuffer.allocate(geometry.colors.data(), geometry.colors.size() * sizeof(float));
+        geometry.colorsUploaded = true;
+    }
+    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(2);
 
     // Upload texture coordinate data if available (cached)
@@ -672,14 +764,14 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
 }
 
 void GeometryManager::renderGeometry(const GeometryData& geometry,
-                                   QOpenGLVertexArrayObject& vao,
-                                   QOpenGLBuffer& vertexBuffer,
-                                   QOpenGLBuffer& colorBuffer,
-                                   QOpenGLBuffer& normalBuffer,
-                                   QOpenGLBuffer& indexBuffer,
-                                   QOpenGLBuffer& texCoordBuffer,
-                                   ResourceManager* resourceManager,
-                                   GLenum drawMode)
+                                     QOpenGLVertexArrayObject& vao,
+                                     QOpenGLBuffer& vertexBuffer,
+                                     QOpenGLBuffer& colorBuffer,
+                                     QOpenGLBuffer& normalBuffer,
+                                     QOpenGLBuffer& indexBuffer,
+                                     QOpenGLBuffer& texCoordBuffer,
+                                     ResourceManager* resourceManager,
+                                     GLenum drawMode)
 {
     if (geometry.isEmpty()) {
         return;
@@ -699,13 +791,13 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
 }
 
 void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& instances,
-                                          QOpenGLVertexArrayObject& vao,
-                                          QOpenGLBuffer& vertexBuffer,
-                                          QOpenGLBuffer& colorBuffer,
-                                          QOpenGLBuffer& normalBuffer,
-                                          QOpenGLBuffer& indexBuffer,
-                                          QOpenGLBuffer& instanceBuffer,
-                                          GLenum drawMode)
+                                           QOpenGLVertexArrayObject& vao,
+                                           QOpenGLBuffer& vertexBuffer,
+                                           QOpenGLBuffer& colorBuffer,
+                                           QOpenGLBuffer& normalBuffer,
+                                           QOpenGLBuffer& indexBuffer,
+                                           QOpenGLBuffer& instanceBuffer,
+                                           GLenum drawMode)
 {
     if (!mInitialized || instances.isEmpty()) {
         return;
@@ -780,14 +872,14 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
 }
 
 void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& instances,
-                                          QOpenGLVertexArrayObject& vao,
-                                          QOpenGLBuffer& vertexBuffer,
-                                          QOpenGLBuffer& colorBuffer,
-                                          QOpenGLBuffer& normalBuffer,
-                                          QOpenGLBuffer& indexBuffer,
-                                          QOpenGLBuffer& instanceBuffer,
-                                          ResourceManager* resourceManager,
-                                          GLenum drawMode)
+                                           QOpenGLVertexArrayObject& vao,
+                                           QOpenGLBuffer& vertexBuffer,
+                                           QOpenGLBuffer& colorBuffer,
+                                           QOpenGLBuffer& normalBuffer,
+                                           QOpenGLBuffer& indexBuffer,
+                                           QOpenGLBuffer& instanceBuffer,
+                                           ResourceManager* resourceManager,
+                                           GLenum drawMode)
 {
     if (instances.isEmpty()) {
         return;
