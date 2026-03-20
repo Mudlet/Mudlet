@@ -24,6 +24,7 @@
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
+#include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
 extern void qInitResources_mudlet();
