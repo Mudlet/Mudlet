@@ -264,8 +264,10 @@ jobs:
         ${{github.workspace}}/CI/validate_deployment.sh
         ${{github.workspace}}/CI/set-build-info.sh
         # ccache can't reliably detect that the compiler is clang on macOS, so just say so explicitly.
-        echo "CXX=clang++" >> $GITHUB_ENV
-        echo "CC=clang" >> $GITHUB_ENV
+        # Use absolute paths to ensure AppleClang is used, not Homebrew's upstream LLVM clang
+        # which can't compile Objective-C++ files against Apple SDK headers.
+        echo "CXX=/usr/bin/clang++" >> $GITHUB_ENV
+        echo "CC=/usr/bin/clang" >> $GITHUB_ENV
 
     - name: check ccache stats prior to build
       run: ccache --zero-stats --show-stats
