@@ -385,6 +385,8 @@ bool TRoomDB::removeArea(int id)
         // This means areas.clear() is not needed during map
         // deletion
         areas.remove(id);
+        pA->mpRoomDB = nullptr;
+        delete pA;
 
         mpMap->mMapGraphNeedsUpdate = true;
         return true;
