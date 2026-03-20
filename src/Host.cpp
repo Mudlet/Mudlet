@@ -847,6 +847,11 @@ void Host::resetProfile_phase2()
     mEventMap.clear();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
+
+    // Have to recopy the values into the Lua "color_table"
+    mLuaInterpreter.updateAnsi16ColorsInTable();
+    mLuaInterpreter.updateExtendedAnsiColorsInTable();
+
     mBlockScriptCompile = false;
 
     mAliasUnit.reenableAllTriggers();
@@ -862,10 +867,6 @@ void Host::resetProfile_phase2()
     getScriptUnit()->compileAll(true);
 
     mResetProfile = false;
-
-    // Have to recopy the values into the Lua "color_table"
-    mLuaInterpreter.updateAnsi16ColorsInTable();
-    mLuaInterpreter.updateExtendedAnsiColorsInTable();
 
     TEvent event{};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
