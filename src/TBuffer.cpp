@@ -1019,8 +1019,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     case HANDLER_INSERT_AND_REPROCESS: {
                         // Insert text like HANDLER_INSERT_ENTITY_SYS, but don't increment position.
                         // Used for error recovery: output the rejected/incomplete tag as literal
-                        // text, then reprocess the current character (which may be a nested '<',
-                        // a newline, an ANSI escape, or the character after an unrecognized tag name)
+                        // text, then reprocess the current character (which may be a newline,
+                        // an ANSI escape, or the character after an unrecognized tag name)
 
                         TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
                         attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);

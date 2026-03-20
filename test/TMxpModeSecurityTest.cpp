@@ -557,6 +557,44 @@ private slots:
   }
 
   // ---------------------------------------------------------------
+  // TEMP_SECURE mode: allows one tag then reverts to default
+  // ---------------------------------------------------------------
+
+  void testTempSecureModeAllowsOneTag() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+    processor.enable();
+
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
+    QVERIFY(!processor.isTagAllowedInCurrentMode(qsl("SEND")));
+
+    processor.setMode(MXP_MODE_CODE_TEMP_SECURE);
+    QCOMPARE(processor.mode(), MXP_MODE_TEMP_SECURE);
+    QVERIFY(processor.isTagAllowedInCurrentMode(qsl("SEND")));
+
+    processAndCollectOutput(processor, "<SEND href=\"test\">click</SEND>");
+    QVERIFY(client.mHrefs.size() > 0);
+
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
+    QVERIFY(!processor.isTagAllowedInCurrentMode(qsl("SEND")));
+  }
+
+  // ---------------------------------------------------------------
+  // Closing tags for secure-only elements rejected in OPEN mode
+  // ---------------------------------------------------------------
+
+  void testClosingTagRejectedInOpenMode() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+    processor.enable();
+
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
+
+    QString output = processAndCollectOutput(processor, "</SEND>");
+    QVERIFY(output.contains(qsl("</SEND>")));
+  }
+
+  // ---------------------------------------------------------------
   // Underscore is valid in tag names (MXP/XML element names)
   // ---------------------------------------------------------------
 
@@ -578,9 +616,7 @@ private slots:
     QString output = processAndCollectOutput(processor, "<Enemy_123>");
 
     // The tag should be processed, not rejected as literal text
-    QVERIFY2(
-        output.isEmpty() || !output.contains(qsl("<Enemy_123>")),
-        "Tag with underscore should be processed, not rejected as literal");
+    QVERIFY(output.isEmpty());
   }
 };
 

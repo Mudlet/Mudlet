@@ -412,12 +412,20 @@ bool TMxpProcessor::isValidTagName(const std::string& tagName) const
     if (tagName.empty()) {
         return true;
     }
-    for (char ch : tagName) {
-        // Valid tag name characters: A-Z, a-z, 0-9, underscore, hyphen, slash (for closing tags), exclamation mark (for !ELEMENT)
-        if (!((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_' || ch == '-' || ch == '/' || ch == '!')) {
-            return false;
+
+    for (size_t i = 0; i < tagName.size(); ++i) {
+        const char ch = tagName[i];
+        if ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_' || ch == '-' || ch == '/') {
+            continue;
         }
+        // '!' is only valid as the first character (for !ELEMENT, !ENTITY, etc.)
+        if (ch == '!' && i == 0) {
+            continue;
+        }
+
+        return false;
     }
+
     return true;
 }
 
@@ -440,33 +448,7 @@ TMxpProcessingResult TMxpProcessor::rejectCurrentTag()
     // instead of being output as literal text.
     std::string validPrefix = rawBytes.empty() ? "" : rawBytes.substr(0, rawBytes.length() - 1);
 
-    const QByteArray encoding = mpMxpClient->getEncoding();
-
-    // Trim any incomplete trailing UTF-8 sequence to avoid passing it to
-    // decodeRawBytes. First strip continuation bytes (10xxxxxx, 0x80-0xBF),
-    // then remove any orphaned leading byte (0xC0+) left behind.
-    // Only apply this for UTF-8; single-byte encodings like ISO 8859-1 use
-    // 0x80-0xBF for valid characters.
-    if (encoding == QByteArrayLiteral("UTF-8")) {
-        while (!validPrefix.empty()) {
-            unsigned char lastByte = static_cast<unsigned char>(validPrefix.back());
-            if ((lastByte & 0xC0) == 0x80) {
-                validPrefix.pop_back();
-            } else {
-                break;
-            }
-        }
-
-        if (!validPrefix.empty()) {
-            unsigned char lastByte = static_cast<unsigned char>(validPrefix.back());
-
-            if (lastByte >= 0xC0) {
-                validPrefix.pop_back();
-            }
-        }
-    }
-
-    const QString decoded = decodeRawBytes(validPrefix, encoding);
+    const QString decoded = decodeRawBytes(validPrefix, mpMxpClient->getEncoding());
 
     lastEntityValue = qsl("<") + decoded;
     mMxpTagBuilder.reset();
