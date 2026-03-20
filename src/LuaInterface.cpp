@@ -145,15 +145,13 @@ bool LuaInterface::loadValue(lua_State* L, TVar* var, int index)
                 const int actualIndex = (index < 0) ? stackTop + index + 1 : index;
 
                 if (actualIndex <= 0 || actualIndex > stackTop) {
-                    qWarning().noquote().nospace() << "LuaInterface::loadValue() - Invalid stack index " << index
-                                                   << " for variable \"" << var->getName() << "\". Stack size: " << stackTop
+                    qWarning().noquote().nospace() << "LuaInterface::loadValue() - Invalid stack index " << index << " for variable \"" << var->getName() << "\". Stack size: " << stackTop
                                                    << ", resolved index: " << actualIndex << ".";
                     return false;
                 }
 
                 if (!lua_istable(L, index)) {
-                    qWarning().noquote().nospace() << "LuaInterface::loadValue() - Value at stack index " << index
-                                                   << " is not a table for variable \"" << var->getName()
+                    qWarning().noquote().nospace() << "LuaInterface::loadValue() - Value at stack index " << index << " is not a table for variable \"" << var->getName()
                                                    << "\". Got type: " << lua_typename(L, lua_type(L, index)) << ".";
                     return false;
                 }
@@ -170,8 +168,8 @@ bool LuaInterface::loadValue(lua_State* L, TVar* var, int index)
                     }
                 }
                 if (!foundTable) {
-                    qWarning().noquote().nospace() << "LuaInterface::loadValue() - No table found on stack for variable \"" << var->getName()
-                                                   << "\" when index=0. Stack size: " << lua_gettop(L) << ".";
+                    qWarning().noquote().nospace() << "LuaInterface::loadValue() - No table found on stack for variable \"" << var->getName() << "\" when index=0. Stack size: " << lua_gettop(L)
+                                                   << ".";
                     return false;
                 }
             }
@@ -423,18 +421,12 @@ bool LuaInterface::setValue(TVar* var)
     }
     int error = luaL_loadstring(mL, variableChangeCode.toUtf8().constData());
     if (error) {
-        qWarning().noquote().nospace() << "LuaInterface::setValue(...) WARNING - Internal Lua (parsing) error: \""
-                                       << lua_tostring(mL, -1)
-                                       << "\" in code:\n\""
-                                       << variableChangeCode << "\".";
+        qWarning().noquote().nospace() << "LuaInterface::setValue(...) WARNING - Internal Lua (parsing) error: \"" << lua_tostring(mL, -1) << "\" in code:\n\"" << variableChangeCode << "\".";
         return false;
     }
     error = lua_pcall(mL, 0, LUA_MULTRET, 0);
     if (error) {
-        qWarning().noquote().nospace() << "LuaInterface::setValue(...) WARNING - Internal Lua (executing) error: \""
-                                       << lua_tostring(mL, -1)
-                                       << "\" in code:\n\""
-                                       << variableChangeCode << "\".";
+        qWarning().noquote().nospace() << "LuaInterface::setValue(...) WARNING - Internal Lua (executing) error: \"" << lua_tostring(mL, -1) << "\" in code:\n\"" << variableChangeCode << "\".";
         return false;
     }
     return true;
@@ -442,7 +434,6 @@ bool LuaInterface::setValue(TVar* var)
 
 void LuaInterface::deleteVar(TVar* var)
 {
-
     QList<TVar*> vars = varOrder(var);
     QString oldName = vars[0]->getName();
     for (int i = 1; i < vars.size(); i++) {
@@ -456,18 +447,12 @@ void LuaInterface::deleteVar(TVar* var)
     oldName.append(qsl(" = nil"));
     int error = luaL_loadstring(mL, oldName.toUtf8().constData());
     if (error) {
-        qWarning().noquote().nospace() << "LuaInterface::deleteVar(...) WARNING - Internal Lua (parsing) error: \""
-                                       << lua_tostring(mL, -1)
-                                       << "\" in code:\n\""
-                                       << oldName << "\".";
+        qWarning().noquote().nospace() << "LuaInterface::deleteVar(...) WARNING - Internal Lua (parsing) error: \"" << lua_tostring(mL, -1) << "\" in code:\n\"" << oldName << "\".";
         return;
     }
     error = lua_pcall(mL, 0, LUA_MULTRET, 0);
     if (error) {
-        qWarning().noquote().nospace() << "LuaInterface::deleteVar(...) WARNING - Internal Lua (executing) error: \""
-                                       << lua_tostring(mL, -1)
-                                       << "\" in code:\n\""
-                                       << oldName << "\".";
+        qWarning().noquote().nospace() << "LuaInterface::deleteVar(...) WARNING - Internal Lua (executing) error: \"" << lua_tostring(mL, -1) << "\" in code:\n\"" << oldName << "\".";
     }
 }
 
@@ -518,8 +503,7 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         } else if (kType == LUA_TTABLE) {
             lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
-            qWarning().noquote().nospace() << "LuaInterface::renameCVar() - Unsupported key type: " << lua_typename(mL, kType)
-                                           << " for variable \"" << var->getName()
+            qWarning().noquote().nospace() << "LuaInterface::renameCVar() - Unsupported key type: " << lua_typename(mL, kType) << " for variable \"" << var->getName()
                                            << "\". Expected string, number, or table.";
             return;
         }
@@ -548,8 +532,7 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
             lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
-            qWarning().noquote().nospace() << "LuaInterface::renameCVar() - Unsupported key type when retrieving old value: " << lua_typename(mL, kType)
-                                           << " for variable \"" << var->getName()
+            qWarning().noquote().nospace() << "LuaInterface::renameCVar() - Unsupported key type when retrieving old value: " << lua_typename(mL, kType) << " for variable \"" << var->getName()
                                            << "\". Expected string, number, table, or function.";
             return;
         }
@@ -565,8 +548,7 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         } else if (kType == LUA_TTABLE) {
             lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
-            qWarning().noquote().nospace() << "LuaInterface::renameCVar() - Unsupported key type when setting new key: " << lua_typename(mL, kType)
-                                           << " for variable \"" << var->getName()
+            qWarning().noquote().nospace() << "LuaInterface::renameCVar() - Unsupported key type when setting new key: " << lua_typename(mL, kType) << " for variable \"" << var->getName()
                                            << "\". Expected string, number, or table.";
             return;
         }
@@ -583,8 +565,7 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
             lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
-            qWarning().noquote().nospace() << "LuaInterface::renameCVar() - Unsupported key type when deleting old key: " << lua_typename(mL, kType)
-                                           << " for variable \"" << var->getName()
+            qWarning().noquote().nospace() << "LuaInterface::renameCVar() - Unsupported key type when deleting old key: " << lua_typename(mL, kType) << " for variable \"" << var->getName()
                                            << "\". Expected string, number, table, or function.";
             return;
         }
@@ -598,7 +579,6 @@ bool LuaInterface::loadVar(TVar* var)
 {
     //puts the value of a variable on the -1 position of the stack
     if (setjmp(buf) == 0) {
-
         const int kType = var->getKeyType();
         const int vType = var->getValueType();
         if (vType == LUA_TTABLE) {
@@ -626,8 +606,7 @@ bool LuaInterface::loadVar(TVar* var)
             return false;
         }
     } else {
-        qWarning().noquote().nospace() << "LuaInterface::loadVar() - Lua panic occurred while loading variable \"" << var->getName()
-                                       << "\" with key type " << lua_typename(mL, var->getKeyType())
+        qWarning().noquote().nospace() << "LuaInterface::loadVar() - Lua panic occurred while loading variable \"" << var->getName() << "\" with key type " << lua_typename(mL, var->getKeyType())
                                        << " and value type " << lua_typename(mL, var->getValueType()) << ".";
         return false;
     }
@@ -680,18 +659,14 @@ void LuaInterface::renameVar(TVar* var)
     auto renameCode = qsl("%1 = %2").arg(newName, oldVariable);
     int error = luaL_loadstring(mL, renameCode.toUtf8().constData());
     if (error) {
-        qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In copying (first) stage, internal Lua (parsing) error: \""
-                                       << lua_tostring(mL, -1)
-                                       << "\" in code:\n\""
-                                       << renameCode << "\".";
+        qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In copying (first) stage, internal Lua (parsing) error: \"" << lua_tostring(mL, -1) << "\" in code:\n\"" << renameCode
+                                       << "\".";
         var->clearNewName();
         return;
     }
     error = lua_pcall(mL, 0, LUA_MULTRET, 0);
     if (error) {
-        qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In copying (first) stage, internal Lua (executing) error: \""
-                                       << lua_tostring(mL, -1)
-                                       << "\" in code:\n\""
+        qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In copying (first) stage, internal Lua (executing) error: \"" << lua_tostring(mL, -1) << "\" in code:\n\""
                                        << renameCode << "\".";
         var->clearNewName();
         return;
@@ -700,18 +675,14 @@ void LuaInterface::renameVar(TVar* var)
     //delete it
     error = luaL_loadstring(mL, oldVariable.append(QLatin1String(" = nil")).toUtf8().constData());
     if (error) {
-        qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In deleting (second) stage, internal Lua (parsing) error: \""
-                                       << lua_tostring(mL, -1)
-                                       << "\" in code:\n\""
+        qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In deleting (second) stage, internal Lua (parsing) error: \"" << lua_tostring(mL, -1) << "\" in code:\n\""
                                        << renameCode << "\".";
         var->clearNewName();
         return;
     }
     error = lua_pcall(mL, 0, LUA_MULTRET, 0);
     if (error) {
-        qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In deleting (second) stage, internal Lua (executing) error: \""
-                                       << lua_tostring(mL, -1)
-                                       << "\" in code:\n\""
+        qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In deleting (second) stage, internal Lua (executing) error: \"" << lua_tostring(mL, -1) << "\" in code:\n\""
                                        << renameCode << "\".";
     }
     var->clearNewName();
@@ -734,9 +705,8 @@ QString LuaInterface::getValue(TVar* var)
             lua_rawgeti(mL, LUA_GLOBALSINDEX, firstVariable->getName().toInt());
         }
         if (lua_isnoneornil(mL, lua_gettop(mL))) {
-            qDebug() << "LuaInterface::getValue: Couldn't put root value" << firstVariable->getName()
-                << "onto the Lua stack in order to get value of" << var->getName()
-                << ", perhaps the key type isn't supported?";
+            qDebug() << "LuaInterface::getValue: Couldn't put root value" << firstVariable->getName() << "onto the Lua stack in order to get value of" << var->getName()
+                     << ", perhaps the key type isn't supported?";
             return {};
         }
         for (int i = 1; i < vars.size(); i++) {

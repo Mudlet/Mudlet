@@ -506,6 +506,14 @@
     <string>&lt;p&gt;Toggle all triggers, aliases, timers, etc. on or off&lt;/p&gt;</string>
    </property>
   </action>
+  <action name="dactionNewMapWindow">
+   <property name="text">
+    <string>New map window</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Open an additional map view window for the current profile.&lt;/p&gt;</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

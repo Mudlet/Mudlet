@@ -22,8 +22,8 @@
 #include <QKeyEvent>
 #include <QPalette>
 
-SingleLineTextEdit::SingleLineTextEdit(QWidget *parent)
-    : QPlainTextEdit(parent)
+SingleLineTextEdit::SingleLineTextEdit(QWidget* parent)
+: QPlainTextEdit(parent)
 {
     highlighter = new TriggerHighlighter(this->document());
     highlighter->setHighlightingEnabled(true);
@@ -34,7 +34,7 @@ SingleLineTextEdit::SingleLineTextEdit(QWidget *parent)
 }
 
 // trap some commonly used multi-line key shortcuts
-void SingleLineTextEdit::keyPressEvent(QKeyEvent *event)
+void SingleLineTextEdit::keyPressEvent(QKeyEvent* event)
 {
     if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
         return;
@@ -43,13 +43,13 @@ void SingleLineTextEdit::keyPressEvent(QKeyEvent *event)
 }
 
 // ensure height remains on single line
-void SingleLineTextEdit::resizeEvent(QResizeEvent *event)
+void SingleLineTextEdit::resizeEvent(QResizeEvent* event)
 {
     QPlainTextEdit::resizeEvent(event);
 }
 
 // ensure we can't paste multiple lines
-void SingleLineTextEdit::insertFromMimeData(const QMimeData *source)
+void SingleLineTextEdit::insertFromMimeData(const QMimeData* source)
 {
     if (source->hasText()) {
         QString text = source->text();

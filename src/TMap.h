@@ -61,6 +61,7 @@ class Host;
 class QOpenGLWidget;
 #endif
 class TArea;
+class TMapViewManager;
 class TRoom;
 class TRoomDB;
 class QFile;
@@ -74,6 +75,7 @@ class TMap : public QObject
 
 signals:
     void signal_saveErrorChanged(bool hasError);
+    void signal_areaChanged(int areaId);
 
 private:
     QString mDefaultAreaName;
@@ -116,7 +118,7 @@ public:
     void logError(QString& msg);
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
-    void update();
+    void updateArea(int areaId);
 
     void audit();
 
@@ -202,9 +204,12 @@ public:
 
 
     TRoomDB* mpRoomDB = nullptr;
+    TMapViewManager* mpViewManager = nullptr;
     QMap<int, int> mEnvColors;
     QPointer<Host> mpHost;
     QString mProfileName;
+
+    TMapViewManager* getViewManager() { return mpViewManager; }
 
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name
@@ -261,7 +266,9 @@ public:
     bool mMapGraphNeedsUpdate = true;
     bool mNewMove = true;
 
-    // Replaced CURRENT_MAP_VERSION, default map version that new maps will get:
+    // WARNING: Do not change this value without careful consideration - increasing
+    // the default map format makes it difficult for players to share maps with
+    // others who may be using older Mudlet versions.
     const int mDefaultVersion = 20;
 
     // Normally the same as mDefaultVersion but can be higher for development
@@ -283,6 +290,8 @@ public:
      *   directly into the TArea class serialization - for lower map versions it
      *   is placed into a "system.fallback_map2DZoom" value in the Area userdata.
      *   SlySven - 2023/03
+     * * Version 22 adds the 'hidden' property to rooms, allowing rooms and their
+     *   exits to be hidden from display in the mapper.
      */
     const int mMaxVersion = 20;
 

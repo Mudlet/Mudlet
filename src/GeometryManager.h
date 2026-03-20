@@ -103,7 +103,9 @@ struct GeometryData {
     }
 
     int vertexCount() const {
-        return vertices.size() / 6;
+        // If normals are stored separately, vertices has 3 floats per vertex
+        // If normals are interleaved, vertices has 6 floats per vertex (pos + normal)
+        return normals.isEmpty() ? vertices.size() / 6 : vertices.size() / 3;
     }
 
     int indexCount() const {
@@ -151,6 +153,13 @@ public:
     GeometryData generateTriangleGeometry(const QVector<float>& vertices, const QVector<float>& colors);
     GeometryData generatePlayerIconGeometry(float scale = 0.005f, float rotX = 0.0f, float rotY = 0.0f, float rotZ = 90.0f);
     void clearPlayerIconTemplate(); // Clear cached template to free memory
+
+    // Generate billboard (camera-facing quad) geometry for labels
+    GeometryData generateBillboardGeometry(float centerX, float centerY, float centerZ,
+                                          float width, float height,
+                                          const QVector3D& cameraRight,
+                                          const QVector3D& cameraUp,
+                                          GLuint textureId);
 
     // Render geometry using provided VAO and buffers
     void renderGeometry(const GeometryData& geometry,

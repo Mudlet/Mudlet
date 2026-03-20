@@ -30,30 +30,28 @@ bool TMxpFrameTagHandler::supports(TMxpContext& ctx, TMxpClient& client, MxpTag*
 TMxpTagHandlerResult TMxpFrameTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
     Q_UNUSED(ctx)
-    
+
     QMap<QString, QString> attributes = extractAttributes(tag);
     QString frameName = attributes.value(qsl("NAME"));
-    
+
 #ifdef DEBUG_MXP_PROCESSING
-    qDebug() << "TMxpFrameTagHandler::handleStartTag: FRAME tag received"
-             << "name:" << frameName
-             << "attributes:" << attributes;
+    qDebug() << "TMxpFrameTagHandler::handleStartTag: FRAME tag received" << "name:" << frameName << "attributes:" << attributes;
 #endif
-    
+
     if (frameName.isEmpty()) {
 #ifdef DEBUG_MXP_PROCESSING
         qDebug() << "TMxpFrameTagHandler::handleStartTag: Empty frame name, not handled";
 #endif
         return MXP_TAG_NOT_HANDLED;
     }
-    
+
     if (client.createMxpFrame(frameName, attributes)) {
 #ifdef DEBUG_MXP_PROCESSING
         qDebug() << "TMxpFrameTagHandler::handleStartTag: Frame created successfully:" << frameName;
 #endif
         return MXP_TAG_HANDLED;
     }
-    
+
 #ifdef DEBUG_MXP_PROCESSING
     qDebug() << "TMxpFrameTagHandler::handleStartTag: Frame creation failed:" << frameName;
 #endif
@@ -63,21 +61,21 @@ TMxpTagHandlerResult TMxpFrameTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
 QMap<QString, QString> TMxpFrameTagHandler::extractAttributes(MxpStartTag* tag)
 {
     QMap<QString, QString> attributes;
-    
+
     // Get the NAME attribute (can be first positional argument or named)
     QString name = tag->getAttributeByNameOrIndex(qsl("NAME"), 0);
 
     if (!name.isEmpty()) {
         attributes[qsl("NAME")] = name;
     }
-    
+
     // Extract all other attributes
     const auto& attrNames = tag->getAttributesNames();
 
     for (const auto& attrName : attrNames) {
         QString upperName = attrName.toUpper();
         const auto& attr = tag->getAttribute(attrName);
-        
+
         // Common attributes
         if (upperName == qsl("INTERNAL")) {
             attributes[qsl("INTERNAL")] = qsl("true");
@@ -110,6 +108,6 @@ QMap<QString, QString> TMxpFrameTagHandler::extractAttributes(MxpStartTag* tag)
             attributes[qsl("FLOATING")] = qsl("true");
         }
     }
-    
+
     return attributes;
 }

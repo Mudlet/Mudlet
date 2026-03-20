@@ -446,6 +446,19 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QCheckBox" name="checkBox_hidden">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string notr="true">Dummy text replaced when used</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
@@ -482,6 +495,7 @@
   <tabstop>spinBox_weight</tabstop>
   <tabstop>comboBox_weight</tabstop>
   <tabstop>checkBox_locked</tabstop>
+  <tabstop>checkBox_hidden</tabstop>
  </tabstops>
  <resources/>
  <connections>

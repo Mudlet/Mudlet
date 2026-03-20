@@ -29,7 +29,12 @@
 #include "TTrigger.h"
 
 EditorModifyPropertyCommand::EditorModifyPropertyCommand(EditorViewType viewType, int itemID, const QString& itemName, const QString& oldStateXML, const QString& newStateXML, Host* host)
-: EditorCommand(generateText(viewType, itemName), host), mViewType(viewType), mItemID(itemID), mItemName(itemName), mOldStateXML(oldStateXML), mNewStateXML(newStateXML)
+: EditorCommand(generateText(viewType, itemName), host)
+, mViewType(viewType)
+, mItemID(itemID)
+, mItemName(itemName)
+, mOldStateXML(oldStateXML)
+, mNewStateXML(newStateXML)
 {
     mCreationTime.start();
 }

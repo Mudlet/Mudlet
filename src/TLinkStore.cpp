@@ -19,11 +19,9 @@
  ***************************************************************************/
 
 #include "TLinkStore.h"
-#if !defined(LinkStore_Test)
-#include "TBuffer.h"  // For Mudlet::HyperlinkStyling definition
+#include "TBuffer.h" // For Mudlet::HyperlinkStyling definition
 #include "Host.h"
-#include "utils.h"    // For qsl() macro
-#endif
+#include "utils.h" // For qsl() macro
 
 #include <QSet>
 
@@ -63,9 +61,7 @@ void TLinkStore::freeReference(Host* pH, const QVector<int>& oldReference)
 
     for (int i = 0, total = oldReference.size(); i < total; ++i) {
         if (oldReference.value(i, 0)) {
-#if !defined(LinkStore_Test)
             pH->mLuaInterpreter.freeLuaRegistryIndex(oldReference.at(i));
-#endif
         }
     }
 }
@@ -74,7 +70,6 @@ void TLinkStore::removeLinkById(int id, Host* pH)
 {
     freeReference(pH, mReferenceStore.value(id));
 
-#if !defined(LinkStore_Test)
     if (mStylingStore.contains(id)) {
         const Mudlet::HyperlinkStyling& styling = mStylingStore[id];
         if (styling.selection.hasSelectionSettings) {
@@ -82,7 +77,6 @@ void TLinkStore::removeLinkById(int id, Host* pH)
             mSelectionGroupIndex.remove(key, id);
         }
     }
-#endif
 
     mLinkStore.remove(id);
     mHintStore.remove(id);
@@ -94,9 +88,7 @@ void TLinkStore::removeLinkById(int id, Host* pH)
         mExpireStore.remove(id);
     }
 
-#if !defined(LinkStore_Test)
     mStylingStore.remove(id);
-#endif
 }
 
 void TLinkStore::expireLinks(const QString& expireName, Host* pH)
@@ -127,7 +119,6 @@ void TLinkStore::removeUnreferencedLinks(const QSet<int>& referencedIds, Host* p
     }
 }
 
-#if !defined(LinkStore_Test)
 void TLinkStore::setStyling(int id, const Mudlet::HyperlinkStyling& styling)
 {
     // Remove old selection group index entry if it exists
@@ -138,9 +129,9 @@ void TLinkStore::setStyling(int id, const Mudlet::HyperlinkStyling& styling)
             mSelectionGroupIndex.remove(oldKey, id);
         }
     }
-    
+
     mStylingStore[id] = styling;
-    
+
     // Add new selection group index entry if applicable
     if (styling.selection.hasSelectionSettings) {
         QPair<QString, QString> key = qMakePair(styling.selection.group, styling.selection.value);
@@ -163,4 +154,3 @@ QList<int> TLinkStore::getLinkIdsByGroupValue(const QString& group, const QStrin
     QPair<QString, QString> key = qMakePair(group, value);
     return mSelectionGroupIndex.values(key);
 }
-#endif
