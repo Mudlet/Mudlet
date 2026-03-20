@@ -49,6 +49,7 @@
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
+#include "TTextBox.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "VarUnit.h"
@@ -1001,8 +1002,8 @@ void Host::waitForProfileSave()
     int iterations = 0;
     while (currentlySavingProfile()) {
         if (++iterations > 1000) {
-            qWarning().nospace() << "Host::waitForProfileSave() WARNING - save did not complete after 1000 event loop iterations. "
-                                 << "State: mWritingHostAndModules=" << mWritingHostAndModules << ", writers pending=" << writers.size() << ". Continuing without waiting.";
+            qWarning().nospace() << "Host::waitForProfileSave() WARNING - save did not complete after 1000 event loop iterations. " << "State: mWritingHostAndModules=" << mWritingHostAndModules
+                                 << ", writers pending=" << writers.size() << ". Continuing without waiting.";
             break;
         }
         qApp->processEvents();
@@ -3746,6 +3747,7 @@ bool Host::showWindow(const QString& name)
     auto pL = mpConsole->mLabelMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
     // check labels first as they are shown/hidden more often
     if (pL) {
         pL->show();
@@ -3771,6 +3773,11 @@ bool Host::showWindow(const QString& name)
         return true;
     }
 
+    if (pT) {
+        pT->show();
+        return true;
+    }
+
     return false;
 }
 
@@ -3784,6 +3791,7 @@ bool Host::hideWindow(const QString& name)
     auto pL = mpConsole->mLabelMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
 
     // check labels first as they are shown/hidden more often
     if (pL) {
@@ -3808,6 +3816,11 @@ bool Host::hideWindow(const QString& name)
         return true;
     }
 
+    if (pT) {
+        pT->hide();
+        return true;
+    }
+
     return false;
 }
 
@@ -3822,6 +3835,7 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
     auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
 
     if (pL) {
         pL->resize(x1, y1);
@@ -3854,6 +3868,11 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
         return true;
     }
 
+    if (pT) {
+        pT->resize(x1, y1);
+        return true;
+    }
+
     return false;
 }
 
@@ -3868,6 +3887,7 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
     auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
 
     if (pL) {
         pL->move(x1, y1);
@@ -3902,6 +3922,11 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
         return true;
     }
 
+    if (pT) {
+        pT->move(x1, y1);
+        return true;
+    }
+
     return false;
 }
 
@@ -3930,6 +3955,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     auto pM = mpConsole->mpMapper;
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
     //parents
     auto pW = mpConsole->mpMainFrame;
     auto pD = mpConsole->mDockWidgetMap.value(windowname);
@@ -3977,6 +4003,13 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         pN->move(x1, y1);
         if (show) {
             pN->show();
+        }
+        return {true, QString()};
+    } else if (pT) {
+        pT->setParent(pW);
+        pT->move(x1, y1);
+        if (show) {
+            pT->show();
         }
         return {true, QString()};
     } else if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
@@ -4672,6 +4705,10 @@ std::optional<QString> Host::windowType(const QString& name) const
         return {qsl("commandline")};
     }
 
+    if (mpConsole->mTextBoxMap.contains(name)) {
+        return {qsl("textedit")};
+    }
+
     return {};
 }
 
@@ -4827,6 +4864,18 @@ void Host::setBorders(QMargins borders)
     QResizeEvent event(s, s);
     QApplication::sendEvent(mpConsole, &event);
     mpConsole->raiseMudletSysWindowResizeEvent(x, y);
+}
+
+void Host::setUserBorders(const QMargins borders)
+{
+    mUserBorders = borders;
+    setBorders(mUserBorders + mMxpBorders);
+}
+
+void Host::setMxpBorders(const QMargins borders)
+{
+    mMxpBorders = borders;
+    setBorders(mUserBorders + mMxpBorders);
 }
 
 void Host::setCommandLineHistorySaveSize(const int lines)
