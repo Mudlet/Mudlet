@@ -328,6 +328,8 @@ public:
     void showedSplitscreenTutorial();
     bool showMuteAllMediaTutorial();
     void showedMuteAllMediaTutorial();
+    bool showCharacterModeWarning();
+    void showedCharacterModeWarning();
     bool experiencedMudletPlayer();
 
     enums::Appearance mAppearance = enums::Appearance::systemSetting;
@@ -403,6 +405,19 @@ public:
     bool mShowTabConnectionIndicators = true; // Global preference for showing connection status indicators on tabs
     TelnetLaunchIntent mTelnetLaunchIntent;
 
+    // Global blink timer for SGR codes 5 and 6 (flashing text)
+    // Shared across all TTextEdit instances for synchronized blinking
+    // Uses 200ms base interval (WCAG 2.3.1 compliant - max 3 Hz)
+    // 4-state counter per ISO/IEC 8613-6: slow blink < 150 cycles/min, fast > 150
+    //   state 0: slow=on,  fast=on
+    //   state 1: slow=on,  fast=off
+    //   state 2: slow=off, fast=on
+    //   state 3: slow=off, fast=off
+    bool slowBlinkState() const { return mBlinkState < 2; }
+    bool fastBlinkState() const { return (mBlinkState % 2) == 0; }
+    void registerBlinkClient();
+    void unregisterBlinkClient();
+
     // AI integration methods
     LlamafileManager* getAIManager() const { return mpLlamafileManager.get(); }
     bool aiModelAvailable() const;
@@ -427,6 +442,7 @@ public slots:
     void slot_handleToolbarVisibilityChanged(bool);
 #if defined(INCLUDE_UPDATER)
     void slot_manualUpdateCheck();
+    void slot_updateCheckFailed(const QString& error);
     void slot_showFullChangelog();
 #endif
     void slot_mapper();
@@ -538,6 +554,7 @@ signals:
     void signal_aiStatusChanged(bool running);
     void signal_aiModelChanged(const QString& modelPath);
     void signal_showTabConnectionIndicatorsChanged(bool);
+    void signal_blinkStateChanged(bool slowState, bool fastState);
     void signal_profileLoaded();
 
 private slots:
@@ -705,6 +722,9 @@ private:
     QPointer<QShortcut> mpShortcutToggleLogging;
     QPointer<QShortcut> mpShortcutToggleEmergencyStop;
     QPointer<QTimer> mpTimerReplay;
+    QPointer<QTimer> mpBlinkTimer;
+    int mBlinkState = 0;
+    int mBlinkClientCount = 0;
     QPointer<QToolBar> mpToolBarReplay;
     QWidget* mpWidget_profileContainer = nullptr;
     // read-only value to see if the interface is light or dark. To set the value,
@@ -732,9 +752,12 @@ private:
     // amount of times the shortcut has been shown help educate new users
     int mScrollbackTutorialsShown = 0;   // Cancel split screen
     int mMuteAllMediaTutorialsShown = 0; // Mute all media
+    int mCharacterModeWarningsShown = 0; // Character-at-a-time mode detection
+
     // show the tutorial maximum 3 times on a new Mudlet
-    static const int mScrollbackTutorialsMax = 3;   // Split screen
-    static const int mMuteAllMediaTutorialsMax = 3; // Mute all media
+    static constexpr int mScrollbackTutorialsMax = 3;   // Split screen
+    static constexpr int mMuteAllMediaTutorialsMax = 3; // Mute all media
+    static constexpr int mCharacterModeWarningsMax = 3; // Character mode
 
     // AI/LlamaFile integration
     std::unique_ptr<LlamafileManager> mpLlamafileManager;
