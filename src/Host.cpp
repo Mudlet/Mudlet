@@ -859,7 +859,7 @@ void Host::resetProfile_phase2()
     mTriggerUnit.reenableAllTriggers();
     mKeyUnit.reenableAllTriggers();
 
-    // This is where the scripts for the profile's get compiled (which confirms
+    // This is where the scripts for the profile get compiled (which confirms
     // that they are valid) and all the Lua code outside of functions gets run:
     getTimerUnit()->compileAll();
     getTriggerUnit()->compileAll();
