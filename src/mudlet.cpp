@@ -252,10 +252,10 @@ void mudlet::init()
     }
     mpMainToolBar = new QToolBar(this);
     mpMainToolBar->setObjectName(qsl("mpMainToolBar"));
+    //: Name of the main toolbar shown in right-click context menus and window management
     mpMainToolBar->setWindowTitle(tr("Main Toolbar"));
     addToolBar(mpMainToolBar);
     mpMainToolBar->setMovable(false);
-
 
     addToolBarBreak();
     auto frame = new QWidget(this);
@@ -4800,6 +4800,7 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
     }
 
     // Add toolbar visibility toggle
+    //: Toggle action in the tab bar context menu to show/hide the main toolbar
     QAction* toggleToolbarAction = new QAction(tr("Main Toolbar"), &contextMenu);
     toggleToolbarAction->setCheckable(true);
     toggleToolbarAction->setChecked(mpMainToolBar->isVisible());

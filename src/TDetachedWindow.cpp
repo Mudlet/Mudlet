@@ -831,6 +831,7 @@ void TDetachedWindow::createToolBar()
 {
     mpToolBar = new QToolBar(this);
     mpToolBar->setObjectName(qsl("detachedMainToolBar"));
+    //: Name of the main toolbar in detached windows, shown in right-click context menus
     mpToolBar->setWindowTitle(tr("Main Toolbar"));
     addToolBar(mpToolBar);
     mpToolBar->setMovable(false);
@@ -1628,6 +1629,7 @@ void TDetachedWindow::slot_showDetachedToolBarContextMenu(const QPoint& position
     QMenu menu(this);
 
     // Create "Main Toolbar" toggle action
+    //: Toggle action in the toolbar context menu to show/hide the main toolbar
     QAction* toolbarToggleAction = menu.addAction(tr("Main Toolbar"));
     toolbarToggleAction->setCheckable(true);
     toolbarToggleAction->setChecked(mpToolBar->isVisible());
