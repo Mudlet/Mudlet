@@ -394,9 +394,9 @@ void TMedia::refreshAudioDevices()
     mediaData.setMediaProtocol(TMediaData::MediaProtocolNotSet);
     mediaData.setMediaType(TMediaData::MediaTypeNotSet);
 
-    QList<std::shared_ptr<TMediaPlayer>> mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
+    QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
-    for (const auto& player : mTMediaPlayerList) {
+    for (const auto& player : mediaPlayerList) {
         if (player) {
             player->refreshAudioOutput();
         }

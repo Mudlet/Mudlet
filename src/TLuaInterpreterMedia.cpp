@@ -1991,12 +1991,3 @@ int TLuaInterpreter::purgeMediaCache(lua_State* L)
     lua_pushboolean(L, true);
     return 1;
 }
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#refreshMediaDevices
-int TLuaInterpreter::refreshMediaDevices(lua_State* L)
-{
-    const Host& host = getHostFromLua(L);
-    host.mpMedia->refreshAudioDevices();
-    lua_pushboolean(L, true);
-    return 1;
-}

@@ -93,7 +93,9 @@ public:
         newOutput->setVolume(volume);
         newOutput->setMuted(muted);
         mMediaPlayer->setAudioOutput(newOutput);
-        delete oldOutput;
+        if (oldOutput) {
+            oldOutput->deleteLater();
+        }
     }
 
 private:
