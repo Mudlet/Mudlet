@@ -206,6 +206,8 @@ public:
     void attachDebugArea(const QString&);
     void checkUpdatesOnStart();
     void commitLayoutUpdates(bool flush = false);
+    bool saveFloatingDockGeometries();
+    void restoreFloatingDockGeometries();
     void deleteProfileData(const QString& profile, const QString& item);
     void disableToolbarButtons();
     void doAutoLogin(const QString&);
