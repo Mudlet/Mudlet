@@ -107,12 +107,6 @@ TChar::TChar(const TChar& copy)
 , mFlags(copy.mFlags)
 , mIsSelected(false)
 , mLinkIndex(copy.mLinkIndex)
-, mUnderlineColor(copy.mUnderlineColor)
-, mOverlineColor(copy.mOverlineColor)
-, mStrikeoutColor(copy.mStrikeoutColor)
-, mHasCustomUnderlineColor(copy.mHasCustomUnderlineColor)
-, mHasCustomOverlineColor(copy.mHasCustomOverlineColor)
-, mHasCustomStrikeoutColor(copy.mHasCustomStrikeoutColor)
 {
 }
 
@@ -1198,15 +1192,6 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 if (effectiveStyling.isStrikeOut) {
                     c.mFlags |= TChar::StrikeOut;
                 }
-                if (effectiveStyling.hasUnderlineColor && effectiveStyling.isUnderlined) {
-                    c.setUnderlineColor(effectiveStyling.underlineColor);
-                }
-                if (effectiveStyling.hasOverlineColor && effectiveStyling.isOverlined) {
-                    c.setOverlineColor(effectiveStyling.overlineColor);
-                }
-                if (effectiveStyling.hasStrikeoutColor && effectiveStyling.isStrikeOut) {
-                    c.setStrikeoutColor(effectiveStyling.strikeoutColor);
-                }
             }
 
             // Only re-apply base styling if effective pseudo-class styling is not present
@@ -1238,18 +1223,6 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
                 if (mCurrentHyperlinkStyling.isStrikeOut) {
                     c.mFlags |= TChar::StrikeOut;
-                }
-
-                if (mCurrentHyperlinkStyling.hasUnderlineColor && mCurrentHyperlinkStyling.isUnderlined) {
-                    c.setUnderlineColor(mCurrentHyperlinkStyling.underlineColor);
-                }
-
-                if (mCurrentHyperlinkStyling.hasOverlineColor && mCurrentHyperlinkStyling.isOverlined) {
-                    c.setOverlineColor(mCurrentHyperlinkStyling.overlineColor);
-                }
-
-                if (mCurrentHyperlinkStyling.hasStrikeoutColor && mCurrentHyperlinkStyling.isStrikeOut) {
-                    c.setStrikeoutColor(mCurrentHyperlinkStyling.strikeoutColor);
                 }
 
                 if (mCurrentHyperlinkStyling.isBold) {
@@ -4336,6 +4309,9 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
         const int linkId = buffer.at(y).at(x).linkIndex();
         if (linkId && (linkId != oldLinkId)) {
             id = slice.mLinkStore.addLinks(mLinkStore.getLinksConst(linkId), mLinkStore.getHintsConst(linkId), mpHost);
+            if (mLinkStore.hasStyling(linkId)) {
+                slice.mLinkStore.setStyling(id, mLinkStore.getStyling(linkId));
+            }
             oldLinkId = linkId;
         }
 
@@ -4410,6 +4386,9 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
         const int linkId = chunk.buffer.at(0).at(cx).linkIndex();
         if (linkId && (oldLinkId != linkId)) {
             id = mLinkStore.addLinks(chunk.mLinkStore.getLinksConst(linkId), chunk.mLinkStore.getHintsConst(linkId), mpHost);
+            if (chunk.mLinkStore.hasStyling(linkId)) {
+                mLinkStore.setStyling(id, chunk.mLinkStore.getStyling(linkId));
+            }
             oldLinkId = linkId;
         }
         if (!linkId) {
@@ -5221,6 +5200,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     TChar::AttributeFlags currentFlags = TChar::None;
     QColor currentFgColor(Qt::black);
     QColor currentBgColor(Qt::black);
+    int currentLinkIndex = 0;
     // This combination of color values (black on black) cannot usefully be used in practice
     // - so use as initialization values
 
@@ -5259,9 +5239,10 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     }
 
     for (auto cookedPos = static_cast<size_t>(pos); pos < lastPos; ++cookedPos, ++pos) {
+        const int charLinkIndex = buffer.at(cookedRow).at(cookedPos).linkIndex();
         // Do we need to start a new span?
         if (firstSpan || buffer.at(cookedRow).at(cookedPos).mFgColor != currentFgColor || buffer.at(cookedRow).at(cookedPos).mBgColor != currentBgColor
-            || (buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask) != currentFlags) {
+            || (buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask) != currentFlags || charLinkIndex != currentLinkIndex) {
             if (firstSpan) {
                 firstSpan = false; // The first span - won't need to close the previous one
             } else {
@@ -5270,6 +5251,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
             currentFgColor = buffer.at(cookedRow).at(cookedPos).mFgColor;
             currentBgColor = buffer.at(cookedRow).at(cookedPos).mBgColor;
             currentFlags = buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask;
+            currentLinkIndex = charLinkIndex;
 
             // clang-format off
             // Determine blink class if any (only when blink is enabled in settings)
@@ -5284,33 +5266,72 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
                 }
             }
 
+            // Build text-decoration CSS including decoration colors from TLinkStore
+            QString textDecorationCss;
+            if (currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline)) {
+                QString decorations;
+                if (currentFlags & TChar::Underline) {
+                    decorations.append(QLatin1String(" underline"));
+                }
+                if (currentFlags & TChar::StrikeOut) {
+                    decorations.append(QLatin1String(" line-through"));
+                }
+                if (currentFlags & TChar::Overline) {
+                    decorations.append(QLatin1String(" overline"));
+                }
+                textDecorationCss = qsl(" text-decoration:%1;").arg(decorations);
+
+                // Look up decoration color from TLinkStore if available
+                if (currentLinkIndex > 0 && mLinkStore.hasStyling(currentLinkIndex)) {
+                    Mudlet::HyperlinkStyling styling = mLinkStore.getStyling(currentLinkIndex);
+                    styling.currentState = getLinkState(currentLinkIndex);
+                    Mudlet::HyperlinkStyling::StateStyle effectiveStyle = styling.getEffectiveStyle();
+
+                    // CSS text-decoration-color applies a single color to all
+                    // decoration lines, so pick the most visually prominent one
+                    // (underline > strikeout > overline). The render path in
+                    // drawCustomDecorations can apply each color independently.
+                    QColor decorationColor;
+                    bool hasDecorationColor = false;
+                    if (effectiveStyle.hasUnderlineColor && (currentFlags & TChar::Underline)) {
+                        decorationColor = effectiveStyle.underlineColor;
+                        hasDecorationColor = true;
+                    } else if (effectiveStyle.hasStrikeoutColor && (currentFlags & TChar::StrikeOut)) {
+                        decorationColor = effectiveStyle.strikeoutColor;
+                        hasDecorationColor = true;
+                    } else if (effectiveStyle.hasOverlineColor && (currentFlags & TChar::Overline)) {
+                        decorationColor = effectiveStyle.overlineColor;
+                        hasDecorationColor = true;
+                    }
+
+                    if (hasDecorationColor) {
+                        textDecorationCss.append(qsl(" text-decoration-color: rgb(%1,%2,%3);")
+                            .arg(QString::number(decorationColor.red()),
+                                 QString::number(decorationColor.green()),
+                                 QString::number(decorationColor.blue())));
+                    }
+                }
+            }
+
             if (currentFlags & TChar::Reverse) {
                 // Swap the fore and background colours:
-                s.append(qsl("<span%10 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
+                s.append(qsl("<span%9 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6);%7%8")
                          .arg(QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 1 to 3
                               QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
-                              currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline ) // remainder is arg 9
-                              ? qsl(" text-decoration:%1%2%3")
-                                .arg(currentFlags & TChar::Underline ? QLatin1String(" underline") : QString(),
-                                     currentFlags & TChar::StrikeOut ? QLatin1String(" line-through") : QString(),
-                                     currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
-                              : QString(),
-                              blinkClass)); // arg 10
+                              blinkClass) // arg 9
+                         + textDecorationCss
+                         + qsl("\">"));
             } else {
-                s.append(qsl("<span%10 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
+                s.append(qsl("<span%9 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6);%7%8")
                          .arg(QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 1 to 3
                               QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
-                              currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline ) // remainder is arg 9
-                              ? qsl(" text-decoration:%1%2%3")
-                                .arg(currentFlags & TChar::Underline ? QLatin1String(" underline") : QString(),
-                                     currentFlags & TChar::StrikeOut ? QLatin1String(" line-through") : QString(),
-                                     currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
-                              : QString(),
-                              blinkClass)); // arg 10
+                              blinkClass) // arg 9
+                         + textDecorationCss
+                         + qsl("\">"));
             }
             // clang-format on
         }
@@ -7038,12 +7059,6 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                     tchar.mBgColor = originalChar.mBgColor;
                     tchar.mFlags = originalChar.mFlags; // Restore ALL ANSI formatting flags including decorations
 
-                    // Clear any custom decoration colors that were applied by pseudo-classes
-                    // ANSI doesn't support custom decoration colors, so we clear them when restoring ANSI base
-                    tchar.clearCustomUnderlineColor();
-                    tchar.clearCustomOverlineColor();
-                    tchar.clearCustomStrikeoutColor();
-
                     // DON'T continue here - let the pseudo-class styling below override the ANSI base
                     // This allows e.g. :visited{color:#bb66dd} to work with ANSI base formatting
                 }
@@ -7105,17 +7120,6 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                     tchar.mFlags |= TChar::StrikeOut;
                 } else {
                     tchar.mFlags &= ~TChar::StrikeOut;
-                }
-
-                // Apply decoration colors
-                if (effectiveStyling.hasUnderlineColor && effectiveStyling.isUnderlined) {
-                    tchar.setUnderlineColor(effectiveStyling.underlineColor);
-                }
-                if (effectiveStyling.hasOverlineColor && effectiveStyling.isOverlined) {
-                    tchar.setOverlineColor(effectiveStyling.overlineColor);
-                }
-                if (effectiveStyling.hasStrikeoutColor && effectiveStyling.isStrikeOut) {
-                    tchar.setStrikeoutColor(effectiveStyling.strikeoutColor);
                 }
 
                 // Update bold and italic
