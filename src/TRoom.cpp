@@ -1541,7 +1541,6 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         }
         mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
         exitRoomId = roomRemapping.value(exitRoomId);
-        exitRoomId = roomRemapping.value(exitRoomId);
     }
 
     if (exitRoomId > 0) {
