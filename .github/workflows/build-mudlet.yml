@@ -99,6 +99,10 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       timeout-minutes: 7
       run: |
+        # Remove Homebrew LLVM to prevent it from shadowing AppleClang.
+        # Upstream LLVM can't compile Objective-C++ against Apple SDK headers.
+        brew uninstall --ignore-dependencies llvm@15 2>/dev/null || true
+
         # Install all required dependencies
         # brew install can hang indefinitely during bottle pouring, so timeout and retry
         for attempt in 1 2 3; do
@@ -183,6 +187,7 @@ jobs:
           libpulse-dev \
           libpugixml-dev \
           libsecret-1-dev \
+          libspeechd-dev \
           libsqlite3-dev \
           qtkeychain-qt6-dev \
           libxkbcommon-x11-0 \
@@ -242,11 +247,6 @@ jobs:
          echo "WITH_UPDATER=no" >> $GITHUB_ENV
          echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
          echo "WITH_FONTS=no" >> $GITHUB_ENV
-  
-    - name: Acquire ccache lock
-      uses: guibranco/github-artifact-lock-action@v3.0.9
-      with:
-        lock-name: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ github.ref_name }}-lock
 
     - name: Restore ccache
       id: restore-ccache
@@ -255,12 +255,6 @@ jobs:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ github.ref_name }}
         restore-keys: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-development
-
-    - name: Release ccache lock
-      if: always()
-      uses: guibranco/github-artifact-lock-action/release-lock@v3.0.9
-      with:
-        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
 
     - name: (Linux) Set build info
       if: runner.os == 'Linux'
@@ -317,11 +311,6 @@ jobs:
         NINJA_STATUS: '[%f/%t %o/sec] '
         MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-  
-    - name: Acquire ccache lock
-      uses: guibranco/github-artifact-lock-action@v3.0.9
-      with:
-        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
 
     - name: Save ccache
       if: always()
@@ -330,12 +319,6 @@ jobs:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
   
-    - name: Release ccache lock
-      if: always()
-      uses: guibranco/github-artifact-lock-action/release-lock@v3.0.9
-      with:
-        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
-
     - name: check ccache stats post build
       run: ccache --show-stats
 
