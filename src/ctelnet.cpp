@@ -404,6 +404,7 @@ void cTelnet::connectIt(const QString& address, int port)
         newEnvironVariablesSent.clear();
 #if !defined(QT_NO_SSL)
         mSslErrors.clear();
+        mPeerCertificate = QSslCertificate();
 #endif
 
         if (mpHost->mUseProxy && !mpHost->mProxyAddress.isEmpty() && mpHost->mProxyPort != 0) {
