@@ -2882,9 +2882,20 @@ void mudlet::readLateSettings(const QSettings& settings)
     setToolBarVisibility(static_cast<enums::controlsVisibilityFlag>(settings.value("toolBarVisibility", static_cast<int>(enums::visibleNever)).toInt()));
 
     // Prevent a lockout where both menu bar and toolbar are hidden, leaving
-    // the user with no way to access settings on next startup
+    // the user with no way to access settings on startup
     if (mMenuBarVisibility == enums::visibleNever && mToolbarVisibility == enums::visibleNever) {
+        qWarning() << "mudlet::readLateSettings() - both menu bar and toolbar were configured"
+                   << "to never show; correcting toolbar to visibleOnlyWithoutLoadedProfile"
+                   << "to prevent lockout. Persisting correction now.";
         setToolBarVisibility(enums::visibleOnlyWithoutLoadedProfile);
+        // Write only the corrected value — calling writeSettings() here would
+        // persist all not-yet-read settings at their defaults, clobbering user data
+        QSettings& correctionSettings = *getQSettings();
+        correctionSettings.setValue("toolBarVisibility", static_cast<int>(mToolbarVisibility));
+        correctionSettings.sync();
+        if (correctionSettings.status() != QSettings::NoError) {
+            qWarning() << "mudlet::readLateSettings() - failed to persist toolbar lockout correction to disk.";
+        }
     }
 
     mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
@@ -3029,8 +3040,16 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 void mudlet::slot_toolbarToggleActionTriggered(bool checked)
 {
     if (!checked && mMenuBarVisibility == enums::visibleNever) {
-        // Prevent lockout: don't hide the toolbar when the menu bar is hidden
+        // Prevent lockout: don't hide toolbar when menu bar is configured to never show
+        // Use blockSignals to avoid re-entrancy from setChecked re-emitting triggered
+        mpMainToolBar->toggleViewAction()->blockSignals(true);
         mpMainToolBar->toggleViewAction()->setChecked(true);
+        mpMainToolBar->toggleViewAction()->blockSignals(false);
+        if (mpActionToggleMainToolBar) {
+            mpActionToggleMainToolBar->blockSignals(true);
+            mpActionToggleMainToolBar->setChecked(true);
+            mpActionToggleMainToolBar->blockSignals(false);
+        }
         return;
     }
 
@@ -4881,17 +4900,15 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
         contextMenu.addSeparator();
     }
 
-    // Add toolbar visibility toggle
     //: Toggle action in the tab bar context menu to show/hide the main toolbar
     QAction* toggleToolbarAction = new QAction(tr("Main Toolbar"), &contextMenu);
     toggleToolbarAction->setCheckable(true);
     toggleToolbarAction->setChecked(mpMainToolBar->isVisible());
-    connect(toggleToolbarAction, &QAction::triggered, this, [this](bool checked) {
-        if (!checked && mMenuBarVisibility == enums::visibleNever) {
-            return;
-        }
-        synchronizeToolBarVisibility(checked);
-    });
+    // Disable hide when it would lock the user out (menu bar also never shown)
+    if (mpMainToolBar->isVisible() && mMenuBarVisibility == enums::visibleNever) {
+        toggleToolbarAction->setEnabled(false);
+    }
+    connect(toggleToolbarAction, &QAction::triggered, this, &mudlet::slot_toolbarToggleActionTriggered);
 
     contextMenu.addAction(toggleToolbarAction);
 
