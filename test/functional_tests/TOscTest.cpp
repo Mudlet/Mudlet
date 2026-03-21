@@ -51,7 +51,11 @@ private:
   // Scans backward through the buffer to find the first hyperlink and returns
   // its command list from the link store.
   QStringList findFirstLinkCommands() {
-    TMainConsole *console = mudlet::self()->getActiveHost()->mpConsole;
+    auto *host = mudlet::self()->getActiveHost();
+    if (!host || !host->mpConsole) {
+      return {};
+    }
+    TMainConsole *console = host->mpConsole;
     int linkId = 0;
     for (int line = console->buffer.getLastLineNumber();
          line >= 0 && linkId == 0; --line) {
@@ -89,9 +93,9 @@ private slots:
 
     mpServer->setWelcomeMessage(messageFromMud);
     startProfile(mHostname, mLocalhost, mPort);
-    QSignalSpy(mudlet::self()->getActiveHost()->mpConsole,
-               &TMainConsole::signal_newDataAlert)
-        .wait(200);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
 
     QString actualText =
         mudlet::self()->getActiveHost()->mpConsole->getCurrentLine("");
@@ -109,9 +113,9 @@ private slots:
 
     mpServer->setWelcomeMessage(messageFromMud);
     startProfile(mHostname, mLocalhost, mPort);
-    QSignalSpy(mudlet::self()->getActiveHost()->mpConsole,
-               &TMainConsole::signal_newDataAlert)
-        .wait(200);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
 
     QString actualText =
         mudlet::self()->getActiveHost()->mpConsole->getCurrentLine("");
@@ -129,9 +133,9 @@ private slots:
 
     mpServer->setWelcomeMessage(messageFromMud);
     startProfile(mHostname, mLocalhost, mPort);
-    QSignalSpy(mudlet::self()->getActiveHost()->mpConsole,
-               &TMainConsole::signal_newDataAlert)
-        .wait(200);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
 
     QString actualText =
         mudlet::self()->getActiveHost()->mpConsole->getCurrentLine("");
@@ -149,9 +153,9 @@ private slots:
 
     mpServer->setWelcomeMessage(messageFromMud);
     startProfile(mHostname, mLocalhost, mPort);
-    QSignalSpy(mudlet::self()->getActiveHost()->mpConsole,
-               &TMainConsole::signal_newDataAlert)
-        .wait(200);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
 
     QString actualText =
         mudlet::self()->getActiveHost()->mpConsole->getCurrentLine("");
@@ -167,9 +171,9 @@ private slots:
 
     mpServer->setWelcomeMessage(messageFromMud);
     startProfile(mHostname, mLocalhost, mPort);
-    QSignalSpy(mudlet::self()->getActiveHost()->mpConsole,
-               &TMainConsole::signal_newDataAlert)
-        .wait(200);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
 
     QString actualText =
         mudlet::self()->getActiveHost()->mpConsole->getCurrentLine("");
@@ -189,9 +193,9 @@ private slots:
 
     mpServer->setWelcomeMessage(messageFromMud);
     startProfile(mHostname, mLocalhost, mPort);
-    QSignalSpy(mudlet::self()->getActiveHost()->mpConsole,
-               &TMainConsole::signal_newDataAlert)
-        .wait(200);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
 
     QString actualText =
         mudlet::self()->getActiveHost()->mpConsole->getCurrentLine("");
@@ -212,9 +216,9 @@ private slots:
 
     mpServer->setWelcomeMessage(messageFromMud);
     startProfile(mHostname, mLocalhost, mPort);
-    QSignalSpy(mudlet::self()->getActiveHost()->mpConsole,
-               &TMainConsole::signal_newDataAlert)
-        .wait(200);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
 
     QStringList commands = findFirstLinkCommands();
     QVERIFY2(!commands.isEmpty(), "No hyperlink found in buffer");
@@ -231,9 +235,9 @@ private slots:
 
     mpServer->setWelcomeMessage(messageFromMud);
     startProfile(mHostname, mLocalhost, mPort);
-    QSignalSpy(mudlet::self()->getActiveHost()->mpConsole,
-               &TMainConsole::signal_newDataAlert)
-        .wait(200);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
 
     QStringList commands = findFirstLinkCommands();
     QVERIFY2(!commands.isEmpty(), "No hyperlink found in buffer");
@@ -248,9 +252,9 @@ private slots:
 
     mpServer->setWelcomeMessage(messageFromMud);
     startProfile(mHostname, mLocalhost, mPort);
-    QSignalSpy(mudlet::self()->getActiveHost()->mpConsole,
-               &TMainConsole::signal_newDataAlert)
-        .wait(200);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
 
     QStringList commands = findFirstLinkCommands();
     QVERIFY2(!commands.isEmpty(), "No hyperlink found in buffer");
@@ -270,9 +274,9 @@ private slots:
 
     mpServer->setWelcomeMessage(messageFromMud);
     startProfile(mHostname, mLocalhost, mPort);
-    QSignalSpy(mudlet::self()->getActiveHost()->mpConsole,
-               &TMainConsole::signal_newDataAlert)
-        .wait(200);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
 
     QStringList commands = findFirstLinkCommands();
     QVERIFY2(!commands.isEmpty(), "No hyperlink found in buffer");
@@ -290,9 +294,9 @@ private slots:
 
     mpServer->setWelcomeMessage(messageFromMud);
     startProfile(mHostname, mLocalhost, mPort);
-    QSignalSpy(mudlet::self()->getActiveHost()->mpConsole,
-               &TMainConsole::signal_newDataAlert)
-        .wait(200);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
 
     QStringList commands = findFirstLinkCommands();
     QVERIFY2(!commands.isEmpty(), "No hyperlink found in buffer");
