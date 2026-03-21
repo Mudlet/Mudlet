@@ -44,7 +44,7 @@ jobs:
       if: matrix.buildname == 'windows64'
       uses: msys2/setup-msys2@v2
       with:
-        msystem: MINGW64
+        msystem: CLANG64
         update: true
 
     - name: (Windows) Build Environment Setup
@@ -55,25 +55,14 @@ jobs:
       run: |
         $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
-  
-    - name: Acquire ccache lock
-      uses: guibranco/github-artifact-lock-action@v3.0.9
-      with:
-        lock-name: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.ref_name }}-lock
 
     - name: Restore ccache
       id: restore-ccache
       uses: actions/cache/restore@v5
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.ref_name }}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}-development
-
-    - name: Release ccache lock
-      if: always()
-      uses: guibranco/github-artifact-lock-action/release-lock@v3.0.9
-      with:
-        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
+        key: ccache-${{matrix.os}}-${{matrix.buildname}}-clang-${{ github.ref_name }}
+        restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}-clang-development
 
     - name: check ccache stats prior to build
       shell: msys2 {0}
@@ -151,11 +140,6 @@ jobs:
           echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
           exit 1
         fi
-  
-    - name: Acquire ccache lock
-      uses: guibranco/github-artifact-lock-action@v3.0.9
-      with:
-        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
 
     - name: Save ccache
       if: always()
@@ -163,12 +147,6 @@ jobs:
       with:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
-  
-    - name: Release ccache lock
-      if: always()
-      uses: guibranco/github-artifact-lock-action/release-lock@v3.0.9
-      with:
-        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
 
     - name: (Windows) Prepare binaries for signing
       id: prepare-signing
