@@ -454,11 +454,14 @@ TConsole* TMainConsole::createBuffer(const QString& name)
 
 void TMainConsole::resetMainConsole()
 {
-    //resetProfile should reset also UserWindows
+    // Delete DockWidgets first — their child UserWindow TConsoles will be
+    // cascade-deleted by Qt's parent-child ownership. Remove the corresponding
+    // TConsole entries from mSubConsoleMap to avoid dangling pointers.
     QMutableMapIterator<QString, TDockWidget*> itDockWidget(mDockWidgetMap);
     while (itDockWidget.hasNext()) {
         itDockWidget.next();
-        itDockWidget.value()->close();
+        mSubConsoleMap.remove(itDockWidget.key());
+        itDockWidget.value()->deleteLater();
         itDockWidget.remove();
     }
 
@@ -469,25 +472,28 @@ void TMainConsole::resetMainConsole()
         itCommandLine.remove();
     }
 
+    // Remaining SubConsole/Buffer entries (UserWindow ones were already removed above)
     QMutableMapIterator<QString, TConsole*> itSubConsole(mSubConsoleMap);
     while (itSubConsole.hasNext()) {
         itSubConsole.next();
-        // CHECK: Do we need to handle the float/dockable widgets here:
-        itSubConsole.value()->close();
+        itSubConsole.value()->deleteLater();
         itSubConsole.remove();
     }
 
     QMutableMapIterator<QString, TLabel*> itLabel(mLabelMap);
     while (itLabel.hasNext()) {
         itLabel.next();
-        itLabel.value()->close();
+        if (itLabel.value()->mpMovie) {
+            mpHost->getGifTracker()->unregisterGif(itLabel.value()->mpMovie);
+        }
+        itLabel.value()->deleteLater();
         itLabel.remove();
     }
 
     QMutableMapIterator<QString, TScrollBox*> itScrollBox(mScrollBoxMap);
     while (itScrollBox.hasNext()) {
         itScrollBox.next();
-        itScrollBox.value()->close();
+        itScrollBox.value()->deleteLater();
         itScrollBox.remove();
     }
 
