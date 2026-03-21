@@ -4830,6 +4830,7 @@ int TLuaInterpreter::unzipAsync(lua_State* L)
         event.mArgumentList.append(extractLocation);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         host.raiseEvent(event);
+        watcher->deleteLater();
     });
     watcher->setFuture(future);
 
