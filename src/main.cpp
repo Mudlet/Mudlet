@@ -22,6 +22,7 @@
  ***************************************************************************/
 
 
+#include <QtGlobal>
 #if defined(Q_OS_MACOS)
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreServices/CoreServices.h>
