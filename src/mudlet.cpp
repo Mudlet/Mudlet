@@ -2579,7 +2579,7 @@ bool mudlet::saveFloatingDockGeometries()
 
     QSaveFile geoFile(geoFilePath);
     if (!geoFile.open(QIODevice::WriteOnly)) {
-        qDebug() << "mudlet::saveFloatingDockGeometries: error opening geometry file for writing";
+        qWarning() << "mudlet::saveFloatingDockGeometries: error opening geometry file for writing:" << geoFile.errorString();
         return false;
     }
 
@@ -2594,10 +2594,9 @@ bool mudlet::saveFloatingDockGeometries()
             continue;
         }
         const auto hostName = pHost->getName();
-        for (auto it = pHost->mpConsole->mDockWidgetMap.constBegin(); it != pHost->mpConsole->mDockWidgetMap.constEnd(); ++it) {
-            auto pDockWidget = it.value();
+        for (auto&& [name, pDockWidget] : pHost->mpConsole->mDockWidgetMap.asKeyValueRange()) {
             if (pDockWidget && pDockWidget->isFloating()) {
-                const QString key = qsl("%1/%2").arg(hostName, it.key());
+                const QString key = qsl("%1/%2").arg(hostName, name);
                 geometries[key] = pDockWidget->saveGeometry();
             }
         }
@@ -2606,7 +2605,7 @@ bool mudlet::saveFloatingDockGeometries()
     ofs << geometries;
 
     if (!geoFile.commit()) {
-        qDebug() << "mudlet::saveFloatingDockGeometries: error saving geometry file:" << geoFile.errorString();
+        qWarning() << "mudlet::saveFloatingDockGeometries: error saving geometry file:" << geoFile.errorString();
         return false;
     }
     return true;
@@ -2635,12 +2634,11 @@ void mudlet::restoreFloatingDockGeometries()
             continue;
         }
         const auto hostName = pHost->getName();
-        for (auto it = pHost->mpConsole->mDockWidgetMap.constBegin(); it != pHost->mpConsole->mDockWidgetMap.constEnd(); ++it) {
-            auto pDockWidget = it.value();
+        for (auto&& [name, pDockWidget] : pHost->mpConsole->mDockWidgetMap.asKeyValueRange()) {
             if (!pDockWidget || !pDockWidget->isFloating()) {
                 continue;
             }
-            const QString key = qsl("%1/%2").arg(hostName, it.key());
+            const QString key = qsl("%1/%2").arg(hostName, name);
             if (geometries.contains(key)) {
                 pDockWidget->restoreGeometry(geometries.value(key));
             }
