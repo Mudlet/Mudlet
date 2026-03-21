@@ -1872,9 +1872,8 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
         }
         if (value == TTrigger::scmIgnored && ansiFgColor == TTrigger::scmIgnored) {
             return warnArgumentValue(L, __func__, qsl("invalid ANSI color number %1, you cannot ignore both foreground and background color").arg(value));
-        } else { // NOLINT(readability-else-after-return)
-            ansiBgColor = value;
         }
+        ansiBgColor = value;
     }
 
     if (lua_isstring(L, ++s)) {

@@ -838,7 +838,8 @@ QSize TMxpFrameManager::calculateFrameSize(const QString& spec, const QSize& con
             // and avoid extra line spacing that reduces actual character count
             int result = chars * fm.height();
             return QSize(0, result);
-        } // Use horizontalAdvance('W') instead of averageCharWidth() for consistency
+        }
+        // Use horizontalAdvance('W') instead of averageCharWidth() for consistency
         // with Host::calcFontSize() which uses this for more accurate character width
         int result = chars * fm.horizontalAdvance(QChar('W'));
         return QSize(result, 0);

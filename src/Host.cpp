@@ -1654,7 +1654,8 @@ QPair<bool, QString> Host::setStopWatchName(const int id, const QString& newName
             if (itStopWatch.value()->name() == newName) {
                 if (itStopWatch.key() != id) {
                     return qMakePair(false, qsl("the name '%1' is already in use for another stopwatch (id:%2)").arg(newName, QString::number(itStopWatch.key())));
-                } // Trivial case - the stopwatch is already called by the NEW name:
+                }
+                // Trivial case - the stopwatch is already called by the NEW name:
                 return qMakePair(true, QString());
             }
         }
@@ -3761,13 +3762,19 @@ bool Host::showWindow(const QString& name)
             return mpConsole->showWindow(name);
         }
         return mpConsole->showWindow(name);
-    } else if (pS) { // NOLINT(readability-else-after-return)
+    }
+
+    if (pS) {
         pS->show();
         return true;
-    } else if (pN) { // NOLINT(readability-else-after-return)
+    }
+
+    if (pN) {
         pN->show();
         return true;
-    } else if (pT) { // NOLINT(readability-else-after-return)
+    }
+
+    if (pT) {
         pT->show();
         return true;
     }
@@ -3798,13 +3805,19 @@ bool Host::hideWindow(const QString& name)
             pD->update();
         }
         return mpConsole->hideWindow(name);
-    } else if (pS) { // NOLINT(readability-else-after-return)
+    }
+
+    if (pS) {
         pS->hide();
         return true;
-    } else if (pN) { // NOLINT(readability-else-after-return)
+    }
+
+    if (pN) {
         pN->hide();
         return true;
-    } else if (pT) { // NOLINT(readability-else-after-return)
+    }
+
+    if (pT) {
         pT->hide();
         return true;
     }
@@ -4007,9 +4020,9 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
             pM->show();
         }
         return {true, QString()};
-    } else { // NOLINT(readability-else-after-return)
-        return {false, qsl("element '%1' not found").arg(name)};
     }
+
+    return {false, qsl("element '%1' not found").arg(name)};
 }
 
 std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, int width, int height)

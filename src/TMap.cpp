@@ -1970,7 +1970,8 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             }
             file.close();
             return true;
-        } // Is a development version so check against mMaxVersion
+        }
+        // Is a development version so check against mMaxVersion
         if (otherProfileVersion > mMaxVersion) {
             // Oh dear, can't handle THIS
             if (fileVersion) {

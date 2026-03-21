@@ -30,7 +30,8 @@ bool TMxpProcessor::setMode(const QString& code)
     const int modeCode = code.toInt(&isOk);
     if (isOk) {
         return setMode(modeCode);
-    } // isOk is false here as toInt(...) failed
+    }
+    // isOk is false here as toInt(...) failed
     qDebug().noquote().nospace() << "TMxpProcessor::setMode(...) INFO - Non-numeric MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
     return false;
 }

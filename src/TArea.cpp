@@ -402,7 +402,8 @@ void TArea::calcSpan()
             ymaxForZ.insert(pR->z(), (-1 * pR->y()));
             isFirstDone = true;
             continue;
-        } // Already had one valid room so now must check more things
+        }
+        // Already had one valid room so now must check more things
 
         if (!zLevels.contains(pR->z())) {
             zLevels.push_back(pR->z());

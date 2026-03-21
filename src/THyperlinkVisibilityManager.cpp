@@ -588,7 +588,8 @@ void THyperlinkVisibilityManager::stopTimerIfNotNeeded()
                     // These phases need the timer even with zero delay
                     hasTimerLinks = true;
                     break;
-                } // Other zero-delay links can be skipped
+                }
+                // Other zero-delay links can be skipped
                 continue;
             }
 
