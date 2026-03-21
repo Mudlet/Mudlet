@@ -47,6 +47,7 @@
 class Host;
 class TArea;
 class TMap;
+class TMapLabel;
 class TRoom;
 struct MapInfoProperties;
 class CustomLineDrawContextMenuHandler;
@@ -169,9 +170,26 @@ public:
     // Clears cache so new symbols are built at next paintEvent():
     void flushSymbolPixmapCache() {mSymbolPixmapCache.clear();}
     void addSymbolToPixmapCache(const QString, const QString, const QColor, const bool);
+    void flushTextLabelPixmapCache() {mTextLabelPixmapCache.clear();}
+    void addTextLabelToCache(const QString& key, const TMapLabel& label, const QSize& targetSize);
+    void drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect);
     void setPlayerRoomStyle(const int style);
     void switchArea(const QString& newAreaName);
+    void switchArea(int areaId);
     void clearSelection();
+
+    // Secondary view support (for multiple map views feature)
+    void setSecondaryView(bool isSecondary) { mIsSecondaryView = isSecondary; }
+    bool isSecondaryView() const { return mIsSecondaryView; }
+
+    // View state getters
+    int getAreaId() const { return mAreaID; }
+    int getCenterRoomId() const { return mRoomID; }
+    qreal getZoom() const { return xyzoom; }
+    int getZLevel() const { return mMapCenterZ; }
+
+    // Center view on a room. For secondary views, skips raising sysMapAreaChanged events.
+    std::pair<bool, QString> centerview(int roomId);
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel = std::nullopt, qreal zoom = 2.0, bool exportAllZLevels = false);
 
 
@@ -311,7 +329,11 @@ public slots:
         bool changeSymbolColor, QColor newSymbolColor,
         bool changeWeight, int newWeight,
         bool changeLockStatus, std::optional<bool> newLockStatus,
+        bool changeHiddenStatus, std::optional<bool> newHiddenStatus,
+        bool changeBorderColor, QColor newBorderColor,
+        bool changeBorderThickness, int newBorderThickness,
         QSet<TRoom*> rooms);
+    void slot_previewBorderProperties(QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();
     void slot_moveRoom();
@@ -405,6 +427,7 @@ private:
     // as we now show room names (if present) as well.
     bool mIsSelectionUsingNames = false;
     QCache<QString, QPixmap> mSymbolPixmapCache;
+    QCache<QString, QPixmap> mTextLabelPixmapCache;
     ushort mSymbolFontSize = 1;
     QFont mMapSymbolFont;
     QPointer<QAction> mpCreateRoomAction;
@@ -421,6 +444,8 @@ private:
     // is initialised to - so that the xyzoom gets read for the first area that
     // is shown - because the value of these two are different:
     int mLastViewedAreaID = -2;
+
+    bool mIsSecondaryView = false;
 
 private slots:
     void slot_createRoom();

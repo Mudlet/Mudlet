@@ -42,5 +42,4 @@ public:
 
     void handleContent(char ch) override;
 };
-#include "TMxpTagHandler.h"
 #endif //MUDLET_TMXPLINKTAGHANDLER_H

@@ -25,8 +25,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace
-{
+namespace {
 constexpr int csmTimerIntervalMs = 16;
 constexpr int csmHoldThresholdMs = 300;
 constexpr qreal csmDeadZone = 9.0;
@@ -38,7 +37,9 @@ constexpr qreal csmMovementScale = 0.3;
 MiddleMousePanHandler::MiddleMousePanHandler(T2DMap& mapWidget)
 : mMapWidget(mapWidget)
 {
-    QObject::connect(&mTimer, &QTimer::timeout, [this]() { handleTick(); });
+    QObject::connect(&mTimer, &QTimer::timeout, [this]() {
+        handleTick();
+    });
 }
 
 bool MiddleMousePanHandler::matches(const T2DMap::MapInteractionContext& context) const
@@ -295,9 +296,7 @@ void MiddleMousePanHandler::renderIndicator(QPainter& painter)
     const QPointF perpendicular(-unitDirection.y(), unitDirection.x());
 
     QPolygonF triangle;
-    triangle << triangleTip
-             << triangleBase + perpendicular * triangleHalfWidth
-             << triangleBase - perpendicular * triangleHalfWidth;
+    triangle << triangleTip << triangleBase + perpendicular * triangleHalfWidth << triangleBase - perpendicular * triangleHalfWidth;
 
     QPen trianglePen(QColor(255, 255, 255, 180));
     trianglePen.setWidthF(1.5);

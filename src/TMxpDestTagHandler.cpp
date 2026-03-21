@@ -30,33 +30,30 @@ bool TMxpDestTagHandler::supports(TMxpContext& ctx, TMxpClient& client, MxpTag* 
 TMxpTagHandlerResult TMxpDestTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
     Q_UNUSED(ctx)
-    
+
     QString frameName = extractFrameName(tag);
-    
+
 #ifdef DEBUG_MXP_PROCESSING
-    qDebug() << "TMxpDestTagHandler::handleStartTag: DEST tag received"
-             << "frameName:" << frameName
-             << "EOL:" << hasEOL(tag)
-             << "EOF:" << hasEOF(tag);
+    qDebug() << "TMxpDestTagHandler::handleStartTag: DEST tag received" << "frameName:" << frameName << "EOL:" << hasEOL(tag) << "EOF:" << hasEOF(tag);
 #endif
-    
+
     if (frameName.isEmpty()) {
 #ifdef DEBUG_MXP_PROCESSING
         qDebug() << "TMxpDestTagHandler::handleStartTag: Empty frame name, not handled";
 #endif
         return MXP_TAG_NOT_HANDLED;
     }
-    
+
     bool eol = hasEOL(tag);
     bool eof = hasEOF(tag);
-    
+
     if (client.setMxpDestination(frameName, eol, eof)) {
 #ifdef DEBUG_MXP_PROCESSING
         qDebug() << "TMxpDestTagHandler::handleStartTag: Destination set to:" << frameName;
 #endif
         return MXP_TAG_HANDLED;
     }
-    
+
 #ifdef DEBUG_MXP_PROCESSING
     qDebug() << "TMxpDestTagHandler::handleStartTag: Failed to set destination:" << frameName;
 #endif
@@ -67,12 +64,12 @@ TMxpTagHandlerResult TMxpDestTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
 {
     Q_UNUSED(ctx)
     Q_UNUSED(tag)
-    
+
 #ifdef DEBUG_MXP_PROCESSING
     qDebug() << "TMxpDestTagHandler::handleEndTag: Clearing destination";
 #endif
     client.clearMxpDestination();
-    
+
     return MXP_TAG_HANDLED;
 }
 
@@ -80,16 +77,14 @@ QString TMxpDestTagHandler::extractFrameName(MxpStartTag* tag)
 {
     // Frame name can be first positional argument or NAME attribute
     QString frameName = tag->getAttributeByNameOrIndex(qsl("NAME"), 0);
-    
+
     // If empty, check if any attribute without a value (flag-style)
     if (frameName.isEmpty()) {
         const auto& attrNames = tag->getAttributesNames();
 
         for (const auto& attrName : attrNames) {
             // Skip known flags
-            if (attrName.compare(qsl("EOL"), Qt::CaseInsensitive) != 0 &&
-                attrName.compare(qsl("EOF"), Qt::CaseInsensitive) != 0 &&
-                attrName.compare(qsl("NAME"), Qt::CaseInsensitive) != 0) {
+            if (attrName.compare(qsl("EOL"), Qt::CaseInsensitive) != 0 && attrName.compare(qsl("EOF"), Qt::CaseInsensitive) != 0 && attrName.compare(qsl("NAME"), Qt::CaseInsensitive) != 0) {
                 const auto& attr = tag->getAttribute(attrName);
                 // Assume this is the frame name
                 if (!attr.hasValue()) {
@@ -99,7 +94,7 @@ QString TMxpDestTagHandler::extractFrameName(MxpStartTag* tag)
             }
         }
     }
-    
+
     return frameName;
 }
 

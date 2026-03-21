@@ -33,10 +33,10 @@ bool GLWidgetFactory::isCorrectWidgetType(QOpenGLWidget* widget, Host* pHost)
     if (!widget || !pHost) {
         return false;
     }
-    
+
     bool shouldUseModern = pHost->getUseModern3DMapper();
     bool isModern = dynamic_cast<ModernGLWidget*>(widget) != nullptr;
-    
+
     return shouldUseModern == isModern;
 }
 

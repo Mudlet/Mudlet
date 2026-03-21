@@ -24,26 +24,22 @@
  ***************************************************************************/
 
 
-#include "TTextCodec.h"
+#include "TEncodingTable.h"
+#include "THyperlinkStyling.h"
+#include "TLinkStore.h"
+#include "utils.h"
 
-#include <QApplication>
 #include <QChar>
 #include <QColor>
 #include <QDebug>
 #include <QMap>
-#include <QQueue>
 #include <QPoint>
 #include <QPointer>
+#include <QQueue>
 #include <QSet>
 #include <QString>
-#include <QStringBuilder>
 #include <QStringList>
-#include <QTime>
 #include <QVector>
-#include "TEncodingTable.h"
-#include "TLinkStore.h"
-#include "TMxpMudlet.h"
-#include "TMxpProcessor.h"
 
 #include <deque>
 #include <memory>
@@ -51,143 +47,6 @@
 
 class Host;
 class TConsole;
-
-// Enhanced OSC 8 hyperlink styling support with CSS link states
-// Defined in Mudlet namespace to avoid circular dependencies
-namespace Mudlet {
-
-struct HyperlinkStyling {
-    // Base styling properties
-    QColor foregroundColor;
-    QColor backgroundColor;
-    bool hasForegroundColor = false;
-    bool hasBackgroundColor = false;
-    bool isBold = false;
-    bool isItalic = false;
-    bool isUnderlined = false; // OSC 8 hyperlinks default to no underline (unlike other Mudlet hyperlinks)
-    bool isStrikeOut = false;
-    bool isOverlined = false;
-    bool hasCustomStyling = false; // Tracks if any custom styling was provided
-    bool hasBaseCustomStyling = false; // Tracks if base (non-pseudo-class) styling was provided
-
-    // Extended text decoration support
-    enum UnderlineStyle {
-        UnderlineNone,
-        UnderlineSolid,     // Standard underline
-        UnderlineWavy,      // Squiggly/wavy underline
-        UnderlineDotted,    // Dotted underline
-        UnderlineDashed     // Dashed underline
-    };
-    UnderlineStyle underlineStyle = UnderlineSolid;
-    QColor underlineColor;
-    QColor overlineColor;
-    QColor strikeoutColor;
-    bool hasUnderlineColor = false;
-    bool hasOverlineColor = false;
-    bool hasStrikeoutColor = false;
-
-    // CSS Link State Support with Accessibility
-    enum LinkState {
-        StateDefault,       // Default/unvisited (:link)
-        StateVisited,       // Visited link (:visited)
-        StateHover,         // Mouse hover (:hover)
-        StateActive,        // Mouse down/active (:active)
-        StateFocus,         // Keyboard focus (:focus)
-        StateFocusVisible,  // Visible keyboard focus (:focus-visible)
-        StateSelected,      // Selected state (from selection object)
-        StateDisabled       // Disabled state (from selection object)
-    };
-
-    // State-specific styling containers
-    struct StateStyle {
-        QColor foregroundColor;
-        QColor backgroundColor;
-        QColor underlineColor;
-        QColor overlineColor;
-        QColor strikeoutColor;
-        bool hasForegroundColor = false;
-        bool hasBackgroundColor = false;
-        bool hasUnderlineColor = false;
-        bool hasOverlineColor = false;
-        bool hasStrikeoutColor = false;
-        bool isBold = false;
-        bool isItalic = false;
-        bool isUnderlined = false;
-        bool isStrikeOut = false;
-        bool isOverlined = false;
-        UnderlineStyle underlineStyle = UnderlineSolid;
-        bool hasCustomStyling = false;
-    };
-
-    // State-specific styles
-    StateStyle linkStyle;           // :link (unvisited)
-    StateStyle visitedStyle;        // :visited
-    StateStyle hoverStyle;          // :hover
-    StateStyle activeStyle;         // :active
-    StateStyle focusStyle;          // :focus
-    StateStyle focusVisibleStyle;   // :focus-visible
-    StateStyle anyLinkStyle;        // :any-link (applies to both :link and :visited)
-    StateStyle selectedStyle;       // :selected (from selection object)
-    StateStyle disabledStyle;       // :disabled (from selection object)
-
-    // State tracking
-    LinkState currentState = StateDefault;
-
-    // Methods to get effective styling for current state
-    StateStyle getEffectiveStyle() const;
-
-    // Selection control: toggleable, stateful links (radio/checkbox behavior)
-    // JSON: {"group": "string", "value": "string", "toggle": bool, "selected": bool, "exclusive": bool, "disabled": bool}
-    // When exclusive=true: radio button behavior (only one selected per group)
-    // When exclusive=false: checkbox behavior (multiple selections per group)
-    struct SelectionSettings {
-        QString group;              // Group identifier for related selections
-        QString value;              // Unique value within the group
-        bool toggle = true;         // Allow deselecting when already selected
-        bool selected = false;      // Initial selection state
-        bool exclusive = true;      // Radio (true) vs checkbox (false) mode
-        bool disabled = false;      // Cannot be clicked when disabled
-        bool hasSelectionSettings = false;
-    };
-
-    SelectionSettings selection;
-
-    // Visibility control: conceal (hide after delay/expire) or reveal (show after delay/expire)
-    // JSON: {"action": "conceal"|"reveal"|["reveal","conceal"], "delay": ms, "wholeline": bool, "expire": {...}}
-    // expire object: {"input": bool, "prompt": bool, "output": bool, "outputDelay": ms}
-    // When action is ["reveal","conceal"]: starts hidden, reveals on trigger, then conceals on click
-    struct VisibilitySettings {
-        // Maximum allowed delay value (24 hours in milliseconds)
-        static constexpr quint32 MaxDelayMs = 86400000;
-        // Default output delay for batch detection (500ms)
-        static constexpr quint32 DefaultOutputDelayMs = 500;
-
-        enum class Action {
-            None,
-            Conceal,
-            Reveal,
-            RevealThenConceal  // Combined: reveal first, then conceal after click
-        };
-
-        Action action = Action::None;
-        quint32 delayMs = 0;
-        bool deletesEntireLine = false;
-        bool isConcealed = false;
-        bool hasVisibilitySettings = false;
-
-        // Expire triggers - when visibility action should occur
-        bool expireOnInput = false;    // User types/submits something
-        bool expireOnPrompt = false;   // GA/EOR telnet signal received
-        bool expireOnOutput = false;   // New output after idle gap
-        quint32 outputDelayMs = DefaultOutputDelayMs;  // Idle gap for output trigger
-    };
-
-    VisibilitySettings visibility;
-
-    bool isSpoiler = false;
-};
-
-} // namespace Mudlet
 
 class WrapInfo
 {
@@ -198,7 +57,13 @@ public:
     const bool needsIndent;
     const int firstChar;
     const int lastChar;
-    WrapInfo(bool isNewline, bool needsIndent, int firstChar, int lastChar) : isNewline(isNewline), needsIndent(needsIndent), firstChar(firstChar), lastChar(lastChar) {}
+    WrapInfo(bool isNewline, bool needsIndent, int firstChar, int lastChar)
+    : isNewline(isNewline)
+    , needsIndent(needsIndent)
+    , firstChar(firstChar)
+    , lastChar(lastChar)
+    {
+    }
 };
 
 class TChar
@@ -206,6 +71,7 @@ class TChar
     friend class TBuffer;
 
 public:
+    // clang-format off
     enum AttributeFlag {
         None = 0x0,
         // Replaces TCHAR_BOLD 2
@@ -256,7 +122,7 @@ public:
         // Mask for "any alternate font" - only the most significant one should
         // be used if more than one is set:
         AltFontMask = 0x1ff00,        // 0000 0000 0000 0001 1111 1111 0000 0000
-        TestMask = 0x1f3ffff,         // 0000 0001 1111 0011 1111 1111 1111 1111 (includes extended underline styles)
+        TestMask = 0x1c3ffff,         // 0000 0001 1100 0011 1111 1111 1111 1111 (includes extended underline styles)
         // The remainder are internal use ones that do not related to SGR codes
         // that have been parsed from the incoming text.
         // Has been found in a search operation (currently Main Console only)
@@ -265,6 +131,7 @@ public:
         // Replaces TCHAR_ECHO 16
         Echo = 0x200000               // 0000 0000 0010 0000 0000 0000 0000 0000
     };
+    // clang-format on
     Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
 
     // Not a default constructor - the defaulted argument means it could have
@@ -282,7 +149,8 @@ public:
     ~TChar() = default;
 
     bool operator==(const TChar&);
-    void setColors(const QColor& newForeGroundColor, const QColor& newBackGroundColor) {
+    void setColors(const QColor& newForeGroundColor, const QColor& newBackGroundColor)
+    {
         mFgColor = newForeGroundColor;
         mBgColor = newBackGroundColor;
     }
@@ -292,7 +160,8 @@ public:
     void setAllDisplayAttributes(const AttributeFlags newDisplayAttributes) { mFlags = (mFlags & ~TestMask) | (newDisplayAttributes & TestMask); }
     void setForeground(const QColor& newColor) { mFgColor = newColor; }
     void setBackground(const QColor& newColor) { mBgColor = newColor; }
-    void setTextFormat(const QColor& newFgColor, const QColor& newBgColor, const AttributeFlags newDisplayAttributes) {
+    void setTextFormat(const QColor& newFgColor, const QColor& newBgColor, const AttributeFlags newDisplayAttributes)
+    {
         setColors(newFgColor, newBgColor);
         setAllDisplayAttributes(newDisplayAttributes);
     }
@@ -303,7 +172,7 @@ public:
     void select() { mIsSelected = true; }
     void deselect() { mIsSelected = false; }
     bool isSelected() const { return mIsSelected; }
-    int linkIndex () const { return mLinkIndex; }
+    int linkIndex() const { return mLinkIndex; }
     bool isBold() const { return mFlags & Bold; }
     bool isItalic() const { return mFlags & Italic; }
     bool isUnderlined() const { return mFlags & Underline; }
@@ -317,43 +186,39 @@ public:
     bool isUnderlineDotted() const { return mFlags & UnderlineDotted; }
     bool isUnderlineDashed() const { return mFlags & UnderlineDashed; }
 
-    // Decoration color accessors
-    const QColor& underlineColor() const { return mUnderlineColor; }
-    const QColor& overlineColor() const { return mOverlineColor; }
-    const QColor& strikeoutColor() const { return mStrikeoutColor; }
-    bool hasCustomUnderlineColor() const { return mHasCustomUnderlineColor; }
-    bool hasCustomOverlineColor() const { return mHasCustomOverlineColor; }
-    bool hasCustomStrikeoutColor() const { return mHasCustomStrikeoutColor; }
-
-    // Decoration color setters
-    void setUnderlineColor(const QColor& color) { mUnderlineColor = color; mHasCustomUnderlineColor = true; }
-    void setOverlineColor(const QColor& color) { mOverlineColor = color; mHasCustomOverlineColor = true; }
-    void setStrikeoutColor(const QColor& color) { mStrikeoutColor = color; mHasCustomStrikeoutColor = true; }
-    void clearCustomUnderlineColor() { mHasCustomUnderlineColor = false; }
-    void clearCustomOverlineColor() { mHasCustomOverlineColor = false; }
-    void clearCustomStrikeoutColor() { mHasCustomStrikeoutColor = false; }
     // Special case - if fast blink is set then do NOT say that blink is set to
     // preserve priority of the former over the latter:
     bool isBlinking() const { return (mFlags & FastBlink) ? false : (mFlags & Blink); }
     bool isFastBlinking() const { return mFlags & FastBlink; }
     quint8 alternateFont() const;
-    static TChar::AttributeFlag alternateFontFlag(const quint8 altFontNumber) {
+    static TChar::AttributeFlag alternateFontFlag(const quint8 altFontNumber)
+    {
         switch (altFontNumber) {
-        case 1: return AltFont1;
-        case 2: return AltFont2;
-        case 3: return AltFont3;
-        case 4: return AltFont4;
-        case 5: return AltFont5;
-        case 6: return AltFont6;
-        case 7: return AltFont7;
-        case 8: return AltFont8;
-        case 9: return AltFont9;
+        case 1:
+            return AltFont1;
+        case 2:
+            return AltFont2;
+        case 3:
+            return AltFont3;
+        case 4:
+            return AltFont4;
+        case 5:
+            return AltFont5;
+        case 6:
+            return AltFont6;
+        case 7:
+            return AltFont7;
+        case 8:
+            return AltFont8;
+        case 9:
+            return AltFont9;
         default:
             Q_ASSERT_X(altFontNumber < 10, "alternateFontFlag", "value out of range 0 to 9");
             return None;
         }
     }
-    static QString attributeType(const AttributeFlag flag) {
+    static QString attributeType(const AttributeFlag flag)
+    {
         switch (flag) {
         case None:
             return qsl("None");
@@ -411,23 +276,15 @@ private:
     // Kept as a separate flag because it must often be handled separately
     bool mIsSelected = false;
     int mLinkIndex = 0;
-
-    // Enhanced decoration color support for OSC 8 hyperlinks
-    QColor mUnderlineColor;
-    QColor mOverlineColor;
-    QColor mStrikeoutColor;
-    bool mHasCustomUnderlineColor = false;
-    bool mHasCustomOverlineColor = false;
-    bool mHasCustomStrikeoutColor = false;
+    // Note: Decoration colors (underline/overline/strikeout) are stored in TLinkStore
+    // for memory efficiency - they are looked up via linkIndex() at render time.
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 
 
-
-
 class TBuffer
 {
-    inline static const TEncodingTable &csmEncodingTable = TEncodingTable::csmDefaultInstance;
+    inline static const TEncodingTable& csmEncodingTable = TEncodingTable::csmDefaultInstance;
 
     inline static const int TCHAR_IN_BYTES = sizeof(TChar);
 
@@ -446,7 +303,7 @@ public:
     void log(int, int);
     int skipSpacesAtBeginOfLine(const int row, const int column);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<int> luaReference = QVector<int>());
-    QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0,  int spacePadding = 0);
+    QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0, int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
     bool isEmpty() const { return buffer.size() == 0; }
     QString& line(int lineNumber);
@@ -492,14 +349,14 @@ public:
     void clearLastClickedLinkIndex() { mLastClickedLinkIndex = 0; }
     static const QList<QByteArray> getEncodingNames();
     void logRemainingOutput();
-    void appendLog(const QString &text);
+    void appendLog(const QString& text);
 
     // OSC 8 hyperlink documentation examples - triggered by secret phrase
     void injectOSC8DocumentationExamples();
 
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
-    void encodingChanged(const QByteArray &);
+    void encodingChanged(const QByteArray&);
     void clearSearchHighlights();
 
     static int lengthInGraphemes(const QString& text);
@@ -651,15 +508,11 @@ private:
     int mCurrentHyperlinkStartColumn = 0;
     QString mCurrentHyperlinkText;
 
-    enum class WatchdogPhase {
-        Phase1_Snapshot,
-        Phase2_Unfreeze,
-        None
-    };
-    static constexpr int    MAX_TAG_TIMEOUT_MS = 1300;
-    WatchdogPhase           mWatchdogPhase = WatchdogPhase::None;
+    enum class WatchdogPhase { Phase1_Snapshot, Phase2_Unfreeze, None };
+    static constexpr int MAX_TAG_TIMEOUT_MS = 1300;
+    WatchdogPhase mWatchdogPhase = WatchdogPhase::None;
     std::unique_ptr<QTimer> mTagWatchdog;
-    std::string             mWatchdogTagSnapshot;
+    std::string mWatchdogTagSnapshot;
 
     // Enhanced OSC 8 hyperlink styling and menu support
     Mudlet::HyperlinkStyling mCurrentHyperlinkStyling;
@@ -672,10 +525,10 @@ private:
     QMap<int, QColor> mLinkOriginalBackgrounds;
     QMap<int, TChar> mLinkOriginalCharacters;
     QMap<int, QString> mLinkOriginalText;
-    int mCurrentHoveredLinkIndex = 0;  // Which link is currently hovered (0 = none)
-    int mCurrentActiveLinkIndex = 0;   // Which link is currently being clicked (0 = none)
-    int mCurrentFocusedLinkIndex = 0;  // Which link has keyboard focus (0 = none)
-    int mLastClickedLinkIndex = 0;     // Last clicked link - suppresses hover until mouse leaves
+    int mCurrentHoveredLinkIndex = 0; // Which link is currently hovered (0 = none)
+    int mCurrentActiveLinkIndex = 0;  // Which link is currently being clicked (0 = none)
+    int mCurrentFocusedLinkIndex = 0; // Which link has keyboard focus (0 = none)
+    int mLastClickedLinkIndex = 0;    // Last clicked link - suppresses hover until mouse leaves
 
     // Flag to skip trigger processing during documentation injection
     bool mSkipTriggerProcessing = false;
@@ -706,8 +559,8 @@ public:
     int getHoveredLink() const { return mCurrentHoveredLinkIndex; }
     int getActiveLink() const { return mCurrentActiveLinkIndex; }
     int getFocusedLink() const { return mCurrentFocusedLinkIndex; }
-    int getLinkIndexAt(int line, int column) const; // Get link index at specific position
-    void clearLinkIndices(int lineNumber, int startColumn, int count); // Clear link indices in a range
+    int getLinkIndexAt(int line, int column) const;                                     // Get link index at specific position
+    void clearLinkIndices(int lineNumber, int startColumn, int count);                  // Clear link indices in a range
     void restoreLinkIndices(int lineNumber, int startColumn, int count, int linkIndex); // Restore link indices in a range
 
 private:

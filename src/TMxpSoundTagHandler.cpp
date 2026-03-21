@@ -35,7 +35,7 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
         const QString type = extractType(tag);
         const QString url = extractUrl(tag);
 
-        TMediaData mediaData {};
+        TMediaData mediaData{};
 
         mediaData.setMediaProtocol(TMediaData::MediaProtocolMSP);
         mediaData.setMediaType(TMediaData::MediaTypeSound);
@@ -105,7 +105,6 @@ QString TMxpSoundTagHandler::extractLoops(MxpStartTag* tag)
 
 QString TMxpSoundTagHandler::extractPriority(MxpStartTag* tag)
 {
-
     return tag->getAttributeByNameOrIndex(qsl("p"), 3);
 }
 

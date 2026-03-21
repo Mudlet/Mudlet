@@ -28,7 +28,7 @@ jobs:
         submodules: recursive
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v3.30.3
+      uses: lukka/get-cmake@v4.3.0
 
     - name: Install dependencies
       run: |
@@ -36,7 +36,7 @@ jobs:
         sudo apt-get install build-essential git liblua5.1-dev zlib1g-dev libhunspell-dev libpcre2-dev \
           libzip-dev libboost-graph-dev libyajl-dev libpulse-dev lua-filesystem lua-zip \
           lua-sql-sqlite3 qt6-multimedia-dev qt6-tools-dev luarocks ccache libpugixml-dev cmake ninja-build \
-          xvfb libassimp-dev -y
+          xvfb libassimp-dev qtkeychain-qt6-dev -y
 
         sudo luarocks install lrexlib-pcre2
 
@@ -45,8 +45,8 @@ jobs:
 
     - name: Set build info
       run: |
-        ${{github.workspace}}/CI/travis.validate_deployment.sh
-        ${{github.workspace}}/CI/travis.set-build-info.sh
+        ${{github.workspace}}/CI/validate_deployment.sh
+        ${{github.workspace}}/CI/set-build-info.sh
 
     - name: Check ccache stats prior to build
       if: runner.os == 'Linux' || runner.os == 'macOS'

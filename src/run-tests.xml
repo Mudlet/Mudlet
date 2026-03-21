@@ -501,20 +501,19 @@ describe("should always pass", function()
   local quitMudlet = os.getenv("QUIT_MUDLET_AFTER_TESTS")
   if quitMudlet then
     ioprint("All tests complete, shutting down Mudlet")
-    -- closeMudlet on its own inside an event handler causes a crash
-    tempTimer(0, closeMudlet)
+    -- It's safe to close mudlet outside of a timer.
+    -- As the internal logic is wrapped in an internal timer already.
+    closeMudlet()
   end
-end</script>
-			<eventHandlerList>
-				<string>testsComplete</string>
-			</eventHandlerList>
+end
+			</script>
 		</Script>
 		<Script isActive="yes" isFolder="no">
 			<name>autoRunTestsEvent</name>
 			<packageName></packageName>
 			<script>function autoRunTestsEvent()
   tempTimer(
-    1,
+    0,
     function()
       autoRunTests()
     end
@@ -532,13 +531,14 @@ function autoRunTests()
 
   if not bustedState.isBustedAvailable() then
     ioprint("Busted not available - double-check that it's installed properly.")
-    raiseEvent("testsComplete")
+    quitMudletAfterTests()
     return
   end
 
   local testLocation = os.getenv("TESTS_DIRECTORY")
   if not testLocation then
     ioprint("No location for the tests provided, don't know what to run.")
+    quitMudletAfterTests()
     return
   end
 
@@ -560,24 +560,25 @@ function autoRunTests()
 
   bustedState.setup({testLocation})
   bustedState.runTests()
-  raiseEvent("testsComplete")
+  quitMudletAfterTests()
 end
 
 local errorLogged = false
 function logTestError()
   if errorLogged then return end
 
-  if getOS() == "linux" then
+  local os_name = getOS()
+  if os_name == "linux" or os_name == "mac" then
     file = io.open("/tmp/busted-tests-failed", "w")
     file:write("Lua busted tests failed")
     file:close()
-  elseif getOS() == "windows" then
+  elseif os_name == "windows" then
     temp_directory = os.getenv("TEMP")
     file = io.open(temp_directory.."\\busted-tests-failed", "w")
     file:write("Lua busted tests failed")
     file:close()
   else
-    ioprint("Tests failed, but did not know how to log the error for "..getOS())
+    ioprint("Tests failed, but did not know how to log the error for "..os_name)
   end
   errorLogged = true
 end</script>

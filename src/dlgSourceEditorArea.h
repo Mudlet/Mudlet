@@ -26,8 +26,6 @@
 
 #include "ui_source_editor_area.h"
 
-#include "utils.h"
-
 class dlgSourceEditorArea : public QWidget, public Ui::source_editor_area
 {
     Q_OBJECT

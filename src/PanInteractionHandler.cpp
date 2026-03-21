@@ -37,13 +37,11 @@ bool PanInteractionHandler::matches(const T2DMap::MapInteractionContext& context
 
     switch (context.event->type()) {
     case QEvent::MouseButtonPress:
-        return context.button == Qt::LeftButton
-            && (context.modifiers.testFlag(Qt::AltModifier) || context.isMapViewOnly);
+        return context.button == Qt::LeftButton && (context.modifiers.testFlag(Qt::AltModifier) || context.isMapViewOnly);
     case QEvent::MouseMove:
         return mMapWidget.mpMap->mLeftDown || mMapWidget.mpMap->m2DPanMode;
     case QEvent::MouseButtonRelease:
-        return context.button == Qt::LeftButton
-            && (mMapWidget.mpMap->mLeftDown || mMapWidget.mpMap->m2DPanMode);
+        return context.button == Qt::LeftButton && (mMapWidget.mpMap->mLeftDown || mMapWidget.mpMap->m2DPanMode);
     default:
         return false;
     }
@@ -159,4 +157,3 @@ bool PanInteractionHandler::handleMouseRelease(T2DMap::MapInteractionContext& co
 
     return false;
 }
-

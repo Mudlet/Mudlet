@@ -36,9 +36,7 @@
  * LUA_TTHREAD          8
  */
 
-TVar::TVar()
-{
-}
+TVar::TVar() {}
 
 TVar::TVar(TVar* p)
 : parent(p)

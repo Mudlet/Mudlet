@@ -24,10 +24,10 @@ TMxpTagHandlerResult TMxpHRTagHandler::handleStartTag(TMxpContext& ctx, TMxpClie
 {
     Q_UNUSED(ctx)
     Q_UNUSED(tag)
-    
+
     // Get the console wrap width to determine HR length
     const int width = client.getWrapWidth();
-    
+
     // Build HR with newlines: the first \n commits the current buffered line,
     // then the dashes form the HR line, and the final \n starts a new line.
     // We inject this through insertText() which feeds it back through the MXP
@@ -35,6 +35,6 @@ TMxpTagHandlerResult TMxpHRTagHandler::handleStartTag(TMxpContext& ctx, TMxpClie
     // the current line buffer state.
     const QString horizontalRule = qsl("\n") + QString(width, '-') + qsl("\n");
     client.insertText(horizontalRule);
-    
+
     return MXP_TAG_HANDLED;
 }

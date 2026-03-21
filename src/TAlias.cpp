@@ -30,7 +30,7 @@
 #include "mudlet.h"
 
 TAlias::TAlias(TAlias* parent, Host* pHost)
-: Tree<TAlias>( parent )
+: Tree<TAlias>(parent)
 , mpHost(pHost)
 {
 }
@@ -69,6 +69,13 @@ void TAlias::setName(const QString& name)
 
 bool TAlias::match(const QString& haystack)
 {
+    // Guard against re-entrancy: cleanup may have deleted this alias while
+    // match() was still on the call stack
+    if (!mpMyChildrenList) {
+        qWarning() << "TAlias::match() called on destroyed alias - ID:" << mID << "Name:" << mName;
+        return false;
+    }
+
     bool matchCondition = false;
     if (!isActive()) {
         if (isFolder()) {
@@ -89,14 +96,14 @@ bool TAlias::match(const QString& haystack)
         return false; //regex compile error
     }
 
-#if defined(Q_OS_WINDOWS)
-    // strndup(3) - a safe strdup(3) does not seem to be available in the
-    // original Mingw or the replacement Mingw-w64 environment we use:
-    char* haystackC = static_cast<char*>(malloc(strlen(haystack.toUtf8().constData()) + 1));
-    strcpy(haystackC, haystack.toUtf8().constData());
-#else
-    char* haystackC = strndup(haystack.toUtf8().constData(), strlen(haystack.toUtf8().constData()));
-#endif
+    const QByteArray utf8Data = haystack.toUtf8();
+    const size_t utf8Length = utf8Data.size();
+    char* haystackC = static_cast<char*>(malloc(utf8Length + 1));
+    if (!haystackC) {
+        return false;
+    }
+    memcpy(haystackC, utf8Data.constData(), utf8Length);
+    haystackC[utf8Length] = '\0';
 
     // These must be initialised before any goto so the latter does not jump
     // over them:
@@ -164,8 +171,8 @@ bool TAlias::match(const QString& haystack)
         for (uint32_t j = 0; j < namecount; ++j) {
             const int n = (tabptr[0] << 8) | tabptr[1];
             auto name = QString::fromUtf8(reinterpret_cast<const char*>(&tabptr[2])).trimmed();
-            auto* substring_start = haystackC + ovector[2*n];
-            auto substring_length = ovector[2*n+1] - ovector[2*n];
+            auto* substring_start = haystackC + ovector[2 * n];
+            auto substring_length = ovector[2 * n + 1] - ovector[2 * n];
             auto utf16_pos = haystack.indexOf(QString::fromUtf8(substring_start, substring_length));
             auto capture = QString::fromUtf8(substring_start, substring_length);
             nameGroups << qMakePair(name, capture);
@@ -215,14 +222,14 @@ bool TAlias::match(const QString& haystack)
         }
     }
 
-END : {
-        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-        pL->setCaptureGroups(captureList, posList);
-        pL->setCaptureNameGroups(nameGroups, namePositions);
-        // call lua trigger function with number of matches and matches itselves as arguments
-        execute();
-        pL->clearCaptureGroups();
-    }
+END: {
+    TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+    pL->setCaptureGroups(captureList, posList);
+    pL->setCaptureNameGroups(nameGroups, namePositions);
+    // call lua trigger function with number of matches and matches itselves as arguments
+    execute();
+    pL->clearCaptureGroups();
+}
 
     if (match_data) {
         pcre2_match_data_free(match_data);
@@ -257,13 +264,8 @@ void TAlias::compileRegex()
 
     // PCRE2_UTF needed to run compile in UTF-8 mode
     // PCRE2_UCP needed for \d, \w etc. to use Unicode properties:
-    QSharedPointer<pcre2_code> re(pcre2_compile(
-        reinterpret_cast<PCRE2_SPTR>(mRegexCode.toUtf8().constData()),
-        PCRE2_ZERO_TERMINATED,
-        PCRE2_UTF | PCRE2_UCP,
-        &errorcode,
-        &erroffset,
-        nullptr), pcre2_code_deleter);
+    QSharedPointer<pcre2_code> re(pcre2_compile(reinterpret_cast<PCRE2_SPTR>(mRegexCode.toUtf8().constData()), PCRE2_ZERO_TERMINATED, PCRE2_UTF | PCRE2_UCP, &errorcode, &erroffset, nullptr),
+                                  pcre2_code_deleter);
 
     if (re == nullptr) {
         mOK_init = false;
@@ -276,6 +278,7 @@ void TAlias::compileRegex()
         }
         setError(qsl("<b><font color='blue'>%1</font></b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)").arg(error)));
     } else {
+        pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE);
         mOK_init = true;
     }
 

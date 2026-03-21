@@ -127,7 +127,7 @@ QString VarUnit::getUnsaveableReason(TVar* var)
             //: Tooltip explaining why a large table cannot be saved, recommending alternative methods
             return tr("This table has %1 items, exceeding the 10,000 item limit for saved variables. "
                       "Use <b>table.save()</b> and <b>table.load()</b> instead for better performance with large tables.")
-                .arg(QLocale::system().toString(itemCount));
+                    .arg(QLocale::system().toString(itemCount));
         }
     }
 
