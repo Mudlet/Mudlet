@@ -382,6 +382,9 @@ private:
     // reported in slot_socketDisconnected() even when mpSocket is null
     // (which happens when the SSL handshake fails before mpSocket is assigned):
     QList<QSslError> mSslErrors;
+    // Stores the peer certificate from slot_socketSslError() so it can be
+    // used by getPeerCertificate() when mpSocket is null:
+    QSslCertificate mPeerCertificate;
 #endif
     // Could be a URL ("www.game.com") or an IPv4 address ("192.168.1.1") or an
     // IPv6 address ("2001:db8::1"):

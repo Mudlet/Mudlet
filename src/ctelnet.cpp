@@ -279,7 +279,7 @@ void cTelnet::encodingChanged(const QByteArray& requestedEncoding)
 QSslCertificate cTelnet::getPeerCertificate()
 {
     if (!mpSocket) {
-        return QSslCertificate();
+        return mPeerCertificate;
     }
     return mpSocket->peerCertificate();
 }
@@ -667,7 +667,7 @@ void cTelnet::slot_socketDisconnected()
         if (mCurrent_sslTsl) {
             // We were connecting/ed securely - getSslErrors() returns stored
             // errors from slot_socketSslError() when mpSocket is null (i.e.
-            // when the SSL handshake failed before the connection completed):
+            // when the SSL handshake failed):
             QList<QSslError> sslErrors = getSslErrors();
             QSslCertificate cert = mpSocket ? mpSocket->peerCertificate() : getPeerCertificate();
             if (mpHost->mSslIgnoreExpired) {
@@ -733,7 +733,7 @@ void cTelnet::slot_socketDisconnected()
 #else
         if (mpSocket) {
 #endif
-            // We were not connecting securely (and mpSocket is valid)
+            // We were not connecting securely
             QString reason;
             if (mDontReconnect) {
                 /*: A reason why a connection to a game server ended, could be
@@ -804,7 +804,7 @@ void cTelnet::slot_socketDisconnected()
 #if !defined(QT_NO_SSL)
 // This can/is raised on a socket that we have not received a prior
 // QSslSocket::encrypted() signal from (which is wired to our
-// "slot_socketconnect()" slot).
+// "slot_socketConnected()" slot).
 void cTelnet::slot_socketSslError(const QList<QSslError>& errors)
 {
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
@@ -823,6 +823,7 @@ void cTelnet::slot_socketSslError(const QList<QSslError>& errors)
     // actual sockets yet!
     const auto pSocket = qobject_cast<QSslSocket*>(sender());
     QSslCertificate cert = pSocket->peerCertificate();
+    mPeerCertificate = cert;
     QList<QSslError> ignoreErrorList;
 
     if (mpHost->mSslIgnoreExpired) {
