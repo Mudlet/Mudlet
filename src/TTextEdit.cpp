@@ -951,6 +951,7 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
 
     if (linkIndex > 0 && mpBuffer->mLinkStore.hasStyling(linkIndex)) {
         Mudlet::HyperlinkStyling styling = mpBuffer->mLinkStore.getStyling(linkIndex);
+        styling.currentState = mpBuffer->getLinkState(linkIndex);
         Mudlet::HyperlinkStyling::StateStyle effectiveStyle = styling.getEffectiveStyle();
 
         if (effectiveStyle.hasUnderlineColor) {

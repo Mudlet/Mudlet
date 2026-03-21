@@ -4309,6 +4309,9 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
         const int linkId = buffer.at(y).at(x).linkIndex();
         if (linkId && (linkId != oldLinkId)) {
             id = slice.mLinkStore.addLinks(mLinkStore.getLinksConst(linkId), mLinkStore.getHintsConst(linkId), mpHost);
+            if (mLinkStore.hasStyling(linkId)) {
+                slice.mLinkStore.setStyling(id, mLinkStore.getStyling(linkId));
+            }
             oldLinkId = linkId;
         }
 
@@ -4383,6 +4386,9 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
         const int linkId = chunk.buffer.at(0).at(cx).linkIndex();
         if (linkId && (oldLinkId != linkId)) {
             id = mLinkStore.addLinks(chunk.mLinkStore.getLinksConst(linkId), chunk.mLinkStore.getHintsConst(linkId), mpHost);
+            if (chunk.mLinkStore.hasStyling(linkId)) {
+                mLinkStore.setStyling(id, chunk.mLinkStore.getStyling(linkId));
+            }
             oldLinkId = linkId;
         }
         if (!linkId) {
@@ -5278,8 +5284,13 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
                 // Look up decoration color from TLinkStore if available
                 if (currentLinkIndex > 0 && mLinkStore.hasStyling(currentLinkIndex)) {
                     Mudlet::HyperlinkStyling styling = mLinkStore.getStyling(currentLinkIndex);
+                    styling.currentState = getLinkState(currentLinkIndex);
                     Mudlet::HyperlinkStyling::StateStyle effectiveStyle = styling.getEffectiveStyle();
 
+                    // CSS text-decoration-color applies a single color to all
+                    // decoration lines, so pick the most visually prominent one
+                    // (underline > strikeout > overline). The render path in
+                    // drawCustomDecorations can apply each color independently.
                     QColor decorationColor;
                     bool hasDecorationColor = false;
                     if (effectiveStyle.hasUnderlineColor && (currentFlags & TChar::Underline)) {
@@ -5304,21 +5315,23 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
 
             if (currentFlags & TChar::Reverse) {
                 // Swap the fore and background colours:
-                s.append(qsl("<span%9 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6);%7%8\">")
+                s.append(qsl("<span%9 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6);%7%8")
                          .arg(QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 1 to 3
                               QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
                               blinkClass) // arg 9
-                         + textDecorationCss);
+                         + textDecorationCss
+                         + qsl("\">"));
             } else {
-                s.append(qsl("<span%9 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6);%7%8\">")
+                s.append(qsl("<span%9 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6);%7%8")
                          .arg(QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 1 to 3
                               QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
                               blinkClass) // arg 9
-                         + textDecorationCss);
+                         + textDecorationCss
+                         + qsl("\">"));
             }
             // clang-format on
         }
