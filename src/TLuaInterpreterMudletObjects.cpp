@@ -863,11 +863,10 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
         const QString fileName = QFileDialog::getExistingDirectory(nullptr, title, location);
         lua_pushstring(L, fileName.toUtf8().constData());
         return 1;
-    } else {
-        const QString fileName = QFileDialog::getOpenFileName(nullptr, title, location);
-        lua_pushstring(L, fileName.toUtf8().constData());
-        return 1;
     }
+    const QString fileName = QFileDialog::getOpenFileName(nullptr, title, location);
+    lua_pushstring(L, fileName.toUtf8().constData());
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isActive
@@ -996,14 +995,13 @@ int TLuaInterpreter::isPrompt(lua_State* L)
     if (userCursorY < host.mpConsole->buffer.promptBuffer.size() && userCursorY >= 0) {
         lua_pushboolean(L, host.mpConsole->buffer.promptBuffer.at(userCursorY));
         return 1;
-    } else {
-        if (host.mpConsole->mTriggerEngineMode && host.mpConsole->mIsPromptLine) {
-            lua_pushboolean(L, true);
-        } else {
-            lua_pushboolean(L, false);
-        }
-        return 1;
     }
+    if (host.mpConsole->mTriggerEngineMode && host.mpConsole->mIsPromptLine) {
+        lua_pushboolean(L, true);
+    } else {
+        lua_pushboolean(L, false);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#killAlias
@@ -1871,9 +1869,10 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
                                      __func__,
                                      qsl("invalid ANSI color number %1, only %2 (ignore background color), %3 (default background color) or 0 to 255 recognised")
                                              .arg(QString::number(value), QString::number(TTrigger::scmIgnored), QString::number(TTrigger::scmDefault)));
-        } else if (value == TTrigger::scmIgnored && ansiFgColor == TTrigger::scmIgnored) {
+        }
+        if (value == TTrigger::scmIgnored && ansiFgColor == TTrigger::scmIgnored) {
             return warnArgumentValue(L, __func__, qsl("invalid ANSI color number %1, you cannot ignore both foreground and background color").arg(value));
-        } else {
+        } else { // NOLINT(readability-else-after-return)
             ansiBgColor = value;
         }
     }

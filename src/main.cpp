@@ -918,7 +918,7 @@ bool runUpdate()
         qWarning() << "Launching installer:" << seenUpdatedInstaller.absoluteFilePath();
         QProcess::startDetached(seenUpdatedInstaller.absoluteFilePath(), QStringList());
         return true;
-    } else if (seenUpdatedInstaller.exists()) {
+    } else if (seenUpdatedInstaller.exists()) { // NOLINT(readability-else-after-return)
         // no new updater and only the old one? Then we're restarting from an update: delete the old installer
         if (!updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
             qWarning() << "Couldn't delete old installer:" << seenUpdatedInstaller;

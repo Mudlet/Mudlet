@@ -1227,10 +1227,9 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
         // 0xff (assuming that there are no Telnet protocol sequences in here):
         outData = mudlet::replaceString(outData, "\xff", "\xff\xff");
         return socketOutRaw(outData);
-    } else {
-        mpHost->mAllowToSendCommand = true;
-        return false;
     }
+    mpHost->mAllowToSendCommand = true;
+    return false;
 }
 
 // Data is *expected* to be in the required MUD Server encoding on entry,
@@ -2098,8 +2097,8 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
     for (int i = 0; i < payload.size(); ++i) {
         if (!i && payload.at(i) == NEW_ENVIRON_SEND) {
             continue;
-        } else if (!i) {
-            return; // Invalid response;
+        } else if (!i) { // NOLINT(readability-else-after-return)
+            return;      // Invalid response;
         }
 
         if (payload.at(i) == NEW_ENVIRON_VAR) {
@@ -2248,8 +2247,8 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
     for (int i = 0; i < payload.size(); ++i) {
         if (!i && payload.at(i) == NEW_ENVIRON_SEND) {
             continue;
-        } else if (!i) {
-            return; // Invalid response;
+        } else if (!i) { // NOLINT(readability-else-after-return)
+            return;      // Invalid response;
         }
 
         if (payload.at(i) == NEW_ENVIRON_VAR) {
@@ -2494,47 +2493,46 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                 enableMSDP = false;
                 break;
-            } else {
-                std::string output;
-
-                enableMSDP = true;
-                sendTelnetOption(TN_DO, OPT_MSDP);
-                //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
-                //NOTE: MSDP does not need quotes for string/vals
-                output += TN_IAC;
-                output += TN_SB;
-                output += OPT_MSDP;
-                output += MSDP_VAR;
-                output += "LIST";
-                output += MSDP_VAL;
-                output += "COMMANDS";
-                output += TN_IAC;
-                output += TN_SE;
-                // This will be unaffected by Mud Server encoding:
-                socketOutRaw(output);
-
-                // send client configurable variables e.g.
-                // IAC SB MSDP MSDP_VAR "CLIENT_NAME" MSDP_VAL "Mudlet" MSDP_VAR "CLIENT_VERSION" MSDP_VAL "4.19" IAC SE
-                output = TN_IAC;
-                output += TN_SB;
-                output += OPT_MSDP;
-                output += MSDP_VAR;
-                output += "CLIENT_NAME";
-                output += MSDP_VAL;
-                output += "Mudlet";
-                output += MSDP_VAR;
-                output += "CLIENT_VERSION";
-                output += MSDP_VAL;
-                output += encodeAndCookBytes(std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData());
-                output += TN_IAC;
-                output += TN_SE;
-                socketOutRaw(output);
-#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
-                qDebug() << "WE send telnet IAC DO MSDP";
-#endif
-                raiseProtocolEvent("sysProtocolEnabled", "MSDP");
-                break;
             }
+            std::string output;
+
+            enableMSDP = true;
+            sendTelnetOption(TN_DO, OPT_MSDP);
+            //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
+            //NOTE: MSDP does not need quotes for string/vals
+            output += TN_IAC;
+            output += TN_SB;
+            output += OPT_MSDP;
+            output += MSDP_VAR;
+            output += "LIST";
+            output += MSDP_VAL;
+            output += "COMMANDS";
+            output += TN_IAC;
+            output += TN_SE;
+            // This will be unaffected by Mud Server encoding:
+            socketOutRaw(output);
+
+            // send client configurable variables e.g.
+            // IAC SB MSDP MSDP_VAR "CLIENT_NAME" MSDP_VAL "Mudlet" MSDP_VAR "CLIENT_VERSION" MSDP_VAL "4.19" IAC SE
+            output = TN_IAC;
+            output += TN_SB;
+            output += OPT_MSDP;
+            output += MSDP_VAR;
+            output += "CLIENT_NAME";
+            output += MSDP_VAL;
+            output += "Mudlet";
+            output += MSDP_VAR;
+            output += "CLIENT_VERSION";
+            output += MSDP_VAL;
+            output += encodeAndCookBytes(std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData());
+            output += TN_IAC;
+            output += TN_SE;
+            socketOutRaw(output);
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
+            qDebug() << "WE send telnet IAC DO MSDP";
+#endif
+            raiseProtocolEvent("sysProtocolEnabled", "MSDP");
+            break;
         }
 
         if (option == OPT_ATCP) {
@@ -3960,10 +3958,9 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
 
     if (!transcodedMsg.endsWith(qsl(")"))) {
         return;
-    } else {
-        // Met the MSP standard so far. Remove this last right parenthesis.
-        transcodedMsg.chop(1);
     }
+    // Met the MSP standard so far. Remove this last right parenthesis.
+    transcodedMsg.chop(1);
 
     TMediaData mediaData{};
 
@@ -4121,11 +4118,10 @@ void cTelnet::setChannel102Variables(const QString& msg)
     if (msg.size() < 2) {
         qDebug() << "ERROR: channel 102 message size != 2 bytes msg<" << msg << ">";
         return;
-    } else {
-        int _m = msg.at(0).toLatin1();
-        int _a = msg.at(1).toLatin1();
-        mpHost->mLuaInterpreter.setChannel102Table(_m, _a);
     }
+    int _m = msg.at(0).toLatin1();
+    int _a = msg.at(1).toLatin1();
+    mpHost->mLuaInterpreter.setChannel102Table(_m, _a);
 }
 
 void cTelnet::setAutoReconnect(bool status)
@@ -4368,9 +4364,8 @@ void cTelnet::gotPrompt(std::string& mud_data)
             if (mMudData[j] == '\n') {
                 mMudData.erase(j, 1);
                 break;
-            } else {
-                break;
             }
+            break;
         NEXT:
             ++j;
         }

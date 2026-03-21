@@ -67,11 +67,11 @@ public:
     QString& getError();
     void setError(QString);
     bool state() const;
-/* No longer used - most cases were accessing the member directly
+    /* No longer used - most cases were accessing the member directly
     QString getPackageName() const { return mPackageName; }
     void setPackageName(const QString& n) { mPackageName = n; }
 */
-/* Not used, the member was not either
+    /* Not used, the member was not either
     void setModuleName(const QString& n) { mModuleName = n; }
     QString getModuleName() const { return mModuleName; }
 */
@@ -89,7 +89,7 @@ public:
     std::list<T*>* mpMyChildrenList;
     int mID;
     QString mPackageName;
-// Not used:    QString mModuleName;
+    // Not used:    QString mModuleName;
 
 protected:
     virtual bool canBeActivated() const;
@@ -108,7 +108,7 @@ private:
 template <class T>
 Tree<T>::Tree()
 : mpParent(nullptr)
-, mpMyChildrenList( new std::list<T *> )
+, mpMyChildrenList(new std::list<T*>)
 , mID(0)
 , mOK_init(true)
 , mOK_code(true)
@@ -120,9 +120,9 @@ Tree<T>::Tree()
 }
 
 template <class T>
-Tree<T>::Tree( T * pParent )
+Tree<T>::Tree(T* pParent)
 : mpParent(pParent)
-, mpMyChildrenList( new std::list<T *> )
+, mpMyChildrenList(new std::list<T*>)
 , mID(0)
 , mOK_init(true)
 , mOK_code(true)
@@ -163,7 +163,8 @@ void Tree<T>::setTemporary(const bool state)
 }
 
 template <class T>
-bool Tree<T>::isTemporary() const {
+bool Tree<T>::isTemporary() const
+{
     return mTemporary;
 }
 
@@ -198,10 +199,9 @@ bool Tree<T>::setIsActive(bool b)
     setShouldBeActive(b);
     if (b) {
         return activate();
-    } else {
-        mActive = false;
-        return false;
     }
+    mActive = false;
+    return false;
 }
 
 template <class T>

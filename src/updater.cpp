@@ -277,7 +277,7 @@ void Updater::setupOnWindows()
         qWarning() << "Checked for updates:" << updates.size() << "update(s) available";
         if (updates.isEmpty()) {
             return;
-        } else if (!updateAutomatically()) {
+        } else if (!updateAutomatically()) { // NOLINT(readability-else-after-return)
             emit signal_updateAvailable(updates.size());
         } else {
             downloadReleaseIfValid(updates.first());
@@ -341,12 +341,12 @@ void Updater::setupOnLinux()
         qWarning() << "Checked for updates:" << updates.size() << "update(s) available";
         if (updates.isEmpty()) {
             return;
-        } else if (!updateAutomatically()) {
+        }
+        if (!updateAutomatically()) {
             emit signal_updateAvailable(updates.size());
             return;
-        } else {
-            downloadReleaseIfValid(updates.first());
         }
+        downloadReleaseIfValid(updates.first());
     });
 
     // Setup to unzip and replace old binary when the download is done

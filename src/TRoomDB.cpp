@@ -388,7 +388,8 @@ bool TRoomDB::removeArea(int id)
 
         mpMap->mMapGraphNeedsUpdate = true;
         return true;
-    } else if (areaNamesMap.contains(id)) {
+    }
+    if (areaNamesMap.contains(id)) {
         // Handle corner case where the area name was created but not used
         areaNamesMap.remove(id);
         return true;
@@ -484,12 +485,11 @@ TArea* TRoomDB::getRawArea(int id, bool* isValid = nullptr)
             *isValid = true;
         }
         return areas.value(id);
-    } else {
-        if (isValid) {
-            *isValid = false;
-        }
-        return nullptr;
     }
+    if (isValid) {
+        *isValid = false;
+    }
+    return nullptr;
 }
 
 bool TRoomDB::setAreaName(int areaID, QString name)
@@ -501,15 +501,15 @@ bool TRoomDB::setAreaName(int areaID, QString name)
     if (name.isEmpty()) {
         qWarning() << "TRoomDB::setAreaName((int)areaID, (QString)name): WARNING: Empty name supplied.";
         return false;
-    } else if (areaNamesMap.values().count(name) > 0) {
+    }
+    if (areaNamesMap.values().count(name) > 0) {
         // That name is already IN the areaNamesMap
         if (areaNamesMap.value(areaID) == name) {
             // The trivial case, the given areaID already IS that name
             return true;
-        } else {
-            qWarning() << "TRoomDB::setAreaName((int)areaID, (QString)name): WARNING: Duplicate name supplied" << name << "- that is not permitted any longer!";
-            return false;
         }
+        qWarning() << "TRoomDB::setAreaName((int)areaID, (QString)name): WARNING: Duplicate name supplied" << name << "- that is not permitted any longer!";
+        return false;
     }
     areaNamesMap[areaID] = name;
     // This creates a NEW area name with given areaID if the ID was not
@@ -536,11 +536,10 @@ bool TRoomDB::addArea(int id)
             areaNamesMap.insert(id, newAreaName);
         }
         return true;
-    } else {
-        QString error = tr("Area with ID %1 already exists!").arg(id);
-        mpMap->logError(error);
-        return false;
     }
+    QString error = tr("Area with ID %1 already exists!").arg(id);
+    mpMap->logError(error);
+    return false;
 }
 
 int TRoomDB::createNewAreaID()
@@ -559,7 +558,8 @@ int TRoomDB::addArea(QString name)
         QString error = tr("An Unnamed Area is (no longer) permitted!");
         mpMap->logError(error);
         return 0;
-    } else if (areaNamesMap.values().contains(name)) {
+    }
+    if (areaNamesMap.values().contains(name)) {
         QString error = tr("An area called %1 already exists!").arg(name);
         mpMap->logError(error);
         return 0;
@@ -571,9 +571,8 @@ int TRoomDB::addArea(QString name)
         // This will overwrite the "Unnamed Area_###" that addArea( areaID )
         // will generate - but that is fine.
         return areaID;
-    } else {
-        return 0; //fail
     }
+    return 0; //fail
 }
 
 // this func is called by the xml map importer
@@ -584,7 +583,8 @@ bool TRoomDB::addArea(int id, QString name)
 {
     if (((!name.isEmpty()) && areaNamesMap.values().contains(name)) || areaNamesMap.keys().contains(id)) {
         return false;
-    } else if (addArea(id)) {
+    }
+    if (addArea(id)) {
         // This will generate an "Unnamed Area_###" area name which we should
         // overwrite only if we have a name!
         if (!name.isEmpty()) {

@@ -2811,12 +2811,11 @@ void dlgProfilePreferences::slot_copyMap()
             label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
             QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
             continue; // Try again with next profile
-        } else {
-            label_mapFileActionResult->setText(tr("Map copied successfully to other profile %1.").arg(otherHostName));
-            qApp->processEvents(); // Copied from "Loading map - please wait..." case
-                                   // Just in case is needed to make the above message
-                                   // show up when saving big maps
         }
+        label_mapFileActionResult->setText(tr("Map copied successfully to other profile %1.").arg(otherHostName));
+        qApp->processEvents(); // Copied from "Loading map - please wait..." case
+                               // Just in case is needed to make the above message
+                               // show up when saving big maps
     }
 
     // Finally, signal the other profiles to reload their maps:

@@ -177,10 +177,9 @@ bool ScriptUnit::registerScript(TScript* pT)
     if (pT->getParent()) {
         addScript(pT);
         return true;
-    } else {
-        addScriptRootNode(pT);
-        return true;
     }
+    addScriptRootNode(pT);
+    return true;
 }
 
 void ScriptUnit::unregisterScript(TScript* pT)
@@ -191,11 +190,10 @@ void ScriptUnit::unregisterScript(TScript* pT)
     if (pT->getParent()) {
         removeScript(pT);
         return;
-    } else {
-        removeScript(pT);
-        removeScriptRootNode(pT);
-        return;
     }
+    removeScript(pT);
+    removeScriptRootNode(pT);
+    return;
 }
 
 

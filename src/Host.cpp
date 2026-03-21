@@ -1654,10 +1654,8 @@ QPair<bool, QString> Host::setStopWatchName(const int id, const QString& newName
             if (itStopWatch.value()->name() == newName) {
                 if (itStopWatch.key() != id) {
                     return qMakePair(false, qsl("the name '%1' is already in use for another stopwatch (id:%2)").arg(newName, QString::number(itStopWatch.key())));
-                } else {
-                    // Trivial case - the stopwatch is already called by the NEW name:
-                    return qMakePair(true, QString());
-                }
+                } // Trivial case - the stopwatch is already called by the NEW name:
+                return qMakePair(true, QString());
             }
         }
     }
@@ -3524,24 +3522,23 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
             dockwidget->setFloating(true);
         }
         return {true, QString()};
-    } else {
-        if (area == QLatin1String("r") || area == QLatin1String("right")) {
-            dockwidget->setFloating(false);
-            mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
-            return {true, QString()};
-        } else if (area == QLatin1String("l") || area == QLatin1String("left")) {
-            dockwidget->setFloating(false);
-            mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, dockwidget);
-            return {true, QString()};
-        } else if (area == QLatin1String("t") || area == QLatin1String("top")) {
-            dockwidget->setFloating(false);
-            mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, dockwidget);
-            return {true, QString()};
-        } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
-            dockwidget->setFloating(false);
-            mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, dockwidget);
-            return {true, QString()};
-        }
+    } else if (area == QLatin1String("r") || area == QLatin1String("right")) { // NOLINT(readability-else-after-return)
+        dockwidget->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
+        return {true, QString()};
+    } else if (area == QLatin1String("l") || area == QLatin1String("left")) { // NOLINT(readability-else-after-return)
+        dockwidget->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, dockwidget);
+        return {true, QString()};
+    } else if (area == QLatin1String("t") || area == QLatin1String("top")) { // NOLINT(readability-else-after-return)
+        dockwidget->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, dockwidget);
+        return {true, QString()};
+    } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) { // NOLINT(readability-else-after-return)
+        dockwidget->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, dockwidget);
+        return {true, QString()};
+    } else { // NOLINT(readability-else-after-return)
         return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
     }
 }
@@ -3755,7 +3752,7 @@ bool Host::showWindow(const QString& name)
     if (pL) {
         pL->show();
         return true;
-    } else if (pC) {
+    } else if (pC) { // NOLINT(readability-else-after-return)
         auto pD = mpConsole->mDockWidgetMap.value(name);
         if (pD) {
             pD->update();
@@ -3764,19 +3761,13 @@ bool Host::showWindow(const QString& name)
             return mpConsole->showWindow(name);
         }
         return mpConsole->showWindow(name);
-    }
-
-    if (pS) {
+    } else if (pS) { // NOLINT(readability-else-after-return)
         pS->show();
         return true;
-    }
-
-    if (pN) {
+    } else if (pN) { // NOLINT(readability-else-after-return)
         pN->show();
         return true;
-    }
-
-    if (pT) {
+    } else if (pT) { // NOLINT(readability-else-after-return)
         pT->show();
         return true;
     }
@@ -3800,26 +3791,20 @@ bool Host::hideWindow(const QString& name)
     if (pL) {
         pL->hide();
         return true;
-    } else if (pC) {
+    } else if (pC) { // NOLINT(readability-else-after-return)
         auto pD = mpConsole->mDockWidgetMap.value(name);
         if (pD) {
             pD->hide();
             pD->update();
         }
         return mpConsole->hideWindow(name);
-    }
-
-    if (pS) {
+    } else if (pS) { // NOLINT(readability-else-after-return)
         pS->hide();
         return true;
-    }
-
-    if (pN) {
+    } else if (pN) { // NOLINT(readability-else-after-return)
         pN->hide();
         return true;
-    }
-
-    if (pT) {
+    } else if (pT) { // NOLINT(readability-else-after-return)
         pT->hide();
         return true;
     }
@@ -3985,7 +3970,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
             pL->show();
         }
         return {true, QString()};
-    } else if (pC) {
+    } else if (pC) { // NOLINT(readability-else-after-return)
         pC->setParent(pW);
         pC->move(x1, y1);
         pC->mOldX = x1;
@@ -3994,37 +3979,37 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
             pC->show();
         }
         return {true, QString()};
-    } else if (pS) {
+    } else if (pS) { // NOLINT(readability-else-after-return)
         pS->setParent(pW);
         pS->move(x1, y1);
         if (show) {
             pS->show();
         }
         return {true, QString()};
-    } else if (pN) {
+    } else if (pN) { // NOLINT(readability-else-after-return)
         pN->setParent(pW);
         pN->move(x1, y1);
         if (show) {
             pN->show();
         }
         return {true, QString()};
-    } else if (pT) {
+    } else if (pT) { // NOLINT(readability-else-after-return)
         pT->setParent(pW);
         pT->move(x1, y1);
         if (show) {
             pT->show();
         }
         return {true, QString()};
-    } else if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
+    } else if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) { // NOLINT(readability-else-after-return)
         pM->setParent(pW);
         pM->move(x1, y1);
         if (show) {
             pM->show();
         }
         return {true, QString()};
+    } else { // NOLINT(readability-else-after-return)
+        return {false, qsl("element '%1' not found").arg(name)};
     }
-
-    return {false, qsl("element '%1' not found").arg(name)};
 }
 
 std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, int width, int height)
@@ -4060,24 +4045,23 @@ std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, 
             pM->resize(width, height);
         }
         return {true, QString()};
-    } else {
-        if (area == QLatin1String("r") || area == QLatin1String("right")) {
-            pM->setFloating(false);
-            mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, pM);
-            return {true, QString()};
-        } else if (area == QLatin1String("l") || area == QLatin1String("left")) {
-            pM->setFloating(false);
-            mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, pM);
-            return {true, QString()};
-        } else if (area == QLatin1String("t") || area == QLatin1String("top")) {
-            pM->setFloating(false);
-            mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, pM);
-            return {true, QString()};
-        } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
-            pM->setFloating(false);
-            mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, pM);
-            return {true, QString()};
-        }
+    } else if (area == QLatin1String("r") || area == QLatin1String("right")) { // NOLINT(readability-else-after-return)
+        pM->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, pM);
+        return {true, QString()};
+    } else if (area == QLatin1String("l") || area == QLatin1String("left")) { // NOLINT(readability-else-after-return)
+        pM->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, pM);
+        return {true, QString()};
+    } else if (area == QLatin1String("t") || area == QLatin1String("top")) { // NOLINT(readability-else-after-return)
+        pM->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, pM);
+        return {true, QString()};
+    } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) { // NOLINT(readability-else-after-return)
+        pM->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, pM);
+        return {true, QString()};
+    } else { // NOLINT(readability-else-after-return)
         return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
     }
 }
@@ -4128,7 +4112,7 @@ bool Host::echoWindow(const QString& name, const QString& text)
     if (pC) {
         pC->print(text);
         return true;
-    } else if (pL) {
+    } else if (pL) { // NOLINT(readability-else-after-return)
         pL->setText(text);
         return true;
     }
@@ -4370,7 +4354,7 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
     if (pC) {
         pC->setConsoleBgColor(r, g, b, alpha);
         return true;
-    } else if (pL) {
+    } else if (pL) { // NOLINT(readability-else-after-return)
         QString styleSheet = pL->styleSheet();
         QString newColor = QString("background-color: rgba(%1, %2, %3, %4);").arg(r).arg(g).arg(b).arg(alpha);
         if (styleSheet.contains(qsl("background-color"))) {

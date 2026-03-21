@@ -171,7 +171,8 @@ void THyperlinkVisibilityManager::onLinkClicked(int linkId)
             performConcealment(link);
             emit visibilityChanged();
             return; // Link was removed from map, must not access reference anymore
-        } else if (link.delayMs > 0 && link.timerActivatedMs == 0) {
+        }
+        if (link.delayMs > 0 && link.timerActivatedMs == 0) {
             // Delayed concealment - start timer
             link.timerActivatedMs = QDateTime::currentMSecsSinceEpoch();
 #if defined(DEBUG_OSC_PROCESSING)
@@ -587,10 +588,8 @@ void THyperlinkVisibilityManager::stopTimerIfNotNeeded()
                     // These phases need the timer even with zero delay
                     hasTimerLinks = true;
                     break;
-                } else {
-                    // Other zero-delay links can be skipped
-                    continue;
-                }
+                } // Other zero-delay links can be skipped
+                continue;
             }
 
             if (link.action == TrackedHyperlink::Action::Conceal && !link.isConcealed) {

@@ -128,14 +128,13 @@ bool TScript::compileScript(bool saveLoadingError)
             setEventHandlerList(getEventHandlerList());
         }
         return true;
-    } else {
-        mOK_code = false;
-        setError(error);
-        if (saveLoadingError) {
-            setLoadingError(error);
-        }
-        return false;
     }
+    mOK_code = false;
+    setError(error);
+    if (saveLoadingError) {
+        setLoadingError(error);
+    }
+    return false;
 }
 
 void TScript::execute()

@@ -48,10 +48,9 @@ void TDockWidget::closeEvent(QCloseEvent* event)
         mpHost->hideWindow(mWidgetConsoleName);
         event->ignore();
         return;
-    } else {
-        event->accept();
-        return;
     }
+    event->accept();
+    return;
 }
 
 void TDockWidget::resizeEvent(QResizeEvent* event)

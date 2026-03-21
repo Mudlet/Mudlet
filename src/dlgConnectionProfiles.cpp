@@ -2035,23 +2035,22 @@ bool dlgConnectionProfiles::validateProfile()
                 connect_button->setAccessibleDescription(btn_connect_enabled_accessDesc);
             }
             return true;
-        } else {
-            if (!notificationAreaMessageBox->text().isEmpty()) {
-                notificationArea->show();
-                notificationAreaMessageBox->show();
-            }
-            if (offline_button) {
-                offline_button->setEnabled(false);
-                offline_button->setToolTip(utils::richText(tr("Please set a valid profile name, game server address and the game port before loading.")));
-                offline_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
-            }
-            if (connect_button) {
-                connect_button->setEnabled(false);
-                connect_button->setToolTip(utils::richText(tr("Please set a valid profile name, game server address and the game port before connecting.")));
-                connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
-            }
-            return false;
         }
+        if (!notificationAreaMessageBox->text().isEmpty()) {
+            notificationArea->show();
+            notificationAreaMessageBox->show();
+        }
+        if (offline_button) {
+            offline_button->setEnabled(false);
+            offline_button->setToolTip(utils::richText(tr("Please set a valid profile name, game server address and the game port before loading.")));
+            offline_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
+        }
+        if (connect_button) {
+            connect_button->setEnabled(false);
+            connect_button->setToolTip(utils::richText(tr("Please set a valid profile name, game server address and the game port before connecting.")));
+            connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
+        }
+        return false;
     }
     return false;
 }

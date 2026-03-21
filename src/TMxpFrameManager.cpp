@@ -86,7 +86,7 @@ bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QStr
 
     if (action == qsl("close")) {
         return closeFrame(name);
-    } else if (action == qsl("focus")) {
+    } else if (action == qsl("focus")) { // NOLINT(readability-else-after-return)
         return focusFrame(name);
     }
 
@@ -838,12 +838,10 @@ QSize TMxpFrameManager::calculateFrameSize(const QString& spec, const QSize& con
             // and avoid extra line spacing that reduces actual character count
             int result = chars * fm.height();
             return QSize(0, result);
-        } else {
-            // Use horizontalAdvance('W') instead of averageCharWidth() for consistency
-            // with Host::calcFontSize() which uses this for more accurate character width
-            int result = chars * fm.horizontalAdvance(QChar('W'));
-            return QSize(result, 0);
-        }
+        } // Use horizontalAdvance('W') instead of averageCharWidth() for consistency
+        // with Host::calcFontSize() which uses this for more accurate character width
+        int result = chars * fm.horizontalAdvance(QChar('W'));
+        return QSize(result, 0);
     }
 
     // Percentage-based size (e.g., "25%")
@@ -884,11 +882,11 @@ Qt::DockWidgetArea TMxpFrameManager::alignmentToDockArea(const QString& align)
 
     if (lower == qsl("top")) {
         return Qt::TopDockWidgetArea;
-    } else if (lower == qsl("bottom")) {
+    } else if (lower == qsl("bottom")) { // NOLINT(readability-else-after-return)
         return Qt::BottomDockWidgetArea;
-    } else if (lower == qsl("right")) {
+    } else if (lower == qsl("right")) { // NOLINT(readability-else-after-return)
         return Qt::RightDockWidgetArea;
-    } else {
+    } else { // NOLINT(readability-else-after-return)
         return Qt::LeftDockWidgetArea;
     }
 }

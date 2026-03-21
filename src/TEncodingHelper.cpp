@@ -179,13 +179,13 @@ bool TEncodingHelper::canEncode(const QString& str, const QByteArray& encoding)
 {
     if (encoding == "M_CP437" || encoding == "CP437") {
         return TTextCodec_437::canEncode(str);
-    } else if (encoding == "M_CP667" || encoding == "CP667") {
+    } else if (encoding == "M_CP667" || encoding == "CP667") { // NOLINT(readability-else-after-return)
         return TTextCodec_667::canEncode(str);
-    } else if (encoding == "M_CP737" || encoding == "CP737") {
+    } else if (encoding == "M_CP737" || encoding == "CP737") { // NOLINT(readability-else-after-return)
         return TTextCodec_737::canEncode(str);
-    } else if (encoding == "M_CP869" || encoding == "CP869") {
+    } else if (encoding == "M_CP869" || encoding == "CP869") { // NOLINT(readability-else-after-return)
         return TTextCodec_869::canEncode(str);
-    } else if (encoding == "M_MEDIEVIA" || encoding == "MEDIEVIA") {
+    } else if (encoding == "M_MEDIEVIA" || encoding == "MEDIEVIA") { // NOLINT(readability-else-after-return)
         return TTextCodec_medievia::canEncode(str);
     }
 
@@ -223,13 +223,13 @@ QList<QByteArray> TEncodingHelper::aliases(const QByteArray& encoding)
 {
     if (encoding == "M_CP437" || encoding == "CP437") {
         return TTextCodec_437::aliases();
-    } else if (encoding == "M_CP667" || encoding == "CP667") {
+    } else if (encoding == "M_CP667" || encoding == "CP667") { // NOLINT(readability-else-after-return)
         return TTextCodec_667::aliases();
-    } else if (encoding == "M_CP737" || encoding == "CP737") {
+    } else if (encoding == "M_CP737" || encoding == "CP737") { // NOLINT(readability-else-after-return)
         return TTextCodec_737::aliases();
-    } else if (encoding == "M_CP869" || encoding == "CP869") {
+    } else if (encoding == "M_CP869" || encoding == "CP869") { // NOLINT(readability-else-after-return)
         return TTextCodec_869::aliases();
-    } else if (encoding == "M_MEDIEVIA" || encoding == "MEDIEVIA") {
+    } else if (encoding == "M_MEDIEVIA" || encoding == "MEDIEVIA") { // NOLINT(readability-else-after-return)
         return TTextCodec_medievia::aliases();
     }
 

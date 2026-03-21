@@ -120,7 +120,8 @@ int TLuaInterpreter::getDiscordDetail(lua_State* L)
     auto result = discordApiEnabled(L);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetDetail)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetDetail)) {
         return warnArgumentValue(L, __func__, "access to Discord detail is disabled in settings for privacy");
     }
 
@@ -137,7 +138,8 @@ int TLuaInterpreter::getDiscordLargeIcon(lua_State* L)
     auto result = discordApiEnabled(L);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIcon)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIcon)) {
         return warnArgumentValue(L, __func__, "access to Discord large icon is disabled in settings for privacy");
     }
 
@@ -154,7 +156,8 @@ int TLuaInterpreter::getDiscordLargeIconText(lua_State* L)
     auto result = discordApiEnabled(L, true);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIconText)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIconText)) {
         return warnArgumentValue(L, __func__, "access to Discord large icon text is disabled in settings for privacy");
     }
 
@@ -171,7 +174,8 @@ int TLuaInterpreter::getDiscordParty(lua_State* L)
     auto result = discordApiEnabled(L, true);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetPartyInfo)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetPartyInfo)) {
         return warnArgumentValue(L, __func__, "access to Discord party info is disabled in settings for privacy");
     }
 
@@ -190,7 +194,8 @@ int TLuaInterpreter::getDiscordSmallIcon(lua_State* L)
     auto result = discordApiEnabled(L, true);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIcon)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIcon)) {
         return warnArgumentValue(L, __func__, "access to Discord small icon is disabled in settings for privacy");
     }
 
@@ -207,7 +212,8 @@ int TLuaInterpreter::getDiscordSmallIconText(lua_State* L)
     auto result = discordApiEnabled(L, true);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIconText)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIconText)) {
         return warnArgumentValue(L, __func__, "access to Discord small icon text is disabled in settings for privacy");
     }
 
@@ -224,7 +230,8 @@ int TLuaInterpreter::getDiscordState(lua_State* L)
     auto result = discordApiEnabled(L);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetState)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetState)) {
         return warnArgumentValue(L, __func__, "access to Discord state is disabled in settings for privacy");
     }
 
@@ -240,7 +247,8 @@ int TLuaInterpreter::getDiscordTimeStamps(lua_State* L)
     auto result = discordApiEnabled(L);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetTimeInfo)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetTimeInfo)) {
         return warnArgumentValue(L, __func__, "access to Discord time is disabled in settings for privacy");
     }
 
@@ -311,7 +319,8 @@ int TLuaInterpreter::setDiscordDetail(lua_State* L)
     auto result = discordApiEnabled(L);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetDetail)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetDetail)) {
         return warnArgumentValue(L, __func__, "access to Discord detail is disabled in settings for privacy");
     }
 
@@ -334,7 +343,8 @@ int TLuaInterpreter::setDiscordElapsedStartTime(lua_State* L)
     auto result = discordApiEnabled(L);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetTimeInfo)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetTimeInfo)) {
         return warnArgumentValue(L, __func__, "access to Discord time is disabled in settings for privacy");
     }
 
@@ -356,9 +366,11 @@ int TLuaInterpreter::setDiscordGame(lua_State* L)
     auto result = discordApiEnabled(L);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetDetail)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetDetail)) {
         return warnArgumentValue(L, __func__, "access to Discord detail is disabled in settings for privacy");
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIcon)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIcon)) {
         return warnArgumentValue(L, __func__, "access to Discord large icon is disabled in settings for privacy");
     }
 
@@ -414,7 +426,8 @@ int TLuaInterpreter::setDiscordLargeIcon(lua_State* L)
     auto result = discordApiEnabled(L, true);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIcon)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIcon)) {
         return warnArgumentValue(L, __func__, "access to Discord large icon is disabled in settings for privacy");
     }
 
@@ -432,7 +445,8 @@ int TLuaInterpreter::setDiscordLargeIconText(lua_State* L)
     auto result = discordApiEnabled(L);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIconText)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIconText)) {
         return warnArgumentValue(L, __func__, "access to Discord large icon text is disabled in settings for privacy");
     }
 
@@ -455,7 +469,8 @@ int TLuaInterpreter::setDiscordParty(lua_State* L)
     auto result = discordApiEnabled(L);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetPartyInfo)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetPartyInfo)) {
         return warnArgumentValue(L, __func__, "access to Discord party info is disabled in settings for privacy");
     }
 
@@ -489,7 +504,8 @@ int TLuaInterpreter::setDiscordRemainingEndTime(lua_State* L)
     auto result = discordApiEnabled(L);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetTimeInfo)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetTimeInfo)) {
         return warnArgumentValue(L, __func__, "access to Discord time is disabled in settings for privacy");
     }
 
@@ -512,7 +528,8 @@ int TLuaInterpreter::setDiscordSmallIcon(lua_State* L)
     auto result = discordApiEnabled(L);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIcon)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIcon)) {
         return warnArgumentValue(L, __func__, "access to Discord small icon is disabled in settings for privacy");
     }
 
@@ -530,7 +547,8 @@ int TLuaInterpreter::setDiscordSmallIconText(lua_State* L)
     auto result = discordApiEnabled(L);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIconText)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIconText)) {
         return warnArgumentValue(L, __func__, "access to Discord small icon text is disabled in settings for privacy");
     }
 
@@ -552,7 +570,8 @@ int TLuaInterpreter::setDiscordState(lua_State* L)
     auto result = discordApiEnabled(L);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetState)) {
+    }
+    if (!(host.mDiscordAccessFlags & Host::DiscordSetState)) {
         return warnArgumentValue(L, __func__, "access to Discord state is disabled in settings for privacy");
     }
 

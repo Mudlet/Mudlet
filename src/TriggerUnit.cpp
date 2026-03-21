@@ -199,10 +199,9 @@ bool TriggerUnit::registerTrigger(TTrigger* pT)
     if (pT->getParent()) {
         addTrigger(pT);
         return true;
-    } else {
-        addTriggerRootNode(pT);
-        return true;
     }
+    addTriggerRootNode(pT);
+    return true;
 }
 
 void TriggerUnit::unregisterTrigger(TTrigger* pT)
@@ -213,10 +212,9 @@ void TriggerUnit::unregisterTrigger(TTrigger* pT)
     if (pT->getParent()) {
         removeTrigger(pT);
         return;
-    } else {
-        removeTriggerRootNode(pT);
-        return;
     }
+    removeTriggerRootNode(pT);
+    return;
 }
 
 
