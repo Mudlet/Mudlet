@@ -942,9 +942,6 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
 
     // Look up decoration colors from TLinkStore if this character has a link
     const int linkIndex = charStyle.linkIndex();
-    bool hasUnderlineColor = false;
-    bool hasOverlineColor = false;
-    bool hasStrikeoutColor = false;
     QColor underlineColor = defaultColor;
     QColor overlineColor = defaultColor;
     QColor strikeoutColor = defaultColor;
@@ -956,17 +953,14 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
 
         if (effectiveStyle.hasUnderlineColor) {
             underlineColor = effectiveStyle.underlineColor;
-            hasUnderlineColor = true;
         }
 
         if (effectiveStyle.hasOverlineColor) {
             overlineColor = effectiveStyle.overlineColor;
-            hasOverlineColor = true;
         }
 
         if (effectiveStyle.hasStrikeoutColor) {
             strikeoutColor = effectiveStyle.strikeoutColor;
-            hasStrikeoutColor = true;
         }
     }
 
@@ -1014,8 +1008,8 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
             painter.drawLine(textRect.left(), underlineY, textRect.right(), underlineY);
 
         } else {
-            // Solid underline - draw for linked characters (Qt didn't draw them) or if we have custom color
-            if (isLinked || hasUnderlineColor) {
+            // Solid underline - draw for linked characters (Qt didn't draw them)
+            if (isLinked) {
                 pen.setStyle(Qt::SolidLine);
                 painter.setPen(pen);
                 painter.drawLine(textRect.left(), underlineY, textRect.right(), underlineY);
