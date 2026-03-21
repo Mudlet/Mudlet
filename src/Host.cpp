@@ -959,6 +959,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
             reloadModules();
         }
         mWritingHostAndModules = false;
+        watcher->deleteLater();
     });
     watcher->setFuture(mModuleFuture);
     return {true, filename_xml, QString()};
