@@ -5360,7 +5360,7 @@ void mudlet::slot_updateCheckFailed(const QString& error)
 {
     auto* pHost = getActiveHost();
     if (pHost && pHost->mpConsole) {
-        pHost->mpConsole->printSystemMessage(tr("Update check failed - please check your internet connection. Error: %1\n").arg(error));
+        pHost->mpConsole->printSystemMessage(tr("Update check failed. Error: %1\n").arg(error));
     }
 }
 
