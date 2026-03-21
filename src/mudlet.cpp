@@ -219,7 +219,7 @@ void mudlet::init()
     //: Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!
     mTimeFormat = tr("hh:mm:ss");
 
-    if (QStringList{qsl("windowsvista"), qsl("macintosh")}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
+    if (QStringList{qsl("windowsvista"), qsl("macintosh"), qsl("macos")}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
         qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << mDefaultStyle << "' has been detected as the style factory in use - QPushButton styling fix applied!";
         mBG_ONLY_STYLESHEET = qsl("QPushButton {background-color: %1; border: 1px solid #8f8f91;}");
         mTEXT_ON_BG_STYLESHEET = qsl("QPushButton {color: %1; background-color: %2; border: 1px solid #8f8f91;}");
