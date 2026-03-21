@@ -4078,7 +4078,7 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
     }
     lua_pop(L, lua_gettop(L));
 
-    return (error);
+    return !error;
 }
 
 // No documentation available in wiki - internal function
