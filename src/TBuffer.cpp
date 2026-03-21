@@ -2943,27 +2943,26 @@ void TBuffer::decodeOSC(const QString& sequence)
                 customTooltip = queryParams.value(qsl("tooltip"));
             }
 
-            // Remove styling/menu/tooltip query parameters from URL for command processing
             QString baseUrl = rawUrl;
-            // Reuse the already parsed params for URL reconstruction
-            QMap<QString, QString> allParams = queryParams;
 
-            // For web URLs, preserve original parameters except our special ones
             if (rawUrl.startsWith(qsl("http://")) || rawUrl.startsWith(qsl("https://")) || rawUrl.startsWith(qsl("ftp://"))) {
-                // Remove our special parameters
-                allParams.remove(qsl("style"));
-                allParams.remove(qsl("menu"));
-                allParams.remove(qsl("tooltip"));
-
-                // Rebuild URL with only non-special parameters
                 int queryStart = baseUrl.indexOf('?');
                 if (queryStart != -1) {
-                    baseUrl = baseUrl.left(queryStart);
-                }
+                    // Split on raw query string so percent-encoded variants of
+                    // "config"/"preset" (e.g. %63%6F%6E%66%69%67) are preserved
+                    const QStringList rawPairs = baseUrl.mid(queryStart + 1).split('&');
+                    QStringList kept;
+                    for (const auto& pair : rawPairs) {
+                        const auto key = pair.left(pair.indexOf('='));
+                        if (key != qsl("config") && key != qsl("preset")) {
+                            kept.append(pair);
+                        }
+                    }
 
-                // Only append parameters if there are any left
-                if (!allParams.isEmpty()) {
-                    baseUrl = appendQueryParameters(baseUrl, allParams);
+                    baseUrl = baseUrl.left(queryStart);
+                    if (!kept.isEmpty()) {
+                        baseUrl += '?' + kept.join('&');
+                    }
                 }
             } else {
                 // For send: and prompt: commands, remove all query parameters
@@ -6292,7 +6291,11 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "\x1b]8;;send:look\x1b\\\x1b[34mLook\x1b[0m\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;prompt:cast%20fireball\x1b\\\x1b[33mCast Spell\x1b[0m\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;https://mudlet.org\x1b\\\x1b[36mWebsite\x1b[0m\x1b]8;;\x1b\\\n";
-    output += "       send:CMD  prompt:CMD (editable)  https://URL (browser)\n\n";
+    output += "       send:CMD  prompt:CMD (editable)  https://URL (browser)\n";
+    output += "URLs:  ";
+    output += "\x1b]8;;https://mudlet.org/?id=42&lang=en\x1b\\\x1b[36mWith params\x1b[0m\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;https://mudlet.org/?%63%6F%6E%66%69%67=value\x1b\\\x1b[36mEncoded config\x1b[0m\x1b]8;;\x1b\\\n";
+    output += "       query params preserved (?id=42&lang=en)  percent-encoded reserved names kept\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
     // 2. JSON CONFIGURATION - Show the structure early
