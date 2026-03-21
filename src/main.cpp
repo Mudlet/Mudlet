@@ -977,6 +977,10 @@ int main(int argc, char* argv[])
             mudlet::self()->migratePasswordsToSecureStorage();
         }
 
+        if (!telnetUri.isEmpty()) {
+            mudlet::self()->mProcessingTelnetUri = true;
+        }
+
         // Always load auto-login profiles first
         mudlet::self()->startAutoLogin(cliProfiles);
 
