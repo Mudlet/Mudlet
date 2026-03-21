@@ -855,6 +855,11 @@ void Host::resetProfile_phase2()
     mEventMap.clear();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
+
+    // Have to recopy the values into the Lua "color_table"
+    mLuaInterpreter.updateAnsi16ColorsInTable();
+    mLuaInterpreter.updateExtendedAnsiColorsInTable();
+
     mBlockScriptCompile = false;
 
     mAliasUnit.reenableAllTriggers();
@@ -862,6 +867,8 @@ void Host::resetProfile_phase2()
     mTriggerUnit.reenableAllTriggers();
     mKeyUnit.reenableAllTriggers();
 
+    // This is where the scripts for the profile get compiled (which confirms
+    // that they are valid) and all the Lua code outside of functions gets run:
     getTimerUnit()->compileAll();
     getTriggerUnit()->compileAll();
     getAliasUnit()->compileAll();
@@ -870,10 +877,6 @@ void Host::resetProfile_phase2()
     getScriptUnit()->compileAll(true);
 
     mResetProfile = false;
-
-    // Have to recopy the values into the Lua "color_table"
-    mLuaInterpreter.updateAnsi16ColorsInTable();
-    mLuaInterpreter.updateExtendedAnsiColorsInTable();
 
     TEvent event{};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));

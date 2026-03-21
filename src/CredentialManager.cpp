@@ -98,16 +98,25 @@ void CredentialManager::handleTimeout()
 {
     qWarning() << "CredentialManager: Operation timed out";
 
-    // Call appropriate callback with timeout error
-    if (mCurrentCallback) {
-        mCurrentCallback(false, qsl("Operation timed out"));
-    } else if (mCurrentRetrievalCallback) {
-        mCurrentRetrievalCallback(false, QString(), qsl("Operation timed out"));
-    } else if (mCurrentAvailabilityCallback) {
-        mCurrentAvailabilityCallback(false, qsl("Operation timed out"));
-    }
+    // Move callbacks to locals before cleanup — the callback chain may call
+    // cleanupCurrentOperation() (e.g. by starting a new keychain operation),
+    // which would destroy the std::function while it's still executing,
+    // causing use-after-free of captured lambda state
+    auto callback = std::exchange(mCurrentCallback, nullptr);
+    auto retrievalCallback = std::exchange(mCurrentRetrievalCallback, nullptr);
+    auto availabilityCallback = std::exchange(mCurrentAvailabilityCallback, nullptr);
 
+    // Clean up the timed-out operation before invoking the callback,
+    // since the callback may start a new operation
     cleanupCurrentOperation();
+
+    if (callback) {
+        callback(false, qsl("Operation timed out"));
+    } else if (retrievalCallback) {
+        retrievalCallback(false, QString(), qsl("Operation timed out"));
+    } else if (availabilityCallback) {
+        availabilityCallback(false, qsl("Operation timed out"));
+    }
 }
 
 void CredentialManager::cleanupCurrentOperation()
