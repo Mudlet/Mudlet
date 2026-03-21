@@ -17,8 +17,8 @@
         <file>icons/abandonedrealms_icon.jpg</file>
         <file>icons/accessories-text-editor.png</file>
         <file>icons/accursed_lands.png</file>
-        <file>icons/achaea_120_30.png</file>
-        <file>icons/aetolia_120_30.png</file>
+        <file>icons/achaea.png</file>
+        <file>icons/aetolia.png</file>
         <file>icons/application-exit.png</file>
         <file>icons/application-json.png</file>
         <file>icons/application-xml.png</file>
@@ -125,13 +125,13 @@
         <file>icons/gw2.png</file>
         <file>icons/head.png</file>
         <file>icons/help-hint.png</file>
-        <file>icons/imperian_120_30.png</file>
+        <file>icons/imperian.png</file>
         <file>icons/import.png</file>
         <file>icons/infinity_480x120.png</file>
         <file>icons/internet-telephony.png</file>
         <file>icons/legendsofthejedi_120x30.png</file>
         <file>icons/luminari_icon.png</file>
-        <file>icons/lusternia_120_30.png</file>
+        <file>icons/lusternia.png</file>
         <file>icons/media-optical.png</file>
         <file>icons/media-seek-backward.png</file>
         <file>icons/media-seek-forward.png</file>
@@ -191,6 +191,7 @@
         <file>icons/searchOptions-withVariables+wholeWords.png</file>
         <file>icons/searchOptions-withVariables.png</file>
         <file>icons/Slothmud.png</file>
+        <file>icons/starmourn.png</file>
         <file>icons/solid-line.png</file>
         <file>icons/stickmud_icon.jpg</file>
         <file>icons/system-restart.png</file>
