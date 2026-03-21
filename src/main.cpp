@@ -22,7 +22,7 @@
  ***************************************************************************/
 
 
-#if defined(__APPLE__)
+#if defined(Q_OS_MACOS)
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreServices/CoreServices.h>
 // MacTypes.h defines nil as nullptr, which conflicts with Boost
