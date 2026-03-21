@@ -6740,9 +6740,6 @@ void dlgTriggerEditor::saveVar()
     mChangingVar = true;
     int uiNameType = mpVarsMainArea->comboBox_variable_key_type->itemData(mpVarsMainArea->comboBox_variable_key_type->currentIndex(), Qt::UserRole).toInt();
     int uiValueType = mpVarsMainArea->comboBox_variable_value_type->itemData(mpVarsMainArea->comboBox_variable_value_type->currentIndex(), Qt::UserRole).toInt();
-    if ((uiNameType == LUA_TNUMBER || uiNameType == LUA_TSTRING) && newVar) {
-        uiNameType = LUA_TNONE;
-    }
     //check variable recasting
     const int varRecast = canRecast(pItem, uiNameType, uiValueType);
     if ((uiNameType == -1) || (variable && uiNameType != variable->getKeyType())) {

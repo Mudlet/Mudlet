@@ -392,7 +392,12 @@ bool LuaInterface::setValue(TVar* var)
 
 
     QList<TVar*> vars = varOrder(var);
-    QString variableChangeCode = vars[0]->getName();
+    QString variableChangeCode;
+    if (vars.size() == 1 && vars[0]->getKeyType() == LUA_TNUMBER) {
+        variableChangeCode = qsl("_G[%1]").arg(vars[0]->getName());
+    } else {
+        variableChangeCode = vars[0]->getName();
+    }
     for (int i = 1; i < vars.size(); i++) {
         if (vars[i]->isReference()) {
             return setCValue(vars);
@@ -435,7 +440,12 @@ bool LuaInterface::setValue(TVar* var)
 void LuaInterface::deleteVar(TVar* var)
 {
     QList<TVar*> vars = varOrder(var);
-    QString oldName = vars[0]->getName();
+    QString oldName;
+    if (vars.size() == 1 && vars[0]->getKeyType() == LUA_TNUMBER) {
+        oldName = qsl("_G[%1]").arg(vars[0]->getName());
+    } else {
+        oldName = vars[0]->getName();
+    }
     for (int i = 1; i < vars.size(); i++) {
         if (vars[i]->getKeyType() == LUA_TNUMBER) {
             oldName.append(qsl("[%1]").arg(vars[i]->getName()));
@@ -631,22 +641,25 @@ void LuaInterface::renameVar(TVar* var)
             if (i < vars.size() - 1) {
                 newName.append(qsl("[%1]").arg(vars[i]->getName()));
             }
-
         } else if (kType == LUA_TTABLE) {
             renameCVar(vars);
             return;
-        }
-
-        // That leaves LUA_TSTRING:
-        oldVariable.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
-        if (i < vars.size() - 1) {
-            newName.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
+        } else {
+            // LUA_TSTRING:
+            oldVariable.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
+            if (i < vars.size() - 1) {
+                newName.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
+            }
         }
     }
 
     if (vars.size() <= 1) {
         // this variable is at root level on _G
-        newName.append(qsl("_G[\"%1\"]").arg(vars.last()->getNewName()));
+        if (var->getNewKeyType() == LUA_TNUMBER) {
+            newName.append(qsl("_G[%1]").arg(vars.last()->getNewName()));
+        } else {
+            newName.append(qsl("_G[\"%1\"]").arg(vars.last()->getNewName()));
+        }
     } else {
         // this variable is nested in a table
         if (var->getNewKeyType() == LUA_TNUMBER) {
