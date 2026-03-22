@@ -431,6 +431,8 @@ Host::~Host()
     qDeleteAll(mStopWatchMap);
     mStopWatchMap.clear();
 
+    delete mMMCPServer;
+
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }

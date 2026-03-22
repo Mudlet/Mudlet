@@ -2014,6 +2014,7 @@ void mudlet::closeHost(const QString& name)
 
     mpTabBar->removeTab(name);
     // PLACEMARKER: Host destruction (1) - from all sources
+    mDiscord.resetData(pH);
     int hostCount = mHostManager.getHostCount();
     emit signal_hostDestroyed(pH, --hostCount);
     // This is what kills the Host instance:
