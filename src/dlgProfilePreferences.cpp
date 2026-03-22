@@ -56,7 +56,6 @@
 #include <QFontDialog>
 #include <QNetworkDiskCache>
 #include <QPainter>
-#include <QPainterPath>
 #include <QString>
 #include <QTableWidget>
 #include <QToolBar>
@@ -1134,7 +1133,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(spinBox_playerRoomOuterDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomOuterDiameter);
         connect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomInnerDiameter);
 
-        // Initialize room and exit size controls
+        // Initialize room, exit, and border size controls
         spinBox_roomSize->setValue(pHost->mRoomSize * 10);
         // mLineSize/mRoomBorderSize are inversely proportional to thickness
         // (exitWidth = 1/eSize * ...), convert to a direct 1-11 scale
@@ -1571,6 +1570,9 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(checkbox_mMapperShowRoomBorders, &QCheckBox::toggled, nullptr, nullptr);
     disconnect(checkBox_drawUpperLowerLevels, &QCheckBox::toggled, nullptr, nullptr);
     disconnect(mMapperUseAntiAlias, &QCheckBox::toggled, nullptr, nullptr);
+    if (mpDoubleSpinBox_mapSymbolFontFudge) {
+        disconnect(mpDoubleSpinBox_mapSymbolFontFudge, qOverload<double>(&QDoubleSpinBox::valueChanged), nullptr, nullptr);
+    }
 
     // Console buffer settings
     disconnect(checkBox_useMaxBufferSize, &QCheckBox::toggled, nullptr, nullptr);
