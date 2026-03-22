@@ -8253,7 +8253,7 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
             // First argument is a string so is presumably a command line name
             name = CMDLINE_NAME(L, 1);
             if (n > 1) {
-                saveCommands = !getVerifiedBool(L, __func__, 2, "save command history", true);
+                saveCommands = getVerifiedBool(L, __func__, 2, "save command history", true);
             }
 
         } else {
@@ -8262,7 +8262,7 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
                 return lua_error(L); // Dummy return!
             }
 
-            saveCommands = !getVerifiedBool(L, __func__, 1, "save command history", true);
+            saveCommands = getVerifiedBool(L, __func__, 1, "save command history", true);
         }
     }
 
