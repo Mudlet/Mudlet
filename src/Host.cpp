@@ -2941,8 +2941,8 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
         if (startTimeStamp.isDouble()) {
             timeStamp = static_cast<int64_t>(startTimeStamp.toDouble());
             pMudlet->mDiscord.setStartTimeStamp(this, timeStamp);
-        } else if (endTimeStamp.isString()) {
-            timeStamp = endTimeStamp.toString().toLongLong();
+        } else if (startTimeStamp.isString()) {
+            timeStamp = startTimeStamp.toString().toLongLong();
             pMudlet->mDiscord.setStartTimeStamp(this, timeStamp);
         }
     }
