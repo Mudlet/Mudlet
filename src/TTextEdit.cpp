@@ -72,6 +72,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mEnableBlinkText(pH->getEnableBlinkText())
 , mMouseWheelRemainder()
 {
+    mBlinkContentMinX = INT_MAX;
     mLastClickTimer.start();
     Q_ASSERT_X(mpHost, "TTextEdit::TTextEdit(...)", "mpHost is a nullptr");
     Q_ASSERT_X(mSearchHighlightFgColor != mSearchHighlightBgColor, "TTextEdit::TTextEdit(...)", "search highlight foreground and background colors must not be the same");
@@ -880,7 +881,7 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
         if (mEnableBlinkText) {
             const bool isFastBlink = attributes & TChar::FastBlink;
             auto pMudlet = mudlet::self();
-            const int blinkSpan = mPrevBlinkMaxX - mPrevBlinkMinX;
+            const int blinkSpan = (mPrevBlinkMaxX > mPrevBlinkMinX) ? (mPrevBlinkMaxX - mPrevBlinkMinX) : 0;
             qreal normalizedX = 0.5;
             if (blinkSpan > 0) {
                 // normalizedX may be outside [0,1] when text has scrolled or reflowed
@@ -888,7 +889,7 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
                 // for out-of-range values, so no clamping is needed.
                 normalizedX = static_cast<qreal>(textRect.center().x() - mPrevBlinkMinX) / static_cast<qreal>(blinkSpan);
             } else if (width() > 0) {
-                // blinkSpan <= 0 when no blinking content was rendered last frame
+                // blinkSpan is 0 when no blinking content was rendered last frame
                 // (e.g. first frame, widget hidden, or content scrolled away).
                 // Fall back to widget-width normalization so the pulse has a reasonable position.
                 normalizedX = static_cast<qreal>(textRect.center().x()) / static_cast<qreal>(width());
@@ -3265,8 +3266,8 @@ void TTextEdit::slot_changeEnableBlinkText(const bool state)
         if (!mEnableBlinkText && mIsBlinkClientRegistered) {
             if (auto* pMudlet = mudlet::self()) {
                 pMudlet->unregisterBlinkClient();
-                mIsBlinkClientRegistered = false;
             }
+            mIsBlinkClientRegistered = false;
         }
         update();
     }
@@ -3274,7 +3275,9 @@ void TTextEdit::slot_changeEnableBlinkText(const bool state)
 
 void TTextEdit::slot_blinkStateChanged()
 {
-    forceUpdate();
+    if (mIsBlinkClientRegistered) {
+        forceUpdate();
+    }
 }
 
 void TTextEdit::slot_scrollStoppedTimeout()

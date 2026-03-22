@@ -30,12 +30,11 @@
 
 #include <QElapsedTimer>
 #include <QMap>
-#include <climits>
 #include <QPointer>
 #include <QTimer>
 #include <QWidget>
-#include <chrono>
 
+#include <chrono>
 #include <string>
 
 
@@ -226,9 +225,9 @@ private:
     bool mEnableBlinkText = false;
     mutable bool mHasBlinkingContent = false;
     mutable bool mIsBlinkClientRegistered = false;
-    mutable int mBlinkContentMinX = INT_MAX; // sentinel: reset to INT_MAX each frame in drawForeground()
+    mutable int mBlinkContentMinX; // INT_MAX sentinel, initialized in constructor, reset each frame in drawForeground()
     mutable int mBlinkContentMaxX = 0;
-    mutable int mPrevBlinkMinX = INT_MAX;
+    mutable int mPrevBlinkMinX = 0; // 0 means no previous-frame data; blinkSpan will be 0, triggering the fallback path
     mutable int mPrevBlinkMaxX = 0;
     QPointer<QTimer> mpScrollStoppedTimer;
     std::chrono::high_resolution_clock::time_point mCopyImageStartTime;
