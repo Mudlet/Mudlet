@@ -224,10 +224,14 @@ QString IrcMessageFormatter::formatNoticeMessage(IrcNoticeMessage* message, bool
         if (cmd.toUpper() == "PING") {
             const QString secs = formatSeconds(params.value(1).toInt());
             return QObject::tr("! %1 replied in %2").arg(message->nick(), secs);
-        } else if (cmd.toUpper() == "TIME") { // NOLINT(readability-else-after-return)
+        }
+
+        if (cmd.toUpper() == "TIME") {
             const QString rest = QStringList(params.mid(1)).join(" ");
             return QObject::tr("! %1 time is %2").arg(message->nick(), rest);
-        } else if (cmd.toUpper() == "VERSION") { // NOLINT(readability-else-after-return)
+        }
+
+        if (cmd.toUpper() == "VERSION") {
             const QString rest = QStringList(params.mid(1)).join(" ");
             return QObject::tr("! %1 version is %2").arg(message->nick(), rest);
         }

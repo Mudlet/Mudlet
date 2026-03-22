@@ -5252,14 +5252,17 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
         if (QFile::exists(qsl("/usr/local/share/hunspell/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/local/share/hunspell/");
-        } else if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) { // NOLINT(readability-else-after-return)
+        }
+        if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/share/hunspell/");
-        } else if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) { // NOLINT(readability-else-after-return)
+        }
+        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) { // NOLINT(readability-else-after-return)
+        }
+        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
@@ -5277,14 +5280,17 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
         if (QFile::exists(qsl("/usr/local/share/mozilla-dicts/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/local/share/mozilla-dicts/");
-        } else if (QFile::exists(qsl("/usr/share/mozilla-dicts/%1.aff").arg(extra1))) { // NOLINT(readability-else-after-return)
+        }
+        if (QFile::exists(qsl("/usr/share/mozilla-dicts/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/share/mozilla-dicts/");
-        } else if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) { // NOLINT(readability-else-after-return)
+        }
+        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) { // NOLINT(readability-else-after-return)
+        }
+        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
@@ -5297,20 +5303,23 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
         if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/share/hunspell/");
-        } else if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) { // NOLINT(readability-else-after-return)
+        }
+        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory
             // alongside the ./src one. {Typically QMake builds from Qtcreator
             // with CONFIG containing both 'debug_and_release' and
             // 'debug_and_release_target' (this is normal also on Windows):
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) { // NOLINT(readability-else-after-return)
+        }
+        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one. {Typically
             // QMake builds from Qtcreator with CONFIG NOT containing both
             // 'debug_and_release' and 'debug_and_release_target':
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(qsl("%1/../../mudlet/src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) { // NOLINT(readability-else-after-return)
+        }
+        if (QFile::exists(qsl("%1/../../mudlet/src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory above the ./src one. {Typically
             // CMake builds from Qtcreator which are outside of the unpacked
             // source code from a git repo or tarball - which has to have been
@@ -5329,7 +5338,8 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
         if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
             return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) { // NOLINT(readability-else-after-return)
+        }
+        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one:
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
         } else { // NOLINT(readability-else-after-return)
@@ -5650,7 +5660,8 @@ bool mudlet::isVersionAtLeast(const QString& minVersion)
 
         if (currentPart > minPart) {
             return true;
-        } else if (currentPart < minPart) { // NOLINT(readability-else-after-return)
+        }
+        if (currentPart < minPart) {
             return false;
         }
         // If equal, continue to next part
