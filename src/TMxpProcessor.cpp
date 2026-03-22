@@ -24,6 +24,126 @@
 #include "TEncodingHelper.h"
 #include <QDebug>
 
+// Static sets of MXP tags from the specification
+// See: https://www.zuggsoft.com/zmud/mxp.htm
+
+const QSet<QString>& TMxpProcessor::openModeTags()
+{
+    // MXP spec: "Only the tags described in this section [Text Formatting] are OPEN tags.
+    // All other MXP tags are SECURE tags."
+    // This includes text formatting, line spacing, and optional HTML tags
+    static const QSet<QString> tags = {
+            // Text formatting (OPEN)
+            qsl("B"),
+            qsl("BOLD"),
+            qsl("STRONG"),
+            qsl("I"),
+            qsl("ITALIC"),
+            qsl("EM"),
+            qsl("U"),
+            qsl("UNDERLINE"),
+            qsl("S"),
+            qsl("STRIKEOUT"),
+            qsl("C"),
+            qsl("COLOR"),
+            qsl("H"),
+            qsl("HIGH"),
+            qsl("FONT"),
+            // Line spacing (OPEN)
+            qsl("NOBR"),
+            qsl("P"),
+            qsl("BR"),
+            qsl("SBR"),
+            // Optional HTML tags (formatting)
+            qsl("H1"),
+            qsl("H2"),
+            qsl("H3"),
+            qsl("H4"),
+            qsl("H5"),
+            qsl("H6"),
+            qsl("HR"),
+            qsl("SMALL"),
+            qsl("TT"),
+    };
+    return tags;
+}
+
+const QSet<QString>& TMxpProcessor::allMxpTags()
+{
+    static const QSet<QString> tags = []() {
+        QSet<QString> result = openModeTags();
+        result.unite({
+                // Links (SECURE)
+                qsl("SEND"),
+                qsl("A"),
+                qsl("EXPIRE"),
+                // Version control (SECURE)
+                qsl("VERSION"),
+                qsl("SUPPORT"),
+                // MSP compatibility (SECURE)
+                qsl("SOUND"),
+                qsl("MUSIC"),
+                // Entity display (SECURE)
+                qsl("GAUGE"),
+                qsl("STAT"),
+                // Frames and cursor control (SECURE)
+                qsl("FRAME"),
+                qsl("DEST"),
+                // Cross-linking (SECURE)
+                qsl("RELOCATE"),
+                qsl("USER"),
+                qsl("PASSWORD"),
+                // Images (SECURE)
+                qsl("IMAGE"),
+                // File filters (SECURE)
+                qsl("FILTER"),
+                // Definition commands (SECURE)
+                qsl("!ELEMENT"),
+                qsl("!EL"),
+                qsl("!ATTLIST"),
+                qsl("!AT"),
+                qsl("!ENTITY"),
+                qsl("!EN"),
+                qsl("!TAG"),
+                // Variables (SECURE)
+                qsl("VAR"),
+                qsl("V"),
+                // Welcome text
+                qsl("WELCOME"),
+                // HTML comments
+                qsl("!--"),
+        });
+        return result;
+    }();
+    return tags;
+}
+
+bool TMxpProcessor::isRecognizedMxpTag(const QString& tagName) const
+{
+    const QString upper = tagName.toUpper();
+    if (allMxpTags().contains(upper)) {
+        return true;
+    }
+    return mMxpTagProcessor.getElementRegistry().containsElement(upper);
+}
+
+bool TMxpProcessor::isTagAllowedInCurrentMode(const QString& tagName) const
+{
+    if (mMXP_MODE == MXP_MODE_LOCKED) {
+        return false;
+    }
+
+    if (mMXP_MODE == MXP_MODE_SECURE || mMXP_MODE == MXP_MODE_TEMP_SECURE) {
+        return isRecognizedMxpTag(tagName);
+    }
+
+    const QString upper = tagName.toUpper();
+    if (openModeTags().contains(upper)) {
+        return true;
+    }
+    return mMxpTagProcessor.getElementRegistry().isOpenElement(upper);
+}
+
 bool TMxpProcessor::setMode(const QString& code)
 {
     bool isOk = false;
@@ -166,20 +286,30 @@ void TMxpProcessor::disable()
 
 TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustomEntities)
 {
+    // LOCKED mode: per MXP spec, line is not parsed for any tags at all
+    if (mMXP_MODE == MXP_MODE_LOCKED) {
+        mMxpTagProcessor.handleContent(ch);
+        return HANDLER_FALL_THROUGH;
+    }
+
+    // Newline while inside a tag: MXP tags cannot span lines
+    // Reject the partial tag as literal text, then let the newline trigger line commit
+    if ((ch == '\n' || ch == '\r') && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag() && !mMxpTagBuilder.isInsideComment()) {
+        const std::string rawBytes = mMxpTagBuilder.getRawTagContent();
+        const QString decoded = decodeRawBytes(rawBytes, mpMxpClient->getEncoding());
+
+        lastEntityValue = qsl("<") + decoded;
+        mMxpTagBuilder.reset();
+        // Return HANDLER_INSERT_AND_REPROCESS to output the rejected tag
+        // and reprocess the newline character (which will cause line commit)
+        return HANDLER_INSERT_AND_REPROCESS;
+    }
+
     if (ch == '<' && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.isQuotedSequence() && !mMxpTagBuilder.isInsideComment()) {
         // Error recovery: nested '<' inside a tag
         // Output the incomplete tag as text and prepare to process the new '<' as a tag start
         const std::string rawBytes = mMxpTagBuilder.getRawTagContent();
-        const QByteArray encoding = mpMxpClient->getEncoding();
-        QString decoded;
-
-        if (encoding == qsl("UTF-8")) {
-            decoded = QString::fromStdString(rawBytes);
-        } else if (encoding == qsl("ISO 8859-1")) {
-            decoded = QString::fromLatin1(rawBytes.c_str(), static_cast<int>(rawBytes.length()));
-        } else {
-            decoded = TEncodingHelper::decode(QByteArray::fromRawData(rawBytes.c_str(), rawBytes.length()), encoding);
-        }
+        const QString decoded = decodeRawBytes(rawBytes, mpMxpClient->getEncoding());
 
         lastEntityValue = qsl("<") + decoded;
         // resetForNewTag() puts the builder in "inside tag" state, as if we just processed '<'
@@ -189,6 +319,27 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     }
 
     if (!mMxpTagBuilder.accept(ch) && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag()) {
+        // Character consumed, tag still building - validate the tag name
+        // against known MXP tags for early rejection of non-MXP content.
+        const std::string partialName = mMxpTagBuilder.getPartialTagName();
+        if (!partialName.empty()) {
+            // First check: reject immediately if tag name contains invalid characters
+            // like %, ^, @, etc. This catches non-MXP content like <%^BOLD immediately
+            if (!isValidTagName(partialName)) {
+                return rejectCurrentTag();
+            }
+            // Second check: if tag name is complete (hit a boundary), validate
+            // against known MXP tags. We intentionally do NOT reject based on
+            // partial prefix matching because "SE" might not match any OPEN-mode
+            // tag yet still be a legitimate MXP tag (SEND) that we need to
+            // collect fully before deciding.
+            if (mMxpTagBuilder.isTagNameComplete()) {
+                const QString qPartialName = QString::fromStdString(partialName);
+                if (!isTagAllowedInCurrentMode(qPartialName)) {
+                    return rejectCurrentTag();
+                }
+            }
+        }
         return HANDLER_NEXT_CHAR;
     }
     if (mMxpTagBuilder.hasTag()) {
@@ -197,20 +348,14 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
         const std::string rawTagBytes = mMxpTagBuilder.getRawTagContent();
         const QByteArray encoding = mpMxpClient->getEncoding();
 
-        // Build the tag content string with proper encoding
-        QString rawTagContent = qsl("<");
-
-        // Decode the raw bytes using the proper encoding
-        if (encoding == qsl("UTF-8")) {
-            rawTagContent += QString::fromStdString(rawTagBytes);
-        } else if (encoding == qsl("ISO 8859-1")) {
-            rawTagContent += QString::fromLatin1(rawTagBytes.c_str(), static_cast<int>(rawTagBytes.length()));
-        } else {
-            // For other encodings (GBK, BIG5, EUC-KR, etc.), use TEncodingHelper
-            rawTagContent += TEncodingHelper::decode(QByteArray::fromRawData(rawTagBytes.c_str(), rawTagBytes.length()), encoding);
-        }
+        const QString rawTagContent = qsl("<") + decodeRawBytes(rawTagBytes, encoding);
 
         QScopedPointer<MxpTag> const tag(mMxpTagBuilder.buildTag());
+
+        if (!isTagAllowedInCurrentMode(tag->getName())) {
+            lastEntityValue = rawTagContent;
+            return HANDLER_INSERT_ENTITY_SYS;
+        }
 
         TMxpTagHandlerResult const result = mMxpTagProcessor.handleTag(mMxpTagProcessor, *mpMxpClient, tag.get());
 
@@ -249,6 +394,65 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     mMxpTagProcessor.handleContent(ch);
 
     return HANDLER_FALL_THROUGH;
+}
+
+QString TMxpProcessor::decodeRawBytes(const std::string& raw, const QByteArray& encoding) const
+{
+    if (encoding == QByteArrayLiteral("UTF-8")) {
+        return QString::fromStdString(raw);
+    } else if (encoding == QByteArrayLiteral("ISO 8859-1")) {
+        return QString::fromLatin1(raw.c_str(), static_cast<int>(raw.length()));
+    } else {
+        return TEncodingHelper::decode(QByteArray::fromRawData(raw.c_str(), raw.length()), encoding);
+    }
+}
+
+bool TMxpProcessor::isValidTagName(const std::string& tagName) const
+{
+    if (tagName.empty()) {
+        return true;
+    }
+
+    for (size_t i = 0; i < tagName.size(); ++i) {
+        const char ch = tagName[i];
+        if ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_' || ch == '-' || ch == '/') {
+            continue;
+        }
+        // '!' is only valid as the first character (for !ELEMENT, !ENTITY, etc.)
+        if (ch == '!' && i == 0) {
+            continue;
+        }
+
+        return false;
+    }
+
+    return true;
+}
+
+QString TMxpProcessor::abortCurrentTag()
+{
+    const std::string rawBytes = mMxpTagBuilder.getRawTagContent();
+    const QString decoded = decodeRawBytes(rawBytes, mpMxpClient->getEncoding());
+    const QString result = qsl("<") + decoded;
+    mMxpTagBuilder.reset();
+    return result;
+}
+
+TMxpProcessingResult TMxpProcessor::rejectCurrentTag()
+{
+    const std::string rawBytes = mMxpTagBuilder.getRawTagContent();
+
+    // Remove the last byte (the character that triggered or followed rejection).
+    // That character will be re-processed through HANDLER_INSERT_AND_REPROCESS,
+    // allowing ANSI escape sequences starting with ESC to be properly handled
+    // instead of being output as literal text.
+    std::string validPrefix = rawBytes.empty() ? "" : rawBytes.substr(0, rawBytes.length() - 1);
+
+    const QString decoded = decodeRawBytes(validPrefix, mpMxpClient->getEncoding());
+
+    lastEntityValue = qsl("<") + decoded;
+    mMxpTagBuilder.reset();
+    return HANDLER_INSERT_AND_REPROCESS;
 }
 
 void TMxpProcessor::processRawInput(char ch)

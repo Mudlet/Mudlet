@@ -219,7 +219,7 @@ void mudlet::init()
     //: Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!
     mTimeFormat = tr("hh:mm:ss");
 
-    if (QStringList{qsl("windowsvista"), qsl("macintosh")}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
+    if (QStringList{qsl("windowsvista"), qsl("macintosh"), qsl("macos")}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
         qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << mDefaultStyle << "' has been detected as the style factory in use - QPushButton styling fix applied!";
         mBG_ONLY_STYLESHEET = qsl("QPushButton {background-color: %1; border: 1px solid #8f8f91;}");
         mTEXT_ON_BG_STYLESHEET = qsl("QPushButton {color: %1; background-color: %2; border: 1px solid #8f8f91;}");
@@ -2514,7 +2514,13 @@ bool mudlet::saveWindowLayout()
         ofs << layoutData;
         if (!layoutFile.commit()) {
             qDebug() << "mudlet::saveWindowLayout: error saving window layout: " << layoutFile.errorString();
+            return false;
         }
+
+        if (!saveFloatingDockGeometries()) {
+            return false;
+        }
+
         mHasSavedLayout = true;
         return true;
     }
@@ -2546,7 +2552,10 @@ bool mudlet::loadWindowLayout()
 
             const bool rv = restoreState(layoutData);
 
-            commitLayoutUpdates(true);
+            if (rv) {
+                restoreFloatingDockGeometries();
+                commitLayoutUpdates(true);
+            }
             mIsLoadingLayout = false;
 
             return rv;
@@ -2560,6 +2569,79 @@ void mudlet::commitLayoutUpdates(bool flush)
     for (auto pHost : mHostManager) {
         if (pHost->commitLayoutUpdates(flush)) {
             mHasSavedLayout = false;
+        }
+    }
+}
+
+bool mudlet::saveFloatingDockGeometries()
+{
+    const QString geoFilePath = getMudletPath(enums::mainDataItemPath, qsl("windowLayoutGeometry.dat"));
+
+    QSaveFile geoFile(geoFilePath);
+    if (!geoFile.open(QIODevice::WriteOnly)) {
+        qWarning() << "mudlet::saveFloatingDockGeometries: error opening geometry file for writing:" << geoFile.errorString();
+        return false;
+    }
+
+    QDataStream ofs(&geoFile);
+    if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ofs.setVersion(scmQDataStreamFormat_5_12);
+    }
+
+    QMap<QString, QByteArray> geometries;
+    for (auto pHost : mHostManager) {
+        if (!pHost || !pHost->mpConsole) {
+            continue;
+        }
+        const auto hostName = pHost->getName();
+        for (auto&& [name, pDockWidget] : pHost->mpConsole->mDockWidgetMap.asKeyValueRange()) {
+            if (pDockWidget && pDockWidget->isFloating()) {
+                const QString key = qsl("%1/%2").arg(hostName, name);
+                geometries[key] = pDockWidget->saveGeometry();
+            }
+        }
+    }
+
+    ofs << geometries;
+
+    if (!geoFile.commit()) {
+        qWarning() << "mudlet::saveFloatingDockGeometries: error saving geometry file:" << geoFile.errorString();
+        return false;
+    }
+    return true;
+}
+
+void mudlet::restoreFloatingDockGeometries()
+{
+    const QString geoFilePath = getMudletPath(enums::mainDataItemPath, qsl("windowLayoutGeometry.dat"));
+
+    QFile geoFile(geoFilePath);
+    if (!geoFile.exists() || !geoFile.open(QIODevice::ReadOnly)) {
+        return;
+    }
+
+    QDataStream ifs(&geoFile);
+    if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(scmQDataStreamFormat_5_12);
+    }
+
+    QMap<QString, QByteArray> geometries;
+    ifs >> geometries;
+    geoFile.close();
+
+    for (auto pHost : mHostManager) {
+        if (!pHost || !pHost->mpConsole) {
+            continue;
+        }
+        const auto hostName = pHost->getName();
+        for (auto&& [name, pDockWidget] : pHost->mpConsole->mDockWidgetMap.asKeyValueRange()) {
+            if (!pDockWidget || !pDockWidget->isFloating()) {
+                continue;
+            }
+            const QString key = qsl("%1/%2").arg(hostName, name);
+            if (geometries.contains(key)) {
+                pDockWidget->restoreGeometry(geometries.value(key));
+            }
         }
     }
 }
@@ -3617,7 +3699,7 @@ void mudlet::assignKeySequences()
         dactionPackageManager->setShortcut(QKeySequence());
 
         delete mpShortcutModules.data();
-        mpShortcutModules = new QShortcut(mKeySequencePackages, this);
+        mpShortcutModules = new QShortcut(mKeySequenceModules, this);
         connect(mpShortcutModules.data(), &QShortcut::activated, this, &mudlet::slot_moduleManager);
         dactionModuleManager->setShortcut(QKeySequence());
 

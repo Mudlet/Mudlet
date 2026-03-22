@@ -1241,7 +1241,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
@@ -3549,6 +3549,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
 
                             theme_download_label->hide();
                             tempThemesArchive->deleteLater();
+                            watcher->deleteLater();
                         });
                         watcher->setFuture(future);
                         reply->deleteLater();
