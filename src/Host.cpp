@@ -428,6 +428,9 @@ Host::~Host()
     qDeleteAll(profileShortcuts);
     profileShortcuts.clear();
 
+    qDeleteAll(mStopWatchMap);
+    mStopWatchMap.clear();
+
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
