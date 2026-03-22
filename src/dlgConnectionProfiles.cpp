@@ -308,6 +308,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
 dlgConnectionProfiles::~dlgConnectionProfiles()
 {
+    if (mPasswordSaveTimer) {
+        mPasswordSaveTimer->stop();
+    }
+    mPendingPasswordSaveProfile.clear();
+
     // Clear any pending operation flags
     mKeychainOperationInProgress = false;
     mPendingProfileLoad.clear();
@@ -810,7 +815,11 @@ void dlgConnectionProfiles::slot_addProfile()
 {
     profile_name_entry->setReadOnly(false);
     // while normally handled by fillout_form, due to it's asynchronous nature it is better UX to reset it here
-    character_password_entry->setText(QString());
+    // Block signals to prevent triggering password save for the previously selected profile
+    {
+        const QSignalBlocker blocker(character_password_entry);
+        character_password_entry->setText(QString());
+    }
     fillout_form();
     welcome_message->hide();
 
@@ -1090,7 +1099,18 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     // because there isn't one in storage yet. It'll be copied over into the widget
     // by the copy method
     if (!mCopyingProfile) {
-        character_password_entry->setText(QString());
+        // Cancel any pending password save from the previous profile to prevent
+        // cross-profile password corruption when rapidly switching profiles
+        if (mPasswordSaveTimer) {
+            mPasswordSaveTimer->stop();
+        }
+        mPendingPasswordSaveProfile.clear();
+
+        // Block signals when clearing to prevent triggering a save for the wrong profile
+        {
+            const QSignalBlocker blocker(character_password_entry);
+            character_password_entry->setText(QString());
+        }
         // Schedule password loading asynchronously to avoid event loop issues
         auto* timer = new QTimer(this);
         timer->setSingleShot(true);
@@ -1633,6 +1653,7 @@ void dlgConnectionProfiles::slot_copyProfile()
         mpCopyProfile->setEnabled(true);
         QApplication::restoreOverrideCursor();
         validateProfile();
+        watcher->deleteLater();
     });
     watcher->setFuture(future);
 }
@@ -1839,9 +1860,11 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
         if (!character_password_entry->text().trimmed().isEmpty()) {
             pHost->setPass(character_password_entry->text().trimmed());
-        } else {
-            slot_updatePassword(pHost->getPass());
         }
+        // Note: If password field is empty, we don't call slot_updatePassword() because:
+        // 1. The host's password was already loaded via Host::loadSecuredPassword()
+        // 2. Calling slot_updatePassword with empty password would delete the stored password
+        // 3. slot_updatePassword reads profile from list widget which could mismatch
 
         if (!login_entry->text().trimmed().isEmpty()) {
             pHost->setLogin(login_entry->text().trimmed());
@@ -2452,6 +2475,12 @@ void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name
 
 void dlgConnectionProfiles::slot_passwordTextChanged()
 {
+    QListWidgetItem* pItem = listWidget_profiles->currentItem();
+    if (!pItem) {
+        return;
+    }
+    mPendingPasswordSaveProfile = pItem->data(csmNameRole).toString();
+
     // Cancel any pending password save
     if (mPasswordSaveTimer) {
         mPasswordSaveTimer->stop();
@@ -2460,9 +2489,13 @@ void dlgConnectionProfiles::slot_passwordTextChanged()
         mPasswordSaveTimer->setSingleShot(true);
         mPasswordSaveTimer->setInterval(500); // 500ms debounce
         connect(mPasswordSaveTimer, &QTimer::timeout, this, [this]() {
-            QListWidgetItem* pItem = listWidget_profiles->currentItem();
-            if (pItem) {
-                slot_updatePassword(character_password_entry->text());
+            if (!mPendingPasswordSaveProfile.isEmpty()) {
+                // Check if this profile is STILL selected - if not, don't save
+                // (user switched away, so the password field content is for a different profile)
+                QListWidgetItem* currentItem = listWidget_profiles->currentItem();
+                if (currentItem && currentItem->data(csmNameRole).toString() == mPendingPasswordSaveProfile) {
+                    slot_updatePassword(character_password_entry->text());
+                }
             }
         });
     }

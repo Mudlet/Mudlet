@@ -25,6 +25,7 @@
 
 
 #include "TEncodingTable.h"
+#include "THyperlinkStyling.h"
 #include "TLinkStore.h"
 #include "utils.h"
 
@@ -443,14 +444,8 @@ private:
     // Kept as a separate flag because it must often be handled separately
     bool mIsSelected = false;
     int mLinkIndex = 0;
-
-    // Enhanced decoration color support for OSC 8 hyperlinks
-    QColor mUnderlineColor;
-    QColor mOverlineColor;
-    QColor mStrikeoutColor;
-    bool mHasCustomUnderlineColor = false;
-    bool mHasCustomOverlineColor = false;
-    bool mHasCustomStrikeoutColor = false;
+    // Note: Decoration colors (underline/overline/strikeout) are stored in TLinkStore
+    // for memory efficiency - they are looked up via linkIndex() at render time.
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 
