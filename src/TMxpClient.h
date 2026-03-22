@@ -87,9 +87,9 @@ public:
         return true;
     }
 
-    virtual bool endTagReceived(MxpEndTag* startTag)
+    virtual bool endTagReceived(MxpEndTag* endTag)
     {
-        Q_UNUSED(startTag)
+        Q_UNUSED(endTag)
         return true;
     }
 
