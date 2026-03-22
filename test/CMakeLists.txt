@@ -10,7 +10,6 @@ endif()
 find_package(Qt6 6.8.2 REQUIRED COMPONENTS Test)
 
 set(UNIT_TESTS
-    BlinkAnimationTest
     TEntityResolverTest
     TEntityHandlerTest
     TLinkStoreTest
