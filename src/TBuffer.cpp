@@ -2973,7 +2973,18 @@ void TBuffer::decodeOSC(const QString& sequence)
                     const QStringList rawPairs = baseUrl.mid(queryStart + 1).split('&');
                     QStringList kept;
                     for (const auto& pair : rawPairs) {
-                        const auto key = pair.left(pair.indexOf('='));
+                        // Find the separator between key and value - use earliest of '=' or '%3D' (percent-encoded =)
+                        int literalEq = pair.indexOf('=');
+                        int encodedEq = pair.indexOf(qsl("%3D"), 0, Qt::CaseInsensitive);
+                        int eqPos = -1;
+                        if (literalEq >= 0 && encodedEq >= 0) {
+                            eqPos = qMin(literalEq, encodedEq);
+                        } else if (literalEq >= 0) {
+                            eqPos = literalEq;
+                        } else {
+                            eqPos = encodedEq;
+                        }
+                        const auto key = eqPos >= 0 ? pair.left(eqPos) : pair;
                         if (key != qsl("config") && key != qsl("preset")) {
                             kept.append(pair);
                         }
