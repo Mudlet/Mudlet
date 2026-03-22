@@ -5000,6 +5000,10 @@ end)LUA");
 // on initialization of a new session *or* in case of an interpreter reset by the user.
 void TLuaInterpreter::initLuaGlobals()
 {
+    if (pGlobalLua) {
+        lua_close(pGlobalLua);
+    }
+
     pGlobalLua = newstate();
     storeHostInLua(pGlobalLua, mpHost);
 
