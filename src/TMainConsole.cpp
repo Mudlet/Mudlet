@@ -458,7 +458,7 @@ void TMainConsole::resetMainConsole()
     QMutableMapIterator<QString, TDockWidget*> itDockWidget(mDockWidgetMap);
     while (itDockWidget.hasNext()) {
         itDockWidget.next();
-        itDockWidget.value()->close();
+        itDockWidget.value()->deleteLater();
         itDockWidget.remove();
     }
 
@@ -480,14 +480,14 @@ void TMainConsole::resetMainConsole()
     QMutableMapIterator<QString, TLabel*> itLabel(mLabelMap);
     while (itLabel.hasNext()) {
         itLabel.next();
-        itLabel.value()->close();
+        itLabel.value()->deleteLater();
         itLabel.remove();
     }
 
     QMutableMapIterator<QString, TScrollBox*> itScrollBox(mScrollBoxMap);
     while (itScrollBox.hasNext()) {
         itScrollBox.next();
-        itScrollBox.value()->close();
+        itScrollBox.value()->deleteLater();
         itScrollBox.remove();
     }
 
