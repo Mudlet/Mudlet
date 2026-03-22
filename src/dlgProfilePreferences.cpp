@@ -1285,7 +1285,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -1439,29 +1439,24 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     int shortcutsRow = 0;
     while (shortcutKeys.hasNext()) {
         auto key = shortcutKeys.next();
-        QKeySequence* sequence = new QKeySequence(*pHost->profileShortcuts.value(key));
-        currentShortcuts.insert(key, sequence);
-        auto sequenceEdit = new QKeySequenceEdit(*sequence);
+        currentShortcuts.insert(key, QKeySequence(*pHost->profileShortcuts.value(key)));
+        auto sequenceEdit = new QKeySequenceEdit(currentShortcuts.value(key));
 
         gridLayout_groupBox_shortcuts->addWidget(new QLabel(mudlet::self()->mpShortcutsManager->getLabel(key)), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
         shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
-            QKeySequence* newSequence = nullptr;
-            if (sequenceEdit->keySequence().isEmpty() || sequenceEdit->keySequence().matches(QKeySequence(Qt::Key_Escape))) {
-                newSequence = new QKeySequence();
-            } else {
-                newSequence = new QKeySequence(sequenceEdit->keySequence());
+            QKeySequence newSequence;
+            if (!sequenceEdit->keySequence().isEmpty() && !sequenceEdit->keySequence().matches(QKeySequence(Qt::Key_Escape))) {
+                newSequence = sequenceEdit->keySequence();
             }
-            sequenceEdit->setKeySequence(*newSequence);
-            sequence->swap(*newSequence);
-            delete newSequence;
+            sequenceEdit->setKeySequence(newSequence);
+            currentShortcuts[key] = newSequence;
         });
         connect(this, &dlgProfilePreferences::signal_resetMainWindowShortcutsToDefaults, sequenceEdit, [=]() {
-            sequenceEdit->setKeySequence(*mudlet::self()->mpShortcutsManager->getDefault(key));
-            QKeySequence* newSequence = new QKeySequence(*mudlet::self()->mpShortcutsManager->getDefault(key));
-            sequence->swap(*newSequence);
-            delete newSequence;
+            const auto defaultSequence = *mudlet::self()->mpShortcutsManager->getDefault(key);
+            sequenceEdit->setKeySequence(defaultSequence);
+            currentShortcuts[key] = defaultSequence;
         });
     }
 }
@@ -3249,7 +3244,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         auto iterator = mudlet::self()->mpShortcutsManager->iterator();
         while (iterator.hasNext()) {
             auto key = iterator.next();
-            QKeySequence sequence = QKeySequence(*currentShortcuts.value(key));
+            QKeySequence sequence = currentShortcuts.value(key);
             pHost->profileShortcuts.value(key)->swap(sequence);
         }
     }
