@@ -64,6 +64,7 @@
 #include <hunspell/hunspell.h>
 
 class QCloseEvent;
+class QMediaDevices;
 class QMediaPlayer;
 class QMenu;
 class QLabel;
@@ -541,6 +542,7 @@ signals:
 
 private slots:
     void slot_assignShortcutsFromProfile(Host* pHost = nullptr);
+    void slot_audioOutputDeviceChanged();
     void slot_compactInputLine(const bool);
     void slot_passwordMigratedToPortableStorage(QKeychain::Job*);
     void slot_passwordMigratedToSecureStorage(QKeychain::Job*);
@@ -633,6 +635,7 @@ private:
     bool mMultiView = false;
     bool mMuteAPI = false;
     bool mMuteGame = false;
+    QMediaDevices* mpMediaDevices = nullptr;
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;
     QPointer<QAction> mpActionAliases;
