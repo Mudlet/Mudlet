@@ -437,6 +437,8 @@ Host::~Host()
         mpDockableMapWidget->deleteLater();
     }
 
+    delete mMMCPServer;
+
     mErrorLogStream.flush();
     mErrorLogFile.close();
     // Since this is a destructor, it's risky to rely on member variables within the destructor itself.

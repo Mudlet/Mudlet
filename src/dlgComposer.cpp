@@ -226,6 +226,7 @@ void dlgComposer::recheckWholeLine()
 void dlgComposer::slot_contextMenu(const QPoint& pos)
 {
     auto* popup = edit->createStandardContextMenu();
+    popup->setAttribute(Qt::WA_DeleteOnClose);
     if (mpHost && mpHost->mEnableSpellCheck) {
         // Convert from widget coordinates to viewport coordinates
         QPoint viewportPos = edit->viewport()->mapFromParent(pos);
