@@ -1843,6 +1843,21 @@ QString cTelnet::getNewEnvironOSCHyperlinksDisabled()
     return qsl("1");
 }
 
+bool cTelnet::isOscHyperlinkConfigFeatureEnabled()
+{
+    // Returns true if any config-using OSC 8 feature is enabled
+    // These are the features that use the ?config= parameter
+    return getNewEnvironOSCHyperlinksStyleBasic() == qsl("1") || getNewEnvironOSCHyperlinksStyleStates() == qsl("1") || getNewEnvironOSCHyperlinksTooltip() == qsl("1")
+           || getNewEnvironOSCHyperlinksMenu() == qsl("1") || getNewEnvironOSCHyperlinksCompact() == qsl("1") || getNewEnvironOSCHyperlinksVisibility() == qsl("1")
+           || getNewEnvironOSCHyperlinksSelection() == qsl("1") || getNewEnvironOSCHyperlinksSpoiler() == qsl("1") || getNewEnvironOSCHyperlinksDisabled() == qsl("1");
+}
+
+bool cTelnet::isOscHyperlinkPresetsEnabled()
+{
+    // Returns true if OSC 8 presets feature is enabled
+    return getNewEnvironOSCHyperlinksPresets() == qsl("1");
+}
+
 QString cTelnet::getNewEnvironScreenReader()
 {
     return mpHost->mAdvertiseScreenReader ? qsl("1") : qsl("0");

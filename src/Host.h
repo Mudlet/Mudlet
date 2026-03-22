@@ -200,6 +200,12 @@ public:
     bool getHaveColorSpaceId() { return mSGRCodeHasColSpaceId; }
     void setMayRedefineColors(const bool state) { mServerMayRedefineColors = state; }
     bool getMayRedefineColors() { return mServerMayRedefineColors; }
+    // Check if OSC 8 config parameter should be stripped from web URLs
+    // Returns true if any config-using feature is advertised via NEW-ENVIRON
+    bool shouldStripOscHyperlinkConfigParam();
+    // Check if OSC 8 preset parameter should be stripped from web URLs
+    // Returns true if presets feature is advertised via NEW-ENVIRON
+    bool shouldStripOscHyperlinkPresetParam();
     void setDiscordApplicationID(const QString& s);
     const QString& getDiscordApplicationID();
     void setDiscordInviteURL(const QString& s);

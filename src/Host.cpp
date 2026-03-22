@@ -5014,3 +5014,13 @@ QStringList Host::getValidExperiments() const
 {
     return QStringList(mValidExperiments.constBegin(), mValidExperiments.constEnd());
 }
+
+bool Host::shouldStripOscHyperlinkConfigParam()
+{
+    return mTelnet.isOscHyperlinkConfigFeatureEnabled();
+}
+
+bool Host::shouldStripOscHyperlinkPresetParam()
+{
+    return mTelnet.isOscHyperlinkPresetsEnabled();
+}

@@ -2968,6 +2968,10 @@ void TBuffer::decodeOSC(const QString& sequence)
             if (rawUrl.startsWith(qsl("http://")) || rawUrl.startsWith(qsl("https://")) || rawUrl.startsWith(qsl("ftp://"))) {
                 int queryStart = baseUrl.indexOf('?');
                 if (queryStart != -1) {
+                    // Only strip reserved parameters if corresponding features are advertised
+                    const bool stripConfig = mpHost->shouldStripOscHyperlinkConfigParam();
+                    const bool stripPreset = mpHost->shouldStripOscHyperlinkPresetParam();
+
                     // Split on raw query string so percent-encoded variants of
                     // "config"/"preset" (e.g. %63%6F%6E%66%69%67) are preserved
                     const QStringList rawPairs = baseUrl.mid(queryStart + 1).split('&');
@@ -2985,9 +2989,10 @@ void TBuffer::decodeOSC(const QString& sequence)
                             eqPos = encodedEq;
                         }
                         const auto key = eqPos >= 0 ? pair.left(eqPos) : pair;
-                        if (key != qsl("config") && key != qsl("preset")) {
-                            kept.append(pair);
+                        if ((stripConfig && key == qsl("config")) || (stripPreset && key == qsl("preset"))) {
+                            continue;
                         }
+                        kept.append(pair);
                     }
 
                     baseUrl = baseUrl.left(queryStart);
