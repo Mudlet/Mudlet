@@ -495,31 +495,19 @@ inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
 {
     QString text;
     const QDebugStateSaver saver(debug);
+    // clang-format off
     switch (type) {
-    case TConsole::UnknownType:
-        text = qsl("Unknown");
-        break;
-    case TConsole::CentralDebugConsole:
-        text = qsl("Central Debug Console");
-        break;
-    case TConsole::ErrorConsole:
-        text = qsl("Profile Error Console");
-        break;
-    case TConsole::MainConsole:
-        text = qsl("Profile Main Console");
-        break;
-    case TConsole::SubConsole:
-        text = qsl("Mini Console");
-        break;
-    case TConsole::UserWindow:
-        text = qsl("User Window");
-        break;
-    case TConsole::Buffer:
-        text = qsl("Buffer");
-        break;
+    case TConsole::UnknownType:           text = qsl("Unknown"); break;
+    case TConsole::CentralDebugConsole:   text = qsl("Central Debug Console"); break;
+    case TConsole::ErrorConsole:          text = qsl("Profile Error Console"); break;
+    case TConsole::MainConsole:           text = qsl("Profile Main Console"); break;
+    case TConsole::SubConsole:            text = qsl("Mini Console"); break;
+    case TConsole::UserWindow:            text = qsl("User Window"); break;
+    case TConsole::Buffer:                text = qsl("Buffer"); break;
     default:
         text = qsl("Non-coded Type");
     }
+    // clang-format on
     debug.nospace() << text;
     return debug;
 }

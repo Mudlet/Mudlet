@@ -211,30 +211,31 @@ class TChar
     friend class TBuffer;
 
 public:
+    // clang-format off
     enum AttributeFlag {
         None = 0x0,
         // Replaces TCHAR_BOLD 2
-        Bold = 0x1, // 0000 0000 0000 0000 0000 0000 0000 0001
+        Bold = 0x1,                   // 0000 0000 0000 0000 0000 0000 0000 0001
         // Replaces TCHAR_ITALICS 1
-        Italic = 0x2, // 0000 0000 0000 0000 0000 0000 0000 0010
+        Italic = 0x2,                 // 0000 0000 0000 0000 0000 0000 0000 0010
         // Replaces TCHAR_UNDERLINE 4
-        Underline = 0x4, // 0000 0000 0000 0000 0000 0000 0000 0100
+        Underline = 0x4,              // 0000 0000 0000 0000 0000 0000 0000 0100
         // ANSI CSI SGR Overline (53 on, 55 off)
-        Overline = 0x8, // 0000 0000 0000 0000 0000 0000 0000 1000
+        Overline = 0x8,               // 0000 0000 0000 0000 0000 0000 0000 1000
         // Replaces TCHAR_STRIKEOUT 32
-        StrikeOut = 0x10, // 0000 0000 0000 0000 0000 0000 0001 0000
+        StrikeOut = 0x10,             // 0000 0000 0000 0000 0000 0000 0001 0000
         // Extended underline styles for enhanced OSC 8 hyperlink support
-        UnderlineWavy = 0x400000,    // 0000 0000 0100 0000 0000 0000 0000 0000
-        UnderlineDotted = 0x800000,  // 0000 0000 1000 0000 0000 0000 0000 0000
-        UnderlineDashed = 0x1000000, // 0000 0001 0000 0000 0000 0000 0000 0000
+        UnderlineWavy = 0x400000,     // 0000 0000 0100 0000 0000 0000 0000 0000
+        UnderlineDotted = 0x800000,   // 0000 0000 1000 0000 0000 0000 0000 0000
+        UnderlineDashed = 0x1000000,  // 0000 0001 0000 0000 0000 0000 0000 0000
         // NOT a replacement for TCHAR_INVERSE, that is now covered by the
         // separate isSelected bool but they must be EX-ORed at the point of
         // painting the Character
-        Reverse = 0x20, // 0000 0000 0000 0000 0000 0000 0010 0000
+        Reverse = 0x20,               // 0000 0000 0000 0000 0000 0000 0010 0000
         // Flashing less than 150 times a minute:
-        Blink = 0x40, // 0000 0000 0000 0000 0000 0000 0100 0000
+        Blink = 0x40,                 // 0000 0000 0000 0000 0000 0000 0100 0000
         // Flashing at least 150 times a minute:
-        FastBlink = 0x80, // 0000 0000 0000 0000 0000 0000 1000 0000
+        FastBlink = 0x80,             // 0000 0000 0000 0000 0000 0000 1000 0000
         // Alternate fonts 1 to 9 from SGR 11 m to SGR 19 m; we flag each one
         // separately so that trigger processing can select them individually
         // which could not be done should they be rolled up into just 4 bits.
@@ -242,34 +243,35 @@ public:
         // used if/when we can actually paint different fonts in a TConsole at
         // the same time; currently there is no MUD standard to specify what the
         // alternatives are:
-        AltFont1 = 0x00100, // 0000 0000 0000 0000 0000 0001 0000 0000
-        AltFont2 = 0x00200, // 0000 0000 0000 0000 0000 0010 0000 0000
-        AltFont3 = 0x00400, // 0000 0000 0000 0000 0000 0100 0000 0000
-        AltFont4 = 0x00800, // 0000 0000 0000 0000 0000 1000 0000 0000
-        AltFont5 = 0x01000, // 0000 0000 0000 0000 0001 0000 0000 0000
-        AltFont6 = 0x02000, // 0000 0000 0000 0000 0010 0000 0000 0000
-        AltFont7 = 0x04000, // 0000 0000 0000 0000 0100 0000 0000 0000
-        AltFont8 = 0x08000, // 0000 0000 0000 0000 1000 0000 0000 0000
-        AltFont9 = 0x10000, // 0000 0000 0000 0001 0000 0000 0000 0000
+        AltFont1 = 0x00100,           // 0000 0000 0000 0000 0000 0001 0000 0000
+        AltFont2 = 0x00200,           // 0000 0000 0000 0000 0000 0010 0000 0000
+        AltFont3 = 0x00400,           // 0000 0000 0000 0000 0000 0100 0000 0000
+        AltFont4 = 0x00800,           // 0000 0000 0000 0000 0000 1000 0000 0000
+        AltFont5 = 0x01000,           // 0000 0000 0000 0000 0001 0000 0000 0000
+        AltFont6 = 0x02000,           // 0000 0000 0000 0000 0010 0000 0000 0000
+        AltFont7 = 0x04000,           // 0000 0000 0000 0000 0100 0000 0000 0000
+        AltFont8 = 0x08000,           // 0000 0000 0000 0000 1000 0000 0000 0000
+        AltFont9 = 0x10000,           // 0000 0000 0000 0001 0000 0000 0000 0000
         // From SGR 8 m; however there is no MUD standard protocol to control
         // when we should show concealed text.
-        Concealed = 0x20000, // 0000 0000 0000 0010 0000 0000 0000 0000
+        Concealed = 0x20000,          // 0000 0000 0000 0010 0000 0000 0000 0000
         // Mask for "is flashing" at any rate - will return a logical true
         // should either of the above be set - should both be set then FastBlink
         // should take preference over Blink:
-        BlinkMask = 0xC0, // 0000 0000 0000 0000 0000 0000 1100 0000
+        BlinkMask = 0xC0,             // 0000 0000 0000 0000 0000 0000 1100 0000
         // Mask for "any alternate font" - only the most significant one should
         // be used if more than one is set:
-        AltFontMask = 0x1ff00, // 0000 0000 0000 0001 1111 1111 0000 0000
-        TestMask = 0x1c3ffff,  // 0000 0001 1100 0011 1111 1111 1111 1111 (includes extended underline styles)
+        AltFontMask = 0x1ff00,        // 0000 0000 0000 0001 1111 1111 0000 0000
+        TestMask = 0x1c3ffff,         // 0000 0001 1100 0011 1111 1111 1111 1111 (includes extended underline styles)
         // The remainder are internal use ones that do not related to SGR codes
         // that have been parsed from the incoming text.
         // Has been found in a search operation (currently Main Console only)
         // and has been given a highlight to indicate that:
-        Found = 0x100000, // 0000 0000 0001 0000 0000 0000 0000 0000
+        Found = 0x100000,             // 0000 0000 0001 0000 0000 0000 0000 0000
         // Replaces TCHAR_ECHO 16
-        Echo = 0x200000 // 0000 0000 0010 0000 0000 0000 0000 0000
+        Echo = 0x200000               // 0000 0000 0010 0000 0000 0000 0000 0000
     };
+    // clang-format on
     Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
 
     // Not a default constructor - the defaulted argument means it could have
