@@ -2017,6 +2017,14 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
         // userMapData
         QMap<QString, QString> _dummyQMapQStringQString;
         ifs >> _dummyQMapQStringQString;
+        if (otherProfileVersion >= 19) {
+            QFont _dummyQFont;
+            ifs >> _dummyQFont;
+            double _dummyDouble;
+            ifs >> _dummyDouble;
+            bool _dummyBool;
+            ifs >> _dummyBool;
+        }
     }
 
     if (otherProfileVersion >= 14) {
