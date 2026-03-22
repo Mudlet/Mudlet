@@ -735,6 +735,7 @@ public:
     static int killMapInfo(lua_State*);
     static int enableMapInfo(lua_State*);
     static int disableMapInfo(lua_State*);
+    static int getMapInfo(lua_State*);
     static int getProfileTabNumber(lua_State*);
     static int addFileWatch(lua_State*);
     static int removeFileWatch(lua_State*);

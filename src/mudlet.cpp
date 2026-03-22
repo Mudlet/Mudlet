@@ -78,6 +78,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QNetworkDiskCache>
+#include <QMediaDevices>
 #include <QMediaPlayer>
 #include <QMessageBox>
 #include <QPainter>
@@ -219,7 +220,7 @@ void mudlet::init()
     //: Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!
     mTimeFormat = tr("hh:mm:ss");
 
-    if (QStringList{qsl("windowsvista"), qsl("macintosh")}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
+    if (QStringList{qsl("windowsvista"), qsl("macintosh"), qsl("macos")}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
         qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << mDefaultStyle << "' has been detected as the style factory in use - QPushButton styling fix applied!";
         mBG_ONLY_STYLESHEET = qsl("QPushButton {background-color: %1; border: 1px solid #8f8f91;}");
         mTEXT_ON_BG_STYLESHEET = qsl("QPushButton {color: %1; background-color: %2; border: 1px solid #8f8f91;}");
@@ -795,6 +796,10 @@ void mudlet::init()
         mBlinkState = (mBlinkState + 1) % 4;
         emit signal_blinkStateChanged(slowBlinkState(), fastBlinkState());
     });
+
+    // Monitor audio device changes to automatically refresh media players
+    mpMediaDevices = new QMediaDevices(this);
+    connect(mpMediaDevices, &QMediaDevices::audioOutputsChanged, this, &mudlet::slot_audioOutputDeviceChanged);
 
     // Initialize the window menu on startup
     updateWindowMenu();
@@ -3735,7 +3740,7 @@ void mudlet::assignKeySequences()
         dactionPackageManager->setShortcut(QKeySequence());
 
         delete mpShortcutModules.data();
-        mpShortcutModules = new QShortcut(mKeySequencePackages, this);
+        mpShortcutModules = new QShortcut(mKeySequenceModules, this);
         connect(mpShortcutModules.data(), &QShortcut::activated, this, &mudlet::slot_moduleManager);
         dactionModuleManager->setShortcut(QKeySequence());
 
@@ -4751,6 +4756,15 @@ void mudlet::slot_muteMedia()
     }
 }
 
+void mudlet::slot_audioOutputDeviceChanged()
+{
+    for (auto pHost : mHostManager) {
+        if (pHost && pHost->mpMedia) {
+            pHost->mpMedia->refreshAudioDevices();
+        }
+    }
+}
+
 // Called by the short-cut to the menu item that doesn't pass the checked state
 // of the menu-item that it provides a short-cut to:
 void mudlet::slot_toggleCompactInputLine()
@@ -5604,6 +5618,7 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     if (entries.isEmpty()) {
         preInstallPackages = true;
         pHost->mLoadedOk = true;
+        pHost->mMapInfoContributors.insert(qsl("Short"));
     } else {
         QFile file(qsl("%1%2").arg(folder, saveFileName.isEmpty() ? entries.at(0) : saveFileName));
         if (!file.open(QFile::ReadOnly | QFile::Text)) {
