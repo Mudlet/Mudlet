@@ -78,6 +78,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QNetworkDiskCache>
+#include <QMediaDevices>
 #include <QMediaPlayer>
 #include <QMessageBox>
 #include <QPainter>
@@ -796,6 +797,10 @@ void mudlet::init()
         mBlinkState = (mBlinkState + 1) % 4;
         emit signal_blinkStateChanged(slowBlinkState(), fastBlinkState());
     });
+
+    // Monitor audio device changes to automatically refresh media players
+    mpMediaDevices = new QMediaDevices(this);
+    connect(mpMediaDevices, &QMediaDevices::audioOutputsChanged, this, &mudlet::slot_audioOutputDeviceChanged);
 
     // Initialize the window menu on startup
     updateWindowMenu();
@@ -4711,6 +4716,15 @@ void mudlet::slot_muteMedia()
 
         if (!mMuteGame) {
             slot_muteGame(true);
+        }
+    }
+}
+
+void mudlet::slot_audioOutputDeviceChanged()
+{
+    for (auto pHost : mHostManager) {
+        if (pHost && pHost->mpMedia) {
+            pHost->mpMedia->refreshAudioDevices();
         }
     }
 }
