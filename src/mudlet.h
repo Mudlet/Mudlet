@@ -63,6 +63,7 @@
 #include <hunspell/hunspell.h>
 
 class QCloseEvent;
+class QMediaDevices;
 class QMediaPlayer;
 class QMenu;
 class QLabel;
@@ -208,6 +209,8 @@ public:
     void attachDebugArea(const QString&);
     void checkUpdatesOnStart();
     void commitLayoutUpdates(bool flush = false);
+    bool saveFloatingDockGeometries();
+    void restoreFloatingDockGeometries();
     void deleteProfileData(const QString& profile, const QString& item);
     void disableToolbarButtons();
     void doAutoLogin(const QString&);
@@ -555,6 +558,7 @@ signals:
 
 private slots:
     void slot_assignShortcutsFromProfile(Host* pHost = nullptr);
+    void slot_audioOutputDeviceChanged();
     void slot_compactInputLine(const bool);
     void slot_passwordMigratedToPortableStorage(QKeychain::Job*);
     void slot_passwordMigratedToSecureStorage(QKeychain::Job*);
@@ -647,6 +651,7 @@ private:
     bool mMultiView = false;
     bool mMuteAPI = false;
     bool mMuteGame = false;
+    QMediaDevices* mpMediaDevices = nullptr;
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;
     QPointer<QAction> mpActionAliases;

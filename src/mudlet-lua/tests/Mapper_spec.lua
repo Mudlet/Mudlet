@@ -196,3 +196,43 @@ describe("Tests per-room border functions", function()
   end)
 
 end)
+
+describe("Tests map info functions", function()
+
+  describe("Tests getMapInfo", function()
+    it("should return a table with contributor states", function()
+      local info = getMapInfo()
+      assert.is_table(info)
+      -- "Short" is a built-in contributor and should exist
+      assert.is_not_nil(info["Short"])
+    end)
+
+    it("should reflect enabled/disabled state", function()
+      enableMapInfo("Short")
+      local info = getMapInfo()
+      assert.is_true(info["Short"])
+
+      disableMapInfo("Short")
+      info = getMapInfo()
+      assert.is_false(info["Short"])
+
+      -- Re-enable for clean state
+      enableMapInfo("Short")
+    end)
+  end)
+
+  describe("Tests enableMapInfo and disableMapInfo", function()
+    it("should return nil for non-existent contributor", function()
+      local result, err = enableMapInfo("NonExistentContributor")
+      assert.is_nil(result)
+      assert.is_string(err)
+    end)
+
+    it("should return nil for non-existent contributor on disable", function()
+      local result, err = disableMapInfo("NonExistentContributor")
+      assert.is_nil(result)
+      assert.is_string(err)
+    end)
+  end)
+
+end)
