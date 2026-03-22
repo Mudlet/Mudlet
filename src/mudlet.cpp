@@ -3699,7 +3699,7 @@ void mudlet::assignKeySequences()
         dactionPackageManager->setShortcut(QKeySequence());
 
         delete mpShortcutModules.data();
-        mpShortcutModules = new QShortcut(mKeySequencePackages, this);
+        mpShortcutModules = new QShortcut(mKeySequenceModules, this);
         connect(mpShortcutModules.data(), &QShortcut::activated, this, &mudlet::slot_moduleManager);
         dactionModuleManager->setShortcut(QKeySequence());
 
