@@ -2765,7 +2765,10 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         return;
     }
     if (!writeFile.commit()) {
-        qDebug() << "TMap::slot_replyFinished: error saving downloaded map: " << writeFile.errorString();
+        const QString alertMsg = tr("[ ALERT ] - Map download failed, unable to save destination file:\n%1\nreason: %2").arg(mLocalMapFileName, writeFile.errorString());
+        postMessage(alertMsg);
+        cleanup();
+        return;
     }
 
     Host* pHost = mpHost;
