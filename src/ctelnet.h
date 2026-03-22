@@ -205,6 +205,8 @@ public:
     const QByteArrayList& getEncodingsList() const { return mAcceptableEncodings; }
     std::optional<QAbstractSocket::SocketError> error() const;
     QString errorString();
+    bool isOscHyperlinkConfigFeatureEnabled();
+    bool isOscHyperlinkPresetsEnabled();
 #if !defined(QT_NO_SSL)
     QSslCertificate getPeerCertificate();
     QList<QSslError> getSslErrors();
@@ -271,12 +273,6 @@ public slots:
     void slot_timerPosting();
     void slot_send_login();
     void slot_send_pass();
-
-public:
-    // Check if any config-using OSC 8 hyperlink feature is enabled
-    bool isOscHyperlinkConfigFeatureEnabled();
-    // Check if OSC 8 hyperlink presets feature is enabled
-    bool isOscHyperlinkPresetsEnabled();
 
 signals:
     // Intended to signal status changes for other parts of application
