@@ -1093,7 +1093,7 @@ void MMCPServer::sendServedMessage(MMCPClient* pClient, const QString& msg, bool
     }
 }
 
-QString MMCPServer::getChatName() const
+const QString& MMCPServer::getChatName() const
 {
     if (mpHost) {
         return mpHost->getMMCPChatName();

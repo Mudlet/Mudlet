@@ -3058,7 +3058,7 @@ void Host::initMMCPServer()
 
 
 // Return the MMCP chat name for this host
-QString Host::getMMCPChatName()
+const QString& Host::getMMCPChatName() const
 {
     return mMMCPChatName;
 }
@@ -3092,7 +3092,7 @@ quint16 Host::getMMCPPort()
     return mMMCPChatPort;
 }
 
-QString Host::getMMCPChatPrefix()
+const QString& Host::getMMCPChatPrefix() const
 {
     return mMMCPChatPrefix;
 }

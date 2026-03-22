@@ -337,9 +337,9 @@ public:
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
-    QString getMMCPChatName();
+    const QString& getMMCPChatName() const;
     quint16 getMMCPPort();
-    QString getMMCPChatPrefix();
+    const QString& getMMCPChatPrefix() const;
     bool getMMCPAutoStartServer();
     bool getMMCPAllowPeekRequests();
     bool getMMCPPrefixEmotes();

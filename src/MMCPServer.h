@@ -83,7 +83,7 @@ public:
 
     quint16 addConnectedClient(MMCPClient*);
 
-    QString getChatName() const;
+    const QString& getChatName() const;
 
     bool isDoNotDisturb() { return mDoNotDisturb; }
     void toggleDoNotDisturb();
