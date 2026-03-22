@@ -42,6 +42,7 @@
 #include "ui_main_window.h"
 #include <QAction>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFlags>
 #include <QKeySequence>
 #include <QMainWindow>
@@ -395,16 +396,7 @@ public:
     bool mDrawUpperLowerLevels = true;
     bool mShowTabConnectionIndicators = true; // Global preference for showing connection status indicators on tabs
 
-    // Global blink timer for SGR codes 5 and 6 (flashing text)
-    // Shared across all TTextEdit instances for synchronized blinking
-    // Uses 200ms base interval (WCAG 2.3.1 compliant - max 3 Hz)
-    // 4-state counter per ISO/IEC 8613-6: slow blink < 150 cycles/min, fast > 150
-    //   state 0: slow=on,  fast=on
-    //   state 1: slow=on,  fast=off
-    //   state 2: slow=off, fast=on
-    //   state 3: slow=off, fast=off
-    bool slowBlinkState() const { return mBlinkState < 2; }
-    bool fastBlinkState() const { return (mBlinkState % 2) == 0; }
+    qreal blinkOpacityForPosition(qreal normalizedX, bool isFastBlink) const;
     void registerBlinkClient();
     void unregisterBlinkClient();
 
@@ -544,7 +536,7 @@ signals:
     void signal_aiStatusChanged(bool running);
     void signal_aiModelChanged(const QString& modelPath);
     void signal_showTabConnectionIndicatorsChanged(bool);
-    void signal_blinkStateChanged(bool slowState, bool fastState);
+    void signal_blinkStateChanged();
     void signal_profileLoaded();
 
 private slots:
@@ -713,7 +705,8 @@ private:
     QPointer<QShortcut> mpShortcutToggleEmergencyStop;
     QPointer<QTimer> mpTimerReplay;
     QPointer<QTimer> mpBlinkTimer;
-    int mBlinkState = 0;
+    QElapsedTimer mBlinkElapsedTimer;
+    qreal mBlinkTimeMs = 0.0;
     int mBlinkClientCount = 0;
     QPointer<QToolBar> mpToolBarReplay;
     QWidget* mpWidget_profileContainer = nullptr;

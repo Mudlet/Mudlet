@@ -40,6 +40,7 @@
 #include "TTextProperties.h"
 
 #include <chrono>
+#include <climits>
 #include <cmath>
 #include <QtEvents>
 #include <QtGlobal>
@@ -101,7 +102,9 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     setAttribute(Qt::WA_OpaquePaintEvent, false);
     setAttribute(Qt::WA_DeleteOnClose);
 
-    connect(mudlet::self(), &mudlet::signal_blinkStateChanged, this, &TTextEdit::slot_blinkStateChanged);
+    if (auto* pMudlet = mudlet::self()) {
+        connect(pMudlet, &mudlet::signal_blinkStateChanged, this, &TTextEdit::slot_blinkStateChanged);
+    }
 
     // Scroll optimizations may use cached screen data, missing blinking content detection
     mpScrollStoppedTimer = new QTimer(this);
@@ -869,18 +872,29 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     const bool isBlinking = attributes & (TChar::Blink | TChar::FastBlink);
 
     bool isItalics = attributes & TChar::Italic;
+    QColor effectiveFgColor = fgColor;
     if (isBlinking) {
         mHasBlinkingContent = true;
+        mBlinkContentMinX = qMin(mBlinkContentMinX, textRect.left());
+        mBlinkContentMaxX = qMax(mBlinkContentMaxX, textRect.right());
         if (mEnableBlinkText) {
             const bool isFastBlink = attributes & TChar::FastBlink;
             auto pMudlet = mudlet::self();
-            const bool isVisible = pMudlet ? (isFastBlink ? pMudlet->fastBlinkState() : pMudlet->slowBlinkState()) : true;
-            if (!isVisible) {
-                if (!textRect.isNull()) {
-                    drawCustomDecorations(painter, fgColor, textRect, charStyle);
-                }
-                return;
+            const int blinkSpan = mPrevBlinkMaxX - mPrevBlinkMinX;
+            qreal normalizedX = 0.5;
+            if (blinkSpan > 0) {
+                // normalizedX may be outside [0,1] when text has scrolled or reflowed
+                // since the previous frame; the Gaussian naturally produces low brightness
+                // for out-of-range values, so no clamping is needed.
+                normalizedX = static_cast<qreal>(textRect.center().x() - mPrevBlinkMinX) / static_cast<qreal>(blinkSpan);
+            } else if (width() > 0) {
+                // blinkSpan <= 0 when no blinking content was rendered last frame
+                // (e.g. first frame, widget hidden, or content scrolled away).
+                // Fall back to widget-width normalization so the pulse has a reasonable position.
+                normalizedX = static_cast<qreal>(textRect.center().x()) / static_cast<qreal>(width());
             }
+            const qreal opacity = pMudlet ? pMudlet->blinkOpacityForPosition(normalizedX, isFastBlink) : 1.0;
+            effectiveFgColor.setAlphaF(effectiveFgColor.alphaF() * opacity);
         } else {
             isItalics = true;
         }
@@ -920,13 +934,13 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
         return;
     }
 
-    if (painter.pen().color() != fgColor) {
-        painter.setPen(fgColor);
+    if (painter.pen().color() != effectiveFgColor) {
+        painter.setPen(effectiveFgColor);
     }
     painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
 
     // Draw custom decorations (colored underlines, overlines, strikethrough)
-    drawCustomDecorations(painter, fgColor, textRect, charStyle);
+    drawCustomDecorations(painter, effectiveFgColor, textRect, charStyle);
 }
 
 void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultColor, const QRect& textRect, TChar& charStyle) const
@@ -1136,6 +1150,10 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
 void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
     mHasBlinkingContent = false;
+    mPrevBlinkMinX = mBlinkContentMinX;
+    mPrevBlinkMaxX = mBlinkContentMaxX;
+    mBlinkContentMinX = INT_MAX;
+    mBlinkContentMaxX = 0;
 
     qreal dpr = devicePixelRatioF();
     QPixmap screenPixmap;
@@ -1228,12 +1246,14 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     mForceUpdate = false;
 
     const bool shouldBeRegistered = mEnableBlinkText && mHasBlinkingContent;
-    if (shouldBeRegistered && !mIsBlinkClientRegistered) {
-        mudlet::self()->registerBlinkClient();
-        mIsBlinkClientRegistered = true;
-    } else if (!shouldBeRegistered && mIsBlinkClientRegistered) {
-        mudlet::self()->unregisterBlinkClient();
-        mIsBlinkClientRegistered = false;
+    if (auto* pMudlet = mudlet::self()) {
+        if (shouldBeRegistered && !mIsBlinkClientRegistered) {
+            pMudlet->registerBlinkClient();
+            mIsBlinkClientRegistered = true;
+        } else if (!shouldBeRegistered && mIsBlinkClientRegistered) {
+            pMudlet->unregisterBlinkClient();
+            mIsBlinkClientRegistered = false;
+        }
     }
 }
 
@@ -3243,17 +3263,17 @@ void TTextEdit::slot_changeEnableBlinkText(const bool state)
     if (mEnableBlinkText != state) {
         mEnableBlinkText = state;
         if (!mEnableBlinkText && mIsBlinkClientRegistered) {
-            mudlet::self()->unregisterBlinkClient();
-            mIsBlinkClientRegistered = false;
+            if (auto* pMudlet = mudlet::self()) {
+                pMudlet->unregisterBlinkClient();
+                mIsBlinkClientRegistered = false;
+            }
         }
         update();
     }
 }
 
-void TTextEdit::slot_blinkStateChanged(bool slowState, bool fastState)
+void TTextEdit::slot_blinkStateChanged()
 {
-    Q_UNUSED(slowState);
-    Q_UNUSED(fastState);
     forceUpdate();
 }
 

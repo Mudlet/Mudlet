@@ -30,6 +30,7 @@
 
 #include <QElapsedTimer>
 #include <QMap>
+#include <climits>
 #include <QPointer>
 #include <QTimer>
 #include <QWidget>
@@ -150,7 +151,7 @@ public slots:
     void slot_analyseSelection();
     void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
     void slot_changeEnableBlinkText(bool);
-    void slot_blinkStateChanged(bool slowState, bool fastState);
+    void slot_blinkStateChanged();
     void slot_scrollStoppedTimeout();
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     void slot_changeDebugShowAllProblemCodepoints(const bool);
@@ -225,6 +226,10 @@ private:
     bool mEnableBlinkText = false;
     mutable bool mHasBlinkingContent = false;
     mutable bool mIsBlinkClientRegistered = false;
+    mutable int mBlinkContentMinX = INT_MAX; // sentinel: reset to INT_MAX each frame in drawForeground()
+    mutable int mBlinkContentMaxX = 0;
+    mutable int mPrevBlinkMinX = INT_MAX;
+    mutable int mPrevBlinkMaxX = 0;
     QPointer<QTimer> mpScrollStoppedTimer;
     std::chrono::high_resolution_clock::time_point mCopyImageStartTime;
     // How many "normal" width "characters" are each tab stop apart, while
