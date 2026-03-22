@@ -23,6 +23,10 @@
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 
+extern "C" {
+#include <lauxlib.h>
+}
+
 MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH)
 : QObject(parent)
 , mpHost(pH)
@@ -37,6 +41,19 @@ MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH)
 
 void MapInfoContributorManager::registerContributor(const QString& name, MapInfoCallback callback)
 {
+    releaseLuaCallbackRef(name);
+    if (contributors.contains(name)) {
+        ordering.removeOne(name);
+    }
+    ordering.append(name);
+    contributors.insert(name, callback);
+    emit signal_contributorsUpdated();
+}
+
+void MapInfoContributorManager::registerContributor(const QString& name, MapInfoCallback callback, lua_State* L, int callbackRef)
+{
+    releaseLuaCallbackRef(name);
+    mLuaCallbackRefs.insert(name, {L, callbackRef});
     if (contributors.contains(name)) {
         ordering.removeOne(name);
     }
@@ -47,10 +64,19 @@ void MapInfoContributorManager::registerContributor(const QString& name, MapInfo
 
 bool MapInfoContributorManager::removeContributor(const QString& name)
 {
+    releaseLuaCallbackRef(name);
     mpHost->mMapInfoContributors.remove(name);
     ordering.removeOne(name);
     emit signal_contributorsUpdated();
     return contributors.remove(name) > 0;
+}
+
+void MapInfoContributorManager::releaseLuaCallbackRef(const QString& name)
+{
+    if (auto it = mLuaCallbackRefs.find(name); it != mLuaCallbackRefs.end()) {
+        luaL_unref(it->L, LUA_REGISTRYINDEX, it->ref);
+        mLuaCallbackRefs.erase(it);
+    }
 }
 
 bool MapInfoContributorManager::enableContributor(const QString& name)
