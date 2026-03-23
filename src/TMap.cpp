@@ -2022,6 +2022,14 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
         // userMapData
         QMap<QString, QString> _dummyQMapQStringQString;
         ifs >> _dummyQMapQStringQString;
+        if (otherProfileVersion >= 19) {
+            QFont _dummyQFont;
+            ifs >> _dummyQFont;
+            double _dummyDouble;
+            ifs >> _dummyDouble;
+            bool _dummyBool;
+            ifs >> _dummyBool;
+        }
     }
 
     if (otherProfileVersion >= 14) {
@@ -2722,8 +2730,10 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         // We don't delete the progress dialog until here as we now use it to inform
         // about post-download operations
 
-        mpProgressDialog->deleteLater();
-        mpProgressDialog = nullptr; // Must reset this so it can be reused
+        if (mpProgressDialog) {
+            mpProgressDialog->deleteLater();
+            mpProgressDialog = nullptr; // Must reset this so it can be reused
+        }
 
         mLocalMapFileName.clear();
         mExpectedFileSize = 0;
@@ -2760,7 +2770,10 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         return;
     }
     if (!writeFile.commit()) {
-        qDebug() << "TMap::slot_replyFinished: error saving downloaded map: " << writeFile.errorString();
+        const QString alertMsg = tr("[ ALERT ] - Map download failed, unable to save destination file:\n%1\nreason: %2").arg(mLocalMapFileName, writeFile.errorString());
+        postMessage(alertMsg);
+        cleanup();
+        return;
     }
 
     Host* pHost = mpHost;
@@ -2776,7 +2789,9 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
     // Since the download is complete but we do not offer to
     // cancel the required post-processing we should now hide
     // the cancel/abort button:
-    mpProgressDialog->setCancelButton(nullptr);
+    if (mpProgressDialog) {
+        mpProgressDialog->setCancelButton(nullptr);
+    }
 
     bool parsingWasSuccessful;
     QString parsingFileName;
