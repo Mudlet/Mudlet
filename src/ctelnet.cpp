@@ -947,7 +947,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
  afterwards.*/
         TDebug(QColorConstants::Blue, QColorConstants::White) << tr("The %n IP address(es) of %1 has/have been found. It/They are:",
                                                                     // Intentional comment to separate arguments
-                                                                    nullptr,
+                                                                    "",
                                                                     addressesToReport.count())
                                                                          .arg(hostInfo.hostName())
                                                                          .append(QChar::LineFeed)
@@ -1095,6 +1095,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
             mSocket_ipV4.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
 
         } else {
+            const QString connectToText = usingRawIPAddress ? mHostUrl : hostInfo.hostName();
             if (hasIPv6_address) {
                 connect(&mSocket_ipV6, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected, Qt::UniqueConnection);
                 connect(&mSocket_ipV6, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected, Qt::UniqueConnection);
@@ -1120,17 +1121,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                     postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)));
                 }
 
-                // If a proxy IS being used it is not clear to me how a raw IP
-                // address would work - but hey lets let the user find out for
-                // themselves - SlySven 2026/03
-                if (usingRawIPAddress) {
-                    // In fact if the reverse lookup failed we still have the
-                    // raw IP address in hostInfo.hostName() but this handles
-                    // the situation where something else was found:
-                    mSocket_ipV6.connectToHost(mHostUrl, mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
-                } else {
-                    mSocket_ipV6.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
-                }
+                mSocket_ipV6.connectToHost(connectToText, mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
 
             }
             if (hasIPv4_address) {
@@ -1160,11 +1151,8 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                     postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)));
                 }
 
-                if (usingRawIPAddress) {
-                    mSocket_ipV4.connectToHost(mHostUrl, mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
-                } else {
-                    mSocket_ipV4.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
-                }
+                mSocket_ipV4.connectToHost(connectToText, mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
+
             }
         }
 #if !defined(QT_NO_SSL)
