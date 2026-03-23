@@ -3591,7 +3591,9 @@ void mudlet::showOptionsDialog(const QString& tab)
         connect(pPrefs, &dlgProfilePreferences::signal_preferencesSaved, this, [=, this]() {
             slot_assignShortcutsFromProfile(getActiveHost());
         });
-        connect(pHost, &Host::mmcpChatNameChanged, pPrefs, &dlgProfilePreferences::slot_setMMCPChatName);
+        if (pHost) {
+            connect(pHost, &Host::mmcpChatNameChanged, pPrefs, &dlgProfilePreferences::slot_setMMCPChatName);
+        }
         pPrefs->setAttribute(Qt::WA_DeleteOnClose);
     }
 
