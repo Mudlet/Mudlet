@@ -44,7 +44,6 @@
 #include "edbee/views/texteditorscrollarea.h"
 #include "edbee/models/textdocumentscopes.h"
 #include "MMCP.h"
-#include "MMCPServer.h"
 
 #include <chrono>
 #include <QtConcurrent>
@@ -1616,6 +1615,11 @@ void dlgProfilePreferences::clearHostDetails()
     lineEdit_discordUserDiscriminator->clear();
 
     lineEdit_mmcpChatName->clear();
+    lineEdit_mmcpPort->clear();
+    lineEdit_mmcpChatMessagePrefix->clear();
+    checkBox_mmcpAddChatMessageNewline->setChecked(true);
+    checkBox_mmcpPrefixEmotes->setChecked(false);
+    checkBox_mmcpSnoopInMainConsole->setChecked(true);
 
     checkBox_debugShowAllCodepointProblems->setChecked(false);
     checkBox_announceIncomingText->setChecked(false);
@@ -3140,13 +3144,13 @@ void dlgProfilePreferences::slot_saveAndClose()
         }
 
         // Save chat options so they are written to XML upon export
-        pHost->mMMCPChatName = lineEdit_mmcpChatName->text().trimmed();
+        pHost->setMMCPChatName(lineEdit_mmcpChatName->text().trimmed());
         pHost->mMMCPChatPrefix = lineEdit_mmcpChatMessagePrefix->text().trimmed();
         bool ok;
         quint16 port = lineEdit_mmcpPort->text().toUShort(&ok);
         pHost->mMMCPChatPort = ok ? port : csDefaultMMCPHostPort;
-
-        /* Possible inclusion in 4020.1
+        
+        /* Possible inclusion in 4.21
         pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
         pHost->mMMCPAutoAcceptCalls = checkBox_mmcpAutoAcceptCalls->isChecked();
         pHost->mMMCPAllowPeekRequests = checkBox_mmcpAllowPeekReq->isChecked();
@@ -4105,8 +4109,10 @@ void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
 }
 
 /**
- * Update the chatname lineEdit if the user changes their chat name while
- * the preferences dialog is open
+ * Update the chatname lineEdit when the chat name changes.
+ * This may be called redundantly when the change originates from this
+ * dialog (since the signal is emitted after the lineEdit was already
+ * edited), but setText() does not emit editingFinished so no loop occurs.
  */
 void dlgProfilePreferences::slot_setMMCPChatName(const QString& name)
 {
@@ -4119,10 +4125,11 @@ void dlgProfilePreferences::slot_setMMCPChatName(const QString& name)
  */
 void dlgProfilePreferences::slot_mmcpChatNameChanged()
 {
-    const QString& chatName = lineEdit_mmcpChatName->text();
-
     if (mpHost) {
-        mpHost->setMMCPChatName(chatName, false);
+        if (!mpHost->setMMCPChatName(lineEdit_mmcpChatName->text().trimmed())) {
+            // Validation failed — revert lineEdit to the current stored name
+            lineEdit_mmcpChatName->setText(mpHost->getMMCPChatName());
+        }
     }
 }
 
