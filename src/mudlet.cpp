@@ -6651,6 +6651,9 @@ void mudlet::activateProfile(Host* pHost)
         mpCurrentActiveHost->mpConsole->show();
         mpCurrentActiveHost->mpConsole->repaint();
         mpCurrentActiveHost->mpConsole->refresh();
+        // Defer subconsole refresh to allow Qt to fully process the show event
+        // and update widget geometry before we try to recalculate screen dimensions
+        QTimer::singleShot(0, mpCurrentActiveHost->mpConsole, &TMainConsole::refreshSubconsoles);
         mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
 
         // If NOT in multiview mode, hide all other consoles in the main window
