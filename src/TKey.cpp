@@ -186,6 +186,16 @@ bool TKey::compileScript()
     }
 }
 
+void TKey::validateKeyBinding()
+{
+    if (!isFolder() && mKeyCode == Qt::Key(0)) {
+        mOK_init = false;
+        setError(QObject::tr("No key binding set. Click \"Grab New Key\" to assign one."));
+    } else {
+        mOK_init = true;
+    }
+}
+
 void TKey::execute()
 {
     if (!mCommand.isEmpty()) {

@@ -43,7 +43,7 @@ public:
     TKey(QString name, Host* pHost);
     void compileAll();
     QString getName() const { return mName; }
-    void setName(const QString & name);
+    void setName(const QString& name);
     Qt::Key getKeyCode() const { return mKeyCode; }
     void setKeyCode(const Qt::Key code) { mKeyCode = code; }
     void setKeyCode(const int codeNumber) { setKeyCode(static_cast<Qt::Key>(codeNumber)); }
@@ -65,6 +65,7 @@ public:
 
     bool match(const Qt::Key, const Qt::KeyboardModifiers, const bool);
     bool registerKey();
+    void validateKeyBinding();
 
     bool exportItem = true;
     bool mModuleMasterFolder = false;
