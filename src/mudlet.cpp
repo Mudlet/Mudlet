@@ -6764,22 +6764,19 @@ void mudlet::unregisterBlinkClient()
     }
 }
 
-qreal mudlet::blinkOpacityForPosition(qreal normalizedX, bool isFastBlink) const
+qreal mudlet::blinkPulseOpacity(bool isFastBlink) const
 {
-    return computeBlinkOpacity(normalizedX, mBlinkTimeMs, isFastBlink);
+    return computeBlinkPulseOpacity(mBlinkTimeMs, isFastBlink);
 }
 
-qreal mudlet::computeBlinkOpacity(qreal normalizedX, qreal blinkTimeMs, bool isFastBlink)
+qreal mudlet::computeBlinkPulseOpacity(qreal blinkTimeMs, bool isFastBlink)
 {
     constexpr qreal minOpacity = 0.4;
-    constexpr qreal sigma = 0.22;
     const qreal periodMs = isFastBlink ? 1000.0 : 2000.0;
-    // Sweep phase from -0.4 to 1.4 so the wide band fully enters and exits.
-    // fast blink uses a 1000ms period, so it completes two sweeps per 2000ms accumulator cycle.
-    const qreal phase = -0.4 + 1.8 * (std::fmod(blinkTimeMs, periodMs) / periodMs);
-    const qreal dist = normalizedX - phase;
-    const qreal brightness = std::exp(-dist * dist / (2.0 * sigma * sigma));
-    return minOpacity + (1.0 - minOpacity) * brightness;
+    // Smooth cosine oscillation between minOpacity and 1.0,
+    // approximating the ease-in-out feel of the CSS @keyframes used in HTML logs
+    const qreal phase = std::fmod(blinkTimeMs, periodMs) / periodMs;
+    return minOpacity + (1.0 - minOpacity) * 0.5 * (1.0 + std::cos(2.0 * M_PI * phase));
 }
 
 void mudlet::setupTrayIcon()

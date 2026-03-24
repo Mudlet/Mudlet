@@ -4371,7 +4371,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="6" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_enableBlinkText">
             <property name="toolTip">
-             <string>&lt;p&gt;When enabled, text with blinking attribute (SGR codes 5 and 6) will display a shimmer sweep effect. When disabled, blinking text will display as italics.&lt;/p&gt;</string>
+             <string>&lt;p&gt;When enabled, text with the blinking attribute (SGR codes 5 and 6) is displayed with a smooth pulsing effect. When disabled, blinking text is shown in italics instead.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Enable blinking text</string>

@@ -396,8 +396,8 @@ public:
     bool mDrawUpperLowerLevels = true;
     bool mShowTabConnectionIndicators = true; // Global preference for showing connection status indicators on tabs
 
-    qreal blinkOpacityForPosition(qreal normalizedX, bool isFastBlink) const;
-    static qreal computeBlinkOpacity(qreal normalizedX, qreal blinkTimeMs, bool isFastBlink);
+    qreal blinkPulseOpacity(bool isFastBlink) const;
+    static qreal computeBlinkPulseOpacity(qreal blinkTimeMs, bool isFastBlink);
     void registerBlinkClient();
     void unregisterBlinkClient();
 

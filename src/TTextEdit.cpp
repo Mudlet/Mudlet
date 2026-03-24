@@ -40,7 +40,6 @@
 #include "TTextProperties.h"
 
 #include <chrono>
-#include <climits>
 #include <cmath>
 #include <QtEvents>
 #include <QtGlobal>
@@ -72,7 +71,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mEnableBlinkText(pH->getEnableBlinkText())
 , mMouseWheelRemainder()
 {
-    mBlinkContentMinX = INT_MAX;
     mLastClickTimer.start();
     Q_ASSERT_X(mpHost, "TTextEdit::TTextEdit(...)", "mpHost is a nullptr");
     Q_ASSERT_X(mSearchHighlightFgColor != mSearchHighlightBgColor, "TTextEdit::TTextEdit(...)", "search highlight foreground and background colors must not be the same");
@@ -876,25 +874,10 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     QColor effectiveFgColor = fgColor;
     if (isBlinking) {
         mHasBlinkingContent = true;
-        mBlinkContentMinX = qMin(mBlinkContentMinX, textRect.left());
-        mBlinkContentMaxX = qMax(mBlinkContentMaxX, textRect.right());
         if (mEnableBlinkText) {
             const bool isFastBlink = attributes & TChar::FastBlink;
             auto pMudlet = mudlet::self();
-            const int blinkSpan = (mPrevBlinkMaxX > mPrevBlinkMinX) ? (mPrevBlinkMaxX - mPrevBlinkMinX) : 0;
-            qreal normalizedX = 0.5;
-            if (blinkSpan > 0) {
-                // normalizedX may be outside [0,1] when text has scrolled or reflowed
-                // since the previous frame; the Gaussian naturally produces low brightness
-                // for out-of-range values, so no clamping is needed.
-                normalizedX = static_cast<qreal>(textRect.center().x() - mPrevBlinkMinX) / static_cast<qreal>(blinkSpan);
-            } else if (width() > 0) {
-                // blinkSpan is 0 when no blinking content was rendered last frame
-                // (e.g. first frame, widget hidden, or content scrolled away).
-                // Fall back to widget-width normalization so the pulse has a reasonable position.
-                normalizedX = static_cast<qreal>(textRect.center().x()) / static_cast<qreal>(width());
-            }
-            const qreal opacity = pMudlet ? pMudlet->blinkOpacityForPosition(normalizedX, isFastBlink) : 1.0;
+            const qreal opacity = pMudlet ? pMudlet->blinkPulseOpacity(isFastBlink) : 1.0;
             effectiveFgColor.setAlphaF(effectiveFgColor.alphaF() * opacity);
         } else {
             isItalics = true;
@@ -1151,10 +1134,6 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
 void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
     mHasBlinkingContent = false;
-    mPrevBlinkMinX = mBlinkContentMinX;
-    mPrevBlinkMaxX = mBlinkContentMaxX;
-    mBlinkContentMinX = INT_MAX;
-    mBlinkContentMaxX = 0;
 
     qreal dpr = devicePixelRatioF();
     QPixmap screenPixmap;
@@ -3259,10 +3238,10 @@ void TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide(const bool state)
     }
 }
 
-void TTextEdit::slot_changeEnableBlinkText(const bool state)
+void TTextEdit::slot_changeEnableBlinkText(const bool enable)
 {
-    if (mEnableBlinkText != state) {
-        mEnableBlinkText = state;
+    if (mEnableBlinkText != enable) {
+        mEnableBlinkText = enable;
         if (!mEnableBlinkText && mIsBlinkClientRegistered) {
             if (auto* pMudlet = mudlet::self()) {
                 pMudlet->unregisterBlinkClient();
