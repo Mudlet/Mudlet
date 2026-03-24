@@ -200,6 +200,8 @@ public:
     bool getHaveColorSpaceId() { return mSGRCodeHasColSpaceId; }
     void setMayRedefineColors(const bool state) { mServerMayRedefineColors = state; }
     bool getMayRedefineColors() { return mServerMayRedefineColors; }
+    bool shouldStripOscHyperlinkConfigParam();
+    bool shouldStripOscHyperlinkPresetParam();
     void setDiscordApplicationID(const QString& s);
     const QString& getDiscordApplicationID();
     void setDiscordInviteURL(const QString& s);
