@@ -790,8 +790,6 @@ void mudlet::init()
         emit signal_adjustAccessibleNames();
     });
 
-    initializeAI();
-
     // 200ms interval for WCAG 2.3.1 compliance (max 3 Hz)
     // 4-state counter per ISO/IEC 8613-6: slow blink < 150 cycles/min, fast > 150
     mpBlinkTimer = new QTimer(this);
