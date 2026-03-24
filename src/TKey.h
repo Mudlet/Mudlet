@@ -87,9 +87,7 @@ private:
      * Qt::KeypadModifier  0x20000000 A keypad button is pressed.
      */
 
-    // Have to use brace default initiliaser here as there is not a null enum
-    // value declared:
-    Qt::Key mKeyCode = {};
+    Qt::Key mKeyCode = Qt::Key_unknown;
     Qt::KeyboardModifiers mKeyModifier = Qt::NoModifier;
 
     QString mScript;
