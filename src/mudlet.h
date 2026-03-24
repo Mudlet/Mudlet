@@ -29,7 +29,6 @@
 #include "discord.h"
 #include "FontManager.h"
 #include "HostManager.h"
-#include "LlamaFileManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
 #include "utils.h"
@@ -63,6 +62,7 @@
 #include <hunspell/hunspell.h>
 
 class QCloseEvent;
+class QMediaDevices;
 class QMediaPlayer;
 class QMenu;
 class QLabel;
@@ -206,6 +206,8 @@ public:
     void attachDebugArea(const QString&);
     void checkUpdatesOnStart();
     void commitLayoutUpdates(bool flush = false);
+    bool saveFloatingDockGeometries();
+    void restoreFloatingDockGeometries();
     void deleteProfileData(const QString& profile, const QString& item);
     void disableToolbarButtons();
     void doAutoLogin(const QString&);
@@ -406,15 +408,6 @@ public:
     void registerBlinkClient();
     void unregisterBlinkClient();
 
-    // AI integration methods
-    LlamafileManager* getAIManager() const { return mpLlamafileManager.get(); }
-    bool aiModelAvailable() const;
-    bool aiRunning() const;
-    QString getAIModelPath() const { return mAIModelPath; }
-    void setAIModelPath(const QString& path);
-    bool getAIAutoStart() const { return mAIAutoStart; }
-    void setAIAutoStart(bool autoStart);
-
 
 #if defined(INCLUDE_UPDATER)
     Updater* pUpdater = nullptr;
@@ -539,14 +532,13 @@ signals:
     void signal_tabChanged(const QString&);
     void signal_toolBarVisibilityChanged(const enums::controlsVisibility);
     void signal_windowStateChanged(const Qt::WindowStates);
-    void signal_aiStatusChanged(bool running);
-    void signal_aiModelChanged(const QString& modelPath);
     void signal_showTabConnectionIndicatorsChanged(bool);
     void signal_blinkStateChanged(bool slowState, bool fastState);
     void signal_profileLoaded();
 
 private slots:
     void slot_assignShortcutsFromProfile(Host* pHost = nullptr);
+    void slot_audioOutputDeviceChanged();
     void slot_compactInputLine(const bool);
     void slot_passwordMigratedToPortableStorage(QKeychain::Job*);
     void slot_passwordMigratedToSecureStorage(QKeychain::Job*);
@@ -561,8 +553,6 @@ private slots:
 #endif
     void slot_updateShortcuts();
     void slot_windowStateChanged(const Qt::WindowStates);
-    void slot_aiStatusChanged(LlamafileManager::Status newStatus, LlamafileManager::Status oldStatus);
-    void slot_aiError(const QString& error);
     void slot_refreshTabIndicatorsDelayed();
 
 
@@ -639,6 +629,7 @@ private:
     bool mMultiView = false;
     bool mMuteAPI = false;
     bool mMuteGame = false;
+    QMediaDevices* mpMediaDevices = nullptr;
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;
     QPointer<QAction> mpActionAliases;
@@ -746,17 +737,6 @@ private:
     static constexpr int mScrollbackTutorialsMax = 3;   // Split screen
     static constexpr int mMuteAllMediaTutorialsMax = 3; // Mute all media
     static constexpr int mCharacterModeWarningsMax = 3; // Character mode
-
-    // AI/LlamaFile integration
-    std::unique_ptr<LlamafileManager> mpLlamafileManager;
-    QString mAIModelPath;
-    bool mAIAutoStart = true;
-
-    // Helper methods for AI integration
-    void initializeAI();
-    void shutdownAI();
-    bool findAIModel();
-    void setupAIConfig();
 
     // Helper method for detached windows cleanup
     void saveDetachedWindowsGeometry();

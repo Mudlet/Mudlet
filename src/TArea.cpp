@@ -57,7 +57,6 @@ TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 TArea::~TArea()
 {
     if (!mpRoomDB) {
-        qDebug() << "ERROR: In TArea::~TArea(), instance has no mpRoomDB";
         return;
     }
     if (!mpRoomDB->mBulkDeletionMode) {

@@ -337,9 +337,9 @@ public:
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
-    QString getMMCPChatName();
+    const QString& getMMCPChatName() const;
     quint16 getMMCPPort();
-    QString getMMCPChatPrefix();
+    const QString& getMMCPChatPrefix() const;
     bool getMMCPAutoStartServer();
     bool getMMCPAllowPeekRequests();
     bool getMMCPPrefixEmotes();
@@ -462,7 +462,7 @@ public:
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void initMMCPServer();
-    void setMMCPChatName(const QString&, bool shouldSignal = true);
+    bool setMMCPChatName(const QString&);
     void setShowIdsInEditor(const bool isShown)
     {
         mShowIDsInEditor = isShown;
@@ -754,7 +754,7 @@ public:
     double mLineSize = 10.0;
     double mRoomSize = 0.5;
     double mMapGridLineSize = 0.5;
-    QSet<QString> mMapInfoContributors{qsl("Short")};
+    QSet<QString> mMapInfoContributors;
     bool mBubbleMode = false;
     bool mMapViewOnly = true;
     bool mShowRoomID = false;
