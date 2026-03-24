@@ -195,7 +195,7 @@ public:
     // Is used to set preference dialog control directly:
     Qt::CheckState getWideAmbiguousEAsianGlyphsControlState() { return mAutoAmbigousWidthGlyphsSetting ? Qt::PartiallyChecked : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
     bool getEnableBlinkText() const { return mEnableBlinkText; }
-    void setEnableBlinkText(const bool enabled);
+    void setEnableBlinkText(bool enable);
     void setHaveColorSpaceId(const bool state) { mSGRCodeHasColSpaceId = state; }
     bool getHaveColorSpaceId() { return mSGRCodeHasColSpaceId; }
     void setMayRedefineColors(const bool state) { mServerMayRedefineColors = state; }
@@ -820,7 +820,7 @@ signals:
     // width characters:
     void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
     // Tells TTextEdit instances for this profile whether to animate blinking text:
-    void signal_changeEnableBlinkText(const bool);
+    void signal_changeEnableBlinkText(bool);
     void profileSaveStarted();
     void profileSaveFinished();
     void signal_changeSpellDict(const QString&);
@@ -926,7 +926,7 @@ private:
     // in the TTextEdit classes are only made when necessary:
     bool mWideAmbigousWidthGlyphs = false;
 
-    // Whether to animate blinking text (SGR codes 5 and 6) - if false, displays as italics
+    // Whether to animate blinking text (SGR codes 5 and 6) with a pulse effect
     bool mEnableBlinkText = false;
 
     // keeps track of all of the array writers we're currently operating with

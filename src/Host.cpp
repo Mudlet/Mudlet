@@ -2685,11 +2685,11 @@ void Host::refreshPackageFonts()
     }
 }
 
-void Host::setEnableBlinkText(const bool enabled)
+void Host::setEnableBlinkText(const bool enable)
 {
-    if (mEnableBlinkText != enabled) {
-        mEnableBlinkText = enabled;
-        emit signal_changeEnableBlinkText(enabled);
+    if (mEnableBlinkText != enable) {
+        mEnableBlinkText = enable;
+        emit signal_changeEnableBlinkText(enable);
     }
 }
 

@@ -101,7 +101,9 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     setAttribute(Qt::WA_OpaquePaintEvent, false);
     setAttribute(Qt::WA_DeleteOnClose);
 
-    connect(mudlet::self(), &mudlet::signal_blinkStateChanged, this, &TTextEdit::slot_blinkStateChanged);
+    if (auto* pMudlet = mudlet::self()) {
+        connect(pMudlet, &mudlet::signal_blinkStateChanged, this, &TTextEdit::slot_blinkStateChanged);
+    }
 
     // Scroll optimizations may use cached screen data, missing blinking content detection
     mpScrollStoppedTimer = new QTimer(this);
@@ -869,18 +871,14 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     const bool isBlinking = attributes & (TChar::Blink | TChar::FastBlink);
 
     bool isItalics = attributes & TChar::Italic;
+    QColor effectiveFgColor = fgColor;
     if (isBlinking) {
         mHasBlinkingContent = true;
         if (mEnableBlinkText) {
             const bool isFastBlink = attributes & TChar::FastBlink;
             auto pMudlet = mudlet::self();
-            const bool isVisible = pMudlet ? (isFastBlink ? pMudlet->fastBlinkState() : pMudlet->slowBlinkState()) : true;
-            if (!isVisible) {
-                if (!textRect.isNull()) {
-                    drawCustomDecorations(painter, fgColor, textRect, charStyle);
-                }
-                return;
-            }
+            const qreal opacity = pMudlet ? pMudlet->blinkPulseOpacity(isFastBlink) : 1.0;
+            effectiveFgColor.setAlphaF(effectiveFgColor.alphaF() * opacity);
         } else {
             isItalics = true;
         }
@@ -920,13 +918,13 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
         return;
     }
 
-    if (painter.pen().color() != fgColor) {
-        painter.setPen(fgColor);
+    if (painter.pen().color() != effectiveFgColor) {
+        painter.setPen(effectiveFgColor);
     }
     painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
 
     // Draw custom decorations (colored underlines, overlines, strikethrough)
-    drawCustomDecorations(painter, fgColor, textRect, charStyle);
+    drawCustomDecorations(painter, effectiveFgColor, textRect, charStyle);
 }
 
 void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultColor, const QRect& textRect, TChar& charStyle) const
@@ -1228,12 +1226,14 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     mForceUpdate = false;
 
     const bool shouldBeRegistered = mEnableBlinkText && mHasBlinkingContent;
-    if (shouldBeRegistered && !mIsBlinkClientRegistered) {
-        mudlet::self()->registerBlinkClient();
-        mIsBlinkClientRegistered = true;
-    } else if (!shouldBeRegistered && mIsBlinkClientRegistered) {
-        mudlet::self()->unregisterBlinkClient();
-        mIsBlinkClientRegistered = false;
+    if (auto* pMudlet = mudlet::self()) {
+        if (shouldBeRegistered && !mIsBlinkClientRegistered) {
+            pMudlet->registerBlinkClient();
+            mIsBlinkClientRegistered = true;
+        } else if (!shouldBeRegistered && mIsBlinkClientRegistered) {
+            pMudlet->unregisterBlinkClient();
+            mIsBlinkClientRegistered = false;
+        }
     }
 }
 
@@ -2024,10 +2024,10 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     text.append("        span { white-space: pre-wrap; }\n");
 
     if (mEnableBlinkText) {
-        text.append("        @keyframes blink-slow { 50% { opacity: 0; } }\n");
-        text.append("        @keyframes blink-fast { 50% { opacity: 0; } }\n");
-        text.append("        .blink-slow { animation: blink-slow 0.8s step-end infinite; }\n");
-        text.append("        .blink-fast { animation: blink-fast 0.4s step-end infinite; }\n");
+        text.append("        @keyframes blink-slow { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }\n");
+        text.append("        @keyframes blink-fast { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }\n");
+        text.append("        .blink-slow { animation: blink-slow 2s ease-in-out infinite; }\n");
+        text.append("        .blink-fast { animation: blink-fast 1s ease-in-out infinite; }\n");
     }
 
     text.append("     -->\n");
@@ -3238,23 +3238,25 @@ void TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide(const bool state)
     }
 }
 
-void TTextEdit::slot_changeEnableBlinkText(const bool state)
+void TTextEdit::slot_changeEnableBlinkText(const bool enable)
 {
-    if (mEnableBlinkText != state) {
-        mEnableBlinkText = state;
+    if (mEnableBlinkText != enable) {
+        mEnableBlinkText = enable;
         if (!mEnableBlinkText && mIsBlinkClientRegistered) {
-            mudlet::self()->unregisterBlinkClient();
+            if (auto* pMudlet = mudlet::self()) {
+                pMudlet->unregisterBlinkClient();
+            }
             mIsBlinkClientRegistered = false;
         }
         update();
     }
 }
 
-void TTextEdit::slot_blinkStateChanged(bool slowState, bool fastState)
+void TTextEdit::slot_blinkStateChanged()
 {
-    Q_UNUSED(slowState);
-    Q_UNUSED(fastState);
-    forceUpdate();
+    if (mIsBlinkClientRegistered) {
+        forceUpdate();
+    }
 }
 
 void TTextEdit::slot_scrollStoppedTimeout()

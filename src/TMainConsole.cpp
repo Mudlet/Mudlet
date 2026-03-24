@@ -277,10 +277,10 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
             logStream << "        span { white-space: pre-wrap; }\n";
 
             if (mpHost->getEnableBlinkText()) {
-                logStream << "        @keyframes blink-slow { 50% { opacity: 0; } }\n";
-                logStream << "        @keyframes blink-fast { 50% { opacity: 0; } }\n";
-                logStream << "        .blink-slow { animation: blink-slow 0.8s step-end infinite; }\n";
-                logStream << "        .blink-fast { animation: blink-fast 0.4s step-end infinite; }\n";
+                logStream << "        @keyframes blink-slow { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }\n";
+                logStream << "        @keyframes blink-fast { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }\n";
+                logStream << "        .blink-slow { animation: blink-slow 2s ease-in-out infinite; }\n";
+                logStream << "        .blink-fast { animation: blink-fast 1s ease-in-out infinite; }\n";
             }
 
             logStream << "     -->\n";
