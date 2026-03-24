@@ -3545,7 +3545,6 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         return {true, QString()};
     }
     return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
-    }
 }
 
 std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
@@ -4089,7 +4088,6 @@ std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, 
     }
 
     return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
-    }
 }
 
 std::pair<bool, QString> Host::closeMapWidget()
