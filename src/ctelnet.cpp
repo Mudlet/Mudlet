@@ -1843,14 +1843,14 @@ QString cTelnet::getNewEnvironOSCHyperlinksDisabled()
     return qsl("1");
 }
 
-bool cTelnet::isOscHyperlinkConfigFeatureEnabled()
+bool cTelnet::oscHyperlinkConfigFeatureEnabled()
 {
     return getNewEnvironOSCHyperlinksStyleBasic() == qsl("1") || getNewEnvironOSCHyperlinksStyleStates() == qsl("1") || getNewEnvironOSCHyperlinksTooltip() == qsl("1")
            || getNewEnvironOSCHyperlinksMenu() == qsl("1") || getNewEnvironOSCHyperlinksCompact() == qsl("1") || getNewEnvironOSCHyperlinksVisibility() == qsl("1")
            || getNewEnvironOSCHyperlinksSelection() == qsl("1") || getNewEnvironOSCHyperlinksSpoiler() == qsl("1") || getNewEnvironOSCHyperlinksDisabled() == qsl("1");
 }
 
-bool cTelnet::isOscHyperlinkPresetsEnabled()
+bool cTelnet::oscHyperlinkPresetsEnabled()
 {
     return getNewEnvironOSCHyperlinksPresets() == qsl("1");
 }

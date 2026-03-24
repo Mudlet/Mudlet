@@ -5018,10 +5018,10 @@ QStringList Host::getValidExperiments() const
 
 bool Host::shouldStripOscHyperlinkConfigParam()
 {
-    return mTelnet.isOscHyperlinkConfigFeatureEnabled();
+    return mTelnet.oscHyperlinkConfigFeatureEnabled();
 }
 
 bool Host::shouldStripOscHyperlinkPresetParam()
 {
-    return mTelnet.isOscHyperlinkPresetsEnabled();
+    return mTelnet.oscHyperlinkPresetsEnabled();
 }
