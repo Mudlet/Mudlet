@@ -266,6 +266,50 @@ private slots:
                             .arg(commands.first())));
   }
 
+  void test_Osc8WebUrl_StripsPresetWithEncodedEquals() {
+    // Tests that preset parameter is stripped even when = is percent-encoded as
+    // %3D, while preserving non-reserved parameters
+    QString messageFromMud = "\x1b]8;;https://example.com/"
+                             "?preset%3Ddefault&page=1\x1b\\Link\x1b]8;;\x1b\\";
+
+    mpServer->setWelcomeMessage(messageFromMud);
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    QStringList commands = findFirstLinkCommands();
+    QVERIFY2(!commands.isEmpty(), "No hyperlink found in buffer");
+    QVERIFY2(!commands.first().contains("preset%3D"),
+             qPrintable(QString("Preset param with encoded = not stripped: %1")
+                            .arg(commands.first())));
+    QVERIFY2(commands.first().contains("page=1"),
+             qPrintable(QString("Non-reserved 'page' param was stripped: %1")
+                            .arg(commands.first())));
+  }
+
+  void test_Osc8WebUrl_StripsConfigWithEncodedEquals() {
+    // Tests that config parameter is stripped even when = is percent-encoded as
+    // %3d (lowercase variant of %3D), while preserving non-reserved parameters
+    QString messageFromMud = "\x1b]8;;https://example.com/"
+                             "?config%3dvalue&foo=bar\x1b\\Link\x1b]8;;\x1b\\";
+
+    mpServer->setWelcomeMessage(messageFromMud);
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    QStringList commands = findFirstLinkCommands();
+    QVERIFY2(!commands.isEmpty(), "No hyperlink found in buffer");
+    QVERIFY2(!commands.first().contains("config%3d"),
+             qPrintable(QString("Config param with encoded = not stripped: %1")
+                            .arg(commands.first())));
+    QVERIFY2(commands.first().contains("foo=bar"),
+             qPrintable(QString("Non-reserved 'foo' param was stripped: %1")
+                            .arg(commands.first())));
+  }
+
   void test_Osc8WebUrl_PreservesPercentEncodedReservedNames() {
     // %63%6F%6E%66%69%67 is "config" percent-encoded — should NOT be stripped
     QString messageFromMud =

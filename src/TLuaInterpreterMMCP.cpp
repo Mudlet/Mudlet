@@ -251,14 +251,13 @@ int TLuaInterpreter::mmcpChatName(lua_State* L)
     QString name;
     if (n > 0) {
         name = getVerifiedString(L, sFunc, 1, "name");
-        const auto result = pHost->mMMCPServer->chatName(name);
-        if (!result.first) {
-            return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
+        if (!pHost->setMMCPChatName(name)) {
+            return warnArgumentValue(L, sFunc, qsl("invalid chat name: tilde (~) and comma (,) are not allowed"));
         }
 
         lua_pushboolean(L, true);
     } else {
-        name = pHost->mMMCPServer->getChatName();
+        name = pHost->getMMCPChatName();
         lua_pushstring(L, name.toUtf8().constData());
     }
 
