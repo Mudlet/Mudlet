@@ -63,7 +63,14 @@ public:
         }
         return mMediaPlayer->playbackState();
     }
-    void setVolume(int volume) const { return mMediaPlayer->audioOutput()->setVolume(volume / 100.0f); }
+    void setVolume(int volume) const
+    {
+        if (!mMediaPlayer) {
+            qWarning() << "TMediaPlayer::setVolume() - mMediaPlayer is nullptr!";
+            return;
+        }
+        mMediaPlayer->audioOutput()->setVolume(volume / 100.0f);
+    }
     TMediaPlaylist* playlist() const { return mPlaylist; }
     void setPlaylist(TMediaPlaylist* playlist)
     {
@@ -73,12 +80,29 @@ public:
             mPlaylist = playlist;
         }
     }
+    void refreshAudioOutput()
+    {
+        if (!mMediaPlayer) {
+            return;
+        }
+        QAudioOutput* oldOutput = mMediaPlayer->audioOutput();
+        float volume = oldOutput ? oldOutput->volume() : 1.0f;
+        bool muted = oldOutput ? oldOutput->isMuted() : false;
+
+        auto* newOutput = new QAudioOutput();
+        newOutput->setVolume(volume);
+        newOutput->setMuted(muted);
+        mMediaPlayer->setAudioOutput(newOutput);
+        if (oldOutput) {
+            oldOutput->deleteLater();
+        }
+    }
 
 private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
-    QMediaPlayer* mMediaPlayer;
-    TMediaPlaylist* mPlaylist;
+    QMediaPlayer* mMediaPlayer = nullptr;
+    TMediaPlaylist* mPlaylist = nullptr;
     bool initialized = false;
 };
 
@@ -103,6 +127,7 @@ public:
     void stopMedia(TMediaData& mediaData);
     void parseGMCP(QString& packageMessage, QString& gmcp);
     bool purgeMediaCache();
+    void refreshAudioDevices();
     void muteMedia(const TMediaData::MediaProtocol mediaProtocol);
     void unmuteMedia(const TMediaData::MediaProtocol mediaProtocol);
     void printClosedCaption(const TMediaData& mediaData, const QString& action) const;

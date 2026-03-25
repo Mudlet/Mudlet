@@ -259,7 +259,7 @@ void TMxpFrameManager::resetAllFrames()
     mMxpBorders = QMargins();
 
     if (mpHost) {
-        mpHost->setBorders(QMargins());
+        mpHost->setMxpBorders(QMargins());
     }
 
     clearDestination();
@@ -525,7 +525,7 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
             y = containerY;
         }
 
-        mpHost->setBorders(mMxpBorders);
+        mpHost->setMxpBorders(mMxpBorders);
     }
 
     // FLOATING attribute, no explicit title, or very small height = borderless frame without header
@@ -585,11 +585,6 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         // Create console directly with tabPage as parent to avoid flash on mpMainFrame
         // (createMiniConsole parents to mpMainFrame and calls show() before we can intervene)
         console = new TConsole(mpHost, frame->name, TConsole::SubConsole, tabPage);
-        if (!console) {
-            qWarning() << "TMxpFrameManager::layoutInternalFrame: Failed to create console for" << frame->name;
-            delete containerWidget;
-            return;
-        }
 
         // Setup console properties (mirroring what createMiniConsole does)
         console->setObjectName(frame->name);
@@ -615,12 +610,6 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         // Floating/borderless: console directly in container, no tab header
         // Create console directly with containerWidget as parent to avoid flash
         console = new TConsole(mpHost, frame->name, TConsole::SubConsole, containerWidget);
-
-        if (!console) {
-            qWarning() << "TMxpFrameManager::layoutInternalFrame: Failed to create console for" << frame->name;
-            delete containerWidget;
-            return;
-        }
 
         // Setup console properties (mirroring what createMiniConsole does)
         console->setObjectName(frame->name);
@@ -783,12 +772,6 @@ void TMxpFrameManager::layoutTabFrame(TMxpFrame* frame)
 
     // Create console directly with tabPage as parent
     auto* console = new TConsole(mpHost, frame->name, TConsole::SubConsole, tabPage);
-
-    if (!console) {
-        qWarning() << "TMxpFrameManager::layoutTabFrame: Failed to create console";
-        delete tabPage;
-        return;
-    }
 
     // Setup console properties
     TMainConsole* mainConsole = mpHost->mpConsole;
@@ -1029,7 +1012,7 @@ void TMxpFrameManager::recalculateBorders()
     mMxpBorders = QMargins();
 
     if (!mpHost->mpConsole) {
-        mpHost->setBorders(mMxpBorders);
+        mpHost->setMxpBorders(mMxpBorders);
         return;
     }
 
@@ -1065,5 +1048,5 @@ void TMxpFrameManager::recalculateBorders()
     }
 
     // Apply the recalculated borders
-    mpHost->setBorders(mMxpBorders);
+    mpHost->setMxpBorders(mMxpBorders);
 }

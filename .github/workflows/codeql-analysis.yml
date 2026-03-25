@@ -17,10 +17,6 @@ jobs:
     name: ${{matrix.buildname}}
     runs-on: ubuntu-latest
 
-    concurrency:
-      group: ${{github.workflow}}-${{matrix.buildname}}-${{github.ref}}
-      cancel-in-progress: true
-
     permissions:
       security-events: write
 
@@ -102,7 +98,7 @@ jobs:
         queries: security-extended, security-and-quality
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.2.3
+      uses: lukka/get-cmake@v4.3.0
 
     - name: (Linux) Install Lua via GitHub Actions
       uses: leafo/gh-actions-lua@v12

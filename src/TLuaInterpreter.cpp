@@ -2302,7 +2302,7 @@ void TLuaInterpreter::parseCommandOrFunction(lua_State* lState, const char* func
 void TLuaInterpreter::parseHintsTable(lua_State* lState, const char* functionName, int& index, QStringList& hintList)
 {
     if (!lua_istable(lState, index)) {
-        lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, "hints", luaL_typename(lState, index));
+        lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, index, "hints", luaL_typename(lState, index));
         lua_error(lState);
         Q_UNREACHABLE();
     }
@@ -2331,7 +2331,7 @@ void TLuaInterpreter::parseHintsTable(lua_State* lState, const char* functionNam
 void TLuaInterpreter::parseCommandsOrFunctionsTable(lua_State* lState, const char* functionName, int& index, QStringList& commandsList, QVector<int>& luaFunctionNumbers)
 {
     if (!lua_istable(lState, index)) {
-        lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, "commands/functions", luaL_typename(lState, index));
+        lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, index, "commands/functions", luaL_typename(lState, index));
         lua_error(lState);
         Q_UNREACHABLE();
     }
@@ -2552,7 +2552,7 @@ int TLuaInterpreter::getTime(lua_State* L)
     } else {
         const QDate dt = time.date();
         const QTime tm = time.time();
-        lua_createtable(L, 0, 4);
+        lua_createtable(L, 0, 7);
         lua_pushstring(L, "hour");
         lua_pushinteger(L, tm.hour());
         lua_rawset(L, n + 1);
@@ -3582,7 +3582,16 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
                 lua_remove(L, -2);
             }
             lua_pushstring(L, tokenList.at(i).toUtf8().constData());
-            lua_pcall(L, 2, 0, 0);
+            if (lua_pcall(L, 2, 0, 0)) {
+                std::string e;
+                if (lua_isstring(L, -1)) {
+                    e = "GMCP merge error: ";
+                    e += lua_tostring(L, -1);
+                }
+                const QString _n = qsl("GMCP merge");
+                const QString _f = qsl("__gmcp_merge_gmcp_sub_tables");
+                logError(e, _n, _f);
+            }
         }
     } else {
         {
@@ -4069,7 +4078,7 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
     }
     lua_pop(L, lua_gettop(L));
 
-    return (error);
+    return !error;
 }
 
 // No documentation available in wiki - internal function
@@ -4821,6 +4830,7 @@ int TLuaInterpreter::unzipAsync(lua_State* L)
         event.mArgumentList.append(extractLocation);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         host.raiseEvent(event);
+        watcher->deleteLater();
     });
     watcher->setFuture(future);
 
@@ -5076,6 +5086,17 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "deleteLabel", TLuaInterpreter::deleteLabel);
     lua_register(pGlobalLua, "deleteMiniConsole", TLuaInterpreter::deleteMiniConsole);
     lua_register(pGlobalLua, "deleteCommandLine", TLuaInterpreter::deleteCommandLine);
+    lua_register(pGlobalLua, "createTextEdit", TLuaInterpreter::createTextEdit);
+    lua_register(pGlobalLua, "deleteTextEdit", TLuaInterpreter::deleteTextEdit);
+    lua_register(pGlobalLua, "getTextEditText", TLuaInterpreter::getTextEditText);
+    lua_register(pGlobalLua, "setTextEditText", TLuaInterpreter::setTextEditText);
+    lua_register(pGlobalLua, "clearTextEdit", TLuaInterpreter::clearTextEdit);
+    lua_register(pGlobalLua, "setTextEditReadOnly", TLuaInterpreter::setTextEditReadOnly);
+    lua_register(pGlobalLua, "setTextEditPlaceholder", TLuaInterpreter::setTextEditPlaceholder);
+    lua_register(pGlobalLua, "setTextEditStyleSheet", TLuaInterpreter::setTextEditStyleSheet);
+    lua_register(pGlobalLua, "setTextEditFont", TLuaInterpreter::setTextEditFont);
+    lua_register(pGlobalLua, "setTextEditFontSize", TLuaInterpreter::setTextEditFontSize);
+    lua_register(pGlobalLua, "setTextEditTabMovesFocus", TLuaInterpreter::setTextEditTabMovesFocus);
     lua_register(pGlobalLua, "deleteScrollBox", TLuaInterpreter::deleteScrollBox);
     lua_register(pGlobalLua, "setLabelToolTip", TLuaInterpreter::setLabelToolTip);
     lua_register(pGlobalLua, "setLabelCursor", TLuaInterpreter::setLabelCursor);
@@ -5529,6 +5550,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "killMapInfo", TLuaInterpreter::killMapInfo);
     lua_register(pGlobalLua, "enableMapInfo", TLuaInterpreter::enableMapInfo);
     lua_register(pGlobalLua, "disableMapInfo", TLuaInterpreter::disableMapInfo);
+    lua_register(pGlobalLua, "getMapInfo", TLuaInterpreter::getMapInfo);
     lua_register(pGlobalLua, "getProfileTabNumber", TLuaInterpreter::getProfileTabNumber);
     lua_register(pGlobalLua, "addFileWatch", TLuaInterpreter::addFileWatch);
     lua_register(pGlobalLua, "removeFileWatch", TLuaInterpreter::removeFileWatch);
@@ -5564,9 +5586,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "disableTimeStamps", TLuaInterpreter::disableTimeStamps);
     lua_register(pGlobalLua, "enableTimeStamps", TLuaInterpreter::enableTimeStamps);
     lua_register(pGlobalLua, "timeStampsEnabled", TLuaInterpreter::timeStampsEnabled);
-    lua_register(pGlobalLua, "aiChat", TLuaInterpreter::aiChat);
-    lua_register(pGlobalLua, "aiPrompt", TLuaInterpreter::aiPrompt);
-    lua_register(pGlobalLua, "aiPromptStream", TLuaInterpreter::aiPromptStream);
     lua_register(pGlobalLua, "setActiveProfile", TLuaInterpreter::setActiveProfile);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
@@ -8232,7 +8251,7 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
             // First argument is a string so is presumably a command line name
             name = CMDLINE_NAME(L, 1);
             if (n > 1) {
-                saveCommands = !getVerifiedBool(L, __func__, 2, "save command history", true);
+                saveCommands = getVerifiedBool(L, __func__, 2, "save command history", true);
             }
 
         } else {
@@ -8241,7 +8260,7 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
                 return lua_error(L); // Dummy return!
             }
 
-            saveCommands = !getVerifiedBool(L, __func__, 1, "save command history", true);
+            saveCommands = getVerifiedBool(L, __func__, 1, "save command history", true);
         }
     }
 

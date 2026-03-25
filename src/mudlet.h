@@ -29,7 +29,6 @@
 #include "discord.h"
 #include "FontManager.h"
 #include "HostManager.h"
-#include "LlamaFileManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
 #include "utils.h"
@@ -42,6 +41,7 @@
 #include "ui_main_window.h"
 #include <QAction>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFlags>
 #include <QKeySequence>
 #include <QMainWindow>
@@ -63,6 +63,7 @@
 #include <hunspell/hunspell.h>
 
 class QCloseEvent;
+class QMediaDevices;
 class QMediaPlayer;
 class QMenu;
 class QLabel;
@@ -206,6 +207,8 @@ public:
     void attachDebugArea(const QString&);
     void checkUpdatesOnStart();
     void commitLayoutUpdates(bool flush = false);
+    bool saveFloatingDockGeometries();
+    void restoreFloatingDockGeometries();
     void deleteProfileData(const QString& profile, const QString& item);
     void disableToolbarButtons();
     void doAutoLogin(const QString&);
@@ -236,6 +239,7 @@ public:
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     bool loadWindowLayout();
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
+    bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
     bool migratePasswordsToProfileStorage();
     bool migratePasswordsToSecureStorage();
     // Helper function to check if current version is >= specified version for backward compatibility
@@ -317,6 +321,8 @@ public:
     void showedSplitscreenTutorial();
     bool showMuteAllMediaTutorial();
     void showedMuteAllMediaTutorial();
+    bool showCharacterModeWarning();
+    void showedCharacterModeWarning();
     bool experiencedMudletPlayer();
 
     enums::Appearance mAppearance = enums::Appearance::systemSetting;
@@ -391,27 +397,10 @@ public:
     bool mDrawUpperLowerLevels = true;
     bool mShowTabConnectionIndicators = true; // Global preference for showing connection status indicators on tabs
 
-    // Global blink timer for SGR codes 5 and 6 (flashing text)
-    // Shared across all TTextEdit instances for synchronized blinking
-    // Uses 200ms base interval (WCAG 2.3.1 compliant - max 3 Hz)
-    // 4-state counter per ISO/IEC 8613-6: slow blink < 150 cycles/min, fast > 150
-    //   state 0: slow=on,  fast=on
-    //   state 1: slow=on,  fast=off
-    //   state 2: slow=off, fast=on
-    //   state 3: slow=off, fast=off
-    bool slowBlinkState() const { return mBlinkState < 2; }
-    bool fastBlinkState() const { return (mBlinkState % 2) == 0; }
+    qreal blinkPulseOpacity(bool isFastBlink) const;
+    static qreal computeBlinkPulseOpacity(qreal blinkTimeMs, bool isFastBlink);
     void registerBlinkClient();
     void unregisterBlinkClient();
-
-    // AI integration methods
-    LlamafileManager* getAIManager() const { return mpLlamafileManager.get(); }
-    bool aiModelAvailable() const;
-    bool aiRunning() const;
-    QString getAIModelPath() const { return mAIModelPath; }
-    void setAIModelPath(const QString& path);
-    bool getAIAutoStart() const { return mAIAutoStart; }
-    void setAIAutoStart(bool autoStart);
 
 
 #if defined(INCLUDE_UPDATER)
@@ -426,8 +415,10 @@ public slots:
     void slot_connectionDialogueFinished(const QString&, bool);
     void slot_disconnect();
     void slot_handleToolbarVisibilityChanged(bool);
+    void slot_toolbarToggleActionTriggered(bool);
 #if defined(INCLUDE_UPDATER)
     void slot_manualUpdateCheck();
+    void slot_updateCheckFailed(const QString& error);
     void slot_showFullChangelog();
 #endif
     void slot_mapper();
@@ -460,7 +451,7 @@ public slots:
     void slot_replaySpeedDown();
     void slot_replayTimeChanged();
     void slot_restoreMainMenu() { setMenuBarVisibility(enums::visibleAlways); }
-    void slot_restoreMainToolBar() { setToolBarVisibility(enums::visibleAlways); }
+    void slot_restoreMainToolBar() { synchronizeToolBarVisibility(true); }
     void slot_showAboutDialog();
     void slot_showHelpDialogForum();
     void slot_showHelpDialogIrc();
@@ -499,8 +490,6 @@ public slots:
     void setupPreferencesFocusRestoration(dlgProfilePreferences* pPreferences);
     void slot_showTimerDialog();
     void slot_showTabContextMenu(const QPoint& position);
-    void slot_toggleMainToolBar();
-    void slot_showMainToolBarContextMenu(const QPoint& position);
     void synchronizeToolBarVisibility(bool visible);
     void slot_showTriggerDialog();
     void slot_showVariableDialog();
@@ -536,14 +525,13 @@ signals:
     void signal_tabChanged(const QString&);
     void signal_toolBarVisibilityChanged(const enums::controlsVisibility);
     void signal_windowStateChanged(const Qt::WindowStates);
-    void signal_aiStatusChanged(bool running);
-    void signal_aiModelChanged(const QString& modelPath);
     void signal_showTabConnectionIndicatorsChanged(bool);
-    void signal_blinkStateChanged(bool slowState, bool fastState);
+    void signal_blinkStateChanged();
     void signal_profileLoaded();
 
 private slots:
     void slot_assignShortcutsFromProfile(Host* pHost = nullptr);
+    void slot_audioOutputDeviceChanged();
     void slot_compactInputLine(const bool);
     void slot_passwordMigratedToPortableStorage(QKeychain::Job*);
     void slot_passwordMigratedToSecureStorage(QKeychain::Job*);
@@ -558,8 +546,6 @@ private slots:
 #endif
     void slot_updateShortcuts();
     void slot_windowStateChanged(const Qt::WindowStates);
-    void slot_aiStatusChanged(LlamafileManager::Status newStatus, LlamafileManager::Status oldStatus);
-    void slot_aiError(const QString& error);
     void slot_refreshTabIndicatorsDelayed();
 
 
@@ -636,6 +622,7 @@ private:
     bool mMultiView = false;
     bool mMuteAPI = false;
     bool mMuteGame = false;
+    QMediaDevices* mpMediaDevices = nullptr;
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;
     QPointer<QAction> mpActionAliases;
@@ -708,7 +695,8 @@ private:
     QPointer<QShortcut> mpShortcutToggleEmergencyStop;
     QPointer<QTimer> mpTimerReplay;
     QPointer<QTimer> mpBlinkTimer;
-    int mBlinkState = 0;
+    QElapsedTimer mBlinkElapsedTimer;
+    qreal mBlinkTimeMs = 0.0;
     int mBlinkClientCount = 0;
     QPointer<QToolBar> mpToolBarReplay;
     QWidget* mpWidget_profileContainer = nullptr;
@@ -737,20 +725,12 @@ private:
     // amount of times the shortcut has been shown help educate new users
     int mScrollbackTutorialsShown = 0;   // Cancel split screen
     int mMuteAllMediaTutorialsShown = 0; // Mute all media
+    int mCharacterModeWarningsShown = 0; // Character-at-a-time mode detection
+
     // show the tutorial maximum 3 times on a new Mudlet
-    static const int mScrollbackTutorialsMax = 3;   // Split screen
-    static const int mMuteAllMediaTutorialsMax = 3; // Mute all media
-
-    // AI/LlamaFile integration
-    std::unique_ptr<LlamafileManager> mpLlamafileManager;
-    QString mAIModelPath;
-    bool mAIAutoStart = true;
-
-    // Helper methods for AI integration
-    void initializeAI();
-    void shutdownAI();
-    bool findAIModel();
-    void setupAIConfig();
+    static constexpr int mScrollbackTutorialsMax = 3;   // Split screen
+    static constexpr int mMuteAllMediaTutorialsMax = 3; // Mute all media
+    static constexpr int mCharacterModeWarningsMax = 3; // Character mode
 
     // Helper method for detached windows cleanup
     void saveDetachedWindowsGeometry();
