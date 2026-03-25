@@ -21,14 +21,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include "ui_map_label.h"
-#include <QColorDialog>
 #include <QDialog>
-#include <QFileDialog>
-#include <QFontDialog>
-#include "post_guard.h"
 
+class QColorDialog;
+class QFontDialog;
 
 class dlgMapLabel : public QDialog, public Ui::map_label
 {
@@ -44,6 +41,7 @@ public:
     QString getText();
     QColor& getBgColor();
     QColor& getFgColor();
+    QColor& getOutlineColor();
     QFont& getFont();
     bool isOnTop();
     bool noScale();
@@ -55,16 +53,19 @@ private:
     QFontDialog* fontDialog = nullptr;
     QColorDialog* bgColorDialog = nullptr;
     QColorDialog* fgColorDialog = nullptr;
+    QColorDialog* outlineColorDialog = nullptr;
     QString imagePath;
     QString text;
     QColor fgColor = QColor(255, 255, 50, 255);
     QColor bgColor = QColor(50, 50, 150, 100);
+    QColor outlineColor = QColor(255, 255, 50, 255);
     QFont font;
 
 private slots:
     void slot_save();
     void slot_pickFgColor();
     void slot_pickBgColor();
+    void slot_pickOutlineColor();
     void slot_pickFont();
     void slot_pickFile();
     void slot_updateControls();

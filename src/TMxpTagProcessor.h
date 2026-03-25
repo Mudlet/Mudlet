@@ -23,11 +23,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QMap>
 #include <QString>
 #include <QVector>
-#include "post_guard.h"
 
 #include "MxpTag.h"
 #include "TEntityResolver.h"
@@ -57,6 +55,7 @@ public:
     void registerHandler(TMxpTagHandler* handler);
 
     TMxpElementRegistry& getElementRegistry() override;
+    const TMxpElementRegistry& getElementRegistry() const;
     QMap<QString, QVector<QString>>& getSupportedElements() override;
     TMxpTagHandler& getMainHandler() override;
 

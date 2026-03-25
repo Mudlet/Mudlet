@@ -21,9 +21,7 @@
 
 #include "ircmessageformatter.h"
 
-#include "pre_guard.h"
 #include <IrcTextFormat>
-#include "post_guard.h"
 
 QString IrcMessageFormatter::formatMessage(IrcMessage* message, bool isForLua)
 {
@@ -161,9 +159,8 @@ QString IrcMessageFormatter::formatJoinMessage(IrcJoinMessage* message, bool isF
     Q_UNUSED(isForLua)
     if (message->flags() & IrcMessage::Own) {
         return QObject::tr("! You have joined %1 as %2").arg(message->channel(), message->nick());
-    } else {
-        return QObject::tr("! %1 has joined %2").arg(message->nick(), message->channel());
     }
+    return QObject::tr("! %1 has joined %2").arg(message->nick(), message->channel());
 }
 
 QString IrcMessageFormatter::formatKickMessage(IrcKickMessage* message, bool isForLua)
@@ -178,15 +175,14 @@ QString IrcMessageFormatter::formatModeMessage(IrcModeMessage* message, bool isF
     const QString args = message->arguments().join(" ");
     if (message->isReply()) {
         return QObject::tr("! %1 mode is %2 %3").arg(message->target(), message->mode(), args);
-    } else {
-        return QObject::tr("! %1 sets mode %2 %3 %4").arg(message->nick(), message->target(), message->mode(), args);
     }
+    return QObject::tr("! %1 sets mode %2 %3 %4").arg(message->nick(), message->target(), message->mode(), args);
 }
 
 QString IrcMessageFormatter::formatMotdMessage(IrcMotdMessage* message, bool isForLua)
 {
     QString motdData;
-    for (auto line : message->lines()) {
+    for (const auto& line : message->lines()) {
         QString content, lineEnd;
         if (isForLua) {
             lineEnd = "\n";
@@ -209,9 +205,8 @@ QString IrcMessageFormatter::formatNamesMessage(IrcNamesMessage* message, bool i
         // list from the UI userModel alone would be limiting to the IRC commands.
         const QString nameList = message->names().join(" ");
         return QObject::tr("! %1 has %2 users: %3").arg(message->channel(), count, nameList);
-    } else {
-        return QObject::tr("! %1 has %2 users").arg(message->channel(), count);
     }
+    return QObject::tr("! %1 has %2 users").arg(message->channel(), count);
 }
 
 QString IrcMessageFormatter::formatNickMessage(IrcNickMessage* message, bool isForLua)
@@ -332,9 +327,8 @@ QString IrcMessageFormatter::formatPartMessage(IrcPartMessage* message, bool isF
     Q_UNUSED(isForLua)
     if (message->reason().isEmpty()) {
         return QObject::tr("! %1 has left %2").arg(message->nick(), message->channel());
-    } else {
-        return QObject::tr("! %1 has left %2 (%3)").arg(message->nick(), message->channel(), message->reason());
     }
+    return QObject::tr("! %1 has left %2 (%3)").arg(message->nick(), message->channel(), message->reason());
 }
 
 QString IrcMessageFormatter::formatPongMessage(IrcPongMessage* message, bool isForLua)
@@ -372,9 +366,8 @@ QString IrcMessageFormatter::formatQuitMessage(IrcQuitMessage* message, bool isF
     Q_UNUSED(isForLua)
     if (message->reason().isEmpty()) {
         return QObject::tr("! %1 has quit").arg(message->nick());
-    } else {
-        return QObject::tr("! %1 has quit (%2)").arg(message->nick(), message->reason());
     }
+    return QObject::tr("! %1 has quit (%2)").arg(message->nick(), message->reason());
 }
 
 QString IrcMessageFormatter::formatTopicMessage(IrcTopicMessage* message, bool isForLua)

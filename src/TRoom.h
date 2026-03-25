@@ -24,17 +24,13 @@
  ***************************************************************************/
 
 
-#include "TMap.h"
-
-#include "pre_guard.h"
-#include <QApplication>
+#include <QCoreApplication>
 #include <QColor>
 #include <QDebug>
 #include <QHash>
 #include <QMap>
 #include <QSet>
 #include <QVector3D>
-#include "post_guard.h"
 
 class XMLimport;
 class XMLexport;
@@ -76,7 +72,22 @@ public:
     bool setArea(int, bool deferAreaRecalculations = false);
     int getExitWeight(const QString& cmd);
 
+    inline int x() const { return mX; }
+    inline int y() const { return mY; }
+    inline int z() const { return mZ; }
+    inline void setCoordinates(const int x, const int y, const int z) {
+        mX = x;
+        mY = y;
+        mZ = z;
+    }
+    inline void offset(const int deltaX, const int deltaY, const int deltaZ) {
+        mX += deltaX;
+        mY += deltaY;
+        mZ += deltaZ;
+    }
     int getWeight() const { return weight; }
+    bool isHidden() const { return hidden; }
+    void setHidden(const bool);
     int getNorth() const { return north; }
     void setNorth(int id) { north = id; }
     int getNorthwest() const { return northwest; }
@@ -127,19 +138,18 @@ public:
     void writeJsonRoom(QJsonArray&) const;
     int readJsonRoom(const QJsonArray&, const int, const int);
 
-
-    int x = 0;
-    int y = 0;
-    int z = 0;
     int environment = -1;
 
     bool isLocked = false;
+    bool hidden = false;
     qreal min_x = 0.0;
     qreal min_y = 0.0;
     qreal max_x = 0.0;
     qreal max_y = 0.0;
     QString mSymbol;
     QColor mSymbolColor;
+    QColor mBorderColor;      // Per-room border color (invalid = use global)
+    int mBorderThickness = 0; // Per-room border thickness (0 = use global)
     QString name;
 
     QList<int> exitStubs; //contains a list of: exittype (according to defined values above)
@@ -170,6 +180,7 @@ private:
     void readJsonDoor(const QJsonObject&, const QString&);
     void readJsonHighlight(const QJsonObject&);
     void readJsonSymbol(const QJsonObject&);
+    void readJsonBorder(const QJsonObject&);
 
     void writeJsonExits(QJsonObject&) const;
     void writeJsonExitStubs(QJsonObject&) const;
@@ -180,11 +191,16 @@ private:
     void writeJsonDoor(QJsonObject&, const QString&) const;
     void writeJsonHighlight(QJsonObject&) const;
     void writeJsonSymbol(QJsonObject&) const;
+    void writeJsonBorder(QJsonObject&) const;
 
 
     int id = 0;
     int area = -1;
     int weight = 1;
+    // Made private so we can catch all cases where they are to be modified:
+    int mX = 0;
+    int mY = 0;
+    int mZ = 0;
     // Uses "shortStrings" as keys for normal exits:
     QMap<QString, int> exitWeights;
     int north = -1;
@@ -215,12 +231,12 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
         return debug << "TRoom(0x0) ";
     }
     QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
 
     debug.nospace() << "TRoom(" << room->getId() << ")";
     debug.nospace() << ", name=" << room->name;
     debug.nospace() << ", area=" << room->getArea();
-    debug.nospace() << ", pos=" << room->x << "," << room->y << "," << room->z;
+    debug.nospace() << ", pos=" << room->x() << "," << room->y() << "," << room->z();
 
     debug.nospace() << ", exits:";
     if (room->getNorth() != -1) {

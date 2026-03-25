@@ -24,12 +24,10 @@
 
 #include "Tree.h"
 
-#include "pre_guard.h"
 #include <QDebug>
 #include <QPointer>
 #include <QStringList>
 #include <optional>
-#include "post_guard.h"
 
 class Host;
 class TEvent;
@@ -39,6 +37,9 @@ class TScript : public Tree<TScript>
 {
     friend class XMLexport;
     friend class XMLimport;
+    friend class DeleteItemCommand;
+    friend class EditorDeleteItemCommand;
+    friend class ScriptUnit;
 
 public:
     virtual ~TScript();
@@ -60,18 +61,24 @@ public:
     std::optional<QString> getLoadingError();
     void setLoadingError(const QString& error);
     void clearLoadingError();
-    bool exportItem;
-    bool mModuleMasterFolder;
+    QString packageName(TScript* pScript);
+    QString moduleName(TScript* pScript);
+    bool checkIfNew();
+    void unmarkAsNew();
+
+    bool exportItem = true;
+    bool mModuleMasterFolder = false;
+    bool mIsNew = true;
 
 private:
     TScript() = default;
     QString mName;
     QString mScript;
     QString mFuncName;
-    QPointer<Host> mpHost;
-    bool mNeedsToBeCompiled;
+    bool mNeedsToBeCompiled = true;
     QStringList mEventHandlerList;
-    bool mModuleMember;
+    QPointer<Host> mpHost;
+    bool mModuleMember = false;
     std::optional<QString> mLoadingError;
 };
 
@@ -80,7 +87,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const TScript* script)
 {
     QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
     debug.nospace() << "TScript(" << script->getName() << ")";
     debug.nospace() << ", script=" << script->getScript();
     debug.nospace() << ", event handlers=" << script->getEventHandlerList();

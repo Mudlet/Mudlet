@@ -18,20 +18,12 @@ TS_FILES += mudlet_en_US.ts
 
 isEmpty(QMAKE_LRELEASE) {
     win32 {
-        equals(QT_MAJOR_VERSION, 5) {
-            QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease-qt5.exe
-        } else {
-            QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease-qt6.exe
-        }
+        QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease-qt6.exe
         !exists($$QMAKE_LRELEASE) {
             QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
         }
     } else {
-        equals(QT_MAJOR_VERSION, 5) {
-            QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease-qt5
-        } else {
-            QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease-qt6
-        }
+        QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease-qt6
         !exists($$QMAKE_LRELEASE) {
             QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
         }
@@ -45,7 +37,7 @@ for(file, TS_FILES_NOEXT) {
     win32 {
         system("$$QMAKE_LRELEASE $${file}.ts -compress -qm $${file}.qm >> lrelease_output.txt")
     } else {
-        system("LANG=C $$QMAKE_LRELEASE $${file}.ts -compress -qm $${file}.qm >> lrelease_output.txt")
+        system("$$QMAKE_LRELEASE $${file}.ts -compress -qm $${file}.qm >> lrelease_output.txt")
     }
 }
 STATS_GENERATOR = $$system_path("$${PWD}/generate-translation-stats.lua")
@@ -111,3 +103,6 @@ isEmpty(LUA_SEARCH_OUT) {
 
 # message("Running: $$LUA_COMMAND $$STATS_GENERATOR ...")
 system("$$LUA_COMMAND $$STATS_GENERATOR")
+
+DISTFILES += \
+    $$PWD/CMakeLists.txt

@@ -26,13 +26,11 @@
 
 #include "Tree.h"
 
-#include "pre_guard.h"
 #include <QColor>
 #include <QDebug>
 #include <QIcon>
 #include <QObject>
 #include <QPointer>
-#include "post_guard.h"
 
 class EAction;
 class Host;
@@ -94,6 +92,9 @@ public:
     void setDataSaved() { if (mpParent) { mpParent->setDataSaved(); } mDataChanged = false; }
     void setDataChanged() { if (mpParent) { mpParent->setDataChanged(); } mDataChanged = true; }
     bool isDataChanged() { return mDataChanged; }
+    QString packageName(TAction* pAction) const;
+    QString moduleName(TAction* pAction) const;
+
 
     QPointer<TToolBar> mpToolBar;
     QPointer<TEasyButtonBar> mpEasyButtonBar;
@@ -161,7 +162,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const TAction* action)
 {
     QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
     debug.nospace() << "TAction(" << action->getName() << ")";
     debug.nospace() << ", commandButtonUp=" << action->getCommandButtonUp();
     debug.nospace() << ", commandButtonDown=" << action->getCommandButtonDown();

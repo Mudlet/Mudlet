@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017-2019, 2021-2022 by Stephen Lyons             *
+ *   Copyright (C) 2015, 2017-2019, 2021-2022, 2025 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -32,7 +32,6 @@
 #include <winsock2.h>
 #endif
 
-#include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QHostAddress>
 #include <QHostInfo>
@@ -44,15 +43,15 @@
 #include <QSslSocket>
 #endif
 #include <QTime>
-#include "post_guard.h"
 
 #include <zlib.h>
 
 #include <iostream>
 #include <queue>
 #include <string>
+#include <QVector>
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #include <ws2tcpip.h>
 #include "mstcpip.h"
 #else
@@ -71,9 +70,6 @@
 class QNetworkAccessManager;
 class QNetworkReply;
 class QProgressDialog;
-class QTextCodec;
-class QTextDecoder;
-class QTextEncoder;
 class QTimer;
 
 class Host;
@@ -105,23 +101,25 @@ const char TNSB_SEND = 1;
 
 
 const char OPT_ECHO = 1;
+const char OPT_SUPPRESS_GO_AHEAD = 3;
 const char OPT_STATUS = 5;
 const char OPT_TIMING_MARK = 6;
 const char OPT_TERMINAL_TYPE = 24;
+const char OPT_LINEMODE = 34;
 const char OPT_EOR = 25;
 const char OPT_NAWS = 31;
 // https://www.rfc-editor.org/rfc/rfc1572.txt && https://tintin.mudhalla.net/protocols/mnes/
 const char OPT_NEW_ENVIRON = 39;
 const char OPT_CHARSET = 42;
-const char OPT_MSDP = 69; // https://tintin.mudhalla.net/protocols/msdp/
+const char OPT_MSDP = 69;                    // https://tintin.mudhalla.net/protocols/msdp/
 const char OPT_MSSP = static_cast<char>(70); // https://tintin.mudhalla.net/protocols/mssp/
 const char OPT_COMPRESS = 85;
 const char OPT_COMPRESS2 = 86;
 const char OPT_MSP = 90;
 const char OPT_MXP = 91;
 const char OPT_102 = 102;
-const char OPT_ATCP = static_cast<char>(200);
-const char OPT_GMCP = static_cast<char>(201);
+const auto OPT_ATCP = static_cast<unsigned char>(200);
+const auto OPT_GMCP = static_cast<unsigned char>(201);
 
 const char CHARSET_REQUEST = 1;
 const char CHARSET_ACCEPTED = 2;
@@ -142,18 +140,18 @@ const char MSDP_ARRAY_OPEN = 5;
 const char MSDP_ARRAY_CLOSE = 6;
 
 // https://tintin.mudhalla.net/protocols/mtts/
-const int MTTS_STD_ANSI = 1; // Client supports all common ANSI color codes.
-const int MTTS_STD_VT100 = 2; // Client supports all common VT100 codes.
-const int MTTS_STD_UTF_8 = 4; // Client is using UTF-8 character encoding.
-const int MTTS_STD_256_COLORS = 8; // Client supports all 256 color codes.
-const int MTTS_STD_MOUSE_TRACKING = 16; // Client supports xterm mouse tracking.
+const int MTTS_STD_ANSI = 1;               // Client supports all common ANSI color codes.
+const int MTTS_STD_VT100 = 2;              // Client supports all common VT100 codes.
+const int MTTS_STD_UTF_8 = 4;              // Client is using UTF-8 character encoding.
+const int MTTS_STD_256_COLORS = 8;         // Client supports all 256 color codes.
+const int MTTS_STD_MOUSE_TRACKING = 16;    // Client supports xterm mouse tracking.
 const int MTTS_STD_OSC_COLOR_PALETTE = 32; // Client supports the OSC color palette.
-const int MTTS_STD_SCREEN_READER = 64; // Client is using a screen reader.
-const int MTTS_STD_PROXY = 128; // Client is a proxy allowing different users to connect from the same IP address.
-const int MTTS_STD_TRUECOLOR = 256; // Client supports truecolor codes using semicolon notation.
-const int MTTS_STD_MNES = 512; // Client supports the Mud New Environment Standard for information exchange.
-const int MTTS_STD_MSLP = 1024; // Client supports the Mud Server Link Protocol for clickable link handling.
-const int MTTS_STD_SSL = 2048; // Client supports SSL for data encryption, preferably TLS 1.3 or higher.
+const int MTTS_STD_SCREEN_READER = 64;     // Client is using a screen reader.
+const int MTTS_STD_PROXY = 128;            // Client is a proxy allowing different users to connect from the same IP address.
+const int MTTS_STD_TRUECOLOR = 256;        // Client supports truecolor codes using semicolon notation.
+const int MTTS_STD_MNES = 512;             // Client supports the Mud New Environment Standard for information exchange.
+const int MTTS_STD_MSLP = 1024;            // Client supports the Mud Server Link Protocol for clickable link handling.
+const int MTTS_STD_SSL = 2048;             // Client supports SSL for data encryption, preferably TLS 1.3 or higher.
 
 // https://www.rfc-editor.org/rfc/rfc1572.txt && https://tintin.mudhalla.net/protocols/mnes/
 const char NEW_ENVIRON_IS = 0;
@@ -186,7 +184,7 @@ public:
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);
     void setMSPVariables(const QByteArray&);
-    bool isIPAddress(QString&);
+    bool isIPAddress(const QString&);
     bool purgeMediaCache();
     void atcpComposerCancel();
     void atcpComposerSave(QString);
@@ -201,12 +199,14 @@ public:
     bool isReplaying() { return loadingReplay; }
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
-    const QByteArray & getEncoding() const { return mEncoding; }
+    const QByteArray& getEncoding() const { return mEncoding; }
     QPair<bool, QString> setEncoding(const QByteArray&, bool saveValue = true);
     void postMessage(QString);
-    const QByteArrayList & getEncodingsList() const { return mAcceptableEncodings; }
-    QAbstractSocket::SocketError error();
+    const QByteArrayList& getEncodingsList() const { return mAcceptableEncodings; }
+    std::optional<QAbstractSocket::SocketError> error() const;
     QString errorString();
+    bool oscHyperlinkConfigFeatureEnabled();
+    bool oscHyperlinkPresetsEnabled();
 #if !defined(QT_NO_SSL)
     QSslCertificate getPeerCertificate();
     QList<QSslError> getSslErrors();
@@ -220,27 +220,40 @@ public:
     bool isMSSPEnabled() const { return enableMSSP; }
     bool isMSDPEnabled() const { return enableMSDP; }
     bool isMSPEnabled() const { return enableMSP; }
+    bool isMXPEnabled() const { return enableMXP; }
     bool isChannel102Enabled() const { return enableChannel102; }
+    void trackMXPElementDetection(const std::string&);
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
-    QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
+    QString formatShortTelnetCommand(const std::string& telnetCommand, const QString& commandName) const;
+    QAbstractSocket::SocketState getConnectionState() const;
     std::tuple<QString, int, bool> getConnectionInfo() const;
     void setPostingTimeout(const int);
     int getPostingTimeout() const { return mTimeOut; }
     void loopbackTest(QByteArray& data) { processSocketData(data.data(), data.size(), true); }
     void cancelLoginTimers();
+    void terminateConnection();
+    bool currentlySecure() const
+    {
+#if defined(QT_NO_SSL)
+        return false;
+#else
+        return mCurrent_sslTsl;
+#endif
+    }
+    static bool isRawIPv4Address(const QString&);
+    static bool isRawIPv6Address(const QString&);
 
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed = true;
     double networkLatencyTime = 0.0;
     QElapsedTimer networkLatencyTimer;
-    bool mAlertOnNewData = true;
     bool mGA_Driver = false;
     bool mFORCE_GA_OFF = false;
     QPointer<dlgComposer> mpComposer;
     QNetworkAccessManager* mpDownloader = nullptr;
-    QProgressDialog* mpProgressDialog = nullptr;
+    QPointer<QProgressDialog> mpProgressDialog;
     QString mServerPackage;
     QString mProfileName;
 
@@ -266,14 +279,23 @@ signals:
     void signal_connecting(Host*);
     void signal_connected(Host*);
     void signal_disconnected(Host*);
+    // Signal when GA (Go Ahead) or EOR (End of Record) telnet codes are received
+    // Used by hyperlink visibility manager to trigger expire actions
+    void signal_promptReceived();
 
 
 private:
     cTelnet() = default;
 
+#if defined(QT_NO_SSL)
+    void abortLosingSocket(QTcpSocket* losingSocket);
+#else
+    void abortLosingSocket(QSslSocket* losingSocket);
+#endif
+
     // loopbackTesting is for internal testing whilst OFF-LINE using the
     // feedTelnet(...) Lua function.
-    void processSocketData(char *data, int size, const bool loopbackTesting = false);
+    void processSocketData(char* data, int size, const bool loopbackTesting = false);
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
@@ -292,6 +314,19 @@ private:
     QString getNewEnviron256Colors();
     QString getNewEnvironUTF8();
     QString getNewEnvironOSCColorPalette();
+    QString getNewEnvironOSCHyperlinks();
+    QString getNewEnvironOSCHyperlinksSend();
+    QString getNewEnvironOSCHyperlinksPrompt();
+    QString getNewEnvironOSCHyperlinksStyleBasic();
+    QString getNewEnvironOSCHyperlinksStyleStates();
+    QString getNewEnvironOSCHyperlinksTooltip();
+    QString getNewEnvironOSCHyperlinksMenu();
+    QString getNewEnvironOSCHyperlinksCompact();
+    QString getNewEnvironOSCHyperlinksPresets();
+    QString getNewEnvironOSCHyperlinksVisibility();
+    QString getNewEnvironOSCHyperlinksSelection();
+    QString getNewEnvironOSCHyperlinksSpoiler();
+    QString getNewEnvironOSCHyperlinksDisabled();
     QString getNewEnvironScreenReader();
     QString getNewEnvironTruecolor();
     QString getNewEnvironTLS();
@@ -307,7 +342,7 @@ private:
     void sendIsMNESValues(const QByteArray&);
 
     void processTelnetCommand(const std::string& telnetCommand);
-    void sendTelnetOption(char type, char option);
+    void sendTelnetOption(char type, unsigned char option);
     void gotRest(std::string&);
     void gotPrompt(std::string&);
     void postData();
@@ -318,23 +353,45 @@ private:
     void promptTlsConnectionAvailable();
 #endif
     void sendNAWS(int width, int height);
+    QString parseGUIVersionFromJSON(const QJsonObject& json);
+    QString parseGUIUrlFromJSON(const QJsonObject& json);
+    void downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url);
+    void handleGUIPackageInstallationAndUpgrade(QJsonDocument document);
+
     static std::pair<bool, bool> testReadReplayFile();
 
+    void trackKaVirNegotiation(unsigned char option);
+    void autoEnableMXPProcessor();
+    void autoEnableTTYPEVersion();
 
     QPointer<Host> mpHost;
+    // The first one will point to one of the two instances following one of
+    // them having been connected - or will be a nullptr otherwise
 #if defined(QT_NO_SSL)
-    QTcpSocket socket;
+    QTcpSocket* mpSocket = nullptr;
+    QTcpSocket mSocket_ipV4;
+    QTcpSocket mSocket_ipV6;
 #else
-    QSslSocket socket;
+    QSslSocket* mpSocket = nullptr;
+    QSslSocket mSocket_ipV4;
+    QSslSocket mSocket_ipV6;
+    // This copies the state of Host::mSslTsl at the point that connection(s)
+    // is/are attempted but at no other time so that the signals/slots
+    // interconnections are not switched between the different patterns until
+    // it is safe to do so:
+    bool mCurrent_sslTsl = false;
+    // Stores SSL errors received in slot_socketSslError() so they can be
+    // reported in slot_socketDisconnected() even when mpSocket is null
+    // (which happens when the SSL handshake fails before mpSocket is assigned):
+    QList<QSslError> mSslErrors;
+    // Stores the peer certificate from slot_socketSslError() so it can be
+    // used by getPeerCertificate() when mpSocket is null:
+    QSslCertificate mPeerCertificate;
 #endif
-    QHostAddress mHostAddress;
-//    QTextCodec* incomingDataCodec;
-    QTextCodec* mpOutOfBandDataIncomingCodec = nullptr;
-    QTextCodec* outgoingDataCodec = nullptr;
-//    QTextDecoder* incomingDataDecoder;
-    QTextEncoder* outgoingDataEncoder = nullptr;
-    QString hostName;
-    int hostPort = 0;
+    // Could be a URL ("www.game.com") or an IPv4 address ("192.168.1.1") or an
+    // IPv6 address ("2001:db8::1"):
+    QString mHostUrl;
+    int mHostPort = 0;
     bool mWaitingForResponse = false;
     std::queue<int> mCommandQueue;
 
@@ -379,6 +436,7 @@ private:
     bool mIsTimerPosting = false;
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
+    QTimer* mTimerPasswordModeTimeout = nullptr;
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;
@@ -393,7 +451,10 @@ private:
     bool enableMSSP = false;
     bool enableMSDP = false;
     bool enableMSP = false;
+    bool enableMXP = false;
     bool enableChannel102 = false;
+    // Inhibit mAutoReconnect from taking effect for one connection cycle,
+    // either because the user wanted to disconnect or an SSL/TLS error occurred:
     bool mDontReconnect = false;
     bool mAutoReconnect = false;
     QStringList messageStack;
@@ -420,6 +481,19 @@ private:
     // we can send NAWS data when it changes:
     int mNaws_x = 0;
     int mNaws_y = 0;
+
+    bool mServerRequestedSGA = false;
+    QElapsedTimer mEchoToggleTimer;
+    int mEchoToggleCount = 0;
+    bool mEchoAnomalyDetected = false;
+    static constexpr int ECHO_ANOMALY_THRESHOLD = 5;
+    static constexpr int ECHO_ANOMALY_WINDOW_MS = 5000;
+
+    // KaVir protocol negotiation tracking
+    QVector<unsigned char> mNegotiationOrder;
+
+    void checkCharacterModePattern();
+    bool checkEchoAnomalyPattern();
 };
 
 #endif // MUDLET_CTELNET_H

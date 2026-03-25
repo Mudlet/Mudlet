@@ -25,16 +25,14 @@
 
 #include "Tree.h"
 
-#include "pre_guard.h"
-#include <QApplication>
 #include <QColor>
 #include <QDebug>
 #include <QMap>
 #include <QPointer>
 #include <QSharedPointer>
-#include "post_guard.h"
 
-#include <pcre.h>
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
 
 #include <map>
 #include <string>
@@ -52,7 +50,6 @@ class TMatchState;
 #define REGEX_LINE_SPACER 5
 #define REGEX_COLOR_PATTERN 6
 #define REGEX_PROMPT 7
-#define MAX_CAPTURE_GROUPS 33
 
 using NameGroupMatches = QVector<QPair<QString, QString>>;
 
@@ -104,11 +101,13 @@ public:
     void compile();
     void execute();
     bool isFilterChain();
-    bool setRegexCodeList(QStringList patterns, QList<int> patternKinds);
+    bool setRegexCodeList(QStringList patterns, QList<int> patternKinds, bool existingTrigger = true);
     QString getScript() const { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();
     bool match(char*, const QString&, int line, int posOffset = 0);
+    bool checkIfNew();
+    void unmarkAsNew();
 
     bool isMultiline() const { return mIsMultiline; }
     int getTriggerType() const { return mTriggerType; }
@@ -138,32 +137,35 @@ public:
     TColorTable* createColorPattern(int, int);
     static QString createColorPatternText(const int fgColorCode, const int bgColorCode);
     static void decodeColorPatternText(const QString& patternText, int& fgColorCode, int& bgColorCode);
+    QString packageName(TTrigger* pTrigger);
+    QString moduleName(TTrigger* pTrigger);
 
 
-    bool mTriggerContainsPerlRegex;
-    bool mPerlSlashGOption;
-    bool mFilterTrigger;
-    bool mSoundTrigger;
+    bool mTriggerContainsPerlRegex = false;
+    bool mPerlSlashGOption = false;
+    bool mFilterTrigger = false;
+    bool mSoundTrigger = false;
     QString mSoundFile;
-    int mStayOpen;
-    bool mColorTrigger;
+    int mStayOpen = 0;
+    bool mColorTrigger = false;
     QList<TColorTable*> mColorPatternList;
     // The next four members refer to the details of the currently selected
     // color trigger pattern item - it is not obvious that they need to be
     // stored in the profile even though they are:
     QColor mColorTriggerFgColor;
     QColor mColorTriggerBgColor;
-    int mColorTriggerFgAnsi;
-    int mColorTriggerBgAnsi;
-    int mKeepFiring;
+    int mColorTriggerFgAnsi = scmIgnored;
+    int mColorTriggerBgAnsi = scmIgnored;
+    int mKeepFiring = 0;
     QPointer<Host> mpHost;
     QString mName;
     QStringList mPatterns;
-    bool exportItem;
-    bool mModuleMasterFolder;
+    bool exportItem = true;
+    bool mModuleMasterFolder = false;
     // specifies whenever the payload is Lua code as a string
     // or a function
-    bool mRegisteredAnonymousLuaFunction;
+    bool mRegisteredAnonymousLuaFunction = false;
+    bool mIsNew = true;
 
     int getExpiryCount() const;
     void setExpiryCount(int expiryCount);
@@ -176,7 +178,7 @@ private:
     void filter(std::string&, int&);
     void processExactMatch(const QString& line, int patternNumber, int posOffset);
     void processRegexMatch(const char* haystackC, const QString& haystack, int patternNumber, int posOffset,
-                           const QSharedPointer<pcre>& re, int haystackCLength, int rc, int* ovector);
+                           const QSharedPointer<pcre2_code>& re, int haystackCLength, pcre2_match_data* match_data, int rc);
     void processBeginOfLine(const QString& needle, int patternNumber, int posOffset);
     void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where);
     void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList);
@@ -184,19 +186,19 @@ private:
 
 
     QList<int> mPatternKinds;
-    QMap<int, QSharedPointer<pcre>> mRegexMap;
+    QMap<int, QSharedPointer<pcre2_code>> mRegexMap;
 
     // Lua code as a string to run
     QString mScript;
 
-    bool mNeedsToBeCompiled;
-    int mTriggerType;
+    bool mNeedsToBeCompiled = true;
+    int mTriggerType = REGEX_SUBSTRING;
 
-    bool mIsLineTrigger;
-    int mStartOfLineDelta;
-    int mLineDelta;
-    bool mIsMultiline;
-    int mConditionLineDelta;
+    bool mIsLineTrigger = false;
+    int mStartOfLineDelta = 0;
+    int mLineDelta = 3;
+    bool mIsMultiline = false;
+    int mConditionLineDelta = 0;
     QString mCommand;
     std::map<TMatchState*, TMatchState*> mConditionMap;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
@@ -205,19 +207,19 @@ private:
     std::map<int, std::string> mLuaConditionMap;
     QString mFuncName;
     // The colors to use if mIsColorizeTrigger is true:
-    QColor mFgColor;
-    QColor mBgColor;
-    bool mIsColorizerTrigger;
-    bool mModuleMember;
+    QColor mFgColor{Qt::red};
+    QColor mBgColor{Qt::yellow};
+    bool mIsColorizerTrigger = false;
+    bool mModuleMember = false;
     // -1: don't self-destruct, 0: delete, 1+: number of times it can still fire
-    int mExpiryCount;
+    int mExpiryCount = -1;
 };
 
 #ifndef QT_NO_DEBUG_STREAM
 inline QDebug& operator<<(QDebug& debug, const TTrigger* trigger)
 {
     QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
 
     if (!trigger) {
         return debug << "TTrigger(0x0) ";

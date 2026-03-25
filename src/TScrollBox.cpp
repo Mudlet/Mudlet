@@ -21,9 +21,7 @@
 #include "TScrollBox.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QtEvents>
-#include "post_guard.h"
 
 
 TScrollBox::TScrollBox(Host* pH, QWidget* pW)
@@ -36,29 +34,30 @@ TScrollBox::TScrollBox(Host* pH, QWidget* pW)
 }
 
 
-TScrollBoxWidget::TScrollBoxWidget(QWidget* pW) : QWidget(pW) {}
+TScrollBoxWidget::TScrollBoxWidget(QWidget* pW)
+: QWidget(pW)
+{
+}
+
 TScrollBoxWidget::~TScrollBoxWidget() {}
 
 void TScrollBoxWidget::childEvent(QChildEvent* event)
 {
     auto child = event->child();
-    if (event->added())
-    {
+    if (event->added()) {
         child->installEventFilter(this);
     }
-    if (event->removed())
-    {
+    if (event->removed()) {
         child->removeEventFilter(this);
     }
 }
 
 bool TScrollBoxWidget::eventFilter(QObject* object, QEvent* event)
 {
-    Q_UNUSED(object);
+    Q_UNUSED(object)
 
-    if (event->type() == QMoveEvent::Move || event->type() == QResizeEvent::Resize || event->type() == QHideEvent::Hide || event->type() == QShowEvent::Show)
-    {
-      adjustSize();
+    if (event->type() == QMoveEvent::Move || event->type() == QResizeEvent::Resize || event->type() == QHideEvent::Hide || event->type() == QShowEvent::Show) {
+        adjustSize();
     }
 
     return false;

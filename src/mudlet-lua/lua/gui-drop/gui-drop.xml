@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage />
+	<ActionPackage />
+	<ScriptPackage>
+		<Script isActive="yes" isFolder="no">
+			<name>workaround for add</name>
+			<packageName></packageName>
+			<script>-- Once Geyser.add2 is in this is not needed anymore
+local addwrapper = Adjustable.Container.add
+function Adjustable.Container:add(window, cons)
+  addwrapper(self, window, cons)
+  if self.hidden then
+    tempTimer(0, function() self:hide() end)
+  end
+  if self.auto_hidden then
+    tempTimer(0, function() self:hide(true) end)
+  end
+end</script>
+			<eventHandlerList />
+		</Script>
+		<Script isActive="yes" isFolder="no">
+			<name>createDropManager</name>
+			<packageName></packageName>
+			<script>GUIDropManager = GUIDropManager or {}
+GUIDropImages = GUIDropImages or {}
+function GUIDropManager.createDropManager()
+    GUIDropManager.script = "--GUIDropManager\n"
+    
+    local labelscript = [[%s = %s or Geyser.Label:new({name = "%s", x="%s", y="%s", width="%s", height="%s"%s}, %s)
+    %s:setStyleSheet("border-image: url(%s);")
+    %s.imgName = "%s"
+    %s:setDropImg()
+    
+    ]]
+    local containerscript = [[%s = %s or Adjustable.Container:new({name = "%s", x = "%s", y = "%s", width = "%s", height = "%s", lockStyle = "full", padding = 0, noLimit = true%s%s}%s)
+    
+    ]]
+    local function createFname(imgName)
+        return [["..getMudletHomeDir().."/GUIDropImages/]].. imgName
+    end
+    for k,v in pairs(GUIDropImages) do
+        
+        if v.type == "adjustablecontainer" then
+            local container = ""
+            local containervar = ""
+            local locked = ""
+            if v.windowname ~= "main" then
+                container = v.containervar or getKeyFrom(v.container, ".container")
+                if not container then
+                    container = "Geyser.windowList."..v.windowname.."Container.windowList."..v.windowname
+                end
+                containervar = [[, containervar = "]]..container..[["]]
+                v.containervar = container
+                container = ", "..container
+            end
+            if v.locked then
+                locked = ", locked = true"
+            end
+            GUIDropManager.script = GUIDropManager.script..string.format(containerscript, v.name, v.name, v.name, v.x, v.y, v.width, v.height, locked, containervar, container)
+        end
+        
+    end
+    
+    
+    for k,v in pairs(GUIDropImages) do    
+        if v.type == "label" then
+            v.fname = v.fname or createFname(v.imgName)
+            local clickthrough = ""
+            if v.clickthrough then
+                clickthrough = ", clickthrough = true"
+            end
+            GUIDropManager.script = GUIDropManager.script..string.format(labelscript, v.name, v.name, v.name, v.x, v.y, v.width, v.height, clickthrough, v.container.container.name, v.name, v.fname, v.name, v.imgName, v.container.container.name)
+        end    
+    end
+    
+    if not setScript("GUIDropManager", GUIDropManager.script, 2) then
+        display(setScript("GUIDropManager", GUIDropManager.script, 2))
+    end
+    
+end</script>
+			<eventHandlerList />
+		</Script>
+		<Script isActive="yes" isFolder="no">
+			<name>Global Variable Functions</name>
+			<packageName></packageName>
+			<script>function GUIDropManager.getKeyFrom(value, exclude, depth, table, iteration)
+    exclude = exclude or false
+    depth = depth or 3
+    table = table or _G
+    local tempTable = {}
+    iteration = iteration or 1
+    if iteration &gt; depth then
+        return nil, "key not found"
+    end
+    for k,v in pairs(table) do
+        if type(v) == "table" and k ~= "_G" then
+            for k1,v1 in pairs(v) do
+                tempTable[k.."."..k1] = v1
+            end
+        end
+        if v == value and not string.find(k, exclude) then
+            return k
+        end
+    end
+    return GUIDropManager.getKeyFrom(value, exclude, depth, tempTable, iteration + 1)    
+end</script>
+			<eventHandlerList />
+		</Script>
+		<Script isActive="yes" isFolder="no">
+			<name>createDropScript</name>
+			<packageName></packageName>
+			<script>function GUIDropManager.createDropScript()
+    if exists("GUIDropManager", "script") == 0 then
+        permGroup("GUIDropManager", "script")
+    end
+    if exists("GUIDropManager", "script") &lt; 2 then
+        permScript("GUIDropManager", "GUIDropManager","--GUIDropManager Script")
+        enableScript("GUIDropManager")
+        echo("DropScript created!")
+    end
+    GUIDropManager.createDropManager()
+end</script>
+			<eventHandlerList />
+		</Script>
+		<Script isActive="yes" isFolder="no">
+			<name>ImageDrop</name>
+			<packageName></packageName>
+			<script>function GUIDropManager.ImageDrop(event, fname, suffix, posx, posy, consoleName)
+    Adjustable.Container:saveAll()
+    local acceptable_suffix = {"png", "jpg", "bmp", "jpeg"}
+    
+    if not table.contains(acceptable_suffix, suffix) then
+        return
+    end
+    local main_width, main_height = getMainWindowSize()
+    local image_width, image_height = getImageSize(fname)
+    
+    if not image_width then 
+        return 
+    end
+    local image_ratio = image_height / image_width
+    if image_width &gt; main_width-50 or image_height &gt; main_height-50 then
+        image_height = main_height-50
+        image_width = (main_height-50) / image_ratio
+    end
+    
+    posx = math.max(0, posx - (image_width/10))
+    posy = math.max(0, posy - (image_height/10))
+    local imgName = fname:match("([^%/]+)%..+$")
+    
+    if not (io.exists(getMudletHomeDir() .. "/GUIDropImages/")) then
+        lfs.mkdir(getMudletHomeDir() .. "/GUIDropImages/")
+    end
+    
+    --copy file to my profile location
+    local imgLocation = getMudletHomeDir() .. "/GUIDropImages/".. imgName.. ".".. suffix
+    local infile = io.open(fname, "rb")
+    if not (io.exists(imgLocation)) then 
+        local instr = infile:read("*ab")
+        infile:close()
+        local outfile = io.open(imgLocation, "wb")
+        outfile:write(instr)
+        outfile:close()
+    end
+    
+    local acontainer
+    if consoleName == "main" then
+        acontainer = Geyser
+    else
+        acontainer = Geyser.windowList[consoleName.."Container"].windowList[consoleName]
+    end
+    --convert filename to be a feasible variablename
+    local containername = string.gsub(imgName,"[^_%w]","")
+    --if filename is only composed of number convert it
+    if not containername:match("%D+") then
+        containername = "defaultName"
+    end
+    
+    --Check if image exists already and create new containername by adding +1 to the name
+    if GUIDropImages[containername] or _G[containername] then 
+        while GUIDropImages[containername] or _G[containername] do
+            counter = containername:match("%d+$")
+            if counter ~= nil then     
+                containername = containername:sub(1,-(string.len(counter)+1))
+            end
+            counter = counter or 0
+            counter = counter + 1
+            containername = containername..counter
+        end
+    end
+    
+    containername = containername
+    local labelname = containername.."Label"
+    
+    GUIDropImages[containername] = Adjustable.Container:new({name="GUIDropImages."..containername, lockStyle = "full", padding = 0, noLimit = true, autoLoad = false, autoSave = false} , acontainer)
+    GUIDropImages[containername]:move(posx, posy)
+    GUIDropImages[containername]:resize(image_width, image_height)
+    GUIDropImages[containername]:setPercent(true, true)
+    GUIDropImages[labelname] = Geyser.Label:new({name = "GUIDropImages."..labelname, x=0, y=0, width="100%", height="100%", clickthrough = true}, GUIDropImages[containername])
+    
+    GUIDropImages[labelname].fname = [["..getMudletHomeDir().."/GUIDropImages/]].. imgName .. ".".. suffix
+    GUIDropImages[labelname].imgName = imgName .. ".".. suffix
+    GUIDropManager.createDropScript()
+end
+registerAnonymousEventHandler("sysDropEvent", "GUIDropManager.ImageDrop")</script>
+			<eventHandlerList />
+		</Script>
+		<Script isActive="yes" isFolder="no">
+			<name>AdjustableContainer Additions</name>
+			<packageName></packageName>
+			<script>local function deleteImage(s) 
+    GUIDropImages[string.gsub(s.name,"GUIDropImages%.","")] = nil  
+    GUIDropImages[string.gsub(s.name.."Label", "GUIDropImages%.","")] = nil
+    table.remove(Adjustable.Container.all_windows, table.index_of(Adjustable.Container.all_windows, s.name))
+    Adjustable.Container.all[s.name] = nil
+    if io.exists(getMudletHomeDir().."/AdjustableContainer/"..s.name..".lua") then
+        os.remove(getMudletHomeDir().."/AdjustableContainer/"..s.name..".lua")
+    end    
+    s:hide()
+end
+
+local function convertToLabel(s)
+    local labelscript = [[%s = %s or Geyser.Label:new({name = "%s", x="%s", y="%s", width="%s", height="%s"}%s)
+    %s:setStyleSheet("border-image: url(%s);")
+    ]]
+    local container = GUIDropImages[string.gsub(s.name,"GUIDropImages%.","")]
+    local labelname = string.gsub(s.name.."Label", "GUIDropImages%.","")
+    GUIDropImages[labelname]:changeContainer(container.container)
+    GUIDropImages[labelname]:move(container.x, container.y)
+    GUIDropImages[labelname]:resize(container.width, container.height)
+    
+    if exists("GUIDropManager", "script") == 0 then
+        permGroup("GUIDropManager", "script")
+    end
+    
+    if exists("GUIDropLabels", "script") == 0 then
+        permScript("GUIDropLabels", "GUIDropManager","--GUIDropLabels Script")
+        enableScript("GUIDropLabels")
+        echo("LabelScript created!")
+    end
+    
+    if container.containervar then
+        container.containervar = ","..container.containervar
+    else
+        container.containervar = ""
+    end
+    
+    local label = GUIDropImages[string.gsub(s.name.."Label", "GUIDropImages%.","")]
+    labelname = labelname:sub(1,-6)
+    labelscript = string.format(labelscript, labelname, labelname, labelname, label.x, label.y, label.width, label.height, container.containervar, labelname, [["..getMudletHomeDir().."/GUIDropImages/]].. label.imgName)
+    
+    appendScript("GUIDropLabels", labelscript)
+    
+    GUIDropImages[string.gsub(s.name,"GUIDropImages%.","")]:hide()
+    GUIDropImages[string.gsub(s.name,"GUIDropImages%.","")] = nil
+    GUIDropImages[string.gsub(s.name.."Label", "GUIDropImages%.","")] = nil
+    table.remove(Adjustable.Container.all_windows, table.index_of(Adjustable.Container.all_windows, s.name))
+    Adjustable.Container.all[s.name] = nil
+    if io.exists(getMudletHomeDir().."/AdjustableContainer/"..s.name..".lua") then
+        os.remove(getMudletHomeDir().."/AdjdustableContainer/"..s.name..".lua")
+    end  
+end
+
+
+function Adjustable.Container:setDropImg()
+    if self.dropImg then
+        return
+    end
+    
+    self.dropImg = true
+    self.adjLabelstyle =[[
+    QLabel::hover{ background-color: rgba(0,0,0,0%); border: 1px solid grey;}
+    QLabel::!hover{ background-color: rgba(0,0,0,0%);}]]
+    if not self.locked then
+        self.adjLabel:setStyleSheet(self.adjLabelstyle)
+    else
+        self.adjLabel:setStyleSheet([[border:0;]])
+    end
+    self:setTitle(" ")
+    self.minimizeLabel:raise()
+    self.exitLabel:raise()
+    
+    self:newCustomItem("setAbsolute", function(s) s:setAbsolute(true, true) self:save() end)
+    self:newCustomItem("setPercent",  function(s) s:setPercent(true, true)  self:save() end)
+    self:newCustomItem("deleteImage", function(s) deleteImage(s) GUIDropManager.createDropManager() Adjustable.Container:saveAll() end)
+    self:newCustomItem("convertToLabel",  function(s) convertToLabel(s) GUIDropManager.createDropManager() Adjustable.Container:saveAll() end)
+    self:newCustomItem("saveAll",  function(s) Adjustable.Container:saveAll() end)
+    self:newCustomItem("loadAll",  function(s) Adjustable.Container:saveAll() end)
+    self:newCustomItem("updateScript",  function(s) Adjustable.Container:saveAll() GUIDropManager.createDropManager() end)
+end</script>
+			<eventHandlerList />
+		</Script>
+	</ScriptPackage>
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>

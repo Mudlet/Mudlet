@@ -27,16 +27,16 @@
 
 #include "TConsole.h"
 #include "TScrollBox.h"
-#include "pre_guard.h"
 #include <QFile>
 #include <QTextStream>
 #include <QWidget>
 #include <optional>
-#include "post_guard.h"
 
 #include <hunspell/hunspell.h>
 
 #include <list>
+
+class TTextBox;
 
 class TMainConsole : public TConsole
 {
@@ -56,13 +56,14 @@ public:
     bool showWindow(const QString& name);
     bool hideWindow(const QString& name);
     bool printWindow(const QString& name, const QString& text);
+    bool clear(const QString& name);
     void setProfileName(const QString&) override;
     void selectCurrentLine(std::string&);
-    std::list<int> getFgColor(std::string& buf);
-    std::list<int> getBgColor(std::string& buf);
+    std::list<int> getFgColor(QString& buf);
+    std::list<int> getBgColor(QString& buf);
     QPair<quint8, TChar> getTextAttributes(const QString&) const;
-    void luaWrapLine(std::string& buf, int line);
-    QString getCurrentLine(std::string&);
+    void luaWrapLine(QString& buf, int line);
+    QString getCurrentLine(const std::string&);
     TConsole* createBuffer(const QString& name);
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
@@ -70,12 +71,17 @@ public:
     TLabel* createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
     std::pair<bool, QString> createMapper(const QString &windowname, int, int, int, int);
     std::pair<bool, QString> createCommandLine(const QString &windowname, const QString &name, int, int, int, int);
+    std::pair<bool, QString> createTextBox(const QString &windowname, const QString &name, int, int, int, int);
     QSize getUserWindowSize(const QString& windowname) const;
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
-    void setLabelStyleSheet(std::string& buf, std::string& stylesheet);
+    std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet);
     std::optional<QString> getLabelStyleSheet(const QString& name) const;
     std::optional<QSize> getLabelSizeHint(const QString& name) const;
     std::pair<bool, QString> deleteLabel(const QString&);
+    std::pair<bool, QString> deleteMiniConsole(const QString&);
+    std::pair<bool, QString> deleteCommandLine(const QString&);
+    std::pair<bool, QString> deleteTextBox(const QString&);
+    std::pair<bool, QString> deleteScrollBox(const QString&);
     std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration);
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape);
     std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY);
@@ -85,17 +91,12 @@ public:
     void setProfileSpellDictionary();
     void showStatistics();
     const QString& getSystemSpellDictionary() const { return mSpellDic; }
-    QTextCodec* getHunspellCodec_system() const { return mpHunspellCodec_system; }
+    const QByteArray& getHunspellCodecName_system() const { return mHunspellCodecName_system; }
     Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
     // Either returns the handle of the per profile or the shared Mudlet one or
     // nullptr depending on the state of the flags mEnableUserDictionary and
     // mUseSharedDictionary:
-    Hunhandle* getHunspellHandle_user() const {
-        return mEnableUserDictionary
-                ? (mUseSharedDictionary
-                   ? mpHunspell_shared
-                   : mpHunspell_profile)
-                : nullptr; }
+    Hunhandle* getHunspellHandle_user() const { return mEnableUserDictionary ? (mUseSharedDictionary ? mpHunspell_shared : mpHunspell_profile) : nullptr; }
     QSet<QString> getWordSet() const;
     QPair<bool, QString> addWordToSet(const QString&);
     QPair<bool, QString> removeWordFromSet(const QString&);
@@ -107,13 +108,16 @@ public:
     bool saveMap(const QString&, int saveVersion = 0);
     bool loadMap(const QString&);
     bool importMap(const QString&, QString* errMsg = nullptr);
+    void refreshSubconsoles();
 
 
     QMap<QString, TConsole*> mSubConsoleMap;
     QMap<QString, TDockWidget*> mDockWidgetMap;
     QMap<QString, TCommandLine*> mSubCommandLineMap;
+    QMap<QString, TTextBox*> mTextBoxMap;
     QMap<QString, TLabel*> mLabelMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
+    mutable QMap<QString, QSize> mCachedWindowSizes;
     TBuffer mClipboard;
     QFile mLogFile;
     QString mLogFileName;
@@ -154,7 +158,6 @@ private:
     // The user dictionary will always use the UTF-8 codec, but the one
     // selected from the system's ones may not:
     QByteArray mHunspellCodecName_system;
-    QTextCodec* mpHunspellCodec_system = nullptr;
     // To update the profile dictionary we actually have to track all the words
     // in it so we loaded the contents into this on startup and adjust it as we
     // go. Then, at the end of a session we will put the revised contents
@@ -166,4 +169,3 @@ private:
 };
 
 #endif // MUDLET_TMAINCONSOLE_H
-

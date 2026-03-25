@@ -21,10 +21,8 @@
 
 #include "utils.h" // For qsl(...)
 
-#include "pre_guard.h"
 #include <QString>
 #include <QList>
-#include "post_guard.h"
 
 struct GameDetail
 {
@@ -62,8 +60,20 @@ public:
     }
 
     // clang-format off
-    // games are to be added here in alphabetical order
+    // games are to be added here in alphabetical order, except the tutorial which should be first
     inline static const QList<GameDetail> scmDefaultGames = {
+            { qsl("Mudlet Tutorial"),
+            qsl("localhost"),
+            0,
+            false,
+            qsl("<a href='https://mudlet.org'>Website</a><br>"
+                "<a href='https://wiki.mudlet.org'>Wiki</a>"),
+            qsl(":/icons/mudlet-tutorial.png"),
+            qsl("Mudlet provides a simple tutorial to help you get familiar with playing MUDs using Mudlet."
+                 "\n\n"
+                 "You play a young adventurer who has recently graduated from the adventuring school.  "
+                 "You must aid the Sheriff in a series of tasks for the townfolk and become a local hero.")
+            },
             { qsl("Abandoned Realms"),
             qsl("abandonedrealms.com"),
             9000,
@@ -105,16 +115,24 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl("achaea.com"),
              23,
              false,
-             qsl("<a href='http://www.achaea.com/'>http://www.achaea.com</a>"),
-             qsl(":/icons/achaea_120_30.png"),
-             QString()},
+             qsl("<a href='http://www.achaea.com/'>Website</a><br>"
+                 "<a href='https://discord.gg/2v2upFTj8G'>Discord</a>"),
+             qsl(":/icons/achaea.png"),
+             qsl("In Achaea, your name carries weight."
+                 "\n\n"
+                 "Some worlds are easy to leave behind. Achaea is not one of them. The cities, the Houses, the rivalries, "
+                 "the faith, the politics all create the social gravity veterans remember."
+                 "\n\n"
+                 "Reputation matters here. History lingers. What you do shapes how people know you."
+                 "\n\n"
+                 "Come back to a world where identity means more than a build.")},
 
             {qsl("3Kingdoms"),
              qsl("3k.org"),
              3000,
              false,
              qsl("<a href='http://www.3k.org/'>http://www.3k.org</a>"),
-             qsl(":/icons/3klogo.png"),
+             qsl(":/icons/3Kingdoms.png"),
              qsl("Simple enough to learn, yet complex enough to challenge you for years, 3Kingdoms "
                  "is a colossal adventure through which many years of active and continued "
                  "development by its dedicated coding staff.  Based around the mighty town of "
@@ -134,18 +152,27 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              3200,
              false,
              qsl("<a href='http://www.3scapes.org/'>http://www.3scapes.org</a>"),
-             qsl(":/icons/3slogo.png"),
+             qsl(":/icons/3Scapes.png"),
              qsl("3Scapes is an alternative dimension to 3Kingdoms, similar in many respects, but "
                  "unique and twisted in so many ways.  3Scapes offers a faster pace of play, along "
                  "with an assortment of new guilds, features, and areas.")},
 
             {qsl("Lusternia"),
              qsl("lusternia.com"),
-             23,
+             5000,
              false,
-             qsl("<a href='http://www.lusternia.com/'>http://www.lusternia.com</a>"),
-             qsl(":/icons/lusternia_120_30.png"),
-             QString()},
+             qsl("<a href='http://www.lusternia.com/'>Website</a><br>"
+                 "<a href='https://discord.gg/d8PECxD739'>Discord</a>"),
+             qsl(":/icons/lusternia.png"),
+             qsl("Lusternia feels like nowhere else."
+                 "\n\n"
+                 "Not because it tries to be strange for its own sake, but because it never settled for ordinary. "
+                 "The planes are stranger. The lore runs deeper. The factions feel less familiar, and the world keeps "
+                 "opening up long after the first impression."
+                 "\n\n"
+                 "Veterans do not come back to Lusternia for comfort. They come back for discovery."
+                 "\n\n"
+                 "Enter a world that keeps revealing more of itself.")},
 
             {qsl("BatMUD"),
              qsl("batmud.bat.org"),
@@ -217,6 +244,28 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "\n\n"
                  "中文开源武侠MUD炎黄群侠传，游戏包括25大门派和5大世家，正邪只在一念间；近千门武学等你学习，上百种任务随你体验；让自己成为一代宗师，江湖笑，恩怨了。")},
 
+            {qsl("Petria"),
+             qsl("game.petriamud.com"),
+             6600,
+             false,
+             qsl("<a href='http://www.petriamud.com'>www.petriamud.com</a><br>"
+                 "<a href='https://www.youtube.com/channel/UCqXqG9qG6L1q3Q3F4F6Q6Nw'>Petria - YouTube</a>"),
+             qsl(":/icons/banner_petria.jpg"),
+             /* English translation, provided by game:
+*              "Petria MUD, active since 1996, is one of the longest-running Spanish-language games with an active community to this day.
+*               A free fantasy world where you can play different races and classes, join clans, explore, participate in tournaments, and live epic adventures.
+*               • Free and in Spanish.
+*               • Dynamic events: Tournaments, Clan Raids, BattleGrounds (War of Flags), Quests, among others.
+*               • Over two decades of history, with constant improvements and new content.
+*               In Petria, you can forge your own path, defend your clan, and write your own legend."
+*/
+             qsl("Petria MUD Activo desde 1996, es uno de los juegos en Español más longevos y con comunidad activa hasta hoy. "
+                 "Un mundo de fantasía gratuito donde podrás jugar distintas razas y clases, unirte a clanes, explorar, participar en torneos y vivir aventuras épicas.\n\n"
+                 "• Gratis y en Español.\n"
+                 "• Eventos dinámicos: Torneos, Asaltos de Clanes, BattleGrounds (War of Flags), Quests, entre otros.\n"
+                 "• Más de dos décadas de historia, con constantes mejoras y nuevos contenidos.\n\n"
+                 "En Petria podrás forjar tu camino, defender a tu clan y escribir tu propia leyenda.")},
+
             {qsl("Realms of Despair"),
              qsl("realmsofdespair.com"),
              4000,
@@ -256,17 +305,44 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl("aetolia.com"),
              23,
              false,
-             qsl("<a href='http://www.aetolia.com/'>http://www.aetolia.com</a>"),
-             qsl(":/icons/aetolia_120_30.png"),
-             QString()},
+             qsl("<a href='http://www.aetolia.com/'>Website</a><br>"
+                 "<a href='https://discord.gg/x2s7fY6'>Discord</a>"),
+             qsl(":/icons/aetolia.png"),
+             qsl("Aetolia does not do safe fantasy."
+                 "\n\n"
+                 "It never did."
+                 "\n\n"
+                 "This is a world of darkness, pressure, factional loyalty, and choices that leave scars. "
+                 "Allegiance matters. Hostility kills. The atmosphere is not decoration. It is part of the threat."
+                 "\n\n"
+                 "Step back into a world that does not let you stay comfortable.")},
+
+            {qsl("Astaria"),
+             qsl("astaria.net"),
+             5000,
+             false,
+             qsl("<a href='https://astariamud.com'>astariamud.com</a>"),
+             qsl(":/icons/banner_astaria.png"),
+             qsl("Once more unto the breach, dear friends...\n\n"
+                 "Welcome Traveller, your sojourn awaits. Only one step remains between you and a realm where your mind can soar, unbound from the fetters of the mundane world.\n\n"
+                 "Let your spirit take shape in one of fifteen races, cast your will into one of nine guilds and begin your journey towards destiny. Forge friendships. Gain power. Vanquish enemies. Work with your allies toward goals greater than yourself. Become part of the rich history of adventurers who have made their home in a world that is immediately fun and will continue to challenge and stimulate for years to come. Step through the portal, and immerse yourself in the mythical world, Astaria.\n\n"
+                 "Astaria is a free-to-play MUD with an RP-optional atmosphere, set in a medieval fantasy world with a touch of cosmic horror. Active since 1994, it's a realm where dragons still roam, adventures await around every corner, and new heroes are always welcome.")},
 
             {qsl("Imperian"),
              qsl("imperian.com"),
-             23,
+             4000,
              false,
-             qsl("<a href='http://www.imperian.com/'>http://www.imperian.com</a>"),
-             qsl(":/icons/imperian_120_30.png"),
-             QString()},
+             qsl("<a href='http://www.imperian.com/'>Website</a><br>"
+                 "<a href='https://discord.gg/QX42sY8E7U'>Discord</a>"),
+             qsl(":/icons/imperian.png"),
+             qsl("Imperian was made for conflict."
+                 "\n\n"
+                 "Rivalry matters here. Pressure matters. Momentum matters. Nothing feels softened, "
+                 "and very little is handed to you. That harder edge is exactly what veterans remember."
+                 "\n\n"
+                 "Imperian has always been about conflict with teeth and reputation earned the hard way."
+                 "\n\n"
+                 "If you want fantasy that hits harder and asks more of you, start here.")},
 
             {qsl("WoTMUD"),
              qsl("game.wotmud.org"),
@@ -319,6 +395,21 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "destruction are rising from a long slumber to again wreak havoc on the realm.  "
                  "The gameplay of Luminari will be familiar to anyone who has played Dungeons and "
                  "Dragons, Pathfinder or any of the many RPG systems based on the d20 ruleset.")},
+
+            {qsl("Starmourn"),
+             qsl("starmourn.com"),
+             3000,
+             false,
+             qsl("<a href='http://www.starmourn.com/'>Website</a><br>"
+                 "<a href='https://discord.gg/H8m7pFV'>Discord</a>"),
+             qsl(":/icons/starmourn.png"),
+             qsl("Starmourn offers a galaxy with real edge."
+                 "\n\n"
+                 "Factions, syndicates, aliens, cybernetics, advanced tech, and a style all its own make "
+                 "Starmourn feel different from the usual fantasy loop. It is a universe built around danger, "
+                 "ambition, and the chance to carve out a name where safety was never promised."
+                 "\n\n"
+                 "The future is open. Take your place in it.")},
 
             {qsl("StickMUD"),
              qsl("stickmud.com"),
@@ -467,6 +558,22 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              "strong emphasis on role-playing,  Accursed Lands may be the perfect fit for you. "
              "We would be happy to have you!")},
 
+            {qsl("BlackMUD"),
+             qsl("blackmud.com"),
+             2000,
+             false,
+             qsl("<a href='http://www.blackmud.com'>www.blackmud.com</a>"),
+             qsl(":/icons/blackmud.png"),
+             qsl("The world of Entia is a wonderous and challenging place, set within an "
+             "medieval/fantasy theme and boasting over 90 original areas, made up of tens "
+             "of thousands of rooms (and still growing and improving in quality), all designed"
+             " around an original comprehensive world theme and history. BlackMUD is "
+             "combat-centric but we do encourage and reward roleplaying for those who wish to "
+             "participate. The story of Entia revolves around a continuing war in which the "
+             "forces of chaos seek to Unmake the universe itself. It is a time of fear and "
+             "darkness. It is a time for those with courage, to step forward and defend their "
+             "beliefs, and their very existence.")},
+
             {qsl("Carrion Fields"),
              qsl("carrionfields.net"),
              4449,
@@ -539,39 +646,6 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "\n\n"
                  "What role will you play? The legend awaits!")},
 
-            {qsl("CoreMUD"),
-             qsl("coremud.org"),
-             4020,
-             true,
-             qsl("<a href='https://coremud.org/'>coremud.org</a>"),
-             qsl(":/icons/coremud_icon.jpg"),
-             qsl("Welcome to Core Mud, an interactive text MUD set on the planet formal star-charts "
-                 "refer to as Hermes 571-G, but that everyone in the know refers to simply as \"Core\"."
-                 "\n\n"
-                 "Core is one of the most distant settlements known to mankind, most famous for its "
-                 "lucrative yet oppressive mines, but more than mankind can be found here..."
-                 "\n\n"
-                 "Core is a diverse group of 9 races in total, all vying for recognition or profits, "
-                 "or both, working for The Company, the megalithic entity running the colony itself."
-                 "\n\n"
-                 "To The Company, everything is secondary to profits."
-                 "\n\n"
-                 "It is up to you to determine how best to survive in this environment, whether that "
-                 "be through combat training, superior mining skills, or technical prowess."
-                 "\n\n"
-                 "Core MUD is always free to play and features a fun and supportive atmosphere. "
-                 "Roleplaying is encouraged but not mandatory."
-                 "\n\n"
-                 "Mining is your primary source of income, but there are multiple ways to scrape "
-                 "together a few credits... or a few million."
-                 "\n\n"
-                 "Core Mud also features an economy which is player-driven.  Players own "
-                 "merchandise shops featuring energy weaponry or useful tools, pubs featuring "
-                 "assorted alcoholic (of course) and non-alcoholic beverages, and clinics for "
-                 "healing, to name a few."
-                 "\n\n"
-                 "Come join us today!")},
-
             {qsl("Multi-Users in Middle-earth"),
              qsl("mume.org"),
              4242,
@@ -589,10 +663,10 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "inception in the fall of 1991.")},
 
             {qsl("MorgenGrauen"),
-             qsl("mg.mud.de"),
-             4711,
-             false,
-             qsl("<a href='http://mg.mud.de/'>MorgenGrauen Webseite</a><br>"
+             qsl("mud.morgengrauen.info"),
+             4712,
+             true,
+             qsl("<a href='http://morgengrauen.info/'>MorgenGrauen Webseite</a><br>"
                  "<a href='https://www.youtube.com/MorgenGrauen'>YouTube Kanal</a><br>"
                  "<a href='https://discord.gg/nHJnYHk'>Discord Server</a>"),
              qsl(":/icons/morgengrauen_480x120.png"),
@@ -631,6 +705,36 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "venue of original ideas, mind boggling quests, and bloodcurdling "
                  "beasts, spinning into realms of power, magic, and technology, "
                  "and many players with which to share your adventures.")},
+
+            {qsl("Medievia"),
+             qsl("medievia.com"),
+             4000,
+             false,
+             qsl("<a href='http://medievia.com/'>Medievia</a>"),
+             qsl(":/icons/medievia.png"),
+             qsl("If you take the deepest and most advanced game possible, and mix it with the best "
+                 "chat world around, what you have is Medievia.\n\n"
+                 "Imagine...\n"
+                 "    Endless player-created areas to explore for the first time.\n"
+                 "    Ships you can take out to sea. You can go crabbing, kill monsters, "
+                 "attack other ships, explore new islands, etc.\n"
+                 "    Dragons that hunt you, good dragons that fly you places, dragon lairs "
+                 "you can defeat, etc.\n"
+                 "    Trading for gold where you take goods via covered wagon/mules across "
+                 "the wilderness through adventure after adventure from trade post to "
+                 "trade post. Now you can even go right under the ocean to undersea trading posts.\n"
+                 "    Player vs Player action in zones, ships, wilderness, herobattles, arenas, "
+                 "CPK, NPK, LPK, etc.\n"
+                 "    Joining a clan, the clan can join a town, or go ahead and make their own "
+                 "town in the wilderness.\n"
+                 "    Giving birth and creating your own bloodline. If your bloodline gets big enough "
+                 "you can build homes and castles.\n"
+                 "    A game that has the intuition to track your happiness, pride, sadness, and fear "
+                 "while changing itself to fit your needs!\n"
+                 "    Weather, storms, wind, fire, floods, disease, even asteroids. This may be text "
+                 "but it is the most dynamic game ever attempted. The wind affects the ships, where "
+                 "fire spreads, and even how some critters smell you if you are upwind from them.\n\n"
+                 "Do you dare enter?")},
             };
     // clang-format on
 };

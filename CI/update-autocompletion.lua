@@ -31,7 +31,7 @@ local function scrapeLuaFunctions(htmlbody)
       if usage then
         state = 0
         --print("Usage: " .. usage)
-        func = {}
+        local func = {}
         func.name = trim(name)
         func.usage = trim(usage)
         table.insert(funcs, func)
@@ -49,7 +49,7 @@ local function scrapeLuaFunctions(htmlbody)
     end
   end
 
-  jsonText = lunajson.encode(funcsHash)
+  local jsonText = lunajson.encode(funcsHash)
   print(count .. " functions in the API.")
 
   return jsonText

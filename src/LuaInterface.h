@@ -25,13 +25,17 @@
 
 #include "TVar.h"
 
-#include "pre_guard.h"
 #include <QScopedPointer>
 #include <QSet>
-#include "post_guard.h"
+
+#include <utility>
 
 extern "C" {
-    #include <lua.h>
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lua.h>
+#else
+#include <lua.h>
+#endif
 }
 
 
@@ -64,13 +68,13 @@ public:
     bool loadVar(TVar* var);
     bool reparentCVariable(TVar* from, TVar* to, TVar* curVar);
     bool reparentVariable(QTreeWidgetItem*, QTreeWidgetItem*, QTreeWidgetItem*);
-    bool validMove(QTreeWidgetItem*);
+    std::pair<bool, QString> validMove(QTreeWidgetItem*);
     void getAllChildren(TVar* var, QList<TVar*>* list);
     lua_State* getState();
     static int onPanic(lua_State*);
 
 private:
-    int depth;
+    int depth = 0;
     lua_State* mL;
     QSet<TVar> hiddenVars;
     QScopedPointer<VarUnit> varUnit;

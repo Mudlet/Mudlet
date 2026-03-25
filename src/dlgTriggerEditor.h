@@ -26,11 +26,11 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
+#include "EditorCommand.h"
 #include "ui_trigger_editor.h"
+
 #include <QPointer>
 #include <unordered_map>
-#include "post_guard.h"
 
 #include "TAction.h"
 #include "TAlias.h"
@@ -46,14 +46,20 @@
 #include "dlgTimersMainArea.h"
 #include "dlgTriggersMainArea.h"
 #include "dlgVarsMainArea.h"
+#include "SingleLineTextEdit.h"
+#include "EditorUndoStack.h"
 
-#include "pre_guard.h"
 #include <QDialog>
+#include <QDockWidget>
 #include <QFlag>
+#include <QIcon>
 #include <QListWidgetItem>
 #include <QScrollArea>
 #include <QTreeWidget>
-#include "post_guard.h"
+#include <QDesktopServices>
+#include <QSet>
+#include <QStringList>
+#include <QVector>
 
 // Edbee editor includes
 #include "edbee/edbee.h"
@@ -63,6 +69,7 @@
 #include "edbee/models/texteditorconfig.h"
 #include "edbee/models/textgrammar.h"
 #include "edbee/models/textundostack.h"
+#include "edbee/models/textautocompleteprovider.h"
 #include "edbee/texteditorcommand.h"
 #include "edbee/texteditorcontroller.h"
 #include "edbee/texteditorwidget.h"
@@ -84,66 +91,73 @@ class dlgAliasMainArea;
 class dlgScriptsMainArea;
 class dlgKeysMainArea;
 class dlgTriggerPatternEdit;
+class QLabel;
+class QFrame;
+class QToolButton;
 class TAction;
 class TKey;
 class TConsole;
 class dlgVarsMainArea;
+class QShortcut;
 
 
 class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
     Q_OBJECT
 
+    // Allow external test suite to access private members
+    friend void runUndoRedoTestSuite(dlgTriggerEditor* editor);
+
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
         // having to modify existing code that puts it into the item:
-              IdRole = Qt::UserRole,
+        IdRole = Qt::UserRole,
         // Was the "name" field inserted into the search widget tree {as
         // pItem->text(1)} but since we now suppress that for subsequent
         // elements for the same "item" we need to carry the same data
         // internally even when we do not insert the text in the display:
-            NameRole = Qt::UserRole + 1,
+        NameRole = Qt::UserRole + 1,
         // What the Item is (one of the cmXxxxxView values) so we know how to
         // interpret the search result:
-            ItemRole = Qt::UserRole + 2,
+        ItemRole = Qt::UserRole + 2,
         // Value of one of SearchDataResultType (below)
-            TypeRole = Qt::UserRole + 3,
+        TypeRole = Qt::UserRole + 3,
         // When the result is a pattern or event handler ("Script" item) type or
         // lua script this is the pattern number (0-49 for "Triggers"), (event
         // handler index for "Scripts") or script line (so we know which
         // field/line to jump to)
-   PatternOrLineRole = Qt::UserRole + 4,
+        PatternOrLineRole = Qt::UserRole + 4,
         // Value is the position (starting at 0, counting in QChars) of the
         // particular find used to position cursor at start of match:
         PositionRole = Qt::UserRole + 5,
         // Value is the index (starting at 0) of the particular find used to
         // disambiguate multiple finds in the same "thing" (so we know which one
         // to jump to) - may not be as much use as it seems...
-           IndexRole = Qt::UserRole + 6
+        IndexRole = Qt::UserRole + 6
     };
 
     // Classify the search result - so we know where to position the cursor as
     // we implement moving the focus to the origin of the result:
     enum SearchDataResultType {
         // Unset (?):
-               SearchResultIsUnknown = 0x0,
+        SearchResultIsUnknown = 0x0,
         // The contents in the Edbee Editor widget:
-                SearchResultIsScript = 0x1,
+        SearchResultIsScript = 0x1,
         // The item's "Name":
-                  SearchResultIsName = 0x2,
+        SearchResultIsName = 0x2,
         // Only for "Triggers"/"Aliases" (and only the former has multiples):
-               SearchResultIsPattern = 0x3,
+        SearchResultIsPattern = 0x3,
         // All but "Variable" - the simple "Command":
-               SearchResultIsCommand = 0x4,
+        SearchResultIsCommand = 0x4,
         // Only Push-down "Buttons" - the additional "Up" "Command" field:
-          SearchResultIsExtraCommand = 0x5,
+        SearchResultIsExtraCommand = 0x5,
         // Only "Buttons" - "Css" - unlikely to be useful currently but might be
         //useful in future if we really get into stylesheets:
-                  SearchResultsIsCss = 0x6,
+        SearchResultsIsCss = 0x6,
         // Only "Scripts":
-          SearchResultIsEventHandler = 0x7,
+        SearchResultIsEventHandler = 0x7,
         // Only "Variables":
-                 SearchResultIsValue = 0x8
+        SearchResultIsValue = 0x8
     };
 
 public:
@@ -152,38 +166,28 @@ public:
         // Unset:
         SearchOptionNone = 0x0,
         SearchOptionCaseSensitive = 0x1,
-        SearchOptionIncludeVariables = 0x2 /*,
-        SearchOptionRegExp = 0x4,
-        SearchOptionWholeWord = 0x8 */
+        SearchOptionIncludeVariables = 0x2,
+        SearchOptionWholeWord = 0x4 /*,
+        SearchOptionRegExp = 0x8 */
     };
 
     Q_DISABLE_COPY(dlgTriggerEditor)
     dlgTriggerEditor(Host*);
 
-    Q_DECLARE_FLAGS(SearchOptions,SearchOption)
-
-    enum class EditorViewType {
-        cmUnknownView = 0,
-        cmTriggerView = 0x01,
-        cmTimerView = 0x02,
-        cmAliasView = 0x03,
-        cmScriptView = 0x04,
-        cmActionView = 0x05,
-        cmKeysView = 0x06,
-        cmVarsView = 0x07
-    };
+    Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
     void closeEvent(QCloseEvent* event) override;
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
+    void showEvent(QShowEvent* event) override;
     void enterEvent(TEnterEvent* event) override;
     bool eventFilter(QObject*, QEvent* event) override;
     bool event(QEvent* event) override;
-    void resizeEvent(QResizeEvent *event) override;
+    void resizeEvent(QResizeEvent* event) override;
     void changeEvent(QEvent* e) override;
     void fillout_form();
     void showError(const QString&);
-    void showWarning(const QString&);
+    void showWarning(const QString&, bool announce = true);
     void showInfo(const QString&);
     void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent);
     void children_icon_alias(QTreeWidgetItem* pWidgetItemParent);
@@ -215,6 +219,9 @@ public:
     void activeToggle_script();
     void activeToggle_timer();
     void activeToggle_trigger();
+    void slot_itemMoved(int itemID, int oldParentID, int newParentID, int oldPosition, int newPosition);
+    void slot_batchMoveStarted();
+    void slot_batchMoveEnded();
     void delete_action();
     void delete_alias();
     void delete_key();
@@ -227,6 +234,10 @@ public:
     void showCurrentTriggerItem();
     void hideSystemMessageArea();
     void showIDLabels(const bool);
+    void setDisplayFont(const QFont&);
+
+signals:
+    void editorClosing();
 
 public slots:
     void slot_toggleHiddenVariables(bool);
@@ -239,9 +250,10 @@ public slots:
     void slot_soundTrigger();
     void slot_colorizeTriggerSetBgColor();
     void slot_colorizeTriggerSetFgColor();
-    void slot_saveSelectedItem(QTreeWidgetItem* pItem);
+    void slot_saveSelectedItem();
     void slot_export();
     void slot_import();
+    void slot_createModule();
     void slot_viewStatsAction();
     void slot_toggleCentralDebugConsole();
     void slot_nextSection();
@@ -276,13 +288,13 @@ public slots:
     void slot_saveEdits();
     void slot_copyXml();
     void slot_pasteXml();
-// Not used:    void slot_choseActionIcon();
-    void slot_showSearchAreaResults(bool);
+    // Not used:    void slot_choseActionIcon();
     void slot_showAllTriggerControls(const bool);
     void slot_rightSplitterMoved(const int pos, const int handle);
     void slot_scriptMainAreaDeleteHandler();
     void slot_scriptMainAreaAddHandler();
-    void slot_scriptMainAreaEditHandler(QListWidgetItem*);
+    void slot_scriptMainAreaEditHandler();
+    void slot_scriptMainAreaClearHandlerSelection(QListWidgetItem*);
     void slot_keyGrab();
     void slot_profileSaveAction();
     void slot_profileSaveAsAction();
@@ -293,14 +305,21 @@ public slots:
     void slot_updateStatusBar(const QString& statusText); // For the source code editor
     void slot_profileSaveStarted();
     void slot_profileSaveFinished();
+    void slot_editorThemeChanged();
+    void slot_smartUndo();
+    void slot_smartRedo();
+    void slot_updateUndoRedoButtonStates();
+    void slot_runUndoRedoTests();
 
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
     void slot_toggleIsPushDownButton(int);
     void slot_toggleSearchCaseSensitivity(bool);
     void slot_toggleSearchIncludeVariables(bool);
+    void slot_toggleSearchWholeWord(bool);
     void slot_toggleGroupBoxColorizeTrigger(const bool);
     void slot_changedPattern();
+    void slot_lineSpacerChanged(int value);
     void slot_clearSearchResults();
     void slot_clearSoundFile();
     void slot_editorContextMenu();
@@ -310,6 +329,54 @@ private slots:
     void slot_floatingChangedEditorItemsToolbar();
     void slot_restoreEditorActionsToolbar();
     void slot_restoreEditorItemsToolbar();
+    void slot_itemEdited();
+    void slot_searchSplitterMoved(const int pos, const int index);
+    void slot_clickedMessageBox(const QString&);
+    void slot_addPattern();
+    void slot_bannerDismissClicked();
+    void slot_itemsChanged(::EditorViewType viewType, QList<int> affectedItemIDs);
+
+    // Per-property immediate save slots for triggers (create individual undo entries)
+    void slot_saveProperty_TriggerName();
+    void slot_saveProperty_TriggerCommand();
+    void slot_saveProperty_TriggerStayOpen();
+    void slot_saveProperty_TriggerLineMargin();
+    void slot_saveProperty_TriggerFilterTrigger();
+    void slot_saveProperty_TriggerPerlSlashG();
+    void slot_saveProperty_TriggerSoundEnabled();
+    void slot_saveProperty_TriggerSoundFile();
+    void slot_saveProperty_TriggerColorizer();
+    void slot_saveProperty_TriggerPattern(int patternIndex);
+    void slot_saveProperty_TriggerPatternType(int patternIndex);
+
+    // Per-property immediate save slots for aliases
+    void slot_saveProperty_AliasName();
+    void slot_saveProperty_AliasPattern();
+    void slot_saveProperty_AliasCommand();
+
+    // Per-property immediate save slots for timers
+    void slot_saveProperty_TimerName();
+    void slot_saveProperty_TimerCommand();
+    void slot_saveProperty_TimerTime();
+
+    // Per-property immediate save slots for scripts
+    void slot_saveProperty_ScriptName();
+    void slot_saveProperty_ScriptEventHandlers();
+
+    // Per-property immediate save slots for keys
+    void slot_saveProperty_KeyName();
+    void slot_saveProperty_KeyCommand();
+
+    // Per-property immediate save slots for actions (buttons)
+    void slot_saveProperty_ActionName();
+    void slot_saveProperty_ActionCommandDown();
+    void slot_saveProperty_ActionCommandUp();
+    void slot_saveProperty_ActionIsPushDown();
+    void slot_saveProperty_ActionBarColumns();
+    void slot_saveProperty_ActionBarOrientation();
+    void slot_saveProperty_ActionBarLocation();
+    void slot_saveProperty_ActionButtonRotation();
+    void slot_saveProperty_ActionCSS();
 
 public:
     TConsole* mpErrorConsole = nullptr;
@@ -323,6 +390,8 @@ private:
     void populateActions();
     void populateKeys();
     void saveOpenChanges();
+    EditorViewType determineViewFromVisibleTree();
+    EditorViewType resolveCurrentView();
     void saveTrigger();
     void saveAlias();
     void saveTimer();
@@ -337,7 +406,7 @@ private:
     void addTrigger(bool);
     void addAction(bool);
     void addKey(bool);
-    void timerEvent(QTimerEvent *event) override;
+    void timerEvent(QTimerEvent* event) override;
 
     void selectTriggerByID(int id);
     void selectTimerByID(int id);
@@ -354,6 +423,8 @@ private:
     void clearKeyForm();
     void clearVarForm();
 
+    void updatePackageItemAccessibility(QTreeWidgetItem* pItem, const QString& currentDescription);
+
     void expand_child_triggers(TTrigger* pTriggerParent, QTreeWidgetItem* pItem);
     void expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem* pWidgetItemParent);
     void expand_child_scripts(TScript* pTriggerParent, QTreeWidgetItem* pWidgetItemParent);
@@ -361,12 +432,12 @@ private:
     void expand_child_action(TAction*, QTreeWidgetItem*);
     void expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* pWidgetItemParent);
 
-    void exportTrigger(const QString &fileName);
-    void exportTimer(const QString &fileName);
-    void exportAlias(const QString &fileName);
-    void exportAction(const QString &fileName);
-    void exportScript(const QString &fileName);
-    void exportKey(const QString &fileName);
+    void exportTrigger(const QString& fileName);
+    void exportTimer(const QString& fileName);
+    void exportAlias(const QString& fileName);
+    void exportAction(const QString& fileName);
+    void exportScript(const QString& fileName);
+    void exportKey(const QString& fileName);
 
     void exportTriggerToClipboard();
     void exportTimerToClipboard();
@@ -375,9 +446,25 @@ private:
     void exportScriptToClipboard();
     void exportKeyToClipboard();
 
+    // Multi-selection export functions
+    void exportMultipleTriggersToClipboard(const QList<TTrigger*>& triggers);
+    void exportMultipleTimersToClipboard(const QList<TTimer*>& timers);
+    void exportMultipleAliasesToClipboard(const QList<TAlias*>& aliases);
+    void exportMultipleActionsToClipboard(const QList<TAction*>& actions);
+    void exportMultipleScriptsToClipboard(const QList<TScript*>& scripts);
+    void exportMultipleKeysToClipboard(const QList<TKey*>& keys);
+
     void clearDocument(edbee::TextEditorWidget* pEditorWidget, const QString& initialText = QString());
 
-    void setAllSearchData(QTreeWidgetItem* pItem, const EditorViewType& type, const QString& name, const int& id, const SearchDataResultType& what, const int& pos = 0, const int& instance = 0, const int& subInstance = 0) {
+    void setAllSearchData(QTreeWidgetItem* pItem,
+                          const EditorViewType& type,
+                          const QString& name,
+                          const int& id,
+                          const SearchDataResultType& what,
+                          const int& pos = 0,
+                          const int& instance = 0,
+                          const int& subInstance = 0)
+    {
         // Which is it? A Trigger, an alias etc:
         pItem->setData(0, ItemRole, static_cast<int>(type));
         // What is its name:
@@ -399,7 +486,8 @@ private:
         pItem->setData(0, IndexRole, subInstance);
     }
 
-    void setAllSearchData(QTreeWidgetItem* pItem, const QString& name, const QStringList& id, const SearchDataResultType& what, const int& pos = 0, const int& subInstance = 0) {
+    void setAllSearchData(QTreeWidgetItem* pItem, const QString& name, const QStringList& id, const SearchDataResultType& what, const int& pos = 0, const int& subInstance = 0)
+    {
         // Which is it? A Trigger, an alias etc:
         pItem->setData(0, ItemRole, static_cast<int>(EditorViewType::cmVarsView));
         // What is its name:
@@ -434,43 +522,76 @@ private:
     void recursiveSearchTimers(TTimer*, const QString& text);
     void recursiveSearchKeys(TKey*, const QString& text);
     void recursiveSearchVariables(TVar*, QList<TVar*>&, bool);
+    void searchSingleTrigger(TTrigger* trigger, const QString& text);
+    void searchSingleAlias(TAlias* alias, const QString& text);
+    void searchSingleScript(TScript* script, const QString& text);
+    void searchSingleAction(TAction* action, const QString& text);
+    void searchSingleTimer(TTimer* timer, const QString& text);
+    void searchSingleKey(TKey* key, const QString& text);
+    void highlightSearchMatches();
+    void
+    emitScriptSearchMatches(const QString& scriptText, const QString& searchText, const QString& name, int objectId, const QString& parentLabel, EditorViewType viewType, QTreeWidgetItem*& parent);
 
     void createSearchOptionIcon();
-    void clearEditorNotification() const;
+    int findSearchMatch(const QString& haystack, const QString& needle, int from = 0) const;
+    bool containsSearchMatch(const QString& haystack, const QString& needle) const;
+    void clearEditorNotification();
     void runScheduledCleanReset();
     void autoSave();
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
+    void createPatternItem(int index);
+    void showPatternItems(int count);
+    void updatePatternPlaceholders();
+    [[nodiscard]] QString patternPlaceholderText(int patternType) const;
+    void handlePatternChange(dlgTriggerPatternEdit* patternItem, bool hasContentHint);
+    void applyPatternWidgetStyle(dlgTriggerPatternEdit* patternWidget);
+
     void keyGrabCallback(const Qt::Key, const Qt::KeyboardModifiers);
     void setShortcuts(const bool active = true);
     void setShortcuts(QList<QAction*> actionList, const bool active = true);
 
     void showOrHideRestoreEditorActionsToolbarAction();
     void showOrHideRestoreEditorItemsToolbarAction();
+    void checkForMoreThanOneTriggerItem();
+    TTrigger* getTriggerFromTreeItem(QTreeWidgetItem* item);
+    TAlias* getAliasFromTreeItem(QTreeWidgetItem* item);
+    TScript* getScriptFromTreeItem(QTreeWidgetItem* item);
+    TTimer* getTimerFromTreeItem(QTreeWidgetItem* item);
+    TKey* getKeyFromTreeItem(QTreeWidgetItem* item);
+    TAction* getActionFromTreeItem(QTreeWidgetItem* item);
+    void updatePatternTabOrder();
+    QWidget* firstFocusablePatternWidget(const dlgTriggerPatternEdit* patternItem) const;
+    bool focusNextPatternItem(const dlgTriggerPatternEdit* currentItem);
+    bool focusPreviousPatternItem(const dlgTriggerPatternEdit* currentItem);
+
+    bool focusPatternItem(const int row, const Qt::FocusReason reason = Qt::TabFocusReason);
+    void setupPatternNavigationShortcuts();
+
 
     // PLACEMARKER 3/3 save button texts need to be kept in sync
-    std::unordered_map<QString, QString> mButtonShortcuts = {
-        {qsl("Save Item"),    tr("Ctrl+S")},
-        {tr("Save Trigger"),  tr("Ctrl+S")},
-        {tr("Save Timer"),    tr("Ctrl+S")},
-        {tr("Save Alias"),    tr("Ctrl+S")},
-        {tr("Save Script"),   tr("Ctrl+S")},
-        {tr("Save Button"),   tr("Ctrl+S")},
-        {tr("Save Key"),      tr("Ctrl+S")},
-        {tr("Save Variable"), tr("Ctrl+S")},
-        {tr("Save Profile"),  tr("Ctrl+Shift+S")},
-        {tr("Triggers"),   tr("Ctrl+1")},
-        {tr("Aliases"),    tr("Ctrl+2")},
-        {tr("Scripts"),    tr("Ctrl+3")},
-        {tr("Timers"),     tr("Ctrl+4")},
-        {tr("Keys"),       tr("Ctrl+5")},
-        {tr("Variables"),  tr("Ctrl+6")},
-        {tr("Buttons"),    tr("Ctrl+7")},
-        {tr("Errors"),     tr("Ctrl+8")},
-        {tr("Statistics"), tr("Ctrl+9")},
-        {tr("Debug"),      tr("Ctrl+0")}
-    };
+    // Note: Shortcut values use Qt's portable format (Ctrl+S) which Qt maps correctly per-platform
+    // Keys use tr() to match translated action labels; values are not translated (they're key sequences)
+    std::unordered_map<QString, QString> mButtonShortcuts = {{tr("Save Item"), qsl("Ctrl+S")},
+                                                             {tr("Save Trigger"), qsl("Ctrl+S")},
+                                                             {tr("Save Timer"), qsl("Ctrl+S")},
+                                                             {tr("Save Alias"), qsl("Ctrl+S")},
+                                                             {tr("Save Script"), qsl("Ctrl+S")},
+                                                             {tr("Save Button"), qsl("Ctrl+S")},
+                                                             {tr("Save Key"), qsl("Ctrl+S")},
+                                                             {tr("Save Variable"), qsl("Ctrl+S")},
+                                                             {tr("Save Profile"), qsl("Ctrl+Shift+S")},
+                                                             {tr("Triggers"), qsl("Ctrl+1")},
+                                                             {tr("Aliases"), qsl("Ctrl+2")},
+                                                             {tr("Scripts"), qsl("Ctrl+3")},
+                                                             {tr("Timers"), qsl("Ctrl+4")},
+                                                             {tr("Keys"), qsl("Ctrl+5")},
+                                                             {tr("Variables"), qsl("Ctrl+6")},
+                                                             {tr("Buttons"), qsl("Ctrl+7")},
+                                                             {tr("Errors"), qsl("Ctrl+8")},
+                                                             {tr("Statistics"), qsl("Ctrl+9")},
+                                                             {tr("Debug"), qsl("Ctrl+0")}};
 
-    std::unordered_map<QLineEdit*, bool> lineEditShouldMarkSpaces;
+    std::unordered_map<SingleLineTextEdit*, bool> lineEditShouldMarkSpaces;
 
     QToolBar* toolBar = nullptr;
     QToolBar* toolBar2 = nullptr;
@@ -495,10 +616,10 @@ private:
     EditorViewType mCurrentView = EditorViewType::cmUnknownView;
 
     QScrollArea* mpScrollArea = nullptr;
-    QWidget* HpatternList = nullptr;
+    QWidget* mpWidget_triggerItems = nullptr;
     // this widget holds the errors, trigger patterns, and all other widgets that aren't edbee
     // in it, as a workaround for an extra splitter getting created by Qt below the error msg otherwise
-    QWidget *mpNonCodeWidgets = nullptr;
+    QWidget* mpNonCodeWidgets = nullptr;
     dlgActionMainArea* mpActionsMainArea = nullptr;
     dlgAliasMainArea* mpAliasMainArea = nullptr;
     dlgKeysMainArea* mpKeysMainArea = nullptr;
@@ -516,6 +637,13 @@ private:
     bool mIsGrabKey = false;
     QPointer<Host> mpHost;
     QList<dlgTriggerPatternEdit*> mTriggerPatternEdit;
+    int mVisiblePatternCount = 0;
+    QStringList mPatternList;
+    QVector<QIcon> mPatternIcons;
+
+    QShortcut* mFirstPatternShortcut = nullptr;
+    QShortcut* mLastPatternShortcut = nullptr;
+    QVector<QShortcut*> mPatternNavigationShortcuts;
     bool mChangingVar = false;
 
     QTextDocument* mpSourceEditorDocument = nullptr;
@@ -531,6 +659,7 @@ private:
     QAction* mSaveItem = nullptr;
 
     SearchOptions mSearchOptions = SearchOptionNone;
+    QSplitter* searchSplitter;
 
     // This has a menu which the following QActions are inserted into:
     QAction* mpAction_searchOptions = nullptr;
@@ -538,8 +667,8 @@ private:
 
     QAction* mpAction_searchCaseSensitive = nullptr;
     QAction* mpAction_searchIncludeVariables = nullptr;
+    QAction* mpAction_searchWholeWord = nullptr;
     // TODO: Add other searchOptions
-    // QAction* mpAction_searchWholeWords;
     // QAction* mpAction_searchRegExp;
 
     QAction* mProfileSaveAction = nullptr;
@@ -549,9 +678,25 @@ private:
     QAction* mpAction_restoreEditorActionsToolbar = nullptr;
     QAction* mpAction_restoreEditorItemsToolbar = nullptr;
 
-    // We need to keep a record of this button as we have to disable it
+    // We need to keep a record of these buttons as we have to disable them
     // for the "Variables" view:
+    QAction* mpAction_toggleActive = nullptr;
     QAction* mpExportAction = nullptr;
+    QAction* mpCreateModuleAction = nullptr;
+
+    // Smart undo/redo actions (route based on focus):
+    QAction* mpUndoAction = nullptr;
+    QAction* mpRedoAction = nullptr;
+    QAction* mpRunUndoRedoTestsAction = nullptr;
+
+    // Undo system for item-level operations (using Qt's QUndoStack framework):
+    EditorUndoStack* mpUndoStack = nullptr;
+
+    // Guarded pointer to text editor's undo stack (for safe signal connections):
+    QPointer<edbee::TextUndoStack> mpTextUndoStack;
+
+    // Track whether auto-complete provider has been initialized
+    static bool smAutoCompleteInitialized;
 
     // tracks the duration of the "Save Profile As" action so
     // autosave doesn't kick in
@@ -560,8 +705,20 @@ private:
     // keeps track of the dialog reset being queued
     bool mCleanResetQueued = false;
 
+    // tracks whether the initial profile load has completed (to avoid clearing undo stack on refreshes)
+    bool mInitialLoadDone = false;
+
+    // Blocks property saves during UI updates (e.g., when loading a selected item or during undo/redo)
+    // to prevent recursive saves and duplicate undo entries
+    bool mBlockPropertySave = false;
+
     // profile autosave interval in minutes
     int mAutosaveInterval = 2;
+
+    // The space recorded for the left side for "items" in the trigger area
+    // so as to be able to fit the right side with the extra controls,
+    // determined the first time the area is shrunk down by the user:
+    int mTriggerMainAreaMinimumHeightToShowAll = 0;
 
     // tracks location of the splitter in the trigger editor for each tab
     QByteArray mTriggerEditorSplitterState;
@@ -571,17 +728,62 @@ private:
     QByteArray mKeyEditorSplitterState;
     QByteArray mTimerEditorSplitterState;
     QByteArray mVarEditorSplitterState;
+    QByteArray mSearchSplitterState;
+
+    struct EditorState
+    {
+        int caretLine = 0;
+        int caretColumn = 0;
+        int verticalScrollPos = 0;
+        int horizontalScrollPos = 0;
+    };
+
+    QMap<EditorViewType, QMap<int, EditorState>> mEditorStates;
+
+    void saveEditorState(EditorViewType viewType, int itemId);
+    void restoreEditorState(EditorViewType viewType, int itemId);
+    void clearEditorState(EditorViewType viewType, int itemId);
 
     // approximate max duration "Copy as image" can take in seconds
     int mCopyAsImageMax = 0;
 
-    QString msgInfoAddAlias;
-    QString msgInfoAddTrigger;
-    QString msgInfoAddScript;
-    QString msgInfoAddTimer;
-    QString msgInfoAddButton;
-    QString msgInfoAddVar;
-    QString msgInfoAddKey;
+    struct introOption
+    {
+        QString name;
+        QString headline;
+        QString contents;
+    };
+
+    struct introTextParts
+    {
+        QString summary;
+        QVector<introOption> options;
+    };
+
+    QMap<EditorViewType, introTextParts> introAddItem;
+
+    void showIntro(const QString& = QString());
+    void showHideableBanner(const QString& content, const QString& bannerKey);
+    [[nodiscard]] QString bannerSettingsKey(EditorViewType viewType, const QString& bannerKey) const;
+    [[nodiscard]] QString legacyBannerSettingsKey(EditorViewType viewType, const QString& bannerKey) const;
+    [[nodiscard]] QString profileSettingsPrefix() const;
+
+    // Banner state tracking
+    QTimer* mpBannerUndoTimer = nullptr;
+    EditorViewType mLastDismissedBannerView = EditorViewType::cmUnknownView;
+    QString mLastDismissedBannerContent;
+    QString mCurrentBannerKey;
+    QString mLastDismissedBannerKey;
+    QSet<QString> mTemporarilyHiddenBanners;
+
+    // Banner methods
+    void handleBannerDismiss();
+    void showBannerUndoToast();
+    void undoBannerDismiss();
+    void handlePermanentBannerDismiss();
+    bool bannerPermanentlyHidden(EditorViewType viewType, const QString& bannerKey = QString(), bool includeBasePreference = true);
+    void setBannerPermanentlyHidden(EditorViewType viewType, const QString& bannerKey, bool hidden);
+
     QString descActive;
     QString descInactive;
     QString descActiveFolder;
@@ -594,6 +796,7 @@ private:
     QString descInactiveOffsetTimer;
     QString descNewFolder;
     QString descNewItem;
+    QString descPackageItem;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

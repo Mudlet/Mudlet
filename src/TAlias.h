@@ -25,18 +25,14 @@
 
 #include "Tree.h"
 
-#include "pre_guard.h"
-#include <QApplication>
 #include <QDebug>
 #include <QPointer>
 #include <QSharedPointer>
-#include "post_guard.h"
 
-#include <pcre.h>
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
 
 class Host;
-
-#define MAX_CAPTURE_GROUPS 33
 
 using NameGroupMatches = QVector<QPair<QString, QString>>;
 
@@ -63,6 +59,12 @@ public:
     void setRegexCode(const QString&);
     void setCommand(const QString& command) { mCommand = command; }
     QString getCommand() const { return mCommand; }
+    QString packageName(TAlias* pAlias);
+    QString moduleName(TAlias* pAlias);
+    bool checkIfNew();
+    void unmarkAsNew();
+
+
 
     bool match(const QString& toMatch);
     bool registerAlias();
@@ -72,7 +74,7 @@ public:
     QString mName;
     QString mCommand;
     QString mRegexCode;
-    QSharedPointer<pcre> mpRegex;
+    QSharedPointer<pcre2_code> mpRegex;
     QString mScript;
     QPointer<Host> mpHost;
     bool mModuleMember = false;
@@ -81,6 +83,7 @@ public:
     bool exportItem = true;
     bool mRegisteredAnonymousLuaFunction = false;
     QVector<NameGroupMatches> nameCaptures;
+    bool mIsNew = true;
 
 private:
     bool mNeedsToBeCompiled = true;
@@ -90,7 +93,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const TAlias* alias)
 {
     QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
 
     if (!alias) {
         return debug << "TAlias(0x0) ";

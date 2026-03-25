@@ -24,15 +24,21 @@
  ***************************************************************************/
 
 
-#include "Host.h"
-
-#include "pre_guard.h"
 #include <QDialog>
 #include <QFileInfo>
+#include <QPointer>
 #include <QTextEdit>
 #include <zip.h>
-#include "post_guard.h"
-#include <zip.h>
+
+class Host;
+class QCloseEvent;
+class QGroupBox;
+class TAction;
+class TAlias;
+class TKey;
+class TScript;
+class TTimer;
+class TTrigger;
 
 #if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && ((LIBZIP_VERSION_MAJOR  > 1) || (LIBZIP_VERSION_MAJOR == 1) && (LIBZIP_VERSION_MINOR >= 7))
 // libzip 1.7.0 supports cancelling archiving in progress
@@ -54,6 +60,17 @@ public:
     Q_DISABLE_COPY(dlgPackageExporter)
     explicit dlgPackageExporter(QWidget* parent, Host*);
     ~dlgPackageExporter();
+
+    // Methods to preselect items when opened from trigger editor
+    void preselectTrigger(QTreeWidgetItem* item);
+    void preselectTimer(QTreeWidgetItem* item);
+    void preselectAlias(QTreeWidgetItem* item);
+    void preselectScript(QTreeWidgetItem* item);
+    void preselectAction(QTreeWidgetItem* item);
+    void preselectKey(QTreeWidgetItem* item);
+
+    // Set module creation mode
+    void setModuleCreationMode(bool isModule);
     void recurseTree(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
     void listTriggers();
     void recurseTriggers(TTrigger*, QTreeWidgetItem*);
@@ -86,6 +103,9 @@ public:
     QString mPlainDescription;
     QStringList mDescriptionImages;
 
+    // Module creation mode flag
+    bool mIsModuleCreationMode = false;
+
 public slots:
     void slot_addFiles();
     void slot_exportPackage();
@@ -94,6 +114,7 @@ private slots:
     void slot_addDependency();
     void slot_removeDependency();
     void slot_importIcon();
+    void slot_removeIcon();
     void slot_openPackageLocation();
     void slot_packageChanged(int);
     void slot_updateLocationPlaceholder();
@@ -103,6 +124,7 @@ private slots:
 
 protected:
     bool eventFilter(QObject* obj, QEvent* evt) override;
+    void closeEvent(QCloseEvent* event) override;
 
 private:
     void appendToDetails(const QString&, const QString&);
@@ -134,6 +156,7 @@ private:
     QString copyNewImagesToTmp(const QString& tempPath) const;
     static void cleanupUnusedImages(const QString& tempPath, const QString& plainDescription);
     void checkToEnableExportButton();
+    void populateDependencies();
 
     Ui::dlgPackageExporter* ui = nullptr;
     QPointer<Host> mpHost;
@@ -159,6 +182,7 @@ private:
 
 signals:
     void signal_exportLocationChanged(const QString& location);
+    void packageExporterClosing(const QString& profileName);
 };
 
 class dlgPackageExporterDescription : public QTextEdit

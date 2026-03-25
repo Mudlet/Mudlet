@@ -1,8 +1,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2020-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2020-2023, 2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -29,10 +30,8 @@
 #include "TConsole.h"
 #include "TRoomDB.h"
 
-#include "pre_guard.h"
 #include <QBuffer>
 #include <QElapsedTimer>
-#include "post_guard.h"
 
 // Previous direction #defines here did not match the DIR_ defines in TRoom.h,
 // but as they are stored in the map file they ought not to be redefined without
@@ -57,10 +56,11 @@ TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 
 TArea::~TArea()
 {
-    if (mpRoomDB) {
+    if (!mpRoomDB) {
+        return;
+    }
+    if (!mpRoomDB->mBulkDeletionMode) {
         mpRoomDB->removeArea(this);
-    } else {
-        qDebug() << "ERROR: In TArea::~TArea(), instance has no mpRoomDB";
     }
 }
 
@@ -77,21 +77,24 @@ int TArea::getAreaID()
 QMap<int, QMap<int, QMultiMap<int, int>>> TArea::koordinatenSystem()
 {
     QMap<int, QMap<int, QMultiMap<int, int>>> kS;
-    QList<TRoom*> const roomList = mpRoomDB->getRoomPtrList();
-    for (auto room : roomList) {
-        const int id = room->getId();
-        const int x = room->x;
-        const int y = room->y;
-        const int z = room->z;
-        QMap<int, QMultiMap<int, int>> const _y;
-        QMultiMap<int, int> const _z;
-        if (!kS.contains(x)) {
-            kS[x] = _y;
+    for (const auto id : std::as_const(rooms)) {
+        const auto room = mpRoomDB->getRoom(id);
+        if (!room) {
+            continue;
         }
-        if (!kS[x].contains(y)) {
-            kS[x][y] = _z;
+
+        const int x = room->x();
+        const int y = room->y();
+        const int z = room->z();
+        if (!kS.contains(z)) {
+            const QMap<int, QMultiMap<int, int>> yMap;
+            kS[z] = yMap;
         }
-        kS[x][y].insert(z, id);
+        if (!kS.value(z).contains(y)) {
+            const QMultiMap<int, int> xMap;
+            kS[z][y] = xMap;
+        }
+        kS[z][y].insert(x, id);
     }
     return kS;
 }
@@ -104,7 +107,7 @@ QList<int> TArea::getRoomsByPosition(int x, int y, int z)
         const int roomId = itAreaRoom.next();
         TRoom* pR = mpRoomDB->getRoom(roomId);
         if (pR) {
-            if (pR->x == x && pR->y == y && pR->z == z) {
+            if (pR->x() == x && pR->y() == y && pR->z() == z) {
                 dL.push_back(roomId);
             }
         }
@@ -117,33 +120,30 @@ QList<int> TArea::getRoomsByPosition(int x, int y, int z)
     return dL;
 }
 
-QList<int> TArea::getCollisionNodes()
+QList<std::tuple<int, int, int>> TArea::getCollisionNodes()
 {
-    QList<int> problems;
-    QMap<int, QMap<int, QMultiMap<int, int>>> const kS = koordinatenSystem();
-    QMapIterator<int, QMap<int, QMultiMap<int, int>>> it(kS);
-    while (it.hasNext()) {
-        it.next();
-        QMap<int, QMultiMap<int, int>> const x_val = it.value();
-        QMapIterator<int, QMultiMap<int, int>> it2(x_val);
-        while (it2.hasNext()) {
-            it2.next();
-            QMultiMap<int, int> y_val = it2.value();
-            QMultiMapIterator<int, int> it3(y_val);
-            QList<int> z_coordinates;
-            while (it3.hasNext()) {
-                it3.next();
-                const int z = it3.key();
-                const int node = it3.value();
-
-                if (!z_coordinates.contains(node)) {
-                    z_coordinates.append(node);
-                } else {
-                    if (!problems.contains(node)) {
-                        auto it4 = y_val.find(z);
-                        problems.append(it4.value());
-                        //qDebug()<<"problem node="<<node;
-                    }
+    // Coordinates (x,y,z) where there are multiple rooms
+    QList<std::tuple<int, int, int>> problems;
+    const auto& zyx_map = koordinatenSystem();
+    QMapIterator<int, QMap<int, QMultiMap<int, int>>> itZ(zyx_map);
+    while (itZ.hasNext()) {
+        itZ.next();
+        const auto& yx_map = itZ.value();
+        QMapIterator<int, QMultiMap<int, int>> itY(yx_map);
+        while (itY.hasNext()) {
+            itY.next();
+            const QMultiMap<int, int>& x_map = itY.value();
+            const auto x_keysList = x_map.keys();
+            QSet<int> x_keys(x_keysList.constBegin(), x_keysList.constEnd());
+            QSetIterator<int> itX(x_keys);
+            while (itX.hasNext()) {
+                const auto x = itX.next();
+                const auto roomsHere = x_map.values(x);
+                if (roomsHere.count() > 1) {
+                    const auto y = itY.key();
+                    const auto z = itZ.key();
+                    const auto location = std::make_tuple(x, y, z);
+                    problems << location;
                 }
             }
         }
@@ -332,9 +332,9 @@ void TArea::fast_calcSpan(int id)
         return;
     }
 
-    const int x = pR->x;
-    const int y = pR->y;
-    const int z = pR->z;
+    const int x = pR->x();
+    const int y = pR->y();
+    const int z = pR->z();
     if (x > max_x) {
         max_x = x;
     }
@@ -389,72 +389,72 @@ void TArea::calcSpan()
 
         if (!isFirstDone) {
             // Only do this initialization for the first valid room
-            min_x = pR->x;
+            min_x = pR->x();
             max_x = min_x;
-            min_y = pR->y * -1;
+            min_y = pR->y() * -1;
             max_y = min_y;
-            min_z = pR->z;
+            min_z = pR->z();
             max_z = min_z;
-            zLevels.push_back(pR->z);
-            xminForZ.insert(pR->z, pR->x);
-            xmaxForZ.insert(pR->z, pR->x);
-            yminForZ.insert(pR->z, pR->y);
-            ymaxForZ.insert(pR->z, pR->y);
+            zLevels.push_back(pR->z());
+            xminForZ.insert(pR->z(), pR->x());
+            xmaxForZ.insert(pR->z(), pR->x());
+            yminForZ.insert(pR->z(), (-1 * pR->y()));
+            ymaxForZ.insert(pR->z(), (-1 * pR->y()));
             isFirstDone = true;
             continue;
         } else {
             // Already had one valid room so now must check more things
 
-            if (!zLevels.contains(pR->z)) {
-                zLevels.push_back(pR->z);
+            if (!zLevels.contains(pR->z())) {
+                zLevels.push_back(pR->z());
             }
 
-            if (!xminForZ.contains(pR->z)) {
-                xminForZ.insert(pR->z, pR->x);
-            } else if (pR->x < xminForZ.value(pR->z)) {
-                xminForZ.insert(pR->z, pR->x);
+            if (!xminForZ.contains(pR->z())) {
+                xminForZ.insert(pR->z(), pR->x());
+            } else if (pR->x() < xminForZ.value(pR->z())) {
+                xminForZ.insert(pR->z(), pR->x());
             }
 
-            if (pR->x < min_x) {
-                min_x = pR->x;
+            if (pR->x() < min_x) {
+                min_x = pR->x();
             }
 
-            if (!xmaxForZ.contains(pR->z)) {
-                xmaxForZ.insert(pR->z, pR->x);
-            } else if (pR->x > xmaxForZ.value(pR->z)) {
-                xmaxForZ.insert(pR->z, pR->x);
+            if (!xmaxForZ.contains(pR->z())) {
+                xmaxForZ.insert(pR->z(), pR->x());
+            } else if (pR->x() > xmaxForZ.value(pR->z())) {
+                xmaxForZ.insert(pR->z(), pR->x());
             }
 
-            if (pR->x > max_x) {
-                max_x = pR->x;
+            if (pR->x() > max_x) {
+                max_x = pR->x();
             }
 
-            if (!yminForZ.contains(pR->z)) {
-                yminForZ.insert(pR->z, (-1 * pR->y));
-            } else if ((-1 * pR->y) < yminForZ.value(pR->z)) {
-                yminForZ.insert(pR->z, (-1 * pR->y));
+            if (!yminForZ.contains(pR->z())) {
+                yminForZ.insert(pR->z(), (-1 * pR->y()));
+            } else if ((-1 * pR->y()) < yminForZ.value(pR->z())) {
+                yminForZ.insert(pR->z(), (-1 * pR->y()));
             }
 
-            if ((-1 * pR->y) < min_y) {
-                min_y = (-1 * pR->y);
+            if ((-1 * pR->y()) < min_y) {
+                min_y = (-1 * pR->y());
             }
 
-            if ((-1 * pR->y) > max_y) {
-                max_y = (-1 * pR->y);
+            if ((-1 * pR->y()) > max_y) {
+                max_y = (-1 * pR->y());
             }
 
-            if (!ymaxForZ.contains(pR->z)) {
-                ymaxForZ.insert(pR->z, (-1 * pR->y));
-            } else if ((-1 * pR->y) > ymaxForZ.value(pR->z)) {
-                ymaxForZ.insert(pR->z, (-1 * pR->y));
+            if (!ymaxForZ.contains(pR->z())) {
+                ymaxForZ.insert(pR->z(), (-1 * pR->y()));
+            } else if ((-1 * pR->y()) > ymaxForZ.value(pR->z())) {
+                ymaxForZ.insert(pR->z(), (-1 * pR->y()));
             }
 
-            if (pR->z < min_z) {
-                min_z = pR->z;
+            if (pR->z() < min_z) {
+                min_z = pR->z();
             }
 
-            if (pR->z > max_z) {
-                max_z = pR->z;
+            if (pR->z() > max_z) {
+                max_z = pR->z();
             }
         }
     }
@@ -487,15 +487,15 @@ void TArea::removeRoom(int room, bool deferAreaRecalculations)
         if (pR) {
             // Now see if the room is on an extreme - if it the only room on a
             // particular z-coordinate it will be on all four
-            if (xminForZ.contains(pR->z) && xminForZ.value(pR->z) >= pR->x) {
+            if (xminForZ.contains(pR->z()) && xminForZ.value(pR->z()) >= pR->x()) {
                 isOnExtreme = true;
-            } else if (xmaxForZ.contains(pR->z) && xmaxForZ.value(pR->z) <= pR->x) {
+            } else if (xmaxForZ.contains(pR->z()) && xmaxForZ.value(pR->z()) <= pR->x()) {
                 isOnExtreme = true;
-            } else if (yminForZ.contains(pR->z) && yminForZ.value(pR->z) >= (-1 * pR->y)) {
+            } else if (yminForZ.contains(pR->z()) && yminForZ.value(pR->z()) >= (-1 * pR->y())) {
                 isOnExtreme = true;
-            } else if (ymaxForZ.contains(pR->z) && ymaxForZ.value(pR->z) <= (-1 * pR->y)) {
+            } else if (ymaxForZ.contains(pR->z()) && ymaxForZ.value(pR->z()) <= (-1 * pR->y())) {
                 isOnExtreme = true;
-            } else if (min_x >= pR->x || min_y >= (-1 * pR->y) || max_x <= pR->x || max_y <= (-1 * pR->y)) {
+            } else if (min_x >= pR->x() || min_y >= (-1 * pR->y()) || max_x <= pR->x() || max_y <= (-1 * pR->y())) {
                 isOnExtreme = true;
             }
         }
@@ -528,19 +528,45 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
         QPair<QString, int> exitData;
         exitData.second = itAreaExit.value().first;
         switch (itAreaExit.value().second) {
-        case DIR_NORTH:     exitData.first = QString("north");                         break;
-        case DIR_NORTHEAST: exitData.first = QString("northeast");                     break;
-        case DIR_NORTHWEST: exitData.first = QString("northwest");                     break;
-        case DIR_SOUTH:     exitData.first = QString("south");                         break;
-        case DIR_WEST:      exitData.first = QString("west");                          break;
-        case DIR_EAST:      exitData.first = QString("east");                          break;
-        case DIR_SOUTHEAST: exitData.first = QString("southeast");                     break;
-        case DIR_SOUTHWEST: exitData.first = QString("southwest");                     break;
-        case DIR_UP:        exitData.first = QString("up");                            break;
-        case DIR_DOWN:      exitData.first = QString("down");                          break;
-        case DIR_IN:        exitData.first = QString("in");                            break;
-        case DIR_OUT:       exitData.first = QString("out");                           break;
-        case DIR_OTHER:     roomsWithOtherAreaSpecialExits.insert(itAreaExit.key());   break;
+        case DIR_NORTH:
+            exitData.first = QString("north");
+            break;
+        case DIR_NORTHEAST:
+            exitData.first = QString("northeast");
+            break;
+        case DIR_NORTHWEST:
+            exitData.first = QString("northwest");
+            break;
+        case DIR_SOUTH:
+            exitData.first = QString("south");
+            break;
+        case DIR_WEST:
+            exitData.first = QString("west");
+            break;
+        case DIR_EAST:
+            exitData.first = QString("east");
+            break;
+        case DIR_SOUTHEAST:
+            exitData.first = QString("southeast");
+            break;
+        case DIR_SOUTHWEST:
+            exitData.first = QString("southwest");
+            break;
+        case DIR_UP:
+            exitData.first = QString("up");
+            break;
+        case DIR_DOWN:
+            exitData.first = QString("down");
+            break;
+        case DIR_IN:
+            exitData.first = QString("in");
+            break;
+        case DIR_OUT:
+            exitData.first = QString("out");
+            break;
+        case DIR_OTHER:
+            roomsWithOtherAreaSpecialExits.insert(itAreaExit.key());
+            break;
         default:
             qWarning("TArea::getAreaExitRoomData() Warning: unrecognised exit code %i found for exit from room %i to room %i.", itAreaExit.value().second, itAreaExit.key(), itAreaExit.value().first);
         }
@@ -577,7 +603,8 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
 int TArea::createLabelId() const
 {
     int labelId = -1;
-    do {} while (mMapLabels.contains(++labelId));
+    do {
+    } while (mMapLabels.contains(++labelId));
     if (labelId < 0) {
         labelId = -1;
     }
@@ -759,15 +786,9 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
         labelObj.insert(QLatin1String("text"), textValue);
     }
 
-    if (!(pLabel->fgColor.red() == defaultLabelForeground.red()
-          && pLabel->fgColor.green() == defaultLabelForeground.green()
-          && pLabel->fgColor.blue() == defaultLabelForeground.blue()
-          && pLabel->fgColor.alpha() == defaultLabelForeground.alpha()
-          && pLabel->bgColor.red() == defaultLabelBackground.red()
-          && pLabel->bgColor.green() == defaultLabelBackground.green()
-          && pLabel->bgColor.blue() == defaultLabelBackground.blue()
-          && pLabel->bgColor.alpha() == defaultLabelBackground.alpha())) {
-
+    if (!(pLabel->fgColor.red() == defaultLabelForeground.red() && pLabel->fgColor.green() == defaultLabelForeground.green() && pLabel->fgColor.blue() == defaultLabelForeground.blue()
+          && pLabel->fgColor.alpha() == defaultLabelForeground.alpha() && pLabel->bgColor.red() == defaultLabelBackground.red() && pLabel->bgColor.green() == defaultLabelBackground.green()
+          && pLabel->bgColor.blue() == defaultLabelBackground.blue() && pLabel->bgColor.alpha() == defaultLabelBackground.alpha())) {
         // For an image the colors are not used and tend to be set to black, if
         // so skip them. Unfortunately because of the way QColour s are
         // assembled the operator== is too picky for our purposes as even the
@@ -799,6 +820,15 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
     labelObj.insert(QLatin1String("showOnTop"), pLabel->showOnTop);
     // Invert the logic here as we are saying "scaled" rather than "unscaled":
     labelObj.insert(QLatin1String("scaledels"), !pLabel->noScaling);
+
+    if (!pLabel->font.family().isEmpty()) {
+        QJsonObject fontObj;
+        fontObj.insert(QLatin1String("family"), pLabel->font.family());
+        fontObj.insert(QLatin1String("pointSize"), pLabel->font.pointSize());
+        fontObj.insert(QLatin1String("weight"), pLabel->font.weight());
+        fontObj.insert(QLatin1String("italic"), pLabel->font.italic());
+        labelObj.insert(QLatin1String("font"), fontObj);
+    }
 
     const QJsonValue labelValue{labelObj};
     array.append(labelValue);
@@ -832,16 +862,23 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
         label.bgColor = defaultLabelBackground;
     }
 
-    const QJsonArray imageArray = labelObj.value(QLatin1String("image")).toArray();
     QList<QByteArray> pixmapData;
-    for (int i = 0, total = imageArray.size(); i < total; ++i) {
-        pixmapData.append(imageArray.at(i).toString().toLatin1());
+    for (const auto& image : labelObj.value(QLatin1String("image")).toArray()) {
+        pixmapData.append(image.toString().toLatin1());
     }
     label.pix = convertBase64DataToImage(pixmapData);
 
     label.showOnTop = labelObj.value(QLatin1String("showOnTop")).toBool();
 
     label.noScaling = !labelObj.value(QLatin1String("scaledels")).toBool(true);
+
+    if (labelObj.contains(QLatin1String("font"))) {
+        const QJsonObject fontObj = labelObj.value(QLatin1String("font")).toObject();
+        label.font = QFont(fontObj.value(QLatin1String("family")).toString(),
+                           fontObj.value(QLatin1String("pointSize")).toInt(),
+                           fontObj.value(QLatin1String("weight")).toInt(),
+                           fontObj.value(QLatin1String("italic")).toBool());
+    }
 
     mMapLabels.insert(labelId, label);
 }
@@ -916,7 +953,10 @@ QList<QByteArray> TArea::convertImageToBase64Data(const QPixmap& pixmap) const
 {
     QBuffer imageInputBuffer;
 
-    imageInputBuffer.open(QIODevice::WriteOnly);
+    if (!imageInputBuffer.open(QIODevice::WriteOnly)) {
+        qWarning() << "TArea::convertImageToBase64Data() ERROR: failed to open image input buffer for writing";
+        return {};
+    }
     // Go for maximum compression - for the smallest amount of data, the second
     // argument is a const char[] so does not require a QString wrapper:
     pixmap.save(&imageInputBuffer, "PNG", 0);
@@ -924,7 +964,10 @@ QList<QByteArray> TArea::convertImageToBase64Data(const QPixmap& pixmap) const
     QByteArray encodedImageArray{imageInputBuffer.buffer().toBase64()};
     imageInputBuffer.close();
     imageOutputBuffer.setBuffer(&encodedImageArray);
-    imageOutputBuffer.open(QIODevice::ReadOnly);
+    if (!imageOutputBuffer.open(QIODevice::ReadOnly)) {
+        qWarning() << "TArea::convertImageToBase64Data() ERROR: failed to open image output buffer for reading";
+        return {};
+    }
 
     QList<QByteArray> pixmapArray;
     // Extract the image into lines of bytes (unsigned chars):
@@ -945,7 +988,9 @@ QPixmap TArea::convertBase64DataToImage(const QList<QByteArray>& pixmapArray) co
 {
     const QByteArray decodedImageArray = QByteArray::fromBase64(pixmapArray.join());
     QPixmap pixmap;
-    pixmap.loadFromData(decodedImageArray);
+    if (!pixmap.loadFromData(decodedImageArray)) {
+        qWarning() << "TArea::convertBase64DataToImage() ERROR - failed to load pixmap from base64 data, data size:" << decodedImageArray.size() << "bytes";
+    }
 
     return pixmap;
 }
@@ -979,5 +1024,14 @@ void TArea::set2DMapZoom(const qreal zoom)
 {
     if (zoom >= T2DMap::csmMinXYZoom) {
         mLast2DMapZoom = zoom;
+    }
+}
+
+void TArea::clean()
+{
+    if (mIsDirty) {
+        determineAreaExits();
+        calcSpan();
+        mIsDirty = false;
     }
 }

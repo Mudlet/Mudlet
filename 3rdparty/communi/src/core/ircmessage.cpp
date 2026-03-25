@@ -605,20 +605,11 @@ void IrcMessage::setTimeStamp(const QDateTime& timeStamp)
 }
 
 /*!
-    This property holds the FALLBACK encoding for the message.
-
-    The fallback encoding is used when the message is detected not
-    to be valid UTF-8 and the consequent auto-detection of message
-    encoding fails. See QTextCodec::availableCodes() for the list of
-    supported encodings.
-
-    The default value is ISO-8859-15.
+    Only support UTF-8.
 
     \par Access functions:
     \li QByteArray <b>encoding</b>() const
     \li void <b>setEncoding</b>(const QByteArray& encoding)
-
-    \sa QTextCodec::availableCodecs(), QTextCodec::codecForLocale()
  */
 QByteArray IrcMessage::encoding() const
 {
@@ -701,7 +692,7 @@ IrcMessage* IrcMessage::fromData(const QByteArray& data, IrcConnection* connecti
     if (!tag.isEmpty()) {
         QDateTime ts = QDateTime::fromString(QString::fromUtf8(tag), Qt::ISODate);
         if (ts.isValid())
-            message->d_ptr->timeStamp = ts.toTimeSpec(Qt::LocalTime);
+            message->d_ptr->timeStamp = ts.toLocalTime();
     }
     return message;
 }

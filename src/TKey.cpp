@@ -29,15 +29,15 @@
 #include "mudlet.h"
 
 TKey::TKey(TKey* parent, Host* pHost)
-: Tree<TKey>( parent )
+: Tree<TKey>(parent)
 , mpHost(pHost)
 {
 }
 
 TKey::TKey(QString name, Host* pHost)
-: Tree<TKey>( nullptr )
-, mName(name)
+: Tree<TKey>(nullptr)
 , mpHost(pHost)
+, mName(name)
 {
 }
 
@@ -68,6 +68,13 @@ void TKey::setName(const QString& name)
 
 bool TKey::match(const Qt::Key key, const Qt::KeyboardModifiers modifier, const bool isToMatchAll)
 {
+    // Guard against re-entrancy: cleanup may have deleted this key while
+    // match() was still on the call stack
+    if (!mpMyChildrenList) {
+        qWarning() << "TKey::match() called on destroyed key - ID:" << mID << "Name:" << mName;
+        return false;
+    }
+
     bool isAMatch = false;
     if (isActive()) {
         if (!isFolder()) {
@@ -200,4 +207,38 @@ void TKey::execute()
     }
 
     mpHost->mLuaInterpreter.call(mFuncName, mName);
+}
+
+QString TKey::packageName(TKey* pKey)
+{
+    if (!pKey) {
+        return QString();
+    }
+
+    if (!pKey->mPackageName.isEmpty()) {
+        return !mpHost->mModuleInfo.contains(pKey->mPackageName) ? pKey->mPackageName : QString();
+    }
+
+    if (pKey->getParent()) {
+        return packageName(pKey->getParent());
+    }
+
+    return QString();
+}
+
+QString TKey::moduleName(TKey* pKey)
+{
+    if (!pKey) {
+        return QString();
+    }
+
+    if (!pKey->mPackageName.isEmpty()) {
+        return mpHost->mModuleInfo.contains(pKey->mPackageName) ? pKey->mPackageName : QString();
+    }
+
+    if (pKey->getParent()) {
+        return moduleName(pKey->getParent());
+    }
+
+    return QString();
 }

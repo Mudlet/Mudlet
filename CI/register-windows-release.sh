@@ -1,6 +1,7 @@
 #!/bin/bash
 ###########################################################################
-#   Copyright (C) 2024-2024  by John McKisson - john.mckisson@gmail.com   #
+#   Copyright (C) 2024 by John McKisson - john.mckisson@gmail.com         #
+#   Copyright (C) 2025 by Stephen Lyons - slysven@virginmedia.com         #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
 #   it under the terms of the GNU General Public License as published by  #
@@ -22,17 +23,16 @@
 # BUILD_COMMIT and registers it with dblsqd. It will attempt this for up to
 # an hour, every minute until success.
 # GHA Env vars needed:
-#    ARCH - For registering wither 32 or 64 bit build with dblsqd
 #    BUILD_COMMIT - For listing the json feed
 #    PATH - For path of dblsqd
 #    VERSION_STRING - The version of Mudlet being released
 
 # Version: 1.0.0    Initial Release
+# Version: 1.1.0    Hard-code only for x86_64 architecture
 
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Timeout exceeded, failure
-# 2 - ARCH not properly set
 
 echo "=== Downloading JSON feed ==="
 json_url="https://make.mudlet.org/snapshots/json.php?commitid=${BUILD_COMMIT}"
@@ -60,17 +60,11 @@ FetchAndCheckURL() {
       return 1
     fi
 
-    # Determine the search pattern based on ARCH environment variable
-    if [ "$ARCH" == "x86" ]; then
-      search_pattern="windows-32.exe"
-    elif [ "$ARCH" == "x86_64" ]; then
-      search_pattern="windows-64.exe"
-    else
-      echo "ARCH environment variable is not set to x86 or x86_64."
-      exit 2
-    fi
-
-    echo "Searching for $search_pattern"
+    # The processing of this variable by the jq tool means that converting this
+    # variable name to SCREAMING_SNAKE_CASE was too hard to do and get correct
+    # so leave it alone in a form that "works":
+    search_pattern="windows-64.exe"
+    echo "Searching for ${search_pattern}"
 
     # Use jq to filter the JSON data
     matching_url=$(echo "$json_data" | jq -r --arg search_pattern "$search_pattern" '.data[] | select(.platform == "windows" and (.url | test($search_pattern))) | .url')
@@ -108,8 +102,8 @@ done
 
 
 echo "=== Registering release with Dblsqd ==="
-echo "dblsqd push -a mudlet -c public-test-build -r \"${VERSION_STRING}\" -s mudlet --type 'standalone' --attach win:${ARCH} \"${matching_url}\""
+echo "dblsqd push -a mudlet -c public-test-build -r \"${VERSION_STRING}\" -s mudlet --type 'standalone' --attach win:x86_64} \"${matching_url}\""
 
 PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
 export PATH
-dblsqd push -a mudlet -c public-test-build -r "${VERSION_STRING}" -s mudlet --type 'standalone' --attach win:"${ARCH}" "${matching_url}"
+dblsqd push -a mudlet -c public-test-build -r "${VERSION_STRING}" -s mudlet --type 'standalone' --attach win:x86_64 "${matching_url}"

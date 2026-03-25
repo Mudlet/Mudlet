@@ -392,3 +392,37 @@ void TAction::setName(const QString& name)
         }
     }
 }
+
+QString TAction::packageName(TAction* pAction) const
+{
+    if (!pAction) {
+        return QString();
+    }
+
+    if (!pAction->mPackageName.isEmpty()) {
+        return !mpHost->mModuleInfo.contains(pAction->mPackageName) ? pAction->mPackageName : QString();
+    }
+
+    if (pAction->getParent()) {
+        return packageName(pAction->getParent());
+    }
+
+    return QString();
+}
+
+QString TAction::moduleName(TAction* pAction) const
+{
+    if (!pAction) {
+        return QString();
+    }
+
+    if (!pAction->mPackageName.isEmpty()) {
+        return mpHost->mModuleInfo.contains(pAction->mPackageName) ? pAction->mPackageName : QString();
+    }
+
+    if (pAction->getParent()) {
+        return moduleName(pAction->getParent());
+    }
+
+    return QString();
+}

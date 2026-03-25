@@ -65,6 +65,40 @@ function __printTable( k, v )
   insertText("\nkey = " .. tostring(k) .. " value = " .. tostring( v )  )
 end
 
+
+
+-- Slightly modified code from inspect.lua.
+-- https://github.com/kikito/inspect.lua/blob/a8ca3120dfec48801036eaeff9335ab7a096dd24/inspect.lua#L145-L163
+--
+-- MIT License
+-- Copyright (c) 2022 Enrique García Cota
+local spairs_default_type_order = {
+  ['number']   = 1,
+  ['boolean']  = 2,
+  ['string']   = 3,
+  ['table']    = 4,
+  ['function'] = 5,
+  ['userdata'] = 6,
+  ['thread']   = 7
+}
+
+-- Consider merging this compare with the definition in inspect.lua.
+-- 
+-- note: is not used for the same purpose as compare.  
+--       compare checks equality without consideration for ordering.
+local function spairsCompare(a, b)
+   local ta, tb = type(a), type(b)
+
+   if ta == tb and (ta == 'string' or ta == 'number') then
+      return (a) < (b)
+   end
+
+   local dta = spairs_default_type_order[ta] or 100
+   local dtb = spairs_default_type_order[tb] or 100
+
+   return dta == dtb and ta < tb or dta < dtb
+end
+
 -- originally found at https://stackoverflow.com/questions/15706270/sort-a-table-in-lua
 --- Returns a sorted iterator for a tbl. Defaults to a basic table.sort against the keys
 --@param tbl the table to iterator
@@ -83,7 +117,7 @@ function spairs(tbl, order)
   if order then
     table.sort(keys, function(a,b) return order(tbl, a, b) end)
   else
-    table.sort(keys)
+    table.sort(keys, spairsCompare)
   end
 
   local i = 0
@@ -399,7 +433,7 @@ end
 ---   }
 ---   </pre>
 function table.intersection(...)
-  sets = { ... }
+  local sets = { ... }
   if #sets < 2 then
     return false
   end
@@ -437,7 +471,7 @@ end
 ---   This is an intersection of unique values. The order and keys of the input tables are
 ---   not preserved.
 function table.n_intersection(...)
-  sets = { ... }
+  local sets = { ... }
   if #sets < 2 then
     return false
   end
@@ -528,8 +562,8 @@ function table.update(t1, t2)
     tbl[k] = v
   end
   for k, v in pairs(t2) do
-    if type(v) == "table" then
-      tbl[k] = table.update(tbl[k] or {}, v)
+    if type(v) == "table" and type(tbl[k]) == "table" then
+      tbl[k] = table.update(tbl[k], v)
     else
       tbl[k] = v
     end

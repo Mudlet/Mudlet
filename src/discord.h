@@ -22,7 +22,6 @@
 
 #include "Host.h"
 
-#include "pre_guard.h"
 #include <functional>
 #include <utility>
 #include <QDebug>
@@ -31,7 +30,6 @@
 #include <QLibrary>
 #include "../3rdparty/discord/rpc/include/discord_register.h"
 #include "../3rdparty/discord/rpc/include/discord_rpc.h"
-#include "post_guard.h"
 
 /*
  * From the discord headers and on-line documentation:
@@ -137,7 +135,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const localDiscordPresence& ldp)
 {
     const QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
 
     QString result = qsl("localDiscordPresence(\n"
                                     "    mDetails: \"%1\"  mState: \"%2\" mInstance: %3\n"

@@ -21,13 +21,11 @@
 #define MUDLET_TMXPELEMENTREGISTRY_H
 
 #include "MxpTag.h"
-#include "pre_guard.h"
 #include <QHash>
 #include <QMap>
 #include <QStringList>
 #include <QList>
 #include <QSharedPointer>
-#include "post_guard.h"
 
 struct TMxpElement
 {
@@ -57,6 +55,7 @@ public:
 
     bool containsElement(const QString& name) const;
     TMxpElement getElement(const QString& name) const;
+    bool isOpenElement(const QString& name) const;
 };
 
 #endif //MUDLET_TMXPELEMENTREGISTRY_H

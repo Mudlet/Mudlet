@@ -28,11 +28,9 @@
 #include "TEasyButtonBar.h"
 #include "TToolBar.h"
 
-#include "pre_guard.h"
 #include <QMenu>
 #include <QStyleOptionButton>
 #include <QStylePainter>
-#include "post_guard.h"
 
 TFlipButton::TFlipButton(TAction* pTAction, Host* pHost)
 : QPushButton(nullptr)
@@ -93,7 +91,7 @@ QSize TFlipButton::minimumSizeHint() const
 
 void TFlipButton::paintEvent(QPaintEvent* event)
 {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
     QStylePainter painter(this);
 
     switch (mOrientation) {

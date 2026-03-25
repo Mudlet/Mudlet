@@ -57,12 +57,12 @@ end
 --- function to give your adjustable container a new title
 -- @param text new title text
 -- @param color title text color
--- @param format title format
+-- @param format A format list to use. 'c' - center, 'l' - left, 'r' - right,  'b' - bold, 'i' - italics, 'u' - underline, 's' - strikethrough,  '##' - font size.  For example, "cb18" specifies center bold 18pt font be used.  Order doesn't matter.
 function Adjustable.Container:setTitle(text, color, format)
     self.titleFormat = format or self.titleFormat or "l"
     self.titleText = text or self.titleText or string.format("%s - Adjustable Container")
     self.titleTxtColor = color or self.titleTxtColor or "green"
-    if self.locked and self.connectedContainers then
+    if self.locked and (self.connectedContainers or self.lockStyle == "standard" or self.lockStyle == "border" or self.lockStyle == "full") then
         return
     end
     self.adjLabel:echo(string.format("&nbsp;&nbsp;%s", self.titleText), self.titleTxtColor, self.titleFormat)
@@ -336,6 +336,10 @@ end
 --- adds elements to connect containers to borders into the right click menu
 function Adjustable.Container:addConnectMenu()
     local label = self.adjLabel
+    -- Check if menu already exists to prevent duplicates when called multiple times
+    if label:findMenuElement("Connect To: ") then
+        return
+    end
     local menuTxt = self.Locale.connectTo.message
     label:addMenuLabel("Connect To: ")
     label:findMenuElement("Connect To: "):echo(menuTxt, "nocolor", "c")
@@ -1038,6 +1042,7 @@ end
 --@param cons.customItemsLabel.txt  text of the "custom menu" item
 --@param[opt="green"] cons.titleTxtColor  color of the title text
 --@param cons.titleText  title text
+--@param cons.titleFormat  a format list to use. 'c' - center, 'l' - left, 'r' - right,  'b' - bold, 'i' - italics, 'u' - underline, 's' - strikethrough,  '##' - font size.
 --@param[opt="standard"] cons.lockStyle  choose lockstyle at creation. possible integrated lockstyle are: "standard", "border", "light" and "full"
 --@param[opt=false] cons.noLimit  there is a minimum size limit if this constraint is set to false.
 --@param[opt=true] cons.raiseOnClick  raise your container if you click on it with your left mouse button

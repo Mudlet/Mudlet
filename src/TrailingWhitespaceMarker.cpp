@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2023-2023 by Adam Robinson - seldon1951@hotmail.com     *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,48 +18,45 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QString>
 #include <QLineEdit>
-#include <QDebug>
-void unmarkQString(QString* text) {
+#include <QString>
+
+#include <SingleLineTextEdit.h>
+
+void unmarkQString(QString* text)
+{
     QChar middleDot(0x00B7);
-    text->replace(middleDot, ' ');
+    text->replace(middleDot, QChar::Space);
 }
-void markQString(QString* text) {
+void markQString(QString* text)
+{
     QChar middleDot(0x00B7);
 
     // Trim text, check first and last character for ^ or $
     QString trimmedText = text->trimmed();
-    if (trimmedText.length() == 0) {
+    if (trimmedText.isEmpty()) {
         return;
     }
 
     // Mark leading spaces before ^ with a middle dot
-    if (trimmedText.at(0) == '^') {
-        for (int i = 0; i < text->length(); i++){
-            if (text->at(i) == ' '){
-                text->replace(i, 1, middleDot);
-            } else {
-                break;
-            }
-        }
+    if (trimmedText.front() == '^') {
+        auto firstNonSpace = std::find_if_not(text->begin(), text->end(), [](QChar c) {
+            return c == QChar(' ');
+        });
+        std::replace(text->begin(), firstNonSpace, QChar(' '), middleDot);
     }
 
     // Mark trailing spaces after $ with a middle dot
-    if (trimmedText.at(trimmedText.length()-1) == '$') {
-        for (int i = text->length() - 1; i > -1; i--){
-            if (text->at(i) == ' '){
-                text->replace(i, 1, middleDot);
-            } else {
-                break;
-            }
-        }
+    if (trimmedText.back() == '$') {
+        auto lastNonSpace = std::find_if_not(text->rbegin(), text->rend(), [](QChar c) {
+            return c == QChar(' ');
+        });
+        std::replace(lastNonSpace, text->rend(), QChar(' '), middleDot);
     }
-
 }
 
-void markQLineEdit(QLineEdit* lineEdit) {
-
+void markQLineEdit(QLineEdit* lineEdit)
+{
     QString text = lineEdit->text();
 
     unmarkQString(&text);
@@ -69,12 +67,11 @@ void markQLineEdit(QLineEdit* lineEdit) {
     lineEdit->setText(text);
     lineEdit->setCursorPosition(cursorPos);
 
-
     lineEdit->blockSignals(false);
 }
 
-void unmarkQLineEdit(QLineEdit* lineEdit) {
-
+void unmarkQLineEdit(QLineEdit* lineEdit)
+{
     QString text = lineEdit->text();
 
     unmarkQString(&text);
@@ -84,6 +81,38 @@ void unmarkQLineEdit(QLineEdit* lineEdit) {
     lineEdit->setText(text);
     lineEdit->setCursorPosition(cursorPos);
 
-
     lineEdit->blockSignals(false);
+}
+
+void markQTextEdit(QPlainTextEdit* textEdit)
+{
+    QString text = textEdit->toPlainText();
+
+    unmarkQString(&text);
+    markQString(&text);
+
+    textEdit->blockSignals(true);
+    int cursorPos = textEdit->textCursor().position();
+    textEdit->setPlainText(text);
+
+    QTextCursor cursor = textEdit->textCursor();
+    cursor.setPosition(cursorPos);
+    textEdit->setTextCursor(cursor);
+    textEdit->blockSignals(false);
+}
+
+void unmarkQTextEdit(QPlainTextEdit* textEdit)
+{
+    QString text = textEdit->toPlainText();
+
+    unmarkQString(&text);
+
+    textEdit->blockSignals(true);
+    int cursorPos = textEdit->textCursor().position();
+    textEdit->setPlainText(text);
+
+    QTextCursor cursor = textEdit->textCursor();
+    cursor.setPosition(cursorPos);
+    textEdit->setTextCursor(cursor);
+    textEdit->blockSignals(false);
 }

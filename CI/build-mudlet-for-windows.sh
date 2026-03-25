@@ -1,7 +1,7 @@
 #!/bin/bash
 ###########################################################################
-#   Copyright (C) 2024-2024  by John McKisson - john.mckisson@gmail.com   #
-#   Copyright (C) 2023-2024  by Stephen Lyons - slysven@virginmedia.com   #
+#   Copyright (C) 2024-2026  by John McKisson - john.mckisson@gmail.com   #
+#   Copyright (C) 2023-2025  by Stephen Lyons - slysven@virginmedia.com   #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
 #   it under the terms of the GNU General Public License as published by  #
@@ -19,7 +19,10 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
+# Version: 3.1.0    Switch from MINGW64 to CLANG64
+#          3.0.0    Switch from qmake to CMake with Release builds
+#          2.1.0    Remove MINGW32 since upstream no longer supports it
+#          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
 #          1.5.0    Change BUILD_TYPE to BUILD_CONFIG to avoid clash with
 #                   CI/CB system using same variable
 #          1.4.0    Rewrite Makefile to use ccache.exe if available
@@ -29,7 +32,7 @@
 #          1.0.0    Original version
 
 # Script to build the Mudlet code currently checked out in
-# ${GITHUB_WORKSPACE} in a MINGW32 or MINGW64 shell
+# ${GITHUB_WORKSPACE} in a CLANG64 shell
 
 # To be used AFTER setup-windows-sdk.sh has been run; once this has completed
 # successfully, package-mudlet-for-windows.sh is run by the workflow
@@ -37,33 +40,28 @@
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
-# 2 - Unsupported MSYS2/MINGGW shell type
+# 2 - Unsupported MSYS2 shell type
 # 3 - Unsupported build type
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from an MINGW32 or MINGW64 type bash terminal appropriate"
-  echo "to the bitness you want to work on. You may do this once for each of them should"
-  echo "you wish to do both."
+  echo "Please run this script from a CLANG64 type bash terminal as the MSYS one"
+  echo "does not supported what is needed."
   exit 2
-elif [ "${MSYSTEM}" = "MINGW32" ]; then
-  export BUILD_BITNESS="32"
-  export BUILDCOMPONENT="i686"
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
-  export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="x86_64"
+elif [ "${MSYSTEM}" = "CLANG64" ]; then
+  echo "Building with CLANG64"
 else
-  echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW32 or"
-  echo "MINGW64 are currently supported. Please rerun this in a bash terminal of one"
-  echo "of those two types."
+  echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
+  echo "CLANG64 is currently supported. Please rerun this in a bash terminal of"
+  echo "that type."
   exit 2
 fi
 
 # Check if GITHUB_REPO_TAG is "false"
-if [[ "$GITHUB_REPO_TAG" == "false" ]]; then
+if [[ "${GITHUB_REPO_TAG}" == "false" ]]; then
   echo "=== GITHUB_REPO_TAG is FALSE ==="
 
   # Check if this is a scheduled build
-  if [[ "$GITHUB_SCHEDULED_BUILD" == "true" ]]; then
+  if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
     echo "=== GITHUB_SCHEDULED_BUILD is TRUE, this is a PTB ==="
     MUDLET_VERSION_BUILD="-ptb"
   else
@@ -71,17 +69,17 @@ if [[ "$GITHUB_REPO_TAG" == "false" ]]; then
   fi
 
   # Check if this is a pull request
-  if [[ -n "$GITHUB_PULL_REQUEST_NUMBER" ]]; then
+  if [[ -n "${GITHUB_PULL_REQUEST_NUMBER}" ]]; then
     # Use the specific commit SHA from the pull request head, since GitHub Actions merges the PR
-    BUILD_COMMIT=$(git rev-parse --short "$GITHUB_PULL_REQUEST_HEAD_SHA")
-    MUDLET_VERSION_BUILD="$MUDLET_VERSION_BUILD-PR$GITHUB_PULL_REQUEST_NUMBER"
+    BUILD_COMMIT=$(git rev-parse --short "${GITHUB_PULL_REQUEST_HEAD_SHA}")
+    MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${GITHUB_PULL_REQUEST_NUMBER}"
   else
     BUILD_COMMIT=$(git rev-parse --short HEAD)
 
-    if [[ "$MUDLET_VERSION_BUILD" == "-ptb" ]]; then
+    if [[ "${MUDLET_VERSION_BUILD}" == "-ptb" ]]; then
       # Get current date in YYYY-MM-DD format
       DATE=$(date +%F)
-      MUDLET_VERSION_BUILD="$MUDLET_VERSION_BUILD-$DATE"
+      MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${DATE}"
     fi
   fi
 fi
@@ -90,31 +88,31 @@ fi
 export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD,,}"
 export BUILD_COMMIT="${BUILD_COMMIT,,}"
 
-MINGW_BASE_DIR="${GHCUP_MSYS2}\mingw32"
+MINGW_BASE_DIR="${MSYSTEM_PREFIX}"
 export MINGW_BASE_DIR
-MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
-export MINGW_INTERNAL_BASE_DIR
-PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
+PATH="${MINGW_BASE_DIR}/usr/local/bin:${MINGW_BASE_DIR}/bin:/usr/bin:${PATH}"
 export PATH
 RUNNER_WORKSPACE_UNIX_PATH=$(echo "${RUNNER_WORKSPACE}" | sed 's|\\|/|g' | sed 's|D:|/d|g')
 export CCACHE_DIR=${RUNNER_WORKSPACE_UNIX_PATH}/ccache
 
 echo "MSYSTEM is: ${MSYSTEM}"
+echo "MSYSTEM_PREFIX is: ${MSYSTEM_PREFIX}"
 echo "CCACHE_DIR is: ${CCACHE_DIR}"
 echo "PATH is now:"
 echo "${PATH}"
+echo "which clang: $(which clang)"
+echo "which clang++: $(which clang++)"
+clang --version
+clang++ --version
 echo ""
 
-cd $GITHUB_WORKSPACE || exit 1
+cd "${GITHUB_WORKSPACE}" || exit 1
 mkdir -p "build-${MSYSTEM}"
 
-cd ${GITHUB_WORKSPACE}/build-"${MSYSTEM}" || exit 1
+cd "${GITHUB_WORKSPACE}"/build-"${MSYSTEM}" || exit 1
 
-#### Qt Creator note ####
-# If one is planning to use qtcreator these will probably be wanted in a
-# shell startup script so as to prepare it to use Lua 5.1 when running
-# qmake (needed to process translation files to get the translations
-# statistics):
+#### Lua environment setup ####
+# Set up Lua 5.1 paths for translation processing and runtime
 LUA_PATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-path)" )
 export LUA_PATH
 LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
@@ -126,59 +124,66 @@ echo "LUA_PATH is: ${LUA_PATH}"
 echo "LUA_CPATH is: ${LUA_CPATH}"
 echo ""
 
-#### Qt Creator note ####
-# The following WITH_XXXXs can usefully be used in the Qt Creator's "Project"
-# tab for the "Kit" concerned in the "Build Environment" section:
-if [ "${MSYSTEM}" = "MINGW64" ]; then
-  # The MINGW64 case already has the Qt5 keychain package pre-built so no need
-  # to build our bundled copy:
-  export WITH_OWN_QTKEYCHAIN="NO"
-fi
-
-if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$GITHUB_SCHEDULED_BUILD" == "false" ]]; then
-    # The updater is not helpful in this environment (PR testing build)
-    export WITH_UPDATER="NO"
-else
-    # Tagged build, this is a release or a PTB build, include the updater
-    export WITH_UPDATER="YES"
-fi
-# This one is VITAL as some things in the code have to be tweaked to be
-# different compared to the CI/CB build environment (or the
-# setup-windows-sdk.ps) one!
-export WITH_MAIN_BUILD_SYSTEM="NO"
-
-echo "Running qmake to make MAKEFILE ..."
+echo "Running CMake to configure project ..."
 echo ""
 
-if [ "${MSYSTEM}" = "MINGW64" ]; then
-    qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
+# Set Ninja status format for consistent build output
+export NINJA_STATUS='[%f/%t %o/sec] '
+
+# Set updater flag based on build type
+if [[ "${MUDLET_VERSION_BUILD,,}" == *"-testing"* ]]; then
+  # The updater is not helpful in this environment (PR testing build)
+  export WITH_UPDATER=NO
 else
-    qmake ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
+  # Tagged build, this is a release or a PTB build, include the updater
+  export WITH_UPDATER=YES
 fi
 
-echo " ... qmake done."
-echo ""
+# Configure CMake with ccache and Release build type
+CMAKE_ARGS=(
+  -G Ninja
+  -DCMAKE_BUILD_TYPE=Release
+  -DCMAKE_PREFIX_PATH="${MINGW_BASE_DIR}"
+  -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${GITHUB_WORKSPACE}/build-${MSYSTEM}/release"
+)
 
+if [ "${WITH_SENTRY}" = "ON" ]; then
+    CMAKE_ARGS+=("-DWITH_SENTRY=ON")
+    CMAKE_ARGS+=("-DSENTRY_DSN=${SENTRY_DSN}")
+fi
+
+if [ "${SENTRY_SEND_DEBUG}" = "1" ]; then
+    CMAKE_ARGS+=("-DSENTRY_SEND_DEBUG=1")
+fi
+
+# Enable ccache for CMake
 export WITH_CCACHE="YES"
-
 if [ "${WITH_CCACHE}" = "YES" ]; then
-  echo "  Tweaking Makefile.Release to use ccache..."
-  sed -i "s/CC            = gcc/CC            = ccache gcc/" ./Makefile.Release
-  sed -i "s/CXX           = g++/CXX           = ccache g++/" ./Makefile.Release
-  echo ""
+  echo "  Configuring CMake to use ccache..."
+  CMAKE_ARGS+=(
+    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+    -DCMAKE_C_COMPILER_LAUNCHER=ccache
+  )
 fi
 
-echo "Running make to build project ..."
+cmake .. "${CMAKE_ARGS[@]}"
+
+echo " ... CMake configuration done."
 echo ""
 
-# Despite the mingw32 prefix mingw32-make.exe IS the make we want.
+echo "Running CMake build ..."
+echo ""
+
+# Build using CMake with parallel jobs
+# Note: --config is only relevant for multi-config generators (e.g., Visual Studio)
+# but is harmless for single-config generators like Unix Makefiles
 if [ -n "${NUMBER_OF_PROCESSORS}" ] && [ "${NUMBER_OF_PROCESSORS}" -gt 1 ]; then
-  mingw32-make -j "${NUMBER_OF_PROCESSORS}"
+  cmake --build . --parallel "${NUMBER_OF_PROCESSORS}"
 else
-  mingw32-make
+  cmake --build .
 fi
 
-echo " ... make finished"
+echo " ... CMake build finished"
 echo ""
 
 cd ~ || exit 1

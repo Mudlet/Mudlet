@@ -24,9 +24,13 @@
 //DarkTheme only works with Fusion style
 DarkTheme::DarkTheme()
 : DarkTheme(new AltFocusMenuBarDisable(qsl("Fusion")))
-{}
+{
+}
 
-DarkTheme::DarkTheme(QStyle* style) : QProxyStyle(style) {}
+DarkTheme::DarkTheme(QStyle* style)
+: QProxyStyle(style)
+{
+}
 
 void DarkTheme::polish(QPalette& palette)
 {
@@ -39,6 +43,9 @@ void DarkTheme::polish(QPalette& palette)
     palette.setColor(QPalette::ToolTipText, Qt::white);
     palette.setColor(QPalette::Text, Qt::white);
     palette.setColor(QPalette::Dark, QColor(35, 35, 35));
+    palette.setColor(QPalette::Light, QColor(75, 75, 75));
+    palette.setColor(QPalette::Midlight, QColor(64, 64, 64));
+    palette.setColor(QPalette::Mid, QColor(45, 45, 45));
     palette.setColor(QPalette::Shadow, QColor(20, 20, 20));
     palette.setColor(QPalette::Button, QColor(53, 53, 53));
     palette.setColor(QPalette::ButtonText, Qt::white);
@@ -49,7 +56,11 @@ void DarkTheme::polish(QPalette& palette)
     palette.setColor(QPalette::Disabled, QPalette::WindowText, QColor(127, 127, 127));
     palette.setColor(QPalette::Disabled, QPalette::Text, QColor(127, 127, 127));
     palette.setColor(QPalette::Disabled, QPalette::Light, QColor(53, 53, 53));
+    palette.setColor(QPalette::Disabled, QPalette::Midlight, QColor(53, 53, 53));
+    palette.setColor(QPalette::Disabled, QPalette::Mid, QColor(42, 42, 42));
     palette.setColor(QPalette::Disabled, QPalette::ButtonText, QColor(127, 127, 127));
     palette.setColor(QPalette::Disabled, QPalette::HighlightedText, QColor(127, 127, 127));
     palette.setColor(QPalette::Disabled, QPalette::Highlight, QColor(80, 80, 80));
+
+    QProxyStyle::polish(palette);
 }

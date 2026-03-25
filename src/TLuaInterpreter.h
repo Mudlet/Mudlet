@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2016, 2018-2023, 2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -25,13 +25,10 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TMap.h"
 #include "TMediaData.h"
-#include "TTextCodec.h"
 #include "TTrigger.h"
 #include "utils.h"
 
-#include "pre_guard.h"
 #include <QEvent>
 #include <QFileSystemWatcher>
 #include <QNetworkAccessManager>
@@ -47,24 +44,29 @@
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
-#include "post_guard.h"
 
 extern "C" {
-    #include <lauxlib.h>
-    #include <lua.h>
-    #include <lualib.h>
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lauxlib.h>
+#include <lua5.1/lua.h>
+#include <lua5.1/lualib.h>
+#else
+#include <lauxlib.h>
+#include <lua.h>
+#include <lualib.h>
+#endif
 }
 
 #include <list>
 #include <string>
 #include <memory>
+#include <optional>
 
 class Host;
 class TAction;
 class TEvent;
 class TLuaThread;
 class TMapLabel;
-class TTrigger;
 
 
 #define SERVEROUTPUT 1
@@ -89,6 +91,7 @@ public:
     void setMSDPTable(QString& key, const QString& string_data);
     void parseJSON(QString& key, const QString& string_data, const QString& protocol);
     void parseMSSP(const QString& string_data);
+    void handleIreComposerEdit(const QString& jsonData);
     void msdp2Lua(const char*);
     void initLuaGlobals();
     void initIndenterGlobals();
@@ -106,7 +109,7 @@ public:
     double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
     void setAtcpTable(const QString&, const QString&);
-    void signalMXPEvent(const QString& type, const QMap<QString, QString>& attrs, const QStringList& actions);
+    void signalMXPEvent(const QString& type, const QMap<QString, QString>& attrs, const QStringList& actions, const QString& caption = QString());
     void setGMCPTable(QString&, const QString&);
     void setMSSPTable(const QString&);
     void setChannel102Table(int& var, int& arg);
@@ -114,6 +117,14 @@ public:
     QString formatLuaCode(const QString&);
     void loadGlobal();
     QString getLuaString(const QString& stringName);
+    struct ExitWeightFilterResult
+    {
+        bool blocked = false;
+        std::optional<int> weightOverride;
+    };
+
+    ExitWeightFilterResult applyExitWeightFilter(int roomId, const QString& exitCommand);
+    bool hasExitWeightFilter() const;
     int check_for_mappingscript();
     int check_for_custom_speedwalk();
     void set_lua_integer(const QString& varName, int varValue);
@@ -149,6 +160,7 @@ public:
     int startTempPromptTrigger(const QString& function, int expiryCount = -1);
     std::pair<int, QString> startPermRegexTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
+    std::pair<int, QString> startPermExactMatchTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     std::pair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
@@ -170,6 +182,7 @@ public:
     static int setDoor(lua_State*);
     static int getDoors(lua_State*);
     static int setExitWeight(lua_State*);
+    static int setExitWeightFilter(lua_State*);
     static int getExitWeights(lua_State*);
     static int uninstallPackage(lua_State*);
     static int setMapZoom(lua_State*);
@@ -201,7 +214,33 @@ public:
     static int deleteMapLabel(lua_State*);
     static int getRooms(lua_State*);
     static int connectToServer(lua_State*);
+    static int mmcpChatTo(lua_State*);
+    static int mmcpChatAll(lua_State*);
+    static int mmcpAllowSnoop(lua_State*);
+    static int mmcpAccept(lua_State*);
+    static int mmcpCall(lua_State*);
+    static int mmcpDeny(lua_State*);
+    static int mmcpDoNotDisturb(lua_State*);
+    static int mmcpEmoteAll(lua_State*);
+    static int mmcpGetClientFlags(lua_State* L);
+    static int mmcpChatGroup(lua_State*);
+    static int mmcpIgnore(lua_State*);
+    static int mmcpDisplayClientList(lua_State*);
+    static int mmcpChatName(lua_State*);
+    static int mmcpPing(lua_State*);
+    static int mmcpPeekConnections(lua_State*);
+    static int mmcpPrivate(lua_State*);
+    static int mmcpRequestConnections(lua_State*);
+    static int mmcpServe(lua_State*);
+    static int mmcpSetGroup(lua_State*);
+    static int mmcpSendSideChannel(lua_State* L);
+    static int mmcpSnoop(lua_State*);
+    static int mmcpStartServer(lua_State*);
+    static int mmcpStopServer(lua_State*);
+    static int mmcpDisconnect(lua_State*);
+    static int mmcpGetClientList(lua_State*);
     static int sendIrc(lua_State*);
+    static int openIRC(lua_State*);
     static int getIrcNick(lua_State*);
     static int getIrcServer(lua_State*);
     static int getIrcChannels(lua_State*);
@@ -220,6 +259,12 @@ public:
     static int setRoomCharColor(lua_State*);
     static int unsetRoomCharColor(lua_State*);
     static int getRoomCharColor(lua_State*);
+    static int setRoomBorderColor(lua_State*);
+    static int getRoomBorderColor(lua_State*);
+    static int clearRoomBorderColor(lua_State*);
+    static int setRoomBorderThickness(lua_State*);
+    static int getRoomBorderThickness(lua_State*);
+    static int clearRoomBorderThickness(lua_State*);
     static int deleteArea(lua_State*);
     static int deleteRoom(lua_State*);
     static int getRoomAreaName(lua_State*);
@@ -230,6 +275,7 @@ public:
     static int sendSocket(lua_State*);
     static int openUrl(lua_State*);
     static int getRoomsByPosition(lua_State*);
+    static int getRoomsByPosition1(lua_State*);
     static int getRoomEnv(lua_State*);
     static int downloadFile(lua_State*);
     static int setRoomUserData(lua_State*);
@@ -272,11 +318,21 @@ public:
     static int denyCurrentSend(lua_State*);
     static int tempBeginOfLineTrigger(lua_State*);
     static int tempExactMatchTrigger(lua_State*);
+#if defined(INCLUDE_3DMAPPER)
+    static int shiftMapPerspective(lua_State*);
+    static int setMapPerspective(lua_State*);
+#endif
     static int centerview(lua_State*);
+    static int createMapView(lua_State*);
+    static int closeMapView(lua_State*);
+    static int closeAllMapViews(lua_State*);
+    static int getMapViewIds(lua_State*);
+    static int getMapViewInfo(lua_State*);
     static int getAreaTable(lua_State*);
     static int getAreaTableSwap(lua_State*);
     static int getPath(lua_State*);
     static int getAreaRooms(lua_State*);
+    static int getAreaRooms1(lua_State*);
     static int clearCmdLine(lua_State*);
     static int printCmdLine(lua_State*);
     static int searchRoom(lua_State*);
@@ -289,6 +345,7 @@ public:
     static int feedTelnet(lua_State*);
     static int Wait(lua_State*);
     static int expandAlias(lua_State*);
+    static int sendCmdLine(lua_State*);
     static int sendRaw(lua_State*);
     static int echo(lua_State*);
     static int selectString(lua_State*); // Was select but I think it clashes with the Lua command with that name
@@ -345,6 +402,9 @@ public:
     static int pasteWindow(lua_State*);
     static int setRoomWeight(lua_State*);
     static int getRoomWeight(lua_State*);
+    static int setRoomHidden(lua_State*);
+    static int getRoomHidden(lua_State*);
+    static int getHiddenRooms(lua_State*);
     static int gotoRoom(lua_State*);
     static int permKey(lua_State*);
     static int tempKey(lua_State*);
@@ -357,6 +417,7 @@ public:
     static int setWindowWrap(lua_State*);
     static int getWindowWrap(lua_State*);
     static int setWindowWrapIndent(lua_State*);
+    static int setWindowWrapHangingIndent(lua_State*);
     static int resetFormat(lua_State*);
     static int moveCursorEnd(lua_State*);
     static int getLastLineNumber(lua_State*);
@@ -386,6 +447,20 @@ public:
     static int createLabelMainWindow(lua_State*, const QString& labelName);
     static int createLabelUserWindow(lua_State*, const QString& windowName, const QString& labelName);
     static int deleteLabel(lua_State*);
+    static int deleteMiniConsole(lua_State*);
+    static int deleteCommandLine(lua_State*);
+    static int createTextEdit(lua_State*);
+    static int deleteTextEdit(lua_State*);
+    static int getTextEditText(lua_State*);
+    static int setTextEditText(lua_State*);
+    static int clearTextEdit(lua_State*);
+    static int setTextEditReadOnly(lua_State*);
+    static int setTextEditPlaceholder(lua_State*);
+    static int setTextEditStyleSheet(lua_State*);
+    static int setTextEditFont(lua_State*);
+    static int setTextEditFontSize(lua_State*);
+    static int setTextEditTabMovesFocus(lua_State*);
+    static int deleteScrollBox(lua_State*);
     static int setLabelToolTip(lua_State*);
     static int setLabelCursor(lua_State*);
     static int setLabelCustomCursor(lua_State*);
@@ -449,12 +524,22 @@ public:
     static int receiveMSP(lua_State*);
     static int loadMusicFile(lua_State*);
     static int loadSoundFile(lua_State*);
+    static int loadVideoFile(lua_State*);
     static int playMusicFile(lua_State*);
     static int playSoundFile(lua_State*);
+    static int playVideoFile(lua_State*);
     static int getPlayingMusic(lua_State*);
     static int getPlayingSounds(lua_State*);
+    static int getPlayingVideos(lua_State*);
+    static int getPausedSounds(lua_State*);
+    static int getPausedMusic(lua_State*);
+    static int getPausedVideos(lua_State*);
     static int stopMusic(lua_State*);
     static int stopSounds(lua_State*);
+    static int stopVideos(lua_State*);
+    static int pauseSounds(lua_State*);
+    static int pauseMusic(lua_State*);
+    static int pauseVideos(lua_State*);
     static int purgeMediaCache(lua_State*);
     static int setBorderSizes(lua_State*);
     static int setBorderTop(lua_State*);
@@ -467,6 +552,7 @@ public:
     static int getBorderLeft(lua_State*);
     static int getBorderRight(lua_State*);
     static int getBorderSizes(lua_State*);
+    static int getBorderColor(lua_State*);
     static int getConsoleBufferSize(lua_State*);
     static int setConsoleBufferSize(lua_State*);
     static int enableScrollBar(lua_State*);
@@ -480,12 +566,18 @@ public:
     static int disableCommandLine(lua_State*);
     static int enableClickthrough(lua_State*);
     static int disableClickthrough(lua_State*);
+    static int setLabelStyleSheet(lua_State*);
+    static int setLinkStyle(lua_State*);
+    static int resetLinkStyle(lua_State*);
+    static int clearVisitedLinks(lua_State*);
     static int startLogging(lua_State*);
+    static int appendLog(lua_State*);
     static int calcFontWidth(int size);
     static int calcFontHeight(int size);
     static int calcFontSize(lua_State*);
     static int permRegexTrigger(lua_State*);
     static int permSubstringTrigger(lua_State*);
+    static int permExactMatchTrigger(lua_State*);
     static int permTimer(lua_State*);
     static int permScript(lua_State*);
     static int getScript(lua_State*);
@@ -502,7 +594,6 @@ public:
     static int disableAlias(lua_State*);
     static int killAlias(lua_State*);
     static int permBeginOfLineStringTrigger(lua_State*);
-    static int setLabelStyleSheet(lua_State*);
     static int setUserWindowStyleSheet(lua_State*);
     static int getTime(lua_State*);
     static int getEpoch(lua_State*);
@@ -522,6 +613,7 @@ public:
     static int connectExitStub(lua_State*);
     static int getExitStubs(lua_State*);
     static int getExitStubs1(lua_State*);
+    static int getExitStubsNames(lua_State*);
     static int getModulePriority(lua_State*);
     static int setModulePriority(lua_State*);
     static int updateMap(lua_State*);
@@ -583,6 +675,7 @@ public:
     static int getColumnCount(lua_State*);
     static int getRowCount(lua_State*);
     static int getOS(lua_State*);
+    static int getProcessID(lua_State*);
     static int getClipboardText(lua_State*);
     static int setClipboardText(lua_State*);
     static int getAvailableFonts(lua_State*);
@@ -618,6 +711,9 @@ public:
     static int getDictionaryWordList(lua_State*);
     static int getTextFormat(lua_State*);
     static int getCharacterName(lua_State*);
+    static int getProfileInformation(lua_State*);
+    static int setProfileInformation(lua_State*);
+    static int clearProfileInformation(lua_State*);
     static int getWindowsCodepage(lua_State*);
     static int getHTTP(lua_State*);
     static int customHTTP(lua_State*);
@@ -639,6 +735,7 @@ public:
     static int killMapInfo(lua_State*);
     static int enableMapInfo(lua_State*);
     static int disableMapInfo(lua_State*);
+    static int getMapInfo(lua_State*);
     static int getProfileTabNumber(lua_State*);
     static int addFileWatch(lua_State*);
     static int removeFileWatch(lua_State*);
@@ -663,6 +760,15 @@ public:
     static int clearMapSelection(lua_State*);
     static int findItems(lua_State*);
     static int holdingModifiers(lua_State*);
+    static int getProfiles(lua_State*);
+    static int loadProfile(lua_State*);
+    static int closeProfile(lua_State*);
+    static int getCollisionLocationsInArea(lua_State*);
+    static int exportAreaImage(lua_State*);
+    static int disableTimeStamps(lua_State*);
+    static int enableTimeStamps(lua_State*);
+    static int timeStampsEnabled(lua_State*);
+    static int setActiveProfile(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -670,34 +776,13 @@ public:
     void freeAllInLuaRegistry(TEvent);
 
     inline static const QMap<Qt::MouseButton, QString> csmMouseButtons = {
-        {Qt::NoButton, qsl("NoButton")},
-        {Qt::LeftButton, qsl("LeftButton")},
-        {Qt::RightButton, qsl("RightButton")},
-        {Qt::MiddleButton, qsl("MidButton")},
-        {Qt::BackButton, qsl("BackButton")},
-        {Qt::ForwardButton, qsl("ForwardButton")},
-        {Qt::TaskButton, qsl("TaskButton")},
-        {Qt::ExtraButton4, qsl("ExtraButton4")},
-        {Qt::ExtraButton5, qsl("ExtraButton5")},
-        {Qt::ExtraButton6, qsl("ExtraButton6")},
-        {Qt::ExtraButton7, qsl("ExtraButton7")},
-        {Qt::ExtraButton8, qsl("ExtraButton8")},
-        {Qt::ExtraButton9, qsl("ExtraButton9")},
-        {Qt::ExtraButton10, qsl("ExtraButton10")},
-        {Qt::ExtraButton11, qsl("ExtraButton11")},
-        {Qt::ExtraButton12, qsl("ExtraButton12")},
-        {Qt::ExtraButton13, qsl("ExtraButton13")},
-        {Qt::ExtraButton14, qsl("ExtraButton14")},
-        {Qt::ExtraButton15, qsl("ExtraButton15")},
-        {Qt::ExtraButton16, qsl("ExtraButton16")},
-        {Qt::ExtraButton17, qsl("ExtraButton17")},
-        {Qt::ExtraButton18, qsl("ExtraButton18")},
-        {Qt::ExtraButton19, qsl("ExtraButton19")},
-        {Qt::ExtraButton20, qsl("ExtraButton20")},
-        {Qt::ExtraButton21, qsl("ExtraButton21")},
-        {Qt::ExtraButton22, qsl("ExtraButton22")},
-        {Qt::ExtraButton23, qsl("ExtraButton23")},
-        {Qt::ExtraButton24, qsl("ExtraButton24")}};
+            {Qt::NoButton, qsl("NoButton")},           {Qt::LeftButton, qsl("LeftButton")},       {Qt::RightButton, qsl("RightButton")},     {Qt::MiddleButton, qsl("MidButton")},
+            {Qt::BackButton, qsl("BackButton")},       {Qt::ForwardButton, qsl("ForwardButton")}, {Qt::TaskButton, qsl("TaskButton")},       {Qt::ExtraButton4, qsl("ExtraButton4")},
+            {Qt::ExtraButton5, qsl("ExtraButton5")},   {Qt::ExtraButton6, qsl("ExtraButton6")},   {Qt::ExtraButton7, qsl("ExtraButton7")},   {Qt::ExtraButton8, qsl("ExtraButton8")},
+            {Qt::ExtraButton9, qsl("ExtraButton9")},   {Qt::ExtraButton10, qsl("ExtraButton10")}, {Qt::ExtraButton11, qsl("ExtraButton11")}, {Qt::ExtraButton12, qsl("ExtraButton12")},
+            {Qt::ExtraButton13, qsl("ExtraButton13")}, {Qt::ExtraButton14, qsl("ExtraButton14")}, {Qt::ExtraButton15, qsl("ExtraButton15")}, {Qt::ExtraButton16, qsl("ExtraButton16")},
+            {Qt::ExtraButton17, qsl("ExtraButton17")}, {Qt::ExtraButton18, qsl("ExtraButton18")}, {Qt::ExtraButton19, qsl("ExtraButton19")}, {Qt::ExtraButton20, qsl("ExtraButton20")},
+            {Qt::ExtraButton21, qsl("ExtraButton21")}, {Qt::ExtraButton22, qsl("ExtraButton22")}, {Qt::ExtraButton23, qsl("ExtraButton23")}, {Qt::ExtraButton24, qsl("ExtraButton24")}};
 
     static const QString csmInvalidRoomID;
     static const QString csmInvalidStopWatchID;
@@ -737,21 +822,31 @@ private:
     static std::tuple<bool, int> getWatchId(lua_State*, Host&);
     static void pushMapLabelPropertiesToLua(lua_State*, const TMapLabel& label);
     static std::pair<int, TAction*> getTActionFromIdOrName(lua_State*, const int, const char*);
-    static int loadMediaFileAsOrderedArguments(lua_State*);
-    static int loadMediaFileAsTableArgument(lua_State*);
-    static int playMusicFileAsOrderedArguments(lua_State*);
-    static int playMusicFileAsTableArgument(lua_State*);
-    static int playSoundFileAsOrderedArguments(lua_State*);
-    static int playSoundFileAsTableArgument(lua_State*);
+    static int loadMediaFileAsOrderedArguments(lua_State*, const char*);
+    static int loadMediaFileAsTableArgument(lua_State*, const char*);
+    static int playMusicFileAsOrderedArguments(lua_State*, const char*);
+    static int playMusicFileAsTableArgument(lua_State*, const char*);
+    static int playSoundFileAsOrderedArguments(lua_State*, const char*);
+    static int playSoundFileAsTableArgument(lua_State*, const char*);
+    static int playVideoFileAsTableArgument(lua_State*, const char*);
     static void processPlayingMediaTable(lua_State*, TMediaData&);
-    static int getPlayingMusicAsOrderedArguments(lua_State*);
-    static int getPlayingMusicAsTableArgument(lua_State*);
-    static int getPlayingSoundsAsOrderedArguments(lua_State*);
-    static int getPlayingSoundsAsTableArgument(lua_State*);
-    static int stopMusicAsOrderedArguments(lua_State*);
-    static int stopMusicAsTableArgument(lua_State*);
-    static int stopSoundsAsOrderedArguments(lua_State*);
-    static int stopSoundsAsTableArgument(lua_State*);
+    static int getPlayingMusicAsOrderedArguments(lua_State*, const char*);
+    static int getPlayingMusicAsTableArgument(lua_State*, const char*);
+    static int getPlayingSoundsAsOrderedArguments(lua_State*, const char*);
+    static int getPlayingSoundsAsTableArgument(lua_State*, const char*);
+    static int getPlayingVideosAsTableArgument(lua_State*, const char*);
+    static void processPausedMediaTable(lua_State*, TMediaData&);
+    static int getPausedSoundsAsTableArgument(lua_State*, const char*);
+    static int getPausedMusicAsTableArgument(lua_State*, const char*);
+    static int getPausedVideosAsTableArgument(lua_State*, const char*);
+    static int stopMusicAsOrderedArguments(lua_State*, const char*);
+    static int stopMusicAsTableArgument(lua_State*, const char*);
+    static int stopSoundsAsOrderedArguments(lua_State*, const char*);
+    static int stopSoundsAsTableArgument(lua_State*, const char*);
+    static int stopVideosAsTableArgument(lua_State*, const char*);
+    static int pauseSoundsAsTableArgument(lua_State*, const char*);
+    static int pauseMusicAsTableArgument(lua_State*, const char*);
+    static int pauseVideosAsTableArgument(lua_State*, const char*);
     static void parseCommandOrFunction(lua_State*, const char*, int&, QString&, int&);
     static void parseCommandsOrFunctionsTable(lua_State*, const char*, int&, QStringList&, QVector<int>&);
     static void parseHintsTable(lua_State*, const char*, int&, QStringList&);
@@ -760,27 +855,27 @@ private:
     bool callReference(lua_State*, QString name, int parameters);
     void logError(std::string& e, const QString&, const QString& function);
     void logEventError(const QString& event, const QString& error);
-    std::pair<bool, QString> validLuaCode(const QString &code);
+    std::pair<bool, QString> validLuaCode(const QString& code);
     std::pair<bool, QString> validateLuaCodeParam(int index);
     QByteArray encodeBytes(const char*);
     void setMatches(lua_State*);
     void setupLanguageData();
     QString readScriptFile(const QString& path) const;
     void handleHttpOK(QNetworkReply*);
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     void loadUtf8Filenames();
 #endif
 
     void insertColorTableEntry(lua_State*, const QColor&, const QString&);
-    struct lua_state_deleter {
-        void operator()(lua_State* ptr) const noexcept {
-            lua_close(ptr);
-        }
+    struct lua_state_deleter
+    {
+        void operator()(lua_State* ptr) const noexcept { lua_close(ptr); }
     };
     void updateEditor();
 
 
-    bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
+    bool loadLuaModule(
+            QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
     void insertNativeSeparatorsFunction(lua_State*);
 
 
@@ -805,6 +900,11 @@ private:
 
     // Holds the list of places to look for the LuaGlobal.lua file:
     QStringList mPossiblePaths;
+
+    static std::pair<bool, QString> aiEnabled(lua_State*);
+    void storeExitWeightFilter(lua_State* L, int index);
+    void clearExitWeightFilter(lua_State* L);
+    int mExitWeightFilterRef = LUA_NOREF;
 };
 
 Host& getHostFromLua(lua_State*);

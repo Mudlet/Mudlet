@@ -22,8 +22,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     libyajl-dev \
     libpulse-dev \
     libpugixml-dev \
-    libqt5opengl5-dev \
-    libqt5texttospeech5-dev \
+    libqt6opengl6-dev \
+    libqt6texttospeech6-dev \
     libsecret-1-dev \
     lua-filesystem \
     lua-sql-sqlite3 \
@@ -31,16 +31,18 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     luarocks \
     lua5.1 \
     mesa-common-dev \
-    qt5keychain-dev \
-    qt5-qmake \
-    qtbase5-dev-tools \
-    qtbase5-dev \
+    qtkeychain-qt6-dev \
+    qmake6-bin \
+    qt6-tools-dev \
+    qt6-tools-dev-tools \
+    qt6-base-dev \
     qtchooser \
     qtcreator \
-    qtmultimedia5-dev \
-    qttools5-dev \
-    qtspeech5-flite-plugin \
-    qtspeech5-speechd-plugin \
+    qt6-speech-dev \
+    qt6-speech-flite-plugin \
+    qt6-speech-speechd-plugin \
+    qt6-multimedia-dev \
+    qt6-tools-dev \
     ubuntu-restricted-extras \
     zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*

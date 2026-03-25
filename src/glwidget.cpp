@@ -29,9 +29,7 @@
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 
-#include "pre_guard.h"
 #include <QtEvents>
-#include "post_guard.h"
 
 #include <QPainter>
 #ifdef Q_OS_MACOS
@@ -45,12 +43,17 @@
 #endif
 
 
-GLWidget::GLWidget(TMap* pMap, Host* pHost, QWidget *parent)
+GLWidget::GLWidget(TMap* pMap, Host* pHost, QWidget* parent)
 : QOpenGLWidget(parent)
 , mpMap(pMap)
 , mpHost(pHost)
 {
-    setAttribute(Qt::WA_OpaquePaintEvent);
+    if (mpHost->mBgColor_2.alpha() < 255) {
+        setAttribute(Qt::WA_OpaquePaintEvent, false);
+        setAttribute(Qt::WA_AlwaysStackOnTop);
+    } else {
+        setAttribute(Qt::WA_OpaquePaintEvent);
+    }
 }
 
 QSize GLWidget::minimumSizeHint() const
@@ -223,7 +226,7 @@ void GLWidget::slot_setCameraPositionZ(int angle)
 
 void GLWidget::initializeGL()
 {
-    const QColor color(QColorConstants::Black);
+    const QColor color(mpHost->mBgColor_2);
     glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
     xRot = 1;
     yRot = 5;
@@ -251,6 +254,9 @@ void GLWidget::setViewCenter(int areaId, int xPos, int yPos, int zPos)
 
 void GLWidget::paintGL()
 {
+    // Start frame timing
+    mFrameTimer.start();
+
     if (!mpMap) {
         return;
     }
@@ -279,12 +285,12 @@ void GLWidget::paintGL()
                 if (mpMap->mpRoomDB->isEmpty()) {
                     message = tr("No rooms in the map - load another one, or start mapping from scratch to begin.");
                 } else {
-                    message = tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size());
+                    message = tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", nullptr, mpMap->mpRoomDB->size());
                 }
             } else {
                 message = tr("You do not have a map yet - load one, or start mapping from scratch to begin.");
             }
-            painter.drawText(0, 0, (width() -1), (height() -1), Qt::AlignCenter | Qt::TextWordWrap, message);
+            painter.drawText(0, 0, (width() - 1), (height() - 1), Qt::AlignCenter | Qt::TextWordWrap, message);
             painter.end();
 
             glLoadIdentity();
@@ -292,9 +298,9 @@ void GLWidget::paintGL()
             return;
         }
         mAID = pRID->getArea();
-        ox = pRID->x;
-        oy = pRID->y;
-        oz = pRID->z;
+        ox = pRID->x();
+        oy = pRID->y();
+        oz = pRID->z();
         mMapCenterX = ox;
         mMapCenterY = oy;
         mMapCenterZ = oz;
@@ -323,7 +329,8 @@ void GLWidget::paintGL()
     glClearDepth(1.0);
     glDepthFunc(GL_LESS);
 
-    glClearColor(0.0, 0.0, 0.0, 1.0);
+    const QColor color(mpHost->mBgColor_2);
+    glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
     GLfloat diffuseLight[] = {0.507, 0.507, 0.507, 1.0};
@@ -363,62 +370,60 @@ void GLWidget::paintGL()
     glEnable(GL_LINE_SMOOTH);
     glEnable(GL_LINE_STIPPLE);
     glLineWidth(1.0);
-    int quads = 0;
-    int verts = 0;
     float planeColor2[][4] = {{0.9, 0.5, 0.0, 1.0},
-                               {165.0 / 255.0, 102.0 / 255.0, 167.0 / 255.0, 1.0},
-                               {170.0 / 255.0, 10.0 / 255.0, 127.0 / 255.0, 1.0},
-                               {203.0 / 255.0, 135.0 / 255.0, 101.0 / 255.0, 1.0},
-                               {154.0 / 255.0, 154.0 / 255.0, 115.0 / 255.0, 1.0},
-                               {107.0 / 255.0, 154.0 / 255.0, 100.0 / 255.0, 1.0},
-                               {154.0 / 255.0, 184.0 / 255.0, 111.0 / 255.0, 1.0},
-                               {67.0 / 255.0, 154.0 / 255.0, 148.0 / 255.0, 1.0},
-                               {154.0 / 255.0, 118.0 / 255.0, 151.0 / 255.0, 1.0},
-                               {208.0 / 255.0, 213.0 / 255.0, 164.0 / 255.0, 1.0},
-                               {213.0 / 255.0, 169.0 / 255.0, 158.0 / 255.0, 1.0},
-                               {139.0 / 255.0, 209.0 / 255.0, 0, 1.0},
-                               {163.0 / 255.0, 209.0 / 255.0, 202.0 / 255.0, 1.0},
-                               {158.0 / 255.0, 156.0 / 255.0, 209.0 / 255.0, 1.0},
-                               {209.0 / 255.0, 144.0 / 255.0, 162.0 / 255.0, 1.0},
-                               {209.0 / 255.0, 183.0 / 255.0, 78.0 / 255.0, 1.0},
-                               {111.0 / 255.0, 209.0 / 255.0, 88.0 / 255.0, 1.0},
-                               {95.0 / 255.0, 120.0 / 255.0, 209.0 / 255.0, 1.0},
-                               {31.0 / 255.0, 209.0 / 255.0, 126.0 / 255.0, 1.0},
-                               {1.0, 170.0 / 255.0, 1.0, 1.0},
-                               {158.0 / 255.0, 105.0 / 255.0, 158.0 / 255.0, 1.0},
-                               {68.0 / 255.0, 189.0 / 255.0, 189.0 / 255.0, 1.0},
-                               {0.1, 0.69, 0.49, 1.0},
-                               {0.0, 0.15, 1.0, 1.0},
-                               {0.12, 0.02, 0.20, 1.0},
-                               {0.0, 0.3, 0.1, 1.0}};
+                              {165.0 / 255.0, 102.0 / 255.0, 167.0 / 255.0, 1.0},
+                              {170.0 / 255.0, 10.0 / 255.0, 127.0 / 255.0, 1.0},
+                              {203.0 / 255.0, 135.0 / 255.0, 101.0 / 255.0, 1.0},
+                              {154.0 / 255.0, 154.0 / 255.0, 115.0 / 255.0, 1.0},
+                              {107.0 / 255.0, 154.0 / 255.0, 100.0 / 255.0, 1.0},
+                              {154.0 / 255.0, 184.0 / 255.0, 111.0 / 255.0, 1.0},
+                              {67.0 / 255.0, 154.0 / 255.0, 148.0 / 255.0, 1.0},
+                              {154.0 / 255.0, 118.0 / 255.0, 151.0 / 255.0, 1.0},
+                              {208.0 / 255.0, 213.0 / 255.0, 164.0 / 255.0, 1.0},
+                              {213.0 / 255.0, 169.0 / 255.0, 158.0 / 255.0, 1.0},
+                              {139.0 / 255.0, 209.0 / 255.0, 0, 1.0},
+                              {163.0 / 255.0, 209.0 / 255.0, 202.0 / 255.0, 1.0},
+                              {158.0 / 255.0, 156.0 / 255.0, 209.0 / 255.0, 1.0},
+                              {209.0 / 255.0, 144.0 / 255.0, 162.0 / 255.0, 1.0},
+                              {209.0 / 255.0, 183.0 / 255.0, 78.0 / 255.0, 1.0},
+                              {111.0 / 255.0, 209.0 / 255.0, 88.0 / 255.0, 1.0},
+                              {95.0 / 255.0, 120.0 / 255.0, 209.0 / 255.0, 1.0},
+                              {31.0 / 255.0, 209.0 / 255.0, 126.0 / 255.0, 1.0},
+                              {1.0, 170.0 / 255.0, 1.0, 1.0},
+                              {158.0 / 255.0, 105.0 / 255.0, 158.0 / 255.0, 1.0},
+                              {68.0 / 255.0, 189.0 / 255.0, 189.0 / 255.0, 1.0},
+                              {0.1, 0.69, 0.49, 1.0},
+                              {0.0, 0.15, 1.0, 1.0},
+                              {0.12, 0.02, 0.20, 1.0},
+                              {0.0, 0.3, 0.1, 1.0}};
 
 
     float planeColor[][4] = {{0.5, 0.6, 0.5, 0.2},
-                              {0.233, 0.498, 0.113, 0.2},
-                              {0.666, 0.333, 0.498, 0.2},
-                              {0.5, 0.333, 0.666, 0.2},
-                              {0.69, 0.458, 0.0, 0.2},
-                              {0.333, 0.0, 0.49, 0.2},
-                              {133.0 / 255.0, 65.0 / 255.0, 98.0 / 255.0, 0.2},
-                              {0.3, 0.3, 0.0, 0.2},
-                              {0.6, 0.2, 0.6, 0.2},
-                              {0.6, 0.6, 0.2, 0.2},
-                              {0.4, 0.1, 0.4, 0.2},
-                              {0.4, 0.4, 0.1, 0.2},
-                              {0.3, 0.1, 0.3, 0.2},
-                              {0.3, 0.3, 0.1, 0.2},
-                              {0.2, 0.1, 0.2, 0.2},
-                              {0.2, 0.2, 0.1, 0.2},
-                              {0.24, 0.1, 0.5, 0.2},
-                              {0.1, 0.1, 0.0, 0.2},
-                              {0.54, 0.6, 0.2, 0.2},
-                              {0.2, 0.2, 0.5, 0.2},
-                              {0.6, 0.6, 0.2, 0.2},
-                              {0.6, 0.4, 0.6, 0.2},
-                              {0.4, 0.4, 0.1, 0.2},
-                              {0.4, 0.2, 0.4, 0.2},
-                              {0.2, 0.2, 0.0, 0.2},
-                              {0.2, 0.1, 0.3, 0.2}};
+                             {0.233, 0.498, 0.113, 0.2},
+                             {0.666, 0.333, 0.498, 0.2},
+                             {0.5, 0.333, 0.666, 0.2},
+                             {0.69, 0.458, 0.0, 0.2},
+                             {0.333, 0.0, 0.49, 0.2},
+                             {133.0 / 255.0, 65.0 / 255.0, 98.0 / 255.0, 0.2},
+                             {0.3, 0.3, 0.0, 0.2},
+                             {0.6, 0.2, 0.6, 0.2},
+                             {0.6, 0.6, 0.2, 0.2},
+                             {0.4, 0.1, 0.4, 0.2},
+                             {0.4, 0.4, 0.1, 0.2},
+                             {0.3, 0.1, 0.3, 0.2},
+                             {0.3, 0.3, 0.1, 0.2},
+                             {0.2, 0.1, 0.2, 0.2},
+                             {0.2, 0.2, 0.1, 0.2},
+                             {0.24, 0.1, 0.5, 0.2},
+                             {0.1, 0.1, 0.0, 0.2},
+                             {0.54, 0.6, 0.2, 0.2},
+                             {0.2, 0.2, 0.5, 0.2},
+                             {0.6, 0.6, 0.2, 0.2},
+                             {0.6, 0.4, 0.6, 0.2},
+                             {0.4, 0.4, 0.1, 0.2},
+                             {0.4, 0.2, 0.4, 0.2},
+                             {0.2, 0.2, 0.0, 0.2},
+                             {0.2, 0.1, 0.3, 0.2}};
 
     while (true) {
         if (zRot <= 0) {
@@ -436,9 +441,12 @@ void GLWidget::paintGL()
             if (!pR) {
                 continue;
             }
-            auto rx = static_cast<float>(pR->x);
-            auto ry = static_cast<float>(pR->y);
-            auto rz = static_cast<float>(pR->z);
+            if (pR->isHidden()) {
+                continue;
+            }
+            auto rx = static_cast<float>(pR->x());
+            auto ry = static_cast<float>(pR->y());
+            auto rz = static_cast<float>(pR->z());
             if (rz != zPlane) {
                 continue;
             }
@@ -463,7 +471,7 @@ void GLWidget::paintGL()
             exitList.push_back(pR->getNorthwest());
             exitList.push_back(pR->getUp());
             exitList.push_back(pR->getDown());
-            const int e = pR->z;
+            const int e = pR->z();
             const int ef = abs(e % 26);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor[ef]);
             glMateriali(GL_FRONT, GL_SHININESS, 1);
@@ -495,14 +503,17 @@ void GLWidget::paintGL()
                     if (!pExit) {
                         continue;
                     }
+                    if (pExit->isHidden()) {
+                        continue;
+                    }
                     if (pExit->getArea() != mAID) {
                         areaExit = true;
                     } else {
                         areaExit = false;
                     }
-                    auto ex = static_cast<float>(pExit->x);
-                    auto ey = static_cast<float>(pExit->y);
-                    auto ez = static_cast<float>(pExit->z);
+                    auto ex = static_cast<float>(pExit->x());
+                    auto ey = static_cast<float>(pExit->y());
+                    auto ez = static_cast<float>(pExit->z());
                     const QVector3D p1(ex, ey, ez);
                     const QVector3D p2(rx, ry, rz);
                     glLoadIdentity();
@@ -511,7 +522,7 @@ void GLWidget::paintGL()
                     // if (areaExit) {
                     //    glLineWidth(1); //1/mScale+2);
                     // } else {
-                        glLineWidth(1); //1/mScale);
+                    glLineWidth(1); //1/mScale);
                     // }
                     if (k == mRID || ((rz == pz) && (rx == px) && (ry == py))) {
                         glDisable(GL_BLEND);
@@ -558,7 +569,6 @@ void GLWidget::paintGL()
                     }
                     glVertex3f(p2.x(), p2.y(), p2.z());
                     glEnd();
-                    verts++;
                     if (areaExit) {
                         glDisable(GL_BLEND);
                         glEnable(GL_LIGHTING);
@@ -597,7 +607,6 @@ void GLWidget::paintGL()
                         glMateriali(GL_FRONT, GL_SHININESS, 96);
 
                         glLoadName(k);
-                        quads++;
                         glBegin(GL_QUADS);
                         glNormal3f(0.57735, -0.57735, 0.57735);
                         glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
@@ -779,8 +788,7 @@ void GLWidget::paintGL()
                             break;
                         default: //user defined room color
                             if (!mpMap->mCustomEnvColors.contains(env)) {
-                                if (16 < env && env < 232)
-                                {
+                                if (16 < env && env < 232) {
                                     quint8 const base = env - 16;
                                     quint8 r = base / 36;
                                     quint8 g = (base - (r * 36)) / 6;
@@ -906,15 +914,18 @@ void GLWidget::paintGL()
                     if (!pExit) {
                         continue;
                     }
+                    if (pExit->isHidden()) {
+                        continue;
+                    }
                     if (pExit->getArea() != mAID) {
                         areaExit = true;
                     } else {
                         areaExit = false;
                     }
 
-                    auto ex = static_cast<float>(pExit->x);
-                    auto ey = static_cast<float>(pExit->y);
-                    auto ez = static_cast<float>(pExit->z);
+                    auto ex = static_cast<float>(pExit->x());
+                    auto ey = static_cast<float>(pExit->y());
+                    auto ez = static_cast<float>(pExit->z());
                     const QVector3D p1(ex, ey, ez);
                     const QVector3D p2(rx, ry, rz);
                     glLoadIdentity();
@@ -923,7 +934,7 @@ void GLWidget::paintGL()
                     // if (areaExit) {
                     //    glLineWidth(1); //1/mScale+2);
                     // } else {
-                        glLineWidth(1); //1/mScale);
+                    glLineWidth(1); //1/mScale);
                     // }
                     if (k == mRID || ((rz == pz) && (rx == px) && (ry == py))) {
                         glDisable(GL_BLEND);
@@ -938,7 +949,7 @@ void GLWidget::paintGL()
                         glEnable(GL_LIGHT1);
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor2[ef]);
                         glMateriali(GL_FRONT, GL_SHININESS, 1); //gut:36
-                        glColor4f(0.3, 0.3, 0.3, 1.0); /*planeColor2[ef][0],
+                        glColor4f(0.3, 0.3, 0.3, 1.0);          /*planeColor2[ef][0],
                                   planeColor2[ef][1],
                                   planeColor2[ef][2],
                                   planeColor2[ef][3])*/
@@ -972,7 +983,6 @@ void GLWidget::paintGL()
                     }
                     glVertex3f(p2.x(), p2.y(), p2.z());
                     glEnd();
-                    verts++;
                     if (areaExit) {
                         glDisable(GL_BLEND);
                         glEnable(GL_LIGHTING);
@@ -1007,7 +1017,6 @@ void GLWidget::paintGL()
                         }
 
                         glLoadName(k);
-                        quads++;
                         glBegin(GL_QUADS);
                         glNormal3f(0.57735, -0.57735, 0.57735);
                         glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
@@ -1189,8 +1198,7 @@ void GLWidget::paintGL()
                             break;
                         default: //user defined room color
                             if (!mpMap->mCustomEnvColors.contains(env)) {
-                                if (16 < env && env < 232)
-                                {
+                                if (16 < env && env < 232) {
                                     quint8 const base = env - 16;
                                     quint8 r = base / 36;
                                     quint8 g = (base - (r * 36)) / 6;
@@ -1317,7 +1325,6 @@ void GLWidget::paintGL()
         }
     }
 
-    quads = 0;
     zPlane = zmin;
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -1335,9 +1342,12 @@ void GLWidget::paintGL()
             if (!pR) {
                 continue;
             }
-            auto rx = static_cast<float>(pR->x);
-            auto ry = static_cast<float>(pR->y);
-            auto rz = static_cast<float>(pR->z);
+            if (pR->isHidden()) {
+                continue;
+            }
+            auto rx = static_cast<float>(pR->x());
+            auto ry = static_cast<float>(pR->y());
+            auto rz = static_cast<float>(pR->z());
             if (rz != zPlane) {
                 continue;
             }
@@ -1353,7 +1363,7 @@ void GLWidget::paintGL()
                 }
             }
 
-            const int e = pR->z;
+            const int e = pR->z();
             const int ef = abs(e % 26);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor[ef]);
             glMateriali(GL_FRONT, GL_SHININESS, 36); //gut:96
@@ -1400,7 +1410,7 @@ void GLWidget::paintGL()
                 }
 
                 glLoadName(currentRoomId);
-                quads++;
+
                 glBegin(GL_QUADS);
                 glNormal3f(0.57735, -0.57735, 0.57735);
                 glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
@@ -1583,8 +1593,7 @@ void GLWidget::paintGL()
                     break;
                 default: //user defined room color
                     if (!mpMap->mCustomEnvColors.contains(env)) {
-                        if (16 < env && env < 232)
-                        {
+                        if (16 < env && env < 232) {
                             quint8 const base = env - 16;
                             quint8 r = base / 36;
                             quint8 g = (base - (r * 36)) / 6;
@@ -1705,7 +1714,6 @@ void GLWidget::paintGL()
             }
 
             glLoadName(currentRoomId);
-            quads++;
             glBegin(GL_QUADS);
             glNormal3f(0.57735, -0.57735, 0.57735);
             glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
@@ -1886,8 +1894,7 @@ void GLWidget::paintGL()
                 break;
             default: //user defined room color
                 if (!mpMap->mCustomEnvColors.contains(env)) {
-                    if (16 < env && env < 232)
-                    {
+                    if (16 < env && env < 232) {
                         quint8 const base = env - 16;
                         quint8 r = base / 36;
                         quint8 g = (base - (r * 36)) / 6;
@@ -2014,29 +2021,34 @@ void GLWidget::paintGL()
             }
             glEnd();
 
-//            if (mpMap->rooms[pArea->rooms[i]]->out > -1) {
-//                glBegin( GL_LINE_LOOP );
-//                for (int angle=0; angle<360; angle += 1 ) {
-//                    glVertex3f((0.5 + sin((float)angle) * 0.25)/scale, ( cos((float)angle) * 0.25)/scale, 0.0);
-//                }
-//                glEnd();
-//            }
+            //            if (mpMap->rooms[pArea->rooms[i]]->out > -1) {
+            //                glBegin( GL_LINE_LOOP );
+            //                for (int angle=0; angle<360; angle += 1 ) {
+            //                    glVertex3f((0.5 + sin((float)angle) * 0.25)/scale, ( cos((float)angle) * 0.25)/scale, 0.0);
+            //                }
+            //                glEnd();
+            //            }
 
-//            glTranslatef(-0.1, 0.0, 0.0);
-//            if (mpMap->rooms[pArea->rooms[i]]->in > -1) {
-//                glBegin(GL_TRIANGLE_FAN);
-//                glVertex3f(0.0, 0.0, 0.0);
-//                for (int angle=0; angle<=360; angle += 5) {
-//                    glVertex3f((sin((float)angle)*0.25)/scale, (cos((float)angle)*0.25)/scale, 0.0);
-//                }
-//                glEnd();
-//            }
+            //            glTranslatef(-0.1, 0.0, 0.0);
+            //            if (mpMap->rooms[pArea->rooms[i]]->in > -1) {
+            //                glBegin(GL_TRIANGLE_FAN);
+            //                glVertex3f(0.0, 0.0, 0.0);
+            //                for (int angle=0; angle<=360; angle += 5) {
+            //                    glVertex3f((sin((float)angle)*0.25)/scale, (cos((float)angle)*0.25)/scale, 0.0);
+            //                }
+            //                glEnd();
+            //            }
         }
 
 
         zPlane += 1.0;
     }
     glFlush();
+
+    // End frame timing and store result
+    // Display instant frame time
+    qint64 frameTime = mFrameTimer.elapsed();
+    qDebug() << "[Legacy GLWidget] Frame time:" << frameTime << "ms";
 }
 
 void GLWidget::resizeGL(int w, int h)
@@ -2051,15 +2063,11 @@ void GLWidget::resizeGL(int w, int h)
 void GLWidget::mousePressEvent(QMouseEvent* event)
 {
     mudlet::self()->activateProfile(mpHost);
-    if (!mpMap||!mpMap->mpRoomDB) {
+    if (!mpMap || !mpMap->mpRoomDB) {
         return;
     }
     if (event->buttons() & Qt::LeftButton) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        auto eventPos = event->pos();
-#else
         auto eventPos = event->position().toPoint();
-#endif
         const int x = eventPos.x();
         const int y = height() - eventPos.y(); // the opengl origin is at bottom left
         GLuint buff[16] = {0};
@@ -2107,9 +2115,8 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
             } else if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
                 mpMap->mpHost->startSpeedWalk();
             } else {
-                mpMap->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Mapper: Cannot find a path from %1 to %2 using known exits.")
-                                                          .arg(QString::number(mpMap->mRoomIdHash.value(mpMap->mProfileName)),
-                                                               QString::number(mpMap->mTargetID))));
+                mpMap->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(
+                        tr("Mapper: Cannot find a path from %1 to %2 using known exits.").arg(QString::number(mpMap->mRoomIdHash.value(mpMap->mProfileName)), QString::number(mpMap->mTargetID))));
             }
             //            else
             //            {
@@ -2133,15 +2140,11 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
 
 void GLWidget::mouseMoveEvent(QMouseEvent* event)
 {
-    if (!mpMap||!mpMap->mpRoomDB) {
+    if (!mpMap || !mpMap->mpRoomDB) {
         return;
     }
     if (mPanMode) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        auto eventPos = event->localPos();
-#else
         auto eventPos = event->position();
-#endif
         auto x = static_cast<float>(eventPos.x());
         auto y = static_cast<float>(height()) - static_cast<float>(eventPos.y()); // the opengl origin is at bottom left
         if ((mPanXStart - x) > 1.0f) {

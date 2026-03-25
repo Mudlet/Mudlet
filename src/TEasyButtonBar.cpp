@@ -27,9 +27,7 @@
 #include "TConsole.h"
 #include "TFlipButton.h"
 
-#include "pre_guard.h"
 #include <QGridLayout>
-#include "post_guard.h"
 
 
 TEasyButtonBar::TEasyButtonBar(TAction* pA, QString name, QWidget* pW)
@@ -106,15 +104,13 @@ void TEasyButtonBar::addButton(TFlipButton* pB)
         if (columns <= 0) {
             columns = 1;
         }
-        if (columns > 0) {
-            mItemCount++;
-            const int row = mItemCount / columns;
-            const int col = mItemCount % columns;
-            if (mVerticalOrientation) {
-                mpLayout->addWidget(pB, row, col);
-            } else {
-                mpLayout->addWidget(pB, col, row);
-            }
+        mItemCount++;
+        const int row = mItemCount / columns;
+        const int col = mItemCount % columns;
+        if (mVerticalOrientation) {
+            mpLayout->addWidget(pB, row, col);
+        } else {
+            mpLayout->addWidget(pB, col, row);
         }
     } else {
         pB->move(pB->mpTAction->mPosX, pB->mpTAction->mPosY);
@@ -153,7 +149,7 @@ void TEasyButtonBar::finalize()
 // button state to ensure the visible representation is used.
 void TEasyButtonBar::slot_pressed(const bool isChecked)
 {
-    auto * pB = dynamic_cast<TFlipButton*>(sender());
+    auto* pB = dynamic_cast<TFlipButton*>(sender());
     if (!pB) {
         return;
     }

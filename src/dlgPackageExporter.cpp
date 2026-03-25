@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2022, 2024 by Stephen Lyons                  *
+ *   Copyright (C) 2015, 2017-2022, 2024-2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -24,6 +24,7 @@
 #include "dlgPackageExporter.h"
 #include "ui_dlgPackageExporter.h"
 
+#include "Host.h"
 #include "mudlet.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -31,24 +32,26 @@
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
+#include "XMLexport.h"
 
-#include "pre_guard.h"
 #include <QtConcurrent>
 #include <QDesktopServices>
 #include <QDirIterator>
 #include <QFileDialog>
 #include <QInputDialog>
+#include <QMessageBox>
 #include <QMimeData>
-#include "post_guard.h"
+#include <QTimer>
 
-// We are now using code that won't work with really old versions of libzip:
-// Unfortunately libzip 1.70 forgot to include these defines and thus broke the
-// original tests:
-#if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && (LIBZIP_VERSION_MAJOR < 1) && (LIBZIP_VERSION_MINOR < 11)
-#error Mudlet requires a version of libzip of at least 0.11
+// We are now using code that won't work with really old versions of libzip;
+// some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
+// (and one or two other recent versions) forgot to include the version defines
+// and thus broke a test depending on them:
+#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR < 1)
+#error Mudlet requires a version of libzip of at least 1.0
 #endif
 
-dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
+dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
 : QDialog(parent)
 , ui(new Ui::dlgPackageExporter)
 , mpHost(pHost)
@@ -56,6 +59,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     ui->setupUi(this);
     ui->splitter_metadataAssets->hide();
     ui->Icon->hide();
+    ui->pushButton_removeIcon->hide();
 
     mpExportSelection = ui->treeWidget_exportSelection;
     mpSelectionText = ui->groupBox_exportSelection;
@@ -97,11 +101,17 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     connect(mExportButton, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_exportPackage);
     connect(ui->pushButton_packageLocation, &QPushButton::clicked, this, &dlgPackageExporter::slot_openPackageLocation);
     connect(ui->lineEdit_packageName, &QLineEdit::textChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
+    connect(ui->lineEdit_author, &QLineEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
+    connect(ui->lineEdit_title, &QLineEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
+    connect(ui->lineEdit_version, &QLineEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
+    connect(ui->textEdit_description, &QTextEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
     connect(this, &dlgPackageExporter::signal_exportLocationChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
     slot_updateLocationPlaceholder();
     connect(ui->packageList, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgPackageExporter::slot_packageChanged);
-    connect(ui->addDependency, &QPushButton::clicked, this, &dlgPackageExporter::slot_addDependency);
+    connect(ui->pushButton_addDependency, &QPushButton::clicked, this, &dlgPackageExporter::slot_addDependency);
+    connect(ui->pushButton_removeDependency, &QPushButton::clicked, this, &dlgPackageExporter::slot_removeDependency);
     connect(ui->pushButton_addIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_importIcon);
+    connect(ui->pushButton_removeIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_removeIcon);
     connect(mCancelButton, &QPushButton::clicked, this, &dlgPackageExporter::slot_cancelExport);
 
     ui->listWidget_addedFiles->installEventFilter(this);
@@ -112,17 +122,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     dlgPackageExporter* te_parent = static_cast<dlgPackageExporter*>(topLevelWidget());
     te_parent->mPlainDescription = ui->textEdit_description->toPlainText();
 
-    ui->packageList->addItem(tr("update installed package"));
-    ui->DependencyList->addItem(tr("add dependencies"));
-    ui->packageList->addItems(mpHost->mInstalledPackages);
-    ui->DependencyList->addItems(mpHost->mInstalledPackages);
-    auto modules = mpHost -> mInstalledModules;
-    QMap<QString, QStringList>::const_iterator iter = modules.constBegin();
-    while (iter != modules.constEnd()) {
-        ui->packageList->addItem(iter.key());
-        ui->DependencyList->addItem(iter.key());
-        ++iter;
-    }
+    populateDependencies();
 
     listTriggers();
     listAliases();
@@ -133,6 +133,13 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
 
     //: Title of the window. The %1 will be replaced by the current profile's name
     setWindowTitle(tr("Package Exporter - %1").arg(mpHost->getName()));
+
+    // Set the previous details if saved
+    QSettings& settings = *mudlet::getQSettings();
+    auto packageAuthor = settings.value(qsl("packageAuthor"), QString()).toString();
+    if (!packageAuthor.isEmpty()) {
+        ui->lineEdit_author->setText(packageAuthor);
+    }
 
     // Ensure this dialog goes away if the Host (profile) is closed while we are
     // open - as this is parented to the mudlet instance rather than the Host
@@ -145,6 +152,223 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
 dlgPackageExporter::~dlgPackageExporter()
 {
     delete ui;
+}
+
+void dlgPackageExporter::setModuleCreationMode(bool isModule)
+{
+    mIsModuleCreationMode = isModule;
+    if (isModule) {
+        // Update the window title for module creation
+        setWindowTitle(tr("Create Module - %1").arg(mpHost->getName()));
+
+        // Update UI elements for module creation
+        ui->lineEdit_packageName->setPlaceholderText(tr("Enter module name"));
+
+        // Update button text to be module-specific
+        mExportButton->setText(tr("Create Module"));
+
+        // Update export location button text
+        ui->pushButton_packageLocation->setText(tr("Select where to save module"));
+
+        // Update the groupbox title for module creation
+        ui->groupBox_exportSelection->setTitle(tr("Select items to include in module"));
+
+        // Hide the package list dropdown and "or" label for cleaner module creation
+        ui->packageList->setVisible(false);
+        ui->label_or->setVisible(false);
+
+        // Update the description button text to be module-specific
+        // IMPORTANT: Must use setText not setPlaceholderText for buttons
+        ui->pushButton_openInfos->setText(tr("Add module description, icon, and assets (optional)"));
+
+        // Update the export location widget to be more descriptive
+        ui->lineEdit_filePath->setPlaceholderText(tr("Module location"));
+
+        // Update info label if visible
+        ui->infoLabel->setText(QString());
+
+        // Update metadata labels to be module-specific
+        ui->label_shortDescription->setText(tr("Module description"));
+        ui->lineEdit_title->setPlaceholderText(tr("Brief description of your module"));
+        ui->lineEdit_author->setPlaceholderText(tr("Module author (recommended)"));
+        ui->lineEdit_version->setPlaceholderText(tr("Module version (recommended)"));
+
+        // Update dependencies and assets labels
+        ui->label_requiredPackages->setText(tr("Module dependencies"));
+        ui->label_assets->setText(tr("Include module assets (images, sounds, fonts)"));
+        ui->addFiles->setText(tr("Select files to include in module"));
+
+        // Clear dropdown lists that have package-specific items
+        // Temporarily disconnect the signal to prevent unwanted selections when clearing
+        disconnect(ui->packageList, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgPackageExporter::slot_packageChanged);
+        ui->packageList->clear();
+        ui->DependencyList->clear();
+        // Add only module-relevant items to dependency list
+        ui->DependencyList->addItem(tr("Select module dependencies"));
+        ui->DependencyList->addItems(mpHost->mInstalledPackages);
+        auto modules = mpHost->mInstalledModules;
+        for (const auto& [moduleName, moduleData] : modules.asKeyValueRange()) {
+            ui->DependencyList->addItem(moduleName);
+        }
+        // Reconnect the signal (though it's not needed in module creation mode)
+        connect(ui->packageList, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgPackageExporter::slot_packageChanged);
+
+        // Clear the default package template text and set module-specific template
+        ui->textEdit_description->clear();
+        ui->textEdit_description->setPlainText(tr("(optional)\n\n"
+                                                  "This module description is shown in the Module Manager. The editor supports Commonmark markdown.\n\n"
+                                                  "### Description\n\n"
+                                                  "A full description of what this module does. If the module is game-specific, mention that here.\n\n"
+                                                  "### Usage\n\n"
+                                                  "If this module uses aliases, show a few examples and expected output.\n\n"
+                                                  "`> alias_1`\n\n"
+                                                  "    output of alias_1  -- indent by four spaces\n"
+                                                  "    more output        -- for code blocks\n\n"
+                                                  "### See Also\n\n"
+                                                  "Further reading material, e.g., links to documentation or forum posts.\n\n"
+                                                  "* https://wiki.mudlet.org/w/Manual:Modules"));
+
+        // Focus on the module name input
+        ui->lineEdit_packageName->setFocus();
+    }
+}
+
+void dlgPackageExporter::preselectTrigger(QTreeWidgetItem* item)
+{
+    if (!item) {
+        return;
+    }
+
+    // Get the trigger ID from the editor tree item
+    const int triggerId = item->data(0, Qt::UserRole).toInt();
+
+    // Don't select anything if the ID is invalid (0 or negative)
+    if (triggerId <= 0) {
+        return;
+    }
+
+    // Find the matching trigger in our trigger map by ID
+    for (auto it = triggerMap.begin(); it != triggerMap.end(); ++it) {
+        if (it.value()->getID() == triggerId) {
+            it.key()->setCheckState(0, Qt::Checked);
+            break;
+        }
+    }
+}
+
+void dlgPackageExporter::preselectTimer(QTreeWidgetItem* item)
+{
+    if (!item) {
+        return;
+    }
+
+    // Get the timer ID from the editor tree item
+    const int timerId = item->data(0, Qt::UserRole).toInt();
+
+    // Don't select anything if the ID is invalid (0 or negative)
+    if (timerId <= 0) {
+        return;
+    }
+
+    // Find the matching timer in our timer map by ID
+    for (auto it = timerMap.begin(); it != timerMap.end(); ++it) {
+        if (it.value()->getID() == timerId) {
+            it.key()->setCheckState(0, Qt::Checked);
+            break;
+        }
+    }
+}
+
+void dlgPackageExporter::preselectAlias(QTreeWidgetItem* item)
+{
+    if (!item) {
+        return;
+    }
+
+    // Get the alias ID from the editor tree item
+    const int aliasId = item->data(0, Qt::UserRole).toInt();
+
+    // Don't select anything if the ID is invalid (0 or negative)
+    if (aliasId <= 0) {
+        return;
+    }
+
+    // Find the matching alias in our alias map by ID
+    for (auto it = aliasMap.begin(); it != aliasMap.end(); ++it) {
+        if (it.value()->getID() == aliasId) {
+            it.key()->setCheckState(0, Qt::Checked);
+            break;
+        }
+    }
+}
+
+void dlgPackageExporter::preselectScript(QTreeWidgetItem* item)
+{
+    if (!item) {
+        return;
+    }
+
+    // Get the script ID from the editor tree item
+    const int scriptId = item->data(0, Qt::UserRole).toInt();
+
+    // Don't select anything if the ID is invalid (0 or negative)
+    if (scriptId <= 0) {
+        return;
+    }
+
+    // Find the matching script in our script map by ID
+    for (auto it = scriptMap.begin(); it != scriptMap.end(); ++it) {
+        if (it.value()->getID() == scriptId) {
+            it.key()->setCheckState(0, Qt::Checked);
+            break;
+        }
+    }
+}
+
+void dlgPackageExporter::preselectAction(QTreeWidgetItem* item)
+{
+    if (!item) {
+        return;
+    }
+
+    // Get the action ID from the editor tree item
+    const int actionId = item->data(0, Qt::UserRole).toInt();
+
+    // Don't select anything if the ID is invalid (0 or negative)
+    if (actionId <= 0) {
+        return;
+    }
+
+    // Find the matching action in our action map by ID
+    for (auto it = actionMap.begin(); it != actionMap.end(); ++it) {
+        if (it.value()->getID() == actionId) {
+            it.key()->setCheckState(0, Qt::Checked);
+            break;
+        }
+    }
+}
+
+void dlgPackageExporter::preselectKey(QTreeWidgetItem* item)
+{
+    if (!item) {
+        return;
+    }
+
+    // Get the key ID from the editor tree item
+    const int keyId = item->data(0, Qt::UserRole).toInt();
+
+    // Don't select anything if the ID is invalid (0 or negative)
+    if (keyId <= 0) {
+        return;
+    }
+
+    // Find the matching key in our key map by ID
+    for (auto it = keyMap.begin(); it != keyMap.end(); ++it) {
+        if (it.value()->getID() == keyId) {
+            it.key()->setCheckState(0, Qt::Checked);
+            break;
+        }
+    }
 }
 
 void dlgPackageExporter::appendToDetails(const QString& what, const QString& value)
@@ -184,8 +408,7 @@ std::pair<bool, QString> dlgPackageExporter::writeFileToZip(const QString& archi
     if (s == nullptr) {
         return {false,
                 //: This error message will appear when a file is to be placed into the package but the code cannot open it.
-                tr("Failed to open file \"%1\" to place into package. Error message was: \"%2\".")
-                        .arg(fileSystemFileName.toHtmlEscaped(), zip_strerror(archive))};
+                tr("Failed to open file \"%1\" to place into package. Error message was: \"%2\".").arg(fileSystemFileName.toHtmlEscaped(), zip_strerror(archive))};
     }
 
     if (zip_file_add(archive, archiveFileName.toUtf8().constData(), s, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE) == -1) {
@@ -193,11 +416,34 @@ std::pair<bool, QString> dlgPackageExporter::writeFileToZip(const QString& archi
         s = nullptr;
         return {false,
                 //: This error message will appear when a file is to be placed into the package but cannot be done for some reason.
-                tr("Failed to add file \"%1\" to package. Error message was: \"%3\".")
-                        .arg(archiveFileName.toHtmlEscaped(), zip_strerror(archive))};
+                tr("Failed to add file \"%1\" to package. Error message was: \"%3\".").arg(archiveFileName.toHtmlEscaped(), zip_strerror(archive))};
     }
 
     return {true, QString()};
+}
+
+void dlgPackageExporter::populateDependencies()
+{
+    ui->DependencyList->clear();
+    ui->DependencyList->addItem(tr("add dependencies"));
+    const QSignalBlocker blocker(ui->packageList);
+    const QString previousSelection = ui->packageList->currentText();
+    ui->packageList->clear();
+    //: First item in package selection dropdown - when selected, allows updating an existing installed package
+    ui->packageList->addItem(tr("update installed package"));
+    ui->packageList->addItems(mpHost->mInstalledPackages);
+
+    ui->DependencyList->addItems(mpHost->mInstalledPackages);
+    auto modules = mpHost->mInstalledModules;
+    for (const auto& [moduleName, moduleData] : modules.asKeyValueRange()) {
+        ui->packageList->addItem(moduleName);
+        ui->DependencyList->addItem(moduleName);
+    }
+
+    const int previousIndex = ui->packageList->findText(previousSelection);
+    if (previousIndex >= 0) {
+        ui->packageList->setCurrentIndex(previousIndex);
+    }
 }
 
 void dlgPackageExporter::slot_addDependency()
@@ -284,7 +530,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
         }
     }
 
-    const QString packagePath{mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())};
+    const QString packagePath{mudlet::getMudletPath(enums::profileHomePath, mpHost->getName())};
     //fill package metadata
     mPackageIconPath.clear();
     QMap<QString, QString> const packageInfo = mpHost->mPackageInfo.value(packageName);
@@ -293,8 +539,10 @@ void dlgPackageExporter::slot_packageChanged(int index)
     if (!icon.isEmpty()) {
         mPackageIconPath = qsl("%1/%2/.mudlet/Icon/%3").arg(packagePath, packageName, icon);
         ui->Icon->show();
+        ui->pushButton_removeIcon->show();
     } else {
         ui->Icon->hide();
+        ui->pushButton_removeIcon->hide();
     }
     const QIcon myIcon(mPackageIconPath);
     ui->Icon->clear();
@@ -306,12 +554,12 @@ void dlgPackageExporter::slot_packageChanged(int index)
     ui->textEdit_description->setMarkdown(description);
     const QString version = packageInfo.value(qsl("version"));
     ui->lineEdit_version->setText(version);
+    populateDependencies(); // available dependencies, as opposed to required ones which is next
     const QStringList dependencies = packageInfo.value(qsl("dependencies")).split(QLatin1Char(','));
     ui->comboBox_dependencies->clear();
     if (!dependencies.at(0).isEmpty()) {
         ui->comboBox_dependencies->addItems(dependencies);
     }
-
     //get files and folders from package
     ui->listWidget_addedFiles->clear();
     const QFileInfo info(qsl("%1/%2/").arg(packagePath, packageName));
@@ -347,24 +595,64 @@ void dlgPackageExporter::slot_updateLocationPlaceholder()
 
 void dlgPackageExporter::checkToEnableExportButton()
 {
-    if (ui->lineEdit_packageName->text().isEmpty() || mExportingPackage) {
+    QStringList missingFields;
+    if (ui->lineEdit_packageName->text().isEmpty()) {
+        //: package name will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
+        missingFields << tr("package name");
+    }
+    // intentionally disabled for now until mpkg gains wider adoption
+    // if (ui->lineEdit_author->text().isEmpty()) {
+    //     //: package author will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
+    //     missingFields << tr("author");
+    // }
+    // if (ui->lineEdit_title->text().isEmpty()) {
+    //     //: package title will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
+    //     missingFields << tr("title");
+    // }
+    // if (ui->lineEdit_version->text().isEmpty()) {
+    //     //: package version will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
+    //     missingFields << tr("version");
+    // }
+    // if (ui->textEdit_description->toPlainText().isEmpty() || mExportingPackage) {
+    //     //: package description will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
+    //     missingFields << tr("description");
+    // }
+
+    if (!missingFields.isEmpty()) {
         mExportButton->setEnabled(false);
+        mExportButton->setToolTip(tr("Required field missing: %1").arg(missingFields.join(qsl(", "))));
     } else {
-        mExportButton->setEnabled(true);
+        mExportButton->setEnabled(!mExportingPackage);
+        mExportButton->setToolTip(tr("Export package"));
     }
 }
 
 void dlgPackageExporter::slot_importIcon()
 {
-    const QString fileName = QFileDialog::getOpenFileName(this, tr("Open Icon"), QDir::currentPath(), tr("Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)"));
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+
+    const QString fileName = QFileDialog::getOpenFileName(this, tr("Open Icon"), lastDir, tr("Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)"));
     if (fileName.isEmpty()) {
         return;
     }
+    lastDir = QFileInfo(fileName).absolutePath();
+    settings.setValue("lastFileDialogLocation", lastDir);
+    mPackagePath = lastDir;
+    emit signal_exportLocationChanged(mPackagePath);
     mPackageIconPath = fileName;
     const QIcon myIcon(mPackageIconPath);
     ui->Icon->clear();
     ui->Icon->setPixmap(myIcon.pixmap(ui->Icon->size()));
     ui->Icon->show();
+    ui->pushButton_removeIcon->show();
+}
+
+void dlgPackageExporter::slot_removeIcon()
+{
+    mPackageIconPath.clear();
+    ui->Icon->hide();
+    ui->pushButton_removeIcon->hide();
 }
 
 bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
@@ -396,7 +684,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             //during package creation it uses the profile folder. But once the package is created it will use
             //profile folder/packagename
             QString plainText{mPlainDescription};
-            const QString profilePath{mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())};
+            const QString profilePath{mudlet::getMudletPath(enums::profileHomePath, mpHost->getName())};
             //$packagePath will be replaced by the resource path if an existing package is selected
             if (ui->packageList->currentIndex() != 0) {
                 const QString packageName = ui->packageList->currentText();
@@ -483,8 +771,98 @@ void dlgPackageExporter::slot_exportPackage()
         return;
     }
 
+    // Check if any items are selected for export
+    bool hasSelectedItems = false;
+
+    // Check triggers
+    if (mpTriggers) {
+        QTreeWidgetItemIterator it(mpTriggers);
+        while (*it) {
+            if ((*it)->checkState(0) == Qt::Checked) {
+                hasSelectedItems = true;
+                break;
+            }
+            ++it;
+        }
+    }
+
+    // Check timers if no triggers selected
+    if (!hasSelectedItems && mpTimers) {
+        QTreeWidgetItemIterator it(mpTimers);
+        while (*it) {
+            if ((*it)->checkState(0) == Qt::Checked) {
+                hasSelectedItems = true;
+                break;
+            }
+            ++it;
+        }
+    }
+
+    // Check aliases if no triggers/timers selected
+    if (!hasSelectedItems && mpAliases) {
+        QTreeWidgetItemIterator it(mpAliases);
+        while (*it) {
+            if ((*it)->checkState(0) == Qt::Checked) {
+                hasSelectedItems = true;
+                break;
+            }
+            ++it;
+        }
+    }
+
+    // Check actions if no triggers/timers/aliases selected
+    if (!hasSelectedItems && mpButtons) {
+        QTreeWidgetItemIterator it(mpButtons);
+        while (*it) {
+            if ((*it)->checkState(0) == Qt::Checked) {
+                hasSelectedItems = true;
+                break;
+            }
+            ++it;
+        }
+    }
+
+    // Check scripts if no triggers/timers/aliases/actions selected
+    if (!hasSelectedItems && mpScripts) {
+        QTreeWidgetItemIterator it(mpScripts);
+        while (*it) {
+            if ((*it)->checkState(0) == Qt::Checked) {
+                hasSelectedItems = true;
+                break;
+            }
+            ++it;
+        }
+    }
+
+    // Check keys if no other items selected
+    if (!hasSelectedItems && mpKeys) {
+        QTreeWidgetItemIterator it(mpKeys);
+        while (*it) {
+            if ((*it)->checkState(0) == Qt::Checked) {
+                hasSelectedItems = true;
+                break;
+            }
+            ++it;
+        }
+    }
+
+    if (!hasSelectedItems) {
+        if (mIsModuleCreationMode) {
+            displayResultMessage(tr("Cannot create empty module. Please select at least one trigger, timer, alias, script, action, or key to include in the module."), false);
+        } else {
+            displayResultMessage(tr("Cannot create empty package. Please select at least one item to include in the package."), false);
+        }
+        return;
+    }
+
     // if packageName changed allow to create a new package in the same path
-    mPackagePathFileName = qsl("%1/%2.mpackage").arg(getActualPath(), mPackageName);
+    if (mIsModuleCreationMode) {
+        // For modules, save to the profile directory instead of user's last dialog location
+        QString profileDir = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName());
+        mPackagePathFileName = qsl("%1/%2.mpackage").arg(profileDir, mPackageName);
+    } else {
+        mPackagePathFileName = qsl("%1/%2.mpackage").arg(getActualPath(), mPackageName);
+    }
 
     // QT Docs say that QStandardPaths::writableLocation(QStandardPaths::TempLocation)
     // "Returns a directory where temporary files can be stored. The returned
@@ -538,7 +916,8 @@ void dlgPackageExporter::slot_exportPackage()
     QFile checkWriteability(mXmlPathFileName);
     if (!checkWriteability.open(QIODevice::WriteOnly)) {
         displayResultMessage(tr("Failed to export. Could not open the folder \"%1\" for writing. Do you have the necessary permissions and free disk-space to write to that folder?")
-                             .arg(mXmlPathFileName.toHtmlEscaped()), false);
+                                     .arg(mXmlPathFileName.toHtmlEscaped()),
+                             false);
         assetsFuture.cancel();
         mExportingPackage = false;
         checkToEnableExportButton();
@@ -572,21 +951,74 @@ void dlgPackageExporter::slot_exportPackage()
         } else {
             auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageComment);
             auto watcher = new QFutureWatcher<std::pair<bool, QString>>;
-            connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [=]() {
+            connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [=, this]() {
                 mExportingPackage = false;
                 checkToEnableExportButton();
 
                 if (auto [isOk, errorMsg] = future.result(); !isOk) {
                     displayResultMessage(errorMsg, false);
                 } else {
-                    displayResultMessage(tr("Package \"%1\" exported to: %2")
-                                                 .arg(mPackageName.toHtmlEscaped(), qsl("<a href=\"file:///%1\">%1</a>")
-                                                                            .arg(getActualPath().toHtmlEscaped())),
-                                         true);
+                    // If in module creation mode, automatically install the module
+                    if (mIsModuleCreationMode) {
+                        auto [installSuccess, installMessage] = mpHost->installPackage(mPackagePathFileName, enums::PackageModuleType::ModuleFromUI);
+                        if (installSuccess) {
+                            // Show embedded success message (better UX than popup)
+                            displayResultMessage(tr("Module \"%1\" created and installed successfully! You can now close this dialog.").arg(mPackageName.toHtmlEscaped()), true);
+
+                            // Clear the form to allow creating another module
+                            ui->lineEdit_packageName->clear();
+                            ui->lineEdit_packageName->setFocus();
+                        } else {
+                            // Check if it's a duplicate module error
+                            if (installMessage.contains("already installed")) {
+                                QMessageBox msgBox(this);
+                                msgBox.setWindowTitle(tr("Module Already Exists"));
+                                msgBox.setText(tr("A module named \"%1\" is already installed.").arg(mPackageName.toHtmlEscaped()));
+                                msgBox.setInformativeText(tr("Do you want to overwrite the existing module?"));
+                                msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+                                msgBox.setDefaultButton(QMessageBox::No);
+                                msgBox.setIcon(QMessageBox::Question);
+
+                                if (msgBox.exec() == QMessageBox::Yes) {
+                                    // User chose to overwrite - uninstall first, then reinstall
+                                    if (mpHost->uninstallPackage(mPackageName, enums::PackageModuleType::ModuleFromUI)) {
+                                        auto [retrySuccess, retryMessage] = mpHost->installPackage(mPackagePathFileName, enums::PackageModuleType::ModuleFromUI);
+                                        if (retrySuccess) {
+                                            // Show success dialog for overwrite
+                                            QMessageBox successBox(this);
+                                            successBox.setWindowTitle(tr("Module Overwritten"));
+                                            successBox.setText(tr("Module \"%1\" overwritten successfully!").arg(mPackageName.toHtmlEscaped()));
+                                            successBox.setInformativeText(tr("The existing module has been replaced."));
+                                            successBox.setIcon(QMessageBox::Information);
+                                            successBox.setStandardButtons(QMessageBox::Ok);
+                                            successBox.exec();
+
+                                            // Close the dialog after successful module overwrite to prevent duplicates
+                                            this->accept();
+                                        } else {
+                                            displayResultMessage(tr("Module \"%1\" exported but installation failed: %2").arg(mPackageName.toHtmlEscaped(), retryMessage.toHtmlEscaped()), false);
+                                        }
+                                    } else {
+                                        displayResultMessage(tr("Module \"%1\" exported but failed to uninstall existing version").arg(mPackageName.toHtmlEscaped()), false);
+                                    }
+                                } else {
+                                    // User chose not to overwrite
+                                    displayResultMessage(tr("Module \"%1\" exported successfully but not installed (already exists)").arg(mPackageName.toHtmlEscaped()), true);
+                                }
+                            } else {
+                                displayResultMessage(tr("Module \"%1\" exported but installation failed: %2").arg(mPackageName.toHtmlEscaped(), installMessage.toHtmlEscaped()), false);
+                            }
+                        }
+                    } else {
+                        displayResultMessage(tr("Package \"%1\" exported to: %2").arg(mPackageName.toHtmlEscaped(), qsl("<a href=\"file:///%1\">%1</a>").arg(getActualPath().toHtmlEscaped())), true);
+                    }
                 }
                 mCancelButton->setVisible(false);
                 mCloseButton->setVisible(true);
                 QApplication::restoreOverrideCursor();
+
+                // Clean up the watcher
+                watcher->deleteLater();
             });
             watcher->setFuture(future);
         }
@@ -601,6 +1033,10 @@ void dlgPackageExporter::slot_exportPackage()
         mCloseButton->setVisible(true);
         QApplication::restoreOverrideCursor();
     }
+
+    // save settings for future reuse
+    QSettings& settings = *mudlet::getQSettings();
+    settings.setValue("packageAuthor", ui->lineEdit_author->text());
 }
 
 //copy the newly-added description image files
@@ -791,10 +1227,9 @@ void dlgPackageExporter::exportXml(bool& isOk,
         }
     }
 
-    if (!writer.exportPackage(mXmlPathFileName, false)) {
+    if (!writer.exportPackage(mXmlPathFileName, false, true)) {
         //: This error message is shown when all the Mudlet items cannot be written to the 'packageName'.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened
-        displayResultMessage(tr("Failed to export. Could not write Mudlet items to the file \"%1\".")
-                             .arg(mXmlPathFileName.toHtmlEscaped()), false);
+        displayResultMessage(tr("Failed to export. Could not write Mudlet items to the file \"%1\".").arg(mXmlPathFileName.toHtmlEscaped()), false);
         // Although we have failed, we must not just abort here. We need to reset
         // the selected "for export or not"-flags first. So note that we have failed:
         isOk = false;
@@ -820,22 +1255,14 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
     appendToDetails(qsl("description"), packageDescription);
     appendToDetails(qsl("version"), ui->lineEdit_version->text());
     appendToDetails(qsl("dependencies"), dependencies.join(","));
-    QDateTime iso8601timestamp = QDateTime::currentDateTime();
-    const int offset = iso8601timestamp.offsetFromUtc();
-    iso8601timestamp.setOffsetFromUtc(offset);
-    QDateTime iso8601time(QDateTime::currentDateTime());
-    iso8601time.setTimeSpec(Qt::OffsetFromUTC);
-    mPackageConfig.append(qsl("created = \"%1\"\n").arg(iso8601timestamp.toString(Qt::ISODate)));
-    mPackageComment.append(qsl("    created: %1\n").arg(iso8601timestamp.toString(Qt::ISODate)));
+    const auto iso8601timestamp = utils::dateStamp();
+    mPackageConfig.append(qsl("created = \"%1\"\n").arg(iso8601timestamp));
+    mPackageComment.append(qsl("    created: %1\n").arg(iso8601timestamp));
 
     const QString luaConfig = qsl("%1/config.lua").arg(stagingDirName);
     QSaveFile configFile(luaConfig);
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out(&configFile);
-        // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        out.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
         out << mPackageConfig;
         if (!configFile.commit()) {
             qDebug() << "dlgPackageExporter::writeConfigFile: error saving package config data: " << configFile.errorString();
@@ -880,7 +1307,8 @@ std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& 
     return {true, QString{}};
 }
 
-std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageComment)
+std::pair<bool, QString>
+dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageComment)
 {
     bool isOk = true;
     QString error;
@@ -895,18 +1323,18 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
     if (!archive) {
         zip_error_t zipError;
         zip_error_init_with_code(&zipError, ze);
-        /*:
-        This zipError message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing
-        file anywhere
-        in the computer's file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.
-        */
-        const QString errMsg = tr("Failed to open package file. Error is: \"%1\".")
-                                 .arg(zip_error_strerror(&zipError));
+        /*: This zipError message is shown when the libzip library code is unable
+ to open the file that was to be the end result of the export process.
+ As this may be an existing file anywhere in the computer's
+ file-system(s) it is possible that permissions on the directory or an
+ existing file that is to be overwritten may be a source of problems
+ here.*/
+        const QString errMsg = tr("Failed to open package file. Error is: \"%1\".").arg(zip_error_strerror(&zipError));
         zip_error_fini(&zipError);
         return {false, errMsg};
     }
     // Opened/created archive file successfully
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
     /*
      * From Qt Docs:
@@ -927,7 +1355,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
      */
     qEnableNtfsPermissionChecks();
 #endif
-#endif // defined(Q_OS_WIN32)
+#endif // defined(Q_OS_WINDOWS)
     QDirIterator stagingFile(stagingDirName, QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files, QDirIterator::Subdirectories);
     // relative names to use in archive:
     QStringList directoryEntries;
@@ -936,7 +1364,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
     QMap<QString, QString> fileEntries;
     while (stagingFile.hasNext() && isOk) {
         const QString itEntry = stagingFile.next();
-        Q_UNUSED(itEntry);
+        Q_UNUSED(itEntry)
         // Dot and DotDot entries are no use to us so skip them
         if (!(stagingFile.fileName().compare(qsl(".")) && stagingFile.fileName().compare(qsl("..")))) {
             // Dot and DotDot entries are no use to us so skip them
@@ -964,7 +1392,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         }
     }
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     // Turn off permission checking on NTFS file systems
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
     qt_ntfs_permission_lookup--;
@@ -1040,7 +1468,9 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         zip_set_archive_comment(archive, packageComment.toUtf8().constData(), static_cast<zip_uint16_t>(packageComment.toUtf8().length()));
 
 #if defined(LIBZIP_SUPPORTS_CANCELLING)
-        auto cancel_callback = [](zip*, void*) -> int { return !mExportingPackage; };
+        auto cancel_callback = [](zip*, void*) -> int {
+            return !mExportingPackage;
+        };
         zip_register_cancel_callback_with_state(archive, cancel_callback, nullptr, nullptr);
 #endif
 
@@ -1058,10 +1488,11 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
                 return {false, tr("Export cancelled.")};
             }
 
-            /*:
-            This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be
-            the point at which something breaks because a problem was not spotted/detected in the process earlier...
-            */
+            /*: This error message is displayed at the final stage of exporting
+ a package when all the sourced files are finally put into the
+ archive. Unfortunately this may be the point at which something
+ breaks because a problem was not spotted/detected in the process
+ earlier...*/
             const QString errorMsg = tr("Failed to zip up the package. Error is: \"%1\".").arg(zipError);
             zip_discard(archive);
             // In libzip 0.11 a function was added to clean up
@@ -1070,10 +1501,10 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
             // - before that version the memory just leaked away...
             return {false, errorMsg};
         }
+
     } else {
         zip_discard(archive);
     }
-
 
     return {isOk, error};
 }
@@ -1083,6 +1514,10 @@ void dlgPackageExporter::slot_addFiles()
     QFileDialog* fDialog = new QFileDialog;
     fDialog->setFileMode(QFileDialog::Directory);
     fDialog->setOption(QFileDialog::DontUseNativeDialog);
+
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+    fDialog->setDirectory(lastDir);
 
     QStringList selectedFiles;
     //change file dialog children functions to support multiple folder+file selection
@@ -1094,30 +1529,46 @@ void dlgPackageExporter::slot_addFiles()
     if (dialogListView) {
         dialogListView->setSelectionMode(QAbstractItemView::ExtendedSelection);
         //button would be disabled if no folder is selected
-        connect(dialogListView, &QListView::clicked, this, [=] { button->setEnabled(true); });
+        connect(dialogListView, &QListView::clicked, this, [=] {
+            button->setEnabled(true);
+        });
     }
     QTreeView* dialogTreeView = fDialog->findChild<QTreeView*>();
     if (dialogTreeView) {
         dialogTreeView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-        connect(dialogTreeView, &QTreeView::clicked, this, [=] { button->setEnabled(true); });
+        connect(dialogTreeView, &QTreeView::clicked, this, [=] {
+            button->setEnabled(true);
+        });
     }
-    connect(button, &QPushButton::clicked, this, [=] { fDialog->QDialog::accept(); });
+    connect(button, &QPushButton::clicked, this, [=] {
+        fDialog->QDialog::accept();
+    });
     if (fDialog->exec()) {
         selectedFiles = fDialog->selectedFiles();
     }
     if (!selectedFiles.isEmpty()) {
         ui->listWidget_addedFiles->addItems(selectedFiles);
+
+        lastDir = fDialog->directory().absolutePath();
+        settings.setValue("lastFileDialogLocation", lastDir);
+        mPackagePath = lastDir;
+        emit signal_exportLocationChanged(mPackagePath);
     }
     fDialog->deleteLater();
 }
 
 void dlgPackageExporter::slot_openPackageLocation()
 {
-    const QString profileName(mpHost->getName());
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
-    mPackagePath = QFileDialog::getExistingDirectory(
-            nullptr, tr("Where do you want to save the package?"), mudlet::getMudletPath(mudlet::profileHomePath, profileName), QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly);
+    mPackagePath = QFileDialog::getExistingDirectory(nullptr, tr("Where do you want to save the package?"), lastDir, QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly);
 
+    if (mPackagePath.isEmpty()) {
+        return;
+    }
+
+    settings.setValue("lastFileDialogLocation", mPackagePath);
     emit signal_exportLocationChanged(mPackagePath);
 }
 
@@ -1241,7 +1692,7 @@ void dlgPackageExporter::recurseAliases(TAlias* item, QTreeWidgetItem* qItem)
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable  | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         qItem->addChild(pItem);
         aliasMap.insert(pItem, pChild);
@@ -1263,7 +1714,7 @@ void dlgPackageExporter::listAliases()
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable  | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         if (pChild->isFolder() && pChild->getScript().isEmpty()) {
             pItem->setData(0, Qt::UserRole, isTopFolder);
@@ -1331,7 +1782,7 @@ void dlgPackageExporter::recurseKeys(TKey* item, QTreeWidgetItem* qItem)
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable  | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         keyMap.insert(pItem, pChild);
         qItem->addChild(pItem);
@@ -1353,7 +1804,7 @@ void dlgPackageExporter::listKeys()
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable  | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         if (pChild->isFolder() && pChild->getScript().isEmpty()) {
             pItem->setData(0, Qt::UserRole, isTopFolder);
@@ -1376,7 +1827,7 @@ void dlgPackageExporter::recurseActions(TAction* item, QTreeWidgetItem* qItem)
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable  | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         actionMap.insert(pItem, pChild);
         qItem->addChild(pItem);
@@ -1395,7 +1846,7 @@ void dlgPackageExporter::listActions()
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable  | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         if (pChild->isFolder() && pChild->getScript().isEmpty()) {
             pItem->setData(0, Qt::UserRole, isTopFolder);
@@ -1421,7 +1872,7 @@ void dlgPackageExporter::recurseTimers(TTimer* item, QTreeWidgetItem* qItem)
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable  | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         timerMap.insert(pItem, pChild);
         qItem->addChild(pItem);
@@ -1443,7 +1894,7 @@ void dlgPackageExporter::listTimers()
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable  | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         if (pChild->isFolder() && pChild->getScript().isEmpty()) {
             pItem->setData(0, Qt::UserRole, isTopFolder);
@@ -1457,36 +1908,35 @@ void dlgPackageExporter::listTimers()
 void dlgPackageExporter::displayResultMessage(const QString& html, const bool isSuccessMessage)
 {
     if (!isSuccessMessage) {
-        // Big RED error message
-        ui->infoLabel->setText(qsl("<p><font color='red'><b><big>%1</big><b></font></p>").arg(html));
+        // Light coral red error message - #FF6B6B has good contrast on both light and dark backgrounds
+        ui->infoLabel->setText(qsl("<p><font color='#FF6B6B'><b><big>%1</big><b></font></p>").arg(html));
         return;
     }
 
     // Big BLACK (Green would be hard for most common colour blind people to
     // tell from Red, and Blue would likely hide the URL) success message:
     ui->infoLabel->setText(qsl("<p><b><big>%1</big><b></p>"
-                                          "<p>%2</p>")
-                           .arg(html,
-                            /*:
+                               "<p>%2</p>")
+                                   .arg(html,
+                                        /*:
                             Only the text outside of the 'a' (HTML anchor) tags PLUS the verb
                             'upload' in between them in the source text, (associated with uploading
                             the resulting package to the Mudlet forums) should be translated.
                             */
-                                tr("Why not <a href=\"https://forums.mudlet.org/viewforum.php?f=6\">upload</a> your package for other Mudlet users?")));
+                                        tr("Why not <a href=\"https://packages.mudlet.org/upload\">upload</a> your package for other Mudlet users?")));
     ui->infoLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
     ui->infoLabel->setOpenExternalLinks(true);
 }
 
-void dlgPackageExporter::slot_recountItems(QTreeWidgetItem *item)
+void dlgPackageExporter::slot_recountItems(QTreeWidgetItem* item)
 {
-
     checkChildren(item);
     static bool debounce;
     if (!debounce) {
         debounce = true;
         QTimer::singleShot(0, this, [this]() {
             debounce = false;
-            
+
             const int itemsToExport = countCheckedItems();
             if (itemsToExport) {
                 //: This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.
@@ -1518,7 +1968,10 @@ void dlgPackageExporter::slot_rightClickOnItems(const QPoint& point)
 
 QString dlgPackageExporter::getActualPath() const
 {
-    return mPackagePath.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::DesktopLocation) : mPackagePath;
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+
+    return mPackagePath.isEmpty() ? lastDir : mPackagePath;
 }
 
 void dlgPackageExporter::slot_cancelExport()
@@ -1531,7 +1984,11 @@ void dlgPackageExporter::slot_cancelExport()
 }
 
 //Description Class TextEdit
-dlgPackageExporterDescription::dlgPackageExporterDescription(QWidget* pW) : QTextEdit(pW) {}
+dlgPackageExporterDescription::dlgPackageExporterDescription(QWidget* pW)
+: QTextEdit(pW)
+{
+}
+
 dlgPackageExporterDescription::~dlgPackageExporterDescription() {}
 
 bool dlgPackageExporterDescription::canInsertFromMimeData(const QMimeData* source) const
@@ -1555,12 +2012,7 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
             setPlainText(my_parent->mPlainDescription);
         }
         QStringList accepted_types;
-        accepted_types << "jpeg"
-                       << "jpg"
-                       << "png"
-                       << "gif"
-                       << "bmp"
-                       << "svg";
+        accepted_types << "jpeg" << "jpg" << "png" << "gif" << "bmp" << "svg";
         for (const auto& url : source->urls()) {
             const QString fname = url.toLocalFile();
             const QFileInfo info(fname);
@@ -1587,4 +2039,12 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
     } else {
         QTextEdit::insertFromMimeData(source);
     }
+}
+
+void dlgPackageExporter::closeEvent(QCloseEvent* event)
+{
+    if (mpHost) {
+        emit packageExporterClosing(mpHost->getName());
+    }
+    QDialog::closeEvent(event);
 }

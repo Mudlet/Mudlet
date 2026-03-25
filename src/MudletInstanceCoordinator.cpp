@@ -24,7 +24,11 @@
 
 const int WAIT_FOR_RESPONSE_MS = 500;
 
-MudletInstanceCoordinator::MudletInstanceCoordinator(const QString& serverName, QObject* parent) : QLocalServer(parent), mServerName(serverName) {}
+MudletInstanceCoordinator::MudletInstanceCoordinator(const QString& serverName, QObject* parent)
+: QLocalServer(parent)
+, mServerName(serverName)
+{
+}
 
 void MudletInstanceCoordinator::queuePackage(const QString& packageName)
 {
@@ -73,7 +77,7 @@ void MudletInstanceCoordinator::installPackagesToHost(Host* activeProfile)
 {
     mMutex.lock();
     for (const QString& path : mQueuedPackagePaths) {
-        auto ret = activeProfile->installPackage(path, 0);
+        auto ret = activeProfile->installPackage(path, enums::PackageModuleType::Package);
     }
     mQueuedPackagePaths.clear();
     mMutex.unlock();

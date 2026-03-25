@@ -27,13 +27,14 @@
 #include "Host.h"
 #include "ircmessageformatter.h"
 
+#include <IrcTextFormat>
+#include <IrcUser>
+
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QDesktopServices>
 #include <QScrollBar>
 #include <QShortcut>
-#include "post_guard.h"
 
 
 dlgIRC::dlgIRC(Host* pHost)
@@ -106,7 +107,7 @@ dlgIRC::~dlgIRC()
         connection->close();
     }
 
-    if (mpHost->mpDlgIRC) {
+    if (mpHost && mpHost->mpDlgIRC) {
         mpHost->mpDlgIRC = nullptr;
     }
 }
@@ -272,12 +273,12 @@ void dlgIRC::setupCommandParser()
     commandParser->addCommand(IrcCommand::Whois, qsl("WHOIS <user>"));
     commandParser->addCommand(IrcCommand::Whowas, qsl("WHOWAS <user>"));
 
-    commandParser->addCommand(IrcCommand::Custom, qsl("MSG <target> <message...>")); // replaces the old /msg command.
-    commandParser->addCommand(IrcCommand::Custom, qsl("CLEAR (<buffer>)"));          // clears the given buffer, or the current active if none are given.
-    commandParser->addCommand(IrcCommand::Custom, qsl("CLOSE (<buffer>)"));          // closes the buffer and removes it from the list, uses current active buffer if none are given.
-    commandParser->addCommand(IrcCommand::Custom, qsl("RECONNECT"));                 // Issues a Quit command and closes the IRC connection then reconnects to the IRC server.
-    commandParser->addCommand(IrcCommand::Custom, qsl("HELP (<command>)"));          // displays some help information about a given command or lists all available commands.
-    commandParser->addCommand(IrcCommand::Custom, qsl("MSGLIMIT <limit> (<buffer>)"));  // sets buffer limit on all buffers and updates settings, or sets buffer limit on given buffer.
+    commandParser->addCommand(IrcCommand::Custom, qsl("MSG <target> <message...>"));   // replaces the old /msg command.
+    commandParser->addCommand(IrcCommand::Custom, qsl("CLEAR (<buffer>)"));            // clears the given buffer, or the current active if none are given.
+    commandParser->addCommand(IrcCommand::Custom, qsl("CLOSE (<buffer>)"));            // closes the buffer and removes it from the list, uses current active buffer if none are given.
+    commandParser->addCommand(IrcCommand::Custom, qsl("RECONNECT"));                   // Issues a Quit command and closes the IRC connection then reconnects to the IRC server.
+    commandParser->addCommand(IrcCommand::Custom, qsl("HELP (<command>)"));            // displays some help information about a given command or lists all available commands.
+    commandParser->addCommand(IrcCommand::Custom, qsl("MSGLIMIT <limit> (<buffer>)")); // sets buffer limit on all buffers and updates settings, or sets buffer limit on given buffer.
 }
 
 void dlgIRC::setupBuffers()
@@ -304,7 +305,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
 
     const QString cmdName = QString(cmd->parameters().at(0)).toUpper();
     if (cmdName == "CLEAR") {
-        auto * buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
+        auto* buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
         if (cmd->parameters().count() > 1) {
             const QString bufferName = cmd->parameters().at(1);
             //QString cBufferName = buffer->title();
@@ -318,7 +319,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
         return true;
     }
     if (cmdName == "CLOSE") {
-        auto * buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
+        auto* buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
         if (cmd->parameters().count() > 1) {
             const QString bufferName = cmd->parameters().at(1);
             if (!bufferName.isEmpty()) {
@@ -546,7 +547,7 @@ void dlgIRC::slot_onBufferRemoved(IrcBuffer* buffer)
 
 void dlgIRC::slot_onBufferActivated(const QModelIndex& index)
 {
-    auto * buffer = index.data(Irc::BufferRole).value<IrcBuffer*>();
+    auto* buffer = index.data(Irc::BufferRole).value<IrcBuffer*>();
     // document, user list and nick completion for the current buffer
     ircBrowser->setDocument(bufferTexts.value(buffer));
     ircBrowser->verticalScrollBar()->triggerAction(QScrollBar::SliderToMaximum);
@@ -560,7 +561,7 @@ void dlgIRC::slot_onBufferActivated(const QModelIndex& index)
 
 void dlgIRC::slot_onUserActivated(const QModelIndex& index)
 {
-    auto * user = index.data(Irc::UserRole).value<IrcUser*>();
+    auto* user = index.data(Irc::UserRole).value<IrcUser*>();
     if (user) {
         // ensure the "user" isn't our own client, can only do this by name.
         if (user->name() == mNickName) {
@@ -595,7 +596,7 @@ void dlgIRC::slot_receiveMessage(IrcMessage* message)
         mPingStarted = 0;
     }
 
-    auto * buffer = qobject_cast<IrcBuffer*>(sender());
+    auto* buffer = qobject_cast<IrcBuffer*>(sender());
     if (!buffer) {
         buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
     }
@@ -606,7 +607,7 @@ void dlgIRC::slot_receiveMessage(IrcMessage* message)
             // send a plain-text formatted copy of the message to Lua, as long as it isn't our own.
             if (!message->isOwn()) {
                 const QString textToLua = IrcMessageFormatter::formatMessage(message, true);
-                if (!textToLua.isEmpty()) {
+                if (!textToLua.isEmpty() && mpHost) {
                     const QString from = message->nick();
                     const QString to = getMessageTarget(message, buffer->title());
                     mpHost->postIrcMessage(from, to, textToLua);
@@ -638,7 +639,7 @@ void dlgIRC::slot_nickNameRequired(const QString& reserved, QString* alt)
 
 void dlgIRC::slot_nickNameChanged(const QString& nick)
 {
-    if (nick == mNickName) {
+    if (!mpHost || nick == mNickName) {
         return;
     }
 
@@ -651,6 +652,10 @@ void dlgIRC::slot_nickNameChanged(const QString& nick)
 
 void dlgIRC::slot_joinedChannel(IrcJoinMessage* message)
 {
+    if (!mpHost) {
+        return;
+    }
+
     if (!mReadyForSending) {
         mReadyForSending = true;
     }
@@ -668,6 +673,10 @@ void dlgIRC::slot_joinedChannel(IrcJoinMessage* message)
 
 void dlgIRC::slot_partedChannel(IrcPartMessage* message)
 {
+    if (!mpHost) {
+        return;
+    }
+
     const QString chan = message->channel();
     if (mChannels.contains(chan)) {
         mChannels.removeAll(chan);
@@ -699,21 +708,18 @@ QString dlgIRC::getMessageTarget(IrcMessage* msg, const QString& bufferName)
     QString target = bufferName;
     switch (msg->type()) {
     case IrcMessage::Notice: {
-        auto * msgNotice = static_cast<IrcNoticeMessage*>(msg);
+        auto* msgNotice = static_cast<IrcNoticeMessage*>(msg);
         target = msgNotice->target();
         break;
     }
     case IrcMessage::Private: {
-        auto * msgPrivate = static_cast<IrcPrivateMessage*>(msg);
+        auto* msgPrivate = static_cast<IrcPrivateMessage*>(msg);
         target = msgPrivate->target();
         break;
     }
     default:
         // Other message types are not expected - I hope - SlySven
-        qWarning().noquote().nospace() << "dlgIRC::getMessageTarget(..., \""
-                                       << bufferName
-                                       << "\") WARNING - message of type: "
-                                       << msg->type()
+        qWarning().noquote().nospace() << "dlgIRC::getMessageTarget(..., \"" << bufferName << "\") WARNING - message of type: " << msg->type()
                                        << " not explicitly handled, this needs fixing by Mudlet Makers...";
     }
     return target;
@@ -769,7 +775,7 @@ QString dlgIRC::readIrcPassword(Host* pH)
 
 QString dlgIRC::readAppDefaultIrcNick()
 {
-    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("irc_nick")));
+    QFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
     const bool opened = file.open(QIODevice::ReadOnly);
     QString rstr;
     if (opened) {
@@ -785,7 +791,7 @@ QString dlgIRC::readAppDefaultIrcNick()
 
 void dlgIRC::writeAppDefaultIrcNick(const QString& nick)
 {
-    QSaveFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("irc_nick")));
+    QSaveFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
     const bool opened = file.open(QIODevice::WriteOnly);
     if (opened) {
         QDataStream ofs(&file);

@@ -28,19 +28,18 @@
  ***************************************************************************/
 
 
-#include "TBuffer.h"
-
-#include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QMap>
 #include <QPointer>
+#include <QTimer>
 #include <QWidget>
-#include <chrono>
-#include "post_guard.h"
 
+#include <chrono>
 #include <string>
 
+
 class Host;
+class TBuffer;
 class TConsole;
 class TChar;
 
@@ -57,13 +56,14 @@ class TTextEdit : public QWidget
 public:
     Q_DISABLE_COPY(TTextEdit)
     TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isLowerPane);
+    ~TTextEdit();
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
-    uint getGraphemeBaseCharacter(const QString& str) const;
-    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen, int *offset = nullptr) const;
+    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen, int* offset = nullptr) const;
     int drawGraphemeBackground(QPainter&, QVector<QColor>&, QVector<QRect>&, QVector<QString>&, QVector<int>&, QPoint&, const QString&, const int, const int, TChar&) const;
-    void drawGraphemeForeground(QPainter&, const QColor&, const QRect&, const QString&, TChar &) const;
+    void drawGraphemeForeground(QPainter&, const QColor&, const QRect&, const QString&, TChar&) const;
+    void drawCustomDecorations(QPainter&, const QColor&, const QRect&, TChar&) const;
     void showNewLines();
     void forceUpdate();
     void needUpdate(int, int);
@@ -86,13 +86,18 @@ public:
     void focusInEvent(QFocusEvent* event) override;
     int imageTopLine();
     int bufferScrollDown(int lines);
-// Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
-    void setConsoleBgColor(int r, int g, int b, int a ) { mBgColor = QColor(r, g, b, a); }
-    void resetHScrollbar() { mScreenOffset = 0; mMaxHRange = 0; }
+    // Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
+    void setConsoleBgColor(int r, int g, int b, int a) { mBgColor = QColor(r, g, b, a); }
+    void resetHScrollbar()
+    {
+        mScreenOffset = 0;
+        mMaxHRange = 0;
+    }
     int getScreenHeight() const { return mScreenHeight; }
     void searchSelectionOnline();
-    int getColumnCount();
-    int getRowCount();
+    int getColumnCount() const;
+    int getRowCount() const;
+    void toggleTimeStamps(const bool);
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     void reportCodepointErrors();
@@ -104,28 +109,25 @@ public:
 
     QColor mBgColor;
     // position of cursor, in characters, across the entire buffer
-    int mCursorY;
-    int mCursorX;
+    int mCursorY = 0;
+    int mCursorX = 0;
 
     // Position of "caret", the cursor used for accessibility purposes.
-    int mCaretLine;
-    int mCaretColumn;
+    int mCaretLine = 0;
+    int mCaretColumn = 0;
     // If the current line is shorter than the previous one, hold here the
     // previous column value so that we can return to it if the next line is
     // long enough again.
-    int mOldCaretColumn;
+    int mOldCaretColumn = 0;
 
-    QFont mDisplayFont;
     QColor mFgColor;
-    int mFontAscent;
-    int mFontDescent;
-    bool mIsCommandPopup;
+    bool mIsCommandPopup = false;
     // If true, this TTextEdit is to display the last lines in
     // mpConsole.mpBuffer. This is always true for the lower main window panel
     // but it is RESET when the upper one is scrolled upwards. The name appears
     // to be related to the file monitoring feature in the *nix tail command.
     // See, e.g.: https://en.wikipedia.org/wiki/Tail_(Unix)#File_monitoring
-    bool mIsTailMode;
+    bool mIsTailMode = true;
     // The content to use for the current popup (link)
     // Key: is an index stored when the popup is created - this has been
     // changed from the previous "text to show for each popup" to avoid
@@ -135,11 +137,10 @@ public:
     // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;
     QRegion mSelectedRegion;
-    bool mShowTimeStamps;
 
 public slots:
-    void slot_toggleTimeStamps(const bool);
     void slot_copySelectionToClipboard();
+    void slot_copySelectionToSearchBar();
     void slot_selectAll();
     void slot_scrollBarMoved(int);
     void slot_hScrollBarMoved(int);
@@ -148,6 +149,9 @@ public slots:
     void slot_searchSelectionOnline();
     void slot_analyseSelection();
     void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
+    void slot_changeEnableBlinkText(bool);
+    void slot_blinkStateChanged();
+    void slot_scrollStoppedTimeout();
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     void slot_changeDebugShowAllProblemCodepoints(const bool);
 #endif
@@ -166,7 +170,7 @@ private:
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
     std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
-    int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool *isOutOfbounds, bool *isOverTimeStamp = nullptr) const;
+    int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool* isOutOfbounds, bool* isOverTimeStamp = nullptr) const;
     int getGraphemeWidth(uint unicode) const;
     void normaliseSelection();
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds);
@@ -179,7 +183,7 @@ private:
 
     int mFontHeight;
     int mFontWidth;
-    bool mForceUpdate;
+    bool mForceUpdate = false;
     const QColor mCaretColor = QColorConstants::Gray;
     const QColor mSearchHighlightFgColor = QColorConstants::Black;
     const QColor mSearchHighlightBgColor = QColorConstants::Yellow;
@@ -190,16 +194,16 @@ private:
     // which one this instance is:
     const bool mIsLowerPane;
     // last line offset rendered
-    int mLastRenderedOffset;
-    bool mMouseTracking;
+    int mLastRenderedOffset = 0;
+    bool mMouseTracking = false;
     // 1/2/3 for single/double/triple click seen so far
-    int  mMouseTrackLevel;
-    bool mCtrlSelecting {};
+    int mMouseTrackLevel = 0;
+    bool mCtrlSelecting{};
     // tracks status of the Shift key for keyboard-based selection
-    bool mShiftSelection {};
-    int mCtrlDragStartY {};
+    bool mShiftSelection{};
+    int mCtrlDragStartY{};
     QPoint mDragStart, mDragSelectionEnd;
-    int mOldScrollPos;
+    int mOldScrollPos = 0;
     // top-left point of the selection
     QPoint mPA;
     // bottom-right point of the selection
@@ -213,21 +217,21 @@ private:
     // currently viewed screen area
     QPixmap mScreenMap;
     int mScreenWidth = 100;
-    int mScreenOffset;
-    int mMaxHRange;
+    int mScreenOffset = 0;
+    int mMaxHRange = 0;
     QElapsedTimer mLastClickTimer;
     QPointer<QAction> mpContextMenuAnalyser;
     bool mWideAmbigousWidthGlyphs;
+    bool mEnableBlinkText = false;
+    mutable bool mHasBlinkingContent = false;
+    mutable bool mIsBlinkClientRegistered = false;
+    QPointer<QTimer> mpScrollStoppedTimer;
     std::chrono::high_resolution_clock::time_point mCopyImageStartTime;
     // How many "normal" width "characters" are each tab stop apart, while
     // there is no current mechanism to adjust this, sensible values will
     // probably be 1 (so that a tab is just treated as a space), 2, 4 and 8,
     // in the past it was typically 8 and this is what we'll use at present:
-    int mTabStopwidth;
-    // How many normal width characters that are used for the time stamps; it
-    // would only be valid to change this by clearing the buffer first - so
-    // making this a const value for the moment:
-    const int mTimeStampWidth;
+    int mTabStopwidth = 8;
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     bool mShowAllCodepointIssues = false;

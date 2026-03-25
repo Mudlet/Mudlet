@@ -2,6 +2,7 @@
  *   Copyright (C) 2011 by Chris Mitchell                                  *
  *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *   Copyright (C) 2021-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,10 +25,11 @@
 
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QFileDialog>
 #include <QMessageBox>
-#include "post_guard.h"
+#include <QTimer>
+
+using namespace std::chrono_literals;
 
 
 dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
@@ -47,9 +49,7 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
-dlgModuleManager::~dlgModuleManager()
-{
-}
+dlgModuleManager::~dlgModuleManager() {}
 
 void dlgModuleManager::layoutModules()
 {
@@ -84,14 +84,14 @@ void dlgModuleManager::layoutModules()
         it2.next();
         QStringList pModules = it2.value();
         pModules.sort();
-        for (int i = 0; i < pModules.size(); i++) {
+        for (const QString& pModule : pModules) {
             const int row = moduleTable->rowCount();
             moduleTable->insertRow(row);
             auto masterModule = new QTableWidgetItem();
             auto itemEntry = new QTableWidgetItem();
             auto itemLocation = new QTableWidgetItem();
             auto itemPriority = new QTableWidgetItem();
-            QStringList moduleInfo = mpHost->mInstalledModules[pModules[i]];
+            QStringList moduleInfo = mpHost->mInstalledModules[pModule];
 
             if (moduleInfo.at(1).toInt()) {
                 masterModule->setCheckState(Qt::Checked);
@@ -107,11 +107,11 @@ void dlgModuleManager::layoutModules()
             // checkbox more central in the column
             masterModule->setTextAlignment(Qt::AlignCenter);
 
-            const QString moduleName = pModules[i];
+            const QString moduleName = pModule;
             itemEntry->setText(moduleName);
             itemEntry->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
             itemLocation->setText(moduleInfo[0]);
-            itemLocation->setToolTip(utils::richText(moduleInfo[0]));     // show the full path in a tooltip, in case it doesn't fit in the table
+            itemLocation->setToolTip(utils::richText(moduleInfo[0]));         // show the full path in a tooltip, in case it doesn't fit in the table
             itemLocation->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled); // disallow editing of module path, because that is not saved
             itemPriority->setData(Qt::EditRole, mpHost->mModulePriorities[moduleName]);
             moduleTable->setItem(row, 0, itemEntry);
@@ -129,23 +129,42 @@ void dlgModuleManager::slot_installModule()
         return;
     }
 
-    const QString fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet Module"), QDir::currentPath());
-    if (fileName.isEmpty()) {
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value(qsl("lastFileDialogLocation"), QDir::homePath()).toString();
+
+    //: Module manager - import modules from file dialog (multi-select enabled)
+    //: Module manager - file filter for supported module types (mpackage, zip, xml)
+    const QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Load Mudlet Module"), lastDir, tr("Mudlet Packages (*.mpackage *.zip *.xml)"));
+    if (fileNames.isEmpty()) {
         return;
     }
 
-    QFile file(fileName);
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Load Mudlet Module:"), tr("Cannot read file %1:\n%2.").arg(fileName.toHtmlEscaped(), file.errorString()));
-        return;
+    lastDir = QFileInfo(fileNames.first()).absolutePath();
+    settings.setValue(qsl("lastFileDialogLocation"), lastDir);
+
+    QStringList failedModules;
+
+    for (const QString& fileName : fileNames) {
+        auto [success, errorMsg] = mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI);
+        if (success) {
+            mpHost->waitForProfileSave();
+        } else {
+            const QString baseName = QFileInfo(fileName).fileName();
+            failedModules << baseName;
+            qWarning() << "dlgModuleManager::slot_installModule() ERROR - failed to import" << baseName << ":" << errorMsg;
+        }
     }
 
-    mpHost->installPackage(fileName, 1);
     for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
         moduleTable->removeRow(i);
     }
 
     layoutModules();
+
+    if (!failedModules.isEmpty()) {
+        //: Module manager - status message shown when some modules failed to import. %1 is a comma-separated list of module names
+        showImportStatus(tr("Failed to import: %1").arg(failedModules.join(qsl(", "))));
+    }
 }
 
 void dlgModuleManager::slot_uninstallModule()
@@ -157,7 +176,7 @@ void dlgModuleManager::slot_uninstallModule()
     const int cRow = moduleTable->currentRow();
     QTableWidgetItem* pI = moduleTable->item(cRow, 0);
     if (pI) {
-        mpHost->uninstallPackage(pI->text(), 1);
+        mpHost->uninstallPackage(pI->text(), enums::PackageModuleType::ModuleFromUI);
     }
     for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
         moduleTable->removeRow(i);
@@ -187,8 +206,7 @@ void dlgModuleManager::slot_moduleClicked(QTableWidgetItem* pItem)
     }
 
     if (mpHost->moduleHelp.contains(entry->text())) {
-        helpButton->setDisabled((!mpHost->moduleHelp.value(entry->text()).contains(qsl("helpURL"))
-                                || mpHost->moduleHelp.value(entry->text()).value(qsl("helpURL")).isEmpty()));
+        helpButton->setDisabled((!mpHost->moduleHelp.value(entry->text()).contains(qsl("helpURL")) || mpHost->moduleHelp.value(entry->text()).value(qsl("helpURL")).isEmpty()));
     } else {
         helpButton->setDisabled(true);
     }
@@ -233,6 +251,9 @@ void dlgModuleManager::slot_helpModule()
         if (!mudlet::self()->openWebPage(mpHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")))) {
             //failed first open, try for a module related path
             QTableWidgetItem* item = moduleTable->item(cRow, 3);
+            if (!item) {
+                return;
+            }
             const QString itemPath = item->text();
             QStringList path = itemPath.split(QDir::separator());
             path.pop_back();
@@ -244,4 +265,20 @@ void dlgModuleManager::slot_helpModule()
             }
         }
     }
+}
+
+void dlgModuleManager::showImportStatus(const QString& message)
+{
+    label_importStatus->setText(message);
+    label_importStatus->setStyleSheet(qsl("QLabel { padding: 8px; }"));
+    label_importStatus->show();
+    QTimer::singleShot(4s, label_importStatus, &QWidget::hide);
+}
+
+void dlgModuleManager::closeEvent(QCloseEvent* event)
+{
+    if (mpHost) {
+        emit moduleManagerClosing(mpHost->getName());
+    }
+    QDialog::closeEvent(event);
 }

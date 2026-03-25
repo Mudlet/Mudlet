@@ -1,6 +1,7 @@
 ############################################################################
 #    Copyright (C) 2018 by Vadim Peretokin - vperetokin@gmail.com          #
-#    Copyright (C) 2020, 2023 by Stephen Lyons - slysven@virginmedia.com   #
+#    Copyright (C) 2020, 2023, 2025 by Stephen Lyons                       #
+#                                                - slysven@virginmedia.com #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -22,24 +23,13 @@
 
 message(STATUS "Building translations")
 
-if(WITH_QT6)
-  find_package(Qt6LinguistTools REQUIRED)
-  get_target_property(LRELEASE_LOCATION Qt6::lrelease LOCATION)
-else()
-  find_package(Qt5LinguistTools REQUIRED)
-  get_target_property(LRELEASE_LOCATION Qt5::lrelease LOCATION)
-endif()
+find_package(Qt6LinguistTools 6.8.2 REQUIRED)
+get_target_property(LRELEASE_LOCATION Qt6::lrelease LOCATION)
 
 file(GLOB TS_FILES *.ts)
 string(REPLACE ".ts" "" TS_FILES_NOEXT "${TS_FILES}")
 
 file(REMOVE "${CMAKE_CURRENT_SOURCE_DIR}/lrelease_output.txt")
-if(NOT WIN32)
-  set(OLDLANG $ENV{LANG})
-#  message(STATUS "The environmental variable LANG was set to: $ENV{LANG}")
-  set(ENV{LANG} "C")
-#  message(STATUS "The environmental variable LANG is now set to: $ENV{LANG}")
-endif()
 
 foreach(ts_file ${TS_FILES_NOEXT})
   string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}" qm_file ${ts_file})
@@ -50,11 +40,6 @@ foreach(ts_file ${TS_FILES_NOEXT})
 #  message(STATUS ${lrelease_output})
   file(APPEND "${CMAKE_CURRENT_SOURCE_DIR}/lrelease_output.txt" ${lrelease_output})
 endforeach()
-
-if(NOT WIN32)
-  set(ENV{LANG} ${OLDLANG})
-#  message(STATUS "The environmental variable LANG should now be reset to: ${OLDLANG} and it is now: $ENV{LANG}")
-endif()
 
 find_program(LUA_LOCATION lua-5.1)
 if(NOT LUA_LOCATION)

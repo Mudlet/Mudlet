@@ -26,11 +26,9 @@
 #include "Tree.h"
 
 
-#include "pre_guard.h"
 #include <QDebug>
 #include <QPointer>
 #include <QTime>
-#include "post_guard.h"
 
 class Host;
 
@@ -42,6 +40,8 @@ class TTimer : public Tree<TTimer>
     friend class TimerUnit;
     friend class XMLexport;
     friend class XMLimport;
+    friend class DeleteItemCommand;
+    friend class EditorDeleteItemCommand;
 
 public:
     ~TTimer() override;
@@ -99,6 +99,9 @@ public:
     // Override the Tree version as we need to insert the id number as a
     // property into the QTimer that mpQTimer points to as well:
     void setID(int) override;
+    QString packageName(TTimer* pTimer);
+    QString moduleName(TTimer* pTimer);
+
 
 
     // specifies whenever the payload is Lua code as a string
@@ -120,9 +123,9 @@ private:
     QTime mTime;
     QString mCommand;
     QString mFuncName;
-    QPointer<Host> mpHost;
     bool mNeedsToBeCompiled = true;
     QTimer* mpQTimer;
+    QPointer<Host> mpHost;
     bool mModuleMember = false;
 };
 
@@ -130,7 +133,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const TTimer* timer)
 {
     QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
     debug.nospace() << "TTimer("
                     << "name= " << timer->getName()
                     << " time= " << timer->getTime()

@@ -1,8 +1,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018, 2020-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2016-2018, 2020-2023, 2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,6 +24,7 @@
 
 #include "dlgConnectionProfiles.h"
 
+#include <pugixml.hpp>
 
 #include "Host.h"
 #include "HostManager.h"
@@ -30,15 +32,18 @@
 #include "TGameDetails.h"
 #include "XMLimport.h"
 #include "mudlet.h"
+#include "CredentialManager.h"
+#include "SecureStringUtils.h"
 
-#include "pre_guard.h"
 #include <QtConcurrent>
 #include <QtUiTools>
 #include <QColorDialog>
 #include <QDir>
+#include <QPointer>
 #include <QRandomGenerator>
 #include <QSettings>
-#include "post_guard.h"
+#include <QSignalBlocker>
+#include <QTime>
 #include <chrono>
 #include <sstream>
 
@@ -64,27 +69,15 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     }
     QPixmap holdPixmap;
 
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     holdPixmap = notificationAreaIconLabelWarning->pixmap(Qt::ReturnByValue);
-#else
-    holdPixmap = *(this->notificationAreaIconLabelWarning->pixmap());
-#endif
     holdPixmap.setDevicePixelRatio(5.3);
     notificationAreaIconLabelWarning->setPixmap(holdPixmap);
 
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     holdPixmap = notificationAreaIconLabelError->pixmap(Qt::ReturnByValue);
-#else
-    holdPixmap = *(this->notificationAreaIconLabelError->pixmap());
-#endif
     holdPixmap.setDevicePixelRatio(5.3);
     notificationAreaIconLabelError->setPixmap(holdPixmap);
 
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     holdPixmap = notificationAreaIconLabelInformation->pixmap(Qt::ReturnByValue);
-#else
-    holdPixmap = *(notificationAreaIconLabelInformation->pixmap());
-#endif
     holdPixmap.setDevicePixelRatio(5.3);
     notificationAreaIconLabelInformation->setPixmap(holdPixmap);
 
@@ -92,9 +85,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     // undefined. this is an undocumented qt bug, as it only shows on certain OS
     // and certain architectures.
 
-    profiles_tree_widget->setSelectionMode(QAbstractItemView::SingleSelection);
-    profiles_tree_widget->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(profiles_tree_widget, &QWidget::customContextMenuRequested, this, &dlgConnectionProfiles::slot_profileContextMenu);
+    listWidget_profiles->setSelectionMode(QAbstractItemView::SingleSelection);
+    listWidget_profiles->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(listWidget_profiles, &QWidget::customContextMenuRequested, this, &dlgConnectionProfiles::slot_profileContextMenu);
 
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
@@ -110,12 +103,10 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mudlet::self()->mShowIconsOnDialogs = !abort->icon().isNull();
 
     auto Welcome_text_template = tr("<p><center><big><b>Welcome to Mudlet!</b></big></center></p>"
-                                    "<p><center><b>Click on one of the games on the list to play.</b></center></p>"
-                                    "<p>To play a game not in the list, click on %1 "
-                                    "<span style=\" color:#555753;\">New</span>, fill in the <i>Profile Name</i>, "
-                                    "<i>Server address</i>, and <i>Port</i> fields in the <i>Required </i> area.</p>"
-                                    "<p>After that, click %2 <span style=\" color:#555753;\">Connect</span> "
-                                    "to play.</p>"
+                                    "<p><center><b>To get started, double-click on </b>Mudlet Tutorial<b> or select a game from the list.</b></center></p>"
+                                    "<p>Want to play a game that’s not listed?</p>"
+                                    "<p>Click %1 <span style=\" color:#555753;\">New</span>, then enter the <i>Profile Name</i>, <i>Server Address</i>, and <i>Port</i> in the required fields.</p>"
+                                    "<p>Once you're ready, click %2 <span style=\" color:#555753;\">Connect</span> to begin your adventure.</p>"
                                     "<p>Have fun!</p><p align=\"right\"><span style=\" font-family:'Sans';\">The Mudlet Team </span>"
                                     "<img src=\":/icons/mudlet_main_16px.png\"/></p>",
                                     "Welcome message. Both %1 and %2 may be replaced by icons when this text is used.");
@@ -130,10 +121,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     copy_profile_toolbutton->addAction(mpCopyProfile);
     copy_profile_toolbutton->addAction(copyProfileSettings);
     copy_profile_toolbutton->setDefaultAction(mpCopyProfile);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    auto widgetList = mpCopyProfile->associatedWidgets();
-#else
-    // QAction::associatedWidgets() has been deprecated in Qt 6
+
     auto objectList = mpCopyProfile->associatedObjects();
     QList<QWidget*> widgetList;
     for (auto pObjectItem : objectList) {
@@ -142,14 +130,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
             widgetList << pWidgetItem;
         }
     }
-#endif
+
     Q_ASSERT_X(!widgetList.isEmpty(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for mpCopyProfile QAction not found.");
     widgetList.first()->setAccessibleName(tr("copy profile"));
     widgetList.first()->setAccessibleDescription(tr("copy the entire profile to new one that will require a different new name."));
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    widgetList = copyProfileSettings->associatedWidgets();
-#else
     objectList = copyProfileSettings->associatedObjects();
     widgetList.clear();
     for (auto pObjectItem : objectList) {
@@ -158,7 +143,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
             widgetList << pWidgetItem;
         }
     }
-#endif
+
     Q_ASSERT_X(!widgetList.isEmpty(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for copyProfileSettings QAction not found.");
     widgetList.first()->setAccessibleName(tr("copy profile settings"));
     widgetList.first()->setAccessibleDescription(tr("copy the settings and some other parts of the profile to a new one that will require a different new name."));
@@ -236,20 +221,44 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(mpCopyProfile, &QAction::triggered, this, &dlgConnectionProfiles::slot_copyProfile);
     connect(copyProfileSettings, &QAction::triggered, this, &dlgConnectionProfiles::slot_copyOnlySettingsOfProfile);
     connect(remove_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_deleteProfile);
-    connect(profile_name_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_updateName);
+    connect(profile_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_updateName);
     connect(profile_name_entry, &QLineEdit::editingFinished, this, &dlgConnectionProfiles::slot_saveName);
     connect(host_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_updateUrl);
     connect(port_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_updatePort);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    connect(port_ssl_tsl, &QCheckBox::checkStateChanged, this, &dlgConnectionProfiles::slot_updateSslTslPort);
+    connect(autologin_checkBox, &QCheckBox::checkStateChanged, this, &dlgConnectionProfiles::slot_updateAutoConnect);
+    connect(auto_reconnect, &QCheckBox::checkStateChanged, this, &dlgConnectionProfiles::slot_updateAutoReconnect);
+#else
     connect(port_ssl_tsl, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateSslTslPort);
     connect(autologin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateAutoConnect);
     connect(auto_reconnect, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateAutoReconnect);
+#endif
     connect(login_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_updateLogin);
-    connect(character_password_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_updatePassword);
-    connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_updateDescription);
-    connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_itemClicked);
-    connect(profiles_tree_widget, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
+    // Use textChanged with timer debouncing to avoid saving on every keystroke
+    connect(character_password_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_passwordTextChanged);
 
+    // Listen for password migration completion to refresh the form
+    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToSecure, this, [this]() {
+        // Refresh the current profile's password field after migration
+        slot_itemClicked(listWidget_profiles->currentItem());
+    });
+
+    // Listen for character password migration completion to refresh the form
+    connect(mudlet::self(), &mudlet::signal_characterPasswordsMigrated, this, [this]() {
+        // Refresh the current profile's password field after migration
+        slot_itemClicked(listWidget_profiles->currentItem());
+    });
+
+    connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_updateDescription);
+    connect(listWidget_profiles, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_itemClicked);
+    connect(listWidget_profiles, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    connect(discord_optin_checkBox, &QCheckBox::checkStateChanged, this, &dlgConnectionProfiles::slot_updateDiscordOptIn);
+#else
     connect(discord_optin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateDiscordOptIn);
+#endif
 
     // website_entry atm is only a label
     //connect(website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_updateWebsite(const QString)));
@@ -270,7 +279,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mOKPalette.setColor(QPalette::Base, QColor(150, 255, 150, 50));
     mErrorPalette.setColor(QPalette::Base, QColor(255, 150, 150, 50));
 
-    profiles_tree_widget->setViewMode(QListView::IconMode);
+    listWidget_profiles->setViewMode(QListView::IconMode);
 
     btn_load_enabled_accessDesc = tr("Click to load but not connect the selected profile.");
     btn_connect_enabled_accessDesc = tr("Click to load and connect the selected profile.");
@@ -293,10 +302,21 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mSearchTextTimer.setSingleShot(true);
     QCoreApplication::instance()->installEventFilter(this);
     connect(&mSearchTextTimer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_reenableAllProfileItems);
+
+    profile_history->view()->setTextElideMode(Qt::ElideNone);
 }
 
 dlgConnectionProfiles::~dlgConnectionProfiles()
 {
+    if (mPasswordSaveTimer) {
+        mPasswordSaveTimer->stop();
+    }
+    mPendingPasswordSaveProfile.clear();
+
+    // Clear any pending operation flags
+    mKeychainOperationInProgress = false;
+    mPendingProfileLoad.clear();
+
     QCoreApplication::instance()->removeEventFilter(this);
 }
 
@@ -308,14 +328,54 @@ void dlgConnectionProfiles::accept()
         setVisible(false);
         // This is needed to make the above take effect as fast as possible:
         qApp->processEvents();
-        loadProfile(true);
-        QDialog::accept();
+
+        // Check if keychain authentication is pending - if so, wait for it
+        ensurePasswordLoadedThenConnect(true);
     }
+}
+
+void dlgConnectionProfiles::slot_load()
+{
+    setVisible(false);
+    // This is needed to make the above take effect as fast as possible:
+    qApp->processEvents();
+
+    // Check if keychain authentication is pending - if so, wait for it
+    ensurePasswordLoadedThenConnect(false);
+}
+
+void dlgConnectionProfiles::ensurePasswordLoadedThenConnect(bool alsoConnect)
+{
+    const QString profile_name = profile_name_entry->text().trimmed();
+
+    if (profile_name.isEmpty()) {
+        QDialog::accept();
+        return;
+    }
+
+    // Check if we have any pending keychain operations for this profile
+    if (hasPendingKeychainOperation(profile_name)) {
+        // Queue the profile loading until keychain completes
+        mPendingConnect = alsoConnect;
+        mPendingProfileLoad = profile_name;
+        return; // Will be handled by keychain callback
+    }
+
+    // No pending keychain operations, proceed immediately
+    loadProfile(alsoConnect);
+    QDialog::accept();
+}
+
+bool dlgConnectionProfiles::hasPendingKeychainOperation(const QString& profile_name) const
+{
+    Q_UNUSED(profile_name)
+    // Simply check if we have a keychain operation in progress
+    return mKeychainOperationInProgress;
 }
 
 void dlgConnectionProfiles::slot_updateDescription()
 {
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+    QListWidgetItem* pItem = listWidget_profiles->currentItem();
 
     if (pItem) {
         const QString description = mud_description_textedit->toPlainText();
@@ -338,10 +398,10 @@ void dlgConnectionProfiles::indicatePackagesInstallOnConnect(QStringList package
     packageInfoLayout->setContentsMargins(8, 8, 8, 8);
     packageGroupBox->setStyleSheet("QGroupBox:title { padding-left: 8px; }");
 
-    for (const QString &package : packages) {
+    for (const QString& package : packages) {
         QFileInfo fileInfo(package);
         QString packageName = fileInfo.baseName();
-        QLabel *packageLabel = new QLabel(packageName);
+        QLabel* packageLabel = new QLabel(packageName);
         packageInfoLayout->addWidget(packageLabel);
     }
 
@@ -351,7 +411,7 @@ void dlgConnectionProfiles::indicatePackagesInstallOnConnect(QStringList package
 // Not used:
 //void dlgConnectionProfiles::slot_updateWebsite(const QString& url)
 //{
-//    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+//    QListWidgetItem* pItem = listWidget_profiles->currentItem();
 //    if (pItem) {
 //        writeProfileData(pItem->data(csmNameRole).toString(), qsl("website"), url);
 //    }
@@ -359,52 +419,79 @@ void dlgConnectionProfiles::indicatePackagesInstallOnConnect(QStringList package
 
 void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
 {
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+    QListWidgetItem* pItem = listWidget_profiles->currentItem();
     if (!pItem) {
         return;
     }
 
+    const QString profileName = pItem->data(csmNameRole).toString();
+
     if (mudlet::self()->storingPasswordsSecurely()) {
-        writeSecurePassword(pItem->data(csmNameRole).toString(), pass);
+        if (pass.trimmed().isEmpty()) {
+            // If password is empty, remove it from secure storage
+            deleteSecurePassword(profileName);
+        } else {
+            // Store the password securely
+            writeSecurePassword(profileName, pass);
+        }
     } else {
-        writeProfileData(pItem->data(csmNameRole).toString(), qsl("password"), pass);
+        auto result = mudlet::self()->writeProfileData(profileName, qsl("password"), pass);
+        if (!result.first) {
+            qWarning().noquote().nospace() << "dlgConnectionProfiles::slot_updatePassword() ERROR - failed to save password for profile \"" << profileName << "\": " << result.second;
+        }
     }
 }
 
 void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QString& pass) const
 {
-    auto* job = new QKeychain::WritePasswordJob(qsl("Mudlet profile"));
-    job->setAutoDelete(false);
-    job->setInsecureFallback(false);
+    // Validate that we have a password to store
+    if (pass.trimmed().isEmpty()) {
+        qDebug() << "dlgConnectionProfiles: Skipping storage of empty password for profile" << profile;
+        return;
+    }
 
-    job->setKey(profile);
-    job->setTextData(pass);
-    job->setProperty("profile", profile);
+    // Use async API for QtKeychain integration with file fallback
+    auto* credManager = new CredentialManager();
 
-    connect(job, &QKeychain::WritePasswordJob::finished, this, &dlgConnectionProfiles::slot_passwordSaved);
+    credManager->storePassword(profile, "character", pass, [credManager, profile](bool success, const QString& errorMessage) {
+        if (success) {
+            qDebug() << "dlgConnectionProfiles: Successfully stored password for profile" << profile;
+        } else {
+            qWarning() << "dlgConnectionProfiles: Failed to store password for profile" << profile << ":" << errorMessage;
+        }
 
-    job->start();
+        // Clean up the credential manager
+        credManager->deleteLater();
+    });
 }
 
 void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
 {
-    auto* job = new QKeychain::DeletePasswordJob(qsl("Mudlet profile"));
-    job->setAutoDelete(false);
-    job->setInsecureFallback(false);
+    // Use async API for QtKeychain integration with file fallback
+    auto* credManager = new CredentialManager();
 
-    job->setKey(profile);
-    job->setProperty("profile", profile);
+    credManager->removePassword(profile, "character", [credManager, profile](bool success, const QString& errorMessage) {
+        if (success) {
+            qDebug() << "dlgConnectionProfiles: Successfully removed password for profile" << profile;
+        } else {
+            qWarning() << "dlgConnectionProfiles: Failed to remove password for profile" << profile << ":" << errorMessage;
+        }
 
-    connect(job, &QKeychain::WritePasswordJob::finished, this, &dlgConnectionProfiles::slot_passwordDeleted);
-
-    job->start();
+        // Clean up the credential manager
+        credManager->deleteLater();
+    });
 }
 
 void dlgConnectionProfiles::slot_updateLogin(const QString& login)
 {
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+    QListWidgetItem* pItem = listWidget_profiles->currentItem();
     if (pItem) {
-        writeProfileData(pItem->data(csmNameRole).toString(), qsl("login"), login);
+        const QString profileName = pItem->data(csmNameRole).toString();
+        auto result = mudlet::self()->writeProfileData(profileName, qsl("login"), login);
+        if (!result.first) {
+            qWarning().noquote().nospace() << "dlgConnectionProfiles::slot_updateLogin() ERROR - failed to save character name for profile \"" << profileName << "\": " << result.second;
+            // Could optionally show user notification here
+        }
     }
 }
 
@@ -420,7 +507,7 @@ void dlgConnectionProfiles::slot_updateUrl(const QString& url)
     }
 
     if (validateProfile()) {
-        QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+        QListWidgetItem* pItem = listWidget_profiles->currentItem();
         if (!pItem) {
             return;
         }
@@ -430,7 +517,7 @@ void dlgConnectionProfiles::slot_updateUrl(const QString& url)
 
 void dlgConnectionProfiles::slot_updateAutoConnect(int state)
 {
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+    QListWidgetItem* pItem = listWidget_profiles->currentItem();
     if (!pItem) {
         return;
     }
@@ -439,7 +526,7 @@ void dlgConnectionProfiles::slot_updateAutoConnect(int state)
 
 void dlgConnectionProfiles::slot_updateAutoReconnect(int state)
 {
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+    QListWidgetItem* pItem = listWidget_profiles->currentItem();
     if (!pItem) {
         return;
     }
@@ -450,7 +537,7 @@ void dlgConnectionProfiles::slot_updateAutoReconnect(int state)
 // checked state set programmatically AS WELL as when the user clicks on it:
 void dlgConnectionProfiles::slot_updateDiscordOptIn(int state)
 {
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+    QListWidgetItem* pItem = listWidget_profiles->currentItem();
     if (!pItem) {
         return;
     }
@@ -490,7 +577,7 @@ void dlgConnectionProfiles::slot_updatePort(const QString& ignoreBlank)
     }
 
     if (validateProfile()) {
-        QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+        QListWidgetItem* pItem = listWidget_profiles->currentItem();
         if (!pItem) {
             return;
         }
@@ -501,7 +588,7 @@ void dlgConnectionProfiles::slot_updatePort(const QString& ignoreBlank)
 void dlgConnectionProfiles::slot_updateSslTslPort(int state)
 {
     if (validateProfile()) {
-        QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+        QListWidgetItem* pItem = listWidget_profiles->currentItem();
         if (!pItem) {
             return;
         }
@@ -517,7 +604,7 @@ void dlgConnectionProfiles::slot_updateName(const QString& newName)
 
 void dlgConnectionProfiles::slot_saveName()
 {
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+    QListWidgetItem* pItem = listWidget_profiles->currentItem();
     const QString newProfileName = profile_name_entry->text().trimmed();
     const QString newProfileHost = host_name_entry->text().trimmed();
     const QString newProfilePort = port_entry->text().trimmed();
@@ -529,30 +616,152 @@ void dlgConnectionProfiles::slot_saveName()
     }
 
     const QString currentProfileEditName = pItem->data(csmNameRole).toString();
-    const int row = mProfileList.indexOf(currentProfileEditName);
-    if ((row >= 0) && (row < mProfileList.size())) {
-        mProfileList[row] = newProfileName;
-    } else {
-        mProfileList << newProfileName;
-    }
-
     // don't do anything if this was just a normal click, and not an edit of any sort
     if (currentProfileEditName == newProfileName) {
         return;
+    }
+
+    // Check for orphaned keychain entries when creating a new profile with a name
+    // that doesn't exist as a directory but might have keychain entries from
+    // a previously deleted profile (deleted outside Mudlet interface)
+    if (mudlet::self()->storingPasswordsSecurely() && currentProfileEditName == tr("new profile name") && !QDir(mudlet::getMudletPath(enums::profileHomePath, newProfileName)).exists()) {
+        // Check if there are orphaned keychain entries for this profile name
+        // Use QPointer to safely detect if dialog or credManager is destroyed during async operations
+        // Create CredentialManager without a parent to avoid destruction when dialog closes
+        QPointer<dlgConnectionProfiles> safeThis = this;
+        QPointer<CredentialManager> safeCredManager = new CredentialManager(nullptr);
+
+        safeCredManager->retrievePassword(
+                newProfileName,
+                "character",
+                [safeThis, safeCredManager, currentProfileEditName, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl](
+                        bool foundCharacterEntry, const QString& characterPassword, const QString& errorMessage) {
+                    Q_UNUSED(characterPassword)
+                    Q_UNUSED(errorMessage)
+
+                    // Check if credManager was destroyed
+                    if (!safeCredManager) {
+                        qWarning() << "dlgConnectionProfiles: CredentialManager destroyed during keychain operation, aborting";
+                        return;
+                    }
+
+                    // Check if dialog was destroyed during async operation
+                    if (!safeThis) {
+                        qWarning() << "dlgConnectionProfiles: Dialog destroyed during keychain operation, aborting";
+                        safeCredManager->deleteLater();
+                        return;
+                    }
+
+                    safeCredManager->retrievePassword(
+                            newProfileName,
+                            "proxy",
+                            [safeThis, safeCredManager, currentProfileEditName, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl, foundCharacterEntry](
+                                    bool foundProxyEntry, const QString& proxyPassword, const QString& errorMessage) {
+                                Q_UNUSED(proxyPassword)
+                                Q_UNUSED(errorMessage)
+
+                                // Check if credManager was destroyed
+                                if (!safeCredManager) {
+                                    qWarning() << "dlgConnectionProfiles: CredentialManager destroyed during keychain operation, aborting";
+                                    return;
+                                }
+
+                                // Check if dialog was destroyed during async operation
+                                if (!safeThis) {
+                                    qWarning() << "dlgConnectionProfiles: Dialog destroyed during keychain operation, aborting";
+                                    safeCredManager->deleteLater();
+                                    return;
+                                }
+
+                                // Define a helper lambda to continue after cleanup is done
+                                // CredentialManager only supports one operation at a time, so we must chain removals
+                                // Captures QPointers to safely detect if dialog or credManager has been destroyed
+                                // -- each must be checked for null before use
+                                auto continueAfterCleanup = [safeThis, safeCredManager, currentProfileEditName, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl]() {
+                                    // Clean up credManager if still valid
+                                    if (safeCredManager) {
+                                        safeCredManager->deleteLater();
+                                    }
+
+                                    // Final safety check before accessing dialog members
+                                    if (!safeThis) {
+                                        qWarning() << "dlgConnectionProfiles: Dialog destroyed before continueProfileSave, aborting";
+                                        return;
+                                    }
+
+                                    // Find the current item by the old profile name instead of using a captured pointer
+                                    auto items = safeThis->findData(*safeThis->listWidget_profiles, currentProfileEditName, csmNameRole);
+                                    if (items.isEmpty()) {
+                                        qWarning() << "dlgConnectionProfiles: Could not find profile item for" << currentProfileEditName << "after async operation";
+                                        return;
+                                    }
+
+                                    safeThis->continueProfileSave(items.first(), newProfileName, newProfileHost, newProfilePort, newProfileSslTsl);
+                                };
+
+                                // If we found any orphaned entries, clean them up (chained to avoid lost callbacks)
+                                if (foundCharacterEntry && foundProxyEntry) {
+                                    // Both need cleanup - chain them
+                                    safeCredManager->removePassword(newProfileName, "character", [safeCredManager, newProfileName, continueAfterCleanup](bool success, const QString& errorMessage) {
+                                        if (!success) {
+                                            qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned character password for" << newProfileName << ":" << errorMessage;
+                                        }
+                                        // Check credManager before chaining next operation
+                                        if (!safeCredManager) {
+                                            qWarning() << "dlgConnectionProfiles: CredentialManager destroyed, cannot clean up proxy password";
+                                            continueAfterCleanup();
+                                            return;
+                                        }
+                                        // Now clean up proxy (chained)
+                                        safeCredManager->removePassword(newProfileName, "proxy", [newProfileName, continueAfterCleanup](bool proxySuccess, const QString& proxyError) {
+                                            if (!proxySuccess) {
+                                                qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned proxy password for" << newProfileName << ":" << proxyError;
+                                            }
+                                            continueAfterCleanup();
+                                        });
+                                    });
+                                } else if (foundCharacterEntry) {
+                                    safeCredManager->removePassword(newProfileName, "character", [newProfileName, continueAfterCleanup](bool success, const QString& errorMessage) {
+                                        if (!success) {
+                                            qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned character password for" << newProfileName << ":" << errorMessage;
+                                        }
+                                        continueAfterCleanup();
+                                    });
+                                } else if (foundProxyEntry) {
+                                    safeCredManager->removePassword(newProfileName, "proxy", [newProfileName, continueAfterCleanup](bool success, const QString& errorMessage) {
+                                        if (!success) {
+                                            qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned proxy password for" << newProfileName << ":" << errorMessage;
+                                        }
+                                        continueAfterCleanup();
+                                    });
+                                } else {
+                                    // No cleanup needed
+                                    continueAfterCleanup();
+                                }
+                            });
+                });
+
+        return; // Exit here - continueProfileSave will be called from the callback
     }
 
     if (mudlet::self()->storingPasswordsSecurely()) {
         migrateSecuredPassword(currentProfileEditName, newProfileName);
     }
 
+    continueProfileSave(pItem, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl);
+}
+
+void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, const QString& newProfileHost, const QString& newProfilePort, const int newProfileSslTsl)
+{
+    const QString currentProfileEditName = pItem->data(csmNameRole).toString();
     setItemName(pItem, newProfileName);
 
-    const QDir currentPath(mudlet::getMudletPath(mudlet::profileHomePath, currentProfileEditName));
+    const QDir currentPath(mudlet::getMudletPath(enums::profileHomePath, currentProfileEditName));
     const QDir dir;
 
     if (currentPath.exists()) {
         // CHECKME: previous code specified a path ending in a '/'
-        QDir parentpath(mudlet::getMudletPath(mudlet::profilesPath));
+        QDir parentpath(mudlet::getMudletPath(enums::profilesPath));
         if (!parentpath.rename(currentProfileEditName, newProfileName)) {
             notificationArea->show();
             notificationAreaIconLabelWarning->show();
@@ -561,7 +770,7 @@ void dlgConnectionProfiles::slot_saveName()
             notificationAreaMessageBox->show();
             notificationAreaMessageBox->setText(tr("Could not rename your profile data on the computer."));
         }
-    } else if (!dir.mkpath(mudlet::getMudletPath(mudlet::profileHomePath, newProfileName))) {
+    } else if (!dir.mkpath(mudlet::getMudletPath(enums::profileHomePath, newProfileName))) {
         notificationArea->show();
         notificationAreaIconLabelWarning->show();
         notificationAreaIconLabelError->hide();
@@ -589,12 +798,12 @@ void dlgConnectionProfiles::slot_saveName()
         // run fillout_form to re-create the default profile icon and description
         fillout_form();
         // and re-select the profile since focus is lost
-        auto pRestoredItems = findData(*profiles_tree_widget, newProfileName, csmNameRole);
-        Q_ASSERT_X(pRestoredItems.count() == 1, "dlgConnectionProfiles::slot_saveName", "Couldn't find exactly 1 restored profile to select");
+        auto pRestoredItems = findData(*listWidget_profiles, newProfileName, csmNameRole);
+        Q_ASSERT_X(pRestoredItems.count() == 1, "dlgConnectionProfiles::continueProfileSave", "Couldn't find exactly 1 restored profile to select");
 
         // As we are using QAbstractItemView::SingleSelection this will
         // automatically unselect the previous item:
-        profiles_tree_widget->setCurrentItem(pRestoredItems.first());
+        listWidget_profiles->setCurrentItem(pRestoredItems.first());
         slot_itemClicked(pRestoredItems.first());
     } else {
         setItemName(pItem, newProfileName);
@@ -606,11 +815,15 @@ void dlgConnectionProfiles::slot_addProfile()
 {
     profile_name_entry->setReadOnly(false);
     // while normally handled by fillout_form, due to it's asynchronous nature it is better UX to reset it here
-    character_password_entry->setText(QString());
+    // Block signals to prevent triggering password save for the previously selected profile
+    {
+        const QSignalBlocker blocker(character_password_entry);
+        character_password_entry->setText(QString());
+    }
     fillout_form();
     welcome_message->hide();
 
-    informationalArea->show();
+    informationArea->show();
     tabWidget_connectionInfo->show();
 
     const QString newname = tr("new profile name");
@@ -621,7 +834,7 @@ void dlgConnectionProfiles::slot_addProfile()
     }
     setItemName(pItem, newname);
 
-    profiles_tree_widget->addItem(pItem);
+    listWidget_profiles->addItem(pItem);
 
     // insert newest entry on top of the list as the general sorting
     // is always newest item first -> fillout->form() filters
@@ -629,7 +842,7 @@ void dlgConnectionProfiles::slot_addProfile()
 
     // As we are using QAbstractItemView::SingleSelection this will
     // automatically unselect the previous item:
-    profiles_tree_widget->setCurrentItem(pItem);
+    listWidget_profiles->setCurrentItem(pItem);
 
     profile_name_entry->setText(newname);
     profile_name_entry->setFocus();
@@ -650,7 +863,7 @@ void dlgConnectionProfiles::slot_addProfile()
 // enables the deletion button once the correct text (profile name) is entered
 void dlgConnectionProfiles::slot_deleteProfileCheck(const QString& text)
 {
-    const QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    const QString profile = listWidget_profiles->currentItem()->data(csmNameRole).toString();
     if (profile != text) {
         delete_button->setEnabled(false);
     } else {
@@ -662,14 +875,49 @@ void dlgConnectionProfiles::slot_deleteProfileCheck(const QString& text)
 // actually performs the deletion once the correct text has been entered
 void dlgConnectionProfiles::slot_reallyDeleteProfile()
 {
-    const QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    const QString profile = listWidget_profiles->currentItem()->data(csmNameRole).toString();
     reallyDeleteProfile(profile);
 }
 
 void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
 {
-    QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, profile));
+    QDir dir(mudlet::getMudletPath(enums::profileHomePath, profile));
     dir.removeRecursively();
+
+    // Clean up keychain entries for the deleted profile
+    // Note: CredentialManager only supports one operation at a time, so we must
+    // chain the operations - the second removal starts only after the first completes.
+    // This prevents lost callbacks from aborting in-progress keychain operations.
+    // Crash prevention comes from parentless CredentialManager + QPointer guards.
+    // Create CredentialManager without a parent to avoid destruction when dialog closes
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        QPointer<CredentialManager> safeCredManager = new CredentialManager(nullptr);
+
+        // Clean up character password entry first, then chain proxy cleanup
+        safeCredManager->removePassword(profile, "character", [safeCredManager, profile](bool success, const QString& errorMessage) {
+            if (!success) {
+                qWarning() << "dlgConnectionProfiles: Failed to clean up character password for deleted profile" << profile << ":" << errorMessage;
+            }
+
+            // Check if credManager was destroyed before chaining next operation
+            if (!safeCredManager) {
+                qWarning() << "dlgConnectionProfiles: CredentialManager destroyed, cannot clean up proxy password";
+                return;
+            }
+
+            // Now clean up proxy password entry (chained after character password removal completes)
+            safeCredManager->removePassword(profile, "proxy", [safeCredManager, profile](bool proxySuccess, const QString& proxyErrorMessage) {
+                if (!proxySuccess) {
+                    qWarning() << "dlgConnectionProfiles: Failed to clean up proxy password for deleted profile" << profile << ":" << proxyErrorMessage;
+                }
+
+                // Clean up the credential manager after both operations complete (if still valid)
+                if (safeCredManager) {
+                    safeCredManager->deleteLater();
+                }
+            });
+        });
+    }
 
     // record the deleted default profile so it does not get re-created in the future
     auto& settings = *mudlet::self()->mpSettings;
@@ -680,25 +928,25 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
     settings.setValue(qsl("deletedDefaultMuds"), deletedDefaultMuds);
 
     fillout_form();
-    profiles_tree_widget->setFocus();
+    listWidget_profiles->setFocus();
 }
 
 // called when the 'delete' button is pressed, raises a dialog to confirm deletion
 // if this profile has been used
 void dlgConnectionProfiles::slot_deleteProfile()
 {
-    if (!profiles_tree_widget->currentItem()) {
+    if (!listWidget_profiles->currentItem()) {
         return;
     }
 
-    const QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    const QString profile = listWidget_profiles->currentItem()->data(csmNameRole).toString();
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
     if (!onlyShownPredefinedProfiles.isEmpty() && onlyShownPredefinedProfiles.contains(profile)) {
         // Do NOT allow deletion of the prioritised predefined MUD:
         return;
     }
 
-    const QDir profileDirContents(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile));
+    const QDir profileDirContents(mudlet::getMudletPath(enums::profileXmlFilesPath, profile));
     if (!profileDirContents.exists() || profileDirContents.isEmpty()) {
         // shortcut - don't show profile deletion confirmation if there is no data to delete
         reallyDeleteProfile(profile);
@@ -708,7 +956,10 @@ void dlgConnectionProfiles::slot_deleteProfile()
     QUiLoader loader;
 
     QFile file(qsl(":/ui/delete_profile_confirmation.ui"));
-    file.open(QFile::ReadOnly);
+    if (!file.open(QFile::ReadOnly)) {
+        qWarning() << "dlgConnectionProfiles: failed to open UI file for reading:" << file.errorString();
+        return;
+    }
 
     auto* delete_profile_dialog = dynamic_cast<QDialog*>(loader.load(&file, this));
     file.close();
@@ -740,7 +991,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
 QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item) const
 {
-    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
+    QFile file(mudlet::getMudletPath(enums::profileDataItemPath, profile, item));
     const bool success = file.open(QIODevice::ReadOnly);
     QString ret;
     if (success) {
@@ -757,7 +1008,7 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
 
 QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
-    QSaveFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
+    QSaveFile file(mudlet::getMudletPath(enums::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
@@ -765,40 +1016,54 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
         }
         ofs << what;
         if (!file.commit()) {
-            qDebug().noquote().nospace() << "dlgConnectionProfiles::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";
+            qDebug().noquote().nospace() << "dlgConnectionProfiles::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString()
+                                         << "\".";
         }
     }
 
     if (file.error() == QFileDevice::NoError) {
         return {true, QString()};
-    } else {
-        return {false, file.errorString()};
     }
+    return {false, file.errorString()};
 }
 
 QString dlgConnectionProfiles::getDescription(const QString& profile_name) const
 {
-    auto itDetails = TGameDetails::findGame(profile_name);
-    if (itDetails != TGameDetails::scmDefaultGames.constEnd()) {
-        if (!(*itDetails).description.isEmpty()) {
-            return (*itDetails).description;
+    QString profileDesc = readProfileData(profile_name, qsl("description"));
+
+    if (profileDesc.isEmpty()) {
+        auto itDetails = TGameDetails::findGame(profile_name);
+        if (itDetails != TGameDetails::scmDefaultGames.constEnd()) {
+            if (!(*itDetails).description.isEmpty()) {
+                return (*itDetails).description;
+            }
         }
     }
 
-    // Else, if there isn't a predefined text, return whatever the user might
-    // have stored:
-    return readProfileData(profile_name, qsl("description"));
+    return profileDesc;
 }
 
 void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 {
     if (!pItem) {
+        qDebug() << "dlgConnectionProfiles::slot_itemClicked() called with null item";
         return;
     }
 
-    slot_togglePasswordVisibility(false);
-
     const QString profile_name = pItem->data(csmNameRole).toString();
+
+    // Prevent rapid duplicate clicks on the same profile
+    static QString lastProfileClicked;
+    static QTime lastClickTime;
+
+    if (profile_name == lastProfileClicked && lastClickTime.isValid() && lastClickTime.msecsTo(QTime::currentTime()) < 100) {
+        return;
+    }
+
+    lastProfileClicked = profile_name;
+    lastClickTime = QTime::currentTime();
+
+    slot_togglePasswordVisibility(false);
 
     profile_name_entry->setText(profile_name);
 
@@ -834,19 +1099,24 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     // because there isn't one in storage yet. It'll be copied over into the widget
     // by the copy method
     if (!mCopyingProfile) {
-        character_password_entry->setText(QString());
-        if (mudlet::self()->storingPasswordsSecurely()) {
-            loadSecuredPassword(profile_name, [this, profile_name](const QString& password) {
-                if (!password.isEmpty()) {
-                    character_password_entry->setText(password);
-                } else {
-                    character_password_entry->setText(readProfileData(profile_name, qsl("password")));
-                }
-            });
-
-        } else {
-            character_password_entry->setText(readProfileData(profile_name, qsl("password")));
+        // Cancel any pending password save from the previous profile to prevent
+        // cross-profile password corruption when rapidly switching profiles
+        if (mPasswordSaveTimer) {
+            mPasswordSaveTimer->stop();
         }
+        mPendingPasswordSaveProfile.clear();
+
+        // Block signals when clearing to prevent triggering a save for the wrong profile
+        {
+            const QSignalBlocker blocker(character_password_entry);
+            character_password_entry->setText(QString());
+        }
+        // Schedule password loading asynchronously to avoid event loop issues
+        auto* timer = new QTimer(this);
+        timer->setSingleShot(true);
+        timer->setProperty("profileName", profile_name);
+        connect(timer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_loadPasswordAsync);
+        timer->start(0);
     }
 
     val = readProfileData(profile_name, qsl("login"));
@@ -898,7 +1168,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     profile_history->clear();
 
-    QDir dir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
+    QDir dir(mudlet::getMudletPath(enums::profileXmlFilesPath, profile_name));
     dir.setSorting(QDir::Time);
     const QStringList entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
 
@@ -924,7 +1194,6 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
                 year = match.captured(3);
             }
 
-
             QDateTime datetime;
             datetime.setTime(QTime(hour.toInt(), minute.toInt(), second.toInt()));
             datetime.setDate(QDate(year.toInt(), month.toInt(), day.toInt()));
@@ -932,10 +1201,9 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         } else if (entry == QLatin1String("autosave.xml")) {
             const QFileInfo fileInfo(dir, entry);
             auto lastModified = fileInfo.lastModified();
-            profile_history->addItem(QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png"))),
-                                     mudlet::self()->getUserLocale().toString(lastModified, mDateTimeFormat),
-                                     QVariant(entry));
-        } else {
+            profile_history->addItem(
+                    QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png"))), mudlet::self()->getUserLocale().toString(lastModified, mDateTimeFormat), QVariant(entry));
+        } else if (entry.endsWith(QLatin1String(".xml"), Qt::CaseInsensitive)) {
             profile_history->addItem(entry, QVariant(entry)); // if it has a custom name, use it as it is
         }
     }
@@ -945,6 +1213,11 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     const QString profileLoadedMessage = tr("This profile is currently loaded - close it before changing the connection parameters.");
 
     if (mudlet::self()->getHostManager().getHost(profile_name)) {
+        remove_profile_button->setEnabled(false);
+        remove_profile_button->setToolTip(utils::richText(tr("A profile that is in use cannot be removed")));
+        connect_button->setEnabled(false);
+        offline_button->setEnabled(false);
+
         profile_name_entry->setReadOnly(true);
         host_name_entry->setReadOnly(true);
         port_entry->setReadOnly(true);
@@ -979,6 +1252,8 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         if (notificationAreaMessageBox->text() == profileLoadedMessage) {
             clearNotificationArea();
         }
+        remove_profile_button->setEnabled(true);
+        remove_profile_button->setToolTip(QString());
     }
 }
 
@@ -1005,17 +1280,17 @@ void dlgConnectionProfiles::updateDiscordStatus()
 // (re-)creates the dialogs profile list
 void dlgConnectionProfiles::fillout_form()
 {
-    profiles_tree_widget->clear();
+    listWidget_profiles->clear();
     profile_name_entry->clear();
     host_name_entry->clear();
     port_entry->clear();
 
-    mProfileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    mProfileList = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     if (mProfileList.isEmpty()) {
         welcome_message->show();
         tabWidget_connectionInfo->hide();
-        informationalArea->hide();
+        informationArea->hide();
 
 // collapse the width as the default is too big and set the height to a reasonable default
 // to fit all of the 'Welcome' message
@@ -1029,10 +1304,10 @@ void dlgConnectionProfiles::fillout_form()
         welcome_message->hide();
 
         tabWidget_connectionInfo->show();
-        informationalArea->show();
+        informationArea->show();
     }
 
-    profiles_tree_widget->setIconSize(QSize(120, 30));
+    listWidget_profiles->setIconSize(QSize(120, 30));
     QString description;
     QListWidgetItem* pItem;
 
@@ -1057,7 +1332,7 @@ void dlgConnectionProfiles::fillout_form()
             // Can't use setupMudProfile(...) here as we do not set the icon in the same way:
             setItemName(pItem, mudServer);
 
-            profiles_tree_widget->addItem(pItem);
+            listWidget_profiles->addItem(pItem);
             description = getDescription(qsl("mudlet.org"));
             if (!description.isEmpty()) {
                 pItem->setToolTip(utils::richText(description));
@@ -1065,8 +1340,8 @@ void dlgConnectionProfiles::fillout_form()
         }
 #endif
     } else {
-        pItem = new QListWidgetItem();
         for (const QString& onlyShownPredefinedProfile : onlyShownPredefinedProfiles) {
+            pItem = new QListWidgetItem();
             auto details = TGameDetails::findGame(onlyShownPredefinedProfile);
             setupMudProfile(pItem, onlyShownPredefinedProfile, (*details).description, (*details).icon);
         }
@@ -1081,13 +1356,13 @@ void dlgConnectionProfiles::fillout_form()
     int predefined_profile_row = -1;
     bool firstMudletLaunch = true;
 
-    for (int i = 0; i < profiles_tree_widget->count(); i++) {
-        const auto profile = profiles_tree_widget->item(i);
+    for (int i = 0; i < listWidget_profiles->count(); i++) {
+        const auto profile = listWidget_profiles->item(i);
         const auto profileName = profile->data(csmNameRole).toString();
         if (profileName == qsl("Mudlet self-test")) {
             test_profile_row = i;
         }
-        const auto fileinfo = QFileInfo(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profileName));
+        const auto fileinfo = QFileInfo(mudlet::getMudletPath(enums::profileXmlFilesPath, profileName));
         if (fileinfo.exists()) {
             firstMudletLaunch = false;
             const QDateTime profile_lastRead = fileinfo.lastModified();
@@ -1108,9 +1383,9 @@ void dlgConnectionProfiles::fillout_form()
         if (onlyShownPredefinedProfiles.isEmpty()) {
             // Select a random pre-defined profile to give all MUDs a fair go first time
             // make sure not to select the test_profile though
-            if (profiles_tree_widget->count() > 1) {
+            if (listWidget_profiles->count() > 1) {
                 while (toselectRow == -1 || toselectRow == test_profile_row) {
-                    toselectRow = QRandomGenerator::global()->bounded(profiles_tree_widget->count());
+                    toselectRow = QRandomGenerator::global()->bounded(listWidget_profiles->count());
                 }
             }
         } else if (predefined_profile_row >= 0) {
@@ -1121,7 +1396,7 @@ void dlgConnectionProfiles::fillout_form()
     }
 
     if (toselectRow != -1) {
-        profiles_tree_widget->setCurrentRow(toselectRow);
+        listWidget_profiles->setCurrentRow(toselectRow);
     }
 
     updateDiscordStatus();
@@ -1131,8 +1406,7 @@ void dlgConnectionProfiles::setProfileIcon() const
 {
     const QStringList defaultGames = TGameDetails::keys();
 
-    for (int i = 0; i < mProfileList.size(); i++) {
-        const QString& profileName = mProfileList.at(i);
+    for (const QString& profileName : mProfileList) {
         if (profileName.isEmpty()) {
             continue;
         }
@@ -1156,7 +1430,7 @@ void dlgConnectionProfiles::setProfileIcon() const
 
 bool dlgConnectionProfiles::hasCustomIcon(const QString& profileName) const
 {
-    return QFileInfo::exists(mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, qsl("profileicon")));
+    return QFileInfo::exists(mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon")));
 }
 
 void dlgConnectionProfiles::loadCustomProfile(const QString& profileName) const
@@ -1169,12 +1443,12 @@ void dlgConnectionProfiles::loadCustomProfile(const QString& profileName) const
     if (!description.isEmpty()) {
         pItem->setToolTip(utils::richText(description));
     }
-    profiles_tree_widget->addItem(pItem);
+    listWidget_profiles->addItem(pItem);
 }
 
 void dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidgetItem* profile) const
 {
-    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, qsl("profileicon"));
+    auto profileIconPath = mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon"));
     auto icon = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
     profile->setIcon(icon);
 }
@@ -1185,41 +1459,39 @@ void dlgConnectionProfiles::migrateSecuredPassword(const QString& oldProfile, co
     const auto& password = character_password_entry->text().trimmed();
 
     deleteSecurePassword(oldProfile);
-    writeSecurePassword(newProfile, password);
+
+    // Only store the password if it's not empty
+    if (!password.isEmpty()) {
+        writeSecurePassword(newProfile, password);
+    }
 }
 
 template <typename L>
 void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callback)
 {
-    // character_password_entry
+    // Use async API for QtKeychain integration with file fallback
+    auto* credManager = new CredentialManager();
 
-    auto* job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile"));
-    job->setAutoDelete(false);
-    job->setInsecureFallback(false);
-
-    job->setKey(profile);
-
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* task) {
-        if (task->error()) {
-            const auto error = task->errorString();
-            if (error != qsl("Entry not found") && error != qsl("No match")) {
-                qDebug().nospace().noquote() << "dlgConnectionProfiles::loadSecuredPassword() ERROR - could not retrieve secure password for \"" << profile << "\", error is: " << error << ".";
+    credManager->retrievePassword(profile, "character", [credManager, callback = std::move(callback)](bool success, const QString& password, const QString& errorMessage) {
+        if (success) {
+            callback(password);
+            QString passwordCopy = password; // Make a copy for secure clearing
+            SecureStringUtils::secureStringClear(passwordCopy);
+        } else {
+            if (!errorMessage.isEmpty()) {
+                qDebug() << "dlgConnectionProfiles: Failed to retrieve password:" << errorMessage;
             }
-
+            callback(QString()); // Call with empty string on failure
         }
 
-        auto readJob = static_cast<QKeychain::ReadPasswordJob*>(task);
-        callback(readJob->textData());
-
-        task->deleteLater();
+        // Clean up the credential manager
+        credManager->deleteLater();
     });
-
-    job->start();
 }
 
 std::optional<QColor> getCustomColor(const QString& profileName)
 {
-    auto profileColorPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, qsl("profilecolor"));
+    auto profileColorPath = mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
     if (QFileInfo::exists(profileColorPath)) {
         QFile file(profileColorPath);
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -1241,13 +1513,13 @@ void dlgConnectionProfiles::generateCustomProfile(const QString& profileName) co
     auto pItem = new QListWidgetItem();
     setItemName(pItem, profileName);
     pItem->setIcon(customIcon(profileName, getCustomColor(profileName)));
-    profiles_tree_widget->addItem(pItem);
+    listWidget_profiles->addItem(pItem);
 }
 
 void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
 {
-    const QPoint globalPos = profiles_tree_widget->mapToGlobal(pos);
-    auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    const QPoint globalPos = listWidget_profiles->mapToGlobal(pos);
+    auto profileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
 
     QMenu menu;
     if (hasCustomIcon(profileName)) {
@@ -1271,13 +1543,18 @@ void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
 
 void dlgConnectionProfiles::slot_setCustomIcon()
 {
-    auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    auto profileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
 
-    const QString imageLocation = QFileDialog::getOpenFileName(
-            this, tr("Select custom image for profile (should be 120x30)"), QStandardPaths::writableLocation(QStandardPaths::HomeLocation), tr("Images (%1)").arg(qsl("*.png *.gif *.jpg")));
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+
+    const QString imageLocation = QFileDialog::getOpenFileName(this, tr("Select custom image for profile (should be 120x30)"), lastDir, tr("Images (%1)").arg(qsl("*.png *.gif *.jpg")));
     if (imageLocation.isEmpty()) {
         return;
     }
+
+    lastDir = QFileInfo(imageLocation).absolutePath();
+    settings.setValue("lastFileDialogLocation", lastDir);
 
     const bool success = mudlet::self()->setProfileIcon(profileName, imageLocation).first;
     if (!success) {
@@ -1285,54 +1562,39 @@ void dlgConnectionProfiles::slot_setCustomIcon()
     }
 
     auto icon = QIcon(QPixmap(imageLocation).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
-    profiles_tree_widget->currentItem()->setIcon(icon);
+    listWidget_profiles->currentItem()->setIcon(icon);
 }
 void dlgConnectionProfiles::slot_setCustomColor()
 {
-    auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    auto profileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
     QColor color = QColorDialog::getColor(getCustomColor(profileName).value_or(QColor(255, 255, 255)));
     if (color.isValid()) {
-        auto profileColorPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, qsl("profilecolor"));
+        auto profileColorPath = mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
         QSaveFile file(profileColorPath);
-        file.open(QIODevice::WriteOnly | QIODevice::Text);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            qWarning() << "dlgConnectionProfiles: failed to open profile color file for writing:" << file.errorString();
+            return;
+        }
         auto colorName = color.name();
         file.write(colorName.toUtf8(), colorName.length());
         if (!file.commit()) {
             qDebug() << "dlgConnectionProfiles::slot_setCustomColor: error saving custom icon color: " << file.errorString();
         }
-        profiles_tree_widget->currentItem()->setIcon(customIcon(profileName, {color}));
+        listWidget_profiles->currentItem()->setIcon(customIcon(profileName, {color}));
     }
 }
 void dlgConnectionProfiles::slot_resetCustomIcon()
 {
-    auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    auto profileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
 
     const bool success = mudlet::self()->resetProfileIcon(profileName).first;
     if (!success) {
         return;
     }
 
-    auto currentRow = profiles_tree_widget->currentRow();
+    auto currentRow = listWidget_profiles->currentRow();
     fillout_form();
-    profiles_tree_widget->setCurrentRow(currentRow);
-}
-
-void dlgConnectionProfiles::slot_passwordSaved(QKeychain::Job* job)
-{
-    if (job->error()) {
-        qWarning().nospace().noquote() << "dlgslot_passwordSaved:slot_passwordSaved(...) ERROR - could not save password for \"" << job->property("profile").toString() << "\"; error was: \"" << job->errorString() << "\".";
-    }
-
-    job->deleteLater();
-}
-
-void dlgConnectionProfiles::slot_passwordDeleted(QKeychain::Job* job)
-{
-    if (job->error()) {
-        qWarning() << "dlgConnectionProfiles::slot_passwordDeleted(...) ERROR - could not delete password for: \"" << job->property("profile").toString() << "\"; error was: \"" << job->errorString() << "\".";
-    }
-
-    job->deleteLater();
+    listWidget_profiles->setCurrentRow(currentRow);
 }
 
 void dlgConnectionProfiles::slot_cancel()
@@ -1357,7 +1619,7 @@ void dlgConnectionProfiles::slot_copyProfile()
     }
 
     // copy the folder on-disk
-    const QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, oldname));
+    const QDir dir(mudlet::getMudletPath(enums::profileHomePath, oldname));
     if (!dir.exists()) {
         mCopyingProfile = false;
         return;
@@ -1366,9 +1628,9 @@ void dlgConnectionProfiles::slot_copyProfile()
     QApplication::setOverrideCursor(Qt::BusyCursor);
     mpCopyProfile->setText(tr("Copying..."));
     mpCopyProfile->setEnabled(false);
-    auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(mudlet::profileHomePath, oldname), mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
+    auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(enums::profileHomePath, oldname), mudlet::getMudletPath(enums::profileHomePath, profile_name));
     auto watcher = new QFutureWatcher<bool>;
-    connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
+    connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
         mProfileList << profile_name;
         slot_itemClicked(pItem);
         // Clear the Discord optin on the copied profile - just because the source
@@ -1377,8 +1639,13 @@ void dlgConnectionProfiles::slot_copyProfile()
         discord_optin_checkBox->setChecked(false);
 
         // restore the password, which won't be copied by the disk copy if stored in the credential manager
-        character_password_entry->setText(oldPassword);
-        if (mudlet::self()->storingPasswordsSecurely()) {
+        // Temporarily block textChanged signal to avoid triggering save on programmatic setText
+        {
+            const QSignalBlocker blocker(character_password_entry);
+            character_password_entry->setText(oldPassword);
+        }
+
+        if (mudlet::self()->storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
             writeSecurePassword(profile_name, oldPassword);
         }
         mCopyingProfile = false;
@@ -1386,6 +1653,7 @@ void dlgConnectionProfiles::slot_copyProfile()
         mpCopyProfile->setEnabled(true);
         QApplication::restoreOverrideCursor();
         validateProfile();
+        watcher->deleteLater();
     });
     watcher->setFuture(future);
 }
@@ -1399,16 +1667,16 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
         return;
     }
 
-    const QDir newProfileDir(mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
+    const QDir newProfileDir(mudlet::getMudletPath(enums::profileHomePath, profile_name));
     newProfileDir.mkpath(newProfileDir.path());
     if (!newProfileDir.exists()) {
         return;
     }
 
     // copy relevant profile files
-    for (const QString file : {"url", "port", "password", "login", "description"}) {
-        auto filePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileHomePath, oldname), file);
-        auto newFilePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileHomePath, profile_name), file);
+    for (const QString& file : {qsl("url"), qsl("port"), qsl("password"), qsl("login"), qsl("description")}) {
+        auto filePath = qsl("%1/%2").arg(mudlet::getMudletPath(enums::profileHomePath, oldname), file);
+        auto newFilePath = qsl("%1/%2").arg(mudlet::getMudletPath(enums::profileHomePath, profile_name), file);
         QFile::copy(filePath, newFilePath);
     }
 
@@ -1452,9 +1720,9 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
     setItemName(pItem, profile_name);
 
     // add the new widget in
-    profiles_tree_widget->addItem(pItem);
+    listWidget_profiles->addItem(pItem);
     pItem->setIcon(customIcon(profile_name, std::nullopt));
-    profiles_tree_widget->setCurrentItem(pItem);
+    listWidget_profiles->setCurrentItem(pItem);
 
     profile_name_entry->setText(profile_name);
     profile_name_entry->setFocus();
@@ -1468,8 +1736,8 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
 
 void dlgConnectionProfiles::copyProfileSettingsOnly(const QString& oldname, const QString& newname)
 {
-    const QDir oldProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, oldname));
-    const QDir newProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, newname));
+    const QDir oldProfiledir(mudlet::getMudletPath(enums::profileXmlFilesPath, oldname));
+    const QDir newProfiledir(mudlet::getMudletPath(enums::profileXmlFilesPath, newname));
     newProfiledir.mkpath(newProfiledir.absolutePath());
     QStringList entries = oldProfiledir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     if (entries.empty()) {
@@ -1538,15 +1806,6 @@ void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pug
     }
 }
 
-void dlgConnectionProfiles::slot_load()
-{
-    setVisible(false);
-    // This is needed to make the above take effect as fast as possible:
-    qApp->processEvents();
-    loadProfile(false);
-    QDialog::accept();
-}
-
 void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 {
     const QString profile_name = profile_name_entry->text().trimmed();
@@ -1555,10 +1814,34 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         return;
     }
 
-    Host *pHost = mudlet::self()->loadProfile(profile_name, alsoConnect);
+    // Check if the host already exists before calling mudlet::loadProfile()
+    Host* pHostBeforeLoad = mudlet::self()->getHostManager().getHost(profile_name);
+    bool hostExistedBefore = (pHostBeforeLoad != nullptr);
+
+    Host* pHost = mudlet::self()->loadProfile(profile_name, alsoConnect, profile_history->currentData().toString());
 
     // overwrite the generic profile with user supplied name, url and login information
     if (pHost) {
+        Host* pActiveHost = mudlet::self()->getActiveHost();
+
+        if (pActiveHost && pActiveHost->getName() == profile_name) {
+            // Skip reconnect if mudlet::loadProfile already connected for existing hosts
+            if (alsoConnect && hostExistedBefore) {
+                QDialog::accept();
+                return;
+            }
+            // Reconnect to the active profile
+            pActiveHost->mTelnet.reconnect();
+            QDialog::accept();
+            return;
+        }
+
+        // Skip signal emission if mudlet::loadProfile already handled the connection
+        if (alsoConnect && hostExistedBefore) {
+            QDialog::accept();
+            return;
+        }
+
         pHost->setName(profile_name);
 
         if (!host_name_entry->text().trimmed().isEmpty()) {
@@ -1577,9 +1860,11 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
         if (!character_password_entry->text().trimmed().isEmpty()) {
             pHost->setPass(character_password_entry->text().trimmed());
-        } else {
-            slot_updatePassword(pHost->getPass());
         }
+        // Note: If password field is empty, we don't call slot_updatePassword() because:
+        // 1. The host's password was already loaded via Host::loadSecuredPassword()
+        // 2. Calling slot_updatePassword with empty password would delete the stored password
+        // 3. slot_updatePassword reads profile from list widget which could mismatch
 
         if (!login_entry->text().trimmed().isEmpty()) {
             pHost->setLogin(login_entry->text().trimmed());
@@ -1588,8 +1873,12 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         }
 
         // This settings also need to be configured, note that the only time not to
-        // save the setting is on profile loading:
-        pHost->mTelnet.setEncoding(readProfileData(profile_name, qsl("encoding")).toUtf8(), false);
+        // save the setting is on profile loading. Only override the default UTF-8
+        // encoding if a saved encoding exists:
+        const QByteArray savedEncoding = readProfileData(profile_name, qsl("encoding")).toUtf8();
+        if (!savedEncoding.isEmpty()) {
+            pHost->mTelnet.setEncoding(savedEncoding, false);
+        }
         // Needed to ensure setting is correct on start-up:
         pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
         pHost->setAutoReconnect(auto_reconnect->isChecked());
@@ -1615,7 +1904,7 @@ bool dlgConnectionProfiles::validateProfile()
 
     clearNotificationArea();
 
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+    QListWidgetItem* pItem = listWidget_profiles->currentItem();
 
     if (pItem) {
         QString name = profile_name_entry->text().trimmed();
@@ -1706,26 +1995,26 @@ bool dlgConnectionProfiles::validateProfile()
             valid = false;
         }
 
-        if (url.indexOf(QRegularExpression(qsl("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
-            if (port_ssl_tsl->isChecked()) {
-                notificationAreaIconLabelError->show();
-                notificationAreaMessageBox->setText(
-                        qsl("%1\n%2\n\n%3").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the Game server."), check.errorString()));
-                host_name_entry->setPalette(mErrorPalette);
-                validUrl = false;
-                valid = false;
-            }
-        }
-
-        if (url.indexOf(QRegularExpression(qsl("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
-            if (port_ssl_tsl->isChecked()) {
-                notificationAreaIconLabelError->show();
-                notificationAreaMessageBox->setText(
-                        qsl("%1\n%2\n\n%3").arg(notificationAreaMessageBox->text(), tr("SSL connections require the URL of the Game server."), check.errorString()));
-                host_name_entry->setPalette(mErrorPalette);
-                validUrl = false;
-                valid = false;
-            }
+        // Need to reject raw IP addresses (of either version 4 or 6 type) as
+        // it is very unlikely that the Security Certificates include them as
+        // a Host Name.
+        if (port_ssl_tsl->isChecked() && (cTelnet::isRawIPv4Address(url) || cTelnet::isRawIPv6Address(url))) {
+            notificationAreaIconLabelError->show();
+            // As the only tags are not on the first line the default
+            // Qt::AutoFormat won't detect that rich-text is present in this text!
+            notificationAreaMessageBox->setTextFormat(Qt::RichText);
+            /*: Please use two line-feeds after the first line so the second
+ line can be italicised and spaced out - if appropriate for
+ the locale.*/
+            notificationAreaMessageBox->setText(qsl("%1%2\n\n%3")
+                                                        .arg(!notificationAreaMessageBox->text().isEmpty() ? notificationAreaMessageBox->text().append(QChar::LineFeed) : QString(),
+                                                             tr("Please enter the URL of the Game server.\n\n"
+                                                                "<i>SSL/TLS connections require a URL, as an IP address is not a suitable "
+                                                                "identifier for the certification of the Game Server.</i>"),
+                                                             check.errorString()));
+            host_name_entry->setPalette(mErrorPalette);
+            validUrl = false;
+            valid = false;
         }
 
         if (valid) {
@@ -1781,16 +2070,16 @@ bool dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QStrin
         destDir.mkdir(destFolder);
     }
     QStringList files = sourceDir.entryList(QDir::Files);
-    for (int i = 0; i < files.count(); i++) {
-        const QString srcName = sourceFolder + QDir::separator() + files[i];
-        const QString destName = destFolder + QDir::separator() + files[i];
+    for (const QString& file : files) {
+        const QString srcName = sourceFolder + QDir::separator() + file;
+        const QString destName = destFolder + QDir::separator() + file;
         QFile::copy(srcName, destName);
     }
     files.clear();
     files = sourceDir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot);
-    for (int i = 0; i < files.count(); i++) {
-        const QString srcName = sourceFolder + QDir::separator() + files[i];
-        const QString destName = destFolder + QDir::separator() + files[i];
+    for (const QString& file : files) {
+        const QString srcName = sourceFolder + QDir::separator() + file;
+        const QString destName = destFolder + QDir::separator() + file;
         copyFolder(srcName, destName);
     }
     return true;
@@ -1835,8 +2124,8 @@ QList<QListWidgetItem*> dlgConnectionProfiles::findData(const QListWidget& listW
 QList<int> dlgConnectionProfiles::findProfilesBeginningWith(const QString& what) const
 {
     QList<int> results;
-    for (int index = 0, total = profiles_tree_widget->count(); index < total; ++index) {
-        if (profiles_tree_widget->item(index)->data(csmNameRole).toString().startsWith(what, Qt::CaseInsensitive)) {
+    for (int index = 0, total = listWidget_profiles->count(); index < total; ++index) {
+        if (listWidget_profiles->item(index)->data(csmNameRole).toString().startsWith(what, Qt::CaseInsensitive)) {
             results.append(index);
         }
     }
@@ -1857,10 +2146,9 @@ void dlgConnectionProfiles::setItemName(QListWidgetItem* pI, const QString& name
 
 void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QString& mudServer, const QString& serverDescription, const QString& iconFileName)
 {
-    pItem = new QListWidgetItem();
     setItemName(pItem, mudServer);
 
-    profiles_tree_widget->addItem(pItem);
+    listWidget_profiles->addItem(pItem);
     if (!hasCustomIcon(mudServer)) {
         const QPixmap pixmap(iconFileName);
         if (pixmap.isNull()) {
@@ -1927,14 +2215,14 @@ void dlgConnectionProfiles::clearNotificationArea()
 
 void dlgConnectionProfiles::slot_reenableAllProfileItems()
 {
-    for (int i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
-        profiles_tree_widget->item(i)->setFlags(profiles_tree_widget->item(i)->flags() | Qt::ItemIsEnabled);
+    for (int i = 0, total = listWidget_profiles->count(); i < total; ++i) {
+        listWidget_profiles->item(i)->setFlags(listWidget_profiles->item(i)->flags() | Qt::ItemIsEnabled);
     }
 }
 
 bool dlgConnectionProfiles::eventFilter(QObject* obj, QEvent* event)
 {
-    if (obj == profiles_tree_widget && event->type() == QEvent::KeyPress) {
+    if (obj == listWidget_profiles && event->type() == QEvent::KeyPress) {
         QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
         switch (keyEvent->key()) {
             // Process all the keys that could be used in a profile name
@@ -2039,15 +2327,177 @@ void dlgConnectionProfiles::addLetterToProfileSearch(const int key)
         return;
     }
 
-    for (int i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
-        auto flags = profiles_tree_widget->item(i)->flags();
+    for (int i = 0, total = listWidget_profiles->count(); i < total; ++i) {
+        auto flags = listWidget_profiles->item(i)->flags();
         if (indexes.isEmpty() || !indexes.contains(i)) {
             flags &= ~Qt::ItemIsEnabled;
         } else {
             flags |= Qt::ItemIsEnabled;
         }
-        profiles_tree_widget->item(i)->setFlags(flags);
+        listWidget_profiles->item(i)->setFlags(flags);
     }
 
-    profiles_tree_widget->setCurrentRow(indexes.first());
+    listWidget_profiles->setCurrentRow(indexes.first());
+}
+
+void dlgConnectionProfiles::slot_loadPasswordAsync()
+{
+    if (!sender()) {
+        return;
+    }
+
+    // Get the profile name from the timer's property
+    QTimer* timer = qobject_cast<QTimer*>(sender());
+    if (!timer) {
+        return;
+    }
+
+    const QString profile_name = timer->property("profileName").toString();
+
+    // Prevent duplicate password loading operations for the same profile
+    if (mKeychainOperationInProgress) {
+        return;
+    }
+
+    if (profile_name.isEmpty()) {
+        return;
+    }
+
+    // Clean up the timer
+    timer->deleteLater();
+
+    // Check if this dialog is still valid and the profile is still selected
+    if (listWidget_profiles->currentItem() == nullptr) {
+        return;
+    }
+
+    const QString currentProfileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
+
+    if (currentProfileName != profile_name) {
+        // Selection has changed, ignore this async load
+        return;
+    }
+
+    // If secure storage is enabled, try keychain first, then fallback to QSettings
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        mKeychainOperationInProgress = true;
+        auto* credManager = new CredentialManager(this);
+        credManager->retrievePassword(profile_name, "character", [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage) {
+            // Clear the operation flag first
+            mKeychainOperationInProgress = false;
+
+            // Check if profile selection has changed while we were waiting
+            if (listWidget_profiles->currentItem() && listWidget_profiles->currentItem()->data(csmNameRole).toString() == profile_name) {
+                if (success) {
+                    // Keychain operation succeeded - set the password (even if empty)
+                    // Temporarily block textChanged signal to avoid triggering save on programmatic setText
+                    {
+                        const QSignalBlocker blocker(character_password_entry);
+                        character_password_entry->setText(retrievedPassword);
+                    }
+
+                    if (retrievedPassword.isEmpty()) {
+                        qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profile_name;
+                    } else {
+                        qDebug() << "dlgConnectionProfiles: Successfully loaded password from keychain for" << profile_name;
+                    }
+                } else {
+                    // Fallback to QSettings only if credential retrieval failed
+                    loadPasswordFromSettings(profile_name);
+                    qDebug() << "dlgConnectionProfiles: Credential retrieval unsuccessful for" << profile_name << "-" << errorMessage;
+                }
+            }
+
+            // Check if there's a pending connection waiting for this password load
+            // (do this regardless of profile selection state to avoid hanging)
+            if (!mPendingProfileLoad.isEmpty() && mPendingProfileLoad == profile_name) {
+                qDebug() << "dlgConnectionProfiles: Password load completed, proceeding with pending connection for" << profile_name;
+
+                // Clear pending state
+                QString profileToLoad = mPendingProfileLoad;
+                bool shouldConnect = mPendingConnect;
+                mPendingProfileLoad.clear();
+
+                // Proceed with the connection
+                loadProfile(shouldConnect);
+                QDialog::accept();
+            }
+
+            credManager->deleteLater();
+        });
+    } else {
+        // Secure storage disabled, use QSettings directly
+        loadPasswordFromSettings(profile_name);
+
+        // Check if there's a pending connection waiting
+        if (!mPendingProfileLoad.isEmpty() && mPendingProfileLoad == profile_name) {
+            qDebug() << "dlgConnectionProfiles: Password loaded from settings, proceeding with pending connection for" << profile_name;
+
+            // Clear pending state
+            QString profileToLoad = mPendingProfileLoad;
+            bool shouldConnect = mPendingConnect;
+            mPendingProfileLoad.clear();
+
+            // Proceed with the connection
+            loadProfile(shouldConnect);
+            QDialog::accept();
+        }
+    }
+}
+
+void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name)
+{
+    auto& settings = *mudlet::self()->mpSettings;
+    settings.beginGroup(qsl("profiles/%1").arg(profile_name));
+
+    // Get password and handle migration
+    const QString password = settings.value(qsl("password"), QString()).toString();
+    const QString oldPassword = settings.value(qsl("login"), QString()).toString();
+
+    // Temporarily block textChanged signal to avoid triggering save on programmatic setText
+    {
+        const QSignalBlocker blocker(character_password_entry);
+
+        if (!password.isEmpty()) {
+            character_password_entry->setText(password);
+        } else if (!oldPassword.isEmpty()) {
+            // Migrate old password
+            character_password_entry->setText(oldPassword);
+            settings.setValue(qsl("password"), oldPassword);
+            settings.remove(qsl("login"));
+        } else {
+            character_password_entry->setText(QString());
+        }
+    }
+
+    settings.endGroup();
+}
+
+void dlgConnectionProfiles::slot_passwordTextChanged()
+{
+    QListWidgetItem* pItem = listWidget_profiles->currentItem();
+    if (!pItem) {
+        return;
+    }
+    mPendingPasswordSaveProfile = pItem->data(csmNameRole).toString();
+
+    // Cancel any pending password save
+    if (mPasswordSaveTimer) {
+        mPasswordSaveTimer->stop();
+    } else {
+        mPasswordSaveTimer = new QTimer(this);
+        mPasswordSaveTimer->setSingleShot(true);
+        mPasswordSaveTimer->setInterval(500); // 500ms debounce
+        connect(mPasswordSaveTimer, &QTimer::timeout, this, [this]() {
+            if (!mPendingPasswordSaveProfile.isEmpty()) {
+                // Check if this profile is STILL selected - if not, don't save
+                // (user switched away, so the password field content is for a different profile)
+                QListWidgetItem* currentItem = listWidget_profiles->currentItem();
+                if (currentItem && currentItem->data(csmNameRole).toString() == mPendingPasswordSaveProfile) {
+                    slot_updatePassword(character_password_entry->text());
+                }
+            }
+        });
+    }
+    mPasswordSaveTimer->start();
 }

@@ -23,14 +23,16 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QDebug>
 #include <QList>
 #include <QString>
-#include "post_guard.h"
 
 extern "C" {
-    #include <lua.h>
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lua.h>
+#else
+#include <lua.h>
+#endif
 }
 
 class TVar
@@ -39,6 +41,7 @@ public:
     TVar();
     explicit TVar(TVar*);
     TVar(TVar*, const QString&, int, const QString&, int);
+    ~TVar();
     void addChild(TVar*);
     void setParent(TVar*);
     void removeChild(TVar*);
@@ -61,20 +64,20 @@ public:
     bool isReference();
 
 public:
-    bool hidden;
-    const void* pKey;
-    const void* pValue;
-    bool saved;
+    bool hidden = false;
+    const void* pKey = nullptr;
+    const void* pValue = nullptr;
+    bool saved = false;
 
 private:
-    bool reference;
+    bool reference = false;
     QList<TVar*> children;
-    TVar* parent;
+    TVar* parent = nullptr;
     QString name;
-    int keyType;
+    int keyType = LUA_TNONE;
     QString value;
-    int valueType;
-    int newKeyType;
+    int valueType = LUA_TNONE;
+    int newKeyType = LUA_TNONE;
     QString nName;
 };
 
@@ -82,7 +85,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const TVar* var)
 {
   QDebugStateSaver saver(debug);
-  Q_UNUSED(saver);
+  Q_UNUSED(saver)
   debug.nospace() << "TVar(" << var->getName() << ")";
 
   switch (var->getKeyType()) {
@@ -102,7 +105,7 @@ inline QDebug& operator<<(QDebug& debug, const TVar* var)
     case LUA_TNONE: debug.nospace() << ", valueType=none"; break;
     case LUA_TNIL: debug.nospace() << ", valueType=nil"; break;
     case LUA_TBOOLEAN: debug.nospace() << ", valueType=boolean"; break;
-    case LUA_TLIGHTUSERDATA: debug.nospace() << ", valueType=lightuserdata"; break;  
+    case LUA_TLIGHTUSERDATA: debug.nospace() << ", valueType=lightuserdata"; break;
     case LUA_TNUMBER: debug.nospace() << ", valueType=number"; break;
     case LUA_TSTRING: debug.nospace() << ", valueType=string"; break;
     case LUA_TTABLE: debug.nospace() << ", valueType=table"; break;

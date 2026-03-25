@@ -40,6 +40,7 @@ TTimer::TTimer(TTimer* parent, Host* pHost)
     mpQTimer->setProperty(scmProperty_HostName, mpHost->getName());
     mpHost->getTimerUnit()->mQTimerSet.insert(mpQTimer);
     mpQTimer->setProperty(scmProperty_TTimerId, 0);
+    mpQTimer->setTimerType(Qt::PreciseTimer);
 }
 
 TTimer::TTimer(const QString& name, QTime time, Host* pHost, bool repeating)
@@ -54,6 +55,7 @@ TTimer::TTimer(const QString& name, QTime time, Host* pHost, bool repeating)
     mpHost->getTimerUnit()->mQTimerSet.insert(mpQTimer);
     mpQTimer->setProperty(scmProperty_TTimerId, 0);
     mRepeating = repeating;
+    mpQTimer->setTimerType(Qt::PreciseTimer);
 }
 
 TTimer::~TTimer()
@@ -69,10 +71,14 @@ TTimer::~TTimer()
                 mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
             }
         }
-    }
 
-    mpHost->getTimerUnit()->mQTimerSet.remove(mpQTimer);
-    mpQTimer->deleteLater();
+        mpHost->getTimerUnit()->mQTimerSet.remove(mpQTimer);
+        // During normal operation, use deleteLater() for safety
+        mpQTimer->deleteLater();
+    } else {
+        // During shutdown (mpHost is null), delete immediately
+        delete mpQTimer;
+    }
 }
 
 void TTimer::setName(const QString& name)
@@ -191,6 +197,13 @@ bool TTimer::checkRestart()
 
 void TTimer::execute()
 {
+    // Guard against re-entrancy: cleanup may have deleted this timer while
+    // execute() was still on the call stack
+    if (!mpMyChildrenList) {
+        qWarning() << "TTimer::execute() called on destroyed timer - ID:" << mID << "Name:" << mName;
+        return;
+    }
+
     if (!isActive() || isFolder()) {
         mpQTimer->stop();
         return;
@@ -235,7 +248,6 @@ void TTimer::execute()
         }
 
         if (!mpHost->mLuaInterpreter.call(mFuncName, mName, (mTime < mpHost->mTimerDebugOutputSuppressionInterval))) {
-
             mpQTimer->stop();
         }
     }
@@ -246,12 +258,10 @@ bool TTimer::canBeUnlocked()
     if (shouldBeActive()) {
         if (!mpParent) {
             return true;
-        } else {
-            return mpParent->canBeUnlocked();
         }
-    } else {
-        return false;
+        return mpParent->canBeUnlocked();
     }
+    return false;
 }
 
 void TTimer::enableTimer(int id)
@@ -375,3 +385,36 @@ int TTimer::remainingTime()
     return mpQTimer->remainingTime();
 }
 
+QString TTimer::packageName(TTimer* pTimer)
+{
+    if (!pTimer) {
+        return QString();
+    }
+
+    if (!pTimer->mPackageName.isEmpty()) {
+        return !mpHost->mModuleInfo.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
+    }
+
+    if (pTimer->getParent()) {
+        return packageName(pTimer->getParent());
+    }
+
+    return QString();
+}
+
+QString TTimer::moduleName(TTimer* pTimer)
+{
+    if (!pTimer) {
+        return QString();
+    }
+
+    if (!pTimer->mPackageName.isEmpty()) {
+        return mpHost->mModuleInfo.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
+    }
+
+    if (pTimer->getParent()) {
+        return moduleName(pTimer->getParent());
+    }
+
+    return QString();
+}

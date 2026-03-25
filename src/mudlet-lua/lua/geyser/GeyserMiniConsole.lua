@@ -21,7 +21,7 @@ end
 --- Replaces the currently selected text.
 -- @param with The text to use as a replacement.
 function Geyser.MiniConsole:replace (with)
-  replace(self.name, with)
+  return replace(self.name, with)
 end
 
 --- Replaces the entire line the cursor is on
@@ -130,16 +130,6 @@ end
 function Geyser.MiniConsole:disableHorizontalScrollBar()
   disableHorizontalScrollBar(self.name)
   self.horizontalScrollBar = false
-end
-
---- Enables scrolling in the miniconsole
-function Geyser.MiniConsole:enableScrolling()
-  enableScrolling(self.name)
-end
-
---- Disables scrolling in the miniconsole
-function Geyser.MiniConsole:disableScrolling()
-  disableScrolling(self.name)
 end
 
 --- Check if scrolling is enabled in the miniconsole
@@ -452,8 +442,10 @@ function Geyser.MiniConsole:resetAutoWrap()
   if not self.autoWrap then
     return nil, "Autowrap is not enabled for " .. self.name
   end
+
   local fontWidth, fontHeight = calcFontSize(self.name)
   local consoleWidth = self.get_width()
+
   if self.scrollBar then
     consoleWidth = consoleWidth - 15
   end
@@ -681,6 +673,11 @@ function Geyser.MiniConsole:new (cons, container)
     --print("  New in " .. self.name .. " : " .. me.name)
   end
   return me
+end
+
+--- Deletes the miniconsole using the C++ deleteMiniConsole function
+function Geyser.MiniConsole:type_delete()
+  deleteMiniConsole(self.name)
 end
 
 --- Overridden constructor to use add2

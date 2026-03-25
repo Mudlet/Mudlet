@@ -26,14 +26,8 @@
 
 #include "Tree.h"
 
-#include "pre_guard.h"
 #include <QDebug>
 #include <QPointer>
-#include "post_guard.h"
-
-extern "C" {
-    #include <lua.h>
-}
 
 class Host;
 
@@ -65,6 +59,9 @@ public:
     bool setScript(const QString& script);
     void setCommand(QString command) { mCommand = command; }
     QString getCommand() const { return mCommand; }
+    QString packageName(TKey* pKey);
+    QString moduleName(TKey* pKey);
+
 
     bool match(const Qt::Key, const Qt::KeyboardModifiers, const bool);
     bool registerKey();
@@ -72,6 +69,7 @@ public:
     bool exportItem = true;
     bool mModuleMasterFolder = false;
     bool mRegisteredAnonymousLuaFunction = false;
+    QPointer<Host> mpHost;
 
 private:
     TKey() = default;
@@ -95,7 +93,6 @@ private:
 
     QString mScript;
     QString mFuncName;
-    QPointer<Host> mpHost;
     bool mNeedsToBeCompiled = true;
     bool mModuleMember = false;
 };
@@ -104,7 +101,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const TKey* key)
 {
     QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
     debug.nospace() << "TKey(" << key->getName();
     debug.nospace() << ", keyCode=" << key->getKeyCode();
     debug.nospace() << ", keyModifiers=" << key->getKeyModifiers();

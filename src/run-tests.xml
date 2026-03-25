@@ -1,7 +1,84 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE MudletPackage>
 <MudletPackage version="1.001">
-	<TriggerPackage />
+	<TriggerPackage>
+		<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+			<name>Test selectCaptureGroup with nested hierarchy</name>
+			<script></script>
+			<triggerType>0</triggerType>
+			<conditonLineDelta>0</conditonLineDelta>
+			<mStayOpen>0</mStayOpen>
+			<mCommand></mCommand>
+			<packageName></packageName>
+			<mFgColor>#ff0000</mFgColor>
+			<mBgColor>#ffff00</mBgColor>
+			<mSoundFile></mSoundFile>
+			<colorTriggerFgColor>#000000</colorTriggerFgColor>
+			<colorTriggerBgColor>#000000</colorTriggerBgColor>
+			<regexCodeList />
+			<regexCodePropertyList />
+			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="yes" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>Filter</name>
+				<script></script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList>
+					<string>^Foo Bar (Baz Qux)$</string>
+				</regexCodeList>
+				<regexCodePropertyList>
+					<integer>1</integer>
+				</regexCodePropertyList>
+				<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Not Filter</name>
+					<script></script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^Baz Qux$</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Trigger</name>
+						<script>selectCaptureGroup(2)</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>^Baz (Qux)$</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>1</integer>
+						</regexCodePropertyList>
+					</Trigger>
+				</TriggerGroup>
+			</TriggerGroup>
+		</TriggerGroup>
+	</TriggerPackage>
 	<TimerPackage />
 	<AliasPackage>
 		<Alias isActive="yes" isFolder="no">
@@ -424,20 +501,19 @@ describe("should always pass", function()
   local quitMudlet = os.getenv("QUIT_MUDLET_AFTER_TESTS")
   if quitMudlet then
     ioprint("All tests complete, shutting down Mudlet")
-    -- closeMudlet on its own inside an event handler causes a crash
-    tempTimer(0, closeMudlet)
+    -- It's safe to close mudlet outside of a timer.
+    -- As the internal logic is wrapped in an internal timer already.
+    closeMudlet()
   end
-end</script>
-			<eventHandlerList>
-				<string>testsComplete</string>
-			</eventHandlerList>
+end
+			</script>
 		</Script>
 		<Script isActive="yes" isFolder="no">
 			<name>autoRunTestsEvent</name>
 			<packageName></packageName>
 			<script>function autoRunTestsEvent()
   tempTimer(
-    1,
+    0,
     function()
       autoRunTests()
     end
@@ -455,13 +531,14 @@ function autoRunTests()
 
   if not bustedState.isBustedAvailable() then
     ioprint("Busted not available - double-check that it's installed properly.")
-    raiseEvent("testsComplete")
+    quitMudletAfterTests()
     return
   end
 
   local testLocation = os.getenv("TESTS_DIRECTORY")
   if not testLocation then
     ioprint("No location for the tests provided, don't know what to run.")
+    quitMudletAfterTests()
     return
   end
 
@@ -483,19 +560,25 @@ function autoRunTests()
 
   bustedState.setup({testLocation})
   bustedState.runTests()
-  raiseEvent("testsComplete")
+  quitMudletAfterTests()
 end
 
 local errorLogged = false
 function logTestError()
   if errorLogged then return end
 
-  if getOS() == "linux" then
+  local os_name = getOS()
+  if os_name == "linux" or os_name == "mac" then
     file = io.open("/tmp/busted-tests-failed", "w")
     file:write("Lua busted tests failed")
     file:close()
+  elseif os_name == "windows" then
+    temp_directory = os.getenv("TEMP")
+    file = io.open(temp_directory.."\\busted-tests-failed", "w")
+    file:write("Lua busted tests failed")
+    file:close()
   else
-    ioprint("Tests failed, but did not know how to log the error for "..getOS())
+    ioprint("Tests failed, but did not know how to log the error for "..os_name)
   end
   errorLogged = true
 end</script>

@@ -35,7 +35,7 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
         const QString type = extractType(tag);
         const QString url = extractUrl(tag);
 
-        TMediaData mediaData {};
+        TMediaData mediaData{};
 
         mediaData.setMediaProtocol(TMediaData::MediaProtocolMSP);
         mediaData.setMediaType(TMediaData::MediaTypeSound);
@@ -51,7 +51,7 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
         if (!loops.isEmpty()) {
             mediaData.setMediaLoops(loops.toInt());
 
-            if (mediaData.getMediaLoops() < TMediaData::MediaLoopsRepeat || mediaData.getMediaLoops() == 0) {
+            if (mediaData.mediaLoops() < TMediaData::MediaLoopsRepeat || mediaData.mediaLoops() == 0) {
                 mediaData.setMediaLoops(TMediaData::MediaLoopsDefault);
             }
         } else {
@@ -61,9 +61,9 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
         if (!priority.isEmpty()) {
             mediaData.setMediaPriority(priority.toInt());
 
-            if (mediaData.getMediaPriority() > TMediaData::MediaPriorityMax) {
+            if (mediaData.mediaPriority() > TMediaData::MediaPriorityMax) {
                 mediaData.setMediaPriority(TMediaData::MediaPriorityMax);
-            } else if (mediaData.getMediaPriority() < TMediaData::MediaPriorityMin) {
+            } else if (mediaData.mediaPriority() < TMediaData::MediaPriorityMin) {
                 mediaData.setMediaPriority(TMediaData::MediaPriorityMin);
             }
         } else {
@@ -78,7 +78,7 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
             mediaData.setMediaUrl(url);
         }
 
-        if (mediaData.getMediaFileName() == "Off" && mediaData.getMediaUrl().isEmpty()) {
+        if (mediaData.mediaFileName() == "Off" && mediaData.mediaUrl().isEmpty()) {
             client.stopMedia(mediaData);
         } else {
             client.playMedia(mediaData);
@@ -105,7 +105,6 @@ QString TMxpSoundTagHandler::extractLoops(MxpStartTag* tag)
 
 QString TMxpSoundTagHandler::extractPriority(MxpStartTag* tag)
 {
-
     return tag->getAttributeByNameOrIndex(qsl("p"), 3);
 }
 

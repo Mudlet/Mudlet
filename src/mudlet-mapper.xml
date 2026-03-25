@@ -1529,7 +1529,7 @@ enableTrigger("Shadow preeminence")</script>
 					<colorTriggerFgColor>#000000</colorTriggerFgColor>
 					<colorTriggerBgColor>#000000</colorTriggerBgColor>
 					<regexCodeList>
-						<string>^((?:\d+)(?:mc|gp|cr).+)$</string>
+						<string>^((?:\d+)(?:mc|gp|cr|gp ea).+)$</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>1</integer>
@@ -1561,7 +1561,7 @@ end</script>
 						<colorTriggerFgColor>#000000</colorTriggerFgColor>
 						<colorTriggerBgColor>#000000</colorTriggerBgColor>
 						<regexCodeList>
-							<string>^.{45} (.+)$</string>
+							<string>^.{47} (.+)$</string>
 						</regexCodeList>
 						<regexCodePropertyList>
 							<integer>1</integer>
@@ -4714,6 +4714,7 @@ local function set(newid)
     setRoomEnv(rid, getRoomEnv(mmp.currentroom))
   end
   mmp.setExit(mmp.currentroom, rid, m)
+  clearRoomUserDataItem(newid, "hashonly")
   mmp.echo(string.format("Created new room (%d) at %dx, %dy, %dz.\n", rid, x, y, z))
   centerview(mmp.roomexists(mmp.currentroom) and mmp.currentroom or rid)
   if not mmp.roomexists(mmp.currentroom) then
@@ -5926,7 +5927,7 @@ mmp.lagtable =
     [4] = {description = "Bad. Terrible. Terribad.", time = 5},
     [5] = {description = "Carrier Pigeon", time = 10},
   }
-local newversion = "24.1.1"
+local newversion = "25.5.4"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo("Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.")
@@ -6092,6 +6093,7 @@ function mmp.startup()
     "Clicky clicky to read up on what's this about"
   )
   echo(")\n")
+  raiseEvent("mapperScriptLoaded", "ire-mapping-script")
 end</script>
 				<eventHandlerList />
 			</Script>
@@ -6668,9 +6670,15 @@ local oldnum
 
 function mmp.speedwalking(event, num)
   local num = tonumber(num) or tonumber(gmcp.Room.Info.num)
+  
+  if num == nil and gmcp.Room.Info.roomhash then
+    num = mmp.roomidFromHash(gmcp.Room.Info.roomhash)
+  end
+  
   if num ~= mmp.currentroom then
     mmp.previousroom = mmp.currentroom
   end
+  
   mmp.currentroom = num
   mmp.currentroomname = getRoomName(num)
   -- Try to track if we're flying or not, for Imperian wings
@@ -7179,8 +7187,31 @@ registerAnonymousEventHandler("mmp clear externals", "mmp.removeWings")</script>
 					<name>Achaea</name>
 					<packageName></packageName>
 					<script>registerAnonymousEventHandler("mmp link externals", "mmp.addWingsAchaea")
-
-
+        
+local universeLocations = {
+  ['Main'] = {
+    azdun = 1772,
+    blackrock = 10573,
+    bitterfork = 25093,
+    genji = 10091,
+    manusha = 8730,
+    newthera = 20386,
+    caerwitrin = 17678,
+    shastaan = 2855,
+    mannaseh = 1745,
+    manara = 9124,
+    brasslantern = 30383,
+    mhojave = 39103,
+    thraasi = 35703,
+    newhope = 25581,
+  },
+  ['Meropis'] = {
+    rageteeth = 1226,
+    seleucar  = 29755,
+    judgement = 35450,
+    yggdrasil = 12207,
+  }
+}
 
 function mmp.addWingsAchaea()
   --Trimmed down version of the original function, meant to only be used for wings. (Where the command varies based on several MCONFIGS)
@@ -7291,36 +7322,26 @@ function mmp.addWingsAchaea()
     end
   end
   --universe tarot
-  if mmp.settings.universe and mmp.oncontinent(area, "Main") then
-    local tarotLocations =
-      {
-        azdun = 1772,
-        blackrock = 10573,
-        bitterfork = 25093,
-        genji = 10091,
-        manusha = 8730,
-        newthera = 20386,
-        caerwitrin = 17678,
-        shastaan = 2855,
-        mannaseh = 1745,
-        manara = 9124,
-        brasslantern = 30383,
-        mhojave = 39103,
-        thraasi = 35703,
-        newhope = 25581,
-      }
-    for village, roomnum in pairs(tarotLocations) do
-      mmp.tempSpecialExit(
-        roomnum,
-        [=[script:
-        mmp.customwalkdelay(4.5)
-        send("fling universe at ground",false)
-        tempTimer(4,[[send("touch ]=] ..
-        village ..
-        [=[",false)]])
-        ]=],
-        10
-      )
+  if mmp.settings.universe then
+    local continents = mmp.getareacontinents(area)
+    
+    for _, continent in ipairs(continents) do
+      local universeExits = universeLocations[continent]
+      if universeExits then
+        for village, roomnum in pairs(universeExits) do
+          mmp.tempSpecialExit(
+            roomnum,
+            [=[script:
+            mmp.customwalkdelay(4.5)
+            send("fling universe at ground",false)
+            tempTimer(4,[[send("touch ]=] ..
+            village ..
+            [=[",false)]])
+            ]=],
+            10
+          )
+        end
+      end
     end
   end
   --gare
@@ -9605,7 +9626,16 @@ end
 
 function mmp.roomexists(num)
   if not num then return false end
-  if roomExists then return roomExists(num) end
+  if roomExists then
+    -- in case we are in a hash-based game and the room ID got created to store a hash
+    -- and hasn't been created properly, say it doesn't exist
+    if getRoomUserData(num, "hashonly") == "true" then
+      mmp.echo("roomexists: returning false for "..num)
+      return false
+    else
+      return roomExists(num)
+    end
+  end
 
   local s,m = pcall(getRoomArea, tonumber(num))
   return (s and true or false)
@@ -9775,7 +9805,7 @@ end</script>
     -- generate a report
     mmp.echo(
       string.format(
-        "Room: %s #: %d area: %s (%d)", name, num, tostring(mmp.areatabler[areanum]), areanum
+        "Room: %s #: %d%s area: %s (%d)", name, num, (getRoomHashByID(num) and (" hash: ".. getRoomHashByID(num)) or ''), tostring(mmp.areatabler[areanum]), areanum
       )
     )
     mmp.echo(
@@ -9800,7 +9830,7 @@ end</script>
     for exit, leadsto in pairs(exits) do
       echo(
         string.format(
-          "  %s -&gt; %s (%d)%s%s\n",
+          "  %s -&gt; %s (%d)%s%s%s\n",
           exit,
           getRoomName(leadsto),
           leadsto,
@@ -9817,7 +9847,8 @@ end</script>
             " (weight: " ..
             exitweights[mmp.anytoshort(exit)] ..
             ")"
-          )
+          ),
+          (getRoomHashByID(num) and (" hash: ".. getRoomHashByID(leadsto)) or '')
         )
       )
     end
@@ -10359,7 +10390,13 @@ end
 					<packageName></packageName>
 					<script>function mmp.centerRoominfo()
   -- lusternia has gmcp.Room.Players before gmcp.Room.Info is created
-  if gmcp.Room.Info then centerview(gmcp.Room.Info.num) end
+  if gmcp.Room.Info then
+    if gmcp.Room.Info.num then
+      centerview(gmcp.Room.Info.num)
+    elseif gmcp.Room.Info.roomhash then
+      centerview(mmp.roomidFromHash(gmcp.Room.Info.roomhash))
+    end
+  end
 end</script>
 					<eventHandlerList>
 						<string>gmcp.Room</string>
@@ -10382,10 +10419,14 @@ end</script>
 					<script>--mmp.mappingNewroom
 
 local function makeroom(oldid, newid, x, y, z)
+  assert(oldid, "makeroom: need the ID of the original room")
+  assert(newid, "makeroom: need the ID of the room to create")
   assert(x and y and z, "makeroom: need all 3 coordinates")
   addRoom(newid)
   setRoomCoordinates(newid, x, y, z)
   setRoomArea(newid, getRoomArea(oldid))
+  -- in case we are in a hash-based game and the room ID already got created to store a hash, clear the flag
+  clearRoomUserDataItem(newid, "hashonly")
   local fgr, fgg, fgb = unpack(color_table.red)
   local bgr, bgg, bgb = unpack(color_table.blue)
   highlightRoom(newid, fgr, fgg, fgb, bgr, bgg, bgb, 1, 100, 100)
@@ -10464,6 +10505,22 @@ local function getshiftedcoords(original, ox, oy, oz)
   return x, y, z
 end
 
+-- returns a room ID for a given hash
+-- if a room doesn't exist, it'll create it in order to bind the hash to a certain createRoomID
+-- at the same time, it'll mark the userdata "hashonly" as "true" so mmp.roomExists won't say this room exists
+-- this preserves the same logic in the code as non-hash games
+function mmp.roomidFromHash(hash)
+  local id = getRoomIDbyHash(hash)
+  if id == -1 then 
+    id = createRoomID()
+    addRoom(id)
+    setRoomIDbyHash(id, hash)
+    setRoomUserData(id, "hashonly", "true")
+  end
+  
+  return id
+end
+
 function mmp.mappingNewroom(_, num)
   local s, m =
     xpcall(
@@ -10486,6 +10543,9 @@ function mmp.mappingNewroom(_, num)
         local getRoomName, getRoomCoordinates, getRoomsByPosition =
           getRoomName, getRoomCoordinates, getRoomsByPosition
         local num = tonumber(num) or tonumber(gmcp.Room.Info.num)
+        if not num and gmcp.Room.Info.roomhash then
+          num = mmp.roomidFromHash(gmcp.Room.Info.roomhash)
+        end
         local currentexits = gmcp.Room.Info.exits
         local s = ""
         if not mmp.roomexists(num) then
@@ -10493,6 +10553,12 @@ function mmp.mappingNewroom(_, num)
           -- wilderness and non-wilderness rooms require different methods of calculating relative coordinates
           if not inwilderness() then
             for exit, id in pairs(currentexits) do
+              if gmcp.Room.Info.roomhash then
+                -- in a hash-based game, the 'id' is actually a hash, not an id
+                -- turn it into a proper id:
+                id = mmp.roomidFromHash(id)
+              end
+              
               if mmp.roomexists(id) then
                 s = makeroom(id, num, getshiftedcoords(exit, getRoomCoordinates(id)))
               end
@@ -10518,6 +10584,12 @@ function mmp.mappingNewroom(_, num)
             local x = getRoomExits(num) or {}
             -- check for missing exits
             for exit, id in pairs(currentexits) do
+              if gmcp.Room.Info.roomhash then
+                -- in a hash-based game, the 'id' is actually a hash, not an id
+                -- turn it into a proper id:
+                id = mmp.roomidFromHash(id)
+              end
+              
               if id == 0 then
                 s =
                   s ..
@@ -10557,21 +10629,21 @@ function mmp.mappingNewroom(_, num)
             end
           else
             local function getshiftedcoords(direction, ox, oy, oz)
-              if direction == 'n' then
+              if direction == 'n' or direction == 'north' then
                 return ox, oy + 1, oz
-              elseif direction == 'e' then
-                return ox + 1, oy, oz
-              elseif direction == 's' then
+              elseif direction == 'e' or direction == 'east' then
+                return ox + 1, oy, oz  
+              elseif direction == 's' or direction == 'south' then
                 return ox, oy - 1, oz
-              elseif direction == 'w' then
+              elseif direction == 'w' or direction == 'west' then
                 return ox - 1, oy, oz
-              elseif direction == 'ne' then
+              elseif direction == 'ne' or direction == 'northeast' then
                 return ox + 1, oy + 1, oz
-              elseif direction == 'se' then
+              elseif direction == 'se' or direction == 'southeast' then
                 return ox + 1, oy - 1, oz
-              elseif direction == 'sw' then
+              elseif direction == 'sw' or direction == 'southwest' then
                 return ox - 1, oy - 1, oz
-              elseif direction == 'nw' then
+              elseif direction == 'nw' or direction == 'northwest' then
                 return ox - 1, oy + 1, oz
               else
                 error("getshiftedcoords: direction " .. direction .. " isn't supported yet.")
@@ -12079,6 +12151,103 @@ end</script>
 						</eventHandlerList>
 					</Script>
 				</Script>
+				<Script isActive="yes" isFolder="no">
+					<name>Astaria</name>
+					<packageName></packageName>
+					<script></script>
+					<eventHandlerList />
+					<Script isActive="yes" isFolder="no">
+						<name>mmp.registerAstariasEnvData</name>
+						<packageName></packageName>
+						<script>function mmp.registerAstariasEnvData(_, game)
+  if game ~= "Astaria" then return end
+  mmp.envids =
+  {
+    ["field"]                   = 3,
+    -- old ones below
+    ["a sheltered dell"]        = 68,
+    ["Arcane Temple"]           = 66,
+    ["Blackened Lands"]         = 58,
+    ["Blackstone Dungeon"]      = 65,
+    ["Blackstone Keep"]         = 62,
+    ["Constructed underground"] = 2,
+    ["Dark Forest"]             = 1,
+    ["Deep Ocean"]              = 24,
+    ["Desert Ruins"]            = 38,
+    ["Dwarven city"]            = 18,
+    ["Forestal Council"]        = 44,
+    ["Frozen Bog"]              = 76,
+    ["Lake of Fire"]            = 56,
+    ["Natural underground"]     = 3,
+    ["Noble Bar"]               = 53,
+    ["Noble Chambers"]          = 51,
+    ["Rocky Shore"]             = 77,
+    ["Sylayan city"]            = 19,
+    ["Tainted Underground"]     = 35,
+    ["Tainted Water"]           = 39,
+    ["Underground Lake"]        = 36,
+    ["Vast Ocean"]              = 26,
+    ["Wetlands Village"]        = 64,
+    ["within a tent"]           = 69,
+    Academia                    = 42,
+    Acropolis                   = 33,
+    Beach                       = 5,
+    Blighted                    = 74,
+    bog                         = 73,
+    Catacombs                   = 63,
+    Church                      = 54,
+    Cliffs                      = 67,
+    Crags                       = 32,
+    Desert                      = 6,
+    Docks                       = 30,
+    Farmland                    = 41,
+    Forest                      = 4,
+    Freshwater                  = 22,
+    Garden                      = 21,
+    garrison                    = 71,
+    Grasslands                  = 7,
+    Graveyard                   = 46,
+    Hills                       = 9,
+    Jungle                      = 17,
+    Mountains                   = 14,
+    Nobility                    = 50,
+    Ocean                       = 20,
+    Path                        = 11,
+    Polar                       = 27,
+    Pond                        = 49,
+    pyramid                     = 72,
+    quarry                      = 70,
+    River                       = 10,
+    Road                        = 12,
+    Ruins                       = 37,
+    Scrublands                  = 78,
+    Sewer                       = 23,
+    Swamp                       = 15,
+    Temple                      = 57,
+    Tower                       = 79,
+    transportation              = 48,
+    Tundra                      = 16,
+    Underworld                  = 28,
+    Urban                       = 8,
+    Valley                      = 13,
+    Villa                       = 75,
+    Village                     = 47,
+    Volcano                     = 59,
+    Warrens                     = 31,
+  }
+
+  mmp.waterenvs = {}
+  local waterids = { "River", "Ocean", "Deep Ocean", "Vast Ocean", "Underground Lake", "Tainted Water", "Lake of Fire" }
+  for i = 1, #waterids do mmp.waterenvs[mmp.envids[waterids[i]]] = true end
+
+  mmp.envidsr = {};
+  for name, id in pairs(mmp.envids) do mmp.envidsr[id] = name end
+end</script>
+						<eventHandlerList>
+							<string>mmp logged in</string>
+						</eventHandlerList>
+					</Script>
+				</Script>
 			</ScriptGroup>
 			<ScriptGroup isActive="yes" isFolder="yes">
 				<name>Test / one-time things</name>
@@ -12173,7 +12342,7 @@ end</script>
     mmp.echon("------------------[ Mapper Script Update ]------------------")
     mmp.echon(" The mapper script was updated from &lt;orange&gt;"..tostring(mmp.version).."&lt;reset&gt; -&gt; &lt;green&gt;"..tostring(mmp.newmapperversion).."&lt;reset&gt;!")
     mmp.echon("")
-    cechoLink(" Would you like to install the update? &lt;u&gt;&lt;ForestGreen&gt;Click here if so&lt;/u&gt;&lt;reset&gt;.", "mmp.downloadmapperscript()", "Changelog for the latest ("..tostring(mmp.version).." -&gt; "..tostring(mmp.newmapperversion)..") update:\n"..changelog, true)
+    cechoLink(" Would you like to install the update? &lt;u&gt;&lt;ForestGreen&gt;\n Click here if so&lt;/u&gt;&lt;reset&gt;.", "mmp.downloadmapperscript()", "Changelog for the latest ("..tostring(mmp.version).." -&gt; "..tostring(mmp.newmapperversion)..") update:\n"..changelog, true)
     echo("\n\n")
 
   elseif filename == mmp.crowdchangelogfile then   -- changelog for the crowdmap
@@ -12848,7 +13017,7 @@ end</script>
 		</ScriptGroup>
 	</ScriptPackage>
 	<KeyPackage />
-	<VariablePackage>
-		<HiddenVariables />
-	</VariablePackage>
+	<HelpPackage>
+		<helpURL></helpURL>
+	</HelpPackage>
 </MudletPackage>

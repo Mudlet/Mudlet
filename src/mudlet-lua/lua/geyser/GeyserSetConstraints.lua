@@ -3,7 +3,7 @@
 -- @module Geyser.SetConstraints
 
 function Geyser.calc_constraints (window, cons, container)
-  oldlocale = os.setlocale(nil, "numeric")
+  local oldlocale = os.setlocale(nil, "numeric")
   os.setlocale("C", "numeric")
   -- If container is nil then by default it is the dimensions of the main window
   container = container or Geyser
