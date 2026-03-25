@@ -1303,7 +1303,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 pR->userData.insert(QLatin1String("system.fallback_symbol"), pR->mSymbol);
             }
         }
-        if (mSaveVersion < 22) {
+        if (mSaveVersion < 21) {
             if (pR->hidden) {
                 pR->userData.insert(QLatin1String("system.fallback_hidden"), QLatin1String("true"));
             }
@@ -1328,10 +1328,8 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pR->getWeight();
         ofs << pR->name;
         ofs << pR->isLocked;
-        if (mSaveVersion >= 22) {
-            ofs << pR->hidden;
-        }
         if (mSaveVersion >= 21) {
+            ofs << pR->hidden;
             ofs << pR->getSpecialExits();
         } else {
             QMultiMap<int, QString> oldSpecialExits;

@@ -833,10 +833,8 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
     }
     ifs >> name;
     ifs >> isLocked;
-    if (version >= 22) {
-        ifs >> hidden;
-    }
     if (version >= 21) {
+        ifs >> hidden;
         ifs >> mSpecialExits;
     } else if (version >= 6) {
         // Before version 21 the special exits were stored as a QMultiMap<int, QString>
@@ -879,7 +877,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
     if (version >= 10) {
         ifs >> userData;
         // Recover and remove fallback values from the user data:
-        if (version < 22) {
+        if (version < 21) {
             const QString hiddenString = userData.take(QLatin1String("system.fallback_hidden"));
             if (!hiddenString.compare(QLatin1String("true"), Qt::CaseInsensitive)) {
                 hidden = true;

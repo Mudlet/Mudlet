@@ -293,7 +293,7 @@ public:
      * * Version 22 adds the 'hidden' property to rooms, allowing rooms and their
      *   exits to be hidden from display in the mapper.
      */
-    const int mMaxVersion = 22;
+    const int mMaxVersion = 20;
 
     // Ideally would be the same as mDefaultVersion but we have it lower,
     // particularly for release builds and is the minimum version allowed for
