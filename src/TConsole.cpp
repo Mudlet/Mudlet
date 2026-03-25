@@ -1912,7 +1912,19 @@ void TConsole::printSystemMessage(const QString& msg)
 void TConsole::echo(const QString& msg)
 {
     if (mTriggerEngineMode) {
-        buffer.appendLine(msg, 0, msg.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+        // Use insertInLine instead of appendLine so that newline characters
+        // are embedded in the trigger line rather than creating new buffer
+        // lines (which would cause subsequent echo/cecho calls to append to
+        // the wrong line). The embedded newlines are properly handled during
+        // wrapping by getWrapInfo.
+        const int y = buffer.size() - 1;
+        if (y >= 0) {
+            const int x = buffer.lineBuffer.at(y).size();
+            QPoint insertPoint(x, y);
+            buffer.insertInLine(insertPoint, msg, mFormatCurrent);
+        } else {
+            buffer.appendLine(msg, 0, msg.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+        }
     } else {
         print(msg);
     }

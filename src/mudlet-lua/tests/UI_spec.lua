@@ -666,14 +666,14 @@ describe("Tests UI functions", function()
       -- Test combinations that might stress the formatting system
       decho("formattest", "<red:yellow>colored_bg<reset> ")
       insertText("formattest", "normal ")
-      
+
       -- Try complex formatting if available
       decho("formattest", "<b><i><u>complex<reset>\n")
-      
+
       -- Test the complex formatted text
       selectSection("formattest", 24, 1) -- Something in "complex"
       local complexFormat = getTextFormat("formattest")
-      
+
       assert.is_table(complexFormat)
       assert.is_table(complexFormat.foreground)
       assert.is_table(complexFormat.background)
@@ -1334,6 +1334,90 @@ describe("Tests UI functions", function()
 
       assert.are.equal("------- line inserted at: 0/0 -----", firstLine,
         "First line should be the inserted text, got '" .. tostring(firstLine) .. "'")
+    end)
+
+    -- https://github.com/Mudlet/Mudlet/issues/8945
+    -- cinsertText was also reported as broken with newlines
+    it("should create new lines with cinsertText", function()
+      echo(consoleName, "line1\n")
+      echo(consoleName, "line2\n")
+
+      local lineCountBefore = getLineCount(consoleName)
+
+      moveCursor(consoleName, 0, 0)
+      cinsertText(consoleName, "<red>inserted line\n")
+
+      local lineCountAfter = getLineCount(consoleName)
+
+      assert.is_true(lineCountAfter > lineCountBefore,
+        "cinsertText with \\n should create a new line, but line count went from "
+        .. lineCountBefore .. " to " .. lineCountAfter)
+    end)
+  end)
+
+  -- https://github.com/Mudlet/Mudlet/issues/8824
+  -- cecho behavior change with newlines and creplaceLine
+  -- These tests use feedTriggers + tempTrigger to get proper trigger context,
+  -- since echo/cecho only operate at cursor position within triggers.
+  describe("Tests cecho with creplaceLine in trigger context", function()
+
+    -- Reproduction from the issue: cecho("\n") then creplaceLine then cecho
+    -- should place subsequent cecho text on the replaced line, not a new one
+    it("should place cecho text on same line after creplaceLine", function()
+      local triggerId = tempTrigger("TEST_8824_REPLACE", function()
+        cecho("\n")
+        selectCurrentLine()
+        creplaceLine("<red>REPLACED")
+        cecho("(cecho)")
+      end)
+
+      feedTriggers("TEST_8824_REPLACE\n")
+      killTrigger(triggerId)
+
+      -- search recent main console lines for the result
+      local lineCount = getLineCount()
+      local found = false
+      for i = lineCount - 1, math.max(0, lineCount - 10), -1 do
+        moveCursor(0, i)
+        selectCurrentLine()
+        local line = getCurrentLine()
+        deselect()
+        if string.find(line, "REPLACED", 1, true) then
+          assert.truthy(string.find(line, "(cecho)", 1, true),
+            "Line with 'REPLACED' should also contain '(cecho)', got '" .. tostring(line) .. "'")
+          found = true
+          break
+        end
+      end
+      assert.is_true(found, "No line contained 'REPLACED' in main console")
+    end)
+
+    -- Harrison-Teeg's reproduction: original echoed text should not bleed
+    -- through after creplaceLine
+    it("should not show original echo text after creplaceLine", function()
+      local triggerId = tempTrigger("TEST_8824_BLEED", function()
+        echo("\n cecho before lineselection / replace...")
+        selectCurrentLine()
+        creplaceLine("<red>REPLACED")
+        cecho("\n cecho after")
+      end)
+
+      feedTriggers("TEST_8824_BLEED\n")
+      killTrigger(triggerId)
+
+      -- find the line with "REPLACED" and verify original text is gone
+      local lineCount = getLineCount()
+      for i = lineCount - 1, math.max(0, lineCount - 10), -1 do
+        moveCursor(0, i)
+        selectCurrentLine()
+        local line = getCurrentLine()
+        deselect()
+        if string.find(line, "REPLACED", 1, true) then
+          assert.falsy(string.find(line, "cecho before", 1, true),
+            "Original echo text should not bleed through after creplaceLine, got '" .. tostring(line) .. "'")
+          break
+        end
+      end
     end)
   end)
 
