@@ -217,6 +217,7 @@ describe("Tests UI functions", function()
 
     before_each(function()
       clearWindow("testformat")
+      moveCursor("testformat", 0, 0)
       deselect("testformat")
     end)
 
@@ -259,7 +260,7 @@ describe("Tests UI functions", function()
       
       -- Select the last character of the line (exclamation mark)
       local lineLength = utf8.len(testLine)
-      selectSection("testformat", lineLength, 1) -- Select just the last character
+      selectSection("testformat", lineLength - 1, 1) -- Select just the last character (0-indexed)
       
       -- Debug what we actually selected
       local selection = getSelection("testformat")
@@ -550,6 +551,7 @@ describe("Tests UI functions", function()
 
     before_each(function()
       clearWindow("formattest")
+      moveCursor("formattest", 0, 0)
       deselect("formattest")
     end)
 
@@ -670,10 +672,6 @@ describe("Tests UI functions", function()
       -- Try complex formatting if available
       decho("formattest", "<b><i><u>complex<reset>\n")
 
-      -- Move cursor to line 0 so selectSection operates on the right line
-      -- (the trailing \n above moves the cursor to the next line)
-      moveCursor("formattest", 0, 0)
-
       -- Test the complex formatted text
       selectSection("formattest", 24, 1) -- Something in "complex"
       local complexFormat = getTextFormat("formattest")
@@ -787,19 +785,19 @@ describe("Tests UI functions", function()
         if line and line ~= "" then
           local len = utf8.len(line)
           if len > 0 then
-            selectSection("formattest", len, 1) -- Select the last character
-            
+            selectSection("formattest", len - 1, 1) -- Select the last character (0-indexed)
+
             local selection = getSelection("formattest")
-            local fgColor = getFgColor("formattest")
-            local bgColor = getBgColor("formattest")
-            
+            local r, g, b = getFgColor("formattest")
+            local br, bg, bb = getBgColor("formattest")
+
             -- This was the failing call before the fix
             local format = getTextFormat("formattest")
-            
+
             -- All should work now
             assert.is_not_nil(selection, "getSelection should work")
-            assert.is_table(fgColor, "getFgColor should work")
-            assert.is_table(bgColor, "getBgColor should work") 
+            assert.is_not_nil(r, "getFgColor should work")
+            assert.is_not_nil(br, "getBgColor should work")
             assert.is_table(format, "getTextFormat should work (this was failing before)")
             
             if selection then
@@ -867,8 +865,8 @@ describe("Tests UI functions", function()
         
         local lineLength = utf8.len(testLine)
         
-        -- Test selecting the last character - this was failing before the fix
-        selectSection("formattest", lineLength, 1)
+        -- Test selecting the last character (0-indexed, so last char is at lineLength - 1)
+        selectSection("formattest", lineLength - 1, 1)
         
         local format = getTextFormat("formattest")
         local selection = getSelection("formattest")
