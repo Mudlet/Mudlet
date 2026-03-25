@@ -97,7 +97,10 @@
 #include <QToolButton>
 #include <QToolTip>
 #include <QVariantHash>
+
 #include <QRandomGenerator>
+
+#include <cmath>
 #include <memory>
 #include <zip.h>
 #include <QStyle>
@@ -786,15 +789,19 @@ void mudlet::init()
         emit signal_adjustAccessibleNames();
     });
 
-    initializeAI();
-
     // 200ms interval for WCAG 2.3.1 compliance (max 3 Hz)
     // 4-state counter per ISO/IEC 8613-6: slow blink < 150 cycles/min, fast > 150
     mpBlinkTimer = new QTimer(this);
-    mpBlinkTimer->setInterval(200);
+    mpBlinkTimer->setInterval(33);
     connect(mpBlinkTimer, &QTimer::timeout, this, [this]() {
-        mBlinkState = (mBlinkState + 1) % 4;
-        emit signal_blinkStateChanged(slowBlinkState(), fastBlinkState());
+        // Use actual elapsed time so the animation phase stays accurate even
+        // when the main thread is busy (map loads, incoming MUD data floods, etc.)
+        mBlinkTimeMs += static_cast<qreal>(mBlinkElapsedTimer.restart());
+        // Prevent floating-point drift; both periods (1000ms, 2000ms) divide evenly into 2000ms
+        if (mBlinkTimeMs >= 2000.0) {
+            mBlinkTimeMs = std::fmod(mBlinkTimeMs, 2000.0);
+        }
+        emit signal_blinkStateChanged();
     });
 
     // Monitor audio device changes to automatically refresh media players
@@ -2944,9 +2951,6 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     slot_muteAPI(settings.contains(qsl("enableMuteAPI")) ? settings.value(qsl("enableMuteAPI"), QVariant(false)).toBool() : false);
     slot_muteGame(settings.contains(qsl("enableMuteGame")) ? settings.value(qsl("enableMuteGame"), QVariant(false)).toBool() : false);
-
-    mAIModelPath = settings.value("AI/modelPath", "").toString();
-    mAIAutoStart = settings.value("AI/autoStart", true).toBool();
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -3126,9 +3130,6 @@ void mudlet::writeSettings()
     settings.setValue(qsl("enableMuteAPI"), mMuteAPI);
     settings.setValue(qsl("enableMuteGame"), mMuteGame);
     settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
-    mpSettings->setValue("AI/modelPath", mAIModelPath);
-    mpSettings->setValue("AI/autoStart", mAIAutoStart);
-
     settings.sync();
     switch (settings.status()) {
     case QSettings::NoError:
@@ -3646,7 +3647,9 @@ void mudlet::showOptionsDialog(const QString& tab)
         connect(pPrefs, &dlgProfilePreferences::signal_preferencesSaved, this, [=, this]() {
             slot_assignShortcutsFromProfile(getActiveHost());
         });
-        connect(pHost, &Host::mmcpChatNameChanged, pPrefs, &dlgProfilePreferences::slot_setMMCPChatName);
+        if (pHost) {
+            connect(pHost, &Host::mmcpChatNameChanged, pPrefs, &dlgProfilePreferences::slot_setMMCPChatName);
+        }
         pPrefs->setAttribute(Qt::WA_DeleteOnClose);
     }
 
@@ -4831,7 +4834,6 @@ mudlet::~mudlet()
     }
 
     saveDetachedWindowsGeometry();
-    shutdownAI();
 
     mudlet::smpSelf = nullptr;
 }
@@ -6690,6 +6692,9 @@ void mudlet::activateProfile(Host* pHost)
         mpCurrentActiveHost->mpConsole->show();
         mpCurrentActiveHost->mpConsole->repaint();
         mpCurrentActiveHost->mpConsole->refresh();
+        // Defer subconsole refresh to allow Qt to fully process the show event
+        // and update widget geometry before we try to recalculate screen dimensions
+        QTimer::singleShot(0, mpCurrentActiveHost->mpConsole, &TMainConsole::refreshSubconsoles);
         mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
 
         // If NOT in multiview mode, hide all other consoles in the main window
@@ -6775,6 +6780,7 @@ void mudlet::registerBlinkClient()
 {
     ++mBlinkClientCount;
     if (mBlinkClientCount == 1 && mpBlinkTimer && !mpBlinkTimer->isActive()) {
+        mBlinkElapsedTimer.start();
         mpBlinkTimer->start();
     }
 }
@@ -6786,9 +6792,24 @@ void mudlet::unregisterBlinkClient()
     }
     if (mBlinkClientCount == 0 && mpBlinkTimer && mpBlinkTimer->isActive()) {
         mpBlinkTimer->stop();
-        mBlinkState = 0;
-        emit signal_blinkStateChanged(slowBlinkState(), fastBlinkState());
+        mBlinkTimeMs = 0.0;
+        emit signal_blinkStateChanged();
     }
+}
+
+qreal mudlet::blinkPulseOpacity(bool isFastBlink) const
+{
+    return computeBlinkPulseOpacity(mBlinkTimeMs, isFastBlink);
+}
+
+qreal mudlet::computeBlinkPulseOpacity(qreal blinkTimeMs, bool isFastBlink)
+{
+    constexpr qreal minOpacity = 0.4;
+    const qreal periodMs = isFastBlink ? 1000.0 : 2000.0;
+    // Smooth cosine oscillation between minOpacity and 1.0,
+    // approximating the ease-in-out feel of the CSS @keyframes used in HTML logs
+    const qreal phase = std::fmod(blinkTimeMs, periodMs) / periodMs;
+    return minOpacity + (1.0 - minOpacity) * 0.5 * (1.0 + std::cos(2.0 * M_PI * phase));
 }
 
 void mudlet::setupTrayIcon()
@@ -7099,49 +7120,6 @@ bool mudlet::profileExists(const QString& profileName)
     return it != TGameDetails::scmDefaultGames.end();
 }
 
-void mudlet::initializeAI()
-{
-    // Create the LlamafileManager
-    mpLlamafileManager = std::make_unique<LlamafileManager>(this);
-
-    // Connect signals
-    connect(mpLlamafileManager.get(), &LlamafileManager::statusChanged, this, &mudlet::slot_aiStatusChanged);
-    connect(mpLlamafileManager.get(), &LlamafileManager::processError, this, &mudlet::slot_aiError);
-
-    // Try to find and configure AI model
-    if (findAIModel()) {
-        qDebug() << "mudlet::initializeAI() INFO: AI model found at:" << mAIModelPath;
-        setupAIConfig();
-
-        // Auto-start if enabled and model is available
-        if (mAIAutoStart) {
-            qDebug() << "mudlet::initializeAI() INFO: Auto-starting AI service...";
-            QTimer::singleShot(2s, this, [this]() {
-                if (mpLlamafileManager && !mpLlamafileManager->isRunning()) {
-                    LlamafileManager::Config config;
-                    config.modelPath = mAIModelPath;
-                    config.host = "127.0.0.1";
-                    config.port = 8080;
-                    config.autoRestart = true;
-                    config.enableGpu = true;
-
-                    mpLlamafileManager->start(config);
-                }
-            });
-        }
-    } else {
-        qDebug() << "mudlet::initializeAI() INFO: no model found, integration disabled.";
-    }
-}
-
-void mudlet::shutdownAI()
-{
-    if (mpLlamafileManager && mpLlamafileManager->isRunning()) {
-        qDebug() << "mudlet::shutdownAI() - Stopping AI service...";
-        mpLlamafileManager->stop();
-    }
-}
-
 void mudlet::saveDetachedWindowsGeometry()
 {
     for (const auto& detachedWindow : mDetachedWindows) {
@@ -7149,101 +7127,6 @@ void mudlet::saveDetachedWindowsGeometry()
             detachedWindow->saveWindowGeometry();
         }
     }
-}
-
-bool mudlet::findAIModel()
-{
-    // Check if model path is already set in settings
-    if (mpSettings->contains("AI/modelPath")) {
-        QString savedPath = mpSettings->value("AI/modelPath").toString();
-
-#ifdef Q_OS_WIN
-        // On Windows, ensure .exe extension exists
-        if (!savedPath.endsWith(".exe", Qt::CaseInsensitive)) {
-            QString pathWithExe = savedPath + ".exe";
-            if (QFile::exists(savedPath) && !QFile::exists(pathWithExe)) {
-                if (QFile::rename(savedPath, pathWithExe)) {
-                    savedPath = pathWithExe;
-                    mpSettings->setValue("AI/modelPath", savedPath); // Update settings
-                }
-            } else if (QFile::exists(pathWithExe)) {
-                savedPath = pathWithExe;
-                mpSettings->setValue("AI/modelPath", savedPath); // Update settings
-            }
-        }
-#endif
-
-        if (LlamafileManager::isLlamafileExecutable(savedPath)) {
-            mAIModelPath = savedPath;
-            return true;
-        }
-    }
-
-    // Search for llamafile executables in common locations
-    QStringList searchPaths;
-    searchPaths << QCoreApplication::applicationDirPath() << QStandardPaths::writableLocation(QStandardPaths::HomeLocation) << QStandardPaths::writableLocation(QStandardPaths::DownloadLocation)
-                << getMudletPath(enums::profilesPath) << (getMudletPath(enums::profilesPath) + "/ai") << "/usr/local/bin" << "/opt/llamafile";
-
-    QString foundPath = LlamafileManager::findLlamafileExecutable(searchPaths);
-    if (!foundPath.isEmpty()) {
-        mAIModelPath = foundPath;
-        mpSettings->setValue("AI/modelPath", mAIModelPath);
-        return true;
-    }
-
-    return false;
-}
-
-void mudlet::setupAIConfig()
-{
-    // Read AI settings from config
-    mAIAutoStart = mpSettings->value("AI/autoStart", true).toBool();
-}
-
-bool mudlet::aiModelAvailable() const
-{
-    return !mAIModelPath.isEmpty() && QFileInfo::exists(mAIModelPath);
-}
-
-bool mudlet::aiRunning() const
-{
-    return mpLlamafileManager && mpLlamafileManager->isRunning();
-}
-
-void mudlet::setAIModelPath(const QString& path)
-{
-    if (mAIModelPath != path) {
-        mAIModelPath = path;
-        mpSettings->setValue("AI/modelPath", path);
-        emit signal_aiModelChanged(path);
-    }
-}
-
-void mudlet::setAIAutoStart(bool autoStart)
-{
-    if (mAIAutoStart != autoStart) {
-        mAIAutoStart = autoStart;
-        mpSettings->setValue("AI/autoStart", autoStart);
-    }
-}
-
-void mudlet::slot_aiStatusChanged(LlamafileManager::Status newStatus, LlamafileManager::Status oldStatus)
-{
-    Q_UNUSED(oldStatus)
-
-    bool running = (newStatus == LlamafileManager::Status::Running);
-    emit signal_aiStatusChanged(running);
-
-    if (running) {
-        qDebug() << "mudlet::slot_aiStatusChanged() - AI service is now running";
-    } else if (newStatus == LlamafileManager::Status::Error) {
-        qDebug() << "mudlet::slot_aiStatusChanged() - AI service encountered an error";
-    }
-}
-
-void mudlet::slot_aiError(const QString& error)
-{
-    qWarning() << "mudlet::slot_aiError() - AI service error:" << error;
 }
 
 void mudlet::slot_tabDetachRequested(int index, const QPoint& globalPos)

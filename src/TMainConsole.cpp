@@ -277,10 +277,10 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
             logStream << "        span { white-space: pre-wrap; }\n";
 
             if (mpHost->getEnableBlinkText()) {
-                logStream << "        @keyframes blink-slow { 50% { opacity: 0; } }\n";
-                logStream << "        @keyframes blink-fast { 50% { opacity: 0; } }\n";
-                logStream << "        .blink-slow { animation: blink-slow 0.8s step-end infinite; }\n";
-                logStream << "        .blink-fast { animation: blink-fast 0.4s step-end infinite; }\n";
+                logStream << "        @keyframes blink-slow { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }\n";
+                logStream << "        @keyframes blink-fast { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }\n";
+                logStream << "        .blink-slow { animation: blink-slow 2s ease-in-out infinite; }\n";
+                logStream << "        .blink-fast { animation: blink-fast 1s ease-in-out infinite; }\n";
             }
 
             logStream << "     -->\n";
@@ -632,6 +632,8 @@ std::pair<bool, QString> TMainConsole::deleteMiniConsole(const QString& name)
 
     auto pConsole = mSubConsoleMap.take(name);
     if (pConsole) {
+        mCachedWindowSizes.remove(name);
+
         // Using deleteLater() rather than delete as it seems a safer option
         // given that this item is likely to be linked to some events and
         // suchlike:
@@ -1084,11 +1086,34 @@ bool TMainConsole::printWindow(const QString& name, const QString& text)
 QSize TMainConsole::getUserWindowSize(const QString& windowname) const
 {
     auto pW = mDockWidgetMap.value(windowname);
+
     if (pW) {
         const QSize windowSize = pW->widget()->size();
-        QSize userWindowSize(windowSize.width(), windowSize.height());
-        return userWindowSize;
+        const int minValidWidth = 50;
+
+        // Reject obviously invalid sizes
+        if (windowSize.width() < minValidWidth) {
+            if (mCachedWindowSizes.contains(windowname)) {
+                return mCachedWindowSizes.value(windowname);
+            }
+            return windowSize;
+        }
+
+        // Reject suspicious shrinkage (more than 50% reduction suggests profile
+        // is transitioning and geometry isn't settled yet)
+        if (mCachedWindowSizes.contains(windowname)) {
+            const QSize cachedSize = mCachedWindowSizes.value(windowname);
+            const double shrinkageRatio = static_cast<double>(windowSize.width()) / cachedSize.width();
+            if (shrinkageRatio < 0.5) {
+                return cachedSize;
+            }
+        }
+
+        // Size looks valid, cache and return it
+        mCachedWindowSizes[windowname] = windowSize;
+        return windowSize;
     }
+
     return getMainWindowSize();
 }
 
@@ -1252,6 +1277,15 @@ void TMainConsole::setProfileName(const QString& newName)
 
     for (const auto pC : std::as_const(mSubConsoleMap)) {
         pC->setProfileName(newName);
+    }
+}
+
+void TMainConsole::refreshSubconsoles()
+{
+    for (const auto pC : std::as_const(mSubConsoleMap)) {
+        if (pC) {
+            pC->refreshView();
+        }
     }
 }
 

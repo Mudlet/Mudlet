@@ -2968,15 +2968,32 @@ void TBuffer::decodeOSC(const QString& sequence)
             if (rawUrl.startsWith(qsl("http://")) || rawUrl.startsWith(qsl("https://")) || rawUrl.startsWith(qsl("ftp://"))) {
                 int queryStart = baseUrl.indexOf('?');
                 if (queryStart != -1) {
-                    // Split on raw query string so percent-encoded variants of
-                    // "config"/"preset" (e.g. %63%6F%6E%66%69%67) are preserved
+                    // Strip reserved parameters when corresponding OSC 8 features are enabled
+                    // (currently always true; will reflect NEW-ENVIRON negotiation once fully implemented)
+                    const bool stripConfig = mpHost->shouldStripOscHyperlinkConfigParam();
+                    const bool stripPreset = mpHost->shouldStripOscHyperlinkPresetParam();
+
+                    // Compare keys against literal strings only; percent-encoded key names
+                    // (e.g. %63%6F%6E%66%69%67 for "config") are intentionally not stripped
                     const QStringList rawPairs = baseUrl.mid(queryStart + 1).split('&');
                     QStringList kept;
                     for (const auto& pair : rawPairs) {
-                        const auto key = pair.left(pair.indexOf('='));
-                        if (key != qsl("config") && key != qsl("preset")) {
-                            kept.append(pair);
+                        // Find the separator between key and value - use earliest of '=' or '%3D' (percent-encoded =)
+                        int literalEq = pair.indexOf('=');
+                        int encodedEq = pair.indexOf(qsl("%3D"), 0, Qt::CaseInsensitive);
+                        int eqPos = -1;
+                        if (literalEq >= 0 && encodedEq >= 0) {
+                            eqPos = qMin(literalEq, encodedEq);
+                        } else if (literalEq >= 0) {
+                            eqPos = literalEq;
+                        } else {
+                            eqPos = encodedEq;
                         }
+                        const auto key = eqPos >= 0 ? pair.left(eqPos) : pair;
+                        if ((stripConfig && key == qsl("config")) || (stripPreset && key == qsl("preset"))) {
+                            continue;
+                        }
+                        kept.append(pair);
                     }
 
                     baseUrl = baseUrl.left(queryStart);

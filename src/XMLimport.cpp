@@ -862,13 +862,7 @@ void XMLimport::readHost(Host* pHost)
         pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
     }
 
-    if (attributes().hasAttribute("mEnableBlinkText")) {
-        pHost->setEnableBlinkText(attributes().value(qsl("mEnableBlinkText")) == YES);
-    } else {
-        // Default to disabled for safety in a backwards compatible manner
-        // - so it doesn't start flashing unexpectedly:
-        pHost->setEnableBlinkText(false);
-    }
+    pHost->setEnableBlinkText(attributes().value(qsl("mEnableBlinkText")) == qsl("yes"));
 
     if (attributes().hasAttribute("logFileNameFormat")) {
         // We previously mixed "yyyy-MM-dd{#|T}hh-MM-ss" with "yyyy-MM-dd{#|T}HH-MM-ss"

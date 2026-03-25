@@ -195,11 +195,13 @@ public:
     // Is used to set preference dialog control directly:
     Qt::CheckState getWideAmbiguousEAsianGlyphsControlState() { return mAutoAmbigousWidthGlyphsSetting ? Qt::PartiallyChecked : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
     bool getEnableBlinkText() const { return mEnableBlinkText; }
-    void setEnableBlinkText(const bool enabled);
+    void setEnableBlinkText(bool enable);
     void setHaveColorSpaceId(const bool state) { mSGRCodeHasColSpaceId = state; }
     bool getHaveColorSpaceId() { return mSGRCodeHasColSpaceId; }
     void setMayRedefineColors(const bool state) { mServerMayRedefineColors = state; }
     bool getMayRedefineColors() { return mServerMayRedefineColors; }
+    bool shouldStripOscHyperlinkConfigParam();
+    bool shouldStripOscHyperlinkPresetParam();
     void setDiscordApplicationID(const QString& s);
     const QString& getDiscordApplicationID();
     void setDiscordInviteURL(const QString& s);
@@ -337,9 +339,9 @@ public:
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
-    QString getMMCPChatName();
+    const QString& getMMCPChatName() const;
     quint16 getMMCPPort();
-    QString getMMCPChatPrefix();
+    const QString& getMMCPChatPrefix() const;
     bool getMMCPAutoStartServer();
     bool getMMCPAllowPeekRequests();
     bool getMMCPPrefixEmotes();
@@ -462,7 +464,7 @@ public:
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void initMMCPServer();
-    void setMMCPChatName(const QString&, bool shouldSignal = true);
+    bool setMMCPChatName(const QString&);
     void setShowIdsInEditor(const bool isShown)
     {
         mShowIDsInEditor = isShown;
@@ -820,7 +822,7 @@ signals:
     // width characters:
     void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
     // Tells TTextEdit instances for this profile whether to animate blinking text:
-    void signal_changeEnableBlinkText(const bool);
+    void signal_changeEnableBlinkText(bool);
     void profileSaveStarted();
     void profileSaveFinished();
     void signal_changeSpellDict(const QString&);
@@ -926,7 +928,7 @@ private:
     // in the TTextEdit classes are only made when necessary:
     bool mWideAmbigousWidthGlyphs = false;
 
-    // Whether to animate blinking text (SGR codes 5 and 6) - if false, displays as italics
+    // Whether to animate blinking text (SGR codes 5 and 6) with a pulse effect
     bool mEnableBlinkText = false;
 
     // keeps track of all of the array writers we're currently operating with
