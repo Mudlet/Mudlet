@@ -256,13 +256,11 @@ void mudlet::init()
     }
     mpMainToolBar = new QToolBar(this);
     mpMainToolBar->setObjectName(qsl("mpMainToolBar"));
+    //: Name of the main toolbar shown in Qt's built-in toolbar toggle menus and right-click context menus
     mpMainToolBar->setWindowTitle(tr("Main Toolbar"));
     addToolBar(mpMainToolBar);
     mpMainToolBar->setMovable(false);
 
-    // Add context menu to toolbar for show/hide functionality
-    mpMainToolBar->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(mpMainToolBar, &QWidget::customContextMenuRequested, this, &mudlet::slot_showMainToolBarContextMenu);
     addToolBarBreak();
     auto frame = new QWidget(this);
     setCentralWidget(frame);
@@ -562,7 +560,7 @@ void mudlet::init()
     connect(mpActionVariables.data(), &QAction::triggered, this, &mudlet::slot_showVariableDialog);
     connect(mpActionButtons.data(), &QAction::triggered, this, &mudlet::slot_showActionDialog);
     connect(mpActionOptions.data(), &QAction::triggered, this, &mudlet::slot_showPreferencesDialog);
-    connect(mpActionToggleMainToolBar.data(), &QAction::triggered, this, &mudlet::slot_toggleMainToolBar);
+    connect(mpActionToggleMainToolBar.data(), &QAction::triggered, this, &mudlet::slot_toolbarToggleActionTriggered);
     connect(mpActionAbout.data(), &QAction::triggered, this, &mudlet::slot_showAboutDialog);
     connect(mpActionMultiView.data(), &QAction::triggered, this, &mudlet::slot_multiView);
     connect(mpActionReconnect.data(), &QAction::triggered, this, &mudlet::slot_reconnect);
@@ -724,6 +722,7 @@ void mudlet::init()
     readLateSettings(*mpSettings);
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
+    connect(mpMainToolBar->toggleViewAction(), &QAction::triggered, this, &mudlet::slot_toolbarToggleActionTriggered);
 
     dactionToggleFullScreen->setToolTip(utils::richText(tr("Toggle Full Screen View")));
 
@@ -2893,6 +2892,25 @@ void mudlet::readLateSettings(const QSettings& settings)
     // it is suggested Mudlet 4.x:
     setMenuBarVisibility(static_cast<enums::controlsVisibilityFlag>(settings.value("menuBarVisibility", static_cast<int>(enums::visibleAlways)).toInt()));
     setToolBarVisibility(static_cast<enums::controlsVisibilityFlag>(settings.value("toolBarVisibility", static_cast<int>(enums::visibleNever)).toInt()));
+
+    // Prevent a lockout where both menu bar and toolbar are hidden, leaving
+    // the user with no way to access settings on startup
+    if (mMenuBarVisibility == enums::visibleNever && mToolbarVisibility == enums::visibleNever) {
+        qWarning() << "mudlet::readLateSettings() - both menu bar and toolbar were configured"
+                   << "to never show; correcting toolbar to visibleOnlyWithoutLoadedProfile"
+                   << "to prevent lockout. Persisting correction now.";
+        setToolBarVisibility(enums::visibleOnlyWithoutLoadedProfile);
+        // Write only the corrected value — calling writeSettings() here would
+        // persist all not-yet-read settings at their defaults, clobbering user data
+        QSettings& correctionSettings = *getQSettings();
+        correctionSettings.setValue("toolBarVisibility", static_cast<int>(mToolbarVisibility));
+        correctionSettings.sync();
+        if (correctionSettings.status() != QSettings::NoError) {
+            qWarning() << "mudlet::readLateSettings() - failed to persist toolbar lockout correction to disk."
+                       << "QSettings status:" << correctionSettings.status() << "File:" << correctionSettings.fileName();
+        }
+    }
+
     mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
 
     mShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
@@ -3027,6 +3045,35 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
             mpMainToolBar->show();
         }
     }
+}
+
+void mudlet::slot_toolbarToggleActionTriggered(bool checked)
+{
+    if (!mpMainToolBar) {
+        qWarning() << "mudlet::slot_toolbarToggleActionTriggered() - mpMainToolBar is null; cannot process toggle action.";
+        return;
+    }
+
+    if (!checked && !canHideToolBar()) {
+        // Prevent lockout: don't hide toolbar when menu bar is configured to never show.
+        // blockSignals suppresses the toggled signal that setChecked would otherwise emit,
+        // preventing other connected slots from reacting to this corrective state reset.
+        mpMainToolBar->toggleViewAction()->blockSignals(true);
+        mpMainToolBar->toggleViewAction()->setChecked(true);
+        mpMainToolBar->toggleViewAction()->blockSignals(false);
+        // Qt has already hidden the toolbar by the time this slot fires — explicitly restore it
+        mpMainToolBar->setVisible(true);
+
+        if (mpActionToggleMainToolBar) {
+            mpActionToggleMainToolBar->blockSignals(true);
+            mpActionToggleMainToolBar->setChecked(true);
+            mpActionToggleMainToolBar->blockSignals(false);
+        }
+
+        return;
+    }
+
+    synchronizeToolBarVisibility(checked);
 }
 
 void mudlet::adjustToolBarVisibility()
@@ -4828,34 +4875,16 @@ void mudlet::slot_windowStateChanged(const Qt::WindowStates newState)
     }
 }
 
-void mudlet::slot_toggleMainToolBar()
-{
-    // Toggle the toolbar visibility
-    enums::controlsVisibility currentState = toolBarVisibility();
-    bool newVisibility = (currentState == enums::visibleNever);
-
-    // Synchronize toolbar visibility across all windows
-    synchronizeToolBarVisibility(newVisibility);
-}
-
-void mudlet::slot_showMainToolBarContextMenu(const QPoint& position)
-{
-    QMenu contextMenu(this);
-
-    // Create a copy of the toggle action for the context menu
-    QAction* toggleAction = new QAction(tr("Profile Toolbar"), &contextMenu);
-    toggleAction->setCheckable(true);
-    toggleAction->setChecked(mpMainToolBar->isVisible());
-    connect(toggleAction, &QAction::triggered, this, &mudlet::slot_toggleMainToolBar);
-
-    contextMenu.addAction(toggleAction);
-
-    // Show the context menu at the global position
-    contextMenu.exec(mpMainToolBar->mapToGlobal(position));
-}
-
 void mudlet::synchronizeToolBarVisibility(bool visible)
 {
+    if (!visible && !canHideToolBar()) {
+        // Prevent lockout: hiding the toolbar when the menu bar never shows would leave
+        // the user with no way to access settings. Callers should guard against this,
+        // but this is a defensive check for any future call sites.
+        qDebug() << "mudlet::synchronizeToolBarVisibility() - ignoring hide request; menu bar is set to visibleNever.";
+        return;
+    }
+
     // Update main window toolbar
     if (mpMainToolBar) {
         if (visible) {
@@ -4906,11 +4935,14 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
         contextMenu.addSeparator();
     }
 
-    // Add toolbar visibility toggle
-    QAction* toggleToolbarAction = new QAction(tr("Profile Toolbar"), &contextMenu);
+    //: Toggle action in the tab bar context menu to show/hide the main toolbar
+    QAction* toggleToolbarAction = new QAction(tr("Main Toolbar"), &contextMenu);
     toggleToolbarAction->setCheckable(true);
     toggleToolbarAction->setChecked(mpMainToolBar->isVisible());
-    connect(toggleToolbarAction, &QAction::triggered, this, &mudlet::slot_toggleMainToolBar);
+    if (mpMainToolBar->isVisible() && !canHideToolBar()) {
+        toggleToolbarAction->setEnabled(false);
+    }
+    connect(toggleToolbarAction, &QAction::triggered, this, &mudlet::slot_toolbarToggleActionTriggered);
 
     contextMenu.addAction(toggleToolbarAction);
 
