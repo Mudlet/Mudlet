@@ -55,6 +55,7 @@ public:
     void registerHandler(TMxpTagHandler* handler);
 
     TMxpElementRegistry& getElementRegistry() override;
+    const TMxpElementRegistry& getElementRegistry() const;
     QMap<QString, QVector<QString>>& getSupportedElements() override;
     TMxpTagHandler& getMainHandler() override;
 
