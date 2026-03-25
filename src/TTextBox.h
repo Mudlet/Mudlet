@@ -1,5 +1,8 @@
+#ifndef MUDLET_TTEXTBOX_H
+#define MUDLET_TTEXTBOX_H
+
 /***************************************************************************
- *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2026 by Mudlet Makers                                   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,45 +20,21 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_TMXPELEMENTREGISTRY_H
-#define MUDLET_TMXPELEMENTREGISTRY_H
+#include <QPlainTextEdit>
+#include <QPointer>
 
-#include "MxpTag.h"
-#include <QHash>
-#include <QMap>
-#include <QStringList>
-#include <QList>
-#include <QSharedPointer>
+class Host;
 
-struct TMxpElement
+class TTextBox : public QPlainTextEdit
 {
-    QString name;
-    QString definition;
-    QStringList attrs;
-    QString tag;
-    QString flags;
-    // if a custom element definition specified a default for an attribute, it's in defaultValues[attribute]
-    QHash<QString, QString> defaultValues;
-    bool open;
-    bool empty;
-
-    QString href;
-    QString hint;
-
-    QList<QSharedPointer<MxpNode>> parsedDefinition;
-};
-
-class TMxpElementRegistry
-{
-    QMap<QString, TMxpElement> mMXP_Elements;
+    Q_OBJECT
 
 public:
-    void registerElement(const TMxpElement& element);
-    void unregisterElement(const QString& name);
+    Q_DISABLE_COPY(TTextBox)
+    explicit TTextBox(Host* pHost, const QString& name, QWidget* parent = nullptr);
 
-    bool containsElement(const QString& name) const;
-    TMxpElement getElement(const QString& name) const;
-    bool isOpenElement(const QString& name) const;
+private:
+    QPointer<Host> mpHost;
 };
 
-#endif //MUDLET_TMXPELEMENTREGISTRY_H
+#endif // MUDLET_TTEXTBOX_H

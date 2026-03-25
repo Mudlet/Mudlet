@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2026 by Mudlet Makers                                   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,45 +17,23 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_TMXPELEMENTREGISTRY_H
-#define MUDLET_TMXPELEMENTREGISTRY_H
+#include "TTextBox.h"
 
-#include "MxpTag.h"
-#include <QHash>
-#include <QMap>
-#include <QStringList>
-#include <QList>
-#include <QSharedPointer>
+#include "Host.h"
+#include "utils.h"
 
-struct TMxpElement
+#include <QTextOption>
+
+TTextBox::TTextBox(Host* pHost, const QString& name, QWidget* parent)
+    : QPlainTextEdit(parent)
+    , mpHost(pHost)
 {
-    QString name;
-    QString definition;
-    QStringList attrs;
-    QString tag;
-    QString flags;
-    // if a custom element definition specified a default for an attribute, it's in defaultValues[attribute]
-    QHash<QString, QString> defaultValues;
-    bool open;
-    bool empty;
+    setObjectName(qsl("textEdit_%1_%2").arg(mpHost->getName(), name));
+    setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+    setFrameShape(QFrame::StyledPanel);
 
-    QString href;
-    QString hint;
-
-    QList<QSharedPointer<MxpNode>> parsedDefinition;
-};
-
-class TMxpElementRegistry
-{
-    QMap<QString, TMxpElement> mMXP_Elements;
-
-public:
-    void registerElement(const TMxpElement& element);
-    void unregisterElement(const QString& name);
-
-    bool containsElement(const QString& name) const;
-    TMxpElement getElement(const QString& name) const;
-    bool isOpenElement(const QString& name) const;
-};
-
-#endif //MUDLET_TMXPELEMENTREGISTRY_H
+    QPalette palette;
+    palette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
+    palette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
+    setPalette(palette);
+}

@@ -277,10 +277,12 @@ void TRoom::setWeight(int w)
     mpRoomDB->mpMap->setUnsaved(__func__);
 }
 
-void TRoom::setHidden(bool isHidden)
+void TRoom::setHidden(const bool isHidden)
 {
-    hidden = isHidden;
-    mpRoomDB->mpMap->setUnsaved(__func__);
+    if (hidden != isHidden) {
+        hidden = isHidden;
+        mpRoomDB->mpMap->setUnsaved(__func__);
+    }
 }
 
 void TRoom::setExitWeight(const QString& cmd, int w)
@@ -1540,7 +1542,6 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             mpRoomDB->mpMap->postMessage(infoMsg);
         }
         mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
-        exitRoomId = roomRemapping.value(exitRoomId);
         exitRoomId = roomRemapping.value(exitRoomId);
     }
 
