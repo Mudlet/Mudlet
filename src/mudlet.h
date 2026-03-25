@@ -239,6 +239,7 @@ public:
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     bool loadWindowLayout();
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
+    bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
     bool migratePasswordsToProfileStorage();
     bool migratePasswordsToSecureStorage();
     // Helper function to check if current version is >= specified version for backward compatibility
@@ -467,7 +468,7 @@ public slots:
     void slot_replaySpeedDown();
     void slot_replayTimeChanged();
     void slot_restoreMainMenu() { setMenuBarVisibility(enums::visibleAlways); }
-    void slot_restoreMainToolBar() { setToolBarVisibility(enums::visibleAlways); }
+    void slot_restoreMainToolBar() { synchronizeToolBarVisibility(true); }
     void slot_showAboutDialog();
     void slot_showHelpDialogForum();
     void slot_showHelpDialogIrc();

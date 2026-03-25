@@ -760,10 +760,14 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
 
     contextMenu.addSeparator();
 
-    //: This is a checkable toggle item in the context menu shown when right-clicking a tab in a detached window, to show or hide the toolbar.
+    //: This is a checkable toggle item in the context menu shown when right-clicking a tab in a detached window, to show or hide the toolbar. It appears with a checkmark when the toolbar is visible.
     auto toolbarToggleAction = contextMenu.addAction(tr("Main Toolbar"));
     toolbarToggleAction->setCheckable(true);
     toolbarToggleAction->setChecked(mpToolBar && mpToolBar->isVisible());
+    // Disabled when hiding would cause lockout (menu bar also never shown)
+    if (mpToolBar && mpToolBar->isVisible() && !canHideToolBar()) {
+        toolbarToggleAction->setEnabled(false);
+    }
     connect(toolbarToggleAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
 
     // Add connection indicator toggle
@@ -826,7 +830,7 @@ void TDetachedWindow::createToolBar()
 {
     mpToolBar = new QToolBar(this);
     mpToolBar->setObjectName(qsl("detachedMainToolBar"));
-    //: Name of the main toolbar in detached windows, shown in right-click context menus
+    //: Name of the main toolbar shown in Qt's built-in toolbar toggle menus and right-click context menus
     mpToolBar->setWindowTitle(tr("Main Toolbar"));
     addToolBar(mpToolBar);
     mpToolBar->setMovable(false);
@@ -842,6 +846,8 @@ void TDetachedWindow::createToolBar()
         }
         auto pMudlet = mudlet::self();
         if (!pMudlet) {
+            qWarning() << "TDetachedWindow::createToolBar() lambda - mudlet singleton is null;"
+                       << "cannot synchronize toolbar visibility.";
             return;
         }
         pMudlet->synchronizeToolBarVisibility(checked);
@@ -1610,6 +1616,8 @@ void TDetachedWindow::slot_toggleToolBarVisibility()
 
     // Prevent lockout: cannot hide toolbar when menu bar is configured to never show
     if (!newVisibility && !canHideToolBar()) {
+        mpToolBar->toggleViewAction()->setChecked(true);
+        mpToolBar->setVisible(true);
         if (mpActionToggleToolBar) {
             mpActionToggleToolBar->setChecked(true);
         }
@@ -1618,6 +1626,8 @@ void TDetachedWindow::slot_toggleToolBarVisibility()
 
     auto mudletInstance = mudlet::self();
     if (!mudletInstance) {
+        qWarning() << "TDetachedWindow::slot_toggleToolBarVisibility() - mudlet singleton is null;"
+                   << "cannot synchronize toolbar visibility.";
         return;
     }
 
@@ -1632,10 +1642,14 @@ void TDetachedWindow::slot_showDetachedToolBarContextMenu(const QPoint& position
 
     QMenu menu(this);
 
-    //: This is a checkable toggle item in the context menu shown when right-clicking the toolbar in a detached window, to show or hide the toolbar.
+    //: This is a checkable toggle item in the context menu shown when right-clicking the toolbar in a detached window, to show or hide the toolbar. It appears with a checkmark when the toolbar is visible.
     QAction* toolbarToggleAction = menu.addAction(tr("Main Toolbar"));
     toolbarToggleAction->setCheckable(true);
     toolbarToggleAction->setChecked(mpToolBar->isVisible());
+    // Disabled when hiding would cause lockout (menu bar also never shown)
+    if (mpToolBar->isVisible() && !canHideToolBar()) {
+        toolbarToggleAction->setEnabled(false);
+    }
     connect(toolbarToggleAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
 
     // Show the context menu at the clicked position
@@ -1655,6 +1669,8 @@ void TDetachedWindow::setToolBarVisibility(bool visible)
 
 bool TDetachedWindow::isToolBarVisible() const
 {
+    // Returns false when mpToolBar is null — callers that distinguish
+    // "hidden" from "no toolbar" should check mpToolBar directly.
     return mpToolBar ? mpToolBar->isVisible() : false;
 }
 
@@ -1662,9 +1678,11 @@ bool TDetachedWindow::canHideToolBar() const
 {
     auto mudletInstance = mudlet::self();
     if (!mudletInstance) {
+        qWarning() << "TDetachedWindow::canHideToolBar() - mudlet singleton is null;"
+                   << "cannot determine menu bar visibility. Treating toolbar as non-hideable.";
         return false;
     }
-    return mudletInstance->menuBarVisibility() != enums::visibleNever;
+    return mudletInstance->canHideToolBar();
 }
 
 void TDetachedWindow::slot_saveProfile()
