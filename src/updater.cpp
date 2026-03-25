@@ -138,14 +138,7 @@ void Updater::checkUpdatesOnStart()
                 return;
             }
 
-            const auto& release = updates.first();
-            const QUrl downloadUrl = release.getDownloadUrl();
-            if (!downloadUrl.isValid() || downloadUrl.isEmpty()) {
-                qWarning() << "Bi-daily update check: invalid download URL for release" << release.getVersion();
-                return;
-            }
-
-            feed->downloadRelease(release);
+            downloadReleaseIfValid(updates.first());
         });
         KDToolBox::connectSingleShot(feed, &dblsqd::Feed::loadError, this, [](const QString& error) {
             qWarning() << "Bi-daily update check: failed to load feed:" << error;
@@ -230,6 +223,20 @@ void Updater::showFullChangelog() const
     changelogDialog->show();
 }
 
+bool Updater::downloadReleaseIfValid(const dblsqd::Release& release)
+{
+    const QUrl downloadUrl = release.getDownloadUrl();
+    if (!downloadUrl.isValid() || downloadUrl.isEmpty()) {
+        qWarning() << "Update check: invalid download URL for release" << release.getVersion();
+        if (mManualCheckInProgress) {
+            emit signal_updateCheckFailed(tr("Invalid download URL for version %1").arg(release.getVersion()));
+        }
+        return false;
+    }
+    feed->downloadRelease(release);
+    return true;
+}
+
 void Updater::finishSetup()
 {
 #if defined(Q_OS_LINUX)
@@ -261,7 +268,8 @@ void Updater::setupOnWindows()
 
     // Setup to automatically download the new release when an update is available
     connect(feed, &dblsqd::Feed::ready, feed, [=, this]() {
-        if (mudlet::self()->developmentVersion) {
+        auto* pMudlet = mudlet::self();
+        if (!pMudlet || pMudlet->developmentVersion) {
             return;
         }
 
@@ -272,7 +280,7 @@ void Updater::setupOnWindows()
         } else if (!updateAutomatically()) {
             emit signal_updateAvailable(updates.size());
         } else {
-            feed->downloadRelease(updates.first());
+            downloadReleaseIfValid(updates.first());
         }
     });
 
@@ -297,6 +305,7 @@ void Updater::setupOnWindows()
         // replace current binary with the unzipped one
         auto watcher = new QFutureWatcher<void>;
         connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::finishSetup);
+        connect(watcher, &QFutureWatcher<void>::finished, watcher, &QObject::deleteLater);
         watcher->setFuture(future);
     });
 
@@ -324,7 +333,8 @@ void Updater::setupOnLinux()
     connect(feed, &dblsqd::Feed::ready, this, [=, this]() {
         // don't update development builds to prevent auto-update from overwriting your
         // compiled binary while in development
-        if (mudlet::self()->developmentVersion) {
+        auto* pMudlet = mudlet::self();
+        if (!pMudlet || pMudlet->developmentVersion) {
             return;
         }
 
@@ -336,7 +346,7 @@ void Updater::setupOnLinux()
             emit signal_updateAvailable(updates.size());
             return;
         } else {
-            feed->downloadRelease(updates.first());
+            downloadReleaseIfValid(updates.first());
         }
     });
 
@@ -361,6 +371,7 @@ void Updater::setupOnLinux()
         // replace current binary with the unzipped one
         auto watcher = new QFutureWatcher<void>;
         connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::slot_updateLinuxBinary);
+        connect(watcher, &QFutureWatcher<void>::finished, watcher, &QObject::deleteLater);
         watcher->setFuture(future);
     });
 
@@ -531,6 +542,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 #endif
         mpInstallOrRestart->setText(tr("Restart to apply update"));
         mpInstallOrRestart->setEnabled(true);
+        watcher->deleteLater();
     });
     watcher->setFuture(future);
 #endif // !Q_OS_MACOS
