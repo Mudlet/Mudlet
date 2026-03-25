@@ -62,7 +62,16 @@ void FontManager::loadFonts(const QString& folder)
 
 void FontManager::loadFont(const QString& filePath, const QString& belongsTo)
 {
-    if (fontAlreadyLoaded(filePath)) {
+    const QFileInfo fontFile(filePath);
+    const auto fileName = fontFile.fileName();
+
+    if (loadedFontPaths.contains(fileName)) {
+        // Font is already loaded... record this additional affiliation
+        // so multiple profiles sharing the same font are tracked independently
+        const int existingID = loadedFontPaths.value(fileName);
+        if (!loadedFontAffiliation.contains(belongsTo, existingID)) {
+            loadedFontAffiliation.insert(belongsTo, existingID);
+        }
         return;
     }
 
@@ -103,7 +112,13 @@ void FontManager::rememberFont(const QString& filePath, int fontID, const QStrin
 void FontManager::unloadFonts(const QString& belongsTo)
 {
     const auto fontIds = loadedFontAffiliation.values(belongsTo);
+    loadedFontAffiliation.remove(belongsTo);
+
     for (const int id : fontIds) {
+        // Only remove from Qt if no other owner still references this font
+        if (loadedFontAffiliation.values().contains(id)) {
+            continue;
+        }
         QFontDatabase::removeApplicationFont(id);
         // Remove from loadedFontPaths so the font can be re-registered
         // if the package is reinstalled
@@ -112,7 +127,6 @@ void FontManager::unloadFonts(const QString& belongsTo)
             loadedFontPaths.remove(fileName);
         }
     }
-    loadedFontAffiliation.remove(belongsTo);
 }
 
 void FontManager::addEmojiFont()
