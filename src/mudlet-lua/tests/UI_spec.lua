@@ -670,6 +670,10 @@ describe("Tests UI functions", function()
       -- Try complex formatting if available
       decho("formattest", "<b><i><u>complex<reset>\n")
 
+      -- Move cursor to line 0 so selectSection operates on the right line
+      -- (the trailing \n above moves the cursor to the next line)
+      moveCursor("formattest", 0, 0)
+
       -- Test the complex formatted text
       selectSection("formattest", 24, 1) -- Something in "complex"
       local complexFormat = getTextFormat("formattest")
