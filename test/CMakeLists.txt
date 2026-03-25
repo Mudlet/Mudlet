@@ -26,6 +26,7 @@ set(UNIT_TESTS
     TLuaInterfaceTest
     SecureStringUtilsTest
     CredentialManagerTest
+    DiscordTest
 )
 
 foreach(test_name ${UNIT_TESTS})

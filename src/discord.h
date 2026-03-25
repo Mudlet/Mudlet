@@ -169,7 +169,13 @@ public:
     bool libraryLoaded();
     bool usingMudletsDiscordID(Host*) const;
 
+    void initializeRpc();
+    void shutdownRpc();
     void UpdatePresence();
+
+    void setServerOrigin(Host* pHost, int flag);
+    void clearServerOrigin(Host* pHost, int flag);
+    bool isServerOrigin(Host* pHost, int flag) const;
 
     QString deduceGameName(const QString& address);
     QPair<bool, QString> gameIntegrationSupported(const QString& address);
@@ -225,8 +231,6 @@ private:
     std::function<void(const DiscordRichPresence*)> Discord_UpdatePresence;
     std::function<void(void)> Discord_RunCallbacks;
     std::function<void(void)> Discord_Shutdown;
-    // Not used:
-    // std::function<void>(void)> Discord_ClearPresence;
 #if defined(DISCORD_DISABLE_IO_THREAD)
     // std::function<void(void)> Discord_UpdateConnection;
 #endif
@@ -234,6 +238,7 @@ private:
     // std::function<void(DiscordEventHandlers*)> Discord_UpdateHandlers;
 
     bool mLoaded = false;
+    bool mRpcActive = false;
 
     // Key is a Application Id, Value is a pointer to a local copy of the data
     // currently held for that presence:
@@ -258,6 +263,10 @@ private:
     QMap<Host*, QString>mSmallImageTexts;
     QMap<Host*, int>mPartySize;
     QMap<Host*, int>mPartyMax;
+
+    // Tracks which presence fields were last set by the server (vs Lua).
+    // Uses the same bit positions as Host::DiscordOptionFlag.
+    QMap<Host*, int>mServerOriginFlags;
 
     // Hash with game name as key and various URL forms that might be used for
     // it as values:

@@ -97,6 +97,16 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // Only unhide this if it is needed
     groupBox_discordPrivacy->hide();
 
+    connect(comboBox_discordMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
+        const bool enablePrivacy = (index == static_cast<int>(Host::DiscordShowGameDetails));
+        comboBox_discordLargeIconPrivacy->setEnabled(enablePrivacy);
+        comboBox_discordSmallIconPrivacy->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToDetail->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToState->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToPartyInfo->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToTimerInfo->setEnabled(enablePrivacy);
+    });
+
     // As we demonstrate the options that these next two checkboxes control in
     // the editor "preview" widget (on another tab) we will need to track
     // changes and update the edbee widget straight away. As we can have
@@ -844,10 +854,19 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
 
+    comboBox_discordMode->setCurrentIndex(static_cast<int>(pHost->mDiscordMode));
+
     if (mudlet::self()->mDiscord.libraryLoaded()) {
         Host::DiscordOptionFlags const discordFlags = pHost->mDiscordAccessFlags;
         groupBox_discordPrivacy->show();
-        checkBox_discordLuaAPI->setChecked(discordFlags & Host::DiscordLuaAccessEnabled);
+
+        const bool enablePrivacy = (pHost->mDiscordMode == Host::DiscordShowGameDetails);
+        comboBox_discordLargeIconPrivacy->setEnabled(enablePrivacy);
+        comboBox_discordSmallIconPrivacy->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToDetail->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToState->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToPartyInfo->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToTimerInfo->setEnabled(enablePrivacy);
 
         if ((discordFlags & Host::DiscordSetLargeIcon) && (discordFlags & Host::DiscordSetLargeIconText)) {
             comboBox_discordLargeIconPrivacy->setCurrentIndex(0);
@@ -1604,7 +1623,7 @@ void dlgProfilePreferences::clearHostDetails()
     mSearchEngineMap.clear();
     search_engine_combobox->clear();
 
-    checkBox_discordLuaAPI->setChecked(false);
+    comboBox_discordMode->setCurrentIndex(static_cast<int>(Host::DiscordShowGameDetails));
     comboBox_discordLargeIconPrivacy->setCurrentIndex(0);
     comboBox_discordSmallIconPrivacy->setCurrentIndex(0);
     checkBox_discordServerAccessToDetail->setChecked(false);
@@ -3132,8 +3151,9 @@ void dlgProfilePreferences::slot_saveAndClose()
                 | (checkBox_discordServerAccessToDetail->isChecked() ? Host::DiscordNoOption : Host::DiscordSetDetail)
                 | (checkBox_discordServerAccessToState->isChecked() ? Host::DiscordNoOption : Host::DiscordSetState)
                 | (checkBox_discordServerAccessToPartyInfo->isChecked() ? Host::DiscordNoOption : Host::DiscordSetPartyInfo)
-                | (checkBox_discordServerAccessToTimerInfo->isChecked() ? Host::DiscordNoOption : Host::DiscordSetTimeInfo)
-                | (checkBox_discordLuaAPI->isChecked() ? Host::DiscordLuaAccessEnabled : Host::DiscordNoOption));
+                | (checkBox_discordServerAccessToTimerInfo->isChecked() ? Host::DiscordNoOption : Host::DiscordSetTimeInfo));
+
+        pHost->setDiscordMode(static_cast<Host::DiscordMode>(comboBox_discordMode->currentIndex()));
 
         pHost->mRequiredDiscordUserName = lineEdit_discordUserName->text().trimmed();
         if (lineEdit_discordUserDiscriminator->hasAcceptableInput()) {
