@@ -57,7 +57,13 @@ public:
     const bool needsIndent;
     const int firstChar;
     const int lastChar;
-    WrapInfo(bool isNewline, bool needsIndent, int firstChar, int lastChar) : isNewline(isNewline), needsIndent(needsIndent), firstChar(firstChar), lastChar(lastChar) {}
+    WrapInfo(bool isNewline, bool needsIndent, int firstChar, int lastChar)
+    : isNewline(isNewline)
+    , needsIndent(needsIndent)
+    , firstChar(firstChar)
+    , lastChar(lastChar)
+    {
+    }
 };
 
 class TChar
@@ -65,6 +71,7 @@ class TChar
     friend class TBuffer;
 
 public:
+    // clang-format off
     enum AttributeFlag {
         None = 0x0,
         // Replaces TCHAR_BOLD 2
@@ -124,6 +131,7 @@ public:
         // Replaces TCHAR_ECHO 16
         Echo = 0x200000               // 0000 0000 0010 0000 0000 0000 0000 0000
     };
+    // clang-format on
     Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
 
     // Not a default constructor - the defaulted argument means it could have
@@ -141,7 +149,8 @@ public:
     ~TChar() = default;
 
     bool operator==(const TChar&);
-    void setColors(const QColor& newForeGroundColor, const QColor& newBackGroundColor) {
+    void setColors(const QColor& newForeGroundColor, const QColor& newBackGroundColor)
+    {
         mFgColor = newForeGroundColor;
         mBgColor = newBackGroundColor;
     }
@@ -151,7 +160,8 @@ public:
     void setAllDisplayAttributes(const AttributeFlags newDisplayAttributes) { mFlags = (mFlags & ~TestMask) | (newDisplayAttributes & TestMask); }
     void setForeground(const QColor& newColor) { mFgColor = newColor; }
     void setBackground(const QColor& newColor) { mBgColor = newColor; }
-    void setTextFormat(const QColor& newFgColor, const QColor& newBgColor, const AttributeFlags newDisplayAttributes) {
+    void setTextFormat(const QColor& newFgColor, const QColor& newBgColor, const AttributeFlags newDisplayAttributes)
+    {
         setColors(newFgColor, newBgColor);
         setAllDisplayAttributes(newDisplayAttributes);
     }
@@ -162,7 +172,7 @@ public:
     void select() { mIsSelected = true; }
     void deselect() { mIsSelected = false; }
     bool isSelected() const { return mIsSelected; }
-    int linkIndex () const { return mLinkIndex; }
+    int linkIndex() const { return mLinkIndex; }
     bool isBold() const { return mFlags & Bold; }
     bool isItalic() const { return mFlags & Italic; }
     bool isUnderlined() const { return mFlags & Underline; }
@@ -176,43 +186,39 @@ public:
     bool isUnderlineDotted() const { return mFlags & UnderlineDotted; }
     bool isUnderlineDashed() const { return mFlags & UnderlineDashed; }
 
-    // Decoration color accessors
-    const QColor& underlineColor() const { return mUnderlineColor; }
-    const QColor& overlineColor() const { return mOverlineColor; }
-    const QColor& strikeoutColor() const { return mStrikeoutColor; }
-    bool hasCustomUnderlineColor() const { return mHasCustomUnderlineColor; }
-    bool hasCustomOverlineColor() const { return mHasCustomOverlineColor; }
-    bool hasCustomStrikeoutColor() const { return mHasCustomStrikeoutColor; }
-
-    // Decoration color setters
-    void setUnderlineColor(const QColor& color) { mUnderlineColor = color; mHasCustomUnderlineColor = true; }
-    void setOverlineColor(const QColor& color) { mOverlineColor = color; mHasCustomOverlineColor = true; }
-    void setStrikeoutColor(const QColor& color) { mStrikeoutColor = color; mHasCustomStrikeoutColor = true; }
-    void clearCustomUnderlineColor() { mHasCustomUnderlineColor = false; }
-    void clearCustomOverlineColor() { mHasCustomOverlineColor = false; }
-    void clearCustomStrikeoutColor() { mHasCustomStrikeoutColor = false; }
     // Special case - if fast blink is set then do NOT say that blink is set to
     // preserve priority of the former over the latter:
     bool isBlinking() const { return (mFlags & FastBlink) ? false : (mFlags & Blink); }
     bool isFastBlinking() const { return mFlags & FastBlink; }
     quint8 alternateFont() const;
-    static TChar::AttributeFlag alternateFontFlag(const quint8 altFontNumber) {
+    static TChar::AttributeFlag alternateFontFlag(const quint8 altFontNumber)
+    {
         switch (altFontNumber) {
-        case 1: return AltFont1;
-        case 2: return AltFont2;
-        case 3: return AltFont3;
-        case 4: return AltFont4;
-        case 5: return AltFont5;
-        case 6: return AltFont6;
-        case 7: return AltFont7;
-        case 8: return AltFont8;
-        case 9: return AltFont9;
+        case 1:
+            return AltFont1;
+        case 2:
+            return AltFont2;
+        case 3:
+            return AltFont3;
+        case 4:
+            return AltFont4;
+        case 5:
+            return AltFont5;
+        case 6:
+            return AltFont6;
+        case 7:
+            return AltFont7;
+        case 8:
+            return AltFont8;
+        case 9:
+            return AltFont9;
         default:
             Q_ASSERT_X(altFontNumber < 10, "alternateFontFlag", "value out of range 0 to 9");
             return None;
         }
     }
-    static QString attributeType(const AttributeFlag flag) {
+    static QString attributeType(const AttributeFlag flag)
+    {
         switch (flag) {
         case None:
             return qsl("None");
@@ -270,23 +276,15 @@ private:
     // Kept as a separate flag because it must often be handled separately
     bool mIsSelected = false;
     int mLinkIndex = 0;
-
-    // Enhanced decoration color support for OSC 8 hyperlinks
-    QColor mUnderlineColor;
-    QColor mOverlineColor;
-    QColor mStrikeoutColor;
-    bool mHasCustomUnderlineColor = false;
-    bool mHasCustomOverlineColor = false;
-    bool mHasCustomStrikeoutColor = false;
+    // Note: Decoration colors (underline/overline/strikeout) are stored in TLinkStore
+    // for memory efficiency - they are looked up via linkIndex() at render time.
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 
 
-
-
 class TBuffer
 {
-    inline static const TEncodingTable &csmEncodingTable = TEncodingTable::csmDefaultInstance;
+    inline static const TEncodingTable& csmEncodingTable = TEncodingTable::csmDefaultInstance;
 
     inline static const int TCHAR_IN_BYTES = sizeof(TChar);
 
@@ -305,7 +303,7 @@ public:
     void log(int, int);
     int skipSpacesAtBeginOfLine(const int row, const int column);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<int> luaReference = QVector<int>());
-    QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0,  int spacePadding = 0);
+    QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0, int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
     bool isEmpty() const { return buffer.size() == 0; }
     QString& line(int lineNumber);
@@ -351,14 +349,14 @@ public:
     void clearLastClickedLinkIndex() { mLastClickedLinkIndex = 0; }
     static const QList<QByteArray> getEncodingNames();
     void logRemainingOutput();
-    void appendLog(const QString &text);
+    void appendLog(const QString& text);
 
     // OSC 8 hyperlink documentation examples - triggered by secret phrase
     void injectOSC8DocumentationExamples();
 
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
-    void encodingChanged(const QByteArray &);
+    void encodingChanged(const QByteArray&);
     void clearSearchHighlights();
 
     static int lengthInGraphemes(const QString& text);
@@ -510,15 +508,11 @@ private:
     int mCurrentHyperlinkStartColumn = 0;
     QString mCurrentHyperlinkText;
 
-    enum class WatchdogPhase {
-        Phase1_Snapshot,
-        Phase2_Unfreeze,
-        None
-    };
-    static constexpr int    MAX_TAG_TIMEOUT_MS = 1300;
-    WatchdogPhase           mWatchdogPhase = WatchdogPhase::None;
+    enum class WatchdogPhase { Phase1_Snapshot, Phase2_Unfreeze, None };
+    static constexpr int MAX_TAG_TIMEOUT_MS = 1300;
+    WatchdogPhase mWatchdogPhase = WatchdogPhase::None;
     std::unique_ptr<QTimer> mTagWatchdog;
-    std::string             mWatchdogTagSnapshot;
+    std::string mWatchdogTagSnapshot;
 
     // Enhanced OSC 8 hyperlink styling and menu support
     Mudlet::HyperlinkStyling mCurrentHyperlinkStyling;
@@ -531,10 +525,10 @@ private:
     QMap<int, QColor> mLinkOriginalBackgrounds;
     QMap<int, TChar> mLinkOriginalCharacters;
     QMap<int, QString> mLinkOriginalText;
-    int mCurrentHoveredLinkIndex = 0;  // Which link is currently hovered (0 = none)
-    int mCurrentActiveLinkIndex = 0;   // Which link is currently being clicked (0 = none)
-    int mCurrentFocusedLinkIndex = 0;  // Which link has keyboard focus (0 = none)
-    int mLastClickedLinkIndex = 0;     // Last clicked link - suppresses hover until mouse leaves
+    int mCurrentHoveredLinkIndex = 0; // Which link is currently hovered (0 = none)
+    int mCurrentActiveLinkIndex = 0;  // Which link is currently being clicked (0 = none)
+    int mCurrentFocusedLinkIndex = 0; // Which link has keyboard focus (0 = none)
+    int mLastClickedLinkIndex = 0;    // Last clicked link - suppresses hover until mouse leaves
 
     // Flag to skip trigger processing during documentation injection
     bool mSkipTriggerProcessing = false;
@@ -565,8 +559,8 @@ public:
     int getHoveredLink() const { return mCurrentHoveredLinkIndex; }
     int getActiveLink() const { return mCurrentActiveLinkIndex; }
     int getFocusedLink() const { return mCurrentFocusedLinkIndex; }
-    int getLinkIndexAt(int line, int column) const; // Get link index at specific position
-    void clearLinkIndices(int lineNumber, int startColumn, int count); // Clear link indices in a range
+    int getLinkIndexAt(int line, int column) const;                                     // Get link index at specific position
+    void clearLinkIndices(int lineNumber, int startColumn, int count);                  // Clear link indices in a range
     void restoreLinkIndices(int lineNumber, int startColumn, int count, int linkIndex); // Restore link indices in a range
 
 private:

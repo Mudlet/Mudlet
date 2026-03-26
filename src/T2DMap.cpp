@@ -2127,7 +2127,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             painter.setPen(transparentPen);
             myPath.addEllipse(playerRoomOnWidgetCoordinates, roomRadius, roomRadius);
         } else {
-            gradient.setStops(mPlayerRoomColorGradentStops);
+            gradient.setStops(mPlayerRoomColorGradientStops);
             painter.setBrush(gradient);
             painter.setPen(transparentPen);
             myPath.addEllipse(playerRoomOnWidgetCoordinates, roomRadius, roomRadius);

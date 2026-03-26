@@ -101,7 +101,9 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     setAttribute(Qt::WA_OpaquePaintEvent, false);
     setAttribute(Qt::WA_DeleteOnClose);
 
-    connect(mudlet::self(), &mudlet::signal_blinkStateChanged, this, &TTextEdit::slot_blinkStateChanged);
+    if (auto* pMudlet = mudlet::self()) {
+        connect(pMudlet, &mudlet::signal_blinkStateChanged, this, &TTextEdit::slot_blinkStateChanged);
+    }
 
     // Scroll optimizations may use cached screen data, missing blinking content detection
     mpScrollStoppedTimer = new QTimer(this);
@@ -869,20 +871,14 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     const bool isBlinking = attributes & (TChar::Blink | TChar::FastBlink);
 
     bool isItalics = attributes & TChar::Italic;
+    QColor effectiveFgColor = fgColor;
     if (isBlinking) {
         mHasBlinkingContent = true;
         if (mEnableBlinkText) {
             const bool isFastBlink = attributes & TChar::FastBlink;
             auto pMudlet = mudlet::self();
-            const bool isVisible = pMudlet
-                ? (isFastBlink ? pMudlet->fastBlinkState() : pMudlet->slowBlinkState())
-                : true;
-            if (!isVisible) {
-                if (!textRect.isNull()) {
-                    drawCustomDecorations(painter, fgColor, textRect, charStyle);
-                }
-                return;
-            }
+            const qreal opacity = pMudlet ? pMudlet->blinkPulseOpacity(isFastBlink) : 1.0;
+            effectiveFgColor.setAlphaF(effectiveFgColor.alphaF() * opacity);
         } else {
             isItalics = true;
         }
@@ -892,17 +888,18 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     const bool isStrikeOut = attributes & TChar::StrikeOut;
     const bool isUnderline = attributes & TChar::Underline;
 
-    // Check for advanced underline styles or custom decoration colors
+    // Check for advanced underline styles
     const bool isUnderlineWavy = attributes & TChar::UnderlineWavy;
     const bool isUnderlineDotted = attributes & TChar::UnderlineDotted;
     const bool isUnderlineDashed = attributes & TChar::UnderlineDashed;
     const bool hasAdvancedUnderline = isUnderlineWavy || isUnderlineDotted || isUnderlineDashed;
 
-    // If we have advanced underline styles or custom decoration colors, disable Qt's built-in decorations
-    // and draw them manually later
-    const bool useQtUnderline = isUnderline && !hasAdvancedUnderline && !charStyle.hasCustomUnderlineColor();
-    const bool useQtOverline = isOverline && !charStyle.hasCustomOverlineColor();
-    const bool useQtStrikeOut = isStrikeOut && !charStyle.hasCustomStrikeoutColor();
+    // For linked characters, we draw decorations manually to support custom colors from TLinkStore
+    // For non-linked characters, we can use Qt's built-in decorations
+    const bool hasLink = charStyle.linkIndex() > 0;
+    const bool useQtUnderline = isUnderline && !hasAdvancedUnderline && !hasLink;
+    const bool useQtOverline = isOverline && !hasLink;
+    const bool useQtStrikeOut = isStrikeOut && !hasLink;
 
     // const bool isConcealed = attributes & TChar::Concealed;
     // const int altFontIndex = charStyle.alternateFont();
@@ -921,13 +918,13 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
         return;
     }
 
-    if (painter.pen().color() != fgColor) {
-        painter.setPen(fgColor);
+    if (painter.pen().color() != effectiveFgColor) {
+        painter.setPen(effectiveFgColor);
     }
     painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
 
     // Draw custom decorations (colored underlines, overlines, strikethrough)
-    drawCustomDecorations(painter, fgColor, textRect, charStyle);
+    drawCustomDecorations(painter, effectiveFgColor, textRect, charStyle);
 }
 
 void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultColor, const QRect& textRect, TChar& charStyle) const
@@ -941,15 +938,39 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
     int strikeoutY = textRect.top() + textRect.height() / 2;
     int lineWidth = 1;
 
+    // Look up decoration colors from TLinkStore if this character has a link
+    const int linkIndex = charStyle.linkIndex();
+    QColor underlineColor = defaultColor;
+    QColor overlineColor = defaultColor;
+    QColor strikeoutColor = defaultColor;
+
+    if (linkIndex > 0 && mpBuffer->mLinkStore.hasStyling(linkIndex)) {
+        Mudlet::HyperlinkStyling styling = mpBuffer->mLinkStore.getStyling(linkIndex);
+        styling.currentState = mpBuffer->getLinkState(linkIndex);
+        Mudlet::HyperlinkStyling::StateStyle effectiveStyle = styling.getEffectiveStyle();
+
+        if (effectiveStyle.hasUnderlineColor) {
+            underlineColor = effectiveStyle.underlineColor;
+        }
+
+        if (effectiveStyle.hasOverlineColor) {
+            overlineColor = effectiveStyle.overlineColor;
+        }
+
+        if (effectiveStyle.hasStrikeoutColor) {
+            strikeoutColor = effectiveStyle.strikeoutColor;
+        }
+    }
+
     // Draw underline decorations
     if (attributes & TChar::Underline) {
-        QColor underlineColor = charStyle.hasCustomUnderlineColor() ? charStyle.underlineColor() : defaultColor;
         QPen pen(underlineColor);
         pen.setWidth(lineWidth);
 
         bool isWavy = attributes & TChar::UnderlineWavy;
         bool isDotted = attributes & TChar::UnderlineDotted;
         bool isDashed = attributes & TChar::UnderlineDashed;
+        bool isLinked = linkIndex > 0;
 
         if (isWavy) {
             // Draw wavy underline
@@ -985,8 +1006,8 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
             painter.drawLine(textRect.left(), underlineY, textRect.right(), underlineY);
 
         } else {
-            // Solid underline (only draw if we have custom color or advanced style)
-            if (charStyle.hasCustomUnderlineColor() || isWavy || isDotted || isDashed) {
+            // Solid underline - draw for linked characters (Qt didn't draw them)
+            if (isLinked) {
                 pen.setStyle(Qt::SolidLine);
                 painter.setPen(pen);
                 painter.drawLine(textRect.left(), underlineY, textRect.right(), underlineY);
@@ -994,9 +1015,8 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
         }
     }
 
-    // Draw overline decorations
-    if (attributes & TChar::Overline) {
-        QColor overlineColor = charStyle.hasCustomOverlineColor() ? charStyle.overlineColor() : defaultColor;
+    // Draw overline decorations (only for linked characters since Qt draws them for non-linked)
+    if ((attributes & TChar::Overline) && linkIndex > 0) {
         QPen pen(overlineColor);
         pen.setWidth(lineWidth);
         pen.setStyle(Qt::SolidLine);
@@ -1004,9 +1024,8 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
         painter.drawLine(textRect.left(), overlineY, textRect.right(), overlineY);
     }
 
-    // Draw strikethrough decorations
-    if (attributes & TChar::StrikeOut) {
-        QColor strikeoutColor = charStyle.hasCustomStrikeoutColor() ? charStyle.strikeoutColor() : defaultColor;
+    // Draw strikethrough decorations (only for linked characters since Qt draws them for non-linked)
+    if ((attributes & TChar::StrikeOut) && linkIndex > 0) {
         QPen pen(strikeoutColor);
         pen.setWidth(lineWidth);
         pen.setStyle(Qt::SolidLine);
@@ -1180,7 +1199,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 
     //delete non used characters.
     //needed for horizontal scrolling because there sometimes characters didn't get cleared
-    QRect deleteRect = QRect(0, from * mFontHeight, x_right * mFontHeight, (y_bottom + 1) * mFontHeight);
+    QRect deleteRect = QRect(0, from * mFontHeight, x_right * mFontWidth, (y_bottom + 1) * mFontHeight);
     p.setCompositionMode(QPainter::CompositionMode_Source);
     p.fillRect(deleteRect, Qt::transparent);
 
@@ -1207,12 +1226,14 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     mForceUpdate = false;
 
     const bool shouldBeRegistered = mEnableBlinkText && mHasBlinkingContent;
-    if (shouldBeRegistered && !mIsBlinkClientRegistered) {
-        mudlet::self()->registerBlinkClient();
-        mIsBlinkClientRegistered = true;
-    } else if (!shouldBeRegistered && mIsBlinkClientRegistered) {
-        mudlet::self()->unregisterBlinkClient();
-        mIsBlinkClientRegistered = false;
+    if (auto* pMudlet = mudlet::self()) {
+        if (shouldBeRegistered && !mIsBlinkClientRegistered) {
+            pMudlet->registerBlinkClient();
+            mIsBlinkClientRegistered = true;
+        } else if (!shouldBeRegistered && mIsBlinkClientRegistered) {
+            pMudlet->unregisterBlinkClient();
+            mIsBlinkClientRegistered = false;
+        }
     }
 }
 
@@ -2003,10 +2024,10 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     text.append("        span { white-space: pre-wrap; }\n");
 
     if (mEnableBlinkText) {
-        text.append("        @keyframes blink-slow { 50% { opacity: 0; } }\n");
-        text.append("        @keyframes blink-fast { 50% { opacity: 0; } }\n");
-        text.append("        .blink-slow { animation: blink-slow 0.8s step-end infinite; }\n");
-        text.append("        .blink-fast { animation: blink-fast 0.4s step-end infinite; }\n");
+        text.append("        @keyframes blink-slow { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }\n");
+        text.append("        @keyframes blink-fast { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }\n");
+        text.append("        .blink-slow { animation: blink-slow 2s ease-in-out infinite; }\n");
+        text.append("        .blink-fast { animation: blink-fast 1s ease-in-out infinite; }\n");
     }
 
     text.append("     -->\n");
@@ -3217,23 +3238,25 @@ void TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide(const bool state)
     }
 }
 
-void TTextEdit::slot_changeEnableBlinkText(const bool state)
+void TTextEdit::slot_changeEnableBlinkText(const bool enable)
 {
-    if (mEnableBlinkText != state) {
-        mEnableBlinkText = state;
+    if (mEnableBlinkText != enable) {
+        mEnableBlinkText = enable;
         if (!mEnableBlinkText && mIsBlinkClientRegistered) {
-            mudlet::self()->unregisterBlinkClient();
+            if (auto* pMudlet = mudlet::self()) {
+                pMudlet->unregisterBlinkClient();
+            }
             mIsBlinkClientRegistered = false;
         }
         update();
     }
 }
 
-void TTextEdit::slot_blinkStateChanged(bool slowState, bool fastState)
+void TTextEdit::slot_blinkStateChanged()
 {
-    Q_UNUSED(slowState);
-    Q_UNUSED(fastState);
-    forceUpdate();
+    if (mIsBlinkClientRegistered) {
+        forceUpdate();
+    }
 }
 
 void TTextEdit::slot_scrollStoppedTimeout()
@@ -3575,8 +3598,9 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         break;
     case Qt::Key_End:
         if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
-            newCaretLine = mpBuffer->lineBuffer.length() - 1;
-            newCaretColumn = mpBuffer->lineBuffer[mCaretLine].length() - 1;
+            const int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty() ? 1 : 0;
+            newCaretLine = mpBuffer->lineBuffer.length() - 1 - emptyLastLine;
+            newCaretColumn = std::max(0, static_cast<int>(mpBuffer->lineBuffer[newCaretLine].length()) - 1);
         } else {
             newCaretColumn = mpBuffer->lineBuffer.at(mCaretLine).length() - 1;
         }

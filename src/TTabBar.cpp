@@ -28,13 +28,13 @@
 
 #include "utils.h"
 
+#include <QApplication>
 #include <QStyleOption>
 #include <QPainter>
 #include <QVariant>
 #include <QMouseEvent>
 #include <QDrag>
 #include <QMimeData>
-#include <QApplication>
 #include <QScreen>
 #include <QDateTime>
 
@@ -46,6 +46,11 @@ static const int TAB_REORDER_DELAY_MS = 150;             // Delay before allowin
 
 void TStyle::drawControl(ControlElement element, const QStyleOption* option, QPainter* painter, const QWidget* widget) const
 {
+    // Delegate to the application style (DarkTheme) rather than our proxy base
+    // style, which resolves to a separate Fusion instance that doesn't have
+    // dark palette colors on Windows 10
+    auto* appStyle = qApp->style();
+
     if (element == QStyle::CE_TabBarTab) {
         QString tabName = mpTabBar->tabData(mpTabBar->tabAt(option->rect.center())).toString();
         QFont font = widget->font();
@@ -59,14 +64,14 @@ void TStyle::drawControl(ControlElement element, const QStyleOption* option, QPa
             painter->setFont(font);
         }
 
-        QProxyStyle::drawControl(element, option, painter, widget);
+        appStyle->drawControl(element, option, painter, widget);
 
         if (isStyleChanged) {
             painter->restore();
         }
 
     } else {
-        QProxyStyle::drawControl(element, option, painter, widget);
+        appStyle->drawControl(element, option, painter, widget);
     }
 }
 

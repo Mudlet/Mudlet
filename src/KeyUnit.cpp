@@ -85,7 +85,7 @@ void KeyUnit::uninstall(const QString& packageName)
         }
     }
     for (auto& key : uninstallList) {
-        unregisterKey(key);
+        delete key;
     }
     uninstallList.clear();
 }
@@ -392,6 +392,11 @@ QString KeyUnit::getKeyName(const Qt::Key keyCode, const Qt::KeyboardModifiers m
            % ((modifierCode & Qt::MetaModifier) ? "meta + " : QString()) % ((modifierCode & Qt::KeypadModifier) ? "keypad + " : QString())
            % ((modifierCode & Qt::GroupSwitchModifier) ? "groupswitch + " : QString());
 
+
+    if (keyCode == Qt::Key_unknown) {
+        //: Displayed when no key binding has been set
+        return tr("no key chosen");
+    }
 
     if (mKeys.contains(keyCode)) {
         return name % mKeys.value(keyCode);
