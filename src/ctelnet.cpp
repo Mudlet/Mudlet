@@ -32,6 +32,7 @@
 
 #include "Host.h"
 #include "TBuffer.h"
+#include "TMxpProcessor.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
@@ -49,6 +50,7 @@
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
 #endif
+#include "MMCPServer.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -144,6 +146,10 @@ void cTelnet::reset()
     mGA_Driver = false;
     command = "";
     mMudData = "";
+
+    mServerRequestedSGA = false;
+    mEchoToggleCount = 0;
+    mEchoAnomalyDetected = false;
 
     mNegotiationOrder.clear();
 }
@@ -273,7 +279,7 @@ void cTelnet::encodingChanged(const QByteArray& requestedEncoding)
 QSslCertificate cTelnet::getPeerCertificate()
 {
     if (!mpSocket) {
-        return QSslCertificate();
+        return mPeerCertificate;
     }
     return mpSocket->peerCertificate();
 }
@@ -281,7 +287,7 @@ QSslCertificate cTelnet::getPeerCertificate()
 QList<QSslError> cTelnet::getSslErrors()
 {
     if (!mpSocket) {
-        return QList<QSslError>{};
+        return mSslErrors;
     }
     return mpSocket->sslHandshakeErrors();
 }
@@ -396,6 +402,10 @@ void cTelnet::connectIt(const QString& address, int port)
         mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
         mCycleCountMTTS = 0;
         newEnvironVariablesSent.clear();
+#if !defined(QT_NO_SSL)
+        mSslErrors.clear();
+        mPeerCertificate = QSslCertificate();
+#endif
 
         if (mpHost->mUseProxy && !mpHost->mProxyAddress.isEmpty() && mpHost->mProxyPort != 0) {
             auto& proxy = mpHost->getConnectionProxy();
@@ -442,15 +452,13 @@ void cTelnet::connectIt(const QString& address, int port)
     // Detect raw IPv6 addresses - as they need to be wrapped in '['...']'
 
     /*: For an IPv6 address (which is composed of hex-digits and colons) if we
-     * want to show it with a port number appended (as a colon and then an
-     * integer between 1 and 65535) we need to wrap it with '['...']' to
-     * separate the latter from the former, however some Far-East locales may
-     * expect to use the wide versions of these character here.
-     */
+ want to show it with a port number appended (as a colon and then an
+ integer between 1 and 65535) we need to wrap it with '['...']' to
+ separate the latter from the former, however some Far-East locales may
+ expect to use the wide versions of these character here.*/
     const QString displayAddress = isRawIPv6Address(mHostUrl) ? tr("[%1]").arg(mHostUrl) : mHostUrl;
     /*: %1 is the URL or an IP address (suitably wrapped if it is an IPv6 one)
-     * of the Game Server (or Proxy); %2 is the port number.
-     */
+ of the Game Server (or Proxy); %2 is the port number.*/
     TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Looking up the details of server: %1:%2 ...").arg(displayAddress, QString::number(port)).append(QChar::LineFeed) >> mpHost;
     // We can now use a compile-time slot for this as:
     // https://bugreports.qt.io/browse/QTBUG-67646 was (finally) fixed in
@@ -649,21 +657,20 @@ void cTelnet::slot_socketDisconnected()
     const QString msg = tr("[ INFO ]  - Connection time: %1.")
                                 .arg(timeDiff.addMSecs(timeOffset)
                                              /*: This is the format to be used to show the profile connection time, it follows
-                                 * the rules of the "QDateTime::toString(...)" function and may need
-                                 * modification for some locales, e.g. France, Spain.
-                                 */
+ the rules of the "QDateTime::toString(...)" function and may need
+ modification for some locales, e.g. France, Spain.*/
                                              .toString(tr("hh:mm:ss.zzz")));
     mNeedDecompression = false;
     reset();
 
-    if (!mpHost->isClosingDown() && mpSocket) {
-        // Don't do this if we are closing down - or we do not know which
-        // socket is the "active" one
+    if (!mpHost->isClosingDown()) {
 #if !defined(QT_NO_SSL)
         if (mCurrent_sslTsl) {
-            // We were connecting/ed securely:
+            // We were connecting/ed securely - getSslErrors() returns stored
+            // errors from slot_socketSslError() when mpSocket is null (i.e.
+            // when the SSL handshake failed):
             QList<QSslError> sslErrors = getSslErrors();
-            QSslCertificate cert = mpSocket->peerCertificate();
+            QSslCertificate cert = mpSocket ? mpSocket->peerCertificate() : getPeerCertificate();
             if (mpHost->mSslIgnoreExpired) {
                 sslErrors.removeAll(QSslError(QSslError::CertificateExpired, cert));
             }
@@ -675,15 +682,13 @@ void cTelnet::slot_socketDisconnected()
             QStringList reasons;
             if (mDontReconnect) {
                 /*: A reason why a connection to a game server ended, could be
-                 * one of several to be listed. This text used in two places,
-                 * ensure the same text is used in both.
-                 */
+ one of several to be listed. This text used in two places,
+ ensure the same text is used in both.*/
                 reasons.append(tr("User Disconnected"));
             } else if (timeOffset >= 0 && timeOffset < 5000) {
                 /*: A reason why a connection to a game server ended, could be
-                 * one of several to be listed. This text used in two places,
-                 * ensure the same text is used in both.
-                 */
+ one of several to be listed. This text used in two places,
+ ensure the same text is used in both.*/
                 reasons.append(tr("Connection/login attempt rejected by server"));
             }
 
@@ -700,16 +705,15 @@ void cTelnet::slot_socketDisconnected()
 
             if (reasons.count()) {
                 /*: This message is used when we have been trying to connect or
-                 * we were connected securely, but the connection has been lost.
-                 * It is possible with a secure connection that there is MORE
-                 * than one error message to show, but for English or other
-                 * locales where the singular case (%n==1) is distinct it would
-                 * be perfectly feasible to replace "for %n reason(s)" with
-                 * "because" for that number (1) of errors - however the text
-                 * should then be repeated in the corresponding situation for
-                 * an "open" connection which is different in that it only ever
-                 * has one "reason" to report.
-                 */
+ we were connected securely, but the connection has been lost.
+ It is possible with a secure connection that there is MORE
+ than one error message to show, but for English or other
+ locales where the singular case (%n==1) is distinct it would
+ be perfectly feasible to replace "for %n reason(s)" with
+ "because" for that number (1) of errors - however the text
+ should then be repeated in the corresponding situation for
+ an "open" connection which is different in that it only ever
+ has one "reason" to report.*/
                 postMessage(tr("[ ALERT ] - Socket got disconnected, for %n reason(s):\n"
                                "%1",
                                // Intentional comment to separate arguments
@@ -718,33 +722,32 @@ void cTelnet::slot_socketDisconnected()
                                     .arg(reasons.join(QChar::LineFeed)));
             } else {
                 /*: This message is used when we have been trying to connect or
-                 * we were connected securely or in an open manner, but the
-                 * connection has been lost and we do not have any explaination
-                 * to give to the user as to why. Anyhow, in this case we do not
-                 * have anything more to say about it. This text used in two
-                 * places, ensure the same translation is used in both of them.
-                 */
+ we were connected securely or in an open manner, but the
+ connection has been lost and we do not have any explaination
+ to give to the user as to why. Anyhow, in this case we do not
+ have anything more to say about it. This text used in two
+ places, ensure the same translation is used in both of them.*/
                 postMessage(tr("[ ALERT ] - Socket got disconnected."));
             }
 
-        } else {
+        } else if (mpSocket) {
+#else
+        if (mpSocket) {
 #endif
             // We were not connecting securely
             QString reason;
             if (mDontReconnect) {
                 /*: A reason why a connection to a game server ended, could be
-                 * one of several to be listed. This text used in two places,
-                 * ensure the same text is used in both.
-                 */
+ one of several to be listed. This text used in two places,
+ ensure the same text is used in both.*/
                 reason = tr("User Disconnected");
             } else if (QAbstractSocket::SslHandshakeFailedError == mpSocket->error()) {
                 //: A reason why a connection to a game server ended.
                 reason = tr("Secure connections not supported by this game on this port; try turning the option off");
             } else if (timeOffset >= 0 && timeOffset < 5000) {
                 /*: A reason why a connection to a game server ended, could be
-                 * one of several to be listed. This text used in two places,
-                 * ensure the same text is used in both.
-                 */
+ one of several to be listed. This text used in two places,
+ ensure the same text is used in both.*/
                 reason = tr("Connection/login attempt rejected by server");
             } else if (!mpSocket->errorString().isEmpty()) {
                 reason = mpSocket->errorString();
@@ -752,30 +755,26 @@ void cTelnet::slot_socketDisconnected()
 
             if (reason.isEmpty()) {
                 /*: This message is used when we have been trying to connect or
-                 * we were connected securely or in an open manner, but the
-                 * connection has been lost and we do not have any explaination
-                 * to give to the user as to why. Anyhow, in this case we do not
-                 * have anything more to say about it. This text used in two
-                 * places, ensure the same translation is used in both of them.
-                 */
+ we were connected securely or in an open manner, but the
+ connection has been lost and we do not have any explaination
+ to give to the user as to why. Anyhow, in this case we do not
+ have anything more to say about it. This text used in two
+ places, ensure the same translation is used in both of them.*/
                 postMessage(tr("[ ALERT ] - Socket got disconnected."));
             } else {
                 /*: This message is used when we have been trying to connect or
-                 * we were connected in an open, insecure manner, but the
-                 * connection has been lost. Unlike the secure connection case
-                 * there is only one error message to show; it would be
-                 * desirable to use the same text for this message as the "one
-                 * reason" (%n==1) situation for locales such as English (with
-                 * a distinct form for the singular) use for the secure type
-                 * of connection.
-                 */
+ we were connected in an open, insecure manner, but the
+ connection has been lost. Unlike the secure connection case
+ there is only one error message to show; it would be
+ desirable to use the same text for this message as the "one
+ reason" (%n==1) situation for locales such as English (with
+ a distinct form for the singular) use for the secure type
+ of connection.*/
                 postMessage(tr("[ ALERT ] - Socket got disconnected, for reason:\n"
                                "%1")
                                     .arg(reason));
             }
-#if !defined(QT_NO_SSL)
         }
-#endif
     }
 
     // Always display the connection time:
@@ -806,7 +805,7 @@ void cTelnet::slot_socketDisconnected()
 #if !defined(QT_NO_SSL)
 // This can/is raised on a socket that we have not received a prior
 // QSslSocket::encrypted() signal from (which is wired to our
-// "slot_socketconnect()" slot).
+// "slot_socketConnected()" slot).
 void cTelnet::slot_socketSslError(const QList<QSslError>& errors)
 {
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
@@ -817,10 +816,15 @@ void cTelnet::slot_socketSslError(const QList<QSslError>& errors)
         return;
     }
 
+    // Store the errors so slot_socketDisconnected() can report them even if
+    // mpSocket was never assigned (SSL handshake failed before encrypted()):
+    mSslErrors = errors;
+
     // We can't use mpSocket as it likely has not got set to one of the
     // actual sockets yet!
     const auto pSocket = qobject_cast<QSslSocket*>(sender());
     QSslCertificate cert = pSocket->peerCertificate();
+    mPeerCertificate = cert;
     QList<QSslError> ignoreErrorList;
 
     if (mpHost->mSslIgnoreExpired) {
@@ -887,10 +891,9 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 
     if (!(hasIPv4_address || hasIPv6_address)) {
         /*: This text is used in the (expected) case when the user has provided
-         * a URL for the Game Server rather than (unusually) an IP address.
-         * After a DNS lookup however, we have NOT found any IP addresses which
-         * means that we cannot proceed further to connect to the Game server.
-         */
+ a URL for the Game Server rather than (unusually) an IP address.
+ After a DNS lookup however, we have NOT found any IP addresses which
+ means that we cannot proceed further to connect to the Game server.*/
         TDebug(QColorConstants::Red, QColorConstants::White) << tr("Host name lookup Failure! A connection cannot be established.\n"
                                                                    "The server name is not correct, or your nameservers are not\n"
                                                                    "working properly.\n")
@@ -906,16 +909,14 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
     QStringList addressesToReport;
     for (const auto& address : addressList_ipV6) {
         /*: Used to add an IPv6 address line to the list displayed during
-         * connecting to a Host. Some, e.g. Far Eastern locales may require a
-         * different text here if they do not use spaces, or need "wide" '(' ')'s
-         */
+ connecting to a Host. Some, e.g. Far Eastern locales may require a
+ different text here if they do not use spaces, or need "wide" '(' ')'s*/
         addressesToReport << tr("%1 (IPv6)").arg(address);
     }
     for (const auto& address : addressList_ipV4) {
         /*: Used to add an IPv4 address line to the list displayed during
-         * connecting to a Host. Some, e.g. Far Eastern locales may require a
-         * different text here if they do not use spaces, or "wide" '('...')'
-         */
+ connecting to a Host. Some, e.g. Far Eastern locales may require a
+ different text here if they do not use spaces, or "wide" '('...')'*/
         addressesToReport << tr("%1 (IPv4)").arg(address);
     }
     if (addressesToReport.count() > 1) {
@@ -927,18 +928,16 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
         // there isn't much we can say
         if (!mHostUrl.compare(hostInfo.hostName())) {
             /*: This text is used when the user has provided a raw IP address
-             * for the Game Server rather than a URL. In this case we try to
-             * perform a "reverse-lookup" to see if we can identify the URL that
-             * matches it - but nothing useful was found.
-             */
+ for the Game Server rather than a URL. In this case we try to
+ perform a "reverse-lookup" to see if we can identify the URL that
+ matches it - but nothing useful was found.*/
             TDebug(QColorConstants::Svg::orange, QColorConstants::White) << tr("A host name could not be found for the given IP address.").append(QChar::LineFeed) >> mpHost;
         } else {
             /*: This text is used when the user has provided a raw IP address
-             * for the Game Server rather than a URL. In this case we try to
-             * perform a "reverse-lookup" to see if we can identify the URL that
-             * matches it - and this is used when we have something (%1) to
-             * show.
-             */
+ for the Game Server rather than a URL. In this case we try to
+ perform a "reverse-lookup" to see if we can identify the URL that
+ matches it - and this is used when we have something (%1) to
+ show.*/
             TDebug(QColorConstants::Blue, QColorConstants::White) << tr("A host name for the IP address has been found.\n"
                                                                         "It is: \"%1\"\n")
                                                                              .arg(hostInfo.hostName())
@@ -946,11 +945,10 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
         }
     } else {
         /*: This text is used in the (expected) case when the user has provided
-         * a URL (%1) for the Game Server rather than (unusually) an IP address.
-         * After a DNS lookup we have found at least one but possibly more (%n)
-         * IP addresses, which will be listed (one per line) immediately
-         * afterwards.
-         */
+ a URL (%1) for the Game Server rather than (unusually) an IP address.
+ After a DNS lookup we have found at least one but possibly more (%n)
+ IP addresses, which will be listed (one per line) immediately
+ afterwards.*/
         TDebug(QColorConstants::Blue, QColorConstants::White) << tr("The %n IP address(es) of %1 has/have been found. It/They are:",
                                                                     // Intentional comment to separate arguments
                                                                     "",
@@ -985,29 +983,25 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 
             if (mConnectViaProxy) {
                 /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
-                 * case. %1 is the URL for the server and %2 is the port number
-                 * (on BOTH addresses) for the connection.
-                 */
+ case. %1 is the URL for the server and %2 is the port number
+ (on BOTH addresses) for the connection.*/
                 TDebug(QColorConstants::Blue, QColorConstants::White)
                                 << tr("Trying secure (IPv4 and IPv6) connections to proxy %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                         >> mpHost;
-                /* We don't need to worry about %1 being a raw IPv6 address here
-                 * as we prohibit IP addresses for secure connections so it is
-                 * a URL; %2 is the port number.
-                 */
+                /*: We don't need to worry about %1 being a raw IPv6 address here
+ as we prohibit IP addresses for secure connections so it is
+ a URL; %2 is the port number.*/
                 postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 via proxy...").arg(hostInfo.hostName(), QString::number(mHostPort)));
             } else {
                 /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
-                 * case. %1 is the URL for the Server and %2 is the port number
-                 * (on BOTH addresses) for the connection.
-                 */
+ case. %1 is the URL for the Server and %2 is the port number
+ (on BOTH addresses) for the connection.*/
                 TDebug(QColorConstants::Blue, QColorConstants::White)
                                 << tr("Trying secure (IPv4 and IPv6) connections to %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                         >> mpHost;
-                /* We don't need to worry about %1 being a raw IPv6 address here
-                 * as we prohibit IP addresses for secure connections so it is
-                 * a URL; %2 is the port number.
-                 */
+                /*: We don't need to worry about %1 being a raw IPv6 address here
+ as we prohibit IP addresses for secure connections so it is
+ a URL; %2 is the port number.*/
                 postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort)));
             }
 
@@ -1023,27 +1017,23 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 
                 if (mConnectViaProxy) {
                     /*: %1 is the URL for the Server and %2 is the port number
-                     * for the connection.
-                     */
+ for the connection.*/
                     TDebug(QColorConstants::Blue, QColorConstants::White)
                                     << tr("Trying secure (IPv6) connection to %1:%2 via proxy...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
-                    /* We don't need to worry about %1 being a raw IPv6 address here
-                     * as we prohibit IP addresses for secure connections so it is
-                     * a URL; %2 is the port number.
-                     */
+                    /*: We don't need to worry about %1 being a raw IPv6 address here
+ as we prohibit IP addresses for secure connections so it is
+ a URL; %2 is the port number.*/
                     postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 via proxy...").arg(hostInfo.hostName(), QString::number(mHostPort)));
                 } else {
                     /*: %1 is the URL for the Server and %2 is the port number
-                     * for the connection.
-                     */
+ for the connection.*/
                     TDebug(QColorConstants::Blue, QColorConstants::White)
                                     << tr("Trying secure (IPv4 and IPv6) connections to %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
-                    /* We don't need to worry about %1 being a raw IPv6 address here
-                     * as we prohibit IP addresses for secure connections so it is
-                     * a URL; %2 is the port number.
-                     */
+                    /*: We don't need to worry about %1 being a raw IPv6 address here
+ as we prohibit IP addresses for secure connections so it is
+ a URL; %2 is the port number.*/
                     postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort)));
                 }
                 mSocket_ipV6.connectToHostEncrypted(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
@@ -1056,8 +1046,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 
                 if (mConnectViaProxy) {
                     /*: %1 is the URL for the Server and %2 is the port number
-                     * for the connection.
-                     */
+ for the connection.*/
                     TDebug(QColorConstants::Blue, QColorConstants::White)
                                     << tr("Trying secure (IPv4) connection to %1:%2 via proxy...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
@@ -1065,8 +1054,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                     postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 via proxy...").arg(hostInfo.hostName(), QString::number(mHostPort)));
                 } else {
                     /*: %1 is the URL for the Server and %2 is the port number
-                     * for the connection.
-                     */
+ for the connection.*/
                     TDebug(QColorConstants::Blue, QColorConstants::White)
                                     << tr("Trying secure (IPv4) connection to %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
@@ -1089,9 +1077,8 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 
             if (mConnectViaProxy) {
                 /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
-                 * case. %1 is the URL for the proxy and %2 is the port number
-                 * (on BOTH addresses) for the connection.
-                 */
+ case. %1 is the URL for the proxy and %2 is the port number
+ (on BOTH addresses) for the connection.*/
                 TDebug(QColorConstants::Blue, QColorConstants::White)
                                 << tr("Trying open (IPv4 and IPv6) connections to %1:%2 via proxy...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                         >> mpHost;
@@ -1099,9 +1086,8 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 via proxy...").arg(hostInfo.hostName(), QString::number(mHostPort)));
             } else {
                 /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
-                 * case. %1 is the URL for the Server and %2 is the port number
-                 * (on BOTH addresses) for the connection.
-                 */
+ case. %1 is the URL for the Server and %2 is the port number
+ (on BOTH addresses) for the connection.*/
                 TDebug(QColorConstants::Blue, QColorConstants::White)
                                 << tr("Trying open (IPv4 and IPv6) connections to %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                         >> mpHost;
@@ -1121,24 +1107,20 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 const QString displayAddress = isRawIPv6Address(hostInfo.hostName()) ? tr("[%1]").arg(hostInfo.hostName()) : hostInfo.hostName();
                 if (mConnectViaProxy) {
                     /*: %1 is the URL or IPv6 address (suitably wrapped) for the
-                     * Game Server and %2 is the port number for the connection.
-                     */
+ Game Server and %2 is the port number for the connection.*/
                     TDebug(QColorConstants::Blue, QColorConstants::White)
                                     << tr("Trying open (IPv6) connection to %1:%2 via proxy...").arg(displayAddress, QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
                     /*: %1 is the URL or IPv6 address (suitably wrapped) for the
-                     * Game Server and %2 is the port number.
-                     */
+ Game Server and %2 is the port number.*/
                     postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 via proxy...").arg(displayAddress, QString::number(mHostPort)));
                 } else {
                     /*: %1 is the URL or IPv6 address (suitably wrapped) for the
-                     * Game Server and %2 is the port number for the connection.
-                     */
+ Game Server and %2 is the port number for the connection.*/
                     TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv6) connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
                     /*: %1 is the URL or IPv6 address (suitably wrapped) for the
-                     * Game Server and %2 is the port number for the connection.
-                     */
+ Game Server and %2 is the port number for the connection.*/
                     postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)));
                 }
 
@@ -1151,26 +1133,22 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 
                 if (mConnectViaProxy) {
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
-                     * is the port number for the connection.
-                     */
+ is the port number for the connection.*/
                     TDebug(QColorConstants::Blue, QColorConstants::White)
                                     << tr("Trying open (IPv4) connection to %1:%2 via proxy...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
-                     * is the port number for the connection.
-                     */
+ is the port number for the connection.*/
                     postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 via proxy...").arg(hostInfo.hostName(), QString::number(mHostPort)));
 
                 } else {
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
-                     * is the port number for the connection.
-                     */
+ is the port number for the connection.*/
                     TDebug(QColorConstants::Blue, QColorConstants::White)
                                     << tr("Trying open (IPv4) connection to %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
-                     * is the port number for the connection.
-                     */
+ is the port number for the connection.*/
                     postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort)));
                 }
 
@@ -1865,6 +1843,18 @@ QString cTelnet::getNewEnvironOSCHyperlinksDisabled()
     return qsl("1");
 }
 
+bool cTelnet::oscHyperlinkConfigFeatureEnabled()
+{
+    return getNewEnvironOSCHyperlinksStyleBasic() == qsl("1") || getNewEnvironOSCHyperlinksStyleStates() == qsl("1") || getNewEnvironOSCHyperlinksTooltip() == qsl("1")
+           || getNewEnvironOSCHyperlinksMenu() == qsl("1") || getNewEnvironOSCHyperlinksCompact() == qsl("1") || getNewEnvironOSCHyperlinksVisibility() == qsl("1")
+           || getNewEnvironOSCHyperlinksSelection() == qsl("1") || getNewEnvironOSCHyperlinksSpoiler() == qsl("1") || getNewEnvironOSCHyperlinksDisabled() == qsl("1");
+}
+
+bool cTelnet::oscHyperlinkPresetsEnabled()
+{
+    return getNewEnvironOSCHyperlinksPresets() == qsl("1");
+}
+
 QString cTelnet::getNewEnvironScreenReader()
 {
     return mpHost->mAdvertiseScreenReader ? qsl("1") : qsl("0");
@@ -2349,7 +2339,7 @@ void cTelnet::autoEnableMXPProcessor()
     // IRE-style implementation that doesn't send mode switches but uses
     // secure tags. Lock to secure mode for compatibility.
     // Properly-negotiated MXP games will use mode switches as needed.
-    mpHost->mMxpProcessor.setMode(6); // Lock secure mode
+    mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
     postMessage(tr("[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but has not turned it on properly. MXP processing has been automatically enabled for clickable links, room "
                    "info, and richer interactions. You can disable this setting in Settings > Special Options."));
 }
@@ -2536,16 +2526,16 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 socketOutRaw(output);
 
                 // send client configurable variables e.g.
-                // IAC SB MSDP MSDP_VAR "CLIENT" MSDP_VAL "Mudlet" MSDP_VAR "VERSION" MSDP_VAL "4.19" IAC SE
+                // IAC SB MSDP MSDP_VAR "CLIENT_NAME" MSDP_VAL "Mudlet" MSDP_VAR "CLIENT_VERSION" MSDP_VAL "4.19" IAC SE
                 output = TN_IAC;
                 output += TN_SB;
                 output += OPT_MSDP;
                 output += MSDP_VAR;
-                output += "CLIENT";
+                output += "CLIENT_NAME";
                 output += MSDP_VAL;
                 output += "Mudlet";
                 output += MSDP_VAR;
-                output += "VERSION";
+                output += "CLIENT_VERSION";
                 output += MSDP_VAL;
                 output += encodeAndCookBytes(std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData());
                 output += TN_IAC;
@@ -2712,6 +2702,24 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             break;
         }
 
+        if (option == OPT_SUPPRESS_GO_AHEAD) {
+            sendTelnetOption(TN_DONT, option);
+            hisOptionState[idxOption] = false;
+            mServerRequestedSGA = true;
+            qDebug() << "SUPPRESS-GO-AHEAD: Rejected (Mudlet operates in line mode only)";
+            raiseProtocolEvent("sysProtocolRejected", "SUPPRESS_GO_AHEAD");
+            checkCharacterModePattern();
+            break;
+        }
+
+        if (option == OPT_LINEMODE) {
+            sendTelnetOption(TN_DONT, option);
+            hisOptionState[idxOption] = false;
+            qDebug() << "LINEMODE: Server's WILL rejected (Mudlet operates in line mode only)";
+            raiseProtocolEvent("sysProtocolRejected", "LINEMODE");
+            break;
+        }
+
         heAnnouncedState[idxOption] = true;
         if (triedToEnable[idxOption]) {
             hisOptionState[idxOption] = true;
@@ -2723,31 +2731,38 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 //unless explicitly requested)
 
                 if (option == OPT_ECHO) {
-                    sendTelnetOption(TN_DO, option);
-                    hisOptionState[idxOption] = true;
-                    mpHost->setRemoteEchoingActive(true);
-                    qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
+                    if (checkEchoAnomalyPattern()) {
+                        sendTelnetOption(TN_DONT, option);
+                        hisOptionState[idxOption] = false;
+                        qDebug() << "ECHO: Rejecting due to anomaly pattern detection";
+                    } else {
+                        sendTelnetOption(TN_DO, option);
+                        hisOptionState[idxOption] = true;
+                        mpHost->setRemoteEchoingActive(true);
+                        qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
+                        checkCharacterModePattern();
 
-                    // Start a safety timeout for password mode, but only during
-                    // the first 5 minutes of a connection (login phase). This
-                    // protects against servers that fail to send WONT ECHO due
-                    // to network issues or bugs, while not affecting legitimate
-                    // password prompts later in the session (e.g., admin commands).
-                    // Skip this if the user has disabled password masking entirely.
-                    constexpr auto LOGIN_PHASE_MS = 5min;
-                    constexpr auto PASSWORD_TIMEOUT_MS = 60s;
-                    if (!mpHost->mDisablePasswordMasking && mConnectionTimer.isValid() && mConnectionTimer.elapsed() < LOGIN_PHASE_MS.count()) {
-                        if (!mTimerPasswordModeTimeout) {
-                            mTimerPasswordModeTimeout = new QTimer(this);
-                            mTimerPasswordModeTimeout->setSingleShot(true);
-                            connect(mTimerPasswordModeTimeout, &QTimer::timeout, this, [this]() {
-                                if (mpHost && mpHost->isRemoteEchoingActive()) {
-                                    qWarning() << "ECHO: Password mode timeout - server never sent WONT ECHO, clearing masking";
-                                    mpHost->setRemoteEchoingActive(false);
-                                }
-                            });
+                        // Start a safety timeout for password mode, but only during
+                        // the first 5 minutes of a connection (login phase). This
+                        // protects against servers that fail to send WONT ECHO due
+                        // to network issues or bugs, while not affecting legitimate
+                        // password prompts later in the session (e.g., admin commands).
+                        // Skip this if the user has disabled password masking entirely.
+                        constexpr auto LOGIN_PHASE_MS = 5min;
+                        constexpr auto PASSWORD_TIMEOUT_MS = 60s;
+                        if (!mpHost->mDisablePasswordMasking && mConnectionTimer.isValid() && mConnectionTimer.elapsed() < LOGIN_PHASE_MS.count()) {
+                            if (!mTimerPasswordModeTimeout) {
+                                mTimerPasswordModeTimeout = new QTimer(this);
+                                mTimerPasswordModeTimeout->setSingleShot(true);
+                                connect(mTimerPasswordModeTimeout, &QTimer::timeout, this, [this]() {
+                                    if (mpHost && mpHost->isRemoteEchoingActive()) {
+                                        qWarning() << "ECHO: Password mode timeout - server never sent WONT ECHO, clearing masking";
+                                        mpHost->setRemoteEchoingActive(false);
+                                    }
+                                });
+                            }
+                            mTimerPasswordModeTimeout->start(std::chrono::duration_cast<std::chrono::milliseconds>(PASSWORD_TIMEOUT_MS).count());
                         }
-                        mTimerPasswordModeTimeout->start(std::chrono::duration_cast<std::chrono::milliseconds>(PASSWORD_TIMEOUT_MS).count());
                     }
                 } else if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE) {
                     sendTelnetOption(TN_DO, option);
@@ -2880,12 +2895,17 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 hisOptionState[idxOption] = false;
 
                 if (option == OPT_ECHO) {
-                    // Cancel any pending password mode timeout since we got the proper WONT ECHO
-                    if (mTimerPasswordModeTimeout) {
-                        mTimerPasswordModeTimeout->stop();
+                    if (mEchoAnomalyDetected) {
+                        qDebug() << "ECHO: Ignoring WONT due to anomaly pattern";
+                    } else {
+                        checkEchoAnomalyPattern();
+                        // Cancel any pending password mode timeout since we got the proper WONT ECHO
+                        if (mTimerPasswordModeTimeout) {
+                            mTimerPasswordModeTimeout->stop();
+                        }
+                        mpHost->setRemoteEchoingActive(false);
+                        qDebug() << "ECHO: Server ending password mode - restoring normal operation and preserved content";
                     }
-                    mpHost->setRemoteEchoingActive(false);
-                    qDebug() << "ECHO: Server ending password mode - restoring normal operation and preserved content";
                 }
 
                 if (option == OPT_COMPRESS) {
@@ -2933,6 +2953,15 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 raiseProtocolEvent("sysProtocolEnabled", "NEW_ENVIRON");
             }
 
+            break;
+        }
+
+        if (option == OPT_LINEMODE) {
+            sendTelnetOption(TN_WONT, option);
+            myOptionState[idxOption] = false;
+            announcedState[idxOption] = true;
+            qDebug() << "LINEMODE: Rejected (Mudlet operates in line mode only)";
+            raiseProtocolEvent("sysProtocolRejected", "LINEMODE");
             break;
         }
 
@@ -3464,6 +3493,18 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             // strip first 3 characters to get rid of <IAC><SB><90>
             // and strip the last 2 characters to get rid of <IAC><TN_SE>
             setMSPVariables(payload);
+            return;
+        }
+
+        // Some servers require this subnegotiation before processing MXP escape sequences
+        if (option == OPT_MXP) {
+            if (mpHost->mEnableMXP) {
+                enableMXP = true;
+                qDebug() << "MXP enabled via subnegotiation";
+                mpHost->mMxpProcessor.enable();
+                mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_LOCKED);
+                raiseProtocolEvent("sysProtocolEnabled", "MXP");
+            }
             return;
         }
 
@@ -4274,6 +4315,17 @@ void cTelnet::postMessage(QString msg)
                 if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orange-ish
                 }
+            } else if (prefix.contains(tr("CHAT")) || prefix.contains(QLatin1String("CHAT"))) {
+                mpHost->mpConsole->print(prefix, QColor(255, 255, 50), mpHost->mBgColor);                  // Bright yellow
+                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
+                for (int _i = 0; _i < body.size(); ++_i) {
+                    QString temp = body.at(_i);
+                    temp.replace('\t', QLatin1String("        "));
+                    body[_i] = temp.rightJustified(temp.length() + prefixLength);
+                }
+                if (!body.empty()) {
+                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(255, 50, 50), mpHost->mBgColor); // Red-ish
+                }
             } else {                                                                                        // Unrecognised but still in a "[ something ] -  message..." format
                 mpHost->mpConsole->print(prefix, QColor(190, 50, 50), mpHost->mBgColor);                    // Foreground red, background bright grey
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 50, 50), mpHost->mBgColor); //Foreground dark grey, background bright grey
@@ -4368,7 +4420,7 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
             // If force MXP is already enabled, this is a re-initialization (e.g., after "config mxp on")
             // Re-apply secure mode without showing the auto-enable message
             if (mpHost->getForceMXPProcessorOn() && mpHost->mPromptedForMXPProcessorOn) {
-                mpHost->mMxpProcessor.setMode(6); // Re-lock to secure mode
+                mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
                 return;
             }
             // Otherwise, this is the first time we're seeing MXP, so auto-enable it
@@ -4458,6 +4510,9 @@ void cTelnet::postData()
     // All data goes through main console's printOnDisplay which calls
     // translateToPlainText - MXP DEST routing happens inside that process
     mpHost->mpConsole->printOnDisplay(mMudData, true);
+    if (mpHost->mMMCPServer && !mpHost->mIsRemoteEchoingActive) {
+        mpHost->mMMCPServer->receiveFromPlayer(mMudData);
+    }
 }
 
 void cTelnet::initStreamDecompressor()
@@ -5217,4 +5272,45 @@ QAbstractSocket::SocketState cTelnet::getConnectionState() const
     static const QRegularExpression isRawIPv6AddressRegExp(qsl("^[0-9a-f:]+$"));
 
     return isRawIPv6AddressRegExp.match(text).hasMatch();
+}
+
+void cTelnet::checkCharacterModePattern()
+{
+    if (!mServerRequestedSGA || !mpHost || !mpHost->isRemoteEchoingActive()) {
+        return;
+    }
+
+    raiseProtocolEvent("sysCharacterModeDetected", "");
+    qDebug() << "Character-at-a-time mode pattern detected (ECHO + SGA)";
+
+    if (mudlet::self()->showCharacterModeWarning()) {
+        mudlet::self()->showedCharacterModeWarning();
+        //: Warning shown when server uses character-at-a-time mode which Mudlet doesn't support
+        postMessage(tr("[ WARN ]  - This game appears to use character-at-a-time mode, "
+                       "which Mudlet does not support. Input may not work as expected. "
+                       "Consider using keybindings for immediate key response instead."));
+    }
+}
+
+bool cTelnet::checkEchoAnomalyPattern()
+{
+    if (mEchoAnomalyDetected) {
+        return true;
+    }
+
+    if (mEchoToggleTimer.isValid() && mEchoToggleTimer.elapsed() < ECHO_ANOMALY_WINDOW_MS) {
+        mEchoToggleCount++;
+
+        if (mEchoToggleCount >= ECHO_ANOMALY_THRESHOLD) {
+            mEchoAnomalyDetected = true;
+
+            raiseProtocolEvent("sysEchoAnomalyDetected", "");
+            qWarning() << "ECHO anomaly pattern detected - disabling ECHO response to protect TCommandLine";
+            return true;
+        }
+    } else {
+        mEchoToggleCount = 1;
+    }
+    mEchoToggleTimer.restart();
+    return false;
 }

@@ -44,6 +44,7 @@
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
+#include "TTextBox.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
 #include "dlgComposer.h"
@@ -785,6 +786,221 @@ int TLuaInterpreter::deleteCommandLine(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createTextEdit
+int TLuaInterpreter::createTextEdit(lua_State* L)
+{
+    QString windowName = QLatin1String("main");
+    const int n = lua_gettop(L);
+    int counter = 1;
+
+    if (n > 5) {
+        if (lua_type(L, 1) != LUA_TSTRING) {
+            lua_pushfstring(L, "createTextEdit: bad argument #1 type (parent window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
+        windowName = lua_tostring(L, 1);
+        counter++;
+        if (isMain(windowName)) {
+            // createTextEdit only accepts the empty name as the main window
+            windowName.clear();
+        }
+    }
+
+    if (lua_type(L, counter) != LUA_TSTRING) {
+        lua_pushfstring(L, "createTextEdit: bad argument #%d type (text edit name as string expected, got %s!)", counter, luaL_typename(L, counter));
+        return lua_error(L);
+    }
+    const QString textEditName{lua_tostring(L, counter)};
+    counter++;
+    const int x = getVerifiedInt(L, __func__, counter, "text edit x-coordinate");
+    counter++;
+    const int y = getVerifiedInt(L, __func__, counter, "text edit y-coordinate");
+    counter++;
+    const int width = getVerifiedInt(L, __func__, counter, "text edit width");
+    counter++;
+    const int height = getVerifiedInt(L, __func__, counter, "text edit height");
+    counter++;
+
+    const Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.mpConsole->createTextBox(windowName, textEditName, x, y, width, height); !success) {
+        return warnArgumentValue(L, __func__, message);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteTextEdit
+int TLuaInterpreter::deleteTextEdit(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+
+    const Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.mpConsole->deleteTextBox(textEditName); !success) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getTextEditText
+int TLuaInterpreter::getTextEditText(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    lua_pushstring(L, pT->toPlainText().toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextEditText
+int TLuaInterpreter::setTextEditText(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+    const QString text = getVerifiedString(L, __func__, 2, "text");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    pT->setPlainText(text);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearTextEdit
+int TLuaInterpreter::clearTextEdit(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    pT->clear();
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextEditReadOnly
+int TLuaInterpreter::setTextEditReadOnly(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+    const bool readOnly = getVerifiedBool(L, __func__, 2, "read only state");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    pT->setReadOnly(readOnly);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextEditPlaceholder
+int TLuaInterpreter::setTextEditPlaceholder(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+    const QString placeholder = getVerifiedString(L, __func__, 2, "placeholder text");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    pT->setPlaceholderText(placeholder);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextEditStyleSheet
+int TLuaInterpreter::setTextEditStyleSheet(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+    const QString css = getVerifiedString(L, __func__, 2, "stylesheet");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    pT->setStyleSheet(css);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextEditFont
+int TLuaInterpreter::setTextEditFont(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+    const QString fontName = getVerifiedString(L, __func__, 2, "font name");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    QFont font = pT->font();
+    font.setFamily(fontName);
+    pT->setFont(font);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextEditFontSize
+int TLuaInterpreter::setTextEditFontSize(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+    const int size = getVerifiedInt(L, __func__, 2, "font size");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    QFont font = pT->font();
+    font.setPointSize(size);
+    pT->setFont(font);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextEditTabMovesFocus
+int TLuaInterpreter::setTextEditTabMovesFocus(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+    const bool tabMovesFocus = getVerifiedBool(L, __func__, 2, "tab moves focus state");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    pT->setTabChangesFocus(tabMovesFocus);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteScrollBox
 int TLuaInterpreter::deleteScrollBox(lua_State* L)
 {
@@ -1260,7 +1476,7 @@ int TLuaInterpreter::getBgColor(lua_State* L)
 int TLuaInterpreter::getBorderBottom(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    lua_pushnumber(L, host.borders().bottom());
+    lua_pushnumber(L, host.userBorders().bottom());
     return 1;
 }
 
@@ -1268,7 +1484,7 @@ int TLuaInterpreter::getBorderBottom(lua_State* L)
 int TLuaInterpreter::getBorderLeft(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    lua_pushnumber(L, host.borders().left());
+    lua_pushnumber(L, host.userBorders().left());
     return 1;
 }
 
@@ -1276,7 +1492,7 @@ int TLuaInterpreter::getBorderLeft(lua_State* L)
 int TLuaInterpreter::getBorderRight(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    lua_pushnumber(L, host.borders().right());
+    lua_pushnumber(L, host.userBorders().right());
     return 1;
 }
 
@@ -1284,7 +1500,7 @@ int TLuaInterpreter::getBorderRight(lua_State* L)
 int TLuaInterpreter::getBorderSizes(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    auto sizes = host.borders();
+    auto sizes = host.userBorders();
     lua_createtable(L, 0, 4);
     lua_pushinteger(L, sizes.top());
     lua_setfield(L, -2, "top");
@@ -1301,7 +1517,7 @@ int TLuaInterpreter::getBorderSizes(lua_State* L)
 int TLuaInterpreter::getBorderTop(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    lua_pushnumber(L, host.borders().top());
+    lua_pushnumber(L, host.userBorders().top());
     return 1;
 }
 
@@ -2981,9 +3197,9 @@ int TLuaInterpreter::setBold(lua_State* L)
 int TLuaInterpreter::setBorderBottom(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    auto sizes = host.borders();
+    auto sizes = host.userBorders();
     sizes.setBottom(getVerifiedInt(L, __func__, 1, "new size"));
-    host.setBorders(sizes);
+    host.setUserBorders(sizes);
     return 0;
 }
 
@@ -3006,9 +3222,9 @@ int TLuaInterpreter::setBorderColor(lua_State* L)
 int TLuaInterpreter::setBorderLeft(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    auto sizes = host.borders();
+    auto sizes = host.userBorders();
     sizes.setLeft(getVerifiedInt(L, __func__, 1, "new size"));
-    host.setBorders(sizes);
+    host.setUserBorders(sizes);
     return 0;
 }
 
@@ -3016,9 +3232,9 @@ int TLuaInterpreter::setBorderLeft(lua_State* L)
 int TLuaInterpreter::setBorderRight(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    auto sizes = host.borders();
+    auto sizes = host.userBorders();
     sizes.setRight(getVerifiedInt(L, __func__, 1, "new size"));
-    host.setBorders(sizes);
+    host.setUserBorders(sizes);
     return 0;
 }
 
@@ -3032,20 +3248,20 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
         break;
     case 1: {
         auto value = getVerifiedInt(L, __func__, 1, "new size");
-        host.setBorders({value, value, value, value});
+        host.setUserBorders({value, value, value, value});
         break;
     }
     case 2: {
         auto height = getVerifiedInt(L, __func__, 1, "new height");
         auto width = getVerifiedInt(L, __func__, 2, "new width");
-        host.setBorders({width, height, width, height});
+        host.setUserBorders({width, height, width, height});
         break;
     }
     case 3: {
         auto top = getVerifiedInt(L, __func__, 1, "new top size");
         auto width = getVerifiedInt(L, __func__, 2, "new width");
         auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
-        host.setBorders({width, top, width, bottom});
+        host.setUserBorders({width, top, width, bottom});
         break;
     }
     default: {
@@ -3053,7 +3269,7 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
         auto right = getVerifiedInt(L, __func__, 2, "new right size");
         auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
         auto left = getVerifiedInt(L, __func__, 4, "new left size");
-        host.setBorders({left, top, right, bottom});
+        host.setUserBorders({left, top, right, bottom});
         break;
     }
     }
@@ -3064,9 +3280,9 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
 int TLuaInterpreter::setBorderTop(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    auto sizes = host.borders();
+    auto sizes = host.userBorders();
     sizes.setTop(getVerifiedInt(L, __func__, 1, "new size"));
-    host.setBorders(sizes);
+    host.setUserBorders(sizes);
     return 0;
 }
 
@@ -3827,8 +4043,27 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
         }
     }
 
+    QString blinkMode = qsl("none");
+
+    if (s < n) {
+        // s has not been incremented yet so this means we still have another argument!
+        if (lua_isstring(L, ++s)) {
+            blinkMode = lua_tostring(L, s);
+            if (blinkMode != qsl("none") && blinkMode != qsl("slow") && blinkMode != qsl("fast")) {
+                return warnArgumentValue(L, __func__, qsl("blink mode must be \"none\", \"slow\", or \"fast\", got \"%1\"").arg(blinkMode));
+            }
+        } else {
+            lua_pushfstring(L, "setTextFormat: bad argument #%d type (blink mode as string {\"none\"/\"slow\"/\"fast\"} is optional, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
+        }
+    }
+
+    const bool slowBlink = (blinkMode == qsl("slow"));
+    const bool fastBlink = (blinkMode == qsl("fast"));
+
     TChar::AttributeFlags const flags = (bold ? TChar::Bold : TChar::None) | (italics ? TChar::Italic : TChar::None) | (overline ? TChar::Overline : TChar::None)
-                                        | (reverse ? TChar::Reverse : TChar::None) | (strikeout ? TChar::StrikeOut : TChar::None) | (underline ? TChar::Underline : TChar::None);
+                                        | (reverse ? TChar::Reverse : TChar::None) | (strikeout ? TChar::StrikeOut : TChar::None) | (underline ? TChar::Underline : TChar::None)
+                                        | (fastBlink ? TChar::FastBlink : (slowBlink ? TChar::Blink : TChar::None));
 
     if (!host.mpConsole->setTextFormat(
                 windowName, QColor(colorComponents.at(3), colorComponents.at(4), colorComponents.at(5)), QColor(colorComponents.at(0), colorComponents.at(1), colorComponents.at(2)), flags)) {

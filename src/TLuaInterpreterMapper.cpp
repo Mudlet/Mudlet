@@ -1914,6 +1914,24 @@ int TLuaInterpreter::enableMapInfo(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapInfo
+int TLuaInterpreter::getMapInfo(lua_State* L)
+{
+    const auto& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mMapInfoContributorManager) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+
+    const auto& keys = host.mpMap->mMapInfoContributorManager->getContributorKeys();
+    lua_createtable(L, 0, keys.size());
+    for (const auto& name : keys) {
+        lua_pushstring(L, name.toUtf8().constData());
+        lua_pushboolean(L, host.mMapInfoContributors.contains(name));
+        lua_settable(L, -3);
+    }
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAllAreaUserData
 int TLuaInterpreter::getAllAreaUserData(lua_State* L)
 {

@@ -5,6 +5,7 @@
 mudlet = mudlet or {}
 mudlet.supports = {
   coroutines = true,
+  mmcp = true,
   namedPatterns = true,
   osVersion = true
 }
@@ -962,9 +963,13 @@ function timeframe(vname, true_time, nil_time, ...)
   -- aggregate timerlist data
   local timerlist = {
     {0, nil},
-    type(true_time) == "number" and {true_time, true} or type(true_time) == "table" and true_time,
-    type(nil_time) == "number" and {nil_time, nil} or type(nil_time) == "table" and nil_time,
+    (type(true_time) == "number" and {true_time, true}) or (type(true_time) == "table" and true_time),
+    ...
   }
+  table.insert(
+    timerlist,
+    (type(nil_time) == "number" and {nil_time, nil}) or (type(nil_time) == "table" and nil_time) or nil
+  )
 
   -- Add additional timers from varargs or table argument
   for _, timer in ipairs(additional_timers) do
@@ -1267,6 +1272,7 @@ function getConfig(...)
       "compactInputLine",
       "controlCharacterHandling",
       "editorAutoComplete",
+      "enableBlinkText",
       "enableClosedCaption",
       "enableGMCP",
       "enableMNES",

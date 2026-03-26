@@ -31,6 +31,7 @@
 #include <QNetworkAccessManager>
 #include <QProgressDialog>
 #include <QTimer>
+#include <QVersionNumber>
 
 using namespace std::chrono_literals;
 
@@ -45,7 +46,6 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     connect(packageList, &QListWidget::currentItemChanged, this, &dlgPackageManager::slot_itemChanged);
     connect(packageList, &QListWidget::itemSelectionChanged, this, &dlgPackageManager::slot_toggleInstallRepoButton);
     connect(packageList, &QListWidget::itemSelectionChanged, this, &dlgPackageManager::slot_toggleRemoveButton);
-    connect(packageStatusList, &QListWidget::currentItemChanged, this, &dlgPackageManager::slot_setPackageList);
     connect(pushButton_installFile, &QAbstractButton::clicked, this, &dlgPackageManager::slot_installPackageFromFile);
     connect(pushButton_installRepo, &QAbstractButton::clicked, this, &dlgPackageManager::slot_installPackageFromRepository);
     connect(pushButton_remove, &QAbstractButton::clicked, this, &dlgPackageManager::slot_removePackages);
@@ -60,16 +60,11 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     pushButton_report->setIcon(QIcon(qsl(":/icons/flag-red.png")));
     pushButton_report->hide();
 
-    packageStatusList->setSortingEnabled(false);
-    //: Package manager - status item showing installed packages
-    statusInstalled = new QListWidgetItem(tr("Installed") + QString(" (%1)").arg(mpHost->mInstalledPackages.size()), packageStatusList);
-    //: Package manager - status item showing available packages
-    statusAvailable = new QListWidgetItem(tr("Available") + QString(" (%1)").arg(repositoryPackages.size()), packageStatusList);
-    packageStatusList->setCurrentItem(statusInstalled);
+    setupNavigationButtons();
+    applyNavigationStyles();
 
     packageList->setSortingEnabled(true);
 
-    // Set up custom delegate for package list to show name and description
     mpPackageItemDelegate = new PackageItemDelegate(this);
     packageList->setItemDelegate(mpPackageItemDelegate);
 
@@ -79,9 +74,32 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     }
 
     pushButton_installRepo->setEnabled(false);
-    packageList->setCurrentRow(0);
+    mCurrentView = NavigationView::Installed;
+    slot_setPackageList();
 
     setAttribute(Qt::WA_DeleteOnClose);
+}
+
+void dlgPackageManager::applyNavigationStyles()
+{
+    navigationFrame->setStyleSheet(qsl("QFrame#navigationFrame {"
+                                       "  border: 1px solid palette(mid);"
+                                       "  border-radius: 6px;"
+                                       "  background-color: palette(window);"
+                                       "}"
+                                       "QPushButton {"
+                                       "  border: none;"
+                                       "  border-radius: 4px;"
+                                       "  padding: 6px 16px;"
+                                       "  background-color: transparent;"
+                                       "}"
+                                       "QPushButton:checked {"
+                                       "  background-color: palette(highlight);"
+                                       "  color: palette(highlighted-text);"
+                                       "}"
+                                       "QPushButton:hover:!checked {"
+                                       "  background-color: palette(midlight);"
+                                       "}"));
 }
 
 void dlgPackageManager::clearPackageDetails()
@@ -160,6 +178,8 @@ void dlgPackageManager::downloadRepositoryIndex()
         file->deleteLater();
         manager->deleteLater();
         readPackageRepositoryFile();
+        populatePackagesWithUpdates();
+        updateUpdatesBadge();
     });
 }
 
@@ -172,6 +192,33 @@ void dlgPackageManager::fillPackageDetails(const QString& name, const QString& t
     label_author->setText(author);
     //: Package manager - label showing package version
     label_version->setText(tr("Version ") + version);
+}
+
+bool dlgPackageManager::hasNewerVersion(const QString& installed, const QString& repo) const
+{
+    const QVersionNumber installedVersion = QVersionNumber::fromString(installed);
+    const QVersionNumber repoVersion = QVersionNumber::fromString(repo);
+    return repoVersion > installedVersion;
+}
+
+void dlgPackageManager::populatePackagesWithUpdates()
+{
+    mPackagesWithUpdates.clear();
+
+    for (const QString& packageName : mpHost->mInstalledPackages) {
+        if (!packageLookup.contains(packageName)) {
+            continue;
+        }
+
+        const QJsonObject repoPackage = packageLookup.value(packageName);
+        const QString repoVersion = repoPackage.value(qsl("version")).toString();
+        const auto packageInfo = mpHost->mPackageInfo.value(packageName);
+        const QString installedVersion = packageInfo.value(qsl("version"));
+
+        if (!installedVersion.isEmpty() && !repoVersion.isEmpty() && hasNewerVersion(installedVersion, repoVersion)) {
+            mPackagesWithUpdates.append(packageName);
+        }
+    }
 }
 
 bool dlgPackageManager::readPackageRepositoryFile()
@@ -205,8 +252,10 @@ bool dlgPackageManager::readPackageRepositoryFile()
         QJsonObject pkg = val.toObject();
         packageLookup.insert(pkg["mpackage"].toString(), pkg);
     }
-    //: Package manager - status item showing number of available packages
-    statusAvailable->setText(tr("Available") + QString(" (%1)").arg(repositoryPackages.size()));
+
+    populatePackagesWithUpdates();
+    updateUpdatesBadge();
+
     return true;
 }
 
@@ -217,7 +266,8 @@ void dlgPackageManager::resetPackageList()
     }
 
     clearPackageDetails();
-    packageStatusList->setCurrentItem(statusInstalled);
+    mCurrentView = NavigationView::Installed;
+    mpNavigationGroup->button(static_cast<int>(NavigationView::Installed))->setChecked(true);
     packageList->clear();
 
     for (int i = 0; i < mpHost->mInstalledPackages.size(); i++) {
@@ -234,7 +284,6 @@ void dlgPackageManager::resetPackageList()
             const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
             item->setIcon(QIcon(iconDir));
         } else {
-            // for alignment purposes in the package list
             QPixmap emptyPixmap(16, 16);
             emptyPixmap.fill(Qt::transparent);
             item->setIcon(QIcon(emptyPixmap));
@@ -242,9 +291,21 @@ void dlgPackageManager::resetPackageList()
         packageList->addItem(item);
     }
 
-    //: Package manager - status item showing number of installed packages
-    statusInstalled->setText(tr("Installed") + QString(" (%1)").arg(mpHost->mInstalledPackages.size()));
+    populatePackagesWithUpdates();
+    updateUpdatesBadge();
     packageList->setCurrentRow(0);
+}
+
+void dlgPackageManager::setupNavigationButtons()
+{
+    mpNavigationGroup = new QButtonGroup(this);
+    mpNavigationGroup->setExclusive(true);
+
+    mpNavigationGroup->addButton(pushButton_explore, static_cast<int>(NavigationView::Explore));
+    mpNavigationGroup->addButton(pushButton_installed, static_cast<int>(NavigationView::Installed));
+    mpNavigationGroup->addButton(pushButton_updates, static_cast<int>(NavigationView::Updates));
+
+    connect(mpNavigationGroup, &QButtonGroup::idClicked, this, &dlgPackageManager::slot_navigationButtonClicked);
 }
 
 void dlgPackageManager::slot_installPackageFromFile()
@@ -304,7 +365,6 @@ void dlgPackageManager::slot_installPackageFromRepository()
     auto cancelled = std::make_shared<bool>(false);
     bool repoError = false;
 
-    // Handle cancellation
     QObject::connect(progress, &QProgressDialog::canceled, [activeReplies, pendingDownloads, manager, progress, cancelled]() {
         *cancelled = true;
         for (QNetworkReply* reply : *activeReplies) {
@@ -312,7 +372,6 @@ void dlgPackageManager::slot_installPackageFromRepository()
                 reply->abort();
             }
         }
-        // Clean up any partially downloaded files
         for (const QString& filePath : pendingDownloads->values()) {
             QFile::remove(filePath);
         }
@@ -380,10 +439,8 @@ void dlgPackageManager::slot_installPackageFromRepository()
             reply->deleteLater();
             file->deleteLater();
 
-            // Remove this reply from active list
             activeReplies->removeOne(reply);
 
-            // If cancelled, just clean up and return
             if (*cancelled) {
                 QFile::remove(outPath);
                 return;
@@ -398,10 +455,14 @@ void dlgPackageManager::slot_installPackageFromRepository()
 
             if (--(*remainingDownloads.get()) == 0) {
                 for (auto it = pendingDownloads->begin(); it != pendingDownloads->end(); ++it) {
-                    const QString& pkgName = it.key();
+                    const QString& packageName = it.key();
                     const QString& filePath = it.value();
 
                     if (mpHost) {
+                        // Uninstall existing package first if this is an update
+                        if (mpHost->mInstalledPackages.contains(packageName)) {
+                            mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
+                        }
                         mpHost->installPackage(filePath, enums::PackageModuleType::Package);
                     }
                     QFile::remove(filePath);
@@ -412,13 +473,11 @@ void dlgPackageManager::slot_installPackageFromRepository()
                 progress->deleteLater();
                 manager->deleteLater();
 
-                // Refresh the package list to show newly installed packages
                 resetPackageList();
             }
         });
     }
 
-    // package listing must have been corrupted, re-download
     if (repoError) {
         downloadRepositoryIndex();
     }
@@ -432,10 +491,9 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
 
     clearPackageDetails();
 
-    const auto status = packageStatusList->currentItem();
     QString packageName = pItem->text();
 
-    if (status == statusInstalled) {
+    if (mCurrentView == NavigationView::Installed) {
         auto packageInfo{mpHost->mPackageInfo.value(packageName)};
         if (packageInfo.isEmpty()) {
             packageDescription->clear();
@@ -465,7 +523,7 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
 
         fillPackageDetails(packageName, packageInfo.value(qsl("title")), packageInfo.value(qsl("author")), packageInfo.value(qsl("version")));
 
-    } else if (status == statusAvailable) {
+    } else if (mCurrentView == NavigationView::Explore) {
         pushButton_website->show();
         pushButton_report->show();
         downloadIcon(packageName);
@@ -476,7 +534,32 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
                     packageObj.value(qsl("mpackage")).toString(), packageObj.value(qsl("title")).toString(), packageObj.value(qsl("author")).toString(), packageObj.value(qsl("version")).toString());
             packageDescription->setMarkdown(packageObj.value(qsl("description")).toString());
         }
+    } else if (mCurrentView == NavigationView::Updates) {
+        pushButton_website->show();
+        pushButton_report->show();
+        downloadIcon(packageName);
+
+        if (packageLookup.contains(packageName)) {
+            QJsonObject packageObj = packageLookup.value(packageName);
+            const auto packageInfo = mpHost->mPackageInfo.value(packageName);
+            const QString installedVersion = packageInfo.value(qsl("version"));
+            const QString repoVersion = packageObj.value(qsl("version")).toString();
+
+            fillPackageDetails(packageObj.value(qsl("mpackage")).toString(), packageObj.value(qsl("title")).toString(), packageObj.value(qsl("author")).toString(), repoVersion);
+
+            //: Package manager - version update indicator showing old and new versions
+            label_version->setText(tr("Version %1 → %2").arg(installedVersion, repoVersion));
+
+            packageDescription->setMarkdown(packageObj.value(qsl("description")).toString());
+        }
     }
+}
+
+void dlgPackageManager::slot_navigationButtonClicked(int buttonId)
+{
+    mCurrentView = static_cast<NavigationView>(buttonId);
+    lineEdit_searchBar->clear();
+    slot_setPackageList();
 }
 
 void dlgPackageManager::slot_onIconDownloaded(QNetworkReply* reply)
@@ -539,14 +622,16 @@ void dlgPackageManager::slot_removePackages()
     for (const QString& package : removePackages) {
         mpHost->uninstallPackage(package, enums::PackageModuleType::Package);
     }
+
+    populatePackagesWithUpdates();
+    updateUpdatesBadge();
 }
 
 void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
 {
-    const auto status = packageStatusList->currentItem();
     packageList->clear();
 
-    if (status == statusInstalled) {
+    if (mCurrentView == NavigationView::Installed) {
         for (const auto& value : mpHost->mPackageInfo) {
             const QString name = value.value(qsl("mpackage"));
             const QString title = value.value(qsl("title"));
@@ -564,7 +649,6 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
                     const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(name, iconName));
                     item->setIcon(QIcon(iconDir));
                 } else {
-                    // for alignment purposes in the package list
                     QPixmap emptyPixmap(16, 16);
                     emptyPixmap.fill(Qt::transparent);
                     item->setIcon(QIcon(emptyPixmap));
@@ -572,7 +656,7 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
                 packageList->addItem(item);
             }
         }
-    } else if (status == statusAvailable) {
+    } else if (mCurrentView == NavigationView::Explore) {
         for (const QJsonValue& value : repositoryPackages) {
             const QJsonObject pkg = value.toObject();
             const QString name = pkg[qsl("mpackage")].toString();
@@ -593,6 +677,31 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
                 packageList->addItem(item);
             }
         }
+    } else if (mCurrentView == NavigationView::Updates) {
+        for (const QString& packageName : mPackagesWithUpdates) {
+            const auto packageInfo = mpHost->mPackageInfo.value(packageName);
+            const QString title = packageInfo.value(qsl("title"));
+            const QString description = packageInfo.value(qsl("description"));
+            const QString author = packageInfo.value(qsl("author"));
+
+            if (packageName.contains(searchText, Qt::CaseInsensitive) || title.contains(searchText, Qt::CaseInsensitive) || description.contains(searchText, Qt::CaseInsensitive)
+                || author.contains(searchText, Qt::CaseInsensitive)) {
+                QListWidgetItem* item = new QListWidgetItem(packageName);
+                if (!title.isEmpty()) {
+                    item->setData(Qt::UserRole, title);
+                }
+                const auto iconName = packageInfo.value(qsl("icon"));
+                if (!iconName.isEmpty()) {
+                    const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
+                    item->setIcon(QIcon(iconDir));
+                } else {
+                    QPixmap emptyPixmap(16, 16);
+                    emptyPixmap.fill(Qt::transparent);
+                    item->setIcon(QIcon(emptyPixmap));
+                }
+                packageList->addItem(item);
+            }
+        }
     }
 }
 
@@ -602,7 +711,7 @@ void dlgPackageManager::slot_setPackageList()
         return;
     }
 
-    if (lineEdit_searchBar->text().length() > 0) {
+    if (!lineEdit_searchBar->text().isEmpty()) {
         slot_searchTextChanged(lineEdit_searchBar->text());
         return;
     }
@@ -610,9 +719,7 @@ void dlgPackageManager::slot_setPackageList()
     packageList->clear();
     clearPackageDetails();
 
-    const auto status = packageStatusList->currentItem();
-
-    if (status == statusInstalled) {
+    if (mCurrentView == NavigationView::Installed) {
         for (int i = 0; i < mpHost->mInstalledPackages.size(); i++) {
             auto item = new QListWidgetItem();
             item->setText(mpHost->mInstalledPackages.at(i));
@@ -626,14 +733,13 @@ void dlgPackageManager::slot_setPackageList()
                 const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
                 item->setIcon(QIcon(iconDir));
             } else {
-                // for alignment purposes in the package list
                 QPixmap emptyPixmap(16, 16);
                 emptyPixmap.fill(Qt::transparent);
                 item->setIcon(QIcon(emptyPixmap));
             }
             packageList->addItem(item);
         }
-    } else if (status == statusAvailable) {
+    } else if (mCurrentView == NavigationView::Explore) {
         if (!readPackageRepositoryFile()) {
             return;
         }
@@ -648,6 +754,33 @@ void dlgPackageManager::slot_setPackageList()
             }
             packageList->addItem(item);
         }
+    } else if (mCurrentView == NavigationView::Updates) {
+        populatePackagesWithUpdates();
+
+        if (mPackagesWithUpdates.isEmpty()) {
+            //: Package manager - message shown in description area when no updates are available
+            packageDescription->setPlainText(tr("All packages are up to date."));
+        }
+
+        for (const QString& packageName : mPackagesWithUpdates) {
+            auto item = new QListWidgetItem();
+            item->setText(packageName);
+            const auto packageInfo{mpHost->mPackageInfo.value(packageName)};
+            const auto iconName = packageInfo.value(qsl("icon"));
+            const auto title = packageInfo.value(qsl("title"));
+            if (!title.isEmpty()) {
+                item->setData(Qt::UserRole, title);
+            }
+            if (!iconName.isEmpty()) {
+                const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
+                item->setIcon(QIcon(iconDir));
+            } else {
+                QPixmap emptyPixmap(16, 16);
+                emptyPixmap.fill(Qt::transparent);
+                item->setIcon(QIcon(emptyPixmap));
+            }
+            packageList->addItem(item);
+        }
     }
 
     packageList->setCurrentRow(0);
@@ -655,43 +788,56 @@ void dlgPackageManager::slot_setPackageList()
 
 void dlgPackageManager::slot_toggleInstallRepoButton()
 {
-    const auto status = packageStatusList->currentItem();
-
-    if (status == statusAvailable) {
+    if (mCurrentView == NavigationView::Explore || mCurrentView == NavigationView::Updates) {
         const QList selection = packageList->selectedItems();
         const int selectionCount = selection.size();
         pushButton_installRepo->setEnabled(selectionCount);
-        if (selectionCount) {
-            //: Message on button in package manager to install one or more (%n is the count of) selected package(s).
-            pushButton_installRepo->setText(tr("Install (%n)", nullptr, selectionCount));
+
+        if (mCurrentView == NavigationView::Updates) {
+            if (selectionCount) {
+                //: Message on button in package manager to update one or multiple (%n is the count) selected packages.
+                pushButton_installRepo->setText(tr("Update (%n)", nullptr, selectionCount));
+            } else {
+                //: Message on button in package manager when there are no selected packages - button will also be disabled.
+                pushButton_installRepo->setText(tr("Update"));
+            }
+            //: Tooltip for button in package manager when in Updates view
+            pushButton_installRepo->setToolTip(tr("Update selected packages"));
         } else {
-            //: Message on button in package manager initially and when there is no packages to install
-            pushButton_installRepo->setText(tr("Install"));
+            if (selectionCount) {
+                //: Message on button in package manager to install one or multiple (%n is the count) selected packages.
+                pushButton_installRepo->setText(tr("Install (%n)", nullptr, selectionCount));
+            } else {
+                //: Message on button in package manager when there are no selected packages - button will also be disabled.
+                pushButton_installRepo->setText(tr("Install"));
+            }
+            //: Tooltip for button in package manager when in Explore view
+            pushButton_installRepo->setToolTip(tr("Install package from repository"));
         }
     } else {
-        //: Message on button in package manager initially and when there is no packages to install
+        //: Message on button in package manager initially and when the view is the "Installed" one
         pushButton_installRepo->setText(tr("Install"));
         pushButton_installRepo->setEnabled(false);
+        //: Tooltip for button in package manager when in Explore view
+        pushButton_installRepo->setToolTip(tr("Install package from repository"));
     }
 }
 
 void dlgPackageManager::slot_toggleRemoveButton()
 {
-    const auto status = packageStatusList->currentItem();
-
-    if (status == statusInstalled) {
+    if (mCurrentView == NavigationView::Installed) {
         const QList selection = packageList->selectedItems();
         const int selectionCount = selection.size();
         pushButton_remove->setEnabled(selectionCount);
         if (selectionCount) {
-            //: Message on button in package manager to remove one or more (%n is the count of) selected package(s).
+            //: Message on button in package manager to remove one or multiple (%n is the count) selected packages.
             pushButton_remove->setText(tr("Remove (%n)", nullptr, selectionCount));
         } else {
-            //: Message on button in package manager initially and when there is no packages to remove
+            //: Message on button in package manager when there are no selected packages - button will also be disabled.
             pushButton_remove->setText(tr("Remove"));
         }
     } else {
-        //: Message on button in package manager initially and when there is no packages to remove
+        //: Message on button in package manager initially and when the view is NOT the "Installed" one
         pushButton_remove->setText(tr("Remove"));
         pushButton_remove->setEnabled(false);
     }
@@ -705,9 +851,20 @@ void dlgPackageManager::showImportStatus(const QString& message)
     QTimer::singleShot(4s, label_importStatus, &QWidget::hide);
 }
 
+void dlgPackageManager::updateUpdatesBadge()
+{
+    const int count = mPackagesWithUpdates.size();
+    if (count) {
+        //: Package manager - navigation button showing one or more available updates
+        pushButton_updates->setText(tr("Updates (%1)").arg(count));
+    } else {
+        //: Package manager - navigation button for when there are no updates
+        pushButton_updates->setText(tr("Updates"));
+    }
+}
+
 void dlgPackageManager::closeEvent(QCloseEvent* event)
 {
-    // Only emit signal to restore focus if we're not shutting down
     if (mudlet::self() && !mudlet::self()->isGoingDown() && mpHost && !mpHost->isClosingDown()) {
         emit packageManagerClosing(mpHost->getName());
     }

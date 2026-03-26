@@ -497,7 +497,7 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L, const char* f
             intValue = getVerifiedInt(L, func, i, "fadein");
 
             if (intValue < 0) {
-                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %s)", "fadein", intValue);
+                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadein", intValue);
                 return lua_error(L);
             }
 
@@ -507,7 +507,7 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L, const char* f
             intValue = getVerifiedInt(L, func, i, "fadeout");
 
             if (intValue < 0) {
-                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %s)", "fadeout", intValue);
+                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", intValue);
                 return lua_error(L);
             }
 
@@ -517,7 +517,7 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L, const char* f
             intValue = getVerifiedInt(L, func, i, "start");
 
             if (intValue < 0) {
-                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %s)", "start", intValue);
+                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "start", intValue);
                 return lua_error(L);
             }
 
@@ -559,7 +559,7 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L, const char* f
             intValue = getVerifiedInt(L, func, i, "finish");
 
             if (intValue < 0) {
-                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %s)", "finish", intValue);
+                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "finish", intValue);
                 return lua_error(L);
             }
 

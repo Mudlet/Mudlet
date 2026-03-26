@@ -416,6 +416,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mEchoLuaErrors") = pHost->mEchoLuaErrors ? "yes" : "no";
     host.append_attribute("runAllKeyMatches") = pHost->getKeyUnit()->mRunAllKeyMatches ? "yes" : "no";
     host.append_attribute("AmbigousWidthGlyphsToBeWide") = pHost->mAutoAmbigousWidthGlyphsSetting ? "auto" : (pHost->mWideAmbigousWidthGlyphs ? "yes" : "no");
+    host.append_attribute("mEnableBlinkText") = pHost->mEnableBlinkText ? "yes" : "no";
     // FIXME: Change to a string or integer property when possible to support more
     // than false (perhaps 0 or "PlainText") or true (perhaps 1 or "HTML") in the
     // future - phpBB code might be useful if it can be done.
@@ -445,9 +446,13 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     pHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     host.append_attribute("mEnableUserDictionary") = enableUserDictionary ? "yes" : "no";
     host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";
-    if (pHost->mMapInfoContributors.isEmpty()) {
-        host.append_attribute("mShowInfo") = "no";
-    }
+    // This is to reproduce the behaviour for Mudlet versions prior to the
+    // introduction of the Map Info system https://github.com/Mudlet/Mudlet/pull/4718
+    // where having the info showing would produce what is now the "Full" map info,
+    // this does duplicate the action, for the "Full" item, in later code which
+    // that handles all enabled Map Info items but as the container is a set that
+    // isn't a problem:
+    host.append_attribute("mShowInfo") = pHost->mMapInfoContributors.contains(qsl("Full")) ? "yes" : "no";
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
     host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
@@ -584,7 +589,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("serverPackageName").text().set(pHost->mServerGUI_Package_name.toUtf8().constData());
         host.append_child("serverPackageVersion").text().set(pHost->mServerGUI_Package_version.toUtf8().constData());
         host.append_child("port").text().set(QString::number(pHost->getPort()).toUtf8().constData());
-        auto borders = pHost->borders();
+        auto borders = pHost->userBorders();
         host.append_child("borderTopHeight").text().set(QString::number(borders.top()).toUtf8().constData());
         host.append_child("borderBottomHeight").text().set(QString::number(borders.bottom()).toUtf8().constData());
         host.append_child("borderLeftWidth").text().set(QString::number(borders.left()).toUtf8().constData());
@@ -595,7 +600,10 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("consoleBufferSize").text().set(QString::number(pHost->mConsoleBufferSize).toUtf8().constData());
         host.append_child("useMaxConsoleBufferSize").text().set(pHost->mUseMaxConsoleBufferSize ? "yes" : "no");
         host.append_child("mFgColor").text().set(pHost->mFgColor.name().toUtf8().constData());
-        host.append_child("mBgColor").text().set(pHost->mBgColor.name().toUtf8().constData());
+
+        auto consoleBgColorNode = host.append_child("mBgColor");
+        consoleBgColorNode.text().set(pHost->mBgColor.name().toUtf8().constData());
+        consoleBgColorNode.append_attribute("alpha").set_value(pHost->mBgColor.alpha());
         host.append_child("mCommandFgColor").text().set(pHost->mCommandFgColor.name().toUtf8().constData());
         host.append_child("mCommandBgColor").text().set(pHost->mCommandBgColor.name().toUtf8().constData());
         host.append_child("mCommandLineFgColor").text().set(pHost->mCommandLineFgColor.name().toUtf8().constData());
@@ -699,6 +707,19 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
     }
+    {
+        // Store MMCP related attributes in the MMCP child node
+        auto mmcpNode = host.append_child("MMCP");
+        mmcpNode.append_attribute("chatName") = pHost->mMMCPChatName.toUtf8().constData();
+        mmcpNode.append_attribute("chatPort") = QString::number(pHost->mMMCPChatPort).toUtf8().constData();
+        mmcpNode.append_attribute("chatPrefix") = pHost->mMMCPChatPrefix.toUtf8().constData();
+        mmcpNode.append_attribute("autostartServer") = pHost->mMMCPAutostartServer ? "yes" : "no";
+        mmcpNode.append_attribute("allowPeekRequests") = pHost->mMMCPAllowPeekRequests ? "yes" : "no";
+        mmcpNode.append_attribute("prefixEmotes") = pHost->mMMCPPrefixEmotes ? "yes" : "no";
+        mmcpNode.append_attribute("chatMessageNewline") = pHost->mMMCPAddChatMessageNewline ? "yes" : "no";
+        mmcpNode.append_attribute("autoAcceptCalls") = pHost->mMMCPAutoAcceptCalls ? "yes" : "no";
+        mmcpNode.append_attribute("snoopInMain") = pHost->mMMCPShowSnoopInMainConsole ? "yes" : "no";
+    }
 
     // Write experiments
     {
@@ -711,6 +732,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
     }
+
 
     writeTriggerPackage(pHost, mudletPackage, true);
     writeTimerPackage(pHost, mudletPackage, true);

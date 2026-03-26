@@ -101,15 +101,17 @@ const char TNSB_SEND = 1;
 
 
 const char OPT_ECHO = 1;
+const char OPT_SUPPRESS_GO_AHEAD = 3;
 const char OPT_STATUS = 5;
 const char OPT_TIMING_MARK = 6;
 const char OPT_TERMINAL_TYPE = 24;
+const char OPT_LINEMODE = 34;
 const char OPT_EOR = 25;
 const char OPT_NAWS = 31;
 // https://www.rfc-editor.org/rfc/rfc1572.txt && https://tintin.mudhalla.net/protocols/mnes/
 const char OPT_NEW_ENVIRON = 39;
 const char OPT_CHARSET = 42;
-const char OPT_MSDP = 69; // https://tintin.mudhalla.net/protocols/msdp/
+const char OPT_MSDP = 69;                    // https://tintin.mudhalla.net/protocols/msdp/
 const char OPT_MSSP = static_cast<char>(70); // https://tintin.mudhalla.net/protocols/mssp/
 const char OPT_COMPRESS = 85;
 const char OPT_COMPRESS2 = 86;
@@ -138,18 +140,18 @@ const char MSDP_ARRAY_OPEN = 5;
 const char MSDP_ARRAY_CLOSE = 6;
 
 // https://tintin.mudhalla.net/protocols/mtts/
-const int MTTS_STD_ANSI = 1; // Client supports all common ANSI color codes.
-const int MTTS_STD_VT100 = 2; // Client supports all common VT100 codes.
-const int MTTS_STD_UTF_8 = 4; // Client is using UTF-8 character encoding.
-const int MTTS_STD_256_COLORS = 8; // Client supports all 256 color codes.
-const int MTTS_STD_MOUSE_TRACKING = 16; // Client supports xterm mouse tracking.
+const int MTTS_STD_ANSI = 1;               // Client supports all common ANSI color codes.
+const int MTTS_STD_VT100 = 2;              // Client supports all common VT100 codes.
+const int MTTS_STD_UTF_8 = 4;              // Client is using UTF-8 character encoding.
+const int MTTS_STD_256_COLORS = 8;         // Client supports all 256 color codes.
+const int MTTS_STD_MOUSE_TRACKING = 16;    // Client supports xterm mouse tracking.
 const int MTTS_STD_OSC_COLOR_PALETTE = 32; // Client supports the OSC color palette.
-const int MTTS_STD_SCREEN_READER = 64; // Client is using a screen reader.
-const int MTTS_STD_PROXY = 128; // Client is a proxy allowing different users to connect from the same IP address.
-const int MTTS_STD_TRUECOLOR = 256; // Client supports truecolor codes using semicolon notation.
-const int MTTS_STD_MNES = 512; // Client supports the Mud New Environment Standard for information exchange.
-const int MTTS_STD_MSLP = 1024; // Client supports the Mud Server Link Protocol for clickable link handling.
-const int MTTS_STD_SSL = 2048; // Client supports SSL for data encryption, preferably TLS 1.3 or higher.
+const int MTTS_STD_SCREEN_READER = 64;     // Client is using a screen reader.
+const int MTTS_STD_PROXY = 128;            // Client is a proxy allowing different users to connect from the same IP address.
+const int MTTS_STD_TRUECOLOR = 256;        // Client supports truecolor codes using semicolon notation.
+const int MTTS_STD_MNES = 512;             // Client supports the Mud New Environment Standard for information exchange.
+const int MTTS_STD_MSLP = 1024;            // Client supports the Mud Server Link Protocol for clickable link handling.
+const int MTTS_STD_SSL = 2048;             // Client supports SSL for data encryption, preferably TLS 1.3 or higher.
 
 // https://www.rfc-editor.org/rfc/rfc1572.txt && https://tintin.mudhalla.net/protocols/mnes/
 const char NEW_ENVIRON_IS = 0;
@@ -197,12 +199,14 @@ public:
     bool isReplaying() { return loadingReplay; }
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
-    const QByteArray & getEncoding() const { return mEncoding; }
+    const QByteArray& getEncoding() const { return mEncoding; }
     QPair<bool, QString> setEncoding(const QByteArray&, bool saveValue = true);
     void postMessage(QString);
-    const QByteArrayList & getEncodingsList() const { return mAcceptableEncodings; }
+    const QByteArrayList& getEncodingsList() const { return mAcceptableEncodings; }
     std::optional<QAbstractSocket::SocketError> error() const;
     QString errorString();
+    bool oscHyperlinkConfigFeatureEnabled();
+    bool oscHyperlinkPresetsEnabled();
 #if !defined(QT_NO_SSL)
     QSslCertificate getPeerCertificate();
     QList<QSslError> getSslErrors();
@@ -229,7 +233,8 @@ public:
     void loopbackTest(QByteArray& data) { processSocketData(data.data(), data.size(), true); }
     void cancelLoginTimers();
     void terminateConnection();
-    bool currentlySecure() const {
+    bool currentlySecure() const
+    {
 #if defined(QT_NO_SSL)
         return false;
 #else
@@ -290,7 +295,7 @@ private:
 
     // loopbackTesting is for internal testing whilst OFF-LINE using the
     // feedTelnet(...) Lua function.
-    void processSocketData(char *data, int size, const bool loopbackTesting = false);
+    void processSocketData(char* data, int size, const bool loopbackTesting = false);
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
@@ -375,6 +380,13 @@ private:
     // interconnections are not switched between the different patterns until
     // it is safe to do so:
     bool mCurrent_sslTsl = false;
+    // Stores SSL errors received in slot_socketSslError() so they can be
+    // reported in slot_socketDisconnected() even when mpSocket is null
+    // (which happens when the SSL handshake fails before mpSocket is assigned):
+    QList<QSslError> mSslErrors;
+    // Stores the peer certificate from slot_socketSslError() so it can be
+    // used by getPeerCertificate() when mpSocket is null:
+    QSslCertificate mPeerCertificate;
 #endif
     // Could be a URL ("www.game.com") or an IPv4 address ("192.168.1.1") or an
     // IPv6 address ("2001:db8::1"):
@@ -470,8 +482,18 @@ private:
     int mNaws_x = 0;
     int mNaws_y = 0;
 
+    bool mServerRequestedSGA = false;
+    QElapsedTimer mEchoToggleTimer;
+    int mEchoToggleCount = 0;
+    bool mEchoAnomalyDetected = false;
+    static constexpr int ECHO_ANOMALY_THRESHOLD = 5;
+    static constexpr int ECHO_ANOMALY_WINDOW_MS = 5000;
+
     // KaVir protocol negotiation tracking
     QVector<unsigned char> mNegotiationOrder;
+
+    void checkCharacterModePattern();
+    bool checkEchoAnomalyPattern();
 };
 
 #endif // MUDLET_CTELNET_H

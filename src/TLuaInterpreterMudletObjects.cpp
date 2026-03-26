@@ -2588,6 +2588,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     if (pP) {
         patterns = pP->getPatternsList();
         propertyList = pP->getRegexCodePropertyList();
+        host.getTriggerUnit()->killTrigger(triggerName);
     }
     patterns << pattern;
     if (colorTrigger) {

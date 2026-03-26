@@ -86,9 +86,11 @@ function handleWindowResizeEvent()
 end
 
 local packages = {
+  "3rdparty/Inspect.lua",
+
   "StringUtils.lua",
   "TableUtils.lua",
-  -- "Logging.lua", -- never documented and fails to load now
+
   "DebugTools.lua",
   "DateTime.lua",
   "DB.lua",
@@ -111,6 +113,7 @@ local packages = {
   "geyser/GeyserUserWindow.lua",
   "geyser/GeyserAdjustableContainer.lua",
   "geyser/GeyserCommandLine.lua",
+  "geyser/GeyserTextEdit.lua",
   "geyser/GeyserButton.lua",
 
   -- TODO probably don't need to load this file
