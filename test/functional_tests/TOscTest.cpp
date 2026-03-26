@@ -309,10 +309,10 @@ private slots:
         << QString() << false;
     QTest::newRow("object with empty text")
         << qsl(R"({"title":{"text":"","style":{"color":"#ff0000"}},"menu":[{"Action":"send:action"}]})")
-        << QString() << false;
+        << QString() << true;
     QTest::newRow("object without text key")
         << qsl(R"({"title":{"style":{"color":"#ff0000"}},"menu":[{"Action":"send:action"}]})")
-        << QString() << false;
+        << QString() << true;
     QTest::newRow("object without style key")
         << qsl(R"({"title":{"text":"Style-less Title"},"menu":[{"Action":"send:action"}]})")
         << qsl("Style-less Title") << false;
