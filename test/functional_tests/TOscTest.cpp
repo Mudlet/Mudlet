@@ -20,6 +20,10 @@
 /*
  * Tests for OSC (Operating System Command) escape sequence handling.
  *
+ * Uses loopbackTest() to inject data directly into the telnet processing
+ * pipeline, avoiding per-test TCP connections and profile creation.
+ * Mudlet is started once in initTestCase and reused across all tests.
+ *
  * Run with: ctest -R TOscTest -V
  */
 
@@ -45,18 +49,26 @@ class TOscTest : public QObject {
 
 private:
   TelnetServerStub *mpServer = nullptr;
+  Host *mpHost = nullptr;
   const QString mHostname = "OSC-Test-Host";
   const QString mPort = "4002";
   const QString mLocalhost = "localhost";
 
+  // Injects raw telnet data into the processing pipeline via loopback and
+  // waits for the buffer to process it.
+  void injectData(const QString &message) {
+    QByteArray data = (message + qsl("\r\n")).toUtf8();
+    mpHost->mTelnet.loopbackTest(data);
+    QTest::qWait(50);
+  }
+
   // Scans backward through the buffer to find the first hyperlink and returns
   // its command list from the link store.
   QStringList findFirstLinkCommands() {
-    auto *host = mudlet::self()->getActiveHost();
-    if (!host || !host->mpConsole) {
+    if (!mpHost || !mpHost->mpConsole) {
       return {};
     }
-    TMainConsole *console = host->mpConsole;
+    TMainConsole *console = mpHost->mpConsole;
     int linkId = 0;
     for (int line = console->buffer.getLastLineNumber();
          line >= 0 && linkId == 0; --line) {
@@ -71,11 +83,10 @@ private:
   // Scans backward through the buffer to find the first hyperlink and returns
   // its HyperlinkStyling from the link store.
   Mudlet::HyperlinkStyling findFirstLinkStyling() {
-    auto *host = mudlet::self()->getActiveHost();
-    if (!host || !host->mpConsole) {
+    if (!mpHost || !mpHost->mpConsole) {
       return {};
     }
-    TMainConsole *console = host->mpConsole;
+    TMainConsole *console = mpHost->mpConsole;
     int linkId = 0;
     for (int line = console->buffer.getLastLineNumber();
          line >= 0 && linkId == 0; --line) {
@@ -100,9 +111,10 @@ private:
   }
 
 private slots:
-  void initTestCase() { initializeQRCResourcesForOscTest(); }
+  // Start mudlet and create a profile once for all tests.
+  void initTestCase() {
+    initializeQRCResourcesForOscTest();
 
-  void init() {
     mpServer = new TelnetServerStub(qApp);
     mpServer->start(mLocalhost, mPort.toUShort());
     mudlet::start();
@@ -112,7 +124,50 @@ private slots:
             "MudletInstanceCoordinator"));
     mudlet::self()->init();
     mudlet::self()->setStorePasswordsSecurely(false);
-    deleteProfileDirectory(mHostname);
+
+    const QString path =
+        mudlet::getMudletPath(enums::profileHomePath, mHostname);
+    QDir(path).removeRecursively();
+
+    QTimer::singleShot(0, qApp, [this]() {
+      mudlet::self()->startAutoLogin({});
+      QTest::qWait(100);
+      QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
+                        Qt::LeftButton);
+      QTest::qWait(100);
+      QTest::keyClicks(QApplication::focusWidget(), mHostname);
+      QTest::qWait(100);
+      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+      QTest::qWait(100);
+      QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
+      QTest::qWait(100);
+      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+      QTest::qWait(100);
+      QTest::keyClicks(QApplication::focusWidget(), mPort);
+      QTest::qWait(100);
+      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
+    });
+
+    QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
+    if (!spy.wait(1000)) {
+      QFAIL("Profile took too long to load.");
+    }
+    mpHost = mudlet::self()->getActiveHost();
+    if (!mpHost) {
+      QFAIL("No active host available for the test.");
+    }
+
+    QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
+    if (!spy2.wait(500)) {
+      QFAIL("Could not connect with the host.");
+    }
+  }
+
+  // Clear buffer and link state before each test for isolation.
+  void init() {
+    if (mpHost && mpHost->mpConsole) {
+      mpHost->mpConsole->buffer.clear();
+    }
   }
 
   // Data-driven test: verifies text after various OSC sequences is displayed
@@ -145,22 +200,17 @@ private slots:
     QFETCH(QString, message);
     QFETCH(QString, expectedText);
 
-    mpServer->setWelcomeMessage(message);
-    startProfile(mHostname, mLocalhost, mPort);
-    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
-                   &TMainConsole::signal_newDataAlert);
-    QVERIFY(spy.wait(200));
+    injectData(message);
 
-    QString actualText =
-        mudlet::self()->getActiveHost()->mpConsole->getCurrentLine("");
+    QString actualText = mpHost->mpConsole->getCurrentLine("");
     QVERIFY2(actualText.contains(expectedText),
              qPrintable(qsl("Expected text to contain '%1' but got '%2'")
                             .arg(expectedText, actualText)));
   }
 
-  // ═══════════════════════════════════════════════════════════════════
+  // =====================================================================
   // OSC 8 Hyperlink URL Parameter Tests
-  // ═══════════════════════════════════════════════════════════════════
+  // =====================================================================
 
   // Data-driven test: verifies OSC 8 URL query parameter handling - reserved
   // params (config, preset) are stripped while user params are preserved.
@@ -204,27 +254,23 @@ private slots:
     QFETCH(QStringList, mustContain);
     QFETCH(QStringList, mustNotContain);
 
-    mpServer->setWelcomeMessage(message);
-    startProfile(mHostname, mLocalhost, mPort);
-    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
-                   &TMainConsole::signal_newDataAlert);
-    QVERIFY(spy.wait(200));
+    injectData(message);
 
     QStringList commands = findFirstLinkCommands();
     QVERIFY2(!commands.isEmpty(), "No hyperlink found in buffer");
-    for (const auto& expected : mustContain) {
+    for (const auto &expected : mustContain) {
       QVERIFY2(commands.first().contains(expected),
                qPrintable(qsl("Expected '%1' in: %2").arg(expected, commands.first())));
     }
-    for (const auto& forbidden : mustNotContain) {
+    for (const auto &forbidden : mustNotContain) {
       QVERIFY2(!commands.first().contains(forbidden),
                qPrintable(qsl("Did not expect '%1' in: %2").arg(forbidden, commands.first())));
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════════
+  // =====================================================================
   // OSC 8 Hyperlink Context Menu Title Tests
-  // ═══════════════════════════════════════════════════════════════════
+  // =====================================================================
 
   // Data-driven test: verifies menuTitle text is parsed correctly from various
   // config JSON shapes (simple string, object, compact syntax, invalid types).
@@ -280,12 +326,7 @@ private slots:
     QFETCH(QString, config);
     QFETCH(QString, expectedTitle);
 
-    mpServer->setWelcomeMessage(
-        buildOsc8WithConfig(qsl("send:action"), qsl("[Link]"), config));
-    startProfile(mHostname, mLocalhost, mPort);
-    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
-                   &TMainConsole::signal_newDataAlert);
-    QVERIFY(spy.wait(200));
+    injectData(buildOsc8WithConfig(qsl("send:action"), qsl("[Link]"), config));
 
     auto styling = findFirstLinkStyling();
     QCOMPARE(styling.menuTitle, expectedTitle);
@@ -361,12 +402,7 @@ private slots:
     QFETCH(int, underlineStyle);
     QFETCH(QString, underlineColor);
 
-    mpServer->setWelcomeMessage(
-        buildOsc8WithConfig(qsl("send:action"), qsl("[Link]"), config));
-    startProfile(mHostname, mLocalhost, mPort);
-    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
-                   &TMainConsole::signal_newDataAlert);
-    QVERIFY(spy.wait(200));
+    injectData(buildOsc8WithConfig(qsl("send:action"), qsl("[Link]"), config));
 
     auto styling = findFirstLinkStyling();
     QCOMPARE(styling.menuTitle, expectedTitle);
@@ -395,73 +431,24 @@ private slots:
   void test_Osc8Title_LinkTextDisplayedInBuffer() {
     QString config = qsl(
         R"({"title":"Lamb and Barley Stew","menu":[{"View Details":"send:look stew"}]})");
-    mpServer->setWelcomeMessage(buildOsc8WithConfig(
+    injectData(buildOsc8WithConfig(
         qsl("send:look stew"), qsl("[Lamb and Barley Stew]"), config));
-    startProfile(mHostname, mLocalhost, mPort);
-    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
-                   &TMainConsole::signal_newDataAlert);
-    QVERIFY(spy.wait(200));
 
-    QString actualText =
-        mudlet::self()->getActiveHost()->mpConsole->getCurrentLine("");
+    QString actualText = mpHost->mpConsole->getCurrentLine("");
     QVERIFY2(
         actualText.contains(qsl("[Lamb and Barley Stew]")),
         qPrintable(qsl("Expected link text in buffer but got '%1'")
                        .arg(actualText)));
   }
 
-  void cleanup() {
+  void cleanupTestCase() {
     delete mpServer;
     mpServer = nullptr;
-    deleteProfileDirectory(mHostname);
-    delete mudlet::self();
-  }
-
-  void startProfile(const QString &hostname, const QString &address,
-                    const QString &port) {
-    QTimer::singleShot(0, qApp, [hostname, address, port]() {
-      mudlet::self()->startAutoLogin({});
-      QTest::qWait(100);
-      QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
-                        Qt::LeftButton);
-      QTest::qWait(100);
-      QTest::keyClicks(QApplication::focusWidget(), hostname);
-      QTest::qWait(100);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
-      QTest::keyClicks(QApplication::focusWidget(), address);
-      QTest::qWait(100);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
-      QTest::keyClicks(QApplication::focusWidget(), port);
-      QTest::qWait(100);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-    });
-
-    QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-    if (!spy.wait(1000)) {
-      QFAIL("Profile took too long to load.");
-    }
-    auto host = mudlet::self()->getActiveHost();
-    if (!host) {
-      QFAIL("No active host available for the test.");
-    }
-
-    QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-    if (!spy2.wait(500)) {
-      QFAIL("Could not connect with the host.");
-    }
-  }
-
-  void deleteProfileDirectory(const QString &profileName) {
+    mpHost = nullptr;
     const QString path =
-        mudlet::getMudletPath(enums::profileHomePath, profileName);
-    QDir dir(path);
-
-    if (!dir.exists()) {
-      return;
-    }
-    dir.removeRecursively();
+        mudlet::getMudletPath(enums::profileHomePath, mHostname);
+    QDir(path).removeRecursively();
+    delete mudlet::self();
   }
 };
 
