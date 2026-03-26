@@ -628,7 +628,7 @@ void Discord::resetData(Host* pHost)
 {
     mStartTimes.remove(pHost);
     mEndTimes.remove(pHost);
-    mDetailTexts[pHost] = qsl("www.mudlet.org");
+    mDetailTexts.remove(pHost);
     mStateTexts.remove(pHost);
     mLargeImages.remove(pHost);
     mLargeImageTexts.remove(pHost);

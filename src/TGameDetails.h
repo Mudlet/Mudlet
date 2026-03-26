@@ -735,6 +735,37 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "but it is the most dynamic game ever attempted. The wind affects the ships, where "
                  "fire spreads, and even how some critters smell you if you are upwind from them.\n\n"
                  "Do you dare enter?")},
+
+            {qsl("Dragonfire MUD"),
+             qsl("dragonfiremud.com"),
+             1999,
+             false,
+             qsl("<a href='https://www.dragonfiremud.com/'>https://www.dragonfiremud.com/</a>"),
+             qsl(":/icons/dragonfire_icon.jpg"),
+             qsl("Dragonfire MUD is an ancient LPMUD that has been online since 1989, offering deep "
+                 "lore and a classic text-based RPG experience. It features 16 distinctive guilds, "
+                 "over 10,000 unique rooms, and hundreds of custom quests that you can tackle at your "
+                 "own pace."
+                 "\n\n"
+                 "Explore realms spanning fantasy, modern, future, and shadowy secrets, hunt dragons "
+                 "for experience and loot, and discover hidden areas and guilds. Optional player "
+                 "killing is allowed, and the community welcomes new adventurers and builders alike.")},
+
+            {qsl("Beyond the Void MUD"),
+             qsl("voidmud.com"),
+             2201,
+             false,
+             qsl("<a href='https://www.voidmud.com/'>https://www.voidmud.com/</a>"),
+             qsl(":/icons/voidmud_icon.jpg"),
+             qsl("Beyond the Void is an EverQuest-inspired text RPG that brings the world of Norrath "
+                 "to life with a reimagined storyline touched by an ancient alien race and its rift "
+                 "stones for fast travel. The Void serves as a central hub with trainers, guild "
+                 "masters, and trade for every profession."
+                 "\n\n"
+                 "Free to play and ready for adventurers, the game emphasizes classic EverQuest "
+                 "combat in a modern text-only experience. Build a character with up to three "
+                 "classes, pursue epic quests and rebirth bonuses, and enjoy quality-of-life "
+                 "features like a custom Mudlet UI and real-time maps.")},
             };
     // clang-format on
 };

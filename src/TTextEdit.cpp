@@ -1199,7 +1199,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 
     //delete non used characters.
     //needed for horizontal scrolling because there sometimes characters didn't get cleared
-    QRect deleteRect = QRect(0, from * mFontHeight, x_right * mFontHeight, (y_bottom + 1) * mFontHeight);
+    QRect deleteRect = QRect(0, from * mFontHeight, x_right * mFontWidth, (y_bottom + 1) * mFontHeight);
     p.setCompositionMode(QPainter::CompositionMode_Source);
     p.fillRect(deleteRect, Qt::transparent);
 
@@ -3598,8 +3598,9 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         break;
     case Qt::Key_End:
         if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
-            newCaretLine = mpBuffer->lineBuffer.length() - 1;
-            newCaretColumn = mpBuffer->lineBuffer[mCaretLine].length() - 1;
+            const int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty() ? 1 : 0;
+            newCaretLine = mpBuffer->lineBuffer.length() - 1 - emptyLastLine;
+            newCaretColumn = std::max(0, static_cast<int>(mpBuffer->lineBuffer[newCaretLine].length()) - 1);
         } else {
             newCaretColumn = mpBuffer->lineBuffer.at(mCaretLine).length() - 1;
         }
