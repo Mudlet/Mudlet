@@ -175,43 +175,50 @@ private slots:
   void test_OscTextDisplay_data() {
     QTest::addColumn<QString>("message");
     QTest::addColumn<QString>("expectedText");
+    // BEL-terminated OSC 8 splits link text across buffer lines in loopback
+    // mode, so exact match on the joined text isn't possible - use contains.
+    QTest::addColumn<bool>("exactMatch");
 
     QTest::newRow("BEL-terminated OSC 2 (window title)")
         << QString("\x1b]2;Window Title\x07Hello World")
-        << qsl("Hello World");
+        << qsl("Hello World") << true;
     QTest::newRow("ST-terminated OSC P (color redefine)")
         << QString("\x1b]P0FF0000\x1b\\Hello")
-        << qsl("Hello");
+        << qsl("Hello") << true;
     QTest::newRow("BEL-terminated OSC 8 (hyperlink)")
         << QString("\x1b]8;;http://example.com\x07Link Text\x1b]8;;\x07 After Link")
-        << qsl("Link Text After Link");
+        << qsl("Link Text After Link") << false;
     QTest::newRow("BEL-terminated OSC P")
         << QString("\x1b]P0FF0000\x07Hello")
-        << qsl("Hello");
+        << qsl("Hello") << true;
     QTest::newRow("empty OSC sequence")
         << QString("\x1b]\x07Normal text")
-        << qsl("Normal text");
+        << qsl("Normal text") << true;
     QTest::newRow("OSC exceeds length limit")
         << QString("\x1b]2;") + QString(5000, 'A') + QString("\x07Normal text")
-        << qsl("Normal text");
+        << qsl("Normal text") << true;
   }
 
   void test_OscTextDisplay() {
     QFETCH(QString, message);
     QFETCH(QString, expectedText);
+    QFETCH(bool, exactMatch);
 
     injectData(message);
 
-    // Scan all buffer lines for the expected text since cursor position
-    // varies depending on OSC terminator type (BEL vs ST).
+    // Join all buffer lines since cursor position varies with loopback.
     TMainConsole *console = mpHost->mpConsole;
     QString allText;
     for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
       allText += console->buffer.line(i);
     }
-    QVERIFY2(allText.contains(expectedText),
-             qPrintable(qsl("Expected buffer to contain '%1' but got '%2'")
-                            .arg(expectedText, allText)));
+    if (exactMatch) {
+      QCOMPARE(allText.trimmed(), expectedText);
+    } else {
+      QVERIFY2(allText.contains(expectedText),
+               qPrintable(qsl("Expected buffer to contain '%1' but got '%2'")
+                              .arg(expectedText, allText)));
+    }
   }
 
   // =====================================================================
