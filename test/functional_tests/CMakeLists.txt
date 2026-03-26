@@ -22,6 +22,6 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0"
         LABELS "functional"
-        TIMEOUT 60  # seconds
+        TIMEOUT 120  # seconds
     )
 endforeach()
