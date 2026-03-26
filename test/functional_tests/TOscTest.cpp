@@ -165,9 +165,9 @@ private slots:
 
   // Clear buffer and link state before each test for isolation.
   void init() {
-    if (mpHost && mpHost->mpConsole) {
-      mpHost->mpConsole->buffer.clear();
-    }
+    QVERIFY(mpHost);
+    QVERIFY(mpHost->mpConsole);
+    mpHost->mpConsole->buffer.clear();
   }
 
   // Data-driven test: verifies text after various OSC sequences is displayed
@@ -283,59 +283,70 @@ private slots:
   void test_Osc8Title_TextParsing_data() {
     QTest::addColumn<QString>("config");
     QTest::addColumn<QString>("expectedTitle");
+    QTest::addColumn<bool>("hasCustomStyling");
 
     QTest::newRow("simple string")
         << qsl(R"({"title":"Lamb and Barley Stew","menu":[{"View Details":"send:look stew"}]})")
-        << qsl("Lamb and Barley Stew");
+        << qsl("Lamb and Barley Stew") << false;
     QTest::newRow("compact ti shorthand")
         << qsl(R"({"ti":"Rusty Sword","m":[{"Equip":"send:wield sword"}]})")
-        << qsl("Rusty Sword");
+        << qsl("Rusty Sword") << false;
     QTest::newRow("title without menu")
         << qsl(R"({"title":"Lonely Title"})")
-        << qsl("Lonely Title");
+        << qsl("Lonely Title") << false;
     QTest::newRow("menu without title")
         << qsl(R"({"menu":[{"North":"send:north"}]})")
-        << QString();
+        << QString() << false;
     QTest::newRow("empty string")
         << qsl(R"({"title":"","menu":[{"Action":"send:action"}]})")
-        << QString();
+        << QString() << false;
     QTest::newRow("object with empty text")
         << qsl(R"({"title":{"text":"","style":{"color":"#ff0000"}},"menu":[{"Action":"send:action"}]})")
-        << QString();
+        << QString() << false;
     QTest::newRow("object without text key")
         << qsl(R"({"title":{"style":{"color":"#ff0000"}},"menu":[{"Action":"send:action"}]})")
-        << QString();
+        << QString() << false;
     QTest::newRow("object without style key")
         << qsl(R"({"title":{"text":"Style-less Title"},"menu":[{"Action":"send:action"}]})")
-        << qsl("Style-less Title");
+        << qsl("Style-less Title") << false;
     QTest::newRow("unicode characters")
         << qsl(R"({"title":"Potion du Guerrier","menu":[{"Drink":"send:drink potion"}]})")
-        << qsl("Potion du Guerrier");
+        << qsl("Potion du Guerrier") << false;
     QTest::newRow("special characters")
         << qsl(R"({"title":"Item <Rare> [+5] & More!","menu":[{"Use":"send:use item"}]})")
-        << qsl("Item <Rare> [+5] & More!");
+        << qsl("Item <Rare> [+5] & More!") << false;
     QTest::newRow("alongside other config")
         << qsl(R"({"title":"Full Config","tooltip":"A helpful tooltip","style":{"color":"#00ffff"},"menu":[{"Action 1":"send:action1"}]})")
-        << qsl("Full Config");
+        << qsl("Full Config") << true;
     QTest::newRow("numeric value ignored")
         << qsl(R"({"title":42,"menu":[{"Action":"send:action"}]})")
-        << QString();
+        << QString() << false;
     QTest::newRow("boolean value ignored")
         << qsl(R"({"title":true,"menu":[{"Action":"send:action"}]})")
-        << QString();
+        << QString() << false;
     QTest::newRow("array value ignored")
         << qsl(R"({"title":["a","b"],"menu":[{"Action":"send:action"}]})")
-        << QString();
+        << QString() << false;
   }
 
   void test_Osc8Title_TextParsing() {
     QFETCH(QString, config);
     QFETCH(QString, expectedTitle);
+    QFETCH(bool, hasCustomStyling);
 
     injectData(buildOsc8WithConfig(qsl("send:action"), qsl("[Link]"), config));
 
+    // Verify a link was actually created in the buffer - prevents silent
+    // passes when the injection pipeline is broken entirely.
+    QStringList commands = findFirstLinkCommands();
+    QVERIFY2(!commands.isEmpty(), "No hyperlink found in buffer");
+
     auto styling = findFirstLinkStyling();
     QCOMPARE(styling.menuTitle, expectedTitle);
+    if (!hasCustomStyling) {
+      QVERIFY2(!styling.menuTitleStyle.hasCustomStyling,
+               "Expected no custom styling on menu title");
+    }
   }
 
   // Data-driven test: verifies menuTitleStyle properties are parsed correctly.
