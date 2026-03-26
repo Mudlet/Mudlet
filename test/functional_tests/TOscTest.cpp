@@ -202,10 +202,16 @@ private slots:
 
     injectData(message);
 
-    QString actualText = mpHost->mpConsole->getCurrentLine("");
-    QVERIFY2(actualText.contains(expectedText),
-             qPrintable(qsl("Expected text to contain '%1' but got '%2'")
-                            .arg(expectedText, actualText)));
+    // Scan all buffer lines for the expected text since cursor position
+    // varies depending on OSC terminator type (BEL vs ST).
+    TMainConsole *console = mpHost->mpConsole;
+    QString allText;
+    for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
+      allText += console->buffer.line(i);
+    }
+    QVERIFY2(allText.contains(expectedText),
+             qPrintable(qsl("Expected buffer to contain '%1' but got '%2'")
+                            .arg(expectedText, allText)));
   }
 
   // =====================================================================
@@ -434,11 +440,15 @@ private slots:
     injectData(buildOsc8WithConfig(
         qsl("send:look stew"), qsl("[Lamb and Barley Stew]"), config));
 
-    QString actualText = mpHost->mpConsole->getCurrentLine("");
+    TMainConsole *console = mpHost->mpConsole;
+    QString allText;
+    for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
+      allText += console->buffer.line(i);
+    }
     QVERIFY2(
-        actualText.contains(qsl("[Lamb and Barley Stew]")),
+        allText.contains(qsl("[Lamb and Barley Stew]")),
         qPrintable(qsl("Expected link text in buffer but got '%1'")
-                       .arg(actualText)));
+                       .arg(allText)));
   }
 
   void cleanupTestCase() {
