@@ -25,6 +25,7 @@
 
 #include <QtTest/QtTest>
 
+#include "THyperlinkStyling.h"
 #include "TLinkStore.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
@@ -65,6 +66,37 @@ private:
       return {};
     }
     return console->getLinkStore().getLinksConst(linkId);
+  }
+
+  // Scans backward through the buffer to find the first hyperlink and returns
+  // its HyperlinkStyling from the link store.
+  Mudlet::HyperlinkStyling findFirstLinkStyling() {
+    auto *host = mudlet::self()->getActiveHost();
+    if (!host || !host->mpConsole) {
+      return {};
+    }
+    TMainConsole *console = host->mpConsole;
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    if (linkId <= 0) {
+      return {};
+    }
+    return console->getLinkStore().getStyling(linkId);
+  }
+
+  // Builds an OSC 8 hyperlink message with optional JSON config in the URL.
+  // The config is appended as a ?config= query parameter.
+  QString buildOsc8WithConfig(const QString &baseUrl, const QString &linkText,
+                              const QString &jsonConfig) {
+    QString url = baseUrl;
+    if (!jsonConfig.isEmpty()) {
+      url += qsl("?config=") + jsonConfig;
+    }
+    return qsl("\x1b]8;;") + url + qsl("\x1b\\") + linkText +
+           qsl("\x1b]8;;\x1b\\");
   }
 
 private slots:
@@ -349,6 +381,369 @@ private slots:
     QVERIFY2(!commands.first().contains("config="),
              qPrintable(QString("Query params leaked into send command: %1")
                             .arg(commands.first())));
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // OSC 8 Hyperlink Context Menu Title Tests
+  // ═══════════════════════════════════════════════════════════════════
+
+  void test_Osc8Title_SimpleStringTitle() {
+    QString config = qsl(
+        R"({"title":"Lamb and Barley Stew","menu":[{"View Details":"send:look stew"},{"Buy":"send:buy stew"},{"Taste":"send:taste stew"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:look stew"), qsl("[Stew]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QCOMPARE(styling.menuTitle, qsl("Lamb and Barley Stew"));
+  }
+
+  void test_Osc8Title_StyledObjectBoldAndColor() {
+    QString config = qsl(
+        R"({"title":{"text":"Magic Shop - Potions","style":{"color":"#ffd700","bold":true}},"menu":[{"Buy":"send:buy potion"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:buy potion"), qsl("[Shop]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QCOMPARE(styling.menuTitle, qsl("Magic Shop - Potions"));
+    QVERIFY(styling.menuTitleStyle.isBold);
+    QVERIFY(styling.menuTitleStyle.hasForegroundColor);
+    QCOMPARE(styling.menuTitleStyle.foregroundColor, QColor("#ffd700"));
+  }
+
+  void test_Osc8Title_StyledObjectItalicAndBackground() {
+    QString config = qsl(
+        R"({"title":{"text":"Sir Galahad the Brave","style":{"color":"#ffffff","bg":"#333333","italic":true}},"menu":[{"Talk":"send:talk galahad"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:talk galahad"), qsl("[Galahad]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QCOMPARE(styling.menuTitle, qsl("Sir Galahad the Brave"));
+    QVERIFY(styling.menuTitleStyle.isItalic);
+    QVERIFY(styling.menuTitleStyle.hasForegroundColor);
+    QCOMPARE(styling.menuTitleStyle.foregroundColor, QColor("#ffffff"));
+    QVERIFY(styling.menuTitleStyle.hasBackgroundColor);
+    QCOMPARE(styling.menuTitleStyle.backgroundColor, QColor("#333333"));
+  }
+
+  void test_Osc8Title_CompactSyntaxTiShorthand() {
+    QString config = qsl(
+        R"({"ti":"Rusty Sword","m":[{"Equip":"send:wield sword"},{"Drop":"send:drop sword"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:wield sword"), qsl("[Sword]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QCOMPARE(styling.menuTitle, qsl("Rusty Sword"));
+  }
+
+  void test_Osc8Title_MenuWithoutTitle() {
+    QString config = qsl(
+        R"({"menu":[{"North":"send:north"},{"South":"send:south"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:north"), qsl("[Exits]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QVERIFY2(styling.menuTitle.isEmpty(),
+             qPrintable(qsl("Expected empty menuTitle but got '%1'")
+                            .arg(styling.menuTitle)));
+  }
+
+  void test_Osc8Title_TitleWithoutMenu() {
+    QString config = qsl(R"({"title":"Lonely Title"})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:test"), qsl("[No Menu]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QCOMPARE(styling.menuTitle, qsl("Lonely Title"));
+  }
+
+  void test_Osc8Title_AllTextDecorations() {
+    QString config = qsl(
+        R"({"title":{"text":"Decorated Title","style":{"color":"#ff0000","bold":true,"italic":true,"underline":true,"strikethrough":true}},"menu":[{"Action":"send:action"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:action"), qsl("[Decorated]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QCOMPARE(styling.menuTitle, qsl("Decorated Title"));
+    QVERIFY(styling.menuTitleStyle.isBold);
+    QVERIFY(styling.menuTitleStyle.isItalic);
+    QVERIFY(styling.menuTitleStyle.isUnderlined);
+    QVERIFY(styling.menuTitleStyle.isStrikeOut);
+    QVERIFY(styling.menuTitleStyle.hasForegroundColor);
+    QCOMPARE(styling.menuTitleStyle.foregroundColor, QColor("#ff0000"));
+  }
+
+  void test_Osc8Title_WavyUnderlineStyle() {
+    QString config = qsl(
+        R"({"title":{"text":"Wavy Title","style":{"color":"#00ff00","underline":"wavy"}},"menu":[{"Test":"send:test"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:test"), qsl("[Wavy]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QCOMPARE(styling.menuTitle, qsl("Wavy Title"));
+    QVERIFY(styling.menuTitleStyle.isUnderlined);
+    QCOMPARE(styling.menuTitleStyle.underlineStyle,
+             Mudlet::HyperlinkStyling::UnderlineWavy);
+  }
+
+  void test_Osc8Title_DottedUnderlineStyle() {
+    QString config = qsl(
+        R"({"title":{"text":"Dotted Title","style":{"color":"#00ff00","underline":"dotted"}},"menu":[{"Test":"send:test"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:test"), qsl("[Dotted]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QCOMPARE(styling.menuTitle, qsl("Dotted Title"));
+    QVERIFY(styling.menuTitleStyle.isUnderlined);
+    QCOMPARE(styling.menuTitleStyle.underlineStyle,
+             Mudlet::HyperlinkStyling::UnderlineDotted);
+  }
+
+  void test_Osc8Title_DashedUnderlineStyle() {
+    QString config = qsl(
+        R"({"title":{"text":"Dashed Title","style":{"color":"#00ff00","underline":"dashed"}},"menu":[{"Test":"send:test"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:test"), qsl("[Dashed]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QCOMPARE(styling.menuTitle, qsl("Dashed Title"));
+    QVERIFY(styling.menuTitleStyle.isUnderlined);
+    QCOMPARE(styling.menuTitleStyle.underlineStyle,
+             Mudlet::HyperlinkStyling::UnderlineDashed);
+  }
+
+  void test_Osc8Title_BackgroundColorCssProperty() {
+    QString config = qsl(
+        R"({"title":{"text":"CSS BG Title","style":{"color":"#ffffff","background-color":"#660000"}},"menu":[{"Action":"send:action"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:action"), qsl("[CSS BG]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QCOMPARE(styling.menuTitle, qsl("CSS BG Title"));
+    QVERIFY(styling.menuTitleStyle.hasBackgroundColor);
+    QCOMPARE(styling.menuTitleStyle.backgroundColor, QColor("#660000"));
+  }
+
+  void test_Osc8Title_TextDecorationColor() {
+    QString config = qsl(
+        R"({"title":{"text":"Color Decoration","style":{"color":"#ffffff","underline":true,"text-decoration-color":"#ff00ff"}},"menu":[{"Action":"send:action"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:action"), qsl("[Deco Color]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QCOMPARE(styling.menuTitle, qsl("Color Decoration"));
+    QVERIFY(styling.menuTitleStyle.hasUnderlineColor);
+    QCOMPARE(styling.menuTitleStyle.underlineColor, QColor("#ff00ff"));
+  }
+
+  void test_Osc8Title_EmptyStringTitle() {
+    QString config = qsl(R"({"title":"","menu":[{"Action":"send:action"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:action"), qsl("[Empty]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QVERIFY(styling.menuTitle.isEmpty());
+  }
+
+  void test_Osc8Title_ObjectWithEmptyText() {
+    QString config = qsl(
+        R"({"title":{"text":"","style":{"color":"#ff0000"}},"menu":[{"Action":"send:action"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:action"), qsl("[Empty Obj]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QVERIFY(styling.menuTitle.isEmpty());
+  }
+
+  void test_Osc8Title_ObjectWithoutTextKey() {
+    QString config = qsl(
+        R"({"title":{"style":{"color":"#ff0000"}},"menu":[{"Action":"send:action"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:action"), qsl("[No Text]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QVERIFY(styling.menuTitle.isEmpty());
+  }
+
+  void test_Osc8Title_ObjectWithoutStyleKey() {
+    QString config = qsl(
+        R"({"title":{"text":"Style-less Title"},"menu":[{"Action":"send:action"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:action"), qsl("[No Style]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QCOMPARE(styling.menuTitle, qsl("Style-less Title"));
+    QVERIFY(!styling.menuTitleStyle.hasCustomStyling);
+  }
+
+  void test_Osc8Title_UnicodeCharacters() {
+    QString config = qsl(
+        R"({"title":"Potion du Guerrier","menu":[{"Drink":"send:drink potion"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:drink potion"), qsl("[Potion]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QCOMPARE(styling.menuTitle, qsl("Potion du Guerrier"));
+  }
+
+  void test_Osc8Title_SpecialCharacters() {
+    QString config = qsl(
+        R"({"title":"Item <Rare> [+5] & More!","menu":[{"Use":"send:use item"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:use item"), qsl("[Special]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QCOMPARE(styling.menuTitle, qsl("Item <Rare> [+5] & More!"));
+  }
+
+  void test_Osc8Title_AlongsideOtherConfigProperties() {
+    QString config = qsl(
+        R"({"title":"Full Config","tooltip":"A helpful tooltip","style":{"color":"#00ffff"},"menu":[{"Action 1":"send:action1"},{"Action 2":"send:action2"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:action1"), qsl("[Full Config]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QCOMPARE(styling.menuTitle, qsl("Full Config"));
+  }
+
+  void test_Osc8Title_NumericValueIgnored() {
+    QString config = qsl(R"({"title":42,"menu":[{"Action":"send:action"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:action"), qsl("[Num]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QVERIFY2(styling.menuTitle.isEmpty(),
+             qPrintable(qsl("Numeric title should be ignored but got '%1'")
+                            .arg(styling.menuTitle)));
+  }
+
+  void test_Osc8Title_BooleanValueIgnored() {
+    QString config =
+        qsl(R"({"title":true,"menu":[{"Action":"send:action"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:action"), qsl("[Bool]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QVERIFY2(styling.menuTitle.isEmpty(),
+             qPrintable(qsl("Boolean title should be ignored but got '%1'")
+                            .arg(styling.menuTitle)));
+  }
+
+  void test_Osc8Title_ArrayValueIgnored() {
+    QString config =
+        qsl(R"({"title":["a","b"],"menu":[{"Action":"send:action"}]})");
+    mpServer->setWelcomeMessage(
+        buildOsc8WithConfig(qsl("send:action"), qsl("[Array]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    auto styling = findFirstLinkStyling();
+    QVERIFY2(styling.menuTitle.isEmpty(),
+             qPrintable(qsl("Array title should be ignored but got '%1'")
+                            .arg(styling.menuTitle)));
+  }
+
+  void test_Osc8Title_LinkTextDisplayedInBuffer() {
+    QString config = qsl(
+        R"({"title":"Lamb and Barley Stew","menu":[{"View Details":"send:look stew"}]})");
+    mpServer->setWelcomeMessage(buildOsc8WithConfig(
+        qsl("send:look stew"), qsl("[Lamb and Barley Stew]"), config));
+    startProfile(mHostname, mLocalhost, mPort);
+    QSignalSpy spy(mudlet::self()->getActiveHost()->mpConsole,
+                   &TMainConsole::signal_newDataAlert);
+    QVERIFY(spy.wait(200));
+
+    QString actualText =
+        mudlet::self()->getActiveHost()->mpConsole->getCurrentLine("");
+    QVERIFY2(
+        actualText.contains(qsl("[Lamb and Barley Stew]")),
+        qPrintable(qsl("Expected link text in buffer but got '%1'")
+                       .arg(actualText)));
   }
 
   void cleanup() {

@@ -97,6 +97,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     initializeOSC8SpoilerFeature();
     initializeOSC8SelectionFeature();
     initializeOSC8VisibilityFeature();
+    initializeOSC8TitleFeature();
 
     auto quitShortcut = new QShortcut(this);
     quitShortcut->setKey(Qt::CTRL | Qt::Key_W);
@@ -2894,4 +2895,14 @@ void TConsole::initializeOSC8DisabledFeature()
 
     mpHyperlinkCompactManager->registerShorthand(qsl("d"), qsl("disabled"));
     mpHyperlinkCompactManager->registerPresetProperty(qsl("disabled"));
+}
+
+void TConsole::initializeOSC8TitleFeature()
+{
+    if (!mpHyperlinkCompactManager) {
+        return;
+    }
+
+    mpHyperlinkCompactManager->registerShorthand(qsl("ti"), qsl("title"));
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("title"));
 }
