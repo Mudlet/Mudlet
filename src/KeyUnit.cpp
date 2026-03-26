@@ -85,7 +85,7 @@ void KeyUnit::uninstall(const QString& packageName)
         }
     }
     for (auto& key : uninstallList) {
-        unregisterKey(key);
+        delete key;
     }
     uninstallList.clear();
 }
