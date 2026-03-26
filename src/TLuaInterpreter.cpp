@@ -4830,6 +4830,7 @@ int TLuaInterpreter::unzipAsync(lua_State* L)
         event.mArgumentList.append(extractLocation);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         host.raiseEvent(event);
+        watcher->deleteLater();
     });
     watcher->setFuture(future);
 
@@ -5549,6 +5550,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "killMapInfo", TLuaInterpreter::killMapInfo);
     lua_register(pGlobalLua, "enableMapInfo", TLuaInterpreter::enableMapInfo);
     lua_register(pGlobalLua, "disableMapInfo", TLuaInterpreter::disableMapInfo);
+    lua_register(pGlobalLua, "getMapInfo", TLuaInterpreter::getMapInfo);
     lua_register(pGlobalLua, "getProfileTabNumber", TLuaInterpreter::getProfileTabNumber);
     lua_register(pGlobalLua, "addFileWatch", TLuaInterpreter::addFileWatch);
     lua_register(pGlobalLua, "removeFileWatch", TLuaInterpreter::removeFileWatch);
@@ -5584,9 +5586,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "disableTimeStamps", TLuaInterpreter::disableTimeStamps);
     lua_register(pGlobalLua, "enableTimeStamps", TLuaInterpreter::enableTimeStamps);
     lua_register(pGlobalLua, "timeStampsEnabled", TLuaInterpreter::timeStampsEnabled);
-    lua_register(pGlobalLua, "aiChat", TLuaInterpreter::aiChat);
-    lua_register(pGlobalLua, "aiPrompt", TLuaInterpreter::aiPrompt);
-    lua_register(pGlobalLua, "aiPromptStream", TLuaInterpreter::aiPromptStream);
     lua_register(pGlobalLua, "setActiveProfile", TLuaInterpreter::setActiveProfile);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
@@ -8252,7 +8251,7 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
             // First argument is a string so is presumably a command line name
             name = CMDLINE_NAME(L, 1);
             if (n > 1) {
-                saveCommands = !getVerifiedBool(L, __func__, 2, "save command history", true);
+                saveCommands = getVerifiedBool(L, __func__, 2, "save command history", true);
             }
 
         } else {
@@ -8261,7 +8260,7 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
                 return lua_error(L); // Dummy return!
             }
 
-            saveCommands = !getVerifiedBool(L, __func__, 1, "save command history", true);
+            saveCommands = getVerifiedBool(L, __func__, 1, "save command history", true);
         }
     }
 

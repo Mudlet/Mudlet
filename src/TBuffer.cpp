@@ -661,6 +661,25 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 // '\\' so must not respond to an ESC here - though the code
                 // arrangement should avoid looping around this loop while
                 // seeking this character pair anyhow...
+
+                // If MXP is building a tag when we see ESC, the tag is invalid
+                // because ANSI escape sequences cannot be part of MXP tags.
+                // Output the partial tag as literal text before processing ESC.
+                if (mpHost->mMxpProcessor.isEnabled() && mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
+                    TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                    attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+                    TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+                    const QString literalText = mpHost->mMxpProcessor.abortCurrentTag();
+                    mMudLine.append(literalText);
+                    for (int i = 0; i < literalText.length(); ++i) {
+                        mMudBuffer.push_back(c);
+                    }
+
+                    mTagWatchdog->stop();
+                    mWatchdogPhase = WatchdogPhase::None;
+                }
+
                 mGotESC = true;
                 ++localBufferPosition;
                 continue;
@@ -992,9 +1011,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         continue;
                     }
                     case HANDLER_INSERT_AND_REPROCESS: {
-                        // Insert text like HANDLER_INSERT_ENTITY_SYS, but don't increment position
-                        // This is used for error recovery when a '<' is found inside a tag -
-                        // we output the incomplete tag as text, then reprocess the '<' to start a new tag
+                        // Insert text like HANDLER_INSERT_ENTITY_SYS, but don't increment position.
+                        // Used for error recovery: output the rejected/incomplete tag as literal
+                        // text, then reprocess the current character (which may be a newline,
+                        // an ANSI escape, or the character after an unrecognized tag name)
 
                         TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
                         attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
@@ -2950,15 +2970,32 @@ void TBuffer::decodeOSC(const QString& sequence)
             if (rawUrl.startsWith(qsl("http://")) || rawUrl.startsWith(qsl("https://")) || rawUrl.startsWith(qsl("ftp://"))) {
                 int queryStart = baseUrl.indexOf('?');
                 if (queryStart != -1) {
-                    // Split on raw query string so percent-encoded variants of
-                    // "config"/"preset" (e.g. %63%6F%6E%66%69%67) are preserved
+                    // Strip reserved parameters when corresponding OSC 8 features are enabled
+                    // (currently always true; will reflect NEW-ENVIRON negotiation once fully implemented)
+                    const bool stripConfig = mpHost->shouldStripOscHyperlinkConfigParam();
+                    const bool stripPreset = mpHost->shouldStripOscHyperlinkPresetParam();
+
+                    // Compare keys against literal strings only; percent-encoded key names
+                    // (e.g. %63%6F%6E%66%69%67 for "config") are intentionally not stripped
                     const QStringList rawPairs = baseUrl.mid(queryStart + 1).split('&');
                     QStringList kept;
                     for (const auto& pair : rawPairs) {
-                        const auto key = pair.left(pair.indexOf('='));
-                        if (key != qsl("config") && key != qsl("preset")) {
-                            kept.append(pair);
+                        // Find the separator between key and value - use earliest of '=' or '%3D' (percent-encoded =)
+                        int literalEq = pair.indexOf('=');
+                        int encodedEq = pair.indexOf(qsl("%3D"), 0, Qt::CaseInsensitive);
+                        int eqPos = -1;
+                        if (literalEq >= 0 && encodedEq >= 0) {
+                            eqPos = qMin(literalEq, encodedEq);
+                        } else if (literalEq >= 0) {
+                            eqPos = literalEq;
+                        } else {
+                            eqPos = encodedEq;
                         }
+                        const auto key = eqPos >= 0 ? pair.left(eqPos) : pair;
+                        if ((stripConfig && key == qsl("config")) || (stripPreset && key == qsl("preset"))) {
+                            continue;
+                        }
+                        kept.append(pair);
                     }
 
                     baseUrl = baseUrl.left(queryStart);

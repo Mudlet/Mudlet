@@ -35,3 +35,12 @@ void TMxpElementRegistry::unregisterElement(const QString& name)
 {
     mMXP_Elements.remove(name.toUpper());
 }
+
+bool TMxpElementRegistry::isOpenElement(const QString& name) const
+{
+    const auto it = mMXP_Elements.constFind(name.toUpper());
+    if (it != mMXP_Elements.constEnd()) {
+        return it->open;
+    }
+    return false;
+}

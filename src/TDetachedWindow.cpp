@@ -760,11 +760,14 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
 
     contextMenu.addSeparator();
 
-    // Add toolbar visibility toggle to the context menu
-    //: This is an item in the context menu when clicked on a detached tab.
-    auto toolbarToggleAction = contextMenu.addAction(tr("Profile Toolbar"));
+    //: This is a checkable toggle item in the context menu shown when right-clicking a tab in a detached window, to show or hide the toolbar. It appears with a checkmark when the toolbar is visible.
+    auto toolbarToggleAction = contextMenu.addAction(tr("Main Toolbar"));
     toolbarToggleAction->setCheckable(true);
     toolbarToggleAction->setChecked(mpToolBar && mpToolBar->isVisible());
+    // Disabled when hiding would cause lockout (menu bar also never shown)
+    if (mpToolBar && mpToolBar->isVisible() && !canHideToolBar()) {
+        toolbarToggleAction->setEnabled(false);
+    }
     connect(toolbarToggleAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
 
     // Add connection indicator toggle
@@ -827,10 +830,28 @@ void TDetachedWindow::createToolBar()
 {
     mpToolBar = new QToolBar(this);
     mpToolBar->setObjectName(qsl("detachedMainToolBar"));
-    mpToolBar->setWindowTitle(tr("Profile Toolbar"));
+    //: Name of the main toolbar shown in Qt's built-in toolbar toggle menus and right-click context menus
+    mpToolBar->setWindowTitle(tr("Main Toolbar"));
     addToolBar(mpToolBar);
     mpToolBar->setMovable(false);
     mpToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+
+    // Intercept the toggle action that Qt's default menu bar context menu uses,
+    // so we can persist visibility and prevent lockout
+    connect(mpToolBar->toggleViewAction(), &QAction::triggered, this, [this](bool checked) {
+        if (!checked && !canHideToolBar()) {
+            mpToolBar->toggleViewAction()->setChecked(true);
+            mpToolBar->setVisible(true);
+            return;
+        }
+        auto pMudlet = mudlet::self();
+        if (!pMudlet) {
+            qWarning() << "TDetachedWindow::createToolBar() lambda - mudlet singleton is null;"
+                       << "cannot synchronize toolbar visibility.";
+            return;
+        }
+        pMudlet->synchronizeToolBarVisibility(checked);
+    });
 
     // Reattach action - placed first in the toolbar for prominence
     //: This is an item in the toolbar of a detached Mudlet window. It will reattach the profile to the main Mudlet window.
@@ -1593,12 +1614,24 @@ void TDetachedWindow::slot_toggleToolBarVisibility()
 
     bool newVisibility = !isToolBarVisible();
 
-    // Synchronize toolbar visibility across all windows
-    auto mudletInstance = mudlet::self();
-
-    if (mudletInstance) {
-        mudletInstance->synchronizeToolBarVisibility(newVisibility);
+    // Prevent lockout: cannot hide toolbar when menu bar is configured to never show
+    if (!newVisibility && !canHideToolBar()) {
+        mpToolBar->toggleViewAction()->setChecked(true);
+        mpToolBar->setVisible(true);
+        if (mpActionToggleToolBar) {
+            mpActionToggleToolBar->setChecked(true);
+        }
+        return;
     }
+
+    auto mudletInstance = mudlet::self();
+    if (!mudletInstance) {
+        qWarning() << "TDetachedWindow::slot_toggleToolBarVisibility() - mudlet singleton is null;"
+                   << "cannot synchronize toolbar visibility.";
+        return;
+    }
+
+    mudletInstance->synchronizeToolBarVisibility(newVisibility);
 }
 
 void TDetachedWindow::slot_showDetachedToolBarContextMenu(const QPoint& position)
@@ -1609,10 +1642,14 @@ void TDetachedWindow::slot_showDetachedToolBarContextMenu(const QPoint& position
 
     QMenu menu(this);
 
-    // Create "Profile Toolbar" toggle action
-    QAction* toolbarToggleAction = menu.addAction(tr("Profile Toolbar"));
+    //: This is a checkable toggle item in the context menu shown when right-clicking the toolbar in a detached window, to show or hide the toolbar. It appears with a checkmark when the toolbar is visible.
+    QAction* toolbarToggleAction = menu.addAction(tr("Main Toolbar"));
     toolbarToggleAction->setCheckable(true);
     toolbarToggleAction->setChecked(mpToolBar->isVisible());
+    // Disabled when hiding would cause lockout (menu bar also never shown)
+    if (mpToolBar->isVisible() && !canHideToolBar()) {
+        toolbarToggleAction->setEnabled(false);
+    }
     connect(toolbarToggleAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
 
     // Show the context menu at the clicked position
@@ -1632,7 +1669,20 @@ void TDetachedWindow::setToolBarVisibility(bool visible)
 
 bool TDetachedWindow::isToolBarVisible() const
 {
+    // Returns false when mpToolBar is null — callers that distinguish
+    // "hidden" from "no toolbar" should check mpToolBar directly.
     return mpToolBar ? mpToolBar->isVisible() : false;
+}
+
+bool TDetachedWindow::canHideToolBar() const
+{
+    auto mudletInstance = mudlet::self();
+    if (!mudletInstance) {
+        qWarning() << "TDetachedWindow::canHideToolBar() - mudlet singleton is null;"
+                   << "cannot determine menu bar visibility. Treating toolbar as non-hideable.";
+        return false;
+    }
+    return mudletInstance->canHideToolBar();
 }
 
 void TDetachedWindow::slot_saveProfile()

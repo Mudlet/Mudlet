@@ -2086,6 +2086,21 @@ QSize TConsole::getMainWindowSize() const
     const int toolbarHeight = mpTopToolBar->height();
     const int commandLineHeight = mpCommandLine->height();
     QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
+
+    // Reject obviously invalid or suspiciously small sizes during profile switch transitions
+    const int minValidWidth = 50;
+    if (mainWindowSize.width() < minValidWidth && mOldSize.width() >= minValidWidth) {
+        return mOldSize;
+    }
+
+    // Reject suspicious shrinkage (more than 50% reduction) - geometry may not have settled yet
+    if (mOldSize.width() > 0) {
+        const double shrinkageRatio = static_cast<double>(mainWindowSize.width()) / mOldSize.width();
+        if (shrinkageRatio < 0.5) {
+            return mOldSize;
+        }
+    }
+
     return mainWindowSize;
 }
 
