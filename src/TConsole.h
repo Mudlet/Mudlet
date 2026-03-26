@@ -457,6 +457,7 @@ private:
     void initializeOSC8SelectionFeature();
     void initializeOSC8SpoilerFeature();
     void initializeOSC8DisabledFeature();
+    void initializeOSC8TitleFeature();
 
     // OSC 8 hyperlink managers
     std::unique_ptr<THyperlinkCompactManager> mpHyperlinkCompactManager;

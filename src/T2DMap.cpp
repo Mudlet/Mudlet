@@ -5164,7 +5164,7 @@ void T2DMap::setPlayerRoomStyle(const int type)
         return;
     }
 
-    mPlayerRoomColorGradentStops = buildPlayerRoomGradientStops(
+    mPlayerRoomColorGradientStops = buildPlayerRoomGradientStops(
             type, mpMap->mPlayerRoomInnerDiameterPercentage, mpMap->mPlayerRoomInnerColor, mpMap->mPlayerRoomOuterColor);
 }
 
