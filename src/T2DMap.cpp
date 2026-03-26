@@ -2011,11 +2011,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
         if (mapLabel.pos.z() != mMapCenterZ) {
             continue;
         }
-        if (mapLabel.text.isEmpty()) {
-            //: Default text if a label is created in mapper with no text
-            mapLabel.text = tr("no text");
-            pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
-        }
         QPointF labelPosition;
         const int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
         const int labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
@@ -2140,11 +2135,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
         if (mapLabel.pos.z() != mMapCenterZ) {
             continue;
-        }
-        if (mapLabel.text.isEmpty()) {
-            //: Default text if a label is created in mapper with no text
-            mapLabel.text = tr("no text");
-            pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
         QPointF labelPosition;
         const int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
@@ -5384,10 +5374,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         auto mapLabel = itMapLabel.value();
         if (mapLabel.pos.z() != exportZLevel) {
             continue;
-        }
-        if (mapLabel.text.isEmpty()) {
-            mapLabel.text = tr("no text");
-            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
         // Use export coordinate system for label positioning
         const int exportRX = padding - (pArea->min_x * finalRoomSize);
