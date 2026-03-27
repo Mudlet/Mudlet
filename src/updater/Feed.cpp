@@ -18,7 +18,6 @@ Feed::Feed()
 : feedReply(nullptr)
 , downloadReply(nullptr)
 , downloadFile(nullptr)
-, redirects(0)
 , _ready(false)
 {
 }
@@ -98,14 +97,13 @@ void Feed::load()
     QNetworkRequest request(getUrl());
     request.setRawHeader("Accept", "application/vnd.github+json");
     request.setRawHeader("User-Agent", "Mudlet-Updater");
+    request.setTransferTimeout(30000);
     feedReply = nam.get(request);
     connect(feedReply, &QNetworkReply::finished, this, &Feed::handleFeedFinished);
 }
 
 void Feed::downloadRelease(Release release)
 {
-    redirects = 0;
-
     // First fetch the checksums, then start the actual download
     this->release = release;
     const QUrl checksumsUrl = release.getChecksumsUrl();
@@ -121,18 +119,28 @@ void Feed::fetchChecksums(const QUrl& checksumsUrl)
     QNetworkRequest request(checksumsUrl);
     request.setRawHeader("Accept", "application/octet-stream");
     request.setRawHeader("User-Agent", "Mudlet-Updater");
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setTransferTimeout(30000);
     auto* reply = nam.get(request);
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        if (reply->error() == QNetworkReply::NoError) {
+        if (reply->error() != QNetworkReply::NoError) {
+            qWarning() << "Failed to fetch checksums:" << reply->errorString() << "- download will proceed without integrity verification";
+        } else {
             const QString checksumData = QString::fromUtf8(reply->readAll());
             const QStringList lines = checksumData.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+            // SHA256 hex digest is 64 characters; search for separator after that
+            static const QRegularExpression separatorRx(qsl("[\\s*]+"));
+            static const QRegularExpression hexRx(qsl("^[0-9a-fA-F]{64}$"));
             for (const auto& line : lines) {
                 // Format: "hash  filename" or "hash *filename"
-                const int separatorPos = line.indexOf(QRegularExpression(qsl("[\\s*]+")), 64);
+                const int separatorPos = line.indexOf(separatorRx, 64);
                 if (separatorPos <= 0) {
                     continue;
                 }
                 const QString hash = line.left(separatorPos).trimmed();
+                if (!hexRx.match(hash).hasMatch()) {
+                    continue;
+                }
                 const QString filename = line.mid(separatorPos).trimmed().remove(QLatin1Char('*'));
 
                 // Match against the download URL filename
@@ -141,6 +149,9 @@ void Feed::fetchChecksums(const QUrl& checksumsUrl)
                     this->release.setDownloadSHA256(hash);
                     break;
                 }
+            }
+            if (this->release.getDownloadSHA256().isEmpty()) {
+                qWarning() << "Checksum file downloaded but no matching hash found for" << this->release.getDownloadUrl().fileName();
             }
         }
         reply->deleteLater();
@@ -164,6 +175,8 @@ void Feed::makeDownloadRequest(QUrl url)
 
     QNetworkRequest request(url);
     request.setRawHeader("User-Agent", "Mudlet-Updater");
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setTransferTimeout(60000);
     downloadReply = nam.get(request);
     connect(downloadReply, &QNetworkReply::downloadProgress, this, &Feed::handleDownloadProgress);
     connect(downloadReply, &QNetworkReply::readyRead, this, &Feed::handleDownloadReadyRead);
@@ -185,14 +198,31 @@ void Feed::handleFeedFinished()
     feedReply = nullptr;
 
     const QJsonDocument doc = QJsonDocument::fromJson(json);
+    if (doc.isNull()) {
+        emit loadError(tr("Could not parse update information from server"));
+        return;
+    }
+
+    // Check for GitHub API error responses (e.g. rate limiting)
+    if (doc.isObject() && doc.object().contains(qsl("message")) && !m_prerelease) {
+        emit loadError(doc.object().value(qsl("message")).toString());
+        return;
+    }
 
     if (m_prerelease) {
         // PTB channel: single release object from /releases/tags/public-test-build
         if (doc.isObject()) {
             const QJsonObject releaseObj = doc.object();
+            if (releaseObj.contains(qsl("message"))) {
+                emit loadError(releaseObj.value(qsl("message")).toString());
+                return;
+            }
             if (!releaseObj.value(qsl("draft")).toBool()) {
                 releases << Release(releaseObj, m_os, m_arch);
             }
+        } else {
+            emit loadError(tr("Unexpected response format from update server"));
+            return;
         }
     } else {
         // Release channel: array of all releases
@@ -210,6 +240,9 @@ void Feed::handleFeedFinished()
 
                 releases << Release(releaseObj, m_os, m_arch);
             }
+        } else {
+            emit loadError(tr("Unexpected response format from update server"));
+            return;
         }
     }
 
@@ -229,12 +262,20 @@ void Feed::handleDownloadReadyRead()
 {
     if (downloadFile == nullptr) {
         QString fileName = downloadReply->url().fileName();
+        // Insert QTemporaryFile placeholder pattern before the file extension so Qt generates a unique filename
         int extensionPos = fileName.indexOf(QRegularExpression(qsl("(?:\\.tar)?\\.[a-zA-Z0-9]+$")));
         if (extensionPos > -1) {
             fileName.insert(extensionPos, qsl("-XXXXXX"));
         }
         downloadFile = new QTemporaryFile(QDir::tempPath() + qsl("/") + fileName);
-        downloadFile->open();
+        if (!downloadFile->open()) {
+            qWarning() << "Failed to create temporary file for download:" << downloadFile->errorString();
+            emit downloadError(tr("Could not create temporary file for download: %1").arg(downloadFile->errorString()));
+            downloadReply->abort();
+            delete downloadFile;
+            downloadFile = nullptr;
+            return;
+        }
     }
     downloadFile->write(downloadReply->readAll());
 }
@@ -243,33 +284,42 @@ void Feed::handleDownloadFinished()
 {
     if (downloadReply->error() != QNetworkReply::NoError) {
         emit downloadError(downloadReply->errorString());
-        return;
-    } else if (!downloadReply->attribute(QNetworkRequest::RedirectionTargetAttribute).isNull()) {
-        if (redirects >= 8) {
-            emit downloadError(tr("Too many redirects."));
-            return;
+        if (downloadFile) {
+            downloadFile->close();
+            delete downloadFile;
+            downloadFile = nullptr;
         }
-        QUrl redirectionTarget = downloadReply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
-        QUrl redirectedUrl = downloadReply->url().resolved(redirectionTarget);
-        redirects++;
-        makeDownloadRequest(redirectedUrl);
+        downloadReply->deleteLater();
+        downloadReply = nullptr;
         return;
-    } else if (downloadFile == nullptr) {
+    }
+
+    if (downloadFile == nullptr) {
         emit downloadError(tr("No data received from server"));
+        downloadReply->deleteLater();
+        downloadReply = nullptr;
         return;
     }
 
     downloadFile->flush();
     downloadFile->seek(0);
     QCryptographicHash fileHash(QCryptographicHash::Sha256);
-    fileHash.addData(downloadFile->readAll());
-    QString hashResult = fileHash.result().toHex();
+    fileHash.addData(downloadFile);
+    const QString hashResult = fileHash.result().toHex();
     if (!release.getDownloadSHA256().isEmpty() && hashResult.toLower() != release.getDownloadSHA256().toLower()) {
+        qWarning() << "SHA256 mismatch - expected:" << release.getDownloadSHA256() << "got:" << hashResult;
         emit downloadError(tr("Could not verify download integrity."));
+        downloadFile->close();
+        delete downloadFile;
+        downloadFile = nullptr;
+        downloadReply->deleteLater();
+        downloadReply = nullptr;
         return;
     }
 
     downloadFile->close();
+    downloadReply->deleteLater();
+    downloadReply = nullptr;
     emit downloadFinished();
 }
 

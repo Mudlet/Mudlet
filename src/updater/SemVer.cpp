@@ -55,7 +55,7 @@ bool SemVer::isValid() const
  * SemVer.
  * \sa isValid()
  */
-bool SemVer::operator<(const SemVer& other)
+bool SemVer::operator<(const SemVer& other) const
 {
     if (!this->isValid() || !other.isValid()) {
         return false;
@@ -68,15 +68,15 @@ bool SemVer::operator<(const SemVer& other)
     } else if (this->patch != other.patch) {
         return this->patch < other.patch;
     } else if (this->prerelease != other.prerelease) {
-        if (this->prerelease == "") {
+        if (this->prerelease.isEmpty()) {
             return false;
-        } else if (other.prerelease == "") {
+        } else if (other.prerelease.isEmpty()) {
             return true;
         }
-        return (QString::localeAwareCompare(this->prerelease, other.prerelease) < 0);
-    } else {
-        return (QString::localeAwareCompare(this->build, other.build) < 0);
+        return (QString::compare(this->prerelease, other.prerelease) < 0);
     }
+    // Build metadata is ignored for precedence per SemVer 2.0 spec
+    return false;
 }
 
 QString SemVer::getRegExp()
@@ -84,7 +84,7 @@ QString SemVer::getRegExp()
     QString v = "(0|[1-9]\\d*)";
     QString p = "(?:-((?:0|[1-9A-Za-z][0-9A-Za-z]*)(?:\\.(?:0|[1-9A-Za-z][0-9A-Za-z]*))*))?";
     QString b = "(?:\\+((?:[0-9A-Za-z]*)(?:\\.(?:[0-9A-Za-z][0-9A-Za-z]*))*))?";
-    return "^" + v + "." + v + "." + v + p + b + "$";
+    return "^" + v + "\\." + v + "\\." + v + p + b + "$";
 }
 
 } //namespace dblsqd

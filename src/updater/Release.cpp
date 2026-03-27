@@ -4,6 +4,7 @@
 
 #include "../utils.h"
 
+#include <QDebug>
 #include <QJsonArray>
 #include <QTextDocument>
 
@@ -52,12 +53,13 @@ Release::Release(QJsonObject releaseInfo, const QString& os, const QString& arch
         // Match platform-specific asset
         if (!assetPattern.isEmpty() && name.contains(assetPattern, Qt::CaseInsensitive)) {
             this->downloadUrl = QUrl(asset.value(qsl("browser_download_url")).toString());
-            this->downloadSize = static_cast<long>(asset.value(qsl("size")).toDouble());
+            this->downloadSize = static_cast<qint64>(asset.value(qsl("size")).toDouble());
         }
     }
 
     // Fallback: construct URL from known pattern if no asset found
     if (this->downloadUrl.isEmpty() && !this->version.isEmpty() && !os.isEmpty()) {
+        qWarning() << "No matching asset found for" << os << arch << "in release" << this->version << "- using fallback URL";
         this->downloadUrl = QUrl(buildFallbackUrl(this->version, os, arch));
     }
 }
@@ -115,11 +117,6 @@ QUrl Release::getDownloadUrl() const
     return this->downloadUrl;
 }
 
-QString Release::getDownloadSHA1() const
-{
-    return this->downloadSHA1;
-}
-
 QString Release::getDownloadSHA256() const
 {
     return this->downloadSHA256;
@@ -130,14 +127,9 @@ void Release::setDownloadSHA256(const QString& sha256)
     this->downloadSHA256 = sha256;
 }
 
-QString Release::getDownloadDSA() const
-{
-    return this->downloadDSA;
-}
-
 qint64 Release::getDownloadSize() const
 {
-    return static_cast<qint64>(this->downloadSize);
+    return this->downloadSize;
 }
 
 QUrl Release::getChecksumsUrl() const

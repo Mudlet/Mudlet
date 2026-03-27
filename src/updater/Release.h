@@ -22,9 +22,7 @@ public:
     QString getChangelog() const;
     QDateTime getDate() const;
     QUrl getDownloadUrl() const;
-    QString getDownloadSHA1() const;
     QString getDownloadSHA256() const;
-    QString getDownloadDSA() const;
     qint64 getDownloadSize() const;
     QUrl getChecksumsUrl() const;
     void setDownloadSHA256(const QString& sha256);
@@ -35,10 +33,8 @@ private:
     QDateTime date;
     QString changelog;
     QUrl downloadUrl;
-    long downloadSize{0};
-    QString downloadSHA1;
+    qint64 downloadSize{0};
     QString downloadSHA256;
-    QString downloadDSA;
     QUrl checksumsUrl;
 
     static QString buildAssetPattern(const QString& os, const QString& arch);

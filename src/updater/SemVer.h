@@ -10,10 +10,9 @@ class SemVer
 public:
     SemVer(QString version);
 
-    bool operator<(const SemVer& other);
+    bool operator<(const SemVer& other) const;
 
     bool isValid() const;
-    QString toString();
 
 private:
     QString original;

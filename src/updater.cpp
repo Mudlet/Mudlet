@@ -34,8 +34,7 @@
 using namespace std::chrono_literals;
 
 #if defined(Q_OS_WINDOWS)
-// Helper function to clean up .nupkg files from SquirrelTemp directory
-// This prevents cross-contamination with other Squirrel-based apps
+// Clean up legacy .nupkg files from the previous Squirrel/dblsqd update system's temp directory
 static void cleanupSquirrelTempFiles()
 {
     QString squirrelTempPath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + qsl("/SquirrelTemp");
@@ -75,9 +74,8 @@ static void cleanupSquirrelTempFiles()
 // update flows:
 // linux: new AppImage is downloaded, unzipped, and put in place of the old one
 //   user then only restarts mudlet to get the new version
-// windows: new squirrel installer is downloaded and saved
-//   user then restarts, mudlet sees that there's a new installer available: launches it
-//   and promptly quits. Installer updates Mudlet and launches Mudlet when its done
+// windows: installer .exe is downloaded from GitHub Releases. On restart, a batch file
+//   waits for Mudlet to exit, then launches the installer which updates Mudlet
 // mac: handled completely outside of Mudlet by Sparkle
 
 Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
@@ -125,7 +123,7 @@ void Updater::checkUpdatesOnStart()
     connect(mDailyCheck.get(), &QTimer::timeout, this, [this] {
         KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, this, [this]() {
             auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
-            qWarning() << "Bi-daily check for updates:" << updates.size() << "update(s) available";
+            qWarning() << "Twice-daily check for updates:" << updates.size() << "update(s) available";
             if (updates.isEmpty()) {
                 return;
             }
@@ -138,7 +136,7 @@ void Updater::checkUpdatesOnStart()
             downloadReleaseIfValid(updates.first());
         });
         KDToolBox::connectSingleShot(feed, &dblsqd::Feed::loadError, this, [](const QString& error) {
-            qWarning() << "Bi-daily update check: failed to load feed:" << error;
+            qWarning() << "Twice-daily update check: failed to load feed:" << error;
         });
         feed->load();
     });
@@ -299,14 +297,18 @@ void Updater::setupOnWindows()
             prepareSetupOnWindows(fileName);
         });
 
-        // replace current binary with the unzipped one
         auto watcher = new QFutureWatcher<void>;
         connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::finishSetup);
         connect(watcher, &QFutureWatcher<void>::finished, watcher, &QObject::deleteLater);
         watcher->setFuture(future);
     });
 
-    // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
+    connect(feed, &dblsqd::Feed::downloadError, this, [this](const QString& error) {
+        qWarning() << "Automatic update download failed:" << error;
+        emit signal_updateAvailable(1);
+    });
+
+    // Create the update dialog. Constructing it triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, nullptr, settings);
     mpInstallOrRestart->setText(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
@@ -324,8 +326,6 @@ void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
 #if defined(Q_OS_LINUX)
 void Updater::setupOnLinux()
 {
-    // Setup to automatically download the new release when an update is
-    // available or wave a flag when it is to be done manually
     // Setup to automatically download the new release when an update is available
     connect(feed, &dblsqd::Feed::ready, this, [=, this]() {
         // don't update development builds to prevent auto-update from overwriting your
@@ -365,14 +365,18 @@ void Updater::setupOnLinux()
             untarOnLinux(fileName);
         });
 
-        // replace current binary with the unzipped one
         auto watcher = new QFutureWatcher<void>;
         connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::slot_updateLinuxBinary);
         connect(watcher, &QFutureWatcher<void>::finished, watcher, &QObject::deleteLater);
         watcher->setFuture(future);
     });
 
-    // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
+    connect(feed, &dblsqd::Feed::downloadError, this, [this](const QString& error) {
+        qWarning() << "Automatic update download failed:" << error;
+        emit signal_updateAvailable(1);
+    });
+
+    // Create the update dialog. Constructing it triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, nullptr, settings);
     mpInstallOrRestart->setText(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
@@ -529,7 +533,6 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
     });
 #endif
 
-    // replace current binary with the unzipped one
     auto watcher = new QFutureWatcher<void>;
     connect(watcher, &QFutureWatcher<void>::finished, this, [=, this]() {
 #if defined(Q_OS_LINUX)
@@ -546,7 +549,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 }
 
 // records a unix epoch on disk indicating that an update has happened.
-// Mudlet will use that on the next launch to decide whenever it should show
+// Mudlet will use that on the next launch to decide whether it should show
 // the window with the new features. The idea is that if you manually update (thus see the
 // changelog already) and restart, you shouldn't see it again, and if you automatically
 // updated, then you do want to see the changelog.

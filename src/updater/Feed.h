@@ -52,7 +52,6 @@ private:
     Release release;
     QNetworkReply* downloadReply;
     QTemporaryFile* downloadFile;
-    uint redirects;
     bool _ready;
 
     QString m_owner;
