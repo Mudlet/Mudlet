@@ -105,17 +105,13 @@ Discord::Discord(QObject* parent)
     mpHandlers->spectateGame = handleDiscordSpectateGame;
     mpHandlers->joinRequest = handleDiscordJoinRequest;
 
-    // Initialize RPC eagerly so the IPC connection to Discord has time to
-    // establish before the first UpdatePresence call
-    initializeRpc();
+    // Don't initialize RPC until a profile is loaded - UpdatePresence will
+    // call initializeRpc() on demand when there's an active host.
 
     // mudlet instance is not available in this constructor as it's still being initialised, so postpone the connection
     QTimer::singleShot(0, this, [this]() {
         Q_ASSERT(mudlet::self());
         connect(mudlet::self(), &mudlet::signal_tabChanged, this, &Discord::UpdatePresence);
-
-        // update Discord with the default Mudlet logo
-        UpdatePresence();
 
         // process Discord callbacks every 50ms once we are all set up:
         startTimer(50);
@@ -347,6 +343,10 @@ void Discord::UpdatePresence()
 
     if (!mRpcActive) {
         initializeRpc();
+        // Discord needs time to complete the IPC handshake before it can
+        // accept presence data, so schedule a follow-up call
+        QTimer::singleShot(500, this, &Discord::UpdatePresence);
+        return;
     }
 
     if (pHost->mDiscordMode == Host::DiscordShowMudletOnly) {
