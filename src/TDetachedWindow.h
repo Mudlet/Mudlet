@@ -84,13 +84,15 @@ public:
     void setToolBarVisibility(bool visible);
     bool isToolBarVisible() const;
 
+    bool canHideToolBar() const;
+
     // Tab indicator methods
     void updateAllTabIndicators(); // Update all tab indicators in this window
 
+    void saveWindowGeometry();
+
     // Speech button synchronization
     void updateSpeechButton();
-
-    void saveWindowGeometry();
 
 protected:
     void closeEvent(QCloseEvent* event) override;
