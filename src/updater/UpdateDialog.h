@@ -25,25 +25,25 @@ public:
     explicit UpdateDialog(Feed* feed, Type type, QSettings* settings, QWidget* parent = nullptr);
     ~UpdateDialog();
 
-    void setIcon(QString fileName);
-    void setIcon(QPixmap pixmap);
+    void setIcon(const QString& fileName);
+    void setIcon(const QPixmap& pixmap);
     void addInstallButton(QAbstractButton* button);
 
-    void setMinVersion(QString version);
-    void setMaxVersion(QString version);
-    void setPreviousVersion(QString version);
+    void setMinVersion(const QString& version);
+    void setMaxVersion(const QString& version);
+    void setPreviousVersion(const QString& version);
 
     static bool autoDownloadEnabled(QVariant defaultValue, QSettings* settings);
     static bool autoDownloadEnabled(QSettings* settings);
     static void enableAutoDownload(bool enabled, QSettings* settings);
 
     void setOpenExternalLinks(bool open);
-    bool openExternalLinks();
+    bool openExternalLinks() const;
 
 signals:
     void ready();
-    void installButtonClicked(QAbstractButton* button, QString filePath);
-    void linkActivated(QString link);
+    void installButtonClicked(QAbstractButton* button, const QString& filePath);
+    void linkActivated(const QString& link);
 
 public slots:
     void onButtonInstall();
@@ -70,7 +70,7 @@ private:
     void adjustDialogSize();
 
     void startDownload();
-    virtual void startUpdate();
+    void startUpdate();
 
     bool mAccepted;
     bool mIsDownloadFinished;
@@ -80,7 +80,7 @@ private:
     Release mLatestRelease;
     QList<QAbstractButton*> mInstallButtons;
     QAbstractButton* mAcceptedInstallButton;
-    bool mOpenExternalLinks;
+    bool mOpenExternalLinks{true};
     QString mMinVersion;
     QString mMaxVersion;
     QString mPreviousVersion;

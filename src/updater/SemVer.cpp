@@ -13,9 +13,8 @@ namespace dblsqd {
 /*!
  * \brief Constructs a new SemVer object from a string.
  */
-SemVer::SemVer(QString version)
+SemVer::SemVer(const QString& version)
 : mOriginal(version)
-, mValid(false)
 {
     QRegularExpression rx(getRegExp());
     QRegularExpressionMatch match = rx.match(version);
@@ -26,13 +25,6 @@ SemVer::SemVer(QString version)
         mPrerelease = match.captured(4);
         mBuild = match.captured(5);
         mValid = true;
-    } else {
-        mMajor = 0;
-        mMinor = 0;
-        mPatch = 0;
-        mPrerelease = "";
-        mBuild = "";
-        mValid = false;
     }
 }
 

@@ -8,7 +8,7 @@ namespace dblsqd {
 class SemVer
 {
 public:
-    SemVer(QString version);
+    SemVer(const QString& version);
 
     bool operator<(const SemVer& other) const;
 
@@ -16,12 +16,12 @@ public:
 
 private:
     QString mOriginal;
-    int mMajor;
-    int mMinor;
-    int mPatch;
+    int mMajor{0};
+    int mMinor{0};
+    int mPatch{0};
     QString mPrerelease;
     QString mBuild;
-    bool mValid;
+    bool mValid{false};
 
     static QString getRegExp();
 };

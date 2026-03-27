@@ -48,12 +48,12 @@ public:
     bool shouldShowChangelog();
 
 private:
-    dblsqd::Feed* feed;
+    dblsqd::Feed* mFeed;
     dblsqd::UpdateDialog* updateDialog{nullptr};
     QPushButton* mpInstallOrRestart;
     bool mUpdateInstalled;
     bool mManualCheckInProgress{false};
-    QSettings* settings;
+    QSettings* mSettings;
     std::unique_ptr<QTimer> mDailyCheck;
 
 #if defined(Q_OS_LINUX)

@@ -19,13 +19,12 @@ namespace dblsqd {
 /*!
  * \brief Constructs a new Release from a GitHub Releases API JSON object.
  */
-Release::Release(QJsonObject releaseInfo, const QString& os, const QString& arch)
+Release::Release(const QJsonObject& releaseInfo, const QString& os, const QString& arch)
 {
     // Version: strip "Mudlet-" prefix from tag_name
     const QString tagName = releaseInfo.value(qsl("tag_name")).toString();
     mVersion = tagName.startsWith(qsl("Mudlet-")) ? tagName.mid(7) : tagName;
 
-    // Date
     mDate = QDateTime::fromString(releaseInfo.value(qsl("published_at")).toString(), Qt::ISODate);
 
     // Changelog: convert GitHub markdown body to HTML
@@ -68,7 +67,7 @@ Release::Release(QJsonObject releaseInfo, const QString& os, const QString& arch
  * This method is useful when constructing a "virtual" Release for comparing
  * it with Releases retrieved from a Feed.
  */
-Release::Release(QString version, QDateTime date)
+Release::Release(const QString& version, const QDateTime& date)
 : mVersion(version)
 , mDate(date)
 {

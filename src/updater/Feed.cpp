@@ -62,12 +62,12 @@ QUrl Feed::getUrl() const
     return mUrl;
 }
 
-QList<Release> Feed::getReleases()
+QList<Release> Feed::getReleases() const
 {
     return mReleases;
 }
 
-QList<Release> Feed::getUpdates(Release currentRelease)
+QList<Release> Feed::getUpdates(const Release& currentRelease)
 {
     QList<Release> updates;
     for (const auto& release : mReleases) {
@@ -83,7 +83,7 @@ QTemporaryFile* Feed::getDownloadFile()
     return mDownloadFile;
 }
 
-bool Feed::isReady()
+bool Feed::isReady() const
 {
     return mReady;
 }
@@ -104,7 +104,7 @@ void Feed::load()
     connect(mFeedReply, &QNetworkReply::finished, this, &Feed::handleFeedFinished);
 }
 
-void Feed::downloadRelease(Release release)
+void Feed::downloadRelease(const Release& release)
 {
     // First fetch the checksums, then start the actual download
     mCurrentDownload = release;
@@ -161,7 +161,7 @@ void Feed::fetchChecksums(const QUrl& checksumsUrl)
     });
 }
 
-void Feed::makeDownloadRequest(QUrl url)
+void Feed::makeDownloadRequest(const QUrl& url)
 {
     if (mDownloadReply != nullptr && !mDownloadReply->isFinished()) {
         disconnect(mDownloadReply);
@@ -180,7 +180,7 @@ void Feed::makeDownloadRequest(QUrl url)
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setTransferTimeout(60000);
     mDownloadReply = mNam.get(request);
-    connect(mDownloadReply, &QNetworkReply::downloadProgress, this, &Feed::handleDownloadProgress);
+    connect(mDownloadReply, &QNetworkReply::downloadProgress, this, &Feed::downloadProgress);
     connect(mDownloadReply, &QNetworkReply::readyRead, this, &Feed::handleDownloadReadyRead);
     connect(mDownloadReply, &QNetworkReply::finished, this, &Feed::handleDownloadFinished);
 }
@@ -248,16 +248,12 @@ void Feed::handleFeedFinished()
         }
     }
 
-    std::sort(mReleases.begin(), mReleases.end());
-    std::reverse(mReleases.begin(), mReleases.end());
+    std::sort(mReleases.begin(), mReleases.end(), [](const Release& a, const Release& b) {
+        return b < a;
+    });
 
     mReady = true;
     emit ready();
-}
-
-void Feed::handleDownloadProgress(qint64 bytesReceived, qint64 bytesTotal)
-{
-    emit downloadProgress(bytesReceived, bytesTotal);
 }
 
 void Feed::handleDownloadReadyRead()
@@ -265,7 +261,8 @@ void Feed::handleDownloadReadyRead()
     if (mDownloadFile == nullptr) {
         QString fileName = mDownloadReply->url().fileName();
         // Insert QTemporaryFile placeholder pattern before the file extension so Qt generates a unique filename
-        int extensionPos = fileName.indexOf(QRegularExpression(qsl("(?:\\.tar)?\\.[a-zA-Z0-9]+$")));
+        static const QRegularExpression extensionRx(qsl("(?:\\.tar)?\\.[a-zA-Z0-9]+$"));
+        int extensionPos = fileName.indexOf(extensionRx);
         if (extensionPos > -1) {
             fileName.insert(extensionPos, qsl("-XXXXXX"));
         }

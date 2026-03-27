@@ -11,8 +11,8 @@ namespace dblsqd {
 class Release
 {
 public:
-    Release(QJsonObject releaseInfo, const QString& os = QString(), const QString& arch = QString());
-    Release(QString version = QString(), QDateTime date = QDateTime());
+    Release(const QJsonObject& releaseInfo, const QString& os = QString(), const QString& arch = QString());
+    Release(const QString& version = QString(), const QDateTime& date = QDateTime());
 
     friend bool operator<(const Release& one, const Release& other);
     friend bool operator==(const Release& one, const Release& other);

@@ -25,26 +25,26 @@ public:
     QUrl getUrl() const;
 
     void load();
-    void downloadRelease(Release release);
+    void downloadRelease(const Release& release);
 
-    QList<Release> getUpdates(Release currentRelease = Release(QCoreApplication::applicationVersion()));
-    QList<Release> getReleases();
+    QList<Release> getUpdates(const Release& currentRelease = Release(QCoreApplication::applicationVersion()));
+    QList<Release> getReleases() const;
     QTemporaryFile* getDownloadFile();
-    bool isReady();
+    bool isReady() const;
 
 signals:
     void ready();
-    void loadError(QString message);
+    void loadError(const QString& message);
     void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
     void downloadFinished();
-    void downloadError(QString message);
+    void downloadError(const QString& message);
 
 private:
     QUrl mUrl;
 
     QList<Release> mReleases;
 
-    void makeDownloadRequest(QUrl url);
+    void makeDownloadRequest(const QUrl& url);
     void fetchChecksums(const QUrl& checksumsUrl);
 
     QNetworkAccessManager mNam;
@@ -65,7 +65,6 @@ private:
 
 private slots:
     void handleFeedFinished();
-    void handleDownloadProgress(qint64, qint64);
     void handleDownloadReadyRead();
     void handleDownloadFinished();
 };
