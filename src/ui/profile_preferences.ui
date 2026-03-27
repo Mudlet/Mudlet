@@ -3488,12 +3488,18 @@ you can use it but there could be issues with aligning columns of text</string>
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>150</width>
+                   <width>120</width>
                    <height>0</height>
                   </size>
                  </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>120</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
                  <property name="toolTip">
-                  <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
+                  <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to. Discord usernames are always lowercase.&lt;/p&gt;</string>
                  </property>
                  <property name="placeholderText">
                   <string>Discord username</string>
@@ -3504,6 +3510,13 @@ you can use it but there could be issues with aligning columns of text</string>
                 </widget>
                </item>
               </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_discordCurrentUser">
+              <property name="text">
+               <string notr="true"/>
+              </property>
              </widget>
             </item>
             <item>

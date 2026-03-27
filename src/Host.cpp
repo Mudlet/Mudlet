@@ -3087,7 +3087,7 @@ void Host::setDiscordInviteURL(const QString& s)
 // and the currently logged-in Discord user doesn't match.
 bool Host::discordUserIdMatch(const QString& userName) const
 {
-    if (!userName.isEmpty() && !mRequiredDiscordUserName.isEmpty() && userName != mRequiredDiscordUserName) {
+    if (!userName.isEmpty() && !mRequiredDiscordUserName.isEmpty() && userName.toLower() != mRequiredDiscordUserName.toLower()) {
         return false;
     }
     return true;

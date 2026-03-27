@@ -282,6 +282,10 @@ void Discord::timerEvent(QTimerEvent* event)
 
     if (mLoaded && mRpcActive) {
         Discord_RunCallbacks();
+        if (mPendingPresenceUpdate) {
+            mPendingPresenceUpdate = false;
+            UpdatePresence();
+        }
     }
 }
 
@@ -294,8 +298,10 @@ void Discord::handleDiscordReady(const DiscordUser* request)
 #if defined(DEBUG_DISCORD)
     qDebug().noquote().nospace() << "Discord Ready callback received - for UserName: \"" << smUserName << "\", ID: \"" << smUserId << "\".";
 #endif
-    // don't call UpdatePresence from here - freezes Mudlet deep in the Discord API
-    // when profile autostart is enabled
+    // Don't call UpdatePresence directly from here - re-entering the Discord
+    // library from a callback freezes Mudlet. Instead, signal the timer to
+    // pick it up on the next tick.
+    mudlet::self()->mDiscord.mPendingPresenceUpdate = true;
 }
 
 void Discord::handleDiscordDisconnected(int errorCode, const char* message)
@@ -343,9 +349,8 @@ void Discord::UpdatePresence()
 
     if (!mRpcActive) {
         initializeRpc();
-        // Discord needs time to complete the IPC handshake before it can
-        // accept presence data, so schedule a follow-up call
-        QTimer::singleShot(500, this, &Discord::UpdatePresence);
+        // Don't send presence yet - wait for the handleDiscordReady callback
+        // to signal that the IPC handshake is complete
         return;
     }
 
@@ -361,6 +366,9 @@ void Discord::UpdatePresence()
 #if defined(DEBUG_DISCORD)
         qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - Discord UserName does not match, not sending this update!";
 #endif
+        if (mRpcActive) {
+            shutdownRpc();
+        }
         return;
     }
 

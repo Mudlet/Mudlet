@@ -889,6 +889,15 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_discordServerAccessToPartyInfo->setChecked(!(discordFlags & Host::DiscordSetPartyInfo));
         checkBox_discordServerAccessToTimerInfo->setChecked(!(discordFlags & Host::DiscordSetTimeInfo));
         lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
+        const QString currentDiscordUser = Discord::getLoggedInUserName();
+        qDebug() << "Discord logged-in username:" << currentDiscordUser << "(empty:" << currentDiscordUser.isEmpty() << ")";
+        if (!currentDiscordUser.isEmpty()) {
+            //: Label showing which Discord account is currently logged in on this machine
+            //: Shows which Discord account is logged in, e.g. "Discord user: morquin"
+            label_discordCurrentUser->setText(tr("Discord user: %1").arg(currentDiscordUser));
+        } else {
+            label_discordCurrentUser->setText(tr("(Discord not connected)"));
+        }
     }
 
     lineEdit_mmcpChatName->setText(pHost->getMMCPChatName());
@@ -3153,7 +3162,11 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->setDiscordMode(static_cast<Host::DiscordMode>(comboBox_discordMode->currentIndex()));
 
-        pHost->mRequiredDiscordUserName = lineEdit_discordUserName->text().trimmed();
+        const QString newDiscordUserName = lineEdit_discordUserName->text().trimmed().toLower();
+        if (pHost->mRequiredDiscordUserName != newDiscordUserName) {
+            pHost->mRequiredDiscordUserName = newDiscordUserName;
+            mudlet::self()->mDiscord.UpdatePresence();
+        }
 
         // Save chat options so they are written to XML upon export
         pHost->setMMCPChatName(lineEdit_mmcpChatName->text().trimmed());

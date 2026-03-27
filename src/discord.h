@@ -168,6 +168,7 @@ public:
 
     bool libraryLoaded();
     bool usingMudletsDiscordID(Host*) const;
+    static QString getLoggedInUserName() { return smUserName; }
 
     void initializeRpc();
     void shutdownRpc();
@@ -238,6 +239,7 @@ private:
 
     bool mLoaded = false;
     bool mRpcActive = false;
+    bool mPendingPresenceUpdate = false;
 
     // Key is a Application Id, Value is a pointer to a local copy of the data
     // currently held for that presence:
