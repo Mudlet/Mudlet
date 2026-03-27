@@ -435,7 +435,7 @@ private:
     quint8 mMaxRoomIdDigits = 0;
 
     // Holds the QRadialGradient details to use for the player room:
-    QGradientStops mPlayerRoomColorGradentStops;
+    QGradientStops mPlayerRoomColorGradientStops;
 
     QPointer<dlgRoomProperties> mpDlgRoomProperties;
     QPointer<dlgMapLabel> mpDlgMapLabel;

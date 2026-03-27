@@ -77,7 +77,7 @@ void TimerUnit::uninstall(const QString& packageName)
         }
     }
     for (auto& timer : uninstallList) {
-        unregisterTimer(timer);
+        delete timer;
     }
     uninstallList.clear();
 }
