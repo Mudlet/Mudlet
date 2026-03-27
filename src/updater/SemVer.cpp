@@ -14,25 +14,25 @@ namespace dblsqd {
  * \brief Constructs a new SemVer object from a string.
  */
 SemVer::SemVer(QString version)
-: original(version)
-, valid(false)
+: mOriginal(version)
+, mValid(false)
 {
     QRegularExpression rx(getRegExp());
     QRegularExpressionMatch match = rx.match(version);
     if (match.hasMatch()) {
-        this->major = match.captured(1).toInt();
-        this->minor = match.captured(2).toInt();
-        this->patch = match.captured(3).toInt();
-        this->prerelease = match.captured(4);
-        this->build = match.captured(5);
-        this->valid = true;
+        mMajor = match.captured(1).toInt();
+        mMinor = match.captured(2).toInt();
+        mPatch = match.captured(3).toInt();
+        mPrerelease = match.captured(4);
+        mBuild = match.captured(5);
+        mValid = true;
     } else {
-        this->major = 0;
-        this->minor = 0;
-        this->patch = 0;
-        this->prerelease = "";
-        this->build = "";
-        this->valid = false;
+        mMajor = 0;
+        mMinor = 0;
+        mPatch = 0;
+        mPrerelease = "";
+        mBuild = "";
+        mValid = false;
     }
 }
 
@@ -42,7 +42,7 @@ SemVer::SemVer(QString version)
  */
 bool SemVer::isValid() const
 {
-    return this->valid;
+    return mValid;
 }
 
 /*!
@@ -50,30 +50,30 @@ bool SemVer::isValid() const
  *
  * Returns true if the left-hand SemVer object represents a lower version
  * according to the SemVer 2.0 specification.
- * Otherweise returns false.
+ * Otherwise returns false.
  * Returns false if one of the SemVer objects does not represent a valid
  * SemVer.
  * \sa isValid()
  */
 bool SemVer::operator<(const SemVer& other) const
 {
-    if (!this->isValid() || !other.isValid()) {
+    if (!isValid() || !other.isValid()) {
         return false;
     }
 
-    if (this->major != other.major) {
-        return this->major < other.major;
-    } else if (this->minor != other.minor) {
-        return this->minor < other.minor;
-    } else if (this->patch != other.patch) {
-        return this->patch < other.patch;
-    } else if (this->prerelease != other.prerelease) {
-        if (this->prerelease.isEmpty()) {
+    if (mMajor != other.mMajor) {
+        return mMajor < other.mMajor;
+    } else if (mMinor != other.mMinor) {
+        return mMinor < other.mMinor;
+    } else if (mPatch != other.mPatch) {
+        return mPatch < other.mPatch;
+    } else if (mPrerelease != other.mPrerelease) {
+        if (mPrerelease.isEmpty()) {
             return false;
-        } else if (other.prerelease.isEmpty()) {
+        } else if (other.mPrerelease.isEmpty()) {
             return true;
         }
-        return (QString::compare(this->prerelease, other.prerelease) < 0);
+        return (QString::compare(mPrerelease, other.mPrerelease) < 0);
     }
     // Build metadata is ignored for precedence per SemVer 2.0 spec
     return false;
@@ -87,4 +87,4 @@ QString SemVer::getRegExp()
     return "^" + v + "\\." + v + "\\." + v + p + b + "$";
 }
 
-} //namespace dblsqd
+} // namespace dblsqd

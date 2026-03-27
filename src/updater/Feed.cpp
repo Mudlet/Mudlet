@@ -15,25 +15,25 @@
 namespace dblsqd {
 
 Feed::Feed()
-: feedReply(nullptr)
-, downloadReply(nullptr)
-, downloadFile(nullptr)
-, _ready(false)
+: mFeedReply(nullptr)
+, mDownloadReply(nullptr)
+, mDownloadFile(nullptr)
+, mReady(false)
 {
 }
 
 void Feed::setRepo(const QString& owner, const QString& repo, bool prerelease, const QString& os, const QString& arch)
 {
-    m_owner = owner;
-    m_repo = repo;
-    m_prerelease = prerelease;
-    m_os = os.isEmpty() ? detectOs() : os;
-    m_arch = arch.isEmpty() ? detectArch() : arch;
+    mOwner = owner;
+    mRepo = repo;
+    mPrerelease = prerelease;
+    mOs = os.isEmpty() ? detectOs() : os;
+    mArch = arch.isEmpty() ? detectArch() : arch;
 
     if (prerelease) {
-        this->url = QUrl(qsl("https://api.github.com/repos/%1/%2/releases/tags/public-test-build").arg(owner, repo));
+        mUrl = QUrl(qsl("https://api.github.com/repos/%1/%2/releases/tags/public-test-build").arg(owner, repo));
     } else {
-        this->url = QUrl(qsl("https://api.github.com/repos/%1/%2/releases").arg(owner, repo));
+        mUrl = QUrl(qsl("https://api.github.com/repos/%1/%2/releases").arg(owner, repo));
     }
 }
 
@@ -57,20 +57,20 @@ QString Feed::detectArch()
     return autoArch;
 }
 
-QUrl Feed::getUrl()
+QUrl Feed::getUrl() const
 {
-    return QUrl(url);
+    return mUrl;
 }
 
 QList<Release> Feed::getReleases()
 {
-    return releases;
+    return mReleases;
 }
 
 QList<Release> Feed::getUpdates(Release currentRelease)
 {
     QList<Release> updates;
-    for (const auto& release : releases) {
+    for (const auto& release : mReleases) {
         if (currentRelease.getVersion().toLower() != release.getVersion().toLower() && currentRelease < release) {
             updates << release;
         }
@@ -80,17 +80,19 @@ QList<Release> Feed::getUpdates(Release currentRelease)
 
 QTemporaryFile* Feed::getDownloadFile()
 {
-    return downloadFile;
+    return mDownloadFile;
 }
 
 bool Feed::isReady()
 {
-    return _ready;
+    return mReady;
 }
 
 void Feed::load()
 {
-    if (feedReply != nullptr && !feedReply->isFinished()) {
+    if (mFeedReply != nullptr && !mFeedReply->isFinished()) {
+        qWarning() << "Update check already in progress, ignoring duplicate request";
+        emit loadError(tr("Update check already in progress"));
         return;
     }
 
@@ -98,14 +100,14 @@ void Feed::load()
     request.setRawHeader("Accept", "application/vnd.github+json");
     request.setRawHeader("User-Agent", "Mudlet-Updater");
     request.setTransferTimeout(30000);
-    feedReply = nam.get(request);
-    connect(feedReply, &QNetworkReply::finished, this, &Feed::handleFeedFinished);
+    mFeedReply = mNam.get(request);
+    connect(mFeedReply, &QNetworkReply::finished, this, &Feed::handleFeedFinished);
 }
 
 void Feed::downloadRelease(Release release)
 {
     // First fetch the checksums, then start the actual download
-    this->release = release;
+    mCurrentDownload = release;
     const QUrl checksumsUrl = release.getChecksumsUrl();
     if (checksumsUrl.isValid() && !checksumsUrl.isEmpty()) {
         fetchChecksums(checksumsUrl);
@@ -121,7 +123,7 @@ void Feed::fetchChecksums(const QUrl& checksumsUrl)
     request.setRawHeader("User-Agent", "Mudlet-Updater");
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setTransferTimeout(30000);
-    auto* reply = nam.get(request);
+    auto* reply = mNam.get(request);
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         if (reply->error() != QNetworkReply::NoError) {
             qWarning() << "Failed to fetch checksums:" << reply->errorString() << "- download will proceed without integrity verification";
@@ -144,58 +146,58 @@ void Feed::fetchChecksums(const QUrl& checksumsUrl)
                 const QString filename = line.mid(separatorPos).trimmed().remove(QLatin1Char('*'));
 
                 // Match against the download URL filename
-                const QString downloadFilename = this->release.getDownloadUrl().fileName();
+                const QString downloadFilename = mCurrentDownload.getDownloadUrl().fileName();
                 if (!downloadFilename.isEmpty() && filename.contains(downloadFilename, Qt::CaseInsensitive)) {
-                    this->release.setDownloadSHA256(hash);
+                    mCurrentDownload.setDownloadSHA256(hash);
                     break;
                 }
             }
-            if (this->release.getDownloadSHA256().isEmpty()) {
-                qWarning() << "Checksum file downloaded but no matching hash found for" << this->release.getDownloadUrl().fileName();
+            if (mCurrentDownload.getDownloadSHA256().isEmpty()) {
+                qWarning() << "Checksum file downloaded but no matching hash found for" << mCurrentDownload.getDownloadUrl().fileName() << "- download will proceed without integrity verification";
             }
         }
         reply->deleteLater();
-        makeDownloadRequest(this->release.getDownloadUrl());
+        makeDownloadRequest(mCurrentDownload.getDownloadUrl());
     });
 }
 
 void Feed::makeDownloadRequest(QUrl url)
 {
-    if (downloadReply != nullptr && !downloadReply->isFinished()) {
-        disconnect(downloadReply);
-        downloadReply->abort();
-        downloadReply->deleteLater();
+    if (mDownloadReply != nullptr && !mDownloadReply->isFinished()) {
+        disconnect(mDownloadReply);
+        mDownloadReply->abort();
+        mDownloadReply->deleteLater();
     }
-    if (downloadFile != nullptr) {
-        disconnect(downloadFile);
-        downloadFile->close();
-        downloadFile->deleteLater();
-        downloadFile = nullptr;
+    if (mDownloadFile != nullptr) {
+        disconnect(mDownloadFile);
+        mDownloadFile->close();
+        mDownloadFile->deleteLater();
+        mDownloadFile = nullptr;
     }
 
     QNetworkRequest request(url);
     request.setRawHeader("User-Agent", "Mudlet-Updater");
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setTransferTimeout(60000);
-    downloadReply = nam.get(request);
-    connect(downloadReply, &QNetworkReply::downloadProgress, this, &Feed::handleDownloadProgress);
-    connect(downloadReply, &QNetworkReply::readyRead, this, &Feed::handleDownloadReadyRead);
-    connect(downloadReply, &QNetworkReply::finished, this, &Feed::handleDownloadFinished);
+    mDownloadReply = mNam.get(request);
+    connect(mDownloadReply, &QNetworkReply::downloadProgress, this, &Feed::handleDownloadProgress);
+    connect(mDownloadReply, &QNetworkReply::readyRead, this, &Feed::handleDownloadReadyRead);
+    connect(mDownloadReply, &QNetworkReply::finished, this, &Feed::handleDownloadFinished);
 }
 
 void Feed::handleFeedFinished()
 {
-    if (feedReply->error() != QNetworkReply::NoError) {
-        emit loadError(feedReply->errorString());
-        feedReply->deleteLater();
-        feedReply = nullptr;
+    if (mFeedReply->error() != QNetworkReply::NoError) {
+        emit loadError(mFeedReply->errorString());
+        mFeedReply->deleteLater();
+        mFeedReply = nullptr;
         return;
     }
 
-    releases.clear();
-    const QByteArray json = feedReply->readAll();
-    feedReply->deleteLater();
-    feedReply = nullptr;
+    mReleases.clear();
+    const QByteArray json = mFeedReply->readAll();
+    mFeedReply->deleteLater();
+    mFeedReply = nullptr;
 
     const QJsonDocument doc = QJsonDocument::fromJson(json);
     if (doc.isNull()) {
@@ -204,12 +206,12 @@ void Feed::handleFeedFinished()
     }
 
     // Check for GitHub API error responses (e.g. rate limiting)
-    if (doc.isObject() && doc.object().contains(qsl("message")) && !m_prerelease) {
+    if (doc.isObject() && doc.object().contains(qsl("message")) && !mPrerelease) {
         emit loadError(doc.object().value(qsl("message")).toString());
         return;
     }
 
-    if (m_prerelease) {
+    if (mPrerelease) {
         // PTB channel: single release object from /releases/tags/public-test-build
         if (doc.isObject()) {
             const QJsonObject releaseObj = doc.object();
@@ -218,7 +220,7 @@ void Feed::handleFeedFinished()
                 return;
             }
             if (!releaseObj.value(qsl("draft")).toBool()) {
-                releases << Release(releaseObj, m_os, m_arch);
+                mReleases << Release(releaseObj, mOs, mArch);
             }
         } else {
             emit loadError(tr("Unexpected response format from update server"));
@@ -238,7 +240,7 @@ void Feed::handleFeedFinished()
                     continue;
                 }
 
-                releases << Release(releaseObj, m_os, m_arch);
+                mReleases << Release(releaseObj, mOs, mArch);
             }
         } else {
             emit loadError(tr("Unexpected response format from update server"));
@@ -246,10 +248,10 @@ void Feed::handleFeedFinished()
         }
     }
 
-    std::sort(releases.begin(), releases.end());
-    std::reverse(releases.begin(), releases.end());
+    std::sort(mReleases.begin(), mReleases.end());
+    std::reverse(mReleases.begin(), mReleases.end());
 
-    _ready = true;
+    mReady = true;
     emit ready();
 }
 
@@ -260,67 +262,98 @@ void Feed::handleDownloadProgress(qint64 bytesReceived, qint64 bytesTotal)
 
 void Feed::handleDownloadReadyRead()
 {
-    if (downloadFile == nullptr) {
-        QString fileName = downloadReply->url().fileName();
+    if (mDownloadFile == nullptr) {
+        QString fileName = mDownloadReply->url().fileName();
         // Insert QTemporaryFile placeholder pattern before the file extension so Qt generates a unique filename
         int extensionPos = fileName.indexOf(QRegularExpression(qsl("(?:\\.tar)?\\.[a-zA-Z0-9]+$")));
         if (extensionPos > -1) {
             fileName.insert(extensionPos, qsl("-XXXXXX"));
         }
-        downloadFile = new QTemporaryFile(QDir::tempPath() + qsl("/") + fileName);
-        if (!downloadFile->open()) {
-            qWarning() << "Failed to create temporary file for download:" << downloadFile->errorString();
-            emit downloadError(tr("Could not create temporary file for download: %1").arg(downloadFile->errorString()));
-            downloadReply->abort();
-            delete downloadFile;
-            downloadFile = nullptr;
+        mDownloadFile = new QTemporaryFile(QDir::tempPath() + qsl("/") + fileName);
+        if (!mDownloadFile->open()) {
+            qWarning() << "Failed to create temporary file for download:" << mDownloadFile->errorString();
+            emit downloadError(tr("Could not create temporary file for download: %1").arg(mDownloadFile->errorString()));
+            mDownloadReply->abort();
+            delete mDownloadFile;
+            mDownloadFile = nullptr;
             return;
         }
     }
-    downloadFile->write(downloadReply->readAll());
+    const QByteArray data = mDownloadReply->readAll();
+    const qint64 bytesWritten = mDownloadFile->write(data);
+    if (bytesWritten == -1) {
+        qWarning() << "Failed to write download data to temporary file:" << mDownloadFile->errorString();
+        emit downloadError(tr("Failed to save download data: %1").arg(mDownloadFile->errorString()));
+        mDownloadReply->abort();
+        mDownloadFile->close();
+        delete mDownloadFile;
+        mDownloadFile = nullptr;
+        return;
+    }
 }
 
 void Feed::handleDownloadFinished()
 {
-    if (downloadReply->error() != QNetworkReply::NoError) {
-        emit downloadError(downloadReply->errorString());
-        if (downloadFile) {
-            downloadFile->close();
-            delete downloadFile;
-            downloadFile = nullptr;
+    if (mDownloadReply->error() != QNetworkReply::NoError) {
+        emit downloadError(mDownloadReply->errorString());
+        if (mDownloadFile) {
+            mDownloadFile->close();
+            delete mDownloadFile;
+            mDownloadFile = nullptr;
         }
-        downloadReply->deleteLater();
-        downloadReply = nullptr;
+        mDownloadReply->deleteLater();
+        mDownloadReply = nullptr;
         return;
     }
 
-    if (downloadFile == nullptr) {
+    if (mDownloadFile == nullptr) {
         emit downloadError(tr("No data received from server"));
-        downloadReply->deleteLater();
-        downloadReply = nullptr;
+        mDownloadReply->deleteLater();
+        mDownloadReply = nullptr;
         return;
     }
 
-    downloadFile->flush();
-    downloadFile->seek(0);
+    if (!mDownloadFile->flush()) {
+        qWarning() << "Failed to flush download file:" << mDownloadFile->errorString();
+        emit downloadError(tr("Failed to save download: %1").arg(mDownloadFile->errorString()));
+        mDownloadFile->close();
+        delete mDownloadFile;
+        mDownloadFile = nullptr;
+        mDownloadReply->deleteLater();
+        mDownloadReply = nullptr;
+        return;
+    }
+    if (!mDownloadFile->seek(0)) {
+        qWarning() << "Failed to seek in download file:" << mDownloadFile->errorString();
+        emit downloadError(tr("Failed to verify download integrity"));
+        mDownloadFile->close();
+        delete mDownloadFile;
+        mDownloadFile = nullptr;
+        mDownloadReply->deleteLater();
+        mDownloadReply = nullptr;
+        return;
+    }
     QCryptographicHash fileHash(QCryptographicHash::Sha256);
-    fileHash.addData(downloadFile);
+    fileHash.addData(mDownloadFile);
     const QString hashResult = fileHash.result().toHex();
-    if (!release.getDownloadSHA256().isEmpty() && hashResult.toLower() != release.getDownloadSHA256().toLower()) {
-        qWarning() << "SHA256 mismatch - expected:" << release.getDownloadSHA256() << "got:" << hashResult;
+    if (!mCurrentDownload.getDownloadSHA256().isEmpty() && hashResult.toLower() != mCurrentDownload.getDownloadSHA256().toLower()) {
+        qWarning() << "SHA256 mismatch - expected:" << mCurrentDownload.getDownloadSHA256() << "got:" << hashResult;
         emit downloadError(tr("Could not verify download integrity."));
-        downloadFile->close();
-        delete downloadFile;
-        downloadFile = nullptr;
-        downloadReply->deleteLater();
-        downloadReply = nullptr;
+        mDownloadFile->close();
+        delete mDownloadFile;
+        mDownloadFile = nullptr;
+        mDownloadReply->deleteLater();
+        mDownloadReply = nullptr;
         return;
     }
 
-    downloadFile->close();
-    downloadReply->deleteLater();
-    downloadReply = nullptr;
+    mDownloadFile->close();
+    mDownloadReply->deleteLater();
+    mDownloadReply = nullptr;
     emit downloadFinished();
+    // Ownership of mDownloadFile transfers to the caller via getDownloadFile()
+    // which must be called from the synchronous downloadFinished() handler.
+    mDownloadFile = nullptr;
 }
 
 } // namespace dblsqd

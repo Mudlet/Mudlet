@@ -23,17 +23,17 @@ Release::Release(QJsonObject releaseInfo, const QString& os, const QString& arch
 {
     // Version: strip "Mudlet-" prefix from tag_name
     const QString tagName = releaseInfo.value(qsl("tag_name")).toString();
-    this->version = tagName.startsWith(qsl("Mudlet-")) ? tagName.mid(7) : tagName;
+    mVersion = tagName.startsWith(qsl("Mudlet-")) ? tagName.mid(7) : tagName;
 
     // Date
-    this->date = QDateTime::fromString(releaseInfo.value(qsl("published_at")).toString(), Qt::ISODate);
+    mDate = QDateTime::fromString(releaseInfo.value(qsl("published_at")).toString(), Qt::ISODate);
 
     // Changelog: convert GitHub markdown body to HTML
     const QString body = releaseInfo.value(qsl("body")).toString();
     if (!body.isEmpty()) {
         QTextDocument doc;
         doc.setMarkdown(body);
-        this->changelog = doc.toHtml();
+        mChangelog = doc.toHtml();
     }
 
     // Find matching asset by platform/arch
@@ -46,21 +46,19 @@ Release::Release(QJsonObject releaseInfo, const QString& os, const QString& arch
 
         // Look for SHA256SUMS.txt checksums file
         if (name == qsl("SHA256SUMS.txt")) {
-            this->checksumsUrl = QUrl(asset.value(qsl("browser_download_url")).toString());
+            mChecksumsUrl = QUrl(asset.value(qsl("browser_download_url")).toString());
             continue;
         }
 
         // Match platform-specific asset
         if (!assetPattern.isEmpty() && name.contains(assetPattern, Qt::CaseInsensitive)) {
-            this->downloadUrl = QUrl(asset.value(qsl("browser_download_url")).toString());
-            this->downloadSize = static_cast<qint64>(asset.value(qsl("size")).toDouble());
+            mDownloadUrl = QUrl(asset.value(qsl("browser_download_url")).toString());
+            mDownloadSize = static_cast<qint64>(asset.value(qsl("size")).toDouble());
         }
     }
 
-    // Fallback: construct URL from known pattern if no asset found
-    if (this->downloadUrl.isEmpty() && !this->version.isEmpty() && !os.isEmpty()) {
-        qWarning() << "No matching asset found for" << os << arch << "in release" << this->version << "- using fallback URL";
-        this->downloadUrl = QUrl(buildFallbackUrl(this->version, os, arch));
+    if (mDownloadUrl.isEmpty() && !mVersion.isEmpty() && !os.isEmpty()) {
+        qWarning() << "No matching asset found for" << os << arch << "in release" << mVersion;
     }
 }
 
@@ -71,25 +69,25 @@ Release::Release(QJsonObject releaseInfo, const QString& os, const QString& arch
  * it with Releases retrieved from a Feed.
  */
 Release::Release(QString version, QDateTime date)
-: version(version)
-, date(date)
+: mVersion(version)
+, mDate(date)
 {
 }
 
 bool operator<(const Release& one, const Release& other)
 {
-    SemVer v1(one.version);
-    SemVer v2(other.version);
+    SemVer v1(one.mVersion);
+    SemVer v2(other.mVersion);
     if (v1.isValid() && v2.isValid()) {
         return (v1 < v2);
     } else {
-        return (one.date < other.date);
+        return (one.mDate < other.mDate);
     }
 }
 
 bool operator==(const Release& one, const Release& other)
 {
-    return one.version == other.version;
+    return one.mVersion == other.mVersion;
 }
 
 bool operator<=(const Release& one, const Release& other)
@@ -99,42 +97,42 @@ bool operator<=(const Release& one, const Release& other)
 
 QString Release::getVersion() const
 {
-    return this->version;
+    return mVersion;
 }
 
 QString Release::getChangelog() const
 {
-    return this->changelog;
+    return mChangelog;
 }
 
 QDateTime Release::getDate() const
 {
-    return this->date;
+    return mDate;
 }
 
 QUrl Release::getDownloadUrl() const
 {
-    return this->downloadUrl;
+    return mDownloadUrl;
 }
 
 QString Release::getDownloadSHA256() const
 {
-    return this->downloadSHA256;
+    return mDownloadSHA256;
 }
 
 void Release::setDownloadSHA256(const QString& sha256)
 {
-    this->downloadSHA256 = sha256;
+    mDownloadSHA256 = sha256;
 }
 
 qint64 Release::getDownloadSize() const
 {
-    return this->downloadSize;
+    return mDownloadSize;
 }
 
 QUrl Release::getChecksumsUrl() const
 {
-    return this->checksumsUrl;
+    return mChecksumsUrl;
 }
 
 dblsqd::Release Release::getCurrentRelease()
@@ -158,22 +156,6 @@ QString Release::buildAssetPattern(const QString& os, const QString& arch)
             return qsl("-arm64.dmg");
         }
         return qsl("-x86_64.dmg");
-    }
-    return QString();
-}
-
-QString Release::buildFallbackUrl(const QString& version, const QString& os, const QString& arch)
-{
-    const QString base = qsl("https://www.mudlet.org/wp-content/files/Mudlet-");
-    if (os == qsl("linux")) {
-        return base + version + qsl("-linux-x64.AppImage.tar");
-    } else if (os == qsl("win")) {
-        return base + version + qsl("-windows-64-installer.exe");
-    } else if (os == qsl("mac")) {
-        if (arch == qsl("arm64") || arch == qsl("aarch64")) {
-            return base + version + qsl("-arm64.dmg");
-        }
-        return base + version + qsl("-x86_64.dmg");
     }
     return QString();
 }

@@ -212,8 +212,9 @@ void Updater::showFullChangelog() const
 
     auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
     auto releases = feed->getReleases();
-    const auto firstVersion = releases.constLast().getVersion();
-    changelogDialog->setMinVersion(firstVersion);
+    if (!releases.isEmpty()) {
+        changelogDialog->setMinVersion(releases.constLast().getVersion());
+    }
     changelogDialog->setMaxVersion(QApplication::applicationVersion());
     changelogDialog->show();
 }
@@ -234,10 +235,19 @@ bool Updater::downloadReleaseIfValid(const dblsqd::Release& release)
 
 void Updater::finishSetup()
 {
+    auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
 #if defined(Q_OS_LINUX)
-    qWarning() << "Successfully updated Mudlet to" << feed->getUpdates(dblsqd::Release::getCurrentRelease()).constFirst().getVersion();
+    if (!updates.isEmpty()) {
+        qWarning() << "Successfully updated Mudlet to" << updates.constFirst().getVersion();
+    } else {
+        qWarning() << "Update finished but could not determine target version";
+    }
 #elif defined(Q_OS_WINDOWS)
-    qWarning() << "Mudlet prepped to update to" << feed->getUpdates(dblsqd::Release::getCurrentRelease()).first().getVersion() << "on restart";
+    if (!updates.isEmpty()) {
+        qWarning() << "Mudlet prepped to update to" << updates.first().getVersion() << "on restart";
+    } else {
+        qWarning() << "Mudlet prepped to update on restart";
+    }
     // Clean up .nupkg files from SquirrelTemp to prevent cross-app contamination
     cleanupSquirrelTempFiles();
 #endif

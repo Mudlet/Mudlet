@@ -15,13 +15,13 @@ public:
     bool isValid() const;
 
 private:
-    QString original;
-    int major;
-    int minor;
-    int patch;
-    QString prerelease;
-    QString build;
-    bool valid;
+    QString mOriginal;
+    int mMajor;
+    int mMinor;
+    int mPatch;
+    QString mPrerelease;
+    QString mBuild;
+    bool mValid;
 
     static QString getRegExp();
 };

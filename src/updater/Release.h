@@ -29,16 +29,15 @@ public:
     static dblsqd::Release getCurrentRelease();
 
 private:
-    QString version;
-    QDateTime date;
-    QString changelog;
-    QUrl downloadUrl;
-    qint64 downloadSize{0};
-    QString downloadSHA256;
-    QUrl checksumsUrl;
+    QString mVersion;
+    QDateTime mDate;
+    QString mChangelog;
+    QUrl mDownloadUrl;
+    qint64 mDownloadSize{0};
+    QString mDownloadSHA256;
+    QUrl mChecksumsUrl;
 
     static QString buildAssetPattern(const QString& os, const QString& arch);
-    static QString buildFallbackUrl(const QString& version, const QString& os, const QString& arch);
 };
 
 } // namespace dblsqd

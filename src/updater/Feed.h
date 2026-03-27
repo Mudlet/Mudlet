@@ -22,7 +22,7 @@ public:
     Feed();
 
     void setRepo(const QString& owner, const QString& repo, bool prerelease = false, const QString& os = QString(), const QString& arch = QString());
-    QUrl getUrl();
+    QUrl getUrl() const;
 
     void load();
     void downloadRelease(Release release);
@@ -40,25 +40,25 @@ signals:
     void downloadError(QString message);
 
 private:
-    QUrl url;
+    QUrl mUrl;
 
-    QList<Release> releases;
+    QList<Release> mReleases;
 
     void makeDownloadRequest(QUrl url);
     void fetchChecksums(const QUrl& checksumsUrl);
 
-    QNetworkAccessManager nam;
-    QNetworkReply* feedReply;
-    Release release;
-    QNetworkReply* downloadReply;
-    QTemporaryFile* downloadFile;
-    bool _ready;
+    QNetworkAccessManager mNam;
+    QNetworkReply* mFeedReply;
+    Release mCurrentDownload;
+    QNetworkReply* mDownloadReply;
+    QTemporaryFile* mDownloadFile;
+    bool mReady;
 
-    QString m_owner;
-    QString m_repo;
-    bool m_prerelease{false};
-    QString m_os;
-    QString m_arch;
+    QString mOwner;
+    QString mRepo;
+    bool mPrerelease{false};
+    QString mOs;
+    QString mArch;
 
     static QString detectOs();
     static QString detectArch();

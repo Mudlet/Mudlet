@@ -2,13 +2,17 @@
 #define DBLSQD_UPDATE_DIALOG_H
 
 #include "Feed.h"
-#include "ui_update_dialog.h"
-#include <QDesktopServices>
-#include <QFile>
-#include <QMessageBox>
-#include <QSettings>
-#include <QTemporaryFile>
-#include <QUrl>
+
+#include <QDialog>
+#include <QVariant>
+
+class QAbstractButton;
+class QPixmap;
+class QSettings;
+
+namespace Ui {
+class UpdateDialog;
+}
 
 namespace dblsqd {
 
@@ -29,9 +33,9 @@ public:
     void setMaxVersion(QString version);
     void setPreviousVersion(QString version);
 
-    static bool autoDownloadEnabled(QVariant defaultValue, QSettings* settings = nullptr);
-    static bool autoDownloadEnabled(QSettings* settings = nullptr);
-    static void enableAutoDownload(bool enabled, QSettings* settings = nullptr);
+    static bool autoDownloadEnabled(QVariant defaultValue, QSettings* settings);
+    static bool autoDownloadEnabled(QSettings* settings);
+    static void enableAutoDownload(bool enabled, QSettings* settings);
 
     void setOpenExternalLinks(bool open);
     bool openExternalLinks();
@@ -49,11 +53,11 @@ public slots:
     void showIfUpdatesAvailableOrQuit();
 
 private:
-    Ui::UpdateDialog* ui;
-    Feed* feed;
-    int type;
+    Ui::UpdateDialog* mUi;
+    Feed* mFeed;
+    Type mType;
 
-    QSettings* settings;
+    QSettings* mSettings;
     void replaceAppVars(QString& string);
     QString generateChangelogDocument();
 
@@ -68,32 +72,32 @@ private:
     void startDownload();
     virtual void startUpdate();
 
-    bool accepted;
-    bool isDownloadFinished;
-    QString updateFilePath;
-    QList<Release> releases;
-    QList<Release> updates;
-    Release latestRelease;
-    QList<QAbstractButton*> installButtons;
-    QAbstractButton* acceptedInstallButton;
-    bool _openExternalLinks;
-    QString _minVersion;
-    QString _maxVersion;
-    QString _previousVersion;
+    bool mAccepted;
+    bool mIsDownloadFinished;
+    QString mUpdateFilePath;
+    QList<Release> mReleases;
+    QList<Release> mUpdates;
+    Release mLatestRelease;
+    QList<QAbstractButton*> mInstallButtons;
+    QAbstractButton* mAcceptedInstallButton;
+    bool mOpenExternalLinks;
+    QString mMinVersion;
+    QString mMaxVersion;
+    QString mPreviousVersion;
 
-    static void setSettingsValue(QString key, QVariant value, QSettings* settings = nullptr);
-    static QVariant settingsValue(QString key, QVariant defaultValue = QVariant(), QSettings* settings = nullptr);
-    static void removeSetting(QString key, QSettings* settings = nullptr);
-    static void setDefaultSettingsValue(QString key, QVariant value, QSettings* settings = nullptr);
+    static void setSettingsValue(const QString& key, const QVariant& value, QSettings* settings);
+    static QVariant settingsValue(const QString& key, const QVariant& defaultValue, QSettings* settings);
+    static void removeSetting(const QString& key, QSettings* settings);
+    static void setDefaultSettingsValue(const QString& key, const QVariant& value, QSettings* settings);
 
 private slots:
     void handleFeedReady();
-    void handleLoadError(QString message);
+    void handleLoadError(const QString& message);
     void handleDownloadFinished();
-    void handleDownloadError(QString);
+    void handleDownloadError(const QString& message);
     void updateProgressBar(qint64, qint64);
     void autoDownloadCheckboxToggled(bool enabled = true);
-    void onLinkActivated(QUrl link);
+    void onLinkActivated(const QUrl& link);
 };
 
 } // namespace dblsqd
