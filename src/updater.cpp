@@ -93,7 +93,7 @@ Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
     QString arch = QString(); // Let Feed auto-detect for other platforms
 #endif
 
-    mFeed = new dblsqd::Feed();
+    mFeed = new dblsqd::Feed(this);
     mFeed->setRepo(qsl("Mudlet"), qsl("Mudlet"), testVersion, QString(), arch);
 
     if (!mDailyCheck) {
@@ -101,10 +101,7 @@ Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
     }
 }
 
-Updater::~Updater()
-{
-    delete (mFeed);
-}
+Updater::~Updater() = default;
 
 // start the update process and figure out what needs to be done.
 // If it's a silent update, do that right away, otherwise
@@ -133,7 +130,9 @@ void Updater::checkUpdatesOnStart()
                 return;
             }
 
-            downloadReleaseIfValid(updates.first());
+            if (!downloadReleaseIfValid(updates.first())) {
+                emit signal_updateAvailable(updates.size());
+            }
         });
         KDToolBox::connectSingleShot(mFeed, &dblsqd::Feed::loadError, this, [](const QString& error) {
             qWarning() << "Twice-daily update check: failed to load feed:" << error;
@@ -205,7 +204,10 @@ void Updater::showFullChangelog() const
 {
     if (!mFeed->isReady()) {
         KDToolBox::connectSingleShot(mFeed, &dblsqd::Feed::ready, mFeed, [=, this]() {
-            showChangelog();
+            showFullChangelog();
+        });
+        KDToolBox::connectSingleShot(mFeed, &dblsqd::Feed::loadError, mFeed, [](const QString& error) {
+            qWarning() << "Failed to load feed for changelog:" << error;
         });
         mFeed->load();
         return;
@@ -287,23 +289,25 @@ void Updater::setupOnWindows()
         } else if (!updateAutomatically()) {
             emit signal_updateAvailable(updates.size());
         } else {
-            downloadReleaseIfValid(updates.first());
+            if (!downloadReleaseIfValid(updates.first())) {
+                emit signal_updateAvailable(updates.size());
+            }
         }
     });
 
     // Setup to run setup.exe to replace the old installation
     connect(mFeed, &dblsqd::Feed::downloadFinished, this, [=, this]() {
-        // if automatic updates are enabled, and this isn't a manual check, perform the automatic update
+        // Skip automatic processing if auto-updates are disabled or the dialog
+        // is showing (user is managing the update manually)
         if (!(updateAutomatically() && updateDialog->isHidden())) {
             return;
         }
 
-        auto* downloadFile = mFeed->getDownloadFile();
-        if (!downloadFile) {
+        const QString fileName = mFeed->getDownloadFilePath();
+        if (fileName.isEmpty()) {
             qWarning() << "Download finished but no download file available - feed URL:" << mFeed->getUrl();
             return;
         }
-        const QString fileName = downloadFile->fileName();
 
         QFuture<void> future = QtConcurrent::run([=, this]() {
             prepareSetupOnWindows(fileName);
@@ -355,23 +359,25 @@ void Updater::setupOnLinux()
             emit signal_updateAvailable(updates.size());
             return;
         } else {
-            downloadReleaseIfValid(updates.first());
+            if (!downloadReleaseIfValid(updates.first())) {
+                emit signal_updateAvailable(updates.size());
+            }
         }
     });
 
     // Setup to unzip and replace old binary when the download is done
     connect(mFeed, &dblsqd::Feed::downloadFinished, this, [=, this]() {
-        // if automatic updates are enabled, and this isn't a manual check, perform the automatic update
+        // Skip automatic processing if auto-updates are disabled or the dialog
+        // is showing (user is managing the update manually)
         if (!(updateAutomatically() && updateDialog->isHidden())) {
             return;
         }
 
-        auto* downloadFile = mFeed->getDownloadFile();
-        if (!downloadFile) {
+        const QString fileName = mFeed->getDownloadFilePath();
+        if (fileName.isEmpty()) {
             qWarning() << "Download finished but no download file available - feed URL:" << mFeed->getUrl();
             return;
         }
-        const QString fileName = downloadFile->fileName();
 
         QFuture<void> future = QtConcurrent::run([=, this]() {
             untarOnLinux(fileName);
@@ -511,11 +517,19 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
             batchFile.write(batchContent.toLocal8Bit());
             batchFile.close();
 
-            QProcess::startDetached(batchPath, QStringList());
+            if (!QProcess::startDetached(batchPath, QStringList())) {
+                qWarning() << "Failed to launch update batch file:" << batchPath;
+                QMessageBox::warning(nullptr, tr("Update Error"), tr("Could not launch the update installer. Please restart Mudlet and try again."));
+                return;
+            }
             qWarning() << "Launching installer via batch file:" << installerPath;
         } else {
             qWarning() << "Failed to create batch file, attempting direct launch";
-            QProcess::startDetached(installerPath, QStringList());
+            if (!QProcess::startDetached(installerPath, QStringList())) {
+                qWarning() << "Failed to launch installer directly:" << installerPath;
+                QMessageBox::warning(nullptr, tr("Update Error"), tr("Could not launch the update installer. Please restart Mudlet and try again."));
+                return;
+            }
         }
 
         if (mudlet::self()) {
