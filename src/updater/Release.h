@@ -1,0 +1,50 @@
+#ifndef DBLSQD_RELEASE_H
+#define DBLSQD_RELEASE_H
+
+#include <QDateTime>
+#include <QJsonObject>
+#include <QString>
+#include <QUrl>
+
+namespace dblsqd {
+
+class Release
+{
+public:
+    Release(QJsonObject releaseInfo, const QString& os = QString(), const QString& arch = QString());
+    Release(QString version = QString(), QDateTime date = QDateTime());
+
+    friend bool operator<(const Release& one, const Release& other);
+    friend bool operator==(const Release& one, const Release& other);
+    friend bool operator<=(const Release& one, const Release& other);
+
+    QString getVersion() const;
+    QString getChangelog() const;
+    QDateTime getDate() const;
+    QUrl getDownloadUrl() const;
+    QString getDownloadSHA1() const;
+    QString getDownloadSHA256() const;
+    QString getDownloadDSA() const;
+    qint64 getDownloadSize() const;
+    QUrl getChecksumsUrl() const;
+    void setDownloadSHA256(const QString& sha256);
+    static dblsqd::Release getCurrentRelease();
+
+private:
+    QString version;
+    QDateTime date;
+    QString changelog;
+    QUrl downloadUrl;
+    long downloadSize{0};
+    QString downloadSHA1;
+    QString downloadSHA256;
+    QString downloadDSA;
+    QUrl checksumsUrl;
+
+    static QString buildAssetPattern(const QString& os, const QString& arch);
+    static QString buildFallbackUrl(const QString& version, const QString& os, const QString& arch);
+};
+
+} // namespace dblsqd
+
+#endif // DBLSQD_RELEASE_H

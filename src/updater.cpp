@@ -88,18 +88,15 @@ Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     this->settings = settings;
 
-    QString baseUrl = QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw");
-    QString channel = testVersion ? QStringLiteral("public-test-build") : QStringLiteral("release");
-
     // On 32-bit Windows, check if we can upgrade to 64-bit
 #if defined(Q_OS_WINDOWS)
-    QString arch = is64BitCompatible() ? QStringLiteral("x86_64") : QStringLiteral("x86");
+    QString arch = is64BitCompatible() ? qsl("x86_64") : qsl("x86");
 #else
     QString arch = QString(); // Let Feed auto-detect for other platforms
 #endif
 
     feed = new dblsqd::Feed();
-    feed->setUrl(baseUrl, channel, QString(), arch, QString());
+    feed->setRepo(qsl("Mudlet"), qsl("Mudlet"), testVersion, QString(), arch);
 
     if (!mDailyCheck) {
         mDailyCheck = std::make_unique<QTimer>();

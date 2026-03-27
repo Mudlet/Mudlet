@@ -144,7 +144,7 @@ find_package(Qt6 COMPONENTS Core5Compat REQUIRED)
 
 find_package(Lua 5.1 EXACT)
 
-# Set Qt version for edbee-lib and dblsqd
+# Set Qt version for edbee-lib
 option(BUILD_WITH_QT5 "" OFF)
 option(BUILD_WITH_QT6 "" ON)
 
@@ -184,10 +184,6 @@ git_submodule_init(
 #     GIT_SHALLOW TRUE)
 # FetchContent_MakeAvailable(nanobench)
 
-if(USE_UPDATER)
-  git_submodule_init(CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt" SUBMODULE_PATH
-                     "3rdparty/dblsqd" READABLE_NAME "DBLSQD updater")
-endif()
 
 if(APPLE)
   if(USE_UPDATER)
@@ -219,9 +215,6 @@ add_subdirectory(translations/translated)
 add_subdirectory(src)
 add_subdirectory(test)
 
-if(USE_UPDATER)
-  add_subdirectory(3rdparty/dblsqd)
-endif()
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE -O3)
