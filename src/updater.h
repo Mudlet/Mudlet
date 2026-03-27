@@ -49,7 +49,7 @@ public:
 
 private:
     dblsqd::Feed* mFeed;
-    dblsqd::UpdateDialog* updateDialog{nullptr};
+    dblsqd::UpdateDialog* mUpdateDialog{nullptr};
     QPushButton* mpInstallOrRestart;
     bool mUpdateInstalled;
     bool mManualCheckInProgress{false};
@@ -75,7 +75,7 @@ private:
     void showDialogManually() const;
 
 #if defined(Q_OS_LINUX)
-    QString unzippedBinaryName;
+    QString mUnzippedBinaryName;
 #elif defined(Q_OS_WINDOWS)
     QString mDownloadedInstallerPath;
 #elif defined(Q_OS_MACOS)
@@ -93,7 +93,6 @@ signals:
 public slots:
     void slot_installOrRestartClicked(QAbstractButton* button, const QString& filePath);
 #if defined(Q_OS_LINUX)
-    // might want to make these private
     void slot_updateLinuxBinary();
 #endif
 };

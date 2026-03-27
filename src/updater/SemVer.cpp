@@ -85,6 +85,9 @@ bool SemVer::operator<(const SemVer& other) const
         } else if (other.mPrerelease.isEmpty()) {
             return true;
         }
+        // Simplified: compares the whole prerelease string lexicographically.
+        // SemVer 2.0 §11.4 specifies splitting on '.' and comparing numeric
+        // segments as integers, but Mudlet only uses simple prerelease tags.
         return (QString::compare(mPrerelease, other.mPrerelease) < 0);
     }
     // Build metadata is ignored for precedence per SemVer 2.0 spec
@@ -94,8 +97,8 @@ bool SemVer::operator<(const SemVer& other) const
 QString SemVer::getRegExp()
 {
     QString v = "(0|[1-9]\\d*)";
-    QString p = "(?:-((?:0|[1-9A-Za-z][0-9A-Za-z]*)(?:\\.(?:0|[1-9A-Za-z][0-9A-Za-z]*))*))?";
-    QString b = "(?:\\+((?:[0-9A-Za-z]*)(?:\\.(?:[0-9A-Za-z][0-9A-Za-z]*))*))?";
+    QString p = "(?:-((?:0|[1-9A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9A-Za-z-][0-9A-Za-z-]*))*))?";
+    QString b = "(?:\\+((?:[0-9A-Za-z-]*)(?:\\.(?:[0-9A-Za-z-][0-9A-Za-z-]*))*))?";
     return "^" + v + "\\." + v + "\\." + v + p + b + "$";
 }
 

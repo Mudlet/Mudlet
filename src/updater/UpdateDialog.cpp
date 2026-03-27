@@ -427,9 +427,9 @@ void UpdateDialog::setupUpdateUi()
         mUi->progressBar->setValue(1);
     }
 
-    connect(mFeed, &Feed::downloadFinished, this, &UpdateDialog::handleDownloadFinished);
-    connect(mFeed, &Feed::downloadError, this, &UpdateDialog::handleDownloadError);
-    connect(mFeed, &Feed::downloadProgress, this, &UpdateDialog::updateProgressBar);
+    connect(mFeed, &Feed::downloadFinished, this, &UpdateDialog::handleDownloadFinished, Qt::UniqueConnection);
+    connect(mFeed, &Feed::downloadError, this, &UpdateDialog::handleDownloadError, Qt::UniqueConnection);
+    connect(mFeed, &Feed::downloadProgress, this, &UpdateDialog::updateProgressBar, Qt::UniqueConnection);
 
     connect(mUi->buttonConfirm, &QPushButton::clicked, this, &UpdateDialog::accept);
     connect(mUi->actionCancel, &QAction::triggered, this, &UpdateDialog::reject);
@@ -547,7 +547,8 @@ QString UpdateDialog::generateChangelogDocument()
 
 void UpdateDialog::startDownload()
 {
-    mFeed->downloadRelease(mLatestRelease);
+    // Require checksum verification for user-initiated downloads
+    mFeed->downloadRelease(mLatestRelease, /*requireChecksums=*/mAccepted);
     disableButtons(true);
 }
 
@@ -557,6 +558,7 @@ void UpdateDialog::startUpdate()
         done(QDialog::Accepted);
         QApplication::quit();
     } else {
+        //: Error shown when the downloaded update file cannot be opened for installation. %1 is the file path.
         handleDownloadError(tr("Could not open downloaded file %1").arg(mUpdateFilePath));
     }
 }
@@ -615,6 +617,7 @@ void UpdateDialog::handleLoadError(const QString& message)
     if (isVisible()) {
         setupNoUpdatesUi();
         //: Label shown when update check fails
+        //: Label shown in the update dialog when the update check fails due to a network or server error
         mUi->labelHeadlineNoUpdates->setText(tr("Could not check for updates"));
     }
 }
@@ -623,6 +626,7 @@ void UpdateDialog::handleDownloadFinished()
 {
     const QString filePath = mFeed->getDownloadFilePath();
     if (filePath.isEmpty()) {
+        //: Error shown when the download finished but no file was saved
         handleDownloadError(tr("Download completed but no file available"));
         return;
     }
@@ -645,6 +649,8 @@ void UpdateDialog::handleDownloadFinished()
 
 void UpdateDialog::handleDownloadError(const QString& message)
 {
+    //: Title for the download error warning dialog
+    //: Message shown in the download error warning dialog, followed by the specific error details
     QMessageBox::warning(this, tr("Download Error"), tr("There was an error while downloading the update.") + qsl("\n\n") + message);
     done(QDialog::Rejected);
 }

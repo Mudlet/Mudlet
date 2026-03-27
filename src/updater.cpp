@@ -80,6 +80,7 @@ static void cleanupSquirrelTempFiles()
 
 Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
 : QObject(parent)
+//: Label for the update/restart button in the main toolbar
 , mpInstallOrRestart(new QPushButton(tr("Update")))
 , mUpdateInstalled(false)
 {
@@ -187,7 +188,7 @@ void Updater::manuallyCheckUpdates()
 
 void Updater::showDialogManually() const
 {
-    updateDialog->show();
+    mUpdateDialog->show();
 }
 
 // only shows the changelog since the last version
@@ -208,6 +209,11 @@ void Updater::showFullChangelog() const
         });
         KDToolBox::connectSingleShot(mFeed, &dblsqd::Feed::loadError, mFeed, [](const QString& error) {
             qWarning() << "Failed to load feed for changelog:" << error;
+            //: Error title for dialog shown when changelog fails to load
+            QMessageBox::warning(nullptr,
+                                 tr("Changelog Error"),
+                                 //: Error message shown when changelog fails to load from the server
+                                 tr("Could not load the changelog. Please try again later."));
         });
         mFeed->load();
         return;
@@ -229,6 +235,7 @@ bool Updater::downloadReleaseIfValid(const dblsqd::Release& release)
     if (!downloadUrl.isValid() || downloadUrl.isEmpty()) {
         qWarning() << "Update check: invalid download URL for release" << release.getVersion();
         if (mManualCheckInProgress) {
+            //: Error shown when the download URL for an update is missing or invalid. %1 is the version number.
             emit signal_updateCheckFailed(tr("Invalid download URL for version %1").arg(release.getVersion()));
         }
         return false;
@@ -299,7 +306,7 @@ void Updater::setupOnWindows()
     connect(mFeed, &dblsqd::Feed::downloadFinished, this, [=, this]() {
         // Skip automatic processing if auto-updates are disabled or the dialog
         // is showing (user is managing the update manually)
-        if (!(updateAutomatically() && updateDialog->isHidden())) {
+        if (!(updateAutomatically() && mUpdateDialog->isHidden())) {
             return;
         }
 
@@ -325,10 +332,11 @@ void Updater::setupOnWindows()
     });
 
     // Create the update dialog. Constructing it triggers the update check
-    updateDialog = new dblsqd::UpdateDialog(mFeed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
+    mUpdateDialog = new dblsqd::UpdateDialog(mFeed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
+    //: Label for the update button shown in the update dialog
     mpInstallOrRestart->setText(tr("Update"));
-    updateDialog->addInstallButton(mpInstallOrRestart);
-    connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
+    mUpdateDialog->addInstallButton(mpInstallOrRestart);
+    connect(mUpdateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
 
 // Store the path to the downloaded installer for use when user clicks "Restart to update"
@@ -369,7 +377,7 @@ void Updater::setupOnLinux()
     connect(mFeed, &dblsqd::Feed::downloadFinished, this, [=, this]() {
         // Skip automatic processing if auto-updates are disabled or the dialog
         // is showing (user is managing the update manually)
-        if (!(updateAutomatically() && updateDialog->isHidden())) {
+        if (!(updateAutomatically() && mUpdateDialog->isHidden())) {
             return;
         }
 
@@ -395,10 +403,11 @@ void Updater::setupOnLinux()
     });
 
     // Create the update dialog. Constructing it triggers the update check
-    updateDialog = new dblsqd::UpdateDialog(mFeed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
+    mUpdateDialog = new dblsqd::UpdateDialog(mFeed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
+    //: Label for the update button shown in the update dialog
     mpInstallOrRestart->setText(tr("Update"));
-    updateDialog->addInstallButton(mpInstallOrRestart);
-    connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
+    mUpdateDialog->addInstallButton(mpInstallOrRestart);
+    connect(mUpdateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
 
 void Updater::untarOnLinux(const QString& fileName)
@@ -414,7 +423,7 @@ void Updater::untarOnLinux(const QString& fileName)
     if (!tar.waitForFinished()) {
         qWarning() << "Untarring" << fileName << "failed:" << tar.errorString();
     } else {
-        unzippedBinaryName = tar.readAll().trimmed();
+        mUnzippedBinaryName = tar.readAll().trimmed();
     }
     qWarning() << __func__ << "finished";
 }
@@ -423,7 +432,12 @@ void Updater::slot_updateLinuxBinary()
 {
     qWarning() << __func__ << "started";
 
-    QFileInfo unzippedBinary(QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + unzippedBinaryName);
+    if (mUnzippedBinaryName.isEmpty()) {
+        qWarning() << "Extraction failed - no binary to install, aborting update";
+        return;
+    }
+
+    QFileInfo unzippedBinary(QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + mUnzippedBinaryName);
     auto systemEnvironment = QProcessEnvironment::systemEnvironment();
     auto appimageLocation = systemEnvironment.contains(qsl("APPIMAGE")) ? systemEnvironment.value(qsl("APPIMAGE"), QString()) : QCoreApplication::applicationFilePath();
 
@@ -464,8 +478,8 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
     if (mUpdateInstalled) {
         // timer is necessary as calling close right way doesn't seem to do the trick
         QTimer::singleShot(0, this, [=, this]() {
-            updateDialog->close();
-            updateDialog->done(0);
+            mUpdateDialog->close();
+            mUpdateDialog->done(0);
         });
 
 #if defined(Q_OS_WINDOWS)
@@ -474,6 +488,8 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
         // The installer will relaunch Mudlet after the update completes.
         if (mDownloadedInstallerPath.isEmpty() || !QFile::exists(mDownloadedInstallerPath)) {
             qWarning() << "Installer not found at:" << mDownloadedInstallerPath;
+            //: Error title for update-related warning dialogs
+            //: Error shown when the downloaded installer file cannot be found on disk
             QMessageBox::warning(nullptr, tr("Update Error"), tr("The update installer could not be found. Please try checking for updates again."));
             return;
         }
@@ -485,6 +501,8 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
         QString installerPath = qsl("%1/mudlet-setup-%2.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation)).arg(QDateTime::currentSecsSinceEpoch());
         if (!QFile::copy(mDownloadedInstallerPath, installerPath)) {
             qWarning() << "Failed to copy installer from" << mDownloadedInstallerPath << "to" << installerPath;
+            //: Error title for update-related warning dialogs
+            //: Error shown when the installer file cannot be copied to a temporary location for launch
             QMessageBox::warning(nullptr, tr("Update Error"), tr("Could not prepare the update installer. Please try again or download the update manually from https://www.mudlet.org/download/"));
             return;
         }
@@ -519,6 +537,8 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 
             if (!QProcess::startDetached(batchPath, QStringList())) {
                 qWarning() << "Failed to launch update batch file:" << batchPath;
+                //: Error title for update-related warning dialogs
+                //: Error shown when the update installer process fails to start
                 QMessageBox::warning(nullptr, tr("Update Error"), tr("Could not launch the update installer. Please restart Mudlet and try again."));
                 return;
             }
@@ -527,6 +547,8 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
             qWarning() << "Failed to create batch file, attempting direct launch";
             if (!QProcess::startDetached(installerPath, QStringList())) {
                 qWarning() << "Failed to launch installer directly:" << installerPath;
+                //: Error title for update-related warning dialogs
+                //: Error shown when the update installer process fails to start
                 QMessageBox::warning(nullptr, tr("Update Error"), tr("Could not launch the update installer. Please restart Mudlet and try again."));
                 return;
             }
@@ -543,7 +565,14 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
         if (mudlet::self()) {
             mudlet::self()->forceClose();
         }
-        QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
+        if (!QProcess::startDetached(qApp->arguments()[0], qApp->arguments())) {
+            qWarning() << "Failed to restart Mudlet after update";
+            //: Error title for dialog shown when Mudlet fails to restart after updating
+            QMessageBox::critical(nullptr,
+                                  tr("Update Error"),
+                                  //: Error message shown when Mudlet fails to restart after updating on Linux
+                                  tr("Could not restart Mudlet after the update. Please start it manually."));
+        }
         return;
 #endif
     }
@@ -566,6 +595,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 #elif defined(Q_OS_WINDOWS)
         finishSetup();
 #endif
+        //: Label for the button shown after the update has been downloaded and installed, prompting user to restart
         mpInstallOrRestart->setText(tr("Restart to apply update"));
         mpInstallOrRestart->setEnabled(true);
         watcher->deleteLater();

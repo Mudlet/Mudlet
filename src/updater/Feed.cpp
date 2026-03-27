@@ -65,10 +65,10 @@ void Feed::setRepo(const QString& owner, const QString& repo, bool prerelease, c
 
 QString Feed::detectOs()
 {
-    QString autoOs = QSysInfo::productType().toLower();
-    if (autoOs == qsl("windows")) {
+    QString os = QSysInfo::productType().toLower();
+    if (os == qsl("windows")) {
         return qsl("win");
-    } else if (autoOs == qsl("osx") || autoOs == qsl("macos")) {
+    } else if (os == qsl("osx") || os == qsl("macos")) {
         return qsl("mac");
     }
     return QSysInfo::kernelType();
@@ -118,6 +118,7 @@ void Feed::load()
 {
     if (mFeedReply != nullptr && !mFeedReply->isFinished()) {
         qWarning() << "Update check already in progress, ignoring duplicate request";
+        //: Error shown when the user triggers an update check while one is already running
         emit loadError(tr("Update check already in progress"));
         return;
     }
@@ -130,19 +131,23 @@ void Feed::load()
     connect(mFeedReply, &QNetworkReply::finished, this, &Feed::handleFeedFinished);
 }
 
-void Feed::downloadRelease(const Release& release)
+void Feed::downloadRelease(const Release& release, bool requireChecksums)
 {
     const QUrl downloadUrl = release.getDownloadUrl();
     if (!downloadUrl.isValid() || downloadUrl.isEmpty()) {
+        //: Error shown when the GitHub release has no binary matching the user's operating system
         emit downloadError(tr("No download available for your platform"));
         return;
     }
 
-    // First fetch the checksums, then start the actual download
     mCurrentDownload = release;
+    mRequireChecksums = requireChecksums;
     const QUrl checksumsUrl = release.getChecksumsUrl();
     if (checksumsUrl.isValid() && !checksumsUrl.isEmpty()) {
         fetchChecksums(checksumsUrl);
+    } else if (requireChecksums) {
+        //: Error shown when a manual update check cannot verify download integrity
+        emit downloadError(tr("Cannot verify download integrity - no checksum available for this release"));
     } else {
         makeDownloadRequest(downloadUrl);
     }
@@ -158,6 +163,12 @@ void Feed::fetchChecksums(const QUrl& checksumsUrl)
     auto* reply = mNam.get(request);
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         if (reply->error() != QNetworkReply::NoError) {
+            if (mRequireChecksums) {
+                reply->deleteLater();
+                //: Error shown when a manual update check cannot verify download integrity
+                emit downloadError(tr("Cannot verify download integrity - failed to fetch checksums: %1").arg(reply->errorString()));
+                return;
+            }
             qWarning() << "Failed to fetch checksums:" << reply->errorString() << "- download will proceed without integrity verification";
         } else {
             const QString checksumData = QString::fromUtf8(reply->readAll());
@@ -185,6 +196,12 @@ void Feed::fetchChecksums(const QUrl& checksumsUrl)
                 }
             }
             if (mCurrentDownload.getDownloadSHA256().isEmpty()) {
+                if (mRequireChecksums) {
+                    reply->deleteLater();
+                    //: Error shown when a manual update check cannot verify download integrity
+                    emit downloadError(tr("Cannot verify download integrity - no matching checksum found for %1").arg(mCurrentDownload.getDownloadUrl().fileName()));
+                    return;
+                }
                 qCritical() << "Checksum file downloaded but no matching hash found for" << mCurrentDownload.getDownloadUrl().fileName() << "- download will proceed without integrity verification";
             }
         }
@@ -233,6 +250,7 @@ void Feed::handleFeedFinished()
 
     const QJsonDocument doc = QJsonDocument::fromJson(json);
     if (doc.isNull()) {
+        //: Error shown when the server response is not valid JSON
         emit loadError(tr("Could not parse update information from server"));
         return;
     }
@@ -243,8 +261,10 @@ void Feed::handleFeedFinished()
         const QString apiMessage = doc.object().value(qsl("message")).toString();
         qWarning() << "GitHub API error:" << apiMessage;
         if (apiMessage.contains(qsl("rate limit"), Qt::CaseInsensitive)) {
+            //: Error shown when the GitHub API rate limit has been exceeded
             emit loadError(tr("Update check temporarily unavailable. Please try again in a few minutes."));
         } else {
+            //: Error shown when the GitHub API returns an error. %1 is the error message from the server.
             emit loadError(tr("Could not check for updates: %1").arg(apiMessage));
         }
         return;
@@ -258,6 +278,7 @@ void Feed::handleFeedFinished()
                 mReleases << Release(releaseObj, mOs, mArch);
             }
         } else {
+            //: Error shown when the update server response has an unexpected JSON structure
             emit loadError(tr("Unexpected response format from update server"));
             return;
         }
@@ -278,6 +299,7 @@ void Feed::handleFeedFinished()
                 mReleases << Release(releaseObj, mOs, mArch);
             }
         } else {
+            //: Error shown when the update server response has an unexpected JSON structure
             emit loadError(tr("Unexpected response format from update server"));
             return;
         }
@@ -305,6 +327,7 @@ void Feed::handleDownloadReadyRead()
         mDownloadFile = new QTemporaryFile(QDir::tempPath() + qsl("/") + fileName);
         if (!mDownloadFile->open()) {
             qWarning() << "Failed to create temporary file for download:" << mDownloadFile->errorString();
+            //: Error shown when a temporary file cannot be created for the update download. %1 is the system error message.
             emit downloadError(tr("Could not create temporary file for download: %1").arg(mDownloadFile->errorString()));
             mDownloadReply->abort();
             cleanupDownloadFile();
@@ -315,6 +338,7 @@ void Feed::handleDownloadReadyRead()
     const qint64 bytesWritten = mDownloadFile->write(data);
     if (bytesWritten == -1) {
         qWarning() << "Failed to write download data to temporary file:" << mDownloadFile->errorString();
+        //: Error shown when writing download data to disk fails. %1 is the system error message.
         emit downloadError(tr("Failed to save download data: %1").arg(mDownloadFile->errorString()));
         mDownloadReply->abort();
         cleanupDownloadFile();
@@ -333,6 +357,7 @@ void Feed::handleDownloadFinished()
     }
 
     if (mDownloadFile == nullptr) {
+        //: Error shown when the update download completed but the server sent no data
         emit downloadError(tr("No data received from server"));
         mDownloadReply->deleteLater();
         mDownloadReply = nullptr;
@@ -341,6 +366,7 @@ void Feed::handleDownloadFinished()
 
     if (!mDownloadFile->flush()) {
         qWarning() << "Failed to flush download file:" << mDownloadFile->errorString();
+        //: Error shown when flushing the downloaded file to disk fails. %1 is the system error message.
         emit downloadError(tr("Failed to save download: %1").arg(mDownloadFile->errorString()));
         cleanupDownloadFile();
         mDownloadReply->deleteLater();
@@ -349,6 +375,7 @@ void Feed::handleDownloadFinished()
     }
     if (!mDownloadFile->seek(0)) {
         qWarning() << "Failed to seek in download file:" << mDownloadFile->errorString();
+        //: Error shown when the downloaded file cannot be read back for checksum verification
         emit downloadError(tr("Failed to verify download integrity"));
         cleanupDownloadFile();
         mDownloadReply->deleteLater();
@@ -360,6 +387,7 @@ void Feed::handleDownloadFinished()
     const QString hashResult = fileHash.result().toHex();
     if (!mCurrentDownload.getDownloadSHA256().isEmpty() && hashResult.toLower() != mCurrentDownload.getDownloadSHA256().toLower()) {
         qWarning() << "SHA256 mismatch - expected:" << mCurrentDownload.getDownloadSHA256() << "got:" << hashResult;
+        //: Error shown when the downloaded file's SHA256 checksum does not match the expected value
         emit downloadError(tr("Could not verify download integrity."));
         cleanupDownloadFile();
         mDownloadReply->deleteLater();

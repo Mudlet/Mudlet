@@ -45,7 +45,7 @@ public:
     QUrl getUrl() const;
 
     void load();
-    void downloadRelease(const Release& release);
+    void downloadRelease(const Release& release, bool requireChecksums = false);
 
     QList<Release> getUpdates(const Release& currentRelease);
     QList<Release> getReleases() const;
@@ -67,6 +67,7 @@ private:
     void makeDownloadRequest(const QUrl& url);
     void fetchChecksums(const QUrl& checksumsUrl);
     void cleanupDownloadFile();
+    bool mRequireChecksums{false};
 
     QNetworkAccessManager mNam;
     QNetworkReply* mFeedReply;
