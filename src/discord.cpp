@@ -422,7 +422,7 @@ void Discord::UpdatePresence()
     // Helper to decide if a field should be shown. Server-origin fields are
     // subject to mode and privacy flags; Lua-origin fields always pass.
     const bool isShowGameDetails = (pHost->mDiscordMode == Host::DiscordShowGameDetails);
-    const auto shouldShow = [&](int flag) -> bool {
+    const auto shouldShow = [&](Host::DiscordOptionFlag flag) -> bool {
         if (!isServerOrigin(pHost, flag)) {
             return true;
         }
@@ -641,19 +641,19 @@ void Discord::resetData(Host* pHost)
     UpdatePresence();
 }
 
-void Discord::setServerOrigin(Host* pHost, int flag)
+void Discord::setServerOrigin(Host* pHost, const Host::DiscordOptionFlag flag)
 {
     mServerOriginFlags[pHost] |= flag;
 }
 
-void Discord::clearServerOrigin(Host* pHost, int flag)
+void Discord::clearServerOrigin(Host* pHost, const Host::DiscordOptionFlag flag)
 {
     mServerOriginFlags[pHost] &= ~flag;
 }
 
-bool Discord::isServerOrigin(Host* pHost, int flag) const
+bool Discord::isServerOrigin(Host* pHost, const Host::DiscordOptionFlag flag) const
 {
-    return mServerOriginFlags.value(pHost, 0) & flag;
+    return mServerOriginFlags.value(pHost, Host::DiscordNoOption) & flag;
 }
 
 // Returns Host set app ID or the default Mudlet one if none set for the

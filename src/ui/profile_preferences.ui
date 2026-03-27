@@ -3413,7 +3413,7 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>Discord Rich Presence</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_discordPrivacy">
+         <layout class="QGridLayout" name="gridLayout_groupBox_discordRichPresence">
           <item row="0" column="0">
            <layout class="QHBoxLayout">
             <item>

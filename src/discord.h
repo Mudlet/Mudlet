@@ -173,9 +173,9 @@ public:
     void shutdownRpc();
     void UpdatePresence();
 
-    void setServerOrigin(Host* pHost, int flag);
-    void clearServerOrigin(Host* pHost, int flag);
-    bool isServerOrigin(Host* pHost, int flag) const;
+    void setServerOrigin(Host*, const Host::DiscordOptionFlag);
+    void clearServerOrigin(Host*, const Host::DiscordOptionFlag);
+    bool isServerOrigin(Host*, const Host::DiscordOptionFlag) const;
 
     QString deduceGameName(const QString& address);
     QPair<bool, QString> gameIntegrationSupported(const QString& address);
@@ -266,7 +266,7 @@ private:
 
     // Tracks which presence fields were last set by the server (vs Lua).
     // Uses the same bit positions as Host::DiscordOptionFlag.
-    QMap<Host*, int>mServerOriginFlags;
+    QMap<Host*, Host::DiscordOptionFlags> mServerOriginFlags;
 
     // Hash with game name as key and various URL forms that might be used for
     // it as values:
