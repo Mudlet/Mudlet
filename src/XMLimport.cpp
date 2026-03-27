@@ -920,7 +920,10 @@ void XMLimport::readHost(Host* pHost)
     }
 
     if (attributes().hasAttribute(QLatin1String("mDiscordMode"))) {
-        pHost->mDiscordMode = static_cast<Host::DiscordMode>(attributes().value(qsl("mDiscordMode")).toString().toInt());
+        const int modeInt = attributes().value(qsl("mDiscordMode")).toString().toInt();
+        if (modeInt >= Host::DiscordDisabled && modeInt <= Host::DiscordShowGameDetails) {
+            pHost->mDiscordMode = static_cast<Host::DiscordMode>(modeInt);
+        }
     }
 
     if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserName"))) {

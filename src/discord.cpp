@@ -359,6 +359,7 @@ void Discord::UpdatePresence()
         if (mCurrentApplicationId != mHostApplicationIDs.value(nullptr)) {
             shutdownRpc();
             initializeRpc();
+            return;
         }
     }
 
@@ -406,9 +407,10 @@ void Discord::UpdatePresence()
                                      << applicationID << "\"), restarting RPC library with the latter.";
 #endif
         Discord_Shutdown();
-
         Discord_Initialize(applicationID.toUtf8().constData(), mpHandlers, 0, nullptr);
         mCurrentApplicationId = applicationID;
+        // Wait for the ready callback before sending presence
+        return;
     }
 
     if (!pDiscordPresence) {

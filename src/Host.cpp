@@ -337,10 +337,18 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     auto modeStr = readProfileData(qsl("discordmode"));
     if (!modeStr.isEmpty()) {
-        mDiscordMode = static_cast<DiscordMode>(modeStr.toInt());
+        const int modeInt = modeStr.toInt();
+        if (modeInt >= DiscordDisabled && modeInt <= DiscordShowGameDetails) {
+            mDiscordMode = static_cast<DiscordMode>(modeInt);
+        }
+    } else {
+        // Migrate old profiles: if the user had opted out of server-side
+        // Discord, respect that choice by using ShowMudletOnly
+        auto oldOptin = readProfileData(qsl("discordserveroptin"));
+        if (!oldOptin.isEmpty() && oldOptin.toInt() != Qt::Checked) {
+            mDiscordMode = DiscordShowMudletOnly;
+        }
     }
-    // No migration from old discordserveroptin - the new default
-    // (DiscordShowGameDetails) gives game owners maximum options
 
     if (mudlet::self()->storingPasswordsSecurely()) {
         loadSecuredPassword();

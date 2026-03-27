@@ -5053,6 +5053,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_Lcyan_2</tabstop>
   <tabstop>pushButton_Lwhite_2</tabstop>
   <tabstop>reset_colors_button_2</tabstop>
+  <tabstop>comboBox_discordMode</tabstop>
   <tabstop>comboBox_discordLargeIconPrivacy</tabstop>
   <tabstop>comboBox_discordSmallIconPrivacy</tabstop>
   <tabstop>checkBox_discordServerAccessToPartyInfo</tabstop>

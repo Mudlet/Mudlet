@@ -1688,6 +1688,7 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_discordServerAccessToPartyInfo->setChecked(false);
     checkBox_discordServerAccessToTimerInfo->setChecked(false);
     lineEdit_discordUserName->clear();
+    label_discordCurrentUser->clear();
 
     lineEdit_mmcpChatName->clear();
     lineEdit_mmcpPort->clear();
