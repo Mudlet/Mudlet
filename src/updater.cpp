@@ -194,7 +194,8 @@ void Updater::showDialogManually() const
 // only shows the changelog since the last version
 void Updater::showChangelog() const
 {
-    auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
+    auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog, settings);
+    changelogDialog->setAttribute(Qt::WA_DeleteOnClose);
     changelogDialog->setPreviousVersion(getPreviousVersion());
     changelogDialog->show();
 }
@@ -210,7 +211,8 @@ void Updater::showFullChangelog() const
         return;
     }
 
-    auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
+    auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog, settings);
+    changelogDialog->setAttribute(Qt::WA_DeleteOnClose);
     auto releases = feed->getReleases();
     if (!releases.isEmpty()) {
         changelogDialog->setMinVersion(releases.constLast().getVersion());
@@ -319,7 +321,7 @@ void Updater::setupOnWindows()
     });
 
     // Create the update dialog. Constructing it triggers the update check
-    updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, nullptr, settings);
+    updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, settings);
     mpInstallOrRestart->setText(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
@@ -387,7 +389,7 @@ void Updater::setupOnLinux()
     });
 
     // Create the update dialog. Constructing it triggers the update check
-    updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, nullptr, settings);
+    updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, settings);
     mpInstallOrRestart->setText(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);

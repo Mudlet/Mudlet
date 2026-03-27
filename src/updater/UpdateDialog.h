@@ -22,7 +22,7 @@ class UpdateDialog : public QDialog
 
 public:
     enum Type { OnUpdateAvailable, OnLastWindowClosed, Manual, ManualChangelog };
-    explicit UpdateDialog(Feed* feed, Type type = OnUpdateAvailable, QWidget* parent = nullptr, QSettings* settings = nullptr);
+    explicit UpdateDialog(Feed* feed, Type type, QSettings* settings, QWidget* parent = nullptr);
     ~UpdateDialog();
 
     void setIcon(QString fileName);

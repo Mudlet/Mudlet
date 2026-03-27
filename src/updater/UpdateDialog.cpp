@@ -63,17 +63,16 @@ namespace dblsqd {
  * The given UpdateDialog::Type flag determines when/if the dialog is shown
  * automatically.
  *
- * UpdateDialog uses QSettings to save information such as when a release was
- * skipped by the users. If you want to use a specially initialized QSettings
- * object, you may also pass it to this constructor.
+ * A QSettings object must be provided for persisting user preferences such as
+ * skipped releases and auto-download settings.
  *
  */
-UpdateDialog::UpdateDialog(Feed* feed, Type type, QWidget* parent, QSettings* settings)
+UpdateDialog::UpdateDialog(Feed* feed, Type type, QSettings* settings, QWidget* parent)
 : QDialog(parent)
 , mUi(new Ui::UpdateDialog)
 , mFeed(feed)
 , mType(type)
-, mSettings(settings ? settings : new QSettings())
+, mSettings(settings)
 , mAccepted(false)
 , mIsDownloadFinished(false)
 , mAcceptedInstallButton(nullptr)
