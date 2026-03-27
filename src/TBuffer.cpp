@@ -2963,6 +2963,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                 customTooltip = queryParams.value(qsl("tooltip"));
             }
 
+            // Note: title is now parsed directly into mCurrentHyperlinkStyling by parseJsonHyperlinkConfig
+
             QString baseUrl = rawUrl;
 
             if (rawUrl.startsWith(qsl("http://")) || rawUrl.startsWith(qsl("https://")) || rawUrl.startsWith(qsl("ftp://"))) {
@@ -3213,37 +3215,90 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
     qDebug() << "[OSC] Decoded query string:" << decodedQueryString;
 #endif
 
-    // Check for standard format: ?config={...} (entire query string is the config JSON)
-    // The JSON may have escaped quotes: config={\"style\":{...}} or unescaped: config={"style":{...}}
-    // Only treat as full-config JSON if there are no additional parameters (no '&' present)
-    if (decodedQueryString.startsWith(qsl("config=")) && decodedQueryString.indexOf('&') == -1) {
-        QString configJson = decodedQueryString.mid(7); // Remove "config="
-        bool success = parseJsonHyperlinkConfig(configJson, parameters, styling);
-#if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC] Parsed config={...} format, success:" << success;
-#endif
-        return success;
-    }
-
-    QStringList paramPairs = decodedQueryString.split('&');
-    QString presetName;
+    // Extract config= and preset= from the query string.
+    // The config value is JSON which may contain '&' characters inside strings,
+    // so we use brace-depth counting to find where the JSON object ends rather
+    // than naively splitting on '&'.
     QString configJson;
+    QString presetName;
+    QString remaining = decodedQueryString;
 
-    for (const QString& pair : paramPairs) {
-        int eqPos = pair.indexOf('=');
+    while (!remaining.isEmpty()) {
+        // Find config={...} using brace matching
+        if (remaining.startsWith(qsl("config={"))) {
+            int braceStart = 7; // length of "config="
+            int depth = 0;
+            bool inString = false;
+            bool escaped = false;
+            int end = -1;
+
+            for (int i = braceStart; i < remaining.size(); ++i) {
+                QChar ch = remaining.at(i);
+                if (escaped) {
+                    escaped = false;
+                    continue;
+                }
+                if (ch == '\\') {
+                    escaped = true;
+                    continue;
+                }
+                if (ch == '"') {
+                    inString = !inString;
+                    continue;
+                }
+                if (!inString) {
+                    if (ch == '{') {
+                        ++depth;
+                    } else if (ch == '}') {
+                        --depth;
+                        if (depth == 0) {
+                            end = i + 1;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (end > braceStart) {
+                configJson = remaining.mid(braceStart, end - braceStart);
+                // Skip past the JSON and any trailing '&'
+                remaining = (end < remaining.size() && remaining.at(end) == '&')
+                    ? remaining.mid(end + 1)
+                    : remaining.mid(end);
+            } else {
+                // Malformed JSON - take the rest as config and let the parser handle it
+                configJson = remaining.mid(braceStart);
+                remaining.clear();
+            }
+            continue;
+        }
+
+        // Find the next '&' for non-config parameters
+        int ampPos = remaining.indexOf('&');
+        QString param = (ampPos == -1) ? remaining : remaining.left(ampPos);
+        remaining = (ampPos == -1) ? QString() : remaining.mid(ampPos + 1);
+
+        int eqPos = param.indexOf('=');
         if (eqPos == -1) {
             continue;
         }
 
-        QString key = pair.left(eqPos);
-        QString value = pair.mid(eqPos + 1);
+        QString key = param.left(eqPos);
+        QString value = param.mid(eqPos + 1);
 
         if (key == qsl("preset")) {
             presetName = value;
-        } else if (key == qsl("config")) {
-            configJson = value;
         }
     }
+
+#if defined(DEBUG_OSC_PROCESSING)
+    if (!configJson.isEmpty()) {
+        qDebug() << "[OSC] Extracted config JSON:" << configJson;
+    }
+    if (!presetName.isEmpty()) {
+        qDebug() << "[OSC] Found preset:" << presetName;
+    }
+#endif
 
     if (!presetName.isEmpty() || !configJson.isEmpty()) {
         QJsonObject baseConfig;
@@ -3413,6 +3468,27 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC] Tooltip parameter added:" << root[qsl("tooltip")].toString();
 #endif
+    }
+
+    if (root.contains(qsl("title"))) {
+        QJsonValue titleValue = root[qsl("title")];
+        if (titleValue.isString()) {
+            styling.menuTitle = titleValue.toString();
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Title parameter added:" << titleValue.toString();
+#endif
+        } else if (titleValue.isObject()) {
+            QJsonObject titleObj = titleValue.toObject();
+            if (titleObj.contains(qsl("text")) && titleObj[qsl("text")].isString()) {
+                styling.menuTitle = titleObj[qsl("text")].toString();
+            }
+            if (titleObj.contains(qsl("style")) && titleObj[qsl("style")].isObject()) {
+                parseJsonStateStyle(titleObj[qsl("style")].toObject(), styling.menuTitleStyle);
+            }
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Title object parsed - text:" << styling.menuTitle << "hasColor:" << styling.menuTitleStyle.hasForegroundColor;
+#endif
+        }
     }
 
     if (root.contains(qsl("selection")) && root[qsl("selection")].isObject()) {

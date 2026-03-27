@@ -765,6 +765,7 @@ public:
     DiscordOptionFlags mDiscordAccessFlags{DiscordSetSubMask};
 
     double mLineSize = 10.0;
+    double mRoomBorderSize = 10.0;
     double mRoomSize = 0.5;
     double mMapGridLineSize = 0.5;
     QSet<QString> mMapInfoContributors;
