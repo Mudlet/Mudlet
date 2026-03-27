@@ -3083,15 +3083,11 @@ void Host::setDiscordInviteURL(const QString& s)
     writeProfileData(qsl("discordInviteURL"), s);
 }
 
-// Compares the current discord username and discriminator against the non-empty
-// arguments. Returns true if neither match, otherwise false.
-bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const
+// Returns false if the profile is restricted to a specific Discord username
+// and the currently logged-in Discord user doesn't match.
+bool Host::discordUserIdMatch(const QString& userName) const
 {
     if (!userName.isEmpty() && !mRequiredDiscordUserName.isEmpty() && userName != mRequiredDiscordUserName) {
-        return false;
-    }
-
-    if (!userDiscriminator.isEmpty() && !mRequiredDiscordUserDiscriminator.isEmpty() && userDiscriminator != mRequiredDiscordUserDiscriminator) {
         return false;
     }
     return true;

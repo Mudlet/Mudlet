@@ -929,12 +929,6 @@ void XMLimport::readHost(Host* pHost)
         pHost->mRequiredDiscordUserName.clear();
     }
 
-    if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserDiscriminator"))) {
-        pHost->mRequiredDiscordUserDiscriminator = attributes().value(QLatin1String("mRequiredDiscordUserDiscriminator")).toString();
-    } else {
-        pHost->mRequiredDiscordUserDiscriminator.clear();
-    }
-
     if (attributes().hasAttribute(QLatin1String("playerRoomStyle"))) {
         quint8 styleCode = 0;
         quint8 outerDiameterPercentage = 0;

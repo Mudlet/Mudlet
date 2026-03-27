@@ -31,7 +31,6 @@
 
 QString Discord::smUserName;
 QString Discord::smUserId;
-QString Discord::smDiscriminator;
 QString Discord::smAvatar;
 const QString Discord::mMudletApplicationId = qsl("450571881909583884");
 
@@ -294,22 +293,13 @@ void Discord::handleDiscordReady(const DiscordUser* request)
 {
     Discord::smUserName = request->username;
     Discord::smUserId = request->userId;
-    Discord::smDiscriminator = request->discriminator;
     Discord::smAvatar = request->avatar;
 
 #if defined(DEBUG_DISCORD)
-    qDebug().noquote().nospace() << "Discord Ready callback received - for UserName: \"" << smUserName << "\", ID: \"" << smUserId << "#" << smDiscriminator << "\".";
+    qDebug().noquote().nospace() << "Discord Ready callback received - for UserName: \"" << smUserName << "\", ID: \"" << smUserId << "\".";
 #endif
     // don't call UpdatePresence from here - freezes Mudlet deep in the Discord API
     // when profile autostart is enabled
-}
-
-QStringList Discord::getDiscordUserDetails() const
-{
-    QStringList results;
-    results << Discord::smUserName << Discord::smUserId << Discord::smDiscriminator << Discord::smAvatar;
-    results.detach();
-    return results;
 }
 
 void Discord::handleDiscordDisconnected(int errorCode, const char* message)
@@ -334,8 +324,7 @@ void Discord::handleDiscordSpectateGame(const char* spectateSecret)
 
 void Discord::handleDiscordJoinRequest(const DiscordUser* request)
 {
-    qDebug() << "Discord JoinRequest received from user:" << request->username << "userId:" << request->userId;
-    qDebug() << "                         descriminator:" << request->discriminator << "avatar:" << request->avatar;
+    qDebug() << "Discord JoinRequest received from user:" << request->username << "userId:" << request->userId << "avatar:" << request->avatar;
 }
 
 void Discord::UpdatePresence()
@@ -368,9 +357,9 @@ void Discord::UpdatePresence()
         }
     }
 
-    if (!pHost->discordUserIdMatch(Discord::smUserName, Discord::smDiscriminator)) {
+    if (!pHost->discordUserIdMatch(Discord::smUserName)) {
 #if defined(DEBUG_DISCORD)
-        qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - Discord UserName/Discriminator does not match, not sending this update!";
+        qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - Discord UserName does not match, not sending this update!";
 #endif
         return;
     }
@@ -750,5 +739,5 @@ bool Discord::usingMudletsDiscordID(Host* pHost) const
 
 bool Discord::discordUserIdMatch(Host* pHost) const
 {
-    return pHost->discordUserIdMatch(Discord::smUserName, Discord::smDiscriminator);
+    return pHost->discordUserIdMatch(Discord::smUserName);
 }

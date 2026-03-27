@@ -204,9 +204,6 @@ public:
     QPair<int64_t ,int64_t> getTimeStamps(Host* pHost) const { return qMakePair(mStartTimes.value(pHost), mEndTimes.value(pHost)); }
     QPair<int, int> getParty(Host* pHost) const { return qMakePair(mPartySize.value(pHost), mPartyMax.value(pHost)); }
 
-    // Returns the Discord user received from the Discord_Ready callback
-    QStringList getDiscordUserDetails() const;
-
     // Runs the Host::discordUserIdMatch(...) check for the given Host:
     bool discordUserIdMatch(Host* pHost) const;
 
@@ -286,7 +283,6 @@ private:
     // in the User Avatar image and name within that application).
     static QString smUserName;
     static QString smUserId;
-    static QString smDiscriminator;
     static QString smAvatar;
 };
 

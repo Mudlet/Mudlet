@@ -889,7 +889,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_discordServerAccessToPartyInfo->setChecked(!(discordFlags & Host::DiscordSetPartyInfo));
         checkBox_discordServerAccessToTimerInfo->setChecked(!(discordFlags & Host::DiscordSetTimeInfo));
         lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
-        lineEdit_discordUserDiscriminator->setText(pHost->mRequiredDiscordUserDiscriminator);
     }
 
     lineEdit_mmcpChatName->setText(pHost->getMMCPChatName());
@@ -1631,7 +1630,6 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_discordServerAccessToPartyInfo->setChecked(false);
     checkBox_discordServerAccessToTimerInfo->setChecked(false);
     lineEdit_discordUserName->clear();
-    lineEdit_discordUserDiscriminator->clear();
 
     lineEdit_mmcpChatName->clear();
     lineEdit_mmcpPort->clear();
@@ -3156,12 +3154,6 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->setDiscordMode(static_cast<Host::DiscordMode>(comboBox_discordMode->currentIndex()));
 
         pHost->mRequiredDiscordUserName = lineEdit_discordUserName->text().trimmed();
-        if (lineEdit_discordUserDiscriminator->hasAcceptableInput()) {
-            // The input mask specifies 4 digits [0-9]
-            pHost->mRequiredDiscordUserDiscriminator = lineEdit_discordUserDiscriminator->text();
-        } else {
-            pHost->mRequiredDiscordUserDiscriminator.clear();
-        }
 
         // Save chat options so they are written to XML upon export
         pHost->setMMCPChatName(lineEdit_mmcpChatName->text().trimmed());

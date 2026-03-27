@@ -346,7 +346,7 @@ public:
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
     void setDiscordMode(DiscordMode mode);
-    bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
+    bool discordUserIdMatch(const QString& userName) const;
     const QString& getMMCPChatName() const;
     quint16 getMMCPPort();
     const QString& getMMCPChatPrefix() const;
@@ -953,13 +953,9 @@ private:
     // Will be null/empty if they have not set their own invite
     QString mDiscordInviteURL;
 
-    // Will be null/empty if we are not concerned to check the use of Discord
-    // Rich Presence against the local user currently logged into Discord -
-    // these two will be checked against the values from the Discord instance
-    // with which we are linked to by the RPC library - and if they do not match
-    // we won't use Discord functions.
+    // If non-empty, Rich Presence will only be shown when logged into this
+    // Discord username - useful if multiple people share a machine.
     QString mRequiredDiscordUserName;
-    QString mRequiredDiscordUserDiscriminator;
 
     QString mMMCPChatName;
     QString mMMCPChatPrefix;
