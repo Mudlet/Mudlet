@@ -228,6 +228,8 @@ private:
     std::function<void(const DiscordRichPresence*)> Discord_UpdatePresence;
     std::function<void(void)> Discord_RunCallbacks;
     std::function<void(void)> Discord_Shutdown;
+    // Could be useful for clearing presence without tearing down the RPC connection:
+    // std::function<void(void)> Discord_ClearPresence;
 #if defined(DISCORD_DISABLE_IO_THREAD)
     // std::function<void(void)> Discord_UpdateConnection;
 #endif
