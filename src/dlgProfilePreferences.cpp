@@ -890,9 +890,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_discordServerAccessToTimerInfo->setChecked(!(discordFlags & Host::DiscordSetTimeInfo));
         lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
         const QString currentDiscordUser = Discord::getLoggedInUserName();
-        qDebug() << "Discord logged-in username:" << currentDiscordUser << "(empty:" << currentDiscordUser.isEmpty() << ")";
         if (!currentDiscordUser.isEmpty()) {
-            //: Label showing which Discord account is currently logged in on this machine
             //: Shows which Discord account is logged in, e.g. "Discord user: morquin"
             label_discordCurrentUser->setText(tr("Discord user: %1").arg(currentDiscordUser));
         } else {

@@ -164,6 +164,36 @@ private slots:
         QVERIFY(strlen(converted.details) < 128);
     }
 
+    // Test that Discord username comparison is case-insensitive.
+    // This mirrors the logic in Host::discordUserIdMatch without
+    // constructing a Host (which has heavy dependencies).
+    void testUserNameComparisonCaseInsensitive()
+    {
+        // The comparison logic from Host::discordUserIdMatch:
+        // if userName and required are both non-empty, compare toLower()
+        auto matchesRequired = [](const QString& loggedInUser, const QString& requiredUser) -> bool {
+            if (!loggedInUser.isEmpty() && !requiredUser.isEmpty() && loggedInUser.toLower() != requiredUser.toLower()) {
+                return false;
+            }
+            return true;
+        };
+
+        // No restriction - should always match
+        QVERIFY(matchesRequired(qsl("anyuser"), QString()));
+        QVERIFY(matchesRequired(QString(), QString()));
+
+        // Exact lowercase match
+        QVERIFY(matchesRequired(qsl("morquin"), qsl("morquin")));
+        // Mixed case should still match
+        QVERIFY(matchesRequired(qsl("Morquin"), qsl("morquin")));
+        QVERIFY(matchesRequired(qsl("MORQUIN"), qsl("morquin")));
+        QVERIFY(matchesRequired(qsl("morquin"), qsl("Morquin")));
+        // Wrong user should not match
+        QVERIFY(!matchesRequired(qsl("someone_else"), qsl("morquin")));
+        // Empty logged-in user (not connected yet) should match
+        QVERIFY(matchesRequired(QString(), qsl("morquin")));
+    }
+
     void cleanupTestCase()
     {
     }
