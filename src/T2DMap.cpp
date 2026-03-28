@@ -475,6 +475,7 @@ void T2DMap::init()
     }
 
     eSize = mpHost->mLineSize;
+    mBSize = mpHost->mRoomBorderSize;
     rSize = mpHost->mRoomSize;
     mMapperUseAntiAlias = mpHost->mMapperUseAntiAlias;
     mShowGrid = mpHost->mMapperShowGrid;
@@ -1091,9 +1092,9 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     double realHeight;
     int borderWidth;
     if (pRoom->mBorderThickness > 0) {
-        borderWidth = qMax(1, static_cast<int>(pRoom->mBorderThickness / eSize * mRoomWidth * rSize));
+        borderWidth = qMax(1, static_cast<int>(pRoom->mBorderThickness / mBSize * mRoomWidth * rSize));
     } else {
-        borderWidth = qMax(1, static_cast<int>(1 / eSize * mRoomWidth * rSize));
+        borderWidth = qMax(1, static_cast<int>(1 / mBSize * mRoomWidth * rSize));
     }
     const bool shouldDrawBorder = (mpHost->mMapperShowRoomBorders || pRoom->mBorderColor.isValid() || pRoom->mBorderThickness > 0) && !isGridMode;
     bool showThisRoomName = showRoomName;
@@ -1822,13 +1823,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
     mRoomWidth = widgetWidth / xspan;
     mRoomHeight = widgetHeight / yspan;
 
-    static float oldRoomWidth = 0.0f;
-    static float oldRoomHeight = 0.0f;
-    if (!qFuzzyCompare(1.0f + oldRoomWidth, 1.0f + mRoomWidth) || !qFuzzyCompare(1.0f + oldRoomHeight, 1.0f + mRoomHeight)) {
+    if (!qFuzzyCompare(1.0f + mPrevRoomWidth, 1.0f + mRoomWidth) || !qFuzzyCompare(1.0f + mPrevRoomHeight, 1.0f + mRoomHeight)) {
         flushSymbolPixmapCache();
         flushTextLabelPixmapCache();
-        oldRoomWidth = mRoomWidth;
-        oldRoomHeight = mRoomHeight;
+        mPrevRoomWidth = mRoomWidth;
+        mPrevRoomHeight = mRoomHeight;
     }
 
     mRX = qRound(mRoomWidth * ((xspan / 2.0) - mMapCenterX));
@@ -1901,8 +1900,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
         QColor gridColor = mpHost->mMapGridColor;
 
         QPen gridPen(gridColor);
-        const qreal gridWidth = static_cast<qreal>(mpHost->mMapGridLineSize);
+        const qreal gridWidth = static_cast<qreal>(mpHost->mMapGridLineSize) * mRoomWidth / 50.0;
         gridPen.setWidthF(gridWidth);
+        gridPen.setCosmetic(mMapperUseAntiAlias);
         painter.setPen(gridPen);
 
         const qreal visibleMinX = mMapCenterX - xspan / 2.0;
@@ -2103,7 +2103,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
         painter.save();
         const QPen transparentPen(Qt::transparent);
         QPainterPath myPath;
-        const double roomRadius = (mpMap->mPlayerRoomOuterDiameterPercentage / 200.0) * static_cast<double>(mRoomWidth);
+        // Use the room+border diagonal so 100% fully encompasses the square
+        // (including corners), not just touching the midpoints of the sides
+        const int borderWidth = qMax(1, static_cast<int>(1.0 / mBSize * mRoomWidth * rSize));
+        const double roomVisualSize = static_cast<double>(mRoomWidth) * rSize + 2.0 * borderWidth;
+        const double roomRadius = (mpMap->mPlayerRoomOuterDiameterPercentage / 200.0) * roomVisualSize * M_SQRT2;
         QRadialGradient gradient(playerRoomOnWidgetCoordinates, roomRadius);
         if (mpHost->mMapStrongHighlight) {
             // Never set, no means to except via XMLImport, as dlgMapper class's
@@ -2123,7 +2127,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             painter.setPen(transparentPen);
             myPath.addEllipse(playerRoomOnWidgetCoordinates, roomRadius, roomRadius);
         } else {
-            gradient.setStops(mPlayerRoomColorGradentStops);
+            gradient.setStops(mPlayerRoomColorGradientStops);
             painter.setBrush(gradient);
             painter.setPen(transparentPen);
             myPath.addEllipse(playerRoomOnWidgetCoordinates, roomRadius, roomRadius);
@@ -4659,6 +4663,16 @@ void T2DMap::setExitSize(double f)
     if (mpHost) {
         mpHost->mLineSize = f;
     }
+    update();
+}
+
+void T2DMap::setBorderSize(double f)
+{
+    mBSize = f;
+    if (mpHost) {
+        mpHost->mRoomBorderSize = f;
+    }
+    update();
 }
 
 void T2DMap::slot_setCustomLine()
@@ -5150,79 +5164,66 @@ void T2DMap::setPlayerRoomStyle(const int type)
         return;
     }
 
-    // From Qt 5.6 does not deallocate any memory previously used:
-    mPlayerRoomColorGradentStops.clear();
-    // Indicate the LARGEST size we will need
-    mPlayerRoomColorGradentStops.reserve(5);
+    mPlayerRoomColorGradientStops = buildPlayerRoomGradientStops(
+            type, mpMap->mPlayerRoomInnerDiameterPercentage, mpMap->mPlayerRoomInnerColor, mpMap->mPlayerRoomOuterColor);
+}
 
-    const double factor = mpMap->mPlayerRoomInnerDiameterPercentage / 100.0;
-    const bool solid = (mpMap->mPlayerRoomInnerDiameterPercentage == 0);
-    switch (type) {
+QGradientStops T2DMap::buildPlayerRoomGradientStops(const int style, const quint8 innerDiameterPercentage, const QColor& innerColor, const QColor& outerColor)
+{
+    const double factor = innerDiameterPercentage / 100.0;
+    const bool solid = (innerDiameterPercentage == 0);
+
+    switch (style) {
     case 1: // Simple(?) shaded red ring:
         if (solid) {
-            mPlayerRoomColorGradentStops.resize(3);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255, 0, 0, 255));
-            mPlayerRoomColorGradentStops[1] = QGradientStop(0.990, QColor(255, 0, 0, 255));
-            mPlayerRoomColorGradentStops[2] = QGradientStop(1.000, QColor(255, 0, 0, 0));
-        } else {
-            mPlayerRoomColorGradentStops.resize(5);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255, 0, 0, 0));
-            mPlayerRoomColorGradentStops[1] = QGradientStop(factor * 0.950, QColor(255, 0, 0, 0));
-            mPlayerRoomColorGradentStops[2] = QGradientStop(factor * 1.050, QColor(255, 0, 0, 255));
-            mPlayerRoomColorGradentStops[3] = QGradientStop(1.000 - (factor * 0.100), QColor(255, 0, 0, 255));
-            mPlayerRoomColorGradentStops[4] = QGradientStop(1.000, QColor(255, 0, 0, 0));
+            return {{0.000, QColor(255, 0, 0, 255)},
+                    {0.990, QColor(255, 0, 0, 255)},
+                    {1.000, QColor(255, 0, 0, 0)}};
         }
-        break;
-        // End of case 1:
+        return {{0.000, QColor(255, 0, 0, 0)},
+                {factor * 0.980, QColor(255, 0, 0, 0)},
+                {factor * 1.020, QColor(255, 0, 0, 255)},
+                {0.980, QColor(255, 0, 0, 255)},
+                {1.000, QColor(255, 0, 0, 0)}};
 
     case 2: // Shaded bicolor (blue-yellow - so it ALWAYS contrasts with underlying room color) Ring:
         if (solid) {
-            mPlayerRoomColorGradentStops.resize(3);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255, 255, 0, 255));
-            mPlayerRoomColorGradentStops[1] = QGradientStop(0.990, QColor(0, 0, 255, 255));
-            mPlayerRoomColorGradentStops[2] = QGradientStop(1.000, QColor(0, 0, 255, 0));
-        } else {
-            mPlayerRoomColorGradentStops.resize(5);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255, 255, 0, 0));
-            mPlayerRoomColorGradentStops[1] = QGradientStop(factor * 0.950, QColor(255, 255, 0, 0));
-            mPlayerRoomColorGradentStops[2] = QGradientStop(factor * 1.050, QColor(255, 255, 0, 255));
-            mPlayerRoomColorGradentStops[3] = QGradientStop(1.000 - (factor * 0.100), QColor(0, 0, 255, 255));
-            mPlayerRoomColorGradentStops[4] = QGradientStop(1.000, QColor(0, 0, 255, 0));
+            return {{0.000, QColor(255, 255, 0, 255)},
+                    {0.990, QColor(0, 0, 255, 255)},
+                    {1.000, QColor(0, 0, 255, 0)}};
         }
-        break;
-        // End of case 2:
+        return {{0.000, QColor(255, 255, 0, 0)},
+                {factor * 0.980, QColor(255, 255, 0, 0)},
+                {factor * 1.020, QColor(255, 255, 0, 255)},
+                {0.980, QColor(0, 0, 255, 255)},
+                {1.000, QColor(0, 0, 255, 0)}};
 
     case 3: { // User set ring:
         if (solid) {
-            mPlayerRoomColorGradentStops.resize(3);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, mpMap->mPlayerRoomInnerColor);
-            mPlayerRoomColorGradentStops[1] = QGradientStop(0.990, mpMap->mPlayerRoomOuterColor);
-            QColor transparentColor(mpMap->mPlayerRoomOuterColor);
-            transparentColor.setAlpha(0);
-            mPlayerRoomColorGradentStops[2] = QGradientStop(1.000, transparentColor);
-        } else {
-            mPlayerRoomColorGradentStops.resize(5);
-            QColor transparentColor(mpMap->mPlayerRoomInnerColor);
-            transparentColor.setAlpha(0);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(1.000, transparentColor);
-            mPlayerRoomColorGradentStops[1] = QGradientStop(factor * 0.950, transparentColor);
-            mPlayerRoomColorGradentStops[2] = QGradientStop(factor * 1.050, mpMap->mPlayerRoomInnerColor);
-            mPlayerRoomColorGradentStops[3] = QGradientStop(1.000 - (factor * 0.100), mpMap->mPlayerRoomOuterColor);
-            transparentColor = mpMap->mPlayerRoomOuterColor;
-            transparentColor.setAlpha(0);
-            mPlayerRoomColorGradentStops[4] = QGradientStop(1.000, transparentColor);
+            QColor transparentOuter(outerColor);
+            transparentOuter.setAlpha(0);
+            return {{0.000, innerColor},
+                    {0.990, outerColor},
+                    {1.000, transparentOuter}};
         }
-        break;
-    } // End of case 3:
+        QColor transparentInner(innerColor);
+        transparentInner.setAlpha(0);
+        QColor transparentOuter(outerColor);
+        transparentOuter.setAlpha(0);
+        return {{0.000, transparentInner},
+                {factor * 0.980, transparentInner},
+                {factor * 1.020, innerColor},
+                {0.980, outerColor},
+                {1.000, transparentOuter}};
+    }
 
     default: // Sort of emulates the original code:
-        mPlayerRoomColorGradentStops.resize(5);
-        mPlayerRoomColorGradentStops[0] = QGradientStop(0, Qt::white);
-        mPlayerRoomColorGradentStops[1] = QGradientStop(0.7, QColor(255, 0, 0, 200));
-        mPlayerRoomColorGradentStops[2] = QGradientStop(0.799, QColor(150, 100, 100, 100));
-        mPlayerRoomColorGradentStops[3] = QGradientStop(0.80, QColor(150, 100, 100, 150));
-        mPlayerRoomColorGradentStops[4] = QGradientStop(0.95, QColor(255, 0, 0, 150));
-    } // End of switch ()
+        return {{0, Qt::white},
+                {0.7, QColor(255, 0, 0, 200)},
+                {0.799, QColor(150, 100, 100, 100)},
+                {0.80, QColor(150, 100, 100, 150)},
+                {0.95, QColor(255, 0, 0, 150)}};
+    }
 }
 
 void T2DMap::clearSelection()

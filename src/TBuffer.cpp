@@ -107,12 +107,6 @@ TChar::TChar(const TChar& copy)
 , mFlags(copy.mFlags)
 , mIsSelected(false)
 , mLinkIndex(copy.mLinkIndex)
-, mUnderlineColor(copy.mUnderlineColor)
-, mOverlineColor(copy.mOverlineColor)
-, mStrikeoutColor(copy.mStrikeoutColor)
-, mHasCustomUnderlineColor(copy.mHasCustomUnderlineColor)
-, mHasCustomOverlineColor(copy.mHasCustomOverlineColor)
-, mHasCustomStrikeoutColor(copy.mHasCustomStrikeoutColor)
 {
 }
 
@@ -667,6 +661,25 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 // '\\' so must not respond to an ESC here - though the code
                 // arrangement should avoid looping around this loop while
                 // seeking this character pair anyhow...
+
+                // If MXP is building a tag when we see ESC, the tag is invalid
+                // because ANSI escape sequences cannot be part of MXP tags.
+                // Output the partial tag as literal text before processing ESC.
+                if (mpHost->mMxpProcessor.isEnabled() && mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
+                    TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                    attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+                    TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+                    const QString literalText = mpHost->mMxpProcessor.abortCurrentTag();
+                    mMudLine.append(literalText);
+                    for (int i = 0; i < literalText.length(); ++i) {
+                        mMudBuffer.push_back(c);
+                    }
+
+                    mTagWatchdog->stop();
+                    mWatchdogPhase = WatchdogPhase::None;
+                }
+
                 mGotESC = true;
                 ++localBufferPosition;
                 continue;
@@ -998,9 +1011,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         continue;
                     }
                     case HANDLER_INSERT_AND_REPROCESS: {
-                        // Insert text like HANDLER_INSERT_ENTITY_SYS, but don't increment position
-                        // This is used for error recovery when a '<' is found inside a tag -
-                        // we output the incomplete tag as text, then reprocess the '<' to start a new tag
+                        // Insert text like HANDLER_INSERT_ENTITY_SYS, but don't increment position.
+                        // Used for error recovery: output the rejected/incomplete tag as literal
+                        // text, then reprocess the current character (which may be a newline,
+                        // an ANSI escape, or the character after an unrecognized tag name)
 
                         TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
                         attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
@@ -1198,15 +1212,6 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 if (effectiveStyling.isStrikeOut) {
                     c.mFlags |= TChar::StrikeOut;
                 }
-                if (effectiveStyling.hasUnderlineColor && effectiveStyling.isUnderlined) {
-                    c.setUnderlineColor(effectiveStyling.underlineColor);
-                }
-                if (effectiveStyling.hasOverlineColor && effectiveStyling.isOverlined) {
-                    c.setOverlineColor(effectiveStyling.overlineColor);
-                }
-                if (effectiveStyling.hasStrikeoutColor && effectiveStyling.isStrikeOut) {
-                    c.setStrikeoutColor(effectiveStyling.strikeoutColor);
-                }
             }
 
             // Only re-apply base styling if effective pseudo-class styling is not present
@@ -1238,18 +1243,6 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
                 if (mCurrentHyperlinkStyling.isStrikeOut) {
                     c.mFlags |= TChar::StrikeOut;
-                }
-
-                if (mCurrentHyperlinkStyling.hasUnderlineColor && mCurrentHyperlinkStyling.isUnderlined) {
-                    c.setUnderlineColor(mCurrentHyperlinkStyling.underlineColor);
-                }
-
-                if (mCurrentHyperlinkStyling.hasOverlineColor && mCurrentHyperlinkStyling.isOverlined) {
-                    c.setOverlineColor(mCurrentHyperlinkStyling.overlineColor);
-                }
-
-                if (mCurrentHyperlinkStyling.hasStrikeoutColor && mCurrentHyperlinkStyling.isStrikeOut) {
-                    c.setStrikeoutColor(mCurrentHyperlinkStyling.strikeoutColor);
                 }
 
                 if (mCurrentHyperlinkStyling.isBold) {
@@ -2970,27 +2963,45 @@ void TBuffer::decodeOSC(const QString& sequence)
                 customTooltip = queryParams.value(qsl("tooltip"));
             }
 
-            // Remove styling/menu/tooltip query parameters from URL for command processing
+            // Note: title is now parsed directly into mCurrentHyperlinkStyling by parseJsonHyperlinkConfig
+
             QString baseUrl = rawUrl;
-            // Reuse the already parsed params for URL reconstruction
-            QMap<QString, QString> allParams = queryParams;
 
-            // For web URLs, preserve original parameters except our special ones
             if (rawUrl.startsWith(qsl("http://")) || rawUrl.startsWith(qsl("https://")) || rawUrl.startsWith(qsl("ftp://"))) {
-                // Remove our special parameters
-                allParams.remove(qsl("style"));
-                allParams.remove(qsl("menu"));
-                allParams.remove(qsl("tooltip"));
-
-                // Rebuild URL with only non-special parameters
                 int queryStart = baseUrl.indexOf('?');
                 if (queryStart != -1) {
-                    baseUrl = baseUrl.left(queryStart);
-                }
+                    // Strip reserved parameters when corresponding OSC 8 features are enabled
+                    // (currently always true; will reflect NEW-ENVIRON negotiation once fully implemented)
+                    const bool stripConfig = mpHost->shouldStripOscHyperlinkConfigParam();
+                    const bool stripPreset = mpHost->shouldStripOscHyperlinkPresetParam();
 
-                // Only append parameters if there are any left
-                if (!allParams.isEmpty()) {
-                    baseUrl = appendQueryParameters(baseUrl, allParams);
+                    // Compare keys against literal strings only; percent-encoded key names
+                    // (e.g. %63%6F%6E%66%69%67 for "config") are intentionally not stripped
+                    const QStringList rawPairs = baseUrl.mid(queryStart + 1).split('&');
+                    QStringList kept;
+                    for (const auto& pair : rawPairs) {
+                        // Find the separator between key and value - use earliest of '=' or '%3D' (percent-encoded =)
+                        int literalEq = pair.indexOf('=');
+                        int encodedEq = pair.indexOf(qsl("%3D"), 0, Qt::CaseInsensitive);
+                        int eqPos = -1;
+                        if (literalEq >= 0 && encodedEq >= 0) {
+                            eqPos = qMin(literalEq, encodedEq);
+                        } else if (literalEq >= 0) {
+                            eqPos = literalEq;
+                        } else {
+                            eqPos = encodedEq;
+                        }
+                        const auto key = eqPos >= 0 ? pair.left(eqPos) : pair;
+                        if ((stripConfig && key == qsl("config")) || (stripPreset && key == qsl("preset"))) {
+                            continue;
+                        }
+                        kept.append(pair);
+                    }
+
+                    baseUrl = baseUrl.left(queryStart);
+                    if (!kept.isEmpty()) {
+                        baseUrl += '?' + kept.join('&');
+                    }
                 }
             } else {
                 // For send: and prompt: commands, remove all query parameters
@@ -3204,37 +3215,90 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
     qDebug() << "[OSC] Decoded query string:" << decodedQueryString;
 #endif
 
-    // Check for standard format: ?config={...} (entire query string is the config JSON)
-    // The JSON may have escaped quotes: config={\"style\":{...}} or unescaped: config={"style":{...}}
-    // Only treat as full-config JSON if there are no additional parameters (no '&' present)
-    if (decodedQueryString.startsWith(qsl("config=")) && decodedQueryString.indexOf('&') == -1) {
-        QString configJson = decodedQueryString.mid(7); // Remove "config="
-        bool success = parseJsonHyperlinkConfig(configJson, parameters, styling);
-#if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC] Parsed config={...} format, success:" << success;
-#endif
-        return success;
-    }
-
-    QStringList paramPairs = decodedQueryString.split('&');
-    QString presetName;
+    // Extract config= and preset= from the query string.
+    // The config value is JSON which may contain '&' characters inside strings,
+    // so we use brace-depth counting to find where the JSON object ends rather
+    // than naively splitting on '&'.
     QString configJson;
+    QString presetName;
+    QString remaining = decodedQueryString;
 
-    for (const QString& pair : paramPairs) {
-        int eqPos = pair.indexOf('=');
+    while (!remaining.isEmpty()) {
+        // Find config={...} using brace matching
+        if (remaining.startsWith(qsl("config={"))) {
+            int braceStart = 7; // length of "config="
+            int depth = 0;
+            bool inString = false;
+            bool escaped = false;
+            int end = -1;
+
+            for (int i = braceStart; i < remaining.size(); ++i) {
+                QChar ch = remaining.at(i);
+                if (escaped) {
+                    escaped = false;
+                    continue;
+                }
+                if (ch == '\\') {
+                    escaped = true;
+                    continue;
+                }
+                if (ch == '"') {
+                    inString = !inString;
+                    continue;
+                }
+                if (!inString) {
+                    if (ch == '{') {
+                        ++depth;
+                    } else if (ch == '}') {
+                        --depth;
+                        if (depth == 0) {
+                            end = i + 1;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (end > braceStart) {
+                configJson = remaining.mid(braceStart, end - braceStart);
+                // Skip past the JSON and any trailing '&'
+                remaining = (end < remaining.size() && remaining.at(end) == '&')
+                    ? remaining.mid(end + 1)
+                    : remaining.mid(end);
+            } else {
+                // Malformed JSON - take the rest as config and let the parser handle it
+                configJson = remaining.mid(braceStart);
+                remaining.clear();
+            }
+            continue;
+        }
+
+        // Find the next '&' for non-config parameters
+        int ampPos = remaining.indexOf('&');
+        QString param = (ampPos == -1) ? remaining : remaining.left(ampPos);
+        remaining = (ampPos == -1) ? QString() : remaining.mid(ampPos + 1);
+
+        int eqPos = param.indexOf('=');
         if (eqPos == -1) {
             continue;
         }
 
-        QString key = pair.left(eqPos);
-        QString value = pair.mid(eqPos + 1);
+        QString key = param.left(eqPos);
+        QString value = param.mid(eqPos + 1);
 
         if (key == qsl("preset")) {
             presetName = value;
-        } else if (key == qsl("config")) {
-            configJson = value;
         }
     }
+
+#if defined(DEBUG_OSC_PROCESSING)
+    if (!configJson.isEmpty()) {
+        qDebug() << "[OSC] Extracted config JSON:" << configJson;
+    }
+    if (!presetName.isEmpty()) {
+        qDebug() << "[OSC] Found preset:" << presetName;
+    }
+#endif
 
     if (!presetName.isEmpty() || !configJson.isEmpty()) {
         QJsonObject baseConfig;
@@ -3404,6 +3468,27 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC] Tooltip parameter added:" << root[qsl("tooltip")].toString();
 #endif
+    }
+
+    if (root.contains(qsl("title"))) {
+        QJsonValue titleValue = root[qsl("title")];
+        if (titleValue.isString()) {
+            styling.menuTitle = titleValue.toString();
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Title parameter added:" << titleValue.toString();
+#endif
+        } else if (titleValue.isObject()) {
+            QJsonObject titleObj = titleValue.toObject();
+            if (titleObj.contains(qsl("text")) && titleObj[qsl("text")].isString()) {
+                styling.menuTitle = titleObj[qsl("text")].toString();
+            }
+            if (titleObj.contains(qsl("style")) && titleObj[qsl("style")].isObject()) {
+                parseJsonStateStyle(titleObj[qsl("style")].toObject(), styling.menuTitleStyle);
+            }
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Title object parsed - text:" << styling.menuTitle << "hasColor:" << styling.menuTitleStyle.hasForegroundColor;
+#endif
+        }
     }
 
     if (root.contains(qsl("selection")) && root[qsl("selection")].isObject()) {
@@ -4336,6 +4421,9 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
         const int linkId = buffer.at(y).at(x).linkIndex();
         if (linkId && (linkId != oldLinkId)) {
             id = slice.mLinkStore.addLinks(mLinkStore.getLinksConst(linkId), mLinkStore.getHintsConst(linkId), mpHost);
+            if (mLinkStore.hasStyling(linkId)) {
+                slice.mLinkStore.setStyling(id, mLinkStore.getStyling(linkId));
+            }
             oldLinkId = linkId;
         }
 
@@ -4410,6 +4498,9 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
         const int linkId = chunk.buffer.at(0).at(cx).linkIndex();
         if (linkId && (oldLinkId != linkId)) {
             id = mLinkStore.addLinks(chunk.mLinkStore.getLinksConst(linkId), chunk.mLinkStore.getHintsConst(linkId), mpHost);
+            if (chunk.mLinkStore.hasStyling(linkId)) {
+                mLinkStore.setStyling(id, chunk.mLinkStore.getStyling(linkId));
+            }
             oldLinkId = linkId;
         }
         if (!linkId) {
@@ -5221,6 +5312,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     TChar::AttributeFlags currentFlags = TChar::None;
     QColor currentFgColor(Qt::black);
     QColor currentBgColor(Qt::black);
+    int currentLinkIndex = 0;
     // This combination of color values (black on black) cannot usefully be used in practice
     // - so use as initialization values
 
@@ -5259,9 +5351,10 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     }
 
     for (auto cookedPos = static_cast<size_t>(pos); pos < lastPos; ++cookedPos, ++pos) {
+        const int charLinkIndex = buffer.at(cookedRow).at(cookedPos).linkIndex();
         // Do we need to start a new span?
         if (firstSpan || buffer.at(cookedRow).at(cookedPos).mFgColor != currentFgColor || buffer.at(cookedRow).at(cookedPos).mBgColor != currentBgColor
-            || (buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask) != currentFlags) {
+            || (buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask) != currentFlags || charLinkIndex != currentLinkIndex) {
             if (firstSpan) {
                 firstSpan = false; // The first span - won't need to close the previous one
             } else {
@@ -5270,6 +5363,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
             currentFgColor = buffer.at(cookedRow).at(cookedPos).mFgColor;
             currentBgColor = buffer.at(cookedRow).at(cookedPos).mBgColor;
             currentFlags = buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask;
+            currentLinkIndex = charLinkIndex;
 
             // clang-format off
             // Determine blink class if any (only when blink is enabled in settings)
@@ -5284,33 +5378,72 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
                 }
             }
 
+            // Build text-decoration CSS including decoration colors from TLinkStore
+            QString textDecorationCss;
+            if (currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline)) {
+                QString decorations;
+                if (currentFlags & TChar::Underline) {
+                    decorations.append(QLatin1String(" underline"));
+                }
+                if (currentFlags & TChar::StrikeOut) {
+                    decorations.append(QLatin1String(" line-through"));
+                }
+                if (currentFlags & TChar::Overline) {
+                    decorations.append(QLatin1String(" overline"));
+                }
+                textDecorationCss = qsl(" text-decoration:%1;").arg(decorations);
+
+                // Look up decoration color from TLinkStore if available
+                if (currentLinkIndex > 0 && mLinkStore.hasStyling(currentLinkIndex)) {
+                    Mudlet::HyperlinkStyling styling = mLinkStore.getStyling(currentLinkIndex);
+                    styling.currentState = getLinkState(currentLinkIndex);
+                    Mudlet::HyperlinkStyling::StateStyle effectiveStyle = styling.getEffectiveStyle();
+
+                    // CSS text-decoration-color applies a single color to all
+                    // decoration lines, so pick the most visually prominent one
+                    // (underline > strikeout > overline). The render path in
+                    // drawCustomDecorations can apply each color independently.
+                    QColor decorationColor;
+                    bool hasDecorationColor = false;
+                    if (effectiveStyle.hasUnderlineColor && (currentFlags & TChar::Underline)) {
+                        decorationColor = effectiveStyle.underlineColor;
+                        hasDecorationColor = true;
+                    } else if (effectiveStyle.hasStrikeoutColor && (currentFlags & TChar::StrikeOut)) {
+                        decorationColor = effectiveStyle.strikeoutColor;
+                        hasDecorationColor = true;
+                    } else if (effectiveStyle.hasOverlineColor && (currentFlags & TChar::Overline)) {
+                        decorationColor = effectiveStyle.overlineColor;
+                        hasDecorationColor = true;
+                    }
+
+                    if (hasDecorationColor) {
+                        textDecorationCss.append(qsl(" text-decoration-color: rgb(%1,%2,%3);")
+                            .arg(QString::number(decorationColor.red()),
+                                 QString::number(decorationColor.green()),
+                                 QString::number(decorationColor.blue())));
+                    }
+                }
+            }
+
             if (currentFlags & TChar::Reverse) {
                 // Swap the fore and background colours:
-                s.append(qsl("<span%10 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
+                s.append(qsl("<span%9 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6);%7%8")
                          .arg(QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 1 to 3
                               QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
-                              currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline ) // remainder is arg 9
-                              ? qsl(" text-decoration:%1%2%3")
-                                .arg(currentFlags & TChar::Underline ? QLatin1String(" underline") : QString(),
-                                     currentFlags & TChar::StrikeOut ? QLatin1String(" line-through") : QString(),
-                                     currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
-                              : QString(),
-                              blinkClass)); // arg 10
+                              blinkClass) // arg 9
+                         + textDecorationCss
+                         + qsl("\">"));
             } else {
-                s.append(qsl("<span%10 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
+                s.append(qsl("<span%9 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6);%7%8")
                          .arg(QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 1 to 3
                               QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
-                              currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline ) // remainder is arg 9
-                              ? qsl(" text-decoration:%1%2%3")
-                                .arg(currentFlags & TChar::Underline ? QLatin1String(" underline") : QString(),
-                                     currentFlags & TChar::StrikeOut ? QLatin1String(" line-through") : QString(),
-                                     currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
-                              : QString(),
-                              blinkClass)); // arg 10
+                              blinkClass) // arg 9
+                         + textDecorationCss
+                         + qsl("\">"));
             }
             // clang-format on
         }
@@ -6271,7 +6404,11 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "\x1b]8;;send:look\x1b\\\x1b[34mLook\x1b[0m\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;prompt:cast%20fireball\x1b\\\x1b[33mCast Spell\x1b[0m\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;https://mudlet.org\x1b\\\x1b[36mWebsite\x1b[0m\x1b]8;;\x1b\\\n";
-    output += "       send:CMD  prompt:CMD (editable)  https://URL (browser)\n\n";
+    output += "       send:CMD  prompt:CMD (editable)  https://URL (browser)\n";
+    output += "URLs:  ";
+    output += "\x1b]8;;https://mudlet.org/?id=42&lang=en\x1b\\\x1b[36mWith params\x1b[0m\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;https://mudlet.org/?%63%6F%6E%66%69%67=value\x1b\\\x1b[36mEncoded config\x1b[0m\x1b]8;;\x1b\\\n";
+    output += "       query params preserved (?id=42&lang=en)  percent-encoded reserved names kept\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
     // 2. JSON CONFIGURATION - Show the structure early
@@ -7038,12 +7175,6 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                     tchar.mBgColor = originalChar.mBgColor;
                     tchar.mFlags = originalChar.mFlags; // Restore ALL ANSI formatting flags including decorations
 
-                    // Clear any custom decoration colors that were applied by pseudo-classes
-                    // ANSI doesn't support custom decoration colors, so we clear them when restoring ANSI base
-                    tchar.clearCustomUnderlineColor();
-                    tchar.clearCustomOverlineColor();
-                    tchar.clearCustomStrikeoutColor();
-
                     // DON'T continue here - let the pseudo-class styling below override the ANSI base
                     // This allows e.g. :visited{color:#bb66dd} to work with ANSI base formatting
                 }
@@ -7105,17 +7236,6 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                     tchar.mFlags |= TChar::StrikeOut;
                 } else {
                     tchar.mFlags &= ~TChar::StrikeOut;
-                }
-
-                // Apply decoration colors
-                if (effectiveStyling.hasUnderlineColor && effectiveStyling.isUnderlined) {
-                    tchar.setUnderlineColor(effectiveStyling.underlineColor);
-                }
-                if (effectiveStyling.hasOverlineColor && effectiveStyling.isOverlined) {
-                    tchar.setOverlineColor(effectiveStyling.overlineColor);
-                }
-                if (effectiveStyling.hasStrikeoutColor && effectiveStyling.isStrikeOut) {
-                    tchar.setStrikeoutColor(effectiveStyling.strikeoutColor);
                 }
 
                 // Update bold and italic
