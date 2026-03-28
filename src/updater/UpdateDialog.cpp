@@ -234,6 +234,7 @@ void UpdateDialog::setOpenExternalLinks(bool open)
 void UpdateDialog::onButtonInstall()
 {
     mAccepted = true;
+    mAcceptedInstallButton = nullptr;
     if (mIsDownloadFinished) {
         startUpdate();
     } else if (!mLatestRelease.getVersion().isEmpty()) {
@@ -306,6 +307,7 @@ void UpdateDialog::showIfUpdatesAvailableOrQuit()
     }
 }
 
+// "DBLSQD/" prefix retained for backward compatibility with user settings from the previous update system
 QVariant UpdateDialog::settingsValue(const QString& key, const QVariant& defaultValue, QSettings* settings)
 {
     return settings->value(qsl("DBLSQD/") + key, defaultValue);
@@ -601,7 +603,7 @@ void UpdateDialog::handleFeedReady()
             }
             removeSetting(qsl("updateFilePath"), mSettings);
             removeSetting(qsl("updateFileVersion"), mSettings);
-            mUpdateFilePath = "";
+            mUpdateFilePath.clear();
         } else {
             mIsDownloadFinished = true;
         }
@@ -631,7 +633,7 @@ void UpdateDialog::handleLoadError(const QString& message)
         setupNoUpdatesUi();
         //: Label shown in the update dialog when the update check fails due to a network or server error
         mUi->labelHeadlineNoUpdates->setText(tr("Could not check for updates"));
-        mUi->labelChangelog->setHtml(qsl("<p>%1</p>").arg(message));
+        mUi->labelChangelog->setHtml(qsl("<p>%1</p>").arg(message.toHtmlEscaped()));
         mUi->labelChangelog->show();
         adjustDialogSize();
     }
@@ -684,7 +686,9 @@ void UpdateDialog::updateProgressBar(qint64 bytesReceived, qint64 bytesTotal)
 void UpdateDialog::onLinkActivated(const QUrl& link)
 {
     if (mOpenExternalLinks) {
-        QDesktopServices::openUrl(link);
+        if (!QDesktopServices::openUrl(link)) {
+            qWarning() << "Failed to open URL:" << link;
+        }
     } else {
         emit linkActivated(link.toString());
     }

@@ -90,7 +90,6 @@ bool SemVer::operator<(const SemVer& other) const
         // segments as integers, but Mudlet only uses simple prerelease tags.
         return (QString::compare(mPrerelease, other.mPrerelease) < 0);
     }
-    // Build metadata is ignored for precedence per SemVer 2.0 spec
     return false;
 }
 

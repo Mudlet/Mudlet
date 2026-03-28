@@ -428,9 +428,15 @@ void Updater::slot_updateLinuxBinary()
         qWarning() << "could not move new binary from" << unzippedBinary.filePath() << "to" << installedBinaryPath << "- restoring backup";
         if (!dir.rename(backupPath, installedBinaryPath)) {
             qWarning() << "could not restore backup from" << backupPath << "to" << installedBinaryPath;
+            //: Error shown when the update fails and the previous version could not be restored automatically. %1 is the file path to the backup copy.
+            emit signal_updateCheckFailed(tr("Failed to install the update and could not restore the previous version. "
+                                             "Your previous version is saved at: %1 - please rename it back manually. "
+                                             "Alternatively, download a fresh copy from https://www.mudlet.org/download/")
+                                                  .arg(backupPath));
+        } else {
+            //: Error shown when the automatic update fails to install on Linux
+            emit signal_updateCheckFailed(tr("Failed to install the update. Please try again or download manually from https://www.mudlet.org/download/"));
         }
-        //: Error shown when the automatic update fails to install on Linux
-        emit signal_updateCheckFailed(tr("Failed to install the update. Please try again or download manually from https://www.mudlet.org/download/"));
         return;
     }
     if (!dir.remove(backupPath)) {
