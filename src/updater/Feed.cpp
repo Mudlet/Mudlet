@@ -329,11 +329,7 @@ void Feed::handleDownloadReadyRead()
             qWarning() << "Failed to create temporary file for download:" << mDownloadFile->errorString();
             //: Error shown when a temporary file cannot be created for the update download. %1 is the system error message.
             emit downloadError(tr("Could not create temporary file for download: %1").arg(mDownloadFile->errorString()));
-            disconnect(mDownloadReply, &QNetworkReply::finished, this, &Feed::handleDownloadFinished);
-            mDownloadReply->abort();
-            mDownloadReply->deleteLater();
-            mDownloadReply = nullptr;
-            cleanupDownloadFile();
+            abortDownload();
             return;
         }
     }
@@ -343,11 +339,7 @@ void Feed::handleDownloadReadyRead()
         qWarning() << "Failed to write download data to temporary file:" << mDownloadFile->errorString();
         //: Error shown when writing download data to disk fails. %1 is the system error message.
         emit downloadError(tr("Failed to save download data: %1").arg(mDownloadFile->errorString()));
-        disconnect(mDownloadReply, &QNetworkReply::finished, this, &Feed::handleDownloadFinished);
-        mDownloadReply->abort();
-        mDownloadReply->deleteLater();
-        mDownloadReply = nullptr;
-        cleanupDownloadFile();
+        abortDownload();
         return;
     }
 }
@@ -389,7 +381,15 @@ void Feed::handleDownloadFinished()
         return;
     }
     QCryptographicHash fileHash(QCryptographicHash::Sha256);
-    fileHash.addData(mDownloadFile);
+    if (!fileHash.addData(mDownloadFile)) {
+        qWarning() << "Failed to read download file for checksum verification:" << mDownloadFile->errorString();
+        //: Error shown when the downloaded file cannot be read back for checksum verification
+        emit downloadError(tr("Failed to verify download integrity"));
+        cleanupDownloadFile();
+        mDownloadReply->deleteLater();
+        mDownloadReply = nullptr;
+        return;
+    }
     const QString hashResult = fileHash.result().toHex();
     if (!mCurrentDownload.getDownloadSHA256().isEmpty() && hashResult.toLower() != mCurrentDownload.getDownloadSHA256().toLower()) {
         qWarning() << "SHA256 mismatch - expected:" << mCurrentDownload.getDownloadSHA256() << "got:" << hashResult;
@@ -408,6 +408,17 @@ void Feed::handleDownloadFinished()
     mDownloadReply->deleteLater();
     mDownloadReply = nullptr;
     emit downloadFinished();
+}
+
+void Feed::abortDownload()
+{
+    if (mDownloadReply) {
+        disconnect(mDownloadReply, &QNetworkReply::finished, this, &Feed::handleDownloadFinished);
+        mDownloadReply->abort();
+        mDownloadReply->deleteLater();
+        mDownloadReply = nullptr;
+    }
+    cleanupDownloadFile();
 }
 
 void Feed::cleanupDownloadFile()

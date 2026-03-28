@@ -66,6 +66,7 @@ private:
 
     void makeDownloadRequest(const QUrl& url);
     void fetchChecksums(const QUrl& checksumsUrl);
+    void abortDownload();
     void cleanupDownloadFile();
     bool mRequireChecksums{false};
 

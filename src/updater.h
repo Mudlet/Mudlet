@@ -62,11 +62,11 @@ private:
 #elif defined(Q_OS_WINDOWS)
     void setupOnWindows();
     void prepareSetupOnWindows(const QString& fileName);
-    bool is64BitCompatible() const;
 #elif defined(Q_OS_MACOS)
     void setupOnMacOS();
 #endif
 
+    void setupPlatformUpdater();
     void recordUpdateTime() const;
     void recordUpdatedVersion() const;
     QString getPreviousVersion() const;

@@ -380,6 +380,8 @@ void UpdateDialog::resetUi()
         widget->hide();
         widget->disconnect();
     }
+    // Re-establish the changelog link handler broken by disconnect() above
+    connect(mUi->labelChangelog, &QTextBrowser::anchorClicked, this, &UpdateDialog::onLinkActivated);
     mUi->progressBar->reset();
     adjustDialogSize();
 }
@@ -500,10 +502,10 @@ void UpdateDialog::setupNoUpdatesUi()
 
 void UpdateDialog::disableButtons(bool disable)
 {
-    QList<QWidget*> buttons;
     for (auto* button : mInstallButtons) {
-        buttons << button;
+        button->setDisabled(disable);
     }
+    QList<QWidget*> buttons;
     buttons << mUi->buttonCancel << mUi->buttonCancelLoading << mUi->buttonConfirm << mUi->buttonInstall << mUi->checkAutoDownload;
     for (auto* button : buttons) {
         button->setDisabled(disable);

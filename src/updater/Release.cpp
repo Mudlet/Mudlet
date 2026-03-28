@@ -75,6 +75,7 @@ Release::Release(const QJsonObject& releaseInfo, const QString& os, const QStrin
         if (!assetPattern.isEmpty() && name.contains(assetPattern, Qt::CaseInsensitive)) {
             mDownloadUrl = QUrl(asset.value(qsl("browser_download_url")).toString());
             mDownloadSize = static_cast<qint64>(asset.value(qsl("size")).toDouble());
+            break;
         }
     }
 
@@ -117,7 +118,7 @@ bool operator<(const Release& one, const Release& other)
 
 bool operator==(const Release& one, const Release& other)
 {
-    return one.mVersion == other.mVersion;
+    return one.mVersion.compare(other.mVersion, Qt::CaseInsensitive) == 0;
 }
 
 bool operator<=(const Release& one, const Release& other)

@@ -27,10 +27,6 @@
 #include <chrono>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 
-#if defined(Q_OS_WINDOWS)
-#include <windows.h>
-#endif
-
 using namespace std::chrono_literals;
 
 #if defined(Q_OS_WINDOWS)
@@ -87,19 +83,9 @@ Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     mSettings = settings;
 
-    // On 32-bit Windows, check if we can upgrade to 64-bit
-#if defined(Q_OS_WINDOWS)
-    QString arch = is64BitCompatible() ? qsl("x86_64") : qsl("x86");
-#else
-    QString arch = QString(); // Let Feed auto-detect for other platforms
-#endif
-
     mFeed = new dblsqd::Feed(this);
-    mFeed->setRepo(qsl("Mudlet"), qsl("Mudlet"), testVersion, QString(), arch);
-
-    if (!mPeriodicCheck) {
-        mPeriodicCheck = std::make_unique<QTimer>();
-    }
+    mFeed->setRepo(qsl("Mudlet"), qsl("Mudlet"), testVersion);
+    mPeriodicCheck = std::make_unique<QTimer>();
 }
 
 Updater::~Updater() = default;
@@ -276,13 +262,8 @@ void Updater::setupOnMacOS()
 }
 #endif // Q_OS_MACOS
 
-#if defined(Q_OS_WINDOWS)
-void Updater::setupOnWindows()
+void Updater::setupPlatformUpdater()
 {
-    // Clean up old .nupkg files on startup
-    cleanupSquirrelTempFiles();
-
-    // Setup to automatically download the new release when an update is available
     connect(mFeed, &dblsqd::Feed::ready, this, [=, this]() {
         auto* pMudlet = mudlet::self();
         if (!pMudlet || pMudlet->developmentVersion) {
@@ -302,10 +283,25 @@ void Updater::setupOnWindows()
         }
     });
 
-    // Setup to run setup.exe to replace the old installation
+    connect(mFeed, &dblsqd::Feed::downloadError, this, [this](const QString& error) {
+        qWarning() << "Automatic update download failed:" << error;
+        emit signal_updateAvailable(1);
+    });
+
+    mUpdateDialog = new dblsqd::UpdateDialog(mFeed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
+    //: Label for the update button shown in the update dialog
+    mpInstallOrRestart->setText(tr("Update"));
+    mUpdateDialog->addInstallButton(mpInstallOrRestart);
+    connect(mUpdateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
+}
+
+#if defined(Q_OS_WINDOWS)
+void Updater::setupOnWindows()
+{
+    cleanupSquirrelTempFiles();
+    setupPlatformUpdater();
+
     connect(mFeed, &dblsqd::Feed::downloadFinished, this, [=, this]() {
-        // Skip automatic processing if auto-updates are disabled or the dialog
-        // is showing (user is managing the update manually)
         if (!(updateAutomatically() && mUpdateDialog->isHidden())) {
             return;
         }
@@ -325,18 +321,6 @@ void Updater::setupOnWindows()
         connect(watcher, &QFutureWatcher<void>::finished, watcher, &QObject::deleteLater);
         watcher->setFuture(future);
     });
-
-    connect(mFeed, &dblsqd::Feed::downloadError, this, [this](const QString& error) {
-        qWarning() << "Automatic update download failed:" << error;
-        emit signal_updateAvailable(1);
-    });
-
-    // Create the update dialog. Constructing it triggers the update check
-    mUpdateDialog = new dblsqd::UpdateDialog(mFeed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
-    //: Label for the update button shown in the update dialog
-    mpInstallOrRestart->setText(tr("Update"));
-    mUpdateDialog->addInstallButton(mpInstallOrRestart);
-    connect(mUpdateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
 
 // Store the path to the downloaded installer for use when user clicks "Restart to update"
@@ -350,33 +334,9 @@ void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
 #if defined(Q_OS_LINUX)
 void Updater::setupOnLinux()
 {
-    // Setup to automatically download the new release when an update is available
-    connect(mFeed, &dblsqd::Feed::ready, this, [=, this]() {
-        // don't update development builds to prevent auto-update from overwriting your
-        // compiled binary while in development
-        auto* pMudlet = mudlet::self();
-        if (!pMudlet || pMudlet->developmentVersion) {
-            return;
-        }
+    setupPlatformUpdater();
 
-        auto updates = mFeed->getUpdates(dblsqd::Release::getCurrentRelease());
-        qWarning() << "Checked for updates:" << updates.size() << "update(s) available";
-        if (updates.isEmpty()) {
-            return;
-        } else if (!updateAutomatically()) {
-            emit signal_updateAvailable(updates.size());
-            return;
-        } else {
-            if (!downloadReleaseIfValid(updates.first())) {
-                emit signal_updateAvailable(updates.size());
-            }
-        }
-    });
-
-    // Setup to unzip and replace old binary when the download is done
     connect(mFeed, &dblsqd::Feed::downloadFinished, this, [=, this]() {
-        // Skip automatic processing if auto-updates are disabled or the dialog
-        // is showing (user is managing the update manually)
         if (!(updateAutomatically() && mUpdateDialog->isHidden())) {
             return;
         }
@@ -396,18 +356,6 @@ void Updater::setupOnLinux()
         connect(watcher, &QFutureWatcher<void>::finished, watcher, &QObject::deleteLater);
         watcher->setFuture(future);
     });
-
-    connect(mFeed, &dblsqd::Feed::downloadError, this, [this](const QString& error) {
-        qWarning() << "Automatic update download failed:" << error;
-        emit signal_updateAvailable(1);
-    });
-
-    // Create the update dialog. Constructing it triggers the update check
-    mUpdateDialog = new dblsqd::UpdateDialog(mFeed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
-    //: Label for the update button shown in the update dialog
-    mpInstallOrRestart->setText(tr("Update"));
-    mUpdateDialog->addInstallButton(mpInstallOrRestart);
-    connect(mUpdateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
 
 void Updater::untarOnLinux(const QString& fileName)
@@ -420,8 +368,8 @@ void Updater::untarOnLinux(const QString& fileName)
     // we can assume tar to be present on a Linux system. If it's not, it'd be rather broken.
     // tar output folder has to end with a slash
     tar.start(qsl("tar"), QStringList() << qsl("-xvf") << fileName << qsl("-C") << QStandardPaths::writableLocation(QStandardPaths::TempLocation) + qsl("/"));
-    if (!tar.waitForFinished()) {
-        qWarning() << "Untarring" << fileName << "failed:" << tar.errorString();
+    if (!tar.waitForFinished() || tar.exitCode() != 0) {
+        qWarning() << "Untarring" << fileName << "failed - exit code:" << tar.exitCode() << tar.errorString();
     } else {
         mUnzippedBinaryName = tar.readAll().trimmed();
     }
@@ -434,6 +382,8 @@ void Updater::slot_updateLinuxBinary()
 
     if (mUnzippedBinaryName.isEmpty()) {
         qWarning() << "Extraction failed - no binary to install, aborting update";
+        //: Error shown when extracting the downloaded update archive fails on Linux
+        emit signal_updateCheckFailed(tr("Failed to extract the update. Please try again or download manually from https://www.mudlet.org/download/"));
         return;
     }
 
@@ -558,15 +508,12 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
             }
             qWarning() << "Launching installer via batch file:" << installerPath;
         } else {
-            qWarning() << "Failed to create batch file, attempting direct launch";
-            if (!QProcess::startDetached(installerPath, QStringList())) {
-                qWarning() << "Failed to launch installer directly:" << installerPath;
-                //: Error title for update-related warning dialogs
-                const QString errorTitle = tr("Update Error");
-                //: Error shown when the update installer process fails to start
-                QMessageBox::warning(nullptr, errorTitle, tr("Could not launch the update installer. Please restart Mudlet and try again."));
-                return;
-            }
+            qWarning() << "Failed to create update batch file:" << batchFile.errorString();
+            //: Error title for update-related warning dialogs
+            const QString errorTitle = tr("Update Error");
+            //: Error shown when the batch file for managing the update process cannot be created. %1 is the path to the installer.
+            QMessageBox::warning(nullptr, errorTitle, tr("Could not prepare the update. Please close Mudlet and run the installer manually:\n%1").arg(QDir::toNativeSeparators(installerPath)));
+            return;
         }
 
         if (mudlet::self()) {
@@ -728,24 +675,3 @@ QString Updater::getPreviousVersion() const
 
     return previousVersion;
 }
-
-#if defined(Q_OS_WINDOWS)
-// we are trying to detect machines running a 32-Bit build of Mudlet on a 64-Bit Intel/AMD processor
-bool Updater::is64BitCompatible() const
-{
-#if defined(Q_OS_WIN64)
-    return true;
-#endif
-
-    BOOL isWow64 = FALSE;
-    typedef BOOL(WINAPI * LPFN_ISWOW64PROCESS)(HANDLE, PBOOL);
-    LPFN_ISWOW64PROCESS fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(GetModuleHandle(TEXT("kernel32")), "IsWow64Process");
-
-    if (fnIsWow64Process) {
-        if (fnIsWow64Process(GetCurrentProcess(), &isWow64)) {
-            return isWow64 ? true : false;
-        }
-    }
-    return false;
-}
-#endif
