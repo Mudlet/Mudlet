@@ -326,6 +326,16 @@ else
   echo "Renaming \"Mudlet${NAME_SUFFIX}Setup.exe\" to \"${INSTALLER_EXE}\""
   mv "${RELEASE_DIR}/Mudlet${NAME_SUFFIX}Setup.exe" "${INSTALLER_EXE_PATHFILE}"
 
+  echo "=== Generating SHA256 checksum for GitHub Release ==="
+  sha256sum "${INSTALLER_EXE_PATHFILE}" > "${INSTALLER_EXE_PATHFILE}.sha256"
+  {
+    echo "RELEASE_ASSET_PATH=${INSTALLER_EXE_PATHFILE}"
+    echo "RELEASE_ASSET_SHA256_PATH=${INSTALLER_EXE_PATHFILE}.sha256"
+    echo "VERSION=${VERSION}"
+    echo "MUDLET_VERSION_BUILD=${MUDLET_VERSION_BUILD}"
+    echo "BUILD_COMMIT=${BUILD_COMMIT}"
+  } >> "${GITHUB_ENV}"
+
   if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
     echo "=== Preparing artifact for PTB for upload to make.mudlet.org ==="
     # Copy the signed installer to a separate directory - as ${RELEASE_WINDIR}

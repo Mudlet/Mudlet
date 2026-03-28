@@ -131,21 +131,33 @@ if [ "${DEPLOY}" = "deploy" ]; then
     fi
 
     if [ "${public_test_build}" == "true" ]; then
-      mv "${HOME}/Desktop/Mudlet PTB.dmg" "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}.dmg"
+      RELEASE_ARTIFACT="${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}.dmg"
+      mv "${HOME}/Desktop/Mudlet PTB.dmg" "${RELEASE_ARTIFACT}"
     else
-      mv "${HOME}/Desktop/Mudlet.dmg" "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg"
+      RELEASE_ARTIFACT="${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg"
+      mv "${HOME}/Desktop/Mudlet.dmg" "${RELEASE_ARTIFACT}"
     fi
+
+    echo "=== Generating SHA256 checksum for GitHub Release ==="
+    shasum -a 256 "${RELEASE_ARTIFACT}" > "${RELEASE_ARTIFACT}.sha256"
 
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Setting up for Github upload ==="
       mkdir -p "${BUILD_DIR}/upload/"
-      mv "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}.dmg" "${BUILD_DIR}/upload/"
+      mv "${RELEASE_ARTIFACT}" "${BUILD_DIR}/upload/"
       {
         echo "FOLDER_TO_UPLOAD=${BUILD_DIR}/upload"
         echo "UPLOAD_FILENAME=Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}"
+        echo "RELEASE_ASSET_PATH=${BUILD_DIR}/upload/$(basename "${RELEASE_ARTIFACT}")"
+        echo "RELEASE_ASSET_SHA256_PATH=${RELEASE_ARTIFACT}.sha256"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
     else
+      {
+        echo "RELEASE_ASSET_PATH=${RELEASE_ARTIFACT}"
+        echo "RELEASE_ASSET_SHA256_PATH=${RELEASE_ARTIFACT}.sha256"
+      } >> "$GITHUB_ENV"
+
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
       DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-${ARCH}.dmg"

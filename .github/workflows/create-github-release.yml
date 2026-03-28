@@ -1,0 +1,210 @@
+name: 📦 Create GitHub Release
+on:
+  workflow_run:
+    workflows: ["🔨 Build Mudlet", "🔨 Build Mudlet (windows)"]
+    types: [completed]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    if: >
+      github.repository_owner == 'Mudlet' &&
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Check if all platform builds completed
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = context.payload.workflow_run.head_sha;
+            const required = {
+              'linux_macos': 'build-mudlet.yml',
+              'windows': 'build-mudlet-win.yml'
+            };
+            const runIds = {};
+            for (const [key, filename] of Object.entries(required)) {
+              const {data} = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: filename,
+                head_sha: sha,
+                status: 'success',
+                per_page: 1
+              });
+              if (data.total_count === 0) {
+                core.info(`Workflow "${filename}" has not completed successfully yet for ${sha}`);
+                core.setOutput('ready', 'false');
+                return;
+              }
+              runIds[key] = data.workflow_runs[0].id;
+            }
+            core.setOutput('ready', 'true');
+            core.setOutput('linux_macos_run_id', runIds['linux_macos']);
+            core.setOutput('windows_run_id', runIds['windows']);
+
+      - name: Exit if not all builds done
+        if: steps.check.outputs.ready != 'true'
+        run: |
+          echo "Not all platform builds completed yet — exiting. The other workflow's completion will trigger another attempt."
+          exit 0
+
+      # Check if any release assets were actually produced (skips PR/snapshot builds)
+      - name: Download metadata to determine release type
+        if: steps.check.outputs.ready == 'true'
+        id: download-metadata
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: release-metadata-*
+          run-id: ${{ steps.check.outputs.linux_macos_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: metadata/
+
+      - name: Determine release type
+        if: steps.check.outputs.ready == 'true' && steps.download-metadata.outcome == 'success'
+        id: release-type
+        run: |
+          META_FILE=$(find metadata/ -name 'release-metadata.json' -type f | head -1)
+          if [ -z "${META_FILE}" ]; then
+            echo "No release metadata found — this is likely a snapshot/PR build"
+            echo "type=skip" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          META=$(cat "${META_FILE}")
+          REF=$(echo "$META" | jq -r '.ref')
+          EVENT=$(echo "$META" | jq -r '.event')
+          VERSION=$(echo "$META" | jq -r '.version')
+          BUILD_SUFFIX=$(echo "$META" | jq -r '.build_suffix')
+
+          if [[ "$REF" == refs/tags/Mudlet-* ]]; then
+            echo "type=release" >> "$GITHUB_OUTPUT"
+            echo "tag=${REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+            echo "title=Mudlet ${VERSION}" >> "$GITHUB_OUTPUT"
+          elif [[ "$EVENT" == "schedule" ]] || [[ "$BUILD_SUFFIX" == -ptb* ]]; then
+            echo "type=ptb" >> "$GITHUB_OUTPUT"
+            echo "tag=public-test-build" >> "$GITHUB_OUTPUT"
+            echo "title=Public Test Build" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=skip" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Exit if not a release or PTB build
+        if: steps.check.outputs.ready == 'true' && (steps.download-metadata.outcome != 'success' || steps.release-type.outputs.type == 'skip')
+        run: |
+          echo "Not a release or PTB build — skipping GitHub Release creation."
+          exit 0
+
+      # Download all release assets from both workflow runs
+      - name: Download Linux/macOS release assets
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-asset-*
+          run-id: ${{ steps.check.outputs.linux_macos_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: assets/
+
+      - name: Download Windows release assets
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-asset-*
+          run-id: ${{ steps.check.outputs.windows_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: assets/
+          merge-multiple: false
+
+      - name: List collected assets
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        run: find assets/ -type f | sort
+
+      # Assemble SHA256SUMS.txt from per-platform .sha256 sidecar files
+      - name: Assemble SHA256SUMS.txt
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        run: |
+          cat assets/*/*.sha256 > assets/SHA256SUMS.txt
+          echo "Generated SHA256SUMS.txt:"
+          cat assets/SHA256SUMS.txt
+
+      # Generate changelog
+      - uses: actions/checkout@v6
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        with:
+          fetch-depth: 0
+
+      - uses: leafo/gh-actions-lua@v12
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        with:
+          luaVersion: "5.1.5"
+
+      - uses: leafo/gh-actions-luarocks@v6
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+
+      - name: Install changelog dependencies
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        run: |
+          luarocks install argparse
+          luarocks install lunajson
+
+      - name: Generate changelog
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        run: |
+          if [[ "${{ steps.release-type.outputs.type }}" == "release" ]]; then
+            # For release: changelog from previous release tag to this tag
+            PREV_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | sed -n '2p')
+            END_TAG="${{ steps.release-type.outputs.tag }}"
+          else
+            # For PTB: changelog from latest release tag to HEAD
+            PREV_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | head -1)
+            END_TAG="HEAD"
+          fi
+
+          echo "Generating changelog from ${PREV_TAG} to ${END_TAG}"
+          if [ -n "${PREV_TAG}" ]; then
+            lua CI/generate-changelog.lua -f md -m release \
+              --start-commit "${PREV_TAG}" --end-commit "${END_TAG}" > changelog.md || \
+              echo "See commit history for changes." > changelog.md
+          else
+            echo "See commit history for changes." > changelog.md
+          fi
+
+          echo "Changelog preview:"
+          head -20 changelog.md
+
+      # Create the GitHub Release
+      - name: Delete existing PTB release (rolling tag)
+        if: steps.release-type.outputs.type == 'ptb'
+        run: gh release delete public-test-build --yes --cleanup-tag 2>/dev/null || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        run: |
+          # Collect release files (not .sha256 sidecars)
+          FILES=$(find assets/ -type f \
+            \( -name '*.AppImage.tar' -o -name '*.exe' -o -name '*.dmg' -o -name 'SHA256SUMS.txt' \))
+
+          echo "Files to upload:"
+          echo "$FILES"
+
+          ARGS=(
+            "${{ steps.release-type.outputs.tag }}"
+            --title "${{ steps.release-type.outputs.title }}"
+            --notes-file changelog.md
+          )
+
+          if [[ "${{ steps.release-type.outputs.type }}" == "ptb" ]]; then
+            ARGS+=(--prerelease --target "${{ github.event.workflow_run.head_sha }}")
+          fi
+
+          # shellcheck disable=SC2086
+          gh release create "${ARGS[@]}" $FILES
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
