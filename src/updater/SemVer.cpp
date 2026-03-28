@@ -44,7 +44,6 @@ SemVer::SemVer(const QString& version)
         mMinor = match.captured(2).toInt();
         mPatch = match.captured(3).toInt();
         mPrerelease = match.captured(4);
-        mBuild = match.captured(5);
         mValid = true;
     }
 }
@@ -93,6 +92,21 @@ bool SemVer::operator<(const SemVer& other) const
     }
     // Build metadata is ignored for precedence per SemVer 2.0 spec
     return false;
+}
+
+/*!
+ * \brief Returns true if both SemVer objects represent the same version.
+ *
+ * Build metadata is ignored per SemVer 2.0 spec.
+ * Returns false if either object is invalid.
+ */
+bool SemVer::operator==(const SemVer& other) const
+{
+    if (!isValid() || !other.isValid()) {
+        return false;
+    }
+
+    return mMajor == other.mMajor && mMinor == other.mMinor && mPatch == other.mPatch && mPrerelease == other.mPrerelease;
 }
 
 QString SemVer::getRegExp()

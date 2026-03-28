@@ -42,7 +42,6 @@ static void cleanupSquirrelTempFiles()
 
     qDebug() << "Cleaning up Mudlet files from SquirrelTemp:" << squirrelTempPath;
 
-    // Find all Mudlet-related .nupkg files
     QStringList filters;
     filters << qsl("Mudlet*.nupkg") << qsl("mudlet*.nupkg");
     QFileInfoList nupkgFiles = squirrelTempDir.entryInfoList(filters, QDir::Files);
@@ -90,7 +89,6 @@ Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
 
 Updater::~Updater() = default;
 
-// Set up platform-specific update handling and start periodic update checks
 void Updater::checkUpdatesOnStart()
 {
 #if defined(Q_OS_MACOS)
@@ -243,7 +241,7 @@ void Updater::finishSetup()
     } else {
         qWarning() << "Mudlet prepped to update on restart";
     }
-    // Clean up .nupkg files from SquirrelTemp to prevent cross-app contamination
+    // Clean up legacy .nupkg files from the previous Squirrel/dblsqd update system
     cleanupSquirrelTempFiles();
 #endif
     recordUpdateTime();
@@ -277,7 +275,6 @@ void Updater::setupPlatformUpdater()
 
     connect(mFeed, &dblsqd::Feed::downloadError, this, [this](const QString& error) {
         qWarning() << "Automatic update download failed:" << error;
-        emit signal_updateAvailable(1);
     });
 
     mUpdateDialog = new dblsqd::UpdateDialog(mFeed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
@@ -352,6 +349,7 @@ void Updater::setupOnLinux()
 
 void Updater::untarOnLinux(const QString& fileName)
 {
+    mUnzippedBinaryName.clear();
     Q_ASSERT_X(QThread::currentThread() != QCoreApplication::instance()->thread(), "untarOnLinux", "method should not be called in the main GUI thread to avoid a degradation in UX");
     qWarning() << __func__ << "started";
 
@@ -360,7 +358,10 @@ void Updater::untarOnLinux(const QString& fileName)
     // we can assume tar to be present on a Linux system. If it's not, it'd be rather broken.
     // tar output folder has to end with a slash
     tar.start(qsl("tar"), QStringList() << qsl("-xvf") << fileName << qsl("-C") << QStandardPaths::writableLocation(QStandardPaths::TempLocation) + qsl("/"));
-    if (!tar.waitForFinished() || tar.exitCode() != 0) {
+    if (!tar.waitForFinished(300000)) {
+        tar.kill();
+        qWarning() << "Untarring" << fileName << "timed out after 5 minutes:" << tar.errorString();
+    } else if (tar.exitCode() != 0) {
         qWarning() << "Untarring" << fileName << "failed - exit code:" << tar.exitCode() << tar.errorString();
     } else {
         mUnzippedBinaryName = tar.readAll().trimmed();
@@ -435,7 +436,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 
     // if the update is already installed, then the button says 'Restart' - do so
     if (mUpdateInstalled) {
-        // timer is necessary as calling close right way doesn't seem to do the trick
+        // defer to next event loop iteration so the dialog close happens after the button click handler returns
         QTimer::singleShot(0, this, [=, this]() {
             mUpdateDialog->close();
             mUpdateDialog->done(0);
@@ -444,24 +445,23 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 #if defined(Q_OS_WINDOWS)
         // On Windows, create and launch a batch file that waits for Mudlet to exit,
         // then runs the installer. This prevents "file in use" errors during the update.
+        //: Error title for update-related warning dialogs
+        const QString errorTitle = tr("Update Error");
+
         if (mDownloadedInstallerPath.isEmpty() || !QFile::exists(mDownloadedInstallerPath)) {
             qWarning() << "Installer not found at:" << mDownloadedInstallerPath;
-            //: Error title for update-related warning dialogs
-            const QString errorTitle = tr("Update Error");
             //: Error shown when the downloaded installer file cannot be found on disk
             QMessageBox::warning(nullptr, errorTitle, tr("The update installer could not be found. Please try checking for updates again."));
             return;
         }
 
-        // Copy the installer to a permanent location - the source is a QTemporaryFile
-        // that will be deleted when Mudlet exits. We copy (not move) because AV
-        // may still have a lock on the file, and copy only needs read access.
+        // Copy the installer to a permanent location with a known name. We copy
+        // (not move) because AV software may still have a lock on the file, and
+        // copy only needs read access.
         // Use a unique filename with timestamp to avoid conflicts with locked files.
         QString installerPath = qsl("%1/mudlet-setup-%2.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation)).arg(QDateTime::currentSecsSinceEpoch());
         if (!QFile::copy(mDownloadedInstallerPath, installerPath)) {
             qWarning() << "Failed to copy installer from" << mDownloadedInstallerPath << "to" << installerPath;
-            //: Error title for update-related warning dialogs
-            const QString errorTitle = tr("Update Error");
             //: Error shown when the installer file cannot be copied to a temporary location for launch
             QMessageBox::warning(nullptr, errorTitle, tr("Could not prepare the update installer. Please try again or download the update manually from https://www.mudlet.org/download/"));
             return;
@@ -492,13 +492,16 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
                                        "\"%2\"\r\n"
                                        "echo Mudlet updater: installer finished with exit code %ERRORLEVEL%\r\n")
                                            .arg(exeName, QDir::toNativeSeparators(installerPath));
-            batchFile.write(batchContent.toLocal8Bit());
+            if (batchFile.write(batchContent.toLocal8Bit()) == -1) {
+                qWarning() << "Failed to write update batch file:" << batchFile.errorString();
+                //: Error shown when the batch file for managing the update process cannot be written. %1 is the path to the installer.
+                QMessageBox::warning(nullptr, errorTitle, tr("Could not prepare the update. Please close Mudlet and run the installer manually:\n%1").arg(QDir::toNativeSeparators(installerPath)));
+                return;
+            }
             batchFile.close();
 
             if (!QProcess::startDetached(batchPath, QStringList())) {
                 qWarning() << "Failed to launch update batch file:" << batchPath;
-                //: Error title for update-related warning dialogs
-                const QString errorTitle = tr("Update Error");
                 //: Error shown when the update installer process fails to start
                 QMessageBox::warning(nullptr, errorTitle, tr("Could not launch the update installer. Please restart Mudlet and try again."));
                 return;
@@ -506,8 +509,6 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
             qWarning() << "Launching installer via batch file:" << installerPath;
         } else {
             qWarning() << "Failed to create update batch file:" << batchFile.errorString();
-            //: Error title for update-related warning dialogs
-            const QString errorTitle = tr("Update Error");
             //: Error shown when the batch file for managing the update process cannot be created. %1 is the path to the installer.
             QMessageBox::warning(nullptr, errorTitle, tr("Could not prepare the update. Please close Mudlet and run the installer manually:\n%1").arg(QDir::toNativeSeparators(installerPath)));
             return;
@@ -538,11 +539,11 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 
 // otherwise the button says 'Install', so install the update
 #if defined(Q_OS_LINUX)
-    QFuture<void> future = QtConcurrent::run([&, filePath]() {
+    QFuture<void> future = QtConcurrent::run([this, filePath]() {
         untarOnLinux(filePath);
     });
 #elif defined(Q_OS_WINDOWS)
-    QFuture<void> future = QtConcurrent::run([&, filePath]() {
+    QFuture<void> future = QtConcurrent::run([this, filePath]() {
         prepareSetupOnWindows(filePath);
     });
 #endif
@@ -613,9 +614,9 @@ void Updater::recordUpdatedVersion() const
     }
 }
 
-// returns true if Mudlet was updated automatically and a changelog should be shown
-// now that the user is on the new version. If the user updated manually, then there
-// is no need as they would have seen the changelog while updating
+// Returns true if the changelog should be shown on this launch. Only applies to
+// non-development builds with auto-updates on non-macOS (Sparkle handles its own).
+// Requires at least 5 minutes since the update to avoid re-showing a just-seen changelog.
 bool Updater::shouldShowChangelog()
 {
 // Sparkle handles its own changelog display on macOS, so skip the custom changelog dialog
@@ -644,8 +645,8 @@ bool Updater::shouldShowChangelog()
     auto currentDateTime = QDateTime::currentDateTime().toMSecsSinceEpoch();
     auto minsSinceUpdate = (currentDateTime - updateTimestamp) / 1000 / 60;
 
-    // delete the file on check as well since if we updated and restarted right away
-    // we won't need to show the changelog - as well as on a launch 5mins after.
+    // Delete the file after reading. If Mudlet was restarted immediately after updating
+    // (< 5 minutes), the user likely saw the changelog during the update, so don't show it again.
     file.remove();
 
     return minsSinceUpdate >= 5;

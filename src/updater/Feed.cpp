@@ -36,10 +36,6 @@ namespace dblsqd {
 
 Feed::Feed(QObject* parent)
 : QObject(parent)
-, mFeedReply(nullptr)
-, mDownloadReply(nullptr)
-, mDownloadFile(nullptr)
-, mReady(false)
 {
 }
 
@@ -128,6 +124,7 @@ void Feed::load()
     QNetworkRequest request(getUrl());
     request.setRawHeader("Accept", "application/vnd.github+json");
     request.setRawHeader("User-Agent", "Mudlet-Updater");
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setTransferTimeout(30000);
     mFeedReply = mNam.get(request);
     connect(mFeedReply, &QNetworkReply::finished, this, &Feed::handleFeedFinished);
@@ -214,6 +211,8 @@ void Feed::fetchChecksums(const QUrl& checksumsUrl)
 
 void Feed::makeDownloadRequest(const QUrl& url)
 {
+    mDownloadFilePath.clear();
+
     if (mDownloadReply != nullptr && !mDownloadReply->isFinished()) {
         disconnect(mDownloadReply);
         mDownloadReply->abort();
@@ -278,7 +277,10 @@ void Feed::handleFeedFinished()
         if (doc.isObject()) {
             const QJsonObject releaseObj = doc.object();
             if (!releaseObj.value(qsl("draft")).toBool()) {
-                mReleases << Release(releaseObj, mOs, mArch);
+                Release rel(releaseObj, mOs, mArch);
+                if (!rel.getVersion().isEmpty()) {
+                    mReleases << rel;
+                }
             }
         } else {
             //: Error shown when the update server response cannot be understood
@@ -299,7 +301,10 @@ void Feed::handleFeedFinished()
                     continue;
                 }
 
-                mReleases << Release(releaseObj, mOs, mArch);
+                Release rel(releaseObj, mOs, mArch);
+                if (!rel.getVersion().isEmpty()) {
+                    mReleases << rel;
+                }
             }
         } else {
             //: Error shown when the update server response cannot be understood
@@ -320,8 +325,7 @@ void Feed::handleDownloadReadyRead()
 {
     if (mDownloadFile == nullptr) {
         QString fileName = mDownloadReply->url().fileName();
-        // Insert QTemporaryFile placeholder pattern before the file extension
-        // so Qt generates a unique filename (handles compound extensions like .tar.gz)
+        // handle compound extensions like .tar.gz when generating unique temp filenames
         static const QRegularExpression extensionRx(qsl("(?:\\.tar)?\\.[a-zA-Z0-9]+$"));
         int extensionPos = fileName.indexOf(extensionRx);
         if (extensionPos > -1) {
@@ -352,16 +356,14 @@ void Feed::handleDownloadFinished()
     if (mDownloadReply->error() != QNetworkReply::NoError) {
         emit downloadError(mDownloadReply->errorString());
         cleanupDownloadFile();
-        mDownloadReply->deleteLater();
-        mDownloadReply = nullptr;
+        cleanupDownloadReply();
         return;
     }
 
     if (mDownloadFile == nullptr) {
         //: Error shown when the update download completed but nothing was received
         emit downloadError(tr("Download failed. Please try again."));
-        mDownloadReply->deleteLater();
-        mDownloadReply = nullptr;
+        cleanupDownloadReply();
         return;
     }
 
@@ -370,8 +372,7 @@ void Feed::handleDownloadFinished()
         //: Error shown when flushing the downloaded file to disk fails. %1 is the system error message.
         emit downloadError(tr("Failed to save download: %1").arg(mDownloadFile->errorString()));
         cleanupDownloadFile();
-        mDownloadReply->deleteLater();
-        mDownloadReply = nullptr;
+        cleanupDownloadReply();
         return;
     }
     if (!mDownloadFile->seek(0)) {
@@ -379,8 +380,7 @@ void Feed::handleDownloadFinished()
         //: Error shown when the downloaded file cannot be read back for checksum verification
         emit downloadError(tr("Failed to verify download integrity"));
         cleanupDownloadFile();
-        mDownloadReply->deleteLater();
-        mDownloadReply = nullptr;
+        cleanupDownloadReply();
         return;
     }
     QCryptographicHash fileHash(QCryptographicHash::Sha256);
@@ -389,8 +389,7 @@ void Feed::handleDownloadFinished()
         //: Error shown when the downloaded file cannot be read back for checksum verification
         emit downloadError(tr("Failed to verify download integrity"));
         cleanupDownloadFile();
-        mDownloadReply->deleteLater();
-        mDownloadReply = nullptr;
+        cleanupDownloadReply();
         return;
     }
     const QString hashResult = fileHash.result().toHex();
@@ -399,17 +398,14 @@ void Feed::handleDownloadFinished()
         //: Error shown when the downloaded file's SHA256 checksum does not match the expected value
         emit downloadError(tr("Could not verify download integrity."));
         cleanupDownloadFile();
-        mDownloadReply->deleteLater();
-        mDownloadReply = nullptr;
+        cleanupDownloadReply();
         return;
     }
 
-    // Persist the downloaded file and store its path for consumers
     mDownloadFile->setAutoRemove(false);
     mDownloadFilePath = mDownloadFile->fileName();
     cleanupDownloadFile();
-    mDownloadReply->deleteLater();
-    mDownloadReply = nullptr;
+    cleanupDownloadReply();
     emit downloadFinished();
 }
 
@@ -422,6 +418,14 @@ void Feed::abortDownload()
         mDownloadReply = nullptr;
     }
     cleanupDownloadFile();
+}
+
+void Feed::cleanupDownloadReply()
+{
+    if (mDownloadReply) {
+        mDownloadReply->deleteLater();
+        mDownloadReply = nullptr;
+    }
 }
 
 void Feed::cleanupDownloadFile()

@@ -93,8 +93,6 @@ UpdateDialog::UpdateDialog(Feed* feed, Type type, QSettings* settings, QWidget* 
 , mFeed(feed)
 , mType(type)
 , mSettings(settings)
-, mAccepted(false)
-, mIsDownloadFinished(false)
 , mAcceptedInstallButton(nullptr)
 {
     mUi->setupUi(this);
@@ -369,6 +367,11 @@ void UpdateDialog::adjustDialogSize()
 #endif
 }
 
+void UpdateDialog::updateWindowTitle()
+{
+    updateWindowTitle();
+}
+
 void UpdateDialog::resetUi()
 {
     QList<QWidget*> hiddenWidgets;
@@ -419,11 +422,9 @@ void UpdateDialog::setupUpdateUi()
 
     mUi->checkAutoDownload->setChecked(autoDownloadEnabled(mSettings));
 
-    auto title = windowTitle();
-    replaceAppVars(title);
-    setWindowTitle(title);
+    updateWindowTitle();
 
-    // Adapt buttons if release has been downloaded already
+    // Show completed progress bar if release has been downloaded already
     if (mIsDownloadFinished) {
         mUi->progressBar->show();
         mUi->progressBar->setMaximum(1);
@@ -469,9 +470,7 @@ void UpdateDialog::setupChangelogUi()
         label->setText(text);
     }
 
-    auto title = windowTitle();
-    replaceAppVars(title);
-    setWindowTitle(title);
+    updateWindowTitle();
 
     mUi->labelChangelog->setHtml(generateChangelogDocument());
     connect(mUi->buttonConfirm, &QPushButton::clicked, this, &UpdateDialog::accept);
@@ -493,9 +492,7 @@ void UpdateDialog::setupNoUpdatesUi()
     replaceAppVars(text);
     mUi->labelHeadlineNoUpdates->setText(text);
 
-    auto title = windowTitle();
-    replaceAppVars(title);
-    setWindowTitle(title);
+    updateWindowTitle();
 
     connect(mUi->buttonConfirm, &QPushButton::clicked, this, &UpdateDialog::accept);
     adjustDialogSize();
@@ -621,6 +618,9 @@ void UpdateDialog::handleLoadError(const QString& message)
         setupNoUpdatesUi();
         //: Label shown in the update dialog when the update check fails due to a network or server error
         mUi->labelHeadlineNoUpdates->setText(tr("Could not check for updates"));
+        mUi->labelChangelog->setHtml(qsl("<p>%1</p>").arg(message));
+        mUi->labelChangelog->show();
+        adjustDialogSize();
     }
 }
 

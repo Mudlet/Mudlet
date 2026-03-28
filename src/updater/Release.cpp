@@ -43,13 +43,12 @@ namespace dblsqd {
  */
 Release::Release(const QJsonObject& releaseInfo, const QString& os, const QString& arch)
 {
-    // Version: strip "Mudlet-" prefix from tag_name
     const QString tagName = releaseInfo.value(qsl("tag_name")).toString();
     mVersion = tagName.startsWith(qsl("Mudlet-")) ? tagName.mid(7) : tagName;
 
     mDate = QDateTime::fromString(releaseInfo.value(qsl("published_at")).toString(), Qt::ISODate);
 
-    // Changelog: convert GitHub markdown body to HTML
+    // Changelog: convert markdown body to HTML (Qt's CommonMark parser, not full GitHub Flavored Markdown)
     const QString body = releaseInfo.value(qsl("body")).toString();
     if (!body.isEmpty()) {
         QTextDocument doc;
@@ -57,7 +56,6 @@ Release::Release(const QJsonObject& releaseInfo, const QString& os, const QStrin
         mChangelog = doc.toHtml();
     }
 
-    // Find matching asset by platform/arch
     const QJsonArray assets = releaseInfo.value(qsl("assets")).toArray();
     const QString assetPattern = buildAssetPattern(os, arch);
 
@@ -65,13 +63,11 @@ Release::Release(const QJsonObject& releaseInfo, const QString& os, const QStrin
         const QJsonObject asset = assetVal.toObject();
         const QString name = asset.value(qsl("name")).toString();
 
-        // Look for SHA256SUMS.txt checksums file
         if (name == qsl("SHA256SUMS.txt")) {
             mChecksumsUrl = QUrl(asset.value(qsl("browser_download_url")).toString());
             continue;
         }
 
-        // Match platform-specific asset (only first match)
         if (mDownloadUrl.isEmpty() && !assetPattern.isEmpty() && name.contains(assetPattern, Qt::CaseInsensitive)) {
             mDownloadUrl = QUrl(asset.value(qsl("browser_download_url")).toString());
             mDownloadSize = static_cast<qint64>(asset.value(qsl("size")).toDouble());
@@ -117,6 +113,13 @@ bool operator<(const Release& one, const Release& other)
 
 bool operator==(const Release& one, const Release& other)
 {
+    SemVer v1(one.mVersion);
+    SemVer v2(other.mVersion);
+
+    if (v1.isValid() && v2.isValid()) {
+        return v1 == v2;
+    }
+
     return one.mVersion.compare(other.mVersion, Qt::CaseInsensitive) == 0;
 }
 

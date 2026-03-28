@@ -31,6 +31,7 @@ public:
     explicit SemVer(const QString& version);
 
     bool operator<(const SemVer& other) const;
+    bool operator==(const SemVer& other) const;
 
     bool isValid() const;
 
@@ -39,7 +40,6 @@ private:
     int mMinor{0};
     int mPatch{0};
     QString mPrerelease;
-    QString mBuild;
     bool mValid{false};
 
     static QString getRegExp();

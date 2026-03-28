@@ -88,12 +88,13 @@ private:
     void setupChangelogUi();
     void setupNoUpdatesUi();
     void adjustDialogSize();
+    void updateWindowTitle();
 
     void startDownload();
     void startUpdate();
 
-    bool mAccepted;
-    bool mIsDownloadFinished;
+    bool mAccepted{false};
+    bool mIsDownloadFinished{false};
     QString mUpdateFilePath;
     QList<Release> mReleases;
     QList<Release> mUpdates;

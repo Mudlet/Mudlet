@@ -67,16 +67,17 @@ private:
     void makeDownloadRequest(const QUrl& url);
     void fetchChecksums(const QUrl& checksumsUrl);
     void abortDownload();
+    void cleanupDownloadReply();
     void cleanupDownloadFile();
     bool mRequireChecksums{false};
 
     QNetworkAccessManager mNam;
-    QNetworkReply* mFeedReply;
+    QNetworkReply* mFeedReply{nullptr};
     Release mCurrentDownload;
-    QNetworkReply* mDownloadReply;
-    QTemporaryFile* mDownloadFile;
+    QNetworkReply* mDownloadReply{nullptr};
+    QTemporaryFile* mDownloadFile{nullptr};
     QString mDownloadFilePath;
-    bool mReady;
+    bool mReady{false};
 
     QString mOwner;
     QString mRepo;
