@@ -261,9 +261,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ "${RELEASE_TYPE}" == "ptb" ]]; then
-            # Keep only the latest PTB release; after creating the new one there will be 2 total
-            gh release list --json tagName,isPrerelease,createdAt \
-                --jq '[.[] | select(.isPrerelease)] | sort_by(.createdAt) | reverse | .[1:] | .[].tagName' | \
+            # Delete the target tag first in case a duplicate workflow run already created it
+            gh release delete "${RELEASE_TAG}" --yes --cleanup-tag 2>/dev/null || true
+
+            # Clean up old PTB releases, keeping only the latest 1 (+ the new one = 2 total).
+            # Filter by -ptb in tag name to avoid deleting non-PTB prereleases (e.g. release candidates).
+            gh release list --limit 100 --json tagName,isPrerelease,createdAt \
+                --jq '[.[] | select(.isPrerelease and (.tagName | contains("-ptb")))] | sort_by(.createdAt) | reverse | .[1:] | .[].tagName' | \
                 while IFS= read -r old_tag; do
                     echo "Cleaning up old PTB release: ${old_tag}"
                     gh release delete "${old_tag}" --yes --cleanup-tag 2>/dev/null || true
