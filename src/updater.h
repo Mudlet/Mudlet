@@ -20,11 +20,13 @@
 #ifndef UPDATER_H
 #define UPDATER_H
 
-// Guard the includes for builds that have the updater disabled (USE_UPDATER CMake option):
+// Guard for builds without the updater (INCLUDE_UPDATER is defined by CMake when USE_UPDATER is ON):
 #if defined(INCLUDE_UPDATER)
 #include "updater/Feed.h"
 #include "updater/UpdateDialog.h"
+#if defined(Q_OS_MACOS)
 #include "sparkleupdater.h"
+#endif
 #endif
 
 
@@ -49,7 +51,9 @@ public:
 private:
     dblsqd::Feed* mFeed;
     dblsqd::UpdateDialog* mUpdateDialog{nullptr};
+#if !defined(Q_OS_MACOS)
     QPushButton* mpInstallOrRestart;
+#endif
     bool mUpdateInstalled;
     bool mManualCheckInProgress{false};
     QSettings* mSettings;

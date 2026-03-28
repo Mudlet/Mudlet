@@ -69,14 +69,16 @@ static void cleanupSquirrelTempFiles()
 // update flows:
 // linux: new AppImage is downloaded, extracted from its tar archive, and put in place of the old one
 //   user then only restarts mudlet to get the new version
-// windows: installer .exe is downloaded from GitHub Releases. On restart, a batch file
-//   waits for Mudlet to exit, then launches the installer which updates Mudlet
+// windows: installer .exe is downloaded from GitHub Releases. When the user clicks update,
+//   a batch file is launched that waits for Mudlet to exit, then runs the installer
 // mac: handled completely outside of Mudlet by Sparkle
 
 Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
 : QObject(parent)
+#if !defined(Q_OS_MACOS)
 //: Label for the update/restart button in the main toolbar
 , mpInstallOrRestart(new QPushButton(tr("Update")))
+#endif
 , mUpdateInstalled(false)
 {
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
@@ -87,7 +89,10 @@ Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
     mPeriodicCheck = std::make_unique<QTimer>();
 }
 
-Updater::~Updater() = default;
+Updater::~Updater()
+{
+    delete mUpdateDialog;
+}
 
 void Updater::checkUpdatesOnStart()
 {
@@ -170,6 +175,10 @@ void Updater::manuallyCheckUpdates()
 
 void Updater::showDialogManually() const
 {
+    if (!mUpdateDialog) {
+        qWarning() << "showDialogManually called but update dialog not initialized";
+        return;
+    }
     mUpdateDialog->show();
 }
 
@@ -251,7 +260,7 @@ void Updater::finishSetup()
 void Updater::setupOnMacOS()
 {
     // don't need to explicitly check for updates - sparkle will do so on its own
-    msparkleUpdater = new SparkleUpdater();
+    msparkleUpdater = new SparkleUpdater(this);
 }
 #endif // Q_OS_MACOS
 
@@ -296,6 +305,8 @@ void Updater::setupOnWindows()
         const QString fileName = mFeed->getDownloadFilePath();
         if (fileName.isEmpty()) {
             qWarning() << "Download finished but no download file available - feed URL:" << mFeed->getUrl();
+            //: Error shown when the automatic update download finished but produced no file
+            emit signal_updateCheckFailed(tr("Update download failed. Please try again or download manually from https://www.mudlet.org/download/"));
             return;
         }
 
@@ -330,6 +341,8 @@ void Updater::setupOnLinux()
         const QString fileName = mFeed->getDownloadFilePath();
         if (fileName.isEmpty()) {
             qWarning() << "Download finished but no download file available - feed URL:" << mFeed->getUrl();
+            //: Error shown when the automatic update download finished but produced no file
+            emit signal_updateCheckFailed(tr("Update download failed. Please try again or download manually from https://www.mudlet.org/download/"));
             return;
         }
 
@@ -355,7 +368,9 @@ void Updater::untarOnLinux(const QString& fileName)
     // we can assume tar to be present on a Linux system. If it's not, it'd be rather broken.
     // tar output folder has to end with a slash
     tar.start(qsl("tar"), QStringList() << qsl("-xvf") << fileName << qsl("-C") << QStandardPaths::writableLocation(QStandardPaths::TempLocation) + qsl("/"));
-    if (!tar.waitForFinished(300000)) {
+    if (!tar.waitForStarted(5000)) {
+        qWarning() << "Could not start tar:" << tar.errorString();
+    } else if (!tar.waitForFinished(300000)) {
         tar.kill();
         qWarning() << "Untarring" << fileName << "timed out after 5 minutes:" << tar.errorString();
     } else if (tar.exitCode() != 0) {
