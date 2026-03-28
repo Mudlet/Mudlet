@@ -139,17 +139,19 @@ if [ "${DEPLOY}" = "deploy" ]; then
     fi
 
     echo "=== Generating SHA256 checksum for GitHub Release ==="
-    shasum -a 256 "${RELEASE_ARTIFACT}" > "${RELEASE_ARTIFACT}.sha256"
+    RELEASE_ARTIFACT_BASENAME=$(basename "${RELEASE_ARTIFACT}")
+    (cd "$(dirname "${RELEASE_ARTIFACT}")" && shasum -a 256 "${RELEASE_ARTIFACT_BASENAME}") > "${RELEASE_ARTIFACT}.sha256"
 
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Setting up for Github upload ==="
       mkdir -p "${BUILD_DIR}/upload/"
       mv "${RELEASE_ARTIFACT}" "${BUILD_DIR}/upload/"
+      mv "${RELEASE_ARTIFACT}.sha256" "${BUILD_DIR}/upload/"
       {
         echo "FOLDER_TO_UPLOAD=${BUILD_DIR}/upload"
         echo "UPLOAD_FILENAME=Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}"
         echo "RELEASE_ASSET_PATH=${BUILD_DIR}/upload/$(basename "${RELEASE_ARTIFACT}")"
-        echo "RELEASE_ASSET_SHA256_PATH=${RELEASE_ARTIFACT}.sha256"
+        echo "RELEASE_ASSET_SHA256_PATH=${BUILD_DIR}/upload/$(basename "${RELEASE_ARTIFACT}").sha256"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
     else

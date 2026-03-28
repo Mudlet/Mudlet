@@ -327,7 +327,7 @@ else
   mv "${RELEASE_DIR}/Mudlet${NAME_SUFFIX}Setup.exe" "${INSTALLER_EXE_PATHFILE}"
 
   echo "=== Generating SHA256 checksum for GitHub Release ==="
-  sha256sum "${INSTALLER_EXE_PATHFILE}" > "${INSTALLER_EXE_PATHFILE}.sha256"
+  (cd "$(dirname "${INSTALLER_EXE_PATHFILE}")" && sha256sum "$(basename "${INSTALLER_EXE_PATHFILE}")") > "${INSTALLER_EXE_PATHFILE}.sha256"
   {
     echo "RELEASE_ASSET_PATH=${INSTALLER_EXE_PATHFILE}"
     echo "RELEASE_ASSET_SHA256_PATH=${INSTALLER_EXE_PATHFILE}.sha256"

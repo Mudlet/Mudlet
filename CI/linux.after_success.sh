@@ -119,11 +119,12 @@ then
       echo "=== Setting up for Github upload ==="
       mkdir "upload/"
       mv "${RELEASE_ARTIFACT}" "upload/"
+      mv "${RELEASE_ARTIFACT}.sha256" "upload/"
       {
         echo "FOLDER_TO_UPLOAD=$(pwd)/upload"
         echo "UPLOAD_FILENAME=Mudlet-$VERSION$MUDLET_VERSION_BUILD-${BUILD_COMMIT}-linux-x64"
         echo "RELEASE_ASSET_PATH=$(pwd)/upload/${RELEASE_ARTIFACT}"
-        echo "RELEASE_ASSET_SHA256_PATH=$(pwd)/${RELEASE_ARTIFACT}.sha256"
+        echo "RELEASE_ASSET_SHA256_PATH=$(pwd)/upload/${RELEASE_ARTIFACT}.sha256"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
     else

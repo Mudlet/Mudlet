@@ -8,6 +8,10 @@ permissions:
   contents: write
   actions: read
 
+concurrency:
+  group: create-github-release-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
 jobs:
   create-release:
     runs-on: ubuntu-latest
@@ -137,6 +141,7 @@ jobs:
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
         with:
           fetch-depth: 0
+          clean: false
 
       - uses: leafo/gh-actions-lua@v12
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
@@ -178,9 +183,16 @@ jobs:
           head -20 changelog.md
 
       # Create the GitHub Release
-      - name: Delete existing PTB release (rolling tag)
-        if: steps.release-type.outputs.type == 'ptb'
-        run: gh release delete public-test-build --yes --cleanup-tag 2>/dev/null || true
+      # For PTB: delete old rolling release and its tag (will be recreated)
+      # For stable: delete release only (keep the human-created git tag)
+      - name: Delete existing release if re-running
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        run: |
+          if [[ "${{ steps.release-type.outputs.type }}" == "ptb" ]]; then
+            gh release delete "${{ steps.release-type.outputs.tag }}" --yes --cleanup-tag 2>/dev/null || true
+          else
+            gh release delete "${{ steps.release-type.outputs.tag }}" --yes 2>/dev/null || true
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
