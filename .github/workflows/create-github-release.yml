@@ -64,6 +64,10 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: metadata/
 
+      - name: Report skipped release
+        if: steps.check.outputs.ready == 'true' && steps.download-metadata.outcome == 'failure'
+        run: echo "::warning::Release metadata download failed - cannot determine release type"
+
       - name: Determine release type
         if: steps.check.outputs.ready == 'true' && steps.download-metadata.outcome == 'success'
         id: release-type
@@ -128,6 +132,8 @@ jobs:
 
       - name: Verify release assets
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        env:
+          RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
         run: |
           mkdir -p assets/
           echo "Downloaded assets:"
@@ -149,7 +155,7 @@ jobs:
           fi
 
           # Stable releases must have all platforms; PTB tolerates partial
-          if [[ "${{ steps.release-type.outputs.type }}" == "release" ]] && [ ${#MISSING[@]} -gt 0 ]; then
+          if [[ "${RELEASE_TYPE}" == "release" ]] && [ ${#MISSING[@]} -gt 0 ]; then
             echo "::error::Stable release is missing assets for: ${MISSING[*]}"
             exit 1
           fi
@@ -200,11 +206,14 @@ jobs:
 
       - name: Generate changelog
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        env:
+          RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
+          RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
         run: |
-          if [[ "${{ steps.release-type.outputs.type }}" == "release" ]]; then
+          if [[ "${RELEASE_TYPE}" == "release" ]]; then
             # For release: changelog from previous release tag to this tag
-            PREV_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | sed -n '2p')
-            END_TAG="${{ steps.release-type.outputs.tag }}"
+            PREV_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -v "^${RELEASE_TAG}$" | head -1)
+            END_TAG="${RELEASE_TAG}"
           else
             # For PTB: changelog from latest release tag to HEAD
             PREV_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | head -1)
@@ -216,10 +225,18 @@ jobs:
           if [ -n "${PREV_TAG}" ]; then
             if ! lua CI/generate-changelog.lua -f md -m release \
                  --start-commit "${PREV_TAG}" --end-commit "${END_TAG}" > changelog.md; then
+              if [[ "${RELEASE_TYPE}" == "release" ]]; then
+                echo "::error::Changelog generation failed for stable release"
+                exit 1
+              fi
               echo "::warning::Changelog generation failed, using placeholder"
               echo "See commit history for changes." > changelog.md
             fi
           else
+            if [[ "${RELEASE_TYPE}" == "release" ]]; then
+              echo "::error::No previous release tag found - cannot generate changelog for stable release"
+              exit 1
+            fi
             echo "See commit history for changes." > changelog.md
           fi
 
@@ -227,23 +244,31 @@ jobs:
           head -20 changelog.md
 
       # Create the GitHub Release
-      # For PTB: delete old rolling release and its tag (will be recreated)
+      # For PTB: delete old rolling release and its tag (gh release create will recreate both)
       # For stable: delete release only (keep the human-created git tag)
       - name: Delete existing release if re-running
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
-        run: |
-          if [[ "${{ steps.release-type.outputs.type }}" == "ptb" ]]; then
-            gh release delete "${{ steps.release-type.outputs.tag }}" --yes --cleanup-tag 2>/dev/null || true
-          else
-            gh release delete "${{ steps.release-type.outputs.tag }}" --yes 2>/dev/null || true
-          fi
         env:
+          RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
+          RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ "${RELEASE_TYPE}" == "ptb" ]]; then
+            gh release delete "${RELEASE_TAG}" --yes --cleanup-tag 2>/dev/null || true
+          else
+            gh release delete "${RELEASE_TAG}" --yes 2>/dev/null || true
+          fi
 
       - name: Create GitHub Release
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        env:
+          RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
+          RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
+          RELEASE_TITLE: ${{ steps.release-type.outputs.title }}
+          TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Collect release files (not .sha256 sidecars)
+          # Collect release files and combined checksums (exclude per-platform .sha256 sidecars)
           mapfile -t FILES < <(find assets/ -type f \
             \( -name '*.AppImage.tar' -o -name '*.exe' -o -name '*.dmg' -o -name 'SHA256SUMS.txt' \))
 
@@ -256,15 +281,13 @@ jobs:
           printf '%s\n' "${FILES[@]}"
 
           ARGS=(
-            "${{ steps.release-type.outputs.tag }}"
-            --title "${{ steps.release-type.outputs.title }}"
+            "${RELEASE_TAG}"
+            --title "${RELEASE_TITLE}"
             --notes-file changelog.md
           )
 
-          if [[ "${{ steps.release-type.outputs.type }}" == "ptb" ]]; then
-            ARGS+=(--prerelease --target "${{ github.event.workflow_run.head_sha }}")
+          if [[ "${RELEASE_TYPE}" == "ptb" ]]; then
+            ARGS+=(--prerelease --target "${TARGET_SHA}")
           fi
 
           gh release create "${ARGS[@]}" "${FILES[@]}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

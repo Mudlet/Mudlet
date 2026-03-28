@@ -125,12 +125,18 @@ then
         echo "UPLOAD_FILENAME=Mudlet-$VERSION$MUDLET_VERSION_BUILD-${BUILD_COMMIT}-linux-x64"
         echo "RELEASE_ASSET_PATH=$(pwd)/upload/${RELEASE_ARTIFACT}"
         echo "RELEASE_ASSET_SHA256_PATH=$(pwd)/upload/${RELEASE_ARTIFACT}.sha256"
+        echo "VERSION=${VERSION}"
+        echo "MUDLET_VERSION_BUILD=${MUDLET_VERSION_BUILD}"
+        echo "BUILD_COMMIT=${BUILD_COMMIT}"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
     else
       {
         echo "RELEASE_ASSET_PATH=$(pwd)/${RELEASE_ARTIFACT}"
         echo "RELEASE_ASSET_SHA256_PATH=$(pwd)/${RELEASE_ARTIFACT}.sha256"
+        echo "VERSION=${VERSION}"
+        echo "MUDLET_VERSION_BUILD=${MUDLET_VERSION_BUILD}"
+        echo "BUILD_COMMIT=${BUILD_COMMIT}"
       } >> "$GITHUB_ENV"
 
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="

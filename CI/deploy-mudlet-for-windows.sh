@@ -328,6 +328,10 @@ else
 
   echo "=== Generating SHA256 checksum for GitHub Release ==="
   (cd "$(dirname "${INSTALLER_EXE_PATHFILE}")" && sha256sum "$(basename "${INSTALLER_EXE_PATHFILE}")") > "${INSTALLER_EXE_PATHFILE}.sha256"
+  if [ ! -s "${INSTALLER_EXE_PATHFILE}.sha256" ]; then
+    echo "Error: SHA256 checksum generation failed for ${INSTALLER_EXE_PATHFILE}"
+    exit 1
+  fi
   {
     echo "RELEASE_ASSET_PATH=${INSTALLER_EXE_PATHFILE}"
     echo "RELEASE_ASSET_SHA256_PATH=${INSTALLER_EXE_PATHFILE}.sha256"

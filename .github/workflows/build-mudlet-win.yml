@@ -288,9 +288,9 @@ jobs:
       if: steps.sign-installer.outcome == 'success' && env.RELEASE_ASSET_PATH
       shell: msys2 {0}
       run: |
-        # The signed installer replaced the file at ARTIFACT_WINPATHORFILE,
-        # which may differ from RELEASE_ASSET_PATH (e.g. PTB copies to upload dir).
-        # Find the signed installer and update the release asset paths.
+        # After signing, the signed binary lives at ARTIFACT_WINPATHORFILE.
+        # Update RELEASE_ASSET_PATH (set earlier, before signing) to point to
+        # the signed binary and recompute the SHA256.
         SIGNED_PATH=$(cygpath -au "${ARTIFACT_WINPATHORFILE}")
         if [ -d "${SIGNED_PATH}" ]; then
           SIGNED_EXE=$(find "${SIGNED_PATH}" -name "*.exe" -type f | head -1)
@@ -308,8 +308,8 @@ jobs:
           echo "Recomputed SHA256 for signed installer:"
           cat "${SHA256_FILE}"
         else
-          echo "Warning: Could not find signed installer, using original"
-          (cd "$(dirname "${RELEASE_ASSET_PATH}")" && sha256sum "$(basename "${RELEASE_ASSET_PATH}")") > "${RELEASE_ASSET_SHA256_PATH}"
+          echo "::error::Signing step reported success but signed installer not found at ${SIGNED_PATH}"
+          exit 1
         fi
 
     - name: Create intermediate artifact for debugging
@@ -351,9 +351,7 @@ jobs:
       if: env.RELEASE_ASSET_PATH
       shell: msys2 {0}
       run: |
-        cat > release-metadata.json << METAEOF
-        {"version":"${VERSION}","build_suffix":"${MUDLET_VERSION_BUILD}","commit":"${BUILD_COMMIT}","ref":"${{ github.ref }}","event":"${{ github.event_name }}"}
-        METAEOF
+        echo "{\"version\":\"${VERSION}\",\"build_suffix\":\"${MUDLET_VERSION_BUILD}\",\"commit\":\"${BUILD_COMMIT}\",\"ref\":\"${{ github.ref }}\",\"event\":\"${{ github.event_name }}\"}" > release-metadata.json
 
     - name: Upload release metadata
       uses: actions/upload-artifact@v7
