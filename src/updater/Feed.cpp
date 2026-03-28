@@ -112,11 +112,15 @@ bool Feed::isReady() const
 
 void Feed::load()
 {
-    if (mFeedReply != nullptr && !mFeedReply->isFinished()) {
-        qWarning() << "Update check already in progress, ignoring duplicate request";
-        //: Error shown when the user triggers an update check while one is already running
-        emit loadError(tr("Update check already in progress"));
-        return;
+    if (mFeedReply != nullptr) {
+        if (!mFeedReply->isFinished()) {
+            qWarning() << "Update check already in progress, ignoring duplicate request";
+            //: Error shown when the user triggers an update check while one is already running
+            emit loadError(tr("Update check already in progress"));
+            return;
+        }
+        mFeedReply->deleteLater();
+        mFeedReply = nullptr;
     }
 
     mReady = false;
@@ -213,13 +217,15 @@ void Feed::makeDownloadRequest(const QUrl& url)
 {
     mDownloadFilePath.clear();
 
-    if (mDownloadReply != nullptr && !mDownloadReply->isFinished()) {
-        disconnect(mDownloadReply);
-        mDownloadReply->abort();
+    if (mDownloadReply != nullptr) {
+        if (!mDownloadReply->isFinished()) {
+            disconnect(mDownloadReply);
+            mDownloadReply->abort();
+        }
         mDownloadReply->deleteLater();
+        mDownloadReply = nullptr;
     }
     if (mDownloadFile != nullptr) {
-        disconnect(mDownloadFile);
         mDownloadFile->close();
         mDownloadFile->deleteLater();
         mDownloadFile = nullptr;
@@ -280,6 +286,8 @@ void Feed::handleFeedFinished()
                 Release rel(releaseObj, mOs, mArch);
                 if (!rel.getVersion().isEmpty()) {
                     mReleases << rel;
+                } else {
+                    qWarning() << "Skipping release with empty version, tag_name:" << releaseObj.value(qsl("tag_name")).toString();
                 }
             }
         } else {
@@ -304,6 +312,8 @@ void Feed::handleFeedFinished()
                 Release rel(releaseObj, mOs, mArch);
                 if (!rel.getVersion().isEmpty()) {
                     mReleases << rel;
+                } else {
+                    qWarning() << "Skipping release with empty version, tag_name:" << releaseObj.value(qsl("tag_name")).toString();
                 }
             }
         } else {
@@ -325,7 +335,7 @@ void Feed::handleDownloadReadyRead()
 {
     if (mDownloadFile == nullptr) {
         QString fileName = mDownloadReply->url().fileName();
-        // handle compound extensions like .tar.gz when generating unique temp filenames
+        // handle compound extensions like .AppImage.tar when generating unique temp filenames
         static const QRegularExpression extensionRx(qsl("(?:\\.tar)?\\.[a-zA-Z0-9]+$"));
         int extensionPos = fileName.indexOf(extensionRx);
         if (extensionPos > -1) {
@@ -354,7 +364,9 @@ void Feed::handleDownloadReadyRead()
 void Feed::handleDownloadFinished()
 {
     if (mDownloadReply->error() != QNetworkReply::NoError) {
-        emit downloadError(mDownloadReply->errorString());
+        qWarning() << "Download failed:" << mDownloadReply->errorString() << "URL:" << mDownloadReply->url();
+        //: Error shown when the update file download fails. %1 is the network error message.
+        emit downloadError(tr("Download failed: %1").arg(mDownloadReply->errorString()));
         cleanupDownloadFile();
         cleanupDownloadReply();
         return;

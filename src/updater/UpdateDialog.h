@@ -95,6 +95,7 @@ private:
 
     bool mAccepted{false};
     bool mIsDownloadFinished{false};
+    bool mFeedLoadFailed{false};
     QString mUpdateFilePath;
     QList<Release> mReleases;
     QList<Release> mUpdates;

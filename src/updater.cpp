@@ -173,7 +173,6 @@ void Updater::showDialogManually() const
     mUpdateDialog->show();
 }
 
-// only shows the changelog since the last version
 void Updater::showChangelog() const
 {
     auto changelogDialog = new dblsqd::UpdateDialog(mFeed, dblsqd::UpdateDialog::ManualChangelog, mSettings);
@@ -182,7 +181,6 @@ void Updater::showChangelog() const
     changelogDialog->show();
 }
 
-// shows the full changelog
 void Updater::showFullChangelog() const
 {
     if (!mFeed->isReady()) {
@@ -241,7 +239,6 @@ void Updater::finishSetup()
     } else {
         qWarning() << "Mudlet prepped to update on restart";
     }
-    // Clean up legacy .nupkg files from the previous Squirrel/dblsqd update system
     cleanupSquirrelTempFiles();
 #endif
     recordUpdateTime();
@@ -275,6 +272,7 @@ void Updater::setupPlatformUpdater()
 
     connect(mFeed, &dblsqd::Feed::downloadError, this, [this](const QString& error) {
         qWarning() << "Automatic update download failed:" << error;
+        emit signal_updateCheckFailed(error);
     });
 
     mUpdateDialog = new dblsqd::UpdateDialog(mFeed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
@@ -312,13 +310,12 @@ void Updater::setupOnWindows()
     });
 }
 
-// Store the path to the downloaded installer for use when user clicks "Restart to update"
 void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
 {
     mDownloadedInstallerPath = downloadedSetupName;
     qWarning() << "Installer ready at:" << mDownloadedInstallerPath;
 }
-#endif // Q_OS_WIN
+#endif // Q_OS_WINDOWS
 
 #if defined(Q_OS_LINUX)
 void Updater::setupOnLinux()
@@ -364,7 +361,12 @@ void Updater::untarOnLinux(const QString& fileName)
     } else if (tar.exitCode() != 0) {
         qWarning() << "Untarring" << fileName << "failed - exit code:" << tar.exitCode() << tar.errorString();
     } else {
-        mUnzippedBinaryName = tar.readAll().trimmed();
+        const QString output = tar.readAll().trimmed();
+        if (output.isEmpty() || output.contains(QLatin1Char('\n'))) {
+            qWarning() << "Unexpected tar output (expected single filename):" << output;
+        } else {
+            mUnzippedBinaryName = output;
+        }
     }
     qWarning() << __func__ << "finished";
 }
@@ -393,7 +395,12 @@ void Updater::slot_updateLinuxBinary()
     // Safely replace the old binary: rename old to backup first so we can
     // restore it if placing the new binary fails (e.g. cross-device rename)
     const QString backupPath = installedBinaryPath + qsl(".bak");
-    dir.remove(backupPath);
+    if (!dir.remove(backupPath) && QFile::exists(backupPath)) {
+        qWarning() << "Could not remove stale backup at" << backupPath;
+        //: Error shown when the automatic update fails to install on Linux
+        emit signal_updateCheckFailed(tr("Failed to install the update. Please try again or download manually from https://www.mudlet.org/download/"));
+        return;
+    }
     if (!dir.rename(installedBinaryPath, backupPath)) {
         qWarning() << "could not back up old binary from" << installedBinaryPath << "to" << backupPath;
         //: Error shown when the automatic update fails to install on Linux
@@ -409,7 +416,9 @@ void Updater::slot_updateLinuxBinary()
         emit signal_updateCheckFailed(tr("Failed to install the update. Please try again or download manually from https://www.mudlet.org/download/"));
         return;
     }
-    dir.remove(backupPath);
+    if (!dir.remove(backupPath)) {
+        qWarning() << "Could not clean up backup file:" << backupPath;
+    }
     qWarning() << "successfully replaced old binary with new binary";
 
     QFile updatedBinary(appimageLocation);
@@ -517,11 +526,9 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
         if (mudlet::self()) {
             mudlet::self()->forceClose();
         }
-        // Don't restart Mudlet - the installer will do it after the update
+        // Mudlet is not restarted here - the installer is expected to handle launching the updated version
         return;
 #else
-        // if the updater is launched manually instead of when Mudlet is quit,
-        // close Mudlet ourselves
         if (mudlet::self()) {
             mudlet::self()->forceClose();
         }
@@ -537,7 +544,6 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 #endif
     }
 
-// otherwise the button says 'Install', so install the update
 #if defined(Q_OS_LINUX)
     QFuture<void> future = QtConcurrent::run([this, filePath]() {
         untarOnLinux(filePath);
@@ -569,11 +575,10 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 #endif // !Q_OS_MACOS
 }
 
-// records a timestamp (ms since epoch) on disk indicating that an update has happened.
-// Mudlet will use that on the next launch to decide whether it should show
-// the window with the new features. The idea is that if you manually update (thus see the
-// changelog already) and restart, you shouldn't see it again, and if you automatically
-// updated, then you do want to see the changelog.
+// Records a timestamp on disk when an update is installed. On next launch,
+// shouldShowChangelog() uses this to decide whether to show the changelog:
+// if < 5 minutes have passed, the user likely just saw it during the manual
+// update process, so it's skipped. Automatic updates with a longer gap will show it.
 void Updater::recordUpdateTime() const
 {
     QSaveFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
@@ -642,18 +647,20 @@ bool Updater::shouldShowChangelog()
     ifs >> updateTimestamp;
     file.close();
 
+    if (ifs.status() != QDataStream::Ok) {
+        qWarning() << "Failed to read update timestamp file, treating as missing";
+        file.remove();
+        return false;
+    }
+
     auto currentDateTime = QDateTime::currentDateTime().toMSecsSinceEpoch();
     auto minsSinceUpdate = (currentDateTime - updateTimestamp) / 1000 / 60;
 
-    // Delete the file after reading. If Mudlet was restarted immediately after updating
-    // (< 5 minutes), the user likely saw the changelog during the update, so don't show it again.
     file.remove();
 
     return minsSinceUpdate >= 5;
 }
 
-// return the previous version of Mudlet that we updated from
-// return a null QString on failure
 QString Updater::getPreviousVersion() const
 {
     QFile file(mudlet::self()->getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
@@ -670,6 +677,11 @@ QString Updater::getPreviousVersion() const
     ifs >> previousVersion;
     file.close();
     file.remove();
+
+    if (ifs.status() != QDataStream::Ok) {
+        qWarning() << "Failed to read previous version file, treating as missing";
+        return QString();
+    }
 
     return previousVersion;
 }

@@ -26,6 +26,7 @@
 
 #include <QAbstractButton>
 #include <QAction>
+#include <QApplication>
 #include <QDesktopServices>
 #include <QFile>
 #include <QGuiApplication>
@@ -262,7 +263,9 @@ void UpdateDialog::onButtonCustomInstall()
 void UpdateDialog::skip()
 {
     if (!mUpdateFilePath.isEmpty()) {
-        QFile::remove(mUpdateFilePath);
+        if (!QFile::remove(mUpdateFilePath)) {
+            qWarning() << "Failed to remove update file:" << mUpdateFilePath;
+        }
     }
     setSettingsValue(qsl("skipRelease"), mLatestRelease.getVersion(), mSettings);
     done(QDialog::Rejected);
@@ -361,7 +364,7 @@ void UpdateDialog::adjustDialogSize()
 /*HACK: Qt seems to incorrectly calculate window geometry on Windows.
         This code avoids warning messages logged by the application
         in that case.*/
-#if defined(Q_OS_WIN)
+#if defined(Q_OS_WINDOWS)
     QSize dialogSize = size();
     resize(dialogSize.width(), dialogSize.height() + 3);
 #endif
@@ -369,7 +372,9 @@ void UpdateDialog::adjustDialogSize()
 
 void UpdateDialog::updateWindowTitle()
 {
-    updateWindowTitle();
+    QString title = windowTitle();
+    replaceAppVars(title);
+    setWindowTitle(title);
 }
 
 void UpdateDialog::resetUi()
@@ -558,8 +563,9 @@ void UpdateDialog::startUpdate()
         done(QDialog::Accepted);
         QApplication::quit();
     } else {
-        //: Error shown when the downloaded update file cannot be opened for installation
-        handleDownloadError(tr("Could not open the downloaded update. Please try again."));
+        qWarning() << "Failed to open update file:" << mUpdateFilePath << "exists:" << QFile::exists(mUpdateFilePath);
+        //: Error shown when the downloaded update file cannot be opened for installation. %1 is the file path.
+        handleDownloadError(tr("Could not open the downloaded update. You can try opening it manually:\n%1").arg(mUpdateFilePath));
     }
 }
 
@@ -570,6 +576,7 @@ void UpdateDialog::autoDownloadCheckboxToggled(bool enabled)
 
 void UpdateDialog::handleFeedReady()
 {
+    mFeedLoadFailed = false;
     mUpdates = mFeed->getUpdates(dblsqd::Release::getCurrentRelease());
     mReleases = mFeed->getReleases();
     if (!mUpdates.isEmpty()) {
@@ -586,7 +593,9 @@ void UpdateDialog::handleFeedReady()
     if (!mUpdateFilePath.isEmpty() && QFile::exists(mUpdateFilePath)) {
         QString updateFileVersion = settingsValue(qsl("updateFileVersion"), "", mSettings).toString();
         if (updateFileVersion != mLatestRelease.getVersion() || updateFileVersion == QApplication::applicationVersion()) {
-            QFile::remove(mUpdateFilePath);
+            if (!QFile::remove(mUpdateFilePath)) {
+                qWarning() << "Failed to remove stale update file:" << mUpdateFilePath;
+            }
             removeSetting(qsl("updateFilePath"), mSettings);
             removeSetting(qsl("updateFileVersion"), mSettings);
             mUpdateFilePath = "";
@@ -614,6 +623,7 @@ void UpdateDialog::handleFeedReady()
 void UpdateDialog::handleLoadError(const QString& message)
 {
     qWarning() << "Update check failed:" << message;
+    mFeedLoadFailed = true;
     if (isVisible()) {
         setupNoUpdatesUi();
         //: Label shown in the update dialog when the update check fails due to a network or server error
@@ -622,6 +632,9 @@ void UpdateDialog::handleLoadError(const QString& message)
         mUi->labelChangelog->show();
         adjustDialogSize();
     }
+    // Re-establish single-shot connections so the next feed load attempt reaches this dialog
+    KDToolBox::connectSingleShot(mFeed, &Feed::ready, this, &UpdateDialog::handleFeedReady);
+    KDToolBox::connectSingleShot(mFeed, &Feed::loadError, this, &UpdateDialog::handleLoadError);
 }
 
 void UpdateDialog::handleDownloadFinished()

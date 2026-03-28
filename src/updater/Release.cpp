@@ -44,9 +44,15 @@ namespace dblsqd {
 Release::Release(const QJsonObject& releaseInfo, const QString& os, const QString& arch)
 {
     const QString tagName = releaseInfo.value(qsl("tag_name")).toString();
+    if (tagName.isEmpty()) {
+        qWarning() << "Release missing tag_name field";
+    }
     mVersion = tagName.startsWith(qsl("Mudlet-")) ? tagName.mid(7) : tagName;
 
     mDate = QDateTime::fromString(releaseInfo.value(qsl("published_at")).toString(), Qt::ISODate);
+    if (!mDate.isValid()) {
+        qWarning() << "Release" << mVersion << "has invalid or missing published_at date";
+    }
 
     // Changelog: convert markdown body to HTML (Qt's CommonMark parser, not full GitHub Flavored Markdown)
     const QString body = releaseInfo.value(qsl("body")).toString();
@@ -189,6 +195,9 @@ QString Release::buildAssetPattern(const QString& os, const QString& arch)
             return qsl("-arm64.dmg");
         }
         return qsl("-x86_64.dmg");
+    }
+    if (!os.isEmpty()) {
+        qWarning() << "No asset pattern defined for OS:" << os << "arch:" << arch;
     }
     return QString();
 }

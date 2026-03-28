@@ -20,8 +20,7 @@
 #ifndef UPDATER_H
 #define UPDATER_H
 
-// The updater is only supported on Linux, Windows, and macOS. Guard the
-// includes to prevent clang-tidy / Clazy warnings on other platforms:
+// Guard the includes for builds that have the updater disabled (USE_UPDATER CMake option):
 #if defined(INCLUDE_UPDATER)
 #include "updater/Feed.h"
 #include "updater/UpdateDialog.h"
@@ -85,7 +84,6 @@ private:
 
 signals:
     void signal_updateInstalled();
-    // Argument is a count of updates available
     void signal_updateAvailable(const int);
     void signal_automaticUpdatesChanged(const bool);
     void signal_updateCheckFailed(const QString& error);
