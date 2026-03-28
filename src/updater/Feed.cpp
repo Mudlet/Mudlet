@@ -53,7 +53,7 @@ void Feed::setRepo(const QString& owner, const QString& repo, bool prerelease, c
     mArch = arch.isEmpty() ? detectArch() : arch;
 
     if (prerelease) {
-        mUrl = QUrl(qsl("https://api.github.com/repos/%1/%2/releases/tags/public-test-build").arg(owner, repo));
+        mUrl = QUrl(qsl("https://api.github.com/repos/%1/%2/releases?per_page=10").arg(owner, repo));
     } else {
         mUrl = QUrl(qsl("https://api.github.com/repos/%1/%2/releases?per_page=100").arg(owner, repo));
     }
@@ -278,48 +278,30 @@ void Feed::handleFeedFinished()
         return;
     }
 
-    if (mPrerelease) {
-        // PTB channel: single release object from /releases/tags/public-test-build
-        if (doc.isObject()) {
-            const QJsonObject releaseObj = doc.object();
-            if (!releaseObj.value(qsl("draft")).toBool()) {
-                Release rel(releaseObj, mOs, mArch);
-                if (!rel.getVersion().isEmpty()) {
-                    mReleases << rel;
-                } else {
-                    qWarning() << "Skipping release with empty version, tag_name:" << releaseObj.value(qsl("tag_name")).toString();
-                }
-            }
-        } else {
-            //: Error shown when the update server response cannot be understood
-            emit loadError(tr("Could not read update information from the server"));
-            return;
+    // Both channels use the releases list endpoint and return an array
+    if (!doc.isArray()) {
+        //: Error shown when the update server response cannot be understood
+        emit loadError(tr("Could not read update information from the server"));
+        return;
+    }
+
+    const QJsonArray releasesArray = doc.array();
+    for (const auto& val : releasesArray) {
+        const QJsonObject releaseObj = val.toObject();
+
+        // PTB channel: include only prereleases; stable channel: exclude prereleases
+        if (mPrerelease != releaseObj.value(qsl("prerelease")).toBool()) {
+            continue;
         }
-    } else {
-        // Release channel: array of all releases
-        if (doc.isArray()) {
-            const QJsonArray releasesArray = doc.array();
-            for (const auto& val : releasesArray) {
-                const QJsonObject releaseObj = val.toObject();
+        if (releaseObj.value(qsl("draft")).toBool()) {
+            continue;
+        }
 
-                if (releaseObj.value(qsl("prerelease")).toBool()) {
-                    continue;
-                }
-                if (releaseObj.value(qsl("draft")).toBool()) {
-                    continue;
-                }
-
-                Release rel(releaseObj, mOs, mArch);
-                if (!rel.getVersion().isEmpty()) {
-                    mReleases << rel;
-                } else {
-                    qWarning() << "Skipping release with empty version, tag_name:" << releaseObj.value(qsl("tag_name")).toString();
-                }
-            }
+        Release rel(releaseObj, mOs, mArch);
+        if (!rel.getVersion().isEmpty()) {
+            mReleases << rel;
         } else {
-            //: Error shown when the update server response cannot be understood
-            emit loadError(tr("Could not read update information from the server"));
-            return;
+            qWarning() << "Skipping release with empty version, tag_name:" << releaseObj.value(qsl("tag_name")).toString();
         }
     }
 
