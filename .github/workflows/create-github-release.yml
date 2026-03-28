@@ -94,13 +94,20 @@ jobs:
             exit 1
           fi
 
+          COMMIT=$(echo "$META" | jq -r '.commit')
+
           if [[ "$REF" == refs/tags/Mudlet-* ]]; then
             echo "type=release" >> "$GITHUB_OUTPUT"
             echo "tag=${REF#refs/tags/}" >> "$GITHUB_OUTPUT"
             echo "title=Mudlet ${VERSION}" >> "$GITHUB_OUTPUT"
           elif [[ "$EVENT" == "schedule" ]] || [[ "$BUILD_SUFFIX" == -ptb* ]]; then
+            if [ -z "${COMMIT}" ] || [ "${COMMIT}" == "null" ]; then
+              echo "::error::COMMIT field is empty or missing in release metadata for PTB"
+              exit 1
+            fi
+            PTB_TAG="Mudlet-${VERSION}${BUILD_SUFFIX}-${COMMIT}"
             echo "type=ptb" >> "$GITHUB_OUTPUT"
-            echo "tag=public-test-build" >> "$GITHUB_OUTPUT"
+            echo "tag=${PTB_TAG}" >> "$GITHUB_OUTPUT"
             echo "title=Public Test Build" >> "$GITHUB_OUTPUT"
           else
             echo "type=skip" >> "$GITHUB_OUTPUT"
@@ -211,12 +218,12 @@ jobs:
           RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
         run: |
           if [[ "${RELEASE_TYPE}" == "release" ]]; then
-            # For release: changelog from previous release tag to this tag
-            PREV_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -v "^${RELEASE_TAG}$" | head -1)
+            # For release: changelog from previous stable release tag to this tag
+            PREV_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -v -- '-ptb' | grep -v "^${RELEASE_TAG}$" | head -1)
             END_TAG="${RELEASE_TAG}"
           else
-            # For PTB: changelog from latest release tag to HEAD
-            PREV_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | head -1)
+            # For PTB: changelog from latest stable release tag to HEAD
+            PREV_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -v -- '-ptb' | head -1)
             END_TAG="HEAD"
           fi
 
@@ -244,9 +251,9 @@ jobs:
           head -20 changelog.md
 
       # Create the GitHub Release
-      # For PTB: delete old rolling release and its tag (gh release create will recreate both)
-      # For stable: delete release only (keep the human-created git tag)
-      - name: Delete existing release if re-running
+      # For PTB: clean up old PTB releases, keeping only the latest 1 (+ the new one = 2 total)
+      # For stable: delete release only if re-running (keep the human-created git tag)
+      - name: Clean up old releases
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
         env:
           RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
@@ -254,7 +261,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ "${RELEASE_TYPE}" == "ptb" ]]; then
-            gh release delete "${RELEASE_TAG}" --yes --cleanup-tag 2>/dev/null || true
+            # Keep only the latest PTB release; after creating the new one there will be 2 total
+            gh release list --json tagName,isPrerelease,createdAt \
+                --jq '[.[] | select(.isPrerelease)] | sort_by(.createdAt) | reverse | .[1:] | .[].tagName' | \
+                while IFS= read -r old_tag; do
+                    echo "Cleaning up old PTB release: ${old_tag}"
+                    gh release delete "${old_tag}" --yes --cleanup-tag 2>/dev/null || true
+                done
           else
             gh release delete "${RELEASE_TAG}" --yes 2>/dev/null || true
           fi
