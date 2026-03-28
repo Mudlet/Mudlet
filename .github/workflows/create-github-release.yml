@@ -8,6 +8,7 @@ permissions:
   contents: write
   actions: read
 
+# Both build workflows trigger this; don't cancel the first - the second trigger completes the release
 concurrency:
   group: create-github-release-${{ github.event.workflow_run.head_sha }}
   cancel-in-progress: false
@@ -51,13 +52,7 @@ jobs:
             core.setOutput('linux_macos_run_id', runIds['linux_macos']);
             core.setOutput('windows_run_id', runIds['windows']);
 
-      - name: Exit if not all builds done
-        if: steps.check.outputs.ready != 'true'
-        run: |
-          echo "Not all platform builds completed yet — exiting. The other workflow's completion will trigger another attempt."
-          exit 0
-
-      # Check if any release assets were actually produced (skips PR/snapshot builds)
+      # Download build metadata to determine if this is a release or PTB build (not present for snapshot/PR builds)
       - name: Download metadata to determine release type
         if: steps.check.outputs.ready == 'true'
         id: download-metadata
@@ -75,7 +70,7 @@ jobs:
         run: |
           META_FILE=$(find metadata/ -name 'release-metadata.json' -type f | head -1)
           if [ -z "${META_FILE}" ]; then
-            echo "No release metadata found — this is likely a snapshot/PR build"
+            echo "No release metadata found - this is likely a snapshot or PR build"
             echo "type=skip" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -85,6 +80,15 @@ jobs:
           EVENT=$(echo "$META" | jq -r '.event')
           VERSION=$(echo "$META" | jq -r '.version')
           BUILD_SUFFIX=$(echo "$META" | jq -r '.build_suffix')
+
+          if [ -z "${VERSION}" ] || [ "${VERSION}" == "null" ]; then
+            echo "::error::VERSION field is empty or missing in release metadata"
+            exit 1
+          fi
+          if [ -z "${REF}" ] || [ "${REF}" == "null" ]; then
+            echo "::error::REF field is empty or missing in release metadata"
+            exit 1
+          fi
 
           if [[ "$REF" == refs/tags/Mudlet-* ]]; then
             echo "type=release" >> "$GITHUB_OUTPUT"
@@ -98,15 +102,11 @@ jobs:
             echo "type=skip" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Exit if not a release or PTB build
-        if: steps.check.outputs.ready == 'true' && (steps.download-metadata.outcome != 'success' || steps.release-type.outputs.type == 'skip')
-        run: |
-          echo "Not a release or PTB build — skipping GitHub Release creation."
-          exit 0
-
       # Download all release assets from both workflow runs
       - name: Download Linux/macOS release assets
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        id: download-linux-macos
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           pattern: release-asset-*
@@ -116,6 +116,8 @@ jobs:
 
       - name: Download Windows release assets
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        id: download-windows
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           pattern: release-asset-*
@@ -124,22 +126,61 @@ jobs:
           path: assets/
           merge-multiple: false
 
-      - name: List collected assets
+      - name: Verify release assets
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
-        run: find assets/ -type f | sort
+        run: |
+          mkdir -p assets/
+          echo "Downloaded assets:"
+          find assets/ -type f | sort
+
+          MISSING=()
+          if ! find assets/ -name '*.AppImage.tar' -type f | grep -q .; then
+            MISSING+=("Linux (.AppImage.tar)")
+          fi
+          if ! find assets/ -name '*.dmg' -type f | grep -q .; then
+            MISSING+=("macOS (.dmg)")
+          fi
+          if ! find assets/ -name '*.exe' -type f | grep -q .; then
+            MISSING+=("Windows (.exe)")
+          fi
+
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "::warning::Missing release assets for: ${MISSING[*]}"
+          fi
+
+          # Stable releases must have all platforms; PTB tolerates partial
+          if [[ "${{ steps.release-type.outputs.type }}" == "release" ]] && [ ${#MISSING[@]} -gt 0 ]; then
+            echo "::error::Stable release is missing assets for: ${MISSING[*]}"
+            exit 1
+          fi
+
+          if [ ${#MISSING[@]} -eq 3 ]; then
+            echo "::error::No release assets found for any platform"
+            exit 1
+          fi
 
       # Assemble SHA256SUMS.txt from per-platform .sha256 sidecar files
       - name: Assemble SHA256SUMS.txt
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
         run: |
-          cat assets/*/*.sha256 > assets/SHA256SUMS.txt
-          echo "Generated SHA256SUMS.txt:"
+          shopt -s nullglob
+          SHA_FILES=(assets/*/*.sha256)
+          shopt -u nullglob
+
+          if [ ${#SHA_FILES[@]} -eq 0 ]; then
+            echo "::error::No .sha256 checksum files found in assets/"
+            exit 1
+          fi
+
+          cat "${SHA_FILES[@]}" > assets/SHA256SUMS.txt
+          echo "Generated SHA256SUMS.txt (${#SHA_FILES[@]} entries):"
           cat assets/SHA256SUMS.txt
 
       # Generate changelog
       - uses: actions/checkout@v6
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
           clean: false
 
@@ -171,10 +212,13 @@ jobs:
           fi
 
           echo "Generating changelog from ${PREV_TAG} to ${END_TAG}"
+          # Use 'release' mode for both since we have explicit commit ranges (ptb mode requires a dblsqd feed file)
           if [ -n "${PREV_TAG}" ]; then
-            lua CI/generate-changelog.lua -f md -m release \
-              --start-commit "${PREV_TAG}" --end-commit "${END_TAG}" > changelog.md || \
+            if ! lua CI/generate-changelog.lua -f md -m release \
+                 --start-commit "${PREV_TAG}" --end-commit "${END_TAG}" > changelog.md; then
+              echo "::warning::Changelog generation failed, using placeholder"
               echo "See commit history for changes." > changelog.md
+            fi
           else
             echo "See commit history for changes." > changelog.md
           fi
@@ -200,11 +244,16 @@ jobs:
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
         run: |
           # Collect release files (not .sha256 sidecars)
-          FILES=$(find assets/ -type f \
+          mapfile -t FILES < <(find assets/ -type f \
             \( -name '*.AppImage.tar' -o -name '*.exe' -o -name '*.dmg' -o -name 'SHA256SUMS.txt' \))
 
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "::error::No release files found to upload"
+            exit 1
+          fi
+
           echo "Files to upload:"
-          echo "$FILES"
+          printf '%s\n' "${FILES[@]}"
 
           ARGS=(
             "${{ steps.release-type.outputs.tag }}"
@@ -216,7 +265,6 @@ jobs:
             ARGS+=(--prerelease --target "${{ github.event.workflow_run.head_sha }}")
           fi
 
-          # shellcheck disable=SC2086
-          gh release create "${ARGS[@]}" $FILES
+          gh release create "${ARGS[@]}" "${FILES[@]}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
