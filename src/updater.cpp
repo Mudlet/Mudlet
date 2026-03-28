@@ -62,13 +62,13 @@ static void cleanupSquirrelTempFiles()
     }
 
     if (removedCount > 0) {
-        qWarning() << "Cleaned up" << removedCount << "Mudlet .nupkg files from SquirrelTemp, freed" << (freedSpace / 1024 / 1024) << "MB of disk space";
+        qDebug() << "Cleaned up" << removedCount << "Mudlet .nupkg files from SquirrelTemp, freed" << (freedSpace / 1024 / 1024) << "MB of disk space";
     }
 }
 #endif // Q_OS_WINDOWS
 
 // update flows:
-// linux: new AppImage is downloaded, unzipped, and put in place of the old one
+// linux: new AppImage is downloaded, extracted from its tar archive, and put in place of the old one
 //   user then only restarts mudlet to get the new version
 // windows: installer .exe is downloaded from GitHub Releases. On restart, a batch file
 //   waits for Mudlet to exit, then launches the installer which updates Mudlet
@@ -90,9 +90,7 @@ Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
 
 Updater::~Updater() = default;
 
-// start the update process and figure out what needs to be done.
-// If it's a silent update, do that right away, otherwise
-// setup manual updates to do our custom actions
+// Set up platform-specific update handling and start periodic update checks
 void Updater::checkUpdatesOnStart()
 {
 #if defined(Q_OS_MACOS)
@@ -221,8 +219,8 @@ bool Updater::downloadReleaseIfValid(const dblsqd::Release& release)
     if (!downloadUrl.isValid() || downloadUrl.isEmpty()) {
         qWarning() << "Update check: invalid download URL for release" << release.getVersion();
         if (mManualCheckInProgress) {
-            //: Error shown when the download URL for an update is missing or invalid. %1 is the version number.
-            emit signal_updateCheckFailed(tr("Invalid download URL for version %1").arg(release.getVersion()));
+            //: Error shown when no download is available for the user's platform. %1 is the version number.
+            emit signal_updateCheckFailed(tr("No download available for version %1. Please try again later or download manually from https://www.mudlet.org/download/").arg(release.getVersion()));
         }
         return false;
     }
@@ -272,14 +270,8 @@ void Updater::setupPlatformUpdater()
 
         auto updates = mFeed->getUpdates(dblsqd::Release::getCurrentRelease());
         qWarning() << "Checked for updates:" << updates.size() << "update(s) available";
-        if (updates.isEmpty()) {
-            return;
-        } else if (!updateAutomatically()) {
+        if (!updates.isEmpty()) {
             emit signal_updateAvailable(updates.size());
-        } else {
-            if (!downloadReleaseIfValid(updates.first())) {
-                emit signal_updateAvailable(updates.size());
-            }
         }
     });
 
@@ -403,6 +395,8 @@ void Updater::slot_updateLinuxBinary()
     dir.remove(backupPath);
     if (!dir.rename(installedBinaryPath, backupPath)) {
         qWarning() << "could not back up old binary from" << installedBinaryPath << "to" << backupPath;
+        //: Error shown when the automatic update fails to install on Linux
+        emit signal_updateCheckFailed(tr("Failed to install the update. Please try again or download manually from https://www.mudlet.org/download/"));
         return;
     }
     if (!dir.rename(unzippedBinary.filePath(), installedBinaryPath)) {
@@ -410,6 +404,8 @@ void Updater::slot_updateLinuxBinary()
         if (!dir.rename(backupPath, installedBinaryPath)) {
             qWarning() << "could not restore backup from" << backupPath << "to" << installedBinaryPath;
         }
+        //: Error shown when the automatic update fails to install on Linux
+        emit signal_updateCheckFailed(tr("Failed to install the update. Please try again or download manually from https://www.mudlet.org/download/"));
         return;
     }
     dir.remove(backupPath);
@@ -418,6 +414,8 @@ void Updater::slot_updateLinuxBinary()
     QFile updatedBinary(appimageLocation);
     if (!updatedBinary.setPermissions(executablePermissions)) {
         qWarning() << "couldn't set executable permissions on updated Mudlet binary at" << installedBinaryPath;
+        //: Error shown when the automatic update fails to install on Linux
+        emit signal_updateCheckFailed(tr("Failed to install the update. Please try again or download manually from https://www.mudlet.org/download/"));
         return;
     }
     qWarning() << "successfully set executable permissions for the new binary";
@@ -444,9 +442,8 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
         });
 
 #if defined(Q_OS_WINDOWS)
-        // On Windows, launch the installer directly with a delay to ensure Mudlet
-        // has fully exited. This prevents "file in use" errors during the update.
-        // The installer will relaunch Mudlet after the update completes.
+        // On Windows, create and launch a batch file that waits for Mudlet to exit,
+        // then runs the installer. This prevents "file in use" errors during the update.
         if (mDownloadedInstallerPath.isEmpty() || !QFile::exists(mDownloadedInstallerPath)) {
             qWarning() << "Installer not found at:" << mDownloadedInstallerPath;
             //: Error title for update-related warning dialogs

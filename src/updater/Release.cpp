@@ -71,11 +71,10 @@ Release::Release(const QJsonObject& releaseInfo, const QString& os, const QStrin
             continue;
         }
 
-        // Match platform-specific asset
-        if (!assetPattern.isEmpty() && name.contains(assetPattern, Qt::CaseInsensitive)) {
+        // Match platform-specific asset (only first match)
+        if (mDownloadUrl.isEmpty() && !assetPattern.isEmpty() && name.contains(assetPattern, Qt::CaseInsensitive)) {
             mDownloadUrl = QUrl(asset.value(qsl("browser_download_url")).toString());
             mDownloadSize = static_cast<qint64>(asset.value(qsl("size")).toDouble());
-            break;
         }
     }
 

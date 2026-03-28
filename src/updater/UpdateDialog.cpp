@@ -22,6 +22,7 @@
 #include "ui_update_dialog.h"
 
 #include "../utils.h"
+#include "../../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 
 #include <QAbstractButton>
 #include <QAction>
@@ -125,8 +126,8 @@ UpdateDialog::UpdateDialog(Feed* feed, Type type, QSettings* settings, QWidget* 
     } else {
         setupLoadingUi();
         mFeed->load();
-        connect(mFeed, &Feed::ready, this, &UpdateDialog::handleFeedReady);
-        connect(mFeed, &Feed::loadError, this, &UpdateDialog::handleLoadError);
+        KDToolBox::connectSingleShot(mFeed, &Feed::ready, this, &UpdateDialog::handleFeedReady);
+        KDToolBox::connectSingleShot(mFeed, &Feed::loadError, this, &UpdateDialog::handleLoadError);
     }
 }
 
@@ -560,8 +561,8 @@ void UpdateDialog::startUpdate()
         done(QDialog::Accepted);
         QApplication::quit();
     } else {
-        //: Error shown when the downloaded update file cannot be opened for installation. %1 is the file path.
-        handleDownloadError(tr("Could not open downloaded file %1").arg(mUpdateFilePath));
+        //: Error shown when the downloaded update file cannot be opened for installation
+        handleDownloadError(tr("Could not open the downloaded update. Please try again."));
     }
 }
 
@@ -628,7 +629,7 @@ void UpdateDialog::handleDownloadFinished()
     const QString filePath = mFeed->getDownloadFilePath();
     if (filePath.isEmpty()) {
         //: Error shown when the download finished but no file was saved
-        handleDownloadError(tr("Download completed but no file available"));
+        handleDownloadError(tr("Download failed. Please try again."));
         return;
     }
     mIsDownloadFinished = true;

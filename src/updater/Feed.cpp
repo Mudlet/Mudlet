@@ -59,7 +59,7 @@ void Feed::setRepo(const QString& owner, const QString& repo, bool prerelease, c
     if (prerelease) {
         mUrl = QUrl(qsl("https://api.github.com/repos/%1/%2/releases/tags/public-test-build").arg(owner, repo));
     } else {
-        mUrl = QUrl(qsl("https://api.github.com/repos/%1/%2/releases").arg(owner, repo));
+        mUrl = QUrl(qsl("https://api.github.com/repos/%1/%2/releases?per_page=100").arg(owner, repo));
     }
 }
 
@@ -123,6 +123,8 @@ void Feed::load()
         return;
     }
 
+    mReady = false;
+
     QNetworkRequest request(getUrl());
     request.setRawHeader("Accept", "application/vnd.github+json");
     request.setRawHeader("User-Agent", "Mudlet-Updater");
@@ -146,8 +148,8 @@ void Feed::downloadRelease(const Release& release, bool requireChecksums)
     if (checksumsUrl.isValid() && !checksumsUrl.isEmpty()) {
         fetchChecksums(checksumsUrl);
     } else if (requireChecksums) {
-        //: Error shown when a manual update check cannot verify download integrity
-        emit downloadError(tr("Cannot verify download integrity - no checksum available for this release"));
+        //: Error shown when a manual update cannot be verified as safe to install
+        emit downloadError(tr("Could not verify the download is safe. Please try again later."));
     } else {
         makeDownloadRequest(downloadUrl);
     }
@@ -165,8 +167,8 @@ void Feed::fetchChecksums(const QUrl& checksumsUrl)
         if (reply->error() != QNetworkReply::NoError) {
             if (mRequireChecksums) {
                 reply->deleteLater();
-                //: Error shown when a manual update check cannot verify download integrity
-                emit downloadError(tr("Cannot verify download integrity - failed to fetch checksums: %1").arg(reply->errorString()));
+                //: Error shown when a manual update cannot be verified as safe to install
+                emit downloadError(tr("Could not verify the download is safe. Please try again later."));
                 return;
             }
             qWarning() << "Failed to fetch checksums:" << reply->errorString() << "- download will proceed without integrity verification";
@@ -198,8 +200,8 @@ void Feed::fetchChecksums(const QUrl& checksumsUrl)
             if (mCurrentDownload.getDownloadSHA256().isEmpty()) {
                 if (mRequireChecksums) {
                     reply->deleteLater();
-                    //: Error shown when a manual update check cannot verify download integrity
-                    emit downloadError(tr("Cannot verify download integrity - no matching checksum found for %1").arg(mCurrentDownload.getDownloadUrl().fileName()));
+                    //: Error shown when a manual update cannot be verified as safe to install
+                    emit downloadError(tr("Could not verify the download is safe. Please try again later."));
                     return;
                 }
                 qCritical() << "Checksum file downloaded but no matching hash found for" << mCurrentDownload.getDownloadUrl().fileName() << "- download will proceed without integrity verification";
@@ -237,7 +239,8 @@ void Feed::makeDownloadRequest(const QUrl& url)
 void Feed::handleFeedFinished()
 {
     if (mFeedReply->error() != QNetworkReply::NoError) {
-        emit loadError(mFeedReply->errorString());
+        //: Error shown when the network request to the update server fails. %1 is the technical error description.
+        emit loadError(tr("Could not connect to the update server: %1").arg(mFeedReply->errorString()));
         mFeedReply->deleteLater();
         mFeedReply = nullptr;
         return;
@@ -250,8 +253,8 @@ void Feed::handleFeedFinished()
 
     const QJsonDocument doc = QJsonDocument::fromJson(json);
     if (doc.isNull()) {
-        //: Error shown when the server response is not valid JSON
-        emit loadError(tr("Could not parse update information from server"));
+        //: Error shown when the server response cannot be understood
+        emit loadError(tr("Could not read update information from the server"));
         return;
     }
 
@@ -278,8 +281,8 @@ void Feed::handleFeedFinished()
                 mReleases << Release(releaseObj, mOs, mArch);
             }
         } else {
-            //: Error shown when the update server response has an unexpected JSON structure
-            emit loadError(tr("Unexpected response format from update server"));
+            //: Error shown when the update server response cannot be understood
+            emit loadError(tr("Could not read update information from the server"));
             return;
         }
     } else {
@@ -299,8 +302,8 @@ void Feed::handleFeedFinished()
                 mReleases << Release(releaseObj, mOs, mArch);
             }
         } else {
-            //: Error shown when the update server response has an unexpected JSON structure
-            emit loadError(tr("Unexpected response format from update server"));
+            //: Error shown when the update server response cannot be understood
+            emit loadError(tr("Could not read update information from the server"));
             return;
         }
     }
@@ -355,8 +358,8 @@ void Feed::handleDownloadFinished()
     }
 
     if (mDownloadFile == nullptr) {
-        //: Error shown when the update download completed but the server sent no data
-        emit downloadError(tr("No data received from server"));
+        //: Error shown when the update download completed but nothing was received
+        emit downloadError(tr("Download failed. Please try again."));
         mDownloadReply->deleteLater();
         mDownloadReply = nullptr;
         return;
