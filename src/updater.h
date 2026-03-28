@@ -20,8 +20,8 @@
 #ifndef UPDATER_H
 #define UPDATER_H
 
-// FreeBSD does not support the updater and these missing files upset
-// clang-tidy / Clazy when they are run in an environment without them:
+// The updater is only supported on Linux, Windows, and macOS. Guard the
+// includes to prevent clang-tidy / Clazy warnings on other platforms:
 #if defined(INCLUDE_UPDATER)
 #include "updater/Feed.h"
 #include "updater/UpdateDialog.h"
@@ -54,7 +54,7 @@ private:
     bool mUpdateInstalled;
     bool mManualCheckInProgress{false};
     QSettings* mSettings;
-    std::unique_ptr<QTimer> mDailyCheck;
+    std::unique_ptr<QTimer> mPeriodicCheck;
 
 #if defined(Q_OS_LINUX)
     void setupOnLinux();

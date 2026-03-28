@@ -169,7 +169,7 @@ dblsqd::Release Release::getCurrentRelease()
 {
     // embed build time so public test releases, which cannot be compared via semver, can be compared via datetime
     QString buildDateTime = QString(__DATE__) + " " + QString(__TIME__);
-    // locale-correct datetime parsing
+    // locale-independent datetime parsing (C locale matches __DATE__'s English format)
     QDateTime date = QLocale::c().toDateTime(buildDateTime.simplified(), qsl("MMM d yyyy hh:mm:ss"));
 
     return dblsqd::Release(QCoreApplication::applicationVersion(), date);

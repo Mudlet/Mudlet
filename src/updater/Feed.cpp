@@ -93,7 +93,7 @@ QList<Release> Feed::getReleases() const
     return mReleases;
 }
 
-QList<Release> Feed::getUpdates(const Release& currentRelease)
+QList<Release> Feed::getUpdates(const Release& currentRelease) const
 {
     QList<Release> updates;
     for (const auto& release : mReleases) {
@@ -329,18 +329,24 @@ void Feed::handleDownloadReadyRead()
             qWarning() << "Failed to create temporary file for download:" << mDownloadFile->errorString();
             //: Error shown when a temporary file cannot be created for the update download. %1 is the system error message.
             emit downloadError(tr("Could not create temporary file for download: %1").arg(mDownloadFile->errorString()));
+            disconnect(mDownloadReply, &QNetworkReply::finished, this, &Feed::handleDownloadFinished);
             mDownloadReply->abort();
+            mDownloadReply->deleteLater();
+            mDownloadReply = nullptr;
             cleanupDownloadFile();
             return;
         }
     }
     const QByteArray data = mDownloadReply->readAll();
     const qint64 bytesWritten = mDownloadFile->write(data);
-    if (bytesWritten == -1) {
+    if (bytesWritten != data.size()) {
         qWarning() << "Failed to write download data to temporary file:" << mDownloadFile->errorString();
         //: Error shown when writing download data to disk fails. %1 is the system error message.
         emit downloadError(tr("Failed to save download data: %1").arg(mDownloadFile->errorString()));
+        disconnect(mDownloadReply, &QNetworkReply::finished, this, &Feed::handleDownloadFinished);
         mDownloadReply->abort();
+        mDownloadReply->deleteLater();
+        mDownloadReply = nullptr;
         cleanupDownloadFile();
         return;
     }

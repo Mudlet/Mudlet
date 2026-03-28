@@ -20,6 +20,8 @@
 
 #include "SemVer.h"
 
+#include "../utils.h"
+
 #include <QRegularExpression>
 
 namespace dblsqd {
@@ -34,9 +36,8 @@ namespace dblsqd {
  * \brief Constructs a new SemVer object from a string.
  */
 SemVer::SemVer(const QString& version)
-: mOriginal(version)
 {
-    QRegularExpression rx(getRegExp());
+    static const QRegularExpression rx(getRegExp());
     QRegularExpressionMatch match = rx.match(version);
     if (match.hasMatch()) {
         mMajor = match.captured(1).toInt();
@@ -96,10 +97,10 @@ bool SemVer::operator<(const SemVer& other) const
 
 QString SemVer::getRegExp()
 {
-    QString v = "(0|[1-9]\\d*)";
-    QString p = "(?:-((?:0|[1-9A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9A-Za-z-][0-9A-Za-z-]*))*))?";
-    QString b = "(?:\\+((?:[0-9A-Za-z-]*)(?:\\.(?:[0-9A-Za-z-][0-9A-Za-z-]*))*))?";
-    return "^" + v + "\\." + v + "\\." + v + p + b + "$";
+    QString v = qsl("(0|[1-9]\\d*)");
+    QString p = qsl("(?:-((?:0|[1-9A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9A-Za-z-][0-9A-Za-z-]*))*))?");
+    QString b = qsl("(?:\\+((?:[0-9A-Za-z-]*)(?:\\.(?:[0-9A-Za-z-][0-9A-Za-z-]*))*))?");
+    return qsl("^") + v + qsl("\\.") + v + qsl("\\.") + v + p + b + qsl("$");
 }
 
 } // namespace dblsqd

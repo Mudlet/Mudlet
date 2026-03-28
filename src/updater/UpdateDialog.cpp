@@ -616,7 +616,6 @@ void UpdateDialog::handleLoadError(const QString& message)
     qWarning() << "Update check failed:" << message;
     if (isVisible()) {
         setupNoUpdatesUi();
-        //: Label shown when update check fails
         //: Label shown in the update dialog when the update check fails due to a network or server error
         mUi->labelHeadlineNoUpdates->setText(tr("Could not check for updates"));
     }
@@ -650,8 +649,9 @@ void UpdateDialog::handleDownloadFinished()
 void UpdateDialog::handleDownloadError(const QString& message)
 {
     //: Title for the download error warning dialog
+    const QString errorTitle = tr("Download Error");
     //: Message shown in the download error warning dialog, followed by the specific error details
-    QMessageBox::warning(this, tr("Download Error"), tr("There was an error while downloading the update.") + qsl("\n\n") + message);
+    QMessageBox::warning(this, errorTitle, tr("There was an error while downloading the update.") + qsl("\n\n") + message);
     done(QDialog::Rejected);
 }
 
@@ -672,11 +672,13 @@ void UpdateDialog::onLinkActivated(const QUrl& link)
 }
 
 /*! \fn void UpdateDialog::ready()
- * This signal is emitted when updates are available and the UpdateDialog is
+ * This signal is emitted when the feed has been loaded and the UpdateDialog is
  * ready to be shown with show() or exec().
+ * For ManualChangelog type, this is emitted regardless of whether updates are
+ * available.
  */
 
-/*! \fn void UpdateDialog::installButtonClicked(QAbstractButton* button, QString
+/*! \fn void UpdateDialog::installButtonClicked(QAbstractButton* button, const QString&
  * filePath) This signal is emitted when a custom install button was clicked.
  */
 

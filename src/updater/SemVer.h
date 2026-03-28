@@ -35,7 +35,6 @@ public:
     bool isValid() const;
 
 private:
-    QString mOriginal;
     int mMajor{0};
     int mMinor{0};
     int mPatch{0};

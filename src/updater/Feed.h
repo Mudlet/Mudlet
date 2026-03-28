@@ -47,7 +47,7 @@ public:
     void load();
     void downloadRelease(const Release& release, bool requireChecksums = false);
 
-    QList<Release> getUpdates(const Release& currentRelease);
+    QList<Release> getUpdates(const Release& currentRelease) const;
     QList<Release> getReleases() const;
     QString getDownloadFilePath() const;
     bool isReady() const;
