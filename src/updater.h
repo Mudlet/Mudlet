@@ -22,8 +22,11 @@
 
 // Guard for builds without the updater (INCLUDE_UPDATER is defined by CMake when USE_UPDATER is ON):
 #if defined(INCLUDE_UPDATER)
-#include "updater/Feed.h"
-#include "updater/UpdateDialog.h"
+namespace dblsqd {
+class Feed;
+class Release;
+class UpdateDialog;
+}
 #if defined(Q_OS_MACOS)
 #include "sparkleupdater.h"
 #endif
@@ -31,6 +34,11 @@
 
 
 #include <QObject>
+
+class QAbstractButton;
+class QPushButton;
+class QSettings;
+class QTimer;
 
 class Updater : public QObject
 {

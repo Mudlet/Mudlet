@@ -31,6 +31,7 @@
 class QNetworkReply;
 class QTemporaryFile;
 
+// Namespace retained from the previous dblsqd update system to minimize changes in dependent code
 namespace dblsqd {
 
 class Feed : public QObject

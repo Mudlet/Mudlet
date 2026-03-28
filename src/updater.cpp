@@ -19,6 +19,8 @@
 
 #include "updater.h"
 #include "mudlet.h"
+#include "updater/Feed.h"
+#include "updater/UpdateDialog.h"
 
 #include <QDateTime>
 #include <QMessageBox>
@@ -69,8 +71,8 @@ static void cleanupSquirrelTempFiles()
 // update flows:
 // linux: new AppImage is downloaded, extracted from its tar archive, and put in place of the old one
 //   user then only restarts mudlet to get the new version
-// windows: installer .exe is downloaded from GitHub Releases. When the user clicks update,
-//   a batch file is launched that waits for Mudlet to exit, then runs the installer
+// windows: installer .exe is downloaded from GitHub Releases. When the user clicks restart,
+//   a batch file is created that waits for Mudlet to exit, then runs the installer
 // mac: handled completely outside of Mudlet by Sparkle
 
 Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
@@ -454,8 +456,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 {
     Q_UNUSED(button)
 
-    // moc, when used with cmake on macOS bugs out if the entire function declaration and definition is entirely
-    // commented out so we leave a stub in
+    // moc on macOS requires this function definition to exist even though macOS uses Sparkle instead
 #if !defined(Q_OS_MACOS)
 
     // if the update is already installed, then the button says 'Restart' - do so
@@ -590,10 +591,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 #endif // !Q_OS_MACOS
 }
 
-// Records a timestamp on disk when an update is installed. On next launch,
-// shouldShowChangelog() uses this to decide whether to show the changelog:
-// if < 5 minutes have passed, the user likely just saw it during the manual
-// update process, so it's skipped. Automatic updates with a longer gap will show it.
+// Records a timestamp on disk so shouldShowChangelog() can detect automatic updates on next launch
 void Updater::recordUpdateTime() const
 {
     QSaveFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
@@ -635,11 +633,10 @@ void Updater::recordUpdatedVersion() const
 }
 
 // Returns true if the changelog should be shown on this launch. Only applies to
-// non-development builds with auto-updates on non-macOS (Sparkle handles its own).
+// non-development builds with auto-updates on non-macOS (Sparkle handles its own changelog).
 // Requires at least 5 minutes since the update to avoid re-showing a just-seen changelog.
 bool Updater::shouldShowChangelog()
 {
-// Sparkle handles its own changelog display on macOS, so skip the custom changelog dialog
 #if defined(Q_OS_MACOS)
     return false;
 #endif

@@ -19,6 +19,7 @@
  ***************************************************************************/
 
 #include "UpdateDialog.h"
+#include "Feed.h"
 #include "ui_update_dialog.h"
 
 #include "../utils.h"
@@ -96,6 +97,8 @@ UpdateDialog::UpdateDialog(Feed* feed, Type type, QSettings* settings, QWidget* 
 , mSettings(settings)
 , mAcceptedInstallButton(nullptr)
 {
+    Q_ASSERT_X(feed, "UpdateDialog", "Feed object is required");
+    Q_ASSERT_X(settings, "UpdateDialog", "QSettings object is required");
     mUi->setupUi(this);
 
     mUi->buttonCancel->addAction(mUi->actionCancel);
@@ -544,7 +547,7 @@ QString UpdateDialog::generateChangelogDocument()
             h2Style.append(qsl("margin-top: 1em;"));
         }
         first = false;
-        changelog.append(qsl("<h2 style=\"") + h2Style + qsl("\">") + release.getVersion() + qsl("</h2>"));
+        changelog.append(qsl("<h2 style=\"") + h2Style + qsl("\">") + release.getVersion().toHtmlEscaped() + qsl("</h2>"));
         changelog.append(qsl("<p>") + release.getChangelog() + qsl("</p>"));
     }
     return changelog;

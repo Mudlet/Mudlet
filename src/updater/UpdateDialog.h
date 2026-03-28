@@ -21,7 +21,7 @@
 #ifndef DBLSQD_UPDATE_DIALOG_H
 #define DBLSQD_UPDATE_DIALOG_H
 
-#include "Feed.h"
+#include "Release.h"
 
 #include <QDialog>
 #include <QVariant>
@@ -35,6 +35,8 @@ class UpdateDialog;
 }
 
 namespace dblsqd {
+
+class Feed;
 
 class UpdateDialog : public QDialog
 {
