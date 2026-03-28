@@ -268,9 +268,9 @@ else
     # sorting:
     INSTALLER_VERSION="${VERSION}-ptb-${BUILD_COMMIT,,}${BUILD_COUNTER_SUFFIX}"
     # The name we want to use for the installer;
-    # Typically of form: 'Mudlet-4.19.1-ptb-2025-01-01-012345678-windows-64.exe'
-    # Or with build counter: 'Mudlet-4.19.1-ptb-2025-01-01-012345678rebuild2-windows-64.exe'
-    INSTALLER_EXE="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64.exe"
+    # Typically of form: 'Mudlet-4.19.1-ptb-2025-01-01-012345678-windows-64-installer.exe'
+    # Or with build counter: 'Mudlet-4.19.1-ptb-2025-01-01-012345678rebuild2-windows-64-installer.exe'
+    INSTALLER_EXE="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64-installer.exe"
     DBLSQD_VERSION_STRING="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}${BUILD_COUNTER_SUFFIX}"
     # The name that has to be passed as the artifact so that the Mudlet website
     # will accept it as a PTB:
