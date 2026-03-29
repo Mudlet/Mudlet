@@ -352,6 +352,7 @@ set(mudlet_HDRS
     TEvent.h
     TFlipButton.h
     TForkedProcess.h
+    TGameDetails.h
     TimerUnit.h
     TKey.h
     TLabel.h
