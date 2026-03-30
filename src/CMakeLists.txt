@@ -807,6 +807,24 @@ if(APPLE)
     file(GLOB ICON_FILE "icons/mudlet.icns")
   endif()
 
+  # Set Sparkle feed URL in Info.plist for PTB and release builds
+  if(USE_UPDATER)
+    if(APP_BUILD MATCHES "-ptb.+")
+      set(SPARKLE_CHANNEL "ptb")
+    elseif(NOT (APP_BUILD MATCHES "-dev.+" OR APP_BUILD MATCHES "-test.+"))
+      set(SPARKLE_CHANNEL "release")
+    endif()
+
+    if(SPARKLE_CHANNEL)
+      set(SPARKLE_FEED_URL "https://www.mudlet.org/wp-content/files/appcast/${SPARKLE_CHANNEL}-${CMAKE_SYSTEM_PROCESSOR}.xml")
+      add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+        COMMAND bash -c
+          "/usr/libexec/PlistBuddy -c 'Delete :SUFeedURL' '$<TARGET_BUNDLE_DIR:${EXE_MUDLET_TARGET}>/Contents/Info.plist' 2>/dev/null || true && /usr/libexec/PlistBuddy -c 'Add :SUFeedURL string ${SPARKLE_FEED_URL}' '$<TARGET_BUNDLE_DIR:${EXE_MUDLET_TARGET}>/Contents/Info.plist'"
+        COMMENT "Setting Sparkle feed URL for ${SPARKLE_CHANNEL}-${CMAKE_SYSTEM_PROCESSOR}"
+      )
+    endif()
+  endif()
+
   file(GLOB_RECURSE MUDLET_LUA_FILES LIST_DIRECTORIES true "mudlet-lua/*")
   file(GLOB_RECURSE LUA_TRANSLATIONS LIST_DIRECTORIES true "../translations/lua/*")
   file(GLOB DIC_FILES "*.dic")
