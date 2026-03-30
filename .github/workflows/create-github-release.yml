@@ -100,6 +100,7 @@ jobs:
             echo "type=release" >> "$GITHUB_OUTPUT"
             echo "tag=${REF#refs/tags/}" >> "$GITHUB_OUTPUT"
             echo "title=Mudlet ${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           elif [[ "$EVENT" == "schedule" ]] || [[ "$BUILD_SUFFIX" == -ptb* ]]; then
             if [ -z "${COMMIT}" ] || [ "${COMMIT}" == "null" ]; then
               echo "::error::COMMIT field is empty or missing in release metadata for PTB"
@@ -109,6 +110,7 @@ jobs:
             echo "type=ptb" >> "$GITHUB_OUTPUT"
             echo "tag=${PTB_TAG}" >> "$GITHUB_OUTPUT"
             echo "title=Public Test Build" >> "$GITHUB_OUTPUT"
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           else
             echo "type=skip" >> "$GITHUB_OUTPUT"
           fi
@@ -308,3 +310,130 @@ jobs:
           fi
 
           gh release create "${ARGS[@]}" "${FILES[@]}"
+
+      # Generate and upload Sparkle appcast XML for macOS updates
+      - name: Add SSH agent for appcast upload
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        uses: webfactory/ssh-agent@v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.UPLOAD_PRIVATEKEY }}
+
+      - name: Generate Sparkle appcast XML
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        env:
+          RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
+          RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.release-type.outputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p appcast
+
+          # sparkle:version must match CFBundleVersion in the built app
+          export BUNDLE_VERSION="${RELEASE_TAG#Mudlet-}"
+          export RELEASE_VERSION
+
+          # Convert changelog to HTML for Sparkle's description field
+          export CHANGELOG_HTML=""
+          if [ -f changelog.md ]; then
+            CHANGELOG_HTML=$(pandoc changelog.md -f markdown -t html --no-highlight 2>/dev/null || true)
+          fi
+          if [ -z "${CHANGELOG_HTML}" ]; then
+            CHANGELOG_HTML="<p>See <a href='https://github.com/Mudlet/Mudlet/releases/tag/${RELEASE_TAG}'>release notes</a> for details.</p>"
+          fi
+
+          CHANNEL="release"
+          if [[ "${RELEASE_TYPE}" == "ptb" ]]; then
+            CHANNEL="ptb"
+          fi
+
+          export PUB_DATE=$(date -R)
+
+          # Get asset download URLs from the GitHub Release
+          RELEASE_JSON=$(gh release view "${RELEASE_TAG}" --json assets)
+
+          for ARCH in arm64 x86_64; do
+            DMG_FILE=$(find assets/ -name "*-${ARCH}.dmg" -type f | head -1)
+            if [ -z "${DMG_FILE}" ]; then
+              echo "No macOS DMG found for ${ARCH} - skipping appcast"
+              continue
+            fi
+
+            export FILE_SIZE=$(stat --printf="%s" "${DMG_FILE}")
+            DMG_NAME=$(basename "${DMG_FILE}")
+            export DOWNLOAD_URL=$(echo "${RELEASE_JSON}" | jq -r --arg name "${DMG_NAME}" '.assets[] | select(.name == $name) | .url')
+
+            if [ -z "${DOWNLOAD_URL}" ] || [ "${DOWNLOAD_URL}" == "null" ]; then
+              echo "::warning::Could not find download URL for ${DMG_NAME}"
+              continue
+            fi
+
+            # Use envsubst with quoted heredoc to safely handle special characters in changelog HTML
+            envsubst '$RELEASE_VERSION $BUNDLE_VERSION $PUB_DATE $DOWNLOAD_URL $FILE_SIZE $CHANGELOG_HTML' \
+              > "appcast/${CHANNEL}-${ARCH}.xml" << 'APPCAST_EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <channel>
+              <title>Mudlet Updates</title>
+              <description>Updates for Mudlet</description>
+              <language>en</language>
+              <item>
+                <title>Mudlet $RELEASE_VERSION</title>
+                <pubDate>$PUB_DATE</pubDate>
+                <sparkle:version>$BUNDLE_VERSION</sparkle:version>
+                <sparkle:shortVersionString>$RELEASE_VERSION</sparkle:shortVersionString>
+                <sparkle:minimumSystemVersion>11.0</sparkle:minimumSystemVersion>
+                <description><![CDATA[$CHANGELOG_HTML]]></description>
+                <enclosure
+                  url="$DOWNLOAD_URL"
+                  length="$FILE_SIZE"
+                  type="application/octet-stream"/>
+              </item>
+            </channel>
+          </rss>
+          APPCAST_EOF
+
+            echo "Generated appcast/${CHANNEL}-${ARCH}.xml (version=${BUNDLE_VERSION}, size=${FILE_SIZE})"
+          done
+
+          echo "Generated appcast files:"
+          ls -la appcast/ 2>/dev/null || echo "No appcast files generated"
+
+      - name: Upload appcast to mudlet.org
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          shopt -s nullglob
+          APPCAST_FILES=(appcast/*.xml)
+          shopt -u nullglob
+
+          if [ ${#APPCAST_FILES[@]} -eq 0 ]; then
+            echo "::warning::No appcast files to upload"
+            exit 0
+          fi
+
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            mudmachine@make.mudlet.org "mkdir -p '${DEPLOY_PATH}/appcast'"
+
+          for f in "${APPCAST_FILES[@]}"; do
+            scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+              "$f" "mudmachine@make.mudlet.org:'${DEPLOY_PATH}/appcast/'"
+            echo "Uploaded $(basename "$f")"
+          done
+
+      - name: Verify appcast upload
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        run: |
+          shopt -s nullglob
+          APPCAST_FILES=(appcast/*.xml)
+          shopt -u nullglob
+
+          for f in "${APPCAST_FILES[@]}"; do
+            basename=$(basename "$f")
+            url="https://www.mudlet.org/wp-content/files/appcast/${basename}"
+            if curl --output /dev/null --silent --head --fail "$url"; then
+              echo "Verified: ${url}"
+            else
+              echo "::warning::Appcast not yet accessible at ${url}"
+            fi
+          done
