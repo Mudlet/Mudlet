@@ -29,7 +29,6 @@
 
 #include "ctelnet.h"
 
-
 #include "Host.h"
 #include "TBuffer.h"
 #include "TMxpProcessor.h"
@@ -47,6 +46,7 @@
 #include "dlgComposer.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
+#include "utils.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
 #endif
@@ -59,8 +59,11 @@
 #include <QSignalBlocker>
 #include <QSslError>
 
+#include <zstd_errors.h>
+
 using namespace std::chrono_literals;
 
+static const QStringList MCCP4_SUPPORTED_ENCODINGS{qsl("zstd"), qsl("deflate")};
 
 constexpr size_t BUFFER_SIZE = 100000L;
 // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (1 of 7) - investigate switching from using `char[]` to `std::array<char>`
@@ -146,6 +149,8 @@ void cTelnet::reset()
     command = "";
     mMudData = "";
 
+    cleanupMCCP4();
+
     mNegotiationOrder.clear();
 }
 
@@ -223,20 +228,9 @@ cTelnet::~cTelnet()
         mpComposer->deleteLater();
     }
 
-    // Clean up MCCP4 zstd stream context
     if (mZstdDstream) {
         ZSTD_freeDStream(mZstdDstream);
         mZstdDstream = nullptr;
-    }
-
-    // Clean up MCCP4 ZSTD buffers
-    if (mZstdInBuffer) {
-        free(mZstdInBuffer);
-        mZstdInBuffer = nullptr;
-    }
-    if (mZstdOutBuffer) {
-        free(mZstdOutBuffer);
-        mZstdOutBuffer = nullptr;
     }
 
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
@@ -2775,8 +2769,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         } else if (option == OPT_COMPRESS4) {
                             mMCCP_version_4 = true;
                             qDebug() << "MCCP v4 negotiated! Offering supported encodings:" << MCCP4_SUPPORTED_ENCODINGS.join(",");
-                            
-                            // Send ACCEPT_ENCODING suboption
                             std::string response;
                             response += TN_IAC;
                             response += TN_SB;
@@ -2900,12 +2892,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     qDebug() << "MCCP v2 disabled !";
                     break;
                 case OPT_COMPRESS4:
-                    mMCCP_version_4 = false;
-                    if (mZstdDstream) {
-                        ZSTD_freeDStream(mZstdDstream);
-                        mZstdDstream = nullptr;
-                    }
-                    mMCCP4_encoding = MCCP4_ENCODING_NONE;
+                    cleanupMCCP4();
                     qDebug() << "MCCP v4 disabled !";
                     break;
                 default:
@@ -3552,7 +3539,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         case OPT_COMPRESS4: {
             if (telnetCommand.length() >= 5 && telnetCommand[3] == MCCP4_BEGIN_ENCODING) {
-                // Extract encoding type from BEGIN_ENCODING suboption
                 std::string compressionType;
                 for (size_t i = 4; i < telnetCommand.length() - 2; ++i) {
                     if (telnetCommand[i] == TN_IAC) {
@@ -3569,74 +3555,48 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     qDebug() << "MCCP4: Server selected deflate";
                 } else {
                     qWarning() << "MCCP4: Unknown compression type received:" << compressionType.c_str() << ", disabling MCCP4";
-
-                    // Send WONT to disable MCCP4
-                    sendTelnetOption(TN_WONT, OPT_COMPRESS4);
-                    hisOptionState[static_cast<int>(OPT_COMPRESS4)] = false;
-                    mMCCP_version_4 = false;
+                    sendTelnetOption(TN_DONT, OPT_COMPRESS4);
+                    cleanupMCCP4();
                     return;
                 }
 
-                mNeedDecompression = true;
-                qDebug() << "MCCP4: Compression started with" << compressionType.c_str();
-
                 if (mMCCP4_encoding == MCCP4_ENCODING_ZSTD) {
                     if (!mZstdDstream) {
-                        // Initialize buffers first
-                        if (!initZstdBuffers()) {
-                            qWarning() << "MCCP4: Failed to initialize ZSTD buffers";
-                            sendTelnetOption(TN_WONT, OPT_COMPRESS4);
-                            hisOptionState[static_cast<int>(OPT_COMPRESS4)] = false;
-                            mMCCP_version_4 = false;
-                            mNeedDecompression = false;
-                            return;
-                        }
-                        
+                        mZstdOutBuffer.resize(ZSTD_DStreamOutSize());
+
                         mZstdDstream = ZSTD_createDStream();
                         if (!mZstdDstream) {
-                            qWarning() << "MCCP4: Failed to create ZSTD streaming decompression context";
-                            sendTelnetOption(TN_WONT, OPT_COMPRESS4);
-                            hisOptionState[static_cast<int>(OPT_COMPRESS4)] = false;
-                            mMCCP_version_4 = false;
-                            mNeedDecompression = false;
+                            qWarning() << "MCCP4: Failed to create ZSTD decompression context";
+                            sendTelnetOption(TN_DONT, OPT_COMPRESS4);
+                            cleanupMCCP4();
                             return;
                         }
 
                         size_t const initResult = ZSTD_initDStream(mZstdDstream);
                         if (ZSTD_isError(initResult)) {
                             qWarning() << "MCCP4: Failed to initialize ZSTD stream:" << ZSTD_getErrorName(initResult);
-                            ZSTD_freeDStream(mZstdDstream);
-                            mZstdDstream = nullptr;
-                            sendTelnetOption(TN_WONT, OPT_COMPRESS4);
-                            hisOptionState[static_cast<int>(OPT_COMPRESS4)] = false;
-                            mMCCP_version_4 = false;
-                            mNeedDecompression = false;
+                            sendTelnetOption(TN_DONT, OPT_COMPRESS4);
+                            cleanupMCCP4();
                             return;
                         }
-                        qDebug() << "MCCP4: ZSTD streaming decompression context created and initialized";
-                        qDebug() << "MCCP4: Stream pointer:" << static_cast<void*>(mZstdDstream);
+                        qDebug() << "MCCP4: ZSTD decompression context created and initialized";
                     }
                 } else if (mMCCP4_encoding == MCCP4_ENCODING_DEFLATE) {
                     initStreamDecompressor();
                 }
+
+                mNeedDecompression = true;
+                qDebug() << "MCCP4: Compression started with" << compressionType.c_str();
             } else if (telnetCommand.length() >= 4 && static_cast<unsigned char>(telnetCommand[3]) != 255) {
-                // Handle unknown suboptions (but not empty ones) - send WONT per spec
                 unsigned char unknownSuboption = static_cast<unsigned char>(telnetCommand[3]);
                 qWarning() << "MCCP4: Unknown suboption received:" << unknownSuboption << "(" << QString::number(unknownSuboption, 16) << "hex), expected MCCP4_BEGIN_ENCODING ("
                            << MCCP4_BEGIN_ENCODING << "), disabling MCCP4";
-
-                // Send WONT to disable MCCP4
-                sendTelnetOption(TN_WONT, OPT_COMPRESS4);
-                hisOptionState[static_cast<int>(OPT_COMPRESS4)] = false;
-                mMCCP_version_4 = false;
+                sendTelnetOption(TN_DONT, OPT_COMPRESS4);
+                cleanupMCCP4();
             } else {
-                // Handle empty suboption or IAC at position 3 (malformed sequence)
-                qWarning() << "MCCP4: Received malformed or empty suboption - server may not be following MCCP4 protocol correctly";
-
-                // Send WONT to disable MCCP4
-                sendTelnetOption(TN_WONT, OPT_COMPRESS4);
-                hisOptionState[static_cast<int>(OPT_COMPRESS4)] = false;
-                mMCCP_version_4 = false;
+                qWarning() << "MCCP4: Received malformed or empty suboption";
+                sendTelnetOption(TN_DONT, OPT_COMPRESS4);
+                cleanupMCCP4();
             }
             break;
         }
@@ -4589,74 +4549,20 @@ void cTelnet::initStreamDecompressor()
     inflateInit(&mZstream);
 }
 
-void cTelnet::initMCCP4StreamDecompressor()
+void cTelnet::cleanupMCCP4()
 {
-    // Clean up existing stream if any
     if (mZstdDstream) {
         ZSTD_freeDStream(mZstdDstream);
         mZstdDstream = nullptr;
     }
-    
-    // Clean up ZSTD buffers
-    if (mZstdInBuffer) {
-        free(mZstdInBuffer);
-        mZstdInBuffer = nullptr;
+    if (mMCCP4_encoding == MCCP4_ENCODING_DEFLATE) {
+        inflateEnd(&mZstream);
     }
-    if (mZstdOutBuffer) {
-        free(mZstdOutBuffer);
-        mZstdOutBuffer = nullptr;
-    }
-    mZstdInBufferSize = 0;
-    mZstdOutBufferSize = 0;
-    
-    // Reset MCCP4 state to prepare for re-negotiation
+    mZstdOutBuffer.clear();
     mMCCP_version_4 = false;
     mMCCP4_encoding = MCCP4_ENCODING_NONE;
     mNeedDecompression = false;
-    
-    // Clear the server's telnet option state for MCCP4
     hisOptionState[static_cast<int>(OPT_COMPRESS4)] = false;
-    
-    qDebug() << "MCCP4: Stream decompressor reset for server restart/hotboot - ready for re-negotiation";
-}
-
-bool cTelnet::initZstdBuffers()
-{
-    // Free existing buffers if any
-    if (mZstdInBuffer) {
-        free(mZstdInBuffer);
-        mZstdInBuffer = nullptr;
-    }
-    if (mZstdOutBuffer) {
-        free(mZstdOutBuffer);
-        mZstdOutBuffer = nullptr;
-    }
-    
-    // Get ZSTD recommended buffer sizes
-    mZstdInBufferSize = ZSTD_DStreamInSize();
-    mZstdOutBufferSize = ZSTD_DStreamOutSize();
-    
-    // Allocate buffers
-    mZstdInBuffer = static_cast<char*>(malloc(mZstdInBufferSize));
-    mZstdOutBuffer = static_cast<char*>(malloc(mZstdOutBufferSize));
-    
-    if (!mZstdInBuffer || !mZstdOutBuffer) {
-        // Cleanup on allocation failure
-        if (mZstdInBuffer) {
-            free(mZstdInBuffer);
-            mZstdInBuffer = nullptr;
-        }
-        if (mZstdOutBuffer) {
-            free(mZstdOutBuffer);
-            mZstdOutBuffer = nullptr;
-        }
-        mZstdInBufferSize = 0;
-        mZstdOutBufferSize = 0;
-        return false;
-    }
-    
-    qDebug() << "MCCP4: Initialized ZSTD buffers - input size:" << mZstdInBufferSize << "output size:" << mZstdOutBufferSize;
-    return true;
 }
 
 int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
@@ -4696,101 +4602,76 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
 
 int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buffer)
 {
-    // Stream should already be initialized during MCCP4 negotiation
-    if (!mZstdDstream) {
-        qWarning() << "MCCP4: ZSTD stream not initialized - negotiation may have failed";
-        qWarning() << "MCCP4: mMCCP_version_4:" << mMCCP_version_4;
-        qWarning() << "MCCP4: mMCCP4_encoding:" << static_cast<int>(mMCCP4_encoding);
-        qWarning() << "MCCP4: mNeedDecompression:" << mNeedDecompression;
-        return -1;
+    if (!mZstdDstream || mZstdOutBuffer.empty()) {
+        qWarning() << "MCCP4: ZSTD stream or buffer not initialized, disabling MCCP4";
+        cleanupMCCP4();
+        return 0;
     }
-    
-    // Ensure we have buffers allocated
-    if (!mZstdOutBuffer || mZstdOutBufferSize == 0) {
-        qWarning() << "MCCP4: ZSTD buffers not initialized";
-        return -1;
-    }
-    
-    qDebug() << "MCCP4: decompressMCCP4Buffer called with length:" << length;
 
-    ZSTD_inBuffer input = { in_buffer, static_cast<size_t>(length), 0 };
-    ZSTD_outBuffer output = { mZstdOutBuffer, mZstdOutBufferSize, 0 };
-    
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 2)
+    qDebug() << "MCCP4: decompressMCCP4Buffer called with length:" << length;
+#endif
+
+    ZSTD_inBuffer input = {in_buffer, static_cast<size_t>(length), 0};
+    ZSTD_outBuffer output = {mZstdOutBuffer.data(), mZstdOutBuffer.size(), 0};
+
     size_t const result = ZSTD_decompressStream(mZstdDstream, &output, &input);
-    
+
     if (ZSTD_isError(result)) {
-        qWarning() << "MCCP4: zstd streaming decompression error:" << ZSTD_getErrorName(result);
-        
-        // Check if this might be a server restart/hotboot scenario
+        qWarning() << "MCCP4: zstd decompression error:" << ZSTD_getErrorName(result);
+
         ZSTD_ErrorCode errorCode = ZSTD_getErrorCode(result);
         if (errorCode == ZSTD_error_corruption_detected || errorCode == ZSTD_error_frameParameter_windowTooLarge) {
-            qDebug() << "MCCP4: Potential server restart detected - attempting recovery";
-            initMCCP4StreamDecompressor(); // Clean reset for re-negotiation
+            qDebug() << "MCCP4: Potential server restart detected - resetting for re-negotiation";
         } else {
-            // Other errors: send DONT COMPRESS4 and continue without compression
             sendTelnetOption(TN_DONT, OPT_COMPRESS4);
-            mMCCP_version_4 = false;
-            mMCCP4_encoding = MCCP4_ENCODING_NONE;
-            mNeedDecompression = false;
-            
-            if (mZstdDstream) {
-                ZSTD_freeDStream(mZstdDstream);
-                mZstdDstream = nullptr;
-            }
         }
-        
-        // Return remaining input as-is for error recovery
-        size_t remainingInput = length - input.pos;
-        memcpy(out_buffer, in_buffer + input.pos, std::min(remainingInput, static_cast<size_t>(BUFFER_SIZE)));
-        int recoverySize = std::min(static_cast<int>(remainingInput), static_cast<int>(BUFFER_SIZE));
+        // Copy decompressed data before cleanup invalidates the buffer
+        size_t copySize = std::min(output.pos, static_cast<size_t>(BUFFER_SIZE));
+        memcpy(out_buffer, mZstdOutBuffer.data(), copySize);
         in_buffer += length;
         length = 0;
-        return recoverySize;
+
+        cleanupMCCP4();
+        return static_cast<int>(copySize);
     }
-    
+
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 2)
     qDebug() << "MCCP4: ZSTD_decompressStream result:" << result << "output.pos:" << output.pos;
-    
-    // Check for frame boundary or end of decompression
+#endif
+
+    // Copy decompressed data before any cleanup that may invalidate the buffer
+    size_t copySize = std::min(output.pos, static_cast<size_t>(BUFFER_SIZE));
+    if (output.pos > static_cast<size_t>(BUFFER_SIZE)) {
+        qWarning() << "MCCP4: Decompressed output" << output.pos << "exceeds buffer size" << BUFFER_SIZE << "- data truncated";
+    }
+    memcpy(out_buffer, mZstdOutBuffer.data(), copySize);
+
     if (result == 0) {
-        // Frame is complete, check if remaining data contains IAC (raw telnet)
         size_t consumedInput = input.pos;
         size_t remainingInput = length - consumedInput;
-        
+
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 2)
         qDebug() << "MCCP4: Frame complete - consumedInput:" << consumedInput << "remainingInput:" << remainingInput;
-        
+#endif
+
         if (remainingInput > 0 && in_buffer[consumedInput] == TN_IAC) {
-            // Raw telnet data detected, switch to uncompressed mode temporarily
-            qDebug() << "MCCP4: Frame end detected, switching to raw telnet mode for IAC sequence";
-            
-            // Reset stream for next compressed frame
-            qDebug() << "MCCP4: Freeing ZSTD stream due to IAC sequence detection";
-            ZSTD_freeDStream(mZstdDstream);
-            mZstdDstream = nullptr;
-            mNeedDecompression = false;
-            
-            // Update pointers to point to the IAC sequence
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 2)
+            qDebug() << "MCCP4: Frame end with IAC, switching to raw telnet mode";
+#endif
+            cleanupMCCP4();
+
             in_buffer += consumedInput;
             length = static_cast<int>(remainingInput);
         } else {
-            // Frame complete but no IAC, continue with compression
-            // Keep the ZSTD stream alive for the next frame - ZSTD streams can handle multiple frames
-            qDebug() << "MCCP4: Frame complete, no IAC - keeping ZSTD stream alive for next frame";
-            
-            // Just update pointers, keep the stream active
             in_buffer += consumedInput;
             length = static_cast<int>(remainingInput);
         }
     } else {
-        // More input needed or frame continues
-        qDebug() << "MCCP4: Frame continues, need more input - keeping ZSTD stream active";
         in_buffer += input.pos;
         length -= static_cast<int>(input.pos);
     }
-    
-    // Copy decompressed data to output buffer (limited by BUFFER_SIZE for compatibility)
-    size_t copySize = std::min(output.pos, static_cast<size_t>(BUFFER_SIZE));
-    memcpy(out_buffer, mZstdOutBuffer, copySize);
-    
+
     return static_cast<int>(copySize);
 }
 
@@ -5039,21 +4920,20 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     char* buffer = in_buffer;
 
     if (mNeedDecompression) {
-        if (mMCCP_version_4 && mMCCP4_encoding != MCCP4_ENCODING_NONE) {
-            // MCCP4 compression
-            if (mMCCP4_encoding == MCCP4_ENCODING_ZSTD) {
-                datalen = decompressMCCP4Buffer(in_buffer, amount, out_buffer);
-            } else if (mMCCP4_encoding == MCCP4_ENCODING_DEFLATE) {
-                datalen = decompressBuffer(in_buffer, amount, out_buffer);
-            } else {
-                qWarning() << "MCCP4: Unknown encoding type";
-                datalen = amount; // fallback to uncompressed
-            }
-        } else {
-            // MCCP1/2 compression
+        if (mMCCP_version_4 && mMCCP4_encoding == MCCP4_ENCODING_ZSTD) {
+            datalen = decompressMCCP4Buffer(in_buffer, amount, out_buffer);
+            buffer = out_buffer;
+        } else if (mMCCP_version_4 && mMCCP4_encoding == MCCP4_ENCODING_DEFLATE) {
             datalen = decompressBuffer(in_buffer, amount, out_buffer);
+            buffer = out_buffer;
+        } else if (mMCCP_version_4) {
+            qWarning() << "MCCP4: Unknown encoding type, disabling MCCP4";
+            cleanupMCCP4();
+            datalen = 0;
+        } else {
+            datalen = decompressBuffer(in_buffer, amount, out_buffer);
+            buffer = out_buffer;
         }
-        buffer = out_buffer;
     }
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
     buffer[static_cast<size_t>(datalen)] = '\0';

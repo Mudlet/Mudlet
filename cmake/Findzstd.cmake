@@ -5,7 +5,7 @@
 #
 # This module defines
 #  zstd_FOUND, if false, do not try to link to zstd
-#  ZSTD_LIBRARIES
+#  ZSTD_LIBRARY
 #  ZSTD_INCLUDE_DIR, where to find zstd.h
 
 # First try to find zstd via its own CMake config (vcpkg, newer system packages)

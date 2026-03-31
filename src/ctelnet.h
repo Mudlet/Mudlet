@@ -44,15 +44,13 @@
 #endif
 #include <QTime>
 
-#include "utils.h"
-
 #include <zlib.h>
 #include <zstd.h>
-#include <zstd_errors.h>
 
 #include <iostream>
 #include <queue>
 #include <string>
+#include <vector>
 #include <QVector>
 
 #if defined(Q_OS_WINDOWS)
@@ -113,9 +111,9 @@ const char OPT_NAWS = 31;
 // https://www.rfc-editor.org/rfc/rfc1572.txt && https://tintin.mudhalla.net/protocols/mnes/
 const char OPT_NEW_ENVIRON = 39;
 const char OPT_CHARSET = 42;
-const char OPT_MSDP = 69; // https://tintin.mudhalla.net/protocols/msdp/
+const char OPT_MSDP = 69;                    // https://tintin.mudhalla.net/protocols/msdp/
 const char OPT_MSSP = static_cast<char>(70); // https://tintin.mudhalla.net/protocols/mssp/
-const char OPT_COMPRESS = 85; 
+const char OPT_COMPRESS = 85;
 const char OPT_COMPRESS2 = 86; // MCCP2 https://mudstandards.org/mud/mccp2
 const char OPT_COMPRESS4 = 88; // MCCP4, documentation pending
 const char OPT_MSP = 90;
@@ -143,18 +141,18 @@ const char MSDP_ARRAY_OPEN = 5;
 const char MSDP_ARRAY_CLOSE = 6;
 
 // https://tintin.mudhalla.net/protocols/mtts/
-const int MTTS_STD_ANSI = 1; // Client supports all common ANSI color codes.
-const int MTTS_STD_VT100 = 2; // Client supports all common VT100 codes.
-const int MTTS_STD_UTF_8 = 4; // Client is using UTF-8 character encoding.
-const int MTTS_STD_256_COLORS = 8; // Client supports all 256 color codes.
-const int MTTS_STD_MOUSE_TRACKING = 16; // Client supports xterm mouse tracking.
+const int MTTS_STD_ANSI = 1;               // Client supports all common ANSI color codes.
+const int MTTS_STD_VT100 = 2;              // Client supports all common VT100 codes.
+const int MTTS_STD_UTF_8 = 4;              // Client is using UTF-8 character encoding.
+const int MTTS_STD_256_COLORS = 8;         // Client supports all 256 color codes.
+const int MTTS_STD_MOUSE_TRACKING = 16;    // Client supports xterm mouse tracking.
 const int MTTS_STD_OSC_COLOR_PALETTE = 32; // Client supports the OSC color palette.
-const int MTTS_STD_SCREEN_READER = 64; // Client is using a screen reader.
-const int MTTS_STD_PROXY = 128; // Client is a proxy allowing different users to connect from the same IP address.
-const int MTTS_STD_TRUECOLOR = 256; // Client supports truecolor codes using semicolon notation.
-const int MTTS_STD_MNES = 512; // Client supports the Mud New Environment Standard for information exchange.
-const int MTTS_STD_MSLP = 1024; // Client supports the Mud Server Link Protocol for clickable link handling.
-const int MTTS_STD_SSL = 2048; // Client supports SSL for data encryption, preferably TLS 1.3 or higher.
+const int MTTS_STD_SCREEN_READER = 64;     // Client is using a screen reader.
+const int MTTS_STD_PROXY = 128;            // Client is a proxy allowing different users to connect from the same IP address.
+const int MTTS_STD_TRUECOLOR = 256;        // Client supports truecolor codes using semicolon notation.
+const int MTTS_STD_MNES = 512;             // Client supports the Mud New Environment Standard for information exchange.
+const int MTTS_STD_MSLP = 1024;            // Client supports the Mud Server Link Protocol for clickable link handling.
+const int MTTS_STD_SSL = 2048;             // Client supports SSL for data encryption, preferably TLS 1.3 or higher.
 
 // https://www.rfc-editor.org/rfc/rfc1572.txt && https://tintin.mudhalla.net/protocols/mnes/
 const char NEW_ENVIRON_IS = 0;
@@ -167,12 +165,9 @@ const char NEW_ENVIRON_USERVAR = 3;
 
 const char MCCP4_ACCEPT_ENCODING = 1;
 const char MCCP4_BEGIN_ENCODING = 2;
-const std::byte MCCP4_ENCODING_NONE {0};
-const std::byte MCCP4_ENCODING_ZSTD {1};
-const std::byte MCCP4_ENCODING_DEFLATE {2};
-
-// MCCP4 supported encodings
-const QStringList MCCP4_SUPPORTED_ENCODINGS{qsl("zstd"), qsl("deflate")};
+const std::byte MCCP4_ENCODING_NONE{0};
+const std::byte MCCP4_ENCODING_ZSTD{1};
+const std::byte MCCP4_ENCODING_DEFLATE{2};
 
 class cTelnet : public QObject
 {
@@ -211,10 +206,10 @@ public:
     bool isReplaying() { return loadingReplay; }
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
-    const QByteArray & getEncoding() const { return mEncoding; }
+    const QByteArray& getEncoding() const { return mEncoding; }
     QPair<bool, QString> setEncoding(const QByteArray&, bool saveValue = true);
     void postMessage(QString);
-    const QByteArrayList & getEncodingsList() const { return mAcceptableEncodings; }
+    const QByteArrayList& getEncodingsList() const { return mAcceptableEncodings; }
     std::optional<QAbstractSocket::SocketError> error() const;
     QString errorString();
 #if !defined(QT_NO_SSL)
@@ -243,7 +238,8 @@ public:
     void loopbackTest(QByteArray& data) { processSocketData(data.data(), data.size(), true); }
     void cancelLoginTimers();
     void terminateConnection();
-    bool currentlySecure() const {
+    bool currentlySecure() const
+    {
 #if defined(QT_NO_SSL)
         return false;
 #else
@@ -304,10 +300,9 @@ private:
 
     // loopbackTesting is for internal testing whilst OFF-LINE using the
     // feedTelnet(...) Lua function.
-    void processSocketData(char *data, int size, const bool loopbackTesting = false);
+    void processSocketData(char* data, int size, const bool loopbackTesting = false);
     void initStreamDecompressor();
-    void initMCCP4StreamDecompressor();
-    bool initZstdBuffers();
+    void cleanupMCCP4();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     int decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
@@ -402,12 +397,7 @@ private:
 
     z_stream mZstream = {};
     ZSTD_DStream* mZstdDstream = nullptr;
-    
-    // MCCP4 ZSTD buffer management
-    size_t mZstdInBufferSize = 0;
-    size_t mZstdOutBufferSize = 0;
-    char* mZstdInBuffer = nullptr;
-    char* mZstdOutBuffer = nullptr;
+    std::vector<char> mZstdOutBuffer;
 
     bool mNeedDecompression = false;
     std::string command;
@@ -443,7 +433,7 @@ private:
     bool mMCCP_version_1 = false;
     bool mMCCP_version_2 = false;
     bool mMCCP_version_4 = false;
-    std::byte mMCCP4_encoding {0};
+    std::byte mMCCP4_encoding{0};
 
 
     std::string mMudData;
