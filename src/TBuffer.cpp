@@ -4518,6 +4518,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             firstChar = indexOfChar;
             isNewline = true;
             needsIndent = false;
+            xPos = 0;
             continue;
         }
         int nextBoundary = boundaryFinder.toNextBoundary();
