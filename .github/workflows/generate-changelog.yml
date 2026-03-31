@@ -69,7 +69,7 @@ jobs:
         echo $changelog
 
     - name: Upload changelog as ${{matrix.format}}
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: changelog.${{matrix.format}}
         path: changelog.${{matrix.format}}

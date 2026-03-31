@@ -34,6 +34,8 @@
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
 #include "LuaInterface.h"
+#include "MMCP.h"
+#include "MMCPServer.h"
 #include "mudlet.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
@@ -47,6 +49,7 @@
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
+#include "TTextBox.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "VarUnit.h"
@@ -232,6 +235,21 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpAuth(new GMCPAuthenticator(this))
 , mpDockableMapWidget()
 , mTimerDebugOutputSuppressionInterval(QTime())
+, mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
+, mBufferSearchOptions(TConsole::SearchOption::SearchOptionNone)
+, mpDlgIRC(nullptr)
+, mMMCPServer(nullptr)
+, mpDlgProfilePreferences(nullptr)
+, mMMCPChatPort(csDefaultMMCPHostPort)
+, mMMCPChatPrefix(csDefaultChatPrefix)
+, mMMCPAutostartServer(false)
+, mMMCPAllowPeekRequests(false)
+, mMMCPPrefixEmotes(false)
+, mMMCPAddChatMessageNewline(true)
+, mMMCPAutoAcceptCalls(true)
+, mMMCPShowSnoopInMainConsole(true)
+, mTutorialForCompactLineAlreadyShown(false)
+, mLuaInterface(nullptr)
 , mTriggerUnit(this)
 , mTimerUnit(this)
 , mScriptUnit(this)
@@ -409,6 +427,11 @@ Host::~Host()
 
     qDeleteAll(profileShortcuts);
     profileShortcuts.clear();
+
+    qDeleteAll(mStopWatchMap);
+    mStopWatchMap.clear();
+
+    delete mMMCPServer;
 
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
@@ -829,6 +852,11 @@ void Host::resetProfile_phase2()
     mEventMap.clear();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
+
+    // Have to recopy the values into the Lua "color_table"
+    mLuaInterpreter.updateAnsi16ColorsInTable();
+    mLuaInterpreter.updateExtendedAnsiColorsInTable();
+
     mBlockScriptCompile = false;
 
     mAliasUnit.reenableAllTriggers();
@@ -836,6 +864,8 @@ void Host::resetProfile_phase2()
     mTriggerUnit.reenableAllTriggers();
     mKeyUnit.reenableAllTriggers();
 
+    // This is where the scripts for the profile get compiled (which confirms
+    // that they are valid) and all the Lua code outside of functions gets run:
     getTimerUnit()->compileAll();
     getTriggerUnit()->compileAll();
     getAliasUnit()->compileAll();
@@ -844,10 +874,6 @@ void Host::resetProfile_phase2()
     getScriptUnit()->compileAll(true);
 
     mResetProfile = false;
-
-    // Have to recopy the values into the Lua "color_table"
-    mLuaInterpreter.updateAnsi16ColorsInTable();
-    mLuaInterpreter.updateExtendedAnsiColorsInTable();
 
     TEvent event{};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
@@ -938,6 +964,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
             reloadModules();
         }
         mWritingHostAndModules = false;
+        watcher->deleteLater();
     });
     watcher->setFuture(mModuleFuture);
     return {true, filename_xml, QString()};
@@ -984,8 +1011,8 @@ void Host::waitForProfileSave()
     int iterations = 0;
     while (currentlySavingProfile()) {
         if (++iterations > 1000) {
-            qWarning().nospace() << "Host::waitForProfileSave() WARNING - save did not complete after 1000 event loop iterations. "
-                                 << "State: mWritingHostAndModules=" << mWritingHostAndModules << ", writers pending=" << writers.size() << ". Continuing without waiting.";
+            qWarning().nospace() << "Host::waitForProfileSave() WARNING - save did not complete after 1000 event loop iterations. " << "State: mWritingHostAndModules=" << mWritingHostAndModules
+                                 << ", writers pending=" << writers.size() << ". Continuing without waiting.";
             break;
         }
         qApp->processEvents();
@@ -2663,6 +2690,14 @@ void Host::refreshPackageFonts()
     }
 }
 
+void Host::setEnableBlinkText(const bool enable)
+{
+    if (mEnableBlinkText != enable) {
+        mEnableBlinkText = enable;
+        emit signal_changeEnableBlinkText(enable);
+    }
+}
+
 void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
 {
     bool localState = false;
@@ -2911,8 +2946,8 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
         if (startTimeStamp.isDouble()) {
             timeStamp = static_cast<int64_t>(startTimeStamp.toDouble());
             pMudlet->mDiscord.setStartTimeStamp(this, timeStamp);
-        } else if (endTimeStamp.isString()) {
-            timeStamp = endTimeStamp.toString().toLongLong();
+        } else if (startTimeStamp.isString()) {
+            timeStamp = startTimeStamp.toString().toLongLong();
             pMudlet->mDiscord.setStartTimeStamp(this, timeStamp);
         }
     }
@@ -3015,6 +3050,86 @@ bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscri
         return false;
     }
     return true;
+}
+
+void Host::initMMCPServer()
+{
+    if (mMMCPServer) {
+        return;
+    }
+
+    mMMCPServer = new MMCPServer(this);
+}
+
+
+// Return the MMCP chat name for this host
+const QString& Host::getMMCPChatName() const
+{
+    return mMMCPChatName;
+}
+
+// Validate and set the MMCP chat name, notify connected peers, and update GUI.
+// Returns false if the name is invalid (contains ~ or ,).
+bool Host::setMMCPChatName(const QString& name)
+{
+    static const QRegularExpression rx(qsl("~|,"));
+    if (rx.match(name).hasMatch()) {
+        return false;
+    }
+
+    // If the name is unchanged, no need to update or emit signals
+    if (mMMCPChatName == name) {
+        return true;
+    }
+
+    mMMCPChatName = name;
+
+    if (mMMCPServer) {
+        mMMCPServer->chatName(name);
+    }
+
+    emit mmcpChatNameChanged(name);
+    return true;
+}
+
+quint16 Host::getMMCPPort()
+{
+    return mMMCPChatPort;
+}
+
+const QString& Host::getMMCPChatPrefix() const
+{
+    return mMMCPChatPrefix;
+}
+
+bool Host::getMMCPAutoStartServer()
+{
+    return mMMCPAutostartServer;
+}
+
+bool Host::getMMCPAllowPeekRequests()
+{
+    return mMMCPAllowPeekRequests;
+}
+
+bool Host::getMMCPPrefixEmotes()
+{
+    return mMMCPPrefixEmotes;
+}
+
+bool Host::getMMCPAddChatMessageNewline()
+{
+    return mMMCPAddChatMessageNewline;
+}
+
+bool Host::getMMCPAutoAcceptCalls()
+{
+    return mMMCPAutoAcceptCalls;
+}
+
+bool Host::getMMCPShowSnoopInMainConsole()
+{
+    return mMMCPShowSnoopInMainConsole;
 }
 
 QString Host::getSpellDic()
@@ -3653,6 +3768,7 @@ bool Host::showWindow(const QString& name)
     auto pL = mpConsole->mLabelMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
     // check labels first as they are shown/hidden more often
     if (pL) {
         pL->show();
@@ -3678,6 +3794,11 @@ bool Host::showWindow(const QString& name)
         return true;
     }
 
+    if (pT) {
+        pT->show();
+        return true;
+    }
+
     return false;
 }
 
@@ -3691,6 +3812,7 @@ bool Host::hideWindow(const QString& name)
     auto pL = mpConsole->mLabelMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
 
     // check labels first as they are shown/hidden more often
     if (pL) {
@@ -3715,6 +3837,11 @@ bool Host::hideWindow(const QString& name)
         return true;
     }
 
+    if (pT) {
+        pT->hide();
+        return true;
+    }
+
     return false;
 }
 
@@ -3729,6 +3856,7 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
     auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
 
     if (pL) {
         pL->resize(x1, y1);
@@ -3761,6 +3889,11 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
         return true;
     }
 
+    if (pT) {
+        pT->resize(x1, y1);
+        return true;
+    }
+
     return false;
 }
 
@@ -3775,6 +3908,7 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
     auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
 
     if (pL) {
         pL->move(x1, y1);
@@ -3809,6 +3943,11 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
         return true;
     }
 
+    if (pT) {
+        pT->move(x1, y1);
+        return true;
+    }
+
     return false;
 }
 
@@ -3837,6 +3976,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     auto pM = mpConsole->mpMapper;
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
     //parents
     auto pW = mpConsole->mpMainFrame;
     auto pD = mpConsole->mDockWidgetMap.value(windowname);
@@ -3884,6 +4024,13 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         pN->move(x1, y1);
         if (show) {
             pN->show();
+        }
+        return {true, QString()};
+    } else if (pT) {
+        pT->setParent(pW);
+        pT->move(x1, y1);
+        if (show) {
+            pT->show();
         }
         return {true, QString()};
     } else if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
@@ -4579,6 +4726,10 @@ std::optional<QString> Host::windowType(const QString& name) const
         return {qsl("commandline")};
     }
 
+    if (mpConsole->mTextBoxMap.contains(name)) {
+        return {qsl("textedit")};
+    }
+
     return {};
 }
 
@@ -4736,6 +4887,18 @@ void Host::setBorders(QMargins borders)
     mpConsole->raiseMudletSysWindowResizeEvent(x, y);
 }
 
+void Host::setUserBorders(const QMargins borders)
+{
+    mUserBorders = borders;
+    setBorders(mUserBorders + mMxpBorders);
+}
+
+void Host::setMxpBorders(const QMargins borders)
+{
+    mMxpBorders = borders;
+    setBorders(mUserBorders + mMxpBorders);
+}
+
 void Host::setCommandLineHistorySaveSize(const int lines)
 {
     if (mCommandLineHistorySaveSize != lines) {
@@ -4868,4 +5031,14 @@ QStringList Host::getAllExperiments() const
 QStringList Host::getValidExperiments() const
 {
     return QStringList(mValidExperiments.constBegin(), mValidExperiments.constEnd());
+}
+
+bool Host::shouldStripOscHyperlinkConfigParam()
+{
+    return mTelnet.oscHyperlinkConfigFeatureEnabled();
+}
+
+bool Host::shouldStripOscHyperlinkPresetParam()
+{
+    return mTelnet.oscHyperlinkPresetsEnabled();
 }

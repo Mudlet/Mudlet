@@ -97,6 +97,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     initializeOSC8SpoilerFeature();
     initializeOSC8SelectionFeature();
     initializeOSC8VisibilityFeature();
+    initializeOSC8TitleFeature();
 
     auto quitShortcut = new QShortcut(this);
     quitShortcut->setKey(Qt::CTRL | Qt::Key_W);
@@ -2085,6 +2086,21 @@ QSize TConsole::getMainWindowSize() const
     const int toolbarHeight = mpTopToolBar->height();
     const int commandLineHeight = mpCommandLine->height();
     QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
+
+    // Reject obviously invalid or suspiciously small sizes during profile switch transitions
+    const int minValidWidth = 50;
+    if (mainWindowSize.width() < minValidWidth && mOldSize.width() >= minValidWidth) {
+        return mOldSize;
+    }
+
+    // Reject suspicious shrinkage (more than 50% reduction) - geometry may not have settled yet
+    if (mOldSize.width() > 0) {
+        const double shrinkageRatio = static_cast<double>(mainWindowSize.width()) / mOldSize.width();
+        if (shrinkageRatio < 0.5) {
+            return mOldSize;
+        }
+    }
+
     return mainWindowSize;
 }
 
@@ -2879,4 +2895,14 @@ void TConsole::initializeOSC8DisabledFeature()
 
     mpHyperlinkCompactManager->registerShorthand(qsl("d"), qsl("disabled"));
     mpHyperlinkCompactManager->registerPresetProperty(qsl("disabled"));
+}
+
+void TConsole::initializeOSC8TitleFeature()
+{
+    if (!mpHyperlinkCompactManager) {
+        return;
+    }
+
+    mpHyperlinkCompactManager->registerShorthand(qsl("ti"), qsl("title"));
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("title"));
 }

@@ -756,6 +756,16 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);
     setBoolAttribute(qsl("mMapStrongHighlight"), pHost->mMapStrongHighlight);
     setBoolAttribute(qsl("mEnableSpellCheck"), pHost->mEnableSpellCheck);
+    if (attributes().hasAttribute(QLatin1String("mShowInfo"))) {
+        // Old - pre Map Info versions of Mudlet (those before
+        // https://github.com/Mudlet/Mudlet/pull/4718) used the above
+        // setting to control the showing of what is now the "Full"
+        // map info display. So treat it as that to reproduce that
+        // behaviour:
+        if (attributes().value(qsl("mShowInfo")).toString() == YES) {
+            mpHost->mMapInfoContributors.insert(qsl("Full"));
+        }
+    }
     setBoolAttribute(qsl("mAcceptServerGUI"), pHost->mAcceptServerGUI);
     setBoolAttribute(qsl("mAcceptServerMedia"), pHost->mAcceptServerMedia);
     setBoolAttribute(qsl("mMapperUseAntiAlias"), pHost->mMapperUseAntiAlias);
@@ -851,6 +861,8 @@ void XMLimport::readHost(Host* pHost)
         // which is just as well as it is needed for the automatic case...
         pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
     }
+
+    pHost->setEnableBlinkText(attributes().value(qsl("mEnableBlinkText")) == qsl("yes"));
 
     if (attributes().hasAttribute("logFileNameFormat")) {
         // We previously mixed "yyyy-MM-dd{#|T}hh-MM-ss" with "yyyy-MM-dd{#|T}HH-MM-ss"
@@ -960,6 +972,14 @@ void XMLimport::readHost(Host* pHost)
         pHost->mLineSize = 10.0; // Same value as is in Host class initializer list
     }
 
+    pHost->mRoomBorderSize = attributes().value(qsl("mRoomBorderSize")).toString().toDouble();
+
+    if (qFuzzyCompare(1.0 + pHost->mRoomBorderSize, 1.0)) {
+        // For old profiles without border size, use mLineSize to preserve
+        // the previous behavior where border and exit shared the same size
+        pHost->mRoomBorderSize = pHost->mLineSize;
+    }
+
     pHost->mMapGridLineSize = attributes().value(qsl("mMapGridLineSize")).toString().toDouble();
 
     if (qFuzzyCompare(1.0 + pHost->mMapGridLineSize, 1.0)) {
@@ -1032,10 +1052,6 @@ void XMLimport::readHost(Host* pHost)
     } else {
         // The default (and for map/profile files from before 4.15.0):
         pHost->setLargeAreaExitArrows(false);
-    }
-
-    if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
-        mpHost->mMapInfoContributors.clear();
     }
 
     QMargins borders;
@@ -1153,6 +1169,8 @@ void XMLimport::readHost(Host* pHost)
                 readProfileShortcut();
             } else if (name() == qsl("stopwatches")) {
                 readStopWatchMap();
+            } else if (name() == qsl("MMCP")) {
+                readMMCPOptions();
             } else if (name() == qsl("experiment")) {
                 QString key = attributes().value(qsl("key")).toString();
                 bool enabled = attributes().value(qsl("enabled")) == YES;
@@ -1166,7 +1184,7 @@ void XMLimport::readHost(Host* pHost)
         }
     }
 
-    pHost->setBorders(borders);
+    pHost->setUserBorders(borders);
     pHost->loadPackageInfo();
 }
 
@@ -2043,6 +2061,22 @@ void XMLimport::readStopWatchMap()
             }
         }
     }
+}
+
+void XMLimport::readMMCPOptions()
+{
+    mpHost->mMMCPChatName = attributes().value(qsl("chatName")).toString();
+    mpHost->mMMCPChatPort = attributes().value(qsl("chatPort")).toUShort();
+    mpHost->mMMCPChatPrefix = attributes().value(qsl("chatPrefix")).toString();
+    mpHost->mMMCPAutostartServer = attributes().value(qsl("autostartServer")) == YES;
+    mpHost->mMMCPAllowPeekRequests = attributes().value(qsl("allowPeekRequests")) == YES;
+    mpHost->mMMCPPrefixEmotes = attributes().value(qsl("prefixEmotes")) == YES;
+    mpHost->mMMCPAddChatMessageNewline = attributes().value(qsl("chatMessageNewline")) == YES;
+    mpHost->mMMCPAutoAcceptCalls = attributes().value(qsl("autoAcceptCalls")) == YES;
+    mpHost->mMMCPShowSnoopInMainConsole = attributes().value(qsl("snoopInMain")) == YES;
+
+    // MMCP is a self-closing tag, need to call readNext to move along..
+    readNext();
 }
 
 void XMLimport::readMapInfoContributor()

@@ -1461,7 +1461,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </widget>
           </item>
-          <item row="3" column="0">
+          <item row="3" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_showTabConnectionIndicators">
             <property name="toolTip">
              <string>Display whenever a tab is connected or a disconnected</string>
@@ -2702,7 +2702,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <string>Inner diameter: </string>
                </property>
                <property name="maximum">
-                <number>83</number>
+                <number>96</number>
                </property>
                <property name="value">
                 <number>70</number>
@@ -2794,6 +2794,44 @@ you can use it but there could be issues with aligning columns of text</string>
               </widget>
              </item>
              <item row="0" column="4">
+              <widget class="QLabel" name="label_borderSize">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Border size:</string>
+               </property>
+               <property name="buddy">
+                <cstring>spinBox_borderSize</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="5">
+              <widget class="QSpinBox" name="spinBox_borderSize">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+               <property name="minimum">
+                <number>1</number>
+               </property>
+               <property name="maximum">
+                <number>11</number>
+               </property>
+               <property name="value">
+                <number>5</number>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="6">
               <widget class="QLabel" name="label_gridSize">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
@@ -2821,17 +2859,17 @@ you can use it but there could be issues with aligning columns of text</string>
                 <set>Qt::AlignmentFlag::AlignCenter</set>
                </property>
                <property name="minimum">
-                <number>2</number>
+                <number>1</number>
                </property>
                <property name="maximum">
-                <number>20</number>
+                <number>11</number>
                </property>
                <property name="value">
-                <number>7</number>
+                <number>5</number>
                </property>
               </widget>
              </item>
-             <item row="0" column="5">
+             <item row="0" column="7">
               <widget class="QDoubleSpinBox" name="doubleSpinBox_gridSize">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
@@ -3570,6 +3608,160 @@ you can use it but there could be issues with aligning columns of text</string>
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="groupBox_MMCPOptions">
+         <property name="title">
+          <string>MudMaster Chat options</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout">
+          <item row="3" column="6">
+           <widget class="QCheckBox" name="checkBox_mmcpSnoopInMainConsole">
+            <property name="toolTip">
+             <string>&lt;p&gt;Show Snoop data in main console window.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Show snoop data in main console</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLineEdit" name="lineEdit_mmcpChatName">
+            <property name="toolTip">
+             <string>Chat name as seen by connected chat clients.</string>
+            </property>
+            <property name="placeholderText">
+             <string>MMCPUser123</string>
+            </property>
+           </widget>
+          </item>
+          <!-->
+          <item row="3" column="5">
+           <widget class="QCheckBox" name="checkBox_mmcpAllowPeekReq">
+            <property name="toolTip">
+             <string>Allow others to peek and request your public connections.</string>
+            </property>
+            <property name="text">
+             <string>Allow Peek/Connection requests</string>
+            </property>
+           </widget>
+          </item>
+          -->
+          <item row="2" column="2">
+           <widget class="QLineEdit" name="lineEdit_mmcpPort">
+            <property name="toolTip">
+             <string>Port to use when connecting to another client without specifying a port along with the IP address. This is also the default port that listened for incoming connections when running a local server.</string>
+            </property>
+           </widget>
+          </item>
+          <!-- Possible inclusion in 4.21.1
+          <item row="0" column="5">
+           <widget class="QCheckBox" name="checkBox_mmcpAutostartServer">
+            <property name="toolTip">
+             <string>Automatically start a chat server when your profile loads. Uses the default port setting.</string>
+            </property>
+            <property name="text">
+             <string>Auto-Start server</string>
+            </property>
+           </widget>
+          </item>
+          -->
+          <item row="0" column="7">
+           <spacer name="horizontalSpacer_2">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblMMCPName">
+            <property name="text">
+             <string>Chat Name:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_mmcpChatName</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="lblMMCPPort">
+            <property name="text">
+             <string>Default Port:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="lblMMCPChatMsgPrefix">
+            <property name="text">
+             <string>Chat Message Prefix:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="6">
+           <widget class="QCheckBox" name="checkBox_mmcpAddChatMessageNewline">
+            <property name="toolTip">
+             <string>Add an extra blank line to vertically space out chat messages.</string>
+            </property>
+            <property name="text">
+             <string>Add extra line to chat messages</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="6">
+           <widget class="QCheckBox" name="checkBox_mmcpPrefixEmotes">
+            <property name="toolTip">
+             <string>Prefix own EmoteAll messages with 'You emote to everybody'</string>
+            </property>
+            <property name="text">
+             <string>Prefix emote messages</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="2">
+           <widget class="QLineEdit" name="lineEdit_mmcpChatMessagePrefix">
+            <property name="toolTip">
+             <string>Text to display in front of chat messages.</string>
+            </property>
+            <property name="text">
+             <string>&lt;CHAT&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <!-->
+          <item row="2" column="5">
+           <widget class="QCheckBox" name="checkBox_mmcpAutoAcceptCalls">
+            <property name="toolTip">
+             <string>Automatically accept incoming calls from chat clients.</string>
+            </property>
+            <property name="text">
+             <string>Auto-Accept incoming calls</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          -->
+         </layout>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer_connection">
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>
@@ -4214,6 +4406,16 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="6" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_enableBlinkText">
+            <property name="toolTip">
+             <string>&lt;p&gt;When enabled, text with the blinking attribute (SGR codes 5 and 6) is displayed with a smooth pulsing effect. When disabled, blinking text is shown in italics instead.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable blinking text</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -4794,6 +4996,17 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_discordServerAccessToState</tabstop>
   <tabstop>checkBox_discordServerAccessToTimerInfo</tabstop>
   <tabstop>lineEdit_discordUserDiscriminator</tabstop>
+  <tabstop>lineEdit_mmcpChatName</tabstop>
+  <tabstop>lineEdit_mmcpPort</tabstop>
+  <tabstop>lineEdit_mmcpChatMessagePrefix</tabstop>
+  <!-->
+  <tabstop>checkBox_mmcpAutostartServer</tabstop>
+  <tabstop>checkBox_mmcpAutoAcceptCalls</tabstop>
+  <tabstop>checkBox_mmcpAllowPeekReq</tabstop>
+  -->
+  <tabstop>checkBox_mmcpAddChatMessageNewline</tabstop>
+  <tabstop>checkBox_mmcpPrefixEmotes</tabstop>
+  <tabstop>checkBox_mmcpSnoopInMainConsole</tabstop>
   <tabstop>groupBox_ssl</tabstop>
   <tabstop>checkBox_self_signed</tabstop>
   <tabstop>checkBox_ignore_all</tabstop>
@@ -4811,6 +5024,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>comboBox_blankLinesBehaviour</tabstop>
   <tabstop>comboBox_caretModeKey</tabstop>
   <tabstop>checkBox_f3SearchEnabled</tabstop>
+  <tabstop>checkBox_enableBlinkText</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
   <tabstop>mFORCE_GA_OFF</tabstop>
   <tabstop>checkBox_mVersionInTTYPE</tabstop>

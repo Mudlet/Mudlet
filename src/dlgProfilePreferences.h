@@ -121,6 +121,10 @@ public slots:
     void slot_logFileNameFormatChange(int index);
     void slot_changeLogFileAsHtml(bool isHtml);
 
+    // Chat
+    void slot_setMMCPChatName(const QString&);
+    void slot_mmcpChatNameChanged();
+
     // Save.
     void slot_saveAndClose();
 
@@ -171,6 +175,7 @@ private slots:
     void slot_loadHistoryMap();
     void slot_roomSizeChanged(int size);
     void slot_exitSizeChanged(int size);
+    void slot_borderSizeChanged(int size);
     void slot_gridSizeChanged(double size);
     void slot_displayFontChanged();
     void slot_displayFontSizeChanged();

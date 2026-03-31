@@ -50,6 +50,7 @@
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
 #endif
+#include "MMCPServer.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -149,6 +150,10 @@ void cTelnet::reset()
     mMudData = "";
 
     cleanupMCCP4();
+
+    mServerRequestedSGA = false;
+    mEchoToggleCount = 0;
+    mEchoAnomalyDetected = false;
 
     mNegotiationOrder.clear();
 }
@@ -280,7 +285,7 @@ void cTelnet::encodingChanged(const QByteArray& requestedEncoding)
 QSslCertificate cTelnet::getPeerCertificate()
 {
     if (!mpSocket) {
-        return QSslCertificate();
+        return mPeerCertificate;
     }
     return mpSocket->peerCertificate();
 }
@@ -288,7 +293,7 @@ QSslCertificate cTelnet::getPeerCertificate()
 QList<QSslError> cTelnet::getSslErrors()
 {
     if (!mpSocket) {
-        return QList<QSslError>{};
+        return mSslErrors;
     }
     return mpSocket->sslHandshakeErrors();
 }
@@ -403,6 +408,10 @@ void cTelnet::connectIt(const QString& address, int port)
         mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
         mCycleCountMTTS = 0;
         newEnvironVariablesSent.clear();
+#if !defined(QT_NO_SSL)
+        mSslErrors.clear();
+        mPeerCertificate = QSslCertificate();
+#endif
 
         if (mpHost->mUseProxy && !mpHost->mProxyAddress.isEmpty() && mpHost->mProxyPort != 0) {
             auto& proxy = mpHost->getConnectionProxy();
@@ -660,14 +669,14 @@ void cTelnet::slot_socketDisconnected()
     mNeedDecompression = false;
     reset();
 
-    if (!mpHost->isClosingDown() && mpSocket) {
-        // Don't do this if we are closing down - or we do not know which
-        // socket is the "active" one
+    if (!mpHost->isClosingDown()) {
 #if !defined(QT_NO_SSL)
         if (mCurrent_sslTsl) {
-            // We were connecting/ed securely:
+            // We were connecting/ed securely - getSslErrors() returns stored
+            // errors from slot_socketSslError() when mpSocket is null (i.e.
+            // when the SSL handshake failed):
             QList<QSslError> sslErrors = getSslErrors();
-            QSslCertificate cert = mpSocket->peerCertificate();
+            QSslCertificate cert = mpSocket ? mpSocket->peerCertificate() : getPeerCertificate();
             if (mpHost->mSslIgnoreExpired) {
                 sslErrors.removeAll(QSslError(QSslError::CertificateExpired, cert));
             }
@@ -727,7 +736,9 @@ void cTelnet::slot_socketDisconnected()
                 postMessage(tr("[ ALERT ] - Socket got disconnected."));
             }
 
-        } else {
+        } else if (mpSocket) {
+#else
+        if (mpSocket) {
 #endif
             // We were not connecting securely
             QString reason;
@@ -769,9 +780,7 @@ void cTelnet::slot_socketDisconnected()
                                "%1")
                                     .arg(reason));
             }
-#if !defined(QT_NO_SSL)
         }
-#endif
     }
 
     // Always display the connection time:
@@ -813,10 +822,15 @@ void cTelnet::slot_socketSslError(const QList<QSslError>& errors)
         return;
     }
 
+    // Store the errors so slot_socketDisconnected() can report them even if
+    // mpSocket was never assigned (SSL handshake failed before encrypted()):
+    mSslErrors = errors;
+
     // We can't use mpSocket as it likely has not got set to one of the
     // actual sockets yet!
     const auto pSocket = qobject_cast<QSslSocket*>(sender());
     QSslCertificate cert = pSocket->peerCertificate();
+    mPeerCertificate = cert;
     QList<QSslError> ignoreErrorList;
 
     if (mpHost->mSslIgnoreExpired) {
@@ -1837,6 +1851,18 @@ QString cTelnet::getNewEnvironOSCHyperlinksDisabled()
     return qsl("1");
 }
 
+bool cTelnet::oscHyperlinkConfigFeatureEnabled()
+{
+    return getNewEnvironOSCHyperlinksStyleBasic() == qsl("1") || getNewEnvironOSCHyperlinksStyleStates() == qsl("1") || getNewEnvironOSCHyperlinksTooltip() == qsl("1")
+           || getNewEnvironOSCHyperlinksMenu() == qsl("1") || getNewEnvironOSCHyperlinksCompact() == qsl("1") || getNewEnvironOSCHyperlinksVisibility() == qsl("1")
+           || getNewEnvironOSCHyperlinksSelection() == qsl("1") || getNewEnvironOSCHyperlinksSpoiler() == qsl("1") || getNewEnvironOSCHyperlinksDisabled() == qsl("1");
+}
+
+bool cTelnet::oscHyperlinkPresetsEnabled()
+{
+    return getNewEnvironOSCHyperlinksPresets() == qsl("1");
+}
+
 QString cTelnet::getNewEnvironScreenReader()
 {
     return mpHost->mAdvertiseScreenReader ? qsl("1") : qsl("0");
@@ -2684,6 +2710,24 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             break;
         }
 
+        if (option == OPT_SUPPRESS_GO_AHEAD) {
+            sendTelnetOption(TN_DONT, option);
+            hisOptionState[idxOption] = false;
+            mServerRequestedSGA = true;
+            qDebug() << "SUPPRESS-GO-AHEAD: Rejected (Mudlet operates in line mode only)";
+            raiseProtocolEvent("sysProtocolRejected", "SUPPRESS_GO_AHEAD");
+            checkCharacterModePattern();
+            break;
+        }
+
+        if (option == OPT_LINEMODE) {
+            sendTelnetOption(TN_DONT, option);
+            hisOptionState[idxOption] = false;
+            qDebug() << "LINEMODE: Server's WILL rejected (Mudlet operates in line mode only)";
+            raiseProtocolEvent("sysProtocolRejected", "LINEMODE");
+            break;
+        }
+
         heAnnouncedState[idxOption] = true;
         if (triedToEnable[idxOption]) {
             hisOptionState[idxOption] = true;
@@ -2695,31 +2739,38 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 //unless explicitly requested)
 
                 if (option == OPT_ECHO) {
-                    sendTelnetOption(TN_DO, option);
-                    hisOptionState[idxOption] = true;
-                    mpHost->setRemoteEchoingActive(true);
-                    qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
+                    if (checkEchoAnomalyPattern()) {
+                        sendTelnetOption(TN_DONT, option);
+                        hisOptionState[idxOption] = false;
+                        qDebug() << "ECHO: Rejecting due to anomaly pattern detection";
+                    } else {
+                        sendTelnetOption(TN_DO, option);
+                        hisOptionState[idxOption] = true;
+                        mpHost->setRemoteEchoingActive(true);
+                        qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
+                        checkCharacterModePattern();
 
-                    // Start a safety timeout for password mode, but only during
-                    // the first 5 minutes of a connection (login phase). This
-                    // protects against servers that fail to send WONT ECHO due
-                    // to network issues or bugs, while not affecting legitimate
-                    // password prompts later in the session (e.g., admin commands).
-                    // Skip this if the user has disabled password masking entirely.
-                    constexpr auto LOGIN_PHASE_MS = 5min;
-                    constexpr auto PASSWORD_TIMEOUT_MS = 60s;
-                    if (!mpHost->mDisablePasswordMasking && mConnectionTimer.isValid() && mConnectionTimer.elapsed() < LOGIN_PHASE_MS.count()) {
-                        if (!mTimerPasswordModeTimeout) {
-                            mTimerPasswordModeTimeout = new QTimer(this);
-                            mTimerPasswordModeTimeout->setSingleShot(true);
-                            connect(mTimerPasswordModeTimeout, &QTimer::timeout, this, [this]() {
-                                if (mpHost && mpHost->isRemoteEchoingActive()) {
-                                    qWarning() << "ECHO: Password mode timeout - server never sent WONT ECHO, clearing masking";
-                                    mpHost->setRemoteEchoingActive(false);
-                                }
-                            });
+                        // Start a safety timeout for password mode, but only during
+                        // the first 5 minutes of a connection (login phase). This
+                        // protects against servers that fail to send WONT ECHO due
+                        // to network issues or bugs, while not affecting legitimate
+                        // password prompts later in the session (e.g., admin commands).
+                        // Skip this if the user has disabled password masking entirely.
+                        constexpr auto LOGIN_PHASE_MS = 5min;
+                        constexpr auto PASSWORD_TIMEOUT_MS = 60s;
+                        if (!mpHost->mDisablePasswordMasking && mConnectionTimer.isValid() && mConnectionTimer.elapsed() < LOGIN_PHASE_MS.count()) {
+                            if (!mTimerPasswordModeTimeout) {
+                                mTimerPasswordModeTimeout = new QTimer(this);
+                                mTimerPasswordModeTimeout->setSingleShot(true);
+                                connect(mTimerPasswordModeTimeout, &QTimer::timeout, this, [this]() {
+                                    if (mpHost && mpHost->isRemoteEchoingActive()) {
+                                        qWarning() << "ECHO: Password mode timeout - server never sent WONT ECHO, clearing masking";
+                                        mpHost->setRemoteEchoingActive(false);
+                                    }
+                                });
+                            }
+                            mTimerPasswordModeTimeout->start(std::chrono::duration_cast<std::chrono::milliseconds>(PASSWORD_TIMEOUT_MS).count());
                         }
-                        mTimerPasswordModeTimeout->start(std::chrono::duration_cast<std::chrono::milliseconds>(PASSWORD_TIMEOUT_MS).count());
                     }
                 } else if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE) {
                     sendTelnetOption(TN_DO, option);
@@ -2870,12 +2921,17 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 hisOptionState[idxOption] = false;
 
                 if (option == OPT_ECHO) {
-                    // Cancel any pending password mode timeout since we got the proper WONT ECHO
-                    if (mTimerPasswordModeTimeout) {
-                        mTimerPasswordModeTimeout->stop();
+                    if (mEchoAnomalyDetected) {
+                        qDebug() << "ECHO: Ignoring WONT due to anomaly pattern";
+                    } else {
+                        checkEchoAnomalyPattern();
+                        // Cancel any pending password mode timeout since we got the proper WONT ECHO
+                        if (mTimerPasswordModeTimeout) {
+                            mTimerPasswordModeTimeout->stop();
+                        }
+                        mpHost->setRemoteEchoingActive(false);
+                        qDebug() << "ECHO: Server ending password mode - restoring normal operation and preserved content";
                     }
-                    mpHost->setRemoteEchoingActive(false);
-                    qDebug() << "ECHO: Server ending password mode - restoring normal operation and preserved content";
                 }
 
                 switch (option) {
@@ -2931,6 +2987,15 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 raiseProtocolEvent("sysProtocolEnabled", "NEW_ENVIRON");
             }
 
+            break;
+        }
+
+        if (option == OPT_LINEMODE) {
+            sendTelnetOption(TN_WONT, option);
+            myOptionState[idxOption] = false;
+            announcedState[idxOption] = true;
+            qDebug() << "LINEMODE: Rejected (Mudlet operates in line mode only)";
+            raiseProtocolEvent("sysProtocolRejected", "LINEMODE");
             break;
         }
 
@@ -4358,6 +4423,17 @@ void cTelnet::postMessage(QString msg)
                 if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orange-ish
                 }
+            } else if (prefix.contains(tr("CHAT")) || prefix.contains(QLatin1String("CHAT"))) {
+                mpHost->mpConsole->print(prefix, QColor(255, 255, 50), mpHost->mBgColor);                  // Bright yellow
+                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
+                for (int _i = 0; _i < body.size(); ++_i) {
+                    QString temp = body.at(_i);
+                    temp.replace('\t', QLatin1String("        "));
+                    body[_i] = temp.rightJustified(temp.length() + prefixLength);
+                }
+                if (!body.empty()) {
+                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(255, 50, 50), mpHost->mBgColor); // Red-ish
+                }
             } else {                                                                                        // Unrecognised but still in a "[ something ] -  message..." format
                 mpHost->mpConsole->print(prefix, QColor(190, 50, 50), mpHost->mBgColor);                    // Foreground red, background bright grey
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 50, 50), mpHost->mBgColor); //Foreground dark grey, background bright grey
@@ -4542,6 +4618,9 @@ void cTelnet::postData()
     // All data goes through main console's printOnDisplay which calls
     // translateToPlainText - MXP DEST routing happens inside that process
     mpHost->mpConsole->printOnDisplay(mMudData, true);
+    if (mpHost->mMMCPServer && !mpHost->mIsRemoteEchoingActive) {
+        mpHost->mMMCPServer->receiveFromPlayer(mMudData);
+    }
 }
 
 void cTelnet::initStreamDecompressor()
@@ -5498,4 +5577,45 @@ QAbstractSocket::SocketState cTelnet::getConnectionState() const
     static const QRegularExpression isRawIPv6AddressRegExp(qsl("^[0-9a-f:]+$"));
 
     return isRawIPv6AddressRegExp.match(text).hasMatch();
+}
+
+void cTelnet::checkCharacterModePattern()
+{
+    if (!mServerRequestedSGA || !mpHost || !mpHost->isRemoteEchoingActive()) {
+        return;
+    }
+
+    raiseProtocolEvent("sysCharacterModeDetected", "");
+    qDebug() << "Character-at-a-time mode pattern detected (ECHO + SGA)";
+
+    if (mudlet::self()->showCharacterModeWarning()) {
+        mudlet::self()->showedCharacterModeWarning();
+        //: Warning shown when server uses character-at-a-time mode which Mudlet doesn't support
+        postMessage(tr("[ WARN ]  - This game appears to use character-at-a-time mode, "
+                       "which Mudlet does not support. Input may not work as expected. "
+                       "Consider using keybindings for immediate key response instead."));
+    }
+}
+
+bool cTelnet::checkEchoAnomalyPattern()
+{
+    if (mEchoAnomalyDetected) {
+        return true;
+    }
+
+    if (mEchoToggleTimer.isValid() && mEchoToggleTimer.elapsed() < ECHO_ANOMALY_WINDOW_MS) {
+        mEchoToggleCount++;
+
+        if (mEchoToggleCount >= ECHO_ANOMALY_THRESHOLD) {
+            mEchoAnomalyDetected = true;
+
+            raiseProtocolEvent("sysEchoAnomalyDetected", "");
+            qWarning() << "ECHO anomaly pattern detected - disabling ECHO response to protect TCommandLine";
+            return true;
+        }
+    } else {
+        mEchoToggleCount = 1;
+    }
+    mEchoToggleTimer.restart();
+    return false;
 }

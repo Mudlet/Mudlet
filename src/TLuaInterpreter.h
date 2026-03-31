@@ -214,6 +214,31 @@ public:
     static int deleteMapLabel(lua_State*);
     static int getRooms(lua_State*);
     static int connectToServer(lua_State*);
+    static int mmcpChatTo(lua_State*);
+    static int mmcpChatAll(lua_State*);
+    static int mmcpAllowSnoop(lua_State*);
+    static int mmcpAccept(lua_State*);
+    static int mmcpCall(lua_State*);
+    static int mmcpDeny(lua_State*);
+    static int mmcpDoNotDisturb(lua_State*);
+    static int mmcpEmoteAll(lua_State*);
+    static int mmcpGetClientFlags(lua_State* L);
+    static int mmcpChatGroup(lua_State*);
+    static int mmcpIgnore(lua_State*);
+    static int mmcpDisplayClientList(lua_State*);
+    static int mmcpChatName(lua_State*);
+    static int mmcpPing(lua_State*);
+    static int mmcpPeekConnections(lua_State*);
+    static int mmcpPrivate(lua_State*);
+    static int mmcpRequestConnections(lua_State*);
+    static int mmcpServe(lua_State*);
+    static int mmcpSetGroup(lua_State*);
+    static int mmcpSendSideChannel(lua_State* L);
+    static int mmcpSnoop(lua_State*);
+    static int mmcpStartServer(lua_State*);
+    static int mmcpStopServer(lua_State*);
+    static int mmcpDisconnect(lua_State*);
+    static int mmcpGetClientList(lua_State*);
     static int sendIrc(lua_State*);
     static int openIRC(lua_State*);
     static int getIrcNick(lua_State*);
@@ -424,6 +449,17 @@ public:
     static int deleteLabel(lua_State*);
     static int deleteMiniConsole(lua_State*);
     static int deleteCommandLine(lua_State*);
+    static int createTextEdit(lua_State*);
+    static int deleteTextEdit(lua_State*);
+    static int getTextEditText(lua_State*);
+    static int setTextEditText(lua_State*);
+    static int clearTextEdit(lua_State*);
+    static int setTextEditReadOnly(lua_State*);
+    static int setTextEditPlaceholder(lua_State*);
+    static int setTextEditStyleSheet(lua_State*);
+    static int setTextEditFont(lua_State*);
+    static int setTextEditFontSize(lua_State*);
+    static int setTextEditTabMovesFocus(lua_State*);
     static int deleteScrollBox(lua_State*);
     static int setLabelToolTip(lua_State*);
     static int setLabelCursor(lua_State*);
@@ -699,6 +735,7 @@ public:
     static int killMapInfo(lua_State*);
     static int enableMapInfo(lua_State*);
     static int disableMapInfo(lua_State*);
+    static int getMapInfo(lua_State*);
     static int getProfileTabNumber(lua_State*);
     static int addFileWatch(lua_State*);
     static int removeFileWatch(lua_State*);
@@ -731,9 +768,6 @@ public:
     static int disableTimeStamps(lua_State*);
     static int enableTimeStamps(lua_State*);
     static int timeStampsEnabled(lua_State*);
-    static int aiChat(lua_State*);
-    static int aiPrompt(lua_State*);
-    static int aiPromptStream(lua_State*);
     static int setActiveProfile(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
