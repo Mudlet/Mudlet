@@ -115,7 +115,7 @@ const char OPT_MSDP = 69;                    // https://tintin.mudhalla.net/prot
 const char OPT_MSSP = static_cast<char>(70); // https://tintin.mudhalla.net/protocols/mssp/
 const char OPT_COMPRESS = 85;
 const char OPT_COMPRESS2 = 86; // MCCP2 https://mudstandards.org/mud/mccp2
-const char OPT_COMPRESS4 = 88; // MCCP4, documentation pending
+const char OPT_COMPRESS4 = 88; // MCCP4 - zstd/deflate compression via telnet option 88
 const char OPT_MSP = 90;
 const char OPT_MXP = 91;
 const char OPT_102 = 102;
@@ -165,9 +165,9 @@ const char NEW_ENVIRON_USERVAR = 3;
 
 const char MCCP4_ACCEPT_ENCODING = 1;
 const char MCCP4_BEGIN_ENCODING = 2;
-const std::byte MCCP4_ENCODING_NONE{0};
-const std::byte MCCP4_ENCODING_ZSTD{1};
-const std::byte MCCP4_ENCODING_DEFLATE{2};
+constexpr std::byte MCCP4_ENCODING_NONE{0};
+constexpr std::byte MCCP4_ENCODING_ZSTD{1};
+constexpr std::byte MCCP4_ENCODING_DEFLATE{2};
 
 class cTelnet : public QObject
 {
