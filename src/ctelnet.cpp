@@ -227,10 +227,7 @@ cTelnet::~cTelnet()
         mpComposer->deleteLater();
     }
 
-    if (mZstdDstream) {
-        ZSTD_freeDStream(mZstdDstream);
-        mZstdDstream = nullptr;
-    }
+    cleanupMCCP4();
 
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
     qDebug().noquote() << "cTelnet::~cTelnet() INFO - resetting mpSocket.";
@@ -4598,17 +4595,12 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
         hisOptionState[static_cast<int>(OPT_COMPRESS)] = false;
         hisOptionState[static_cast<int>(OPT_COMPRESS2)] = false;
 
-        // Clean up MCCP4 state if deflate was being used via MCCP4
-        // (can't call cleanupMCCP4 here as inflateEnd was already called above)
+        // Clean up MCCP4 state if deflate was being used via MCCP4.
+        // Reset encoding first so cleanupMCCP4() won't call inflateEnd()
+        // again (it was already called above).
         if (mMCCP_version_4 && mMCCP4_encoding == MCCP4_ENCODING_DEFLATE) {
-            if (mZstdDstream) {
-                ZSTD_freeDStream(mZstdDstream);
-                mZstdDstream = nullptr;
-            }
-            mZstdOutBuffer.clear();
-            mMCCP_version_4 = false;
             mMCCP4_encoding = MCCP4_ENCODING_NONE;
-            hisOptionState[static_cast<int>(OPT_COMPRESS4)] = false;
+            cleanupMCCP4();
         }
 
         // zval should always be NULL on inflateEnd.  No need for an else block. MCCP Rev. 3 -MH //
@@ -4978,9 +4970,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     }
 
     std::string cleandata;
-    // Pre-allocate for worst case: decompressed data can be much larger than input
-    // BUFFER_SIZE is 100000, so reserve enough for typical usage
-    cleandata.reserve(static_cast<size_t>(BUFFER_SIZE) * 4);
+    cleandata.reserve(static_cast<size_t>(BUFFER_SIZE));
     qint32 datalen = amount;
     char* buffer = in_buffer;
 
