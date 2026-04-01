@@ -3377,9 +3377,9 @@ void TLuaInterpreter::adjustCaptureGroups(int x, int a)
         }
     }
 
-    for (auto& [name, posRange] : mCapturedNameGroupsPosList) {
-        if (posRange.first >= x) {
-            posRange.first += a;
+    for (auto& [pos, length] : mCapturedNameGroupsPosList) {
+        if (pos >= x) {
+            pos += a;
         }
     }
 }
