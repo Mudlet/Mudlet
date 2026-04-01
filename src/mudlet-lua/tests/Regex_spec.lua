@@ -255,6 +255,25 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         killTrigger(id)
     end)
 
+    -- https://github.com/Mudlet/Mudlet/issues/8912
+    -- selectCaptureGroup with named groups should select the actual capture position,
+    -- not the first occurrence of the captured text in the line
+    it("selectCaptureGroup selects correct position for named groups when captured text appears earlier in line", function()
+        local selection
+        local pattern = "^Hp: (?<chp>[0-9\\-]+)/(?<mhp>[0-9]+) Sp: (?<csp>[0-9\\-]+)/(?<msp>[0-9]+) Ep: (?<cep>[0-9\\-]+)/(?<mep>[0-9]+) Wght: (?<pwt>[0-9\\.]+)% Gold: (?<gld>[0-9]+) Algn: (?<align>[A-Za-z]+) Wpn: (?<wpn>W|H|N)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            selectCaptureGroup("wpn")
+            selection = getSelection()
+            deselect()
+        end, 1)
+
+        feedTriggers("\nHp: 1451/1451 Sp: 6625/6625 Ep: 971/971 Wght: 14.1% Gold: 0 Algn: Angelic Wpn: H\n")
+
+        assert.are.equal("H", selection)
+        killTrigger(id)
+    end)
+
     -- no match
     it("doesnt falsely match a non matching line", function()
         local send = spy.on(_G, "send")
