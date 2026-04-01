@@ -3652,6 +3652,21 @@ void T2DMap::slot_deleteCustomExitLine()
 void T2DMap::slot_moveLabel()
 {
     mMoveLabel = true;
+    setMouseTracking(true);
+    //: 2D Mapper big, bottom of screen help message when moving a label
+    mHelpMsg = tr("Click to finish moving the label.");
+
+    auto [mx, my] = getMousePosition();
+    auto* area = mpMap->mpRoomDB->getArea(mAreaID);
+    if (area) {
+        for (auto& mapLabel : area->mMapLabels) {
+            if (mapLabel.highlight) {
+                mapLabel.pos = QVector3D(static_cast<float>(mx), static_cast<float>(my), static_cast<float>(mMapCenterZ));
+            }
+        }
+    }
+
+    update();
 }
 
 void T2DMap::slot_deleteLabel()

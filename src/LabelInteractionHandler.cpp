@@ -61,7 +61,7 @@ bool LabelInteractionHandler::matches(const T2DMap::MapInteractionContext& conte
     case QEvent::MouseMove:
         return context.isLabelHighlighted || context.isMoveLabelActive;
     case QEvent::MouseButtonRelease:
-        return context.button == Qt::LeftButton && context.isMoveLabelActive;
+        return false;
     default:
         return false;
     }
@@ -98,6 +98,29 @@ bool LabelInteractionHandler::handleMousePress(T2DMap::MapInteractionContext& co
     }
 
     if (context.button == Qt::LeftButton) {
+        if (mMapWidget.mMoveLabel) {
+            mMapWidget.mMoveLabel = false;
+            context.isMoveLabelActive = false;
+            mMapWidget.setMouseTracking(false);
+            mMapWidget.mLabelHighlighted = false;
+            context.isLabelHighlighted = false;
+            mMapWidget.mHelpMsg.clear();
+
+            if (!area->mMapLabels.isEmpty()) {
+                QMutableMapIterator<int, TMapLabel> iterator(area->mMapLabels);
+                while (iterator.hasNext()) {
+                    iterator.next();
+                    auto& mapLabel = iterator.value();
+                    if (mapLabel.highlight) {
+                        mapLabel.highlight = false;
+                    }
+                }
+            }
+
+            mMapWidget.update();
+            return true;
+        }
+
         if (area->mMapLabels.isEmpty()) {
             return false;
         }
@@ -258,21 +281,11 @@ bool LabelInteractionHandler::handleMouseMove(T2DMap::MapInteractionContext& con
         return true;
     }
 
-    if (mMapWidget.mMoveLabel) {
-        mMapWidget.mMoveLabel = false;
-        return false;
-    }
-
     return false;
 }
 
 bool LabelInteractionHandler::handleMouseRelease(T2DMap::MapInteractionContext& context) const
 {
-    if (context.button == Qt::LeftButton) {
-        if (mMapWidget.mMoveLabel) {
-            mMapWidget.mMoveLabel = false;
-        }
-    }
-
+    Q_UNUSED(context)
     return false;
 }
