@@ -374,8 +374,11 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         killTrigger(id)
     end)
 
-    -- selectCaptureGroup works with both number and name for the same group
-    it("selectCaptureGroup by number and by name select the same text for named groups", function()
+    -- selectCaptureGroup with a number uses matches[] indexing:
+    -- selectCaptureGroup(1) = matches[1] = full match
+    -- selectCaptureGroup(2) = matches[2] = first capture group
+    -- selectCaptureGroup by name selects the named group directly
+    it("selectCaptureGroup by number uses matches[] indexing, by name selects named group", function()
         local sel_by_name, sel_by_number
         local pattern = "^Score: (?<score>\\d+) Level: (?<level>\\d+)$"
 
@@ -383,7 +386,8 @@ describe("PCRE regex cases with tempRegexTrigger", function()
             selectCaptureGroup("level")
             sel_by_name = getSelection()
             deselect()
-            selectCaptureGroup(2)
+            -- "level" is the 2nd capture group, so it's matches[3]
+            selectCaptureGroup(3)
             sel_by_number = getSelection()
             deselect()
         end, 1)

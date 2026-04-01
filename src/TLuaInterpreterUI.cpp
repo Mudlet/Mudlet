@@ -2279,6 +2279,9 @@ int TLuaInterpreter::scaleMovie(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCaptureGroup
+// Note: numeric argument uses matches[] indexing, i.e. selectCaptureGroup(1)
+// selects matches[1] (full match), selectCaptureGroup(2) selects matches[2]
+// (first capture group), etc. Named arguments select the named group directly.
 int TLuaInterpreter::selectCaptureGroup(lua_State* L)
 {
     if (!(lua_isnumber(L, 1) || lua_isstring(L, 1))) {
