@@ -274,6 +274,127 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         killTrigger(id)
     end)
 
+    -- named capture groups populate matches table with both numeric and named keys
+    it("named capture groups are accessible by name in matches table", function()
+        local send = spy.on(_G, "send")
+        local snapshot = {}
+        local pattern = "^(?<first>\\w+) (?<second>\\w+)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            send("match")
+            snapshot = matches
+        end, 1)
+
+        feedTriggers("\nHello World\n")
+
+        assert.spy(send).was.called(1)
+        assert.are.equal("Hello World", snapshot[1])
+        assert.are.equal("Hello", snapshot[2])
+        assert.are.equal("World", snapshot[3])
+        assert.are.equal("Hello", snapshot["first"])
+        assert.are.equal("World", snapshot["second"])
+        assert.is_nil(snapshot[4])
+        killTrigger(id)
+    end)
+
+    -- selectCaptureGroup by name selects correct text
+    it("selectCaptureGroup by name selects the right text", function()
+        local selection_first, selection_second
+        local pattern = "^(?<first>\\w+) (?<second>\\w+)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            selectCaptureGroup("first")
+            selection_first = getSelection()
+            deselect()
+            selectCaptureGroup("second")
+            selection_second = getSelection()
+            deselect()
+        end, 1)
+
+        feedTriggers("\nHello World\n")
+
+        assert.are.equal("Hello", selection_first)
+        assert.are.equal("World", selection_second)
+        killTrigger(id)
+    end)
+
+    -- selectCaptureGroup returns -1 for non-existent named group
+    it("selectCaptureGroup returns -1 for non-existent named group", function()
+        local result
+        local pattern = "^(?<name>\\w+)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            result = selectCaptureGroup("nonexistent")
+        end, 1)
+
+        feedTriggers("\nMudlet\n")
+
+        assert.are.equal(-1, result)
+        killTrigger(id)
+    end)
+
+    -- named groups with repeated captured text elsewhere in the line
+    it("selectCaptureGroup selects correct position when same word appears multiple times", function()
+        local selection
+        local pattern = "^(\\w+) said (?<last_word>\\w+)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            selectCaptureGroup("last_word")
+            selection = getSelection()
+            deselect()
+        end, 1)
+
+        -- "hello" appears twice - selectCaptureGroup should pick the captured one (at the end)
+        feedTriggers("\nhello said hello\n")
+
+        assert.are.equal("hello", selection)
+        killTrigger(id)
+    end)
+
+    -- mixed named and unnamed capture groups
+    it("mixed named and unnamed groups both work in matches table", function()
+        local send = spy.on(_G, "send")
+        local snapshot = {}
+        local pattern = "^(\\d+) (?<word>\\w+) (\\d+)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            send("match")
+            snapshot = matches
+        end, 1)
+
+        feedTriggers("\n42 hello 99\n")
+
+        assert.spy(send).was.called(1)
+        assert.are.equal("42 hello 99", snapshot[1])
+        assert.are.equal("42", snapshot[2])
+        assert.are.equal("hello", snapshot[3])
+        assert.are.equal("99", snapshot[4])
+        assert.are.equal("hello", snapshot["word"])
+        assert.is_nil(snapshot[5])
+        killTrigger(id)
+    end)
+
+    -- selectCaptureGroup works with both number and name for the same group
+    it("selectCaptureGroup by number and by name select the same text for named groups", function()
+        local sel_by_name, sel_by_number
+        local pattern = "^Score: (?<score>\\d+) Level: (?<level>\\d+)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            selectCaptureGroup("level")
+            sel_by_name = getSelection()
+            deselect()
+            selectCaptureGroup(2)
+            sel_by_number = getSelection()
+            deselect()
+        end, 1)
+
+        feedTriggers("\nScore: 100 Level: 50\n")
+
+        assert.are.equal("50", sel_by_name)
+        assert.are.equal("50", sel_by_number)
+        killTrigger(id)
+    end)
+
     -- no match
     it("doesnt falsely match a non matching line", function()
         local send = spy.on(_G, "send")
