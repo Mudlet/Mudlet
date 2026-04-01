@@ -45,6 +45,10 @@ bool LabelInteractionHandler::matches(const T2DMap::MapInteractionContext& conte
 
     switch (context.event->type()) {
     case QEvent::MouseButtonPress:
+        if (context.button == Qt::LeftButton && context.isMoveLabelActive) {
+            return !context.isMapViewOnly;
+        }
+
         if (!context.area || context.isCustomLineDrawing) {
             return false;
         }
@@ -106,11 +110,8 @@ bool LabelInteractionHandler::handleMousePress(T2DMap::MapInteractionContext& co
             context.isLabelHighlighted = false;
             mMapWidget.mHelpMsg.clear();
 
-            if (!area->mMapLabels.isEmpty()) {
-                QMutableMapIterator<int, TMapLabel> iterator(area->mMapLabels);
-                while (iterator.hasNext()) {
-                    iterator.next();
-                    auto& mapLabel = iterator.value();
+            if (area && !area->mMapLabels.isEmpty()) {
+                for (auto& mapLabel : area->mMapLabels) {
                     if (mapLabel.highlight) {
                         mapLabel.highlight = false;
                     }

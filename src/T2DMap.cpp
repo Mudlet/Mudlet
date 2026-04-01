@@ -544,6 +544,13 @@ void T2DMap::switchArea(const QString& newAreaName)
         return;
     }
 
+    if (mMoveLabel) {
+        mMoveLabel = false;
+        setMouseTracking(false);
+        mLabelHighlighted = false;
+        mHelpMsg.clear();
+    }
+
     const int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
     TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(playerRoomId);
     int playerAreaID = -2; // Cannot be valid (but -1 can be)!
