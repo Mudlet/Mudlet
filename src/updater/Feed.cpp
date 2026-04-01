@@ -150,7 +150,7 @@ void Feed::downloadRelease(const Release& release, bool requireChecksums)
         fetchChecksums(checksumsUrl);
     } else if (requireChecksums) {
         //: Error shown when a manual update cannot be verified as safe to install
-        emit downloadError(tr("Could not verify the download is safe. Please try again later."));
+        emit downloadError(tr("Could not verify the integrity of the download. Please try again later."));
     } else {
         makeDownloadRequest(downloadUrl);
     }
