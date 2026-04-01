@@ -296,7 +296,6 @@ void TTrigger::processRegexMatch(
     for (i = 0; i < rc; i++) {
         const char* substring_start = haystackC + ovector[2 * i];
         const int substring_length = ovector[2 * i + 1] - ovector[2 * i];
-        const int utf16_pos = haystack.indexOf(QString::fromUtf8(substring_start, substring_length));
         std::string match;
         if (substring_length < 1) {
             captureList.push_back(match);
@@ -304,6 +303,7 @@ void TTrigger::processRegexMatch(
             continue;
         }
 
+        const int utf16_pos = QString::fromUtf8(haystackC, ovector[2 * i]).length();
         match.append(substring_start, substring_length);
         captureList.push_back(match);
         posList.push_back(utf16_pos + posOffset);
@@ -329,11 +329,11 @@ void TTrigger::processRegexMatch(
                     QString::fromUtf8(reinterpret_cast<const char*>(&tabptr[2])).trimmed(); //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
             auto* substring_start = haystackC + ovector[2 * n];                             //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
             auto substring_length = ovector[2 * n + 1] - ovector[2 * n];                    //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
-            auto utf16_pos = haystack.indexOf(QString::fromUtf8(substring_start, substring_length));
+            auto utf16_pos = QString::fromUtf8(haystackC, ovector[2 * n]).length();         //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
             auto capture = QString::fromUtf8(substring_start, substring_length);
             nameGroups << qMakePair(name, capture);
             tabptr += name_entry_size;
-            namePositions.insert(name, qMakePair(utf16_pos + posOffset, static_cast<int>(substring_length)));
+            namePositions.insert(name, qMakePair(utf16_pos + posOffset, static_cast<int>(capture.length())));
         }
     }
     if (mIsColorizerTrigger || mFilterTrigger) {
@@ -365,7 +365,6 @@ void TTrigger::processRegexMatch(
         for (i = 0; i < rc; i++) {
             const char* substring_start = haystackC + ovector[2 * i];
             const int substring_length = ovector[2 * i + 1] - ovector[2 * i];
-            const int utf16_pos = haystack.indexOf(QString::fromUtf8(substring_start, substring_length));
 
             std::string match;
             if (substring_length < 1) {
@@ -373,6 +372,7 @@ void TTrigger::processRegexMatch(
                 posList.push_back(-1);
                 continue;
             }
+            const int utf16_pos = QString::fromUtf8(haystackC, ovector[2 * i]).length();
             match.append(substring_start, substring_length);
             captureList.push_back(match);
             posList.push_back(utf16_pos + posOffset);

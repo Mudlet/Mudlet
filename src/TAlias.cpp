@@ -154,9 +154,10 @@ bool TAlias::match(const QString& haystack)
             posList.push_back(-1);
             continue;
         }
+        const int utf16_pos = QString::fromUtf8(haystackC, ovector[2 * i]).length();
         match.append(substring_start, substring_length);
         captureList.push_back(match);
-        posList.push_back(ovector[2 * i]);
+        posList.push_back(utf16_pos);
         if (mudlet::smDebugMode) {
             TDebug(Qt::darkCyan, Qt::black) << "Alias: capture group #" << (i + 1) << " = " >> mpHost;
             TDebug(Qt::darkMagenta, Qt::black) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
@@ -173,11 +174,11 @@ bool TAlias::match(const QString& haystack)
             auto name = QString::fromUtf8(reinterpret_cast<const char*>(&tabptr[2])).trimmed();
             auto* substring_start = haystackC + ovector[2 * n];
             auto substring_length = ovector[2 * n + 1] - ovector[2 * n];
-            auto utf16_pos = haystack.indexOf(QString::fromUtf8(substring_start, substring_length));
+            auto utf16_pos = QString::fromUtf8(haystackC, ovector[2 * n]).length();
             auto capture = QString::fromUtf8(substring_start, substring_length);
             nameGroups << qMakePair(name, capture);
             tabptr += name_entry_size;
-            namePositions.insert(name, qMakePair(utf16_pos, static_cast<int>(substring_length)));
+            namePositions.insert(name, qMakePair(utf16_pos, static_cast<int>(capture.length())));
         }
     }
 
@@ -212,9 +213,10 @@ bool TAlias::match(const QString& haystack)
                 posList.push_back(-1);
                 continue;
             }
+            const int utf16_pos = QString::fromUtf8(haystackC, ovector[2 * i]).length();
             match.append(substring_start, substring_length);
             captureList.push_back(match);
-            posList.push_back(ovector[2 * i]);
+            posList.push_back(utf16_pos);
             if (mudlet::smDebugMode) {
                 TDebug(Qt::darkCyan, Qt::black) << "capture group #" << (i + 1) << " = " >> mpHost;
                 TDebug(Qt::darkMagenta, Qt::black) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;

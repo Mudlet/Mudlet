@@ -3377,10 +3377,10 @@ void TLuaInterpreter::adjustCaptureGroups(int x, int a)
         }
     }
 
-    NamedMatchesRanges::iterator i;
-    for (i = mCapturedNameGroupsPosList.begin(); i != mCapturedNameGroupsPosList.cend(); ++i) {
-        i.value().first += a;
-        i.value().second += a;
+    for (auto& [name, posRange] : mCapturedNameGroupsPosList) {
+        if (posRange.first >= x) {
+            posRange.first += a;
+        }
     }
 }
 
