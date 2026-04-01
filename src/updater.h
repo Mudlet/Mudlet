@@ -20,6 +20,9 @@
 #ifndef UPDATER_H
 #define UPDATER_H
 
+// QObject must be included before Q_OS_MACOS checks below
+#include <QObject>
+
 // Guard for builds without the updater (INCLUDE_UPDATER is defined by CMake when USE_UPDATER is ON):
 #if defined(INCLUDE_UPDATER)
 namespace dblsqd {
@@ -31,9 +34,6 @@ class UpdateDialog;
 #include "sparkleupdater.h"
 #endif
 #endif
-
-
-#include <QObject>
 
 class QAbstractButton;
 class QPushButton;
@@ -77,7 +77,9 @@ private:
     void setupOnMacOS();
 #endif
 
+#if !defined(Q_OS_MACOS)
     void setupPlatformUpdater();
+#endif
     void recordUpdateTime() const;
     void recordUpdatedVersion() const;
     QString getPreviousVersion() const;

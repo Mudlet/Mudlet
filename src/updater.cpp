@@ -266,6 +266,7 @@ void Updater::setupOnMacOS()
 }
 #endif // Q_OS_MACOS
 
+#if !defined(Q_OS_MACOS)
 void Updater::setupPlatformUpdater()
 {
     connect(mFeed, &dblsqd::Feed::ready, this, [=, this]() {
@@ -292,6 +293,7 @@ void Updater::setupPlatformUpdater()
     mUpdateDialog->addInstallButton(mpInstallOrRestart);
     connect(mUpdateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
+#endif // !Q_OS_MACOS
 
 #if defined(Q_OS_WINDOWS)
 void Updater::setupOnWindows()
