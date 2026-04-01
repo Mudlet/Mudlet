@@ -169,7 +169,7 @@ void Feed::fetchChecksums(const QUrl& checksumsUrl)
             if (mRequireChecksums) {
                 reply->deleteLater();
                 //: Error shown when a manual update cannot be verified as safe to install
-                emit downloadError(tr("Could not verify the download is safe. Please try again later."));
+                emit downloadError(tr("Could not verify the integrity of the download. Please try again later."));
                 return;
             }
             qWarning() << "Failed to fetch checksums:" << reply->errorString() << "- download will proceed without integrity verification";
@@ -202,7 +202,7 @@ void Feed::fetchChecksums(const QUrl& checksumsUrl)
                 if (mRequireChecksums) {
                     reply->deleteLater();
                     //: Error shown when a manual update cannot be verified as safe to install
-                    emit downloadError(tr("Could not verify the download is safe. Please try again later."));
+                    emit downloadError(tr("Could not verify the integrity of the download. Please try again later."));
                     return;
                 }
                 qCritical() << "Checksum file downloaded but no matching hash found for" << mCurrentDownload.getDownloadUrl().fileName() << "- download will proceed without integrity verification";
