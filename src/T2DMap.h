@@ -166,6 +166,7 @@ public:
 
     void setRoomSize(double);
     void setExitSize(double);
+    void setBorderSize(double);
     void createLabel(QRectF labelRectangle);
     // Clears cache so new symbols are built at next paintEvent():
     void flushSymbolPixmapCache() {mSymbolPixmapCache.clear();}
@@ -174,6 +175,7 @@ public:
     void addTextLabelToCache(const QString& key, const TMapLabel& label, const QSize& targetSize);
     void drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect);
     void setPlayerRoomStyle(const int style);
+    static QGradientStops buildPlayerRoomGradientStops(int style, quint8 innerDiameterPercentage, const QColor& innerColor, const QColor& outerColor);
     void switchArea(const QString& newAreaName);
     void switchArea(int areaId);
     void clearSelection();
@@ -228,6 +230,8 @@ public:
     // coordinates):
     float mRoomWidth = 0.0f;
     float mRoomHeight = 0.0f;
+    float mPrevRoomWidth = 0.0f;
+    float mPrevRoomHeight = 0.0f;
     float xspan = 0.0f;
     float yspan = 0.0f;
 
@@ -250,6 +254,7 @@ public:
     QMap<int, QPixmap> mPixMap;
     double rSize = 0.5;
     double eSize = 3.0;
+    double mBSize = 3.0;
     // When a Lua centerview(...) is called this assigns the room ID value to
     // this member and (switching areas if necessary) pans the map to be
     // centered on this room:
