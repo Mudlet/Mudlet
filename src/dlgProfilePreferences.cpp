@@ -656,7 +656,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     loadEditorTab();
 
     fontComboBox_displayFont->setCurrentFont(pHost->getDisplayFont());
-    // Accomodate an initial font size being larger than expected - and ensure
+    // Accommodate an initial font size being larger than expected - and ensure
     // it is a positive value:
     spinBox_displayFontSize->setMaximum(std::max(pHost->getDisplayFont().pointSize(), 40));
     spinBox_displayFontSize->setValue(std::max(1, pHost->getDisplayFont().pointSize()));
@@ -1284,7 +1284,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -3200,7 +3200,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         bool ok;
         quint16 port = lineEdit_mmcpPort->text().toUShort(&ok);
         pHost->mMMCPChatPort = ok ? port : csDefaultMMCPHostPort;
-        
+
         /* Possible inclusion in 4.21
         pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
         pHost->mMMCPAutoAcceptCalls = checkBox_mmcpAutoAcceptCalls->isChecked();
