@@ -69,6 +69,12 @@ void FontManager::loadFont(const QString& filePath, const QString& belongsTo)
         // Font is already loaded... record this additional affiliation
         // so multiple profiles sharing the same font are tracked independently
         const int existingID = loadedFontPaths.value(fileName);
+
+        // Don't track affiliation for failed loads (-1)
+        if (existingID == -1) {
+            return;
+        }
+
         if (!loadedFontAffiliation.contains(belongsTo, existingID)) {
             loadedFontAffiliation.insert(belongsTo, existingID);
         }
@@ -77,37 +83,19 @@ void FontManager::loadFont(const QString& filePath, const QString& belongsTo)
 
     auto fontID = QFontDatabase::addApplicationFont(filePath);
 
-    // remember even if the font failed to load so we don't spam messages on fonts that repeat
-    rememberFont(filePath, fontID, belongsTo);
+    // Remember even if the font failed to load so we don't spam warnings on repeated attempts
+    loadedFontPaths.insert(fileName, fontID);
 
+    // Don't track affiliation for failed loads (-1)
     if (fontID == -1) {
         qWarning() << "FontManager::loadFont() WARNING - Could not load the font(s) in the file: " << filePath;
-        // Uncomment the next pair of lines to get details about fonts that ARE loaded:
-        //    } else {
-        //        qDebug().noquote().nospace() << "FontManager::loadFont() INFO - Loaded font(s) in the file: \"" << filePath << "\"\n    with ID: " << fontID << " providing: \"" << QFontDatabase::applicationFontFamilies(fontID).join(QLatin1String("\", \"")).append(QLatin1String("\"\n"));
+    } else {
+        loadedFontAffiliation.insert(belongsTo, fontID);
+        // Uncomment the next line to get details about fonts that ARE loaded:
+        // qDebug().noquote().nospace() << "FontManager::loadFont() INFO - Loaded font(s) in the file: \"" << filePath << "\"\n    with ID: " << fontID << " providing: \"" << QFontDatabase::applicationFontFamilies(fontID).join(QLatin1String("\", \"")).append(QLatin1String("\"\n"));
     }
 }
 
-bool FontManager::fontAlreadyLoaded(const QString& filePath)
-{
-    const QFileInfo fontFile(filePath);
-    auto fileName = fontFile.fileName();
-
-    return loadedFontPaths.contains(fileName);
-}
-
-void FontManager::rememberFont(const QString& filePath, int fontID, const QString& belongsTo)
-{
-    const QFileInfo fontFile(filePath);
-    auto fileName = fontFile.fileName();
-
-    if (loadedFontPaths.contains(fileName)) {
-        return;
-    }
-
-    loadedFontPaths.insert(fileName, fontID);
-    loadedFontAffiliation.insert(belongsTo, fontID);
-}
 
 void FontManager::unloadFonts(const QString& belongsTo)
 {
@@ -115,6 +103,11 @@ void FontManager::unloadFonts(const QString& belongsTo)
     loadedFontAffiliation.remove(belongsTo);
 
     for (const int id : fontIds) {
+        // -1 means the font failed to load - skip it to avoid matching
+        // unrelated failed fonts
+        if (id == -1) {
+            continue;
+        }
         // Only remove from Qt if no other owner still references this font
         if (loadedFontAffiliation.values().contains(id)) {
             continue;
