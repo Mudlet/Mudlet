@@ -6004,7 +6004,18 @@ void TLuaInterpreter::loadGlobal()
     // /usr/share part of the file-system:
     if (!qsl(LUA_DEFAULT_PATH).isEmpty()) {
         mPossiblePaths << QDir::toNativeSeparators(qsl(LUA_DEFAULT_PATH "/LuaGlobal.lua"));
-    };
+    }
+
+    // The build-time source path lets development builds and test binaries
+    // find LuaGlobal.lua regardless of where the binary runs from.
+    // Only add if the path actually exists to avoid leaking build-time paths
+    // in error messages on packaged end-user builds:
+    if (!qsl(LUA_SOURCE_PATH).isEmpty()) {
+        const auto sourcePath = QDir::toNativeSeparators(qsl(LUA_SOURCE_PATH "/LuaGlobal.lua"));
+        if (QFileInfo::exists(sourcePath)) {
+            mPossiblePaths << sourcePath;
+        }
+    }
     QStringList failedMessages{};
 
     // uncomment the following to enable some debugging texts in the LuaGlobal.lua script:
