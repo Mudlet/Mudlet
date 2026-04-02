@@ -41,6 +41,7 @@
 #include "ui_main_window.h"
 #include <QAction>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFlags>
 #include <QKeySequence>
 #include <QMainWindow>
@@ -238,6 +239,7 @@ public:
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     bool loadWindowLayout();
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
+    bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
     bool migratePasswordsToProfileStorage();
     bool migratePasswordsToSecureStorage();
     // Helper function to check if current version is >= specified version for backward compatibility
@@ -395,16 +397,8 @@ public:
     bool mDrawUpperLowerLevels = true;
     bool mShowTabConnectionIndicators = true; // Global preference for showing connection status indicators on tabs
 
-    // Global blink timer for SGR codes 5 and 6 (flashing text)
-    // Shared across all TTextEdit instances for synchronized blinking
-    // Uses 200ms base interval (WCAG 2.3.1 compliant - max 3 Hz)
-    // 4-state counter per ISO/IEC 8613-6: slow blink < 150 cycles/min, fast > 150
-    //   state 0: slow=on,  fast=on
-    //   state 1: slow=on,  fast=off
-    //   state 2: slow=off, fast=on
-    //   state 3: slow=off, fast=off
-    bool slowBlinkState() const { return mBlinkState < 2; }
-    bool fastBlinkState() const { return (mBlinkState % 2) == 0; }
+    qreal blinkPulseOpacity(bool isFastBlink) const;
+    static qreal computeBlinkPulseOpacity(qreal blinkTimeMs, bool isFastBlink);
     void registerBlinkClient();
     void unregisterBlinkClient();
 
@@ -421,6 +415,7 @@ public slots:
     void slot_connectionDialogueFinished(const QString&, bool);
     void slot_disconnect();
     void slot_handleToolbarVisibilityChanged(bool);
+    void slot_toolbarToggleActionTriggered(bool);
 #if defined(INCLUDE_UPDATER)
     void slot_manualUpdateCheck();
     void slot_updateCheckFailed(const QString& error);
@@ -456,7 +451,7 @@ public slots:
     void slot_replaySpeedDown();
     void slot_replayTimeChanged();
     void slot_restoreMainMenu() { setMenuBarVisibility(enums::visibleAlways); }
-    void slot_restoreMainToolBar() { setToolBarVisibility(enums::visibleAlways); }
+    void slot_restoreMainToolBar() { synchronizeToolBarVisibility(true); }
     void slot_showAboutDialog();
     void slot_showHelpDialogForum();
     void slot_showHelpDialogIrc();
@@ -495,8 +490,6 @@ public slots:
     void setupPreferencesFocusRestoration(dlgProfilePreferences* pPreferences);
     void slot_showTimerDialog();
     void slot_showTabContextMenu(const QPoint& position);
-    void slot_toggleMainToolBar();
-    void slot_showMainToolBarContextMenu(const QPoint& position);
     void synchronizeToolBarVisibility(bool visible);
     void slot_showTriggerDialog();
     void slot_showVariableDialog();
@@ -533,7 +526,7 @@ signals:
     void signal_toolBarVisibilityChanged(const enums::controlsVisibility);
     void signal_windowStateChanged(const Qt::WindowStates);
     void signal_showTabConnectionIndicatorsChanged(bool);
-    void signal_blinkStateChanged(bool slowState, bool fastState);
+    void signal_blinkStateChanged();
     void signal_profileLoaded();
 
 private slots:
@@ -702,7 +695,8 @@ private:
     QPointer<QShortcut> mpShortcutToggleEmergencyStop;
     QPointer<QTimer> mpTimerReplay;
     QPointer<QTimer> mpBlinkTimer;
-    int mBlinkState = 0;
+    QElapsedTimer mBlinkElapsedTimer;
+    qreal mBlinkTimeMs = 0.0;
     int mBlinkClientCount = 0;
     QPointer<QToolBar> mpToolBarReplay;
     QWidget* mpWidget_profileContainer = nullptr;

@@ -428,6 +428,11 @@ Host::~Host()
     qDeleteAll(profileShortcuts);
     profileShortcuts.clear();
 
+    qDeleteAll(mStopWatchMap);
+    mStopWatchMap.clear();
+
+    delete mMMCPServer;
+
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
@@ -2685,11 +2690,11 @@ void Host::refreshPackageFonts()
     }
 }
 
-void Host::setEnableBlinkText(const bool enabled)
+void Host::setEnableBlinkText(const bool enable)
 {
-    if (mEnableBlinkText != enabled) {
-        mEnableBlinkText = enabled;
-        emit signal_changeEnableBlinkText(enabled);
+    if (mEnableBlinkText != enable) {
+        mEnableBlinkText = enable;
+        emit signal_changeEnableBlinkText(enable);
     }
 }
 
@@ -5026,4 +5031,14 @@ QStringList Host::getAllExperiments() const
 QStringList Host::getValidExperiments() const
 {
     return QStringList(mValidExperiments.constBegin(), mValidExperiments.constEnd());
+}
+
+bool Host::shouldStripOscHyperlinkConfigParam()
+{
+    return mTelnet.oscHyperlinkConfigFeatureEnabled();
+}
+
+bool Host::shouldStripOscHyperlinkPresetParam()
+{
+    return mTelnet.oscHyperlinkPresetsEnabled();
 }

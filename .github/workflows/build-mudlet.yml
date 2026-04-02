@@ -1,3 +1,5 @@
+# DUPLICATE WORKFLOW: This file is paired with build-mudlet-pr.yml
+# Changes here likely need to be mirrored there as well.
 name: 🔨 Build Mudlet
 on:
   push:
@@ -322,25 +324,7 @@ jobs:
     - name: check ccache stats post build
       run: ccache --show-stats
 
-    - name: (Linux) Run C++ tests
-      if: runner.os == 'Linux' && matrix.run_tests == 'true'
-      working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure
-      env:
-        QT_QPA_PLATFORM: offscreen
-
-    - name: (macOS) Run C++ tests
-      if: runner.os == 'macOS'
-      working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure
-
-    - name: Run QTest
-      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
-      env:
-        QT_FORCE_STDERR_LOGGING: 1
-
     - name: install dependencies for packaging/tests
-      if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
       run: |
         LUAROCKS="luarocks --lua-version 5.1 install --local"
 
@@ -373,6 +357,23 @@ jobs:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
+
+    - name: (Linux) Run C++ tests
+      if: runner.os == 'Linux' && matrix.run_tests == 'true'
+      working-directory: '${{runner.workspace}}/b/ninja'
+      run: ctest --output-on-failure
+      env:
+        QT_QPA_PLATFORM: offscreen
+
+    - name: (macOS) Run C++ tests
+      if: runner.os == 'macOS'
+      working-directory: '${{runner.workspace}}/b/ninja'
+      run: ctest --output-on-failure
+
+    - name: Run QTest
+      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
+      env:
+        QT_FORCE_STDERR_LOGGING: 1
 
     - name: add ssh-agent for release uploads
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
