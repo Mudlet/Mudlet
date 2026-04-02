@@ -4331,7 +4331,7 @@ QSize Host::calcFontSize(const QString& windowName)
 
     if (windowName.isEmpty() || windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
         QFontMetrics fontMetrics(mpConsole->mUpperPane->fontMetrics());
-        return QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height());
+        return QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
     }
 
     auto pC = mpConsole->mSubConsoleMap.value(windowName);
@@ -4341,7 +4341,7 @@ QSize Host::calcFontSize(const QString& windowName)
 
     Q_ASSERT_X(pC->mUpperPane, "calcFontSize", "located console does not have the upper pane available");
     QFontMetrics fontMetrics(pC->mUpperPane->fontMetrics());
-    return QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height());
+    return QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
 }
 
 bool Host::setProfileStyleSheet(const QString& styleSheet)

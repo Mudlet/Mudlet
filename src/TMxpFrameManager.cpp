@@ -839,9 +839,9 @@ QSize TMxpFrameManager::calculateFrameSize(const QString& spec, const QSize& con
             int result = chars * fm.height();
             return QSize(0, result);
         } else {
-            // Use horizontalAdvance('W') instead of averageCharWidth() for consistency
-            // with Host::calcFontSize() which uses this for more accurate character width
-            int result = chars * fm.horizontalAdvance(QChar('W'));
+            // Use averageCharWidth() for consistency with Host::calcFontSize() and
+            // TTextEdit::mFontWidth which both use this metric for character width
+            int result = chars * fm.averageCharWidth();
             return QSize(result, 0);
         }
     }
