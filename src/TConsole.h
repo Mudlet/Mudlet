@@ -122,7 +122,7 @@ struct TFontAttributes
     // We use but don't set "Line Spacing" - so don't worry about it.
     QFont::Weight mWeight = QFont::Normal;
     bool mFixedPitch = true; // We always set this
-    bool mKerning = false;   // Kerning is disabled for console fonts
+    bool mKerning = false;   // We haven't been resetting this but we ought to
     // we don't set these on "base" fonts for TConsole's but we can set them for
     // bits of text:
     bool mUnderline = false;
@@ -205,7 +205,7 @@ public:
     int getButtonState();
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
-    void pasteWindow(TBuffer);
+    void pasteWindow(const TBuffer&);
     QStringList getLines(int from, int to);
     int getLineNumber();
     int getLineCount();
@@ -495,6 +495,7 @@ inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
 {
     QString text;
     const QDebugStateSaver saver(debug);
+    // clang-format off
     switch (type) {
     case TConsole::UnknownType:
         text = qsl("Unknown");
@@ -520,6 +521,7 @@ inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
     default:
         text = qsl("Non-coded Type");
     }
+    // clang-format on
     debug.nospace() << text;
     return debug;
 }
