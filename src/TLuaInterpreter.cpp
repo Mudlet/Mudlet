@@ -4973,14 +4973,13 @@ end)LUA");
     // clang-format on
 }
 
-// Abort all in-flight network downloads. Must be called before lua_close()
-// because downloadFile() connects a progress lambda that captures the
-// lua_State* by value - closing the state turns that into a dangling pointer.
+// Abort all in-flight network downloads during resetProfile so that
+// stale completion/error events from the old Lua state are not
+// delivered to the new state's event handlers.
 void TLuaInterpreter::abortAllDownloads()
 {
     for (auto* reply : downloadMap.keys()) {
         reply->abort();
-        reply->deleteLater();
     }
     downloadMap.clear();
 }
