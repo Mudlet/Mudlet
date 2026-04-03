@@ -213,9 +213,9 @@ void dlgRoomProperties::initHiddenInstructions(const int hiddenRoomCount)
  when some (%n) but not all of the rooms are hidden. Ensure that, if the locale uses
  spaces between words, that one is present at the beginning or end so that the
  text is correctly spaced when it is inserted into the primary text.*/
-                        .arg(tr(" %n room(a) are currently hidden."),
+                        .arg(tr(" %n room(s) are currently hidden.",
                              nullptr,
-                             hiddenRoomCount));
+                             hiddenRoomCount)));
 /*: Tooltip to give additional information for the checkbox to control the
  state of being hidden when the selection includes multiple rooms and they
  are not all in the same state.*/
