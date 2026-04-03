@@ -84,8 +84,8 @@ private:
 
   int countTempTriggers() {
     int count = 0;
-    for (auto *trigger : mpHost->getTriggerUnit()->getTriggerRootNodeList()) {
-      if (trigger->isTemporary()) {
+    for (const auto* trigger : mpHost->getTriggerUnit()->getTriggerRootNodeList()) {
+      if (trigger && trigger->isTemporary()) {
         ++count;
       }
     }
@@ -94,8 +94,8 @@ private:
 
   int countTempAliases() {
     int count = 0;
-    for (auto *alias : mpHost->getAliasUnit()->getAliasRootNodeList()) {
-      if (alias->isTemporary()) {
+    for (const auto* alias : mpHost->getAliasUnit()->getAliasRootNodeList()) {
+      if (alias && alias->isTemporary()) {
         ++count;
       }
     }
@@ -104,8 +104,8 @@ private:
 
   int countTempTimers() {
     int count = 0;
-    for (auto *timer : mpHost->getTimerUnit()->getTimerRootNodeList()) {
-      if (timer->isTemporary()) {
+    for (const auto* timer : mpHost->getTimerUnit()->getTimerRootNodeList()) {
+      if (timer && timer->isTemporary()) {
         ++count;
       }
     }
@@ -114,8 +114,8 @@ private:
 
   int countTempKeys() {
     int count = 0;
-    for (auto *key : mpHost->getKeyUnit()->getKeyRootNodeList()) {
-      if (key->isTemporary()) {
+    for (const auto* key : mpHost->getKeyUnit()->getKeyRootNodeList()) {
+      if (key && key->isTemporary()) {
         ++count;
       }
     }
@@ -167,7 +167,7 @@ private slots:
 
   void test_tempTriggersRemovedAfterReset() {
     int id = mpHost->mLuaInterpreter.startTempTrigger(qsl("test_pattern"),
-                                                      qsl(""), -1);
+                                                      QString(), -1);
     QVERIFY(id > 0);
     QVERIFY(countTempTriggers() > 0);
 
@@ -177,8 +177,7 @@ private slots:
   }
 
   void test_tempAliasesRemovedAfterReset() {
-    int id =
-        mpHost->mLuaInterpreter.startTempAlias(qsl("^test_alias$"), qsl(""));
+    int id = mpHost->mLuaInterpreter.startTempAlias(qsl("^test_alias$"), QString());
     QVERIFY(id > 0);
     QVERIFY(mpHost->getAliasUnit()->getAlias(id) != nullptr);
 
@@ -191,7 +190,7 @@ private slots:
   }
 
   void test_tempTimersRemovedAfterReset() {
-    auto result = mpHost->mLuaInterpreter.startTempTimer(60.0, qsl(""));
+    auto result = mpHost->mLuaInterpreter.startTempTimer(60.0, QString());
     int id = result.first;
     QVERIFY(id > 0);
     QVERIFY(mpHost->getTimerUnit()->getTimer(id) != nullptr);
@@ -205,7 +204,7 @@ private slots:
   void test_tempKeysRemovedAfterReset() {
     int modifier = Qt::NoModifier;
     int keycode = Qt::Key_F12;
-    int id = mpHost->mLuaInterpreter.startTempKey(modifier, keycode, qsl(""));
+    int id = mpHost->mLuaInterpreter.startTempKey(modifier, keycode, QString());
     QVERIFY(id > 0);
     QVERIFY(countTempKeys() > 0);
 
@@ -222,14 +221,14 @@ private slots:
     QStringList patterns;
     patterns << qsl("perm_test_pattern");
     auto [id, msg] = mpHost->mLuaInterpreter.startPermSubstringTrigger(
-        qsl("perm_trigger"), qsl(""), patterns, qsl(""));
+        qsl("perm_trigger"), QString(), patterns, QString());
     QVERIFY2(id > 0, qPrintable(msg));
 
     performReset();
 
     bool found = false;
-    for (auto *trigger : mpHost->getTriggerUnit()->getTriggerRootNodeList()) {
-      if (trigger->getID() == id) {
+    for (const auto* trigger : mpHost->getTriggerUnit()->getTriggerRootNodeList()) {
+      if (trigger && trigger->getID() == id) {
         found = true;
         QVERIFY(trigger->isActive());
         break;
@@ -240,14 +239,14 @@ private slots:
 
   void test_permanentAliasSurvivesReset() {
     auto [id, msg] = mpHost->mLuaInterpreter.startPermAlias(
-        qsl("perm_alias"), qsl(""), qsl("^perm_test$"), qsl(""));
+        qsl("perm_alias"), QString(), qsl("^perm_test$"), QString());
     QVERIFY2(id > 0, qPrintable(msg));
 
     performReset();
 
     bool found = false;
-    for (auto *alias : mpHost->getAliasUnit()->getAliasRootNodeList()) {
-      if (alias->getID() == id) {
+    for (const auto* alias : mpHost->getAliasUnit()->getAliasRootNodeList()) {
+      if (alias && alias->getID() == id) {
         found = true;
         QVERIFY(alias->isActive());
         break;
@@ -258,14 +257,14 @@ private slots:
 
   void test_permanentTimerSurvivesReset() {
     auto [id, msg] = mpHost->mLuaInterpreter.startPermTimer(
-        qsl("perm_timer"), qsl(""), 300.0, qsl(""));
+        qsl("perm_timer"), QString(), 300.0, QString());
     QVERIFY2(id > 0, qPrintable(msg));
 
     performReset();
 
     bool found = false;
-    for (auto *timer : mpHost->getTimerUnit()->getTimerRootNodeList()) {
-      if (timer->getID() == id) {
+    for (const auto* timer : mpHost->getTimerUnit()->getTimerRootNodeList()) {
+      if (timer && timer->getID() == id) {
         found = true;
         break;
       }
@@ -292,14 +291,19 @@ private slots:
 
   void test_persistentStopWatchSurvivesReset() {
     mpHost->mBlockStopWatchCreation = false;
-    auto result = mpHost->createStopWatch(qsl("persistent_sw"));
+    const auto swName = qsl("persistent_sw");
+    auto result = mpHost->createStopWatch(swName);
     int id = result.first;
     QVERIFY2(id > 0, qPrintable(result.second));
     mpHost->makeStopWatchPersistent(id, true);
 
     performReset();
 
-    auto *sw = mpHost->getStopWatch(id);
+    // The ids for persistent stopWatches need not be identical after profile
+    // resets or reloads - but the names have to be unique as those are designed
+    // to be part of the persistency.
+    const auto idAfterReset = mpHost->findStopWatchId(swName);
+    auto *sw = mpHost->getStopWatch(idAfterReset);
     QVERIFY2(sw != nullptr, "Persistent stopwatch should survive reset");
     QVERIFY(sw->persistent());
   }
@@ -514,7 +518,7 @@ private slots:
 
   void test_phase2RunsDeferredNotImmediate() {
     int triggerId = mpHost->mLuaInterpreter.startTempTrigger(
-        qsl("deferred_test"), qsl(""), -1);
+        qsl("deferred_test"), QString(), -1);
     QVERIFY(triggerId > 0);
 
     mpHost->resetProfile_phase1();
@@ -637,7 +641,7 @@ private slots:
   // -----------------------------------------------------------------------
 
   void test_doubleResetDoesNotCrash() {
-    mpHost->mLuaInterpreter.startTempTrigger(qsl("double_reset_test"), qsl(""),
+    mpHost->mLuaInterpreter.startTempTrigger(qsl("double_reset_test"), QString(),
                                              -1);
 
     // Call phase1 twice before any processEvents
@@ -703,7 +707,7 @@ private slots:
   void test_multipleTempTriggersAllRemovedAfterReset() {
     for (int i = 0; i < 10; ++i) {
       int id = mpHost->mLuaInterpreter.startTempTrigger(
-          qsl("multi_test_%1").arg(i), qsl(""), -1);
+          qsl("multi_test_%1").arg(i), QString(), -1);
       QVERIFY(id > 0);
     }
     QVERIFY(countTempTriggers() >= 10);

@@ -10,23 +10,23 @@ endif()
 find_package(Qt6 6.8.2 REQUIRED COMPONENTS Test)
 
 set(UNIT_TESTS
-    TEntityResolverTest
+    CredentialManagerTest
+    SecureStringUtilsTest
     TEntityHandlerTest
+    TEntityResolverTest
     TLinkStoreTest
-    TMxpTagParserTest
-    TMxpSendTagHandlerTest
-    TMxpEntityTagHandlerTest
-    TMxpFrameDestTagHandlerTest
-    TMxpVersionTagTest
-    TMxpFormattingTagsTest
+    TLuaInterfaceTest
     TMxpCustomElementTagHandlerTest
-    TMxpModeSecurityTest
     TMxpEdgeCasesTest
     TMxpElementDefinitionHandlerTest
-    TLuaInterfaceTest
+    TMxpEntityTagHandlerTest
+    TMxpFormattingTagsTest
+    TMxpFrameDestTagHandlerTest
+    TMxpModeSecurityTest
+    TMxpSendTagHandlerTest
+    TMxpTagParserTest
+    TMxpVersionTagTest
     TVariableEditorTest
-    SecureStringUtilsTest
-    CredentialManagerTest
 )
 
 foreach(test_name ${UNIT_TESTS})
