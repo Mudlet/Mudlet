@@ -521,28 +521,6 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::raiseDownloadProgressEvent(lua_State* L, QString fileUrl, qint64 bytesDownloaded, qint64 totalBytes)
-{
-    Host& host = getHostFromLua(L);
-
-    TEvent event{};
-    event.mArgumentList << qsl("sysDownloadFileProgress");
-    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-    event.mArgumentList << fileUrl;
-    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-    event.mArgumentList << QString::number(bytesDownloaded);
-    event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
-    if (totalBytes >= 0) {
-        event.mArgumentList << QString::number(totalBytes);
-        event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
-    } else {
-        event.mArgumentList << QString();
-        event.mArgumentTypeList << ARGUMENT_TYPE_NIL;
-    }
-
-    host.raiseEvent(event);
-}
-
 // No documentation available in wiki - internal function
 void TLuaInterpreter::slot_pathChanged(const QString& path)
 {
@@ -4993,6 +4971,17 @@ void TLuaInterpreter::insertNativeSeparatorsFunction(lua_State* L)
   return string.gsub(rawPath, '\\', '/')
 end)LUA");
     // clang-format on
+}
+
+// Abort all in-flight network downloads during resetProfile so that
+// stale completion/error events from the old Lua state are not
+// delivered to the new state's event handlers.
+void TLuaInterpreter::abortAllDownloads()
+{
+    for (auto* reply : downloadMap.keys()) {
+        reply->abort();
+    }
+    downloadMap.clear();
 }
 
 // No documentation available in wiki - internal function
