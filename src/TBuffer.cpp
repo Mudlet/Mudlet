@@ -459,7 +459,7 @@ int TBuffer::getLastLineNumber()
     }
 }
 
-void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<int> luaReference)
+void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference)
 {
     const int id = mLinkStore.addLinks(command, hint, mpHost, luaReference);
 
@@ -4179,7 +4179,7 @@ void TBuffer::resetColors()
     pHost->updateAnsi16ColorsInTable();
 }
 
-void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar format, int linkID)
+void TBuffer::append(const QString& text, int sub_start, int sub_end, const TChar& format, int linkID)
 {
     append(text, sub_start, sub_end, format.mFgColor, format.mBgColor, format.mFlags, linkID);
 }

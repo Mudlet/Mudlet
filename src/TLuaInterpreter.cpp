@@ -521,28 +521,6 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::raiseDownloadProgressEvent(lua_State* L, QString fileUrl, qint64 bytesDownloaded, qint64 totalBytes)
-{
-    Host& host = getHostFromLua(L);
-
-    TEvent event{};
-    event.mArgumentList << qsl("sysDownloadFileProgress");
-    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-    event.mArgumentList << fileUrl;
-    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-    event.mArgumentList << QString::number(bytesDownloaded);
-    event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
-    if (totalBytes >= 0) {
-        event.mArgumentList << QString::number(totalBytes);
-        event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
-    } else {
-        event.mArgumentList << QString();
-        event.mArgumentTypeList << ARGUMENT_TYPE_NIL;
-    }
-
-    host.raiseEvent(event);
-}
-
 // No documentation available in wiki - internal function
 void TLuaInterpreter::slot_pathChanged(const QString& path)
 {
@@ -4995,6 +4973,17 @@ end)LUA");
     // clang-format on
 }
 
+// Abort all in-flight network downloads during resetProfile so that
+// stale completion/error events from the old Lua state are not
+// delivered to the new state's event handlers.
+void TLuaInterpreter::abortAllDownloads()
+{
+    for (auto* reply : downloadMap.keys()) {
+        reply->abort();
+    }
+    downloadMap.clear();
+}
+
 // No documentation available in wiki - internal function
 // This function initializes the main Lua Session interpreter.
 // on initialization of a new session *or* in case of an interpreter reset by the user.
@@ -6000,7 +5989,18 @@ void TLuaInterpreter::loadGlobal()
     // /usr/share part of the file-system:
     if (!qsl(LUA_DEFAULT_PATH).isEmpty()) {
         mPossiblePaths << QDir::toNativeSeparators(qsl(LUA_DEFAULT_PATH "/LuaGlobal.lua"));
-    };
+    }
+
+    // The build-time source path lets development builds and test binaries
+    // find LuaGlobal.lua regardless of where the binary runs from.
+    // Only add if the path actually exists to avoid leaking build-time paths
+    // in error messages on packaged end-user builds:
+    if (!qsl(LUA_SOURCE_PATH).isEmpty()) {
+        const auto sourcePath = QDir::toNativeSeparators(qsl(LUA_SOURCE_PATH "/LuaGlobal.lua"));
+        if (QFileInfo::exists(sourcePath)) {
+            mPossiblePaths << sourcePath;
+        }
+    }
     QStringList failedMessages{};
 
     // uncomment the following to enable some debugging texts in the LuaGlobal.lua script:

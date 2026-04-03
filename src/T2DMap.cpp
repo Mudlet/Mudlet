@@ -544,6 +544,13 @@ void T2DMap::switchArea(const QString& newAreaName)
         return;
     }
 
+    if (mMoveLabel) {
+        mMoveLabel = false;
+        setMouseTracking(false);
+        mLabelHighlighted = false;
+        mHelpMsg.clear();
+    }
+
     const int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
     TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(playerRoomId);
     int playerAreaID = -2; // Cannot be valid (but -1 can be)!
@@ -2011,11 +2018,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
         if (mapLabel.pos.z() != mMapCenterZ) {
             continue;
         }
-        if (mapLabel.text.isEmpty()) {
-            //: Default text if a label is created in mapper with no text
-            mapLabel.text = tr("no text");
-            pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
-        }
         QPointF labelPosition;
         const int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
         const int labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
@@ -2144,11 +2146,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
         if (mapLabel.pos.z() != mMapCenterZ) {
             continue;
-        }
-        if (mapLabel.text.isEmpty()) {
-            //: Default text if a label is created in mapper with no text
-            mapLabel.text = tr("no text");
-            pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
         QPointF labelPosition;
         const int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
@@ -3652,6 +3649,21 @@ void T2DMap::slot_deleteCustomExitLine()
 void T2DMap::slot_moveLabel()
 {
     mMoveLabel = true;
+    setMouseTracking(true);
+    //: 2D Mapper big, bottom of screen help message when moving a label
+    mHelpMsg = tr("Click to finish moving the label.");
+
+    auto [mx, my] = getMousePosition();
+    auto* area = mpMap->mpRoomDB->getArea(mAreaID);
+    if (area) {
+        for (auto& mapLabel : area->mMapLabels) {
+            if (mapLabel.highlight) {
+                mapLabel.pos = QVector3D(static_cast<float>(mx), static_cast<float>(my), static_cast<float>(mMapCenterZ));
+            }
+        }
+    }
+
+    update();
 }
 
 void T2DMap::slot_deleteLabel()
@@ -5385,10 +5397,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         auto mapLabel = itMapLabel.value();
         if (mapLabel.pos.z() != exportZLevel) {
             continue;
-        }
-        if (mapLabel.text.isEmpty()) {
-            mapLabel.text = tr("no text");
-            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
         // Use export coordinate system for label positioning
         const int exportRX = padding - (pArea->min_x * finalRoomSize);

@@ -850,6 +850,7 @@ void Host::resetProfile_phase2()
     mpConsole->resetMainConsole();
     mEventHandlerMap.clear();
     mEventMap.clear();
+    mLuaInterpreter.abortAllDownloads();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
 
