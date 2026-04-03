@@ -146,14 +146,16 @@ Discord::~Discord()
         Discord_Shutdown();
         // We might expect to have to do an mpLibrary->unload() but we do not
         // need to as it happens automagically on the application shutdown...
+    }
 
-        // Clear out the localDiscordPresence collection:
-        QMutableMapIterator<QString, localDiscordPresence*> itPresencePtrs(mPresencePtrs);
-        while (itPresencePtrs.hasNext()) {
-            itPresencePtrs.next();
-            delete itPresencePtrs.value();
-            itPresencePtrs.remove();
-        }
+    // Clean up presence allocations regardless of RPC state - entries are
+    // created in UpdatePresence() and must be freed even if RPC was shut
+    // down before destruction (e.g. user switched to Disabled mode).
+    QMutableMapIterator<QString, localDiscordPresence*> itPresencePtrs(mPresencePtrs);
+    while (itPresencePtrs.hasNext()) {
+        itPresencePtrs.next();
+        delete itPresencePtrs.value();
+        itPresencePtrs.remove();
     }
 
     delete mpHandlers;

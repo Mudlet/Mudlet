@@ -97,15 +97,18 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // Only unhide this if it is needed
     groupBox_discordPrivacy->hide();
 
-    connect(comboBox_discordMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
-        const bool enablePrivacy = (index == static_cast<int>(Host::DiscordShowGameDetails));
+    auto updateDiscordPrivacyControls = [this]() {
+        const bool enablePrivacy = radioButton_discordGameDetails->isChecked();
         comboBox_discordLargeIconPrivacy->setEnabled(enablePrivacy);
         comboBox_discordSmallIconPrivacy->setEnabled(enablePrivacy);
         checkBox_discordServerAccessToDetail->setEnabled(enablePrivacy);
         checkBox_discordServerAccessToState->setEnabled(enablePrivacy);
         checkBox_discordServerAccessToPartyInfo->setEnabled(enablePrivacy);
         checkBox_discordServerAccessToTimerInfo->setEnabled(enablePrivacy);
-    });
+    };
+    connect(radioButton_discordGameDetails, &QRadioButton::toggled, this, updateDiscordPrivacyControls);
+    connect(radioButton_discordMudletOnly, &QRadioButton::toggled, this, updateDiscordPrivacyControls);
+    connect(radioButton_discordDisabled, &QRadioButton::toggled, this, updateDiscordPrivacyControls);
 
     // As we demonstrate the options that these next two checkboxes control in
     // the editor "preview" widget (on another tab) we will need to track
@@ -854,7 +857,19 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
 
-    comboBox_discordMode->setCurrentIndex(static_cast<int>(pHost->mDiscordMode));
+    switch (pHost->mDiscordMode) {
+    case Host::DiscordDisabled:
+        radioButton_discordDisabled->setChecked(true);
+        break;
+    case Host::DiscordShowMudletOnly:
+        radioButton_discordMudletOnly->setChecked(true);
+        break;
+    case Host::DiscordShowGameDetails:
+        [[fallthrough]];
+    default:
+        radioButton_discordGameDetails->setChecked(true);
+        break;
+    }
 
     if (mudlet::self()->mDiscord.libraryLoaded()) {
         Host::DiscordOptionFlags const discordFlags = pHost->mDiscordAccessFlags;
@@ -893,8 +908,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         if (!currentDiscordUser.isEmpty()) {
             //: Shows which Discord account is logged in, e.g. "Discord user: morquin"
             label_discordCurrentUser->setText(tr("Discord user: %1").arg(currentDiscordUser));
+            label_discordCurrentUser->setToolTip(QString());
         } else {
             label_discordCurrentUser->setText(tr("(Discord not connected)"));
+            //: Tooltip shown when Discord Rich Presence cannot detect a logged-in user
+            label_discordCurrentUser->setToolTip(tr("The Discord desktop app must be running for Rich Presence to work. Browser and mobile clients are not supported."));
         }
     }
 
@@ -1680,7 +1698,7 @@ void dlgProfilePreferences::clearHostDetails()
     mSearchEngineMap.clear();
     search_engine_combobox->clear();
 
-    comboBox_discordMode->setCurrentIndex(static_cast<int>(Host::DiscordShowGameDetails));
+    radioButton_discordGameDetails->setChecked(true);
     comboBox_discordLargeIconPrivacy->setCurrentIndex(0);
     comboBox_discordSmallIconPrivacy->setCurrentIndex(0);
     checkBox_discordServerAccessToDetail->setChecked(false);
@@ -3210,7 +3228,13 @@ void dlgProfilePreferences::slot_saveAndClose()
                 | (checkBox_discordServerAccessToPartyInfo->isChecked() ? Host::DiscordNoOption : Host::DiscordSetPartyInfo)
                 | (checkBox_discordServerAccessToTimerInfo->isChecked() ? Host::DiscordNoOption : Host::DiscordSetTimeInfo));
 
-        pHost->setDiscordMode(static_cast<Host::DiscordMode>(comboBox_discordMode->currentIndex()));
+        Host::DiscordMode newMode = Host::DiscordShowGameDetails;
+        if (radioButton_discordDisabled->isChecked()) {
+            newMode = Host::DiscordDisabled;
+        } else if (radioButton_discordMudletOnly->isChecked()) {
+            newMode = Host::DiscordShowMudletOnly;
+        }
+        pHost->setDiscordMode(newMode);
 
         const QString newDiscordUserName = lineEdit_discordUserName->text().trimmed().toLower();
         if (pHost->mRequiredDiscordUserName != newDiscordUserName) {
