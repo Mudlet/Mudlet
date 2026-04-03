@@ -200,14 +200,22 @@ void dlgRoomProperties::initHiddenInstructions(const int hiddenRoomCount)
 {
     if (hiddenRoomCount && hiddenRoomCount < mpRooms.size()) {
         checkBox_hidden->setText(
-                /* room properties dialog, setting text for checkbox, where you can
+                /*: room properties dialog, setting text for checkbox, where you can
  set/unset a number of room's hidden status. More than one room is being
- considered and some (%1), but not all (%n) of them are hidden and in this case the
+ considered and some, but not all (%n) of them are hidden and in this case the
  checkbox also has an partially checked state to be used to leave them all
- unchanged.*/
-                tr("Check to hide all or uncheck to show all in the map display, %1 of the %n room(s) are currently hidden.",
+ unchanged. A second translatable sentance indicating the number of currently
+ hidden rooms will be inserted as %1.*/
+                tr("Check/uncheck to hide/show all %n room(s).%1",
                    nullptr,
-                   mpRooms.size()).arg(hiddenRoomCount));
+                   mpRooms.size())
+                        /*: room properties dialog, additional sentance inserted into setting text for checkbox,
+ when some (%n) but not all of the rooms are hidden. Ensure that, if the locale uses
+ spaces between words, that one is present at the beginning or end so that the
+ text is correctly spaced when it is inserted into the primary text.*/
+                        .arg(tr(" %n room(a) are currently hidden."),
+                             nullptr,
+                             hiddenRoomCount));
 /*: Tooltip to give additional information for the checkbox to control the
  state of being hidden when the selection includes multiple rooms and they
  are not all in the same state.*/
@@ -216,17 +224,17 @@ void dlgRoomProperties::initHiddenInstructions(const int hiddenRoomCount)
     }
 
     if (hiddenRoomCount) {
-        /* room properties dialog, setting text for checkbox, where you can
+        /*: room properties dialog, setting text for checkbox, where you can
  set/unset the hidden status of one or more rooms where %n is the total number
  of rooms and all of them are currently hidden.*/
-        checkBox_hidden->setText(tr("Check to hide or uncheck to show in the map display (all) %n currently hidden room(s).",
+        checkBox_hidden->setText(tr("Uncheck to show (all) %n currently hidden room(s).",
                                     nullptr,
                                     mpRooms.size()));
     } else {
-        /* room properties dialog, setting text for checkbox, where you can
+        /*: room properties dialog, setting text for checkbox, where you can
  set/unset the hidden status of one or more rooms where %n is the total number
  of rooms and all of them are currently shown.*/
-        checkBox_hidden->setText(tr("Check to hide or uncheck to show in the map display (all) %n currently shown room(s).",
+        checkBox_hidden->setText(tr("Check to hide (all) %n currently shown room(s).",
                                     nullptr,
                                     mpRooms.size()));
     }

@@ -116,6 +116,19 @@
     </widget>
    </item>
    <item>
+    <widget class="QCheckBox" name="checkBox_hidden">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string notr="true">Dummy text replaced when used</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QGroupBox" name="groupBox_symbol">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -446,19 +459,6 @@
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QCheckBox" name="checkBox_hidden">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string notr="true">Dummy text replaced when used</string>
-        </property>
-       </widget>
-      </item>
      </layout>
     </widget>
    </item>
@@ -490,12 +490,12 @@
  <tabstops>
   <tabstop>lineEdit_name</tabstop>
   <tabstop>pushButton_setRoomColor</tabstop>
+  <tabstop>checkBox_hidden</tabstop>
   <tabstop>lineEdit_roomSymbol</tabstop>
   <tabstop>comboBox_roomSymbol</tabstop>
   <tabstop>spinBox_weight</tabstop>
   <tabstop>comboBox_weight</tabstop>
   <tabstop>checkBox_locked</tabstop>
-  <tabstop>checkBox_hidden</tabstop>
  </tabstops>
  <resources/>
  <connections>
