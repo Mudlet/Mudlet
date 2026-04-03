@@ -33,8 +33,8 @@
 #include <QPointer>
 #include <QTimer>
 #include <QWidget>
-#include <chrono>
 
+#include <chrono>
 #include <string>
 
 
@@ -150,7 +150,7 @@ public slots:
     void slot_analyseSelection();
     void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
     void slot_changeEnableBlinkText(bool);
-    void slot_blinkStateChanged(bool slowState, bool fastState);
+    void slot_blinkStateChanged();
     void slot_scrollStoppedTimeout();
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     void slot_changeDebugShowAllProblemCodepoints(const bool);

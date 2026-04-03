@@ -158,6 +158,8 @@ struct HyperlinkStyling {
     VisibilitySettings visibility;
 
     bool isSpoiler = false;
+    QString menuTitle;
+    StateStyle menuTitleStyle;
 };
 
 } // namespace Mudlet

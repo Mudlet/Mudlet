@@ -6,7 +6,8 @@
 	// update list in .devcontainer/devcontainer.json
 	"recommendations": [
 		"ms-vscode.cpptools",
-		"ms-vscode.cmake-tools"
+		"ms-vscode.cmake-tools",
+		"sumneko.lua"
 	],
 	// List of extensions recommended by VS Code that should not be recommended for users of this workspace.
 	"unwantedRecommendations": [
