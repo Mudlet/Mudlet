@@ -1,3 +1,5 @@
+# DUPLICATE WORKFLOW: This file is paired with build-mudlet.yml
+# Changes here likely need to be mirrored there as well.
 name: 🔨 Build Mudlet - PR
 on:
   pull_request:
@@ -71,7 +73,7 @@ jobs:
         modules: qt5compat qtmultimedia qtspeech
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.2.3
+      uses: lukka/get-cmake@v4.3.0
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
@@ -213,13 +215,13 @@ jobs:
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
     - name: (Linux) Build xcb-util-cursor 0.1.5
-      timeout-minutes: 3
+      timeout-minutes: 5
       if: runner.os == 'Linux'
       run: |
         # Download and extract xcb-util-cursor 0.1.5
         # This version fixes the off-by-one heap buffer overflow in _XcursorThemeInherits
         # that causes PTB builds to crash with AddressSanitizer
-        wget -q --read-timeout=10 --retry-connrefused --retry-on-host-error --waitretry=60 https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz
+        wget -q --connect-timeout=10 --read-timeout=30 --tries=3 --waitretry=5 https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz
         tar xf xcb-util-cursor-0.1.5.tar.xz
         cd xcb-util-cursor-0.1.5
 
@@ -316,25 +318,7 @@ jobs:
     - name: check ccache stats post build
       run: ccache --show-stats
 
-    - name: (Linux) Run C++ tests
-      if: runner.os == 'Linux' && matrix.run_tests == 'true'
-      working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure
-      env:
-        QT_QPA_PLATFORM: offscreen
-
-    - name: (macOS) Run C++ tests
-      if: runner.os == 'macOS'
-      working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure
-
-    - name: Run QTest
-      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
-      env:
-        QT_FORCE_STDERR_LOGGING: 1
-
     - name: install dependencies for packaging/tests
-      if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
       run: |
         LUAROCKS="luarocks --lua-version 5.1 install --local"
 
@@ -368,9 +352,26 @@ jobs:
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
 
+    - name: (Linux) Run C++ tests
+      if: runner.os == 'Linux' && matrix.run_tests == 'true'
+      working-directory: '${{runner.workspace}}/b/ninja'
+      run: ctest --output-on-failure
+      env:
+        QT_QPA_PLATFORM: offscreen
+
+    - name: (macOS) Run C++ tests
+      if: runner.os == 'macOS'
+      working-directory: '${{runner.workspace}}/b/ninja'
+      run: ctest --output-on-failure
+
+    - name: Run QTest
+      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
+      env:
+        QT_FORCE_STDERR_LOGGING: 1
+
     - name: add ssh-agent for release uploads
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
-      uses: webfactory/ssh-agent@v0.9.1
+      uses: webfactory/ssh-agent@v0.10.0
       with:
         ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
 

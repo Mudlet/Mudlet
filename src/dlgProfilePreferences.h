@@ -175,6 +175,7 @@ private slots:
     void slot_loadHistoryMap();
     void slot_roomSizeChanged(int size);
     void slot_exitSizeChanged(int size);
+    void slot_borderSizeChanged(int size);
     void slot_gridSizeChanged(double size);
     void slot_displayFontChanged();
     void slot_displayFontSizeChanged();

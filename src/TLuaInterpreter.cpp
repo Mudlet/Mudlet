@@ -2302,7 +2302,7 @@ void TLuaInterpreter::parseCommandOrFunction(lua_State* lState, const char* func
 void TLuaInterpreter::parseHintsTable(lua_State* lState, const char* functionName, int& index, QStringList& hintList)
 {
     if (!lua_istable(lState, index)) {
-        lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, "hints", luaL_typename(lState, index));
+        lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, index, "hints", luaL_typename(lState, index));
         lua_error(lState);
         Q_UNREACHABLE();
     }
@@ -2331,7 +2331,7 @@ void TLuaInterpreter::parseHintsTable(lua_State* lState, const char* functionNam
 void TLuaInterpreter::parseCommandsOrFunctionsTable(lua_State* lState, const char* functionName, int& index, QStringList& commandsList, QVector<int>& luaFunctionNumbers)
 {
     if (!lua_istable(lState, index)) {
-        lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, "commands/functions", luaL_typename(lState, index));
+        lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, index, "commands/functions", luaL_typename(lState, index));
         lua_error(lState);
         Q_UNREACHABLE();
     }
@@ -4078,7 +4078,7 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
     }
     lua_pop(L, lua_gettop(L));
 
-    return (error);
+    return !error;
 }
 
 // No documentation available in wiki - internal function
@@ -4830,6 +4830,7 @@ int TLuaInterpreter::unzipAsync(lua_State* L)
         event.mArgumentList.append(extractLocation);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         host.raiseEvent(event);
+        watcher->deleteLater();
     });
     watcher->setFuture(future);
 
@@ -4999,6 +5000,10 @@ end)LUA");
 // on initialization of a new session *or* in case of an interpreter reset by the user.
 void TLuaInterpreter::initLuaGlobals()
 {
+    if (pGlobalLua) {
+        lua_close(pGlobalLua);
+    }
+
     pGlobalLua = newstate();
     storeHostInLua(pGlobalLua, mpHost);
 
@@ -5549,6 +5554,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "killMapInfo", TLuaInterpreter::killMapInfo);
     lua_register(pGlobalLua, "enableMapInfo", TLuaInterpreter::enableMapInfo);
     lua_register(pGlobalLua, "disableMapInfo", TLuaInterpreter::disableMapInfo);
+    lua_register(pGlobalLua, "getMapInfo", TLuaInterpreter::getMapInfo);
     lua_register(pGlobalLua, "getProfileTabNumber", TLuaInterpreter::getProfileTabNumber);
     lua_register(pGlobalLua, "addFileWatch", TLuaInterpreter::addFileWatch);
     lua_register(pGlobalLua, "removeFileWatch", TLuaInterpreter::removeFileWatch);
@@ -5584,9 +5590,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "disableTimeStamps", TLuaInterpreter::disableTimeStamps);
     lua_register(pGlobalLua, "enableTimeStamps", TLuaInterpreter::enableTimeStamps);
     lua_register(pGlobalLua, "timeStampsEnabled", TLuaInterpreter::timeStampsEnabled);
-    lua_register(pGlobalLua, "aiChat", TLuaInterpreter::aiChat);
-    lua_register(pGlobalLua, "aiPrompt", TLuaInterpreter::aiPrompt);
-    lua_register(pGlobalLua, "aiPromptStream", TLuaInterpreter::aiPromptStream);
     lua_register(pGlobalLua, "setActiveProfile", TLuaInterpreter::setActiveProfile);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
@@ -5997,7 +6000,18 @@ void TLuaInterpreter::loadGlobal()
     // /usr/share part of the file-system:
     if (!qsl(LUA_DEFAULT_PATH).isEmpty()) {
         mPossiblePaths << QDir::toNativeSeparators(qsl(LUA_DEFAULT_PATH "/LuaGlobal.lua"));
-    };
+    }
+
+    // The build-time source path lets development builds and test binaries
+    // find LuaGlobal.lua regardless of where the binary runs from.
+    // Only add if the path actually exists to avoid leaking build-time paths
+    // in error messages on packaged end-user builds:
+    if (!qsl(LUA_SOURCE_PATH).isEmpty()) {
+        const auto sourcePath = QDir::toNativeSeparators(qsl(LUA_SOURCE_PATH "/LuaGlobal.lua"));
+        if (QFileInfo::exists(sourcePath)) {
+            mPossiblePaths << sourcePath;
+        }
+    }
     QStringList failedMessages{};
 
     // uncomment the following to enable some debugging texts in the LuaGlobal.lua script:
@@ -8252,7 +8266,7 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
             // First argument is a string so is presumably a command line name
             name = CMDLINE_NAME(L, 1);
             if (n > 1) {
-                saveCommands = !getVerifiedBool(L, __func__, 2, "save command history", true);
+                saveCommands = getVerifiedBool(L, __func__, 2, "save command history", true);
             }
 
         } else {
@@ -8261,7 +8275,7 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
                 return lua_error(L); // Dummy return!
             }
 
-            saveCommands = !getVerifiedBool(L, __func__, 1, "save command history", true);
+            saveCommands = getVerifiedBool(L, __func__, 1, "save command history", true);
         }
     }
 
