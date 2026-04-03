@@ -403,16 +403,18 @@ private slots:
   }
 
   void test_luaStateIsNewAfterReset() {
-    lua_State *oldL = mpHost->mLuaInterpreter.getLuaGlobalState();
-    QVERIFY(oldL);
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QVERIFY(L);
+    luaL_dostring(L, "resetTestSentinel = 42");
 
     performReset();
 
     lua_State *newL = mpHost->mLuaInterpreter.getLuaGlobalState();
     QVERIFY(newL);
-    QVERIFY2(
-        oldL != newL,
-        "Lua state pointer should change after reset (new state allocated)");
+    lua_getglobal(newL, "resetTestSentinel");
+    QVERIFY2(lua_isnil(newL, -1),
+             "Lua state should be fresh after reset");
+    lua_pop(newL, 1);
   }
 
   // -----------------------------------------------------------------------
