@@ -24,6 +24,7 @@ set(UNIT_TESTS
     TMxpEdgeCasesTest
     TMxpElementDefinitionHandlerTest
     TLuaInterfaceTest
+    TVariableEditorTest
     SecureStringUtilsTest
     CredentialManagerTest
 )

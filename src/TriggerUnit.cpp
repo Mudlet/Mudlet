@@ -78,7 +78,7 @@ void TriggerUnit::uninstall(const QString& packageName)
         }
     }
     for (auto& trigger : uninstallList) {
-        unregisterTrigger(trigger);
+        delete trigger;
     }
     uninstallList.clear();
 }
