@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2023, 2025 by Stephen Lyons                        *
+ *   Copyright (C) 2013-2023, 2025-2026 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
@@ -232,8 +232,9 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, cons
     // std::optional<int>...
     auto const result = lua_tointeger(L, pos);
     if (result < std::numeric_limits<int>::min() || result > std::numeric_limits<int>::max()) {
-        lua_pushfstring(L, "%s: integer over/under-flow in argument #%d (%s as an integer is outside of valid range %d to %d!)",
+        lua_pushfstring(L, "%s: integer over/under-flow in argument #%d (%s as an integer, provided value %s is outside of valid range %d to %d!)",
                         functionName, pos, publicName,
+                        lua_tostring(L, pos),
                         std::numeric_limits<int>::min(),
                         std::numeric_limits<int>::max());
         lua_error(L);

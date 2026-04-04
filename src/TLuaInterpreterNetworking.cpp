@@ -76,9 +76,6 @@
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#connectToServer
 int TLuaInterpreter::connectToServer(lua_State* L)
 {
-    // The lua_tointeger(...) call can return a 64-bit integer number, on
-    // Windows Platform that is bigger than the int32_t type (a.k.a. "int" AND
-    // "long" types on that platform)! 8-O
     int port = 23;
     bool isToSaveToProfile = false;
 
