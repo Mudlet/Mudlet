@@ -256,6 +256,13 @@ jobs:
             echo "See commit history for changes." > changelog.md
           fi
 
+          # Prepend a note for PTB changelogs so readers know the scope
+          if [[ "${RELEASE_TYPE}" == "ptb" ]] && [ -n "${PREV_TAG}" ]; then
+            RELEASE_VERSION="${PREV_TAG#Mudlet-}"
+            { echo "Changes since ${RELEASE_VERSION}:"; echo; cat changelog.md; } > changelog.tmp
+            mv changelog.tmp changelog.md
+          fi
+
           echo "Changelog preview:"
           head -20 changelog.md
 
