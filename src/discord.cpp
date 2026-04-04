@@ -494,7 +494,7 @@ QString Discord::deduceGameName(const QString& address)
             otherName = otherName.split(QChar('.')).last();
             break;
         }
-        if (otherName.startsWith(QLatin1String("www."))) { // NOLINT(readability-else-after-return)
+        if (otherName.startsWith(QLatin1String("www."))) {
             // Error(?) in entering details so that a web-server name was given:
             otherName = otherName.split(QChar('.')).last();
             break;

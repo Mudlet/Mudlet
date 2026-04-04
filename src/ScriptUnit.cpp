@@ -187,13 +187,10 @@ void ScriptUnit::unregisterScript(TScript* pT)
     if (!pT) {
         return;
     }
-    if (pT->getParent()) {
-        removeScript(pT);
-        return;
-    }
     removeScript(pT);
-    removeScriptRootNode(pT);
-    return;
+    if (!pT->getParent()) {
+        removeScriptRootNode(pT);
+    }
 }
 
 

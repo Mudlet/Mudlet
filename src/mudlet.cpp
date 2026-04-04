@@ -5266,11 +5266,10 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
             // From shadow build directory alongside the ./src one:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        } else { // NOLINT(readability-else-after-return)
-            // From build within ./src
-            mudlet::self()->mUsingMudletDictionaries = true;
-            return qsl("%1/").arg(QCoreApplication::applicationDirPath());
         }
+        // From build within ./src
+        mudlet::self()->mUsingMudletDictionaries = true;
+        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #elif defined(Q_OS_OPENBSD)
         // OpenBSD uses dictionary files from Mozilla rather than direct from,
         // Hunspell, but it does not ship a en_us one so we cannot use that on
@@ -5294,11 +5293,10 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
             // From shadow build directory alongside the ./src one:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        } else { // NOLINT(readability-else-after-return)
-            // From build within ./src
-            mudlet::self()->mUsingMudletDictionaries = true;
-            return qsl("%1/").arg(QCoreApplication::applicationDirPath());
         }
+        // From build within ./src
+        mudlet::self()->mUsingMudletDictionaries = true;
+        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #elif defined(Q_OS_LINUX)
         if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
@@ -5326,12 +5324,11 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
             // unpacked/placed in a directory called 'mudlet'}:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../../mudlet/src/").arg(QCoreApplication::applicationDirPath());
-        } else { // NOLINT(readability-else-after-return)
-            // From build within ./src AND installer builds that bundle
-            // dictionaries in the same directory as the executable:
-            mudlet::self()->mUsingMudletDictionaries = true;
-            return qsl("%1/").arg(QCoreApplication::applicationDirPath());
         }
+        // From build within ./src AND installer builds that bundle
+        // dictionaries in the same directory as the executable:
+        mudlet::self()->mUsingMudletDictionaries = true;
+        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #else
         // Probably Windows!
         mudlet::self()->mUsingMudletDictionaries = true;
@@ -5342,10 +5339,9 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
         if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one:
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        } else { // NOLINT(readability-else-after-return)
-            // From build within ./src
-            return qsl("%1/").arg(QCoreApplication::applicationDirPath());
         }
+        // From build within ./src
+        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #endif
     }
     Q_UNREACHABLE();

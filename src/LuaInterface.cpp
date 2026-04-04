@@ -595,7 +595,9 @@ bool LuaInterface::loadVar(TVar* var)
             }
             lua_pop(mL, 1);
             return false;
-        } else if (vType == LUA_TNUMBER) { // NOLINT(readability-else-after-return)
+        }
+
+        if (vType == LUA_TNUMBER) {
             lua_pushnumber(mL, QString(var->getValue()).toInt());
         } else if (vType == LUA_TBOOLEAN) {
             lua_pushboolean(mL, var->getValue().toLower() == "true" ? 1 : 0);

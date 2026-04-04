@@ -3756,7 +3756,9 @@ bool Host::showWindow(const QString& name)
     if (pL) {
         pL->show();
         return true;
-    } else if (pC) { // NOLINT(readability-else-after-return)
+    }
+
+    if (pC) {
         auto pD = mpConsole->mDockWidgetMap.value(name);
         if (pD) {
             pD->update();
@@ -3801,7 +3803,9 @@ bool Host::hideWindow(const QString& name)
     if (pL) {
         pL->hide();
         return true;
-    } else if (pC) { // NOLINT(readability-else-after-return)
+    }
+
+    if (pC) {
         auto pD = mpConsole->mDockWidgetMap.value(name);
         if (pD) {
             pD->hide();
@@ -3986,7 +3990,9 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
             pL->show();
         }
         return {true, QString()};
-    } else if (pC) { // NOLINT(readability-else-after-return)
+    }
+
+    if (pC) {
         pC->setParent(pW);
         pC->move(x1, y1);
         pC->mOldX = x1;
@@ -3995,28 +4001,36 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
             pC->show();
         }
         return {true, QString()};
-    } else if (pS) { // NOLINT(readability-else-after-return)
+    }
+
+    if (pS) {
         pS->setParent(pW);
         pS->move(x1, y1);
         if (show) {
             pS->show();
         }
         return {true, QString()};
-    } else if (pN) { // NOLINT(readability-else-after-return)
+    }
+
+    if (pN) {
         pN->setParent(pW);
         pN->move(x1, y1);
         if (show) {
             pN->show();
         }
         return {true, QString()};
-    } else if (pT) { // NOLINT(readability-else-after-return)
+    }
+
+    if (pT) {
         pT->setParent(pW);
         pT->move(x1, y1);
         if (show) {
             pT->show();
         }
         return {true, QString()};
-    } else if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) { // NOLINT(readability-else-after-return)
+    }
+
+    if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->setParent(pW);
         pM->move(x1, y1);
         if (show) {
@@ -4137,7 +4151,7 @@ bool Host::echoWindow(const QString& name, const QString& text)
         pC->print(text);
         return true;
     }
-   
+
     if (pL) {
         pL->setText(text);
         return true;

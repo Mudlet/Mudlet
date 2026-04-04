@@ -345,7 +345,6 @@ void KeyUnit::unregisterKey(TKey* pT)
         return;
     }
     removeKeyRootNode(pT);
-    return;
 }
 
 
