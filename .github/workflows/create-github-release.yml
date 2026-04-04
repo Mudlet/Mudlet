@@ -1,0 +1,439 @@
+name: 📦 Create GitHub Release
+on:
+  workflow_run:
+    workflows: ["🔨 Build Mudlet", "🔨 Build Mudlet (windows)"]
+    types: [completed]
+
+permissions:
+  contents: write
+  actions: read
+
+# Both build workflows trigger this; don't cancel the first - the second trigger completes the release
+concurrency:
+  group: create-github-release-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    if: >
+      github.repository_owner == 'Mudlet' &&
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Check if all platform builds completed
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = context.payload.workflow_run.head_sha;
+            const required = {
+              'linux_macos': 'build-mudlet.yml',
+              'windows': 'build-mudlet-win.yml'
+            };
+            const runIds = {};
+            for (const [key, filename] of Object.entries(required)) {
+              const {data} = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: filename,
+                head_sha: sha,
+                status: 'success',
+                per_page: 1
+              });
+              if (data.total_count === 0) {
+                core.info(`Workflow "${filename}" has not completed successfully yet for ${sha}`);
+                core.setOutput('ready', 'false');
+                return;
+              }
+              runIds[key] = data.workflow_runs[0].id;
+            }
+            core.setOutput('ready', 'true');
+            core.setOutput('linux_macos_run_id', runIds['linux_macos']);
+            core.setOutput('windows_run_id', runIds['windows']);
+
+      # Download build metadata to determine if this is a release or PTB build (not present for snapshot/PR builds)
+      - name: Download metadata to determine release type
+        if: steps.check.outputs.ready == 'true'
+        id: download-metadata
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: release-metadata-*
+          run-id: ${{ steps.check.outputs.linux_macos_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: metadata/
+
+      - name: Report skipped release
+        if: steps.check.outputs.ready == 'true' && steps.download-metadata.outcome == 'failure'
+        run: echo "::warning::Release metadata download failed - cannot determine release type"
+
+      - name: Determine release type
+        if: steps.check.outputs.ready == 'true' && steps.download-metadata.outcome == 'success'
+        id: release-type
+        run: |
+          META_FILE=$(find metadata/ -name 'release-metadata.json' -type f | head -1)
+          if [ -z "${META_FILE}" ]; then
+            echo "No release metadata found - this is likely a snapshot or PR build"
+            echo "type=skip" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          META=$(cat "${META_FILE}")
+          REF=$(echo "$META" | jq -r '.ref')
+          EVENT=$(echo "$META" | jq -r '.event')
+          VERSION=$(echo "$META" | jq -r '.version')
+          BUILD_SUFFIX=$(echo "$META" | jq -r '.build_suffix')
+
+          if [ -z "${VERSION}" ] || [ "${VERSION}" == "null" ]; then
+            echo "::error::VERSION field is empty or missing in release metadata"
+            exit 1
+          fi
+          if [ -z "${REF}" ] || [ "${REF}" == "null" ]; then
+            echo "::error::REF field is empty or missing in release metadata"
+            exit 1
+          fi
+
+          COMMIT=$(echo "$META" | jq -r '.commit')
+
+          if [[ "$REF" == refs/tags/Mudlet-* ]]; then
+            echo "type=release" >> "$GITHUB_OUTPUT"
+            echo "tag=${REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+            echo "title=Mudlet ${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          elif [[ "$EVENT" == "schedule" ]] || [[ "$BUILD_SUFFIX" == -ptb* ]]; then
+            if [ -z "${COMMIT}" ] || [ "${COMMIT}" == "null" ]; then
+              echo "::error::COMMIT field is empty or missing in release metadata for PTB"
+              exit 1
+            fi
+            PTB_TAG="Mudlet-${VERSION}${BUILD_SUFFIX}-${COMMIT}"
+            echo "type=ptb" >> "$GITHUB_OUTPUT"
+            echo "tag=${PTB_TAG}" >> "$GITHUB_OUTPUT"
+            echo "title=Public Test Build" >> "$GITHUB_OUTPUT"
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=skip" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Download all release assets from both workflow runs
+      - name: Download Linux/macOS release assets
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        id: download-linux-macos
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-asset-*
+          run-id: ${{ steps.check.outputs.linux_macos_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: assets/
+
+      - name: Download Windows release assets
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        id: download-windows
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-asset-*
+          run-id: ${{ steps.check.outputs.windows_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: assets/
+          merge-multiple: false
+
+      - name: Verify release assets
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        env:
+          RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
+        run: |
+          mkdir -p assets/
+          echo "Downloaded assets:"
+          find assets/ -type f | sort
+
+          MISSING=()
+          if ! find assets/ -name '*.AppImage.tar' -type f | grep -q .; then
+            MISSING+=("Linux (.AppImage.tar)")
+          fi
+          if ! find assets/ -name '*.dmg' -type f | grep -q .; then
+            MISSING+=("macOS (.dmg)")
+          fi
+          if ! find assets/ -name '*.exe' -type f | grep -q .; then
+            MISSING+=("Windows (.exe)")
+          fi
+
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "::warning::Missing release assets for: ${MISSING[*]}"
+          fi
+
+          # Stable releases must have all platforms; PTB tolerates partial
+          if [[ "${RELEASE_TYPE}" == "release" ]] && [ ${#MISSING[@]} -gt 0 ]; then
+            echo "::error::Stable release is missing assets for: ${MISSING[*]}"
+            exit 1
+          fi
+
+          if [ ${#MISSING[@]} -eq 3 ]; then
+            echo "::error::No release assets found for any platform"
+            exit 1
+          fi
+
+      # Assemble SHA256SUMS.txt from per-platform .sha256 sidecar files
+      - name: Assemble SHA256SUMS.txt
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        run: |
+          shopt -s nullglob
+          SHA_FILES=(assets/*/*.sha256)
+          shopt -u nullglob
+
+          if [ ${#SHA_FILES[@]} -eq 0 ]; then
+            echo "::error::No .sha256 checksum files found in assets/"
+            exit 1
+          fi
+
+          cat "${SHA_FILES[@]}" > assets/SHA256SUMS.txt
+          echo "Generated SHA256SUMS.txt (${#SHA_FILES[@]} entries):"
+          cat assets/SHA256SUMS.txt
+
+      # Generate changelog
+      - uses: actions/checkout@v6
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          clean: false
+
+      - uses: leafo/gh-actions-lua@v12
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        with:
+          luaVersion: "5.1.5"
+
+      - uses: leafo/gh-actions-luarocks@v6
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+
+      - name: Install changelog dependencies
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        run: |
+          luarocks install argparse
+          luarocks install lunajson
+
+      - name: Generate changelog
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        env:
+          RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
+          RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
+        run: |
+          if [[ "${RELEASE_TYPE}" == "release" ]]; then
+            # For release: changelog from previous stable release tag to this tag
+            PREV_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -v -- '-ptb' | grep -v "^${RELEASE_TAG}$" | head -1)
+            END_TAG="${RELEASE_TAG}"
+          else
+            # For PTB: changelog from latest stable release tag to HEAD
+            PREV_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -v -- '-ptb' | head -1)
+            END_TAG="HEAD"
+          fi
+
+          echo "Generating changelog from ${PREV_TAG} to ${END_TAG}"
+          # Use 'release' mode for both since we have explicit commit ranges (ptb mode requires a dblsqd feed file)
+          if [ -n "${PREV_TAG}" ]; then
+            if ! lua CI/generate-changelog.lua -f md -m release \
+                 --start-commit "${PREV_TAG}" --end-commit "${END_TAG}" > changelog.md; then
+              if [[ "${RELEASE_TYPE}" == "release" ]]; then
+                echo "::error::Changelog generation failed for stable release"
+                exit 1
+              fi
+              echo "::warning::Changelog generation failed, using placeholder"
+              echo "See commit history for changes." > changelog.md
+            fi
+          else
+            if [[ "${RELEASE_TYPE}" == "release" ]]; then
+              echo "::error::No previous release tag found - cannot generate changelog for stable release"
+              exit 1
+            fi
+            echo "See commit history for changes." > changelog.md
+          fi
+
+          echo "Changelog preview:"
+          head -20 changelog.md
+
+      # Create the GitHub Release
+      # For PTB: clean up old PTB releases, keeping only the latest 1 (+ the new one = 2 total)
+      # For stable: delete release only if re-running (keep the human-created git tag)
+      - name: Clean up old releases
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        env:
+          RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
+          RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ "${RELEASE_TYPE}" == "ptb" ]]; then
+            # Delete the target tag first in case a duplicate workflow run already created it
+            gh release delete "${RELEASE_TAG}" --yes --cleanup-tag 2>/dev/null || true
+
+            # Clean up old PTB releases, keeping only the latest 1 (+ the new one = 2 total).
+            # Filter by -ptb in tag name to avoid deleting non-PTB prereleases (e.g. release candidates).
+            gh release list --limit 100 --json tagName,isPrerelease,createdAt \
+                --jq '[.[] | select(.isPrerelease and (.tagName | contains("-ptb")))] | sort_by(.createdAt) | reverse | .[1:] | .[].tagName' | \
+                while IFS= read -r old_tag; do
+                    echo "Cleaning up old PTB release: ${old_tag}"
+                    gh release delete "${old_tag}" --yes --cleanup-tag 2>/dev/null || true
+                done
+          else
+            gh release delete "${RELEASE_TAG}" --yes 2>/dev/null || true
+          fi
+
+      - name: Create GitHub Release
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        env:
+          RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
+          RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
+          RELEASE_TITLE: ${{ steps.release-type.outputs.title }}
+          TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Collect release files and combined checksums (exclude per-platform .sha256 sidecars)
+          mapfile -t FILES < <(find assets/ -type f \
+            \( -name '*.AppImage.tar' -o -name '*.exe' -o -name '*.dmg' -o -name 'SHA256SUMS.txt' \))
+
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "::error::No release files found to upload"
+            exit 1
+          fi
+
+          echo "Files to upload:"
+          printf '%s\n' "${FILES[@]}"
+
+          ARGS=(
+            "${RELEASE_TAG}"
+            --title "${RELEASE_TITLE}"
+            --notes-file changelog.md
+          )
+
+          if [[ "${RELEASE_TYPE}" == "ptb" ]]; then
+            ARGS+=(--prerelease --target "${TARGET_SHA}")
+          fi
+
+          gh release create "${ARGS[@]}" "${FILES[@]}"
+
+      # Generate and upload Sparkle appcast XML for macOS updates
+      - name: Add SSH agent for appcast upload
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        uses: webfactory/ssh-agent@v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.UPLOAD_PRIVATEKEY }}
+
+      - name: Generate Sparkle appcast XML
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        env:
+          RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
+          RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.release-type.outputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p appcast
+
+          # sparkle:version must match CFBundleVersion in the built app
+          export BUNDLE_VERSION="${RELEASE_TAG#Mudlet-}"
+          export RELEASE_VERSION
+
+          # Convert changelog to HTML for Sparkle's description field
+          export CHANGELOG_HTML=""
+          if [ -f changelog.md ]; then
+            CHANGELOG_HTML=$(pandoc changelog.md -f markdown -t html --no-highlight 2>/dev/null || true)
+          fi
+          if [ -z "${CHANGELOG_HTML}" ]; then
+            CHANGELOG_HTML="<p>See <a href='https://github.com/Mudlet/Mudlet/releases/tag/${RELEASE_TAG}'>release notes</a> for details.</p>"
+          fi
+
+          CHANNEL="release"
+          if [[ "${RELEASE_TYPE}" == "ptb" ]]; then
+            CHANNEL="ptb"
+          fi
+
+          export PUB_DATE=$(date -R)
+
+          # Get asset download URLs from the GitHub Release
+          RELEASE_JSON=$(gh release view "${RELEASE_TAG}" --json assets)
+
+          for ARCH in arm64 x86_64; do
+            DMG_FILE=$(find assets/ -name "*-${ARCH}.dmg" -type f | head -1)
+            if [ -z "${DMG_FILE}" ]; then
+              echo "No macOS DMG found for ${ARCH} - skipping appcast"
+              continue
+            fi
+
+            export FILE_SIZE=$(stat --printf="%s" "${DMG_FILE}")
+            DMG_NAME=$(basename "${DMG_FILE}")
+            export DOWNLOAD_URL=$(echo "${RELEASE_JSON}" | jq -r --arg name "${DMG_NAME}" '.assets[] | select(.name == $name) | .url')
+
+            if [ -z "${DOWNLOAD_URL}" ] || [ "${DOWNLOAD_URL}" == "null" ]; then
+              echo "::warning::Could not find download URL for ${DMG_NAME}"
+              continue
+            fi
+
+            # Use envsubst with quoted heredoc to safely handle special characters in changelog HTML
+            envsubst '$RELEASE_VERSION $BUNDLE_VERSION $PUB_DATE $DOWNLOAD_URL $FILE_SIZE $CHANGELOG_HTML' \
+              > "appcast/${CHANNEL}-${ARCH}.xml" << 'APPCAST_EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <channel>
+              <title>Mudlet Updates</title>
+              <description>Updates for Mudlet</description>
+              <language>en</language>
+              <item>
+                <title>Mudlet $RELEASE_VERSION</title>
+                <pubDate>$PUB_DATE</pubDate>
+                <sparkle:version>$BUNDLE_VERSION</sparkle:version>
+                <sparkle:shortVersionString>$RELEASE_VERSION</sparkle:shortVersionString>
+                <sparkle:minimumSystemVersion>11.0</sparkle:minimumSystemVersion>
+                <description><![CDATA[$CHANGELOG_HTML]]></description>
+                <enclosure
+                  url="$DOWNLOAD_URL"
+                  length="$FILE_SIZE"
+                  type="application/octet-stream"/>
+              </item>
+            </channel>
+          </rss>
+          APPCAST_EOF
+
+            echo "Generated appcast/${CHANNEL}-${ARCH}.xml (version=${BUNDLE_VERSION}, size=${FILE_SIZE})"
+          done
+
+          echo "Generated appcast files:"
+          ls -la appcast/ 2>/dev/null || echo "No appcast files generated"
+
+      - name: Upload appcast to mudlet.org
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          shopt -s nullglob
+          APPCAST_FILES=(appcast/*.xml)
+          shopt -u nullglob
+
+          if [ ${#APPCAST_FILES[@]} -eq 0 ]; then
+            echo "::warning::No appcast files to upload"
+            exit 0
+          fi
+
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            mudmachine@make.mudlet.org "mkdir -p '${DEPLOY_PATH}/appcast'"
+
+          for f in "${APPCAST_FILES[@]}"; do
+            scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+              "$f" "mudmachine@make.mudlet.org:'${DEPLOY_PATH}/appcast/'"
+            echo "Uploaded $(basename "$f")"
+          done
+
+      - name: Verify appcast upload
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        run: |
+          shopt -s nullglob
+          APPCAST_FILES=(appcast/*.xml)
+          shopt -u nullglob
+
+          for f in "${APPCAST_FILES[@]}"; do
+            basename=$(basename "$f")
+            url="https://www.mudlet.org/wp-content/files/appcast/${basename}"
+            if curl --output /dev/null --silent --head --fail "$url"; then
+              echo "Verified: ${url}"
+            else
+              echo "::warning::Appcast not yet accessible at ${url}"
+            fi
+          done
