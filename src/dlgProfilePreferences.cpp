@@ -1285,7 +1285,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
@@ -3092,7 +3092,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
         pHost->mNoAntiAlias = !checkBox_antiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
-        
+
         QSettings* settings = mudlet::getQSettings();
         if (settings->value("telnetHandlerEnabled", false).toBool() != telnetHandlerEnabled->isChecked()) {
             settings->setValue("telnetHandlerEnabled", telnetHandlerEnabled->isChecked());
@@ -3201,7 +3201,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         bool ok;
         quint16 port = lineEdit_mmcpPort->text().toUShort(&ok);
         pHost->mMMCPChatPort = ok ? port : csDefaultMMCPHostPort;
-        
+
         /* Possible inclusion in 4.21
         pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
         pHost->mMMCPAutoAcceptCalls = checkBox_mmcpAutoAcceptCalls->isChecked();
