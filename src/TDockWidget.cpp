@@ -50,7 +50,6 @@ void TDockWidget::closeEvent(QCloseEvent* event)
         return;
     }
     event->accept();
-    return;
 }
 
 void TDockWidget::resizeEvent(QResizeEvent* event)

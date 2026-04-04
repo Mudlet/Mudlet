@@ -214,7 +214,6 @@ void TriggerUnit::unregisterTrigger(TTrigger* pT)
         return;
     }
     removeTriggerRootNode(pT);
-    return;
 }
 
 

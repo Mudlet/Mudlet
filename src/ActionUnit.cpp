@@ -287,7 +287,6 @@ void ActionUnit::unregisterAction(TAction* pT)
         removeAction(pT);
     }
     updateToolbar();
-    return;
 }
 
 

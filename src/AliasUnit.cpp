@@ -214,7 +214,6 @@ void AliasUnit::unregisterAlias(TAlias* pT)
         return;
     }
     removeAliasRootNode(pT);
-    return;
 }
 
 
