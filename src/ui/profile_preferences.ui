@@ -2458,7 +2458,7 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>Map view</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout">
+         <layout class="QGridLayout" name="gridLayout_groupBox_mapViewOptions">
           <item row="7" column="0">
            <spacer name="roomSizeTopMarginSpacer">
             <property name="orientation">
@@ -3560,107 +3560,55 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </layout>
           </item>
-          <item row="1" column="2">
-           <layout class="QHBoxLayout">
-            <item>
-             <widget class="QCheckBox" name="checkBox_discordServerAccessToDetail">
+          <item row="1" column="2" rowspan="2">
+           <layout class="QGridLayout" name="gridLayout_discordPrivacyControls">
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_discordLargeIcon">
               <property name="text">
-               <string>Hide detail</string>
+               <string>Large icon:</string>
               </property>
              </widget>
             </item>
-            <item>
-             <widget class="QCheckBox" name="checkBox_discordServerAccessToState">
-              <property name="text">
-               <string>Hide state</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="checkBox_discordServerAccessToPartyInfo">
-              <property name="text">
-               <string>Hide party details</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="checkBox_discordServerAccessToTimerInfo">
-              <property name="text">
-               <string>Hide timer</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <spacer>
-              <property name="orientation">
-               <enum>Qt::Orientation::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>20</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-           </layout>
-          </item>
-          <item row="2" column="2">
-           <layout class="QHBoxLayout">
-            <item>
+            <item row="0" column="1">
              <widget class="QComboBox" name="comboBox_discordLargeIconPrivacy">
               <property name="sizeAdjustPolicy">
-               <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
+               <enum>QComboBox::SizeAdjustPolicy::AdjustToContentsOnFirstShow</enum>
               </property>
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
+              <property name="minimumContentsLength">
+               <number>18</number>
               </property>
               <item>
                <property name="text">
-                <string>Don't hide large icon or tooltip</string>
+                <string>Show all</string>
                </property>
               </item>
               <item>
                <property name="text">
-                <string>Hide large icon tooltip</string>
+                <string>Hide tooltip</string>
                </property>
               </item>
               <item>
                <property name="text">
-                <string>Hide large icon and tooltip</string>
+                <string>Hide tooltip and icon</string>
                </property>
               </item>
              </widget>
             </item>
-            <item>
-             <widget class="QComboBox" name="comboBox_discordSmallIconPrivacy">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
+            <item row="0" column="2">
+             <widget class="QCheckBox" name="checkBox_discordServerAccessToDetail">
+              <property name="text">
+               <string>Hide details text</string>
               </property>
-              <item>
-               <property name="text">
-                <string>Don't hide small icon or tooltip</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Hide small icon tooltip</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Hide small icon and tooltip</string>
-               </property>
-              </item>
              </widget>
             </item>
-            <item>
+            <item row="0" column="3">
+             <widget class="QCheckBox" name="checkBox_discordServerAccessToState">
+              <property name="text">
+               <string>Hide state text</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="4">
              <spacer>
               <property name="orientation">
                <enum>Qt::Orientation::Horizontal</enum>
@@ -3672,6 +3620,52 @@ you can use it but there could be issues with aligning columns of text</string>
                </size>
               </property>
              </spacer>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_discordSmallIcon">
+              <property name="text">
+               <string>Small icon:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QComboBox" name="comboBox_discordSmallIconPrivacy">
+              <property name="sizeAdjustPolicy">
+               <enum>QComboBox::SizeAdjustPolicy::AdjustToContentsOnFirstShow</enum>
+              </property>
+              <property name="minimumContentsLength">
+               <number>18</number>
+              </property>
+              <item>
+               <property name="text">
+                <string>Show all</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Hide tooltip</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Hide tooltip and icon</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QCheckBox" name="checkBox_discordServerAccessToPartyInfo">
+              <property name="text">
+               <string>Hide party info</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="3">
+             <widget class="QCheckBox" name="checkBox_discordServerAccessToTimerInfo">
+              <property name="text">
+               <string>Hide server login time (Discord shows activity timer when hidden)</string>
+              </property>
+             </widget>
             </item>
            </layout>
           </item>
@@ -3683,7 +3677,7 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>MudMaster Chat options</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout">
+         <layout class="QGridLayout" name="gridLayout_groupBox_MMCPOptions">
           <item row="3" column="6">
            <widget class="QCheckBox" name="checkBox_mmcpSnoopInMainConsole">
             <property name="toolTip">

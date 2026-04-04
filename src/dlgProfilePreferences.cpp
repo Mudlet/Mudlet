@@ -99,7 +99,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
 
     auto updateDiscordPrivacyControls = [this]() {
         const bool enablePrivacy = radioButton_discordGameDetails->isChecked();
+        label_discordLargeIcon->setEnabled(enablePrivacy);
         comboBox_discordLargeIconPrivacy->setEnabled(enablePrivacy);
+        label_discordSmallIcon->setEnabled(enablePrivacy);
         comboBox_discordSmallIconPrivacy->setEnabled(enablePrivacy);
         checkBox_discordServerAccessToDetail->setEnabled(enablePrivacy);
         checkBox_discordServerAccessToState->setEnabled(enablePrivacy);

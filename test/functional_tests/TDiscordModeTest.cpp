@@ -311,10 +311,12 @@ private slots:
 
     void cleanupTestCase()
     {
-        if (mpHost) {
-            const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
-            QDir(path).removeRecursively();
-        }
+        delete mpServer;
+        mpServer = nullptr;
+        mpHost = nullptr;
+        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        QDir(path).removeRecursively();
+        delete mudlet::self();
     }
 };
 
