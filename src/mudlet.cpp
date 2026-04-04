@@ -6938,10 +6938,6 @@ MudletInstanceCoordinator* mudlet::getInstanceCoordinator()
     return mInstanceCoordinator.get();
 }
 
-void mudlet::takeOwnershipOfFileOpenHandler(std::unique_ptr<FileOpenHandler> fileOpenHandler)
-{
-    mFileOpenHandler = std::move(fileOpenHandler);
-}
 void mudlet::setGlobalStyleSheet(const QString& styleSheet)
 {
     mpMainToolBar->setStyleSheet(styleSheet);

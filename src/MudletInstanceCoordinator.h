@@ -41,7 +41,6 @@ public:
 
     void queueTelnetUri(const QString& uri);
     bool forwardTelnetUriToRunningInstance();
-    QString readTelnetUriQueue();
 
 protected:
     void incomingConnection(quintptr socketDescriptor) override;

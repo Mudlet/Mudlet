@@ -44,8 +44,12 @@ bool MudletInstanceCoordinator::installPackagesRemotely()
 
     if (socket.waitForConnected(WAIT_FOR_RESPONSE_MS)) {
         const QString packagePathsData = mQueuedPackagePaths.join(QChar::LineFeed) + QChar::LineFeed;
-        socket.write(packagePathsData.toUtf8());
-        socket.waitForBytesWritten(WAIT_FOR_RESPONSE_MS);
+        if (socket.write(packagePathsData.toUtf8()) == -1) {
+            return false;
+        }
+        if (!socket.waitForBytesWritten(WAIT_FOR_RESPONSE_MS)) {
+            return false;
+        }
         socket.disconnectFromServer();
         return true;
     }
@@ -116,8 +120,9 @@ void MudletInstanceCoordinator::handleReadyRead()
             });
         } else {
             QMutexLocker locker(&mMutex);
-            const QStringList packagePaths = message.split(QChar::LineFeed, Qt::SkipEmptyParts);
-            mQueuedPackagePaths << packagePaths;
+            if (!message.isEmpty()) {
+                mQueuedPackagePaths << message;
+            }
             locker.unlock();
 
             installPackagesLocally();
@@ -192,11 +197,5 @@ bool MudletInstanceCoordinator::forwardTelnetUriToRunningInstance()
     QMutexLocker locker(&mMutex);
     mQueuedTelnetUri.clear();
     return true;
-}
-
-QString MudletInstanceCoordinator::readTelnetUriQueue()
-{
-    QMutexLocker locker(&mMutex);
-    return mQueuedTelnetUri;
 }
 

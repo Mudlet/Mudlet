@@ -762,6 +762,8 @@ int main(int argc, char* argv[])
                         qDebug() << "main: macOS telnet handler path mismatch. Registered:" << handlerPath << "Current:" << myBundlePath;
                         forceAsk = true;
                     }
+                } else {
+                    forceAsk = true;
                 }
                 CFRelease(appUrl);
             } else {
@@ -796,9 +798,14 @@ int main(int argc, char* argv[])
         QProcess xdgQuery;
         xdgQuery.start(qsl("xdg-mime"), QStringList() << qsl("query") << qsl("default") << qsl("x-scheme-handler/telnet"));
         xdgQuery.waitForFinished(3000);
-        QString existingHandler = QString::fromUtf8(xdgQuery.readAllStandardOutput()).trimmed();
-        existingHandlerFound = !existingHandler.isEmpty() && !existingHandler.toLower().contains("mudlet");
-        qDebug() << "main: Linux telnet handler check:" << existingHandler << (existingHandlerFound ? "(existing)" : "(none/mudlet)");
+        if (xdgQuery.error() == QProcess::FailedToStart) {
+            existingHandlerFound = true;
+            qDebug() << "main: Linux telnet handler check: xdg-mime not found (assuming existing handler to ask user)";
+        } else {
+            QString existingHandler = QString::fromUtf8(xdgQuery.readAllStandardOutput()).trimmed();
+            existingHandlerFound = !existingHandler.isEmpty() && !existingHandler.toLower().contains("mudlet");
+            qDebug() << "main: Linux telnet handler check:" << existingHandler << (existingHandlerFound ? "(existing)" : "(none/mudlet)");
+        }
 #endif
 
 #if defined(Q_OS_MACOS)
@@ -1035,11 +1042,6 @@ int main(int argc, char* argv[])
 #endif // Q_OS_LINUX
 #endif // INCLUDE_UPDATER
 
-    QTimer::singleShot(2s, qApp, []() {
-        if (mudlet::self()->storingPasswordsSecurely()) {
-            mudlet::self()->migratePasswordsToSecureStorage();
-        }
-    });
 
     app->restoreOverrideCursor();
 

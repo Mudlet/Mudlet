@@ -200,7 +200,6 @@ public:
     void activateProfile(Host*);
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
-    void takeOwnershipOfFileOpenHandler(std::unique_ptr<FileOpenHandler>);
     void addConsoleForNewHost(Host*);
     QPair<bool, bool> addWordToSet(const QString&);
     void adjustMenuBarVisibility();
@@ -399,7 +398,6 @@ public:
     bool mUsingMudletDictionaries = false;
     bool mWindowMinimized = false;
     std::unique_ptr<MudletInstanceCoordinator> mInstanceCoordinator;
-    std::unique_ptr<FileOpenHandler> mFileOpenHandler;
     // How many graphemes do we need before we run the spell checker on a "word" in the command line:
     int mMinLengthForSpellCheck = 3;
     bool mDrawUpperLowerLevels = true;
