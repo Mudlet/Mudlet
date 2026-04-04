@@ -428,7 +428,7 @@ void UpdateDialog::setupUpdateUi()
         replaceAppVars(text);
         label->setText(text);
     }
-    mUi->labelChangelog->setHtml(generateChangelogDocument());
+    mUi->labelChangelog->setMarkdown(generateChangelogDocument());
 
     mUi->checkAutoDownload->setChecked(autoDownloadEnabled(mSettings));
 
@@ -482,7 +482,7 @@ void UpdateDialog::setupChangelogUi()
 
     updateWindowTitle();
 
-    mUi->labelChangelog->setHtml(generateChangelogDocument());
+    mUi->labelChangelog->setMarkdown(generateChangelogDocument());
     connect(mUi->buttonConfirm, &QPushButton::clicked, this, &UpdateDialog::accept);
     mUi->buttonConfirm->setFocus();
     adjustDialogSize();
@@ -542,23 +542,16 @@ QString UpdateDialog::generateChangelogDocument()
             }
         }
     }
-    bool first = true;
     for (const auto& release : changelogReleases) {
-        QString h2Style = qsl("font-size: medium;");
-        if (!first) {
-            h2Style.append(qsl("margin-top: 1em;"));
-        }
-        first = false;
-        changelog.append(qsl("<h2 style=\"") + h2Style + qsl("\">") + release.getVersion().toHtmlEscaped() + qsl("</h2>"));
-        changelog.append(qsl("<p>") + release.getChangelog() + qsl("</p>"));
+        changelog.append(qsl("## ") + release.getVersion() + qsl("\n\n"));
+        changelog.append(release.getChangelog() + qsl("\n\n"));
     }
     return changelog;
 }
 
 void UpdateDialog::startDownload()
 {
-    // Require checksum verification for user-initiated downloads
-    mFeed->downloadRelease(mLatestRelease, /*requireChecksums=*/mAccepted);
+    mFeed->downloadRelease(mLatestRelease, /*requireChecksums=*/true);
     disableButtons(true);
 }
 

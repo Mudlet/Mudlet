@@ -28,7 +28,6 @@
 #include <QDebug>
 #include <QJsonArray>
 #include <QJsonObject>
-#include <QTextDocument>
 
 namespace dblsqd {
 
@@ -54,12 +53,9 @@ Release::Release(const QJsonObject& releaseInfo, const QString& os, const QStrin
         qWarning() << "Release" << mVersion << "has invalid or missing published_at date";
     }
 
-    // Changelog: convert markdown body to HTML (Qt's CommonMark parser, not full GitHub Flavored Markdown)
     const QString body = releaseInfo.value(qsl("body")).toString();
     if (!body.isEmpty()) {
-        QTextDocument doc;
-        doc.setMarkdown(body);
-        mChangelog = doc.toHtml();
+        mChangelog = body;
     }
 
     const QJsonArray assets = releaseInfo.value(qsl("assets")).toArray();
