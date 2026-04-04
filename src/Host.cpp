@@ -437,7 +437,6 @@ Host::~Host()
         mpDockableMapWidget->deleteLater();
     }
 
-    delete mMMCPServer;
 
     mErrorLogStream.flush();
     mErrorLogFile.close();
