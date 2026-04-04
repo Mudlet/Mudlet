@@ -63,7 +63,7 @@ FetchAndCheckURL() {
     # The processing of this variable by the jq tool means that converting this
     # variable name to SCREAMING_SNAKE_CASE was too hard to do and get correct
     # so leave it alone in a form that "works":
-    search_pattern="windows-64.exe"
+    search_pattern="windows-64-installer\\.exe"
     echo "Searching for ${search_pattern}"
 
     # Use jq to filter the JSON data
