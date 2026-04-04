@@ -53,6 +53,7 @@ class MapInfoContributorManager : public QObject
 
 public:
     MapInfoContributorManager(QObject* parent, Host* ph);
+    ~MapInfoContributorManager();
 
     void registerContributor(const QString& name, MapInfoCallback callback);
     void registerContributor(const QString& name, MapInfoCallback callback, lua_State* L, int callbackRef);

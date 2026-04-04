@@ -39,6 +39,13 @@ MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH)
     });
 }
 
+MapInfoContributorManager::~MapInfoContributorManager()
+{
+    for (auto it = mLuaCallbackRefs.begin(); it != mLuaCallbackRefs.end(); ++it) {
+        luaL_unref(it->L, LUA_REGISTRYINDEX, it->ref);
+    }
+}
+
 void MapInfoContributorManager::registerContributor(const QString& name, MapInfoCallback callback)
 {
     releaseLuaCallbackRef(name);
