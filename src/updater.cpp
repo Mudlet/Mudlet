@@ -277,11 +277,12 @@ void Updater::setupOnWindows()
         qWarning() << "Checked for updates:" << updates.size() << "update(s) available";
         if (updates.isEmpty()) {
             return;
-        } else if (!updateAutomatically()) { // NOLINT(readability-else-after-return)
-            emit signal_updateAvailable(updates.size());
-        } else {
-            downloadReleaseIfValid(updates.first());
         }
+        if (!updateAutomatically()) {
+            emit signal_updateAvailable(updates.size());
+            return;
+        }
+        downloadReleaseIfValid(updates.first());
     });
 
     // Setup to run setup.exe to replace the old installation

@@ -2099,7 +2099,7 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
             continue;
         }
         if (!i) {
-            return;      // Invalid response;
+            return; // Invalid response;
         }
 
         if (payload.at(i) == NEW_ENVIRON_VAR) {
@@ -2250,7 +2250,7 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
             continue;
         }
         if (!i) {
-            return;      // Invalid response;
+            return; // Invalid response;
         }
 
         if (payload.at(i) == NEW_ENVIRON_VAR) {

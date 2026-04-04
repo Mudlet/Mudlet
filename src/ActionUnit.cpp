@@ -280,11 +280,9 @@ void ActionUnit::unregisterAction(TAction* pT)
             }
         }
     }
+    removeAction(pT);
     if (!pT->getParent()) {
-        removeAction(pT);
         removeActionRootNode(pT);
-    } else {
-        removeAction(pT);
     }
     updateToolbar();
 }

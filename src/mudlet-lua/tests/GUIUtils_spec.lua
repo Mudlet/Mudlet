@@ -981,6 +981,50 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end)
     end)
   end)
+
+  describe("Tests the functionality of selectAll", function()
+
+    it("Should error when first argument is not a string", function()
+      assert.has_error(function()
+        selectAll(123, function() end)
+      end)
+    end)
+
+    it("Should error when second argument is not a function", function()
+      assert.has_error(function()
+        selectAll("test", "not a function")
+      end)
+    end)
+
+    it("Should not call the function if there are no matches", function()
+      createBuffer("selectAllBuffer")
+      clearWindow("selectAllBuffer")
+      echo("selectAllBuffer", "nothing here")
+      selectCurrentLine("selectAllBuffer")
+      -- copy text to the main console so selectAll can work on it
+      echo("no match for this\n")
+      selectCurrentLine()
+      local callCount = 0
+      selectAll("zzzzz", function() callCount = callCount + 1 end)
+      assert.equals(0, callCount)
+    end)
+
+    it("Should call the function once for a single match on the current line", function()
+      echo("hello world")
+      selectCurrentLine()
+      local funcCalls = 0
+      selectAll("hello", function() funcCalls = funcCalls + 1 end)
+      assert.equals(1, funcCalls)
+    end)
+
+    it("Should call the function for each match on the current line", function()
+      echo("\ncat dog cat dog cat")
+      selectCurrentLine()
+      local funcCalls = 0
+      selectAll("cat", function() funcCalls = funcCalls + 1 end)
+      assert.equals(3, funcCalls)
+    end)
+  end)
 end)
 
 --[[
