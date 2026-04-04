@@ -34,15 +34,14 @@ SingleLineTextEdit::SingleLineTextEdit(QWidget* parent)
     setTabChangesFocus(true);
 }
 
-// strip whitespace formatting marks (middle dots) when copying
+// strip whitespace formatting marks (middle dots) when copying,
+// creating fresh mime data to avoid HTML carrying the marks
 QMimeData* SingleLineTextEdit::createMimeDataFromSelection() const
 {
-    auto* mimeData = QPlainTextEdit::createMimeDataFromSelection();
-    if (mimeData->hasText()) {
-        QString text = mimeData->text();
-        unmarkQString(&text);
-        mimeData->setText(text);
-    }
+    QString text = textCursor().selectedText();
+    unmarkQString(&text);
+    auto* mimeData = new QMimeData();
+    mimeData->setText(text);
     return mimeData;
 }
 
