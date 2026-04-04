@@ -436,7 +436,14 @@ jobs:
       if: env.RELEASE_ASSET_PATH
       shell: bash
       run: |
-        echo "{\"version\":\"${VERSION}\",\"build_suffix\":\"${MUDLET_VERSION_BUILD}\",\"commit\":\"${BUILD_COMMIT}\",\"ref\":\"${{ github.ref }}\",\"event\":\"${{ github.event_name }}\"}" > release-metadata.json
+        jq -n \
+          --arg version "${VERSION}" \
+          --arg build_suffix "${MUDLET_VERSION_BUILD}" \
+          --arg commit "${BUILD_COMMIT}" \
+          --arg ref "${{ github.ref }}" \
+          --arg event "${{ github.event_name }}" \
+          '{version: $version, build_suffix: $build_suffix, commit: $commit, ref: $ref, event: $event}' \
+          > release-metadata.json
 
     - name: Upload release metadata
       uses: actions/upload-artifact@v7
