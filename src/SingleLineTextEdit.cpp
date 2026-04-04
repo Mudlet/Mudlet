@@ -17,6 +17,7 @@
 
 #include "Host.h"
 #include "SingleLineTextEdit.h"
+#include "TrailingWhitespaceMarker.h"
 
 #include <QColor>
 #include <QKeyEvent>
@@ -31,6 +32,18 @@ SingleLineTextEdit::SingleLineTextEdit(QWidget* parent)
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setTabChangesFocus(true);
+}
+
+// strip whitespace formatting marks (middle dots) when copying
+QMimeData* SingleLineTextEdit::createMimeDataFromSelection() const
+{
+    auto* mimeData = QPlainTextEdit::createMimeDataFromSelection();
+    if (mimeData->hasText()) {
+        QString text = mimeData->text();
+        unmarkQString(&text);
+        mimeData->setText(text);
+    }
+    return mimeData;
 }
 
 // trap some commonly used multi-line key shortcuts
