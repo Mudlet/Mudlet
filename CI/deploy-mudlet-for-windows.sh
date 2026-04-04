@@ -268,9 +268,9 @@ else
     # sorting:
     INSTALLER_VERSION="${VERSION}-ptb-${BUILD_COMMIT,,}${BUILD_COUNTER_SUFFIX}"
     # The name we want to use for the installer;
-    # Typically of form: 'Mudlet-4.19.1-ptb-2025-01-01-012345678-windows-64.exe'
-    # Or with build counter: 'Mudlet-4.19.1-ptb-2025-01-01-012345678rebuild2-windows-64.exe'
-    INSTALLER_EXE="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64.exe"
+    # Typically of form: 'Mudlet-4.19.1-ptb-2025-01-01-012345678-windows-64-installer.exe'
+    # Or with build counter: 'Mudlet-4.19.1-ptb-2025-01-01-012345678rebuild2-windows-64-installer.exe'
+    INSTALLER_EXE="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64-installer.exe"
     DBLSQD_VERSION_STRING="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}${BUILD_COUNTER_SUFFIX}"
     # The name that has to be passed as the artifact so that the Mudlet website
     # will accept it as a PTB:
@@ -325,6 +325,20 @@ else
   INSTALLER_EXE_PATHFILE="$(cygpath -au "${RELEASE_DIR}/${INSTALLER_EXE}")"
   echo "Renaming \"Mudlet${NAME_SUFFIX}Setup.exe\" to \"${INSTALLER_EXE}\""
   mv "${RELEASE_DIR}/Mudlet${NAME_SUFFIX}Setup.exe" "${INSTALLER_EXE_PATHFILE}"
+
+  echo "=== Generating SHA256 checksum for GitHub Release ==="
+  (cd "$(dirname "${INSTALLER_EXE_PATHFILE}")" && sha256sum "$(basename "${INSTALLER_EXE_PATHFILE}")") > "${INSTALLER_EXE_PATHFILE}.sha256"
+  if [ ! -s "${INSTALLER_EXE_PATHFILE}.sha256" ]; then
+    echo "Error: SHA256 checksum generation failed for ${INSTALLER_EXE_PATHFILE}"
+    exit 1
+  fi
+  {
+    echo "RELEASE_ASSET_PATH=${INSTALLER_EXE_PATHFILE}"
+    echo "RELEASE_ASSET_SHA256_PATH=${INSTALLER_EXE_PATHFILE}.sha256"
+    echo "VERSION=${VERSION}"
+    echo "MUDLET_VERSION_BUILD=${MUDLET_VERSION_BUILD}"
+    echo "BUILD_COMMIT=${BUILD_COMMIT}"
+  } >> "${GITHUB_ENV}"
 
   if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
     echo "=== Preparing artifact for PTB for upload to make.mudlet.org ==="

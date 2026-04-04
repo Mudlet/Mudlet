@@ -2045,8 +2045,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
 
         if (mapLabel.highlight) {
-            labelPaintRectangle.setSize(mapLabel.clickSize);
-            painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
+            paintLabelHighlight(painter, labelPaintRectangle, mapLabel.clickSize);
         }
     }
 
@@ -2173,8 +2172,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
         if (mapLabel.highlight) {
-            labelPaintRectangle.setSize(mapLabel.clickSize);
-            painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
+            paintLabelHighlight(painter, labelPaintRectangle, mapLabel.clickSize);
         }
     }
 
@@ -3068,6 +3066,16 @@ void T2DMap::createLabel(QRectF labelRectangle)
     mpDlgMapLabel->show();
     mpDlgMapLabel->raise();
     mpDlgMapLabel->updated();
+}
+
+void T2DMap::paintLabelHighlight(QPainter& painter, QRectF labelPaintRectangle, const QSizeF& clickSize)
+{
+    labelPaintRectangle.setSize(clickSize);
+    painter.save();
+    painter.setPen(QPen(QColor(255, 155, 55), 2));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawRect(labelPaintRectangle);
+    painter.restore();
 }
 
 void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
@@ -5173,8 +5181,7 @@ void T2DMap::setPlayerRoomStyle(const int type)
         return;
     }
 
-    mPlayerRoomColorGradientStops = buildPlayerRoomGradientStops(
-            type, mpMap->mPlayerRoomInnerDiameterPercentage, mpMap->mPlayerRoomInnerColor, mpMap->mPlayerRoomOuterColor);
+    mPlayerRoomColorGradientStops = buildPlayerRoomGradientStops(type, mpMap->mPlayerRoomInnerDiameterPercentage, mpMap->mPlayerRoomInnerColor, mpMap->mPlayerRoomOuterColor);
 }
 
 QGradientStops T2DMap::buildPlayerRoomGradientStops(const int style, const quint8 innerDiameterPercentage, const QColor& innerColor, const QColor& outerColor)
@@ -5185,53 +5192,31 @@ QGradientStops T2DMap::buildPlayerRoomGradientStops(const int style, const quint
     switch (style) {
     case 1: // Simple(?) shaded red ring:
         if (solid) {
-            return {{0.000, QColor(255, 0, 0, 255)},
-                    {0.990, QColor(255, 0, 0, 255)},
-                    {1.000, QColor(255, 0, 0, 0)}};
+            return {{0.000, QColor(255, 0, 0, 255)}, {0.990, QColor(255, 0, 0, 255)}, {1.000, QColor(255, 0, 0, 0)}};
         }
-        return {{0.000, QColor(255, 0, 0, 0)},
-                {factor * 0.980, QColor(255, 0, 0, 0)},
-                {factor * 1.020, QColor(255, 0, 0, 255)},
-                {0.980, QColor(255, 0, 0, 255)},
-                {1.000, QColor(255, 0, 0, 0)}};
+        return {{0.000, QColor(255, 0, 0, 0)}, {factor * 0.980, QColor(255, 0, 0, 0)}, {factor * 1.020, QColor(255, 0, 0, 255)}, {0.980, QColor(255, 0, 0, 255)}, {1.000, QColor(255, 0, 0, 0)}};
 
     case 2: // Shaded bicolor (blue-yellow - so it ALWAYS contrasts with underlying room color) Ring:
         if (solid) {
-            return {{0.000, QColor(255, 255, 0, 255)},
-                    {0.990, QColor(0, 0, 255, 255)},
-                    {1.000, QColor(0, 0, 255, 0)}};
+            return {{0.000, QColor(255, 255, 0, 255)}, {0.990, QColor(0, 0, 255, 255)}, {1.000, QColor(0, 0, 255, 0)}};
         }
-        return {{0.000, QColor(255, 255, 0, 0)},
-                {factor * 0.980, QColor(255, 255, 0, 0)},
-                {factor * 1.020, QColor(255, 255, 0, 255)},
-                {0.980, QColor(0, 0, 255, 255)},
-                {1.000, QColor(0, 0, 255, 0)}};
+        return {{0.000, QColor(255, 255, 0, 0)}, {factor * 0.980, QColor(255, 255, 0, 0)}, {factor * 1.020, QColor(255, 255, 0, 255)}, {0.980, QColor(0, 0, 255, 255)}, {1.000, QColor(0, 0, 255, 0)}};
 
     case 3: { // User set ring:
         if (solid) {
             QColor transparentOuter(outerColor);
             transparentOuter.setAlpha(0);
-            return {{0.000, innerColor},
-                    {0.990, outerColor},
-                    {1.000, transparentOuter}};
+            return {{0.000, innerColor}, {0.990, outerColor}, {1.000, transparentOuter}};
         }
         QColor transparentInner(innerColor);
         transparentInner.setAlpha(0);
         QColor transparentOuter(outerColor);
         transparentOuter.setAlpha(0);
-        return {{0.000, transparentInner},
-                {factor * 0.980, transparentInner},
-                {factor * 1.020, innerColor},
-                {0.980, outerColor},
-                {1.000, transparentOuter}};
+        return {{0.000, transparentInner}, {factor * 0.980, transparentInner}, {factor * 1.020, innerColor}, {0.980, outerColor}, {1.000, transparentOuter}};
     }
 
     default: // Sort of emulates the original code:
-        return {{0, Qt::white},
-                {0.7, QColor(255, 0, 0, 200)},
-                {0.799, QColor(150, 100, 100, 100)},
-                {0.80, QColor(150, 100, 100, 150)},
-                {0.95, QColor(255, 0, 0, 150)}};
+        return {{0, Qt::white}, {0.7, QColor(255, 0, 0, 200)}, {0.799, QColor(150, 100, 100, 100)}, {0.80, QColor(150, 100, 100, 150)}, {0.95, QColor(255, 0, 0, 150)}};
     }
 }
 
@@ -5426,8 +5411,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         }
 
         if (mapLabel.highlight) {
-            labelPaintRectangle.setSize(mapLabel.clickSize);
-            painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
+            paintLabelHighlight(painter, labelPaintRectangle, mapLabel.clickSize);
         }
     }
 
@@ -5969,8 +5953,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
             pArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
         if (mapLabel.highlight) {
-            labelPaintRectangle.setSize(mapLabel.clickSize);
-            painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
+            paintLabelHighlight(painter, labelPaintRectangle, mapLabel.clickSize);
         }
     }
 

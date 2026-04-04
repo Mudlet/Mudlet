@@ -79,7 +79,7 @@ jobs:
         modules: qt5compat qtmultimedia qtspeech
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.3.0
+      uses: lukka/get-cmake@v4.3.1
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
@@ -423,6 +423,36 @@ jobs:
       run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
       shell: bash
 
+    - name: Upload release asset for GitHub Release
+      uses: actions/upload-artifact@v7
+      if: env.RELEASE_ASSET_PATH
+      with:
+        name: release-asset-${{ runner.os }}-${{ runner.arch }}
+        path: |
+          ${{ env.RELEASE_ASSET_PATH }}
+          ${{ env.RELEASE_ASSET_SHA256_PATH }}
+        retention-days: 3
+
+    - name: Export release metadata
+      if: env.RELEASE_ASSET_PATH
+      shell: bash
+      run: |
+        jq -n \
+          --arg version "${VERSION}" \
+          --arg build_suffix "${MUDLET_VERSION_BUILD}" \
+          --arg commit "${BUILD_COMMIT}" \
+          --arg ref "${{ github.ref }}" \
+          --arg event "${{ github.event_name }}" \
+          '{version: $version, build_suffix: $build_suffix, commit: $commit, ref: $ref, event: $event}' \
+          > release-metadata.json
+
+    - name: Upload release metadata
+      uses: actions/upload-artifact@v7
+      if: env.RELEASE_ASSET_PATH
+      with:
+        name: release-metadata-${{ runner.os }}-${{ runner.arch }}
+        path: release-metadata.json
+        retention-days: 3
 
     # we need to be in the right place for LuaGlobals.lua to load
     - name: (Linux) Prep binary for running tests

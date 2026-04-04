@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2023, 2025 by Stephen Lyons                        *
+ *   Copyright (C) 2013-2023, 2025-2026 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
@@ -224,7 +224,23 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, cons
         lua_error(L);
         Q_UNREACHABLE();
     }
-    return lua_tointeger(L, pos);
+    // lua_tointeger(...) returns a ptrdiff_t which on 64-bit platforms is a
+    // signed 64 bit value, which is usually larger than an "int" a.k.a. an
+    // int32_t:
+    // We have to error out here otherwise we have to restructure every usage
+    // to handle such an over/under-flow - at least with a change to a
+    // std::optional<int>...
+    auto const result = lua_tointeger(L, pos);
+    if (result < std::numeric_limits<int>::min() || result > std::numeric_limits<int>::max()) {
+        lua_pushfstring(L, "%s: integer over/under-flow in argument #%d (%s as an integer, provided value %s is outside of valid range %d to %d!)",
+                        functionName, pos, publicName,
+                        lua_tostring(L, pos),
+                        std::numeric_limits<int>::min(),
+                        std::numeric_limits<int>::max());
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+    return static_cast<int>(result);
 }
 
 // No documentation available in wiki - internal function
@@ -2159,7 +2175,7 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
         }
     }
 
-    qint64 const luaLine = getVerifiedInt(L, __func__, s, "line number");
+    const auto luaLine = getVerifiedInt(L, __func__, s, "line number");
     if (luaLine < 1) {
         return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it should be greater than zero").arg(luaLine));
     }
@@ -5659,6 +5675,10 @@ void TLuaInterpreter::initLuaGlobals()
     // AppInstaller on Linux would like the C search path to also be set to
     // a ./lib sub-directory of the current binary directory:
     additionalCPaths << qsl("%1/lib/?.so").arg(appPath);
+#elif defined(Q_OS_WINDOWS)
+    // Running from an extracted .zip archive requires the C search path
+    // to also be set to the directory of the executable:
+    additionalCPaths << qsl("%1/?.dll").arg(appPath);
 #elif defined(Q_OS_MACOS)
     // macOS app bundle would like the search path to also be set to the current
     // binary directory for both modules and binary libraries:
