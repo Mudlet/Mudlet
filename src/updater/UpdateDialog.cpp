@@ -616,6 +616,9 @@ void UpdateDialog::handleFeedReady()
 
     setupUpdateUi();
     emit ready();
+
+    KDToolBox::connectSingleShot(mFeed, &Feed::ready, this, &UpdateDialog::handleFeedReady);
+    KDToolBox::connectSingleShot(mFeed, &Feed::loadError, this, &UpdateDialog::handleLoadError);
 }
 
 void UpdateDialog::handleLoadError(const QString& message)
