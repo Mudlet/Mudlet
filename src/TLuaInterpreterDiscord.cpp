@@ -319,11 +319,11 @@ int TLuaInterpreter::setDiscordElapsedStartTime(lua_State* L)
         return warnArgumentValue(L, __func__, result.second);
     }
 
-    int64_t const timeStamp = getVerifiedInt(L, __func__, 1, "epoch time");
+    const auto timeStamp = getVerifiedInt(L, __func__, 1, "epoch time");
     if (timeStamp < 0) {
         return warnArgumentValue(L, __func__, "the timestamp must be zero to clear the 'elapsed:' time or an epoch time value from the recent past");
     }
-    pMudlet->mDiscord.setStartTimeStamp(&host, timeStamp);
+    pMudlet->mDiscord.setStartTimeStamp(&host, static_cast<int64_t>(timeStamp));
     pMudlet->mDiscord.clearServerOrigin(&host, Host::DiscordSetTimeInfo);
     lua_pushboolean(L, true);
     return 1;
@@ -435,22 +435,22 @@ int TLuaInterpreter::setDiscordParty(lua_State* L)
         return warnArgumentValue(L, __func__, result.second);
     }
 
-    int64_t const partySize = getVerifiedInt(L, __func__, 1, "current party size");
+    const auto partySize = getVerifiedInt(L, __func__, 1, "current party size");
     if (partySize < 0) {
         return warnArgumentValue(L, __func__, "the current party size must be zero or more");
     }
 
-    int64_t partyMax = -1;
+    int partyMax = -1;
     if (lua_gettop(L) > 1) {
         partyMax = getVerifiedInt(L, __func__, 2, "party maximum size", true);
         if (partyMax < 0) {
             return warnArgumentValue(L, __func__, "the optional party maximum size must be zero (to remove the party details) or more (to set the maximum)");
         }
 
-        pMudlet->mDiscord.setParty(&host, static_cast<int>(qMin(static_cast<int64_t>(INT_MAX), partySize)), static_cast<int>(qMin(static_cast<int64_t>(INT_MAX), partyMax)));
+        pMudlet->mDiscord.setParty(&host, partySize, partyMax);
     } else {
         // Only got the partySize now
-        pMudlet->mDiscord.setParty(&host, static_cast<int>(qMin(static_cast<int64_t>(INT_MAX), partySize)));
+        pMudlet->mDiscord.setParty(&host, partySize);
     }
     pMudlet->mDiscord.clearServerOrigin(&host, Host::DiscordSetPartyInfo);
     lua_pushboolean(L, true);
@@ -468,12 +468,12 @@ int TLuaInterpreter::setDiscordRemainingEndTime(lua_State* L)
         return warnArgumentValue(L, __func__, result.second);
     }
 
-    int64_t const timeStamp = getVerifiedInt(L, __func__, 1, "epoch time");
+    const auto timeStamp = getVerifiedInt(L, __func__, 1, "epoch time");
 
     if (timeStamp < 0) {
         return warnArgumentValue(L, __func__, "the timestamp must be zero to clear the 'remaining:' time or an epoch time value in the recent future");
     }
-    pMudlet->mDiscord.setEndTimeStamp(&host, timeStamp);
+    pMudlet->mDiscord.setEndTimeStamp(&host, static_cast<int64_t>(timeStamp));
     pMudlet->mDiscord.clearServerOrigin(&host, Host::DiscordSetTimeInfo);
     lua_pushboolean(L, true);
     return 1;
