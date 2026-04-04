@@ -333,6 +333,27 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         killTrigger(id)
     end)
 
+    -- named groups in alternation: non-participating group must not crash
+    it("named groups in alternation don't crash when one group doesn't participate", function()
+        local result_a, result_b
+        local snapshot = {}
+        local pattern = "^(?<a>cat)|(?<b>dog)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            snapshot = matches
+            result_a = selectCaptureGroup("a")
+            result_b = selectCaptureGroup("b")
+        end, 1)
+
+        feedTriggers("\ncat\n")
+
+        assert.are.equal("cat", snapshot["a"])
+        assert.is_nil(snapshot["b"])
+        assert.are_not.equal(-1, result_a)
+        assert.are.equal(-1, result_b)
+        killTrigger(id)
+    end)
+
     -- named groups with repeated captured text elsewhere in the line
     it("selectCaptureGroup selects correct position when same word appears multiple times", function()
         local selection

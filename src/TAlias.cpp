@@ -172,12 +172,15 @@ bool TAlias::match(const QString& haystack)
         for (uint32_t j = 0; j < namecount; ++j) {
             const int n = (tabptr[0] << 8) | tabptr[1];
             auto name = QString::fromUtf8(reinterpret_cast<const char*>(&tabptr[2])).trimmed();
+            tabptr += name_entry_size;
+            if (ovector[2 * n] == PCRE2_UNSET) {
+                continue;
+            }
             auto* substring_start = haystackC + ovector[2 * n];
             auto substring_length = ovector[2 * n + 1] - ovector[2 * n];
             auto utf16_pos = QString::fromUtf8(haystackC, ovector[2 * n]).length();
             auto capture = QString::fromUtf8(substring_start, substring_length);
             nameGroups << qMakePair(name, capture);
-            tabptr += name_entry_size;
             namePositions.insert(name, qMakePair(utf16_pos, static_cast<int>(capture.length())));
         }
     }

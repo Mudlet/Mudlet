@@ -327,12 +327,15 @@ void TTrigger::processRegexMatch(
             const int n = (tabptr[0] << 8) | tabptr[1];
             auto name =
                     QString::fromUtf8(reinterpret_cast<const char*>(&tabptr[2])).trimmed(); //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
-            auto* substring_start = haystackC + ovector[2 * n];                             //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
-            auto substring_length = ovector[2 * n + 1] - ovector[2 * n];                    //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
-            auto utf16_pos = QString::fromUtf8(haystackC, ovector[2 * n]).length();         //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+            tabptr += name_entry_size;
+            if (ovector[2 * n] == PCRE2_UNSET) { //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+                continue;
+            }
+            auto* substring_start = haystackC + ovector[2 * n];                     //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
+            auto substring_length = ovector[2 * n + 1] - ovector[2 * n];            //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+            auto utf16_pos = QString::fromUtf8(haystackC, ovector[2 * n]).length(); //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
             auto capture = QString::fromUtf8(substring_start, substring_length);
             nameGroups << qMakePair(name, capture);
-            tabptr += name_entry_size;
             namePositions.insert(name, qMakePair(utf16_pos + posOffset, static_cast<int>(capture.length())));
         }
     }
