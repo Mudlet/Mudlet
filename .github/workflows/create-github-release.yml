@@ -244,22 +244,28 @@ jobs:
           else
             # For PTB: short changelog since last PTB (prominent) + full changelog since last stable release (collapsed)
             STABLE_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -v -- '-ptb' | head -1)
-            PTB_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -- '-ptb' | head -1)
+            PTB_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -- '-ptb' | grep -v "^${RELEASE_TAG}$" | head -1)
+
+            # Verify the PTB tag is an ancestor of HEAD
+            if [ -n "${PTB_TAG}" ] && ! git merge-base --is-ancestor "${PTB_TAG}" HEAD 2>/dev/null; then
+              echo "::warning::Latest PTB tag ${PTB_TAG} is not an ancestor of HEAD, skipping PTB diff"
+              PTB_TAG=""
+            fi
 
             # Generate the full changelog since last stable release
             FULL_CHANGELOG=""
             if [ -n "${STABLE_TAG}" ]; then
               echo "Generating full changelog from ${STABLE_TAG} to HEAD"
               FULL_CHANGELOG=$(lua CI/generate-changelog.lua -f md -m release \
-                   --start-commit "${STABLE_TAG}" --end-commit HEAD 2>/dev/null || true)
+                   --start-commit "${STABLE_TAG}" --end-commit HEAD || true)
             fi
 
-            # Generate the short changelog since last PTB
+            # Generate the incremental changelog since last PTB
             PTB_CHANGELOG=""
             if [ -n "${PTB_TAG}" ] && [ "${PTB_TAG}" != "${STABLE_TAG}" ]; then
               echo "Generating PTB changelog from ${PTB_TAG} to HEAD"
               PTB_CHANGELOG=$(lua CI/generate-changelog.lua -f md -m release \
-                   --start-commit "${PTB_TAG}" --end-commit HEAD 2>/dev/null || true)
+                   --start-commit "${PTB_TAG}" --end-commit HEAD || true)
             fi
 
             # Assemble the combined changelog
