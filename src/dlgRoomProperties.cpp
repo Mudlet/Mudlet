@@ -206,7 +206,7 @@ void dlgRoomProperties::initHiddenInstructions(const int hiddenRoomCount)
  checkbox also has an partially checked state to be used to leave them all
  unchanged. A second translatable sentance indicating the number of currently
  hidden rooms will be inserted as %1.*/
-                tr("Check/uncheck to hide/show all %n room(s).%1",
+                tr("Hide all %n room(s).%1",
                    nullptr,
                    mpRooms.size())
                         /*: room properties dialog, additional sentance inserted into setting text for checkbox,
@@ -223,22 +223,12 @@ void dlgRoomProperties::initHiddenInstructions(const int hiddenRoomCount)
         return;
     }
 
-    if (hiddenRoomCount) {
-        /*: room properties dialog, setting text for checkbox, where you can
+    /*: room properties dialog, setting text for checkbox, where you can
  set/unset the hidden status of one or more rooms where %n is the total number
- of rooms and all of them are currently hidden.*/
-        checkBox_hidden->setText(tr("Uncheck to show (all) %n currently hidden room(s).",
-                                    nullptr,
-                                    mpRooms.size()));
-    } else {
-        /*: room properties dialog, setting text for checkbox, where you can
- set/unset the hidden status of one or more rooms where %n is the total number
- of rooms and all of them are currently shown.*/
-        checkBox_hidden->setText(tr("Check to hide (all) %n currently shown room(s).",
-                                    nullptr,
-                                    mpRooms.size()));
-    }
-
+ of rooms and all of them are currently hidden or shown.*/
+    checkBox_hidden->setText(tr("Hide (all) %n room(s).",
+                                nullptr,
+                                mpRooms.size()));
     checkBox_hidden->setToolTip(QString());
 }
 
