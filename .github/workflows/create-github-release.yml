@@ -420,7 +420,7 @@ jobs:
           fi
 
           ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            mudmachine@make.mudlet.org "mkdir -p ${DEPLOY_PATH}/appcast"
+            mudmachine@make.mudlet.org "mkdir -p \"${DEPLOY_PATH}/appcast\""
 
           for f in "${APPCAST_FILES[@]}"; do
             scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
