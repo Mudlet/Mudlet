@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2023, 2025 by Stephen Lyons                        *
+ *   Copyright (C) 2013-2023, 2025-2026 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
@@ -224,7 +224,23 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, cons
         lua_error(L);
         Q_UNREACHABLE();
     }
-    return lua_tointeger(L, pos);
+    // lua_tointeger(...) returns a ptrdiff_t which on 64-bit platforms is a
+    // signed 64 bit value, which is usually larger than an "int" a.k.a. an
+    // int32_t:
+    // We have to error out here otherwise we have to restructure every usage
+    // to handle such an over/under-flow - at least with a change to a
+    // std::optional<int>...
+    auto const result = lua_tointeger(L, pos);
+    if (result < std::numeric_limits<int>::min() || result > std::numeric_limits<int>::max()) {
+        lua_pushfstring(L, "%s: integer over/under-flow in argument #%d (%s as an integer, provided value %s is outside of valid range %d to %d!)",
+                        functionName, pos, publicName,
+                        lua_tostring(L, pos),
+                        std::numeric_limits<int>::min(),
+                        std::numeric_limits<int>::max());
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+    return static_cast<int>(result);
 }
 
 // No documentation available in wiki - internal function
@@ -521,28 +537,6 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::raiseDownloadProgressEvent(lua_State* L, QString fileUrl, qint64 bytesDownloaded, qint64 totalBytes)
-{
-    Host& host = getHostFromLua(L);
-
-    TEvent event{};
-    event.mArgumentList << qsl("sysDownloadFileProgress");
-    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-    event.mArgumentList << fileUrl;
-    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-    event.mArgumentList << QString::number(bytesDownloaded);
-    event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
-    if (totalBytes >= 0) {
-        event.mArgumentList << QString::number(totalBytes);
-        event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
-    } else {
-        event.mArgumentList << QString();
-        event.mArgumentTypeList << ARGUMENT_TYPE_NIL;
-    }
-
-    host.raiseEvent(event);
-}
-
 // No documentation available in wiki - internal function
 void TLuaInterpreter::slot_pathChanged(const QString& path)
 {
@@ -2181,7 +2175,7 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
         }
     }
 
-    qint64 const luaLine = getVerifiedInt(L, __func__, s, "line number");
+    const auto luaLine = getVerifiedInt(L, __func__, s, "line number");
     if (luaLine < 1) {
         return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it should be greater than zero").arg(luaLine));
     }
@@ -2302,7 +2296,7 @@ void TLuaInterpreter::parseCommandOrFunction(lua_State* lState, const char* func
 void TLuaInterpreter::parseHintsTable(lua_State* lState, const char* functionName, int& index, QStringList& hintList)
 {
     if (!lua_istable(lState, index)) {
-        lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, "hints", luaL_typename(lState, index));
+        lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, index, "hints", luaL_typename(lState, index));
         lua_error(lState);
         Q_UNREACHABLE();
     }
@@ -2331,7 +2325,7 @@ void TLuaInterpreter::parseHintsTable(lua_State* lState, const char* functionNam
 void TLuaInterpreter::parseCommandsOrFunctionsTable(lua_State* lState, const char* functionName, int& index, QStringList& commandsList, QVector<int>& luaFunctionNumbers)
 {
     if (!lua_istable(lState, index)) {
-        lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, "commands/functions", luaL_typename(lState, index));
+        lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, index, "commands/functions", luaL_typename(lState, index));
         lua_error(lState);
         Q_UNREACHABLE();
     }
@@ -4078,7 +4072,7 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
     }
     lua_pop(L, lua_gettop(L));
 
-    return (error);
+    return !error;
 }
 
 // No documentation available in wiki - internal function
@@ -4830,6 +4824,7 @@ int TLuaInterpreter::unzipAsync(lua_State* L)
         event.mArgumentList.append(extractLocation);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         host.raiseEvent(event);
+        watcher->deleteLater();
     });
     watcher->setFuture(future);
 
@@ -4994,11 +4989,26 @@ end)LUA");
     // clang-format on
 }
 
+// Abort all in-flight network downloads during resetProfile so that
+// stale completion/error events from the old Lua state are not
+// delivered to the new state's event handlers.
+void TLuaInterpreter::abortAllDownloads()
+{
+    for (auto* reply : downloadMap.keys()) {
+        reply->abort();
+    }
+    downloadMap.clear();
+}
+
 // No documentation available in wiki - internal function
 // This function initializes the main Lua Session interpreter.
 // on initialization of a new session *or* in case of an interpreter reset by the user.
 void TLuaInterpreter::initLuaGlobals()
 {
+    if (pGlobalLua) {
+        lua_close(pGlobalLua);
+    }
+
     pGlobalLua = newstate();
     storeHostInLua(pGlobalLua, mpHost);
 
@@ -5549,6 +5559,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "killMapInfo", TLuaInterpreter::killMapInfo);
     lua_register(pGlobalLua, "enableMapInfo", TLuaInterpreter::enableMapInfo);
     lua_register(pGlobalLua, "disableMapInfo", TLuaInterpreter::disableMapInfo);
+    lua_register(pGlobalLua, "getMapInfo", TLuaInterpreter::getMapInfo);
     lua_register(pGlobalLua, "getProfileTabNumber", TLuaInterpreter::getProfileTabNumber);
     lua_register(pGlobalLua, "addFileWatch", TLuaInterpreter::addFileWatch);
     lua_register(pGlobalLua, "removeFileWatch", TLuaInterpreter::removeFileWatch);
@@ -5584,9 +5595,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "disableTimeStamps", TLuaInterpreter::disableTimeStamps);
     lua_register(pGlobalLua, "enableTimeStamps", TLuaInterpreter::enableTimeStamps);
     lua_register(pGlobalLua, "timeStampsEnabled", TLuaInterpreter::timeStampsEnabled);
-    lua_register(pGlobalLua, "aiChat", TLuaInterpreter::aiChat);
-    lua_register(pGlobalLua, "aiPrompt", TLuaInterpreter::aiPrompt);
-    lua_register(pGlobalLua, "aiPromptStream", TLuaInterpreter::aiPromptStream);
     lua_register(pGlobalLua, "setActiveProfile", TLuaInterpreter::setActiveProfile);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
@@ -5667,6 +5675,10 @@ void TLuaInterpreter::initLuaGlobals()
     // AppInstaller on Linux would like the C search path to also be set to
     // a ./lib sub-directory of the current binary directory:
     additionalCPaths << qsl("%1/lib/?.so").arg(appPath);
+#elif defined(Q_OS_WINDOWS)
+    // Running from an extracted .zip archive requires the C search path
+    // to also be set to the directory of the executable:
+    additionalCPaths << qsl("%1/?.dll").arg(appPath);
 #elif defined(Q_OS_MACOS)
     // macOS app bundle would like the search path to also be set to the current
     // binary directory for both modules and binary libraries:
@@ -5997,7 +6009,18 @@ void TLuaInterpreter::loadGlobal()
     // /usr/share part of the file-system:
     if (!qsl(LUA_DEFAULT_PATH).isEmpty()) {
         mPossiblePaths << QDir::toNativeSeparators(qsl(LUA_DEFAULT_PATH "/LuaGlobal.lua"));
-    };
+    }
+
+    // The build-time source path lets development builds and test binaries
+    // find LuaGlobal.lua regardless of where the binary runs from.
+    // Only add if the path actually exists to avoid leaking build-time paths
+    // in error messages on packaged end-user builds:
+    if (!qsl(LUA_SOURCE_PATH).isEmpty()) {
+        const auto sourcePath = QDir::toNativeSeparators(qsl(LUA_SOURCE_PATH "/LuaGlobal.lua"));
+        if (QFileInfo::exists(sourcePath)) {
+            mPossiblePaths << sourcePath;
+        }
+    }
     QStringList failedMessages{};
 
     // uncomment the following to enable some debugging texts in the LuaGlobal.lua script:
@@ -8252,7 +8275,7 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
             // First argument is a string so is presumably a command line name
             name = CMDLINE_NAME(L, 1);
             if (n > 1) {
-                saveCommands = !getVerifiedBool(L, __func__, 2, "save command history", true);
+                saveCommands = getVerifiedBool(L, __func__, 2, "save command history", true);
             }
 
         } else {
@@ -8261,7 +8284,7 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
                 return lua_error(L); // Dummy return!
             }
 
-            saveCommands = !getVerifiedBool(L, __func__, 1, "save command history", true);
+            saveCommands = getVerifiedBool(L, __func__, 1, "save command history", true);
         }
     }
 

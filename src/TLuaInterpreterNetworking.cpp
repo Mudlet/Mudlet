@@ -76,10 +76,7 @@
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#connectToServer
 int TLuaInterpreter::connectToServer(lua_State* L)
 {
-    // The lua_tointeger(...) call can return a 64-bit integer number, on
-    // Windows Platform that is bigger than the int32_t type (a.k.a. "int" AND
-    // "long" types on that platform)! 8-O
-    lua_Integer port = 23;
+    int port = 23;
     bool isToSaveToProfile = false;
 
     Host& host = getHostFromLua(L);
@@ -139,12 +136,22 @@ int TLuaInterpreter::downloadFile(lua_State* L)
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
+    Host* pHost = &host;
     host.mLuaInterpreter.downloadMap.insert(reply, localFile);
-    connect(reply, &QNetworkReply::downloadProgress, reply, [=](qint64 bytesDownloaded, qint64 totalBytes) {
-        raiseDownloadProgressEvent(L, urlString, bytesDownloaded, totalBytes);
+    connect(reply, &QNetworkReply::downloadProgress, reply, [pHost, urlString, reply](qint64 bytesDownloaded, qint64 totalBytes) {
+        TEvent event{};
+        event.mArgumentList << qsl("sysDownloadFileProgress") << urlString << QString::number(bytesDownloaded);
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_NUMBER;
+        if (totalBytes >= 0) {
+            event.mArgumentList << QString::number(totalBytes);
+            event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
+        } else {
+            event.mArgumentList << QString();
+            event.mArgumentTypeList << ARGUMENT_TYPE_NIL;
+        }
+        pHost->raiseEvent(event);
         if (mudlet::smDebugMode) {
-            auto& lHost = getHostFromLua(L);
-            TDebug(Qt::white, Qt::blue) << "downloadFile: " << bytesDownloaded << "/" << totalBytes << " bytes ready for " << reply->url().toString() << "\n" >> &lHost;
+            TDebug(Qt::white, Qt::blue) << "downloadFile: " << bytesDownloaded << "/" << totalBytes << " bytes ready for " << reply->url().toString() << "\n" >> pHost;
         }
     });
 
