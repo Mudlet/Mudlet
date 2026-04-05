@@ -6939,6 +6939,8 @@ void dlgTriggerEditor::saveKey()
         pT->setCommand(command);
         pT->setScript(script);
 
+        pT->validateKeyBinding();
+
         QIcon icon;
         QString itemDescription;
         const bool itemActive = pT->isActive();
