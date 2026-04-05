@@ -422,6 +422,7 @@ EOF
     # Define portable ZIP paths
     PORTABLE_ZIP_NAME="Mudlet-portable-${MSYSTEM,,}.zip"
     PORTABLE_ZIP_PATH="$(cygpath -au "${GITHUB_WORKSPACE}")/${PORTABLE_ZIP_NAME}"
+    PORTABLE_ZIP_WINPATH="$(cygpath -aw "${PORTABLE_ZIP_PATH}")"
 
     # Check if portable ZIP exists
     if [[ -f "${PORTABLE_ZIP_PATH}" ]]; then
@@ -434,7 +435,7 @@ EOF
       # Upload portable ZIP via SCP with proper naming
       PORTABLE_REMOTE_NAME="Mudlet-${VERSION}-windows-64-portable.zip"
       powershell.exe <<EOF
-\$portableZipPath = "${PORTABLE_ZIP_PATH}"
+\$portableZipPath = "${PORTABLE_ZIP_WINPATH}"
 \$DEPLOY_PATH = "${DEPLOY_PATH}"
 \$remoteFileName = "${PORTABLE_REMOTE_NAME}"
 scp.exe -i temp_key_file_portable -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$portableZipPath mudmachine@mudlet.org:\${DEPLOY_PATH}/\$remoteFileName
