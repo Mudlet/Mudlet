@@ -267,13 +267,15 @@ else
     # appended the short commit SHA1 - and just not worry about any sort of
     # sorting:
     INSTALLER_VERSION="${VERSION}-ptb-${BUILD_COMMIT,,}${BUILD_COUNTER_SUFFIX}"
-    # The name we want to use for the installer;
-    # Typically of form: 'Mudlet-4.19.1-ptb-2025-01-01-012345678-windows-64-installer.exe'
-    # Or with build counter: 'Mudlet-4.19.1-ptb-2025-01-01-012345678rebuild2-windows-64-installer.exe'
-    INSTALLER_EXE="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64-installer.exe"
+    # The actual installer filename. Must NOT include '-installer' for PTBs —
+    # make.mudlet.org's gha_queue processor matches the extracted filename from
+    # the GHA artifact ZIP, and it expects this convention.
+    # Typically of form: 'Mudlet-4.19.1-ptb-2025-01-01-012345678-windows-64.exe'
+    # Or with build counter: 'Mudlet-4.19.1-ptb-2025-01-01-012345678rebuild2-windows-64.exe'
+    INSTALLER_EXE="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64.exe"
     DBLSQD_VERSION_STRING="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}${BUILD_COUNTER_SUFFIX}"
-    # The name that has to be passed as the artifact so that the Mudlet website
-    # will accept it as a PTB:
+    # The GHA artifact name — includes '-installer' so make.mudlet.org
+    # recognises it as a PTB installer (distinct from the snapshot .zip):
     ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64-installer.exe"
   else
     NAME_SUFFIX='_64_'
