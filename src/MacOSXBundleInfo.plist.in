@@ -34,6 +34,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>telnet</string>
+				<string>telnets</string>
 			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>

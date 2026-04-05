@@ -4501,7 +4501,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     enableToolbarButtons();
 }
 
-// Parse a telnet:// URI according to RFC 4248
+// Parse a telnet:// or telnets:// URI according to RFC 4248
 std::optional<mudlet::TelnetUriData> mudlet::parseTelnetUri(const QString& uri)
 {
     QUrl url(uri);
@@ -4511,19 +4511,21 @@ std::optional<mudlet::TelnetUriData> mudlet::parseTelnetUri(const QString& uri)
         return std::nullopt;
     }
 
-    if (url.scheme().compare(qsl("telnet"), Qt::CaseInsensitive) != 0) {
-        qWarning() << "mudlet::parseTelnetUri() - Invalid URI scheme:" << url.scheme();
+    const QString scheme = url.scheme();
+    if (scheme.compare(qsl("telnet"), Qt::CaseInsensitive) != 0 && scheme.compare(qsl("telnets"), Qt::CaseInsensitive) != 0) {
+        qWarning() << "mudlet::parseTelnetUri() - Invalid URI scheme:" << scheme;
         return std::nullopt;
     }
 
     TelnetUriData data;
+    data.useTls = scheme.compare(qsl("telnets"), Qt::CaseInsensitive) == 0;
     data.host = url.host();
     if (data.host.isEmpty()) {
         qWarning() << "mudlet::parseTelnetUri() - URI missing host";
         return std::nullopt;
     }
 
-    data.port = url.port(23);
+    data.port = url.port(data.useTls ? 992 : 23);
     if (data.port < 1 || data.port > 65535) {
         qWarning() << "mudlet::parseTelnetUri() - Port out of range:" << data.port;
         return std::nullopt;
@@ -4607,11 +4609,15 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
         writeProfileData(profileName, qsl("login"), uriData.username);
     }
 
+    if (uriData.useTls) {
+        writeProfileData(profileName, qsl("ssl_tsl"), QString::number(Qt::Checked));
+    }
+
     return profileName;
 }
 
 
-// Main entry point for handling telnet:// URIs
+// Main entry point for handling telnet:// and telnets:// URIs
 void mudlet::handleTelnetUri(const QString& uri)
 {
     // Set flag to prevent connection dialog from opening during this workflow
