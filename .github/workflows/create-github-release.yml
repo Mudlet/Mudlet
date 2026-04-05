@@ -103,7 +103,7 @@ jobs:
         id: release-type
         run: |
           META_FILE=$(find metadata/ -name 'release-metadata.json' -type f | head -1)
-          if [ -z "${META_FILE}" ]; then
+          if [[ -z "${META_FILE}" ]]; then
             echo "No release metadata found - this is likely a snapshot or PR build"
             echo "type=skip" >> "$GITHUB_OUTPUT"
             exit 0
@@ -115,11 +115,11 @@ jobs:
           VERSION=$(echo "$META" | jq -r '.version')
           BUILD_SUFFIX=$(echo "$META" | jq -r '.build_suffix')
 
-          if [ -z "${VERSION}" ] || [ "${VERSION}" == "null" ]; then
+          if [[ -z "${VERSION}" || "${VERSION}" == "null" ]]; then
             echo "::error::VERSION field is empty or missing in release metadata"
             exit 1
           fi
-          if [ -z "${REF}" ] || [ "${REF}" == "null" ]; then
+          if [[ -z "${REF}" || "${REF}" == "null" ]]; then
             echo "::error::REF field is empty or missing in release metadata"
             exit 1
           fi
@@ -132,7 +132,7 @@ jobs:
             echo "title=Mudlet ${VERSION}" >> "$GITHUB_OUTPUT"
             echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           elif [[ "$EVENT" == "schedule" ]] || [[ "$BUILD_SUFFIX" == -ptb* ]]; then
-            if [ -z "${COMMIT}" ] || [ "${COMMIT}" == "null" ]; then
+            if [[ -z "${COMMIT}" || "${COMMIT}" == "null" ]]; then
               echo "::error::COMMIT field is empty or missing in release metadata for PTB"
               exit 1
             fi
@@ -188,17 +188,17 @@ jobs:
             MISSING+=("Windows (.exe)")
           fi
 
-          if [ ${#MISSING[@]} -gt 0 ]; then
+          if [[ ${#MISSING[@]} -gt 0 ]]; then
             echo "::warning::Missing release assets for: ${MISSING[*]}"
           fi
 
           # Stable releases must have all platforms; PTB tolerates partial
-          if [[ "${RELEASE_TYPE}" == "release" ]] && [ ${#MISSING[@]} -gt 0 ]; then
+          if [[ "${RELEASE_TYPE}" == "release" && ${#MISSING[@]} -gt 0 ]]; then
             echo "::error::Stable release is missing assets for: ${MISSING[*]}"
             exit 1
           fi
 
-          if [ ${#MISSING[@]} -eq 3 ]; then
+          if [[ ${#MISSING[@]} -eq 3 ]]; then
             echo "::error::No release assets found for any platform"
             exit 1
           fi
@@ -211,7 +211,7 @@ jobs:
           SHA_FILES=(assets/*/*.sha256)
           shopt -u nullglob
 
-          if [ ${#SHA_FILES[@]} -eq 0 ]; then
+          if [[ ${#SHA_FILES[@]} -eq 0 ]]; then
             echo "::error::No .sha256 checksum files found in assets/"
             exit 1
           fi
@@ -231,7 +231,7 @@ jobs:
             PREV_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -v -- '-ptb' | grep -v "^${RELEASE_TAG}$" | head -1)
 
             echo "Generating changelog from ${PREV_TAG} to ${RELEASE_TAG}"
-            if [ -n "${PREV_TAG}" ]; then
+            if [[ -n "${PREV_TAG}" ]]; then
               if ! lua CI/generate-changelog.lua -f md -m release \
                    --start-commit "${PREV_TAG}" --end-commit "${RELEASE_TAG}" > changelog.md; then
                 echo "::error::Changelog generation failed for stable release"
@@ -247,14 +247,14 @@ jobs:
             PTB_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -- '-ptb' | grep -v "^${RELEASE_TAG}$" | head -1)
 
             # Verify the PTB tag is an ancestor of HEAD
-            if [ -n "${PTB_TAG}" ] && ! git merge-base --is-ancestor "${PTB_TAG}" HEAD; then
+            if [[ -n "${PTB_TAG}" ]] && ! git merge-base --is-ancestor "${PTB_TAG}" HEAD; then
               echo "::warning::Latest PTB tag ${PTB_TAG} is not an ancestor of HEAD, skipping PTB diff"
               PTB_TAG=""
             fi
 
             # Generate the full changelog since last stable release
             FULL_CHANGELOG=""
-            if [ -n "${STABLE_TAG}" ]; then
+            if [[ -n "${STABLE_TAG}" ]]; then
               echo "Generating full changelog from ${STABLE_TAG} to HEAD"
               if ! FULL_CHANGELOG=$(lua CI/generate-changelog.lua -f md -m release \
                    --start-commit "${STABLE_TAG}" --end-commit HEAD); then
@@ -265,7 +265,7 @@ jobs:
 
             # Generate the incremental changelog since last PTB
             PTB_CHANGELOG=""
-            if [ -n "${PTB_TAG}" ]; then
+            if [[ -n "${PTB_TAG}" ]]; then
               echo "Generating PTB changelog from ${PTB_TAG} to HEAD"
               if ! PTB_CHANGELOG=$(lua CI/generate-changelog.lua -f md -m release \
                    --start-commit "${PTB_TAG}" --end-commit HEAD); then
@@ -275,7 +275,7 @@ jobs:
             fi
 
             # Assemble the combined changelog
-            if [ -n "${PTB_CHANGELOG}" ] && [ -n "${FULL_CHANGELOG}" ]; then
+            if [[ -n "${PTB_CHANGELOG}" && -n "${FULL_CHANGELOG}" ]]; then
               {
                 echo "#### Changes since last PTB (${PTB_TAG})"
                 echo ""
@@ -288,13 +288,20 @@ jobs:
                 echo ""
                 echo "</details>"
               } > changelog.md
-            elif [ -n "${FULL_CHANGELOG}" ]; then
+            elif [[ -n "${FULL_CHANGELOG}" ]]; then
               # No previous PTB or first PTB after a release - just show full changelog
               echo "${FULL_CHANGELOG}" > changelog.md
             else
               echo "::warning::Changelog generation failed, using placeholder"
               echo "See commit history for changes." > changelog.md
             fi
+          fi
+
+          # Prepend a note for PTB changelogs so readers know the scope
+          if [[ "${RELEASE_TYPE}" == "ptb" && -n "${STABLE_TAG}" ]]; then
+            RELEASE_VERSION="${STABLE_TAG#Mudlet-}"
+            { echo "Changes since ${RELEASE_VERSION}:"; echo; cat changelog.md; } > changelog.tmp
+            mv changelog.tmp changelog.md
           fi
 
           echo "Changelog preview:"
@@ -339,7 +346,7 @@ jobs:
           mapfile -t FILES < <(find assets/ -type f \
             \( -name '*.AppImage.tar' -o -name '*.exe' -o -name '*.dmg' -o -name 'SHA256SUMS.txt' \))
 
-          if [ ${#FILES[@]} -eq 0 ]; then
+          if [[ ${#FILES[@]} -eq 0 ]]; then
             echo "::error::No release files found to upload"
             exit 1
           fi
@@ -382,10 +389,10 @@ jobs:
 
           # Convert changelog to HTML for Sparkle's description field
           export CHANGELOG_HTML=""
-          if [ -f changelog.md ]; then
+          if [[ -f changelog.md ]]; then
             CHANGELOG_HTML=$(pandoc changelog.md -f markdown -t html --no-highlight 2>/dev/null || true)
           fi
-          if [ -z "${CHANGELOG_HTML}" ]; then
+          if [[ -z "${CHANGELOG_HTML}" ]]; then
             CHANGELOG_HTML="<p>See <a href='https://github.com/Mudlet/Mudlet/releases/tag/${RELEASE_TAG}'>release notes</a> for details.</p>"
           fi
 
@@ -401,7 +408,7 @@ jobs:
 
           for ARCH in arm64 x86_64; do
             DMG_FILE=$(find assets/ -name "*-${ARCH}.dmg" -type f | head -1)
-            if [ -z "${DMG_FILE}" ]; then
+            if [[ -z "${DMG_FILE}" ]]; then
               echo "No macOS DMG found for ${ARCH} - skipping appcast"
               continue
             fi
@@ -410,7 +417,7 @@ jobs:
             DMG_NAME=$(basename "${DMG_FILE}")
             export DOWNLOAD_URL=$(echo "${RELEASE_JSON}" | jq -r --arg name "${DMG_NAME}" '.assets[] | select(.name == $name) | .url')
 
-            if [ -z "${DOWNLOAD_URL}" ] || [ "${DOWNLOAD_URL}" == "null" ]; then
+            if [[ -z "${DOWNLOAD_URL}" || "${DOWNLOAD_URL}" == "null" ]]; then
               echo "::warning::Could not find download URL for ${DMG_NAME}"
               continue
             fi
@@ -455,7 +462,7 @@ jobs:
           APPCAST_FILES=(appcast/*.xml)
           shopt -u nullglob
 
-          if [ ${#APPCAST_FILES[@]} -eq 0 ]; then
+          if [[ ${#APPCAST_FILES[@]} -eq 0 ]]; then
             echo "::warning::No appcast files to upload"
             exit 0
           fi
