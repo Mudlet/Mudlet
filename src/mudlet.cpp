@@ -4501,7 +4501,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     enableToolbarButtons();
 }
 
-// Parse a telnet:// or telnets:// URI according to RFC 4248
+// Parse a telnet:// (RFC 4248) or telnets:// (TLS variant) URI
 std::optional<mudlet::TelnetUriData> mudlet::parseTelnetUri(const QString& uri)
 {
     QUrl url(uri);
@@ -4512,13 +4512,14 @@ std::optional<mudlet::TelnetUriData> mudlet::parseTelnetUri(const QString& uri)
     }
 
     const QString scheme = url.scheme();
-    if (scheme.compare(qsl("telnet"), Qt::CaseInsensitive) != 0 && scheme.compare(qsl("telnets"), Qt::CaseInsensitive) != 0) {
+    const bool isTelnets = scheme.compare(qsl("telnets"), Qt::CaseInsensitive) == 0;
+    if (scheme.compare(qsl("telnet"), Qt::CaseInsensitive) != 0 && !isTelnets) {
         qWarning() << "mudlet::parseTelnetUri() - Invalid URI scheme:" << scheme;
         return std::nullopt;
     }
 
     TelnetUriData data;
-    data.useTls = scheme.compare(qsl("telnets"), Qt::CaseInsensitive) == 0;
+    data.useTls = isTelnets;
     data.host = url.host();
     if (data.host.isEmpty()) {
         qWarning() << "mudlet::parseTelnetUri() - URI missing host";
@@ -4649,12 +4650,14 @@ void mudlet::handleTelnetUri(const QString& uri)
             slot_showConnectionDialog();
             return;
         }
+    } else if (uriData->useTls) {
+        writeProfileData(profileName, qsl("ssl_tsl"), QString::number(Qt::Checked));
     }
 
     qDebug() << "mudlet::handleTelnetUri() - Auto-loading profile:" << profileName;
     doAutoLogin(profileName);
 
-    // Reset flag after telnet:// URI processing is complete
+    // Reset flag after telnet:// or telnets:// URI processing is complete
     mProcessingTelnetUri = false;
 }
 
