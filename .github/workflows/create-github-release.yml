@@ -229,31 +229,60 @@ jobs:
           if [[ "${RELEASE_TYPE}" == "release" ]]; then
             # For release: changelog from previous stable release tag to this tag
             PREV_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -v -- '-ptb' | grep -v "^${RELEASE_TAG}$" | head -1)
-            END_TAG="${RELEASE_TAG}"
-          else
-            # For PTB: changelog from latest stable release tag to HEAD
-            PREV_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -v -- '-ptb' | head -1)
-            END_TAG="HEAD"
-          fi
 
-          echo "Generating changelog from ${PREV_TAG} to ${END_TAG}"
-          # Use 'release' mode for both since we have explicit commit ranges (ptb mode requires a dblsqd feed file)
-          if [ -n "${PREV_TAG}" ]; then
-            if ! lua CI/generate-changelog.lua -f md -m release \
-                 --start-commit "${PREV_TAG}" --end-commit "${END_TAG}" > changelog.md; then
-              if [[ "${RELEASE_TYPE}" == "release" ]]; then
+            echo "Generating changelog from ${PREV_TAG} to ${RELEASE_TAG}"
+            if [ -n "${PREV_TAG}" ]; then
+              if ! lua CI/generate-changelog.lua -f md -m release \
+                   --start-commit "${PREV_TAG}" --end-commit "${RELEASE_TAG}" > changelog.md; then
                 echo "::error::Changelog generation failed for stable release"
                 exit 1
               fi
-              echo "::warning::Changelog generation failed, using placeholder"
-              echo "See commit history for changes." > changelog.md
-            fi
-          else
-            if [[ "${RELEASE_TYPE}" == "release" ]]; then
+            else
               echo "::error::No previous release tag found - cannot generate changelog for stable release"
               exit 1
             fi
-            echo "See commit history for changes." > changelog.md
+          else
+            # For PTB: short changelog since last PTB (prominent) + full changelog since last stable release (collapsed)
+            STABLE_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -v -- '-ptb' | head -1)
+            PTB_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -- '-ptb' | head -1)
+
+            # Generate the full changelog since last stable release
+            FULL_CHANGELOG=""
+            if [ -n "${STABLE_TAG}" ]; then
+              echo "Generating full changelog from ${STABLE_TAG} to HEAD"
+              FULL_CHANGELOG=$(lua CI/generate-changelog.lua -f md -m release \
+                   --start-commit "${STABLE_TAG}" --end-commit HEAD 2>/dev/null || true)
+            fi
+
+            # Generate the short changelog since last PTB
+            PTB_CHANGELOG=""
+            if [ -n "${PTB_TAG}" ] && [ "${PTB_TAG}" != "${STABLE_TAG}" ]; then
+              echo "Generating PTB changelog from ${PTB_TAG} to HEAD"
+              PTB_CHANGELOG=$(lua CI/generate-changelog.lua -f md -m release \
+                   --start-commit "${PTB_TAG}" --end-commit HEAD 2>/dev/null || true)
+            fi
+
+            # Assemble the combined changelog
+            if [ -n "${PTB_CHANGELOG}" ] && [ -n "${FULL_CHANGELOG}" ]; then
+              {
+                echo "#### Changes since last PTB (${PTB_TAG})"
+                echo ""
+                echo "${PTB_CHANGELOG}"
+                echo ""
+                echo "<details>"
+                echo "<summary>Full changelog since last release (${STABLE_TAG})</summary>"
+                echo ""
+                echo "${FULL_CHANGELOG}"
+                echo ""
+                echo "</details>"
+              } > changelog.md
+            elif [ -n "${FULL_CHANGELOG}" ]; then
+              # No previous PTB or first PTB after a release - just show full changelog
+              echo "${FULL_CHANGELOG}" > changelog.md
+            else
+              echo "::warning::Changelog generation failed, using placeholder"
+              echo "See commit history for changes." > changelog.md
+            fi
           fi
 
           echo "Changelog preview:"
