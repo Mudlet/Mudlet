@@ -421,7 +421,7 @@ EOF
     echo "=== Uploading portable ZIP to mudlet.org ==="
     # Define portable ZIP paths
     PORTABLE_ZIP_NAME="Mudlet-portable-${MSYSTEM,,}.zip"
-    PORTABLE_ZIP_PATH="${GITHUB_WORKSPACE_UNIX_PATH}/${PORTABLE_ZIP_NAME}"
+    PORTABLE_ZIP_PATH="$(cygpath -au "${GITHUB_WORKSPACE}")/${PORTABLE_ZIP_NAME}"
 
     # Check if portable ZIP exists
     if [[ -f "${PORTABLE_ZIP_PATH}" ]]; then

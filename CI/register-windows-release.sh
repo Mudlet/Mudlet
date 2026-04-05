@@ -49,21 +49,16 @@ start_time=$(date +%s)
 # Return Codes:
 # 0 - Success!
 # 1 - curl failure
-# 2 - json parse failure
 # 3 - no matching URL found
 FetchAndCheckURL() {
-    json_data=$(curl -s "$json_url")
-
-    # Check if curl succeeded
-    if ! curl -s "$json_url" -o /dev/null; then
+    # Fetch JSON feed and check if curl succeeded
+    if ! json_data=$(curl -s "$json_url"); then
       echo "Failed to download JSON feed."
       return 1
     fi
 
-    # The processing of this variable by the jq tool means that converting this
-    # variable name to SCREAMING_SNAKE_CASE was too hard to do and get correct
-    # so leave it alone in a form that "works":
-    search_pattern="windows-64-installer\\.exe"
+    # Match both old (*-windows-64.exe) and new (*-windows-64-installer.exe) naming
+    search_pattern="windows-64(-installer)?\\.exe"
     echo "Searching for ${search_pattern}"
 
     # Use jq to filter the JSON data
@@ -102,7 +97,7 @@ done
 
 
 echo "=== Registering release with Dblsqd ==="
-echo "dblsqd push -a mudlet -c public-test-build -r \"${VERSION_STRING}\" -s mudlet --type 'standalone' --attach win:x86_64} \"${matching_url}\""
+echo "dblsqd push -a mudlet -c public-test-build -r \"${VERSION_STRING}\" -s mudlet --type 'standalone' --attach win:x86_64 \"${matching_url}\""
 
 PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
 export PATH
