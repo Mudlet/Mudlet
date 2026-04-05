@@ -265,7 +265,7 @@ jobs:
 
             # Generate the incremental changelog since last PTB
             PTB_CHANGELOG=""
-            if [ -n "${PTB_TAG}" ] && [ "${PTB_TAG}" != "${STABLE_TAG}" ]; then
+            if [ -n "${PTB_TAG}" ]; then
               echo "Generating PTB changelog from ${PTB_TAG} to HEAD"
               if ! PTB_CHANGELOG=$(lua CI/generate-changelog.lua -f md -m release \
                    --start-commit "${PTB_TAG}" --end-commit HEAD); then
