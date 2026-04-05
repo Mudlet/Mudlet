@@ -303,9 +303,11 @@ jobs:
         if [ -n "${SIGNED_EXE}" ] && [ -f "${SIGNED_EXE}" ]; then
           SHA256_FILE="${SIGNED_EXE}.sha256"
           (cd "$(dirname "${SIGNED_EXE}")" && sha256sum "$(basename "${SIGNED_EXE}")") > "${SHA256_FILE}"
+          # Convert to Windows paths — actions/upload-artifact runs in Node.js
+          # outside MSYS2 and misinterprets Unix paths like /d/a/... as D:\d\a\...
           {
-            echo "RELEASE_ASSET_PATH=${SIGNED_EXE}"
-            echo "RELEASE_ASSET_SHA256_PATH=${SHA256_FILE}"
+            echo "RELEASE_ASSET_PATH=$(cygpath -aw "${SIGNED_EXE}")"
+            echo "RELEASE_ASSET_SHA256_PATH=$(cygpath -aw "${SHA256_FILE}")"
           } >> "$GITHUB_ENV"
           echo "Recomputed SHA256 for signed installer:"
           cat "${SHA256_FILE}"
