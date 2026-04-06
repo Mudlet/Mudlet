@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015-2018, 2020, 2022, 2024-2025 by Stephen Lyons       #
+#    Copyright (C) 2015-2018, 2020, 2022, 2024-2026 by Stephen Lyons       #
 #                                                - slysven@virginmedia.com #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -44,118 +44,50 @@ project(mudlet)
 
 # All the other files that we want to see in the editor but which CMake doesn't
 # do anything with.
-add_custom_target(OTHER_FILES
-  COMMENT "Refreshing OTHER_FILES list for passive file display in IDE"
-  SOURCES
+# Gather non-compiled files for IDE visibility using glob patterns
+# Note: New files are picked up automatically on CMake reconfigure
+file(GLOB ROOT_FILES_LIST CONFIGURE_DEPENDS
   .clang-tidy
-  .claude/commands/pr-mudlet.md
-  .DirIcon
   .crowdin.yml
   .cursorrules
-  .devcontainer/Dockerfile
-  .devcontainer/devcontainer.json
-  .devcontainer/library-scripts/desktop-lite-debian.sh
-  .github/CODEOWNERS
-  .github/ISSUE_TEMPLATE/01-bug-report.md
-  .github/ISSUE_TEMPLATE/02-feature-request.md
-  .github/ISSUE_TEMPLATE/config.yml
-  .github/PULL_REQUEST_TEMPLATE.md
-  .github/codeql/codeql-config.yml
-  .github/codespell-wordlist.txt
-  .github/copilot-instructions.md
-  .github/dependabot.yml
-  .github/pr-labeler.yml
-  .github/repo-metadata.yml
-  .github/workflows/build-mudlet-win.yml
-  .github/workflows/build-mudlet.yml
-  .github/workflows/check_pr_labels.yml
-  .github/workflows/clangtidy-diff-analysis.yml
-  .github/workflows/clangtidy-post-comments.yml
-  .github/workflows/codeql-analysis.yml
-  .github/workflows/codespell-analysis.yml
-  .github/workflows/dangerjs.yml
-  .github/workflows/generate-changelog.yml
-  .github/workflows/generate-coder-attribution.yml
-  .github/workflows/link-ptbs-to-dblsqd.yml
-  .github/workflows/performance-analysis.yml
-  .github/workflows/qridlayout-ordering.yml
-  .github/workflows/tag-pull-requests.yml
-  .github/workflows/update-3rdparty.yml
-  .github/workflows/update-autocompletion.yml
-  .github/workflows/update-en-us-plural.yml
-  .github/workflows/update-geyser-docs.yml
-  .github/workflows/update-translations.yml
   .gitignore
   .gitmodules
   .imgbotconfig
-  .vscode/c_cpp_properties.json
-  .vscode/extensions.json
-  .vscode/settings.json
-  3rdparty/communi/CHANGELOG.md
-  3rdparty/communi/LICENSE
-  3rdparty/communi/README.md
-  3rdparty/communi/communi.pri
-  3rdparty/communi/version.pri
-  3rdparty/discord/rpc/include/discord_register.h
-  3rdparty/discord/rpc/include/discord_rpc.h
-  3rdparty/discord/rpc/lib/discord-rpc32.dll
-  3rdparty/discord/rpc/lib/discord-rpc64.dll
-  3rdparty/discord/rpc/lib/libdiscord-rpc.dylib
-  3rdparty/discord/rpc/lib/libdiscord-rpc.so
-  3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h
-  AGENTS.md
-  CI/after_success.sh
-  CI/before_install.sh
-  CI/build-mudlet-for-windows.sh
-  CI/deploy-mudlet-for-windows.sh
-  CI/fix.grid.ui.ordering.js
-  CI/generate-changelog.lua
-  CI/install.sh
-  CI/linux.after_success.sh
-  CI/linux.install.sh
-  CI/lua-5.1.5-so.patch
-  CI/org.mudlet.mudlet.yml
-  CI/osx.after_success.sh
-  CI/osx.before_install.sh
-  CI/osx.install.sh
-  CI/package-mudlet-for-windows.sh
-  CI/register-windows-release.sh
-  CI/send_debug_files_to_sentry.sh
-  CI/set-build-info.sh
-  CI/setup-windows-sdk.sh
-  CI/update-autocompletion.lua
-  CI/validate-deployment-for-windows.sh
-  CI/validate_deployment.sh
-  CLAUDE.md
+  .DirIcon
+  *.md
   COMMITMENT
   COMPILE
   COPYING
   CPPLINT.cfg
-  README.md
-  SECURITY.md
-  UI-design-philosophy.md
-  asan-suppressions.txt
   dangerfile.js
-  docker/.env.template
-  docker/Dockerfile
-  docker/docker-compose.override.linux.yml
-  docker/docker-compose.yml
-  docs/AI-ASSISTANTS.md
-  docs/CODE_OF_CONDUCT.md
-  docs/CONTRIBUTING.md
-  docs/FUNDING.yml
-  docs/GITHUB.md
-  docs/README.md
-  docs/SUPPORT.md
-  docs/ai-instructions.md
-  icon_1024x1204.png
-  icon_dev_1024x1204.png
-  icon_ptb_1024x1204.png
+  asan-suppressions.txt
   mudlet.desktop
   mudlet.png
   mudlet.svg
+  icon_*.png
+)
+
+file(GLOB_RECURSE OTHER_FILES_LIST CONFIGURE_DEPENDS
+  .github/**
+  .devcontainer/**
+  .vscode/**
+  .claude/**
+  3rdparty/discord/rpc/lib/*
+  CI/**
+  docker/**
+  docs/**
   src/.clang-format
   src/.gitignore
+)
+
+# It is not clear that the "COMMENT" actually shows up anywhere - so include
+# a status message:
+message(STATUS "Refreshing OTHER_FILES list...")
+add_custom_target(OTHER_FILES
+  COMMENT "Refreshing OTHER_FILES list for passive file display in IDE"
+  SOURCES
+    ${ROOT_FILES_LIST}
+    ${OTHER_FILES_LIST}
 )
 
 if(CMAKE_CONFIGURATION_TYPES)
