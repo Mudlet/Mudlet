@@ -71,7 +71,7 @@ void ScriptUnit::uninstall(const QString& packageName)
         }
     }
     for (auto& script : uninstallList) {
-        unregisterScript(script);
+        delete script;
     }
     uninstallList.clear();
 }

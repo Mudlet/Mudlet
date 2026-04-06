@@ -241,7 +241,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mMMCPServer(nullptr)
 , mpDlgProfilePreferences(nullptr)
 , mMMCPChatPort(csDefaultMMCPHostPort)
-, mMMCPChatPrefix(qsl("<CHAT>"))
+, mMMCPChatPrefix(csDefaultChatPrefix)
 , mMMCPAutostartServer(false)
 , mMMCPAllowPeekRequests(false)
 , mMMCPPrefixEmotes(false)
@@ -427,6 +427,11 @@ Host::~Host()
 
     qDeleteAll(profileShortcuts);
     profileShortcuts.clear();
+
+    qDeleteAll(mStopWatchMap);
+    mStopWatchMap.clear();
+
+    delete mMMCPServer;
 
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
@@ -845,6 +850,7 @@ void Host::resetProfile_phase2()
     mpConsole->resetMainConsole();
     mEventHandlerMap.clear();
     mEventMap.clear();
+    mLuaInterpreter.abortAllDownloads();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
 
@@ -859,7 +865,7 @@ void Host::resetProfile_phase2()
     mTriggerUnit.reenableAllTriggers();
     mKeyUnit.reenableAllTriggers();
 
-    // This is where the scripts for the profile's get compiled (which confirms
+    // This is where the scripts for the profile get compiled (which confirms
     // that they are valid) and all the Lua code outside of functions gets run:
     getTimerUnit()->compileAll();
     getTriggerUnit()->compileAll();
@@ -959,6 +965,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
             reloadModules();
         }
         mWritingHostAndModules = false;
+        watcher->deleteLater();
     });
     watcher->setFuture(mModuleFuture);
     return {true, filename_xml, QString()};
@@ -2684,11 +2691,11 @@ void Host::refreshPackageFonts()
     }
 }
 
-void Host::setEnableBlinkText(const bool enabled)
+void Host::setEnableBlinkText(const bool enable)
 {
-    if (mEnableBlinkText != enabled) {
-        mEnableBlinkText = enabled;
-        emit signal_changeEnableBlinkText(enabled);
+    if (mEnableBlinkText != enable) {
+        mEnableBlinkText = enable;
+        emit signal_changeEnableBlinkText(enable);
     }
 }
 
@@ -2940,8 +2947,8 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
         if (startTimeStamp.isDouble()) {
             timeStamp = static_cast<int64_t>(startTimeStamp.toDouble());
             pMudlet->mDiscord.setStartTimeStamp(this, timeStamp);
-        } else if (endTimeStamp.isString()) {
-            timeStamp = endTimeStamp.toString().toLongLong();
+        } else if (startTimeStamp.isString()) {
+            timeStamp = startTimeStamp.toString().toLongLong();
             pMudlet->mDiscord.setStartTimeStamp(this, timeStamp);
         }
     }
@@ -3055,23 +3062,35 @@ void Host::initMMCPServer()
     mMMCPServer = new MMCPServer(this);
 }
 
-/**
- * Get the current chat name from the MMCPServer if it exists, otherwise
- * read it from our saved profile information
- * There is also the mMMCPChatname read from the xml package, where should we
- * use that?
- */
-QString Host::getMMCPChatName()
+
+// Return the MMCP chat name for this host
+const QString& Host::getMMCPChatName() const
 {
     return mMMCPChatName;
 }
 
-void Host::setMMCPChatName(const QString& name, bool shouldSignal)
+// Validate and set the MMCP chat name, notify connected peers, and update GUI.
+// Returns false if the name is invalid (contains ~ or ,).
+bool Host::setMMCPChatName(const QString& name)
 {
-    mMMCPChatName = name;
-    if (shouldSignal) {
-        emit mmcpChatNameChanged(name);
+    static const QRegularExpression rx(qsl("~|,"));
+    if (rx.match(name).hasMatch()) {
+        return false;
     }
+
+    // If the name is unchanged, no need to update or emit signals
+    if (mMMCPChatName == name) {
+        return true;
+    }
+
+    mMMCPChatName = name;
+
+    if (mMMCPServer) {
+        mMMCPServer->chatName(name);
+    }
+
+    emit mmcpChatNameChanged(name);
+    return true;
 }
 
 quint16 Host::getMMCPPort()
@@ -3079,7 +3098,7 @@ quint16 Host::getMMCPPort()
     return mMMCPChatPort;
 }
 
-QString Host::getMMCPChatPrefix()
+const QString& Host::getMMCPChatPrefix() const
 {
     return mMMCPChatPrefix;
 }
@@ -5013,4 +5032,14 @@ QStringList Host::getAllExperiments() const
 QStringList Host::getValidExperiments() const
 {
     return QStringList(mValidExperiments.constBegin(), mValidExperiments.constEnd());
+}
+
+bool Host::shouldStripOscHyperlinkConfigParam()
+{
+    return mTelnet.oscHyperlinkConfigFeatureEnabled();
+}
+
+bool Host::shouldStripOscHyperlinkPresetParam()
+{
+    return mTelnet.oscHyperlinkPresetsEnabled();
 }

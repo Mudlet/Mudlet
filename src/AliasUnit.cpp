@@ -67,7 +67,7 @@ void AliasUnit::uninstall(const QString& packageName)
         }
     }
     for (auto& alias : uninstallList) {
-        unregisterAlias(alias);
+        delete alias;
     }
     uninstallList.clear();
 }
