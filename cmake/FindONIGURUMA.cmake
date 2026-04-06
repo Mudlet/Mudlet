@@ -30,7 +30,7 @@ find_path(ONIGURUMA_INCLUDE_DIR
   oniguruma.h
   HINTS
     ${ONIGURUMA_DIR}
-    $ENV{ONIGURUMAL_DIR}
+    $ENV{ONIGURUMA_DIR}
     ${PC_ONIGURUMA_INCLUDE_DIRS}
   PATHS
     ${ONIGURUMA_HOME}/include
@@ -62,7 +62,7 @@ else()
 endif()
 
 include(FindPackageHandleStandardArgs)
-# Support the REQUIRED and QUIET arguments, and set PUGIXML_FOUND if found.
+# Support the REQUIRED and QUIET arguments, and set ONIGURUMA_FOUND if found.
 find_package_handle_standard_args(ONIGURUMA REQUIRED_VARS ONIGURUMA_LIBRARY
                                   ONIGURUMA_INCLUDE_DIR VERSION_VAR ONIGURUMA_VER)
 
