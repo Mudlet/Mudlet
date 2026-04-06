@@ -108,7 +108,7 @@ jobs:
         # Install all required dependencies
         # brew install can hang indefinitely during bottle pouring, so timeout and retry
         for attempt in 1 2 3; do
-          brew install libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost &
+          brew install libzzip libzip ccache expect assimp hunspell oniguruma pcre2 pugixml sqlite yajl boost &
           brew_pid=$!
           ( sleep 120 && kill $brew_pid 2>/dev/null ) &
           watcher_pid=$!
@@ -185,21 +185,22 @@ jobs:
           libglu1-mesa-dev \
           libhunspell-dev \
           liblua5.1-0-dev \
+          libonig-dev \
           libpcre2-dev \
           libpulse-dev \
           libpugixml-dev \
           libsecret-1-dev \
           libspeechd-dev \
           libsqlite3-dev \
-          qtkeychain-qt6-dev \
+          libssl-dev \
           libxkbcommon-x11-0 \
           libxcb-render-util0-dev \
           libxcb-image0-dev \
           libyajl-dev \
           libzip-dev \
+          qtkeychain-qt6-dev \
           pcre2-utils \
           pkg-config \
-          libssl-dev \
           openssl \
           ca-certificates \
           -y
