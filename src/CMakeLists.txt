@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2018, 2020, 2023, 2025 by Stephen Lyons            #
+#    Copyright (C) 2015-2018, 2020, 2023, 2025-2026 by Stephen Lyons       #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
 #    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
@@ -259,6 +259,9 @@ set(mudlet_UIS
     ui/vars_main_area.ui)
 
 set(mudlet_HDRS
+    ../3rdparty/discord/rpc/include/discord_register.h
+    ../3rdparty/discord/rpc/include/discord_rpc.h
+    ../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h
     ActionUnit.h
     AliasUnit.h
     AltFocusMenuBarDisable.h

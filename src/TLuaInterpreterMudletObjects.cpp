@@ -533,6 +533,38 @@ int TLuaInterpreter::exists(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getKeyCode
+int TLuaInterpreter::getKeyCode(lua_State* L)
+{
+    auto [isId, nameOrId] = getVerifiedStringOrInteger(L, __func__, 1, "itemID or item name");
+    bool isOk = false;
+    const int id = nameOrId.toInt(&isOk);
+
+    if (isId && (!isOk || id < 0)) {
+        return warnArgumentValue(L, __func__, csmInvalidItemID.arg(lua_tostring(L, 1)));
+    }
+
+    Host& host = getHostFromLua(L);
+    TKey* pT = nullptr;
+
+    if (isId) {
+        pT = host.getKeyUnit()->getKey(id);
+    } else {
+        pT = host.getKeyUnit()->mLookupTable.value(nameOrId);
+    }
+
+    if (!pT) {
+        const QString errorMsg = isId ? qsl("keybind ID %1 does not exist").arg(nameOrId)
+                                      : qsl("keybind '%1' does not exist").arg(nameOrId);
+        return warnArgumentValue(L, __func__, errorMsg);
+    }
+
+    lua_pushinteger(L, static_cast<lua_Integer>(pT->getKeyCode()));
+    lua_pushinteger(L, static_cast<lua_Integer>(pT->getKeyModifiers()));
+
+    return 2;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getButtonState
 int TLuaInterpreter::getButtonState(lua_State* L)
 {
