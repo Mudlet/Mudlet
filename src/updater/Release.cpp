@@ -185,7 +185,7 @@ QString Release::buildAssetPattern(const QString& os, const QString& arch)
     if (os == qsl("linux")) {
         return qsl("-linux-x64.AppImage.tar");
     } else if (os == qsl("win")) {
-        return qsl("-windows-64-installer.exe");
+        return qsl("-windows-64");
     } else if (os == qsl("mac")) {
         if (arch == qsl("arm64") || arch == qsl("aarch64")) {
             return qsl("-arm64.dmg");
