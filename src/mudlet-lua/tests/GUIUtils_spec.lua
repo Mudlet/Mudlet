@@ -984,6 +984,10 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
   describe("Tests the functionality of selectAll", function()
 
+    before_each(function()
+      clearWindow()
+    end)
+
     it("Should error when first argument is not a string", function()
       assert.has_error(function()
         selectAll(123, function() end)
@@ -1015,7 +1019,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should call the function for each match on the current line", function()
-      echo("\ncat dog cat dog cat")
+      echo("cat dog cat dog cat")
       moveCursorEnd()
       selectCurrentLine()
       local funcCalls = 0
