@@ -7,6 +7,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetBenchmark.cpp
     ResetProfileTest.cpp
     TOscTest.cpp
+    TriggerEditorTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
