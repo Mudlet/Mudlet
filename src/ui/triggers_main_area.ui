@@ -541,7 +541,7 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string comment="Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button">keep color</string>
+            <string comment="Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button">keep</string>
            </property>
           </widget>
          </item>
@@ -564,7 +564,7 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string comment="Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button">keep color</string>
+            <string comment="Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button">keep</string>
            </property>
           </widget>
          </item>
