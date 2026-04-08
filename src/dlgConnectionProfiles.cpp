@@ -798,7 +798,10 @@ void dlgConnectionProfiles::slot_addProfile()
     }
     fillout_form();
     welcome_message->hide();
-
+    widget_topLeft->show();
+    mpSkipToGamesButton->hide();
+    connect_button->show();
+    offline_button->show();
     informationArea->show();
     tabWidget_connectionInfo->show();
 
@@ -1346,7 +1349,7 @@ void dlgConnectionProfiles::fillout_form()
         connect_button->hide();
         offline_button->hide();
         mpSkipToGamesButton->show();
-        resize(400, 350);
+        adjustSize();
     }
 }
 
