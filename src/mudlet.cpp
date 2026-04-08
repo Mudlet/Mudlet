@@ -51,6 +51,7 @@
 #include "XMLimport.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
+#include "FileOpenHandler.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
@@ -739,7 +740,7 @@ void mudlet::init()
     connect(this, &mudlet::signal_windowStateChanged, this, &mudlet::slot_windowStateChanged);
 
 #if defined(INCLUDE_UPDATER)
-    pUpdater = new Updater(this, mpSettings, publicTestVersion);
+    pUpdater = new Updater(this, mpSettings, !releaseVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(pUpdater, &Updater::signal_updateCheckFailed, this, &mudlet::slot_updateCheckFailed);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
@@ -2774,6 +2775,13 @@ void mudlet::closeEvent(QCloseEvent* event)
     writeSettings();
 
     goingDown();
+
+    // Close connection dialog if it's open to prevent cleanup issues during shutdown
+    if (mpConnectionDialog) {
+        mpConnectionDialog->close();
+        mpConnectionDialog = nullptr;
+    }
+
     if (smpDebugArea) {
         smpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
         smpDebugArea->close();
@@ -2897,8 +2905,7 @@ void mudlet::readLateSettings(const QSettings& settings)
     // Prevent a lockout where both menu bar and toolbar are hidden, leaving
     // the user with no way to access settings on startup
     if (mMenuBarVisibility == enums::visibleNever && mToolbarVisibility == enums::visibleNever) {
-        qWarning() << "mudlet::readLateSettings() - both menu bar and toolbar were configured"
-                   << "to never show; correcting toolbar to visibleOnlyWithoutLoadedProfile"
+        qWarning() << "mudlet::readLateSettings() - both menu bar and toolbar were configured" << "to never show; correcting toolbar to visibleOnlyWithoutLoadedProfile"
                    << "to prevent lockout. Persisting correction now.";
         setToolBarVisibility(enums::visibleOnlyWithoutLoadedProfile);
         // Write only the corrected value — calling writeSettings() here would
@@ -2907,8 +2914,8 @@ void mudlet::readLateSettings(const QSettings& settings)
         correctionSettings.setValue("toolBarVisibility", static_cast<int>(mToolbarVisibility));
         correctionSettings.sync();
         if (correctionSettings.status() != QSettings::NoError) {
-            qWarning() << "mudlet::readLateSettings() - failed to persist toolbar lockout correction to disk."
-                       << "QSettings status:" << correctionSettings.status() << "File:" << correctionSettings.fileName();
+            qWarning() << "mudlet::readLateSettings() - failed to persist toolbar lockout correction to disk." << "QSettings status:" << correctionSettings.status()
+                       << "File:" << correctionSettings.fileName();
         }
     }
 
@@ -3146,6 +3153,13 @@ void mudlet::writeSettings()
 
 void mudlet::slot_showConnectionDialog()
 {
+    // Don't show connection dialog if we're processing a telnet:// URI
+    // as that workflow bypasses the dialog entirely
+    if (mProcessingTelnetUri) {
+        qDebug() << "slot_showConnectionDialog() - Skipping dialog, processing telnet:// URI";
+        return;
+    }
+
     if (mpConnectionDialog) {
         // If dialog already exists, bring it to the front of the main window
         mpConnectionDialog->raise();
@@ -4367,7 +4381,7 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
         }
     }
 
-    if (loadedProfiles == 0) {
+    if (loadedProfiles == 0 && !mProcessingTelnetUri) {
         slot_showConnectionDialog();
     } else {
         qDebug() << "All" << loadedProfiles << "profiles loaded in" << timer.elapsed() / 1000.0 << "seconds";
@@ -4485,6 +4499,158 @@ void mudlet::doAutoLogin(const QString& profile_name)
     slot_connectionDialogueFinished(profile_name, true);
     enableToolbarButtons();
 }
+
+// Parse a telnet:// URI according to RFC 4248
+std::optional<mudlet::TelnetUriData> mudlet::parseTelnetUri(const QString& uri)
+{
+    QUrl url(uri);
+
+    if (!url.isValid()) {
+        qWarning() << "mudlet::parseTelnetUri() - Malformed URI";
+        return std::nullopt;
+    }
+
+    if (url.scheme().compare(qsl("telnet"), Qt::CaseInsensitive) != 0) {
+        qWarning() << "mudlet::parseTelnetUri() - Invalid URI scheme:" << url.scheme();
+        return std::nullopt;
+    }
+
+    TelnetUriData data;
+    data.host = url.host();
+    if (data.host.isEmpty()) {
+        qWarning() << "mudlet::parseTelnetUri() - URI missing host";
+        return std::nullopt;
+    }
+
+    data.port = url.port(23);
+    if (data.port < 1 || data.port > 65535) {
+        qWarning() << "mudlet::parseTelnetUri() - Port out of range:" << data.port;
+        return std::nullopt;
+    }
+
+    if (!url.userName().isEmpty()) {
+        data.username = url.userName();
+    }
+
+    qDebug() << "mudlet::parseTelnetUri() - Parsed URI:" << url.toDisplayString(QUrl::RemoveUserInfo);
+    return data;
+}
+
+// Find existing profile matching host and port
+QString mudlet::findMatchingProfile(const QString& host, int port)
+{
+    QDir profilesDir(getMudletPath(enums::profilesPath));
+    QStringList profileNames = profilesDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+
+    profileNames += TGameDetails::keys();
+    profileNames.removeDuplicates();
+
+    QString matchedProfile;
+    QDateTime latestTime;
+
+    for (const auto& profileName : profileNames) {
+        QString profileHost = readProfileData(profileName, qsl("url"));
+        QString profilePort = readProfileData(profileName, qsl("port"));
+
+        if (!profileHost.compare(host, Qt::CaseInsensitive) && profilePort.toInt() == port) {
+            QString profilePath = getMudletPath(enums::profileHomePath, profileName);
+            QFileInfo profileInfo(profilePath);
+
+            if (matchedProfile.isEmpty() || profileInfo.lastModified() > latestTime) {
+                matchedProfile = profileName;
+                latestTime = profileInfo.lastModified();
+            }
+        }
+    }
+
+    if (!matchedProfile.isEmpty()) {
+        qDebug() << "mudlet::findMatchingProfile() - Found matching profile:" << matchedProfile;
+    }
+
+    return matchedProfile;
+}
+
+// Create profile metadata for a telnet URI (does NOT call addHost —
+// let doAutoLogin() → loadProfile() → slot_connectionDialogueFinished()
+// handle the full initialization pipeline)
+QString mudlet::createProfileForUri(const TelnetUriData& uriData)
+{
+    QString profileName = uriData.host;
+
+    int dotIndex = profileName.indexOf('.');
+    if (dotIndex > 0) {
+        profileName = profileName.left(dotIndex);
+    }
+
+    if (!profileName.isEmpty()) {
+        profileName[0] = profileName[0].toUpper();
+    }
+
+    // Bounded loop to avoid hanging on unexpected collisions
+    QString originalName = profileName;
+    for (int suffix = 2; suffix < 100 && profileExists(profileName); ++suffix) {
+        profileName = qsl("%1-%2").arg(originalName).arg(suffix);
+    }
+
+    if (profileExists(profileName)) {
+        qWarning() << "mudlet::createProfileForUri() - Could not find unique name for profile";
+        return QString();
+    }
+
+    qDebug() << "mudlet::createProfileForUri() - Creating profile:" << profileName;
+
+    writeProfileData(profileName, qsl("url"), uriData.host);
+    writeProfileData(profileName, qsl("port"), QString::number(uriData.port));
+
+    if (!uriData.username.isEmpty()) {
+        writeProfileData(profileName, qsl("login"), uriData.username);
+    }
+
+    return profileName;
+}
+
+
+// Main entry point for handling telnet:// URIs
+void mudlet::handleTelnetUri(const QString& uri)
+{
+    // Set flag to prevent connection dialog from opening during this workflow
+    mProcessingTelnetUri = true;
+
+    if (uri.isEmpty()) {
+        qDebug() << "mudlet::handleTelnetUri() - Called with empty URI";
+        mProcessingTelnetUri = false;
+        return;
+    }
+
+    qDebug() << "mudlet::handleTelnetUri() - Processing URI:" << QUrl(uri).toDisplayString(QUrl::RemoveUserInfo);
+
+    auto uriData = parseTelnetUri(uri);
+    if (!uriData) {
+        qWarning() << "mudlet::handleTelnetUri() - Invalid telnet URI (credentials redacted)";
+        mProcessingTelnetUri = false;
+        slot_showConnectionDialog();
+        return;
+    }
+
+    QString profileName = findMatchingProfile(uriData->host, uriData->port);
+
+    if (profileName.isEmpty()) {
+        profileName = createProfileForUri(*uriData);
+        if (profileName.isEmpty()) {
+            qWarning() << "mudlet::handleTelnetUri() - Failed to create profile";
+            mProcessingTelnetUri = false;
+            slot_showConnectionDialog();
+            return;
+        }
+    }
+
+    qDebug() << "mudlet::handleTelnetUri() - Auto-loading profile:" << profileName;
+    doAutoLogin(profileName);
+
+    // Reset flag after telnet:// URI processing is complete
+    mProcessingTelnetUri = false;
+}
+
 
 void mudlet::processEventLoopHack()
 {
@@ -4818,6 +4984,7 @@ mudlet::~mudlet()
 
     if (mpHunspell_sharedDictionary) {
         saveDictionary(getMudletPath(enums::mainDataItemPath, qsl("mudlet")), mWordSet_shared);
+        Hunspell_destroy(mpHunspell_sharedDictionary);
         mpHunspell_sharedDictionary = nullptr;
     }
     if (!mTranslatorsLoadedList.isEmpty()) {
@@ -6770,6 +6937,7 @@ MudletInstanceCoordinator* mudlet::getInstanceCoordinator()
 {
     return mInstanceCoordinator.get();
 }
+
 void mudlet::setGlobalStyleSheet(const QString& styleSheet)
 {
     mpMainToolBar->setStyleSheet(styleSheet);

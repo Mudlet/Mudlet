@@ -64,7 +64,6 @@ public:
     , mEntityHandler(mMxpTagProcessor.getEntityResolver())
     , mpMxpClient(pMxpClient)
     {
-        mpMxpClient->initialize(&mMxpTagProcessor);
     }
 
     bool setMode(const QString& code);
