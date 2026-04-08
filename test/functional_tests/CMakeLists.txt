@@ -8,6 +8,7 @@ set(FUNCTIONAL_TEST_SOURCES
     ResetProfileTest.cpp
     TOscTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
+    TDiscordModeTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
