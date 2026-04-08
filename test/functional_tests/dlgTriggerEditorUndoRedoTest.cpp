@@ -17,8 +17,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// NOLINTBEGIN(clang-diagnostic-error) - clangd falsely flags private member access; dlgTriggerEditorUndoRedoTest is a friend class of dlgTriggerEditor
-
 #include <QtTest/QtTest>
 
 #include "EditorUndoStack.h"
