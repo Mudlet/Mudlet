@@ -1,5 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2024 by Mudlet makers                                   *
+ *   Copyright (C) 2017 by Philipp Medien - hello@dblsqd.com               *
+ *   Copyright (C) 2026 by Vadim Peretokin - vperetokin@gmail.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -16,41 +17,34 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef SPARKLEUPDATER_H
-#define SPARKLEUPDATER_H
-#include <QObject>
 
-class QAction;
+#ifndef DBLSQD_SEMVER_H
+#define DBLSQD_SEMVER_H
 
-#ifdef __OBJC__
-@class SparkleUpdaterDelegate;
-#endif
+#include <QString>
 
-class SparkleUpdater : public QObject
+namespace dblsqd {
+
+class SemVer
 {
-    Q_OBJECT
-
 public:
-    explicit SparkleUpdater(QObject* parent = nullptr);
-    ~SparkleUpdater();
+    explicit SemVer(const QString& version);
 
+    bool operator<(const SemVer& other) const;
+    bool operator==(const SemVer& other) const;
 
-    void checkForUpdates();
-
-    void setAutomaticallyChecksForUpdates(bool on);
-    bool automaticallyChecksForUpdates();
-
-    void setAutomaticallyDownloadsUpdates(bool on);
-    bool automaticallyDownloadsUpdates();
-    // private slots:
-    //     void checkForUpdates();
+    bool isValid() const;
 
 private:
-#ifdef __OBJC__
-    // for ARC tracking.
-    SparkleUpdaterDelegate* _updaterDelegate;
-#else
-    void* _updaterDelegate;
-#endif
+    int mMajor{0};
+    int mMinor{0};
+    int mPatch{0};
+    QString mPrerelease;
+    bool mValid{false};
+
+    static QString getRegExp();
 };
-#endif
+
+} // namespace dblsqd
+
+#endif // DBLSQD_SEMVER_H
