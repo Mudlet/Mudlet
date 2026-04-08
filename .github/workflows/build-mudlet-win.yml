@@ -286,6 +286,36 @@ jobs:
           echo "Warning: No signed installer found in ${SIGNED_DIR}"
         fi
 
+    - name: (Windows) Update release asset to signed installer
+      if: steps.sign-installer.outcome == 'success' && env.RELEASE_ASSET_PATH
+      shell: msys2 {0}
+      run: |
+        # After signing, the signed binary lives at ARTIFACT_WINPATHORFILE.
+        # Update RELEASE_ASSET_PATH (set earlier, before signing) to point to
+        # the signed binary and recompute the SHA256.
+        SIGNED_PATH=$(cygpath -au "${ARTIFACT_WINPATHORFILE}")
+        if [ -d "${SIGNED_PATH}" ]; then
+          SIGNED_EXE=$(find "${SIGNED_PATH}" -name "*.exe" -type f | head -1)
+        else
+          SIGNED_EXE="${SIGNED_PATH}"
+        fi
+
+        if [ -n "${SIGNED_EXE}" ] && [ -f "${SIGNED_EXE}" ]; then
+          SHA256_FILE="${SIGNED_EXE}.sha256"
+          (cd "$(dirname "${SIGNED_EXE}")" && sha256sum "$(basename "${SIGNED_EXE}")") > "${SHA256_FILE}"
+          # Convert to Windows paths — actions/upload-artifact runs in Node.js
+          # outside MSYS2 and misinterprets Unix paths like /d/a/... as D:\d\a\...
+          {
+            echo "RELEASE_ASSET_PATH=$(cygpath -aw "${SIGNED_EXE}")"
+            echo "RELEASE_ASSET_SHA256_PATH=$(cygpath -aw "${SHA256_FILE}")"
+          } >> "$GITHUB_ENV"
+          echo "Recomputed SHA256 for signed installer:"
+          cat "${SHA256_FILE}"
+        else
+          echo "::error::Signing step reported success but signed installer not found at ${SIGNED_PATH}"
+          exit 1
+        fi
+
     - name: Create intermediate artifact for debugging
       uses: actions/upload-artifact@v7
       if: env.INTERMEDIATE_ARTIFACT_NAME
@@ -310,6 +340,37 @@ jobs:
       shell: msys2 {0}
       if: env.ARTIFACT_NAME
       run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
+
+    - name: Upload release asset for GitHub Release
+      uses: actions/upload-artifact@v7
+      if: env.RELEASE_ASSET_PATH
+      with:
+        name: release-asset-Windows-X64
+        path: |
+          ${{ env.RELEASE_ASSET_PATH }}
+          ${{ env.RELEASE_ASSET_SHA256_PATH }}
+        retention-days: 3
+
+    - name: Export release metadata
+      if: env.RELEASE_ASSET_PATH
+      shell: msys2 {0}
+      run: |
+        jq -n \
+          --arg version "${VERSION}" \
+          --arg build_suffix "${MUDLET_VERSION_BUILD}" \
+          --arg commit "${BUILD_COMMIT}" \
+          --arg ref "${{ github.ref }}" \
+          --arg event "${{ github.event_name }}" \
+          '{version: $version, build_suffix: $build_suffix, commit: $commit, ref: $ref, event: $event}' \
+          > release-metadata.json
+
+    - name: Upload release metadata
+      uses: actions/upload-artifact@v7
+      if: env.RELEASE_ASSET_PATH
+      with:
+        name: release-metadata-Windows-X64
+        path: release-metadata.json
+        retention-days: 3
 
     - name: Register PTB Release
       shell: msys2 {0}

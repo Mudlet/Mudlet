@@ -4,6 +4,10 @@ on:
   pull_request_target:
     types: [opened, synchronize, reopened, edited]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 concurrency:
   group: ${{github.workflow}}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -11,25 +15,12 @@ concurrency:
 jobs:
   danger:
     runs-on: ubuntu-latest
-    #if: github.event_name  == 'pull_request' # only run pull requests, no really
     steps:
-    - name: Checkout develop branch for danger config
+    - name: Checkout base branch for danger config
       uses: actions/checkout@v6
       with:
-        path: danger-config
         fetch-depth: 1
-    - name: Checkout PR head for file analysis
-      uses: actions/checkout@v6
-      with:
-        ref: ${{github.event.pull_request.head.sha}}
-        path: pr-files
-        fetch-depth: 0
-    - name: Copy danger config to PR workspace
-      run: |
-        cp danger-config/dangerfile.js pr-files/
-        cp danger-config/package.json pr-files/ 2>/dev/null || true
-    - name: Install yarn dependencies and run danger
-      working-directory: pr-files
+    - name: Install dependencies and run danger
       run: |
         yarn add danger --dev
         yarn danger ci

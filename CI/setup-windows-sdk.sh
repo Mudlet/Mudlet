@@ -1,7 +1,7 @@
 #!/bin/bash
 ###########################################################################
 #   Copyright (C) 2024-2026  by John McKisson - john.mckisson@gmail.com   #
-#   Copyright (C) 2023-2025  by Stephen Lyons - slysven@virginmedia.com   #
+#   Copyright (C) 2023-2026  by Stephen Lyons - slysven@virginmedia.com   #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
 #   it under the terms of the GNU General Public License as published by  #
@@ -120,6 +120,7 @@ while true; do
     "${MINGW_PACKAGE_PREFIX}-zlib" \
     "${MINGW_PACKAGE_PREFIX}-boost" \
     "${MINGW_PACKAGE_PREFIX}-yajl" \
+    "${MINGW_PACKAGE_PREFIX}-oniguruma" \
     "${MINGW_PACKAGE_PREFIX}-lua-luarocks" \
     "${MINGW_PACKAGE_PREFIX}-ffmpeg" \
     "${MINGW_PACKAGE_PREFIX}-cmake" \

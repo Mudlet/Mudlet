@@ -200,6 +200,7 @@ void Updater::showDialogManually() const
 void Updater::showChangelog() const
 {
     auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
+    changelogDialog->setAttribute(Qt::WA_DeleteOnClose);
     changelogDialog->setPreviousVersion(getPreviousVersion());
     changelogDialog->show();
 }
@@ -216,6 +217,7 @@ void Updater::showFullChangelog() const
     }
 
     auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
+    changelogDialog->setAttribute(Qt::WA_DeleteOnClose);
     auto releases = feed->getReleases();
     const auto firstVersion = releases.constLast().getVersion();
     changelogDialog->setMinVersion(firstVersion);
