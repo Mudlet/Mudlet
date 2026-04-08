@@ -54,8 +54,16 @@ jobs:
                 runIds[key] = data.workflow_runs[0].id;
               }
             }
-            if (Object.keys(runIds).length === 0) {
+            const totalPlatforms = Object.keys(platforms).length;
+            const completedCount = Object.keys(runIds).length;
+            if (completedCount === 0) {
               core.info('No platform builds have succeeded yet');
+              core.setOutput('ready', 'false');
+              return;
+            }
+            // Release builds must wait for all platforms; PTBs can proceed with partial
+            if (completedCount < totalPlatforms && triggeringRun.head_branch !== 'development') {
+              core.info(`Only ${completedCount}/${totalPlatforms} platforms completed - waiting for all platforms (release build)`);
               core.setOutput('ready', 'false');
               return;
             }
