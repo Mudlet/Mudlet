@@ -100,7 +100,7 @@ void dlgModuleManager::layoutModules()
             }
             masterModule->setText(QString());
             //: Tooltip for master module checkbox
-            masterModule->setToolTip(utils::richText(tr("Master module: saved and resynchronized across all sessions that share it.")));
+            masterModule->setToolTip(utils::richText(tr("Master module: saved and resynchronized across all sessions on Save Profile or session end.")));
 
             // Although there is now no text used here this may help to make the
             // checkbox more central in the column

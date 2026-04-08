@@ -237,7 +237,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                "<li>Add items as <strong>buttons</strong> to a bar or menu.</li>"
                "<li>Define a <strong>command</strong> or script to execute when pressed.</li>"
                "<li><strong>Activate</strong> the item. </li></ol>"
-               "<p><strong>Note:</strong> Deactivated items are hidden.</p>"
+               "<p><strong>Note:</strong> Deactivated items are hidden, including all items they contain.</p>"
                "<p><strong>Click-down buttons:</strong> Can define separate commands for press/release. Use getButtonState() to check state.</p>")},
 //        {qsl("button2"), tr("How to add a new button from the input line"),
 //            tr("")},
@@ -969,7 +969,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                       "active.</p>")
                                            .arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_S).toString(QKeySequence::NativeText)));
     //: Status tip for saving profile
-    mProfileSaveAction->setStatusTip(tr("Save profile (triggers, aliases, scripts, timers, buttons, keys) and synchronize modules."));
+    mProfileSaveAction->setStatusTip(tr("Save profile (triggers, aliases, scripts, timers, buttons, keys - not the map) and synchronize modules."));
 
     mProfileSaveAsAction = new QAction(QIcon(qsl(":/icons/utilities-file-archiver.png")), tr("Save Profile As"), this);
 
