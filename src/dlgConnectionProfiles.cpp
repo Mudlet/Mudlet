@@ -123,7 +123,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mudlet::self()->mShowIconsOnDialogs = !abort->icon().isNull();
 
     //: Welcome message shown on first launch, focused on starting the tutorial.
-    auto Welcome_text_template = tr("<p><center><img src=\":/icons/mudlet-tutorial.png\" width=\"120\" height=\"30\"/></center></p>"
+    auto Welcome_text_template = tr("<p><center><img src=\"tutorialIcon\"/></center></p>"
                                     "<p><center><big><b>Welcome to Mudlet!</b></big></center></p>"
                                     "<p><center>Play a short guided adventure to learn<br>"
                                     "how to navigate in games, use triggers, aliases, and scripting.</center></p>"
@@ -132,6 +132,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
                                     "<img src=\":/icons/mudlet_main_16px.png\"/></p>");
 
     auto pWelcome_document = new QTextDocument(this);
+    QPixmap tutorialIcon(qsl(":/icons/mudlet-tutorial.png"));
+    tutorialIcon = tutorialIcon.scaled(160, 40, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    pWelcome_document->addResource(QTextDocument::ImageResource, QUrl(qsl("tutorialIcon")), tutorialIcon);
 
     mpCopyProfile = new QAction(tr("Copy"), this);
     mpCopyProfile->setObjectName(qsl("copyProfile"));
