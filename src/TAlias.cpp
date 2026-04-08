@@ -380,7 +380,7 @@ QString TAlias::packageName(TAlias* pAlias)
     }
 
     if (!pAlias->mPackageName.isEmpty()) {
-        return !mpHost->mModuleInfo.contains(pAlias->mPackageName) ? pAlias->mPackageName : QString();
+        return !mpHost->mInstalledModules.contains(pAlias->mPackageName) ? pAlias->mPackageName : QString();
     }
 
     if (pAlias->getParent()) {
@@ -397,7 +397,7 @@ QString TAlias::moduleName(TAlias* pAlias)
     }
 
     if (!pAlias->mPackageName.isEmpty()) {
-        return mpHost->mModuleInfo.contains(pAlias->mPackageName) ? pAlias->mPackageName : QString();
+        return mpHost->mInstalledModules.contains(pAlias->mPackageName) ? pAlias->mPackageName : QString();
     }
 
     if (pAlias->getParent()) {
