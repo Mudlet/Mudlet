@@ -1327,7 +1327,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -4493,23 +4493,28 @@ void dlgProfilePreferences::slot_setAppearance(const enums::Appearance state)
         pHost->mEditorTheme = currentTheme;
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
 
-        if (!pHost->mEditorThemeDark.isEmpty()) {
+        // prefer a name-matched counterpart, then stored dark theme, then Monokai default
+        const auto counterpart = findThemeCounterpart(currentTheme, code_editor_theme_selection_combobox, true);
+        if (!counterpart.isEmpty()) {
+            switchEditorTheme(counterpart);
+        } else if (!pHost->mEditorThemeDark.isEmpty() && pHost->mEditorThemeDark != currentTheme) {
             switchEditorTheme(pHost->mEditorThemeDark);
         } else {
-            // try to find a dark counterpart by name
-            const auto counterpart = findThemeCounterpart(currentTheme, code_editor_theme_selection_combobox, true);
-            switchEditorTheme(counterpart.isEmpty() ? qsl("Monokai") : counterpart);
+            switchEditorTheme(qsl("Monokai"));
         }
     } else {
         // save current as the dark theme
         pHost->mEditorThemeDark = currentTheme;
         pHost->mEditorThemeFileDark = code_editor_theme_selection_combobox->currentData().toString();
 
-        if (!pHost->mEditorTheme.isEmpty()) {
+        // prefer a name-matched counterpart, then stored light theme, then Mudlet default
+        const auto counterpart = findThemeCounterpart(currentTheme, code_editor_theme_selection_combobox, false);
+        if (!counterpart.isEmpty()) {
+            switchEditorTheme(counterpart);
+        } else if (!pHost->mEditorTheme.isEmpty() && pHost->mEditorTheme != currentTheme) {
             switchEditorTheme(pHost->mEditorTheme);
         } else {
-            const auto counterpart = findThemeCounterpart(currentTheme, code_editor_theme_selection_combobox, false);
-            switchEditorTheme(counterpart.isEmpty() ? qsl("Mudlet") : counterpart);
+            switchEditorTheme(qsl("Mudlet"));
         }
     }
 }
