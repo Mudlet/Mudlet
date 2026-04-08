@@ -79,7 +79,6 @@ public slots:
 
     void slot_updateAutoConnect(int state);
     void slot_updateAutoReconnect(int state);
-    void slot_updateDiscordOptIn(int state);
     void slot_load();
     void slot_cancel();
     void slot_copyProfile();
@@ -98,7 +97,6 @@ private:
     static bool copyFolder(const QString& sourceFolder, const QString& destFolder);
     QString getDescription(const QString& profile_name) const;
     bool validateConnect();
-    void updateDiscordStatus();
     bool validateProfile();
     void loadProfile(bool alsoConnect);
     void copyProfileSettingsOnly(const QString& oldname, const QString& newname);
