@@ -544,6 +544,13 @@ void T2DMap::switchArea(const QString& newAreaName)
         return;
     }
 
+    if (mMoveLabel) {
+        mMoveLabel = false;
+        setMouseTracking(false);
+        mLabelHighlighted = false;
+        mHelpMsg.clear();
+    }
+
     const int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
     TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(playerRoomId);
     int playerAreaID = -2; // Cannot be valid (but -1 can be)!
@@ -2011,11 +2018,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
         if (mapLabel.pos.z() != mMapCenterZ) {
             continue;
         }
-        if (mapLabel.text.isEmpty()) {
-            //: Default text if a label is created in mapper with no text
-            mapLabel.text = tr("no text");
-            pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
-        }
         QPointF labelPosition;
         const int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
         const int labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
@@ -2043,8 +2045,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
 
         if (mapLabel.highlight) {
-            labelPaintRectangle.setSize(mapLabel.clickSize);
-            painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
+            paintLabelHighlight(painter, labelPaintRectangle, mapLabel.clickSize);
         }
     }
 
@@ -2145,11 +2146,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
         if (mapLabel.pos.z() != mMapCenterZ) {
             continue;
         }
-        if (mapLabel.text.isEmpty()) {
-            //: Default text if a label is created in mapper with no text
-            mapLabel.text = tr("no text");
-            pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
-        }
         QPointF labelPosition;
         const int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
         const int labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
@@ -2176,8 +2172,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
         if (mapLabel.highlight) {
-            labelPaintRectangle.setSize(mapLabel.clickSize);
-            painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
+            paintLabelHighlight(painter, labelPaintRectangle, mapLabel.clickSize);
         }
     }
 
@@ -3073,6 +3068,16 @@ void T2DMap::createLabel(QRectF labelRectangle)
     mpDlgMapLabel->updated();
 }
 
+void T2DMap::paintLabelHighlight(QPainter& painter, QRectF labelPaintRectangle, const QSizeF& clickSize)
+{
+    labelPaintRectangle.setSize(clickSize);
+    painter.save();
+    painter.setPen(QPen(QColor(255, 155, 55), 2));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawRect(labelPaintRectangle);
+    painter.restore();
+}
+
 void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
 {
     TMapLabel label;
@@ -3652,6 +3657,21 @@ void T2DMap::slot_deleteCustomExitLine()
 void T2DMap::slot_moveLabel()
 {
     mMoveLabel = true;
+    setMouseTracking(true);
+    //: 2D Mapper big, bottom of screen help message when moving a label
+    mHelpMsg = tr("Click to finish moving the label.");
+
+    auto [mx, my] = getMousePosition();
+    auto* area = mpMap->mpRoomDB->getArea(mAreaID);
+    if (area) {
+        for (auto& mapLabel : area->mMapLabels) {
+            if (mapLabel.highlight) {
+                mapLabel.pos = QVector3D(static_cast<float>(mx), static_cast<float>(my), static_cast<float>(mMapCenterZ));
+            }
+        }
+    }
+
+    update();
 }
 
 void T2DMap::slot_deleteLabel()
@@ -5164,8 +5184,7 @@ void T2DMap::setPlayerRoomStyle(const int type)
         return;
     }
 
-    mPlayerRoomColorGradientStops = buildPlayerRoomGradientStops(
-            type, mpMap->mPlayerRoomInnerDiameterPercentage, mpMap->mPlayerRoomInnerColor, mpMap->mPlayerRoomOuterColor);
+    mPlayerRoomColorGradientStops = buildPlayerRoomGradientStops(type, mpMap->mPlayerRoomInnerDiameterPercentage, mpMap->mPlayerRoomInnerColor, mpMap->mPlayerRoomOuterColor);
 }
 
 QGradientStops T2DMap::buildPlayerRoomGradientStops(const int style, const quint8 innerDiameterPercentage, const QColor& innerColor, const QColor& outerColor)
@@ -5176,53 +5195,31 @@ QGradientStops T2DMap::buildPlayerRoomGradientStops(const int style, const quint
     switch (style) {
     case 1: // Simple(?) shaded red ring:
         if (solid) {
-            return {{0.000, QColor(255, 0, 0, 255)},
-                    {0.990, QColor(255, 0, 0, 255)},
-                    {1.000, QColor(255, 0, 0, 0)}};
+            return {{0.000, QColor(255, 0, 0, 255)}, {0.990, QColor(255, 0, 0, 255)}, {1.000, QColor(255, 0, 0, 0)}};
         }
-        return {{0.000, QColor(255, 0, 0, 0)},
-                {factor * 0.980, QColor(255, 0, 0, 0)},
-                {factor * 1.020, QColor(255, 0, 0, 255)},
-                {0.980, QColor(255, 0, 0, 255)},
-                {1.000, QColor(255, 0, 0, 0)}};
+        return {{0.000, QColor(255, 0, 0, 0)}, {factor * 0.980, QColor(255, 0, 0, 0)}, {factor * 1.020, QColor(255, 0, 0, 255)}, {0.980, QColor(255, 0, 0, 255)}, {1.000, QColor(255, 0, 0, 0)}};
 
     case 2: // Shaded bicolor (blue-yellow - so it ALWAYS contrasts with underlying room color) Ring:
         if (solid) {
-            return {{0.000, QColor(255, 255, 0, 255)},
-                    {0.990, QColor(0, 0, 255, 255)},
-                    {1.000, QColor(0, 0, 255, 0)}};
+            return {{0.000, QColor(255, 255, 0, 255)}, {0.990, QColor(0, 0, 255, 255)}, {1.000, QColor(0, 0, 255, 0)}};
         }
-        return {{0.000, QColor(255, 255, 0, 0)},
-                {factor * 0.980, QColor(255, 255, 0, 0)},
-                {factor * 1.020, QColor(255, 255, 0, 255)},
-                {0.980, QColor(0, 0, 255, 255)},
-                {1.000, QColor(0, 0, 255, 0)}};
+        return {{0.000, QColor(255, 255, 0, 0)}, {factor * 0.980, QColor(255, 255, 0, 0)}, {factor * 1.020, QColor(255, 255, 0, 255)}, {0.980, QColor(0, 0, 255, 255)}, {1.000, QColor(0, 0, 255, 0)}};
 
     case 3: { // User set ring:
         if (solid) {
             QColor transparentOuter(outerColor);
             transparentOuter.setAlpha(0);
-            return {{0.000, innerColor},
-                    {0.990, outerColor},
-                    {1.000, transparentOuter}};
+            return {{0.000, innerColor}, {0.990, outerColor}, {1.000, transparentOuter}};
         }
         QColor transparentInner(innerColor);
         transparentInner.setAlpha(0);
         QColor transparentOuter(outerColor);
         transparentOuter.setAlpha(0);
-        return {{0.000, transparentInner},
-                {factor * 0.980, transparentInner},
-                {factor * 1.020, innerColor},
-                {0.980, outerColor},
-                {1.000, transparentOuter}};
+        return {{0.000, transparentInner}, {factor * 0.980, transparentInner}, {factor * 1.020, innerColor}, {0.980, outerColor}, {1.000, transparentOuter}};
     }
 
     default: // Sort of emulates the original code:
-        return {{0, Qt::white},
-                {0.7, QColor(255, 0, 0, 200)},
-                {0.799, QColor(150, 100, 100, 100)},
-                {0.80, QColor(150, 100, 100, 150)},
-                {0.95, QColor(255, 0, 0, 150)}};
+        return {{0, Qt::white}, {0.7, QColor(255, 0, 0, 200)}, {0.799, QColor(150, 100, 100, 100)}, {0.80, QColor(150, 100, 100, 150)}, {0.95, QColor(255, 0, 0, 150)}};
     }
 }
 
@@ -5386,10 +5383,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         if (mapLabel.pos.z() != exportZLevel) {
             continue;
         }
-        if (mapLabel.text.isEmpty()) {
-            mapLabel.text = tr("no text");
-            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
-        }
         // Use export coordinate system for label positioning
         const int exportRX = padding - (pArea->min_x * finalRoomSize);
         const int exportRY = padding - (pArea->min_y * finalRoomSize);
@@ -5421,8 +5414,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         }
 
         if (mapLabel.highlight) {
-            labelPaintRectangle.setSize(mapLabel.clickSize);
-            painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
+            paintLabelHighlight(painter, labelPaintRectangle, mapLabel.clickSize);
         }
     }
 
@@ -5964,8 +5956,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
             pArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
         if (mapLabel.highlight) {
-            labelPaintRectangle.setSize(mapLabel.clickSize);
-            painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
+            paintLabelHighlight(painter, labelPaintRectangle, mapLabel.clickSize);
         }
     }
 
