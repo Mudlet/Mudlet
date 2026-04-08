@@ -22,8 +22,6 @@ The control has three settings:
 - **Checked** '*wide*' = Draw ambiguous width characters two 'spaces' wide.
 - **Partly checked** *(Default) 'auto'* = Use 'wide' setting for MUD Server encodings of **Big5**/**Big5-HKSCS**, **GBK**, **GBK18030** or **EUC-KR** and 'narrow' for all others.
 
-*Note: This is a temporary arrangement and will probably change when Mudlet gains full support for languages other than English.*
-
 ---
 
 ## Manual:Mapper - Map Symbol Font Section

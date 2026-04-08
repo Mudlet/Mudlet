@@ -463,16 +463,16 @@ void dlgRoomExits::slot_addSpecialExit()
 
     pI->setCheckState(ExitsTreeWidget::colIndex_doorNone, Qt::Checked); //Doortype: none
     //: Tooltip for no door symbol option
-    pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, utils::richText(tr("No door symbol on 2D map (only functional option currently).")));
+    pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, utils::richText(tr("No door symbol drawn on the 2D map for this exit.")));
     pI->setCheckState(ExitsTreeWidget::colIndex_doorOpen, Qt::Unchecked); //Doortype: open
     //: Tooltip for open door symbol option
-    pI->setToolTip(ExitsTreeWidget::colIndex_doorOpen, utils::richText(tr("Green (open) door symbol (not currently functional).")));
+    pI->setToolTip(ExitsTreeWidget::colIndex_doorOpen, utils::richText(tr("Green (open) door symbol drawn on the 2D map.")));
     pI->setCheckState(ExitsTreeWidget::colIndex_doorClosed, Qt::Unchecked); //Doortype: closed
     //: Tooltip for closed door symbol option
-    pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, utils::richText(tr("Orange (closed) door symbol (not currently functional).")));
+    pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, utils::richText(tr("Orange (closed) door symbol drawn on the 2D map.")));
     pI->setCheckState(ExitsTreeWidget::colIndex_doorLocked, Qt::Unchecked); //Doortype: locked
     //: Tooltip for locked door symbol option
-    pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, utils::richText(tr("Red (locked) door symbol (not currently functional).")));
+    pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, utils::richText(tr("Red (locked) door symbol drawn on the 2D map.")));
 
     pI->setText(ExitsTreeWidget::colIndex_command, mSpecialExitCommandPlaceholder); //Exit command
     pI->setTextAlignment(ExitsTreeWidget::colIndex_command, Qt::AlignLeft);
@@ -1830,13 +1830,13 @@ void dlgRoomExits::init()
         pI->setCheckState(ExitsTreeWidget::colIndex_doorClosed, Qt::Unchecked);
         pI->setCheckState(ExitsTreeWidget::colIndex_doorLocked, Qt::Unchecked);
         //: Tooltip for no door symbol option
-        pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, utils::richText(tr("No door symbol on 2D map (only functional option currently).")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, utils::richText(tr("No door symbol drawn on the 2D map for this exit.")));
         //: Tooltip for open door symbol option
-        pI->setToolTip(ExitsTreeWidget::colIndex_doorOpen, utils::richText(tr("Green (open) door symbol (not currently functional).")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorOpen, utils::richText(tr("Green (open) door symbol drawn on the 2D map.")));
         //: Tooltip for closed door symbol option
-        pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, utils::richText(tr("Orange (closed) door symbol (not currently functional).")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, utils::richText(tr("Orange (closed) door symbol drawn on the 2D map.")));
         //: Tooltip for locked door symbol option
-        pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, utils::richText(tr("Red (locked) door symbol (not currently functional).")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, utils::richText(tr("Red (locked) door symbol drawn on the 2D map.")));
         {
             const int specialDoor = pR->getDoor(dir);
             switch (specialDoor) {

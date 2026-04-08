@@ -102,10 +102,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     // settings suggest it:
     mudlet::self()->mShowIconsOnDialogs = !abort->icon().isNull();
 
-    //: Welcome message for new users
     auto Welcome_text_template = tr("<p><center><big><b>Welcome to Mudlet!</b></big></center></p>"
-                                    "<p><center><b>Double-click </b>Mudlet Tutorial<b> or select a game from the list.</b></center></p>"
-                                    "<p>For unlisted games: Click %1 <span style=\" color:#555753;\">New</span>, enter connection details, then click %2 <span style=\" color:#555753;\">Connect</span>.</p>"
+                                    "<p><center><b>To get started, double-click on </b>Mudlet Tutorial<b> or select a game from the list.</b></center></p>"
+                                    "<p>Want to play a game that's not listed?</p>"
+                                    "<p>Click %1 <span style=\" color:#555753;\">New</span>, then enter the <i>Profile Name</i>, <i>Server Address</i>, and <i>Port</i> in the required fields.</p>"
+                                    "<p>Once you're ready, click %2 <span style=\" color:#555753;\">Connect</span> to begin your adventure.</p>"
                                     "<p>Have fun!</p><p align=\"right\"><span style=\" font-family:'Sans';\">The Mudlet Team </span>"
                                     "<img src=\":/icons/mudlet_main_16px.png\"/></p>",
                                     "Welcome message. Both %1 and %2 may be replaced by icons when this text is used.");
