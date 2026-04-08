@@ -258,6 +258,7 @@ private slots:
 
     const auto &itemType = mItemTypes[itemTypeIndex];
     itemType.showView();
+    cleanupAll(itemType);
 
     // Test: Add item → undo → redo
     {
