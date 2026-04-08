@@ -108,10 +108,15 @@ void FontManager::unloadFonts(const QString& belongsTo)
         if (id == -1) {
             continue;
         }
+
         // Only remove from Qt if no other owner still references this font
         if (!loadedFontAffiliation.keys(id).isEmpty()) {
+            continue;
         }
+
+        // Proceed with unloading
         QFontDatabase::removeApplicationFont(id);
+
         // Remove from loadedFontPaths so the font can be re-registered
         // if the package is reinstalled
         const auto fileName = loadedFontPaths.key(id);
