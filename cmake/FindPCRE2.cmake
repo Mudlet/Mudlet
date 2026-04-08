@@ -13,14 +13,26 @@
 find_package(PCRE2 CONFIG QUIET COMPONENTS 8BIT)
 
 if(PCRE2_FOUND)
+  message(STATUS "Found PCRE2 via CMake config")
   # PCRE2's config file typically creates targets like PCRE2::8BIT or PCRE2::PCRE2-8
   if(TARGET PCRE2::8BIT AND NOT TARGET PCRE2::PCRE2)
-    add_library(PCRE2::PCRE2 ALIAS PCRE2::8BIT)
+    # On FreeBSD PCRE2::8BIT exists but it is already an alias so cannot itself
+    # be made the target of another alias:
+    # From: https://stackoverflow.com/a/76554700/4805858
+    get_property(aliased_target TARGET PCRE2::8BIT PROPERTY ALIASED_TARGET)
+    if("${aliased_target}" STREQUAL "")
+      # is not an alias - so we can use it to make the alias
+      add_library(PCRE2::PCRE2 ALIAS PCRE2::8BIT)
+      message(STATUS "Aliasing PCRE2::PCRE2 to PCRE2::8BIT")
+    else()
+      # is an alias - so we have to use what it is aliased to
+      add_library(PCRE2::PCRE2 ALIAS ${aliased_target})
+      message(STATUS "Aliasing PCRE2::PCRE2 to ${aliased_target}")
+    endif()
   elseif(TARGET PCRE2::PCRE2-8 AND NOT TARGET PCRE2::PCRE2)
     add_library(PCRE2::PCRE2 ALIAS PCRE2::PCRE2-8)
+    message(STATUS "Aliasing PCRE2::PCRE2 to PCRE2::PCRE2-8")
   endif()
-  set(PCRE2_FOUND TRUE)
-  message(STATUS "Found PCRE2 via CMake config")
   return()
 endif()
 

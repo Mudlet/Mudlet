@@ -296,6 +296,16 @@
             </property>
            </widget>
           </item>
+          <item row="3" column="0" colspan="2">
+           <widget class="QCheckBox" name="telnetHandlerEnabled">
+            <property name="text">
+             <string>Mudlet handles telnet:// links</string>
+            </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;If checked, Mudlet will be registered as the default handler for telnet:// links in your system.&lt;/p&gt;</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -2702,7 +2712,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <string>Inner diameter: </string>
                </property>
                <property name="maximum">
-                <number>83</number>
+                <number>96</number>
                </property>
                <property name="value">
                 <number>70</number>
@@ -2794,6 +2804,44 @@ you can use it but there could be issues with aligning columns of text</string>
               </widget>
              </item>
              <item row="0" column="4">
+              <widget class="QLabel" name="label_borderSize">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Border size:</string>
+               </property>
+               <property name="buddy">
+                <cstring>spinBox_borderSize</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="5">
+              <widget class="QSpinBox" name="spinBox_borderSize">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+               <property name="minimum">
+                <number>1</number>
+               </property>
+               <property name="maximum">
+                <number>11</number>
+               </property>
+               <property name="value">
+                <number>5</number>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="6">
               <widget class="QLabel" name="label_gridSize">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
@@ -2821,17 +2869,17 @@ you can use it but there could be issues with aligning columns of text</string>
                 <set>Qt::AlignmentFlag::AlignCenter</set>
                </property>
                <property name="minimum">
-                <number>2</number>
+                <number>1</number>
                </property>
                <property name="maximum">
-                <number>20</number>
+                <number>11</number>
                </property>
                <property name="value">
-                <number>7</number>
+                <number>5</number>
                </property>
               </widget>
              </item>
-             <item row="0" column="5">
+             <item row="0" column="7">
               <widget class="QDoubleSpinBox" name="doubleSpinBox_gridSize">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
@@ -4371,7 +4419,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="6" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_enableBlinkText">
             <property name="toolTip">
-             <string>&lt;p&gt;When enabled, text with blinking attribute (SGR codes 5 and 6) will flash on and off. When disabled, blinking text will display as italics.&lt;/p&gt;</string>
+             <string>&lt;p&gt;When enabled, text with the blinking attribute (SGR codes 5 and 6) is displayed with a smooth pulsing effect. When disabled, blinking text is shown in italics instead.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Enable blinking text</string>

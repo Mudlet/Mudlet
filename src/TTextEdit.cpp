@@ -56,7 +56,9 @@
 #include <QScrollBar>
 #include <QStringRef>
 #include <QTextBoundaryFinder>
+#include <QLabel>
 #include <QToolTip>
+#include <QWidgetAction>
 #include <QVersionNumber>
 
 // Renders text on screen
@@ -101,7 +103,9 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     setAttribute(Qt::WA_OpaquePaintEvent, false);
     setAttribute(Qt::WA_DeleteOnClose);
 
-    connect(mudlet::self(), &mudlet::signal_blinkStateChanged, this, &TTextEdit::slot_blinkStateChanged);
+    if (auto* pMudlet = mudlet::self()) {
+        connect(pMudlet, &mudlet::signal_blinkStateChanged, this, &TTextEdit::slot_blinkStateChanged);
+    }
 
     // Scroll optimizations may use cached screen data, missing blinking content detection
     mpScrollStoppedTimer = new QTimer(this);
@@ -869,18 +873,14 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     const bool isBlinking = attributes & (TChar::Blink | TChar::FastBlink);
 
     bool isItalics = attributes & TChar::Italic;
+    QColor effectiveFgColor = fgColor;
     if (isBlinking) {
         mHasBlinkingContent = true;
         if (mEnableBlinkText) {
             const bool isFastBlink = attributes & TChar::FastBlink;
             auto pMudlet = mudlet::self();
-            const bool isVisible = pMudlet ? (isFastBlink ? pMudlet->fastBlinkState() : pMudlet->slowBlinkState()) : true;
-            if (!isVisible) {
-                if (!textRect.isNull()) {
-                    drawCustomDecorations(painter, fgColor, textRect, charStyle);
-                }
-                return;
-            }
+            const qreal opacity = pMudlet ? pMudlet->blinkPulseOpacity(isFastBlink) : 1.0;
+            effectiveFgColor.setAlphaF(effectiveFgColor.alphaF() * opacity);
         } else {
             isItalics = true;
         }
@@ -920,13 +920,13 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
         return;
     }
 
-    if (painter.pen().color() != fgColor) {
-        painter.setPen(fgColor);
+    if (painter.pen().color() != effectiveFgColor) {
+        painter.setPen(effectiveFgColor);
     }
     painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
 
     // Draw custom decorations (colored underlines, overlines, strikethrough)
-    drawCustomDecorations(painter, fgColor, textRect, charStyle);
+    drawCustomDecorations(painter, effectiveFgColor, textRect, charStyle);
 }
 
 void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultColor, const QRect& textRect, TChar& charStyle) const
@@ -1201,7 +1201,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 
     //delete non used characters.
     //needed for horizontal scrolling because there sometimes characters didn't get cleared
-    QRect deleteRect = QRect(0, from * mFontHeight, x_right * mFontHeight, (y_bottom + 1) * mFontHeight);
+    QRect deleteRect = QRect(0, from * mFontHeight, x_right * mFontWidth, (y_bottom + 1) * mFontHeight);
     p.setCompositionMode(QPainter::CompositionMode_Source);
     p.fillRect(deleteRect, Qt::transparent);
 
@@ -1228,12 +1228,14 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     mForceUpdate = false;
 
     const bool shouldBeRegistered = mEnableBlinkText && mHasBlinkingContent;
-    if (shouldBeRegistered && !mIsBlinkClientRegistered) {
-        mudlet::self()->registerBlinkClient();
-        mIsBlinkClientRegistered = true;
-    } else if (!shouldBeRegistered && mIsBlinkClientRegistered) {
-        mudlet::self()->unregisterBlinkClient();
-        mIsBlinkClientRegistered = false;
+    if (auto* pMudlet = mudlet::self()) {
+        if (shouldBeRegistered && !mIsBlinkClientRegistered) {
+            pMudlet->registerBlinkClient();
+            mIsBlinkClientRegistered = true;
+        } else if (!shouldBeRegistered && mIsBlinkClientRegistered) {
+            pMudlet->unregisterBlinkClient();
+            mIsBlinkClientRegistered = false;
+        }
     }
 }
 
@@ -2024,10 +2026,10 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     text.append("        span { white-space: pre-wrap; }\n");
 
     if (mEnableBlinkText) {
-        text.append("        @keyframes blink-slow { 50% { opacity: 0; } }\n");
-        text.append("        @keyframes blink-fast { 50% { opacity: 0; } }\n");
-        text.append("        .blink-slow { animation: blink-slow 0.8s step-end infinite; }\n");
-        text.append("        .blink-fast { animation: blink-fast 0.4s step-end infinite; }\n");
+        text.append("        @keyframes blink-slow { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }\n");
+        text.append("        @keyframes blink-fast { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }\n");
+        text.append("        .blink-slow { animation: blink-slow 2s ease-in-out infinite; }\n");
+        text.append("        .blink-fast { animation: blink-fast 1s ease-in-out infinite; }\n");
     }
 
     text.append("     -->\n");
@@ -2333,6 +2335,41 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
 
                         auto popup = new QMenu(this);
                         popup->setAttribute(Qt::WA_DeleteOnClose);
+                        popup->setFont(font());
+
+                        if (!hyperlinkStyling.menuTitle.isEmpty()) {
+                            auto titleLabel = new QLabel(hyperlinkStyling.menuTitle, popup);
+                            titleLabel->setFont(font());
+
+                            // Build stylesheet from title style properties
+                            QStringList styleProps;
+                            styleProps << qsl("padding: 4px 20px");
+
+                            if (hyperlinkStyling.menuTitleStyle.hasForegroundColor) {
+                                styleProps << qsl("color: %1").arg(hyperlinkStyling.menuTitleStyle.foregroundColor.name());
+                            } else {
+                                styleProps << qsl("color: #5fbdaf"); // Default teal
+                            }
+
+                            if (hyperlinkStyling.menuTitleStyle.hasBackgroundColor) {
+                                styleProps << qsl("background-color: %1").arg(hyperlinkStyling.menuTitleStyle.backgroundColor.name());
+                            }
+
+                            if (hyperlinkStyling.menuTitleStyle.isBold) {
+                                styleProps << qsl("font-weight: bold");
+                            }
+
+                            if (hyperlinkStyling.menuTitleStyle.isItalic) {
+                                styleProps << qsl("font-style: italic");
+                            }
+
+                            titleLabel->setStyleSheet(styleProps.join(qsl("; ")));
+                            auto titleWidgetAction = new QWidgetAction(popup);
+                            titleWidgetAction->setDefaultWidget(titleLabel);
+                            popup->addAction(titleWidgetAction);
+                            popup->addSeparator();
+                        }
+
                         mPopupCommands.clear();
                         for (int i = 0, total = command.size(); i < total; ++i) {
                             QAction* pA = nullptr;
@@ -2371,7 +2408,11 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         mIsCommandPopup = false;
 
 
-        QAction* action = new QAction(tr("Copy"), this);
+        auto popup = new QMenu(this);
+        popup->setAttribute(Qt::WA_DeleteOnClose);
+        popup->setToolTipsVisible(true); // Not the default...
+
+        QAction* action = new QAction(tr("Copy"), popup);
         // According to the Qt Documentation:
         // "This text is used for the tooltip."
         // "If no tooltip is specified, the action's text is used."
@@ -2382,19 +2423,19 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         // in the QAction constructor:
         action->setToolTip(QString());
         connect(action, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboard);
-        QAction* action2 = new QAction(tr("Copy HTML"), this);
+        QAction* action2 = new QAction(tr("Copy HTML"), popup);
         action2->setToolTip(QString());
         connect(action2, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardHTML);
 
-        auto* actionCopyImage = new QAction(tr("Copy as image"), this);
+        auto* actionCopyImage = new QAction(tr("Copy as image"), popup);
         connect(actionCopyImage, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardImage);
 
-        QAction* action3 = new QAction(tr("Select all"), this);
+        QAction* action3 = new QAction(tr("Select all"), popup);
         action3->setToolTip(QString());
         connect(action3, &QAction::triggered, this, &TTextEdit::slot_selectAll);
 
         QString selectedEngine = mpHost ? mpHost->getSearchEngine().first : tr("Unknown");
-        QAction* action4 = new QAction(tr("Search on %1").arg(selectedEngine), this);
+        QAction* action4 = new QAction(tr("Search on %1").arg(selectedEngine), popup);
         action4->setToolTip(QString());
         connect(action4, &QAction::triggered, this, &TTextEdit::slot_searchSelectionOnline);
         if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
@@ -2402,10 +2443,6 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
             action3->setIcon(QIcon::fromTheme(qsl("edit-select-all"), QIcon(qsl(":/icons/edit-select-all.png"))));
             action4->setIcon(QIcon::fromTheme(qsl("edit-web-search"), QIcon(qsl(":/icons/edit-web-search.png"))));
         }
-
-        auto popup = new QMenu(this);
-        popup->setAttribute(Qt::WA_DeleteOnClose);
-        popup->setToolTipsVisible(true); // Not the default...
         popup->addAction(action);
         popup->addAction(action2);
         popup->addAction(actionCopyImage);
@@ -2413,7 +2450,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         popup->addAction(action3);
 
         if (mDragStart != mDragSelectionEnd && mpHost->mEnableTextAnalyzer) {
-            mpContextMenuAnalyser = new QAction(tr("Analyse characters"), this);
+            mpContextMenuAnalyser = new QAction(tr("Analyse characters"), popup);
             // NOTE: If running inside the Qt Creator IDE using the debugger with
             // the hovered() signal can be *problematic* - as hitting a
             // breakpoint - or getting an OS signal (like a Segment Violation)
@@ -2431,11 +2468,11 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         popup->addAction(action4);
 
         if (!mudlet::self()->isControlsVisible()) {
-            QAction* actionRestoreMainMenu = new QAction(tr("restore Main menu"), this);
+            QAction* actionRestoreMainMenu = new QAction(tr("restore Main menu"), popup);
             connect(actionRestoreMainMenu, &QAction::triggered, mudlet::self(), &mudlet::slot_restoreMainMenu);
             actionRestoreMainMenu->setToolTip(utils::richText(tr("Use this to restore the Main menu to get access to controls.")));
 
-            QAction* actionRestoreMainToolBar = new QAction(tr("restore Main Toolbar"), this);
+            QAction* actionRestoreMainToolBar = new QAction(tr("restore Main Toolbar"), popup);
             connect(actionRestoreMainToolBar, &QAction::triggered, mudlet::self(), &mudlet::slot_restoreMainToolBar);
             actionRestoreMainToolBar->setToolTip(utils::richText(tr("Use this to restore the Main Toolbar to get access to controls.")));
 
@@ -2445,7 +2482,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         }
 
         if (mpConsole->getType() == TConsole::ErrorConsole) {
-            QAction* clearErrorConsole = new QAction(tr("Clear console"), this);
+            QAction* clearErrorConsole = new QAction(tr("Clear console"), popup);
             connect(clearErrorConsole, &QAction::triggered, this, [=, this]() {
                 mpConsole->buffer.clear();
                 mpConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
@@ -2462,7 +2499,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                 QStringList actionInfo = it.value();
                 const QString& uniqueName = it.key();
                 const QString& actionName = actionInfo.at(1);
-                QAction* mouseAction = new QAction(actionName, this);
+                QAction* mouseAction = new QAction(actionName, popup);
                 mouseAction->setToolTip(actionInfo.at(2));
                 popup->addAction(mouseAction);
                 connect(mouseAction, &QAction::triggered, this, [this, uniqueName] {
@@ -3238,23 +3275,25 @@ void TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide(const bool state)
     }
 }
 
-void TTextEdit::slot_changeEnableBlinkText(const bool state)
+void TTextEdit::slot_changeEnableBlinkText(const bool enable)
 {
-    if (mEnableBlinkText != state) {
-        mEnableBlinkText = state;
+    if (mEnableBlinkText != enable) {
+        mEnableBlinkText = enable;
         if (!mEnableBlinkText && mIsBlinkClientRegistered) {
-            mudlet::self()->unregisterBlinkClient();
+            if (auto* pMudlet = mudlet::self()) {
+                pMudlet->unregisterBlinkClient();
+            }
             mIsBlinkClientRegistered = false;
         }
         update();
     }
 }
 
-void TTextEdit::slot_blinkStateChanged(bool slowState, bool fastState)
+void TTextEdit::slot_blinkStateChanged()
 {
-    Q_UNUSED(slowState);
-    Q_UNUSED(fastState);
-    forceUpdate();
+    if (mIsBlinkClientRegistered) {
+        forceUpdate();
+    }
 }
 
 void TTextEdit::slot_scrollStoppedTimeout()
@@ -3596,8 +3635,9 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         break;
     case Qt::Key_End:
         if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
-            newCaretLine = mpBuffer->lineBuffer.length() - 1;
-            newCaretColumn = mpBuffer->lineBuffer[mCaretLine].length() - 1;
+            const int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty() ? 1 : 0;
+            newCaretLine = mpBuffer->lineBuffer.length() - 1 - emptyLastLine;
+            newCaretColumn = std::max(0, static_cast<int>(mpBuffer->lineBuffer[newCaretLine].length()) - 1);
         } else {
             newCaretColumn = mpBuffer->lineBuffer.at(mCaretLine).length() - 1;
         }

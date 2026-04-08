@@ -267,13 +267,15 @@ else
     # appended the short commit SHA1 - and just not worry about any sort of
     # sorting:
     INSTALLER_VERSION="${VERSION}-ptb-${BUILD_COMMIT,,}${BUILD_COUNTER_SUFFIX}"
-    # The name we want to use for the installer;
+    # The actual installer filename. Must NOT include '-installer' for PTBs —
+    # make.mudlet.org's gha_queue processor matches the extracted filename from
+    # the GHA artifact ZIP, and it expects this convention.
     # Typically of form: 'Mudlet-4.19.1-ptb-2025-01-01-012345678-windows-64.exe'
     # Or with build counter: 'Mudlet-4.19.1-ptb-2025-01-01-012345678rebuild2-windows-64.exe'
     INSTALLER_EXE="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64.exe"
     DBLSQD_VERSION_STRING="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}${BUILD_COUNTER_SUFFIX}"
-    # The name that has to be passed as the artifact so that the Mudlet website
-    # will accept it as a PTB:
+    # The GHA artifact name — includes '-installer' so make.mudlet.org
+    # recognises it as a PTB installer (distinct from the snapshot .zip):
     ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64-installer.exe"
   else
     NAME_SUFFIX='_64_'
@@ -325,6 +327,20 @@ else
   INSTALLER_EXE_PATHFILE="$(cygpath -au "${RELEASE_DIR}/${INSTALLER_EXE}")"
   echo "Renaming \"Mudlet${NAME_SUFFIX}Setup.exe\" to \"${INSTALLER_EXE}\""
   mv "${RELEASE_DIR}/Mudlet${NAME_SUFFIX}Setup.exe" "${INSTALLER_EXE_PATHFILE}"
+
+  echo "=== Generating SHA256 checksum for GitHub Release ==="
+  (cd "$(dirname "${INSTALLER_EXE_PATHFILE}")" && sha256sum "$(basename "${INSTALLER_EXE_PATHFILE}")") > "${INSTALLER_EXE_PATHFILE}.sha256"
+  if [ ! -s "${INSTALLER_EXE_PATHFILE}.sha256" ]; then
+    echo "Error: SHA256 checksum generation failed for ${INSTALLER_EXE_PATHFILE}"
+    exit 1
+  fi
+  {
+    echo "RELEASE_ASSET_PATH=${INSTALLER_EXE_WINPATHFILE}"
+    echo "RELEASE_ASSET_SHA256_PATH=$(cygpath -aw "${INSTALLER_EXE_PATHFILE}.sha256")"
+    echo "VERSION=${VERSION}"
+    echo "MUDLET_VERSION_BUILD=${MUDLET_VERSION_BUILD}"
+    echo "BUILD_COMMIT=${BUILD_COMMIT}"
+  } >> "${GITHUB_ENV}"
 
   if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
     echo "=== Preparing artifact for PTB for upload to make.mudlet.org ==="
@@ -407,7 +423,8 @@ EOF
     echo "=== Uploading portable ZIP to mudlet.org ==="
     # Define portable ZIP paths
     PORTABLE_ZIP_NAME="Mudlet-portable-${MSYSTEM,,}.zip"
-    PORTABLE_ZIP_PATH="${GITHUB_WORKSPACE_UNIX_PATH}/${PORTABLE_ZIP_NAME}"
+    PORTABLE_ZIP_PATH="$(cygpath -au "${GITHUB_WORKSPACE}")/${PORTABLE_ZIP_NAME}"
+    PORTABLE_ZIP_WINPATH="$(cygpath -aw "${PORTABLE_ZIP_PATH}")"
 
     # Check if portable ZIP exists
     if [[ -f "${PORTABLE_ZIP_PATH}" ]]; then
@@ -420,7 +437,7 @@ EOF
       # Upload portable ZIP via SCP with proper naming
       PORTABLE_REMOTE_NAME="Mudlet-${VERSION}-windows-64-portable.zip"
       powershell.exe <<EOF
-\$portableZipPath = "${PORTABLE_ZIP_PATH}"
+\$portableZipPath = "${PORTABLE_ZIP_WINPATH}"
 \$DEPLOY_PATH = "${DEPLOY_PATH}"
 \$remoteFileName = "${PORTABLE_REMOTE_NAME}"
 scp.exe -i temp_key_file_portable -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$portableZipPath mudmachine@mudlet.org:\${DEPLOY_PATH}/\$remoteFileName

@@ -171,6 +171,11 @@ cTelnet::~cTelnet()
         mpPostingTimer->stop();
     }
 
+    // Release zlib resources if MCCP compression was still active
+    if (mNeedDecompression) {
+        inflateEnd(&mZstream);
+    }
+
     // Aggressively disconnect the sockets to prevent signals during destruction
     if (mpSocket && mpSocket->state() != QAbstractSocket::UnconnectedState) {
         // Block all signals from the socket first
@@ -660,6 +665,9 @@ void cTelnet::slot_socketDisconnected()
  the rules of the "QDateTime::toString(...)" function and may need
  modification for some locales, e.g. France, Spain.*/
                                              .toString(tr("hh:mm:ss.zzz")));
+    if (mNeedDecompression) {
+        inflateEnd(&mZstream);
+    }
     mNeedDecompression = false;
     reset();
 
@@ -1400,6 +1408,8 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
             //: %1 is the file path, %2 is the error message
             postMessage(tr("[ WARN ]  - Package download failed: could not open file '%1' for writing, reason: %2").arg(mServerPackage, file.errorString()));
             qWarning() << "ctelnet: failed to open file for writing:" << file.errorString();
+            reply->deleteLater();
+            mpPackageDownloadReply = nullptr;
             return;
         }
 
@@ -1409,6 +1419,8 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
             //: %1 is the error message
             postMessage(tr("[ WARN ]  - Package download failed: could not save file, reason: %1").arg(file.errorString()));
             qDebug() << "cTelnet::slot_replyFinished: error downloading package: " << file.errorString();
+            reply->deleteLater();
+            mpPackageDownloadReply = nullptr;
             return;
         }
 
@@ -1840,6 +1852,18 @@ QString cTelnet::getNewEnvironOSCHyperlinksSpoiler()
 QString cTelnet::getNewEnvironOSCHyperlinksDisabled()
 {
     return qsl("1");
+}
+
+bool cTelnet::oscHyperlinkConfigFeatureEnabled()
+{
+    return getNewEnvironOSCHyperlinksStyleBasic() == qsl("1") || getNewEnvironOSCHyperlinksStyleStates() == qsl("1") || getNewEnvironOSCHyperlinksTooltip() == qsl("1")
+           || getNewEnvironOSCHyperlinksMenu() == qsl("1") || getNewEnvironOSCHyperlinksCompact() == qsl("1") || getNewEnvironOSCHyperlinksVisibility() == qsl("1")
+           || getNewEnvironOSCHyperlinksSelection() == qsl("1") || getNewEnvironOSCHyperlinksSpoiler() == qsl("1") || getNewEnvironOSCHyperlinksDisabled() == qsl("1");
+}
+
+bool cTelnet::oscHyperlinkPresetsEnabled()
+{
+    return getNewEnvironOSCHyperlinksPresets() == qsl("1");
 }
 
 QString cTelnet::getNewEnvironScreenReader()

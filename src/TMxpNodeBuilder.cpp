@@ -229,3 +229,19 @@ void TMxpNodeBuilder::resetForNewTag()
     mOptionIgnoreText = true;
     mIsInsideTag = true;
 }
+
+const std::string& TMxpNodeBuilder::getPartialTagName() const
+{
+    if (!mCurrentTagName.empty()) {
+        return mCurrentTagName;
+    }
+
+    // Tag name hasn't been finalized yet - it's being accumulated as
+    // the first "attribute name" before processAttribute() promotes it
+    if (mIsInsideTag && mCurrentTagAttrs.empty() && !mReadingAttrValue) {
+        return mCurrentAttrName;
+    }
+
+    static const std::string empty;
+    return empty;
+}
