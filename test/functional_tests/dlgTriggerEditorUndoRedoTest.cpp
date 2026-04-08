@@ -157,9 +157,9 @@ private:
   }
 
 private slots:
-  void initTestCase() { initializeQRCResources(); }
+  void initTestCase() {
+    initializeQRCResources();
 
-  void init() {
     mpServer = new TelnetServerStub(qApp);
     mpServer->start(mLocalhost, mPort.toUShort());
     QVERIFY2(mpServer->isListening(),
@@ -227,7 +227,7 @@ private slots:
                    qsl("New button"), qsl("New button group")}};
   }
 
-  void cleanup() {
+  void cleanupTestCase() {
     mItemTypes.clear();
     mpEditor = nullptr;
     mpHost = nullptr;
@@ -236,6 +236,7 @@ private slots:
     deleteProfileDirectory(mProfileName);
     delete mudlet::self();
   }
+
 
   // ========================================================================
   // CATEGORY 1: Core Operations - Single Items
