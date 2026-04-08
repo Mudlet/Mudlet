@@ -1327,7 +1327,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
@@ -3753,11 +3753,13 @@ void dlgProfilePreferences::switchEditorTheme(const QString& themeName)
         return;
     }
 
-    // themes may not have loaded yet, so switch as soon as they are available
+    // theme may not be in the list yet (still downloading), so switch once the download completes
     KDToolBox::connectSingleShot(this, &dlgProfilePreferences::signal_themeUpdateCompleted, this, [=, this]() {
         auto deferredIndex = code_editor_theme_selection_combobox->findText(themeName);
         if (deferredIndex != -1) {
             code_editor_theme_selection_combobox->setCurrentIndex(deferredIndex);
+        } else {
+            qWarning() << "dlgProfilePreferences::switchEditorTheme() - theme" << themeName << "not found after theme update completed";
         }
     });
 }
