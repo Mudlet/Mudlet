@@ -381,9 +381,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     connect(comboBox_crashReportPolicy, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_crashReportPolicyChanged);
 
     setupPasswordsMigration();
-
-    connect(label_darkEditorPrompt, &QLabel::linkActivated, this, &dlgProfilePreferences::slot_enableDarkEditor);
-    label_darkEditorPrompt->hide();
 }
 
 void dlgProfilePreferences::setupPasswordsMigration()
@@ -1330,7 +1327,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -1744,7 +1741,7 @@ void dlgProfilePreferences::loadEditorTab()
     config->setUseTabChar(false); // when you press Enter for a newline, pad with spaces and not tabs
     config->setCaretBlinkRate(200);
     config->setIndentSize(2);
-    config->setThemeName(pHost->mEditorTheme);
+    config->setThemeName(pHost->getEditorTheme());
     config->setCaretWidth(1);
     config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces) ? edbee::TextEditorConfig::ShowWhitespaces : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
@@ -1758,12 +1755,12 @@ void dlgProfilePreferences::loadEditorTab()
     edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
 
     populateThemesList();
-    mudlet::loadEdbeeTheme(pHost->mEditorTheme, pHost->mEditorThemeFile);
+    mudlet::loadEdbeeTheme(pHost->getEditorTheme(), pHost->getEditorThemeFile());
     populateScriptsList();
 
     // pre-select the current theme
     code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(qsl("Select theme"));
-    auto themeIndex = code_editor_theme_selection_combobox->findText(pHost->mEditorTheme);
+    auto themeIndex = code_editor_theme_selection_combobox->findText(pHost->getEditorTheme());
     code_editor_theme_selection_combobox->setCurrentIndex(themeIndex);
     slot_themeSelected(themeIndex);
 
@@ -3180,13 +3177,19 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
         pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
         pHost->setEnableBlinkText(checkBox_enableBlinkText->isChecked());
-        pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
-        pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
+        if (mudlet::self()->inDarkMode()) {
+            pHost->mEditorThemeDark = code_editor_theme_selection_combobox->currentText();
+            pHost->mEditorThemeFileDark = code_editor_theme_selection_combobox->currentData().toString();
+        } else {
+            pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
+            pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
+        }
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
         pHost->setEditorShowBidi(checkBox_showBidi->isChecked());
         pHost->setShowIdsInEditor(checkBox_showIdNumbers->isChecked());
+        const auto activeEditorTheme = code_editor_theme_selection_combobox->currentText();
         if (pHost->mpEditorDialog) {
-            pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
+            pHost->mpEditorDialog->setThemeAndOtherSettings(activeEditorTheme);
         }
 
         auto data = script_preview_combobox->currentData().value<QPair<QString, int>>();
@@ -3711,6 +3714,52 @@ void dlgProfilePreferences::populateThemesList()
     code_editor_theme_selection_combobox->setCurrentIndex(code_editor_theme_selection_combobox->findText(currentSelection));
     code_editor_theme_selection_combobox->setUpdatesEnabled(true);
     code_editor_theme_selection_combobox->blockSignals(false);
+}
+
+// Given a theme name, try to find its dark or light counterpart in the combobox.
+// Handles naming patterns like "Solarized light" <-> "Solarized dark",
+// "Kimbie (light)" <-> "Kimbie (dark)", "Kary Foundation - Light" <-> "Kary Foundation - Dark".
+// Returns the counterpart theme name if found, or empty string if not.
+QString dlgProfilePreferences::findThemeCounterpart(const QString& themeName, const QComboBox* themeComboBox, bool toDark)
+{
+    const QString from = toDark ? qsl("light") : qsl("dark");
+    const QString to = toDark ? qsl("dark") : qsl("light");
+
+    // Try case-insensitive replacement of "light" with "dark" (or vice versa)
+    const QRegularExpression re(QRegularExpression::escape(from), QRegularExpression::CaseInsensitiveOption);
+    auto match = re.match(themeName);
+    if (match.hasMatch()) {
+        QString candidate = themeName;
+        // Preserve the case style of the original: if the matched text starts uppercase, capitalize the replacement
+        const QString matched = match.captured(0);
+        const QString replacement = matched[0].isUpper() ? (to[0].toUpper() + to.mid(1)) : to;
+        candidate.replace(match.capturedStart(), match.capturedLength(), replacement);
+
+        if (themeComboBox->findText(candidate) != -1) {
+            return candidate;
+        }
+    }
+
+    return {};
+}
+
+// Switches the editor theme combobox to the given theme name, triggering the
+// preview update. If themes haven't loaded yet, defers until they're available.
+void dlgProfilePreferences::switchEditorTheme(const QString& themeName)
+{
+    auto index = code_editor_theme_selection_combobox->findText(themeName);
+    if (index != -1) {
+        code_editor_theme_selection_combobox->setCurrentIndex(index);
+        return;
+    }
+
+    // themes may not have loaded yet, so switch as soon as they are available
+    KDToolBox::connectSingleShot(this, &dlgProfilePreferences::signal_themeUpdateCompleted, this, [=, this]() {
+        auto deferredIndex = code_editor_theme_selection_combobox->findText(themeName);
+        if (deferredIndex != -1) {
+            code_editor_theme_selection_combobox->setCurrentIndex(deferredIndex);
+        }
+    });
 }
 
 // user has picked a different theme to preview, so apply it
@@ -4422,9 +4471,45 @@ void dlgProfilePreferences::slot_setAppearance(const enums::Appearance state)
         comboBox_appearance->setCurrentIndex(state);
     }
 
+    const bool wasDarkMode = mudlet::self()->inDarkMode();
     mudlet::self()->setAppearance(state);
+    const bool isDarkMode = mudlet::self()->inDarkMode();
 
-    label_darkEditorPrompt->setVisible(mudlet::self()->inDarkMode());
+    if (wasDarkMode == isDarkMode) {
+        return;
+    }
+
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    const auto currentTheme = code_editor_theme_selection_combobox->currentText();
+
+    if (isDarkMode) {
+        // save current as the light theme
+        pHost->mEditorTheme = currentTheme;
+        pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
+
+        if (!pHost->mEditorThemeDark.isEmpty()) {
+            switchEditorTheme(pHost->mEditorThemeDark);
+        } else {
+            // try to find a dark counterpart by name
+            const auto counterpart = findThemeCounterpart(currentTheme, code_editor_theme_selection_combobox, true);
+            switchEditorTheme(counterpart.isEmpty() ? qsl("Monokai") : counterpart);
+        }
+    } else {
+        // save current as the dark theme
+        pHost->mEditorThemeDark = currentTheme;
+        pHost->mEditorThemeFileDark = code_editor_theme_selection_combobox->currentData().toString();
+
+        if (!pHost->mEditorTheme.isEmpty()) {
+            switchEditorTheme(pHost->mEditorTheme);
+        } else {
+            const auto counterpart = findThemeCounterpart(currentTheme, code_editor_theme_selection_combobox, false);
+            switchEditorTheme(counterpart.isEmpty() ? qsl("Mudlet") : counterpart);
+        }
+    }
 }
 
 // This slot is called when the mudlet singleton tells everything that the
@@ -4630,35 +4715,6 @@ void dlgProfilePreferences::slot_changeControlCharacterHandling()
     pHost->setControlCharacterMode(comboBox_controlCharacterHandling->currentData().value<ControlCharacterMode>());
 }
 
-void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)
-{
-    if (link == qsl("dark-code-editor")) {
-        const auto darkTheme = qsl("Monokai");
-
-        label_darkEditorPrompt->hide();
-
-        // switch to code editor tab
-        tabWidget->setCurrentIndex(3);
-
-        auto monokaiIndex = code_editor_theme_selection_combobox->findText(darkTheme);
-        if (monokaiIndex != -1) {
-            code_editor_theme_selection_combobox->setCurrentIndex(monokaiIndex);
-            return;
-        }
-
-        // in case no theme index is available yet, so it as soon as one is available
-        KDToolBox::connectSingleShot(this, &dlgProfilePreferences::signal_themeUpdateCompleted, this, [=, this]() {
-            auto index = code_editor_theme_selection_combobox->findText(darkTheme);
-            if (index != -1) {
-                code_editor_theme_selection_combobox->setCurrentIndex(index);
-            }
-        });
-
-        return;
-    }
-
-    qWarning() << "unknown link clicked in profile preferences:" << link;
-}
 
 void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
 {

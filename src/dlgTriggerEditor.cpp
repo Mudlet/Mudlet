@@ -402,7 +402,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // Update the editor preferences
     connect(mudlet::self(), &mudlet::signal_editorTextOptionsChanged, this, &dlgTriggerEditor::slot_changeEditorTextOptions);
 
-    mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
+    mudlet::loadEdbeeTheme(mpHost->getEditorTheme(), mpHost->getEditorThemeFile());
 
     // edbee editor find area
     mpSourceEditorFindArea = new dlgSourceEditorFindArea(mpSourceEditorEdbee);
@@ -1095,7 +1095,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     auto config = mpSourceEditorEdbee->config();
     config->beginChanges();
-    config->setThemeName(mpHost->mEditorTheme);
+    config->setThemeName(mpHost->getEditorTheme());
     config->setFont(mpHost->getDisplayFont());
     config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces) ? edbee::TextEditorConfig::ShowWhitespaces : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
@@ -1615,7 +1615,7 @@ void dlgTriggerEditor::applyPatternWidgetStyle(dlgTriggerPatternEdit* patternWid
         hasReference = true;
     }
 
-    patternWidget->singleLineTextEdit_pattern->setTheme(mpHost->mEditorTheme);
+    patternWidget->singleLineTextEdit_pattern->setTheme(mpHost->getEditorTheme());
     if (!hasReference) {
         referencePalette = patternWidget->singleLineTextEdit_pattern->palette();
         referenceFont = mpHost->getDisplayFont();
@@ -12633,7 +12633,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* pEditorWidget, con
 
     auto config = mpSourceEditorEdbee->config();
     config->beginChanges();
-    config->setThemeName(mpHost->mEditorTheme);
+    config->setThemeName(mpHost->getEditorTheme());
     config->setFont(mpHost->getDisplayFont());
     config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces) ? edbee::TextEditorConfig::ShowWhitespaces : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);

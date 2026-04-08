@@ -4957,6 +4957,22 @@ void Host::setCommandLineHistorySaveSize(const int lines)
     }
 }
 
+QString Host::getEditorTheme() const
+{
+    if (mudlet::self()->inDarkMode() && !mEditorThemeDark.isEmpty()) {
+        return mEditorThemeDark;
+    }
+    return mEditorTheme;
+}
+
+QString Host::getEditorThemeFile() const
+{
+    if (mudlet::self()->inDarkMode() && !mEditorThemeFileDark.isEmpty()) {
+        return mEditorThemeFileDark;
+    }
+    return mEditorThemeFile;
+}
+
 void Host::editorThemeChanged()
 {
     emit signal_editorThemeChanged();
