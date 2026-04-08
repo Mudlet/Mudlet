@@ -3668,10 +3668,14 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                 if (compressionType == "zstd") {
                     mMCCP4_encoding = MCCP4_ENCODING_ZSTD;
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
                     qDebug() << "MCCP4: Server selected zstd";
+#endif
                 } else if (compressionType == "deflate") {
                     mMCCP4_encoding = MCCP4_ENCODING_DEFLATE;
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
                     qDebug() << "MCCP4: Server selected deflate";
+#endif
                 } else {
                     qWarning() << "MCCP4: Unknown compression type received:" << compressionType.c_str() << ", disabling MCCP4";
                     //: Message shown in the main console when the server selects an unsupported compression type for MCCP4. %1 is the compression type name.
@@ -3704,14 +3708,18 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                             cleanupMCCP4();
                             return;
                         }
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
                         qDebug() << "MCCP4: ZSTD decompression context created and initialized";
+#endif
                     }
                 } else if (mMCCP4_encoding == MCCP4_ENCODING_DEFLATE) {
                     initStreamDecompressor();
                 }
 
                 mNeedDecompression = true;
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
                 qDebug() << "MCCP4: Compression started with" << compressionType.c_str();
+#endif
             } else if (telnetCommand.length() >= 4 && static_cast<unsigned char>(telnetCommand[3]) != 255) {
                 unsigned char unknownSuboption = static_cast<unsigned char>(telnetCommand[3]);
                 qWarning() << "MCCP4: Unknown suboption received:" << unknownSuboption << "(" << QString::number(unknownSuboption, 16) << "hex), expected MCCP4_BEGIN_ENCODING ("
@@ -4774,7 +4782,9 @@ int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buff
     // Loop to consume all input - a single ZSTD_decompressStream call may
     // not consume everything if the output buffer fills up
     while (input.pos < input.size) {
-        ZSTD_outBuffer output = {mZstdOutBuffer.data(), mZstdOutBuffer.size(), 0};
+        // Cap zstd output to remaining space so it never produces more than we can fit
+        size_t spaceLeft = static_cast<size_t>(BUFFER_SIZE) - totalOutput;
+        ZSTD_outBuffer output = {mZstdOutBuffer.data(), std::min(mZstdOutBuffer.size(), spaceLeft), 0};
 
         size_t const result = ZSTD_decompressStream(mZstdDstream, &output, &input);
 
@@ -4785,9 +4795,8 @@ int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buff
 
             sendTelnetOption(TN_DONT, OPT_COMPRESS4);
             // Copy any partial decompressed data before cleanup frees the buffer
-            size_t copySize = std::min(output.pos, static_cast<size_t>(BUFFER_SIZE) - totalOutput);
-            memcpy(out_buffer + totalOutput, mZstdOutBuffer.data(), copySize);
-            totalOutput += copySize;
+            memcpy(out_buffer + totalOutput, mZstdOutBuffer.data(), output.pos);
+            totalOutput += output.pos;
             in_buffer += length;
             length = 0;
 
@@ -4800,13 +4809,8 @@ int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buff
 #endif
 
         // Copy decompressed chunk to output buffer
-        size_t spaceLeft = static_cast<size_t>(BUFFER_SIZE) - totalOutput;
-        size_t copySize = std::min(output.pos, spaceLeft);
-        if (output.pos > spaceLeft) {
-            qWarning() << "MCCP4: Decompressed output exceeds buffer capacity - data truncated";
-        }
-        memcpy(out_buffer + totalOutput, mZstdOutBuffer.data(), copySize);
-        totalOutput += copySize;
+        memcpy(out_buffer + totalOutput, mZstdOutBuffer.data(), output.pos);
+        totalOutput += output.pos;
 
         if (result == 0) {
             // Full zstd frame decoded - remaining input is either raw telnet
