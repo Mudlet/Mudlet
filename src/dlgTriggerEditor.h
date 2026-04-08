@@ -250,8 +250,6 @@ public slots:
     void slot_soundTrigger();
     void slot_colorizeTriggerSetBgColor();
     void slot_colorizeTriggerSetFgColor();
-    void slot_colorizeTriggerClearFgColor();
-    void slot_colorizeTriggerClearBgColor();
     void slot_saveSelectedItem();
     void slot_export();
     void slot_import();

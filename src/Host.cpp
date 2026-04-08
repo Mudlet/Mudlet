@@ -4890,8 +4890,7 @@ const QSet<QString> Host::mValidExperiments = {qsl("experiment.rendering.origina
                                                qsl("experiment.rendering.more-transparent"),
                                                qsl("experiment.3dmap.modernmapper"),
                                                qsl("experiment.render-in-out-exits"),
-                                               qsl("experiment.3d-player-icon"),
-                                               qsl("experiment.ui.highlight-keep-alpha")};
+                                               qsl("experiment.3d-player-icon")};
 
 bool Host::experimentEnabled(const QString& experimentKey) const
 {
