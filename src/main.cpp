@@ -44,6 +44,11 @@
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
 #include "SentryWrapper.h"
+#include "utils.h"
+#include <QFileInfo>
+#include <QGuiApplication>
+#include <QProcessEnvironment>
+#include <QTextStream>
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 #include <windows.h>
@@ -158,6 +163,87 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 }
 #endif
 
+#if !defined(Q_OS_MACOS)
+// Reads highDpiScaleFactorRoundingPolicy from Mudlet.ini before QApplication
+// creation, since Qt requires this to be set before the application is constructed.
+// Replicates setupConfig() config path detection using argv[0] instead of
+// QCoreApplication::applicationDirPath() which isn't available yet.
+static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
+{
+    if (!qEnvironmentVariableIsEmpty("QT_SCALE_FACTOR_ROUNDING_POLICY")) {
+        return;
+    }
+
+    QString execDir;
+    const QProcessEnvironment sysEnv = QProcessEnvironment::systemEnvironment();
+    if (sysEnv.contains(qsl("APPIMAGE"))) {
+        execDir = QFileInfo(sysEnv.value(qsl("APPIMAGE"))).absolutePath();
+    } else if (argc > 0) {
+        execDir = QFileInfo(QString::fromLocal8Bit(argv[0])).absolutePath();
+    } else {
+        return;
+    }
+
+    const QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
+    QString confPath;
+
+    const QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
+    const QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
+
+    if (QFileInfo::exists(markerExecDir)) {
+        QFile file(markerExecDir);
+        QString portPath;
+        if (file.open(QIODevice::ReadOnly)) {
+            QTextStream(&file).readLineInto(&portPath);
+        }
+        if (portPath.isEmpty()) {
+            portPath = qsl("./portable");
+        }
+        confPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
+    } else if (QFileInfo::exists(markerHomeDir)) {
+        QFile file(markerHomeDir);
+        QString portPath;
+        if (file.open(QIODevice::ReadOnly)) {
+            QTextStream(&file).readLineInto(&portPath);
+        }
+        confPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
+    } else {
+        confPath = confDirDefault;
+    }
+
+    if (confPath.isEmpty()) {
+        return;
+    }
+
+    const QString iniPath = qsl("%1/Mudlet.ini").arg(confPath);
+    if (!QFileInfo::exists(iniPath)) {
+        return;
+    }
+
+    const QSettings settings(iniPath, QSettings::IniFormat);
+    const QString value = settings.value(qsl("highDpiScaleFactorRoundingPolicy")).toString();
+    if (value.isEmpty()) {
+        return;
+    }
+
+    static const QMap<QString, Qt::HighDpiScaleFactorRoundingPolicy> policies = {
+            {qsl("round"), Qt::HighDpiScaleFactorRoundingPolicy::Round},
+            {qsl("ceil"), Qt::HighDpiScaleFactorRoundingPolicy::Ceil},
+            {qsl("floor"), Qt::HighDpiScaleFactorRoundingPolicy::Floor},
+            {qsl("roundpreferfloor"), Qt::HighDpiScaleFactorRoundingPolicy::RoundPreferFloor},
+            {qsl("passthrough"), Qt::HighDpiScaleFactorRoundingPolicy::PassThrough},
+    };
+
+    const auto it = policies.find(value.toLower());
+    if (it == policies.end()) {
+        qWarning().noquote() << qsl("main: ignoring invalid highDpiScaleFactorRoundingPolicy value in Mudlet.ini: \"%1\"").arg(value);
+        return;
+    }
+
+    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(it.value());
+}
+#endif // !defined(Q_OS_MACOS)
+
 int main(int argc, char* argv[])
 {
     initializeQRCResources();
@@ -202,6 +288,10 @@ int main(int argc, char* argv[])
             qInstallMessageHandler(msys2QtMessageHandler);
         }
     }
+#endif
+
+#if !defined(Q_OS_MACOS)
+    applyHighDpiRoundingPolicyFromConfig(argc, argv);
 #endif
 
 #if defined(Q_OS_MACOS)

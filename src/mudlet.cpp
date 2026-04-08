@@ -2897,8 +2897,7 @@ void mudlet::readLateSettings(const QSettings& settings)
     // Prevent a lockout where both menu bar and toolbar are hidden, leaving
     // the user with no way to access settings on startup
     if (mMenuBarVisibility == enums::visibleNever && mToolbarVisibility == enums::visibleNever) {
-        qWarning() << "mudlet::readLateSettings() - both menu bar and toolbar were configured"
-                   << "to never show; correcting toolbar to visibleOnlyWithoutLoadedProfile"
+        qWarning() << "mudlet::readLateSettings() - both menu bar and toolbar were configured" << "to never show; correcting toolbar to visibleOnlyWithoutLoadedProfile"
                    << "to prevent lockout. Persisting correction now.";
         setToolBarVisibility(enums::visibleOnlyWithoutLoadedProfile);
         // Write only the corrected value — calling writeSettings() here would
@@ -2907,8 +2906,8 @@ void mudlet::readLateSettings(const QSettings& settings)
         correctionSettings.setValue("toolBarVisibility", static_cast<int>(mToolbarVisibility));
         correctionSettings.sync();
         if (correctionSettings.status() != QSettings::NoError) {
-            qWarning() << "mudlet::readLateSettings() - failed to persist toolbar lockout correction to disk."
-                       << "QSettings status:" << correctionSettings.status() << "File:" << correctionSettings.fileName();
+            qWarning() << "mudlet::readLateSettings() - failed to persist toolbar lockout correction to disk." << "QSettings status:" << correctionSettings.status()
+                       << "File:" << correctionSettings.fileName();
         }
     }
 
@@ -3131,6 +3130,11 @@ void mudlet::writeSettings()
     settings.setValue(qsl("enableMuteAPI"), mMuteAPI);
     settings.setValue(qsl("enableMuteGame"), mMuteGame);
     settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
+#if !defined(Q_OS_MACOS)
+    if (!settings.contains(qsl("highDpiScaleFactorRoundingPolicy"))) {
+        settings.setValue(qsl("highDpiScaleFactorRoundingPolicy"), qsl("PassThrough"));
+    }
+#endif
     settings.sync();
     switch (settings.status()) {
     case QSettings::NoError:
