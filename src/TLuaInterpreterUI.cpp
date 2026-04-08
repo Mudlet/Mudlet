@@ -1161,14 +1161,23 @@ int TLuaInterpreter::echoLink(lua_State* L)
         }
 
         if (!hasText) {
+            if (luaReference) {
+                luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
+            }
             lua_pushfstring(L, "echoLink: bad argument, missing 'text' in table");
             return lua_error(L);
         }
         if (!hasCommand) {
+            if (luaReference) {
+                luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
+            }
             lua_pushfstring(L, "echoLink: bad argument, missing 'command' in table");
             return lua_error(L);
         }
         if (!hasHint) {
+            if (luaReference) {
+                luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
+            }
             lua_pushfstring(L, "echoLink: bad argument, missing 'hint' in table");
             return lua_error(L);
         }
@@ -2094,12 +2103,21 @@ int TLuaInterpreter::insertLink(lua_State* L)
         }
 
         if (!hasText) {
+            if (luaReference) {
+                luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
+            }
             return warnArgumentValue(L, __func__, "missing required 'text' in table");
         }
         if (!hasCommand) {
+            if (luaReference) {
+                luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
+            }
             return warnArgumentValue(L, __func__, "missing required 'command' in table");
         }
         if (!hasHint) {
+            if (luaReference) {
+                luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
+            }
             return warnArgumentValue(L, __func__, "missing required 'hint' in table");
         }
 
@@ -2220,16 +2238,36 @@ int TLuaInterpreter::insertPopup(lua_State* L)
             }
 
             if (!hasText) {
+                for (int ref : luaReferences) {
+                    if (ref) {
+                        luaL_unref(L, LUA_REGISTRYINDEX, ref);
+                    }
+                }
                 return warnArgumentValue(L, __func__, "missing required 'text' in table");
             }
             if (!hasCommands) {
+                for (int ref : luaReferences) {
+                    if (ref) {
+                        luaL_unref(L, LUA_REGISTRYINDEX, ref);
+                    }
+                }
                 return warnArgumentValue(L, __func__, "missing required 'commands' in table");
             }
             if (!hasHints) {
+                for (int ref : luaReferences) {
+                    if (ref) {
+                        luaL_unref(L, LUA_REGISTRYINDEX, ref);
+                    }
+                }
                 return warnArgumentValue(L, __func__, "missing required 'hints' in table");
             }
 
             if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
+                for (int ref : luaReferences) {
+                    if (ref) {
+                        luaL_unref(L, LUA_REGISTRYINDEX, ref);
+                    }
+                }
                 lua_pushnil(L);
                 lua_pushfstring(L,
                                 "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup",

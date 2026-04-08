@@ -317,6 +317,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     // Table argument support
     if (lua_istable(L, 1)) {
         bool hasRoomID = false, hasToRoomIDOrCoords = false, hasDirection = false, hasStyle = false, hasColor = false, hasArrow = false;
+        bool arrow = false;
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
@@ -436,6 +437,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                     lua_pop(L, 2);
                     return warnArgumentValue(L, __func__, "arrow must be a boolean");
                 }
+                arrow = lua_toboolean(L, -1);
                 hasArrow = true;
             }
 
@@ -480,6 +482,9 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
 
         if (id_to > 0) {
             TRoom* pR_to = host.mpMap->mpRoomDB->getRoom(id_to);
+            if (!pR_to) {
+                return warnArgumentValue(L, __func__, qsl("toRoomID %1 is not a valid room").arg(id_to));
+            }
             const int area = pR->getArea();
             const int area_to = pR_to->getArea();
             if (area != area_to) {
@@ -514,17 +519,6 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
             }
             points.append(QPointF(x.at(i), y.at(i)));
         }
-
-        // Extract arrow value from table
-        lua_pushstring(L, "arrow");
-        lua_gettable(L, 1);
-        if (lua_isnil(L, -1)) {
-            lua_pop(L, 1);
-            lua_pushstring(L, "endWithArrow");
-            lua_gettable(L, 1);
-        }
-        const bool arrow = lua_toboolean(L, -1);
-        lua_pop(L, 1);
 
         pR->customLines[direction] = points;
         pR->customLinesArrow[direction] = arrow;
@@ -1415,8 +1409,10 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
                 hasOutlineColor = true;
             } else if (!key.compare(QLatin1String("outlineGreen"), Qt::CaseInsensitive) || !key.compare(QLatin1String("olG"), Qt::CaseInsensitive)) {
                 olg = getVerifiedInt(L, __func__, -1, qPrintable(key));
+                hasOutlineColor = true;
             } else if (!key.compare(QLatin1String("outlineBlue"), Qt::CaseInsensitive) || !key.compare(QLatin1String("olB"), Qt::CaseInsensitive)) {
                 olb = getVerifiedInt(L, __func__, -1, qPrintable(key));
+                hasOutlineColor = true;
             }
 
             lua_pop(L, 1);
@@ -3196,8 +3192,7 @@ int TLuaInterpreter::highlightRoom(lua_State* L)
 
     // Support both table and ordered arguments
     if (lua_istable(L, 1)) {
-        // Table argument format: {roomID=id, color1={r,g,b,a}, color2={r,g,b,a}, radius=r}
-        // Or flat format: {roomID=id, fgr=N, fgg=N, fgb=N, bgr=N, bgg=N, bgb=N, radius=r, alpha1=N, alpha2=N}
+        // Table argument format: {roomID=id, fgr=N, fgg=N, fgb=N, bgr=N, bgg=N, bgb=N, radius=r, alpha1=N, alpha2=N}
         bool hasID = false, hasFgr = false, hasFgg = false, hasFgb = false;
         bool hasBgr = false, hasBgg = false, hasBgb = false, hasRadius = false;
         bool hasAlpha1 = false, hasAlpha2 = false;

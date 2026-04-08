@@ -580,8 +580,7 @@ describe("Tests Other.lua functions", function()
         highlightBgColor = 0,
         soundFile = "",
         fireLength = 0,
-        lineDelta = 0,
-        expireAfter = -1
+        lineDelta = 0
       })
       assert.is_true(result)
     end)
@@ -601,8 +600,7 @@ describe("Tests Other.lua functions", function()
         highlightBgColor = 0,
         soundFile = "",
         fireLength = 0,
-        lineDelta = 0,
-        expireAfter = -1
+        lineDelta = 0
       })
       assert.is_true(result)
     end)

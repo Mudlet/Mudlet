@@ -1152,7 +1152,7 @@ describe("Tests DB.lua functions", function()
         event = "eventName",
         parent = "parent",
         displayname = "displayName",
-        arguments = "arg1,arg2"
+        arguments = {"arg1", "arg2"}
       })
       assert.is_true(result)
     end)
@@ -1278,7 +1278,7 @@ describe("Tests DB.lua functions", function()
     it("should accept table arguments", function()
       local result = pcall(addCustomLine, {
         roomID = 1,
-        targetID = 2,
+        toRoomID = 2,
         direction = "north",
         style = "solid line",
         color = {255, 0, 0},

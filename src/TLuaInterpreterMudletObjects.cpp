@@ -2328,10 +2328,15 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
                     // Store a reference to the function in the registry (luaL_ref pops the value)
                     lua_pushvalue(L, -1);
                     codeFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
+                    hasCode = true;
                 } else if (lua_isstring(L, -1)) {
                     codeString = QString::fromUtf8(lua_tostring(L, -1));
+                    hasCode = true;
+                } else {
+                    lua_pop(L, 2);
+                    luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
+                    return warnArgumentValue(L, __func__, "code must be a string or function");
                 }
-                hasCode = true;
             } else if (!key.compare(QLatin1String("multiline"), Qt::CaseInsensitive) || !key.compare(QLatin1String("multiLine"), Qt::CaseInsensitive)) {
                 multiLine = getVerifiedBool(L, __func__, -1, qPrintable(key));
                 hasMultiline = true;
