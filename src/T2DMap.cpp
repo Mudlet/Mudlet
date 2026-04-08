@@ -1806,12 +1806,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
         yspan = xyzoom * (widgetHeight / widgetWidth);
     }
 
-    // Center map on area when it fits entirely in viewport, but only when
-    // following player movement - not during manual panning or editing
+    // When a small area fits entirely in the viewport, keep the player room
+    // centered but clamp the viewport so all rooms remain visible
     if (centeringOnPlayer && !mRoomBeingMoved && !mMultiSelection) {
         const int zLevel = mMapCenterZ;
 
-        // Get area bounds for current Z level (use overall bounds as fallback)
         const qreal areaMinX = pDrawnArea->xminForZ.value(zLevel, pDrawnArea->min_x);
         const qreal areaMaxX = pDrawnArea->xmaxForZ.value(zLevel, pDrawnArea->max_x);
         // Y is inverted in map coordinates
@@ -1822,8 +1821,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
         const qreal areaHeight = areaMaxY - areaMinY;
 
         if (areaWidth <= xspan && areaHeight <= yspan) {
-            mMapCenterX = (areaMinX + areaMaxX) / 2.0;
-            mMapCenterY = -((areaMinY + areaMaxY) / 2.0);
+            const qreal halfViewX = xspan / 2.0;
+            const qreal halfViewY = yspan / 2.0;
+            mMapCenterX = qBound(areaMaxX - halfViewX, mMapCenterX, areaMinX + halfViewX);
+            mMapCenterY = qBound(areaMaxY - halfViewY, mMapCenterY, areaMinY + halfViewY);
         }
     }
 
