@@ -25,10 +25,6 @@ set(SENTRY_COMMON_ARGS
     -G Ninja
 )
 
-if(UNIX AND NOT APPLE)
-    list(APPEND SENTRY_CMAKE_ARGS -DSENTRY_TRANSPORT=none)
-endif()
-
 if(APPLE)
     execute_process(
         COMMAND xcrun --sdk macosx --show-sdk-path
@@ -122,9 +118,10 @@ elseif(WIN32)
     target_link_libraries(${LIB_MUDLET_TARGET}
         dbghelp
         version
+        synchronization
     )
 else()
-    target_link_libraries(${LIB_MUDLET_TARGET} crashpad_compat)
+    target_link_libraries(${LIB_MUDLET_TARGET} crashpad_compat unwind)
 endif()
 
 set(SENTRY_BINARIES "${SENTRY_PATH}/install_without_transport/bin")

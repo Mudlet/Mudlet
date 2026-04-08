@@ -143,6 +143,8 @@ This software wouldnt've been possible without these open source packages:
 
 Credit to [Markdownify](https://github.com/amitmerchant1990/electron-markdownify) for the README inspiration.
 
+Windows code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
 ## License
 
 GPL2+

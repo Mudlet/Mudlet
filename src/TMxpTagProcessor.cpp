@@ -38,6 +38,7 @@
 #include "TMxpMusicTagHandler.h"
 #include "TMxpSendTagHandler.h"
 #include "TMxpSoundTagHandler.h"
+#include "TMxpStatTagHandler.h"
 #include "TMxpSupportTagHandler.h"
 #include "TMxpTagHandlerResult.h"
 #include "TMxpTagParser.h"
@@ -54,6 +55,14 @@ TMxpTagHandlerResult TMxpTagProcessor::handleTag(TMxpContext& ctx, TMxpClient& c
     qDebug() << "TMxpTagProcessor::handleTag() processing tag:" << tag->getName();
 #endif
 
+    // MXP comments (<!-- ... -->) should be silently consumed, not displayed
+    if (tag->getName() == qsl("!--")) {
+#ifdef DEBUG_MXP_PROCESSING
+        qDebug() << "  Silently consuming MXP comment";
+#endif
+        return MXP_TAG_HANDLED;
+    }
+
     if (!client.tagReceived(tag)) {
 #ifdef DEBUG_MXP_PROCESSING
         qDebug() << "  client.tagReceived() returned false, not handling";
@@ -68,7 +77,7 @@ TMxpTagHandlerResult TMxpTagProcessor::handleTag(TMxpContext& ctx, TMxpClient& c
 #ifdef DEBUG_MXP_PROCESSING
             qDebug() << "  Handler handled tag, result:" << result;
 #endif
-            result = client.tagHandled(tag, result);
+            result = client.tagHandled(tag, result, ctx);
             if (result != MXP_TAG_NOT_HANDLED) {
                 return result;
             }
@@ -97,6 +106,10 @@ TMxpTagProcessor::TMxpTagProcessor()
     // Variable and entity tags
     registerHandler(TMxpFeatureOptions({"var", {"publish"}}), new TMxpVarTagHandler());
     registerHandler(TMxpFeatureOptions({"entity", {"name", "value", "desc", "private", "publish", "delete", "add", "remove"}}), new TMxpEntityTagHandler());
+
+    // Status bar tags (STAT/GAUGE) - silently consumed, no built-in status bar
+    registerHandler(TMxpFeatureOptions({"stat", {"max", "caption"}}), new TMxpStatTagHandler());
+    registerHandler(TMxpFeatureOptions({"gauge", {"max", "caption", "color"}}), new TMxpStatTagHandler());
 
     // Line spacing tags
     registerHandler(TMxpFeatureOptions({"br", {}}), new TMxpBRTagHandler());
@@ -172,6 +185,12 @@ TMxpElementRegistry& TMxpTagProcessor::getElementRegistry()
 {
     return mMxpElementRegistry;
 }
+
+const TMxpElementRegistry& TMxpTagProcessor::getElementRegistry() const
+{
+    return mMxpElementRegistry;
+}
+
 QMap<QString, QVector<QString>>& TMxpTagProcessor::getSupportedElements()
 {
     return mSupportedMxpElements;

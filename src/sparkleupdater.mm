@@ -37,7 +37,8 @@
 
 @end
 
-SparkleUpdater::SparkleUpdater()
+SparkleUpdater::SparkleUpdater(QObject* parent)
+: QObject(parent)
 {
     @autoreleasepool {
         _updaterDelegate = [[SparkleUpdaterDelegate alloc] init];

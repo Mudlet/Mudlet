@@ -287,6 +287,10 @@ dlgRoomExits::~dlgRoomExits()
     // QActions are children of this dialog (created with 'this' as parent),
     // so Qt's parent-child system handles their deletion automatically.
     // Manual deletion here would cause double-delete crashes.
+
+    // TExit objects are heap-allocated and not Qt-parented, so we must free them
+    qDeleteAll(originalExits);
+    qDeleteAll(originalSpecialExits);
 }
 
 void dlgRoomExits::slot_endEditSpecialExits()

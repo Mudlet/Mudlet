@@ -1305,6 +1305,24 @@ int TLuaInterpreter::enableMapInfo(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapInfo
+int TLuaInterpreter::getMapInfo(lua_State* L)
+{
+    const auto& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mMapInfoContributorManager) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+
+    const auto& keys = host.mpMap->mMapInfoContributorManager->getContributorKeys();
+    lua_createtable(L, 0, keys.size());
+    for (const auto& name : keys) {
+        lua_pushstring(L, name.toUtf8().constData());
+        lua_pushboolean(L, host.mMapInfoContributors.contains(name));
+        lua_settable(L, -3);
+    }
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAllAreaUserData
 int TLuaInterpreter::getAllAreaUserData(lua_State* L)
 {
@@ -4133,6 +4151,67 @@ int TLuaInterpreter::setRoomWeight(lua_State* L)
     host.mpMap->updateArea(pR->getArea());
     host.mpMap->mMapGraphNeedsUpdate = true;
     lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomHidden
+int TLuaInterpreter::setRoomHidden(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+    const bool hidden = getVerifiedBool(L, __func__, 2, "hidden");
+
+    const Host& host = getHostFromLua(L);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    pR->setHidden(hidden);
+    host.mpMap->setUnsaved(__func__);
+    host.mpMap->updateArea(pR->getArea());
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomHidden
+int TLuaInterpreter::getRoomHidden(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    int roomId;
+    if (lua_gettop(L) > 0) {
+        roomId = getVerifiedInt(L, __func__, 1, "roomID");
+    } else {
+        roomId = host.mpMap->mRoomIdHash.value(host.getName());
+    }
+
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
+    if (pR) {
+        lua_pushboolean(L, pR->isHidden());
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getHiddenRooms
+int TLuaInterpreter::getHiddenRooms(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+
+    lua_newtable(L);
+    int i = 0;
+    QHashIterator<int, TRoom*> it(host.mpMap->mpRoomDB->getRoomMap());
+    while (it.hasNext()) {
+        it.next();
+        if (it.value()->isHidden()) {
+            lua_pushnumber(L, ++i);
+            lua_pushnumber(L, it.key());
+            lua_settable(L, -3);
+        }
+    }
     return 1;
 }
 

@@ -277,6 +277,14 @@ void TRoom::setWeight(int w)
     mpRoomDB->mpMap->setUnsaved(__func__);
 }
 
+void TRoom::setHidden(const bool isHidden)
+{
+    if (hidden != isHidden) {
+        hidden = isHidden;
+        mpRoomDB->mpMap->setUnsaved(__func__);
+    }
+}
+
 void TRoom::setExitWeight(const QString& cmd, int w)
 {
     if (w > 0) {
@@ -826,6 +834,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
     ifs >> name;
     ifs >> isLocked;
     if (version >= 21) {
+        ifs >> hidden;
         ifs >> mSpecialExits;
     } else if (version >= 6) {
         // Before version 21 the special exits were stored as a QMultiMap<int, QString>
@@ -867,8 +876,14 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
 
     if (version >= 10) {
         ifs >> userData;
+        // Recover and remove fallback values from the user data:
+        if (version < 21) {
+            const QString hiddenString = userData.take(QLatin1String("system.fallback_hidden"));
+            if (!hiddenString.compare(QLatin1String("true"), Qt::CaseInsensitive)) {
+                hidden = true;
+            }
+        }
         if (version < 19) {
-            // Recover and remove backup values from the user data
             const QString symbolString = userData.take(QLatin1String("system.fallback_symbol"));
             if (!symbolString.isEmpty()) {
                 // There is a fallback in the user data
@@ -1532,7 +1547,6 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         }
         mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
         exitRoomId = roomRemapping.value(exitRoomId);
-        exitRoomId = roomRemapping.value(exitRoomId);
     }
 
     if (exitRoomId > 0) {
@@ -1732,6 +1746,10 @@ void TRoom::writeJsonRoom(QJsonArray& obj) const
         roomObj.insert(QLatin1String("locked"), true);
     }
 
+    if (hidden) {
+        roomObj.insert(QLatin1String("hidden"), true);
+    }
+
     if (weight != 1) {
         roomObj.insert(QLatin1String("weight"), static_cast<double>(weight));
     }
@@ -1783,6 +1801,10 @@ int TRoom::readJsonRoom(const QJsonArray& array, const int index, const int area
 
     if (roomObj.contains(QLatin1String("locked")) && roomObj.value(QLatin1String("locked")).toBool()) {
         isLocked = true;
+    }
+
+    if (roomObj.contains(QLatin1String("hidden")) && roomObj.value(QLatin1String("hidden")).toBool()) {
+        hidden = true;
     }
 
     if (roomObj.contains(QLatin1String("weight")) && roomObj.value(QLatin1String("weight")).isDouble()) {

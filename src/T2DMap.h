@@ -101,7 +101,8 @@ public:
     friend class PanInteractionHandler;
     friend class MiddleMousePanHandler;
 
-    struct MapInteractionContext {
+    struct MapInteractionContext
+    {
         QMouseEvent* event = nullptr;
         Qt::MouseButtons buttons = Qt::NoButton;
         Qt::MouseButton button = Qt::NoButton;
@@ -166,14 +167,16 @@ public:
 
     void setRoomSize(double);
     void setExitSize(double);
+    void setBorderSize(double);
     void createLabel(QRectF labelRectangle);
     // Clears cache so new symbols are built at next paintEvent():
-    void flushSymbolPixmapCache() {mSymbolPixmapCache.clear();}
+    void flushSymbolPixmapCache() { mSymbolPixmapCache.clear(); }
     void addSymbolToPixmapCache(const QString, const QString, const QColor, const bool);
-    void flushTextLabelPixmapCache() {mTextLabelPixmapCache.clear();}
+    void flushTextLabelPixmapCache() { mTextLabelPixmapCache.clear(); }
     void addTextLabelToCache(const QString& key, const TMapLabel& label, const QSize& targetSize);
     void drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect);
     void setPlayerRoomStyle(const int style);
+    static QGradientStops buildPlayerRoomGradientStops(int style, quint8 innerDiameterPercentage, const QColor& innerColor, const QColor& outerColor);
     void switchArea(const QString& newAreaName);
     void switchArea(int areaId);
     void clearSelection();
@@ -191,7 +194,6 @@ public:
     // Center view on a room. For secondary views, skips raising sysMapAreaChanged events.
     std::pair<bool, QString> centerview(int roomId);
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel = std::nullopt, qreal zoom = 2.0, bool exportAllZLevels = false);
-
 
 
     // default 2D zoom level
@@ -228,6 +230,8 @@ public:
     // coordinates):
     float mRoomWidth = 0.0f;
     float mRoomHeight = 0.0f;
+    float mPrevRoomWidth = 0.0f;
+    float mPrevRoomHeight = 0.0f;
     float xspan = 0.0f;
     float yspan = 0.0f;
 
@@ -250,6 +254,7 @@ public:
     QMap<int, QPixmap> mPixMap;
     double rSize = 0.5;
     double eSize = 3.0;
+    double mBSize = 3.0;
     // When a Lua centerview(...) is called this assigns the room ID value to
     // this member and (switching areas if necessary) pans the map to be
     // centered on this room:
@@ -322,16 +327,25 @@ public slots:
     void slot_shiftLeft();
     void slot_shiftRight();
     void slot_showPropertiesDialog();
-    void slot_setRoomProperties(
-        bool changeName, QString newName,
-        bool changeRoomColor, int newRoomColor,
-        bool changeSymbol, QString newSymbol,
-        bool changeSymbolColor, QColor newSymbolColor,
-        bool changeWeight, int newWeight,
-        bool changeLockStatus, std::optional<bool> newLockStatus,
-        bool changeBorderColor, QColor newBorderColor,
-        bool changeBorderThickness, int newBorderThickness,
-        QSet<TRoom*> rooms);
+    void slot_setRoomProperties(bool changeName,
+                                QString newName,
+                                bool changeRoomColor,
+                                int newRoomColor,
+                                bool changeSymbol,
+                                QString newSymbol,
+                                bool changeSymbolColor,
+                                QColor newSymbolColor,
+                                bool changeWeight,
+                                int newWeight,
+                                bool changeLockStatus,
+                                std::optional<bool> newLockStatus,
+                                bool changeHiddenStatus,
+                                std::optional<bool> newHiddenStatus,
+                                bool changeBorderColor,
+                                QColor newBorderColor,
+                                bool changeBorderThickness,
+                                int newBorderThickness,
+                                QSet<TRoom*> rooms);
     void slot_previewBorderProperties(QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();
@@ -368,7 +382,8 @@ private:
         bool dispatch(MapInteractionContext& context) const;
 
     private:
-        struct HandlerEntry {
+        struct HandlerEntry
+        {
             int priority = 0;
             IInteractionHandler* handler = nullptr;
         };
@@ -400,14 +415,28 @@ private:
     QPointF snapPointToGrid(const QPointF& point) const;
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
-    inline void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const QMap<int, QPointF>&, const bool showRoomCollision);
+    inline void drawRoom(QPainter&,
+                         QFont&,
+                         QFont&,
+                         QPen&,
+                         TRoom*,
+                         const bool isGridMode,
+                         const bool areRoomIdsLegible,
+                         const bool showRoomNames,
+                         const int,
+                         const float,
+                         const float,
+                         const QMap<int, QPointF>&,
+                         const bool showRoomCollision);
     void paintRoomExits(QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int, float, QMap<int, QPointF>&);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
     void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
+    static void paintLabelHighlight(QPainter& painter, QRectF labelPaintRectangle, const QSizeF& clickSize);
 
     bool mDialogLock = false;
-    struct ClickPosition {
+    struct ClickPosition
+    {
         int x;
         int y;
     } mContextMenuClickPosition;
@@ -434,7 +463,7 @@ private:
     quint8 mMaxRoomIdDigits = 0;
 
     // Holds the QRadialGradient details to use for the player room:
-    QGradientStops mPlayerRoomColorGradentStops;
+    QGradientStops mPlayerRoomColorGradientStops;
 
     QPointer<dlgRoomProperties> mpDlgRoomProperties;
     QPointer<dlgMapLabel> mpDlgMapLabel;

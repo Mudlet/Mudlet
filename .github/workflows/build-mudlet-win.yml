@@ -1,9 +1,10 @@
+# DUPLICATE WORKFLOW: This file is paired with build-mudlet-win-pr.yml
+# Changes here likely need to be mirrored there as well.
 name: 🔨 Build Mudlet (windows)
 on:
   push:
     branches: [master, development, release-*]
     tags: [Mudlet-*]
-  pull_request:
   workflow_dispatch:
     inputs:
       scheduled:
@@ -17,7 +18,7 @@ on:
 permissions:
   id-token: write
   contents: read
-  actions: read
+  actions: write
 
 jobs:
   compile-mudlet:
@@ -26,6 +27,7 @@ jobs:
     if: ${{ github.repository_owner == 'Mudlet' }}
     env:
       SIGNPATH_SIGNING_ENABLED: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+      SIGNPATH_POLICY_SLUG: ${{ startsWith(github.ref, 'refs/tags/') && 'release-signing' || 'test-signing' }}
     strategy:
       fail-fast: false
       matrix:
@@ -44,7 +46,7 @@ jobs:
       if: matrix.buildname == 'windows64'
       uses: msys2/setup-msys2@v2
       with:
-        msystem: MINGW64
+        msystem: CLANG64
         update: true
 
     - name: (Windows) Build Environment Setup
@@ -61,14 +63,28 @@ jobs:
       uses: actions/cache/restore@v5
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.sha }}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}
+        key: ccache-${{matrix.os}}-${{matrix.buildname}}-clang-${{ github.ref_name }}
+        restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}-clang-development
 
     - name: check ccache stats prior to build
       shell: msys2 {0}
       env:
         CCACHE_DIR: ${{runner.workspace}}/ccache
       run: ccache --zero-stats --show-stats
+
+    - name: Get sentry-native commit hash
+      shell: msys2 {0}
+      id: sentry-hash
+      run: echo "SENTRY_HASH=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache sentry-native
+      id: cache-sentry
+      uses: actions/cache@v5
+      with:
+        path: |
+          3rdparty/sentry-native/install_without_transport
+          3rdparty/sentry-native/install_with_transport
+        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
 
     - name: (Windows) Build
       shell: msys2 {0}
@@ -103,10 +119,11 @@ jobs:
         QT_FORCE_STDERR_LOGGING: 1
 
     - name: (Windows) Run Lua tests
-      timeout-minutes: 5
+      timeout-minutes: 1
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        MUDLET_TEST_MODE: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
       run: |
@@ -127,7 +144,7 @@ jobs:
         fi
 
     - name: Save ccache
-      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
+      if: always()
       uses: actions/cache/save@v5
       with:
         path: ${{runner.workspace}}/ccache
@@ -159,7 +176,7 @@ jobs:
     - name: (Windows) Upload unsigned binaries for signing
       id: upload-unsigned-binaries
       if: steps.prepare-signing.outcome == 'success'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: unsigned-binaries
         path: ${{env.SIGNING_DIR}}
@@ -173,12 +190,12 @@ jobs:
         api-token: ${{secrets.SIGNPATH_API_TOKEN}}
         organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}
         project-slug: 'mudlet'
-        signing-policy-slug: ${{secrets.SIGNPATH_SIGNING_POLICY_SLUG}}
+        signing-policy-slug: ${{env.SIGNPATH_POLICY_SLUG}}
         artifact-configuration-slug: 'binaries'
         github-artifact-id: ${{steps.upload-unsigned-binaries.outputs.artifact-id}}
         wait-for-completion: true
         output-artifact-directory: ${{steps.prepare-signing.outputs.signing_dir}}
-        wait-for-completion-timeout-in-seconds: 600
+        wait-for-completion-timeout-in-seconds: 3600
 
     - name: (Windows) Replace binaries with signed versions
       if: steps.sign-binaries.outcome == 'success'
@@ -229,7 +246,7 @@ jobs:
         env.SIGNPATH_SIGNING_ENABLED == 'true' &&
         (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') &&
         contains(env.ARTIFACT_NAME, 'installer')
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: unsigned-installer
         path: ${{env.ARTIFACT_WINPATHORFILE}}
@@ -243,12 +260,12 @@ jobs:
         api-token: ${{secrets.SIGNPATH_API_TOKEN}}
         organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}
         project-slug: 'mudlet'
-        signing-policy-slug: ${{secrets.SIGNPATH_SIGNING_POLICY_SLUG}}
+        signing-policy-slug: ${{env.SIGNPATH_POLICY_SLUG}}
         artifact-configuration-slug: 'installer'
         github-artifact-id: ${{steps.upload-unsigned-installer.outputs.artifact-id}}
         wait-for-completion: true
         output-artifact-directory: ${{github.workspace}}/signed-installer
-        wait-for-completion-timeout-in-seconds: 600
+        wait-for-completion-timeout-in-seconds: 3600
 
     - name: (Windows) Replace installer with signed version
       if: steps.sign-installer.outcome == 'success'
@@ -269,8 +286,38 @@ jobs:
           echo "Warning: No signed installer found in ${SIGNED_DIR}"
         fi
 
+    - name: (Windows) Update release asset to signed installer
+      if: steps.sign-installer.outcome == 'success' && env.RELEASE_ASSET_PATH
+      shell: msys2 {0}
+      run: |
+        # After signing, the signed binary lives at ARTIFACT_WINPATHORFILE.
+        # Update RELEASE_ASSET_PATH (set earlier, before signing) to point to
+        # the signed binary and recompute the SHA256.
+        SIGNED_PATH=$(cygpath -au "${ARTIFACT_WINPATHORFILE}")
+        if [ -d "${SIGNED_PATH}" ]; then
+          SIGNED_EXE=$(find "${SIGNED_PATH}" -name "*.exe" -type f | head -1)
+        else
+          SIGNED_EXE="${SIGNED_PATH}"
+        fi
+
+        if [ -n "${SIGNED_EXE}" ] && [ -f "${SIGNED_EXE}" ]; then
+          SHA256_FILE="${SIGNED_EXE}.sha256"
+          (cd "$(dirname "${SIGNED_EXE}")" && sha256sum "$(basename "${SIGNED_EXE}")") > "${SHA256_FILE}"
+          # Convert to Windows paths — actions/upload-artifact runs in Node.js
+          # outside MSYS2 and misinterprets Unix paths like /d/a/... as D:\d\a\...
+          {
+            echo "RELEASE_ASSET_PATH=$(cygpath -aw "${SIGNED_EXE}")"
+            echo "RELEASE_ASSET_SHA256_PATH=$(cygpath -aw "${SHA256_FILE}")"
+          } >> "$GITHUB_ENV"
+          echo "Recomputed SHA256 for signed installer:"
+          cat "${SHA256_FILE}"
+        else
+          echo "::error::Signing step reported success but signed installer not found at ${SIGNED_PATH}"
+          exit 1
+        fi
+
     - name: Create intermediate artifact for debugging
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       if: env.INTERMEDIATE_ARTIFACT_NAME
       with:
         name: ${{env.INTERMEDIATE_ARTIFACT_NAME}}
@@ -282,7 +329,7 @@ jobs:
       # Uploads the zipped contents of ARTIFACT_WINPATHORFILE as an "artifact" with
       # the given name - the Environmental variables are created by the
       # deploy-mudlet-for-windows.sh script:
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       if: env.ARTIFACT_NAME
       with:
         name: ${{env.ARTIFACT_NAME}}
@@ -293,6 +340,37 @@ jobs:
       shell: msys2 {0}
       if: env.ARTIFACT_NAME
       run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
+
+    - name: Upload release asset for GitHub Release
+      uses: actions/upload-artifact@v7
+      if: env.RELEASE_ASSET_PATH
+      with:
+        name: release-asset-Windows-X64
+        path: |
+          ${{ env.RELEASE_ASSET_PATH }}
+          ${{ env.RELEASE_ASSET_SHA256_PATH }}
+        retention-days: 3
+
+    - name: Export release metadata
+      if: env.RELEASE_ASSET_PATH
+      shell: msys2 {0}
+      run: |
+        jq -n \
+          --arg version "${VERSION}" \
+          --arg build_suffix "${MUDLET_VERSION_BUILD}" \
+          --arg commit "${BUILD_COMMIT}" \
+          --arg ref "${{ github.ref }}" \
+          --arg event "${{ github.event_name }}" \
+          '{version: $version, build_suffix: $build_suffix, commit: $commit, ref: $ref, event: $event}' \
+          > release-metadata.json
+
+    - name: Upload release metadata
+      uses: actions/upload-artifact@v7
+      if: env.RELEASE_ASSET_PATH
+      with:
+        name: release-metadata-Windows-X64
+        path: release-metadata.json
+        retention-days: 3
 
     - name: Register PTB Release
       shell: msys2 {0}

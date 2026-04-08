@@ -32,7 +32,8 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-struct GeometryData {
+struct GeometryData
+{
     QVector<float> vertices;
     QVector<float> colors;
     QVector<float> normals;
@@ -58,7 +59,8 @@ struct GeometryData {
     mutable bool texCoordsUploaded = false;
     mutable bool indicesUploaded = false;
 
-    void clear() {
+    void clear()
+    {
         vertices.clear();
         colors.clear();
         normals.clear();
@@ -79,7 +81,8 @@ struct GeometryData {
         // Note: texture cleanup is handled by clearTexture()
     }
 
-    void clearTexture() {
+    void clearTexture()
+    {
         if (textureId != 0) {
             glDeleteTextures(1, &textureId);
             textureId = 0;
@@ -98,40 +101,38 @@ struct GeometryData {
         }
     }
 
-    bool isEmpty() const {
-        return vertices.isEmpty();
+    bool isEmpty() const { return vertices.isEmpty(); }
+
+    int vertexCount() const
+    {
+        // If normals are stored separately, vertices has 3 floats per vertex
+        // If normals are interleaved, vertices has 6 floats per vertex (pos + normal)
+        return normals.isEmpty() ? vertices.size() / 6 : vertices.size() / 3;
     }
 
-    int vertexCount() const {
-        return vertices.size() / 6;
-    }
+    int indexCount() const { return indices.size(); }
 
-    int indexCount() const {
-        return indices.size();
-    }
+    bool hasIndices() const { return !indices.isEmpty(); }
 
-    bool hasIndices() const {
-        return !indices.isEmpty();
-    }
+    bool hasTexture() const { return (textureId != 0 || baseColorTextureId != 0) && !textureCoords.isEmpty(); }
 
-    bool hasTexture() const {
-        return (textureId != 0 || baseColorTextureId != 0) && !textureCoords.isEmpty();
-    }
-
-    bool hasPBRTextures() const {
-        return baseColorTextureId != 0 || metallicRoughnessTextureId != 0 || normalTextureId != 0;
-    }
+    bool hasPBRTextures() const { return baseColorTextureId != 0 || metallicRoughnessTextureId != 0 || normalTextureId != 0; }
 };
 
 // Instance data for instanced cube rendering
-struct CubeInstanceData {
-    float color[4];             // r, g, b, a color components
-    QMatrix4x4 transform;       // encodes scale -> rotate -> translate
+struct CubeInstanceData
+{
+    float color[4];       // r, g, b, a color components
+    QMatrix4x4 transform; // encodes scale -> rotate -> translate
 
     CubeInstanceData() = default;
 
-    CubeInstanceData(QMatrix4x4 trafo, float r, float g, float b, float a) {
-        color[0] = r; color[1] = g; color[2] = b; color[3] = a;
+    CubeInstanceData(const QMatrix4x4& trafo, float r, float g, float b, float a)
+    {
+        color[0] = r;
+        color[1] = g;
+        color[2] = b;
+        color[3] = a;
         transform = trafo;
     }
 };
@@ -152,65 +153,68 @@ public:
     GeometryData generatePlayerIconGeometry(float scale = 0.005f, float rotX = 0.0f, float rotY = 0.0f, float rotZ = 90.0f);
     void clearPlayerIconTemplate(); // Clear cached template to free memory
 
+    // Generate billboard (camera-facing quad) geometry for labels
+    GeometryData generateBillboardGeometry(float centerX, float centerY, float centerZ, float width, float height, const QVector3D& cameraRight, const QVector3D& cameraUp, GLuint textureId);
+
     // Render geometry using provided VAO and buffers
     void renderGeometry(const GeometryData& geometry,
-                       QOpenGLVertexArrayObject& vao,
-                       QOpenGLBuffer& vertexBuffer,
-                       QOpenGLBuffer& colorBuffer,
-                       QOpenGLBuffer& normalBuffer,
-                       QOpenGLBuffer& indexBuffer,
-                       GLenum drawMode = GL_TRIANGLES);
+                        QOpenGLVertexArrayObject& vao,
+                        QOpenGLBuffer& vertexBuffer,
+                        QOpenGLBuffer& colorBuffer,
+                        QOpenGLBuffer& normalBuffer,
+                        QOpenGLBuffer& indexBuffer,
+                        GLenum drawMode = GL_TRIANGLES);
 
     // Render geometry with texture coordinate support
     void renderGeometry(const GeometryData& geometry,
-                       QOpenGLVertexArrayObject& vao,
-                       QOpenGLBuffer& vertexBuffer,
-                       QOpenGLBuffer& colorBuffer,
-                       QOpenGLBuffer& normalBuffer,
-                       QOpenGLBuffer& indexBuffer,
-                       QOpenGLBuffer& texCoordBuffer,
-                       GLenum drawMode = GL_TRIANGLES);
+                        QOpenGLVertexArrayObject& vao,
+                        QOpenGLBuffer& vertexBuffer,
+                        QOpenGLBuffer& colorBuffer,
+                        QOpenGLBuffer& normalBuffer,
+                        QOpenGLBuffer& indexBuffer,
+                        QOpenGLBuffer& texCoordBuffer,
+                        GLenum drawMode = GL_TRIANGLES);
 
     // Render geometry with resource tracking
     void renderGeometry(const GeometryData& geometry,
-                       QOpenGLVertexArrayObject& vao,
-                       QOpenGLBuffer& vertexBuffer,
-                       QOpenGLBuffer& colorBuffer,
-                       QOpenGLBuffer& normalBuffer,
-                       QOpenGLBuffer& indexBuffer,
-                       class ResourceManager* resourceManager,
-                       GLenum drawMode = GL_TRIANGLES);
+                        QOpenGLVertexArrayObject& vao,
+                        QOpenGLBuffer& vertexBuffer,
+                        QOpenGLBuffer& colorBuffer,
+                        QOpenGLBuffer& normalBuffer,
+                        QOpenGLBuffer& indexBuffer,
+                        class ResourceManager* resourceManager,
+                        GLenum drawMode = GL_TRIANGLES);
 
     // Render geometry with texture coordinate support and resource tracking
     void renderGeometry(const GeometryData& geometry,
-                       QOpenGLVertexArrayObject& vao,
-                       QOpenGLBuffer& vertexBuffer,
-                       QOpenGLBuffer& colorBuffer,
-                       QOpenGLBuffer& normalBuffer,
-                       QOpenGLBuffer& indexBuffer,
-                       QOpenGLBuffer& texCoordBuffer,
-                       class ResourceManager* resourceManager,
-                       GLenum drawMode = GL_TRIANGLES);
+                        QOpenGLVertexArrayObject& vao,
+                        QOpenGLBuffer& vertexBuffer,
+                        QOpenGLBuffer& colorBuffer,
+                        QOpenGLBuffer& normalBuffer,
+                        QOpenGLBuffer& indexBuffer,
+                        QOpenGLBuffer& texCoordBuffer,
+                        class ResourceManager* resourceManager,
+                        GLenum drawMode = GL_TRIANGLES);
 
     // Instanced rendering methods for cube batching
     void renderInstancedCubes(const QVector<CubeInstanceData>& instances,
-                             QOpenGLVertexArrayObject& vao,
-                             QOpenGLBuffer& vertexBuffer,
-                             QOpenGLBuffer& colorBuffer,
-                             QOpenGLBuffer& normalBuffer,
-                             QOpenGLBuffer& indexBuffer,
-                             QOpenGLBuffer& instanceBuffer,
-                             GLenum drawMode = GL_TRIANGLES);
+                              QOpenGLVertexArrayObject& vao,
+                              QOpenGLBuffer& vertexBuffer,
+                              QOpenGLBuffer& colorBuffer,
+                              QOpenGLBuffer& normalBuffer,
+                              QOpenGLBuffer& indexBuffer,
+                              QOpenGLBuffer& instanceBuffer,
+                              GLenum drawMode = GL_TRIANGLES);
 
     void renderInstancedCubes(const QVector<CubeInstanceData>& instances,
-                             QOpenGLVertexArrayObject& vao,
-                             QOpenGLBuffer& vertexBuffer,
-                             QOpenGLBuffer& colorBuffer,
-                             QOpenGLBuffer& normalBuffer,
-                             QOpenGLBuffer& indexBuffer,
-                             QOpenGLBuffer& instanceBuffer,
-                             class ResourceManager* resourceManager,
-                             GLenum drawMode = GL_TRIANGLES);
+                              QOpenGLVertexArrayObject& vao,
+                              QOpenGLBuffer& vertexBuffer,
+                              QOpenGLBuffer& colorBuffer,
+                              QOpenGLBuffer& normalBuffer,
+                              QOpenGLBuffer& indexBuffer,
+                              QOpenGLBuffer& instanceBuffer,
+                              class ResourceManager* resourceManager,
+                              GLenum drawMode = GL_TRIANGLES);
 
 private:
     bool mInitialized = false;
@@ -222,14 +226,14 @@ private:
     mutable std::optional<GeometryData> mPlayerIconTemplate;
 
     // Function pointers for instancing (OpenGL 3.3+)
-    typedef void (QOPENGLF_APIENTRYP PFNGLVERTEXATTRIBDIVISORPROC) (GLuint index, GLuint divisor);
-    typedef void (QOPENGLF_APIENTRYP PFNGLDRAWELEMENTSINSTANCEDPROC) (GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount);
+    typedef void(QOPENGLF_APIENTRYP PFNGLVERTEXATTRIBDIVISORPROC)(GLuint index, GLuint divisor);
+    typedef void(QOPENGLF_APIENTRYP PFNGLDRAWELEMENTSINSTANCEDPROC)(GLenum mode, GLsizei count, GLenum type, const void* indices, GLsizei instancecount);
 
     PFNGLVERTEXATTRIBDIVISORPROC glVertexAttribDivisor = nullptr;
     PFNGLDRAWELEMENTSINSTANCEDPROC glDrawElementsInstanced = nullptr;
 
     void generateCubeTemplate();
-    GeometryData transformCubeTemplate(QMatrix4x4 transform, float r, float g, float b, float a);
+    GeometryData transformCubeTemplate(const QMatrix4x4& transform, float r, float g, float b, float a);
 
     void loadPlayerIconTemplate(float scale = 0.005f, float rotX = 0.0f, float rotY = 0.0f, float rotZ = 90.0f);
 };
