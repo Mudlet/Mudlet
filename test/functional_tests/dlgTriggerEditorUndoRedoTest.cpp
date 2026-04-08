@@ -237,7 +237,6 @@ private slots:
     delete mudlet::self();
   }
 
-
   // ========================================================================
   // CATEGORY 1: Core Operations - Single Items
   // ========================================================================
@@ -748,6 +747,90 @@ private slots:
       QVERIFY2(itemType.baseItem()->childCount() <= 1,
                qPrintable(itemTypeName +
                           ": Stack should handle ID remapping correctly"));
+
+      cleanupAll(itemType);
+    }
+
+    // Test: Multiple undo/redo cycles with nested hierarchy and moves
+    // (regression test for child ID remapping across cycles)
+    {
+      itemType.addFolder();
+      QTreeWidgetItem *parent = itemType.baseItem()->child(0);
+      QVERIFY(parent != nullptr);
+
+      // Add first child folder
+      itemType.treeWidget()->setCurrentItem(parent);
+      itemType.addFolder();
+      QCoreApplication::processEvents();
+
+      // Add second child folder that will have a grandchild
+      itemType.treeWidget()->setCurrentItem(parent);
+      itemType.addFolder();
+      QCoreApplication::processEvents();
+
+      QCOMPARE(parent->childCount(), 2);
+
+      QTreeWidgetItem *childWithGrandchild = parent->child(0);
+
+      // Add grandchild item under the child folder
+      itemType.treeWidget()->setCurrentItem(childWithGrandchild);
+      itemType.addItem();
+      QCoreApplication::processEvents();
+
+      QCOMPARE(childWithGrandchild->childCount(), 1);
+
+      // Move the grandchild to be a direct child of parent (simulate drag-drop)
+      QTreeWidgetItem *grandchild = childWithGrandchild->child(0);
+      int grandchildID = grandchild->data(0, Qt::UserRole).toInt();
+      int oldParentID = childWithGrandchild->data(0, Qt::UserRole).toInt();
+      int newParentID = parent->data(0, Qt::UserRole).toInt();
+      int oldPosition = 0;
+
+      childWithGrandchild->takeChild(0);
+      parent->addChild(grandchild);
+      int newPosition = parent->indexOfChild(grandchild);
+
+      mpEditor->slot_itemMoved(grandchildID, oldParentID, newParentID,
+                               oldPosition, newPosition);
+
+      QVERIFY2(parent->childCount() == 3 &&
+                   childWithGrandchild->childCount() == 0,
+               qPrintable(itemTypeName + ": Move operation should succeed"));
+
+      // Test 3 full undo/redo cycles
+      for (int cycle = 0; cycle < 3; cycle++) {
+        // Undo all operations
+        for (int i = 0; i < 10 && mpEditor->mpUndoStack->canUndo() &&
+                        itemType.baseItem()->childCount() > 0;
+             i++) {
+          mpEditor->mpUndoStack->undo();
+        }
+        QVERIFY2(itemType.baseItem()->childCount() == 0,
+                 qPrintable(itemTypeName +
+                            ": All items should be undone in cycle " +
+                            QString::number(cycle)));
+
+        // Redo all operations
+        for (int i = 0; i < 10 && mpEditor->mpUndoStack->canRedo(); i++) {
+          mpEditor->mpUndoStack->redo();
+        }
+
+        QTreeWidgetItem *restoredParent = itemType.baseItem()->child(0);
+        QVERIFY2(
+            restoredParent != nullptr && restoredParent->childCount() == 3,
+            qPrintable(itemTypeName +
+                       ": Parent should have 3 children after redo in cycle " +
+                       QString::number(cycle)));
+
+        // Verify moved grandchild is still direct child of parent
+        QTreeWidgetItem *childFolder = restoredParent->child(0);
+        QVERIFY2(
+            childFolder != nullptr && childFolder->childCount() == 0,
+            qPrintable(itemTypeName +
+                       ": Child folder should be empty (grandchild was moved) "
+                       "in cycle " +
+                       QString::number(cycle)));
+      }
 
       cleanupAll(itemType);
     }
@@ -1284,6 +1367,8 @@ private slots:
     }
 
     // Test: Deep nested hierarchy preserved after undo
+    // (grandparent -> parent -> 5 children, verifies all children stay
+    // nested under parent and don't get restored at root level)
     {
       int initialCount = itemType.baseItem()->childCount();
 
@@ -1308,15 +1393,16 @@ private slots:
       QTreeWidgetItem *parent = grandparent->child(0);
       QVERIFY(parent != nullptr);
 
+      // Add 5 children to the parent
       itemType.treeWidget()->setCurrentItem(parent);
-      itemType.addItem();
-      if (itemType.viewType == EditorViewType::cmKeysView ||
-          itemType.viewType == EditorViewType::cmActionView) {
-        QCoreApplication::processEvents();
+      for (int i = 0; i < 5; i++) {
+        itemType.addItem();
       }
 
-      QCOMPARE(parent->childCount(), 1);
+      int childrenCount = parent->childCount();
+      QCOMPARE(childrenCount, 5);
 
+      // Delete the grandparent (should delete entire tree)
       itemType.treeWidget()->setCurrentItem(grandparent);
       mpEditor->slot_deleteItemOrGroup();
 
@@ -1330,9 +1416,17 @@ private slots:
                           ": Grandparent with parent should be restored"));
 
       QTreeWidgetItem *restoredP = restoredGP->child(0);
-      QVERIFY2(restoredP != nullptr && restoredP->childCount() == 1,
-               qPrintable(itemTypeName +
-                          ": Deep nested hierarchy should be preserved"));
+      QVERIFY2(
+          restoredP != nullptr && restoredP->childCount() == childrenCount,
+          qPrintable(itemTypeName +
+                     ": All 5 children should be under parent, not at root"));
+
+      // Verify all children are accessible
+      for (int i = 0; i < childrenCount; i++) {
+        QVERIFY2(restoredP->child(i) != nullptr,
+                 qPrintable(itemTypeName + ": Child " + QString::number(i) +
+                            " should exist under parent"));
+      }
 
       cleanupAll(itemType);
     }
