@@ -4598,6 +4598,9 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     length = mZstream.avail_in;
     in_buffer = (char*)mZstream.next_in;
 
+    mZstream.next_in = Z_NULL;
+    mZstream.next_out = Z_NULL;
+
     if (zval == Z_STREAM_END) {
         inflateEnd(&mZstream);
         qDebug() << "recv Z_STREAM_END, ending compression";
