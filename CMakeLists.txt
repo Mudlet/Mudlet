@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015-2018, 2020, 2022, 2024-2025 by Stephen Lyons       #
+#    Copyright (C) 2015-2018, 2020, 2022, 2024-2026 by Stephen Lyons       #
 #                                                - slysven@virginmedia.com #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -41,6 +41,54 @@ if(APPLE)
 endif()
 
 project(mudlet)
+
+# All the other files that we want to see in the editor but which CMake doesn't
+# do anything with.
+# Gather non-compiled files for IDE visibility using glob patterns
+# Note: New files are picked up automatically on CMake reconfigure
+file(GLOB ROOT_FILES_LIST CONFIGURE_DEPENDS
+  .clang-tidy
+  .crowdin.yml
+  .cursorrules
+  .gitignore
+  .gitmodules
+  .imgbotconfig
+  .DirIcon
+  *.md
+  COMMITMENT
+  COMPILE
+  COPYING
+  CPPLINT.cfg
+  dangerfile.js
+  asan-suppressions.txt
+  mudlet.desktop
+  mudlet.png
+  mudlet.svg
+  icon_*.png
+)
+
+file(GLOB_RECURSE OTHER_FILES_LIST CONFIGURE_DEPENDS
+  .github/**
+  .devcontainer/**
+  .vscode/**
+  .claude/**
+  3rdparty/discord/rpc/lib/*
+  CI/**
+  docker/**
+  docs/**
+  src/.clang-format
+  src/.gitignore
+)
+
+# It is not clear that the "COMMENT" actually shows up anywhere - so include
+# a status message:
+message(STATUS "Refreshing OTHER_FILES list...")
+add_custom_target(OTHER_FILES
+  COMMENT "Refreshing OTHER_FILES list for passive file display in IDE"
+  SOURCES
+    ${ROOT_FILES_LIST}
+    ${OTHER_FILES_LIST}
+)
 
 if(CMAKE_CONFIGURATION_TYPES)
   add_custom_target(
@@ -87,7 +135,7 @@ else()
 endif()
 
 # Set APP_VERSION
-set(APP_VERSION 4.19.1)
+set(APP_VERSION 4.20.1)
 
 # Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD or default
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
@@ -136,9 +184,6 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_SHADER_HOT_RELOAD
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
-include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
-                        OPTION_VARIABLE USE_OWN_QTKEYCHAIN
-                        READABLE_NAME "own QtKeychain library")
 
 find_package(Qt6 6.8.2 REQUIRED)
 
@@ -149,7 +194,6 @@ find_package(Lua 5.1 EXACT)
 
 # Set Qt version for edbee-lib and dblsqd
 option(BUILD_WITH_QT5 "" OFF)
-# Set Qt version for qtkeychain
 option(BUILD_WITH_QT6 "" ON)
 
 include(InitGitSubmodule)
@@ -162,19 +206,17 @@ git_submodule_init(
     CHECK_FILE "3rdparty/qt-tags-widget/CMakeLists.txt" SUBMODULE_PATH
     "3rdparty/qt-tags-widget" READABLE_NAME "qt-tags-widget widget")
 
-if(USE_OWN_QTKEYCHAIN)
+# TODO: On macOS, we need to build qtkeychain from source because Homebrew's
+# qtkeychain package is built against Homebrew's Qt, which is incompatible with
+# the Qt installed by jurplel/install-qt-action in CI.
+# See: https://github.com/Mudlet/Mudlet/issues/8875
+if(APPLE)
+  set(USE_OWN_QTKEYCHAIN ON)
   git_submodule_init(
     CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
     SUBMODULE_PATH "3rdparty/qtkeychain"
     READABLE_NAME "QtKeychain")
   add_subdirectory(3rdparty/qtkeychain)
-
-  # Handle both old (files in qtkeychain/) and new (files in qtkeychain/qtkeychain/) directory structures
-  # so includes via <qtkeychain/keychain.h> work in both cases
-  if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/qtkeychain/qtkeychain/keychain.h")
-    # Old structure: add 3rdparty to include path so <qtkeychain/keychain.h> resolves correctly
-    target_include_directories(qt6keychain PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty>)
-  endif()
 endif()
 
 git_submodule_init(

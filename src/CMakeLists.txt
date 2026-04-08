@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2018, 2020, 2023, 2025 by Stephen Lyons            #
+#    Copyright (C) 2015-2018, 2020, 2023, 2025-2026 by Stephen Lyons       #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
 #    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
@@ -84,10 +84,11 @@ set(mudlet_SRCS
     HostManager.cpp
     ircmessageformatter.cpp
     KeyUnit.cpp
-    LlamaFileManager.cpp
     LuaInterface.cpp
     main.cpp
     mapInfoContributorManager.cpp
+    MMCPClient.cpp
+    MMCPServer.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
     EditorUndoStack.cpp
@@ -140,7 +141,6 @@ set(mudlet_SRCS
     TLabel.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
-    TLuaInterpreterAI.cpp
     TLuaInterpreterDiscord.cpp
     TLuaInterpreterMapper.cpp
     TLuaInterpreterMedia.cpp
@@ -148,6 +148,7 @@ set(mudlet_SRCS
     TLuaInterpreterNetworking.cpp
     TLuaInterpreterTextToSpeech.cpp
     TLuaInterpreterUI.cpp
+    TLuaInterpreterMMCP.cpp
     TMainConsole.cpp
     TMap.cpp
     TMapLabel.cpp
@@ -179,6 +180,7 @@ set(mudlet_SRCS
     TMxpProcessor.cpp
     TMxpSendTagHandler.cpp
     TMxpSoundTagHandler.cpp
+    TMxpStatTagHandler.cpp
     TMxpSupportTagHandler.cpp
     TMxpTagHandler.cpp
     TMxpTagParser.cpp
@@ -199,6 +201,7 @@ set(mudlet_SRCS
     TDetachedWindow.cpp
     TTextCodec.cpp
     TEncodingHelper.cpp
+    TTextBox.cpp
     TTextEdit.cpp
     TTimer.cpp
     TToolBar.cpp
@@ -256,6 +259,9 @@ set(mudlet_UIS
     ui/vars_main_area.ui)
 
 set(mudlet_HDRS
+    ../3rdparty/discord/rpc/include/discord_register.h
+    ../3rdparty/discord/rpc/include/discord_rpc.h
+    ../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h
     ActionUnit.h
     AliasUnit.h
     AltFocusMenuBarDisable.h
@@ -299,9 +305,11 @@ set(mudlet_HDRS
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h
-    LlamaFileManager.h
     LuaInterface.h
     mapInfoContributorManager.h
+    MMCP.h
+    MMCPClient.h
+    MMCPServer.h
     mudlet.h
     EditorCommand.h
     MudletInstanceCoordinator.h
@@ -347,11 +355,13 @@ set(mudlet_HDRS
     TEvent.h
     TFlipButton.h
     TForkedProcess.h
+    TGameDetails.h
     TimerUnit.h
     TKey.h
     TLabel.h
     THyperlinkCompactManager.h
     THyperlinkSelectionManager.h
+    THyperlinkStyling.h
     THyperlinkVisibilityManager.h
     TLinkStore.h
     TLuaInterpreter.h
@@ -386,7 +396,8 @@ set(mudlet_HDRS
     TMxpProcessor.h
     TMxpSendTagHandler.h
     TMxpSoundTagHandler.h
-    TMxpSupportTagHandler.cpp
+    TMxpStatTagHandler.h
+    TMxpSupportTagHandler.h
     TMxpTagHandler.h
     TMxpTagParser.h
     TMxpTagProcessor.h
@@ -406,6 +417,7 @@ set(mudlet_HDRS
     TTabBar.h
     TDetachedWindow.h
     TTextCodec.h
+    TTextBox.h
     TTextEdit.h
     TTimer.h
     TToolBar.h
@@ -529,11 +541,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
 endif()
 
 if(NOT USE_OWN_QTKEYCHAIN)
-  # Only use this when we are using a system package and NOT our own local build
   find_package(Qt${QT_MAJOR_VERSION}Keychain REQUIRED)
-
-  # No need to test for it being found as the REQUIRED will make it error out
-  # if it is NOT found!
   message(STATUS "Using system QtKeyChain (Qt${QT_MAJOR_VERSION}) library (found version \"${Qt${QT_MAJOR_VERSION}Keychain_VERSION}\").")
 endif()
 
@@ -645,11 +653,12 @@ target_compile_definitions(${LIB_MUDLET_TARGET}
   PRIVATE
     APP_VERSION="${APP_VERSION}"
     APP_TARGET="${APP_TARGET}"
-    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
+    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
+    LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
 
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
-    target_include_directories(${LIB_MUDLET_TARGET} PRIVATE ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain)
+    target_include_directories(${LIB_MUDLET_TARGET} PUBLIC ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain)
 endif()
 
 # Define shader hot-reloading if enabled
@@ -772,6 +781,7 @@ if(APPLE)
     MACOSX_BUNDLE_BUNDLE_VERSION ${APP_VERSION}${APP_BUILD}
     MACOSX_BUNDLE_GUI_IDENTIFIER org.mudlet.mudlet
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${APP_VERSION}
+    MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/MacOSXBundleInfo.plist.in"
   )
 
   if(${APP_BUILD} MATCHES "-ptb.+")

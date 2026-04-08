@@ -42,6 +42,20 @@ signals:
     void profileChanged(const QString& name);
 ```
 
+### QFlags and enums
+
+When working with Qt `Q_DECLARE_FLAGS` types, always use the proper enum/flags type - never pass them as raw `int`:
+
+```cpp
+// Good - uses the typed enum
+void setServerOrigin(Host*, const Host::DiscordOptionFlag);
+QMap<Host*, Host::DiscordOptionFlags> mServerOriginFlags;
+
+// Bad - loses type safety
+void setServerOrigin(Host*, int flag);
+QMap<Host*, int> mServerOriginFlags;
+```
+
 ### String handling
 
 ```cpp
@@ -163,6 +177,11 @@ After editing any C++ files (`.cpp`, `.h`), run clang-format before committing:
 clang-format -i path/to/edited/file.cpp path/to/edited/file.h
 ```
 
+On macOS, use the Homebrew-installed LLVM version to ensure compatibility:
+```bash
+$(brew --prefix llvm)/bin/clang-format -i path/to/edited/file.cpp path/to/edited/file.h
+```
+
 The project uses the `.clang-format` configuration in `src/`. This ensures consistent code style across the codebase.
 
 ### Static analysis
@@ -198,8 +217,8 @@ cd /path/to/Mudlet/build
 cmake ../../Mudlet -DCMAKE_PREFIX_PATH=`brew --prefix qt6`
 make -j `sysctl -n hw.ncpu`
 
-# Run
-cd /path/to/Mudlet/build && ./src/mudlet.app/Contents/MacOS/mudlet
+# Run Mudlet - use absolute path to avoid directory confusion
+/path/to/Mudlet/build/src/mudlet.app/Contents/MacOS/mudlet
 ```
 
 ### Building on Linux

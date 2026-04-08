@@ -63,6 +63,20 @@ void restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, Q
         }
     }
 }
+
+// Outline color data is stored as "r|g|b|a" to avoid binary format version changes.
+void restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
+{
+    const QString colorKey = qsl("system.labelOutlineColor_%1").arg(labelId);
+    if (userData.contains(colorKey)) {
+        const QStringList colorParts = userData.take(colorKey).split(QLatin1Char('|'));
+        if (colorParts.size() == 4) {
+            label.outlineColor = QColor(colorParts.at(0).toInt(), colorParts.at(1).toInt(), colorParts.at(2).toInt(), colorParts.at(3).toInt());
+        } else {
+            qWarning("TMap: Failed to parse outline color data for label %d, expected 4 parts but got %lld", labelId, colorParts.size());
+        }
+    }
+}
 } // anonymous namespace
 
 TMap::TMap(Host* pH, const QString& profileName)
@@ -1183,7 +1197,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         } else {
             pA->mUserData.insert(QLatin1String("system.fallback_map2DZoom"), QString::number(pA->get2DMapZoom()));
         }
-        // Store font info for labels in userData (avoids binary format version change)
+        // Store font and outline color info for labels in userData (avoids binary format version change)
         const auto permanentLabelsList{pA->getPermanentLabelIds()};
         for (const auto labelID : permanentLabelsList) {
             const auto label = pA->mMapLabels.value(labelID);
@@ -1195,6 +1209,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 const QString fontValue = qsl("%1|%2|%3|%4").arg(label.font.family()).arg(label.font.pointSize()).arg(label.font.weight()).arg(label.font.italic() ? 1 : 0);
                 pA->mUserData.insert(fontKey, fontValue);
             }
+            const QString outlineColorKey = qsl("system.labelOutlineColor_%1").arg(labelID);
+            const QString outlineColorValue = qsl("%1|%2|%3|%4").arg(label.outlineColor.red()).arg(label.outlineColor.green()).arg(label.outlineColor.blue()).arg(label.outlineColor.alpha());
+            pA->mUserData.insert(outlineColorKey, outlineColorValue);
         }
         ofs << pA->mUserData;
         if (mSaveVersion >= 21) {
@@ -1288,6 +1305,11 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 pR->userData.insert(QLatin1String("system.fallback_symbol"), pR->mSymbol);
             }
         }
+        if (mSaveVersion < 21) {
+            if (pR->hidden) {
+                pR->userData.insert(QLatin1String("system.fallback_hidden"), QLatin1String("true"));
+            }
+        }
         ofs << pR->getArea();
         ofs << pR->x();
         ofs << pR->y();
@@ -1308,10 +1330,8 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pR->getWeight();
         ofs << pR->name;
         ofs << pR->isLocked;
-        if (mSaveVersion >= 22) {
-            ofs << pR->hidden;
-        }
         if (mSaveVersion >= 21) {
+            ofs << pR->hidden;
             ofs << pR->getSpecialExits();
         } else {
             QMultiMap<int, QString> oldSpecialExits;
@@ -1764,6 +1784,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                         ifs >> label.noScaling;
                         ifs >> label.showOnTop;
                         restoreLabelFontFromUserData(label, labelId, pA->mUserData);
+                        restoreLabelOutlineColorFromUserData(label, labelId, pA->mUserData);
                         pA->mMapLabels.insert(labelId, label);
                     }
                 }
@@ -1833,6 +1854,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                     }
                     if (pA) {
                         restoreLabelFontFromUserData(label, labelID, pA->mUserData);
+                        restoreLabelOutlineColorFromUserData(label, labelID, pA->mUserData);
                         pA->mMapLabels.insert(labelID, label);
                     }
                     ++areaLabelCounter;
@@ -2000,6 +2022,14 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
         // userMapData
         QMap<QString, QString> _dummyQMapQStringQString;
         ifs >> _dummyQMapQStringQString;
+        if (otherProfileVersion >= 19) {
+            QFont _dummyQFont;
+            ifs >> _dummyQFont;
+            double _dummyDouble;
+            ifs >> _dummyDouble;
+            bool _dummyBool;
+            ifs >> _dummyBool;
+        }
     }
 
     if (otherProfileVersion >= 14) {
@@ -2700,8 +2730,10 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         // We don't delete the progress dialog until here as we now use it to inform
         // about post-download operations
 
-        mpProgressDialog->deleteLater();
-        mpProgressDialog = nullptr; // Must reset this so it can be reused
+        if (mpProgressDialog) {
+            mpProgressDialog->deleteLater();
+            mpProgressDialog = nullptr; // Must reset this so it can be reused
+        }
 
         mLocalMapFileName.clear();
         mExpectedFileSize = 0;
@@ -2738,7 +2770,10 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         return;
     }
     if (!writeFile.commit()) {
-        qDebug() << "TMap::slot_replyFinished: error saving downloaded map: " << writeFile.errorString();
+        const QString alertMsg = tr("[ ALERT ] - Map download failed, unable to save destination file:\n%1\nreason: %2").arg(mLocalMapFileName, writeFile.errorString());
+        postMessage(alertMsg);
+        cleanup();
+        return;
     }
 
     Host* pHost = mpHost;
@@ -2754,7 +2789,9 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
     // Since the download is complete but we do not offer to
     // cancel the required post-processing we should now hide
     // the cancel/abort button:
-    mpProgressDialog->setCancelButton(nullptr);
+    if (mpProgressDialog) {
+        mpProgressDialog->setCancelButton(nullptr);
+    }
 
     bool parsingWasSuccessful;
     QString parsingFileName;

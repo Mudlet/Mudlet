@@ -39,6 +39,7 @@
 #include <QtUiTools>
 #include <QColorDialog>
 #include <QDir>
+#include <QPointer>
 #include <QRandomGenerator>
 #include <QSettings>
 #include <QSignalBlocker>
@@ -253,12 +254,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(listWidget_profiles, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_itemClicked);
     connect(listWidget_profiles, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    connect(discord_optin_checkBox, &QCheckBox::checkStateChanged, this, &dlgConnectionProfiles::slot_updateDiscordOptIn);
-#else
-    connect(discord_optin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateDiscordOptIn);
-#endif
-
     // website_entry atm is only a label
     //connect(website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_updateWebsite(const QString)));
 
@@ -307,11 +302,19 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
 dlgConnectionProfiles::~dlgConnectionProfiles()
 {
+    if (mPasswordSaveTimer) {
+        mPasswordSaveTimer->stop();
+    }
+    mPendingPasswordSaveProfile.clear();
+
     // Clear any pending operation flags
     mKeychainOperationInProgress = false;
     mPendingProfileLoad.clear();
 
-    QCoreApplication::instance()->removeEventFilter(this);
+    // Check if QCoreApplication is still valid during shutdown
+    if (QCoreApplication::instance()) {
+        QCoreApplication::instance()->removeEventFilter(this);
+    }
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
@@ -527,32 +530,6 @@ void dlgConnectionProfiles::slot_updateAutoReconnect(int state)
     writeProfileData(pItem->data(csmNameRole).toString(), qsl("autoreconnect"), QString::number(state));
 }
 
-// This gets called when the QCheckBox that it is connect-ed to gets its
-// checked state set programmatically AS WELL as when the user clicks on it:
-void dlgConnectionProfiles::slot_updateDiscordOptIn(int state)
-{
-    QListWidgetItem* pItem = listWidget_profiles->currentItem();
-    if (!pItem) {
-        return;
-    }
-    writeProfileData(pItem->data(csmNameRole).toString(), qsl("discordserveroptin"), QString::number(state));
-
-    // in case the user is already connected, pull up stored GMCP data
-    auto& hostManager = mudlet::self()->getHostManager();
-    auto pHost = hostManager.getHost(profile_name_entry->text());
-    if (!pHost) {
-        return;
-    }
-
-    if (state == Qt::Checked) {
-        pHost->mDiscordDisableServerSide = false;
-        pHost->mTelnet.requestDiscordInfo();
-    } else {
-        pHost->mDiscordDisableServerSide = true;
-        pHost->clearDiscordData();
-    }
-}
-
 void dlgConnectionProfiles::slot_updatePort(const QString& ignoreBlank)
 {
     const QString port = port_entry->text().trimmed();
@@ -620,46 +597,119 @@ void dlgConnectionProfiles::slot_saveName()
     // a previously deleted profile (deleted outside Mudlet interface)
     if (mudlet::self()->storingPasswordsSecurely() && currentProfileEditName == tr("new profile name") && !QDir(mudlet::getMudletPath(enums::profileHomePath, newProfileName)).exists()) {
         // Check if there are orphaned keychain entries for this profile name
-        auto* credManager = new CredentialManager(this);
-        credManager->retrievePassword(
+        // Use QPointer to safely detect if dialog or credManager is destroyed during async operations
+        // Create CredentialManager without a parent to avoid destruction when dialog closes
+        QPointer<dlgConnectionProfiles> safeThis = this;
+        QPointer<CredentialManager> safeCredManager = new CredentialManager(nullptr);
+
+        safeCredManager->retrievePassword(
                 newProfileName,
                 "character",
-                [this, credManager, newProfileName, pItem, newProfileHost, newProfilePort, newProfileSslTsl](bool foundCharacterEntry, const QString& characterPassword, const QString& errorMessage) {
+                [safeThis, safeCredManager, currentProfileEditName, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl](
+                        bool foundCharacterEntry, const QString& characterPassword, const QString& errorMessage) {
                     Q_UNUSED(characterPassword)
                     Q_UNUSED(errorMessage)
 
-                    credManager->retrievePassword(newProfileName,
-                                                  "proxy",
-                                                  [this, credManager, newProfileName, pItem, newProfileHost, newProfilePort, newProfileSslTsl, foundCharacterEntry](
-                                                          bool foundProxyEntry, const QString& proxyPassword, const QString& errorMessage) {
-                                                      Q_UNUSED(proxyPassword)
-                                                      Q_UNUSED(errorMessage)
+                    // Check if credManager was destroyed
+                    if (!safeCredManager) {
+                        qWarning() << "dlgConnectionProfiles: CredentialManager destroyed during keychain operation, aborting";
+                        return;
+                    }
 
-                                                      // If we found any orphaned entries, clean them up
-                                                      if (foundCharacterEntry || foundProxyEntry) {
-                                                          if (foundCharacterEntry) {
-                                                              credManager->removeCredential(newProfileName, "character", [newProfileName](bool success, const QString& errorMessage) {
-                                                                  if (!success) {
-                                                                      qWarning()
-                                                                              << "dlgConnectionProfiles: Failed to clean up orphaned character password for" << newProfileName << ":" << errorMessage;
-                                                                  }
-                                                              });
-                                                          }
+                    // Check if dialog was destroyed during async operation
+                    if (!safeThis) {
+                        qWarning() << "dlgConnectionProfiles: Dialog destroyed during keychain operation, aborting";
+                        safeCredManager->deleteLater();
+                        return;
+                    }
 
-                                                          if (foundProxyEntry) {
-                                                              credManager->removeCredential(newProfileName, "proxy", [newProfileName](bool success, const QString& errorMessage) {
-                                                                  if (!success) {
-                                                                      qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned proxy password for" << newProfileName << ":" << errorMessage;
-                                                                  }
-                                                              });
-                                                          }
-                                                      }
+                    safeCredManager->retrievePassword(
+                            newProfileName,
+                            "proxy",
+                            [safeThis, safeCredManager, currentProfileEditName, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl, foundCharacterEntry](
+                                    bool foundProxyEntry, const QString& proxyPassword, const QString& errorMessage) {
+                                Q_UNUSED(proxyPassword)
+                                Q_UNUSED(errorMessage)
 
-                                                      credManager->deleteLater();
+                                // Check if credManager was destroyed
+                                if (!safeCredManager) {
+                                    qWarning() << "dlgConnectionProfiles: CredentialManager destroyed during keychain operation, aborting";
+                                    return;
+                                }
 
-                                                      // Continue with normal profile creation flow
-                                                      continueProfileSave(pItem, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl);
-                                                  });
+                                // Check if dialog was destroyed during async operation
+                                if (!safeThis) {
+                                    qWarning() << "dlgConnectionProfiles: Dialog destroyed during keychain operation, aborting";
+                                    safeCredManager->deleteLater();
+                                    return;
+                                }
+
+                                // Define a helper lambda to continue after cleanup is done
+                                // CredentialManager only supports one operation at a time, so we must chain removals
+                                // Captures QPointers to safely detect if dialog or credManager has been destroyed
+                                // -- each must be checked for null before use
+                                auto continueAfterCleanup = [safeThis, safeCredManager, currentProfileEditName, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl]() {
+                                    // Clean up credManager if still valid
+                                    if (safeCredManager) {
+                                        safeCredManager->deleteLater();
+                                    }
+
+                                    // Final safety check before accessing dialog members
+                                    if (!safeThis) {
+                                        qWarning() << "dlgConnectionProfiles: Dialog destroyed before continueProfileSave, aborting";
+                                        return;
+                                    }
+
+                                    // Find the current item by the old profile name instead of using a captured pointer
+                                    auto items = safeThis->findData(*safeThis->listWidget_profiles, currentProfileEditName, csmNameRole);
+                                    if (items.isEmpty()) {
+                                        qWarning() << "dlgConnectionProfiles: Could not find profile item for" << currentProfileEditName << "after async operation";
+                                        return;
+                                    }
+
+                                    safeThis->continueProfileSave(items.first(), newProfileName, newProfileHost, newProfilePort, newProfileSslTsl);
+                                };
+
+                                // If we found any orphaned entries, clean them up (chained to avoid lost callbacks)
+                                if (foundCharacterEntry && foundProxyEntry) {
+                                    // Both need cleanup - chain them
+                                    safeCredManager->removePassword(newProfileName, "character", [safeCredManager, newProfileName, continueAfterCleanup](bool success, const QString& errorMessage) {
+                                        if (!success) {
+                                            qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned character password for" << newProfileName << ":" << errorMessage;
+                                        }
+                                        // Check credManager before chaining next operation
+                                        if (!safeCredManager) {
+                                            qWarning() << "dlgConnectionProfiles: CredentialManager destroyed, cannot clean up proxy password";
+                                            continueAfterCleanup();
+                                            return;
+                                        }
+                                        // Now clean up proxy (chained)
+                                        safeCredManager->removePassword(newProfileName, "proxy", [newProfileName, continueAfterCleanup](bool proxySuccess, const QString& proxyError) {
+                                            if (!proxySuccess) {
+                                                qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned proxy password for" << newProfileName << ":" << proxyError;
+                                            }
+                                            continueAfterCleanup();
+                                        });
+                                    });
+                                } else if (foundCharacterEntry) {
+                                    safeCredManager->removePassword(newProfileName, "character", [newProfileName, continueAfterCleanup](bool success, const QString& errorMessage) {
+                                        if (!success) {
+                                            qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned character password for" << newProfileName << ":" << errorMessage;
+                                        }
+                                        continueAfterCleanup();
+                                    });
+                                } else if (foundProxyEntry) {
+                                    safeCredManager->removePassword(newProfileName, "proxy", [newProfileName, continueAfterCleanup](bool success, const QString& errorMessage) {
+                                        if (!success) {
+                                            qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned proxy password for" << newProfileName << ":" << errorMessage;
+                                        }
+                                        continueAfterCleanup();
+                                    });
+                                } else {
+                                    // No cleanup needed
+                                    continueAfterCleanup();
+                                }
+                            });
                 });
 
         return; // Exit here - continueProfileSave will be called from the callback
@@ -736,7 +786,11 @@ void dlgConnectionProfiles::slot_addProfile()
 {
     profile_name_entry->setReadOnly(false);
     // while normally handled by fillout_form, due to it's asynchronous nature it is better UX to reset it here
-    character_password_entry->setText(QString());
+    // Block signals to prevent triggering password save for the previously selected profile
+    {
+        const QSignalBlocker blocker(character_password_entry);
+        character_password_entry->setText(QString());
+    }
     fillout_form();
     welcome_message->hide();
 
@@ -802,24 +856,37 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
     dir.removeRecursively();
 
     // Clean up keychain entries for the deleted profile
+    // Note: CredentialManager only supports one operation at a time, so we must
+    // chain the operations - the second removal starts only after the first completes.
+    // This prevents lost callbacks from aborting in-progress keychain operations.
+    // Crash prevention comes from parentless CredentialManager + QPointer guards.
+    // Create CredentialManager without a parent to avoid destruction when dialog closes
     if (mudlet::self()->storingPasswordsSecurely()) {
-        auto* credManager = new CredentialManager(this);
+        QPointer<CredentialManager> safeCredManager = new CredentialManager(nullptr);
 
-        // Clean up character password entry
-        credManager->removeCredential(profile, "character", [profile](bool success, const QString& errorMessage) {
+        // Clean up character password entry first, then chain proxy cleanup
+        safeCredManager->removePassword(profile, "character", [safeCredManager, profile](bool success, const QString& errorMessage) {
             if (!success) {
                 qWarning() << "dlgConnectionProfiles: Failed to clean up character password for deleted profile" << profile << ":" << errorMessage;
             }
-        });
 
-        // Clean up proxy password entry (if any)
-        credManager->removeCredential(profile, "proxy", [credManager, profile](bool success, const QString& errorMessage) {
-            if (!success) {
-                qWarning() << "dlgConnectionProfiles: Failed to clean up proxy password for deleted profile" << profile << ":" << errorMessage;
+            // Check if credManager was destroyed before chaining next operation
+            if (!safeCredManager) {
+                qWarning() << "dlgConnectionProfiles: CredentialManager destroyed, cannot clean up proxy password";
+                return;
             }
 
-            // Clean up the credential manager after both operations
-            credManager->deleteLater();
+            // Now clean up proxy password entry (chained after character password removal completes)
+            safeCredManager->removePassword(profile, "proxy", [safeCredManager, profile](bool proxySuccess, const QString& proxyErrorMessage) {
+                if (!proxySuccess) {
+                    qWarning() << "dlgConnectionProfiles: Failed to clean up proxy password for deleted profile" << profile << ":" << proxyErrorMessage;
+                }
+
+                // Clean up the credential manager after both operations complete (if still valid)
+                if (safeCredManager) {
+                    safeCredManager->deleteLater();
+                }
+            });
         });
     }
 
@@ -1003,7 +1070,18 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     // because there isn't one in storage yet. It'll be copied over into the widget
     // by the copy method
     if (!mCopyingProfile) {
-        character_password_entry->setText(QString());
+        // Cancel any pending password save from the previous profile to prevent
+        // cross-profile password corruption when rapidly switching profiles
+        if (mPasswordSaveTimer) {
+            mPasswordSaveTimer->stop();
+        }
+        mPendingPasswordSaveProfile.clear();
+
+        // Block signals when clearing to prevent triggering a save for the wrong profile
+        {
+            const QSignalBlocker blocker(character_password_entry);
+            character_password_entry->setText(QString());
+        }
         // Schedule password loading asynchronously to avoid event loop issues
         auto* timer = new QTimer(this);
         timer->setSingleShot(true);
@@ -1031,19 +1109,6 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     mDiscordApplicationId = readProfileData(profile_name, qsl("discordApplicationId"));
     mDiscordInviteURL = readProfileData(profile_name, qsl("discordInviteURL"));
-
-    // val will be null if this is the first time the profile has been read
-    // since an update to a Mudlet version supporting Discord - so a toint()
-    // will return 0 - which just happens to be Qt::Unchecked() but let's not
-    // rely on that...
-    val = readProfileData(profile_name, qsl("discordserveroptin"));
-    if ((!val.isEmpty()) && val.toInt() == Qt::Checked) {
-        discord_optin_checkBox->setChecked(true);
-    } else {
-        discord_optin_checkBox->setChecked(false);
-    }
-
-    updateDiscordStatus();
 
     mud_description_textedit->setPlainText(getDescription(profile_name));
 
@@ -1147,26 +1212,6 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         }
         remove_profile_button->setEnabled(true);
         remove_profile_button->setToolTip(QString());
-    }
-}
-
-void dlgConnectionProfiles::updateDiscordStatus()
-{
-    auto discordLoaded = mudlet::self()->mDiscord.libraryLoaded();
-
-    if (!discordLoaded) {
-        discord_optin_checkBox->setEnabled(false);
-        discord_optin_checkBox->setChecked(false);
-        discord_optin_checkBox->setToolTip(utils::richText(tr("Discord integration not available on this platform")));
-    } else if (mDiscordApplicationId.isEmpty() && !mudlet::self()->mDiscord.gameIntegrationSupported(host_name_entry->text().trimmed()).first) {
-        // Disable discord support if it is not recognised by name and a
-        // Application Id has not been previously entered:
-        discord_optin_checkBox->setEnabled(false);
-        discord_optin_checkBox->setChecked(false);
-        discord_optin_checkBox->setToolTip(utils::richText(tr("Discord integration not supported by game")));
-    } else {
-        discord_optin_checkBox->setEnabled(true);
-        discord_optin_checkBox->setToolTip(utils::richText(tr("Check to enable Discord integration")));
     }
 }
 
@@ -1292,7 +1337,6 @@ void dlgConnectionProfiles::fillout_form()
         listWidget_profiles->setCurrentRow(toselectRow);
     }
 
-    updateDiscordStatus();
 }
 
 void dlgConnectionProfiles::setProfileIcon() const
@@ -1526,10 +1570,6 @@ void dlgConnectionProfiles::slot_copyProfile()
     connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
         mProfileList << profile_name;
         slot_itemClicked(pItem);
-        // Clear the Discord optin on the copied profile - just because the source
-        // one may have had it enabled does not mean we can assume the new one would
-        // want it set:
-        discord_optin_checkBox->setChecked(false);
 
         // restore the password, which won't be copied by the disk copy if stored in the credential manager
         // Temporarily block textChanged signal to avoid triggering save on programmatic setText
@@ -1546,6 +1586,7 @@ void dlgConnectionProfiles::slot_copyProfile()
         mpCopyProfile->setEnabled(true);
         QApplication::restoreOverrideCursor();
         validateProfile();
+        watcher->deleteLater();
     });
     watcher->setFuture(future);
 }
@@ -1576,10 +1617,6 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
 
     mProfileList << profile_name;
     slot_itemClicked(pItem);
-    // Clear the Discord optin on the copied profile - just because the source
-    // one may have had it enabled does not mean we can assume the new one would
-    // want it set:
-    discord_optin_checkBox->setChecked(false);
 }
 
 bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const
@@ -1752,9 +1789,11 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
         if (!character_password_entry->text().trimmed().isEmpty()) {
             pHost->setPass(character_password_entry->text().trimmed());
-        } else {
-            slot_updatePassword(pHost->getPass());
         }
+        // Note: If password field is empty, we don't call slot_updatePassword() because:
+        // 1. The host's password was already loaded via Host::loadSecuredPassword()
+        // 2. Calling slot_updatePassword with empty password would delete the stored password
+        // 3. slot_updatePassword reads profile from list widget which could mismatch
 
         if (!login_entry->text().trimmed().isEmpty()) {
             pHost->setLogin(login_entry->text().trimmed());
@@ -1894,9 +1933,8 @@ bool dlgConnectionProfiles::validateProfile()
             // Qt::AutoFormat won't detect that rich-text is present in this text!
             notificationAreaMessageBox->setTextFormat(Qt::RichText);
             /*: Please use two line-feeds after the first line so the second
-             *  line can be italicised and spaced out - if appropriate for
-             *  the locale.
-             */
+ line can be italicised and spaced out - if appropriate for
+ the locale.*/
             notificationAreaMessageBox->setText(qsl("%1%2\n\n%3")
                                                         .arg(!notificationAreaMessageBox->text().isEmpty() ? notificationAreaMessageBox->text().append(QChar::LineFeed) : QString(),
                                                              tr("Please enter the URL of the Game server.\n\n"
@@ -2366,6 +2404,12 @@ void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name
 
 void dlgConnectionProfiles::slot_passwordTextChanged()
 {
+    QListWidgetItem* pItem = listWidget_profiles->currentItem();
+    if (!pItem) {
+        return;
+    }
+    mPendingPasswordSaveProfile = pItem->data(csmNameRole).toString();
+
     // Cancel any pending password save
     if (mPasswordSaveTimer) {
         mPasswordSaveTimer->stop();
@@ -2374,9 +2418,13 @@ void dlgConnectionProfiles::slot_passwordTextChanged()
         mPasswordSaveTimer->setSingleShot(true);
         mPasswordSaveTimer->setInterval(500); // 500ms debounce
         connect(mPasswordSaveTimer, &QTimer::timeout, this, [this]() {
-            QListWidgetItem* pItem = listWidget_profiles->currentItem();
-            if (pItem) {
-                slot_updatePassword(character_password_entry->text());
+            if (!mPendingPasswordSaveProfile.isEmpty()) {
+                // Check if this profile is STILL selected - if not, don't save
+                // (user switched away, so the password field content is for a different profile)
+                QListWidgetItem* currentItem = listWidget_profiles->currentItem();
+                if (currentItem && currentItem->data(csmNameRole).toString() == mPendingPasswordSaveProfile) {
+                    slot_updatePassword(character_password_entry->text());
+                }
             }
         });
     }

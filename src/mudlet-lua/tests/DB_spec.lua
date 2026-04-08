@@ -1122,6 +1122,208 @@ describe("Tests DB.lua functions", function()
     end)
   end)
 
+  describe("Tests, if hanging indexes are removed", function()
+    local test_db_name = db:safe_name("remove_indexes_test")
+    local test_db_file = getMudletHomeDir() .. "/Database_" .. test_db_name .. ".db"
+    local cur;
+
+
+    after_each(function()
+      if cur then
+        cur:close()
+      end
+      db:close()
+      os.remove(test_db_file)
+    end)
+
+
+    it("should remove an index", function()
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+
+            _index = { "name" }
+          }
+        }
+      );
+      db:close();
+
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+          }
+        }
+      );
+      local conn = db.__conn[test_db_name]
+      cur, _ = conn:execute([[
+        SELECT
+          name,
+          tbl_name,
+          sql
+        FROM sqlite_master
+          WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
+      ]])
+      assert.is_nil(cur:fetch({}, "a"))
+    end)
+
+
+    it("should remove a compound index", function()
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+
+            _index = { {"name", "city" } }
+          }
+        }
+      );
+      db:close();
+
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+          }
+        }
+      );
+      local conn = db.__conn[test_db_name]
+      cur, _ = conn:execute([[
+        SELECT
+          name,
+          tbl_name,
+          sql
+        FROM sqlite_master
+          WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
+      ]])
+      assert.is_nil(cur:fetch({}, "a"))
+    end)
+
+
+    it("should remove a unique index", function()
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+          }
+        }
+      );
+      -- simulate creating a unique index, as Mudlet no longer creates them.
+      local conn = db.__conn[test_db_name]
+      conn:execute([[CREATE UNIQUE INDEX idx_test_c_name ON people ("name")]])
+      conn:commit()
+      db:close();
+
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+          }
+        }
+      );
+      conn = db.__conn[test_db_name]
+      cur, _ = conn:execute([[
+        SELECT
+          name,
+          tbl_name,
+          sql
+        FROM sqlite_master
+          WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
+      ]])
+      assert.is_nil(cur:fetch({}, "a"))
+    end)
+
+    it("should remove a unique compound index", function()
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+          }
+        }
+      );
+      -- simulate creating a unique index, as Mudlet no longer creates them.
+      local conn = db.__conn[test_db_name]
+      conn:execute([[CREATE UNIQUE INDEX idx_test_c_name_city ON people ("name", "city")]])
+      conn:commit()
+      db:close();
+
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+          }
+        }
+      );
+      conn = db.__conn[test_db_name]
+      cur, _ = conn:execute([[
+        SELECT
+          name,
+          tbl_name,
+          sql
+        FROM sqlite_master
+          WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
+      ]])
+      assert.is_nil(cur:fetch({}, "a"))
+    end)
+
+    it("should remove a unique compound index but keep normal index", function()
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+
+            _index = {"city"}
+          }
+        }
+      );
+      -- simulate creating a unique index, as Mudlet no longer creates them.
+      local conn = db.__conn[test_db_name]
+      conn:execute([[CREATE UNIQUE INDEX idx_test_c_name_city ON people ("name", "city")]])
+      conn:commit()
+      db:close();
+
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+
+            _index = {"city"}
+          }
+        }
+      );
+      conn = db.__conn[test_db_name]
+      cur, _ = conn:execute([[
+        SELECT
+          sql
+        FROM sqlite_master
+          WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
+      ]])
+      assert.are.equal([[CREATE INDEX idx_people_c_city ON people ("city")]], cur:fetch({}, "a").sql);
+      assert.is_nil(cur:fetch({}, "a"))
+    end)
+  end)
+
   describe("Tests that _violations changes trigger table migration", function()
     local test_db_name = "violations_migration_test"
     local test_db_file
@@ -1278,5 +1480,89 @@ describe("Tests DB.lua functions", function()
       end
       assert.is_true(found_replaced)
     end)
+    
+    it("should error when constraint changes result in data loss", function()
+      -- Create initial database where violations of compound unique constraint are FAILed.
+      mydb = db:create(
+        test_db_name,
+        {
+          records = {
+            name     = "",
+            category = "",
+            value    =  0,
+
+            _unique     = { {"name", "category"} },
+            _violations = "FAIL"
+          }
+        }
+      )
+      
+      -- Add test data
+      db:add(mydb.records, {name = "Item1", category = "A", value = 10})
+      db:add(mydb.records, {name = "Item1", category = "B", value = 20})
+      db:close()
+
+      assert.has_error(
+        function()
+          -- Re-create sheet where violations of non-compound unique constraint are REPLACEd.
+          db:create(
+            test_db_name,
+            {
+              records = {
+                name     = "",
+                category = "",
+                value    =  0,
+
+                _unique     = {"name", "category"},
+                _violations = "REPLACE"
+              }
+            }
+          )
+        end
+      )
+
+    end)
+    
+    it("should allow forced data loss during constraint change migrations", function()
+      -- Create initial database where violations of compound unique constraint are FAILed.
+      mydb = db:create(
+        test_db_name,
+        {
+          records = {
+            name     = "",
+            category = "",
+            value    =  0,
+
+            _unique     = { {"name", "category"} },
+            _violations = "FAIL"
+          }
+        }
+      )
+      
+      -- Add test data
+      db:add(mydb.records, {name = "Item1", category = "A", value = 10})
+      db:add(mydb.records, {name = "Item1", category = "B", value = 20})
+
+      -- Re-create sheet where violations of non-compound unique constraint are REPLACEd forecfully.
+      db:close()
+      db:create(
+        test_db_name,
+        {
+          records = {
+            name     = "",
+            category = "",
+            value    =  0,
+
+            _unique     = {"name", "category"},
+            _violations = "REPLACE"
+          }
+        },
+        true
+      )
+      
+      local results = db:fetch(mydb.records, db:eq(mydb.records.name, "Item1"))
+      assert.are.equal(1, #results)
+    end)
   end)
+
 end)

@@ -1,9 +1,10 @@
+# DUPLICATE WORKFLOW: This file is paired with build-mudlet-pr.yml
+# Changes here likely need to be mirrored there as well.
 name: 🔨 Build Mudlet
 on:
   push:
     branches: [master, development, release-*]
     tags: [Mudlet-*]
-  pull_request:
   workflow_dispatch:
     inputs:
       scheduled:
@@ -76,10 +77,10 @@ jobs:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         cache: true
-        modules: qt5compat qtmultimedia
+        modules: qt5compat qtmultimedia qtspeech
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.2.2
+      uses: lukka/get-cmake@v4.3.1
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
@@ -99,9 +100,27 @@ jobs:
         HOMEBREW_NO_AUTO_UPDATE: "ON"
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
+      timeout-minutes: 7
       run: |
+        # Remove Homebrew LLVM to prevent it from shadowing AppleClang.
+        # Upstream LLVM can't compile Objective-C++ against Apple SDK headers.
+        brew uninstall --ignore-dependencies llvm@15 2>/dev/null || true
+
         # Install all required dependencies
-        brew install libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost
+        # brew install can hang indefinitely during bottle pouring, so timeout and retry
+        for attempt in 1 2 3; do
+          brew install libzzip libzip ccache expect assimp hunspell oniguruma pcre2 pugixml sqlite yajl boost &
+          brew_pid=$!
+          ( sleep 120 && kill $brew_pid 2>/dev/null ) &
+          watcher_pid=$!
+          wait $brew_pid && { kill $watcher_pid 2>/dev/null || true; wait $watcher_pid 2>/dev/null || true; break; }
+          kill $watcher_pid 2>/dev/null || true; wait $watcher_pid 2>/dev/null || true
+          echo "::warning::brew install attempt $attempt failed or timed out, retrying..."
+          if [ "$attempt" -eq 3 ]; then
+            echo "::error::brew install failed after 3 attempts"
+            exit 1
+          fi
+        done
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
@@ -116,6 +135,11 @@ jobs:
           HOMEBREW_PREFIX=/usr/local
         fi
         echo "HOMEBREW_PREFIX=$HOMEBREW_PREFIX" >> $GITHUB_ENV
+
+        # Set CMAKE_PREFIX_PATH to include both Qt and Homebrew directories
+        # Qt is installed by install-qt-action, Homebrew has qtkeychain
+        # Use : as separator (Unix) not ; (Windows)
+        echo "CMAKE_PREFIX_PATH=${QT_ROOT_DIR}:${HOMEBREW_PREFIX}" >> $GITHUB_ENV
 
         # Help CMake find Lua installed by gh-actions-lua
         # The action installs to .lua/ and .luarocks/ in the runner home
@@ -162,17 +186,22 @@ jobs:
           libglu1-mesa-dev \
           libhunspell-dev \
           liblua5.1-0-dev \
+          libonig-dev \
           libpcre2-dev \
           libpulse-dev \
           libpugixml-dev \
           libsecret-1-dev \
+          libspeechd-dev \
           libsqlite3-dev \
+          libssl-dev \
           libxkbcommon-x11-0 \
+          libxcb-render-util0-dev \
+          libxcb-image0-dev \
           libyajl-dev \
           libzip-dev \
+          qtkeychain-qt6-dev \
           pcre2-utils \
           pkg-config \
-          libssl-dev \
           openssl \
           ca-certificates \
           -y
@@ -193,6 +222,27 @@ jobs:
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
+    - name: (Linux) Build xcb-util-cursor 0.1.5
+      timeout-minutes: 5
+      if: runner.os == 'Linux'
+      run: |
+        # Download and extract xcb-util-cursor 0.1.5
+        # This version fixes the off-by-one heap buffer overflow in _XcursorThemeInherits
+        # that causes PTB builds to crash with AddressSanitizer
+        wget -q --connect-timeout=10 --read-timeout=30 --tries=3 --waitretry=5 https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz
+        tar xf xcb-util-cursor-0.1.5.tar.xz
+        cd xcb-util-cursor-0.1.5
+
+        # Configure and build
+        ./configure --prefix=/usr --libdir=/usr/lib/x86_64-linux-gnu
+        make -j$(nproc)
+
+        # Install system-wide (replaces Ubuntu 22.04's buggy 0.1.1)
+        sudo make install
+
+        # Update library cache so linker finds new version
+        sudo ldconfig
+
     - name: (Linux Clang) change compiler & disable optional components
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
       run: |
@@ -207,8 +257,8 @@ jobs:
       uses: actions/cache/restore@v5
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}
+        key: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ github.ref_name }}
+        restore-keys: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-development
 
     - name: (Linux) Set build info
       if: runner.os == 'Linux'
@@ -236,7 +286,7 @@ jobs:
 
     - name: Get sentry-native commit hash
       id: sentry-hash
-      run: echo "hash=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> $GITHUB_OUTPUT
+      run: echo "SENTRY_HASH=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
     - name: Cache sentry-native
       id: cache-sentry
@@ -245,7 +295,7 @@ jobs:
         path: |
           3rdparty/sentry-native/install_without_transport
           3rdparty/sentry-native/install_with_transport
-        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.hash }}
+        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
@@ -255,7 +305,7 @@ jobs:
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: >-
           -G Ninja
-          -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
+          -DCMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH != '' && env.CMAKE_PREFIX_PATH || (env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR) }}
           -DUSE_SANITIZER=${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'Address' || '' }}
           ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
           -DWITH_SENTRY=ON
@@ -267,34 +317,16 @@ jobs:
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     - name: Save ccache
-      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
+      if: always()
       uses: actions/cache/save@v5
       with:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
-
+  
     - name: check ccache stats post build
       run: ccache --show-stats
 
-    - name: (Linux) Run C++ tests
-      if: runner.os == 'Linux' && matrix.run_tests == 'cpp'
-      working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure
-      env:
-        QT_QPA_PLATFORM: offscreen
-
-    - name: (macOS) Run C++ tests
-      if: runner.os == 'macOS'
-      working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure
-
-    - name: Run QTest
-      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
-      env:
-        QT_FORCE_STDERR_LOGGING: 1
-
     - name: install dependencies for packaging/tests
-      if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
       run: |
         LUAROCKS="luarocks --lua-version 5.1 install --local"
 
@@ -328,9 +360,26 @@ jobs:
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
 
+    - name: (Linux) Run C++ tests
+      if: runner.os == 'Linux' && matrix.run_tests == 'true'
+      working-directory: '${{runner.workspace}}/b/ninja'
+      run: ctest --output-on-failure
+      env:
+        QT_QPA_PLATFORM: offscreen
+
+    - name: (macOS) Run C++ tests
+      if: runner.os == 'macOS'
+      working-directory: '${{runner.workspace}}/b/ninja'
+      run: ctest --output-on-failure
+
+    - name: Run QTest
+      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
+      env:
+        QT_FORCE_STDERR_LOGGING: 1
+
     - name: add ssh-agent for release uploads
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
-      uses: webfactory/ssh-agent@v0.9.1
+      uses: webfactory/ssh-agent@v0.10.0
       with:
         ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
 
@@ -365,7 +414,7 @@ jobs:
         GITHUB_FORCE_BUILD: ${{ github.event.inputs.scheduled == 'true' }}
 
     - name: Upload packaged Mudlet
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       if: env.UPLOAD_FILENAME
       with:
         name: ${{env.UPLOAD_FILENAME}}
@@ -376,12 +425,41 @@ jobs:
       run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
       shell: bash
 
+    - name: Upload release asset for GitHub Release
+      uses: actions/upload-artifact@v7
+      if: env.RELEASE_ASSET_PATH
+      with:
+        name: release-asset-${{ runner.os }}-${{ runner.arch }}
+        path: |
+          ${{ env.RELEASE_ASSET_PATH }}
+          ${{ env.RELEASE_ASSET_SHA256_PATH }}
+        retention-days: 3
+
+    - name: Export release metadata
+      if: env.RELEASE_ASSET_PATH
+      shell: bash
+      run: |
+        jq -n \
+          --arg version "${VERSION}" \
+          --arg build_suffix "${MUDLET_VERSION_BUILD}" \
+          --arg commit "${BUILD_COMMIT}" \
+          --arg ref "${{ github.ref }}" \
+          --arg event "${{ github.event_name }}" \
+          '{version: $version, build_suffix: $build_suffix, commit: $commit, ref: $ref, event: $event}' \
+          > release-metadata.json
+
+    - name: Upload release metadata
+      uses: actions/upload-artifact@v7
+      if: env.RELEASE_ASSET_PATH
+      with:
+        name: release-metadata-${{ runner.os }}-${{ runner.arch }}
+        path: release-metadata.json
+        retention-days: 3
 
     # we need to be in the right place for LuaGlobals.lua to load
     - name: (Linux) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os =='Linux'
       run: cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
-      shell: bash
 
     - name: (macOS) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
@@ -395,14 +473,14 @@ jobs:
         fi
         cd ~/Desktop
         sudo codesign --remove-signature ~/Desktop/Mudlet.app
-      shell: bash
 
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
-      timeout-minutes: 5
+      timeout-minutes: 1
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        MUDLET_TEST_MODE: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
@@ -410,11 +488,11 @@ jobs:
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      timeout-minutes: 5
-      shell: bash
+      timeout-minutes: 1
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        MUDLET_TEST_MODE: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: detect_leaks=0
@@ -434,14 +512,15 @@ jobs:
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --run-undo-tests
       env:
         ASAN_OPTIONS: detect_leaks=0
+        MUDLET_TEST_MODE: 1
 
     - name: (macOS) Run C++ undo/redo tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
       timeout-minutes: 5
-      shell: bash
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --run-undo-tests
       env:
         ASAN_OPTIONS: detect_leaks=0
+        MUDLET_TEST_MODE: 1
 
     - name: Passed C++ undo/redo tests
       if: matrix.run_tests == 'true'

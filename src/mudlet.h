@@ -29,7 +29,6 @@
 #include "discord.h"
 #include "FontManager.h"
 #include "HostManager.h"
-#include "LlamaFileManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
 #include "utils.h"
@@ -42,6 +41,7 @@
 #include "ui_main_window.h"
 #include <QAction>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFlags>
 #include <QKeySequence>
 #include <QMainWindow>
@@ -63,6 +63,7 @@
 #include <hunspell/hunspell.h>
 
 class QCloseEvent;
+class QMediaDevices;
 class QMediaPlayer;
 class QMenu;
 class QLabel;
@@ -78,6 +79,7 @@ class QTimer;
 
 class dlgAboutDialog;
 class dlgConnectionProfiles;
+class FileOpenHandler;
 class dlgIRC;
 class dlgNotepad;
 class dlgPackageManager;
@@ -206,7 +208,9 @@ public:
     void attachDebugArea(const QString&);
     void checkUpdatesOnStart();
     void commitLayoutUpdates(bool flush = false);
-    void deleteProfileData(const QString &profile, const QString &item);
+    bool saveFloatingDockGeometries();
+    void restoreFloatingDockGeometries();
+    void deleteProfileData(const QString& profile, const QString& item);
     void disableToolbarButtons();
     void doAutoLogin(const QString&);
     void enableToolbarButtons();
@@ -236,6 +240,7 @@ public:
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     bool loadWindowLayout();
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
+    bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
     bool migratePasswordsToProfileStorage();
     bool migratePasswordsToSecureStorage();
     // Helper function to check if current version is >= specified version for backward compatibility
@@ -317,7 +322,12 @@ public:
     void showedSplitscreenTutorial();
     bool showMuteAllMediaTutorial();
     void showedMuteAllMediaTutorial();
+    bool showCharacterModeWarning();
+    void showedCharacterModeWarning();
     bool experiencedMudletPlayer();
+
+    // Telnet URI handling
+    void handleTelnetUri(const QString& uri);
 
     enums::Appearance mAppearance = enums::Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
@@ -333,7 +343,7 @@ public:
     // entries in their system if they do not appear in this and thus get
     // reported in the dictionary selection as the hunspell dictionary/affix
     // filename (e.g. a "xx" or "xx_YY" form rather than "words"):
-    QHash<QString, QString>mDictionaryLanguageCodeMap;
+    QHash<QString, QString> mDictionaryLanguageCodeMap;
     Discord mDiscord;
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
@@ -351,6 +361,8 @@ public:
     QPointer<Host> mpCurrentActiveHost;
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
+    // Flag to prevent connection dialog from opening during telnet:// URI processing
+    bool mProcessingTelnetUri = false;
     QToolBar* mpMainToolBar = nullptr;
     QPointer<QSettings> mpSettings;
     QPointer<ShortcutsManager> mpShortcutsManager;
@@ -391,14 +403,10 @@ public:
     bool mDrawUpperLowerLevels = true;
     bool mShowTabConnectionIndicators = true; // Global preference for showing connection status indicators on tabs
 
-    // AI integration methods
-    LlamafileManager* getAIManager() const { return mpLlamafileManager.get(); }
-    bool aiModelAvailable() const;
-    bool aiRunning() const;
-    QString getAIModelPath() const { return mAIModelPath; }
-    void setAIModelPath(const QString& path);
-    bool getAIAutoStart() const { return mAIAutoStart; }
-    void setAIAutoStart(bool autoStart);
+    qreal blinkPulseOpacity(bool isFastBlink) const;
+    static qreal computeBlinkPulseOpacity(qreal blinkTimeMs, bool isFastBlink);
+    void registerBlinkClient();
+    void unregisterBlinkClient();
 
 
 #if defined(INCLUDE_UPDATER)
@@ -413,8 +421,10 @@ public slots:
     void slot_connectionDialogueFinished(const QString&, bool);
     void slot_disconnect();
     void slot_handleToolbarVisibilityChanged(bool);
+    void slot_toolbarToggleActionTriggered(bool);
 #if defined(INCLUDE_UPDATER)
     void slot_manualUpdateCheck();
+    void slot_updateCheckFailed(const QString& error);
     void slot_showFullChangelog();
 #endif
     void slot_mapper();
@@ -447,7 +457,7 @@ public slots:
     void slot_replaySpeedDown();
     void slot_replayTimeChanged();
     void slot_restoreMainMenu() { setMenuBarVisibility(enums::visibleAlways); }
-    void slot_restoreMainToolBar() { setToolBarVisibility(enums::visibleAlways); }
+    void slot_restoreMainToolBar() { synchronizeToolBarVisibility(true); }
     void slot_showAboutDialog();
     void slot_showHelpDialogForum();
     void slot_showHelpDialogIrc();
@@ -468,7 +478,7 @@ public slots:
     static QIcon createConnectionStatusIcon(bool isConnected, bool isConnecting, bool hasError);
     void updateMainWindowTabIndicators();
     void updateMainWindowTabBarAutoHide();
-    void updateTabIndicators(); // Update all tab indicators (main window)
+    void updateTabIndicators();               // Update all tab indicators (main window)
     void updateDetachedWindowTabIndicators(); // Update all detached window tab indicators
     void slot_showActionDialog();
     void slot_showAliasDialog();
@@ -486,8 +496,6 @@ public slots:
     void setupPreferencesFocusRestoration(dlgProfilePreferences* pPreferences);
     void slot_showTimerDialog();
     void slot_showTabContextMenu(const QPoint& position);
-    void slot_toggleMainToolBar();
-    void slot_showMainToolBarContextMenu(const QPoint& position);
     void synchronizeToolBarVisibility(bool visible);
     void slot_showTriggerDialog();
     void slot_showVariableDialog();
@@ -513,7 +521,7 @@ signals:
     void signal_passwordsMigratedToProfiles();
     void signal_passwordsMigratedToSecure();
     void signal_characterPasswordsMigrated();
-    void signal_profileActivated(Host *, quint8);
+    void signal_profileActivated(Host*, quint8);
     void signal_profileMapReloadRequested(QList<QString>);
     void signal_setToolBarIconSize(int);
     void signal_setTreeIconSize(int);
@@ -523,13 +531,13 @@ signals:
     void signal_tabChanged(const QString&);
     void signal_toolBarVisibilityChanged(const enums::controlsVisibility);
     void signal_windowStateChanged(const Qt::WindowStates);
-    void signal_aiStatusChanged(bool running);
-    void signal_aiModelChanged(const QString& modelPath);
     void signal_showTabConnectionIndicatorsChanged(bool);
+    void signal_blinkStateChanged();
     void signal_profileLoaded();
 
 private slots:
     void slot_assignShortcutsFromProfile(Host* pHost = nullptr);
+    void slot_audioOutputDeviceChanged();
     void slot_compactInputLine(const bool);
     void slot_passwordMigratedToPortableStorage(QKeychain::Job*);
     void slot_passwordMigratedToSecureStorage(QKeychain::Job*);
@@ -544,19 +552,15 @@ private slots:
 #endif
     void slot_updateShortcuts();
     void slot_windowStateChanged(const Qt::WindowStates);
-    void slot_aiStatusChanged(LlamafileManager::Status newStatus, LlamafileManager::Status oldStatus);
-    void slot_aiError(const QString& error);
     void slot_refreshTabIndicatorsDelayed();
 
 
 private:
-
-
     void assignKeySequences();
     QString autodetectPreferredLanguage();
     static bool needsCustomDarkTheme();
     void closeHost(const QString&);
-    int getDictionaryWordCount(const QString &dictionaryPath);
+    int getDictionaryWordCount(const QString& dictionaryPath);
     void goingDown() { mIsGoingDown = true; }
     void initEdbee();
     void installModulesList(Host*, QStringList);
@@ -624,6 +628,7 @@ private:
     bool mMultiView = false;
     bool mMuteAPI = false;
     bool mMuteGame = false;
+    QMediaDevices* mpMediaDevices = nullptr;
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;
     QPointer<QAction> mpActionAliases;
@@ -695,6 +700,10 @@ private:
     QPointer<QShortcut> mpShortcutToggleLogging;
     QPointer<QShortcut> mpShortcutToggleEmergencyStop;
     QPointer<QTimer> mpTimerReplay;
+    QPointer<QTimer> mpBlinkTimer;
+    QElapsedTimer mBlinkElapsedTimer;
+    qreal mBlinkTimeMs = 0.0;
+    int mBlinkClientCount = 0;
     QPointer<QToolBar> mpToolBarReplay;
     QWidget* mpWidget_profileContainer = nullptr;
     // read-only value to see if the interface is light or dark. To set the value,
@@ -720,22 +729,26 @@ private:
     QAction* mWindowListSeparator = nullptr;
 
     // amount of times the shortcut has been shown help educate new users
-    int mScrollbackTutorialsShown = 0; // Cancel split screen
+    int mScrollbackTutorialsShown = 0;   // Cancel split screen
     int mMuteAllMediaTutorialsShown = 0; // Mute all media
+    int mCharacterModeWarningsShown = 0; // Character-at-a-time mode detection
+
     // show the tutorial maximum 3 times on a new Mudlet
-    static const int mScrollbackTutorialsMax = 3; // Split screen
-    static const int mMuteAllMediaTutorialsMax = 3; // Mute all media
+    static constexpr int mScrollbackTutorialsMax = 3;   // Split screen
+    static constexpr int mMuteAllMediaTutorialsMax = 3; // Mute all media
+    static constexpr int mCharacterModeWarningsMax = 3; // Character mode
 
-    // AI/LlamaFile integration
-    std::unique_ptr<LlamafileManager> mpLlamafileManager;
-    QString mAIModelPath;
-    bool mAIAutoStart = true;
+    // Telnet URI handling structures and methods
+    struct TelnetUriData
+    {
+        QString host;
+        int port = 23;
+        QString username;
+    };
 
-    // Helper methods for AI integration
-    void initializeAI();
-    void shutdownAI();
-    bool findAIModel();
-    void setupAIConfig();
+    std::optional<TelnetUriData> parseTelnetUri(const QString& uri);
+    QString findMatchingProfile(const QString& host, int port);
+    QString createProfileForUri(const TelnetUriData& uriData);
 
     // Helper method for detached windows cleanup
     void saveDetachedWindowsGeometry();
@@ -762,7 +775,6 @@ private:
 };
 
 
-
 class TConsoleMonitor : public QObject
 {
     Q_OBJECT
@@ -771,7 +783,8 @@ public:
     Q_DISABLE_COPY(TConsoleMonitor)
     explicit TConsoleMonitor(QObject* parent)
     : QObject(parent)
-    {}
+    {
+    }
 
 protected:
     bool eventFilter(QObject*, QEvent*) override;
@@ -790,7 +803,8 @@ class translation
 public:
     explicit translation(const int translationPercent = -1)
     : mTranslatedPercentage(translationPercent)
-    {}
+    {
+    }
 
     const QString& getNativeName() const { return mNativeName; }
     const QString& getMudletTranslationFileName() const { return mMudletTranslationFileName; }

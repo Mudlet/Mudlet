@@ -56,7 +56,9 @@
 #include <QScrollBar>
 #include <QStringRef>
 #include <QTextBoundaryFinder>
+#include <QLabel>
 #include <QToolTip>
+#include <QWidgetAction>
 #include <QVersionNumber>
 
 // Renders text on screen
@@ -68,6 +70,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mpConsole(pC)
 , mpHost(pH)
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
+, mEnableBlinkText(pH->getEnableBlinkText())
 , mMouseWheelRemainder()
 {
     mLastClickTimer.start();
@@ -100,11 +103,33 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     setAttribute(Qt::WA_OpaquePaintEvent, false);
     setAttribute(Qt::WA_DeleteOnClose);
 
+    if (auto* pMudlet = mudlet::self()) {
+        connect(pMudlet, &mudlet::signal_blinkStateChanged, this, &TTextEdit::slot_blinkStateChanged);
+    }
+
+    // Scroll optimizations may use cached screen data, missing blinking content detection
+    mpScrollStoppedTimer = new QTimer(this);
+    mpScrollStoppedTimer->setSingleShot(true);
+    mpScrollStoppedTimer->setInterval(150);
+    connect(mpScrollStoppedTimer, &QTimer::timeout, this, &TTextEdit::slot_scrollStoppedTimeout);
+
     showNewLines();
     setMouseTracking(true); // test fix for MAC
     setEnabled(true);       //test fix for MAC
 
     connect(mpHost, &Host::signal_changeIsAmbigousWidthGlyphsToBeWide, this, &TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide, Qt::UniqueConnection);
+    connect(mpHost, &Host::signal_changeEnableBlinkText, this, &TTextEdit::slot_changeEnableBlinkText, Qt::UniqueConnection);
+}
+
+TTextEdit::~TTextEdit()
+{
+    if (mIsBlinkClientRegistered) {
+        if (auto* pMudlet = mudlet::self()) {
+            pMudlet->unregisterBlinkClient();
+        }
+
+        mIsBlinkClientRegistered = false;
+    }
 }
 
 void TTextEdit::forceUpdate()
@@ -367,6 +392,10 @@ void TTextEdit::scrollTo(int line)
 
         mScrollVector = 0;
         update();
+
+        if (mpScrollStoppedTimer) {
+            mpScrollStoppedTimer->start();
+        }
     }
 }
 
@@ -387,6 +416,10 @@ void TTextEdit::scrollUp(int lines)
     mIsTailMode = false;
     updateScrollBar(mpBuffer->mCursorY);
     update();
+
+    if (mpScrollStoppedTimer) {
+        mpScrollStoppedTimer->start();
+    }
 }
 
 void TTextEdit::scrollDown(int lines)
@@ -399,6 +432,10 @@ void TTextEdit::scrollDown(int lines)
         mScrollVector = 0;
         updateScrollBar(mpBuffer->mCursorY);
         update();
+
+        if (mpScrollStoppedTimer) {
+            mpScrollStoppedTimer->start();
+        }
     }
 }
 
@@ -823,7 +860,7 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter,
     if (caretIsHere) {
         bgColor = mCaretColor;
     }
-    if (!textRect.isNull() && bgColor != mpConsole->getConsoleBgColor()) {
+    if (!textRect.isNull() && (mpConsole->getType() == TConsole::MainConsole) || bgColor != mpConsole->getConsoleBgColor()) {
         painter.fillRect(textRect, bgColor);
     }
     return charWidth;
@@ -833,26 +870,38 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
 {
     TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
-    // At present we cannot display flashing text - and we just make it italic
-    // (we ought to eventually add knobs for them so they can be shown in a user
-    // preferred style - which might be static for some users) - anyhow Mudlet
-    // will still detect the difference between the options:
-    const bool isItalics = attributes & (TChar::Italic | TChar::Blink | TChar::FastBlink);
+    const bool isBlinking = attributes & (TChar::Blink | TChar::FastBlink);
+
+    bool isItalics = attributes & TChar::Italic;
+    QColor effectiveFgColor = fgColor;
+    if (isBlinking) {
+        mHasBlinkingContent = true;
+        if (mEnableBlinkText) {
+            const bool isFastBlink = attributes & TChar::FastBlink;
+            auto pMudlet = mudlet::self();
+            const qreal opacity = pMudlet ? pMudlet->blinkPulseOpacity(isFastBlink) : 1.0;
+            effectiveFgColor.setAlphaF(effectiveFgColor.alphaF() * opacity);
+        } else {
+            isItalics = true;
+        }
+    }
+
     const bool isOverline = attributes & TChar::Overline;
     const bool isStrikeOut = attributes & TChar::StrikeOut;
     const bool isUnderline = attributes & TChar::Underline;
 
-    // Check for advanced underline styles or custom decoration colors
+    // Check for advanced underline styles
     const bool isUnderlineWavy = attributes & TChar::UnderlineWavy;
     const bool isUnderlineDotted = attributes & TChar::UnderlineDotted;
     const bool isUnderlineDashed = attributes & TChar::UnderlineDashed;
     const bool hasAdvancedUnderline = isUnderlineWavy || isUnderlineDotted || isUnderlineDashed;
 
-    // If we have advanced underline styles or custom decoration colors, disable Qt's built-in decorations
-    // and draw them manually later
-    const bool useQtUnderline = isUnderline && !hasAdvancedUnderline && !charStyle.hasCustomUnderlineColor();
-    const bool useQtOverline = isOverline && !charStyle.hasCustomOverlineColor();
-    const bool useQtStrikeOut = isStrikeOut && !charStyle.hasCustomStrikeoutColor();
+    // For linked characters, we draw decorations manually to support custom colors from TLinkStore
+    // For non-linked characters, we can use Qt's built-in decorations
+    const bool hasLink = charStyle.linkIndex() > 0;
+    const bool useQtUnderline = isUnderline && !hasAdvancedUnderline && !hasLink;
+    const bool useQtOverline = isOverline && !hasLink;
+    const bool useQtStrikeOut = isStrikeOut && !hasLink;
 
     // const bool isConcealed = attributes & TChar::Concealed;
     // const int altFontIndex = charStyle.alternateFont();
@@ -871,13 +920,13 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
         return;
     }
 
-    if (painter.pen().color() != fgColor) {
-        painter.setPen(fgColor);
+    if (painter.pen().color() != effectiveFgColor) {
+        painter.setPen(effectiveFgColor);
     }
     painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
 
     // Draw custom decorations (colored underlines, overlines, strikethrough)
-    drawCustomDecorations(painter, fgColor, textRect, charStyle);
+    drawCustomDecorations(painter, effectiveFgColor, textRect, charStyle);
 }
 
 void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultColor, const QRect& textRect, TChar& charStyle) const
@@ -891,15 +940,39 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
     int strikeoutY = textRect.top() + textRect.height() / 2;
     int lineWidth = 1;
 
+    // Look up decoration colors from TLinkStore if this character has a link
+    const int linkIndex = charStyle.linkIndex();
+    QColor underlineColor = defaultColor;
+    QColor overlineColor = defaultColor;
+    QColor strikeoutColor = defaultColor;
+
+    if (linkIndex > 0 && mpBuffer->mLinkStore.hasStyling(linkIndex)) {
+        Mudlet::HyperlinkStyling styling = mpBuffer->mLinkStore.getStyling(linkIndex);
+        styling.currentState = mpBuffer->getLinkState(linkIndex);
+        Mudlet::HyperlinkStyling::StateStyle effectiveStyle = styling.getEffectiveStyle();
+
+        if (effectiveStyle.hasUnderlineColor) {
+            underlineColor = effectiveStyle.underlineColor;
+        }
+
+        if (effectiveStyle.hasOverlineColor) {
+            overlineColor = effectiveStyle.overlineColor;
+        }
+
+        if (effectiveStyle.hasStrikeoutColor) {
+            strikeoutColor = effectiveStyle.strikeoutColor;
+        }
+    }
+
     // Draw underline decorations
     if (attributes & TChar::Underline) {
-        QColor underlineColor = charStyle.hasCustomUnderlineColor() ? charStyle.underlineColor() : defaultColor;
         QPen pen(underlineColor);
         pen.setWidth(lineWidth);
 
         bool isWavy = attributes & TChar::UnderlineWavy;
         bool isDotted = attributes & TChar::UnderlineDotted;
         bool isDashed = attributes & TChar::UnderlineDashed;
+        bool isLinked = linkIndex > 0;
 
         if (isWavy) {
             // Draw wavy underline
@@ -935,8 +1008,8 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
             painter.drawLine(textRect.left(), underlineY, textRect.right(), underlineY);
 
         } else {
-            // Solid underline (only draw if we have custom color or advanced style)
-            if (charStyle.hasCustomUnderlineColor() || isWavy || isDotted || isDashed) {
+            // Solid underline - draw for linked characters (Qt didn't draw them)
+            if (isLinked) {
                 pen.setStyle(Qt::SolidLine);
                 painter.setPen(pen);
                 painter.drawLine(textRect.left(), underlineY, textRect.right(), underlineY);
@@ -944,9 +1017,8 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
         }
     }
 
-    // Draw overline decorations
-    if (attributes & TChar::Overline) {
-        QColor overlineColor = charStyle.hasCustomOverlineColor() ? charStyle.overlineColor() : defaultColor;
+    // Draw overline decorations (only for linked characters since Qt draws them for non-linked)
+    if ((attributes & TChar::Overline) && linkIndex > 0) {
         QPen pen(overlineColor);
         pen.setWidth(lineWidth);
         pen.setStyle(Qt::SolidLine);
@@ -954,9 +1026,8 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
         painter.drawLine(textRect.left(), overlineY, textRect.right(), overlineY);
     }
 
-    // Draw strikethrough decorations
-    if (attributes & TChar::StrikeOut) {
-        QColor strikeoutColor = charStyle.hasCustomStrikeoutColor() ? charStyle.strikeoutColor() : defaultColor;
+    // Draw strikethrough decorations (only for linked characters since Qt draws them for non-linked)
+    if ((attributes & TChar::StrikeOut) && linkIndex > 0) {
         QPen pen(strikeoutColor);
         pen.setWidth(lineWidth);
         pen.setStyle(Qt::SolidLine);
@@ -1064,6 +1135,8 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
 }
 void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
+    mHasBlinkingContent = false;
+
     qreal dpr = devicePixelRatioF();
     QPixmap screenPixmap;
     QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * dpr, mScreenHeight * mFontHeight * dpr);
@@ -1128,7 +1201,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 
     //delete non used characters.
     //needed for horizontal scrolling because there sometimes characters didn't get cleared
-    QRect deleteRect = QRect(0, from * mFontHeight, x_right * mFontHeight, (y_bottom + 1) * mFontHeight);
+    QRect deleteRect = QRect(0, from * mFontHeight, x_right * mFontWidth, (y_bottom + 1) * mFontHeight);
     p.setCompositionMode(QPainter::CompositionMode_Source);
     p.fillRect(deleteRect, Qt::transparent);
 
@@ -1153,6 +1226,17 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     mScrollVector = 0;
     mLastRenderedOffset = lineOffset;
     mForceUpdate = false;
+
+    const bool shouldBeRegistered = mEnableBlinkText && mHasBlinkingContent;
+    if (auto* pMudlet = mudlet::self()) {
+        if (shouldBeRegistered && !mIsBlinkClientRegistered) {
+            pMudlet->registerBlinkClient();
+            mIsBlinkClientRegistered = true;
+        } else if (!shouldBeRegistered && mIsBlinkClientRegistered) {
+            pMudlet->unregisterBlinkClient();
+            mIsBlinkClientRegistered = false;
+        }
+    }
 }
 
 void TTextEdit::paintEvent(QPaintEvent* e)
@@ -1939,7 +2023,16 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     text.append(",");
     text.append(QString::number(mpHost->mBgColor.blue()));
     text.append(");}\n");
-    text.append("        span { white-space: pre-wrap; } -->\n");
+    text.append("        span { white-space: pre-wrap; }\n");
+
+    if (mEnableBlinkText) {
+        text.append("        @keyframes blink-slow { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }\n");
+        text.append("        @keyframes blink-fast { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }\n");
+        text.append("        .blink-slow { animation: blink-slow 2s ease-in-out infinite; }\n");
+        text.append("        .blink-fast { animation: blink-fast 1s ease-in-out infinite; }\n");
+    }
+
+    text.append("     -->\n");
     text.append("  </style>\n");
     text.append("  </head>\n");
     text.append("  <body><div>");
@@ -2242,6 +2335,41 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
 
                         auto popup = new QMenu(this);
                         popup->setAttribute(Qt::WA_DeleteOnClose);
+                        popup->setFont(font());
+
+                        if (!hyperlinkStyling.menuTitle.isEmpty()) {
+                            auto titleLabel = new QLabel(hyperlinkStyling.menuTitle, popup);
+                            titleLabel->setFont(font());
+
+                            // Build stylesheet from title style properties
+                            QStringList styleProps;
+                            styleProps << qsl("padding: 4px 20px");
+
+                            if (hyperlinkStyling.menuTitleStyle.hasForegroundColor) {
+                                styleProps << qsl("color: %1").arg(hyperlinkStyling.menuTitleStyle.foregroundColor.name());
+                            } else {
+                                styleProps << qsl("color: #5fbdaf"); // Default teal
+                            }
+
+                            if (hyperlinkStyling.menuTitleStyle.hasBackgroundColor) {
+                                styleProps << qsl("background-color: %1").arg(hyperlinkStyling.menuTitleStyle.backgroundColor.name());
+                            }
+
+                            if (hyperlinkStyling.menuTitleStyle.isBold) {
+                                styleProps << qsl("font-weight: bold");
+                            }
+
+                            if (hyperlinkStyling.menuTitleStyle.isItalic) {
+                                styleProps << qsl("font-style: italic");
+                            }
+
+                            titleLabel->setStyleSheet(styleProps.join(qsl("; ")));
+                            auto titleWidgetAction = new QWidgetAction(popup);
+                            titleWidgetAction->setDefaultWidget(titleLabel);
+                            popup->addAction(titleWidgetAction);
+                            popup->addSeparator();
+                        }
+
                         mPopupCommands.clear();
                         for (int i = 0, total = command.size(); i < total; ++i) {
                             QAction* pA = nullptr;
@@ -2280,7 +2408,11 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         mIsCommandPopup = false;
 
 
-        QAction* action = new QAction(tr("Copy"), this);
+        auto popup = new QMenu(this);
+        popup->setAttribute(Qt::WA_DeleteOnClose);
+        popup->setToolTipsVisible(true); // Not the default...
+
+        QAction* action = new QAction(tr("Copy"), popup);
         // According to the Qt Documentation:
         // "This text is used for the tooltip."
         // "If no tooltip is specified, the action's text is used."
@@ -2291,19 +2423,19 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         // in the QAction constructor:
         action->setToolTip(QString());
         connect(action, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboard);
-        QAction* action2 = new QAction(tr("Copy HTML"), this);
+        QAction* action2 = new QAction(tr("Copy HTML"), popup);
         action2->setToolTip(QString());
         connect(action2, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardHTML);
 
-        auto* actionCopyImage = new QAction(tr("Copy as image"), this);
+        auto* actionCopyImage = new QAction(tr("Copy as image"), popup);
         connect(actionCopyImage, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardImage);
 
-        QAction* action3 = new QAction(tr("Select all"), this);
+        QAction* action3 = new QAction(tr("Select all"), popup);
         action3->setToolTip(QString());
         connect(action3, &QAction::triggered, this, &TTextEdit::slot_selectAll);
 
         QString selectedEngine = mpHost ? mpHost->getSearchEngine().first : tr("Unknown");
-        QAction* action4 = new QAction(tr("Search on %1").arg(selectedEngine), this);
+        QAction* action4 = new QAction(tr("Search on %1").arg(selectedEngine), popup);
         action4->setToolTip(QString());
         connect(action4, &QAction::triggered, this, &TTextEdit::slot_searchSelectionOnline);
         if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
@@ -2311,10 +2443,6 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
             action3->setIcon(QIcon::fromTheme(qsl("edit-select-all"), QIcon(qsl(":/icons/edit-select-all.png"))));
             action4->setIcon(QIcon::fromTheme(qsl("edit-web-search"), QIcon(qsl(":/icons/edit-web-search.png"))));
         }
-
-        auto popup = new QMenu(this);
-        popup->setAttribute(Qt::WA_DeleteOnClose);
-        popup->setToolTipsVisible(true); // Not the default...
         popup->addAction(action);
         popup->addAction(action2);
         popup->addAction(actionCopyImage);
@@ -2322,7 +2450,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         popup->addAction(action3);
 
         if (mDragStart != mDragSelectionEnd && mpHost->mEnableTextAnalyzer) {
-            mpContextMenuAnalyser = new QAction(tr("Analyse characters"), this);
+            mpContextMenuAnalyser = new QAction(tr("Analyse characters"), popup);
             // NOTE: If running inside the Qt Creator IDE using the debugger with
             // the hovered() signal can be *problematic* - as hitting a
             // breakpoint - or getting an OS signal (like a Segment Violation)
@@ -2340,11 +2468,11 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         popup->addAction(action4);
 
         if (!mudlet::self()->isControlsVisible()) {
-            QAction* actionRestoreMainMenu = new QAction(tr("restore Main menu"), this);
+            QAction* actionRestoreMainMenu = new QAction(tr("restore Main menu"), popup);
             connect(actionRestoreMainMenu, &QAction::triggered, mudlet::self(), &mudlet::slot_restoreMainMenu);
             actionRestoreMainMenu->setToolTip(utils::richText(tr("Use this to restore the Main menu to get access to controls.")));
 
-            QAction* actionRestoreMainToolBar = new QAction(tr("restore Main Toolbar"), this);
+            QAction* actionRestoreMainToolBar = new QAction(tr("restore Main Toolbar"), popup);
             connect(actionRestoreMainToolBar, &QAction::triggered, mudlet::self(), &mudlet::slot_restoreMainToolBar);
             actionRestoreMainToolBar->setToolTip(utils::richText(tr("Use this to restore the Main Toolbar to get access to controls.")));
 
@@ -2354,7 +2482,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         }
 
         if (mpConsole->getType() == TConsole::ErrorConsole) {
-            QAction* clearErrorConsole = new QAction(tr("Clear console"), this);
+            QAction* clearErrorConsole = new QAction(tr("Clear console"), popup);
             connect(clearErrorConsole, &QAction::triggered, this, [=, this]() {
                 mpConsole->buffer.clear();
                 mpConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
@@ -2371,7 +2499,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                 QStringList actionInfo = it.value();
                 const QString& uniqueName = it.key();
                 const QString& actionName = actionInfo.at(1);
-                QAction* mouseAction = new QAction(actionName, this);
+                QAction* mouseAction = new QAction(actionName, popup);
                 mouseAction->setToolTip(actionInfo.at(2));
                 popup->addAction(mouseAction);
                 connect(mouseAction, &QAction::triggered, this, [this, uniqueName] {
@@ -3147,6 +3275,32 @@ void TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide(const bool state)
     }
 }
 
+void TTextEdit::slot_changeEnableBlinkText(const bool enable)
+{
+    if (mEnableBlinkText != enable) {
+        mEnableBlinkText = enable;
+        if (!mEnableBlinkText && mIsBlinkClientRegistered) {
+            if (auto* pMudlet = mudlet::self()) {
+                pMudlet->unregisterBlinkClient();
+            }
+            mIsBlinkClientRegistered = false;
+        }
+        update();
+    }
+}
+
+void TTextEdit::slot_blinkStateChanged()
+{
+    if (mIsBlinkClientRegistered) {
+        forceUpdate();
+    }
+}
+
+void TTextEdit::slot_scrollStoppedTimeout()
+{
+    forceUpdate();
+}
+
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
 void TTextEdit::slot_changeDebugShowAllProblemCodepoints(const bool state)
 {
@@ -3481,8 +3635,9 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         break;
     case Qt::Key_End:
         if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
-            newCaretLine = mpBuffer->lineBuffer.length() - 1;
-            newCaretColumn = mpBuffer->lineBuffer[mCaretLine].length() - 1;
+            const int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty() ? 1 : 0;
+            newCaretLine = mpBuffer->lineBuffer.length() - 1 - emptyLastLine;
+            newCaretColumn = std::max(0, static_cast<int>(mpBuffer->lineBuffer[newCaretLine].length()) - 1);
         } else {
             newCaretColumn = mpBuffer->lineBuffer.at(mCaretLine).length() - 1;
         }

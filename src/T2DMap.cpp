@@ -333,11 +333,20 @@ bool T2DMap::eventFilter(QObject* watched, QEvent* event)
             if (button == Qt::LeftButton || button == Qt::RightButton) {
                 const QPoint globalPos = mouseEvent->globalPosition().toPoint();
 
-                // Check if the click is on the menu itself using global coordinates
+                // Check if the click is on the menu or any of its visible submenus
                 if (auto* activeMenu = mActiveContextMenu.data()) {
                     const QRect menuGlobalGeometry(activeMenu->mapToGlobal(QPoint(0, 0)), activeMenu->size());
                     if (menuGlobalGeometry.contains(globalPos)) {
                         return QObject::eventFilter(watched, event);
+                    }
+
+                    for (const auto* action : activeMenu->actions()) {
+                        if (auto* subMenu = action->menu(); subMenu && subMenu->isVisible()) {
+                            const QRect subMenuGeometry(subMenu->mapToGlobal(QPoint(0, 0)), subMenu->size());
+                            if (subMenuGeometry.contains(globalPos)) {
+                                return QObject::eventFilter(watched, event);
+                            }
+                        }
                     }
                 }
 
@@ -466,6 +475,7 @@ void T2DMap::init()
     }
 
     eSize = mpHost->mLineSize;
+    mBSize = mpHost->mRoomBorderSize;
     rSize = mpHost->mRoomSize;
     mMapperUseAntiAlias = mpHost->mMapperUseAntiAlias;
     mShowGrid = mpHost->mMapperShowGrid;
@@ -532,6 +542,13 @@ void T2DMap::switchArea(const QString& newAreaName)
     Host* pHost = mpHost;
     if (!pHost || !mpMap) {
         return;
+    }
+
+    if (mMoveLabel) {
+        mMoveLabel = false;
+        setMouseTracking(false);
+        mLabelHighlighted = false;
+        mHelpMsg.clear();
     }
 
     const int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
@@ -921,6 +938,7 @@ void T2DMap::addTextLabelToCache(const QString& key, const TMapLabel& label, con
     QRectF targetRect(0, 0, targetSize.width(), targetSize.height());
     if (!sizeFontToFitTextInRect(scaledFont, targetRect, label.text, 5, 4.0)) {
         // Font too small to be legible - fall back to smooth-scaled original pixmap
+        painter.end();
         pixmap = std::make_unique<QPixmap>(label.pix.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
         if (!mTextLabelPixmapCache.insert(key, pixmap.release())) {
             qWarning("T2DMap::addTextLabelToCache() ALERT: Text Label Pixmap cache is full for key: %s", qUtf8Printable(key));
@@ -1081,9 +1099,9 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     double realHeight;
     int borderWidth;
     if (pRoom->mBorderThickness > 0) {
-        borderWidth = qMax(1, static_cast<int>(pRoom->mBorderThickness / eSize * mRoomWidth * rSize));
+        borderWidth = qMax(1, static_cast<int>(pRoom->mBorderThickness / mBSize * mRoomWidth * rSize));
     } else {
-        borderWidth = qMax(1, static_cast<int>(1 / eSize * mRoomWidth * rSize));
+        borderWidth = qMax(1, static_cast<int>(1 / mBSize * mRoomWidth * rSize));
     }
     const bool shouldDrawBorder = (mpHost->mMapperShowRoomBorders || pRoom->mBorderColor.isValid() || pRoom->mBorderThickness > 0) && !isGridMode;
     bool showThisRoomName = showRoomName;
@@ -1719,7 +1737,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             if (mpMap->mpRoomDB->isEmpty()) {
                 message = tr("No rooms in the map - load another one, or start mapping from scratch to begin.");
             } else {
-                message = tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size());
+                message = tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", nullptr, mpMap->mpRoomDB->size());
             }
         } else {
             message = tr("You do not have a map yet - load one, or start mapping from scratch to begin.");
@@ -1800,18 +1818,25 @@ void T2DMap::paintEvent(QPaintEvent* e)
         const qreal areaMinY = -pDrawnArea->ymaxForZ.value(zLevel, pDrawnArea->max_y);
         const qreal areaMaxY = -pDrawnArea->yminForZ.value(zLevel, pDrawnArea->min_y);
 
-        if (areaMaxX - areaMinX <= xspan) {
-            mMapCenterX = (areaMinX + areaMaxX) / 2.0;
-        }
+        const qreal areaWidth = areaMaxX - areaMinX;
+        const qreal areaHeight = areaMaxY - areaMinY;
 
-        if (areaMaxY - areaMinY <= yspan) {
-            // Negate because areaMinY/areaMaxY are in room coords, but mMapCenterY uses screen coords (-room.y())
+        if (areaWidth <= xspan && areaHeight <= yspan) {
+            mMapCenterX = (areaMinX + areaMaxX) / 2.0;
             mMapCenterY = -((areaMinY + areaMaxY) / 2.0);
         }
     }
 
     mRoomWidth = widgetWidth / xspan;
     mRoomHeight = widgetHeight / yspan;
+
+    if (!qFuzzyCompare(1.0f + mPrevRoomWidth, 1.0f + mRoomWidth) || !qFuzzyCompare(1.0f + mPrevRoomHeight, 1.0f + mRoomHeight)) {
+        flushSymbolPixmapCache();
+        flushTextLabelPixmapCache();
+        mPrevRoomWidth = mRoomWidth;
+        mPrevRoomHeight = mRoomHeight;
+    }
+
     mRX = qRound(mRoomWidth * ((xspan / 2.0) - mMapCenterX));
     mRY = qRound(mRoomHeight * ((yspan / 2.0) - mMapCenterY));
     QFont roomVNumFont = mpMap->mMapSymbolFont;
@@ -1882,8 +1907,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
         QColor gridColor = mpHost->mMapGridColor;
 
         QPen gridPen(gridColor);
-        const qreal gridWidth = static_cast<qreal>(mpHost->mMapGridLineSize);
+        const qreal gridWidth = static_cast<qreal>(mpHost->mMapGridLineSize) * mRoomWidth / 50.0;
         gridPen.setWidthF(gridWidth);
+        gridPen.setCosmetic(mMapperUseAntiAlias);
         painter.setPen(gridPen);
 
         const qreal visibleMinX = mMapCenterX - xspan / 2.0;
@@ -1992,11 +2018,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
         if (mapLabel.pos.z() != mMapCenterZ) {
             continue;
         }
-        if (mapLabel.text.isEmpty()) {
-            //: Default text if a label is created in mapper with no text
-            mapLabel.text = tr("no text");
-            pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
-        }
         QPointF labelPosition;
         const int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
         const int labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
@@ -2024,8 +2045,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
 
         if (mapLabel.highlight) {
-            labelPaintRectangle.setSize(mapLabel.clickSize);
-            painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
+            paintLabelHighlight(painter, labelPaintRectangle, mapLabel.clickSize);
         }
     }
 
@@ -2084,7 +2104,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
         painter.save();
         const QPen transparentPen(Qt::transparent);
         QPainterPath myPath;
-        const double roomRadius = (mpMap->mPlayerRoomOuterDiameterPercentage / 200.0) * static_cast<double>(mRoomWidth);
+        // Use the room+border diagonal so 100% fully encompasses the square
+        // (including corners), not just touching the midpoints of the sides
+        const int borderWidth = qMax(1, static_cast<int>(1.0 / mBSize * mRoomWidth * rSize));
+        const double roomVisualSize = static_cast<double>(mRoomWidth) * rSize + 2.0 * borderWidth;
+        const double roomRadius = (mpMap->mPlayerRoomOuterDiameterPercentage / 200.0) * roomVisualSize * M_SQRT2;
         QRadialGradient gradient(playerRoomOnWidgetCoordinates, roomRadius);
         if (mpHost->mMapStrongHighlight) {
             // Never set, no means to except via XMLImport, as dlgMapper class's
@@ -2104,7 +2128,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             painter.setPen(transparentPen);
             myPath.addEllipse(playerRoomOnWidgetCoordinates, roomRadius, roomRadius);
         } else {
-            gradient.setStops(mPlayerRoomColorGradentStops);
+            gradient.setStops(mPlayerRoomColorGradientStops);
             painter.setBrush(gradient);
             painter.setPen(transparentPen);
             myPath.addEllipse(playerRoomOnWidgetCoordinates, roomRadius, roomRadius);
@@ -2121,11 +2145,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
         if (mapLabel.pos.z() != mMapCenterZ) {
             continue;
-        }
-        if (mapLabel.text.isEmpty()) {
-            //: Default text if a label is created in mapper with no text
-            mapLabel.text = tr("no text");
-            pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
         QPointF labelPosition;
         const int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
@@ -2153,8 +2172,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
         if (mapLabel.highlight) {
-            labelPaintRectangle.setSize(mapLabel.clickSize);
-            painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
+            paintLabelHighlight(painter, labelPaintRectangle, mapLabel.clickSize);
         }
     }
 
@@ -3050,6 +3068,16 @@ void T2DMap::createLabel(QRectF labelRectangle)
     mpDlgMapLabel->updated();
 }
 
+void T2DMap::paintLabelHighlight(QPainter& painter, QRectF labelPaintRectangle, const QSizeF& clickSize)
+{
+    labelPaintRectangle.setSize(clickSize);
+    painter.save();
+    painter.setPen(QPen(QColor(255, 155, 55), 2));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawRect(labelPaintRectangle);
+    painter.restore();
+}
+
 void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
 {
     TMapLabel label;
@@ -3629,6 +3657,21 @@ void T2DMap::slot_deleteCustomExitLine()
 void T2DMap::slot_moveLabel()
 {
     mMoveLabel = true;
+    setMouseTracking(true);
+    //: 2D Mapper big, bottom of screen help message when moving a label
+    mHelpMsg = tr("Click to finish moving the label.");
+
+    auto [mx, my] = getMousePosition();
+    auto* area = mpMap->mpRoomDB->getArea(mAreaID);
+    if (area) {
+        for (auto& mapLabel : area->mMapLabels) {
+            if (mapLabel.highlight) {
+                mapLabel.pos = QVector3D(static_cast<float>(mx), static_cast<float>(my), static_cast<float>(mMapCenterZ));
+            }
+        }
+    }
+
+    update();
 }
 
 void T2DMap::slot_deleteLabel()
@@ -4640,6 +4683,16 @@ void T2DMap::setExitSize(double f)
     if (mpHost) {
         mpHost->mLineSize = f;
     }
+    update();
+}
+
+void T2DMap::setBorderSize(double f)
+{
+    mBSize = f;
+    if (mpHost) {
+        mpHost->mRoomBorderSize = f;
+    }
+    update();
 }
 
 void T2DMap::slot_setCustomLine()
@@ -5131,79 +5184,43 @@ void T2DMap::setPlayerRoomStyle(const int type)
         return;
     }
 
-    // From Qt 5.6 does not deallocate any memory previously used:
-    mPlayerRoomColorGradentStops.clear();
-    // Indicate the LARGEST size we will need
-    mPlayerRoomColorGradentStops.reserve(5);
+    mPlayerRoomColorGradientStops = buildPlayerRoomGradientStops(type, mpMap->mPlayerRoomInnerDiameterPercentage, mpMap->mPlayerRoomInnerColor, mpMap->mPlayerRoomOuterColor);
+}
 
-    const double factor = mpMap->mPlayerRoomInnerDiameterPercentage / 100.0;
-    const bool solid = (mpMap->mPlayerRoomInnerDiameterPercentage == 0);
-    switch (type) {
+QGradientStops T2DMap::buildPlayerRoomGradientStops(const int style, const quint8 innerDiameterPercentage, const QColor& innerColor, const QColor& outerColor)
+{
+    const double factor = innerDiameterPercentage / 100.0;
+    const bool solid = (innerDiameterPercentage == 0);
+
+    switch (style) {
     case 1: // Simple(?) shaded red ring:
         if (solid) {
-            mPlayerRoomColorGradentStops.resize(3);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255, 0, 0, 255));
-            mPlayerRoomColorGradentStops[1] = QGradientStop(0.990, QColor(255, 0, 0, 255));
-            mPlayerRoomColorGradentStops[2] = QGradientStop(1.000, QColor(255, 0, 0, 0));
-        } else {
-            mPlayerRoomColorGradentStops.resize(5);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255, 0, 0, 0));
-            mPlayerRoomColorGradentStops[1] = QGradientStop(factor * 0.950, QColor(255, 0, 0, 0));
-            mPlayerRoomColorGradentStops[2] = QGradientStop(factor * 1.050, QColor(255, 0, 0, 255));
-            mPlayerRoomColorGradentStops[3] = QGradientStop(1.000 - (factor * 0.100), QColor(255, 0, 0, 255));
-            mPlayerRoomColorGradentStops[4] = QGradientStop(1.000, QColor(255, 0, 0, 0));
+            return {{0.000, QColor(255, 0, 0, 255)}, {0.990, QColor(255, 0, 0, 255)}, {1.000, QColor(255, 0, 0, 0)}};
         }
-        break;
-        // End of case 1:
+        return {{0.000, QColor(255, 0, 0, 0)}, {factor * 0.980, QColor(255, 0, 0, 0)}, {factor * 1.020, QColor(255, 0, 0, 255)}, {0.980, QColor(255, 0, 0, 255)}, {1.000, QColor(255, 0, 0, 0)}};
 
     case 2: // Shaded bicolor (blue-yellow - so it ALWAYS contrasts with underlying room color) Ring:
         if (solid) {
-            mPlayerRoomColorGradentStops.resize(3);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255, 255, 0, 255));
-            mPlayerRoomColorGradentStops[1] = QGradientStop(0.990, QColor(0, 0, 255, 255));
-            mPlayerRoomColorGradentStops[2] = QGradientStop(1.000, QColor(0, 0, 255, 0));
-        } else {
-            mPlayerRoomColorGradentStops.resize(5);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255, 255, 0, 0));
-            mPlayerRoomColorGradentStops[1] = QGradientStop(factor * 0.950, QColor(255, 255, 0, 0));
-            mPlayerRoomColorGradentStops[2] = QGradientStop(factor * 1.050, QColor(255, 255, 0, 255));
-            mPlayerRoomColorGradentStops[3] = QGradientStop(1.000 - (factor * 0.100), QColor(0, 0, 255, 255));
-            mPlayerRoomColorGradentStops[4] = QGradientStop(1.000, QColor(0, 0, 255, 0));
+            return {{0.000, QColor(255, 255, 0, 255)}, {0.990, QColor(0, 0, 255, 255)}, {1.000, QColor(0, 0, 255, 0)}};
         }
-        break;
-        // End of case 2:
+        return {{0.000, QColor(255, 255, 0, 0)}, {factor * 0.980, QColor(255, 255, 0, 0)}, {factor * 1.020, QColor(255, 255, 0, 255)}, {0.980, QColor(0, 0, 255, 255)}, {1.000, QColor(0, 0, 255, 0)}};
 
     case 3: { // User set ring:
         if (solid) {
-            mPlayerRoomColorGradentStops.resize(3);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, mpMap->mPlayerRoomInnerColor);
-            mPlayerRoomColorGradentStops[1] = QGradientStop(0.990, mpMap->mPlayerRoomOuterColor);
-            QColor transparentColor(mpMap->mPlayerRoomOuterColor);
-            transparentColor.setAlpha(0);
-            mPlayerRoomColorGradentStops[2] = QGradientStop(1.000, transparentColor);
-        } else {
-            mPlayerRoomColorGradentStops.resize(5);
-            QColor transparentColor(mpMap->mPlayerRoomInnerColor);
-            transparentColor.setAlpha(0);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(1.000, transparentColor);
-            mPlayerRoomColorGradentStops[1] = QGradientStop(factor * 0.950, transparentColor);
-            mPlayerRoomColorGradentStops[2] = QGradientStop(factor * 1.050, mpMap->mPlayerRoomInnerColor);
-            mPlayerRoomColorGradentStops[3] = QGradientStop(1.000 - (factor * 0.100), mpMap->mPlayerRoomOuterColor);
-            transparentColor = mpMap->mPlayerRoomOuterColor;
-            transparentColor.setAlpha(0);
-            mPlayerRoomColorGradentStops[4] = QGradientStop(1.000, transparentColor);
+            QColor transparentOuter(outerColor);
+            transparentOuter.setAlpha(0);
+            return {{0.000, innerColor}, {0.990, outerColor}, {1.000, transparentOuter}};
         }
-        break;
-    } // End of case 3:
+        QColor transparentInner(innerColor);
+        transparentInner.setAlpha(0);
+        QColor transparentOuter(outerColor);
+        transparentOuter.setAlpha(0);
+        return {{0.000, transparentInner}, {factor * 0.980, transparentInner}, {factor * 1.020, innerColor}, {0.980, outerColor}, {1.000, transparentOuter}};
+    }
 
     default: // Sort of emulates the original code:
-        mPlayerRoomColorGradentStops.resize(5);
-        mPlayerRoomColorGradentStops[0] = QGradientStop(0, Qt::white);
-        mPlayerRoomColorGradentStops[1] = QGradientStop(0.7, QColor(255, 0, 0, 200));
-        mPlayerRoomColorGradentStops[2] = QGradientStop(0.799, QColor(150, 100, 100, 100));
-        mPlayerRoomColorGradentStops[3] = QGradientStop(0.80, QColor(150, 100, 100, 150));
-        mPlayerRoomColorGradentStops[4] = QGradientStop(0.95, QColor(255, 0, 0, 150));
-    } // End of switch ()
+        return {{0, Qt::white}, {0.7, QColor(255, 0, 0, 200)}, {0.799, QColor(150, 100, 100, 100)}, {0.80, QColor(150, 100, 100, 150)}, {0.95, QColor(255, 0, 0, 150)}};
+    }
 }
 
 void T2DMap::clearSelection()
@@ -5366,10 +5383,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         if (mapLabel.pos.z() != exportZLevel) {
             continue;
         }
-        if (mapLabel.text.isEmpty()) {
-            mapLabel.text = tr("no text");
-            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
-        }
         // Use export coordinate system for label positioning
         const int exportRX = padding - (pArea->min_x * finalRoomSize);
         const int exportRY = padding - (pArea->min_y * finalRoomSize);
@@ -5401,8 +5414,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         }
 
         if (mapLabel.highlight) {
-            labelPaintRectangle.setSize(mapLabel.clickSize);
-            painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
+            paintLabelHighlight(painter, labelPaintRectangle, mapLabel.clickSize);
         }
     }
 
@@ -5944,8 +5956,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
             pArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
         if (mapLabel.highlight) {
-            labelPaintRectangle.setSize(mapLabel.clickSize);
-            painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
+            paintLabelHighlight(painter, labelPaintRectangle, mapLabel.clickSize);
         }
     }
 
