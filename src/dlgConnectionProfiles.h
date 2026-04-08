@@ -149,6 +149,7 @@ private:
     QTimer mSearchTextTimer;
     QString mSearchText;
     QTimer* mPasswordSaveTimer = nullptr;
+    QPushButton* mpSkipToGamesButton = nullptr;
 
     // Async connection and password handling
     QString mPendingPasswordSaveProfile;
