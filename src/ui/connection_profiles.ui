@@ -718,37 +718,7 @@
                </item>
               </widget>
              </item>
-             <item row="3" column="0">
-              <widget class="QCheckBox" name="discord_optin_checkBox">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="toolTip">
-                <string>Enable Discord integration (not supported by game)</string>
-               </property>
-               <property name="accessibleName">
-                <string>Discord integration</string>
-               </property>
-               <property name="accessibleDescription">
-                <string>Allow this profile to use Mudlet's Discord "Rich Presence"  features</string>
-               </property>
-               <property name="text">
-                <string/>
-               </property>
-               <property name="icon">
-                <iconset resource="../mudlet.qrc">
-                 <normaloff>:/icons/Discord-Logo+Wordmark-Color.png</normaloff>:/icons/Discord-Logo+Wordmark-Color.png
-                </iconset>
-               </property>
-               <property name="iconSize">
-                <size>
-                 <width>65</width>
-                 <height>18</height>
-                </size>
-               </property>
-              </widget>
-             </item>
-             <item row="4" column="0" colspan="2">
+             <item row="3" column="0" colspan="2">
               <widget class="QCheckBox" name="autologin_checkBox">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
@@ -957,7 +927,6 @@
   <tabstop>login_entry</tabstop>
   <tabstop>character_password_entry</tabstop>
   <tabstop>profile_history</tabstop>
-  <tabstop>discord_optin_checkBox</tabstop>
   <tabstop>autologin_checkBox</tabstop>
   <tabstop>auto_reconnect</tabstop>
   <tabstop>mud_description_textedit</tabstop>

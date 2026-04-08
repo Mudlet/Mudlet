@@ -200,6 +200,7 @@ void Updater::showDialogManually() const
 void Updater::showChangelog() const
 {
     auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
+    changelogDialog->setAttribute(Qt::WA_DeleteOnClose);
     changelogDialog->setPreviousVersion(getPreviousVersion());
     changelogDialog->show();
 }
@@ -216,6 +217,7 @@ void Updater::showFullChangelog() const
     }
 
     auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
+    changelogDialog->setAttribute(Qt::WA_DeleteOnClose);
     auto releases = feed->getReleases();
     const auto firstVersion = releases.constLast().getVersion();
     changelogDialog->setMinVersion(firstVersion);
@@ -305,6 +307,7 @@ void Updater::setupOnWindows()
         // replace current binary with the unzipped one
         auto watcher = new QFutureWatcher<void>;
         connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::finishSetup);
+        connect(watcher, &QFutureWatcher<void>::finished, watcher, &QObject::deleteLater);
         watcher->setFuture(future);
     });
 
@@ -370,6 +373,7 @@ void Updater::setupOnLinux()
         // replace current binary with the unzipped one
         auto watcher = new QFutureWatcher<void>;
         connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::slot_updateLinuxBinary);
+        connect(watcher, &QFutureWatcher<void>::finished, watcher, &QObject::deleteLater);
         watcher->setFuture(future);
     });
 
@@ -540,6 +544,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 #endif
         mpInstallOrRestart->setText(tr("Restart to apply update"));
         mpInstallOrRestart->setEnabled(true);
+        watcher->deleteLater();
     });
     watcher->setFuture(future);
 #endif // !Q_OS_MACOS

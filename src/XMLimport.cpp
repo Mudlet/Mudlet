@@ -157,12 +157,19 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
 
                 readPackage();
             } else if (name() == qsl("map")) {
-                readMap();
-                mpHost->mpMap->audit();
-                mpHost->mpMap->mpMapper->mp2dMap->init();
-                mpHost->mpMap->mpMapper->updateAreaComboBox();
-                mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-                mpHost->mpMap->mpMapper->show();
+                if (!packName.isEmpty()) {
+                    qWarning() << "XMLimport::importPackage(...) WARNING: ignoring unexpected <map> element"
+                                  " - map data should not be present in package XML files";
+                } else {
+                    readMap();
+                    mpHost->mpMap->audit();
+                    if (mpHost->mpMap->mpMapper) {
+                        mpHost->mpMap->mpMapper->mp2dMap->init();
+                        mpHost->mpMap->mpMapper->updateAreaComboBox();
+                        mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+                        mpHost->mpMap->mpMapper->show();
+                    }
+                }
             } else {
                 qDebug().nospace() << "XMLimport::importPackage(...) ERROR: "
                                       "unrecognised element with name: "
@@ -756,6 +763,16 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);
     setBoolAttribute(qsl("mMapStrongHighlight"), pHost->mMapStrongHighlight);
     setBoolAttribute(qsl("mEnableSpellCheck"), pHost->mEnableSpellCheck);
+    if (attributes().hasAttribute(QLatin1String("mShowInfo"))) {
+        // Old - pre Map Info versions of Mudlet (those before
+        // https://github.com/Mudlet/Mudlet/pull/4718) used the above
+        // setting to control the showing of what is now the "Full"
+        // map info display. So treat it as that to reproduce that
+        // behaviour:
+        if (attributes().value(qsl("mShowInfo")).toString() == YES) {
+            mpHost->mMapInfoContributors.insert(qsl("Full"));
+        }
+    }
     setBoolAttribute(qsl("mAcceptServerGUI"), pHost->mAcceptServerGUI);
     setBoolAttribute(qsl("mAcceptServerMedia"), pHost->mAcceptServerMedia);
     setBoolAttribute(qsl("mMapperUseAntiAlias"), pHost->mMapperUseAntiAlias);
@@ -852,13 +869,7 @@ void XMLimport::readHost(Host* pHost)
         pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
     }
 
-    if (attributes().hasAttribute("mEnableBlinkText")) {
-        pHost->setEnableBlinkText(attributes().value(qsl("mEnableBlinkText")) == YES);
-    } else {
-        // Default to disabled for safety in a backwards compatible manner
-        // - so it doesn't start flashing unexpectedly:
-        pHost->setEnableBlinkText(false);
-    }
+    pHost->setEnableBlinkText(attributes().value(qsl("mEnableBlinkText")) == qsl("yes"));
 
     if (attributes().hasAttribute("logFileNameFormat")) {
         // We previously mixed "yyyy-MM-dd{#|T}hh-MM-ss" with "yyyy-MM-dd{#|T}HH-MM-ss"
@@ -915,16 +926,17 @@ void XMLimport::readHost(Host* pHost)
         pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value(qsl("mDiscordAccessFlags")).toString().toInt());
     }
 
+    if (attributes().hasAttribute(QLatin1String("mDiscordMode"))) {
+        const int modeInt = attributes().value(qsl("mDiscordMode")).toString().toInt();
+        if (modeInt >= Host::DiscordDisabled && modeInt <= Host::DiscordShowGameDetails) {
+            pHost->mDiscordMode = static_cast<Host::DiscordMode>(modeInt);
+        }
+    }
+
     if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserName"))) {
         pHost->mRequiredDiscordUserName = attributes().value(QLatin1String("mRequiredDiscordUserName")).toString();
     } else {
         pHost->mRequiredDiscordUserName.clear();
-    }
-
-    if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserDiscriminator"))) {
-        pHost->mRequiredDiscordUserDiscriminator = attributes().value(QLatin1String("mRequiredDiscordUserDiscriminator")).toString();
-    } else {
-        pHost->mRequiredDiscordUserDiscriminator.clear();
     }
 
     if (attributes().hasAttribute(QLatin1String("playerRoomStyle"))) {
@@ -966,6 +978,14 @@ void XMLimport::readHost(Host* pHost)
 
     if (qFuzzyCompare(1.0 + pHost->mLineSize, 1.0)) {
         pHost->mLineSize = 10.0; // Same value as is in Host class initializer list
+    }
+
+    pHost->mRoomBorderSize = attributes().value(qsl("mRoomBorderSize")).toString().toDouble();
+
+    if (qFuzzyCompare(1.0 + pHost->mRoomBorderSize, 1.0)) {
+        // For old profiles without border size, use mLineSize to preserve
+        // the previous behavior where border and exit shared the same size
+        pHost->mRoomBorderSize = pHost->mLineSize;
     }
 
     pHost->mMapGridLineSize = attributes().value(qsl("mMapGridLineSize")).toString().toDouble();
@@ -1040,10 +1060,6 @@ void XMLimport::readHost(Host* pHost)
     } else {
         // The default (and for map/profile files from before 4.15.0):
         pHost->setLargeAreaExitArrows(false);
-    }
-
-    if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
-        mpHost->mMapInfoContributors.clear();
     }
 
     QMargins borders;

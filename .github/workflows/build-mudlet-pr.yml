@@ -1,3 +1,5 @@
+# DUPLICATE WORKFLOW: This file is paired with build-mudlet.yml
+# Changes here likely need to be mirrored there as well.
 name: 🔨 Build Mudlet - PR
 on:
   pull_request:
@@ -71,7 +73,7 @@ jobs:
         modules: qt5compat qtmultimedia qtspeech
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.3.0
+      uses: lukka/get-cmake@v4.3.1
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
@@ -100,7 +102,7 @@ jobs:
         # Install all required dependencies
         # brew install can hang indefinitely during bottle pouring, so timeout and retry
         for attempt in 1 2 3; do
-          brew install libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost &
+          brew install libzzip libzip ccache expect assimp hunspell oniguruma pcre2 pugixml sqlite yajl boost &
           brew_pid=$!
           ( sleep 120 && kill $brew_pid 2>/dev/null ) &
           watcher_pid=$!
@@ -177,21 +179,22 @@ jobs:
           libglu1-mesa-dev \
           libhunspell-dev \
           liblua5.1-0-dev \
+          libonig-dev \
           libpcre2-dev \
           libpulse-dev \
           libpugixml-dev \
           libsecret-1-dev \
           libspeechd-dev \
           libsqlite3-dev \
-          qtkeychain-qt6-dev \
+          libssl-dev \
           libxkbcommon-x11-0 \
           libxcb-render-util0-dev \
           libxcb-image0-dev \
           libyajl-dev \
           libzip-dev \
+          qtkeychain-qt6-dev \
           pcre2-utils \
           pkg-config \
-          libssl-dev \
           openssl \
           ca-certificates \
           -y
@@ -369,7 +372,7 @@ jobs:
 
     - name: add ssh-agent for release uploads
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
-      uses: webfactory/ssh-agent@v0.9.1
+      uses: webfactory/ssh-agent@v0.10.0
       with:
         ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
 

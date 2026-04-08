@@ -24,8 +24,10 @@ set(UNIT_TESTS
     TMxpEdgeCasesTest
     TMxpElementDefinitionHandlerTest
     TLuaInterfaceTest
+    TVariableEditorTest
     SecureStringUtilsTest
     CredentialManagerTest
+    DiscordTest
 )
 
 foreach(test_name ${UNIT_TESTS})

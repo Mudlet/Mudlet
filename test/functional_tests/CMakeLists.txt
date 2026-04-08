@@ -7,6 +7,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetBenchmark.cpp
     ResetProfileTest.cpp
     TOscTest.cpp
+    TDiscordModeTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
@@ -27,6 +28,6 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     )
 endforeach()
 
-# ResetProfileTest resets a full profile per test,
+# ResetProfileTest creates a full profile per test method (30 tests),
 # so it needs a longer timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)

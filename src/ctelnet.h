@@ -205,6 +205,8 @@ public:
     const QByteArrayList& getEncodingsList() const { return mAcceptableEncodings; }
     std::optional<QAbstractSocket::SocketError> error() const;
     QString errorString();
+    bool oscHyperlinkConfigFeatureEnabled();
+    bool oscHyperlinkPresetsEnabled();
 #if !defined(QT_NO_SSL)
     QSslCertificate getPeerCertificate();
     QList<QSslError> getSslErrors();
@@ -221,7 +223,10 @@ public:
     bool isMXPEnabled() const { return enableMXP; }
     bool isChannel102Enabled() const { return enableChannel102; }
     void trackMXPElementDetection(const std::string&);
-    void requestDiscordInfo();
+    void sendDiscordHello();
+    void sendDiscordGet();
+    void sendGMCPSupportsAdd(const QString& package);
+    void sendGMCPSupportsRemove(const QString& package);
     QString decodeOption(const unsigned char) const;
     QString formatShortTelnetCommand(const std::string& telnetCommand, const QString& commandName) const;
     QAbstractSocket::SocketState getConnectionState() const;
