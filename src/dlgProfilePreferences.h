@@ -230,7 +230,7 @@ private:
     QPointer<QDialog> mpDialogMapGlyphUsage;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
-    QMap<QString, QKeySequence*> currentShortcuts;
+    QMap<QString, QKeySequence> currentShortcuts;
     QPointer<QMenu> protocolMenu;
     QPointer<QAction> mEnableGMCP;
     QPointer<QAction> mEnableMSDP;
