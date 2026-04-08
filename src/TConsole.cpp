@@ -1819,7 +1819,6 @@ void TConsole::printCommand(QString& msg)
     }
 
     if (mTriggerEngineMode) {
-        msg.append(QChar::LineFeed);
         const int lineBeforeNewContent = buffer.getLastLineNumber();
         if (lineBeforeNewContent >= 0 && !buffer.lineBuffer.back().isEmpty()) {
             msg.prepend(QChar::LineFeed);
@@ -1836,7 +1835,7 @@ void TConsole::printCommand(QString& msg)
                 QPoint P(promptEnd, lineBeforeNewContent);
                 const TChar format(mCommandFgColor, mCommandBgColor);
                 buffer.insertInLine(P, msg, format);
-                const int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+                const int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mWrapAt, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
 
                 mUpperPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
                 mLowerPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
