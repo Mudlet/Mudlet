@@ -171,6 +171,11 @@ cTelnet::~cTelnet()
         mpPostingTimer->stop();
     }
 
+    // Release zlib resources if MCCP compression was still active
+    if (mNeedDecompression) {
+        inflateEnd(&mZstream);
+    }
+
     // Aggressively disconnect the sockets to prevent signals during destruction
     if (mpSocket && mpSocket->state() != QAbstractSocket::UnconnectedState) {
         // Block all signals from the socket first
@@ -376,23 +381,68 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
     return qMakePair(true, QString());
 }
 
-void cTelnet::requestDiscordInfo()
+void cTelnet::sendDiscordHello()
 {
-    mudlet* pMudlet = mudlet::self();
-    if (pMudlet->mDiscord.libraryLoaded()) {
-        std::string data;
-        data = TN_IAC;
-        data += TN_SB;
-        data += OPT_GMCP;
-        data += std::string("External.Discord.Get");
-        data += TN_IAC;
-        data += TN_SE;
-
-        // some games are buggy with MCCP on and require actual input before GMCP is processed
-        data += "\n";
-
-        socketOutRaw(data);
+    if (!enableGMCP) {
+        return;
     }
+
+    std::string data;
+    data = TN_IAC;
+    data += TN_SB;
+    data += OPT_GMCP;
+    data += "External.Discord.Hello";
+    data += TN_IAC;
+    data += TN_SE;
+    socketOutRaw(data);
+}
+
+void cTelnet::sendDiscordGet()
+{
+    if (!enableGMCP) {
+        return;
+    }
+
+    std::string data;
+    data = TN_IAC;
+    data += TN_SB;
+    data += OPT_GMCP;
+    data += "External.Discord.Get";
+    data += TN_IAC;
+    data += TN_SE;
+    socketOutRaw(data);
+}
+
+void cTelnet::sendGMCPSupportsAdd(const QString& package)
+{
+    if (!enableGMCP) {
+        return;
+    }
+
+    std::string data;
+    data = TN_IAC;
+    data += TN_SB;
+    data += OPT_GMCP;
+    data += std::string(R"(Core.Supports.Add [ ")") + package.toStdString() + std::string(R"(" ])");
+    data += TN_IAC;
+    data += TN_SE;
+    socketOutRaw(data);
+}
+
+void cTelnet::sendGMCPSupportsRemove(const QString& package)
+{
+    if (!enableGMCP) {
+        return;
+    }
+
+    std::string data;
+    data = TN_IAC;
+    data += TN_SB;
+    data += OPT_GMCP;
+    data += std::string(R"(Core.Supports.Remove [ ")") + package.toStdString() + std::string(R"(" ])");
+    data += TN_IAC;
+    data += TN_SE;
+    socketOutRaw(data);
 }
 
 void cTelnet::connectIt(const QString& address, int port)
@@ -660,6 +710,9 @@ void cTelnet::slot_socketDisconnected()
  the rules of the "QDateTime::toString(...)" function and may need
  modification for some locales, e.g. France, Spain.*/
                                              .toString(tr("hh:mm:ss.zzz")));
+    if (mNeedDecompression) {
+        inflateEnd(&mZstream);
+    }
     mNeedDecompression = false;
     reset();
 
@@ -1410,6 +1463,8 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
             //: %1 is the file path, %2 is the error message
             postMessage(tr("[ WARN ]  - Package download failed: could not open file '%1' for writing, reason: %2").arg(mServerPackage, file.errorString()));
             qWarning() << "ctelnet: failed to open file for writing:" << file.errorString();
+            reply->deleteLater();
+            mpPackageDownloadReply = nullptr;
             return;
         }
 
@@ -1419,6 +1474,8 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
             //: %1 is the error message
             postMessage(tr("[ WARN ]  - Package download failed: could not save file, reason: %1").arg(file.errorString()));
             qDebug() << "cTelnet::slot_replyFinished: error downloading package: " << file.errorString();
+            reply->deleteLater();
+            mpPackageDownloadReply = nullptr;
             return;
         }
 
@@ -2619,20 +2676,21 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output = TN_IAC;
             output += TN_SB;
             output += OPT_GMCP;
-            output += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1", "Client.Media 1", "Char.Login 1"])";
+            {
+                std::string supportsList = R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1")";
+                if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && mudlet::self()->mDiscord.libraryLoaded()) {
+                    supportsList += R"(, "External.Discord 1")";
+                }
+                supportsList += R"(, "Client.Media 1", "Char.Login 1"])";
+                output += supportsList;
+            }
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
 
-            if (mudlet::self()->mDiscord.libraryLoaded()) {
-                output = TN_IAC;
-                output += TN_SB;
-                output += OPT_GMCP;
-                output += "External.Discord.Hello";
-                output += TN_IAC;
-                output += TN_SE;
-
-                socketOutRaw(output);
+            if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && mudlet::self()->mDiscord.libraryLoaded()) {
+                sendDiscordHello();
+                sendDiscordGet();
             }
 
             raiseProtocolEvent("sysProtocolEnabled", "GMCP");
@@ -4548,6 +4606,9 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
 
     length = mZstream.avail_in;
     in_buffer = (char*)mZstream.next_in;
+
+    mZstream.next_in = Z_NULL;
+    mZstream.next_out = Z_NULL;
 
     if (zval == Z_STREAM_END) {
         inflateEnd(&mZstream);
