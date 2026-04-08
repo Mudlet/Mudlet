@@ -13030,7 +13030,7 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
     auto* buttonBox = dialog.findChild<QDialogButtonBox*>();
     if (buttonBox) {
         //: Button in the color picker that preserves the existing text color on trigger matches
-        auto* keepButton = buttonBox->addButton(tr("Keep Color"), QDialogButtonBox::ActionRole);
+        auto* keepButton = buttonBox->addButton(tr("Keep color"), QDialogButtonBox::ActionRole);
         connect(keepButton, &QPushButton::clicked, &dialog, [&keepColorClicked, &dialog]() {
             keepColorClicked = true;
             dialog.accept();
