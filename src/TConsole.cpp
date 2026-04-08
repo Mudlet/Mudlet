@@ -1941,7 +1941,7 @@ void TConsole::paste()
     mLowerPane->showNewLines();
 }
 
-void TConsole::pasteWindow(TBuffer bufferSlice)
+void TConsole::pasteWindow(const TBuffer& bufferSlice)
 {
     mpHost->mpConsole->mClipboard = bufferSlice;
     paste();

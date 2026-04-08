@@ -168,8 +168,15 @@ public:
 
     bool libraryLoaded();
     bool usingMudletsDiscordID(Host*) const;
+    static QString getLoggedInUserName() { return smUserName; }
 
+    void initializeRpc();
+    void shutdownRpc();
     void UpdatePresence();
+
+    void setServerOrigin(Host*, const Host::DiscordOptionFlag);
+    void clearServerOrigin(Host*, const Host::DiscordOptionFlag);
+    bool isServerOrigin(Host*, const Host::DiscordOptionFlag) const;
 
     QString deduceGameName(const QString& address);
     QPair<bool, QString> gameIntegrationSupported(const QString& address);
@@ -198,9 +205,6 @@ public:
     QPair<int64_t ,int64_t> getTimeStamps(Host* pHost) const { return qMakePair(mStartTimes.value(pHost), mEndTimes.value(pHost)); }
     QPair<int, int> getParty(Host* pHost) const { return qMakePair(mPartySize.value(pHost), mPartyMax.value(pHost)); }
 
-    // Returns the Discord user received from the Discord_Ready callback
-    QStringList getDiscordUserDetails() const;
-
     // Runs the Host::discordUserIdMatch(...) check for the given Host:
     bool discordUserIdMatch(Host* pHost) const;
 
@@ -225,8 +229,8 @@ private:
     std::function<void(const DiscordRichPresence*)> Discord_UpdatePresence;
     std::function<void(void)> Discord_RunCallbacks;
     std::function<void(void)> Discord_Shutdown;
-    // Not used:
-    // std::function<void>(void)> Discord_ClearPresence;
+    // Could be useful for clearing presence without tearing down the RPC connection:
+    // std::function<void(void)> Discord_ClearPresence;
 #if defined(DISCORD_DISABLE_IO_THREAD)
     // std::function<void(void)> Discord_UpdateConnection;
 #endif
@@ -234,6 +238,8 @@ private:
     // std::function<void(DiscordEventHandlers*)> Discord_UpdateHandlers;
 
     bool mLoaded = false;
+    bool mRpcActive = false;
+    bool mPendingPresenceUpdate = false;
 
     // Key is a Application Id, Value is a pointer to a local copy of the data
     // currently held for that presence:
@@ -259,6 +265,10 @@ private:
     QMap<Host*, int>mPartySize;
     QMap<Host*, int>mPartyMax;
 
+    // Tracks which presence fields were last set by the server (vs Lua).
+    // Uses the same bit positions as Host::DiscordOptionFlag.
+    QMap<Host*, Host::DiscordOptionFlags> mServerOriginFlags;
+
     // Hash with game name as key and various URL forms that might be used for
     // it as values:
     QHash<QString, QVector<QString>> mKnownGames;
@@ -277,7 +287,6 @@ private:
     // in the User Avatar image and name within that application).
     static QString smUserName;
     static QString smUserId;
-    static QString smDiscriminator;
     static QString smAvatar;
 };
 
