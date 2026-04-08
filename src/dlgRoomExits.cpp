@@ -1820,7 +1820,7 @@ void dlgRoomExits::init()
         pI->setTextAlignment(ExitsTreeWidget::colIndex_exitWeight, Qt::AlignLeft);
         pSpecialExit->weight = pI->data(ExitsTreeWidget::colIndex_exitWeight, Qt::EditRole).toInt();
         //: Tooltip for exit weight column
-    pI->setToolTip(ExitsTreeWidget::colIndex_exitWeight, utils::richText(tr("Positive value overrides room weight; zero uses default.")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_exitWeight, utils::richText(tr("Positive value overrides room weight; zero uses default.")));
 
         //ExitsTreeWidget::colIndex_doorNone-ExitsTreeWidget::colIndex_doorLocked
         //hold a buttongroup of 4, ideally QRadioButtons, to select a door type

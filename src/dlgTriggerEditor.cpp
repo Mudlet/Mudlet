@@ -233,7 +233,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         {qsl("button1"), tr("How to add a new button now"),
         //: Help contents of a selectable option for the Button intro
             tr("<ol><li>Add a new group to create a <strong>button bar</strong>.</li>"
-               "<li>Add groups as <strong>menus</strong> or sub-menus.<li>"
+               "<li>Add groups as <strong>menus</strong> or sub-menus.</li>"
                "<li>Add items as <strong>buttons</strong> to a bar or menu.</li>"
                "<li>Define a <strong>command</strong> or script to execute when pressed.</li>"
                "<li><strong>Activate</strong> the item. </li></ol>"
@@ -966,7 +966,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                       "when connecting.</p>"
                                       "<p>Should there be any modules that are marked to be \"<i>synced</i>\" this will "
                                       "also cause them to be saved and reloaded into other profiles if they too are "
-                                      "active.</p>"));
+                                      "active.</p>")
+                                           .arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_S).toString(QKeySequence::NativeText)));
     //: Status tip for saving profile
     mProfileSaveAction->setStatusTip(tr("Save profile (triggers, aliases, scripts, timers, buttons, keys) and synchronize modules."));
 

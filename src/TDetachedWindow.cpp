@@ -525,7 +525,7 @@ void TDetachedWindow::createMenus()
     //: This is an item in the "About" menu in the menubar of a detached Mudlet window.
     auto aboutAction = new QAction(tr("About &Mudlet"), this);
     //: This explains the "About Mudlet" item in the "About" menu in the menubar of a detached Mudlet window.
-    aboutAction->setStatusTip(tr("Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it."));
+    aboutAction->setStatusTip(tr("About Mudlet version, creators, and license."));
     connect(aboutAction, &QAction::triggered, pMudlet, &mudlet::slot_showAboutDialog);
     aboutMenu->addAction(aboutAction);
 
@@ -846,8 +846,7 @@ void TDetachedWindow::createToolBar()
         }
         auto pMudlet = mudlet::self();
         if (!pMudlet) {
-            qWarning() << "TDetachedWindow::createToolBar() lambda - mudlet singleton is null;"
-                       << "cannot synchronize toolbar visibility.";
+            qWarning() << "TDetachedWindow::createToolBar() lambda - mudlet singleton is null;" << "cannot synchronize toolbar visibility.";
             return;
         }
         pMudlet->synchronizeToolBarVisibility(checked);
@@ -1057,7 +1056,7 @@ void TDetachedWindow::createToolBar()
 
     // About action (like main window)
     mpActionAbout = new QAction(QIcon(qsl(":/icons/mudlet_information.png")), tr("About"), this);
-    mpActionAbout->setToolTip(utils::richText(tr("Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.")));
+    mpActionAbout->setToolTip(utils::richText(tr("About Mudlet version, creators, and license.")));
     mpActionAbout->setObjectName(qsl("about_action"));
     mpToolBar->addAction(mpActionAbout);
 
@@ -1626,8 +1625,7 @@ void TDetachedWindow::slot_toggleToolBarVisibility()
 
     auto mudletInstance = mudlet::self();
     if (!mudletInstance) {
-        qWarning() << "TDetachedWindow::slot_toggleToolBarVisibility() - mudlet singleton is null;"
-                   << "cannot synchronize toolbar visibility.";
+        qWarning() << "TDetachedWindow::slot_toggleToolBarVisibility() - mudlet singleton is null;" << "cannot synchronize toolbar visibility.";
         return;
     }
 
@@ -1678,8 +1676,7 @@ bool TDetachedWindow::canHideToolBar() const
 {
     auto mudletInstance = mudlet::self();
     if (!mudletInstance) {
-        qWarning() << "TDetachedWindow::canHideToolBar() - mudlet singleton is null;"
-                   << "cannot determine menu bar visibility. Treating toolbar as non-hideable.";
+        qWarning() << "TDetachedWindow::canHideToolBar() - mudlet singleton is null;" << "cannot determine menu bar visibility. Treating toolbar as non-hideable.";
         return false;
     }
     return mudletInstance->canHideToolBar();
