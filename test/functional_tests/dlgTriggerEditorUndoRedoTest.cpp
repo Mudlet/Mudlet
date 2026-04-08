@@ -18,14 +18,10 @@
  ***************************************************************************/
 
 #include <QtTest/QtTest>
-#include <cstdlib>
 
 #include "EditorUndoStack.h"
 #include "Host.h"
 #include "TAction.h"
-#include "TAlias.h"
-#include "TKey.h"
-#include "TScript.h"
 #include "TTimer.h"
 #include "TTreeWidget.h"
 #include "TTrigger.h"
