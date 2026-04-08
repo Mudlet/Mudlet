@@ -190,7 +190,7 @@ static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
     const QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
     const QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
 
-    if (QFileInfo::exists(markerExecDir)) {
+    if (QFileInfo(markerExecDir).isFile()) {
         QFile file(markerExecDir);
         QString portPath;
         if (file.open(QIODevice::ReadOnly)) {
@@ -200,7 +200,7 @@ static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
             portPath = qsl("./portable");
         }
         confPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
-    } else if (QFileInfo::exists(markerHomeDir)) {
+    } else if (QFileInfo(markerHomeDir).isFile()) {
         QFile file(markerHomeDir);
         QString portPath;
         if (file.open(QIODevice::ReadOnly)) {
