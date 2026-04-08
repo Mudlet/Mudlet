@@ -2908,9 +2908,13 @@ function selectAll(windowName, str, func)
   local strType = type(str)
   local funcType = type(func)
   if strType ~= "string" then
-    printError("selectAll: bad argument #1 type (string expected, got " .. strType .. "!)", true, true)
+    local argNum = windowName and "#2" or "#1"
+    printError("selectAll: bad argument " .. argNum .. " type (string expected, got " .. strType .. "!)", true, true)
+    return
   elseif funcType ~= "function" then
-    printError("selectAll: bad argument #2 type (function expected, got " .. funcType .. "!)", true, true)
+    local argNum = windowName and "#3" or "#2"
+    printError("selectAll: bad argument " .. argNum .. " type (function expected, got " .. funcType .. "!)", true, true)
+    return
   end
 
   local count = 1
