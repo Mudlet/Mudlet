@@ -170,7 +170,11 @@ public:
     };
     Q_DECLARE_FLAGS(DiscordOptionFlags, DiscordOptionFlag)
 
-    enum DiscordMode { DiscordDisabled = 0, DiscordShowMudletOnly = 1, DiscordShowGameDetails = 2 };
+    enum DiscordMode {
+        DiscordDisabled = 0,
+        DiscordShowMudletOnly = 1,
+        DiscordShowGameDetails = 2
+    };
 
 
     QString getName() { return mHostName; }
