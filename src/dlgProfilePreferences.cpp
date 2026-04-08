@@ -4489,32 +4489,20 @@ void dlgProfilePreferences::slot_setAppearance(const enums::Appearance state)
     const auto currentTheme = code_editor_theme_selection_combobox->currentText();
 
     if (isDarkMode) {
-        // save current as the light theme
-        pHost->mEditorTheme = currentTheme;
-        pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
-
-        // prefer a name-matched counterpart, then stored dark theme, then Monokai default
         const auto counterpart = findThemeCounterpart(currentTheme, code_editor_theme_selection_combobox, true);
         if (!counterpart.isEmpty()) {
+            // save current as the light theme before switching
+            pHost->mEditorTheme = currentTheme;
+            pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
             switchEditorTheme(counterpart);
-        } else if (!pHost->mEditorThemeDark.isEmpty() && pHost->mEditorThemeDark != currentTheme) {
-            switchEditorTheme(pHost->mEditorThemeDark);
-        } else {
-            switchEditorTheme(qsl("Monokai"));
         }
     } else {
-        // save current as the dark theme
-        pHost->mEditorThemeDark = currentTheme;
-        pHost->mEditorThemeFileDark = code_editor_theme_selection_combobox->currentData().toString();
-
-        // prefer a name-matched counterpart, then stored light theme, then Mudlet default
         const auto counterpart = findThemeCounterpart(currentTheme, code_editor_theme_selection_combobox, false);
         if (!counterpart.isEmpty()) {
+            // save current as the dark theme before switching
+            pHost->mEditorThemeDark = currentTheme;
+            pHost->mEditorThemeFileDark = code_editor_theme_selection_combobox->currentData().toString();
             switchEditorTheme(counterpart);
-        } else if (!pHost->mEditorTheme.isEmpty() && pHost->mEditorTheme != currentTheme) {
-            switchEditorTheme(pHost->mEditorTheme);
-        } else {
-            switchEditorTheme(qsl("Mudlet"));
         }
     }
 }
