@@ -401,6 +401,7 @@ public:
     // How many graphemes do we need before we run the spell checker on a "word" in the command line:
     int mMinLengthForSpellCheck = 3;
     bool mDrawUpperLowerLevels = true;
+    bool mNotUseDisplayScale = false;
     bool mShowTabConnectionIndicators = true; // Global preference for showing connection status indicators on tabs
 
     qreal blinkPulseOpacity(bool isFastBlink) const;

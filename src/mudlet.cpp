@@ -724,6 +724,11 @@ void mudlet::init()
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
     connect(mpMainToolBar->toggleViewAction(), &QAction::triggered, this, &mudlet::slot_toolbarToggleActionTriggered);
+#ifdef Q_OS_WIN32
+    if (mNotUseDisplayScale) {
+        QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::Round);
+    }
+#endif
 
     dactionToggleFullScreen->setToolTip(utils::richText(tr("Toggle Full Screen View")));
 
@@ -2944,6 +2949,7 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mMinLengthForSpellCheck = settings.value("minLengthForSpellCheck", 3).toInt();
     mDrawUpperLowerLevels = settings.value("drawUpperLowerLevels", QVariant(true)).toBool();
+    mNotUseDisplayScale = settings.value("notUseDisplayScale", QVariant(true)).toBool();
     // Make a local version of the value so that we can update the real one
     // by calling the slot method that does that and ALSO carry out the
     // other things needed for it:
@@ -3139,6 +3145,7 @@ void mudlet::writeSettings()
     settings.setValue(qsl("enableMuteAPI"), mMuteAPI);
     settings.setValue(qsl("enableMuteGame"), mMuteGame);
     settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
+    settings.setValue(qsl("notUseDisplayScale"), mNotUseDisplayScale);
     settings.sync();
     switch (settings.status()) {
     case QSettings::NoError:
