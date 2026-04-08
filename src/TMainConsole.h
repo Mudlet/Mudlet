@@ -36,6 +36,8 @@
 
 #include <list>
 
+class TTextBox;
+
 class TMainConsole : public TConsole
 {
     Q_OBJECT
@@ -69,6 +71,7 @@ public:
     TLabel* createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
     std::pair<bool, QString> createMapper(const QString &windowname, int, int, int, int);
     std::pair<bool, QString> createCommandLine(const QString &windowname, const QString &name, int, int, int, int);
+    std::pair<bool, QString> createTextBox(const QString &windowname, const QString &name, int, int, int, int);
     QSize getUserWindowSize(const QString& windowname) const;
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
     std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet);
@@ -77,6 +80,7 @@ public:
     std::pair<bool, QString> deleteLabel(const QString&);
     std::pair<bool, QString> deleteMiniConsole(const QString&);
     std::pair<bool, QString> deleteCommandLine(const QString&);
+    std::pair<bool, QString> deleteTextBox(const QString&);
     std::pair<bool, QString> deleteScrollBox(const QString&);
     std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration);
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape);
@@ -92,12 +96,7 @@ public:
     // Either returns the handle of the per profile or the shared Mudlet one or
     // nullptr depending on the state of the flags mEnableUserDictionary and
     // mUseSharedDictionary:
-    Hunhandle* getHunspellHandle_user() const {
-        return mEnableUserDictionary
-                ? (mUseSharedDictionary
-                   ? mpHunspell_shared
-                   : mpHunspell_profile)
-                : nullptr; }
+    Hunhandle* getHunspellHandle_user() const { return mEnableUserDictionary ? (mUseSharedDictionary ? mpHunspell_shared : mpHunspell_profile) : nullptr; }
     QSet<QString> getWordSet() const;
     QPair<bool, QString> addWordToSet(const QString&);
     QPair<bool, QString> removeWordFromSet(const QString&);
@@ -109,13 +108,16 @@ public:
     bool saveMap(const QString&, int saveVersion = 0);
     bool loadMap(const QString&);
     bool importMap(const QString&, QString* errMsg = nullptr);
+    void refreshSubconsoles();
 
 
     QMap<QString, TConsole*> mSubConsoleMap;
     QMap<QString, TDockWidget*> mDockWidgetMap;
     QMap<QString, TCommandLine*> mSubCommandLineMap;
+    QMap<QString, TTextBox*> mTextBoxMap;
     QMap<QString, TLabel*> mLabelMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
+    mutable QMap<QString, QSize> mCachedWindowSizes;
     TBuffer mClipboard;
     QFile mLogFile;
     QString mLogFileName;
@@ -167,4 +169,3 @@ private:
 };
 
 #endif // MUDLET_TMAINCONSOLE_H
-

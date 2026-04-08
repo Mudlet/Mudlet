@@ -6906,6 +6906,8 @@ void dlgTriggerEditor::saveKey()
         pT->setCommand(command);
         pT->setScript(script);
 
+        pT->validateKeyBinding();
+
         QIcon icon;
         QString itemDescription;
         const bool itemActive = pT->isActive();
@@ -12439,6 +12441,7 @@ void dlgTriggerEditor::slot_colorTriggerFg()
     // while we get a colour setting:
     pD->setWindowModality(Qt::ApplicationModal);
     pD->exec();
+    delete pD;
 
     const QColor color = pT->mColorTriggerFgColor;
     // The above will be an invalid colour if the colour has been reset/ignored
@@ -12502,6 +12505,7 @@ void dlgTriggerEditor::slot_colorTriggerBg()
     // while we get a colour setting:
     pD->setWindowModality(Qt::ApplicationModal);
     pD->exec();
+    delete pD;
 
     const QColor color = pT->mColorTriggerBgColor;
     // The above will be an invalid colour if the colour has been reset/ignored

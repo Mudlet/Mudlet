@@ -70,6 +70,7 @@ private:
     void recordUpdateTime() const;
     void recordUpdatedVersion() const;
     QString getPreviousVersion() const;
+    bool downloadReleaseIfValid(const dblsqd::Release& release);
     void finishSetup();
     void showDialogManually() const;
 

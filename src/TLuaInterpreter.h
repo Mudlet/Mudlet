@@ -94,6 +94,7 @@ public:
     void handleIreComposerEdit(const QString& jsonData);
     void msdp2Lua(const char*);
     void initLuaGlobals();
+    void abortAllDownloads();
     void initIndenterGlobals();
     lua_State* getLuaGlobalState();
 
@@ -449,6 +450,17 @@ public:
     static int deleteLabel(lua_State*);
     static int deleteMiniConsole(lua_State*);
     static int deleteCommandLine(lua_State*);
+    static int createTextEdit(lua_State*);
+    static int deleteTextEdit(lua_State*);
+    static int getTextEditText(lua_State*);
+    static int setTextEditText(lua_State*);
+    static int clearTextEdit(lua_State*);
+    static int setTextEditReadOnly(lua_State*);
+    static int setTextEditPlaceholder(lua_State*);
+    static int setTextEditStyleSheet(lua_State*);
+    static int setTextEditFont(lua_State*);
+    static int setTextEditFontSize(lua_State*);
+    static int setTextEditTabMovesFocus(lua_State*);
     static int deleteScrollBox(lua_State*);
     static int setLabelToolTip(lua_State*);
     static int setLabelCursor(lua_State*);
@@ -724,6 +736,7 @@ public:
     static int killMapInfo(lua_State*);
     static int enableMapInfo(lua_State*);
     static int disableMapInfo(lua_State*);
+    static int getMapInfo(lua_State*);
     static int getProfileTabNumber(lua_State*);
     static int addFileWatch(lua_State*);
     static int removeFileWatch(lua_State*);
@@ -756,10 +769,8 @@ public:
     static int disableTimeStamps(lua_State*);
     static int enableTimeStamps(lua_State*);
     static int timeStampsEnabled(lua_State*);
-    static int aiChat(lua_State*);
-    static int aiPrompt(lua_State*);
-    static int aiPromptStream(lua_State*);
     static int setActiveProfile(lua_State*);
+    static int getKeyCode(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -807,7 +818,6 @@ private:
     static std::pair<bool, QString> discordApiEnabled(lua_State*, bool writeAccess = false);
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
     static int performHttpRequest(lua_State*, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const QString& verb);
-    static void raiseDownloadProgressEvent(lua_State*, QString, qint64, qint64);
     // The last argument is only needed if the third one is true:
     static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
     static std::tuple<bool, int> getWatchId(lua_State*, Host&);

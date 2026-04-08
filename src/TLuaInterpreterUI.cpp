@@ -44,6 +44,7 @@
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
+#include "TTextBox.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
 #include "dlgComposer.h"
@@ -502,6 +503,221 @@ int TLuaInterpreter::deleteCommandLine(lua_State* L)
         return 2;
     }
 
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createTextEdit
+int TLuaInterpreter::createTextEdit(lua_State* L)
+{
+    QString windowName = QLatin1String("main");
+    const int n = lua_gettop(L);
+    int counter = 1;
+
+    if (n > 5) {
+        if (lua_type(L, 1) != LUA_TSTRING) {
+            lua_pushfstring(L, "createTextEdit: bad argument #1 type (parent window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
+        windowName = lua_tostring(L, 1);
+        counter++;
+        if (isMain(windowName)) {
+            // createTextEdit only accepts the empty name as the main window
+            windowName.clear();
+        }
+    }
+
+    if (lua_type(L, counter) != LUA_TSTRING) {
+        lua_pushfstring(L, "createTextEdit: bad argument #%d type (text edit name as string expected, got %s!)", counter, luaL_typename(L, counter));
+        return lua_error(L);
+    }
+    const QString textEditName{lua_tostring(L, counter)};
+    counter++;
+    const int x = getVerifiedInt(L, __func__, counter, "text edit x-coordinate");
+    counter++;
+    const int y = getVerifiedInt(L, __func__, counter, "text edit y-coordinate");
+    counter++;
+    const int width = getVerifiedInt(L, __func__, counter, "text edit width");
+    counter++;
+    const int height = getVerifiedInt(L, __func__, counter, "text edit height");
+    counter++;
+
+    const Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.mpConsole->createTextBox(windowName, textEditName, x, y, width, height); !success) {
+        return warnArgumentValue(L, __func__, message);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteTextEdit
+int TLuaInterpreter::deleteTextEdit(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+
+    const Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.mpConsole->deleteTextBox(textEditName); !success) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getTextEditText
+int TLuaInterpreter::getTextEditText(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    lua_pushstring(L, pT->toPlainText().toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextEditText
+int TLuaInterpreter::setTextEditText(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+    const QString text = getVerifiedString(L, __func__, 2, "text");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    pT->setPlainText(text);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearTextEdit
+int TLuaInterpreter::clearTextEdit(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    pT->clear();
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextEditReadOnly
+int TLuaInterpreter::setTextEditReadOnly(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+    const bool readOnly = getVerifiedBool(L, __func__, 2, "read only state");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    pT->setReadOnly(readOnly);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextEditPlaceholder
+int TLuaInterpreter::setTextEditPlaceholder(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+    const QString placeholder = getVerifiedString(L, __func__, 2, "placeholder text");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    pT->setPlaceholderText(placeholder);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextEditStyleSheet
+int TLuaInterpreter::setTextEditStyleSheet(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+    const QString css = getVerifiedString(L, __func__, 2, "stylesheet");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    pT->setStyleSheet(css);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextEditFont
+int TLuaInterpreter::setTextEditFont(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+    const QString fontName = getVerifiedString(L, __func__, 2, "font name");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    QFont font = pT->font();
+    font.setFamily(fontName);
+    pT->setFont(font);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextEditFontSize
+int TLuaInterpreter::setTextEditFontSize(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+    const int size = getVerifiedInt(L, __func__, 2, "font size");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    QFont font = pT->font();
+    font.setPointSize(size);
+    pT->setFont(font);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextEditTabMovesFocus
+int TLuaInterpreter::setTextEditTabMovesFocus(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+    const bool tabMovesFocus = getVerifiedBool(L, __func__, 2, "tab moves focus state");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    pT->setTabChangesFocus(tabMovesFocus);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2178,7 +2394,7 @@ int TLuaInterpreter::selectString(lua_State* L)
     const QString searchText = getVerifiedString(L, __func__, s++, "text to select");
     // CHECK: Do we need to qualify this for a non-blank string?
 
-    qint64 const numOfMatch = static_cast<qint64>(getVerifiedInt(L, __func__, s, "match count {1 for first}"));
+    const auto numOfMatch = getVerifiedInt(L, __func__, s, "match count {1 for first}");
 
     auto console = CONSOLE(L, windowName);
     lua_pushnumber(L, console->select(searchText, numOfMatch));

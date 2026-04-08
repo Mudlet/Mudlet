@@ -1,3 +1,5 @@
+# DUPLICATE WORKFLOW: This file is paired with build-mudlet-pr.yml
+# Changes here likely need to be mirrored there as well.
 name: 🔨 Build Mudlet
 on:
   push:
@@ -77,7 +79,7 @@ jobs:
         modules: qt5compat qtmultimedia qtspeech
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.2.3
+      uses: lukka/get-cmake@v4.3.1
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
@@ -97,10 +99,27 @@ jobs:
         HOMEBREW_NO_AUTO_UPDATE: "ON"
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
-      timeout-minutes: 3
+      timeout-minutes: 7
       run: |
+        # Remove Homebrew LLVM to prevent it from shadowing AppleClang.
+        # Upstream LLVM can't compile Objective-C++ against Apple SDK headers.
+        brew uninstall --ignore-dependencies llvm@15 2>/dev/null || true
+
         # Install all required dependencies
-        brew install libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost
+        # brew install can hang indefinitely during bottle pouring, so timeout and retry
+        for attempt in 1 2 3; do
+          brew install libzzip libzip ccache expect assimp hunspell oniguruma pcre2 pugixml sqlite yajl boost &
+          brew_pid=$!
+          ( sleep 120 && kill $brew_pid 2>/dev/null ) &
+          watcher_pid=$!
+          wait $brew_pid && { kill $watcher_pid 2>/dev/null || true; wait $watcher_pid 2>/dev/null || true; break; }
+          kill $watcher_pid 2>/dev/null || true; wait $watcher_pid 2>/dev/null || true
+          echo "::warning::brew install attempt $attempt failed or timed out, retrying..."
+          if [ "$attempt" -eq 3 ]; then
+            echo "::error::brew install failed after 3 attempts"
+            exit 1
+          fi
+        done
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
@@ -166,20 +185,22 @@ jobs:
           libglu1-mesa-dev \
           libhunspell-dev \
           liblua5.1-0-dev \
+          libonig-dev \
           libpcre2-dev \
           libpulse-dev \
           libpugixml-dev \
           libsecret-1-dev \
+          libspeechd-dev \
           libsqlite3-dev \
-          qtkeychain-qt6-dev \
+          libssl-dev \
           libxkbcommon-x11-0 \
           libxcb-render-util0-dev \
           libxcb-image0-dev \
           libyajl-dev \
           libzip-dev \
+          qtkeychain-qt6-dev \
           pcre2-utils \
           pkg-config \
-          libssl-dev \
           openssl \
           ca-certificates \
           -y
@@ -229,11 +250,6 @@ jobs:
          echo "WITH_UPDATER=no" >> $GITHUB_ENV
          echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
          echo "WITH_FONTS=no" >> $GITHUB_ENV
-  
-    - name: Acquire ccache lock
-      uses: guibranco/github-artifact-lock-action@v2.0.5
-      with:
-        lock-name: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ github.ref_name }}-lock
 
     - name: Restore ccache
       id: restore-ccache
@@ -242,12 +258,6 @@ jobs:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ github.ref_name }}
         restore-keys: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-development
-
-    - name: Release ccache lock
-      if: always()
-      uses: guibranco/github-artifact-lock-action/release-lock@v2.0.5
-      with:
-        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
 
     - name: (Linux) Set build info
       if: runner.os == 'Linux'
@@ -304,11 +314,6 @@ jobs:
         NINJA_STATUS: '[%f/%t %o/sec] '
         MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-  
-    - name: Acquire ccache lock
-      uses: guibranco/github-artifact-lock-action@v2.0.5
-      with:
-        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
 
     - name: Save ccache
       if: always()
@@ -317,34 +322,10 @@ jobs:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
   
-    - name: Release ccache lock
-      if: always()
-      uses: guibranco/github-artifact-lock-action/release-lock@v2.0.5
-      with:
-        lock-name: ${{ steps.restore-ccache.outputs.cache-primary-key }}-lock
-
     - name: check ccache stats post build
       run: ccache --show-stats
 
-    - name: (Linux) Run C++ tests
-      if: runner.os == 'Linux' && matrix.run_tests == 'true'
-      working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure
-      env:
-        QT_QPA_PLATFORM: offscreen
-
-    - name: (macOS) Run C++ tests
-      if: runner.os == 'macOS'
-      working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure
-
-    - name: Run QTest
-      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
-      env:
-        QT_FORCE_STDERR_LOGGING: 1
-
     - name: install dependencies for packaging/tests
-      if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
       run: |
         LUAROCKS="luarocks --lua-version 5.1 install --local"
 
@@ -378,9 +359,26 @@ jobs:
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
 
+    - name: (Linux) Run C++ tests
+      if: runner.os == 'Linux' && matrix.run_tests == 'true'
+      working-directory: '${{runner.workspace}}/b/ninja'
+      run: ctest --output-on-failure
+      env:
+        QT_QPA_PLATFORM: offscreen
+
+    - name: (macOS) Run C++ tests
+      if: runner.os == 'macOS'
+      working-directory: '${{runner.workspace}}/b/ninja'
+      run: ctest --output-on-failure
+
+    - name: Run QTest
+      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
+      env:
+        QT_FORCE_STDERR_LOGGING: 1
+
     - name: add ssh-agent for release uploads
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
-      uses: webfactory/ssh-agent@v0.9.1
+      uses: webfactory/ssh-agent@v0.10.0
       with:
         ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
 
@@ -426,6 +424,36 @@ jobs:
       run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
       shell: bash
 
+    - name: Upload release asset for GitHub Release
+      uses: actions/upload-artifact@v7
+      if: env.RELEASE_ASSET_PATH
+      with:
+        name: release-asset-${{ runner.os }}-${{ runner.arch }}
+        path: |
+          ${{ env.RELEASE_ASSET_PATH }}
+          ${{ env.RELEASE_ASSET_SHA256_PATH }}
+        retention-days: 3
+
+    - name: Export release metadata
+      if: env.RELEASE_ASSET_PATH
+      shell: bash
+      run: |
+        jq -n \
+          --arg version "${VERSION}" \
+          --arg build_suffix "${MUDLET_VERSION_BUILD}" \
+          --arg commit "${BUILD_COMMIT}" \
+          --arg ref "${{ github.ref }}" \
+          --arg event "${{ github.event_name }}" \
+          '{version: $version, build_suffix: $build_suffix, commit: $commit, ref: $ref, event: $event}' \
+          > release-metadata.json
+
+    - name: Upload release metadata
+      uses: actions/upload-artifact@v7
+      if: env.RELEASE_ASSET_PATH
+      with:
+        name: release-metadata-${{ runner.os }}-${{ runner.arch }}
+        path: release-metadata.json
+        retention-days: 3
 
     # we need to be in the right place for LuaGlobals.lua to load
     - name: (Linux) Prep binary for running tests

@@ -171,6 +171,11 @@ cTelnet::~cTelnet()
         mpPostingTimer->stop();
     }
 
+    // Release zlib resources if MCCP compression was still active
+    if (mNeedDecompression) {
+        inflateEnd(&mZstream);
+    }
+
     // Aggressively disconnect the sockets to prevent signals during destruction
     if (mpSocket && mpSocket->state() != QAbstractSocket::UnconnectedState) {
         // Block all signals from the socket first
@@ -279,7 +284,7 @@ void cTelnet::encodingChanged(const QByteArray& requestedEncoding)
 QSslCertificate cTelnet::getPeerCertificate()
 {
     if (!mpSocket) {
-        return QSslCertificate();
+        return mPeerCertificate;
     }
     return mpSocket->peerCertificate();
 }
@@ -287,7 +292,7 @@ QSslCertificate cTelnet::getPeerCertificate()
 QList<QSslError> cTelnet::getSslErrors()
 {
     if (!mpSocket) {
-        return QList<QSslError>{};
+        return mSslErrors;
     }
     return mpSocket->sslHandshakeErrors();
 }
@@ -402,6 +407,10 @@ void cTelnet::connectIt(const QString& address, int port)
         mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
         mCycleCountMTTS = 0;
         newEnvironVariablesSent.clear();
+#if !defined(QT_NO_SSL)
+        mSslErrors.clear();
+        mPeerCertificate = QSslCertificate();
+#endif
 
         if (mpHost->mUseProxy && !mpHost->mProxyAddress.isEmpty() && mpHost->mProxyPort != 0) {
             auto& proxy = mpHost->getConnectionProxy();
@@ -656,17 +665,20 @@ void cTelnet::slot_socketDisconnected()
  the rules of the "QDateTime::toString(...)" function and may need
  modification for some locales, e.g. France, Spain.*/
                                              .toString(tr("hh:mm:ss.zzz")));
+    if (mNeedDecompression) {
+        inflateEnd(&mZstream);
+    }
     mNeedDecompression = false;
     reset();
 
-    if (!mpHost->isClosingDown() && mpSocket) {
-        // Don't do this if we are closing down - or we do not know which
-        // socket is the "active" one
+    if (!mpHost->isClosingDown()) {
 #if !defined(QT_NO_SSL)
         if (mCurrent_sslTsl) {
-            // We were connecting/ed securely:
+            // We were connecting/ed securely - getSslErrors() returns stored
+            // errors from slot_socketSslError() when mpSocket is null (i.e.
+            // when the SSL handshake failed):
             QList<QSslError> sslErrors = getSslErrors();
-            QSslCertificate cert = mpSocket->peerCertificate();
+            QSslCertificate cert = mpSocket ? mpSocket->peerCertificate() : getPeerCertificate();
             if (mpHost->mSslIgnoreExpired) {
                 sslErrors.removeAll(QSslError(QSslError::CertificateExpired, cert));
             }
@@ -726,7 +738,9 @@ void cTelnet::slot_socketDisconnected()
                 postMessage(tr("[ ALERT ] - Socket got disconnected."));
             }
 
-        } else {
+        } else if (mpSocket) {
+#else
+        if (mpSocket) {
 #endif
             // We were not connecting securely
             QString reason;
@@ -768,9 +782,7 @@ void cTelnet::slot_socketDisconnected()
                                "%1")
                                     .arg(reason));
             }
-#if !defined(QT_NO_SSL)
         }
-#endif
     }
 
     // Always display the connection time:
@@ -801,7 +813,7 @@ void cTelnet::slot_socketDisconnected()
 #if !defined(QT_NO_SSL)
 // This can/is raised on a socket that we have not received a prior
 // QSslSocket::encrypted() signal from (which is wired to our
-// "slot_socketconnect()" slot).
+// "slot_socketConnected()" slot).
 void cTelnet::slot_socketSslError(const QList<QSslError>& errors)
 {
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
@@ -812,10 +824,15 @@ void cTelnet::slot_socketSslError(const QList<QSslError>& errors)
         return;
     }
 
+    // Store the errors so slot_socketDisconnected() can report them even if
+    // mpSocket was never assigned (SSL handshake failed before encrypted()):
+    mSslErrors = errors;
+
     // We can't use mpSocket as it likely has not got set to one of the
     // actual sockets yet!
     const auto pSocket = qobject_cast<QSslSocket*>(sender());
     QSslCertificate cert = pSocket->peerCertificate();
+    mPeerCertificate = cert;
     QList<QSslError> ignoreErrorList;
 
     if (mpHost->mSslIgnoreExpired) {
@@ -1392,6 +1409,8 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
             //: %1 is the file path, %2 is the error message
             postMessage(tr("[ WARN ]  - Package download failed: could not open file '%1' for writing, reason: %2").arg(mServerPackage, file.errorString()));
             qWarning() << "ctelnet: failed to open file for writing:" << file.errorString();
+            reply->deleteLater();
+            mpPackageDownloadReply = nullptr;
             return;
         }
 
@@ -1401,6 +1420,8 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
             //: %1 is the error message
             postMessage(tr("[ WARN ]  - Package download failed: could not save file, reason: %1").arg(file.errorString()));
             qDebug() << "cTelnet::slot_replyFinished: error downloading package: " << file.errorString();
+            reply->deleteLater();
+            mpPackageDownloadReply = nullptr;
             return;
         }
 
@@ -1832,6 +1853,18 @@ QString cTelnet::getNewEnvironOSCHyperlinksSpoiler()
 QString cTelnet::getNewEnvironOSCHyperlinksDisabled()
 {
     return qsl("1");
+}
+
+bool cTelnet::oscHyperlinkConfigFeatureEnabled()
+{
+    return getNewEnvironOSCHyperlinksStyleBasic() == qsl("1") || getNewEnvironOSCHyperlinksStyleStates() == qsl("1") || getNewEnvironOSCHyperlinksTooltip() == qsl("1")
+           || getNewEnvironOSCHyperlinksMenu() == qsl("1") || getNewEnvironOSCHyperlinksCompact() == qsl("1") || getNewEnvironOSCHyperlinksVisibility() == qsl("1")
+           || getNewEnvironOSCHyperlinksSelection() == qsl("1") || getNewEnvironOSCHyperlinksSpoiler() == qsl("1") || getNewEnvironOSCHyperlinksDisabled() == qsl("1");
+}
+
+bool cTelnet::oscHyperlinkPresetsEnabled()
+{
+    return getNewEnvironOSCHyperlinksPresets() == qsl("1");
 }
 
 QString cTelnet::getNewEnvironScreenReader()

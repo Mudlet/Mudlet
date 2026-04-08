@@ -79,8 +79,8 @@ jobs:
 
         echo "Linking ${bold}Linux PTB${normal} ${PTB_VERSION}..."
         dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${LINUX_PTB_URL}" || EXIT_CODE_LINUX=$?
-        echo "Linking ${bold}macOS x84 PTB${normal} ${PTB_VERSION}..."
-        dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${MACOS_ARM64_PTB_URL}" || EXIT_CODE_MACOS_x64=$?
+        echo "Linking ${bold}macOS x64 PTB${normal} ${PTB_VERSION}..."
+        dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${MACOS_X64_PTB_URL}" || EXIT_CODE_MACOS_x64=$?
         echo "Linking ${bold}macOS arm64 PTB${normal} ${PTB_VERSION}..."
         dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach mac:arm "${MACOS_ARM64_PTB_URL}" || EXIT_CODE_MACOS_ARM64=$?
 

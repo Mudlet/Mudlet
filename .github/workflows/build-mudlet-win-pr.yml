@@ -1,3 +1,5 @@
+# DUPLICATE WORKFLOW: This file is paired with build-mudlet-win.yml
+# Changes here likely need to be mirrored there as well.
 name: 🔨 Build Mudlet - PR (windows)
 on:
   pull_request:
@@ -38,7 +40,7 @@ jobs:
       if: matrix.buildname == 'windows64'
       uses: msys2/setup-msys2@v2
       with:
-        msystem: MINGW64
+        msystem: CLANG64
         update: true
 
     - name: (Windows) Build Environment Setup
@@ -55,8 +57,8 @@ jobs:
       uses: actions/cache/restore@v5
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.sha }}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}
+        key: ccache-${{matrix.os}}-${{matrix.buildname}}-clang-${{ github.sha }}
+        restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}-clang
 
     - name: check ccache stats prior to build
       shell: msys2 {0}
