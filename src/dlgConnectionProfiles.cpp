@@ -101,6 +101,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     horizontalLayout_3->insertWidget(0, mpSkipToGamesButton);
 
     connect(mpSkipToGamesButton, &QPushButton::clicked, this, [this]() {
+        mTutorialDismissed = true;
         widget_topLeft->show();
         welcome_message->hide();
         tabWidget_connectionInfo->show();
@@ -196,6 +197,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     connect(welcome_message, &QTextBrowser::anchorClicked, this, [this](const QUrl& link) {
         if (link.toString() == qsl("mudlet-tutorial")) {
+            mTutorialDismissed = true;
             profile_name_entry->setText(qsl("Mudlet Tutorial"));
             host_name_entry->setText(qsl("localhost"));
             port_entry->setText(qsl("0"));
@@ -796,12 +798,9 @@ void dlgConnectionProfiles::slot_addProfile()
         const QSignalBlocker blocker(character_password_entry);
         character_password_entry->setText(QString());
     }
+    mTutorialDismissed = true;
     fillout_form();
     welcome_message->hide();
-    widget_topLeft->show();
-    mpSkipToGamesButton->hide();
-    connect_button->show();
-    offline_button->show();
     informationArea->show();
     tabWidget_connectionInfo->show();
 
@@ -1340,7 +1339,7 @@ void dlgConnectionProfiles::fillout_form()
         listWidget_profiles->setCurrentRow(toselectRow);
     }
 
-    if (firstMudletLaunch && mProfileList.isEmpty()) {
+    if (firstMudletLaunch && mProfileList.isEmpty() && !mTutorialDismissed) {
         // Hide the profile list and show only the tutorial-focused welcome
         widget_topLeft->hide();
         welcome_message->show();

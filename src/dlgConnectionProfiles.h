@@ -150,6 +150,7 @@ private:
     QString mSearchText;
     QTimer* mPasswordSaveTimer = nullptr;
     QPushButton* mpSkipToGamesButton = nullptr;
+    bool mTutorialDismissed = false;
 
     // Async connection and password handling
     QString mPendingPasswordSaveProfile;
