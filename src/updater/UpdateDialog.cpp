@@ -543,11 +543,14 @@ QString UpdateDialog::generateChangelogDocument()
             }
         }
     }
+    static const QRegularExpression summaryTag(qsl("<details>\\s*<summary>(.*?)</summary>"));
     for (const auto& release : changelogReleases) {
+        if (!changelog.isEmpty()) {
+            changelog.append(qsl("---\n\n"));
+        }
         QString body = release.getChangelog();
         // Convert <details>/<summary> to plain markdown - Qt's markdown
         // renderer can't handle these HTML5 tags, causing garbled output
-        static const QRegularExpression summaryTag(qsl("<details>\\s*<summary>(.*?)</summary>"));
         body.replace(summaryTag, qsl("#### \\1"));
         body.remove(qsl("</details>"));
 
