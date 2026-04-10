@@ -24,7 +24,7 @@ jobs:
     steps:
       - name: Check if all platform builds completed
         id: check
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const triggeringRun = context.payload.workflow_run;
