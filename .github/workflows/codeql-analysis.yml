@@ -144,7 +144,7 @@ jobs:
         ${{github.workspace}}/CI/set-build-info.sh
 
     - name: Build Mudlet
-      uses: lukka/run-cmake@v3
+      uses: lukka/run-cmake@v10
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'

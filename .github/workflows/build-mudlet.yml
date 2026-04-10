@@ -297,7 +297,7 @@ jobs:
         key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
 
     - name: Build Mudlet
-      uses: lukka/run-cmake@v3
+      uses: lukka/run-cmake@v10
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
