@@ -826,6 +826,7 @@ if(APPLE)
       add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
         COMMAND bash -c
           "/usr/libexec/PlistBuddy -c 'Delete :SUFeedURL' '$<TARGET_BUNDLE_DIR:${EXE_MUDLET_TARGET}>/Contents/Info.plist' 2>/dev/null || true && /usr/libexec/PlistBuddy -c 'Add :SUFeedURL string ${SPARKLE_FEED_URL}' '$<TARGET_BUNDLE_DIR:${EXE_MUDLET_TARGET}>/Contents/Info.plist'"
+        VERBATIM
         COMMENT "Setting Sparkle feed URL for ${SPARKLE_CHANNEL}-${CMAKE_SYSTEM_PROCESSOR}"
       )
     endif()
