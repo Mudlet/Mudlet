@@ -21,7 +21,8 @@
 
 set -x
 
-# Version: 2.4.0    Switch from MINGW64 to CLANG64
+# Version: 2.5.0    Replace date-based PTB skip with commit-hash check against GitHub releases
+#          2.4.0    Switch from MINGW64 to CLANG64
 #          2.3.0    Add build counter suffix for multiple builds from same commit
 #          2.2.0    Skip commit date check when build is manually forced
 #          2.1.0    Remove MINGW32 since upstream no longer supports it
