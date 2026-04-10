@@ -208,7 +208,9 @@ cTelnet::~cTelnet()
         loadingReplay = false;
         replayFile.close();
         qDebug() << "cTelnet::~cTelnet() INFO - A replay was in progress on this profile but has been aborted.";
-        mudlet::self()->replayOver();
+        if (auto pMudlet = mudlet::self()) {
+            pMudlet->replayOver();
+        }
     }
 
     if (!messageStack.empty()) {
