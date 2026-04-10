@@ -610,7 +610,7 @@ void UpdateDialog::handleFeedReady()
     QString latestVersion = mLatestRelease.getVersion();
     bool skipRelease = (settingsValue(qsl("skipRelease"), "", mSettings).toString() == latestVersion);
     bool autoDownload = autoDownloadEnabled(mSettings) && (!skipRelease);
-    if (autoDownload && !mIsDownloadFinished) {
+    if (autoDownload && !mIsDownloadFinished && !mFeed->isDownloading()) {
         startDownload();
     }
 

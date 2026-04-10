@@ -110,6 +110,11 @@ bool Feed::isReady() const
     return mReady;
 }
 
+bool Feed::isDownloading() const
+{
+    return mDownloadReply != nullptr && !mDownloadReply->isFinished();
+}
+
 void Feed::load()
 {
     if (mFeedReply != nullptr) {
@@ -136,6 +141,11 @@ void Feed::load()
 
 void Feed::downloadRelease(const Release& release, bool requireChecksums)
 {
+    if (isDownloading()) {
+        qWarning() << "Download already in progress, ignoring duplicate request";
+        return;
+    }
+
     const QUrl downloadUrl = release.getDownloadUrl();
     if (!downloadUrl.isValid() || downloadUrl.isEmpty()) {
         //: Error shown when the GitHub release has no binary matching the user's operating system
