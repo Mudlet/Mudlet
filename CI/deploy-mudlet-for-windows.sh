@@ -180,21 +180,13 @@ else
   # Check if it's a Public Test Build
   if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
 
-    # Skip commit check if this is a manually forced build
+    # Skip duplicate check if this is a manually forced build
     if [[ "${GITHUB_FORCE_BUILD}" == "true" ]]; then
-      echo "=== Forced build requested, skipping commit date check ==="
-    else
-      # Get the commit date of the last commit
-      COMMIT_DATE=$(git show -s --format="%cs")
-      # Get yesterday's date in the same format
-      YESTERDAY_DATE=$(date --date="yesterday" +%Y-%m-%d)
-
-      if [[ "${COMMIT_DATE}" < "${YESTERDAY_DATE}" ]]; then
-        echo "=== No new commits, aborting public test build generation ==="
-        exit 0
-      else
-        echo "=== New commits, continuing to create a public test build ==="
-      fi
+      echo "=== Forced build requested, skipping duplicate PTB check ==="
+    elif gh release list --repo "${GITHUB_REPOSITORY}" --limit 20 --json tagName \
+            --jq '.[].tagName' 2>/dev/null | grep -qF -- "${BUILD_COMMIT}"; then
+      echo "=== PTB already exists for commit ${BUILD_COMMIT}, aborting public test build generation ==="
+      exit 0
     fi
 
     # Squirrel uses the name of the binary for the Start menu, so need to rename
