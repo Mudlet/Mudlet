@@ -33,6 +33,7 @@
 #include <QGuiApplication>
 #include <QMessageBox>
 #include <QPixmap>
+#include <QRegularExpression>
 #include <QSettings>
 #include <QTextBrowser>
 #include <QToolButton>
@@ -543,8 +544,14 @@ QString UpdateDialog::generateChangelogDocument()
         }
     }
     for (const auto& release : changelogReleases) {
-        changelog.append(qsl("## ") + release.getVersion() + qsl("\n\n"));
-        changelog.append(release.getChangelog() + qsl("\n\n"));
+        QString body = release.getChangelog();
+        // Convert <details>/<summary> to plain markdown - Qt's markdown
+        // renderer can't handle these HTML5 tags, causing garbled output
+        static const QRegularExpression summaryTag(qsl("<details>\\s*<summary>(.*?)</summary>"));
+        body.replace(summaryTag, qsl("#### \\1"));
+        body.remove(qsl("</details>"));
+
+        changelog.append(body + qsl("\n\n"));
     }
     return changelog;
 }
