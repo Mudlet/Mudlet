@@ -2689,7 +2689,7 @@ void Host::installPackageFonts(const QString& packageName)
 
         if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive)
             || filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
-            mudlet::self()->mFontManager.loadFont(filePath, qsl("%1/%2").arg(getName(), packageName));
+            mudlet::self()->mFontManager.loadFont(filePath, getName() % QLatin1Char('/') % packageName);
         }
     }
 }
