@@ -364,7 +364,8 @@ jobs:
               ARGS+=(--prerelease --target "${TARGET_SHA}")
             fi
 
-            gh release create "${ARGS[@]}" "${FILES[@]}"
+            gh release create "${ARGS[@]}" "${FILES[@]}" \
+              || gh release upload "${RELEASE_TAG}" "${FILES[@]}" --clobber
           fi
 
       # Generate and upload Sparkle appcast XML for macOS updates
