@@ -27,6 +27,7 @@ private slots:
     void initTestCase();
     void testStoreAndRetrieve();
     void testProfileIsolation();
+    void testSpecialCharacterProfileIsolation();
     void testKeyIsolation();
     void testEmptyPassword();
     void testRemovePassword();
@@ -72,6 +73,47 @@ void CredentialManagerTest::testProfileIsolation()
     // Verify isolation
     QCOMPARE(CredentialManager::retrieveCredential(profile1, key), password1);
     QCOMPARE(CredentialManager::retrieveCredential(profile2, key), password2);
+}
+
+void CredentialManagerTest::testSpecialCharacterProfileIsolation()
+{
+    // Test for issue #8933: Profiles with similar names sharing passwords
+    // Profile names that differ only in special characters should NOT collide.
+    // Using only characters allowed by the UI validation in dlgConnectionProfiles.cpp:
+    // ". _0123456789-#&" plus letters. All these would collide to "Game_Server"
+    // under the old sanitization logic.
+    QString profileDot = "Game.Server";
+    QString profileHash = "Game#Server";
+    QString profileAmp = "Game&Server";
+    QString profileSpace = "Game Server";
+    QString profileDash = "Game-Server";
+    QString key = "password";
+    QString passwordDot = "password_dot";
+    QString passwordHash = "password_hash";
+    QString passwordAmp = "password_amp";
+    QString passwordSpace = "password_space";
+    QString passwordDash = "password_dash";
+
+    // Store different passwords for profiles that differ only in special characters
+    QVERIFY(CredentialManager::storeCredential(profileDot, key, passwordDot));
+    QVERIFY(CredentialManager::storeCredential(profileHash, key, passwordHash));
+    QVERIFY(CredentialManager::storeCredential(profileAmp, key, passwordAmp));
+    QVERIFY(CredentialManager::storeCredential(profileSpace, key, passwordSpace));
+    QVERIFY(CredentialManager::storeCredential(profileDash, key, passwordDash));
+
+    // Verify each profile retrieves its own password (not the last stored one)
+    QCOMPARE(CredentialManager::retrieveCredential(profileDot, key), passwordDot);
+    QCOMPARE(CredentialManager::retrieveCredential(profileHash, key), passwordHash);
+    QCOMPARE(CredentialManager::retrieveCredential(profileAmp, key), passwordAmp);
+    QCOMPARE(CredentialManager::retrieveCredential(profileSpace, key), passwordSpace);
+    QCOMPARE(CredentialManager::retrieveCredential(profileDash, key), passwordDash);
+
+    // Cleanup
+    CredentialManager::removeCredential(profileDot, key);
+    CredentialManager::removeCredential(profileHash, key);
+    CredentialManager::removeCredential(profileAmp, key);
+    CredentialManager::removeCredential(profileSpace, key);
+    CredentialManager::removeCredential(profileDash, key);
 }
 
 void CredentialManagerTest::testKeyIsolation()
@@ -236,6 +278,14 @@ void CredentialManagerTest::cleanupTestCase()
     CredentialManager::removeCredential("SanitizationTestProfile", "normal_key");
     CredentialManager::removeCredential("PathTraversalTestProfile", "test_key");
     CredentialManager::removeCredential("ConcurrentTestProfile", "concurrent_key");
+    
+    // Defensive cleanup for special character profile isolation test
+    // (ensures cleanup even if test fails early)
+    CredentialManager::removeCredential("Game.Server", "password");
+    CredentialManager::removeCredential("Game#Server", "password");
+    CredentialManager::removeCredential("Game&Server", "password");
+    CredentialManager::removeCredential("Game Server", "password");
+    CredentialManager::removeCredential("Game-Server", "password");
 }
 
 #include "CredentialManagerTest.moc"

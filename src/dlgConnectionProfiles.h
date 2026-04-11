@@ -68,7 +68,7 @@ public slots:
     void slot_updateSslTslPort(int state);
     void slot_updateLogin(const QString&);
     void slot_updatePassword(const QString&);
-// Not used:    void slot_updateWebsite(const QString&);
+    // Not used:    void slot_updateWebsite(const QString&);
     void slot_deleteProfileCheck(const QString&);
     void slot_updateDescription();
 
@@ -79,7 +79,6 @@ public slots:
 
     void slot_updateAutoConnect(int state);
     void slot_updateAutoReconnect(int state);
-    void slot_updateDiscordOptIn(int state);
     void slot_load();
     void slot_cancel();
     void slot_copyProfile();
@@ -98,7 +97,6 @@ private:
     static bool copyFolder(const QString& sourceFolder, const QString& destFolder);
     QString getDescription(const QString& profile_name) const;
     bool validateConnect();
-    void updateDiscordStatus();
     bool validateProfile();
     void loadProfile(bool alsoConnect);
     void copyProfileSettingsOnly(const QString& oldname, const QString& newname);
@@ -117,13 +115,11 @@ private:
     void deleteSecurePassword(const QString& profile) const;
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void reallyDeleteProfile(const QString& profile);
-    void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName,
-                           const QString& newProfileHost, const QString& newProfilePort,
-                           const int newProfileSslTsl);
+    void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, const QString& newProfileHost, const QString& newProfilePort, const int newProfileSslTsl);
     void setItemName(QListWidgetItem*, const QString&) const;
     QIcon customIcon(const QString&, const std::optional<QColor>&) const;
     void addLetterToProfileSearch(const int);
-    inline void clearNotificationArea();
+    void clearNotificationArea();
     void loadPasswordAsync(const QString& profileName);
 
     // split into 3 properties so each one can be checked individually
@@ -142,7 +138,7 @@ private:
     QPushButton* offline_button = nullptr;
     QPushButton* connect_button = nullptr;
     QLineEdit* delete_profile_lineedit = nullptr;
-    QPushButton* delete_button  = nullptr;
+    QPushButton* delete_button = nullptr;
     QString mDiscordApplicationId;
     QString mDiscordInviteURL;
     QAction* mpAction_revealPassword;
@@ -154,10 +150,11 @@ private:
     QString mSearchText;
     QTimer* mPasswordSaveTimer = nullptr;
 
-    // Async connection handling
-    QString mPendingProfileLoad;  // Profile name waiting for password load
-    bool mPendingConnect = false; // Whether to connect (true) or just load (false)
-    bool mKeychainOperationInProgress = false;  // Track if keychain op is active
+    // Async connection and password handling
+    QString mPendingPasswordSaveProfile;
+    QString mPendingProfileLoad;               // Profile name waiting for password load
+    bool mPendingConnect = false;              // Whether to connect (true) or just load (false)
+    bool mKeychainOperationInProgress = false; // Track if keychain op is active
 
 
 private slots:

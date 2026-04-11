@@ -522,6 +522,15 @@ private:
     void recursiveSearchTimers(TTimer*, const QString& text);
     void recursiveSearchKeys(TKey*, const QString& text);
     void recursiveSearchVariables(TVar*, QList<TVar*>&, bool);
+    void searchSingleTrigger(TTrigger* trigger, const QString& text);
+    void searchSingleAlias(TAlias* alias, const QString& text);
+    void searchSingleScript(TScript* script, const QString& text);
+    void searchSingleAction(TAction* action, const QString& text);
+    void searchSingleTimer(TTimer* timer, const QString& text);
+    void searchSingleKey(TKey* key, const QString& text);
+    void highlightSearchMatches();
+    void
+    emitScriptSearchMatches(const QString& scriptText, const QString& searchText, const QString& name, int objectId, const QString& parentLabel, EditorViewType viewType, QTreeWidgetItem*& parent);
 
     void createSearchOptionIcon();
     int findSearchMatch(const QString& haystack, const QString& needle, int from = 0) const;

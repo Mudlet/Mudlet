@@ -49,6 +49,7 @@
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
+#include "TTextBox.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "VarUnit.h"
@@ -240,7 +241,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mMMCPServer(nullptr)
 , mpDlgProfilePreferences(nullptr)
 , mMMCPChatPort(csDefaultMMCPHostPort)
-, mMMCPChatPrefix(qsl("<CHAT>"))
+, mMMCPChatPrefix(csDefaultChatPrefix)
 , mMMCPAutostartServer(false)
 , mMMCPAllowPeekRequests(false)
 , mMMCPPrefixEmotes(false)
@@ -334,9 +335,19 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         mTelnet.setEncoding(savedEncoding, false);
     }
 
-    auto optin = readProfileData(qsl("discordserveroptin"));
-    if (!optin.isEmpty()) {
-        mDiscordDisableServerSide = optin.toInt() == Qt::Unchecked ? true : false;
+    auto modeStr = readProfileData(qsl("discordmode"));
+    if (!modeStr.isEmpty()) {
+        const int modeInt = modeStr.toInt();
+        if (modeInt >= DiscordDisabled && modeInt <= DiscordShowGameDetails) {
+            mDiscordMode = static_cast<DiscordMode>(modeInt);
+        }
+    } else {
+        // Migrate old profiles: if the user had opted out of server-side
+        // Discord, respect that choice by using ShowMudletOnly
+        auto oldOptin = readProfileData(qsl("discordserveroptin"));
+        if (!oldOptin.isEmpty() && oldOptin.toInt() != Qt::Checked) {
+            mDiscordMode = DiscordShowMudletOnly;
+        }
     }
 
     if (mudlet::self()->storingPasswordsSecurely()) {
@@ -427,9 +438,15 @@ Host::~Host()
     qDeleteAll(profileShortcuts);
     profileShortcuts.clear();
 
+    qDeleteAll(mStopWatchMap);
+    mStopWatchMap.clear();
+
+    delete mMMCPServer;
+
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
+
 
     mErrorLogStream.flush();
     mErrorLogFile.close();
@@ -844,8 +861,14 @@ void Host::resetProfile_phase2()
     mpConsole->resetMainConsole();
     mEventHandlerMap.clear();
     mEventMap.clear();
+    mLuaInterpreter.abortAllDownloads();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
+
+    // Have to recopy the values into the Lua "color_table"
+    mLuaInterpreter.updateAnsi16ColorsInTable();
+    mLuaInterpreter.updateExtendedAnsiColorsInTable();
+
     mBlockScriptCompile = false;
 
     mAliasUnit.reenableAllTriggers();
@@ -853,6 +876,8 @@ void Host::resetProfile_phase2()
     mTriggerUnit.reenableAllTriggers();
     mKeyUnit.reenableAllTriggers();
 
+    // This is where the scripts for the profile get compiled (which confirms
+    // that they are valid) and all the Lua code outside of functions gets run:
     getTimerUnit()->compileAll();
     getTriggerUnit()->compileAll();
     getAliasUnit()->compileAll();
@@ -861,10 +886,6 @@ void Host::resetProfile_phase2()
     getScriptUnit()->compileAll(true);
 
     mResetProfile = false;
-
-    // Have to recopy the values into the Lua "color_table"
-    mLuaInterpreter.updateAnsi16ColorsInTable();
-    mLuaInterpreter.updateExtendedAnsiColorsInTable();
 
     TEvent event{};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
@@ -955,6 +976,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
             reloadModules();
         }
         mWritingHostAndModules = false;
+        watcher->deleteLater();
     });
     watcher->setFuture(mModuleFuture);
     return {true, filename_xml, QString()};
@@ -2310,7 +2332,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     mActionUnit.uninstall(packageName);
     mScriptUnit.uninstall(packageName);
     mKeyUnit.uninstall(packageName);
-    mudlet::self()->mFontManager.unloadFonts(packageName);
+    mudlet::self()->mFontManager.unloadFonts(getName() + QChar('/') + packageName);
     if (isModule) {
         //if ModuleSync, this is a temporary uninstall for reloading so we exit here
         QStringList entry = mInstalledModules[packageName];
@@ -2667,7 +2689,7 @@ void Host::installPackageFonts(const QString& packageName)
 
         if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive)
             || filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
-            mudlet::self()->mFontManager.loadFont(filePath, packageName);
+            mudlet::self()->mFontManager.loadFont(filePath, getName() % QLatin1Char('/') % packageName);
         }
     }
 }
@@ -2680,11 +2702,11 @@ void Host::refreshPackageFonts()
     }
 }
 
-void Host::setEnableBlinkText(const bool enabled)
+void Host::setEnableBlinkText(const bool enable)
 {
-    if (mEnableBlinkText != enabled) {
-        mEnableBlinkText = enabled;
-        emit signal_changeEnableBlinkText(enabled);
+    if (mEnableBlinkText != enable) {
+        mEnableBlinkText = enable;
+        emit signal_changeEnableBlinkText(enable);
     }
 }
 
@@ -2804,6 +2826,10 @@ void Host::processDiscordGMCP(const QString& packageMessage, const QString& data
 
 void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
 {
+    if (mDiscordMode != DiscordShowGameDetails) {
+        return;
+    }
+
     mudlet* pMudlet = mudlet::self();
     bool hasInvite = false;
     auto inviteUrl = discordInfo.value(qsl("inviteurl"));
@@ -2827,6 +2853,7 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
             auto image = pMudlet->mDiscord.getLargeImage(this);
 
             if (image.isEmpty() || image == QLatin1String("mudlet")) {
+                pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIcon);
                 pMudlet->mDiscord.setLargeImage(this, qsl("server-icon"));
             }
         }
@@ -2851,7 +2878,7 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
 
 void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
 {
-    if (mDiscordDisableServerSide) {
+    if (mDiscordMode != DiscordShowGameDetails) {
         return;
     }
 
@@ -2862,17 +2889,23 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
         pMudlet->updateDiscordNamedIcon();
         QPair<bool, QString> const richPresenceSupported = pMudlet->mDiscord.gameIntegrationSupported(getUrl());
         if (richPresenceSupported.first && pMudlet->mDiscord.usingMudletsDiscordID(this)) {
+            pMudlet->mDiscord.setServerOrigin(this, DiscordSetDetail);
             pMudlet->mDiscord.setDetailText(this, tr("Playing %1").arg(richPresenceSupported.second));
+            pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIcon);
             pMudlet->mDiscord.setLargeImage(this, richPresenceSupported.second);
+            pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIconText);
             //: %1 is the game name and %2:%3 is game server address like: mudlet.org:23
             pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3").arg(gameName.toString(), getUrl(), QString::number(getPort())));
         } else {
             // We are using a custom application id, so the top line is
             // likely to be saying "Playing MudName"
             if (richPresenceSupported.first) {
+                pMudlet->mDiscord.setServerOrigin(this, DiscordSetDetail);
                 pMudlet->mDiscord.setDetailText(this, QString());
+                pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIconText);
                 //: %1 is the game name and %2:%3 is game server address like: mudlet.org:23
                 pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3").arg(gameName.toString(), getUrl(), QString::number(getPort())));
+                pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIcon);
                 pMudlet->mDiscord.setLargeImage(this, qsl("server-icon"));
             }
         }
@@ -2880,11 +2913,13 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
 
     auto details = discordInfo.value(qsl("details"));
     if (details != QJsonValue::Undefined) {
+        pMudlet->mDiscord.setServerOrigin(this, DiscordSetDetail);
         pMudlet->mDiscord.setDetailText(this, details.toString());
     }
 
     auto state = discordInfo.value(qsl("state"));
     if (state != QJsonValue::Undefined) {
+        pMudlet->mDiscord.setServerOrigin(this, DiscordSetState);
         pMudlet->mDiscord.setStateText(this, state.toString());
     }
 
@@ -2892,12 +2927,14 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
     if (largeImages != QJsonValue::Undefined) {
         auto largeImage = largeImages.toArray().first();
         if (largeImage != QJsonValue::Undefined) {
+            pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIcon);
             pMudlet->mDiscord.setLargeImage(this, largeImage.toString());
         }
     }
 
     auto largeImageText = discordInfo.value(qsl("largeimagetext"));
     if (largeImageText != QJsonValue::Undefined) {
+        pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIconText);
         pMudlet->mDiscord.setLargeImageText(this, largeImageText.toString());
     }
 
@@ -2905,56 +2942,53 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
     if (smallImages != QJsonValue::Undefined) {
         auto smallImage = smallImages.toArray().first();
         if (smallImage != QJsonValue::Undefined) {
+            pMudlet->mDiscord.setServerOrigin(this, DiscordSetSmallIcon);
             pMudlet->mDiscord.setSmallImage(this, smallImage.toString());
         }
     }
 
     auto smallImageText = discordInfo.value(qsl("smallimagetext"));
     if ((smallImageText != QJsonValue::Undefined)) {
+        pMudlet->mDiscord.setServerOrigin(this, DiscordSetSmallIconText);
         pMudlet->mDiscord.setSmallImageText(this, smallImageText.toString());
     }
 
-    // Use -1 so we can detect (at least during debugging) that a value of 0
-    // has been seen:
     int64_t timeStamp = -1;
     auto endTimeStamp = discordInfo.value(qsl("endtime"));
     if (endTimeStamp.isDouble()) {
-        // It is not entirely clear from the proposed specification
-        // whether the integral seconds since epoch is a string or a
-        // double, so handle both:
-        // This only works properly when the value is less than
-        // 9007199254740992 but since when I last checked it was
-        //       1533042027 second since beginning of 1970 it should be
-        // good enough!
         timeStamp = static_cast<int64_t>(endTimeStamp.toDouble());
+        pMudlet->mDiscord.setServerOrigin(this, DiscordSetTimeInfo);
         pMudlet->mDiscord.setEndTimeStamp(this, timeStamp);
     } else if (endTimeStamp.isString()) {
         timeStamp = endTimeStamp.toString().toLongLong();
+        pMudlet->mDiscord.setServerOrigin(this, DiscordSetTimeInfo);
         pMudlet->mDiscord.setEndTimeStamp(this, timeStamp);
     } else {
         auto startTimeStamp = discordInfo.value(qsl("starttime"));
         if (startTimeStamp.isDouble()) {
             timeStamp = static_cast<int64_t>(startTimeStamp.toDouble());
+            pMudlet->mDiscord.setServerOrigin(this, DiscordSetTimeInfo);
             pMudlet->mDiscord.setStartTimeStamp(this, timeStamp);
-        } else if (endTimeStamp.isString()) {
-            timeStamp = endTimeStamp.toString().toLongLong();
+        } else if (startTimeStamp.isString()) {
+            timeStamp = startTimeStamp.toString().toLongLong();
+            pMudlet->mDiscord.setServerOrigin(this, DiscordSetTimeInfo);
             pMudlet->mDiscord.setStartTimeStamp(this, timeStamp);
         }
     }
 
-    // Use -1 so we can detect (at least during debugging) that a value of 0
-    // has been seen:
     int partySizeValue = -1;
     int partyMaxValue = -1;
     auto partyMax = discordInfo.value(qsl("partymax"));
     auto partySize = discordInfo.value(qsl("partysize"));
+    if (partyMax != QJsonValue::Undefined || partySize != QJsonValue::Undefined) {
+        pMudlet->mDiscord.setServerOrigin(this, DiscordSetPartyInfo);
+    }
     if (partyMax.isDouble()) {
         partyMaxValue = static_cast<int>(partyMax.toDouble());
         if (partyMaxValue > 0 && partySize.isDouble()) {
             partySizeValue = static_cast<int>(partySize.toDouble());
             pMudlet->mDiscord.setParty(this, partySizeValue, partyMaxValue);
         } else {
-            // Switches off the party detail from the RP
             pMudlet->mDiscord.setParty(this, 0, 0);
         }
     } else {
@@ -2980,10 +3014,41 @@ void Host::clearDiscordData()
     pMudlet->mDiscord.setParty(this, 0, 0);
 }
 
+void Host::setDiscordMode(DiscordMode mode)
+{
+    const DiscordMode oldMode = mDiscordMode;
+    mDiscordMode = mode;
+
+    writeProfileData(qsl("discordmode"), QString::number(static_cast<int>(mode)));
+
+    auto pMudlet = mudlet::self();
+
+    if (mode == DiscordShowGameDetails && oldMode != DiscordShowGameDetails) {
+        // Switching to full integration - advertise Discord support to server.
+        // Per spec: Hello triggers Info (app ID, invite URL),
+        // Get triggers Status (rich presence fields).
+        if (mTelnet.isGMCPEnabled()) {
+            mTelnet.sendGMCPSupportsAdd(qsl("External.Discord 1"));
+            mTelnet.sendDiscordHello();
+            mTelnet.sendDiscordGet();
+        }
+    } else if (mode != DiscordShowGameDetails && oldMode == DiscordShowGameDetails) {
+        // Switching away from full integration - retract Discord support
+        // and reset all Discord data including server-origin flags and custom app ID
+        if (mTelnet.isGMCPEnabled()) {
+            mTelnet.sendGMCPSupportsRemove(qsl("External.Discord 1"));
+        }
+        pMudlet->mDiscord.resetData(this);
+        return;
+    }
+
+    pMudlet->mDiscord.UpdatePresence();
+}
+
 
 void Host::processDiscordMSDP(const QString& variable, QString value)
 {
-    if (mDiscordDisableServerSide) {
+    if (mDiscordMode != DiscordShowGameDetails) {
         return;
     }
 
@@ -3028,15 +3093,11 @@ void Host::setDiscordInviteURL(const QString& s)
     writeProfileData(qsl("discordInviteURL"), s);
 }
 
-// Compares the current discord username and discriminator against the non-empty
-// arguments. Returns true if neither match, otherwise false.
-bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const
+// Returns false if the profile is restricted to a specific Discord username
+// and the currently logged-in Discord user doesn't match.
+bool Host::discordUserIdMatch(const QString& userName) const
 {
-    if (!userName.isEmpty() && !mRequiredDiscordUserName.isEmpty() && userName != mRequiredDiscordUserName) {
-        return false;
-    }
-
-    if (!userDiscriminator.isEmpty() && !mRequiredDiscordUserDiscriminator.isEmpty() && userDiscriminator != mRequiredDiscordUserDiscriminator) {
+    if (!userName.isEmpty() && !mRequiredDiscordUserName.isEmpty() && userName.toLower() != mRequiredDiscordUserName.toLower()) {
         return false;
     }
     return true;
@@ -3051,23 +3112,35 @@ void Host::initMMCPServer()
     mMMCPServer = new MMCPServer(this);
 }
 
-/**
- * Get the current chat name from the MMCPServer if it exists, otherwise
- * read it from our saved profile information
- * There is also the mMMCPChatname read from the xml package, where should we
- * use that?
- */
-QString Host::getMMCPChatName()
+
+// Return the MMCP chat name for this host
+const QString& Host::getMMCPChatName() const
 {
     return mMMCPChatName;
 }
 
-void Host::setMMCPChatName(const QString& name, bool shouldSignal)
+// Validate and set the MMCP chat name, notify connected peers, and update GUI.
+// Returns false if the name is invalid (contains ~ or ,).
+bool Host::setMMCPChatName(const QString& name)
 {
-    mMMCPChatName = name;
-    if (shouldSignal) {
-        emit mmcpChatNameChanged(name);
+    static const QRegularExpression rx(qsl("~|,"));
+    if (rx.match(name).hasMatch()) {
+        return false;
     }
+
+    // If the name is unchanged, no need to update or emit signals
+    if (mMMCPChatName == name) {
+        return true;
+    }
+
+    mMMCPChatName = name;
+
+    if (mMMCPServer) {
+        mMMCPServer->chatName(name);
+    }
+
+    emit mmcpChatNameChanged(name);
+    return true;
 }
 
 quint16 Host::getMMCPPort()
@@ -3075,7 +3148,7 @@ quint16 Host::getMMCPPort()
     return mMMCPChatPort;
 }
 
-QString Host::getMMCPChatPrefix()
+const QString& Host::getMMCPChatPrefix() const
 {
     return mMMCPChatPrefix;
 }
@@ -3746,6 +3819,7 @@ bool Host::showWindow(const QString& name)
     auto pL = mpConsole->mLabelMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
     // check labels first as they are shown/hidden more often
     if (pL) {
         pL->show();
@@ -3771,6 +3845,11 @@ bool Host::showWindow(const QString& name)
         return true;
     }
 
+    if (pT) {
+        pT->show();
+        return true;
+    }
+
     return false;
 }
 
@@ -3784,6 +3863,7 @@ bool Host::hideWindow(const QString& name)
     auto pL = mpConsole->mLabelMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
 
     // check labels first as they are shown/hidden more often
     if (pL) {
@@ -3808,6 +3888,11 @@ bool Host::hideWindow(const QString& name)
         return true;
     }
 
+    if (pT) {
+        pT->hide();
+        return true;
+    }
+
     return false;
 }
 
@@ -3822,6 +3907,7 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
     auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
 
     if (pL) {
         pL->resize(x1, y1);
@@ -3854,6 +3940,11 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
         return true;
     }
 
+    if (pT) {
+        pT->resize(x1, y1);
+        return true;
+    }
+
     return false;
 }
 
@@ -3868,6 +3959,7 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
     auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
 
     if (pL) {
         pL->move(x1, y1);
@@ -3902,6 +3994,11 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
         return true;
     }
 
+    if (pT) {
+        pT->move(x1, y1);
+        return true;
+    }
+
     return false;
 }
 
@@ -3930,6 +4027,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     auto pM = mpConsole->mpMapper;
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
+    auto pT = mpConsole->mTextBoxMap.value(name);
     //parents
     auto pW = mpConsole->mpMainFrame;
     auto pD = mpConsole->mDockWidgetMap.value(windowname);
@@ -3977,6 +4075,13 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         pN->move(x1, y1);
         if (show) {
             pN->show();
+        }
+        return {true, QString()};
+    } else if (pT) {
+        pT->setParent(pW);
+        pT->move(x1, y1);
+        if (show) {
+            pT->show();
         }
         return {true, QString()};
     } else if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
@@ -4672,6 +4777,10 @@ std::optional<QString> Host::windowType(const QString& name) const
         return {qsl("commandline")};
     }
 
+    if (mpConsole->mTextBoxMap.contains(name)) {
+        return {qsl("textedit")};
+    }
+
     return {};
 }
 
@@ -4829,6 +4938,18 @@ void Host::setBorders(QMargins borders)
     mpConsole->raiseMudletSysWindowResizeEvent(x, y);
 }
 
+void Host::setUserBorders(const QMargins borders)
+{
+    mUserBorders = borders;
+    setBorders(mUserBorders + mMxpBorders);
+}
+
+void Host::setMxpBorders(const QMargins borders)
+{
+    mMxpBorders = borders;
+    setBorders(mUserBorders + mMxpBorders);
+}
+
 void Host::setCommandLineHistorySaveSize(const int lines)
 {
     if (mCommandLineHistorySaveSize != lines) {
@@ -4961,4 +5082,14 @@ QStringList Host::getAllExperiments() const
 QStringList Host::getValidExperiments() const
 {
     return QStringList(mValidExperiments.constBegin(), mValidExperiments.constEnd());
+}
+
+bool Host::shouldStripOscHyperlinkConfigParam()
+{
+    return mTelnet.oscHyperlinkConfigFeatureEnabled();
+}
+
+bool Host::shouldStripOscHyperlinkPresetParam()
+{
+    return mTelnet.oscHyperlinkPresetsEnabled();
 }

@@ -442,8 +442,10 @@ function Geyser.MiniConsole:resetAutoWrap()
   if not self.autoWrap then
     return nil, "Autowrap is not enabled for " .. self.name
   end
+
   local fontWidth, fontHeight = calcFontSize(self.name)
   local consoleWidth = self.get_width()
+
   if self.scrollBar then
     consoleWidth = consoleWidth - 15
   end

@@ -165,9 +165,16 @@ public:
         DiscordSetPartyInfo = 0x80,
         DiscordSetTimeInfo = 0x100,
         DiscordSetSubMask = 0x3ff,
+        // Kept for backward compatibility with saved profiles but no longer checked:
         DiscordLuaAccessEnabled = 0x800
     };
     Q_DECLARE_FLAGS(DiscordOptionFlags, DiscordOptionFlag)
+
+    enum DiscordMode {
+        DiscordDisabled = 0,
+        DiscordShowMudletOnly = 1,
+        DiscordShowGameDetails = 2
+    };
 
 
     QString getName() { return mHostName; }
@@ -195,11 +202,13 @@ public:
     // Is used to set preference dialog control directly:
     Qt::CheckState getWideAmbiguousEAsianGlyphsControlState() { return mAutoAmbigousWidthGlyphsSetting ? Qt::PartiallyChecked : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
     bool getEnableBlinkText() const { return mEnableBlinkText; }
-    void setEnableBlinkText(const bool enabled);
+    void setEnableBlinkText(bool enable);
     void setHaveColorSpaceId(const bool state) { mSGRCodeHasColSpaceId = state; }
     bool getHaveColorSpaceId() { return mSGRCodeHasColSpaceId; }
     void setMayRedefineColors(const bool state) { mServerMayRedefineColors = state; }
     bool getMayRedefineColors() { return mServerMayRedefineColors; }
+    bool shouldStripOscHyperlinkConfigParam();
+    bool shouldStripOscHyperlinkPresetParam();
     void setDiscordApplicationID(const QString& s);
     const QString& getDiscordApplicationID();
     void setDiscordInviteURL(const QString& s);
@@ -336,10 +345,11 @@ public:
     void waitForProfileSave();
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
-    bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
-    QString getMMCPChatName();
+    void setDiscordMode(DiscordMode mode);
+    bool discordUserIdMatch(const QString& userName) const;
+    const QString& getMMCPChatName() const;
     quint16 getMMCPPort();
-    QString getMMCPChatPrefix();
+    const QString& getMMCPChatPrefix() const;
     bool getMMCPAutoStartServer();
     bool getMMCPAllowPeekRequests();
     bool getMMCPPrefixEmotes();
@@ -452,7 +462,9 @@ public:
     void forgetCommandLine(TCommandLine*);
     QPointer<TConsole> parentTConsole(QObject*) const;
     QMargins borders() const { return mBorders; }
-    void setBorders(const QMargins);
+    QMargins userBorders() const { return mUserBorders; }
+    void setUserBorders(const QMargins);
+    void setMxpBorders(const QMargins);
     void loadMap();
     std::tuple<QString, bool> getCmdLineSettings(const TCommandLine::CommandLineType, const QString&);
     void setCmdLineSettings(const TCommandLine::CommandLineType, const bool, const QString&);
@@ -460,7 +472,7 @@ public:
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void initMMCPServer();
-    void setMMCPChatName(const QString&, bool shouldSignal = true);
+    bool setMMCPChatName(const QString&);
     void setShowIdsInEditor(const bool isShown)
     {
         mShowIDsInEditor = isShown;
@@ -742,17 +754,21 @@ public:
     // module name = {"helpURL" = custom link}
     QMap<QString, QMap<QString, QString>> moduleHelp;
 
-    // Privacy option to allow the game to set Discord Rich Presence information
-    bool mDiscordDisableServerSide = true;
+    // Controls how Discord Rich Presence behaves:
+    // DiscordDisabled - RPC shut down, server unaware
+    // DiscordShowMudletOnly - shows "Playing Mudlet", server unaware, Lua can still set fields
+    // DiscordShowGameDetails - full integration with server GMCP/MSDP
+    DiscordMode mDiscordMode = DiscordShowGameDetails;
 
     // Discord privacy options to give the user control over what data a Server
-    // can set over OOB protocols (MSDP & GMCP) and the user via Lua API:
-    DiscordOptionFlags mDiscordAccessFlags{DiscordLuaAccessEnabled | DiscordSetSubMask};
+    // can set over OOB protocols (MSDP & GMCP):
+    DiscordOptionFlags mDiscordAccessFlags{DiscordSetSubMask};
 
     double mLineSize = 10.0;
+    double mRoomBorderSize = 10.0;
     double mRoomSize = 0.5;
     double mMapGridLineSize = 0.5;
-    QSet<QString> mMapInfoContributors{qsl("Short")};
+    QSet<QString> mMapInfoContributors;
     bool mBubbleMode = false;
     bool mMapViewOnly = true;
     bool mShowRoomID = false;
@@ -818,7 +834,7 @@ signals:
     // width characters:
     void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
     // Tells TTextEdit instances for this profile whether to animate blinking text:
-    void signal_changeEnableBlinkText(const bool);
+    void signal_changeEnableBlinkText(bool);
     void profileSaveStarted();
     void profileSaveFinished();
     void signal_changeSpellDict(const QString&);
@@ -839,6 +855,7 @@ private slots:
     void slot_purgeTemps();
 
 private:
+    void setBorders(const QMargins);
     void installPackageFonts(const QString& packageName);
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
@@ -923,7 +940,7 @@ private:
     // in the TTextEdit classes are only made when necessary:
     bool mWideAmbigousWidthGlyphs = false;
 
-    // Whether to animate blinking text (SGR codes 5 and 6) - if false, displays as italics
+    // Whether to animate blinking text (SGR codes 5 and 6) with a pulse effect
     bool mEnableBlinkText = false;
 
     // keeps track of all of the array writers we're currently operating with
@@ -937,14 +954,10 @@ private:
     // Will be null/empty if they have not set their own invite
     QString mDiscordInviteURL;
 
-    // Will be null/empty if we are not concerned to check the use of Discord
-    // Rich Presence against the local user currently logged into Discord -
-    // these two will be checked against the values from the Discord instance
-    // with which we are linked to by the RPC library - and if they do not match
-    // we won't use Discord functions.
+    // If non-empty, Rich Presence will only be shown when logged into this
+    // Discord username - useful if multiple people share a machine.
     QString mRequiredDiscordUserName;
-    QString mRequiredDiscordUserDiscriminator;
-    
+
     QString mMMCPChatName;
     QString mMMCPChatPrefix;
     quint16 mMMCPChatPort;
@@ -1030,6 +1043,8 @@ private:
     bool mFocusTimerRunning = false;
 
     QMargins mBorders;
+    QMargins mUserBorders;
+    QMargins mMxpBorders;
 
     // The range - applied to ALL command lines - is 0 to 10000, with the knob
     // on the profile preferences having a log-step action with multiples

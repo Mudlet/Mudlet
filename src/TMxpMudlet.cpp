@@ -101,10 +101,10 @@ void TMxpMudlet::stopMedia(TMediaData& mediaData)
     mpHost->mpMedia->stopMedia(mediaData);
 }
 
-TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult result)
+TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult result, TMxpContext& context)
 {
     if (tag->isStartTag()) {
-        if (mpContext->getElementRegistry().containsElement(tag->getName())) {
+        if (context.getElementRegistry().containsElement(tag->getName())) {
             enqueueMxpEvent(tag->asStartTag());
         } else if (tag->isNamed("SEND")) {
             // send events are queued on closing tag so the caption is available

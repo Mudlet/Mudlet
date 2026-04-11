@@ -254,12 +254,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(listWidget_profiles, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_itemClicked);
     connect(listWidget_profiles, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    connect(discord_optin_checkBox, &QCheckBox::checkStateChanged, this, &dlgConnectionProfiles::slot_updateDiscordOptIn);
-#else
-    connect(discord_optin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateDiscordOptIn);
-#endif
-
     // website_entry atm is only a label
     //connect(website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_updateWebsite(const QString)));
 
@@ -308,11 +302,19 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
 dlgConnectionProfiles::~dlgConnectionProfiles()
 {
+    if (mPasswordSaveTimer) {
+        mPasswordSaveTimer->stop();
+    }
+    mPendingPasswordSaveProfile.clear();
+
     // Clear any pending operation flags
     mKeychainOperationInProgress = false;
     mPendingProfileLoad.clear();
 
-    QCoreApplication::instance()->removeEventFilter(this);
+    // Check if QCoreApplication is still valid during shutdown
+    if (QCoreApplication::instance()) {
+        QCoreApplication::instance()->removeEventFilter(this);
+    }
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
@@ -526,32 +528,6 @@ void dlgConnectionProfiles::slot_updateAutoReconnect(int state)
         return;
     }
     writeProfileData(pItem->data(csmNameRole).toString(), qsl("autoreconnect"), QString::number(state));
-}
-
-// This gets called when the QCheckBox that it is connect-ed to gets its
-// checked state set programmatically AS WELL as when the user clicks on it:
-void dlgConnectionProfiles::slot_updateDiscordOptIn(int state)
-{
-    QListWidgetItem* pItem = listWidget_profiles->currentItem();
-    if (!pItem) {
-        return;
-    }
-    writeProfileData(pItem->data(csmNameRole).toString(), qsl("discordserveroptin"), QString::number(state));
-
-    // in case the user is already connected, pull up stored GMCP data
-    auto& hostManager = mudlet::self()->getHostManager();
-    auto pHost = hostManager.getHost(profile_name_entry->text());
-    if (!pHost) {
-        return;
-    }
-
-    if (state == Qt::Checked) {
-        pHost->mDiscordDisableServerSide = false;
-        pHost->mTelnet.requestDiscordInfo();
-    } else {
-        pHost->mDiscordDisableServerSide = true;
-        pHost->clearDiscordData();
-    }
 }
 
 void dlgConnectionProfiles::slot_updatePort(const QString& ignoreBlank)
@@ -810,7 +786,11 @@ void dlgConnectionProfiles::slot_addProfile()
 {
     profile_name_entry->setReadOnly(false);
     // while normally handled by fillout_form, due to it's asynchronous nature it is better UX to reset it here
-    character_password_entry->setText(QString());
+    // Block signals to prevent triggering password save for the previously selected profile
+    {
+        const QSignalBlocker blocker(character_password_entry);
+        character_password_entry->setText(QString());
+    }
     fillout_form();
     welcome_message->hide();
 
@@ -1090,7 +1070,18 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     // because there isn't one in storage yet. It'll be copied over into the widget
     // by the copy method
     if (!mCopyingProfile) {
-        character_password_entry->setText(QString());
+        // Cancel any pending password save from the previous profile to prevent
+        // cross-profile password corruption when rapidly switching profiles
+        if (mPasswordSaveTimer) {
+            mPasswordSaveTimer->stop();
+        }
+        mPendingPasswordSaveProfile.clear();
+
+        // Block signals when clearing to prevent triggering a save for the wrong profile
+        {
+            const QSignalBlocker blocker(character_password_entry);
+            character_password_entry->setText(QString());
+        }
         // Schedule password loading asynchronously to avoid event loop issues
         auto* timer = new QTimer(this);
         timer->setSingleShot(true);
@@ -1118,19 +1109,6 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     mDiscordApplicationId = readProfileData(profile_name, qsl("discordApplicationId"));
     mDiscordInviteURL = readProfileData(profile_name, qsl("discordInviteURL"));
-
-    // val will be null if this is the first time the profile has been read
-    // since an update to a Mudlet version supporting Discord - so a toint()
-    // will return 0 - which just happens to be Qt::Unchecked() but let's not
-    // rely on that...
-    val = readProfileData(profile_name, qsl("discordserveroptin"));
-    if ((!val.isEmpty()) && val.toInt() == Qt::Checked) {
-        discord_optin_checkBox->setChecked(true);
-    } else {
-        discord_optin_checkBox->setChecked(false);
-    }
-
-    updateDiscordStatus();
 
     mud_description_textedit->setPlainText(getDescription(profile_name));
 
@@ -1234,26 +1212,6 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         }
         remove_profile_button->setEnabled(true);
         remove_profile_button->setToolTip(QString());
-    }
-}
-
-void dlgConnectionProfiles::updateDiscordStatus()
-{
-    auto discordLoaded = mudlet::self()->mDiscord.libraryLoaded();
-
-    if (!discordLoaded) {
-        discord_optin_checkBox->setEnabled(false);
-        discord_optin_checkBox->setChecked(false);
-        discord_optin_checkBox->setToolTip(utils::richText(tr("Discord integration not available on this platform")));
-    } else if (mDiscordApplicationId.isEmpty() && !mudlet::self()->mDiscord.gameIntegrationSupported(host_name_entry->text().trimmed()).first) {
-        // Disable discord support if it is not recognised by name and a
-        // Application Id has not been previously entered:
-        discord_optin_checkBox->setEnabled(false);
-        discord_optin_checkBox->setChecked(false);
-        discord_optin_checkBox->setToolTip(utils::richText(tr("Discord integration not supported by game")));
-    } else {
-        discord_optin_checkBox->setEnabled(true);
-        discord_optin_checkBox->setToolTip(utils::richText(tr("Check to enable Discord integration")));
     }
 }
 
@@ -1379,7 +1337,6 @@ void dlgConnectionProfiles::fillout_form()
         listWidget_profiles->setCurrentRow(toselectRow);
     }
 
-    updateDiscordStatus();
 }
 
 void dlgConnectionProfiles::setProfileIcon() const
@@ -1613,10 +1570,6 @@ void dlgConnectionProfiles::slot_copyProfile()
     connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
         mProfileList << profile_name;
         slot_itemClicked(pItem);
-        // Clear the Discord optin on the copied profile - just because the source
-        // one may have had it enabled does not mean we can assume the new one would
-        // want it set:
-        discord_optin_checkBox->setChecked(false);
 
         // restore the password, which won't be copied by the disk copy if stored in the credential manager
         // Temporarily block textChanged signal to avoid triggering save on programmatic setText
@@ -1633,6 +1586,7 @@ void dlgConnectionProfiles::slot_copyProfile()
         mpCopyProfile->setEnabled(true);
         QApplication::restoreOverrideCursor();
         validateProfile();
+        watcher->deleteLater();
     });
     watcher->setFuture(future);
 }
@@ -1663,10 +1617,6 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
 
     mProfileList << profile_name;
     slot_itemClicked(pItem);
-    // Clear the Discord optin on the copied profile - just because the source
-    // one may have had it enabled does not mean we can assume the new one would
-    // want it set:
-    discord_optin_checkBox->setChecked(false);
 }
 
 bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const
@@ -1839,9 +1789,11 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
         if (!character_password_entry->text().trimmed().isEmpty()) {
             pHost->setPass(character_password_entry->text().trimmed());
-        } else {
-            slot_updatePassword(pHost->getPass());
         }
+        // Note: If password field is empty, we don't call slot_updatePassword() because:
+        // 1. The host's password was already loaded via Host::loadSecuredPassword()
+        // 2. Calling slot_updatePassword with empty password would delete the stored password
+        // 3. slot_updatePassword reads profile from list widget which could mismatch
 
         if (!login_entry->text().trimmed().isEmpty()) {
             pHost->setLogin(login_entry->text().trimmed());
@@ -2452,6 +2404,12 @@ void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name
 
 void dlgConnectionProfiles::slot_passwordTextChanged()
 {
+    QListWidgetItem* pItem = listWidget_profiles->currentItem();
+    if (!pItem) {
+        return;
+    }
+    mPendingPasswordSaveProfile = pItem->data(csmNameRole).toString();
+
     // Cancel any pending password save
     if (mPasswordSaveTimer) {
         mPasswordSaveTimer->stop();
@@ -2460,9 +2418,13 @@ void dlgConnectionProfiles::slot_passwordTextChanged()
         mPasswordSaveTimer->setSingleShot(true);
         mPasswordSaveTimer->setInterval(500); // 500ms debounce
         connect(mPasswordSaveTimer, &QTimer::timeout, this, [this]() {
-            QListWidgetItem* pItem = listWidget_profiles->currentItem();
-            if (pItem) {
-                slot_updatePassword(character_password_entry->text());
+            if (!mPendingPasswordSaveProfile.isEmpty()) {
+                // Check if this profile is STILL selected - if not, don't save
+                // (user switched away, so the password field content is for a different profile)
+                QListWidgetItem* currentItem = listWidget_profiles->currentItem();
+                if (currentItem && currentItem->data(csmNameRole).toString() == mPendingPasswordSaveProfile) {
+                    slot_updatePassword(character_password_entry->text());
+                }
             }
         });
     }

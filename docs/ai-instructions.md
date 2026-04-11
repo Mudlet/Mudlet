@@ -42,6 +42,20 @@ signals:
     void profileChanged(const QString& name);
 ```
 
+### QFlags and enums
+
+When working with Qt `Q_DECLARE_FLAGS` types, always use the proper enum/flags type - never pass them as raw `int`:
+
+```cpp
+// Good - uses the typed enum
+void setServerOrigin(Host*, const Host::DiscordOptionFlag);
+QMap<Host*, Host::DiscordOptionFlags> mServerOriginFlags;
+
+// Bad - loses type safety
+void setServerOrigin(Host*, int flag);
+QMap<Host*, int> mServerOriginFlags;
+```
+
 ### String handling
 
 ```cpp

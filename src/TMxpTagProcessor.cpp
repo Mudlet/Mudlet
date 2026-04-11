@@ -77,7 +77,7 @@ TMxpTagHandlerResult TMxpTagProcessor::handleTag(TMxpContext& ctx, TMxpClient& c
 #ifdef DEBUG_MXP_PROCESSING
             qDebug() << "  Handler handled tag, result:" << result;
 #endif
-            result = client.tagHandled(tag, result);
+            result = client.tagHandled(tag, result, ctx);
             if (result != MXP_TAG_NOT_HANDLED) {
                 return result;
             }
@@ -185,6 +185,12 @@ TMxpElementRegistry& TMxpTagProcessor::getElementRegistry()
 {
     return mMxpElementRegistry;
 }
+
+const TMxpElementRegistry& TMxpTagProcessor::getElementRegistry() const
+{
+    return mMxpElementRegistry;
+}
+
 QMap<QString, QVector<QString>>& TMxpTagProcessor::getSupportedElements()
 {
     return mSupportedMxpElements;

@@ -44,7 +44,6 @@
 #include "edbee/views/texteditorscrollarea.h"
 #include "edbee/models/textdocumentscopes.h"
 #include "MMCP.h"
-#include "MMCPServer.h"
 
 #include <chrono>
 #include <QtConcurrent>
@@ -97,6 +96,21 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
 
     // Only unhide this if it is needed
     groupBox_discordPrivacy->hide();
+
+    auto updateDiscordPrivacyControls = [this]() {
+        const bool enablePrivacy = radioButton_discordGameDetails->isChecked();
+        label_discordLargeIcon->setEnabled(enablePrivacy);
+        comboBox_discordLargeIconPrivacy->setEnabled(enablePrivacy);
+        label_discordSmallIcon->setEnabled(enablePrivacy);
+        comboBox_discordSmallIconPrivacy->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToDetail->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToState->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToPartyInfo->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToTimerInfo->setEnabled(enablePrivacy);
+    };
+    connect(radioButton_discordGameDetails, &QRadioButton::toggled, this, updateDiscordPrivacyControls);
+    connect(radioButton_discordMudletOnly, &QRadioButton::toggled, this, updateDiscordPrivacyControls);
+    connect(radioButton_discordDisabled, &QRadioButton::toggled, this, updateDiscordPrivacyControls);
 
     // As we demonstrate the options that these next two checkboxes control in
     // the editor "preview" widget (on another tab) we will need to track
@@ -258,7 +272,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
 
     // Add validator for MMCP Chatname, disallow ~ and , characters
     QRegularExpression rx("^[^~,]*$");
-    QValidator *validator = new QRegularExpressionValidator(rx, this);
+    QValidator* validator = new QRegularExpressionValidator(rx, this);
     lineEdit_mmcpChatName->setValidator(validator);
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
@@ -845,10 +859,31 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
 
+    switch (pHost->mDiscordMode) {
+    case Host::DiscordDisabled:
+        radioButton_discordDisabled->setChecked(true);
+        break;
+    case Host::DiscordShowMudletOnly:
+        radioButton_discordMudletOnly->setChecked(true);
+        break;
+    case Host::DiscordShowGameDetails:
+        [[fallthrough]];
+    default:
+        radioButton_discordGameDetails->setChecked(true);
+        break;
+    }
+
     if (mudlet::self()->mDiscord.libraryLoaded()) {
         Host::DiscordOptionFlags const discordFlags = pHost->mDiscordAccessFlags;
         groupBox_discordPrivacy->show();
-        checkBox_discordLuaAPI->setChecked(discordFlags & Host::DiscordLuaAccessEnabled);
+
+        const bool enablePrivacy = (pHost->mDiscordMode == Host::DiscordShowGameDetails);
+        comboBox_discordLargeIconPrivacy->setEnabled(enablePrivacy);
+        comboBox_discordSmallIconPrivacy->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToDetail->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToState->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToPartyInfo->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToTimerInfo->setEnabled(enablePrivacy);
 
         if ((discordFlags & Host::DiscordSetLargeIcon) && (discordFlags & Host::DiscordSetLargeIconText)) {
             comboBox_discordLargeIconPrivacy->setCurrentIndex(0);
@@ -871,9 +906,18 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_discordServerAccessToPartyInfo->setChecked(!(discordFlags & Host::DiscordSetPartyInfo));
         checkBox_discordServerAccessToTimerInfo->setChecked(!(discordFlags & Host::DiscordSetTimeInfo));
         lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
-        lineEdit_discordUserDiscriminator->setText(pHost->mRequiredDiscordUserDiscriminator);
+        const QString currentDiscordUser = Discord::getLoggedInUserName();
+        if (!currentDiscordUser.isEmpty()) {
+            //: Shows which Discord account is logged in, e.g. "Discord user: morquin"
+            label_discordCurrentUser->setText(tr("Discord user: %1").arg(currentDiscordUser));
+            label_discordCurrentUser->setToolTip(QString());
+        } else {
+            label_discordCurrentUser->setText(tr("(Discord not connected)"));
+            //: Tooltip shown when Discord Rich Presence cannot detect a logged-in user
+            label_discordCurrentUser->setToolTip(tr("The Discord desktop app must be running for Rich Presence to work. Browser and mobile clients are not supported."));
+        }
     }
-    
+
     lineEdit_mmcpChatName->setText(pHost->getMMCPChatName());
     lineEdit_mmcpPort->setText(QString::number(pHost->getMMCPPort()));
     lineEdit_mmcpChatMessagePrefix->setText(pHost->getMMCPChatPrefix());
@@ -883,13 +927,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_mmcpAllowPeekReq->setChecked(pHost->mMMCPAllowPeekRequests);
     checkBox_mmcpAutoAcceptCalls->setChecked(pHost->getMMCPAutoAcceptCalls());
     */
-    
+
     checkBox_mmcpAddChatMessageNewline->setChecked(pHost->getMMCPAddChatMessageNewline());
     checkBox_mmcpPrefixEmotes->setChecked(pHost->getMMCPPrefixEmotes());
     checkBox_mmcpSnoopInMainConsole->setChecked(pHost->getMMCPShowSnoopInMainConsole());
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
 
-    auto originalBorders = pHost->borders();
+    auto originalBorders = pHost->userBorders();
     topBorderHeight->setValue(originalBorders.top());
     bottomBorderHeight->setValue(originalBorders.bottom());
     leftBorderWidth->setValue(originalBorders.left());
@@ -933,6 +977,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
     mFORCE_GA_OFF->setChecked(pHost->mFORCE_GA_OFF);
     mAlertOnNewData->setChecked(pHost->mAlertOnNewData);
+    telnetHandlerEnabled->setChecked(mudlet::getQSettings()->value("telnetHandlerEnabled", false).toBool());
     //encoding->setCurrentIndex( pHost->mEncoding );
     mFORCE_SAVE_ON_EXIT->setChecked(pHost->mFORCE_SAVE_ON_EXIT);
 
@@ -1087,6 +1132,17 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             qWarning() << "dlgProfilePreferences::initWithHost(...) WARNING - Unable to cast groupBox_mapSymbols layout to expected QGridLayout - someone has messed with the profile_preferences.ui "
                           "file and the contents of the groupBox can not be shown...!";
         }
+        connect(mpDoubleSpinBox_mapSymbolFontFudge, qOverload<double>(&QDoubleSpinBox::valueChanged), this, [this](double value) {
+            Host* pHost = mpHost;
+            if (!pHost || !pHost->mpMap) {
+                return;
+            }
+            pHost->mpMap->mMapSymbolFontFudgeFactor = value;
+            if (pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
+                pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
+                pHost->mpMap->mpMapper->mp2dMap->update();
+            }
+        });
 
         label_mapSymbolsFont->setEnabled(true);
         fontComboBox_mapSymbols->setEnabled(true);
@@ -1122,13 +1178,46 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(spinBox_playerRoomOuterDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomOuterDiameter);
         connect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomInnerDiameter);
 
-        // Initialize room and exit size controls
+        // Initialize room, exit, and border size controls
         spinBox_roomSize->setValue(pHost->mRoomSize * 10);
-        spinBox_exitSize->setValue(pHost->mLineSize);
+        // mLineSize/mRoomBorderSize are inversely proportional to thickness
+        // (exitWidth = 1/eSize * ...), convert to a direct 1-11 scale
+        // using a simple reciprocal: mLineSize = 50 / spinner, spinner = 50 / mLineSize
+        spinBox_exitSize->setValue(qBound(1, qRound(50.0 / pHost->mLineSize), 11));
+        spinBox_borderSize->setValue(qBound(1, qRound(50.0 / pHost->mRoomBorderSize), 11));
         doubleSpinBox_gridSize->setValue(pHost->mMapGridLineSize);
         connect(spinBox_roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_roomSizeChanged);
         connect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_exitSizeChanged);
+        connect(spinBox_borderSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_borderSizeChanged);
         connect(doubleSpinBox_gridSize, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &dlgProfilePreferences::slot_gridSizeChanged);
+        connect(checkbox_mMapperShowRoomBorders, &QCheckBox::toggled, this, [this](bool checked) {
+            Host* pHost = mpHost;
+            if (!pHost) {
+                return;
+            }
+            pHost->mMapperShowRoomBorders = checked;
+            if (pHost->mpMap && pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
+                pHost->mpMap->mpMapper->mp2dMap->update();
+            }
+        });
+        connect(checkBox_drawUpperLowerLevels, &QCheckBox::toggled, this, [this](bool checked) {
+            mudlet::self()->mDrawUpperLowerLevels = checked;
+            Host* pHost = mpHost;
+            if (pHost && pHost->mpMap && pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
+                pHost->mpMap->mpMapper->mp2dMap->update();
+            }
+        });
+        connect(mMapperUseAntiAlias, &QCheckBox::toggled, this, [this](bool checked) {
+            Host* pHost = mpHost;
+            if (!pHost) {
+                return;
+            }
+            pHost->mMapperUseAntiAlias = checked;
+            if (pHost->mpMap && pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
+                pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = checked;
+                pHost->mpMap->mpMapper->mp2dMap->update();
+            }
+        });
     } else {
         label_mapSymbolsFont->setEnabled(false);
         fontComboBox_mapSymbols->setEnabled(false);
@@ -1395,29 +1484,24 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     int shortcutsRow = 0;
     while (shortcutKeys.hasNext()) {
         auto key = shortcutKeys.next();
-        QKeySequence* sequence = new QKeySequence(*pHost->profileShortcuts.value(key));
-        currentShortcuts.insert(key, sequence);
-        auto sequenceEdit = new QKeySequenceEdit(*sequence);
+        currentShortcuts.insert(key, QKeySequence(*pHost->profileShortcuts.value(key)));
+        auto sequenceEdit = new QKeySequenceEdit(currentShortcuts.value(key));
 
         gridLayout_groupBox_shortcuts->addWidget(new QLabel(mudlet::self()->mpShortcutsManager->getLabel(key)), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
         shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
-            QKeySequence* newSequence = nullptr;
-            if (sequenceEdit->keySequence().isEmpty() || sequenceEdit->keySequence().matches(QKeySequence(Qt::Key_Escape))) {
-                newSequence = new QKeySequence();
-            } else {
-                newSequence = new QKeySequence(sequenceEdit->keySequence());
+            QKeySequence newSequence;
+            if (!sequenceEdit->keySequence().isEmpty() && !sequenceEdit->keySequence().matches(QKeySequence(Qt::Key_Escape))) {
+                newSequence = sequenceEdit->keySequence();
             }
-            sequenceEdit->setKeySequence(*newSequence);
-            sequence->swap(*newSequence);
-            delete newSequence;
+            sequenceEdit->setKeySequence(newSequence);
+            currentShortcuts[key] = newSequence;
         });
         connect(this, &dlgProfilePreferences::signal_resetMainWindowShortcutsToDefaults, sequenceEdit, [=]() {
-            sequenceEdit->setKeySequence(*mudlet::self()->mpShortcutsManager->getDefault(key));
-            QKeySequence* newSequence = new QKeySequence(*mudlet::self()->mpShortcutsManager->getDefault(key));
-            sequence->swap(*newSequence);
-            delete newSequence;
+            const auto defaultSequence = *mudlet::self()->mpShortcutsManager->getDefault(key);
+            sequenceEdit->setKeySequence(defaultSequence);
+            currentShortcuts[key] = defaultSequence;
         });
     }
 }
@@ -1519,9 +1603,16 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(spinBox_roomSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
+    disconnect(spinBox_borderSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(doubleSpinBox_gridSize, qOverload<double>(&QDoubleSpinBox::valueChanged), nullptr, nullptr);
     disconnect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, nullptr, nullptr);
     disconnect(checkBox_invertMapZoom, &QCheckBox::toggled, nullptr, nullptr);
+    disconnect(checkbox_mMapperShowRoomBorders, &QCheckBox::toggled, nullptr, nullptr);
+    disconnect(checkBox_drawUpperLowerLevels, &QCheckBox::toggled, nullptr, nullptr);
+    disconnect(mMapperUseAntiAlias, &QCheckBox::toggled, nullptr, nullptr);
+    if (mpDoubleSpinBox_mapSymbolFontFudge) {
+        disconnect(mpDoubleSpinBox_mapSymbolFontFudge, qOverload<double>(&QDoubleSpinBox::valueChanged), nullptr, nullptr);
+    }
 
     // Console buffer settings
     disconnect(checkBox_useMaxBufferSize, &QCheckBox::toggled, nullptr, nullptr);
@@ -1605,7 +1696,7 @@ void dlgProfilePreferences::clearHostDetails()
     mSearchEngineMap.clear();
     search_engine_combobox->clear();
 
-    checkBox_discordLuaAPI->setChecked(false);
+    radioButton_discordGameDetails->setChecked(true);
     comboBox_discordLargeIconPrivacy->setCurrentIndex(0);
     comboBox_discordSmallIconPrivacy->setCurrentIndex(0);
     checkBox_discordServerAccessToDetail->setChecked(false);
@@ -1613,9 +1704,14 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_discordServerAccessToPartyInfo->setChecked(false);
     checkBox_discordServerAccessToTimerInfo->setChecked(false);
     lineEdit_discordUserName->clear();
-    lineEdit_discordUserDiscriminator->clear();
-    
+    label_discordCurrentUser->clear();
+
     lineEdit_mmcpChatName->clear();
+    lineEdit_mmcpPort->clear();
+    lineEdit_mmcpChatMessagePrefix->clear();
+    checkBox_mmcpAddChatMessageNewline->setChecked(true);
+    checkBox_mmcpPrefixEmotes->setChecked(false);
+    checkBox_mmcpSnoopInMainConsole->setChecked(true);
 
     checkBox_debugShowAllCodepointProblems->setChecked(false);
     checkBox_announceIncomingText->setChecked(false);
@@ -3030,7 +3126,7 @@ void dlgProfilePreferences::slot_saveAndClose()
             }
         }
         const QMargins newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
-        pHost->setBorders(newBorders);
+        pHost->setUserBorders(newBorders);
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mVersionInTTYPE = checkBox_mVersionInTTYPE->isChecked();
         pHost->setForceMXPProcessorOn(checkBox_mForceMXPProcessorOn->isChecked());
@@ -3041,6 +3137,11 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
         pHost->mNoAntiAlias = !checkBox_antiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
+
+        QSettings* settings = mudlet::getQSettings();
+        if (settings->value("telnetHandlerEnabled", false).toBool() != telnetHandlerEnabled->isChecked()) {
+            settings->setValue("telnetHandlerEnabled", telnetHandlerEnabled->isChecked());
+        }
 
         pHost->mUseProxy = groupBox_proxy->isChecked();
         pHost->mProxyAddress = lineEdit_proxyAddress->text();
@@ -3128,25 +3229,30 @@ void dlgProfilePreferences::slot_saveAndClose()
                 | (checkBox_discordServerAccessToDetail->isChecked() ? Host::DiscordNoOption : Host::DiscordSetDetail)
                 | (checkBox_discordServerAccessToState->isChecked() ? Host::DiscordNoOption : Host::DiscordSetState)
                 | (checkBox_discordServerAccessToPartyInfo->isChecked() ? Host::DiscordNoOption : Host::DiscordSetPartyInfo)
-                | (checkBox_discordServerAccessToTimerInfo->isChecked() ? Host::DiscordNoOption : Host::DiscordSetTimeInfo)
-                | (checkBox_discordLuaAPI->isChecked() ? Host::DiscordLuaAccessEnabled : Host::DiscordNoOption));
+                | (checkBox_discordServerAccessToTimerInfo->isChecked() ? Host::DiscordNoOption : Host::DiscordSetTimeInfo));
 
-        pHost->mRequiredDiscordUserName = lineEdit_discordUserName->text().trimmed();
-        if (lineEdit_discordUserDiscriminator->hasAcceptableInput()) {
-            // The input mask specifies 4 digits [0-9]
-            pHost->mRequiredDiscordUserDiscriminator = lineEdit_discordUserDiscriminator->text();
-        } else {
-            pHost->mRequiredDiscordUserDiscriminator.clear();
+        Host::DiscordMode newMode = Host::DiscordShowGameDetails;
+        if (radioButton_discordDisabled->isChecked()) {
+            newMode = Host::DiscordDisabled;
+        } else if (radioButton_discordMudletOnly->isChecked()) {
+            newMode = Host::DiscordShowMudletOnly;
         }
-        
+        pHost->setDiscordMode(newMode);
+
+        const QString newDiscordUserName = lineEdit_discordUserName->text().trimmed().toLower();
+        if (pHost->mRequiredDiscordUserName != newDiscordUserName) {
+            pHost->mRequiredDiscordUserName = newDiscordUserName;
+            mudlet::self()->mDiscord.UpdatePresence();
+        }
+
         // Save chat options so they are written to XML upon export
-        pHost->mMMCPChatName = lineEdit_mmcpChatName->text().trimmed();
+        pHost->setMMCPChatName(lineEdit_mmcpChatName->text().trimmed());
         pHost->mMMCPChatPrefix = lineEdit_mmcpChatMessagePrefix->text().trimmed();
         bool ok;
         quint16 port = lineEdit_mmcpPort->text().toUShort(&ok);
         pHost->mMMCPChatPort = ok ? port : csDefaultMMCPHostPort;
-        
-        /* Possible inclusion in 4020.1
+
+        /* Possible inclusion in 4.21
         pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
         pHost->mMMCPAutoAcceptCalls = checkBox_mmcpAutoAcceptCalls->isChecked();
         pHost->mMMCPAllowPeekRequests = checkBox_mmcpAllowPeekReq->isChecked();
@@ -3155,10 +3261,10 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mMMCPAutostartServer = false;
         pHost->mMMCPAutoAcceptCalls = false;
         pHost->mMMCPAllowPeekRequests = false;
-        
+
         pHost->mMMCPPrefixEmotes = checkBox_mmcpPrefixEmotes->isChecked();
         pHost->mMMCPAddChatMessageNewline = checkBox_mmcpAddChatMessageNewline->isChecked();
-        
+
         pHost->mMMCPShowSnoopInMainConsole = checkBox_mmcpSnoopInMainConsole->isChecked();
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
         pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
@@ -3188,7 +3294,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         auto iterator = mudlet::self()->mpShortcutsManager->iterator();
         while (iterator.hasNext()) {
             auto key = iterator.next();
-            QKeySequence sequence = QKeySequence(*currentShortcuts.value(key));
+            QKeySequence sequence = currentShortcuts.value(key);
             pHost->profileShortcuts.value(key)->swap(sequence);
         }
     }
@@ -3549,6 +3655,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
 
                             theme_download_label->hide();
                             tempThemesArchive->deleteLater();
+                            watcher->deleteLater();
                         });
                         watcher->setFuture(future);
                         reply->deleteLater();
@@ -4104,10 +4211,13 @@ void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
 }
 
 /**
- * Update the chatname lineEdit if the user changes their chat name while
- * the preferences dialog is open
+ * Update the chatname lineEdit when the chat name changes.
+ * This may be called redundantly when the change originates from this
+ * dialog (since the signal is emitted after the lineEdit was already
+ * edited), but setText() does not emit editingFinished so no loop occurs.
  */
-void dlgProfilePreferences::slot_setMMCPChatName(const QString& name) {
+void dlgProfilePreferences::slot_setMMCPChatName(const QString& name)
+{
     lineEdit_mmcpChatName->setText(name);
 }
 
@@ -4115,11 +4225,13 @@ void dlgProfilePreferences::slot_setMMCPChatName(const QString& name) {
  * Notify connected clients that our chatname has been changed (via GUI)
  * 
  */
-void dlgProfilePreferences::slot_mmcpChatNameChanged() {
-    const QString& chatName = lineEdit_mmcpChatName->text();
-
+void dlgProfilePreferences::slot_mmcpChatNameChanged()
+{
     if (mpHost) {
-        mpHost->setMMCPChatName(chatName, false);
+        if (!mpHost->setMMCPChatName(lineEdit_mmcpChatName->text().trimmed())) {
+            // Validation failed — revert lineEdit to the current stored name
+            lineEdit_mmcpChatName->setText(mpHost->getMMCPChatName());
+        }
     }
 }
 
@@ -4393,6 +4505,7 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
     setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor, true);
     setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
     pHost->mpMap->mPlayerRoomStyle = static_cast<quint8>(style);
+    pHost->mPlayerRoomStyle = static_cast<quint8>(style);
     if (!pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
         return;
     }
@@ -4404,68 +4517,78 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
 void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
 {
     Host* pHost = mpHost;
-    if (!pHost || !mpHost->mpMap || !mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+    if (!pHost || !mpHost->mpMap) {
         return;
     }
 
     setPlayerRoomColor(pushButton_playerRoomPrimaryColor, mpHost->mpMap->mPlayerRoomOuterColor);
+    pHost->mPlayerRoomOuterColor = mpHost->mpMap->mPlayerRoomOuterColor;
     if (comboBox_playerRoomStyle->currentIndex() != 3) {
         return;
     }
 
-    // The current setting IS for the custom color - so use it straight away:
-    mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(3);
-    // And update the displayed map:
-    mpHost->mpMap->mpMapper->mp2dMap->update();
+    if (mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+        // The current setting IS for the custom color - so use it straight away:
+        mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(3);
+        // And update the displayed map:
+        mpHost->mpMap->mpMapper->mp2dMap->update();
+    }
 }
 
 void dlgProfilePreferences::slot_setPlayerRoomSecondaryColor()
 {
     Host* pHost = mpHost;
-    if (!pHost || !mpHost->mpMap || !mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+    if (!pHost || !mpHost->mpMap) {
         return;
     }
 
     setPlayerRoomColor(pushButton_playerRoomSecondaryColor, mpHost->mpMap->mPlayerRoomInnerColor);
+    pHost->mPlayerRoomInnerColor = mpHost->mpMap->mPlayerRoomInnerColor;
     if (comboBox_playerRoomStyle->currentIndex() != 3) {
         return;
     }
 
-    // The current setting IS for the custom color - so use it straight away:
-    mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(3);
-    // And update the displayed map:
-    mpHost->mpMap->mpMapper->mp2dMap->update();
+    if (mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+        // The current setting IS for the custom color - so use it straight away:
+        mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(3);
+        // And update the displayed map:
+        mpHost->mpMap->mpMapper->mp2dMap->update();
+    }
 }
 
 void dlgProfilePreferences::slot_setPlayerRoomOuterDiameter(const int value)
 {
     Host* pHost = mpHost;
-    if (!pHost || !mpHost->mpMap || !mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+    if (!pHost || !pHost->mpMap) {
         return;
     }
 
-    if (value < 256 && mpHost->mpMap->mPlayerRoomOuterDiameterPercentage != value) {
-        mpHost->mpMap->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
-        mpHost->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
-        // And update the displayed map:
-        mpHost->mpMap->mpMapper->mp2dMap->update();
+    if (value < 256 && pHost->mpMap->mPlayerRoomOuterDiameterPercentage != value) {
+        pHost->mpMap->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
+        pHost->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
+        if (pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
+            // And update the displayed map:
+            pHost->mpMap->mpMapper->mp2dMap->update();
+        }
     }
 }
 
 void dlgProfilePreferences::slot_setPlayerRoomInnerDiameter(const int value)
 {
     Host* pHost = mpHost;
-    if (!pHost || !mpHost->mpMap || !mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+    if (!pHost || !pHost->mpMap) {
         return;
     }
 
-    if (value < 256 && mpHost->mpMap->mPlayerRoomInnerDiameterPercentage != value) {
-        mpHost->mpMap->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
-        mpHost->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
-        // Redefine the QGradientStops
-        mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(qBound(0, comboBox_playerRoomStyle->currentIndex(), 3));
-        // And update the displayed map:
-        mpHost->mpMap->mpMapper->mp2dMap->update();
+    if (value < 256 && pHost->mpMap->mPlayerRoomInnerDiameterPercentage != value) {
+        pHost->mpMap->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
+        pHost->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
+        if (pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
+            // Redefine the QGradientStops
+            pHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(qBound(0, comboBox_playerRoomStyle->currentIndex(), 3));
+            // And update the displayed map:
+            pHost->mpMap->mpMapper->mp2dMap->update();
+        }
     }
 }
 
@@ -4483,7 +4606,7 @@ void dlgProfilePreferences::setPlayerRoomColor(QPushButton* b, QColor& c)
 
         // Also sets a contrasting foreground color so text will always be
         // visible and adjusts the saturation of a disabled button:
-        setButtonColor(b, color);
+        setButtonColor(b, color, true);
     }
 }
 
@@ -4752,10 +4875,21 @@ void dlgProfilePreferences::slot_crashReportPolicyChanged(int index)
 void dlgProfilePreferences::slot_exitSizeChanged(int size)
 {
     if (mpHost) {
-        mpHost->mLineSize = size;
+        const double internalSize = 50.0 / size;
+        mpHost->mLineSize = internalSize;
         if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-            mpHost->mpMap->mpMapper->mp2dMap->setExitSize(size);
-            mpHost->mpMap->mpMapper->mp2dMap->update();
+            mpHost->mpMap->mpMapper->mp2dMap->setExitSize(internalSize);
+        }
+    }
+}
+
+void dlgProfilePreferences::slot_borderSizeChanged(int size)
+{
+    if (mpHost) {
+        const double internalSize = 50.0 / size;
+        mpHost->mRoomBorderSize = internalSize;
+        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+            mpHost->mpMap->mpMapper->mp2dMap->setBorderSize(internalSize);
         }
     }
 }
