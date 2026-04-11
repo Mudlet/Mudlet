@@ -12,10 +12,6 @@ qrc_*.cpp
 mudlet
 app-build.txt
 src/crash_reporter/build/
-package-CLANG64-release/*
-portable-CLANG64-release/*
-build-CLANG64/*
-*.zip
 
 
 # Qt creator's clangd cache
