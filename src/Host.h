@@ -362,7 +362,7 @@ public:
     QString mediaLocationGMCP() const;
     void setMediaLocationMSP(const QString& mediaUrl);
     QString mediaLocationMSP() const;
-    // Use this rather than accessng the TMainConsole::font() as the latter
+    // Use this rather than accessing the TMainConsole::font() as the latter
     // isn't always around during profile start-up:
     QFont getDisplayFont();
     QFont getAndClearTempDisplayFont();
@@ -510,7 +510,7 @@ public:
     // Make this the first public member instantiated so we can use ITS font
     // as the "reference" or "master" font for whole profile - and so we don't
     // have to maintain a separate one here in this class which does not, as
-    // something derived from a QOject, have one:
+    // something derived from a QObject, have one:
     QPointer<TMainConsole> mpConsole;
     cTelnet mTelnet;
     QPointer<dlgPackageManager> mpPackageManager;
