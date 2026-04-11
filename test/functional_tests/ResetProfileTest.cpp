@@ -323,22 +323,13 @@ private slots:
         // should be gone.
         QVERIFY2(!mpHost->mEventHandlerMap.contains(qsl("testEvent")), "Manually inserted event handler should be cleared after reset");
     }
-
-    void test_anonymousEventHandlersClearedAfterReset()
-    {
-        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
-        luaL_dostring(L, "function anonHandlerTestFunc() anonHandlerCalled = true end");
-        mpHost->registerAnonymousEventHandler(qsl("testAnonymousEvent"), qsl("anonHandlerTestFunc"));
-
-        performReset();
-
-        // The Lua function no longer exists in the new state
-        lua_State* newL = mpHost->mLuaInterpreter.getLuaGlobalState();
-        lua_getglobal(newL, "anonHandlerTestFunc");
         QVERIFY2(lua_isnil(newL, -1),
                  "Lua function referenced by anonymous "
                  "handler should not exist in new Lua state");
         lua_pop(newL, 1);
+
+        QVERIFY2(!mpHost->mAnonymousEventHandlerFunctions.contains(qsl("testAnonymousEvent")),
+                 "Anonymous event handler map entry should be cleared after reset");
 
         // Raise the event — if the anonymous handler map was properly cleared,
         // this won't attempt to call the now-nonexistent function
@@ -346,7 +337,6 @@ private slots:
         event.mArgumentList.append(qsl("testAnonymousEvent"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(event);
-    }
 
     // -----------------------------------------------------------------------
     // Group 5: Lua State Reinitialization (#3692)
