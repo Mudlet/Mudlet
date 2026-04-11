@@ -103,7 +103,7 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
     // the game save file, apparently) so it was actually the initial value
     // specified in the Host class. Revising the code to make it use the
     // selected font for the main console meant that all the controls at the
-    // bottom took on that font which was glaringly inconsistant with the
+    // bottom took on that font which was glaringly inconsistent with the
     // overall GUI appearance - instead now it adopts the "default" application
     // font:
     setFont(qApp->font());
