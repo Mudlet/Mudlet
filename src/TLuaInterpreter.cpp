@@ -3371,10 +3371,10 @@ void TLuaInterpreter::adjustCaptureGroups(int x, int a)
         }
     }
 
-    NamedMatchesRanges::iterator i;
-    for (i = mCapturedNameGroupsPosList.begin(); i != mCapturedNameGroupsPosList.cend(); ++i) {
-        i.value().first += a;
-        i.value().second += a;
+    for (auto& [pos, length] : mCapturedNameGroupsPosList) {
+        if (pos >= x) {
+            pos += a;
+        }
     }
 }
 
@@ -5596,6 +5596,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "enableTimeStamps", TLuaInterpreter::enableTimeStamps);
     lua_register(pGlobalLua, "timeStampsEnabled", TLuaInterpreter::timeStampsEnabled);
     lua_register(pGlobalLua, "setActiveProfile", TLuaInterpreter::setActiveProfile);
+    lua_register(pGlobalLua, "getKeyCode", TLuaInterpreter::getKeyCode);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 

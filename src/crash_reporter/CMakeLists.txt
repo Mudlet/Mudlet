@@ -63,6 +63,7 @@ if(WIN32)
         winhttp
         version
         dbghelp
+        synchronization
     )
 elseif(APPLE)
     list(APPEND MUDLET_CRASH_REPORTER_LIBS
@@ -75,6 +76,7 @@ elseif(APPLE)
 elseif(UNIX)
     list(APPEND MUDLET_CRASH_REPORTER_LIBS
         crashpad_compat
+        unwind
         pthread
         dl
         z
