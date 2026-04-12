@@ -297,13 +297,6 @@ jobs:
             fi
           fi
 
-          # Prepend a note for PTB changelogs so readers know the scope
-          if [[ "${RELEASE_TYPE}" == "ptb" && -n "${STABLE_TAG}" ]]; then
-            RELEASE_VERSION="${STABLE_TAG#Mudlet-}"
-            { echo "Changes since ${RELEASE_VERSION}:"; echo; cat changelog.md; } > changelog.tmp
-            mv changelog.tmp changelog.md
-          fi
-
           echo "Changelog preview:"
           head -20 changelog.md
 
