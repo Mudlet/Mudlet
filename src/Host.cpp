@@ -324,6 +324,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
     mLogin = readProfileData(qsl("login"));
 
+    const QString sslVal = readProfileData(qsl("ssl_tsl"));
+    if (!sslVal.isEmpty() && sslVal.toInt() == Qt::Checked) {
+        mSslTsl = true;
+    }
+
     const QString val = readProfileData(qsl("autoreconnect"));
     setAutoReconnect(!val.isEmpty() && val.toInt() == Qt::Checked);
 
