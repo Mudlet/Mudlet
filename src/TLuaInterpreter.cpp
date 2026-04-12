@@ -232,8 +232,11 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, cons
     // std::optional<int>...
     auto const result = lua_tointeger(L, pos);
     if (result < std::numeric_limits<int>::min() || result > std::numeric_limits<int>::max()) {
-        lua_pushfstring(L, "%s: integer over/under-flow in argument #%d (%s as an integer, provided value %s is outside of valid range %d to %d!)",
-                        functionName, pos, publicName,
+        lua_pushfstring(L,
+                        "%s: integer over/under-flow in argument #%d (%s as an integer, provided value %s is outside of valid range %d to %d!)",
+                        functionName,
+                        pos,
+                        publicName,
                         lua_tostring(L, pos),
                         std::numeric_limits<int>::min(),
                         std::numeric_limits<int>::max());
@@ -1530,10 +1533,12 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     } else if (funcName == qsl("setLabelOnLeave")) {
         lua_result = host.setLabelOnLeave(labelName, func);
     } else {
+        luaL_unref(L, LUA_REGISTRYINDEX, func);
         return warnArgumentValue(L, __func__, qsl("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));
     }
 
     if (!lua_result) {
+        luaL_unref(L, LUA_REGISTRYINDEX, func);
         return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
     }
     lua_pushboolean(L, true);
@@ -3371,10 +3376,10 @@ void TLuaInterpreter::adjustCaptureGroups(int x, int a)
         }
     }
 
-    NamedMatchesRanges::iterator i;
-    for (i = mCapturedNameGroupsPosList.begin(); i != mCapturedNameGroupsPosList.cend(); ++i) {
-        i.value().first += a;
-        i.value().second += a;
+    for (auto& [pos, length] : mCapturedNameGroupsPosList) {
+        if (pos >= x) {
+            pos += a;
+        }
     }
 }
 

@@ -956,7 +956,7 @@ QString getColorCode(QColor color)
 void TConsole::changeColors()
 {
     if (mType == CentralDebugConsole) {
-        // No-op now?
+        // Font is managed via QWidget::font() inheritance, no font operations needed here
     } else if (mType & (ErrorConsole | SubConsole | UserWindow | Buffer)) {
         if (!mBgImageMode) {
             auto styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1);}").arg(getColorCode(mBgColor));
@@ -1582,7 +1582,7 @@ void TConsole::setFont(const QFont& newFont, const bool forceChange)
         QWidget::setFont(newFont);
         // Update associated TCommandLine's:
         if (mType & (MainConsole | SubConsole | UserWindow)) {
-            if (mpHost->mpConsole) {
+            if (mpHost && mpHost->mpConsole) {
                 for (auto& commandLine : mpHost->mpConsole->mSubCommandLineMap) {
                     auto pConsole = commandLine->console();
                     if (pConsole && (pConsole == this)) {
@@ -1605,7 +1605,6 @@ void TConsole::setFontName(const QString& fontName)
 {
     mDisplayFontDetails.mName = fontName;
     setFont(mDisplayFontDetails.makeFont(), true);
-    refreshView();
 }
 
 QString TConsole::getCurrentLine()

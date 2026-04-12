@@ -639,7 +639,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     loadEditorTab();
 
     fontComboBox_displayFont->setCurrentFont(pHost->getDisplayFont());
-    // Accomodate an initial font size being larger than expected - and ensure
+    // Accommodate an initial font size being larger than expected - and ensure
     // it is a positive value:
     spinBox_displayFontSize->setMaximum(std::max(pHost->getDisplayFont().pointSize(), 40));
     spinBox_displayFontSize->setValue(std::max(1, pHost->getDisplayFont().pointSize()));
