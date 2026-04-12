@@ -150,10 +150,17 @@ void TMap::mapClear()
     }
 }
 
-void TMap::logError(QString& msg)
+// The supplied message should contain a localised message and no "WARNING:" or other prefixes:
+void TMap::logError(const QString& msg)
 {
     if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->mpErrorConsole->print(qsl("%1\n").arg(tr("[MAP ERROR:]%1").arg(msg)), QColor(255, 128, 0), QColor(Qt::black));
+        /*:Used to print a map error in the Errors console in the Editor, %1 is the
+ message text and a line-feed is also appended.*/
+        mpHost->mpEditorDialog->mpErrorConsole->print(tr("[MAP ERROR:] %1")
+                                                              .arg(msg)
+                                                              .append(QChar::LineFeed),
+                                                      QColor(255, 128, 0),
+                                                      QColor(Qt::black));
     }
 }
 
@@ -176,8 +183,8 @@ bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
 {
     TRoom* pR = mpRoomDB->getRoom(id);
     if (!pR) {
-        QString msg = tr("RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!").arg(id).arg(area);
-        logError(msg);
+        logError(tr("Can not set room with RoomID %1 to AreaID %2. Room does not exist!")
+                         .arg(QString::number(id), QString::number(area)));
         return false;
     }
 
@@ -187,8 +194,8 @@ bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
         // to see if it exists as a name only:
         if (!mpRoomDB->getAreaNamesMap().contains(area)) {
             // Ah, no it doesn't so moan:
-            QString msg = tr("AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!").arg(id).arg(area);
-            logError(msg);
+            logError(tr("Can not set room with RoomID %1 to AreaID %2. Area does not exist!")
+                             .arg(QString::number(id), QString::number(area)));
             return false;
         }
         // If got to this point then there is NOT a TArea instance for the given
