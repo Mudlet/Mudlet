@@ -2801,57 +2801,61 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
     const int callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
     auto& host = getHostFromLua(L);
-    host.mpMap->mMapInfoContributorManager->registerContributor(name, [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
-        Q_UNUSED(infoColor)
-        lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
-        if (roomID > 0) {
-            lua_pushinteger(L, roomID);
-        } else {
-            lua_pushnil(L);
-        }
-        lua_pushinteger(L, selectionSize);
-        lua_pushinteger(L, areaId);
-        lua_pushinteger(L, displayAreaId);
-
-        const int error = lua_pcall(L, 4, 6, 0);
-        if (error) {
-            const int errorCount = lua_gettop(L);
-            if (mudlet::smDebugMode) {
-                for (int i = 1; i <= errorCount; i++) {
-                    if (lua_isstring(L, i)) {
-                        auto errorMessage = lua_tostring(L, i);
-                        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: when running map info callback for '" << name << "\nreason: " << errorMessage << "\n" >> 0;
-                    }
+    host.mpMap->mMapInfoContributorManager->registerContributor(
+            name,
+            [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
+                Q_UNUSED(infoColor)
+                lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
+                if (roomID > 0) {
+                    lua_pushinteger(L, roomID);
+                } else {
+                    lua_pushnil(L);
                 }
-            }
-            lua_pop(L, errorCount);
-            return MapInfoProperties{};
-        }
+                lua_pushinteger(L, selectionSize);
+                lua_pushinteger(L, areaId);
+                lua_pushinteger(L, displayAreaId);
 
-        auto nResult = lua_gettop(L);
-        auto index = -nResult;
-        const QString text = lua_tostring(L, index);
-        const bool isBold = lua_toboolean(L, ++index);
-        const bool isItalic = lua_toboolean(L, ++index);
-        int r = -1;
-        int g = -1;
-        int b = -1;
-        if (!lua_isnil(L, ++index)) {
-            r = static_cast<int>(lua_tonumber(L, index));
-        }
-        if (!lua_isnil(L, ++index)) {
-            g = static_cast<int>(lua_tonumber(L, index));
-        }
-        if (!lua_isnil(L, ++index)) {
-            b = static_cast<int>(lua_tonumber(L, index));
-        }
-        QColor color;
-        if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
-            color = QColor(r, g, b);
-        }
-        lua_pop(L, nResult);
-        return MapInfoProperties{isBold, isItalic, text, color};
-    });
+                const int error = lua_pcall(L, 4, 6, 0);
+                if (error) {
+                    const int errorCount = lua_gettop(L);
+                    if (mudlet::smDebugMode) {
+                        for (int i = 1; i <= errorCount; i++) {
+                            if (lua_isstring(L, i)) {
+                                auto errorMessage = lua_tostring(L, i);
+                                TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: when running map info callback for '" << name << "\nreason: " << errorMessage << "\n" >> 0;
+                            }
+                        }
+                    }
+                    lua_pop(L, errorCount);
+                    return MapInfoProperties{};
+                }
+
+                auto nResult = lua_gettop(L);
+                auto index = -nResult;
+                const QString text = lua_tostring(L, index);
+                const bool isBold = lua_toboolean(L, ++index);
+                const bool isItalic = lua_toboolean(L, ++index);
+                int r = -1;
+                int g = -1;
+                int b = -1;
+                if (!lua_isnil(L, ++index)) {
+                    r = static_cast<int>(lua_tonumber(L, index));
+                }
+                if (!lua_isnil(L, ++index)) {
+                    g = static_cast<int>(lua_tonumber(L, index));
+                }
+                if (!lua_isnil(L, ++index)) {
+                    b = static_cast<int>(lua_tonumber(L, index));
+                }
+                QColor color;
+                if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
+                    color = QColor(r, g, b);
+                }
+                lua_pop(L, nResult);
+                return MapInfoProperties{isBold, isItalic, text, color};
+            },
+            L,
+            callback);
 
     host.mpMap->updateArea(-1);
     lua_pushboolean(L, true);
