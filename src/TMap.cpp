@@ -154,7 +154,7 @@ void TMap::mapClear()
 void TMap::logError(const QString& msg)
 {
     if (mpHost->mpEditorDialog) {
-        /*:Used to print a map error in the Errors console in the Editor, %1 is the
+        /*: Used to print a map error in the Errors console in the Editor, %1 is the
  message text and a line-feed is also appended.*/
         mpHost->mpEditorDialog->mpErrorConsole->print(tr("[MAP ERROR:] %1")
                                                               .arg(msg)
