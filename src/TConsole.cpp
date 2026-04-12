@@ -405,7 +405,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         mpLineEdit_networkLatency->setSizePolicy(sizePolicy4);
         mpLineEdit_networkLatency->setFocusPolicy(Qt::NoFocus);
         //: Tooltip for N and S network latency indicators
-        mpLineEdit_networkLatency->setToolTip(utils::richText(tr("<i>N:</i> network latency (ping),<br>"
+        mpLineEdit_networkLatency->setToolTip(utils::richText(tr("<i>N:</i> network latency in seconds (ping),<br>"
                                                                  "<i>S:</i> system processing time (triggers).")));
         mpLineEdit_networkLatency->setMaximumSize(120, 30);
         mpLineEdit_networkLatency->setMinimumSize(120, 30);
