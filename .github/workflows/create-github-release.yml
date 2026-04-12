@@ -307,33 +307,29 @@ jobs:
           echo "Changelog preview:"
           head -20 changelog.md
 
-      # Create the GitHub Release
-      # For PTB: clean up old PTB releases, keeping only the latest 1 (+ the new one = 2 total)
-      # For stable: delete release only if re-running (keep the human-created git tag)
-      - name: Clean up old releases
-        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+      # Clean up old PTB releases, keeping only the latest 1 (+ the new one = 2 total)
+      - name: Clean up old PTB releases
+        if: steps.release-type.outputs.type == 'ptb'
         env:
-          RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
           RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [[ "${RELEASE_TYPE}" == "ptb" ]]; then
-            # Delete the target tag first in case a duplicate workflow run already created it
-            gh release delete "${RELEASE_TAG}" --yes --cleanup-tag 2>/dev/null || true
+          # Filter by -ptb in tag name to avoid deleting non-PTB prereleases (e.g. release candidates).
+          # Exclude the current tag so we never delete what we are about to publish.
+          gh release list --limit 100 --json tagName,isPrerelease,createdAt \
+              --jq '[.[] | select(.isPrerelease and (.tagName | contains("-ptb")))] | sort_by(.createdAt) | reverse | .[1:] | .[].tagName' | \
+              while IFS= read -r old_tag; do
+                  if [[ "${old_tag}" == "${RELEASE_TAG}" ]]; then
+                    continue
+                  fi
+                  echo "Cleaning up old PTB release: ${old_tag}"
+                  gh release delete "${old_tag}" --yes --cleanup-tag 2>/dev/null || true
+              done
 
-            # Clean up old PTB releases, keeping only the latest 1 (+ the new one = 2 total).
-            # Filter by -ptb in tag name to avoid deleting non-PTB prereleases (e.g. release candidates).
-            gh release list --limit 100 --json tagName,isPrerelease,createdAt \
-                --jq '[.[] | select(.isPrerelease and (.tagName | contains("-ptb")))] | sort_by(.createdAt) | reverse | .[1:] | .[].tagName' | \
-                while IFS= read -r old_tag; do
-                    echo "Cleaning up old PTB release: ${old_tag}"
-                    gh release delete "${old_tag}" --yes --cleanup-tag 2>/dev/null || true
-                done
-          else
-            gh release delete "${RELEASE_TAG}" --yes 2>/dev/null || true
-          fi
-
-      - name: Create GitHub Release
+      # Create the release if it doesn't exist yet, or upload any missing assets.
+      # Both build workflows trigger this job so it runs twice per commit - this
+      # avoids the old delete+recreate cycle that spammed notifications.
+      - name: Create or update GitHub Release
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
         env:
           RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
@@ -354,17 +350,23 @@ jobs:
           echo "Files to upload:"
           printf '%s\n' "${FILES[@]}"
 
-          ARGS=(
-            "${RELEASE_TAG}"
-            --title "${RELEASE_TITLE}"
-            --notes-file changelog.md
-          )
+          if gh release view "${RELEASE_TAG}" &>/dev/null; then
+            echo "Release ${RELEASE_TAG} already exists - uploading any missing assets"
+            gh release upload "${RELEASE_TAG}" "${FILES[@]}" --clobber
+          else
+            ARGS=(
+              "${RELEASE_TAG}"
+              --title "${RELEASE_TITLE}"
+              --notes-file changelog.md
+            )
 
-          if [[ "${RELEASE_TYPE}" == "ptb" ]]; then
-            ARGS+=(--prerelease --target "${TARGET_SHA}")
+            if [[ "${RELEASE_TYPE}" == "ptb" ]]; then
+              ARGS+=(--prerelease --target "${TARGET_SHA}")
+            fi
+
+            gh release create "${ARGS[@]}" "${FILES[@]}" \
+              || gh release upload "${RELEASE_TAG}" "${FILES[@]}" --clobber
           fi
-
-          gh release create "${ARGS[@]}" "${FILES[@]}"
 
       # Generate and upload Sparkle appcast XML for macOS updates
       - name: Add SSH agent for appcast upload
