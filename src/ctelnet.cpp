@@ -1,8 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2019, 2021-2022, 2025 by Stephen Lyons  *
- *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2013-2014, 2017-2019, 2021-2022, 2025-2026              *
+ *                              by Stephen Lyons - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
@@ -208,7 +208,9 @@ cTelnet::~cTelnet()
         loadingReplay = false;
         replayFile.close();
         qDebug() << "cTelnet::~cTelnet() INFO - A replay was in progress on this profile but has been aborted.";
-        mudlet::self()->replayOver();
+        if (auto pMudlet = mudlet::self()) {
+            pMudlet->replayOver();
+        }
     }
 
     if (!messageStack.empty()) {
@@ -381,23 +383,68 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
     return qMakePair(true, QString());
 }
 
-void cTelnet::requestDiscordInfo()
+void cTelnet::sendDiscordHello()
 {
-    mudlet* pMudlet = mudlet::self();
-    if (pMudlet->mDiscord.libraryLoaded()) {
-        std::string data;
-        data = TN_IAC;
-        data += TN_SB;
-        data += OPT_GMCP;
-        data += std::string("External.Discord.Get");
-        data += TN_IAC;
-        data += TN_SE;
-
-        // some games are buggy with MCCP on and require actual input before GMCP is processed
-        data += "\n";
-
-        socketOutRaw(data);
+    if (!enableGMCP) {
+        return;
     }
+
+    std::string data;
+    data = TN_IAC;
+    data += TN_SB;
+    data += OPT_GMCP;
+    data += "External.Discord.Hello";
+    data += TN_IAC;
+    data += TN_SE;
+    socketOutRaw(data);
+}
+
+void cTelnet::sendDiscordGet()
+{
+    if (!enableGMCP) {
+        return;
+    }
+
+    std::string data;
+    data = TN_IAC;
+    data += TN_SB;
+    data += OPT_GMCP;
+    data += "External.Discord.Get";
+    data += TN_IAC;
+    data += TN_SE;
+    socketOutRaw(data);
+}
+
+void cTelnet::sendGMCPSupportsAdd(const QString& package)
+{
+    if (!enableGMCP) {
+        return;
+    }
+
+    std::string data;
+    data = TN_IAC;
+    data += TN_SB;
+    data += OPT_GMCP;
+    data += std::string(R"(Core.Supports.Add [ ")") + package.toStdString() + std::string(R"(" ])");
+    data += TN_IAC;
+    data += TN_SE;
+    socketOutRaw(data);
+}
+
+void cTelnet::sendGMCPSupportsRemove(const QString& package)
+{
+    if (!enableGMCP) {
+        return;
+    }
+
+    std::string data;
+    data = TN_IAC;
+    data += TN_SB;
+    data += OPT_GMCP;
+    data += std::string(R"(Core.Supports.Remove [ ")") + package.toStdString() + std::string(R"(" ])");
+    data += TN_IAC;
+    data += TN_SE;
+    socketOutRaw(data);
 }
 
 void cTelnet::connectIt(const QString& address, int port)
@@ -930,15 +977,20 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
     if (addressesToReport.count() > 1) {
         std::sort(addressesToReport.begin(), addressesToReport.end());
     }
+    bool usingRawIPAddress = false;
     if (isRawIPv4Address(mHostUrl) || isRawIPv6Address(mHostUrl)) {
         // We've been given a raw IP address - so instead of repeating it show
         // what the reverse lookup gave us - but if it is the same thing then
-        // there isn't much we can say
+        // there isn't much we can say - we also need to remember it so we
+        // can use it rather than what ever the reverse lookup gave us:
+        usingRawIPAddress = true;
+
         if (!mHostUrl.compare(hostInfo.hostName())) {
             /*: This text is used when the user has provided a raw IP address
  for the Game Server rather than a URL. In this case we try to
  perform a "reverse-lookup" to see if we can identify the URL that
- matches it - but nothing useful was found.*/
+ matches it - but nothing useful was found and we've got the original
+ address back.*/
             TDebug(QColorConstants::Svg::orange, QColorConstants::White) << tr("A host name could not be found for the given IP address.").append(QChar::LineFeed) >> mpHost;
         } else {
             /*: This text is used when the user has provided a raw IP address
@@ -1107,12 +1159,13 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
             mSocket_ipV4.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
 
         } else {
+            const QString connectToText = usingRawIPAddress ? mHostUrl : hostInfo.hostName();
             if (hasIPv6_address) {
                 connect(&mSocket_ipV6, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected, Qt::UniqueConnection);
                 connect(&mSocket_ipV6, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected, Qt::UniqueConnection);
                 connect(&mSocket_ipV6, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
 
-                const QString displayAddress = isRawIPv6Address(hostInfo.hostName()) ? tr("[%1]").arg(hostInfo.hostName()) : hostInfo.hostName();
+                const QString displayAddress = usingRawIPAddress ? tr("[%1]").arg(mHostUrl) : hostInfo.hostName();
                 if (mConnectViaProxy) {
                     /*: %1 is the URL or IPv6 address (suitably wrapped) for the
  Game Server and %2 is the port number for the connection.*/
@@ -1132,35 +1185,38 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                     postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)));
                 }
 
-                mSocket_ipV6.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
+                mSocket_ipV6.connectToHost(connectToText, mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
+
             }
             if (hasIPv4_address) {
                 connect(&mSocket_ipV4, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected, Qt::UniqueConnection);
                 connect(&mSocket_ipV4, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected, Qt::UniqueConnection);
                 connect(&mSocket_ipV4, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
 
+                const QString displayAddress = usingRawIPAddress ? mHostUrl : hostInfo.hostName();
                 if (mConnectViaProxy) {
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
  is the port number for the connection.*/
                     TDebug(QColorConstants::Blue, QColorConstants::White)
-                                    << tr("Trying open (IPv4) connection to %1:%2 via proxy...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
+                                    << tr("Trying open (IPv4) connection to %1:%2 via proxy...").arg(displayAddress, QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
  is the port number for the connection.*/
-                    postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 via proxy...").arg(hostInfo.hostName(), QString::number(mHostPort)));
+                    postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 via proxy...").arg(displayAddress, QString::number(mHostPort)));
 
                 } else {
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
  is the port number for the connection.*/
                     TDebug(QColorConstants::Blue, QColorConstants::White)
-                                    << tr("Trying open (IPv4) connection to %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
+                                    << tr("Trying open (IPv4) connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
  is the port number for the connection.*/
-                    postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort)));
+                    postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)));
                 }
 
-                mSocket_ipV4.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
+                mSocket_ipV4.connectToHost(connectToText, mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
+
             }
         }
 #if !defined(QT_NO_SSL)
@@ -2622,20 +2678,21 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output = TN_IAC;
             output += TN_SB;
             output += OPT_GMCP;
-            output += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1", "Client.Media 1", "Char.Login 1"])";
+            {
+                std::string supportsList = R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1")";
+                if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && mudlet::self()->mDiscord.libraryLoaded()) {
+                    supportsList += R"(, "External.Discord 1")";
+                }
+                supportsList += R"(, "Client.Media 1", "Char.Login 1"])";
+                output += supportsList;
+            }
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
 
-            if (mudlet::self()->mDiscord.libraryLoaded()) {
-                output = TN_IAC;
-                output += TN_SB;
-                output += OPT_GMCP;
-                output += "External.Discord.Hello";
-                output += TN_IAC;
-                output += TN_SE;
-
-                socketOutRaw(output);
+            if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && mudlet::self()->mDiscord.libraryLoaded()) {
+                sendDiscordHello();
+                sendDiscordGet();
             }
 
             raiseProtocolEvent("sysProtocolEnabled", "GMCP");
@@ -4548,6 +4605,9 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
 
     length = mZstream.avail_in;
     in_buffer = (char*)mZstream.next_in;
+
+    mZstream.next_in = Z_NULL;
+    mZstream.next_out = Z_NULL;
 
     if (zval == Z_STREAM_END) {
         inflateEnd(&mZstream);

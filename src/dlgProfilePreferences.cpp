@@ -97,6 +97,21 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // Only unhide this if it is needed
     groupBox_discordPrivacy->hide();
 
+    auto updateDiscordPrivacyControls = [this]() {
+        const bool enablePrivacy = radioButton_discordGameDetails->isChecked();
+        label_discordLargeIcon->setEnabled(enablePrivacy);
+        comboBox_discordLargeIconPrivacy->setEnabled(enablePrivacy);
+        label_discordSmallIcon->setEnabled(enablePrivacy);
+        comboBox_discordSmallIconPrivacy->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToDetail->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToState->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToPartyInfo->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToTimerInfo->setEnabled(enablePrivacy);
+    };
+    connect(radioButton_discordGameDetails, &QRadioButton::toggled, this, updateDiscordPrivacyControls);
+    connect(radioButton_discordMudletOnly, &QRadioButton::toggled, this, updateDiscordPrivacyControls);
+    connect(radioButton_discordDisabled, &QRadioButton::toggled, this, updateDiscordPrivacyControls);
+
     // As we demonstrate the options that these next two checkboxes control in
     // the editor "preview" widget (on another tab) we will need to track
     // changes and update the edbee widget straight away. As we can have
@@ -656,7 +671,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     loadEditorTab();
 
     fontComboBox_displayFont->setCurrentFont(pHost->getDisplayFont());
-    // Accomodate an initial font size being larger than expected - and ensure
+    // Accommodate an initial font size being larger than expected - and ensure
     // it is a positive value:
     spinBox_displayFontSize->setMaximum(std::max(pHost->getDisplayFont().pointSize(), 40));
     spinBox_displayFontSize->setValue(std::max(1, pHost->getDisplayFont().pointSize()));
@@ -844,10 +859,31 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
 
+    switch (pHost->mDiscordMode) {
+    case Host::DiscordDisabled:
+        radioButton_discordDisabled->setChecked(true);
+        break;
+    case Host::DiscordShowMudletOnly:
+        radioButton_discordMudletOnly->setChecked(true);
+        break;
+    case Host::DiscordShowGameDetails:
+        [[fallthrough]];
+    default:
+        radioButton_discordGameDetails->setChecked(true);
+        break;
+    }
+
     if (mudlet::self()->mDiscord.libraryLoaded()) {
         Host::DiscordOptionFlags const discordFlags = pHost->mDiscordAccessFlags;
         groupBox_discordPrivacy->show();
-        checkBox_discordLuaAPI->setChecked(discordFlags & Host::DiscordLuaAccessEnabled);
+
+        const bool enablePrivacy = (pHost->mDiscordMode == Host::DiscordShowGameDetails);
+        comboBox_discordLargeIconPrivacy->setEnabled(enablePrivacy);
+        comboBox_discordSmallIconPrivacy->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToDetail->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToState->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToPartyInfo->setEnabled(enablePrivacy);
+        checkBox_discordServerAccessToTimerInfo->setEnabled(enablePrivacy);
 
         if ((discordFlags & Host::DiscordSetLargeIcon) && (discordFlags & Host::DiscordSetLargeIconText)) {
             comboBox_discordLargeIconPrivacy->setCurrentIndex(0);
@@ -870,7 +906,16 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_discordServerAccessToPartyInfo->setChecked(!(discordFlags & Host::DiscordSetPartyInfo));
         checkBox_discordServerAccessToTimerInfo->setChecked(!(discordFlags & Host::DiscordSetTimeInfo));
         lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
-        lineEdit_discordUserDiscriminator->setText(pHost->mRequiredDiscordUserDiscriminator);
+        const QString currentDiscordUser = Discord::getLoggedInUserName();
+        if (!currentDiscordUser.isEmpty()) {
+            //: Shows which Discord account is logged in, e.g. "Discord user: morquin"
+            label_discordCurrentUser->setText(tr("Discord user: %1").arg(currentDiscordUser));
+            label_discordCurrentUser->setToolTip(QString());
+        } else {
+            label_discordCurrentUser->setText(tr("(Discord not connected)"));
+            //: Tooltip shown when Discord Rich Presence cannot detect a logged-in user
+            label_discordCurrentUser->setToolTip(tr("The Discord desktop app must be running for Rich Presence to work. Browser and mobile clients are not supported."));
+        }
     }
 
     lineEdit_mmcpChatName->setText(pHost->getMMCPChatName());
@@ -1285,7 +1330,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -1651,7 +1696,7 @@ void dlgProfilePreferences::clearHostDetails()
     mSearchEngineMap.clear();
     search_engine_combobox->clear();
 
-    checkBox_discordLuaAPI->setChecked(false);
+    radioButton_discordGameDetails->setChecked(true);
     comboBox_discordLargeIconPrivacy->setCurrentIndex(0);
     comboBox_discordSmallIconPrivacy->setCurrentIndex(0);
     checkBox_discordServerAccessToDetail->setChecked(false);
@@ -1659,7 +1704,7 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_discordServerAccessToPartyInfo->setChecked(false);
     checkBox_discordServerAccessToTimerInfo->setChecked(false);
     lineEdit_discordUserName->clear();
-    lineEdit_discordUserDiscriminator->clear();
+    label_discordCurrentUser->clear();
 
     lineEdit_mmcpChatName->clear();
     lineEdit_mmcpPort->clear();
@@ -3183,15 +3228,20 @@ void dlgProfilePreferences::slot_saveAndClose()
                 | (checkBox_discordServerAccessToDetail->isChecked() ? Host::DiscordNoOption : Host::DiscordSetDetail)
                 | (checkBox_discordServerAccessToState->isChecked() ? Host::DiscordNoOption : Host::DiscordSetState)
                 | (checkBox_discordServerAccessToPartyInfo->isChecked() ? Host::DiscordNoOption : Host::DiscordSetPartyInfo)
-                | (checkBox_discordServerAccessToTimerInfo->isChecked() ? Host::DiscordNoOption : Host::DiscordSetTimeInfo)
-                | (checkBox_discordLuaAPI->isChecked() ? Host::DiscordLuaAccessEnabled : Host::DiscordNoOption));
+                | (checkBox_discordServerAccessToTimerInfo->isChecked() ? Host::DiscordNoOption : Host::DiscordSetTimeInfo));
 
-        pHost->mRequiredDiscordUserName = lineEdit_discordUserName->text().trimmed();
-        if (lineEdit_discordUserDiscriminator->hasAcceptableInput()) {
-            // The input mask specifies 4 digits [0-9]
-            pHost->mRequiredDiscordUserDiscriminator = lineEdit_discordUserDiscriminator->text();
-        } else {
-            pHost->mRequiredDiscordUserDiscriminator.clear();
+        Host::DiscordMode newMode = Host::DiscordShowGameDetails;
+        if (radioButton_discordDisabled->isChecked()) {
+            newMode = Host::DiscordDisabled;
+        } else if (radioButton_discordMudletOnly->isChecked()) {
+            newMode = Host::DiscordShowMudletOnly;
+        }
+        pHost->setDiscordMode(newMode);
+
+        const QString newDiscordUserName = lineEdit_discordUserName->text().trimmed().toLower();
+        if (pHost->mRequiredDiscordUserName != newDiscordUserName) {
+            pHost->mRequiredDiscordUserName = newDiscordUserName;
+            mudlet::self()->mDiscord.UpdatePresence();
         }
 
         // Save chat options so they are written to XML upon export

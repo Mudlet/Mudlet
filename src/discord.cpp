@@ -31,7 +31,6 @@
 
 QString Discord::smUserName;
 QString Discord::smUserId;
-QString Discord::smDiscriminator;
 QString Discord::smAvatar;
 const QString Discord::mMudletApplicationId = qsl("450571881909583884");
 
@@ -106,36 +105,57 @@ Discord::Discord(QObject* parent)
     mpHandlers->spectateGame = handleDiscordSpectateGame;
     mpHandlers->joinRequest = handleDiscordJoinRequest;
 
-    // Initialise the default Mudlet presence
-    Discord_Initialize(mHostApplicationIDs.value(nullptr).toUtf8().constData(), mpHandlers, 0, nullptr);
+    // Don't initialize RPC until a profile is loaded - UpdatePresence will
+    // call initializeRpc() on demand when there's an active host.
 
     // mudlet instance is not available in this constructor as it's still being initialised, so postpone the connection
     QTimer::singleShot(0, this, [this]() {
         Q_ASSERT(mudlet::self());
         connect(mudlet::self(), &mudlet::signal_tabChanged, this, &Discord::UpdatePresence);
 
-        // update Discord with the default Mudlet logo
-        UpdatePresence();
-
         // process Discord callbacks every 50ms once we are all set up:
         startTimer(50);
     });
 }
 
+void Discord::initializeRpc()
+{
+    if (!mLoaded || mRpcActive) {
+        return;
+    }
+
+    mCurrentApplicationId = mHostApplicationIDs.value(nullptr);
+    Discord_Initialize(mCurrentApplicationId.toUtf8().constData(), mpHandlers, 0, nullptr);
+    mRpcActive = true;
+}
+
+void Discord::shutdownRpc()
+{
+    if (!mRpcActive) {
+        return;
+    }
+
+    Discord_Shutdown();
+    mRpcActive = false;
+    mCurrentApplicationId.clear();
+}
+
 Discord::~Discord()
 {
-    if (mLoaded) {
+    if (mRpcActive) {
         Discord_Shutdown();
         // We might expect to have to do an mpLibrary->unload() but we do not
         // need to as it happens automagically on the application shutdown...
+    }
 
-        // Clear out the localDiscordPresence collection:
-        QMutableMapIterator<QString, localDiscordPresence*> itPresencePtrs(mPresencePtrs);
-        while (itPresencePtrs.hasNext()) {
-            itPresencePtrs.next();
-            delete itPresencePtrs.value();
-            itPresencePtrs.remove();
-        }
+    // Clean up presence allocations regardless of RPC state - entries are
+    // created in UpdatePresence() and must be freed even if RPC was shut
+    // down before destruction (e.g. user switched to Disabled mode).
+    QMutableMapIterator<QString, localDiscordPresence*> itPresencePtrs(mPresencePtrs);
+    while (itPresencePtrs.hasNext()) {
+        itPresencePtrs.next();
+        delete itPresencePtrs.value();
+        itPresencePtrs.remove();
     }
 
     delete mpHandlers;
@@ -262,8 +282,12 @@ void Discord::timerEvent(QTimerEvent* event)
 {
     Q_UNUSED(event)
 
-    if (mLoaded) {
+    if (mLoaded && mRpcActive) {
         Discord_RunCallbacks();
+        if (mPendingPresenceUpdate) {
+            mPendingPresenceUpdate = false;
+            UpdatePresence();
+        }
     }
 }
 
@@ -271,22 +295,15 @@ void Discord::handleDiscordReady(const DiscordUser* request)
 {
     Discord::smUserName = request->username;
     Discord::smUserId = request->userId;
-    Discord::smDiscriminator = request->discriminator;
     Discord::smAvatar = request->avatar;
 
 #if defined(DEBUG_DISCORD)
-    qDebug().noquote().nospace() << "Discord Ready callback received - for UserName: \"" << smUserName << "\", ID: \"" << smUserId << "#" << smDiscriminator << "\".";
+    qDebug().noquote().nospace() << "Discord Ready callback received - for UserName: \"" << smUserName << "\", ID: \"" << smUserId << "\".";
 #endif
-    // don't call UpdatePresence from here - freezes Mudlet deep in the Discord API
-    // when profile autostart is enabled
-}
-
-QStringList Discord::getDiscordUserDetails() const
-{
-    QStringList results;
-    results << Discord::smUserName << Discord::smUserId << Discord::smDiscriminator << Discord::smAvatar;
-    results.detach();
-    return results;
+    // Don't call UpdatePresence directly from here - re-entering the Discord
+    // library from a callback freezes Mudlet. Instead, signal the timer to
+    // pick it up on the next tick.
+    mudlet::self()->mDiscord.mPendingPresenceUpdate = true;
 }
 
 void Discord::handleDiscordDisconnected(int errorCode, const char* message)
@@ -311,8 +328,7 @@ void Discord::handleDiscordSpectateGame(const char* spectateSecret)
 
 void Discord::handleDiscordJoinRequest(const DiscordUser* request)
 {
-    qDebug() << "Discord JoinRequest received from user:" << request->username << "userId:" << request->userId;
-    qDebug() << "                         descriminator:" << request->discriminator << "avatar:" << request->avatar;
+    qDebug() << "Discord JoinRequest received from user:" << request->username << "userId:" << request->userId << "avatar:" << request->avatar;
 }
 
 void Discord::UpdatePresence()
@@ -322,25 +338,40 @@ void Discord::UpdatePresence()
     }
 
     auto pHost = mudlet::self()->getActiveHost();
-    if (!pHost) {
-        localDiscordPresence tempPresence;
-        tempPresence.setLargeImageKey(qsl("mudlet"));
-        tempPresence.setDetailText(qsl("www.mudlet.org"));
-#if defined(DEBUG_DISCORD)
-        qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - no current active Host instance, sending update using built-in Mudlet ApplicationID:\n" << tempPresence;
-#endif
-        DiscordRichPresence const convertedPresence(tempPresence.convert());
-        Discord_UpdatePresence(&convertedPresence);
 
+    // Don't send any presence when no profile is active or Discord is
+    // disabled - showing "Playing Mudlet" would leak information when the
+    // user hasn't opted in (see issue #6967)
+    if (!pHost || pHost->mDiscordMode == Host::DiscordDisabled) {
+        if (mRpcActive) {
+            shutdownRpc();
+        }
         return;
     }
 
-    if (!pHost->discordUserIdMatch(Discord::smUserName, Discord::smDiscriminator)) {
-        // Oh dear - the current Discord User does not match the required user
-        // details (if set) - must abort
+    if (!mRpcActive) {
+        initializeRpc();
+        // Don't send presence yet - wait for the handleDiscordReady callback
+        // to signal that the IPC handshake is complete
+        return;
+    }
+
+    if (pHost->mDiscordMode == Host::DiscordShowMudletOnly) {
+        // Ensure we're using the default Mudlet application ID
+        if (mCurrentApplicationId != mHostApplicationIDs.value(nullptr)) {
+            shutdownRpc();
+            initializeRpc();
+            return;
+        }
+    }
+
+    if (!pHost->discordUserIdMatch(Discord::smUserName)) {
 #if defined(DEBUG_DISCORD)
-        qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - Discord UserName/Discriminator does not match, not sending this update!";
+        qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - Discord UserName does not match, not sending this update!";
 #endif
+        if (mRpcActive) {
+            shutdownRpc();
+        }
         return;
     }
 
@@ -367,46 +398,52 @@ void Discord::UpdatePresence()
         pDiscordPresence = mPresencePtrs.value(applicationID);
 
         if (!pDiscordPresence) {
-            // So insert a non-default one
-
             pDiscordPresence = new localDiscordPresence;
             mPresencePtrs.insert(applicationID, pDiscordPresence);
         }
     }
 
     if (mCurrentApplicationId != applicationID) {
-        // It has changed - must shutdown and reopen the library instance with
-        // the alternate application id:
 #if defined(DEBUG_DISCORD)
         qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - mCurrentApplicationId (\"" << mCurrentApplicationId << "\") does not match the one for this Host instance (\""
                                      << applicationID << "\"), restarting RPC library with the latter.";
 #endif
         Discord_Shutdown();
-
         Discord_Initialize(applicationID.toUtf8().constData(), mpHandlers, 0, nullptr);
         mCurrentApplicationId = applicationID;
+        // Wait for the ready callback before sending presence
+        return;
     }
 
-    // Coverity thinks that pDiscordPresence could be a nullptr here, which
-    // would be bad {CID 1473922} so let's test for that and abort:
     if (!pDiscordPresence) {
         qCritical().noquote() << "Discord::UpdatePresence() CRITICAL - pDiscordPresence is unexpectedly a nullptr, unable to proceed with this procedure, please report this to Mudlet Makers!";
         return;
     }
 
-    if (pHost->mDiscordAccessFlags & Host::DiscordSetDetail) {
+    // Helper to decide if a field should be shown. Server-origin fields are
+    // subject to mode and privacy flags; Lua-origin fields always pass.
+    const bool isShowGameDetails = (pHost->mDiscordMode == Host::DiscordShowGameDetails);
+    const auto shouldShow = [&](Host::DiscordOptionFlag flag) -> bool {
+        if (!isServerOrigin(pHost, flag)) {
+            return true;
+        }
+        // Server-origin: only show in ShowGameDetails mode when the privacy flag allows it
+        return isShowGameDetails && (pHost->mDiscordAccessFlags & flag);
+    };
+
+    if (shouldShow(Host::DiscordSetDetail)) {
         pDiscordPresence->setDetailText(mDetailTexts.value(pHost));
     } else {
         pDiscordPresence->setDetailText(QString());
     }
 
-    if (pHost->mDiscordAccessFlags & Host::DiscordSetState) {
+    if (shouldShow(Host::DiscordSetState)) {
         pDiscordPresence->setStateText(mStateTexts.value(pHost));
     } else {
         pDiscordPresence->setStateText(QString());
     }
 
-    if (pHost->mDiscordAccessFlags & Host::DiscordSetLargeIcon) {
+    if (shouldShow(Host::DiscordSetLargeIcon)) {
         auto image = mLargeImages.value(pHost);
         if (image.isEmpty() && applicationID == mMudletApplicationId) {
             image = qsl("mudlet");
@@ -416,25 +453,25 @@ void Discord::UpdatePresence()
         pDiscordPresence->setLargeImageKey(QString());
     }
 
-    if (pHost->mDiscordAccessFlags & Host::DiscordSetLargeIconText) {
+    if (shouldShow(Host::DiscordSetLargeIconText)) {
         pDiscordPresence->setLargeImageText(mLargeImageTexts.value(pHost));
     } else {
         pDiscordPresence->setLargeImageText(QString());
     }
 
-    if (pHost->mDiscordAccessFlags & Host::DiscordSetSmallIcon) {
+    if (shouldShow(Host::DiscordSetSmallIcon)) {
         pDiscordPresence->setSmallImageKey(mSmallImages.value(pHost));
     } else {
         pDiscordPresence->setSmallImageKey(QString());
     }
 
-    if (pHost->mDiscordAccessFlags & Host::DiscordSetSmallIconText) {
+    if (shouldShow(Host::DiscordSetSmallIconText)) {
         pDiscordPresence->setSmallImageText(mSmallImageTexts.value(pHost));
     } else {
         pDiscordPresence->setSmallImageText(QString());
     }
 
-    if (mPartyMax.value(pHost) && (pHost->mDiscordAccessFlags & Host::DiscordSetPartyInfo)) {
+    if (shouldShow(Host::DiscordSetPartyInfo) && mPartyMax.value(pHost)) {
         pDiscordPresence->setPartySize(mPartySize.value(pHost));
         pDiscordPresence->setPartyMax(mPartyMax.value(pHost));
     } else {
@@ -442,7 +479,7 @@ void Discord::UpdatePresence()
         pDiscordPresence->setPartyMax(0);
     }
 
-    if (pHost->mDiscordAccessFlags & Host::DiscordSetTimeInfo) {
+    if (shouldShow(Host::DiscordSetTimeInfo)) {
         if (mEndTimes.value(pHost)) {
             pDiscordPresence->setEndTimeStamp(mEndTimes.value(pHost));
             pDiscordPresence->setStartTimeStamp(0);
@@ -458,7 +495,6 @@ void Discord::UpdatePresence()
 #if defined(DEBUG_DISCORD)
     qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - sending update:\n" << *pDiscordPresence;
 #endif
-    // Convert our stored presence into the format that the RPC library wants:
     DiscordRichPresence const convertedPresence(pDiscordPresence->convert());
     Discord_UpdatePresence(&convertedPresence);
 }
@@ -603,7 +639,23 @@ void Discord::resetData(Host* pHost)
     mPartySize.remove(pHost);
     mPartyMax.remove(pHost);
     mHostApplicationIDs.remove(pHost);
+    mServerOriginFlags.remove(pHost);
     UpdatePresence();
+}
+
+void Discord::setServerOrigin(Host* pHost, const Host::DiscordOptionFlag flag)
+{
+    mServerOriginFlags[pHost] |= flag;
+}
+
+void Discord::clearServerOrigin(Host* pHost, const Host::DiscordOptionFlag flag)
+{
+    mServerOriginFlags[pHost] &= ~flag;
+}
+
+bool Discord::isServerOrigin(Host* pHost, const Host::DiscordOptionFlag flag) const
+{
+    return mServerOriginFlags.value(pHost, Host::DiscordNoOption) & flag;
 }
 
 // Returns Host set app ID or the default Mudlet one if none set for the
@@ -615,20 +667,27 @@ QString Discord::getApplicationId(Host* pHost) const
 
 DiscordRichPresence localDiscordPresence::convert() const
 {
-    return DiscordRichPresence{mState,
-                               mDetails,
+    // Discord RPC distinguishes between nullptr (field not set) and ""
+    // (field set to empty). Pass nullptr for empty strings so Discord
+    // hides the field rather than showing it as blank.
+    const auto nullIfEmpty = [](const char* str) -> const char* {
+        return (str && str[0] != '\0') ? str : nullptr;
+    };
+
+    return DiscordRichPresence{nullIfEmpty(mState),
+                               nullIfEmpty(mDetails),
                                mStartTimestamp,
                                mEndTimestamp,
-                               mLargeImageKey,
-                               mLargeImageText,
-                               mSmallImageKey,
-                               mSmallImageText,
-                               mPartyId,
+                               nullIfEmpty(mLargeImageKey),
+                               nullIfEmpty(mLargeImageText),
+                               nullIfEmpty(mSmallImageKey),
+                               nullIfEmpty(mSmallImageText),
+                               nullIfEmpty(mPartyId),
                                mPartySize,
                                mPartyMax,
-                               mMatchSecret,
-                               mJoinSecret,
-                               mSpectateSecret,
+                               nullIfEmpty(mMatchSecret),
+                               nullIfEmpty(mJoinSecret),
+                               nullIfEmpty(mSpectateSecret),
                                mInstance};
 }
 
@@ -693,5 +752,5 @@ bool Discord::usingMudletsDiscordID(Host* pHost) const
 
 bool Discord::discordUserIdMatch(Host* pHost) const
 {
-    return pHost->discordUserIdMatch(Discord::smUserName, Discord::smDiscriminator);
+    return pHost->discordUserIdMatch(Discord::smUserName);
 }

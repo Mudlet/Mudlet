@@ -43,8 +43,9 @@
 #include <memory>
 #include <vector>
 
-#if defined(Q_OS_LINUX)
 #include <QStandardPaths>
+
+#if defined(Q_OS_LINUX)
 #include <QFile>
 #include <QTextStream>
 #include <QProcess>
@@ -735,7 +736,8 @@ int main(int argc, char* argv[])
     QSettings* appSettings = mudlet::getQSettings();
     bool shouldRegisterTelnet = false;
 
-    bool headlessMode = qEnvironmentVariableIsSet("CI") || qEnvironmentVariableIsSet("GITHUB_ACTIONS") || QCoreApplication::arguments().contains("--profile") || QCoreApplication::arguments().contains("--mirror");
+    bool headlessMode =
+            qEnvironmentVariableIsSet("CI") || qEnvironmentVariableIsSet("GITHUB_ACTIONS") || QCoreApplication::arguments().contains("--profile") || QCoreApplication::arguments().contains("--mirror");
 
     bool forceAsk = false;
 #if defined(Q_OS_MACOS)
@@ -930,7 +932,6 @@ int main(int argc, char* argv[])
         }
 #endif
     }
-
 
 
     // Pass ownership of MudletInstanceCoordinator to mudlet.

@@ -165,9 +165,16 @@ public:
         DiscordSetPartyInfo = 0x80,
         DiscordSetTimeInfo = 0x100,
         DiscordSetSubMask = 0x3ff,
+        // Kept for backward compatibility with saved profiles but no longer checked:
         DiscordLuaAccessEnabled = 0x800
     };
     Q_DECLARE_FLAGS(DiscordOptionFlags, DiscordOptionFlag)
+
+    enum DiscordMode {
+        DiscordDisabled = 0,
+        DiscordShowMudletOnly = 1,
+        DiscordShowGameDetails = 2
+    };
 
 
     QString getName() { return mHostName; }
@@ -338,7 +345,8 @@ public:
     void waitForProfileSave();
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
-    bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
+    void setDiscordMode(DiscordMode mode);
+    bool discordUserIdMatch(const QString& userName) const;
     const QString& getMMCPChatName() const;
     quint16 getMMCPPort();
     const QString& getMMCPChatPrefix() const;
@@ -354,7 +362,7 @@ public:
     QString mediaLocationGMCP() const;
     void setMediaLocationMSP(const QString& mediaUrl);
     QString mediaLocationMSP() const;
-    // Use this rather than accessng the TMainConsole::font() as the latter
+    // Use this rather than accessing the TMainConsole::font() as the latter
     // isn't always around during profile start-up:
     QFont getDisplayFont();
     QFont getAndClearTempDisplayFont();
@@ -502,7 +510,7 @@ public:
     // Make this the first public member instantiated so we can use ITS font
     // as the "reference" or "master" font for whole profile - and so we don't
     // have to maintain a separate one here in this class which does not, as
-    // something derived from a QOject, have one:
+    // something derived from a QObject, have one:
     QPointer<TMainConsole> mpConsole;
     cTelnet mTelnet;
     QPointer<dlgPackageManager> mpPackageManager;
@@ -746,12 +754,15 @@ public:
     // module name = {"helpURL" = custom link}
     QMap<QString, QMap<QString, QString>> moduleHelp;
 
-    // Privacy option to allow the game to set Discord Rich Presence information
-    bool mDiscordDisableServerSide = true;
+    // Controls how Discord Rich Presence behaves:
+    // DiscordDisabled - RPC shut down, server unaware
+    // DiscordShowMudletOnly - shows "Playing Mudlet", server unaware, Lua can still set fields
+    // DiscordShowGameDetails - full integration with server GMCP/MSDP
+    DiscordMode mDiscordMode = DiscordShowGameDetails;
 
     // Discord privacy options to give the user control over what data a Server
-    // can set over OOB protocols (MSDP & GMCP) and the user via Lua API:
-    DiscordOptionFlags mDiscordAccessFlags{DiscordLuaAccessEnabled | DiscordSetSubMask};
+    // can set over OOB protocols (MSDP & GMCP):
+    DiscordOptionFlags mDiscordAccessFlags{DiscordSetSubMask};
 
     double mLineSize = 10.0;
     double mRoomBorderSize = 10.0;
@@ -943,13 +954,9 @@ private:
     // Will be null/empty if they have not set their own invite
     QString mDiscordInviteURL;
 
-    // Will be null/empty if we are not concerned to check the use of Discord
-    // Rich Presence against the local user currently logged into Discord -
-    // these two will be checked against the values from the Discord instance
-    // with which we are linked to by the RPC library - and if they do not match
-    // we won't use Discord functions.
+    // If non-empty, Rich Presence will only be shown when logged into this
+    // Discord username - useful if multiple people share a machine.
     QString mRequiredDiscordUserName;
-    QString mRequiredDiscordUserDiscriminator;
 
     QString mMMCPChatName;
     QString mMMCPChatPrefix;
