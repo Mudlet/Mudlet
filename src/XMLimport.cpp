@@ -926,16 +926,17 @@ void XMLimport::readHost(Host* pHost)
         pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value(qsl("mDiscordAccessFlags")).toString().toInt());
     }
 
+    if (attributes().hasAttribute(QLatin1String("mDiscordMode"))) {
+        const int modeInt = attributes().value(qsl("mDiscordMode")).toString().toInt();
+        if (modeInt >= Host::DiscordDisabled && modeInt <= Host::DiscordShowGameDetails) {
+            pHost->mDiscordMode = static_cast<Host::DiscordMode>(modeInt);
+        }
+    }
+
     if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserName"))) {
         pHost->mRequiredDiscordUserName = attributes().value(QLatin1String("mRequiredDiscordUserName")).toString();
     } else {
         pHost->mRequiredDiscordUserName.clear();
-    }
-
-    if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserDiscriminator"))) {
-        pHost->mRequiredDiscordUserDiscriminator = attributes().value(QLatin1String("mRequiredDiscordUserDiscriminator")).toString();
-    } else {
-        pHost->mRequiredDiscordUserDiscriminator.clear();
     }
 
     if (attributes().hasAttribute(QLatin1String("playerRoomStyle"))) {
