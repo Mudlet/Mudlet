@@ -2279,6 +2279,9 @@ int TLuaInterpreter::scaleMovie(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCaptureGroup
+// Note: numeric argument uses matches[] indexing, i.e. selectCaptureGroup(1)
+// selects matches[1] (full match), selectCaptureGroup(2) selects matches[2]
+// (first capture group), etc. Named arguments select the named group directly.
 int TLuaInterpreter::selectCaptureGroup(lua_State* L)
 {
     if (!(lua_isnumber(L, 1) || lua_isstring(L, 1))) {
@@ -2394,7 +2397,7 @@ int TLuaInterpreter::selectString(lua_State* L)
     const QString searchText = getVerifiedString(L, __func__, s++, "text to select");
     // CHECK: Do we need to qualify this for a non-blank string?
 
-    qint64 const numOfMatch = static_cast<qint64>(getVerifiedInt(L, __func__, s, "match count {1 for first}"));
+    const auto numOfMatch = getVerifiedInt(L, __func__, s, "match count {1 for first}");
 
     auto console = CONSOLE(L, windowName);
     lua_pushnumber(L, console->select(searchText, numOfMatch));

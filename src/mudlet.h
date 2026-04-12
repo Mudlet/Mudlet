@@ -79,6 +79,7 @@ class QTimer;
 
 class dlgAboutDialog;
 class dlgConnectionProfiles;
+class FileOpenHandler;
 class dlgIRC;
 class dlgNotepad;
 class dlgPackageManager;
@@ -325,6 +326,9 @@ public:
     void showedCharacterModeWarning();
     bool experiencedMudletPlayer();
 
+    // Telnet URI handling
+    void handleTelnetUri(const QString& uri);
+
     enums::Appearance mAppearance = enums::Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
     // issue:
@@ -357,6 +361,8 @@ public:
     QPointer<Host> mpCurrentActiveHost;
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
+    // Flag to prevent connection dialog from opening during telnet:// URI processing
+    bool mProcessingTelnetUri = false;
     QToolBar* mpMainToolBar = nullptr;
     QPointer<QSettings> mpSettings;
     QPointer<ShortcutsManager> mpShortcutsManager;
@@ -731,6 +737,18 @@ private:
     static constexpr int mScrollbackTutorialsMax = 3;   // Split screen
     static constexpr int mMuteAllMediaTutorialsMax = 3; // Mute all media
     static constexpr int mCharacterModeWarningsMax = 3; // Character mode
+
+    // Telnet URI handling structures and methods
+    struct TelnetUriData
+    {
+        QString host;
+        int port = 23;
+        QString username;
+    };
+
+    std::optional<TelnetUriData> parseTelnetUri(const QString& uri);
+    QString findMatchingProfile(const QString& host, int port);
+    QString createProfileForUri(const TelnetUriData& uriData);
 
     // Helper method for detached windows cleanup
     void saveDetachedWindowsGeometry();

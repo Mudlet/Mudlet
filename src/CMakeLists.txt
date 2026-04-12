@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2018, 2020, 2023, 2025 by Stephen Lyons            #
+#    Copyright (C) 2015-2018, 2020, 2023, 2025-2026 by Stephen Lyons       #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
 #    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
@@ -259,6 +259,9 @@ set(mudlet_UIS
     ui/vars_main_area.ui)
 
 set(mudlet_HDRS
+    ../3rdparty/discord/rpc/include/discord_register.h
+    ../3rdparty/discord/rpc/include/discord_rpc.h
+    ../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h
     ActionUnit.h
     AliasUnit.h
     AltFocusMenuBarDisable.h
@@ -352,6 +355,7 @@ set(mudlet_HDRS
     TEvent.h
     TFlipButton.h
     TForkedProcess.h
+    TGameDetails.h
     TimerUnit.h
     TKey.h
     TLabel.h
@@ -432,6 +436,15 @@ set(mudlet_HDRS
 if(USE_UPDATER)
   list(APPEND mudlet_SRCS updater.cpp)
   list(APPEND mudlet_HDRS updater.h)
+  list(APPEND mudlet_SRCS updater/Feed.cpp)
+  list(APPEND mudlet_HDRS updater/Feed.h)
+  list(APPEND mudlet_SRCS updater/Release.cpp)
+  list(APPEND mudlet_HDRS updater/Release.h)
+  list(APPEND mudlet_SRCS updater/SemVer.cpp)
+  list(APPEND mudlet_HDRS updater/SemVer.h)
+  list(APPEND mudlet_SRCS updater/UpdateDialog.cpp)
+  list(APPEND mudlet_HDRS updater/UpdateDialog.h)
+  list(APPEND mudlet_UIS updater/update_dialog.ui)
 endif(USE_UPDATER)
 
 if(USE_3DMAPPER)
@@ -649,11 +662,12 @@ target_compile_definitions(${LIB_MUDLET_TARGET}
   PRIVATE
     APP_VERSION="${APP_VERSION}"
     APP_TARGET="${APP_TARGET}"
-    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
+    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
+    LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
 
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
-    target_include_directories(${LIB_MUDLET_TARGET} PRIVATE ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain)
+    target_include_directories(${LIB_MUDLET_TARGET} PUBLIC ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain)
 endif()
 
 # Define shader hot-reloading if enabled
@@ -702,8 +716,8 @@ if (SYSINFO_INCLUDE_DIR)
 endif (SYSINFO_INCLUDE_DIR)
 
 if(USE_UPDATER)
-  target_link_libraries(${LIB_MUDLET_TARGET} dblsqd)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_UPDATER)
+  target_include_directories(${LIB_MUDLET_TARGET} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 endif(USE_UPDATER)
 
 if(USE_3DMAPPER)
@@ -776,6 +790,7 @@ if(APPLE)
     MACOSX_BUNDLE_BUNDLE_VERSION ${APP_VERSION}${APP_BUILD}
     MACOSX_BUNDLE_GUI_IDENTIFIER org.mudlet.mudlet
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${APP_VERSION}
+    MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/MacOSXBundleInfo.plist.in"
   )
 
   if(${APP_BUILD} MATCHES "-ptb.+")
@@ -796,6 +811,25 @@ if(APPLE)
       MACOSX_BUNDLE_LONG_VERSION_STRING ${APP_VERSION}
     )
     file(GLOB ICON_FILE "icons/mudlet.icns")
+  endif()
+
+  # Set Sparkle feed URL in Info.plist for PTB and release builds
+  if(USE_UPDATER)
+    if(APP_BUILD MATCHES "-ptb.+")
+      set(SPARKLE_CHANNEL "ptb")
+    elseif(NOT (APP_BUILD MATCHES "-dev.+" OR APP_BUILD MATCHES "-test.+"))
+      set(SPARKLE_CHANNEL "release")
+    endif()
+
+    if(SPARKLE_CHANNEL)
+      set(SPARKLE_FEED_URL "https://www.mudlet.org/wp-content/files/appcast/${SPARKLE_CHANNEL}-${CMAKE_SYSTEM_PROCESSOR}.xml")
+      add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+        COMMAND bash -c
+          "/usr/libexec/PlistBuddy -c 'Delete :SUFeedURL' '$<TARGET_BUNDLE_DIR:${EXE_MUDLET_TARGET}>/Contents/Info.plist' 2>/dev/null || true && /usr/libexec/PlistBuddy -c 'Add :SUFeedURL string ${SPARKLE_FEED_URL}' '$<TARGET_BUNDLE_DIR:${EXE_MUDLET_TARGET}>/Contents/Info.plist'"
+        VERBATIM
+        COMMENT "Setting Sparkle feed URL for ${SPARKLE_CHANNEL}-${CMAKE_SYSTEM_PROCESSOR}"
+      )
+    endif()
   endif()
 
   file(GLOB_RECURSE MUDLET_LUA_FILES LIST_DIRECTORIES true "mudlet-lua/*")

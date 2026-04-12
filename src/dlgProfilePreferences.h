@@ -175,6 +175,7 @@ private slots:
     void slot_loadHistoryMap();
     void slot_roomSizeChanged(int size);
     void slot_exitSizeChanged(int size);
+    void slot_borderSizeChanged(int size);
     void slot_gridSizeChanged(double size);
     void slot_displayFontChanged();
     void slot_displayFontSizeChanged();
@@ -229,7 +230,7 @@ private:
     QPointer<QDialog> mpDialogMapGlyphUsage;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
-    QMap<QString, QKeySequence*> currentShortcuts;
+    QMap<QString, QKeySequence> currentShortcuts;
     QPointer<QMenu> protocolMenu;
     QPointer<QAction> mEnableGMCP;
     QPointer<QAction> mEnableMSDP;

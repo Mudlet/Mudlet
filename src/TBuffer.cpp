@@ -459,7 +459,7 @@ int TBuffer::getLastLineNumber()
     }
 }
 
-void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<int> luaReference)
+void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference)
 {
     const int id = mLinkStore.addLinks(command, hint, mpHost, luaReference);
 
@@ -4179,7 +4179,7 @@ void TBuffer::resetColors()
     pHost->updateAnsi16ColorsInTable();
 }
 
-void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar format, int linkID)
+void TBuffer::append(const QString& text, int sub_start, int sub_end, const TChar& format, int linkID)
 {
     append(text, sub_start, sub_end, format.mFgColor, format.mBgColor, format.mFlags, linkID);
 }
@@ -4573,6 +4573,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
     int totalWidth = 0;
     int firstChar = 0;
     bool needsIndent = isNewline;
+    bool hasNewline = false;
 
     // find all the appropriate wrap points assuming (hanging-)indentation prepended to each line
     for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total and indexOfChar >= 0;) {
@@ -4586,12 +4587,14 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         }
         // handle embedded linefeed
         if (c == QChar::LineFeed) {
+            hasNewline = true;
             output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
             indexOfChar++;
             boundaryFinder.setPosition(indexOfChar);
             firstChar = indexOfChar;
             isNewline = true;
             needsIndent = false;
+            xPos = 0;
             continue;
         }
         int nextBoundary = boundaryFinder.toNextBoundary();
@@ -4630,7 +4633,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         indexOfChar = nextBoundary;
     }
     // it's possible that no wrapping is needed
-    if (totalWidth <= mWrapAt) {
+    if (totalWidth <= mWrapAt && !hasNewline) {
         output.clear();
         return output;
     }
