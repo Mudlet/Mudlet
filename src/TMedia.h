@@ -31,7 +31,7 @@
 #include "TMediaData.h"
 #include "TMediaPlaylist.h"
 
-#include <memory> // std::shared_ptr
+#include <memory>
 #include <QAudioOutput>
 #include <QMediaPlayer>
 
@@ -44,12 +44,19 @@ public:
     : mpHost(pHost)
     , mMediaData(mediaData)
     , mMediaPlayer(new QMediaPlayer(pHost))
-    , mPlaylist(new TMediaPlaylist)
+    , mPlaylist(std::make_unique<TMediaPlaylist>())
     , initialized(true)
     {
         mMediaPlayer->setAudioOutput(new QAudioOutput());
     }
-    ~TMediaPlayer() = default;
+    ~TMediaPlayer()
+    {
+        if (mMediaPlayer) {
+            auto* output = mMediaPlayer->audioOutput();
+            mMediaPlayer->setAudioOutput(nullptr);
+            delete output;
+        }
+    }
 
     TMediaData mediaData() const { return mMediaData; }
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
@@ -71,13 +78,11 @@ public:
         }
         mMediaPlayer->audioOutput()->setVolume(volume / 100.0f);
     }
-    TMediaPlaylist* playlist() const { return mPlaylist; }
+    TMediaPlaylist* playlist() const { return mPlaylist.get(); }
     void setPlaylist(TMediaPlaylist* playlist)
     {
-        if (mPlaylist != playlist) {
-            if (mPlaylist)
-                delete mPlaylist;
-            mPlaylist = playlist;
+        if (mPlaylist.get() != playlist) {
+            mPlaylist.reset(playlist);
         }
     }
     void refreshAudioOutput()
@@ -102,7 +107,7 @@ private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
     QMediaPlayer* mMediaPlayer = nullptr;
-    TMediaPlaylist* mPlaylist = nullptr;
+    std::unique_ptr<TMediaPlaylist> mPlaylist;
     bool initialized = false;
 };
 
