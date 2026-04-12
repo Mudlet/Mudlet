@@ -184,7 +184,7 @@ QString TScript::packageName(TScript* pScript)
     }
 
     if (!pScript->mPackageName.isEmpty()) {
-        return !mpHost->mModuleInfo.contains(pScript->mPackageName) ? pScript->mPackageName : QString();
+        return !mpHost->mInstalledModules.contains(pScript->mPackageName) ? pScript->mPackageName : QString();
     }
 
     if (pScript->getParent()) {
@@ -201,7 +201,7 @@ QString TScript::moduleName(TScript* pScript)
     }
 
     if (!pScript->mPackageName.isEmpty()) {
-        return mpHost->mModuleInfo.contains(pScript->mPackageName) ? pScript->mPackageName : QString();
+        return mpHost->mInstalledModules.contains(pScript->mPackageName) ? pScript->mPackageName : QString();
     }
 
     if (pScript->getParent()) {

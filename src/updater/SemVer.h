@@ -1,9 +1,6 @@
-#ifndef MUDLET_FONTMANAGER_H
-#define MUDLET_FONTMANAGER_H
-
 /***************************************************************************
- *   Copyright (C) 2009 by Vadim Peretokin - vperetokin@gmail.com          *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Philipp Medien - hello@dblsqd.com               *
+ *   Copyright (C) 2026 by Vadim Peretokin - vperetokin@gmail.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,27 +18,33 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QMap>
-#include <QMultiMap>
+#ifndef DBLSQD_SEMVER_H
+#define DBLSQD_SEMVER_H
 
-class QString;
+#include <QString>
 
+namespace dblsqd {
 
-class FontManager
+class SemVer
 {
 public:
-    void addFonts();
-    void loadFont(const QString& filePath, const QString& belongsTo = "main");
-    void unloadFonts(const QString& belongsTo);
-    void addEmojiFont();
+    explicit SemVer(const QString& version);
+
+    bool operator<(const SemVer& other) const;
+    bool operator==(const SemVer& other) const;
+
+    bool isValid() const;
 
 private:
-    void loadFonts(const QString& folder);
+    int mMajor{0};
+    int mMinor{0};
+    int mPatch{0};
+    QString mPrerelease;
+    bool mValid{false};
 
-    // map of font file basename to font ID (-1 if load failed)
-    QMap<QString, int> loadedFontPaths;
-    // map of font affiliation ("main" or profileName/packageName for package fonts) & font IDs
-    QMultiMap<QString, int> loadedFontAffiliation;
+    static QString getRegExp();
 };
 
-#endif // MUDLET_FONTMANAGER_H
+} // namespace dblsqd
+
+#endif // DBLSQD_SEMVER_H
