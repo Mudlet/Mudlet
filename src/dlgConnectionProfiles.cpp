@@ -97,6 +97,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     //: Button shown on first launch to skip the tutorial and show the full games list
     mpSkipToGamesButton = new QPushButton(tr("Skip - show me the games list"), this);
+    mpSkipToGamesButton->setObjectName(qsl("skipToGamesButton"));
     mpSkipToGamesButton->hide();
     horizontalLayout_3->insertWidget(0, mpSkipToGamesButton);
 
