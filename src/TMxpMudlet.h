@@ -47,7 +47,8 @@ public:
     explicit TMxpMudlet(Host* pHost)
     : mpHost(pHost)
     , mLinkMode(false)
-    {}
+    {
+    }
 
     QString getVersion() override;
 
@@ -72,7 +73,8 @@ public:
     const QColor& getBgColor() { return bgColors.last(); }
 
     // TODO: implement support for fonts?
-    void pushFont(const QString& fontFace, const QString& fontSize) override {
+    void pushFont(const QString& fontFace, const QString& fontSize) override
+    {
         Q_UNUSED(fontFace)
         Q_UNUSED(fontSize)
     }
@@ -103,28 +105,31 @@ public:
     void resetTextProperties() override;
 
     void setStyle(const QString& val) override { mxpStyle = val; }
-    QString getStyle() override { return mxpStyle;}
+    QString getStyle() override { return mxpStyle; }
 
-    void setFlag(const QString& elementName, const QMap<QString, QString>& values, const QString& content) override {
+    void setFlag(const QString& elementName, const QMap<QString, QString>& values, const QString& content) override
+    {
         Q_UNUSED(elementName)
         Q_UNUSED(values)
         Q_UNUSED(content)
         // TODO: raise mxp event
     }
 
-    void publishEntity(const QString& name, const QString& value) override {
+    void publishEntity(const QString& name, const QString& value) override
+    {
         Q_UNUSED(name)
         Q_UNUSED(value)
     }
 
-    void setVariable(const QString& name, const QString& value) override {
+    void setVariable(const QString& name, const QString& value) override
+    {
         Q_UNUSED(name)
         Q_UNUSED(value)
     }
 
     bool startTagReceived(MxpStartTag* startTag) override;
-    
-    TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) override;
+
+    TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result, TMxpContext& context) override;
 
     void enqueueMxpEvent(MxpStartTag* tag);
     TLinkStore& getLinkStore();
@@ -142,11 +147,11 @@ public:
     void insertText(const QString& text) override;
 
     QStack<TMxpEvent> mPendingSendEvents;
-    
+
     // Get the encoding used by the connection
     QByteArray getEncoding() const override;
     bool shouldLockModeToSecure() const override;
-    
+
     // MXP Frame management (FRAME and DEST tag support)
     bool createMxpFrame(const QString& name, const QMap<QString, QString>& attributes) override;
     bool closeMxpFrame(const QString& name) override;
@@ -156,7 +161,7 @@ public:
 
 private:
     bool isTagAllowedInMode(const QString& tagName, TMXPMode mode) const;
-    
+
     Host* mpHost;
     bool mLinkMode;
 };

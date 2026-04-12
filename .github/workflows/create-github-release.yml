@@ -24,7 +24,7 @@ jobs:
     steps:
       - name: Check if all platform builds completed
         id: check
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const triggeringRun = context.payload.workflow_run;
@@ -86,7 +86,7 @@ jobs:
       - name: Download metadata to determine release type
         if: steps.check.outputs.ready == 'true'
         id: download-metadata
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           pattern: release-metadata-*
@@ -150,7 +150,7 @@ jobs:
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
         id: download-linux-macos
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: release-asset-*
           run-id: ${{ steps.check.outputs.linux_macos_run_id }}
@@ -161,7 +161,7 @@ jobs:
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
         id: download-windows
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: release-asset-*
           run-id: ${{ steps.check.outputs.windows_run_id }}
