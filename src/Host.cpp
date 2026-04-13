@@ -838,8 +838,13 @@ std::pair<bool, QString> Host::getModuleSync(const QString& moduleName)
     return {false, qsl("module name '%1' not found").arg(moduleName)};
 }
 
-void Host::resetProfile_phase1()
+bool Host::resetProfile_phase1()
 {
+    if (mResetProfile) {
+        qWarning() << "Host::resetProfile_phase1() called while reset is already in progress, ignoring";
+        return false;
+    }
+
     mAliasUnit.stopAllTriggers();
     mTriggerUnit.stopAllTriggers();
     mTimerUnit.stopAllTriggers();
@@ -849,6 +854,7 @@ void Host::resetProfile_phase1()
     QTimer::singleShot(0, this, [this]() {
         resetProfile_phase2();
     });
+    return true;
 }
 
 void Host::resetProfile_phase2()
@@ -858,6 +864,7 @@ void Host::resetProfile_phase2()
     getTriggerUnit()->removeAllTempTriggers();
     getKeyUnit()->removeAllTempKeys();
     removeAllNonPersistentStopWatches();
+    mpMedia->stopAllMediaPlayers();
 
     mAliasUnit.doCleanup();
     mTimerUnit.doCleanup();
@@ -865,6 +872,7 @@ void Host::resetProfile_phase2()
     mKeyUnit.doCleanup();
     mpConsole->resetMainConsole();
     mEventHandlerMap.clear();
+    mAnonymousEventHandlerFunctions.clear();
     mEventMap.clear();
     mLuaInterpreter.abortAllDownloads();
     mLuaInterpreter.initLuaGlobals();

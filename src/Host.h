@@ -308,7 +308,7 @@ public:
     // produce this action will be purged from the Lua system as part of the
     // reset - which causes nasty existential issues (and crashes) from deleting
     // a script as it is being interpreted!
-    void resetProfile_phase1();
+    bool resetProfile_phase1();
     // This actually does the bulk of the reset but must wait until the profile
     // is quiescent:
     void resetProfile_phase2();
