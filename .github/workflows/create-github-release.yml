@@ -22,25 +22,24 @@ jobs:
       github.event.workflow_run.conclusion == 'success'
 
     steps:
-      - name: Check if all platform builds completed
+      - name: Check if platform builds completed
         id: check
         uses: actions/github-script@v9
         with:
           script: |
             const triggeringRun = context.payload.workflow_run;
-            // Skip PR builds - they use a different head_sha and have no release artifacts
             if (triggeringRun.event === 'pull_request') {
               core.info(`Skipping: triggered by a pull_request build`);
               core.setOutput('ready', 'false');
               return;
             }
             const sha = triggeringRun.head_sha;
-            const required = {
+            const platforms = {
               'linux_macos': 'build-mudlet.yml',
               'windows': 'build-mudlet-win.yml'
             };
             const runIds = {};
-            for (const [key, filename] of Object.entries(required)) {
+            for (const [key, filename] of Object.entries(platforms)) {
               const {data} = await github.rest.actions.listWorkflowRuns({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -51,14 +50,26 @@ jobs:
               });
               if (data.total_count === 0) {
                 core.info(`Workflow "${filename}" has not completed successfully yet for ${sha}`);
-                core.setOutput('ready', 'false');
-                return;
+              } else {
+                runIds[key] = data.workflow_runs[0].id;
               }
-              runIds[key] = data.workflow_runs[0].id;
+            }
+            const totalPlatforms = Object.keys(platforms).length;
+            const completedCount = Object.keys(runIds).length;
+            if (completedCount === 0) {
+              core.info('No platform builds have succeeded yet');
+              core.setOutput('ready', 'false');
+              return;
+            }
+            // Release builds must wait for all platforms; PTBs can proceed with partial
+            if (completedCount < totalPlatforms && triggeringRun.head_branch !== 'development') {
+              core.info(`Only ${completedCount}/${totalPlatforms} platforms completed - waiting for all platforms (release build)`);
+              core.setOutput('ready', 'false');
+              return;
             }
             core.setOutput('ready', 'true');
-            core.setOutput('linux_macos_run_id', runIds['linux_macos']);
-            core.setOutput('windows_run_id', runIds['windows']);
+            core.setOutput('linux_macos_run_id', runIds['linux_macos'] || '');
+            core.setOutput('windows_run_id', runIds['windows'] || '');
 
       # Checkout early so .git exists before artifact downloads — actions/checkout
       # wipes the workspace when no .git directory is present, even with clean: false
@@ -83,9 +94,9 @@ jobs:
           luarocks install lunajson
 
       # Download build metadata to determine if this is a release or PTB build (not present for snapshot/PR builds)
-      - name: Download metadata to determine release type
-        if: steps.check.outputs.ready == 'true'
-        id: download-metadata
+      - name: Download metadata from Linux/macOS build
+        if: steps.check.outputs.ready == 'true' && steps.check.outputs.linux_macos_run_id != ''
+        id: download-metadata-lm
         uses: actions/download-artifact@v8
         continue-on-error: true
         with:
@@ -94,12 +105,23 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: metadata/
 
+      - name: Download metadata from Windows build
+        if: steps.check.outputs.ready == 'true' && steps.download-metadata-lm.outcome != 'success' && steps.check.outputs.windows_run_id != ''
+        id: download-metadata-win
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          pattern: release-metadata-*
+          run-id: ${{ steps.check.outputs.windows_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: metadata/
+
       - name: Report skipped release
-        if: steps.check.outputs.ready == 'true' && steps.download-metadata.outcome == 'failure'
+        if: steps.check.outputs.ready == 'true' && steps.download-metadata-lm.outcome != 'success' && steps.download-metadata-win.outcome != 'success'
         run: echo "::warning::Release metadata download failed - cannot determine release type"
 
       - name: Determine release type
-        if: steps.check.outputs.ready == 'true' && steps.download-metadata.outcome == 'success'
+        if: steps.check.outputs.ready == 'true' && (steps.download-metadata-lm.outcome == 'success' || steps.download-metadata-win.outcome == 'success')
         id: release-type
         run: |
           META_FILE=$(find metadata/ -name 'release-metadata.json' -type f | head -1)
@@ -147,7 +169,7 @@ jobs:
 
       # Download all release assets from both workflow runs
       - name: Download Linux/macOS release assets
-        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        if: (steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb') && steps.check.outputs.linux_macos_run_id != ''
         id: download-linux-macos
         continue-on-error: true
         uses: actions/download-artifact@v8
@@ -158,7 +180,7 @@ jobs:
           path: assets/
 
       - name: Download Windows release assets
-        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        if: (steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb') && steps.check.outputs.windows_run_id != ''
         id: download-windows
         continue-on-error: true
         uses: actions/download-artifact@v8
