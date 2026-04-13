@@ -57,7 +57,7 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames,
                              QHash<QString, int>& pSymbols,
                              QHash<int, int>& pWeights,
                              QHash<bool, int> lockStatus,
-                             QHash<bool, int> hiddenStatus,
+                             int hiddenRoomCount,
                              QSet<TRoom*>& pRooms)
 {
     // Configure name display
@@ -158,18 +158,16 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames,
     initLockInstructions();
 
     // Configure hidden display
-    // Are all hidden statuses the same or mixed? Then show dialog in tristate.
-    if (hiddenStatus.contains(true) && hiddenStatus.contains(false)) {
+    if (hiddenRoomCount && hiddenRoomCount < mpRooms.size()) {
+        // Some rooms are hidden
         checkBox_hidden->setTristate(true);
         checkBox_hidden->setCheckState(Qt::PartiallyChecked);
-    } else if (hiddenStatus.contains(true)) {
+    } else {
+        // Either none or all of them are hidden
         checkBox_hidden->setTristate(false);
-        checkBox_hidden->setCheckState(Qt::Checked);
-    } else { // hiddenStatus.contains(false)
-        checkBox_hidden->setTristate(false);
-        checkBox_hidden->setCheckState(Qt::Unchecked);
+        checkBox_hidden->setChecked(hiddenRoomCount == mpRooms.size());
     }
-    initHiddenInstructions();
+    initHiddenInstructions(hiddenRoomCount);
 
     // Configure border display
     selectedBorderColor = pFirstRoom->mBorderColor;
@@ -191,22 +189,47 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames,
 
 void dlgRoomProperties::initLockInstructions()
 {
-    //: room properties dialog, setting lock status
-    const QString instructions = tr("Lock room(s), so it/they will never be used for speedwalking",
-                                    // Intentional comment to separate arguments!
-                                    "This text will be shown at a checkbox, where you can set/unset a number of room's lock.",
+    //: room properties dialog, text will be shown at a checkbox, where you can set/unset a number of room's lock.
+    const QString instructions = tr("Lock %n room(s), so it/they will never be used for speedwalking",
+                                    nullptr,
                                     mpRooms.size());
     checkBox_locked->setText(instructions);
 }
 
-void dlgRoomProperties::initHiddenInstructions()
+void dlgRoomProperties::initHiddenInstructions(const int hiddenRoomCount)
 {
-    //: room properties dialog, setting hidden status
-    const QString instructions = tr("Hide room(s) from the map display",
-                                    // Intentional comment to separate arguments!
-                                    "This text will be shown at a checkbox, where you can set/unset a number of room's hidden status.",
-                                    mpRooms.size());
-    checkBox_hidden->setText(instructions);
+    if (hiddenRoomCount && hiddenRoomCount < mpRooms.size()) {
+        checkBox_hidden->setText(
+                /*: room properties dialog, setting text for checkbox, where you can
+ set/unset a number of room's hidden status. More than one room is being
+ considered and some, but not all (%n) of them are hidden and in this case the
+ checkbox also has an partially checked state to be used to leave them all
+ unchanged. A second translatable sentance indicating the number of currently
+ hidden rooms will be inserted as %1.*/
+                tr("Hide all %n room(s).%1",
+                   nullptr,
+                   mpRooms.size())
+                        /*: room properties dialog, additional sentance inserted into setting text for checkbox,
+ when some (%n) but not all of the rooms are hidden. Ensure that, if the locale uses
+ spaces between words, that one is present at the beginning or end so that the
+ text is correctly spaced when it is inserted into the primary text.*/
+                        .arg(tr(" %n room(s) are currently hidden.",
+                             nullptr,
+                             hiddenRoomCount)));
+/*: Tooltip to give additional information for the checkbox to control the
+ state of being hidden when the selection includes multiple rooms and they
+ are not all in the same state.*/
+        checkBox_hidden->setToolTip(utils::richText(tr("Leave as partially checked to not change the state of the selected rooms.")));
+        return;
+    }
+
+    /*: room properties dialog, setting text for checkbox, where you can
+ set/unset the hidden status of one or more rooms where %n is the total number
+ of rooms and all of them are currently hidden or shown.*/
+    checkBox_hidden->setText(tr("Hide (all) %n room(s).",
+                                nullptr,
+                                mpRooms.size()));
+    checkBox_hidden->setToolTip(QString());
 }
 
 

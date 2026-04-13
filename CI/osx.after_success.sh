@@ -45,10 +45,6 @@ fi
 
 if [ "${DEPLOY}" = "deploy" ]; then
 
-  # get commit date now before we check out an change into another git repository
-  COMMIT_DATE=$(git show -s --pretty="tformat:%cI" | cut -d'T' -f1 | tr -d '-')
-  YESTERDAY_DATE=$(date -v-1d '+%F' | tr -d '-')
-
   git clone https://github.com/Mudlet/installers.git "${BUILD_DIR}/../installers"
 
   cd "${BUILD_DIR}/../installers/osx"
@@ -96,11 +92,12 @@ if [ "${DEPLOY}" = "deploy" ]; then
     app="${BUILD_DIR}/build/mudlet.app"
     if [ "${public_test_build}" == "true" ]; then
 
-      # Skip commit check if this is a manually forced build
+      # Skip duplicate check if this is a manually forced build
       if [[ "${GITHUB_FORCE_BUILD}" == "true" ]]; then
-        echo "== Forced build requested, skipping commit date check =="
-      elif [[ "${COMMIT_DATE}" -lt "${YESTERDAY_DATE}" ]]; then
-        echo "== No new commits, aborting public test build generation =="
+        echo "== Forced build requested, skipping duplicate PTB check =="
+      elif gh release list --repo "${GITHUB_REPOSITORY}" --limit 20 --json tagName \
+              --jq '.[].tagName' 2>/dev/null | grep -qF -- "${BUILD_COMMIT}"; then
+        echo "== PTB already exists for commit ${BUILD_COMMIT}, aborting public test build generation =="
         exit 0
       fi
 

@@ -45,7 +45,7 @@ bool FileOpenHandler::eventFilter(QObject* obj, QEvent* event)
 
         // Check for Telnet URI
         const QUrl url = openEvent->url();
-        if (!url.isEmpty() && url.scheme().compare(qsl("telnet"), Qt::CaseInsensitive) == 0) {
+        if (!url.isEmpty() && (url.scheme().compare(qsl("telnet"), Qt::CaseInsensitive) == 0 || url.scheme().compare(qsl("telnets"), Qt::CaseInsensitive) == 0)) {
             mudlet::self()->handleTelnetUri(url.toString());
             return true;
         }

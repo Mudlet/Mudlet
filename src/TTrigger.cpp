@@ -1477,7 +1477,7 @@ QString TTrigger::packageName(TTrigger* pTrigger)
     }
 
     if (!pTrigger->mPackageName.isEmpty()) {
-        return !mpHost->mModuleInfo.contains(pTrigger->mPackageName) ? pTrigger->mPackageName : QString();
+        return !mpHost->mInstalledModules.contains(pTrigger->mPackageName) ? pTrigger->mPackageName : QString();
     }
 
     if (pTrigger->getParent()) {
@@ -1494,7 +1494,7 @@ QString TTrigger::moduleName(TTrigger* pTrigger)
     }
 
     if (!pTrigger->mPackageName.isEmpty()) {
-        return mpHost->mModuleInfo.contains(pTrigger->mPackageName) ? pTrigger->mPackageName : QString();
+        return mpHost->mInstalledModules.contains(pTrigger->mPackageName) ? pTrigger->mPackageName : QString();
     }
 
     if (pTrigger->getParent()) {
