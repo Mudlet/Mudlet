@@ -85,7 +85,6 @@ private slots:
         QTimer::singleShot(0, qApp, [hostname, address, port]() {
             mudlet::self()->startAutoLogin({});
             QTest::qWait(100);
-            // Dismiss tutorial invitation if shown on first launch
             auto* skipBtn = mudlet::self()->mpConnectionDialog->findChild<QPushButton*>(qsl("skipToGamesButton"));
             if (skipBtn && skipBtn->isVisible()) {
                 QTest::mouseClick(skipBtn, Qt::LeftButton);
