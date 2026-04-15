@@ -55,7 +55,7 @@ private:
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     const QString mHostname = "Discord-Mode-Test";
-    const QString mPort = "4003";
+    const QString mPort = "4004";
     const QString mLocalhost = "localhost";
 
 private slots:
