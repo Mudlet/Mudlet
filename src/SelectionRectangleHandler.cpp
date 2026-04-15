@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2025 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -211,7 +212,7 @@ bool SelectionRectangleHandler::handleMouseMove(T2DMap::MapInteractionContext& c
             mMapWidget.mMultiSelectionSet.unite(rectangleSelection);
         } else if (hasCtrl) {
             QSet<int> toggledSelection = mMapWidget.mMultiSelectionBaseSet;
-            for (int roomId : rectangleSelection) {
+            for (const int roomId : std::as_const(rectangleSelection)) {
                 if (toggledSelection.contains(roomId)) {
                     toggledSelection.remove(roomId);
                 } else {

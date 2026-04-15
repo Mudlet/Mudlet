@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2024, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016-2020 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
@@ -1408,7 +1409,7 @@ void dlgTriggerEditor::slot_clickedMessageBox(const QString& URL)
 
 void dlgTriggerEditor::slot_editorThemeChanged()
 {
-    for (auto* patternEdit : mTriggerPatternEdit) {
+    for (auto* patternEdit : std::as_const(mTriggerPatternEdit)) {
         applyPatternWidgetStyle(patternEdit);
     }
 }
@@ -1729,7 +1730,7 @@ void dlgTriggerEditor::setupPatternNavigationShortcuts()
         mLastPatternShortcut = nullptr;
     }
 
-    for (auto* shortcut : mPatternNavigationShortcuts) {
+    for (auto* shortcut : std::as_const(mPatternNavigationShortcuts)) {
         if (shortcut) {
             shortcut->deleteLater();
         }
@@ -2855,7 +2856,7 @@ void dlgTriggerEditor::delete_alias()
     QStringList itemNames;
     QList<TAlias*> aliasesToDelete;
 
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (const QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         TAlias* pT = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
             itemNames << pT->getName();
@@ -2933,7 +2934,7 @@ void dlgTriggerEditor::delete_alias()
     };
 
     // Capture each selected alias and all its descendants
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (const QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         TAlias* pT = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
             int parentID = -1;
@@ -2971,7 +2972,7 @@ void dlgTriggerEditor::delete_alias()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
         TAlias* pT = mpHost->getAliasUnit()->getAlias(itemId);
@@ -3025,7 +3026,7 @@ void dlgTriggerEditor::delete_action()
     QStringList itemNames;
     QList<TAction*> actionsToDelete;
 
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (const QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         TAction* pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
             itemNames << pT->getName();
@@ -3081,7 +3082,7 @@ void dlgTriggerEditor::delete_action()
     };
 
     // Capture each selected action and all its descendants
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         TAction* pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
             // Determine parent ID and position
@@ -3113,7 +3114,7 @@ void dlgTriggerEditor::delete_action()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
         TAction* pT = mpHost->getActionUnit()->getAction(itemId);
@@ -3176,7 +3177,7 @@ void dlgTriggerEditor::delete_variable()
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
 
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         TVar* var = vu->getWVar(pItem);
         if (var) {
             itemNames << var->getName();
@@ -3207,7 +3208,7 @@ void dlgTriggerEditor::delete_variable()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         TVar* var = vu->getWVar(pItem);
 
@@ -3250,7 +3251,7 @@ void dlgTriggerEditor::delete_script()
     QStringList itemNames;
     QList<TScript*> scriptsToDelete;
 
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (const QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
             itemNames << pT->getName();
@@ -3306,7 +3307,7 @@ void dlgTriggerEditor::delete_script()
     };
 
     // Capture each selected script and all its descendants
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
             // Determine parent ID and position
@@ -3338,7 +3339,7 @@ void dlgTriggerEditor::delete_script()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
         TScript* pT = mpHost->getScriptUnit()->getScript(itemId);
@@ -3392,7 +3393,7 @@ void dlgTriggerEditor::delete_key()
     QStringList itemNames;
     QList<TKey*> keysToDelete;
 
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (const QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         TKey* pT = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
             itemNames << pT->getName();
@@ -3448,7 +3449,7 @@ void dlgTriggerEditor::delete_key()
     };
 
     // Capture each selected key and all its descendants
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         TKey* pT = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
             // Determine parent ID and position
@@ -3480,7 +3481,7 @@ void dlgTriggerEditor::delete_key()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
         TKey* pT = mpHost->getKeyUnit()->getKey(itemId);
@@ -3534,7 +3535,7 @@ void dlgTriggerEditor::delete_trigger()
     QStringList itemNames;
     QList<TTrigger*> triggersToDelete;
 
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
             itemNames << pT->getName();
@@ -3590,7 +3591,7 @@ void dlgTriggerEditor::delete_trigger()
     };
 
     // Capture each selected trigger and all its descendants
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
             // Determine parent ID and position
@@ -3627,7 +3628,7 @@ void dlgTriggerEditor::delete_trigger()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
         TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(itemId);
@@ -3681,7 +3682,7 @@ void dlgTriggerEditor::delete_timer()
     QStringList itemNames;
     QList<TTimer*> timersToDelete;
 
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (const QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         TTimer* pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
             itemNames << pT->getName();
@@ -3737,7 +3738,7 @@ void dlgTriggerEditor::delete_timer()
     };
 
     // Capture each selected timer and all its descendants
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         TTimer* pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
             // Determine parent ID and position
@@ -3769,7 +3770,7 @@ void dlgTriggerEditor::delete_timer()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
         TTimer* pT = mpHost->getTimerUnit()->getTimer(itemId);
@@ -5740,7 +5741,7 @@ void dlgTriggerEditor::saveTrigger()
     QStringList patterns;
     QList<int> patternKinds;
     int validItems = 0;
-    for (auto* patternEdit : mTriggerPatternEdit) {
+    for (const auto* patternEdit : std::as_const(mTriggerPatternEdit)) {
         QString pattern = patternEdit->singleLineTextEdit_pattern->toPlainText();
 
         // Spaces in the pattern may be marked with middle dots, convert them back
@@ -8290,7 +8291,7 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
     if (pT) {
         const QString name = pT->getName();
         QStringList eventHandlerList = pT->getEventHandlerList();
-        for (const QString& handler : eventHandlerList) {
+        for (const QString& handler : std::as_const(eventHandlerList)) {
             auto pItem = new QListWidgetItem(mpScriptsMainArea->listWidget_script_registered_event_handlers);
             pItem->setText(handler);
             mpScriptsMainArea->listWidget_script_registered_event_handlers->addItem(pItem);
@@ -9669,7 +9670,7 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     if (mFirstPatternShortcut) {
         mFirstPatternShortcut->setEnabled(enablePatternShortcuts);
     }
-    for (auto* shortcut : mPatternNavigationShortcuts) {
+    for (auto* shortcut : std::as_const(mPatternNavigationShortcuts)) {
         if (shortcut) {
             shortcut->setEnabled(enablePatternShortcuts);
         }
@@ -10030,7 +10031,7 @@ void dlgTriggerEditor::showIntro(const QString& desiredOption)
 
     introTextParts introAddCurrentItem = introAddItem.value(mCurrentView);
     QString introTextOptions;
-    for (const auto& [name, headline, contents] : introAddCurrentItem.options) {
+    for (const auto& [name, headline, contents] : std::as_const(introAddCurrentItem.options)) {
         introTextOptions.append((name != desiredOption) ? qsl("<li><a href='%1' style='color: inherit; text-decoration: underline;'>%2</a></li>").arg(name, headline)
                                                         : qsl("<li><strong>%1</strong>%2</li>").arg(headline, contents));
     }
@@ -10965,7 +10966,7 @@ void dlgTriggerEditor::exportTriggerToClipboard()
     QStringList triggerNames;
     QList<TTrigger*> triggersToExport;
 
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (const QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         const int triggerID = pItem->data(0, Qt::UserRole).toInt();
         TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
         if (pT) {
@@ -11029,7 +11030,7 @@ void dlgTriggerEditor::exportTimerToClipboard()
     QStringList timerNames;
     QList<TTimer*> timersToExport;
 
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (const QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         const int timerID = pItem->data(0, Qt::UserRole).toInt();
         TTimer* pT = mpHost->getTimerUnit()->getTimer(timerID);
         if (pT) {
@@ -11085,7 +11086,7 @@ void dlgTriggerEditor::exportAliasToClipboard()
     QStringList aliasNames;
     QList<TAlias*> aliasesToExport;
 
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (const QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         const int aliasID = pItem->data(0, Qt::UserRole).toInt();
         TAlias* pT = mpHost->getAliasUnit()->getAlias(aliasID);
         if (pT) {
@@ -11141,7 +11142,7 @@ void dlgTriggerEditor::exportActionToClipboard()
     QStringList actionNames;
     QList<TAction*> actionsToExport;
 
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (const QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         const int actionID = pItem->data(0, Qt::UserRole).toInt();
         TAction* pT = mpHost->getActionUnit()->getAction(actionID);
         if (pT) {
@@ -11197,7 +11198,7 @@ void dlgTriggerEditor::exportScriptToClipboard()
     QStringList scriptNames;
     QList<TScript*> scriptsToExport;
 
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (const QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         const int scriptID = pItem->data(0, Qt::UserRole).toInt();
         TScript* pT = mpHost->getScriptUnit()->getScript(scriptID);
         if (pT) {
@@ -11253,7 +11254,7 @@ void dlgTriggerEditor::exportKeyToClipboard()
     QStringList keyNames;
     QList<TKey*> keysToExport;
 
-    for (QTreeWidgetItem* pItem : selectedItems) {
+    for (const QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         const int keyID = pItem->data(0, Qt::UserRole).toInt();
         TKey* pT = mpHost->getKeyUnit()->getKey(keyID);
         if (pT) {
@@ -11483,7 +11484,7 @@ void dlgTriggerEditor::slot_pasteXml()
 
         QString originalClipboard = QApplication::clipboard()->text();
 
-        for (const QString& xmlItem : xmlPackages) {
+        for (const QString& xmlItem : std::as_const(xmlPackages)) {
             QString xmlItemTrimmed = xmlItem.trimmed();
             if (xmlItemTrimmed.isEmpty()) {
                 continue; // Skip empty items
@@ -11527,7 +11528,7 @@ void dlgTriggerEditor::slot_pasteXml()
 
                     bool isGroup = (targetItem && targetItem->childCount() > 0) || (targetTrigger && targetTrigger->isFolder());
 
-                    for (int itemID : importedIDs) {
+                    for (const int itemID : std::as_const(importedIDs)) {
                         if (isGroup) {
                             mpHost->getTriggerUnit()->reParentTrigger(itemID, 0, targetId, -1, -1);
                         } else {
@@ -11912,7 +11913,7 @@ void dlgTriggerEditor::slot_pasteXml()
         if (xmlPackages.size() > 1) {
             // Multiple items were pasted
             if (!importedIDs.isEmpty()) {
-                for (int itemID : importedIDs) {
+                for (const int itemID : std::as_const(importedIDs)) {
                     registerUndoCommand(importedItemType, itemID);
                 }
             }
@@ -13247,7 +13248,7 @@ void dlgTriggerEditor::slot_restoreEditorItemsToolbar()
 void dlgTriggerEditor::clearTriggerForm()
 {
     // Clear pattern fields
-    for (auto* patternEdit : mTriggerPatternEdit) {
+    for (auto* patternEdit : std::as_const(mTriggerPatternEdit)) {
         patternEdit->singleLineTextEdit_pattern->clear();
         if (patternEdit->singleLineTextEdit_pattern->isHidden()) {
             patternEdit->singleLineTextEdit_pattern->show();
@@ -13623,7 +13624,7 @@ void dlgTriggerEditor::slot_itemsChanged(EditorViewType viewType, QList<int> aff
                 }
             }
         } else {
-            for (auto* patternEdit : mTriggerPatternEdit) {
+            for (auto* patternEdit : std::as_const(mTriggerPatternEdit)) {
                 patternEdit->singleLineTextEdit_pattern->clear();
                 if (patternEdit->singleLineTextEdit_pattern->isHidden()) {
                     patternEdit->singleLineTextEdit_pattern->show();

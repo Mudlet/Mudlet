@@ -222,7 +222,7 @@ cTelnet::~cTelnet()
 #else
         qWarning("cTelnet::~cTelnet() Instance being destroyed before it could display some messages,\nmessages are:\n------------");
 #endif
-        for (const auto& message : messageStack) {
+        for (const auto& message : std::as_const(messageStack)) {
 #if defined(Q_OS_WINDOWS)
             qWarning("%s", qPrintable(message));
             qWarning("------------");
@@ -753,7 +753,7 @@ void cTelnet::slot_socketDisconnected()
                 // so do not auto-reconnect:
                 mDontReconnect = true;
 
-                for (const auto& error : sslErrors) {
+                for (const auto& error : std::as_const(sslErrors)) {
                     reasons.append(error.errorString());
                 }
             }
@@ -962,13 +962,13 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 
     // Report found IP addresses:
     QStringList addressesToReport;
-    for (const auto& address : addressList_ipV6) {
+    for (const auto& address : std::as_const(addressList_ipV6)) {
         /*: Used to add an IPv6 address line to the list displayed during
  connecting to a Host. Some, e.g. Far Eastern locales may require a
  different text here if they do not use spaces, or need "wide" '(' ')'s*/
         addressesToReport << tr("%1 (IPv6)").arg(address);
     }
-    for (const auto& address : addressList_ipV4) {
+    for (const auto& address : std::as_const(addressList_ipV4)) {
         /*: Used to add an IPv4 address line to the list displayed during
  connecting to a Host. Some, e.g. Far Eastern locales may require a
  different text here if they do not use spaces, or "wide" '('...')'*/
@@ -1269,7 +1269,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
             }
         } else {
             // Plain, raw ASCII, we hope!
-            for (const auto c : data) {
+            for (const auto c : std::as_const(data)) {
                 if ((!mEncodingWarningIssued) && (c.row() || c.cell() > 127)) {
                     QString errorMsg = tr(errorMsgTemplate, "%1 is the command that was sent to the game.").arg(data);
                     postMessage(errorMsg);
@@ -3346,7 +3346,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 QByteArray acceptedCharacterSet;
 
                 if (!characterSetList.isEmpty()) {
-                    for (QByteArray characterSet : characterSetList) {
+                    for (QByteArray characterSet : std::as_const(characterSetList)) {
                         characterSet = characterSet.toUpper();
 
                         if (mAcceptableEncodings.contains(characterSet) || mAcceptableEncodings.contains(("M_" + characterSet))

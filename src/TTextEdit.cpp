@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2023, 2026 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -1800,13 +1800,13 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                                 // For exclusive groups, update visual state of all other members that may have been deselected
                                 if (mgr->isGroupExclusive(group)) {
                                     QStringList groupMembers = mgr->getGroupMembers(group);
-                                    for (const QString& member : groupMembers) {
+                                    for (const QString& member : std::as_const(groupMembers)) {
                                         if (member != value) {
                                             // Get all link IDs with this group/value combination using the reverse index
                                             bool memberSelected = mgr->isSelected(group, member);
                                             QList<int> matchingLinkIds = mpBuffer->mLinkStore.getLinkIdsByGroupValue(group, member);
 
-                                            for (int otherLinkId : matchingLinkIds) {
+                                            for (const int otherLinkId : std::as_const(matchingLinkIds)) {
                                                 mpBuffer->setLinkSelected(otherLinkId, memberSelected);
                                                 mpBuffer->setLinkState(otherLinkId, memberSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
                                                 mpBuffer->updateLinkCharacters(otherLinkId);
@@ -3666,7 +3666,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 mpBuffer->markLinkAsVisited(focusedLink);
 
                 // Execute the command(s)
-                for (const auto& cmd : commands) {
+                for (const auto& cmd : std::as_const(commands)) {
                     mpHost->send(cmd);
                 }
 

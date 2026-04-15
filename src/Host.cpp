@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2025 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2026 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *   Copyright (C) 2023-2025 by Lecker Kebap - Leris@mudlet.org            *
@@ -613,7 +613,7 @@ void Host::autoSaveMap()
 
 void Host::loadPackageInfo()
 {
-    for (const auto& package : mInstalledPackages) {
+    for (const auto& package : std::as_const(mInstalledPackages)) {
         const QDir dir(mudlet::self()->getMudletPath(enums::profilePackagePath, getName(), package));
         if (dir.exists(qsl("config.lua"))) {
             getPackageConfig(dir.absoluteFilePath(qsl("config.lua")));
@@ -1503,7 +1503,7 @@ int Host::findStopWatchId(const QString& name) const
     if (total > 1) {
         std::sort(stopWatchIdList.begin(), stopWatchIdList.end());
     }
-    for (const int currentId : stopWatchIdList) {
+    for (const int currentId : std::as_const(stopWatchIdList)) {
         auto pCurrentStopWatch = mStopWatchMap.value(currentId);
         if (pCurrentStopWatch->name() == name) {
             return currentId;
@@ -1722,7 +1722,7 @@ QPair<bool, QString> Host::setStopWatchName(const QString& currentName, const QS
     int alreadyUsedId = 0;
     // we are looking BOTH for the current name and checking that any other
     // ones WITH names do not match the new name:
-    for (const int currentId : stopWatchIdList) {
+    for (const int currentId : std::as_const(stopWatchIdList)) {
         auto pCurrentStopWatch = mStopWatchMap.value(currentId);
         // This will also pick up the FIRST (lowest id) currently unnamed
         // stopwatch:
