@@ -2070,6 +2070,7 @@ int TLuaInterpreter::tempButton(lua_State* L)
     pT->setScript(script);
     pT->setIsFolder(false);
     pT->setIsActive(true);
+    pT->setTemporary(true);
 
 
     //    pT->setIsPushDownButton( isChecked );
@@ -2134,6 +2135,7 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
     pT->setScript(script);
     pT->setIsFolder(true);
     pT->setIsActive(true);
+    pT->setTemporary(true);
     pT->registerAction();
     // N/U:     int childID = pT->getID();
     host.getActionUnit()->updateToolbar();

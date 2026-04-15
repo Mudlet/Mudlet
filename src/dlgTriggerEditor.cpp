@@ -449,14 +449,20 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpUndoAction->setShortcut(QKeySequence(QKeySequence::Undo)); // Ctrl+Z
     mpUndoAction->setShortcutContext(Qt::WindowShortcut);
     mpUndoAction->setEnabled(false);
-    this->addAction(mpUndoAction);
+    /* In this and the next addAction(...) call we want to use the
+     * QMainWindow::addAction(...) method and NOT the
+     * dlgTriggerEditor::addAction(...) - without specifying this the derived
+     * method is used. Calling the second one causes a bogus "new Toolbar"
+     * containing a "new Menu" to be created each time the profile is opened
+     * - which persist with a new pair added to the pile each time.*/
+    QMainWindow::addAction(mpUndoAction);
     connect(mpUndoAction, &QAction::triggered, this, &dlgTriggerEditor::slot_smartUndo);
 
     mpRedoAction = new QAction(QIcon::fromTheme(qsl("edit-redo"), QIcon(qsl(":/icons/edit-redo.png"))), tr("Redo"), this);
     mpRedoAction->setShortcut(QKeySequence(QKeySequence::Redo)); // Ctrl+Y or Ctrl+Shift+Z
     mpRedoAction->setShortcutContext(Qt::WindowShortcut);
     mpRedoAction->setEnabled(false);
-    this->addAction(mpRedoAction);
+    QMainWindow::addAction(mpRedoAction);
     connect(mpRedoAction, &QAction::triggered, this, &dlgTriggerEditor::slot_smartRedo);
 
     connect(mpUndoStack, &QUndoStack::canUndoChanged, this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
