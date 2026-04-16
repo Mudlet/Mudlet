@@ -1252,10 +1252,14 @@ void dlgConnectionProfiles::fillout_form()
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
+    const bool showOnlyMyProfiles = settings.value(qsl("showOnlyMyProfiles"), false).toBool();
     if (onlyShownPredefinedProfiles.isEmpty()) {
         const auto defaultGames = TGameDetails::keys();
         for (auto& game : defaultGames) {
             if (!deletedDefaultMuds.contains(game)) {
+                if (showOnlyMyProfiles && !mProfileList.contains(game, Qt::CaseInsensitive)) {
+                    continue;
+                }
                 pItem = new QListWidgetItem();
                 auto details = TGameDetails::findGame(game);
                 setupMudProfile(pItem, game, (*details).description, (*details).icon);
@@ -1474,6 +1478,20 @@ void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
                        this,
                        &dlgConnectionProfiles::slot_setCustomColor);
     }
+
+    menu.addSeparator();
+
+    auto& settings = *mudlet::self()->mpSettings;
+    const bool showOnlyMyProfiles = settings.value(qsl("showOnlyMyProfiles"), false).toBool();
+    //: Context menu action to toggle hiding default game profiles that have not been used yet
+    auto* pAction_showMyProfilesOnly = menu.addAction(tr("Show my profiles only"));
+    pAction_showMyProfilesOnly->setCheckable(true);
+    pAction_showMyProfilesOnly->setChecked(showOnlyMyProfiles);
+    connect(pAction_showMyProfilesOnly, &QAction::toggled, this, [this](const bool checked) {
+        auto& settings = *mudlet::self()->mpSettings;
+        settings.setValue(qsl("showOnlyMyProfiles"), checked);
+        fillout_form();
+    });
 
     menu.exec(globalPos);
 }
