@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2022-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2022-2024, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,6 +28,14 @@
 #include "TScript.h"
 
 #include <functional>
+
+/* We need an explict constructor in this file as the Host class is forward
+ * declared in the header file and it is problematic to define any deferencing
+ * of it there:*/
+ScriptUnit::ScriptUnit(Host* pHost)
+: mpHost(pHost)
+{
+}
 
 ScriptUnit::~ScriptUnit()
 {
