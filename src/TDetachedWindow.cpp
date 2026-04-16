@@ -586,7 +586,7 @@ void TDetachedWindow::closeEvent(QCloseEvent* event)
         }
 
         // Remove all consoles from the stacked widget and reset their parents
-        for (auto console : std::as_const(mProfileConsoleMap)) {
+        for (const auto &console : std::as_const(mProfileConsoleMap)) {
             if (console) {
                 mpConsoleContainer->removeWidget(console);
                 console->setParent(nullptr);

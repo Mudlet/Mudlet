@@ -3372,7 +3372,7 @@ void mudlet::restoreProfileFocus(const QString& profileName)
         auto detachedWindows = mudletInstance->mDetachedWindows;
         TDetachedWindow* detachedWindow = nullptr;
 
-        for (auto window : detachedWindows) {
+        for (const auto &window : detachedWindows) {
             if (window && window->getProfileNames().contains(profileName)) {
                 detachedWindow = window;
                 break;
@@ -4953,7 +4953,7 @@ void mudlet::slot_muteMedia()
 
 void mudlet::slot_audioOutputDeviceChanged()
 {
-    for (auto pHost : mHostManager) {
+    for (const auto &pHost : mHostManager) {
         if (pHost && pHost->mpMedia) {
             pHost->mpMedia->refreshAudioDevices();
         }
