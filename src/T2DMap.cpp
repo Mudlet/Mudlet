@@ -5264,8 +5264,8 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         QString basePath = fileInfo.absolutePath();
 
         // Export each Z level as a separate file
-            QString levelFileName = QString("%1/%2_level_%3.%4").arg(basePath).arg(baseFileName).arg(currentZLevel).arg(extension.isEmpty() ? "png" : extension);
         for (const int currentZLevel : std::as_const(pArea->zLevels)) {
+            QString levelFileName = QString("%1/%2_level_%3.%4").arg(basePath).arg(baseFileName).arg(currentZLevel).arg(extension.isEmpty() ? "png" : extension);
 
             // Recursively call this function for each Z level (without exportAllZLevels flag)
             auto [success, message] = exportAreaToImage(areaId, levelFileName, currentZLevel, zoom, false);
