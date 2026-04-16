@@ -333,7 +333,7 @@ private slots:
     void slot_clickedMessageBox(const QString&);
     void slot_addPattern();
     void slot_bannerDismissClicked();
-    void slot_itemsChanged(::EditorViewType viewType, QList<int> affectedItemIDs);
+    void slot_itemsChanged(EditorViewTypes::EditorViewType viewType, QList<int> affectedItemIDs);
 
     // Per-property immediate save slots for triggers (create individual undo entries)
     void slot_saveProperty_TriggerName();
