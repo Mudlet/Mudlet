@@ -59,6 +59,7 @@
 #include <QCheckBox>
 #include <QAbstractButton>
 #include <QColorDialog>
+#include <QDialogButtonBox>
 #include <QFileDialog>
 #include <QFont>
 #include <QFrame>
@@ -81,9 +82,6 @@
 #include <pugixml.hpp>
 #include <QVBoxLayout>
 
-
-// Forward declaration for undo/redo test suite (implemented in test/dlgTriggerEditorUndoRedoTest.cpp)
-void runUndoRedoTestSuite(dlgTriggerEditor* editor);
 
 // Forward declaration for per-property undo helper (defined later in this file)
 static void pushKeyPropertyCommand(EditorUndoStack* undoStack, Host* host, int keyID, const QString& keyName, const QString& propertyName, const QString& oldStateXML, const QString& newStateXML);
@@ -832,14 +830,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             utils::richText(tr("Show/Hide Debug Console (%1) -> system will be <b><i>slower</i></b>.").arg(QKeySequence(Qt::CTRL | Qt::Key_0).toString(QKeySequence::NativeText))));
     connect(showDebugAreaAction, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleCentralDebugConsole);
 
-    // Only show undo/redo test button in "Mudlet self-test" profile (tests are destructive)
-    if (hostName == qsl("Mudlet self-test")) {
-        mpRunUndoRedoTestsAction = new QAction(QIcon(qsl(":/icons/view-statistics.png")), tr("Test Undo/Redo"), this);
-        mpRunUndoRedoTestsAction->setStatusTip(tr("Run internal undo/redo tests and output results to console"));
-        mpRunUndoRedoTestsAction->setToolTip(tr("Run Undo/Redo Tests"));
-        connect(mpRunUndoRedoTestsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_runUndoRedoTests);
-    }
-
     mpAction_toggleActive = new QAction(QIcon(qsl(":/icons/document-encrypt.png")), tr("Activate"), this);
     mpAction_toggleActive->setStatusTip(tr("Toggle Active or Non-Active Mode for Triggers, Scripts etc."));
     connect(mpAction_toggleActive, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
@@ -1044,9 +1034,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar2->addAction(viewErrorsAction);
     toolBar2->addAction(viewStatsAction);
     toolBar2->addAction(showDebugAreaAction);
-    if (mpRunUndoRedoTestsAction) {
-        toolBar2->addAction(mpRunUndoRedoTestsAction);
-    }
 
     toolBar2->setMovable(true);
     //: This is the toolbar that is initially placed at the left side of the editor.
@@ -1577,25 +1564,6 @@ void dlgTriggerEditor::slot_updateUndoRedoButtonStates()
         mpUndoAction->setStatusTip(undoText);
         mpRedoAction->setToolTip(utils::richText(redoText));
         mpRedoAction->setStatusTip(redoText);
-    }
-}
-
-void dlgTriggerEditor::slot_runUndoRedoTests()
-{
-    // Safety check: only allow running in "Mudlet self-test" profile (tests are destructive)
-    if (mpHost->getName() != qsl("Mudlet self-test")) {
-        qWarning() << "Undo/Redo tests can only be run in the 'Mudlet self-test' profile";
-        return;
-    }
-
-    if (mpRunUndoRedoTestsAction) {
-        mpRunUndoRedoTestsAction->setEnabled(false);
-    }
-
-    runUndoRedoTestSuite(this);
-
-    if (mpRunUndoRedoTestsAction) {
-        mpRunUndoRedoTestsAction->setEnabled(true);
     }
 }
 
@@ -12375,13 +12343,37 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
         return;
     }
 
-    auto color = QColorDialog::getColor(QColor(mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString()), this, tr("Select foreground color to apply to matches"));
-    color = color.isValid() ? color : QColorConstants::Transparent;
-    const bool keepColor = color == QColorConstants::Transparent;
-    mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(color));
-    //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
-    mpTriggersMainArea->pushButtonFgColor->setText(keepColor ? tr("keep") : QString());
-    mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, keepColor ? qsl("transparent") : color.name());
+    const QColor initialColor(mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString());
+
+    QColorDialog dialog(initialColor, this);
+    dialog.setWindowTitle(tr("Select foreground color to apply to matches"));
+    dialog.setOption(QColorDialog::DontUseNativeDialog);
+
+    bool keepColorClicked = false;
+    auto* buttonBox = dialog.findChild<QDialogButtonBox*>();
+    if (buttonBox) {
+        //: Button in the color picker that preserves the existing text color on trigger matches
+        auto* keepButton = buttonBox->addButton(tr("Keep color"), QDialogButtonBox::ActionRole);
+        connect(keepButton, &QPushButton::clicked, &dialog, [&keepColorClicked, &dialog]() {
+            keepColorClicked = true;
+            dialog.accept();
+        });
+    }
+
+    dialog.exec();
+
+    if (keepColorClicked) {
+        mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(QColorConstants::Transparent));
+        //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+        mpTriggersMainArea->pushButtonFgColor->setText(tr("keep"));
+        mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, qsl("transparent"));
+    } else if (dialog.selectedColor().isValid()) {
+        const auto color = dialog.selectedColor();
+        mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(color));
+        mpTriggersMainArea->pushButtonFgColor->setText(QString());
+        mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, color.name());
+    }
+    // else: Cancel - do nothing
 }
 
 // Set the background color that will be applied to text that matches the trigger pattern(s)
@@ -12395,13 +12387,37 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
         return;
     }
 
-    auto color = QColorDialog::getColor(QColor(mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString()), this, tr("Select background color to apply to matches"));
-    color = color.isValid() ? color : QColorConstants::Transparent;
-    const bool keepColor = color == QColorConstants::Transparent;
-    mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(color));
-    //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
-    mpTriggersMainArea->pushButtonBgColor->setText(keepColor ? tr("keep") : QString());
-    mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, keepColor ? qsl("transparent") : color.name());
+    const QColor initialColor(mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString());
+
+    QColorDialog dialog(initialColor, this);
+    dialog.setWindowTitle(tr("Select background color to apply to matches"));
+    dialog.setOption(QColorDialog::DontUseNativeDialog);
+
+    bool keepColorClicked = false;
+    auto* buttonBox = dialog.findChild<QDialogButtonBox*>();
+    if (buttonBox) {
+        //: Button in the color picker that preserves the existing text color on trigger matches
+        auto* keepButton = buttonBox->addButton(tr("Keep color"), QDialogButtonBox::ActionRole);
+        connect(keepButton, &QPushButton::clicked, &dialog, [&keepColorClicked, &dialog]() {
+            keepColorClicked = true;
+            dialog.accept();
+        });
+    }
+
+    dialog.exec();
+
+    if (keepColorClicked) {
+        mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(QColorConstants::Transparent));
+        //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+        mpTriggersMainArea->pushButtonBgColor->setText(tr("keep"));
+        mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, qsl("transparent"));
+    } else if (dialog.selectedColor().isValid()) {
+        const auto color = dialog.selectedColor();
+        mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(color));
+        mpTriggersMainArea->pushButtonBgColor->setText(QString());
+        mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, color.name());
+    }
+    // else: Cancel - do nothing
 }
 
 void dlgTriggerEditor::slot_soundTrigger()

@@ -740,7 +740,7 @@ void mudlet::init()
     connect(this, &mudlet::signal_windowStateChanged, this, &mudlet::slot_windowStateChanged);
 
 #if defined(INCLUDE_UPDATER)
-    pUpdater = new Updater(this, mpSettings, publicTestVersion);
+    pUpdater = new Updater(this, mpSettings, !releaseVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(pUpdater, &Updater::signal_updateCheckFailed, this, &mudlet::slot_updateCheckFailed);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
@@ -4500,7 +4500,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     enableToolbarButtons();
 }
 
-// Parse a telnet:// URI according to RFC 4248
+// Parse a telnet:// (RFC 4248) or telnets:// (TLS variant) URI
 std::optional<mudlet::TelnetUriData> mudlet::parseTelnetUri(const QString& uri)
 {
     QUrl url(uri);
@@ -4510,19 +4510,22 @@ std::optional<mudlet::TelnetUriData> mudlet::parseTelnetUri(const QString& uri)
         return std::nullopt;
     }
 
-    if (url.scheme().compare(qsl("telnet"), Qt::CaseInsensitive) != 0) {
-        qWarning() << "mudlet::parseTelnetUri() - Invalid URI scheme:" << url.scheme();
+    const QString scheme = url.scheme();
+    const bool isTelnets = scheme.compare(qsl("telnets"), Qt::CaseInsensitive) == 0;
+    if (scheme.compare(qsl("telnet"), Qt::CaseInsensitive) != 0 && !isTelnets) {
+        qWarning() << "mudlet::parseTelnetUri() - Invalid URI scheme:" << scheme;
         return std::nullopt;
     }
 
     TelnetUriData data;
+    data.useTls = isTelnets;
     data.host = url.host();
     if (data.host.isEmpty()) {
         qWarning() << "mudlet::parseTelnetUri() - URI missing host";
         return std::nullopt;
     }
 
-    data.port = url.port(23);
+    data.port = url.port(data.useTls ? 992 : 23);
     if (data.port < 1 || data.port > 65535) {
         qWarning() << "mudlet::parseTelnetUri() - Port out of range:" << data.port;
         return std::nullopt;
@@ -4606,11 +4609,15 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
         writeProfileData(profileName, qsl("login"), uriData.username);
     }
 
+    if (uriData.useTls) {
+        writeProfileData(profileName, qsl("ssl_tsl"), QString::number(Qt::Checked));
+    }
+
     return profileName;
 }
 
 
-// Main entry point for handling telnet:// URIs
+// Main entry point for handling telnet:// and telnets:// URIs
 void mudlet::handleTelnetUri(const QString& uri)
 {
     // Set flag to prevent connection dialog from opening during this workflow
@@ -4642,12 +4649,14 @@ void mudlet::handleTelnetUri(const QString& uri)
             slot_showConnectionDialog();
             return;
         }
+    } else if (uriData->useTls) {
+        writeProfileData(profileName, qsl("ssl_tsl"), QString::number(Qt::Checked));
     }
 
     qDebug() << "mudlet::handleTelnetUri() - Auto-loading profile:" << profileName;
     doAutoLogin(profileName);
 
-    // Reset flag after telnet:// URI processing is complete
+    // Reset flag after telnet:// or telnets:// URI processing is complete
     mProcessingTelnetUri = false;
 }
 
@@ -6216,6 +6225,18 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
         mDarkMode = true;
     }
 
+    switch (state) {
+    case enums::Appearance::dark:
+        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
+        break;
+    case enums::Appearance::light:
+        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Light);
+        break;
+    case enums::Appearance::systemSetting:
+        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Unknown);
+        break;
+    }
+
     if (needsCustomDarkTheme()) {
         if (mDarkMode) {
             // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
@@ -6225,18 +6246,6 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
             qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
         }
     } else {
-        switch (state) {
-        case enums::Appearance::dark:
-            QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
-            break;
-        case enums::Appearance::light:
-            QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Light);
-            break;
-        case enums::Appearance::systemSetting:
-            QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Unknown);
-            break;
-        }
-        // Apply the AltFocusMenuBarDisable wrapper for Qt native themes
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
     }

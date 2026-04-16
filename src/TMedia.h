@@ -136,6 +136,7 @@ public:
     void muteMedia(const TMediaData::MediaProtocol mediaProtocol);
     void unmuteMedia(const TMediaData::MediaProtocol mediaProtocol);
     void printClosedCaption(const TMediaData& mediaData, const QString& action) const;
+    void stopAllMediaPlayers();
 
 private slots:
     void slot_writeFile(QNetworkReply* reply);
@@ -145,7 +146,6 @@ private:
     QList<std::shared_ptr<TMediaPlayer>> findMediaPlayersByCriteria(const TMediaData& mediaData);
     bool isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData);
     bool resume(TMediaData mediaData);
-    void stopAllMediaPlayers();
     void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state);
     void transitionNonRelativeFile(TMediaData& mediaData);
     QString getStreamUrl(const TMediaData& mediaData);

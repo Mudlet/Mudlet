@@ -324,6 +324,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
     mLogin = readProfileData(qsl("login"));
 
+    const QString sslVal = readProfileData(qsl("ssl_tsl"));
+    if (!sslVal.isEmpty() && sslVal.toInt() == Qt::Checked) {
+        mSslTsl = true;
+    }
+
     const QString val = readProfileData(qsl("autoreconnect"));
     setAutoReconnect(!val.isEmpty() && val.toInt() == Qt::Checked);
 
@@ -833,8 +838,13 @@ std::pair<bool, QString> Host::getModuleSync(const QString& moduleName)
     return {false, qsl("module name '%1' not found").arg(moduleName)};
 }
 
-void Host::resetProfile_phase1()
+bool Host::resetProfile_phase1()
 {
+    if (mResetProfile) {
+        qWarning() << "Host::resetProfile_phase1() called while reset is already in progress, ignoring";
+        return false;
+    }
+
     mAliasUnit.stopAllTriggers();
     mTriggerUnit.stopAllTriggers();
     mTimerUnit.stopAllTriggers();
@@ -844,6 +854,7 @@ void Host::resetProfile_phase1()
     QTimer::singleShot(0, this, [this]() {
         resetProfile_phase2();
     });
+    return true;
 }
 
 void Host::resetProfile_phase2()
@@ -853,6 +864,7 @@ void Host::resetProfile_phase2()
     getTriggerUnit()->removeAllTempTriggers();
     getKeyUnit()->removeAllTempKeys();
     removeAllNonPersistentStopWatches();
+    mpMedia->stopAllMediaPlayers();
 
     mAliasUnit.doCleanup();
     mTimerUnit.doCleanup();
@@ -860,6 +872,7 @@ void Host::resetProfile_phase2()
     mKeyUnit.doCleanup();
     mpConsole->resetMainConsole();
     mEventHandlerMap.clear();
+    mAnonymousEventHandlerFunctions.clear();
     mEventMap.clear();
     mLuaInterpreter.abortAllDownloads();
     mLuaInterpreter.initLuaGlobals();
@@ -1063,7 +1076,7 @@ QString Host::getMmpMapLocation() const
 void Host::updateConsolesFont()
 {
     if (!mpConsole) {
-        qWarning().nospace().noquote() << "Host::updateConsolesFont() WARNING - no TMainConsole to deal with font releated operations.";
+        qWarning().nospace().noquote() << "Host::updateConsolesFont() WARNING - no TMainConsole to deal with font related operations.";
         return;
     }
 
@@ -2332,7 +2345,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     mActionUnit.uninstall(packageName);
     mScriptUnit.uninstall(packageName);
     mKeyUnit.uninstall(packageName);
-    mudlet::self()->mFontManager.unloadFonts(packageName);
+    mudlet::self()->mFontManager.unloadFonts(getName() + QChar('/') + packageName);
     if (isModule) {
         //if ModuleSync, this is a temporary uninstall for reloading so we exit here
         QStringList entry = mInstalledModules[packageName];
@@ -2689,7 +2702,7 @@ void Host::installPackageFonts(const QString& packageName)
 
         if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive)
             || filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
-            mudlet::self()->mFontManager.loadFont(filePath, packageName);
+            mudlet::self()->mFontManager.loadFont(filePath, getName() % QLatin1Char('/') % packageName);
         }
     }
 }
@@ -5016,6 +5029,12 @@ QFont Host::getDisplayFont()
 
 QFont Host::getAndClearTempDisplayFont()
 {
+    if (!mTempDisplayFontAttributes.has_value() || !mTempDisplayFont.has_value()) {
+        qWarning() << "Host::getAndClearTempDisplayFont() WARNING - no temp font was set, using default";
+        mTempDisplayFontAttributes = TFontAttributes(!mNoAntiAlias);
+        mTempDisplayFont = mTempDisplayFontAttributes.value().makeFont();
+    }
+
     QFont tempFont = mTempDisplayFont.value();
     mTempDisplayFont.reset();
     mTempDisplayFontAttributes.reset();

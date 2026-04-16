@@ -284,10 +284,10 @@
           <item row="2" column="0" colspan="2">
            <widget class="QCheckBox" name="telnetHandlerEnabled">
             <property name="text">
-             <string>Mudlet handles telnet:// links</string>
+             <string>Mudlet handles telnet:// and telnets:// links</string>
             </property>
             <property name="toolTip">
-             <string>&lt;p&gt;If checked, Mudlet will be registered as the default handler for telnet:// links in your system.&lt;/p&gt;</string>
+             <string>&lt;p&gt;If checked, Mudlet will be registered as the default handler for telnet:// and telnets:// (secure) links in your system.&lt;/p&gt;</string>
             </property>
            </widget>
           </item>

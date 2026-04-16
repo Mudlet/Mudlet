@@ -43,8 +43,9 @@
 #include <memory>
 #include <vector>
 
-#if defined(Q_OS_LINUX)
 #include <QStandardPaths>
+
+#if defined(Q_OS_LINUX)
 #include <QFile>
 #include <QTextStream>
 #include <QProcess>
@@ -314,9 +315,6 @@ int main(int argc, char* argv[])
     const QCommandLineOption steamMode(QStringList() << qsl("steammode"), qsl("Adjusts Mudlet settings to match Steam's requirements."));
     parser.addOption(steamMode);
 
-    const QCommandLineOption runUndoTests(QStringList() << qsl("run-undo-tests"), qsl("Run internal undo/redo tests (requires 'Mudlet self-test' profile) and exit."));
-    parser.addOption(runUndoTests);
-
     parser.addPositionalArgument("package", "Path to .mpackage file");
 
     const bool parsedCommandLineOk = parser.parse(app->arguments());
@@ -461,8 +459,8 @@ int main(int argc, char* argv[])
     if (!positionalArguments.isEmpty()) {
         const QString firstArg = positionalArguments.first();
 
-        // Check if it's a telnet:// URI
-        if (firstArg.startsWith(qsl("telnet://"), Qt::CaseInsensitive)) {
+        // Check if it's a telnet:// or telnets:// URI
+        if (firstArg.startsWith(qsl("telnet://"), Qt::CaseInsensitive) || firstArg.startsWith(qsl("telnets://"), Qt::CaseInsensitive)) {
             telnetUri = firstArg;
             instanceCoordinator->queueTelnetUri(telnetUri);
 
@@ -735,7 +733,8 @@ int main(int argc, char* argv[])
     QSettings* appSettings = mudlet::getQSettings();
     bool shouldRegisterTelnet = false;
 
-    bool headlessMode = qEnvironmentVariableIsSet("CI") || qEnvironmentVariableIsSet("GITHUB_ACTIONS") || QCoreApplication::arguments().contains("--profile") || QCoreApplication::arguments().contains("--mirror");
+    bool headlessMode =
+            qEnvironmentVariableIsSet("CI") || qEnvironmentVariableIsSet("GITHUB_ACTIONS") || QCoreApplication::arguments().contains("--profile") || QCoreApplication::arguments().contains("--mirror");
 
     bool forceAsk = false;
 #if defined(Q_OS_MACOS)
@@ -824,13 +823,13 @@ int main(int argc, char* argv[])
 
         if (existingHandlerFound) {
             QMessageBox msgBox;
-            //: Title for the dialog asking if Mudlet should handle telnet:// links
+            //: Title for the dialog asking if Mudlet should handle telnet:// and telnets:// links
             msgBox.setWindowTitle(QObject::tr("Telnet Protocol Handler"));
-            //: Text shown when another application is already handling telnet:// links
-            msgBox.setText(QObject::tr("Another application is set to handle telnet:// links."));
+            //: Text shown when another application is already handling telnet:// and telnets:// links
+            msgBox.setText(QObject::tr("Another application is set to handle telnet:// and telnets:// links."));
             //: Detailed explanation for telnet handler override prompt
-            msgBox.setInformativeText(QObject::tr("Would you like Mudlet to handle telnet:// links instead?\n\n"
-                                                  "This will allow you to click on telnet:// links in your browser "
+            msgBox.setInformativeText(QObject::tr("Would you like Mudlet to handle telnet:// and telnets:// links instead?\n\n"
+                                                  "This will allow you to click on telnet:// and telnets:// links in your browser "
                                                   "to automatically open them in Mudlet.\n\n"
                                                   "You can change this later in Settings > General."));
             msgBox.setIcon(QMessageBox::Question);
@@ -859,13 +858,17 @@ int main(int argc, char* argv[])
 
     if (shouldRegisterTelnet) {
 #if defined(Q_OS_WIN)
-        // Register telnet:// protocol handler (per-user, no admin rights required)
+        // Register telnet:// and telnets:// protocol handlers (per-user, no admin rights required)
         const QString mudletExe = QCoreApplication::applicationFilePath().replace('/', '\\');
         settings.setValue("telnet/.", "URL:Telnet Protocol");
         settings.setValue("telnet/URL Protocol", "");
         settings.setValue("telnet/DefaultIcon/.", mudletExe + ",1");
         settings.setValue("telnet/shell/open/command/.", QString("\"%1\" \"%2\"").arg(mudletExe, "%1"));
-        qDebug() << "main: Registered Mudlet as telnet:// protocol handler (per-user)";
+        settings.setValue("telnets/.", "URL:Telnet Protocol (TLS)");
+        settings.setValue("telnets/URL Protocol", "");
+        settings.setValue("telnets/DefaultIcon/.", mudletExe + ",1");
+        settings.setValue("telnets/shell/open/command/.", QString("\"%1\" \"%2\"").arg(mudletExe, "%1"));
+        qDebug() << "main: Registered Mudlet as telnet:// and telnets:// protocol handler (per-user)";
 #endif
 
 #if defined(Q_OS_LINUX)
@@ -887,7 +890,7 @@ int main(int argc, char* argv[])
                     out << "Name=Mudlet\n";
                     out << "Exec=\"" << exePath << "\" %u\n";
                     out << "Type=Application\n";
-                    out << "MimeType=x-scheme-handler/telnet;\n";
+                    out << "MimeType=x-scheme-handler/telnet;x-scheme-handler/telnets;\n";
                     out << "Icon=mudlet\n";
                     out << "NoDisplay=false\n";
                     desktopFile.close();
@@ -911,7 +914,15 @@ int main(int argc, char* argv[])
         if (xdgMime.waitForFinished(3000) && xdgMime.exitCode() == 0) {
             qDebug() << "main: Registered Mudlet as telnet:// protocol handler (Linux)";
         } else {
-            qWarning() << "main: xdg-mime registration failed:" << xdgMime.errorString();
+            qWarning() << "main: xdg-mime telnet registration failed:" << xdgMime.errorString();
+        }
+
+        QProcess xdgMimeTls;
+        xdgMimeTls.start(qsl("xdg-mime"), QStringList() << qsl("default") << qsl("mudlet.desktop") << qsl("x-scheme-handler/telnets"));
+        if (xdgMimeTls.waitForFinished(3000) && xdgMimeTls.exitCode() == 0) {
+            qDebug() << "main: Registered Mudlet as telnets:// protocol handler (Linux)";
+        } else {
+            qWarning() << "main: xdg-mime telnets registration failed:" << xdgMimeTls.errorString();
         }
 #endif
 
@@ -925,12 +936,19 @@ int main(int argc, char* argv[])
             } else {
                 qWarning() << "main: Failed to register telnet:// handler on macOS, error:" << result;
             }
+
+            CFStringRef telnetsScheme = CFSTR("telnets");
+            OSStatus tlsResult = LSSetDefaultHandlerForURLScheme(telnetsScheme, bundleId);
+            if (tlsResult == noErr) {
+                qDebug() << "main: Registered Mudlet as telnets:// protocol handler (macOS)";
+            } else {
+                qWarning() << "main: Failed to register telnets:// handler on macOS, error:" << tlsResult;
+            }
         } else {
             qWarning() << "main: Cannot register telnet handler - CFBundleGetIdentifier returned null";
         }
 #endif
     }
-
 
 
     // Pass ownership of MudletInstanceCoordinator to mudlet.
@@ -962,7 +980,6 @@ int main(int argc, char* argv[])
 
     mudlet::self()->smMirrorToStdOut = parser.isSet(mirrorToStdout);
     mudlet::smSteamMode = parser.isSet(steamMode);
-    const bool shouldRunUndoTests = parser.isSet(runUndoTests);
     if (!onlyProfiles.isEmpty()) {
         mudlet::self()->onlyShowProfiles(onlyProfiles);
     }
@@ -974,7 +991,7 @@ int main(int argc, char* argv[])
         });
     }
 
-    QTimer::singleShot(0, qApp, [cliProfiles, telnetUri, shouldRunUndoTests]() {
+    QTimer::singleShot(0, qApp, [cliProfiles, telnetUri]() {
         // Migrate portable password files to secure storage before any
         // profile dialog or auto-login code runs.  The migration is
         // synchronous (uses static CredentialManager helpers) so it is
@@ -995,42 +1012,6 @@ int main(int argc, char* argv[])
         // Then handle telnet URI if provided
         if (!telnetUri.isEmpty()) {
             mudlet::self()->handleTelnetUri(telnetUri);
-        }
-
-        // If --run-undo-tests was specified, run tests after profile loads
-        if (shouldRunUndoTests) {
-            QTimer::singleShot(3000, qApp, []() {
-                // Find the first loaded host and run tests on its trigger editor
-                Host* firstHost = nullptr;
-                for (auto host : mudlet::self()->getHostManager()) {
-                    if (host) {
-                        firstHost = host.data();
-                        break;
-                    }
-                }
-
-                if (firstHost && firstHost->mpEditorDialog) {
-                    // Verify we're running in the test profile
-                    if (firstHost->getName() != qsl("Mudlet self-test")) {
-                        qDebug() << "ERROR: Undo/Redo tests can only be run in the 'Mudlet self-test' profile";
-                        qDebug() << "Current profile:" << firstHost->getName();
-                        QCoreApplication::exit(1);
-                        return;
-                    }
-
-                    qDebug() << "Running undo/redo tests via --run-undo-tests flag";
-                    firstHost->mpEditorDialog->slot_runUndoRedoTests();
-
-                    // Exit after tests complete
-                    QTimer::singleShot(1000, qApp, []() {
-                        qDebug() << "Tests complete, exiting...";
-                        QCoreApplication::exit(0);
-                    });
-                } else {
-                    qDebug() << "ERROR: No profile loaded or editor not available for undo tests";
-                    QCoreApplication::exit(1);
-                }
-            });
         }
     });
 
