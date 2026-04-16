@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2018, 2020-2023, 2025 by Stephen Lyons       *
+ *   Copyright (C) 2014, 2016-2018, 2020-2023, 2025-2026 by Stephen Lyons  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
@@ -2676,7 +2676,7 @@ void dlgProfilePreferences::slot_saveMap()
             return;
         }
 
-        auto fileName = dialog->selectedFiles().first();
+        auto fileName = dialog->selectedFiles().constFirst();
 
         QSettings& settings = *mudlet::getQSettings();
         QString lastDir = QFileInfo(fileName).absolutePath();
