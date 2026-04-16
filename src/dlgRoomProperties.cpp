@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
- *   Copyright (C) 2022-2023, 2025 by Stephen Lyons                        *
+ *   Copyright (C) 2022-2023, 2025-2026 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2022-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
@@ -77,7 +77,7 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames,
     mpRooms = pRooms;
 
     // Store original border values for live preview restoration on cancel
-    for (TRoom* room : mpRooms) {
+    for (TRoom* room : std::as_const(mpRooms)) {
         mOriginalBorderColors[room] = room->mBorderColor;
         mOriginalBorderThicknesses[room] = room->mBorderThickness;
     }
@@ -743,7 +743,7 @@ void dlgRoomProperties::slot_borderThicknessChanged(int value)
 void dlgRoomProperties::emitBorderPreview()
 {
     // Apply current border settings directly to rooms for live preview
-    for (TRoom* room : mpRooms) {
+    for (TRoom* room : std::as_const(mpRooms)) {
         if (mBorderColorWasChanged) {
             room->mBorderColor = selectedBorderColor;
         }
@@ -756,7 +756,7 @@ void dlgRoomProperties::emitBorderPreview()
 
 void dlgRoomProperties::restoreOriginalBorders()
 {
-    for (TRoom* room : mpRooms) {
+    for (TRoom* room : std::as_const(mpRooms)) {
         room->mBorderColor = mOriginalBorderColors.value(room);
         room->mBorderThickness = mOriginalBorderThicknesses.value(room);
     }

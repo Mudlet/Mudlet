@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2025 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2026 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -1791,7 +1791,7 @@ void mudlet::slot_newMapWindow()
 void mudlet::updateWindowMenu()
 {
     // Clean up existing window list actions
-    for (QAction* action : mWindowListActions) {
+    for (QAction* action : std::as_const(mWindowListActions)) {
         menuWindow->removeAction(action);
         action->deleteLater();
     }
@@ -1848,7 +1848,7 @@ void mudlet::updateWindowMenu()
         // Collect unique detached windows to avoid duplicates
         QSet<TDetachedWindow*> uniqueDetachedWindows;
 
-        for (const auto& detachedWindow : mDetachedWindows) {
+        for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
             if (detachedWindow) {
                 uniqueDetachedWindows.insert(detachedWindow);
             }
@@ -1859,7 +1859,7 @@ void mudlet::updateWindowMenu()
             // Get all profiles in this detached window
             QStringList profilesInWindow = detachedWindow->getProfileNames();
 
-            for (const QString& windowProfileName : profilesInWindow) {
+            for (const QString& windowProfileName : std::as_const(profilesInWindow)) {
                 QString actionText = tr("%1 (Detached)").arg(windowProfileName);
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
@@ -1873,7 +1873,7 @@ void mudlet::updateWindowMenu()
     }
 
     // Also update window menus on all detached windows
-    for (const auto& detachedWindow : mDetachedWindows) {
+    for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
         if (detachedWindow) {
             detachedWindow->updateWindowMenu();
         }
@@ -1956,7 +1956,7 @@ void mudlet::slot_activateDetachedWindowProfile()
     QString profileName = action->data().toString();
 
     // Find which detached window contains this profile
-    for (const auto& detachedWindow : mDetachedWindows) {
+    for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
         if (detachedWindow && detachedWindow->getProfileNames().contains(profileName)) {
             // Activate the detached window
             detachedWindow->raise();
@@ -2748,7 +2748,7 @@ void mudlet::closeEvent(QCloseEvent* event)
 
     // Snapshot detached windows before closeHost() mutates mDetachedWindows
     QSet<TDetachedWindow*> uniqueDetachedWindows;
-    for (const auto& window : mDetachedWindows) {
+    for (const auto& window : std::as_const(mDetachedWindows)) {
         if (window) {
             uniqueDetachedWindows.insert(window.data());
         }
@@ -4551,7 +4551,7 @@ QString mudlet::findMatchingProfile(const QString& host, int port)
     QString matchedProfile;
     QDateTime latestTime;
 
-    for (const auto& profileName : profileNames) {
+    for (const auto& profileName : std::as_const(profileNames)) {
         QString profileHost = readProfileData(profileName, qsl("url"));
         QString profilePort = readProfileData(profileName, qsl("port"));
 
@@ -4725,7 +4725,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     }
 
     // install default packages
-    for (const auto& package : mPackagesToInstallList) {
+    for (const auto& package : std::as_const(mPackagesToInstallList)) {
         pHost->installPackage(package, enums::PackageModuleType::Package);
     }
 
@@ -7044,7 +7044,7 @@ void mudlet::refreshTabBar()
     }
 
     // Also refresh all detached windows to ensure they show CDC identifiers
-    for (const auto& detachedWindow : mDetachedWindows) {
+    for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
         if (detachedWindow) {
             detachedWindow->refreshTabBar();
         }
@@ -7231,7 +7231,7 @@ bool mudlet::experiencedMudletPlayer()
     QFileInfoList entries = profilesDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
     QDateTime sixMonthsAgo = QDateTime::currentDateTime().addMonths(-6);
 
-    for (const QFileInfo& entry : entries) {
+    for (const QFileInfo& entry : std::as_const(entries)) {
         if (entry.lastModified() < sixMonthsAgo) {
             cachedResult = true;
             return true;
@@ -7300,7 +7300,7 @@ bool mudlet::profileExists(const QString& profileName)
 
 void mudlet::saveDetachedWindowsGeometry()
 {
-    for (const auto& detachedWindow : mDetachedWindows) {
+    for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
         if (detachedWindow) {
             detachedWindow->saveWindowGeometry();
         }
@@ -7718,7 +7718,7 @@ void mudlet::addConsoleToSplitter(TMainConsole* console, int index)
     bool needsResize = false;
 
     // Check if any widget has zero or very small size
-    for (int size : sizes) {
+    for (const int size : std::as_const(sizes)) {
         if (size < 10) { // Less than 10 pixels is effectively invisible
             needsResize = true;
             break;
@@ -8814,7 +8814,7 @@ void mudlet::reattachOrphanedProfiles()
     qWarning() << "reattachOrphanedProfiles: Reattaching" << orphanedProfiles.size() << "orphaned profiles:" << orphanedProfiles;
 
     // Reattach each orphaned profile to the main window
-    for (const QString& profileName : orphanedProfiles) {
+    for (const QString& profileName : std::as_const(orphanedProfiles)) {
         Host* pHost = mHostManager.getHost(profileName);
 
         if (!pHost || !pHost->mpConsole) {

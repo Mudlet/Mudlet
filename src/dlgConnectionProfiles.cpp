@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018, 2020-2023, 2025 by Stephen Lyons             *
+ *   Copyright (C) 2016-2018, 2020-2023, 2025-2026 by Stephen Lyons        *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
@@ -124,7 +124,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     auto objectList = mpCopyProfile->associatedObjects();
     QList<QWidget*> widgetList;
-    for (auto pObjectItem : objectList) {
+    for (const auto pObjectItem : std::as_const(objectList)) {
         auto pWidgetItem = qobject_cast<QWidget*>(pObjectItem);
         if (pWidgetItem) {
             widgetList << pWidgetItem;
@@ -137,7 +137,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     objectList = copyProfileSettings->associatedObjects();
     widgetList.clear();
-    for (auto pObjectItem : objectList) {
+    for (const auto pObjectItem : std::as_const(objectList)) {
         auto pWidgetItem = qobject_cast<QWidget*>(pObjectItem);
         if (pWidgetItem) {
             widgetList << pWidgetItem;
@@ -2017,14 +2017,14 @@ bool dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QStrin
         destDir.mkdir(destFolder);
     }
     QStringList files = sourceDir.entryList(QDir::Files);
-    for (const QString& file : files) {
+    for (const QString& file : std::as_const(files)) {
         const QString srcName = sourceFolder + QDir::separator() + file;
         const QString destName = destFolder + QDir::separator() + file;
         QFile::copy(srcName, destName);
     }
     files.clear();
     files = sourceDir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot);
-    for (const QString& file : files) {
+    for (const QString& file : std::as_const(files)) {
         const QString srcName = sourceFolder + QDir::separator() + file;
         const QString destName = destFolder + QDir::separator() + file;
         copyFolder(srcName, destName);

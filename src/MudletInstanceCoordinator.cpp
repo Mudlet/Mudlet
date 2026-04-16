@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2023-2023 by Adam Robinson - seldon1951@hotmail.com     *
+ *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -78,7 +79,7 @@ bool MudletInstanceCoordinator::tryToStart()
 void MudletInstanceCoordinator::installPackagesToHost(Host* activeProfile)
 {
     mMutex.lock();
-    for (const QString& path : mQueuedPackagePaths) {
+    for (const QString& path : std::as_const(mQueuedPackagePaths)) {
         auto ret = activeProfile->installPackage(path, enums::PackageModuleType::Package);
     }
     mQueuedPackagePaths.clear();
