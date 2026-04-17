@@ -105,8 +105,9 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
     Q_OBJECT
 
-    // Allow QTest-based test class to access private members
+    // Allow QTest-based test classes to access private members
     friend class dlgTriggerEditorUndoRedoTest;
+    friend class BogusActionScannerTest;
 
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
@@ -333,6 +334,7 @@ private slots:
     void slot_clickedMessageBox(const QString&);
     void slot_addPattern();
     void slot_bannerDismissClicked();
+    void slot_cleanupBogusActions();
     void slot_itemsChanged(::EditorViewType viewType, QList<int> affectedItemIDs);
 
     // Per-property immediate save slots for triggers (create individual undo entries)
@@ -403,7 +405,9 @@ private:
     void addAlias(bool);
     void addTimer(bool);
     void addTrigger(bool);
-    void addAction(bool);
+    // NB: must NOT be named addAction() - that would shadow the QMainWindow
+    // overloads and silently convert QAction* arguments to bool. See #9194.
+    void addNewAction(bool);
     void addKey(bool);
     void timerEvent(QTimerEvent* event) override;
 
@@ -765,6 +769,12 @@ private:
     [[nodiscard]] QString bannerSettingsKey(EditorViewType viewType, const QString& bannerKey) const;
     [[nodiscard]] QString legacyBannerSettingsKey(EditorViewType viewType, const QString& bannerKey) const;
     [[nodiscard]] QString profileSettingsPrefix() const;
+
+    // Scans the Buttons tree for entries created by the #9194 regression and
+    // offers the user a one-click cleanup via the system message banner. Runs
+    // once per editor instance; re-runs on next profile open if not cleaned up.
+    void checkForBogusActionsAndNotify();
+    bool mBogusActionsNotified = false;
 
     // Banner state tracking
     QTimer* mpBannerUndoTimer = nullptr;

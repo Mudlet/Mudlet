@@ -216,8 +216,8 @@ private slots:
                    qsl("New key"), qsl("New key group")},
                   {qsl("Action"), EditorViewType::cmActionView,
                    [this]() { mpEditor->slot_showActions(); },
-                   [this]() { mpEditor->addAction(false); },
-                   [this]() { mpEditor->addAction(true); },
+                   [this]() { mpEditor->addNewAction(false); },
+                   [this]() { mpEditor->addNewAction(true); },
                    [this]() { return mpEditor->mpActionBaseItem; },
                    [this]() { return mpEditor->treeWidget_actions; },
                    qsl("New button"), qsl("New button group")}};
@@ -1713,7 +1713,7 @@ private slots:
     mpEditor->slot_showActions();
     cleanupAll(mItemTypes[5]);
 
-    mpEditor->addAction(false);
+    mpEditor->addNewAction(false);
     QVERIFY(mpEditor->mpActionBaseItem->childCount() > 0);
 
     QTreeWidgetItem *action = mpEditor->mpActionBaseItem->child(0);

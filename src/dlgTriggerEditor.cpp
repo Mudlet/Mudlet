@@ -27,6 +27,7 @@
 
 #include "dlgTriggerEditor.h"
 
+#include "BogusActionScanner.h"
 #include "Host.h"
 #include "LuaInterface.h"
 #include "TConsole.h"
@@ -86,6 +87,9 @@
 
 // Forward declaration for per-property undo helper (defined later in this file)
 static void pushKeyPropertyCommand(EditorUndoStack* undoStack, Host* host, int keyID, const QString& keyName, const QString& propertyName, const QString& oldStateXML, const QString& newStateXML);
+
+// Defined later in this file - recursively finds the tree item carrying itemID.
+QTreeWidgetItem* findItemByID(QTreeWidgetItem* parent, int itemID);
 
 using namespace std::chrono_literals;
 
@@ -450,20 +454,14 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpUndoAction->setShortcut(QKeySequence(QKeySequence::Undo)); // Ctrl+Z
     mpUndoAction->setShortcutContext(Qt::WindowShortcut);
     mpUndoAction->setEnabled(false);
-    /* In this and the next addAction(...) call we want to use the
-     * QMainWindow::addAction(...) method and NOT the
-     * dlgTriggerEditor::addAction(...) - without specifying this the derived
-     * method is used. Calling the second one causes a bogus "new Toolbar"
-     * containing a "new Menu" to be created each time the profile is opened
-     * - which persist with a new pair added to the pile each time.*/
-    QMainWindow::addAction(mpUndoAction);
+    this->addAction(mpUndoAction);
     connect(mpUndoAction, &QAction::triggered, this, &dlgTriggerEditor::slot_smartUndo);
 
     mpRedoAction = new QAction(QIcon::fromTheme(qsl("edit-redo"), QIcon(qsl(":/icons/edit-redo.png"))), tr("Redo"), this);
     mpRedoAction->setShortcut(QKeySequence(QKeySequence::Redo)); // Ctrl+Y or Ctrl+Shift+Z
     mpRedoAction->setShortcutContext(Qt::WindowShortcut);
     mpRedoAction->setEnabled(false);
-    QMainWindow::addAction(mpRedoAction);
+    this->addAction(mpRedoAction);
     connect(mpRedoAction, &QAction::triggered, this, &dlgTriggerEditor::slot_smartRedo);
 
     connect(mpUndoStack, &QUndoStack::canUndoChanged, this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
@@ -1408,6 +1406,8 @@ void dlgTriggerEditor::slot_clickedMessageBox(const QString& URL)
 {
     if (URL.startsWith("http")) {
         QDesktopServices::openUrl(URL);
+    } else if (URL == qsl("mudlet:cleanupBogusActions")) {
+        slot_cleanupBogusActions();
     } else { // internal links used by expanding info text navigation
         showIntro(URL);
     }
@@ -5329,7 +5329,7 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     // via EditorAddItemCommand::mergeWith(), grouping them into one undo operation.
 }
 
-void dlgTriggerEditor::addAction(bool isFolder)
+void dlgTriggerEditor::addNewAction(bool isFolder)
 {
     saveAction();
 
@@ -9589,6 +9589,10 @@ void dlgTriggerEditor::showEvent(QShowEvent* event)
     // Always reposition the dialog to the correct screen when shown
     // This ensures it follows the active profile, especially after reattachment
     utils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
+
+    // Deferred so the check runs after the editor has finished laying out and
+    // the profile-load banner (if any) has had a chance to settle.
+    QTimer::singleShot(0, this, &dlgTriggerEditor::checkForBogusActionsAndNotify);
 }
 
 void dlgTriggerEditor::changeView(EditorViewType view)
@@ -10015,6 +10019,98 @@ void dlgTriggerEditor::showInfo(const QString& text)
     }
 }
 
+void dlgTriggerEditor::checkForBogusActionsAndNotify()
+{
+    if (mBogusActionsNotified || !mpHost) {
+        return;
+    }
+
+    auto* pActionUnit = mpHost->getActionUnit();
+    if (!pActionUnit) {
+        return;
+    }
+
+    const BogusActionScanner::Names names{tr("New toolbar"), tr("New menu")};
+    const auto bogus = BogusActionScanner::findBogusEntries(pActionUnit->getActionRootNodeList(), names);
+    if (bogus.isEmpty()) {
+        return;
+    }
+
+    mBogusActionsNotified = true;
+
+    //: %n is the number of stray toolbar entries found from the bug fixed in PR #9194.
+    const QString message = tr("<p>Mudlet found %n empty toolbar entry in this profile that appears to be a leftover from a recently fixed bug. "
+                               "<a href='mudlet:cleanupBogusActions'>Click here to review and remove</a> it.</p>",
+                               "",
+                               bogus.size());
+    showInfo(message);
+}
+
+void dlgTriggerEditor::slot_cleanupBogusActions()
+{
+    if (!mpHost) {
+        return;
+    }
+
+    auto* pActionUnit = mpHost->getActionUnit();
+    if (!pActionUnit) {
+        return;
+    }
+
+    // Re-scan in case the tree changed since the banner was shown.
+    const BogusActionScanner::Names names{tr("New toolbar"), tr("New menu")};
+    const auto bogus = BogusActionScanner::findBogusEntries(pActionUnit->getActionRootNodeList(), names);
+    if (bogus.isEmpty()) {
+        hideSystemMessageArea();
+        return;
+    }
+
+    QStringList entryDescriptions;
+    entryDescriptions.reserve(bogus.size());
+    for (const TAction* pRoot : bogus) {
+        const auto* pChildren = pRoot->getChildrenList();
+        const QString childName = (pChildren && !pChildren->empty()) ? pChildren->front()->getName() : QString();
+        entryDescriptions << qsl("• %1 / %2").arg(pRoot->getName(), childName);
+    }
+
+    QMessageBox confirm(this);
+    confirm.setIcon(QMessageBox::Question);
+    confirm.setWindowTitle(tr("Remove leftover toolbar entries"));
+    confirm.setText(tr("Remove the following %n entry from this profile's Buttons tree?", "", bogus.size()));
+    confirm.setInformativeText(entryDescriptions.join(QChar::LineFeed));
+    confirm.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    confirm.setDefaultButton(QMessageBox::Yes);
+
+    if (confirm.exec() != QMessageBox::Yes) {
+        return;
+    }
+
+    for (TAction* pRoot : bogus) {
+        const int id = pRoot->getID();
+        if (QTreeWidgetItem* pItem = findItemByID(mpActionBaseItem, id)) {
+            // The bogus root is a child of the synthetic "Buttons" base item, not
+            // a true top-level item, so take+delete through its parent.
+            if (QTreeWidgetItem* pParentItem = pItem->parent()) {
+                delete pParentItem->takeChild(pParentItem->indexOfChild(pItem));
+            } else {
+                delete treeWidget_actions->takeTopLevelItem(treeWidget_actions->indexOfTopLevelItem(pItem));
+            }
+        }
+        clearEditorState(EditorViewType::cmActionView, id);
+        // ~TAction pops from its parent and recursively deletes children.
+        delete pRoot;
+    }
+
+    if (mCurrentView == EditorViewType::cmActionView) {
+        mpCurrentActionItem = nullptr;
+        clearActionForm();
+    }
+    pActionUnit->updateToolbar();
+
+    hideSystemMessageArea();
+    mudlet::self()->announce(tr("Removed %n leftover toolbar entry.", "", bogus.size()));
+}
+
 void dlgTriggerEditor::showIntro(const QString& desiredOption)
 {
     if (!introAddItem.contains(mCurrentView)) {
@@ -10224,7 +10320,7 @@ void dlgTriggerEditor::slot_addNewItem()
         mpScriptsMainArea->lineEdit_script_name->selectAll();
         break;
     case EditorViewType::cmActionView:
-        addAction(false); //add normal action
+        addNewAction(false); //add normal action
         mpActionsMainArea->lineEdit_action_name->setFocus();
         mpActionsMainArea->lineEdit_action_name->selectAll();
         break;
@@ -10267,7 +10363,7 @@ void dlgTriggerEditor::slot_addNewGroup()
         mpScriptsMainArea->lineEdit_script_name->selectAll();
         break;
     case EditorViewType::cmActionView:
-        addAction(true); //add action group
+        addNewAction(true); //add action group
         mpActionsMainArea->lineEdit_action_name->setFocus();
         mpActionsMainArea->lineEdit_action_name->selectAll();
         break;

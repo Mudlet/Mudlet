@@ -92,6 +92,7 @@ set(mudlet_SRCS
     MudletInstanceCoordinator.cpp
     EditorUndoStack.cpp
     MxpTag.cpp
+    BogusActionScanner.cpp
     EditorAddItemCommand.cpp
     EditorDeleteItemCommand.cpp
     EditorModifyPropertyCommand.cpp
@@ -314,6 +315,7 @@ set(mudlet_HDRS
     MudletInstanceCoordinator.h
     EditorUndoStack.h
     MxpTag.h
+    BogusActionScanner.h
     EditorAddItemCommand.h
     EditorDeleteItemCommand.h
     EditorModifyPropertyCommand.h

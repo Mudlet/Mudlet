@@ -10,6 +10,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TriggerEditorTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     TDiscordModeTest.cpp
+    BogusActionScannerTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
