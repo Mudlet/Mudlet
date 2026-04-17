@@ -441,16 +441,70 @@ private slots:
         QCOMPARE(mpEditor->mpActionBaseItem->childCount(), 1);
     }
 
-    void testCleanupWithNothingToDoHidesBanner()
+    // If the user clicks the cleanup link but the stray entries are already
+    // gone (e.g. removed by a script or undo), we must not silently hide the
+    // banner - the user needs feedback that their click was received.
+    void testCleanupWithNothingToDoTellsUser()
     {
-        // Simulate banner from an earlier scan, but the user cleaned up manually
-        // before clicking the link.
         mpEditor->showInfo(qsl("stale"));
         QVERIFY(mpEditor->mpSystemMessageArea->isVisible());
 
         mpEditor->slot_cleanupBogusActions();
 
-        QVERIFY(!mpEditor->mpSystemMessageArea->isVisible());
+        QVERIFY(mpEditor->mpSystemMessageArea->isVisible());
+        const QString bannerText = mpEditor->mpSystemMessageArea->notificationAreaMessageBox->text();
+        QVERIFY2(bannerText.contains(qsl("no longer present"), Qt::CaseInsensitive) || bannerText.contains(qsl("nothing to clean up"), Qt::CaseInsensitive),
+                 qPrintable(qsl("Banner should explain that there was nothing to do, got: %1").arg(bannerText)));
+    }
+
+    // A higher-priority error/warning banner (e.g. script compile failure from
+    // profile load) must not be clobbered by the info banner. The scanner
+    // leaves its state flag unset so it can retry on the next showEvent.
+    void testBannerDoesNotClobberErrorBanner()
+    {
+        createBogusPair();
+        mpEditor->showError(qsl("pretend profile-load compile error"));
+        QVERIFY(mpEditor->mpSystemMessageArea->isVisible());
+        QVERIFY(mpEditor->mpSystemMessageArea->notificationAreaIconLabelError->isVisible());
+
+        mpEditor->checkForBogusActionsAndNotify();
+
+        QCOMPARE(mpEditor->mpSystemMessageArea->notificationAreaMessageBox->text(), qsl("pretend profile-load compile error"));
+        QVERIFY(mpEditor->mpSystemMessageArea->notificationAreaIconLabelError->isVisible());
+        QVERIFY2(!mpEditor->mBogusActionsNotified, "Flag must stay false so a later showEvent retries once the error banner is dismissed");
+    }
+
+    void testBannerDoesNotClobberWarningBanner()
+    {
+        createBogusPair();
+        mpEditor->showWarning(qsl("pretend warning"), false);
+        QVERIFY(mpEditor->mpSystemMessageArea->notificationAreaIconLabelWarning->isVisible());
+
+        mpEditor->checkForBogusActionsAndNotify();
+
+        QCOMPARE(mpEditor->mpSystemMessageArea->notificationAreaMessageBox->text(), qsl("pretend warning"));
+        QVERIFY(!mpEditor->mBogusActionsNotified);
+    }
+
+    // Simulate action unit / tree drift: the TAction exists in the unit but
+    // its QTreeWidgetItem is gone. Cleanup must still remove the TAction, log
+    // a warning, and surface the drift to the user instead of announcing a
+    // clean success.
+    void testCleanupSurvivesMissingTreeItem()
+    {
+        createBogusPair();
+        QCOMPARE(mpEditor->mpActionBaseItem->childCount(), 1);
+        // Drop the tree widget row without touching the TAction on the unit.
+        delete mpEditor->mpActionBaseItem->takeChild(0);
+        QCOMPARE(mpEditor->mpActionBaseItem->childCount(), 0);
+        QCOMPARE(mpHost->getActionUnit()->getActionRootNodeList().size(), size_t{1});
+
+        clickPendingModal(QMessageBox::Yes);
+        mpEditor->slot_cleanupBogusActions();
+
+        QVERIFY2(mpHost->getActionUnit()->getActionRootNodeList().empty(), "Bogus TAction should still be removed from the action unit");
+        QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "User should see a warning rather than a silent success");
+        QVERIFY(mpEditor->mpSystemMessageArea->notificationAreaIconLabelWarning->isVisible());
     }
 
     // The banner's <a href='mudlet:cleanupBogusActions'> link dispatches

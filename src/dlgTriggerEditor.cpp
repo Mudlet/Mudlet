@@ -10036,9 +10036,21 @@ void dlgTriggerEditor::checkForBogusActionsAndNotify()
         return;
     }
 
+    // Don't clobber an existing error/warning banner - those surface script
+    // compile failures and other issues that the user needs to see first. We
+    // leave mBogusActionsNotified false so the next showEvent re-checks, by
+    // which time the higher-priority banner may have been dismissed.
+    if (mpSystemMessageArea && mpSystemMessageArea->isVisible()
+        && (mpSystemMessageArea->notificationAreaIconLabelError->isVisible() || mpSystemMessageArea->notificationAreaIconLabelWarning->isVisible())) {
+        return;
+    }
+
     mBogusActionsNotified = true;
 
-    //: %n is the number of stray toolbar entries found from the bug fixed in PR #9194.
+    //: Banner shown at the top of the script editor when leftover empty toolbar
+    //: entries from a previously-fixed bug are detected in the user's profile.
+    //: %n is the count of affected entries. The <a href='...'>...</a> is a
+    //: clickable cleanup link - keep the href attribute untranslated.
     const QString message = tr("<p>Mudlet found %n empty toolbar entry in this profile that appears to be a leftover from a recently fixed bug. "
                                "<a href='mudlet:cleanupBogusActions'>Click here to review and remove</a> it.</p>",
                                "",
@@ -10049,11 +10061,13 @@ void dlgTriggerEditor::checkForBogusActionsAndNotify()
 void dlgTriggerEditor::slot_cleanupBogusActions()
 {
     if (!mpHost) {
+        qWarning() << "dlgTriggerEditor::slot_cleanupBogusActions: mpHost is null, ignoring cleanup request";
         return;
     }
 
     auto* pActionUnit = mpHost->getActionUnit();
     if (!pActionUnit) {
+        qWarning() << "dlgTriggerEditor::slot_cleanupBogusActions: action unit is null for host" << mpHost->getName();
         return;
     }
 
@@ -10061,7 +10075,10 @@ void dlgTriggerEditor::slot_cleanupBogusActions()
     const BogusActionScanner::Names names{tr("New toolbar"), tr("New menu")};
     const auto bogus = BogusActionScanner::findBogusEntries(pActionUnit->getActionRootNodeList(), names);
     if (bogus.isEmpty()) {
-        hideSystemMessageArea();
+        //: Info shown when the user clicks the cleanup link but the stray entries
+        //: are no longer there (e.g. removed by a script or an undo). Confirms
+        //: the click was received so the user isn't left wondering.
+        showInfo(tr("The leftover toolbar entries are no longer present; nothing to clean up."));
         return;
     }
 
@@ -10075,7 +10092,11 @@ void dlgTriggerEditor::slot_cleanupBogusActions()
 
     QMessageBox confirm(this);
     confirm.setIcon(QMessageBox::Question);
+    //: Title of the confirmation dialog that asks whether to remove leftover
+    //: toolbar entries from the script editor's Buttons tree.
     confirm.setWindowTitle(tr("Remove leftover toolbar entries"));
+    //: Confirmation dialog prompt. %n is the number of leftover toolbar+menu
+    //: pairs detected. Shown alongside a bulleted list of their names.
     confirm.setText(tr("Remove the following %n entry from this profile's Buttons tree?", "", bogus.size()));
     confirm.setInformativeText(entryDescriptions.join(QChar::LineFeed));
     confirm.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
@@ -10085,6 +10106,8 @@ void dlgTriggerEditor::slot_cleanupBogusActions()
         return;
     }
 
+    int removedCount = 0;
+    int treeLookupFailures = 0;
     for (TAction* pRoot : bogus) {
         const int id = pRoot->getID();
         if (QTreeWidgetItem* pItem = findItemByID(mpActionBaseItem, id)) {
@@ -10095,10 +10118,14 @@ void dlgTriggerEditor::slot_cleanupBogusActions()
             } else {
                 delete treeWidget_actions->takeTopLevelItem(treeWidget_actions->indexOfTopLevelItem(pItem));
             }
+        } else {
+            ++treeLookupFailures;
+            qWarning() << "dlgTriggerEditor::slot_cleanupBogusActions: no tree item for action id" << id << "name" << pRoot->getName() << "- removing from action unit anyway";
         }
         clearEditorState(EditorViewType::cmActionView, id);
         // ~TAction pops from its parent and recursively deletes children.
         delete pRoot;
+        ++removedCount;
     }
 
     if (mCurrentView == EditorViewType::cmActionView) {
@@ -10107,8 +10134,18 @@ void dlgTriggerEditor::slot_cleanupBogusActions()
     }
     pActionUnit->updateToolbar();
 
-    hideSystemMessageArea();
-    mudlet::self()->announce(tr("Removed %n leftover toolbar entry.", "", bogus.size()));
+    if (treeLookupFailures > 0) {
+        //: Warning shown after cleanup when some leftover entries were found
+        //: in the action unit but their tree widget rows couldn't be located.
+        //: The data was still removed; the warning signals that the tree/unit
+        //: state had drifted and a profile restart may be worthwhile.
+        showWarning(tr("Removed %n leftover toolbar entry, but some were out of sync with the editor view. A profile restart is recommended.", "", removedCount));
+    } else {
+        hideSystemMessageArea();
+        //: Announcement (screen reader / toast) after a successful cleanup.
+        //: %n is the number of leftover toolbar entries that were removed.
+        mudlet::self()->announce(tr("Removed %n leftover toolbar entry.", "", removedCount));
+    }
 }
 
 void dlgTriggerEditor::showIntro(const QString& desiredOption)
