@@ -237,11 +237,16 @@ void TRoom::setExitStub(int direction, bool status)
                 exitStubs.append(direction);
             }
         } else {
-            QString error = QString("Set exit stub in given direction in RoomID(%1) - there is already an exit there!").arg(id);
-            mpRoomDB->mpMap->logError(error);
+            mpRoomDB->mpMap->logError(tr("Cannot set exit stub in given direction in RoomID %1. There is already an exit there!")
+                                              .arg(QString::number(id)));
+            // Since there is no change don't proceed to mark map as needing saving
+            return;
         }
     } else {
-        exitStubs.removeAll(direction);
+        if (!exitStubs.removeAll(direction)) {
+            // Since there is no change don't proceed to mark map as needing saving
+            return;
+        }
     }
     mpRoomDB->mpMap->setUnsaved(__func__);
 }
@@ -351,8 +356,8 @@ bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
         mpRoomDB->addArea(areaID);
         pA = mpRoomDB->getArea(areaID);
         if (!pA) { // Oh dear, THAT didn't work
-            QString error = qApp->translate("TRoom", "No area created!  Requested area ID=%1. Note: Area IDs must be > 0").arg(areaID);
-            mpRoomDB->mpMap->logError(error);
+            mpRoomDB->mpMap->logError(tr("Requested AreaID %1 did not exist and could not be created. Note: Area numbers must be greater than zero!")
+                                              .arg(QString::number(areaID)));
             return false;
         }
     }
@@ -373,8 +378,9 @@ bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
         // wrong on last room in a series
         pA2->mIsDirty = true;
     } else {
-        QString error = qApp->translate("TRoom", "Warning: When setting the Area for Room (Id: %1) it did not have a current area!").arg(id);
-        mpRoomDB->mpMap->logError(error);
+        //: Although this is reported as an error it is not a problem
+        mpRoomDB->mpMap->logError(tr("When setting the Area for RoomID %1 it did not have a current area, this is unexpected but not a problem!")
+                                          .arg(QString::number(id)));
     }
 
     area = areaID;

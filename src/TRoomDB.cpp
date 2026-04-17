@@ -93,8 +93,8 @@ bool TRoomDB::addRoom(int id)
         return true;
     }
     if (id <= 0) {
-        QString error = qsl("addRoom: illegal room id=%1. roomID must be > 0").arg(id);
-        mpMap->logError(error);
+        mpMap->logError(tr("Room not created. RoomID %1 is not allowed as room numbers must be greater than zero!")
+                                .arg(QString::number(id)));
     }
     return false;
 }
@@ -540,11 +540,11 @@ bool TRoomDB::addArea(int id)
             areaNamesMap.insert(id, newAreaName);
         }
         return true;
-    } else {
-        QString error = tr("Area with ID %1 already exists!").arg(id);
-        mpMap->logError(error);
-        return false;
     }
+
+    mpMap->logError(tr("Area not added. An area with AreaID %1 already exists!")
+                            .arg(QString::number(id)));
+    return false;
 }
 
 int TRoomDB::createNewAreaID()
@@ -560,12 +560,11 @@ int TRoomDB::addArea(QString name)
 {
     // reject it if area name already exists or is empty
     if (name.isEmpty()) {
-        QString error = tr("An Unnamed Area is (no longer) permitted!");
-        mpMap->logError(error);
+        mpMap->logError(tr("Area not added. An unnamed area (empty area name) is (no longer) permitted!"));
         return 0;
-    } else if (areaNamesMap.values().contains(name)) {
-        QString error = tr("An area called %1 already exists!").arg(name);
-        mpMap->logError(error);
+    }
+    if (areaNamesMap.values().contains(name)) {
+        mpMap->logError(tr("Area not added. An area called \"%1\" already exists!").arg(name));
         return 0;
     }
 

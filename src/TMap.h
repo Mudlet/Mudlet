@@ -115,7 +115,7 @@ public:
     bool setRoomArea(int id, int area, bool deferAreaRecalculations = false);
     void deleteArea(int id);
     int createNewRoomID(int minimumId = 1);
-    void logError(QString& msg);
+    void logError(const QString&);
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
     void updateArea(int areaId);
