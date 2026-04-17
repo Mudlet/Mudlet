@@ -1406,6 +1406,10 @@ void dlgTriggerEditor::slot_clickedMessageBox(const QString& URL)
         QDesktopServices::openUrl(URL);
     } else if (URL == qsl("mudlet:cleanupBogusActions")) {
         slot_cleanupBogusActions();
+    } else if (URL.startsWith(qsl("mudlet:"))) {
+        // Unknown mudlet: scheme - surface it in the log rather than silently
+        // routing it to showIntro, which would render a generic banner.
+        qWarning() << "dlgTriggerEditor::slot_clickedMessageBox: unknown mudlet: URL" << URL << "- ignoring";
     } else { // internal links used by expanding info text navigation
         showIntro(URL);
     }
@@ -10074,15 +10078,13 @@ QList<TAction*> dlgTriggerEditor::findBogusActionEntries() const
         return {};
     }
     const auto& roots = pActionUnit->getActionRootNodeList();
+    // Scan both the current-locale names and the untranslated English ones,
+    // then dedupe. This catches profiles hit under any historical UI language
+    // regardless of the language the editor is now open in.
     QList<TAction*> matches = collectBogusActionEntries(roots, tr("New toolbar"), tr("New menu"));
-
-    // Also match untranslated English so profiles hit by the bug before a
-    // UI-language switch are still caught.
-    if (QLatin1String("New toolbar") != tr("New toolbar") || QLatin1String("New menu") != tr("New menu")) {
-        for (TAction* pExtra : collectBogusActionEntries(roots, qsl("New toolbar"), qsl("New menu"))) {
-            if (!matches.contains(pExtra)) {
-                matches.append(pExtra);
-            }
+    for (TAction* pExtra : collectBogusActionEntries(roots, qsl("New toolbar"), qsl("New menu"))) {
+        if (!matches.contains(pExtra)) {
+            matches.append(pExtra);
         }
     }
     return matches;
@@ -10109,11 +10111,10 @@ void dlgTriggerEditor::checkForBogusActionsAndNotify()
     mBogusActionsNotified = true;
 
     //: Banner shown in the script editor when leftover empty toolbar entries
-    //: from a previously-fixed bug are detected. %n is the count. The
-    //: <a href='...'>...</a> is a clickable cleanup link - keep the href
-    //: attribute untranslated. "entry/entries" keeps the source correct for
-    //: any count at runtime fallback.
-    const QString message = tr("<p>Mudlet found %n empty toolbar entry/entries in this profile, leftover from a recently fixed bug. "
+    //: from a previously-fixed bug are detected. %n is the count; translators
+    //: provide the plural forms. The <a href='...'>...</a> is a clickable
+    //: cleanup link - keep the href attribute untranslated.
+    const QString message = tr("<p>Mudlet found %n empty toolbar entry(s) in this profile, leftover from a recently fixed bug. "
                                "<a href='mudlet:cleanupBogusActions'>Click here to review and remove</a>.</p>",
                                "",
                                bogus.size());
@@ -10156,9 +10157,9 @@ void dlgTriggerEditor::slot_cleanupBogusActions()
     //: toolbar entries from the script editor's Buttons tree.
     confirm.setWindowTitle(tr("Remove leftover toolbar entries"));
     //: Confirmation prompt. %n is the number of leftover toolbar+menu pairs,
-    //: shown alongside a bulleted list of their names. "entry/entries" keeps
-    //: the source correct for any count.
-    confirm.setText(tr("Remove the following %n entry/entries from this profile's Buttons tree?", "", bogus.size()));
+    //: shown alongside a bulleted list of their names; translators provide
+    //: the plural forms.
+    confirm.setText(tr("Remove the following %n entry(s) from this profile's Buttons tree?", "", bogus.size()));
     confirm.setInformativeText(entryDescriptions.join(QChar::LineFeed));
     confirm.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     confirm.setDefaultButton(QMessageBox::Yes);
@@ -10167,8 +10168,9 @@ void dlgTriggerEditor::slot_cleanupBogusActions()
         return;
     }
 
-    // Snapshot IDs: deleting a TAction fires signals that can mutate the
-    // tree and invalidate raw pointers to sibling entries.
+    // Snapshot IDs: ~TAction calls ActionUnit::unregisterAction, which
+    // mutates mActionRootNodeList directly and may touch toolbar widgets,
+    // so holding raw pointers to sibling roots across the loop isn't safe.
     QList<int> bogusIds;
     bogusIds.reserve(bogus.size());
     for (const TAction* pRoot : bogus) {
@@ -10209,12 +10211,12 @@ void dlgTriggerEditor::slot_cleanupBogusActions()
         //: Warning shown after cleanup when the data was removed but some
         //: editor tree rows were out of sync; signals state drift so the
         //: user knows a profile restart may be worthwhile.
-        showWarning(tr("Removed %n leftover toolbar entry/entries, but some were out of sync with the editor view. A profile restart is recommended.", "", removedCount));
+        showWarning(tr("Removed %n leftover toolbar entry(s), but some were out of sync with the editor view. A profile restart is recommended.", "", removedCount));
     } else {
         hideSystemMessageArea();
         //: Announcement (screen reader / toast) after a successful cleanup.
         //: %n is the number of leftover toolbar entries that were removed.
-        mudlet::self()->announce(tr("Removed %n leftover toolbar entry/entries.", "", removedCount));
+        mudlet::self()->announce(tr("Removed %n leftover toolbar entry(s).", "", removedCount));
     }
 }
 

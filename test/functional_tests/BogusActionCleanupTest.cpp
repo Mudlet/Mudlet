@@ -19,16 +19,21 @@
 
 #include <QtTest/QtTest>
 
+#include <QDeadlineTimer>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QTimer>
 
+#include <memory>
+
 #include "ActionUnit.h"
 #include "Host.h"
 #include "TAction.h"
+#include "TToolBar.h"
 #include "TTreeWidget.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
+#include "dlgActionMainArea.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgSystemMessageArea.h"
 #include "dlgTriggerEditor.h"
@@ -128,13 +133,23 @@ private:
 
   // The cleanup slot shows a modal QMessageBox and blocks on exec(); poll
   // briefly for it and click the requested button so the test can progress.
+  // The timer self-destructs either when it clicks a modal or when the
+  // deadline expires, so a short-circuit return from the slot (no modal
+  // ever shown) can't leak a live timer into subsequent tests.
   void clickPendingModal(QMessageBox::StandardButton button) {
+    constexpr int kPollIntervalMs = 20;
+    constexpr int kDeadlineMs = 2000;
     auto *timer = new QTimer(this);
-    timer->setInterval(20);
-    connect(timer, &QTimer::timeout, this, [timer, button]() {
+    timer->setInterval(kPollIntervalMs);
+    auto deadline = std::make_shared<QDeadlineTimer>(kDeadlineMs);
+    connect(timer, &QTimer::timeout, this, [timer, button, deadline]() {
       QWidget *modal = QApplication::activeModalWidget();
       auto *mbox = qobject_cast<QMessageBox *>(modal);
       if (!mbox) {
+        if (deadline->hasExpired()) {
+          timer->stop();
+          timer->deleteLater();
+        }
         return;
       }
       QAbstractButton *target = mbox->button(button);
@@ -540,6 +555,61 @@ private slots:
     QCOMPARE(mpEditor->mpActionBaseItem->childCount(), 0);
   }
 
+  // Guard against a future refactor that drops pActionUnit->updateToolbar()
+  // from the end of the cleanup slot: if the bogus pair ever had an
+  // associated TToolBar (mLocation == 4 is the "floating toolbar" marker
+  // that regenerateToolBars() materialises), the main window would be left
+  // with a stale QPointer entry in mToolBarList. Verify the list is clean
+  // after cleanup.
+  void testCleanupRefreshesToolbarList() {
+    createBogusPair();
+    TAction *pRoot = firstRootAction();
+    QVERIFY(pRoot);
+    pRoot->mLocation = 4;
+    mpHost->getActionUnit()->updateToolbar();
+    const auto preSize = mpHost->getActionUnit()->getToolBarList().size();
+    QVERIFY2(preSize >= 1,
+             "Pre-condition: regenerateToolBars should have created a "
+             "TToolBar for the bogus floating root");
+
+    clickPendingModal(QMessageBox::Yes);
+    mpEditor->slot_cleanupBogusActions();
+
+    QVERIFY(mpHost->getActionUnit()->getActionRootNodeList().empty());
+    // After the slot's updateToolbar() call runs on an empty root list, no
+    // live TToolBar should remain pointing at a destroyed TAction.
+    const auto &postList = mpHost->getActionUnit()->getToolBarList();
+    for (const auto &tb : postList) {
+      QVERIFY2(tb.isNull() || !tb->isVisible(),
+               "Toolbar widget for a deleted TAction should not be visible");
+    }
+  }
+
+  // The cmActionView branch of the cleanup slot must null out
+  // mpCurrentActionItem and hide the action form when the user had the
+  // bogus row selected. Without this the form keeps referring to a
+  // destroyed TAction's tree item.
+  void testCleanupClearsSelectedActionForm() {
+    createBogusPair();
+    mpEditor->slot_showActions();
+    QCOMPARE(mpEditor->mpActionBaseItem->childCount(), 1);
+    QTreeWidgetItem *pBogusItem = mpEditor->mpActionBaseItem->child(0);
+    QVERIFY(pBogusItem);
+    mpEditor->treeWidget_actions->setCurrentItem(pBogusItem);
+    mpEditor->slot_actionSelected(pBogusItem);
+    QCOMPARE(mpEditor->mpCurrentActionItem, pBogusItem);
+    QVERIFY(mpEditor->mpActionsMainArea->isVisible());
+
+    clickPendingModal(QMessageBox::Yes);
+    mpEditor->slot_cleanupBogusActions();
+
+    QVERIFY2(mpEditor->mpCurrentActionItem == nullptr,
+             "mpCurrentActionItem must be cleared so it doesn't dangle at a "
+             "tree item that backed a deleted TAction");
+    QVERIFY2(!mpEditor->mpActionsMainArea->isVisible(),
+             "clearActionForm() should have hidden the action edit panel");
+  }
+
   // showEvent -> QTimer::singleShot is what actually surfaces the banner;
   // direct calls in other tests don't exercise that wiring.
   void testShowEventTriggersBannerCheck() {
@@ -549,11 +619,8 @@ private slots:
 
     mpEditor->hide();
     mpEditor->show();
-    QTest::qWait(50);
 
-    QVERIFY2(mpEditor->mBogusActionsNotified,
-             "showEvent-driven scan must set the notified flag when bogus "
-             "entries exist");
+    QTRY_VERIFY_WITH_TIMEOUT(mpEditor->mBogusActionsNotified, 2000);
     QVERIFY(mpEditor->mpSystemMessageArea->isVisible());
   }
 };
