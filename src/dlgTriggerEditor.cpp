@@ -10019,19 +10019,42 @@ void dlgTriggerEditor::showInfo(const QString& text)
     }
 }
 
+QList<TAction*> dlgTriggerEditor::findBogusActionEntries() const
+{
+    if (!mpHost) {
+        return {};
+    }
+    auto* pActionUnit = mpHost->getActionUnit();
+    if (!pActionUnit) {
+        return {};
+    }
+    const auto& roots = pActionUnit->getActionRootNodeList();
+
+    // Scan once against the current-locale names - covers profiles whose
+    // bogus entries were created in the same locale the user runs in now.
+    QList<TAction*> matches = BogusActionScanner::findBogusEntries(roots, {tr("New toolbar"), tr("New menu")});
+
+    // Then scan against the untranslated English literals - covers profiles
+    // that were affected in an English session before the user switched UI
+    // language. Names are load-bearing signature bits, so we don't want to
+    // drop the name check entirely.
+    if (QLatin1String("New toolbar") != tr("New toolbar") || QLatin1String("New menu") != tr("New menu")) {
+        for (TAction* pExtra : BogusActionScanner::findBogusEntries(roots, {qsl("New toolbar"), qsl("New menu")})) {
+            if (!matches.contains(pExtra)) {
+                matches.append(pExtra);
+            }
+        }
+    }
+    return matches;
+}
+
 void dlgTriggerEditor::checkForBogusActionsAndNotify()
 {
     if (mBogusActionsNotified || !mpHost) {
         return;
     }
 
-    auto* pActionUnit = mpHost->getActionUnit();
-    if (!pActionUnit) {
-        return;
-    }
-
-    const BogusActionScanner::Names names{tr("New toolbar"), tr("New menu")};
-    const auto bogus = BogusActionScanner::findBogusEntries(pActionUnit->getActionRootNodeList(), names);
+    const auto bogus = findBogusActionEntries();
     if (bogus.isEmpty()) {
         return;
     }
@@ -10050,9 +10073,11 @@ void dlgTriggerEditor::checkForBogusActionsAndNotify()
     //: Banner shown at the top of the script editor when leftover empty toolbar
     //: entries from a previously-fixed bug are detected in the user's profile.
     //: %n is the count of affected entries. The <a href='...'>...</a> is a
-    //: clickable cleanup link - keep the href attribute untranslated.
-    const QString message = tr("<p>Mudlet found %n empty toolbar entry in this profile that appears to be a leftover from a recently fixed bug. "
-                               "<a href='mudlet:cleanupBogusActions'>Click here to review and remove</a> it.</p>",
+    //: clickable cleanup link - keep the href attribute untranslated. The
+    //: source uses "entry/entries" and no pronoun so it reads correctly for
+    //: any count when the runtime falls back to the untranslated source.
+    const QString message = tr("<p>Mudlet found %n empty toolbar entry/entries in this profile, leftover from a recently fixed bug. "
+                               "<a href='mudlet:cleanupBogusActions'>Click here to review and remove</a>.</p>",
                                "",
                                bogus.size());
     showInfo(message);
@@ -10072,8 +10097,7 @@ void dlgTriggerEditor::slot_cleanupBogusActions()
     }
 
     // Re-scan in case the tree changed since the banner was shown.
-    const BogusActionScanner::Names names{tr("New toolbar"), tr("New menu")};
-    const auto bogus = BogusActionScanner::findBogusEntries(pActionUnit->getActionRootNodeList(), names);
+    const auto bogus = findBogusActionEntries();
     if (bogus.isEmpty()) {
         //: Info shown when the user clicks the cleanup link but the stray entries
         //: are no longer there (e.g. removed by a script or an undo). Confirms
@@ -10096,8 +10120,9 @@ void dlgTriggerEditor::slot_cleanupBogusActions()
     //: toolbar entries from the script editor's Buttons tree.
     confirm.setWindowTitle(tr("Remove leftover toolbar entries"));
     //: Confirmation dialog prompt. %n is the number of leftover toolbar+menu
-    //: pairs detected. Shown alongside a bulleted list of their names.
-    confirm.setText(tr("Remove the following %n entry from this profile's Buttons tree?", "", bogus.size()));
+    //: pairs detected. Shown alongside a bulleted list of their names. Uses
+    //: "entry/entries" so the source reads correctly for any count.
+    confirm.setText(tr("Remove the following %n entry/entries from this profile's Buttons tree?", "", bogus.size()));
     confirm.setInformativeText(entryDescriptions.join(QChar::LineFeed));
     confirm.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     confirm.setDefaultButton(QMessageBox::Yes);
@@ -10106,17 +10131,37 @@ void dlgTriggerEditor::slot_cleanupBogusActions()
         return;
     }
 
+    // Snapshot the IDs up front: deleting a TAction triggers signals (e.g.
+    // via ActionUnit::updateToolbar) that can run slots which mutate the
+    // action tree, invalidating any raw TAction* we were holding for the
+    // next iteration. IDs stay valid across those signals; look the node
+    // up fresh each pass.
+    QList<int> bogusIds;
+    bogusIds.reserve(bogus.size());
+    for (const TAction* pRoot : bogus) {
+        bogusIds.append(pRoot->getID());
+    }
+
     int removedCount = 0;
     int treeLookupFailures = 0;
-    for (TAction* pRoot : bogus) {
-        const int id = pRoot->getID();
+    for (const int id : bogusIds) {
+        TAction* pRoot = pActionUnit->getAction(id);
+        if (!pRoot) {
+            // A signal handler removed it out from under us; not an error,
+            // but worth a trace in case the pattern becomes common.
+            qWarning() << "dlgTriggerEditor::slot_cleanupBogusActions: action id" << id << "vanished before cleanup; skipping";
+            continue;
+        }
         if (QTreeWidgetItem* pItem = findItemByID(mpActionBaseItem, id)) {
-            // The bogus root is a child of the synthetic "Buttons" base item, not
-            // a true top-level item, so take+delete through its parent.
+            // The bogus root is always a child of the synthetic "Buttons" base
+            // item (findItemByID walks down from mpActionBaseItem), so its
+            // parent is non-null by construction. Treat a missing parent as a
+            // drift/corruption signal rather than a silent fallback.
             if (QTreeWidgetItem* pParentItem = pItem->parent()) {
                 delete pParentItem->takeChild(pParentItem->indexOfChild(pItem));
             } else {
-                delete treeWidget_actions->takeTopLevelItem(treeWidget_actions->indexOfTopLevelItem(pItem));
+                ++treeLookupFailures;
+                qWarning() << "dlgTriggerEditor::slot_cleanupBogusActions: tree item for action id" << id << "has no parent - state drift, leaving the row alone";
             }
         } else {
             ++treeLookupFailures;
@@ -10139,12 +10184,12 @@ void dlgTriggerEditor::slot_cleanupBogusActions()
         //: in the action unit but their tree widget rows couldn't be located.
         //: The data was still removed; the warning signals that the tree/unit
         //: state had drifted and a profile restart may be worthwhile.
-        showWarning(tr("Removed %n leftover toolbar entry, but some were out of sync with the editor view. A profile restart is recommended.", "", removedCount));
+        showWarning(tr("Removed %n leftover toolbar entry/entries, but some were out of sync with the editor view. A profile restart is recommended.", "", removedCount));
     } else {
         hideSystemMessageArea();
         //: Announcement (screen reader / toast) after a successful cleanup.
         //: %n is the number of leftover toolbar entries that were removed.
-        mudlet::self()->announce(tr("Removed %n leftover toolbar entry.", "", removedCount));
+        mudlet::self()->announce(tr("Removed %n leftover toolbar entry/entries.", "", removedCount));
     }
 }
 

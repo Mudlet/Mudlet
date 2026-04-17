@@ -771,9 +771,17 @@ private:
     [[nodiscard]] QString profileSettingsPrefix() const;
 
     // Scans the Buttons tree for entries created by the #9194 regression and
-    // offers the user a one-click cleanup via the system message banner. Runs
-    // once per editor instance; re-runs on next profile open if not cleaned up.
+    // offers the user a one-click cleanup via the system message banner. The
+    // flag below tracks whether this editor instance has already shown the
+    // banner; a fresh dlgTriggerEditor is created each time the profile is
+    // loaded, so cleanup that's ignored this session will re-prompt next time.
+    // Within one session, checkForBogusActionsAndNotify also retries on later
+    // showEvents when a higher-priority banner (error/warning) suppressed it.
     void checkForBogusActionsAndNotify();
+    // Locale-agnostic scan: matches against both the current tr() names and
+    // the untranslated English literals, so profiles originally hit by the bug
+    // in English still get cleaned up after the user switches UI language.
+    QList<TAction*> findBogusActionEntries() const;
     bool mBogusActionsNotified = false;
 
     // Banner state tracking

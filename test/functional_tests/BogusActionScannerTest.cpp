@@ -379,6 +379,37 @@ private slots:
         QVERIFY(BogusActionScanner::findBogusEntries(mpHost->getActionUnit()->getActionRootNodeList(), names).isEmpty());
     }
 
+    // Regression guard for the hasEmptyBugImprint temporary check. Temporary
+    // actions (created programmatically from Lua and not persisted) should
+    // never be flagged - the bug only produced persisted entries.
+    void testScannerIgnoresTemporaryToolbar()
+    {
+        createBogusPair();
+        TAction* pRoot = firstRootAction();
+        QVERIFY(pRoot);
+        pRoot->setTemporary(true);
+
+        const BogusActionScanner::Names names{mToolbarName, mMenuName};
+        QVERIFY(BogusActionScanner::findBogusEntries(mpHost->getActionUnit()->getActionRootNodeList(), names).isEmpty());
+    }
+
+    // Regression guard for the child-side hasEmptyBugImprint call: mutating
+    // a discriminator on the child menu (not the root) must still defuse the
+    // match. Protects against a future refactor that accidentally drops the
+    // child-side check.
+    void testScannerIgnoresChildWithScript()
+    {
+        createBogusPair();
+        TAction* pRoot = firstRootAction();
+        QVERIFY(pRoot);
+        QVERIFY(pRoot->getChildrenList() && !pRoot->getChildrenList()->empty());
+        TAction* pChild = pRoot->getChildrenList()->front();
+        pChild->setScript(qsl("echo('not bogus')"));
+
+        const BogusActionScanner::Names names{mToolbarName, mMenuName};
+        QVERIFY(BogusActionScanner::findBogusEntries(mpHost->getActionUnit()->getActionRootNodeList(), names).isEmpty());
+    }
+
     // ------------------------------------------------------------------
     // Banner - detection + user notification
     // ------------------------------------------------------------------
@@ -518,6 +549,46 @@ private slots:
         mpEditor->slot_clickedMessageBox(qsl("mudlet:cleanupBogusActions"));
 
         QVERIFY(mpHost->getActionUnit()->getActionRootNodeList().empty());
+    }
+
+    // Multiple bogus pairs accumulate when a user opens a broken profile
+    // several times. Scanner must detect them all, cleanup must remove all
+    // of them, and the %n-based plural strings must exercise n > 1.
+    void testScannerAndCleanupHandleMultiplePairs()
+    {
+        createBogusPair();
+        createBogusPair();
+        QCOMPARE(mpHost->getActionUnit()->getActionRootNodeList().size(), size_t{2});
+        QCOMPARE(mpEditor->mpActionBaseItem->childCount(), 2);
+
+        const auto matches = mpEditor->findBogusActionEntries();
+        QCOMPARE(matches.size(), qsizetype{2});
+
+        clickPendingModal(QMessageBox::Yes);
+        mpEditor->slot_cleanupBogusActions();
+
+        QVERIFY2(mpHost->getActionUnit()->getActionRootNodeList().empty(), "Both bogus pairs should be removed from the action unit");
+        QCOMPARE(mpEditor->mpActionBaseItem->childCount(), 0);
+    }
+
+    // The showEvent -> QTimer::singleShot wiring is what actually surfaces
+    // the banner to users. Direct calls to checkForBogusActionsAndNotify
+    // in other tests don't cover that connection, so this test asserts
+    // show()-driven delivery specifically.
+    void testShowEventTriggersBannerCheck()
+    {
+        createBogusPair();
+        QVERIFY(!mpEditor->mBogusActionsNotified);
+        mpEditor->hideSystemMessageArea();
+
+        // Re-show the editor to re-fire showEvent. The scan is deferred by
+        // a zero-timeout singleShot, so yield the event loop briefly.
+        mpEditor->hide();
+        mpEditor->show();
+        QTest::qWait(50);
+
+        QVERIFY2(mpEditor->mBogusActionsNotified, "showEvent-driven scan must set the notified flag when bogus entries exist");
+        QVERIFY(mpEditor->mpSystemMessageArea->isVisible());
     }
 };
 
