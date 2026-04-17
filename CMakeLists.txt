@@ -76,7 +76,7 @@ file(GLOB_RECURSE OTHER_FILES_LIST CONFIGURE_DEPENDS
   CI/**
   docker/**
   docs/**
-  src/.clang-format
+  .clang-format
   src/.gitignore
 )
 
