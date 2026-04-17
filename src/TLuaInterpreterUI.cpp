@@ -2793,6 +2793,7 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L)
     const int func = luaL_ref(L, LUA_REGISTRYINDEX);
 
     if (!host.setCmdLineAction(name, func)) {
+        luaL_unref(L, LUA_REGISTRYINDEX, func);
         return warnArgumentValue(L, __func__, qsl("command line name '%1' not found").arg(name));
     }
 

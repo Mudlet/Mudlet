@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2025 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2016, 2018-2026 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
@@ -1720,7 +1720,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     // try and set the player to a room if we don't have a known location
     if (!pPlayerRoom && !mpMap->mpRoomDB->isEmpty()) {
-        int randomRoom = mpMap->mpRoomDB->getRoomIDList().first();
+        int randomRoom = mpMap->mpRoomDB->getRoomIDList().constFirst();
         pPlayerRoom = mpMap->mpRoomDB->getRoom(randomRoom);
         playerRoomId = pPlayerRoom->getId();
     }
@@ -3966,7 +3966,7 @@ void T2DMap::slot_showPropertiesDialog()
     QHash<QString, int> usedSymbols;
     QHash<int, int> usedWeights; // key is weight, value is count of uses
     QHash<bool, int> usedLockStatus;
-    QHash<bool, int> usedHiddenStatus;
+    int hiddenRoomCount = 0;
 
     while (itRoom.hasNext()) {
         TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
@@ -4022,12 +4022,9 @@ void T2DMap::slot_showPropertiesDialog()
             usedLockStatus[thisLockStatus] = 1;
         }
 
-        // Scan and count all the different hidden status used
-        const bool thisHiddenStatus = room->isHidden();
-        if (usedHiddenStatus.contains(thisHiddenStatus)) {
-            (usedHiddenStatus[thisHiddenStatus])++;
-        } else {
-            usedHiddenStatus[thisHiddenStatus] = 1;
+        // Count the hidden rooms
+        if (room->isHidden()) {
+            ++hiddenRoomCount;
         }
     }
 
@@ -4037,7 +4034,7 @@ void T2DMap::slot_showPropertiesDialog()
     }
 
     mpDlgRoomProperties = new dlgRoomProperties(mpHost, this);
-    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, usedHiddenStatus, roomPtrsSet);
+    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, hiddenRoomCount, roomPtrsSet);
     mpDlgRoomProperties->show();
     mpDlgRoomProperties->raise();
     connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
@@ -4402,7 +4399,7 @@ void T2DMap::slot_setArea()
     std::sort(sortedAreaList.begin(), sortedAreaList.end(), sorter);
 
     const QMap<int, QString>& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
-    for (const QString& areaName : sortedAreaList) {
+    for (const QString& areaName : std::as_const(sortedAreaList)) {
         const int areaId = areaNamesMap.key(areaName);
         arealist_combobox->addItem(qsl("%1 (%2)").arg(areaName, QString::number(areaId)), QString::number(areaId));
     }
@@ -4430,7 +4427,7 @@ void T2DMap::slot_setArea()
                 mpMap->postMessage(tr("[ ERROR ] - Unable to add \"%1\" as an area to the map.\n"
                                       "See the \"[MAP ERROR:]\" message for the reason.",
                                       // Intentional separator between argument
-                                      "The '[MAP ERROR:]' text should be the same as that used for the translation of \"[MAP ERROR:]%1\n\" in the 'TMAP::logerror(...)' function.")
+                                      "The '[MAP ERROR:]' text here should be the same as that used for the translation of \"[MAP ERROR:] %1\" in the 'TMap::logError(...)' function.")
                                            .arg(newAreaName));
                 return;
             }
@@ -5267,7 +5264,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         QString basePath = fileInfo.absolutePath();
 
         // Export each Z level as a separate file
-        for (int currentZLevel : pArea->zLevels) {
+        for (const int currentZLevel : std::as_const(pArea->zLevels)) {
             QString levelFileName = QString("%1/%2_level_%3.%4").arg(basePath).arg(baseFileName).arg(currentZLevel).arg(extension.isEmpty() ? "png" : extension);
 
             // Recursively call this function for each Z level (without exportAllZLevels flag)
@@ -5424,7 +5421,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     QList<int> oneWayExits;
 
     // Build exit lists from rooms on current Z-level (like paintEvent does)
-    for (int roomId : pArea->rooms) {
+    for (const int roomId : std::as_const(pArea->rooms)) {
         TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
         if (!pRoom || pRoom->z() != exportZLevel) {
             continue;
@@ -5438,7 +5435,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     int roomsSkipped = 0;
 
     // First pass: draw rooms on level below (like paintEvent shadow rooms)
-    for (int roomId : pArea->rooms) {
+    for (const int roomId : std::as_const(pArea->rooms)) {
         TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
         if (!pRoom || pRoom->z() != exportZLevel - 1) {
             continue;
@@ -5473,7 +5470,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     }
 
     // Second pass: draw rooms on level above (like paintEvent upper level rooms)
-    for (int roomId : pArea->rooms) {
+    for (const int roomId : std::as_const(pArea->rooms)) {
         TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
         if (!pRoom || pRoom->z() != exportZLevel + 1) {
             continue;
@@ -5883,7 +5880,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     }
 
     // Fourth pass: draw main rooms on current level using existing drawRoom method
-    for (int roomId : pArea->rooms) {
+    for (const int roomId : std::as_const(pArea->rooms)) {
         TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
         if (!pRoom || pRoom->z() != exportZLevel) {
             roomsSkipped++;
