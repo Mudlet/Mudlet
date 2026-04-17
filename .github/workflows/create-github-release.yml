@@ -46,6 +46,7 @@ jobs:
                 workflow_id: filename,
                 head_sha: sha,
                 status: 'success',
+                event: triggeringRun.event,
                 per_page: 1
               });
               if (data.total_count === 0) {
