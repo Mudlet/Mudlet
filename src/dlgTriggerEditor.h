@@ -30,6 +30,7 @@
 #include "ui_trigger_editor.h"
 
 #include <QPointer>
+#include <list>
 #include <unordered_map>
 
 #include "TAction.h"
@@ -107,7 +108,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 
     // Allow QTest-based test classes to access private members
     friend class dlgTriggerEditorUndoRedoTest;
-    friend class BogusActionScannerTest;
+    friend class BogusActionCleanupTest;
 
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
@@ -770,18 +771,16 @@ private:
     [[nodiscard]] QString legacyBannerSettingsKey(EditorViewType viewType, const QString& bannerKey) const;
     [[nodiscard]] QString profileSettingsPrefix() const;
 
-    // Scans the Buttons tree for entries created by the #9194 regression and
-    // offers the user a one-click cleanup via the system message banner. The
-    // flag below tracks whether this editor instance has already shown the
-    // banner; a fresh dlgTriggerEditor is created each time the profile is
-    // loaded, so cleanup that's ignored this session will re-prompt next time.
-    // Within one session, checkForBogusActionsAndNotify also retries on later
-    // showEvents when a higher-priority banner (error/warning) suppressed it.
+    // Offer one-click cleanup for leftover "New toolbar"/"New menu" pairs
+    // created by the #9194 regression. See matchesBogusActionSignature for the
+    // signature we match against.
     void checkForBogusActionsAndNotify();
-    // Locale-agnostic scan: matches against both the current tr() names and
-    // the untranslated English literals, so profiles originally hit by the bug
-    // in English still get cleaned up after the user switches UI language.
     QList<TAction*> findBogusActionEntries() const;
+    // Empty name args disable the corresponding name check.
+    [[nodiscard]] static bool matchesBogusActionSignature(const TAction* pRoot, const QString& toolbarName, const QString& menuName);
+    [[nodiscard]] static QList<TAction*> collectBogusActionEntries(const std::list<TAction*>& rootNodes, const QString& toolbarName, const QString& menuName);
+    // Flag resets on each editor reconstruction (i.e. each profile load), so
+    // dismissed cleanup offers re-prompt next session.
     bool mBogusActionsNotified = false;
 
     // Banner state tracking
