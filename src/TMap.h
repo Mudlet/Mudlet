@@ -393,7 +393,6 @@ private:
     bool mImportRunning = false;
 
     QProgressDialog* mpProgressDialog = nullptr;
-    bool mUsingInlineProgress = false;
     // Using during updates of text in progress dialog partially from other
     // classes:
     qsizetype mProgressDialogAreasTotal = 0;

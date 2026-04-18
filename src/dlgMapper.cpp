@@ -140,17 +140,35 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
     updateEmptyStateOverlay();
 }
 
+static QFrame* createOverlayFrame(QWidget* parent, const QString& objectName)
+{
+    auto* frame = new QFrame(parent);
+    frame->setObjectName(objectName);
+    frame->setAutoFillBackground(true);
+    frame->setFrameShape(QFrame::StyledPanel);
+    frame->setStyleSheet(qsl("QFrame#%1 {"
+                             " background-color: palette(window);"
+                             " border: 1px solid palette(mid);"
+                             " border-radius: 8px;"
+                             "}")
+                                 .arg(objectName));
+    return frame;
+}
+
+static void centerOverlayIn(QFrame* overlay, QWidget* parent, int minWidth)
+{
+    if (!overlay || !parent) {
+        return;
+    }
+    const QSize hint = overlay->sizeHint();
+    const int w = qMax(hint.width(), qMin(minWidth, parent->width() - 20));
+    const int h = hint.height();
+    overlay->setGeometry((parent->width() - w) / 2, (parent->height() - h) / 2, w, h);
+}
+
 void dlgMapper::setupEmptyStateOverlay()
 {
-    mpEmptyStateOverlay = new QFrame(mp2dMap);
-    mpEmptyStateOverlay->setObjectName(qsl("emptyStateOverlay"));
-    mpEmptyStateOverlay->setAutoFillBackground(true);
-    mpEmptyStateOverlay->setFrameShape(QFrame::StyledPanel);
-    mpEmptyStateOverlay->setStyleSheet(qsl("QFrame#emptyStateOverlay {"
-                                           " background-color: palette(window);"
-                                           " border: 1px solid palette(mid);"
-                                           " border-radius: 8px;"
-                                           "}"));
+    mpEmptyStateOverlay = createOverlayFrame(mp2dMap, qsl("emptyStateOverlay"));
 
     //: Empty-state text shown in the mapper when the profile has no local map yet.
     auto* label = new QLabel(tr("No map yet for this profile."), mpEmptyStateOverlay);
@@ -202,15 +220,7 @@ void dlgMapper::setupEmptyStateOverlay()
 
 void dlgMapper::setupProgressOverlay()
 {
-    mpProgressOverlay = new QFrame(mp2dMap);
-    mpProgressOverlay->setObjectName(qsl("mapProgressOverlay"));
-    mpProgressOverlay->setAutoFillBackground(true);
-    mpProgressOverlay->setFrameShape(QFrame::StyledPanel);
-    mpProgressOverlay->setStyleSheet(qsl("QFrame#mapProgressOverlay {"
-                                         " background-color: palette(window);"
-                                         " border: 1px solid palette(mid);"
-                                         " border-radius: 8px;"
-                                         "}"));
+    mpProgressOverlay = createOverlayFrame(mp2dMap, qsl("mapProgressOverlay"));
 
     mpProgressLabel = new QLabel(mpProgressOverlay);
     mpProgressLabel->setAlignment(Qt::AlignCenter);
@@ -241,15 +251,7 @@ void dlgMapper::setupProgressOverlay()
 
 void dlgMapper::repositionProgressOverlay()
 {
-    if (!mpProgressOverlay || !mp2dMap) {
-        return;
-    }
-    const QSize hint = mpProgressOverlay->sizeHint();
-    const int w = qMax(hint.width(), qMin(320, mp2dMap->width() - 20));
-    const int h = hint.height();
-    const int x = (mp2dMap->width() - w) / 2;
-    const int y = (mp2dMap->height() - h) / 2;
-    mpProgressOverlay->setGeometry(x, y, w, h);
+    centerOverlayIn(mpProgressOverlay, mp2dMap, 320);
 }
 
 void dlgMapper::showMapProgress(const QString& label, bool cancelable)
@@ -269,15 +271,17 @@ void dlgMapper::showMapProgress(const QString& label, bool cancelable)
     mpProgressBar->setValue(0);
     mpProgressCancelButton->setVisible(cancelable);
     mpProgressOverlay->show();
-    mpProgressOverlay->adjustSize();
     repositionProgressOverlay();
     mpProgressOverlay->raise();
 }
 
 void dlgMapper::setMapProgressLabel(const QString& text)
 {
-    if (mpProgressLabel) {
-        mpProgressLabel->setText(text);
+    if (!mpProgressLabel || mpProgressLabel->text() == text) {
+        return;
+    }
+    mpProgressLabel->setText(text);
+    if (mpProgressOverlay && mpProgressOverlay->sizeHint().height() != mpProgressOverlay->height()) {
         repositionProgressOverlay();
     }
 }
@@ -361,7 +365,7 @@ void dlgMapper::loadMapFromFile()
         if (success) {
             pHost->mpMap->audit();
             mEmptyStateDismissed = true;
-            mudlet::self()->getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
+            mudlet::getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
         }
         updateEmptyStateOverlay();
     });
@@ -370,15 +374,7 @@ void dlgMapper::loadMapFromFile()
 
 void dlgMapper::repositionEmptyStateOverlay()
 {
-    if (!mpEmptyStateOverlay || !mp2dMap) {
-        return;
-    }
-    const QSize hint = mpEmptyStateOverlay->sizeHint();
-    const int w = qMin(hint.width(), mp2dMap->width() - 20);
-    const int h = hint.height();
-    const int x = (mp2dMap->width() - w) / 2;
-    const int y = (mp2dMap->height() - h) / 2;
-    mpEmptyStateOverlay->setGeometry(x, y, w, h);
+    centerOverlayIn(mpEmptyStateOverlay, mp2dMap, 0);
 }
 
 void dlgMapper::updateEmptyStateOverlay()
@@ -387,7 +383,6 @@ void dlgMapper::updateEmptyStateOverlay()
         return;
     }
     if (!mpMap->mpRoomDB->isEmpty()) {
-        // Map has rooms again - allow overlay to reappear on a future empty map.
         mEmptyStateDismissed = false;
     }
     const bool shouldShow = mpMap->mpRoomDB->isEmpty() && !mpMap->getMmpMapLocation().isEmpty() && !mEmptyStateDismissed;
@@ -399,8 +394,8 @@ void dlgMapper::updateEmptyStateOverlay()
     } else {
         mpEmptyStateOverlay->hide();
     }
-    if (mp2dMap && !isMapProgressVisible()) {
-        // Don't clobber the progress overlay's own suppression of the empty-state text.
+    // Don't clobber the progress overlay's own suppression of the empty-state text.
+    if (mp2dMap && !isMapProgressVisible() && mp2dMap->mSuppressEmptyStateMessage != shouldShow) {
         mp2dMap->mSuppressEmptyStateMessage = shouldShow;
         mp2dMap->update();
     }
@@ -409,8 +404,12 @@ void dlgMapper::updateEmptyStateOverlay()
 bool dlgMapper::eventFilter(QObject* watched, QEvent* event)
 {
     if (watched == mp2dMap && event->type() == QEvent::Resize) {
-        repositionEmptyStateOverlay();
-        repositionProgressOverlay();
+        if (mpEmptyStateOverlay && mpEmptyStateOverlay->isVisible()) {
+            repositionEmptyStateOverlay();
+        }
+        if (mpProgressOverlay && mpProgressOverlay->isVisible()) {
+            repositionProgressOverlay();
+        }
     }
     return QWidget::eventFilter(watched, event);
 }

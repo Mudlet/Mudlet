@@ -2593,7 +2593,6 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
     }
 
     if (!hasActiveTransferProgress()) {
-        // This is the local import case - no progress display until now.
         isLocalImport = true;
         //: This is a title of a progress window.
         createTransferProgress(tr("Map import"), tr("Importing XML map file for use in %1...").arg(mProfileName), false);
@@ -2808,13 +2807,11 @@ void TMap::reportProgressToProgressDialog(const int current, const int maximum)
 void TMap::createTransferProgress(const QString& title, const QString& label, bool cancelable)
 {
     if (mpMapper && mpMapper->isVisible()) {
-        mUsingInlineProgress = true;
         mpMapper->showMapProgress(label, cancelable);
         connect(mpMapper, &dlgMapper::signal_mapProgressCanceled, this, &TMap::slot_downloadCancel, Qt::UniqueConnection);
         return;
     }
 
-    mUsingInlineProgress = false;
     mpProgressDialog = new QProgressDialog(label, cancelable ? tr("Abort") : QString(), 0, 0);
     mpProgressDialog->setWindowTitle(title);
     mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
@@ -2830,69 +2827,66 @@ void TMap::createTransferProgress(const QString& title, const QString& label, bo
 
 void TMap::updateTransferProgressLabel(const QString& text)
 {
-    if (mUsingInlineProgress && mpMapper) {
-        mpMapper->setMapProgressLabel(text);
-    } else if (mpProgressDialog) {
+    if (mpProgressDialog) {
         mpProgressDialog->setLabelText(text);
+    } else if (mpMapper) {
+        mpMapper->setMapProgressLabel(text);
     }
 }
 
 void TMap::updateTransferProgressRange(int minimum, int maximum)
 {
-    if (mUsingInlineProgress && mpMapper) {
-        mpMapper->setMapProgressRange(minimum, maximum);
-    } else if (mpProgressDialog) {
+    if (mpProgressDialog) {
         mpProgressDialog->setRange(minimum, maximum);
+    } else if (mpMapper) {
+        mpMapper->setMapProgressRange(minimum, maximum);
     }
 }
 
 void TMap::updateTransferProgressValue(int value)
 {
-    if (mUsingInlineProgress && mpMapper) {
-        mpMapper->setMapProgressValue(value);
-    } else if (mpProgressDialog) {
+    if (mpProgressDialog) {
         mpProgressDialog->setValue(value);
+    } else if (mpMapper) {
+        mpMapper->setMapProgressValue(value);
     }
 }
 
 int TMap::transferProgressMaximum() const
 {
-    if (mUsingInlineProgress && mpMapper) {
-        return mpMapper->mapProgressMaximum();
-    }
     if (mpProgressDialog) {
         return mpProgressDialog->maximum();
+    }
+    if (mpMapper) {
+        return mpMapper->mapProgressMaximum();
     }
     return 0;
 }
 
 bool TMap::hasActiveTransferProgress() const
 {
-    if (mUsingInlineProgress && mpMapper) {
-        return mpMapper->isMapProgressVisible();
-    }
-    return mpProgressDialog != nullptr;
+    return mpProgressDialog != nullptr || (mpMapper && mpMapper->isMapProgressVisible());
 }
 
 void TMap::disableTransferProgressCancel()
 {
-    if (mUsingInlineProgress && mpMapper) {
-        mpMapper->setMapProgressCancelable(false);
-    } else if (mpProgressDialog) {
+    if (mpProgressDialog) {
         mpProgressDialog->setCancelButton(nullptr);
+    } else if (mpMapper) {
+        mpMapper->setMapProgressCancelable(false);
     }
 }
 
 void TMap::clearTransferProgress()
 {
-    if (mUsingInlineProgress && mpMapper) {
-        disconnect(mpMapper, &dlgMapper::signal_mapProgressCanceled, this, &TMap::slot_downloadCancel);
-        mpMapper->hideMapProgress();
-        mUsingInlineProgress = false;
-    }
     if (mpProgressDialog) {
         mpProgressDialog->deleteLater();
         mpProgressDialog = nullptr;
+        return;
+    }
+    if (mpMapper) {
+        disconnect(mpMapper, &dlgMapper::signal_mapProgressCanceled, this, &TMap::slot_downloadCancel);
+        mpMapper->hideMapProgress();
     }
 }
 

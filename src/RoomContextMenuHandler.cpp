@@ -78,6 +78,18 @@ bool RoomContextMenuHandler::handle(T2DMap::MapInteractionContext& context)
     auto* roomDatabase = mMapWidget.mpMap->mpRoomDB;
     if (!roomDatabase || roomDatabase->isEmpty()) {
         // No map loaded
+        if (!mMapWidget.mpMap->getMmpMapLocation().isEmpty()) {
+            //: 2D Mapper context menu (no map found) item. Downloads the shared map offered by the game server via MMP.
+            auto downloadMap = new QAction(T2DMap::tr("Download from game"), &mMapWidget);
+            TMap* pMap = mMapWidget.mpMap;
+            QObject::connect(downloadMap, &QAction::triggered, &mMapWidget, [pMap]() {
+                if (pMap) {
+                    pMap->downloadMap();
+                }
+            });
+            popup->addAction(downloadMap);
+        }
+
         //: 2D Mapper context menu (no map found) item
         auto createMap = new QAction(T2DMap::tr("Create new map"), &mMapWidget);
         QObject::connect(createMap, &QAction::triggered, &mMapWidget, &T2DMap::slot_newMap);
