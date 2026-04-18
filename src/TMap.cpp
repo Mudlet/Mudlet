@@ -2545,23 +2545,13 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     // Attempts to ensure INFO message gets shown before download is initiated!
 
     mpNetworkReply = mpNetworkAccessManager->get(request);
-    // Using zero for both min and max values should cause the bar to oscillate
-    // until the first update
     //: %1 is the name of the current Mudlet profile
-    mpProgressDialog = new QProgressDialog(tr("Downloading map file for use in %1...").arg(mProfileName), tr("Abort"), 0, 0);
+    const QString label = tr("Downloading map file for use in %1...").arg(mProfileName);
     //: This is a title of a progress window.
-    mpProgressDialog->setWindowTitle(tr("Map download"));
-    mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
-    mpProgressDialog->setMinimumWidth(300);
-    mpProgressDialog->setAutoClose(false);
-    mpProgressDialog->setAutoReset(false);
-    mpProgressDialog->setMinimumDuration(0); // Normally waits for 4 seconds before showing
+    createTransferProgress(tr("Map download"), label, true);
 
     connect(mpNetworkReply, &QNetworkReply::downloadProgress, this, &TMap::slot_setDownloadProgress);
     connect(mpNetworkReply, &QNetworkReply::errorOccurred, this, &TMap::slot_downloadError);
-    connect(mpProgressDialog, &QProgressDialog::canceled, this, &TMap::slot_downloadCancel);
-
-    mpProgressDialog->show();
 }
 
 // Called from TLuaInterpreter::loadFile() or dlgProfilePreferences's "loadMap"
@@ -2602,20 +2592,11 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         return false;
     }
 
-    if (!mpProgressDialog) {
-        // This is the local import case - which has not got a progress dialog
-        // until now:
+    if (!hasActiveTransferProgress()) {
+        // This is the local import case - no progress display until now.
         isLocalImport = true;
-        mpProgressDialog = new QProgressDialog(tr("Importing XML map file for use in %1...").arg(mProfileName), QString(), 0, 0);
         //: This is a title of a progress window.
-        mpProgressDialog->setWindowTitle(tr("Map import"));
-        mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
-        mpProgressDialog->setMinimumWidth(300);
-        mpProgressDialog->setAutoClose(false);
-        mpProgressDialog->setAutoReset(false);
-        mpProgressDialog->setMinimumDuration(0); // Normally waits for 4 seconds before showing
-    } else {
-        ; // This is the download file case which is a no-op
+        createTransferProgress(tr("Map import"), tr("Importing XML map file for use in %1...").arg(mProfileName), false);
     }
 
     // It is NOW safe to delete the map as we are in a position to load one
@@ -2648,9 +2629,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
     }
 
     if (isLocalImport) {
-        // clean-up
-        mpProgressDialog->deleteLater();
-        mpProgressDialog = nullptr;
+        clearTransferProgress();
     }
 
     if (!mpMapper.isNull()) {
@@ -2662,30 +2641,27 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
 
 void TMap::slot_setDownloadProgress(qint64 got, qint64 total)
 {
-    if (!mpProgressDialog) {
+    if (!hasActiveTransferProgress()) {
         return;
     }
 
-    if (!mpProgressDialog->maximum()) {
+    if (!transferProgressMaximum()) {
         // First call, range has not been set;
-        mpProgressDialog->setRange(0, mExpectedFileSize);
-    } else if (total != -1 && mpProgressDialog->maximum() != static_cast<int>(total)) {
+        updateTransferProgressRange(0, mExpectedFileSize);
+    } else if (total != -1 && transferProgressMaximum() != static_cast<int>(total)) {
         // total will stick at -1 when we do not know how big the download is
         // which seems to be the case for the IRE MUDS - *sigh* - Slysven
-        mpProgressDialog->setRange(0, static_cast<int>(total));
+        updateTransferProgressRange(0, static_cast<int>(total));
     }
 
-    mpProgressDialog->setValue(static_cast<int>(got));
+    updateTransferProgressValue(static_cast<int>(got));
 }
 
 void TMap::slot_downloadCancel()
 {
     const QString alertMsg = tr("[ ALERT ] - Map download was canceled, on user's request.");
     postMessage(alertMsg);
-    if (mpProgressDialog) {
-        mpProgressDialog->deleteLater();
-        mpProgressDialog = nullptr; // Must reset this so it can be reused
-    }
+    clearTransferProgress();
     if (mpNetworkReply) {
         mpNetworkReply->abort(); // Will indirectly cause error() AND replyFinished signals to be sent
     }
@@ -2710,13 +2686,9 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         reply->deleteLater();
         mpNetworkReply = nullptr;
 
-        // We don't delete the progress dialog until here as we now use it to inform
-        // about post-download operations
-
-        if (mpProgressDialog) {
-            mpProgressDialog->deleteLater();
-            mpProgressDialog = nullptr; // Must reset this so it can be reused
-        }
+        // We don't dismiss the progress display until here as we now use it to
+        // inform about post-download operations
+        clearTransferProgress();
 
         mLocalMapFileName.clear();
         mExpectedFileSize = 0;
@@ -2772,9 +2744,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
     // Since the download is complete but we do not offer to
     // cancel the required post-processing we should now hide
     // the cancel/abort button:
-    if (mpProgressDialog) {
-        mpProgressDialog->setCancelButton(nullptr);
-    }
+    disableTransferProgressCancel();
 
     bool parsingWasSuccessful;
     QString parsingFileName;
@@ -2815,8 +2785,8 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
 
 void TMap::reportStringToProgressDialog(const QString text)
 {
-    if (mpProgressDialog) {
-        mpProgressDialog->setLabelText(text);
+    if (hasActiveTransferProgress()) {
+        updateTransferProgressLabel(text);
         // Needed to make the changed text show, it does increase the overall
         // time a little but as the main usage is when parsing XML room data
         // and that can take MORE THAN A MINUTE the activity is essential to
@@ -2827,11 +2797,102 @@ void TMap::reportStringToProgressDialog(const QString text)
 
 void TMap::reportProgressToProgressDialog(const int current, const int maximum)
 {
-    if (mpProgressDialog) {
-        if (mpProgressDialog->maximum() != maximum) {
-            mpProgressDialog->setMaximum(maximum);
+    if (hasActiveTransferProgress()) {
+        if (transferProgressMaximum() != maximum) {
+            updateTransferProgressRange(0, maximum);
         }
-        mpProgressDialog->setValue(current);
+        updateTransferProgressValue(current);
+    }
+}
+
+void TMap::createTransferProgress(const QString& title, const QString& label, bool cancelable)
+{
+    if (mpMapper && mpMapper->isVisible()) {
+        mUsingInlineProgress = true;
+        mpMapper->showMapProgress(label, cancelable);
+        connect(mpMapper, &dlgMapper::signal_mapProgressCanceled, this, &TMap::slot_downloadCancel, Qt::UniqueConnection);
+        return;
+    }
+
+    mUsingInlineProgress = false;
+    mpProgressDialog = new QProgressDialog(label, cancelable ? tr("Abort") : QString(), 0, 0);
+    mpProgressDialog->setWindowTitle(title);
+    mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
+    mpProgressDialog->setMinimumWidth(300);
+    mpProgressDialog->setAutoClose(false);
+    mpProgressDialog->setAutoReset(false);
+    mpProgressDialog->setMinimumDuration(0); // Normally waits for 4 seconds before showing
+    if (cancelable) {
+        connect(mpProgressDialog, &QProgressDialog::canceled, this, &TMap::slot_downloadCancel);
+    }
+    mpProgressDialog->show();
+}
+
+void TMap::updateTransferProgressLabel(const QString& text)
+{
+    if (mUsingInlineProgress && mpMapper) {
+        mpMapper->setMapProgressLabel(text);
+    } else if (mpProgressDialog) {
+        mpProgressDialog->setLabelText(text);
+    }
+}
+
+void TMap::updateTransferProgressRange(int minimum, int maximum)
+{
+    if (mUsingInlineProgress && mpMapper) {
+        mpMapper->setMapProgressRange(minimum, maximum);
+    } else if (mpProgressDialog) {
+        mpProgressDialog->setRange(minimum, maximum);
+    }
+}
+
+void TMap::updateTransferProgressValue(int value)
+{
+    if (mUsingInlineProgress && mpMapper) {
+        mpMapper->setMapProgressValue(value);
+    } else if (mpProgressDialog) {
+        mpProgressDialog->setValue(value);
+    }
+}
+
+int TMap::transferProgressMaximum() const
+{
+    if (mUsingInlineProgress && mpMapper) {
+        return mpMapper->mapProgressMaximum();
+    }
+    if (mpProgressDialog) {
+        return mpProgressDialog->maximum();
+    }
+    return 0;
+}
+
+bool TMap::hasActiveTransferProgress() const
+{
+    if (mUsingInlineProgress && mpMapper) {
+        return mpMapper->isMapProgressVisible();
+    }
+    return mpProgressDialog != nullptr;
+}
+
+void TMap::disableTransferProgressCancel()
+{
+    if (mUsingInlineProgress && mpMapper) {
+        mpMapper->setMapProgressCancelable(false);
+    } else if (mpProgressDialog) {
+        mpProgressDialog->setCancelButton(nullptr);
+    }
+}
+
+void TMap::clearTransferProgress()
+{
+    if (mUsingInlineProgress && mpMapper) {
+        disconnect(mpMapper, &dlgMapper::signal_mapProgressCanceled, this, &TMap::slot_downloadCancel);
+        mpMapper->hideMapProgress();
+        mUsingInlineProgress = false;
+    }
+    if (mpProgressDialog) {
+        mpProgressDialog->deleteLater();
+        mpProgressDialog = nullptr;
     }
 }
 

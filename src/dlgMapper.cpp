@@ -41,6 +41,7 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QPainter>
+#include <QProgressBar>
 #include <QProgressDialog>
 #include <QPushButton>
 #include <QSettings>
@@ -131,6 +132,7 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
     slot_updateInfoContributors();
 
     setupEmptyStateOverlay();
+    setupProgressOverlay();
     connect(mpMap, &TMap::signal_mmpMapLocationChanged, this, &dlgMapper::updateEmptyStateOverlay);
     connect(mpMap, &TMap::signal_areaChanged, this, [this](int) {
         updateEmptyStateOverlay();
@@ -196,6 +198,127 @@ void dlgMapper::setupEmptyStateOverlay()
 
     mpEmptyStateOverlay->hide();
     mp2dMap->installEventFilter(this);
+}
+
+void dlgMapper::setupProgressOverlay()
+{
+    mpProgressOverlay = new QFrame(mp2dMap);
+    mpProgressOverlay->setObjectName(qsl("mapProgressOverlay"));
+    mpProgressOverlay->setAutoFillBackground(true);
+    mpProgressOverlay->setFrameShape(QFrame::StyledPanel);
+    mpProgressOverlay->setStyleSheet(qsl("QFrame#mapProgressOverlay {"
+                                         " background-color: palette(window);"
+                                         " border: 1px solid palette(mid);"
+                                         " border-radius: 8px;"
+                                         "}"));
+
+    mpProgressLabel = new QLabel(mpProgressOverlay);
+    mpProgressLabel->setAlignment(Qt::AlignCenter);
+    mpProgressLabel->setWordWrap(true);
+
+    mpProgressBar = new QProgressBar(mpProgressOverlay);
+    mpProgressBar->setRange(0, 0);
+    mpProgressBar->setValue(0);
+    mpProgressBar->setTextVisible(false);
+
+    //: Button label to abort an in-progress map download or import.
+    mpProgressCancelButton = new QPushButton(tr("Abort"), mpProgressOverlay);
+    mpProgressCancelButton->setAutoDefault(false);
+
+    auto* layout = new QVBoxLayout(mpProgressOverlay);
+    layout->setContentsMargins(20, 16, 20, 16);
+    layout->setSpacing(10);
+    layout->addWidget(mpProgressLabel);
+    layout->addWidget(mpProgressBar);
+    layout->addWidget(mpProgressCancelButton, 0, Qt::AlignHCenter);
+
+    connect(mpProgressCancelButton, &QPushButton::clicked, this, [this]() {
+        emit signal_mapProgressCanceled();
+    });
+
+    mpProgressOverlay->hide();
+}
+
+void dlgMapper::repositionProgressOverlay()
+{
+    if (!mpProgressOverlay || !mp2dMap) {
+        return;
+    }
+    const QSize hint = mpProgressOverlay->sizeHint();
+    const int w = qMax(hint.width(), qMin(320, mp2dMap->width() - 20));
+    const int h = hint.height();
+    const int x = (mp2dMap->width() - w) / 2;
+    const int y = (mp2dMap->height() - h) / 2;
+    mpProgressOverlay->setGeometry(x, y, w, h);
+}
+
+void dlgMapper::showMapProgress(const QString& label, bool cancelable)
+{
+    if (!mpProgressOverlay) {
+        return;
+    }
+    if (mpEmptyStateOverlay) {
+        mpEmptyStateOverlay->hide();
+    }
+    if (mp2dMap) {
+        mp2dMap->mSuppressEmptyStateMessage = true;
+        mp2dMap->update();
+    }
+    mpProgressLabel->setText(label);
+    mpProgressBar->setRange(0, 0);
+    mpProgressBar->setValue(0);
+    mpProgressCancelButton->setVisible(cancelable);
+    mpProgressOverlay->show();
+    mpProgressOverlay->adjustSize();
+    repositionProgressOverlay();
+    mpProgressOverlay->raise();
+}
+
+void dlgMapper::setMapProgressLabel(const QString& text)
+{
+    if (mpProgressLabel) {
+        mpProgressLabel->setText(text);
+        repositionProgressOverlay();
+    }
+}
+
+void dlgMapper::setMapProgressRange(int minimum, int maximum)
+{
+    if (mpProgressBar) {
+        mpProgressBar->setRange(minimum, maximum);
+    }
+}
+
+void dlgMapper::setMapProgressValue(int value)
+{
+    if (mpProgressBar) {
+        mpProgressBar->setValue(value);
+    }
+}
+
+int dlgMapper::mapProgressMaximum() const
+{
+    return mpProgressBar ? mpProgressBar->maximum() : 0;
+}
+
+void dlgMapper::setMapProgressCancelable(bool cancelable)
+{
+    if (mpProgressCancelButton) {
+        mpProgressCancelButton->setVisible(cancelable);
+    }
+}
+
+void dlgMapper::hideMapProgress()
+{
+    if (mpProgressOverlay) {
+        mpProgressOverlay->hide();
+    }
+    updateEmptyStateOverlay();
+}
+
+bool dlgMapper::isMapProgressVisible() const
+{
+    return mpProgressOverlay && mpProgressOverlay->isVisible();
 }
 
 void dlgMapper::loadMapFromFile()
@@ -276,7 +399,8 @@ void dlgMapper::updateEmptyStateOverlay()
     } else {
         mpEmptyStateOverlay->hide();
     }
-    if (mp2dMap) {
+    if (mp2dMap && !isMapProgressVisible()) {
+        // Don't clobber the progress overlay's own suppression of the empty-state text.
         mp2dMap->mSuppressEmptyStateMessage = shouldShow;
         mp2dMap->update();
     }
@@ -286,6 +410,7 @@ bool dlgMapper::eventFilter(QObject* watched, QEvent* event)
 {
     if (watched == mp2dMap && event->type() == QEvent::Resize) {
         repositionEmptyStateOverlay();
+        repositionProgressOverlay();
     }
     return QWidget::eventFilter(watched, event);
 }

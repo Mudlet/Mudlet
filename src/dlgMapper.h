@@ -30,6 +30,8 @@
 class Host;
 class TMap;
 class QFrame;
+class QLabel;
+class QProgressBar;
 class QPushButton;
 struct MapInfoProperties;
 #if defined(INCLUDE_3DMAPPER)
@@ -56,6 +58,18 @@ public:
     int getCurrentShownAreaIndex();
     void setFont(const QFont&);
     void recreate3DWidget();
+
+    void showMapProgress(const QString& label, bool cancelable);
+    void setMapProgressLabel(const QString& text);
+    void setMapProgressRange(int minimum, int maximum);
+    void setMapProgressValue(int value);
+    int mapProgressMaximum() const;
+    void setMapProgressCancelable(bool cancelable);
+    void hideMapProgress();
+    bool isMapProgressVisible() const;
+
+signals:
+    void signal_mapProgressCanceled();
 
 public slots:
     void updateEmptyStateOverlay();
@@ -99,6 +113,8 @@ protected:
 private:
     void setupEmptyStateOverlay();
     void repositionEmptyStateOverlay();
+    void setupProgressOverlay();
+    void repositionProgressOverlay();
     void loadMapFromFile();
 
     TMap* mpMap = nullptr;
@@ -106,6 +122,10 @@ private:
     QPointer<QMenu> mpInfoMenu;
     QFrame* mpEmptyStateOverlay = nullptr;
     QPushButton* mpEmptyStateDownloadButton = nullptr;
+    QFrame* mpProgressOverlay = nullptr;
+    QLabel* mpProgressLabel = nullptr;
+    QProgressBar* mpProgressBar = nullptr;
+    QPushButton* mpProgressCancelButton = nullptr;
     bool mEmptyStateDismissed = false;
     bool mIs3DMode = false;
 };

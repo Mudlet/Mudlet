@@ -158,6 +158,19 @@ public:
     // Use progress dialog for post-download operations.
     void reportProgressToProgressDialog(int, int);
 
+    // Download/import progress helpers. Use the inline progress widget in the
+    // mapper when it is visible, otherwise fall back to a modal QProgressDialog.
+    // Do NOT use these from the JSON export/import paths - those keep their own
+    // dedicated QProgressDialog.
+    void createTransferProgress(const QString& title, const QString& label, bool cancelable);
+    void updateTransferProgressLabel(const QString& text);
+    void updateTransferProgressRange(int minimum, int maximum);
+    void updateTransferProgressValue(int value);
+    int transferProgressMaximum() const;
+    bool hasActiveTransferProgress() const;
+    void disableTransferProgressCancel();
+    void clearTransferProgress();
+
     // Show which rooms have which symbols:
     QHash<QString, QSet<int>> roomSymbolsHash();
 
@@ -380,6 +393,7 @@ private:
     bool mImportRunning = false;
 
     QProgressDialog* mpProgressDialog = nullptr;
+    bool mUsingInlineProgress = false;
     // Using during updates of text in progress dialog partially from other
     // classes:
     qsizetype mProgressDialogAreasTotal = 0;
