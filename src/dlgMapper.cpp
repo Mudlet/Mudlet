@@ -161,7 +161,8 @@ static void centerOverlayIn(QFrame* overlay, QWidget* parent, int minWidth)
         return;
     }
     const QSize hint = overlay->sizeHint();
-    const int w = qMax(hint.width(), qMin(minWidth, parent->width() - 20));
+    const int available = qMax(20, parent->width() - 20);
+    const int w = qMin(qMax(hint.width(), minWidth), available);
     const int h = hint.height();
     overlay->setGeometry((parent->width() - w) / 2, (parent->height() - h) / 2, w, h);
 }
