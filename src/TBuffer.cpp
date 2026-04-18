@@ -7099,7 +7099,7 @@ int TBuffer::getLinkIndexAt(int line, int column) const
     return bufferLine.at(column).linkIndex();
 }
 
-bool TBuffer::findNextLink(int fromLine, int fromColumn, int& outLine, int& outColumn) const
+bool TBuffer::findNextLink(int fromLine, int fromColumn, int& outLine, int& outColumn, bool* wrapped) const
 {
     if (buffer.empty()) {
         return false;
@@ -7110,6 +7110,10 @@ bool TBuffer::findNextLink(int fromLine, int fromColumn, int& outLine, int& outC
         return false;
     }
     fromColumn = qBound(-1, fromColumn, static_cast<int>(buffer.at(fromLine).size()) - 1);
+
+    if (wrapped) {
+        *wrapped = false;
+    }
 
     int currentLinkAtStart = getLinkIndexAt(fromLine, fromColumn);
 
@@ -7126,10 +7130,29 @@ bool TBuffer::findNextLink(int fromLine, int fromColumn, int& outLine, int& outC
             }
         }
     }
+
+    // Wrap around: search from the beginning up to the starting position
+    for (int line = 0; line <= fromLine; ++line) {
+        const auto& bufferLine = buffer.at(line);
+        int endCol = (line == fromLine) ? qMin(fromColumn + 1, static_cast<int>(bufferLine.size())) : static_cast<int>(bufferLine.size());
+
+        for (int col = 0; col < endCol; ++col) {
+            int linkIdx = bufferLine.at(col).linkIndex();
+            if (linkIdx > 0 && linkIdx != currentLinkAtStart) {
+                outLine = line;
+                outColumn = col;
+                if (wrapped) {
+                    *wrapped = true;
+                }
+                return true;
+            }
+        }
+    }
+
     return false;
 }
 
-bool TBuffer::findPreviousLink(int fromLine, int fromColumn, int& outLine, int& outColumn) const
+bool TBuffer::findPreviousLink(int fromLine, int fromColumn, int& outLine, int& outColumn, bool* wrapped) const
 {
     if (buffer.empty()) {
         return false;
@@ -7143,6 +7166,10 @@ bool TBuffer::findPreviousLink(int fromLine, int fromColumn, int& outLine, int& 
         fromColumn = -1;
     } else {
         fromColumn = qBound(0, fromColumn, static_cast<int>(buffer.at(fromLine).size()) - 1);
+    }
+
+    if (wrapped) {
+        *wrapped = false;
     }
 
     int currentLinkAtStart = getLinkIndexAt(fromLine, fromColumn);
@@ -7165,6 +7192,29 @@ bool TBuffer::findPreviousLink(int fromLine, int fromColumn, int& outLine, int& 
             }
         }
     }
+
+    // Wrap around: search from the end back to the starting position
+    for (int line = lineCount - 1; line >= fromLine; --line) {
+        const auto& bufferLine = buffer.at(line);
+        int startCol = (line == fromLine) ? qMin(fromColumn, static_cast<int>(bufferLine.size()) - 1) : static_cast<int>(bufferLine.size()) - 1;
+
+        for (int col = startCol; col >= 0; --col) {
+            int linkIdx = bufferLine.at(col).linkIndex();
+            if (linkIdx > 0 && linkIdx != currentLinkAtStart) {
+                int linkStart = col;
+                while (linkStart > 0 && bufferLine.at(linkStart - 1).linkIndex() == linkIdx) {
+                    --linkStart;
+                }
+                outLine = line;
+                outColumn = linkStart;
+                if (wrapped) {
+                    *wrapped = true;
+                }
+                return true;
+            }
+        }
+    }
+
     return false;
 }
 

@@ -3533,6 +3533,45 @@ void TTextEdit::showLinkContextMenu()
     if (command.size() <= 1 && hint.size() <= command.size()) {
         // No menu needed: one command and no extra hints means direct activation
         if (!command.isEmpty()) {
+            // Handle selection group state changes
+            if (hyperlinkStyling.selection.hasSelectionSettings) {
+                auto* mgr = mpConsole ? &mpConsole->getHyperlinkSelectionManager() : nullptr;
+                if (mgr) {
+                    const QString& group = hyperlinkStyling.selection.group;
+                    const QString& value = hyperlinkStyling.selection.value;
+
+                    mgr->setGroupExclusive(group, hyperlinkStyling.selection.exclusive);
+
+                    if (hyperlinkStyling.selection.toggle) {
+                        mgr->toggleSelection(group, value);
+                    } else {
+                        mgr->setSelected(group, value, true);
+                    }
+
+                    bool newSelected = mgr->isSelected(group, value);
+                    command[0] = mgr->modifyUriForSelection(command[0], group, value);
+
+                    mpBuffer->setLinkSelected(focusedLink, newSelected);
+                    mpBuffer->setLinkState(focusedLink, newSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
+                    mpBuffer->updateLinkCharacters(focusedLink);
+
+                    if (mgr->isGroupExclusive(group)) {
+                        QStringList groupMembers = mgr->getGroupMembers(group);
+                        for (const QString& member : std::as_const(groupMembers)) {
+                            if (member != value) {
+                                bool memberSelected = mgr->isSelected(group, member);
+                                QList<int> matchingLinkIds = mpBuffer->mLinkStore.getLinkIdsByGroupValue(group, member);
+                                for (const int otherLinkId : std::as_const(matchingLinkIds)) {
+                                    mpBuffer->setLinkSelected(otherLinkId, memberSelected);
+                                    mpBuffer->setLinkState(otherLinkId, memberSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
+                                    mpBuffer->updateLinkCharacters(otherLinkId);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             if (mpConsole) {
                 mpConsole->getHyperlinkVisibilityManager().onLinkClicked(focusedLink);
             } else {
@@ -3930,9 +3969,16 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         if (!(event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier))) {
             int nextLine = 0;
             int nextCol = 0;
-            if (mpBuffer->findNextLink(mCaretLine, mCaretColumn, nextLine, nextCol)) {
+            bool wrapped = false;
+            if (mpBuffer->findNextLink(mCaretLine, mCaretColumn, nextLine, nextCol, &wrapped)) {
                 newCaretLine = nextLine;
                 newCaretColumn = nextCol;
+                if (wrapped) {
+                    if (auto* pMudlet = mudlet::self()) {
+                        //: Screen-reader announcement when Tab wraps past the last link back to the first
+                        pMudlet->announce(tr("Wrapping to first link"), QString(), true);
+                    }
+                }
             }
         }
         break;
@@ -3940,9 +3986,16 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     case Qt::Key_Backtab: {
         int prevLine = 0;
         int prevCol = 0;
-        if (mpBuffer->findPreviousLink(mCaretLine, mCaretColumn, prevLine, prevCol)) {
+        bool wrapped = false;
+        if (mpBuffer->findPreviousLink(mCaretLine, mCaretColumn, prevLine, prevCol, &wrapped)) {
             newCaretLine = prevLine;
             newCaretColumn = prevCol;
+            if (wrapped) {
+                if (auto* pMudlet = mudlet::self()) {
+                    //: Screen-reader announcement when Shift+Tab wraps past the first link back to the last
+                    pMudlet->announce(tr("Wrapping to last link"), QString(), true);
+                }
+            }
         }
         break;
     }
