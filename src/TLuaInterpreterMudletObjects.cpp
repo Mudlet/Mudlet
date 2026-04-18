@@ -2917,16 +2917,12 @@ int TLuaInterpreter::getSubsystemMemoryStats(lua_State* L)
     lua_getglobal(L, "collectgarbage");
     lua_pushstring(L, "count");
     lua_call(L, 1, 1);
-    // result is already on stack; move it into the table
+    const lua_Number heapKb = lua_tonumber(L, -1);
     lua_settable(L, -3);
 
-    // Lua heap in MB for convenience
+    // Lua heap in MB for convenience — reuse the value already read above
     lua_pushstring(L, "lua_heap_mb");
-    lua_getglobal(L, "collectgarbage");
-    lua_pushstring(L, "count");
-    lua_call(L, 1, 1);
-    lua_pushnumber(L, lua_tonumber(L, -1) / 1024.0);
-    lua_remove(L, -2);
+    lua_pushnumber(L, heapKb / 1024.0);
     lua_settable(L, -3);
 
     // Trigger counts (total, temp) via assembleReport()
@@ -3024,8 +3020,9 @@ int TLuaInterpreter::getSubsystemMemoryStats(lua_State* L)
     // The gap between in_use and allocated is fragmented free space that has been
     // freed but not yet returned to the OS.
     {
-        int64_t heapInUseMb = 0;
-        int64_t heapAllocatedMb = 0;
+        double heapInUseMb = 0.0;
+        double heapAllocatedMb = 0.0;
+        static constexpr double kBytesPerMb = 1024.0 * 1024.0;
 #if defined(Q_OS_MACOS)
         vm_address_t* zones = nullptr;
         unsigned int zoneCount = 0;
@@ -3047,21 +3044,21 @@ int TLuaInterpreter::getSubsystemMemoryStats(lua_State* L)
                 lua_pushstring(L, zoneName);
                 lua_newtable(L);
                 lua_pushstring(L, "in_use_mb");
-                lua_pushnumber(L, static_cast<lua_Number>(zoneStats.size_in_use) / (1024.0 * 1024.0));
+                lua_pushnumber(L, static_cast<double>(zoneStats.size_in_use) / kBytesPerMb);
                 lua_settable(L, -3);
                 lua_pushstring(L, "allocated_mb");
-                lua_pushnumber(L, static_cast<lua_Number>(zoneStats.size_allocated) / (1024.0 * 1024.0));
+                lua_pushnumber(L, static_cast<double>(zoneStats.size_allocated) / kBytesPerMb);
                 lua_settable(L, -3);
                 lua_settable(L, -3);
             }
-            heapInUseMb = static_cast<int64_t>(totalInUse / (1024 * 1024));
-            heapAllocatedMb = static_cast<int64_t>(totalAllocated / (1024 * 1024));
+            heapInUseMb = static_cast<double>(totalInUse) / kBytesPerMb;
+            heapAllocatedMb = static_cast<double>(totalAllocated) / kBytesPerMb;
         }
         lua_settable(L, -3);
 #elif defined(Q_OS_LINUX)
         struct mallinfo2 mi = mallinfo2();
-        heapInUseMb = static_cast<int64_t>(mi.uordblks / (1024 * 1024));
-        heapAllocatedMb = static_cast<int64_t>((mi.arena + mi.hblkhd) / (1024 * 1024));
+        heapInUseMb = static_cast<double>(mi.uordblks) / kBytesPerMb;
+        heapAllocatedMb = (static_cast<double>(mi.arena) + static_cast<double>(mi.hblkhd)) / kBytesPerMb;
 #endif
         lua_pushstring(L, "heap_in_use_mb");
         lua_pushnumber(L, heapInUseMb);

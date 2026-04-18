@@ -100,13 +100,16 @@ public:
         bool muted = oldOutput ? oldOutput->isMuted() : false;
 
         // Parent the new output to mMediaPlayer so it is destroyed with the player.
-        // The old output's parent will be cleared by setAudioOutput; schedule it
-        // for deletion on the next event loop turn.
         auto* newOutput = new QAudioOutput(mMediaPlayer.get());
         newOutput->setVolume(volume);
         newOutput->setMuted(muted);
         mMediaPlayer->setAudioOutput(newOutput);
         if (oldOutput) {
+            // Explicitly clear the parent before scheduling deletion — do not rely on
+            // setAudioOutput() clearing it as an undocumented side-effect. Without this,
+            // mMediaPlayer's destructor could delete oldOutput before deleteLater() fires,
+            // causing a double-free.
+            oldOutput->setParent(nullptr);
             oldOutput->deleteLater();
         }
     }

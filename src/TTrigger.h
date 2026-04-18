@@ -202,6 +202,9 @@ private:
     bool mIsMultiline = false;
     int mConditionLineDelta = 0;
     QString mCommand;
+    // Key is the raw address of the owned TMatchState — stable once inserted and
+    // used for O(1) lookup during the deferred-removal pass in match(). The map
+    // is the sole owner; the raw pointer is never passed out as an observer.
     std::map<TMatchState*, std::unique_ptr<TMatchState>> mConditionMap;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;
