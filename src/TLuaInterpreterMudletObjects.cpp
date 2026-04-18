@@ -565,8 +565,7 @@ int TLuaInterpreter::getKeyCode(lua_State* L)
     }
 
     if (!pT) {
-        const QString errorMsg = isId ? qsl("keybind ID %1 does not exist").arg(nameOrId)
-                                      : qsl("keybind '%1' does not exist").arg(nameOrId);
+        const QString errorMsg = isId ? qsl("keybind ID %1 does not exist").arg(nameOrId) : qsl("keybind '%1' does not exist").arg(nameOrId);
         return warnArgumentValue(L, __func__, errorMsg);
     }
 
@@ -2873,7 +2872,7 @@ int TLuaInterpreter::closeProfile(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProcessMemoryUsage
 int TLuaInterpreter::getProcessMemoryUsage(lua_State* L)
 {
-    long rssKb = 0;
+    int64_t rssKb = 0;
 
 #if defined(Q_OS_LINUX)
     std::ifstream statusFile(qsl("/proc/self/status").toStdString());
@@ -2885,7 +2884,7 @@ int TLuaInterpreter::getProcessMemoryUsage(lua_State* L)
             while (*p == ' ' || *p == '\t') {
                 ++p;
             }
-            rssKb = std::strtol(p, nullptr, 10);
+            rssKb = static_cast<int64_t>(std::strtoll(p, nullptr, 10));
             break;
         }
     }
@@ -2893,12 +2892,12 @@ int TLuaInterpreter::getProcessMemoryUsage(lua_State* L)
     mach_task_basic_info info;
     mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
     if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &infoCount) == KERN_SUCCESS) {
-        rssKb = static_cast<long>(info.resident_size / 1024);
+        rssKb = static_cast<int64_t>(info.resident_size / 1024);
     }
 #elif defined(Q_OS_WINDOWS)
     PROCESS_MEMORY_COUNTERS pmc;
     if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
-        rssKb = static_cast<long>(pmc.WorkingSetSize / 1024);
+        rssKb = static_cast<int64_t>(pmc.WorkingSetSize / 1024);
     }
 #endif
 
@@ -3025,8 +3024,8 @@ int TLuaInterpreter::getSubsystemMemoryStats(lua_State* L)
     // The gap between in_use and allocated is fragmented free space that has been
     // freed but not yet returned to the OS.
     {
-        long heapInUseMb = 0;
-        long heapAllocatedMb = 0;
+        int64_t heapInUseMb = 0;
+        int64_t heapAllocatedMb = 0;
 #if defined(Q_OS_MACOS)
         vm_address_t* zones = nullptr;
         unsigned int zoneCount = 0;
@@ -3055,14 +3054,14 @@ int TLuaInterpreter::getSubsystemMemoryStats(lua_State* L)
                 lua_settable(L, -3);
                 lua_settable(L, -3);
             }
-            heapInUseMb = static_cast<long>(totalInUse / (1024 * 1024));
-            heapAllocatedMb = static_cast<long>(totalAllocated / (1024 * 1024));
+            heapInUseMb = static_cast<int64_t>(totalInUse / (1024 * 1024));
+            heapAllocatedMb = static_cast<int64_t>(totalAllocated / (1024 * 1024));
         }
         lua_settable(L, -3);
 #elif defined(Q_OS_LINUX)
         struct mallinfo2 mi = mallinfo2();
-        heapInUseMb = static_cast<long>(mi.uordblks / (1024 * 1024));
-        heapAllocatedMb = static_cast<long>((mi.arena + mi.hblkhd) / (1024 * 1024));
+        heapInUseMb = static_cast<int64_t>(mi.uordblks / (1024 * 1024));
+        heapAllocatedMb = static_cast<int64_t>((mi.arena + mi.hblkhd) / (1024 * 1024));
 #endif
         lua_pushstring(L, "heap_in_use_mb");
         lua_pushnumber(L, heapInUseMb);
