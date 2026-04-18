@@ -25,17 +25,26 @@
 
 #include "Host.h"
 #include "TConsole.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 
 #include <QElapsedTimer>
+#include <QEvent>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QFrame>
+#include <QLabel>
 #include <QListWidget>
 #include <QMenu>
 #include <QMessageBox>
 #include <QPainter>
 #include <QProgressDialog>
+#include <QPushButton>
+#include <QSettings>
+#include <QVBoxLayout>
 
 using namespace std::chrono_literals;
 
@@ -120,6 +129,165 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
 
     connect(mpMap->mMapInfoContributorManager, &MapInfoContributorManager::signal_contributorsUpdated, this, &dlgMapper::slot_updateInfoContributors);
     slot_updateInfoContributors();
+
+    setupEmptyStateOverlay();
+    connect(mpMap, &TMap::signal_mmpMapLocationChanged, this, &dlgMapper::updateEmptyStateOverlay);
+    connect(mpMap, &TMap::signal_areaChanged, this, [this](int) {
+        updateEmptyStateOverlay();
+    });
+    updateEmptyStateOverlay();
+}
+
+void dlgMapper::setupEmptyStateOverlay()
+{
+    mpEmptyStateOverlay = new QFrame(mp2dMap);
+    mpEmptyStateOverlay->setObjectName(qsl("emptyStateOverlay"));
+    mpEmptyStateOverlay->setAutoFillBackground(true);
+    mpEmptyStateOverlay->setFrameShape(QFrame::StyledPanel);
+    mpEmptyStateOverlay->setStyleSheet(qsl("QFrame#emptyStateOverlay {"
+                                           " background-color: palette(window);"
+                                           " border: 1px solid palette(mid);"
+                                           " border-radius: 8px;"
+                                           "}"));
+
+    //: Empty-state text shown in the mapper when the profile has no local map yet.
+    auto* label = new QLabel(tr("No map yet for this profile."), mpEmptyStateOverlay);
+    label->setAlignment(Qt::AlignCenter);
+    label->setWordWrap(true);
+
+    //: Button in the mapper empty-state. Downloads a shared map offered by the game server via MMP.
+    mpEmptyStateDownloadButton = new QPushButton(tr("Download from game"), mpEmptyStateOverlay);
+    mpEmptyStateDownloadButton->setDefault(true);
+    mpEmptyStateDownloadButton->setAutoDefault(true);
+
+    //: Button in the mapper empty-state. Opens a file dialog to load a .dat/.json/.xml map saved on disk.
+    auto* loadFileButton = new QPushButton(tr("Load from file..."), mpEmptyStateOverlay);
+    loadFileButton->setAutoDefault(false);
+
+    //: Button in the mapper empty-state. Dismisses the prompt so the user can map from scratch.
+    auto* startBlankButton = new QPushButton(tr("Start blank"), mpEmptyStateOverlay);
+    startBlankButton->setAutoDefault(false);
+
+    auto* layout = new QVBoxLayout(mpEmptyStateOverlay);
+    layout->setContentsMargins(20, 16, 20, 16);
+    layout->setSpacing(10);
+    layout->addWidget(label);
+    layout->addWidget(mpEmptyStateDownloadButton);
+    layout->addWidget(loadFileButton);
+    layout->addWidget(startBlankButton);
+
+    connect(mpEmptyStateDownloadButton, &QPushButton::clicked, this, [this]() {
+        mEmptyStateDismissed = true;
+        if (mpMap) {
+            mpMap->downloadMap();
+        }
+        updateEmptyStateOverlay();
+    });
+    connect(loadFileButton, &QPushButton::clicked, this, [this]() {
+        loadMapFromFile();
+    });
+    connect(startBlankButton, &QPushButton::clicked, this, [this]() {
+        mEmptyStateDismissed = true;
+        if (mp2dMap) {
+            mp2dMap->slot_newMap();
+        }
+        updateEmptyStateOverlay();
+    });
+
+    mpEmptyStateOverlay->hide();
+    mp2dMap->installEventFilter(this);
+}
+
+void dlgMapper::loadMapFromFile()
+{
+    if (!mpHost) {
+        return;
+    }
+    //: File dialog filter. Keep the extensions (in braces) unchanged - they are used programmatically.
+    auto filters = QStringList() << tr("Any map file (*.dat *.json *.xml)") << tr("Mudlet binary map (*.dat)") << tr("Mudlet JSON map (*.json)") << tr("Mudlet XML map (*.xml)") << tr("Any file (*)");
+
+    auto* dialog = new QFileDialog(this);
+    //: Title of the file dialog used to pick a map file to load.
+    dialog->setWindowTitle(tr("Load Mudlet map"));
+    QSettings& settings = *mudlet::getQSettings();
+    const QString lastDir = settings.value(qsl("lastFileDialogLocation"), mudlet::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
+    dialog->setDirectory(lastDir);
+    dialog->setNameFilter(filters.join(qsl(";;")));
+    connect(dialog, &QDialog::finished, this, [this, dialog](int result) {
+        dialog->deleteLater();
+        if (result != QDialog::Accepted || dialog->selectedFiles().isEmpty()) {
+            return;
+        }
+        const QString fileName = dialog->selectedFiles().constFirst();
+        Host* pHost = mpHost;
+        if (!pHost || !pHost->mpConsole) {
+            return;
+        }
+        bool success = false;
+        if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
+            success = pHost->mpConsole->importMap(fileName);
+        } else if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
+            auto [ok, errorMessage] = pHost->mpMap->readJsonMapFile(fileName);
+            success = ok;
+            if (!ok) {
+                pHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\nreason: %2.").arg(fileName, errorMessage));
+            }
+        } else {
+            success = pHost->mpConsole->loadMap(fileName);
+        }
+        if (success) {
+            pHost->mpMap->audit();
+            mEmptyStateDismissed = true;
+            mudlet::self()->getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
+        }
+        updateEmptyStateOverlay();
+    });
+    dialog->open();
+}
+
+void dlgMapper::repositionEmptyStateOverlay()
+{
+    if (!mpEmptyStateOverlay || !mp2dMap) {
+        return;
+    }
+    const QSize hint = mpEmptyStateOverlay->sizeHint();
+    const int w = qMin(hint.width(), mp2dMap->width() - 20);
+    const int h = hint.height();
+    const int x = (mp2dMap->width() - w) / 2;
+    const int y = (mp2dMap->height() - h) / 2;
+    mpEmptyStateOverlay->setGeometry(x, y, w, h);
+}
+
+void dlgMapper::updateEmptyStateOverlay()
+{
+    if (!mpEmptyStateOverlay || !mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+    if (!mpMap->mpRoomDB->isEmpty()) {
+        // Map has rooms again - allow overlay to reappear on a future empty map.
+        mEmptyStateDismissed = false;
+    }
+    const bool shouldShow = mpMap->mpRoomDB->isEmpty() && !mpMap->getMmpMapLocation().isEmpty() && !mEmptyStateDismissed;
+    if (shouldShow) {
+        repositionEmptyStateOverlay();
+        mpEmptyStateOverlay->raise();
+        mpEmptyStateOverlay->show();
+        mpEmptyStateDownloadButton->setFocus();
+    } else {
+        mpEmptyStateOverlay->hide();
+    }
+    if (mp2dMap) {
+        mp2dMap->mSuppressEmptyStateMessage = shouldShow;
+        mp2dMap->update();
+    }
+}
+
+bool dlgMapper::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == mp2dMap && event->type() == QEvent::Resize) {
+        repositionEmptyStateOverlay();
+    }
+    return QWidget::eventFilter(watched, event);
 }
 
 int dlgMapper::getCurrentShownAreaIndex()

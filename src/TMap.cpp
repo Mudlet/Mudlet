@@ -42,7 +42,6 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonParseError>
-#include <QMessageBox>
 #include <QPainter>
 #include <QPixmap>
 #include <QProgressDialog>
@@ -157,11 +156,7 @@ void TMap::logError(const QString& msg)
     if (mpHost->mpEditorDialog) {
         /*: Used to print a map error in the Errors console in the Editor, %1 is the
  message text and a line-feed is also appended.*/
-        mpHost->mpEditorDialog->mpErrorConsole->print(tr("[MAP ERROR:] %1")
-                                                              .arg(msg)
-                                                              .append(QChar::LineFeed),
-                                                      QColor(255, 128, 0),
-                                                      QColor(Qt::black));
+        mpHost->mpEditorDialog->mpErrorConsole->print(tr("[MAP ERROR:] %1").arg(msg).append(QChar::LineFeed), QColor(255, 128, 0), QColor(Qt::black));
     }
 }
 
@@ -184,8 +179,7 @@ bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
 {
     TRoom* pR = mpRoomDB->getRoom(id);
     if (!pR) {
-        logError(tr("Can not set room with RoomID %1 to AreaID %2. Room does not exist!")
-                         .arg(QString::number(id), QString::number(area)));
+        logError(tr("Can not set room with RoomID %1 to AreaID %2. Room does not exist!").arg(QString::number(id), QString::number(area)));
         return false;
     }
 
@@ -195,8 +189,7 @@ bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
         // to see if it exists as a name only:
         if (!mpRoomDB->getAreaNamesMap().contains(area)) {
             // Ah, no it doesn't so moan:
-            logError(tr("Can not set room with RoomID %1 to AreaID %2. Area does not exist!")
-                             .arg(QString::number(id), QString::number(area)));
+            logError(tr("Can not set room with RoomID %1 to AreaID %2. Area does not exist!").arg(QString::number(id), QString::number(area)));
             return false;
         }
         // If got to this point then there is NOT a TArea instance for the given
@@ -1579,7 +1572,7 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     return true;
 }
 
-bool TMap::restore(QString location, bool downloadIfNotFound)
+bool TMap::restore(QString location)
 {
     qDebug().noquote().nospace() << "TMap::restore(\"" << location << "\") INFO: restoring map of Profile: \"" << mProfileName << "\" URL: " << mpHost->getUrl();
 
@@ -1900,22 +1893,6 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         appendErrorMsgWithNoLf(okMsg);
         if (canRestore) {
             return true;
-        }
-    }
-
-    if ((!canRestore || entries.empty()) && downloadIfNotFound) {
-        QMessageBox msgBox;
-
-        if (!getMmpMapLocation().isEmpty()) {
-            msgBox.setText(tr("No map found. Would you like to download the map or start your own?"));
-            QPushButton* yesButton = msgBox.addButton(tr("Download the map"), QMessageBox::ActionRole);
-            QPushButton* noButton = msgBox.addButton(tr("Start my own"), QMessageBox::ActionRole);
-            msgBox.exec();
-            if (msgBox.clickedButton() == yesButton) {
-                downloadMap();
-            } else if (msgBox.clickedButton() == noButton) {
-                ; //No-op to avoid unused "noButton"
-            }
         }
     }
 
@@ -2830,6 +2807,9 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         const QString alertMsg = tr("[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg(parsingFileName);
         postMessage(alertMsg);
     }
+    if (mpMapper) {
+        mpMapper->updateEmptyStateOverlay();
+    }
     cleanup();
 }
 
@@ -2876,9 +2856,13 @@ QHash<QString, QSet<int>> TMap::roomSymbolsHash()
 
 void TMap::setMmpMapLocation(const QString& location)
 {
+    if (mMmpMapLocation == location) {
+        return;
+    }
     mMmpMapLocation = location;
 
     qDebug() << "MMP map registered at" << mMmpMapLocation;
+    emit signal_mmpMapLocationChanged();
 }
 
 QString TMap::getMmpMapLocation() const

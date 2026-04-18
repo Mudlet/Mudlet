@@ -40,7 +40,7 @@ class TArea
     Q_DECLARE_TR_FUNCTIONS(TArea) // Needed so we can use tr() even though TArea is NOT derived from QObject
 
     friend bool TMap::serialize(QDataStream&, int);
-    friend bool TMap::restore(QString, bool);
+    friend bool TMap::restore(QString);
     friend bool TMap::retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
 
 public:
@@ -79,7 +79,7 @@ public:
     QSet<int> rooms; // rooms of this area
     // TODO: These next 2 members have not been used for some time - if at all
     // - maybe they can go?
-    QVector3D pos;   // pos auf der map und 0 punkt des area internen koordinatensystems
+    QVector3D pos; // pos auf der map und 0 punkt des area internen koordinatensystems
     QVector3D span;
     int min_x = 0;
     int min_y = 0;
@@ -124,7 +124,7 @@ private:
     void writeJson3DCoordinates(QJsonObject&, const QString&, const QVector3D&) const;
 
     QList<QByteArray> convertImageToBase64Data(const QPixmap&) const;
-    QPixmap convertBase64DataToImage(const QList<QByteArray> &) const;
+    QPixmap convertBase64DataToImage(const QList<QByteArray>&) const;
 
 
     // Supplied by C'tor and now needed to pass an error message upwards:

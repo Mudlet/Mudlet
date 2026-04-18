@@ -1726,6 +1726,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
     }
     // no rooms at all, let's show an information message instead
     if (!pPlayerRoom) {
+        if (mSuppressEmptyStateMessage) {
+            return;
+        }
         painter.save();
         painter.fillRect(0, 0, width(), height(), Qt::transparent);
         auto font(painter.font());

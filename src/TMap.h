@@ -76,6 +76,7 @@ class TMap : public QObject
 signals:
     void signal_saveErrorChanged(bool hasError);
     void signal_areaChanged(int areaId);
+    void signal_mmpMapLocationChanged();
 
 private:
     QString mDefaultAreaName;
@@ -86,16 +87,7 @@ public:
     TMap(Host*, const QString&);
     ~TMap();
     void mapClear();
-    int createMapImageLabel(int area,
-                            QString filePath,
-                            float x,
-                            float y,
-                            float z,
-                            float width,
-                            float height,
-                            float zoom,
-                            bool showOnTop,
-                            bool temporary);
+    int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool temporary);
     int createMapLabel(int area,
                        const QString& text,
                        float x,
@@ -128,7 +120,7 @@ public:
     bool gotoRoom(int);
     bool gotoRoom(int, int);
     bool serialize(QDataStream&, int saveVersion = 0);
-    bool restore(QString location, bool downloadIfNotFound = true);
+    bool restore(QString location);
     bool retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
     void initGraph();
     QString connectExitStubByDirection(const int fromRoomId, const int dirType);
@@ -169,7 +161,7 @@ public:
     // Show which rooms have which symbols:
     QHash<QString, QSet<int>> roomSymbolsHash();
 
-    void setMmpMapLocation(const QString &location);
+    void setMmpMapLocation(const QString& location);
     QString getMmpMapLocation() const;
 
     // has setRoomNamesShown ever been called on this map?
@@ -223,32 +215,30 @@ public:
     QList<QString> mDirList;
     QList<int> mWeightList;
     QMap<int, QColor> mCustomEnvColors;
-    inline static const QMap<int, QVector3D> scmUnitVectors = {
-        {DIR_NORTH, {0, -1, 0}},
-        {DIR_NORTHEAST, {1, -1, 0}},
-        {DIR_NORTHWEST, {-1, -1, 0}},
-        {DIR_EAST, {1, 0, 0}},
-        {DIR_WEST, {-1, 0, 0}},
-        {DIR_SOUTH, {0, 1, 0}},
-        {DIR_SOUTHEAST, {1, 1, 0}},
-        {DIR_SOUTHWEST, {-1, 1, 0}},
-        {DIR_UP, {0, 0, 1}},
-        {DIR_DOWN, {0, 0, -1}}};
+    inline static const QMap<int, QVector3D> scmUnitVectors = {{DIR_NORTH, {0, -1, 0}},
+                                                               {DIR_NORTHEAST, {1, -1, 0}},
+                                                               {DIR_NORTHWEST, {-1, -1, 0}},
+                                                               {DIR_EAST, {1, 0, 0}},
+                                                               {DIR_WEST, {-1, 0, 0}},
+                                                               {DIR_SOUTH, {0, 1, 0}},
+                                                               {DIR_SOUTHEAST, {1, 1, 0}},
+                                                               {DIR_SOUTHWEST, {-1, 1, 0}},
+                                                               {DIR_UP, {0, 0, 1}},
+                                                               {DIR_DOWN, {0, 0, -1}}};
 
     // contains complementary directions of DIR_XXXX
-    inline static const QMap<int, int> scmReverseDirections = {
-        {DIR_NORTH, DIR_SOUTH},
-        {DIR_NORTHEAST, DIR_SOUTHWEST},
-        {DIR_NORTHWEST, DIR_SOUTHEAST},
-        {DIR_EAST, DIR_WEST},
-        {DIR_WEST, DIR_EAST},
-        {DIR_SOUTH, DIR_NORTH},
-        {DIR_SOUTHEAST, DIR_NORTHWEST},
-        {DIR_SOUTHWEST, DIR_NORTHEAST},
-        {DIR_UP, DIR_DOWN},
-        {DIR_DOWN, DIR_UP},
-        {DIR_IN, DIR_OUT},
-        {DIR_OUT, DIR_IN}};
+    inline static const QMap<int, int> scmReverseDirections = {{DIR_NORTH, DIR_SOUTH},
+                                                               {DIR_NORTHEAST, DIR_SOUTHWEST},
+                                                               {DIR_NORTHWEST, DIR_SOUTHEAST},
+                                                               {DIR_EAST, DIR_WEST},
+                                                               {DIR_WEST, DIR_EAST},
+                                                               {DIR_SOUTH, DIR_NORTH},
+                                                               {DIR_SOUTHEAST, DIR_NORTHWEST},
+                                                               {DIR_SOUTHWEST, DIR_NORTHEAST},
+                                                               {DIR_UP, DIR_DOWN},
+                                                               {DIR_DOWN, DIR_UP},
+                                                               {DIR_IN, DIR_OUT},
+                                                               {DIR_OUT, DIR_IN}};
 
 #if defined(INCLUDE_3DMAPPER)
     QPointer<QOpenGLWidget> mpM;

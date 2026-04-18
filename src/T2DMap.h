@@ -290,6 +290,10 @@ public:
     bool mBubbleMode = false;
     bool mMapperUseAntiAlias = true;
 
+    // Set by dlgMapper when its empty-state overlay is visible, so the painted
+    // "No rooms in the map..." text doesn't bleed through behind the overlay.
+    bool mSuppressEmptyStateMessage = false;
+
     // Controls if the mapper is in view-only mode
     bool mMapViewOnly = true;
 

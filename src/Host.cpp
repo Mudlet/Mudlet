@@ -563,7 +563,7 @@ void Host::closeChildren()
 void Host::loadMap()
 {
     qDebug() << "Host::loadMap() - restore map case 4.";
-    if (mpMap->restore(QString(), false)) {
+    if (mpMap->restore(QString())) {
         mpMap->audit();
         if (mpMap->mpMapper) {
             mpMap->mpMapper->mp2dMap->init();
@@ -4664,6 +4664,7 @@ void Host::createMapper(const bool loadDefaultMap)
     // always want it to be visible.
     pMap->mpMapper->show();
     mpDockableMapWidget->show();
+    pMap->mpMapper->updateEmptyStateOverlay();
 
     check_for_mappingscript();
     TEvent mapOpenEvent{};
