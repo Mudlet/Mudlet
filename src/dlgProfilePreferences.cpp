@@ -1483,8 +1483,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     int shortcutsRow = 0;
     while (shortcutKeys.hasNext()) {
         auto key = shortcutKeys.next();
-        currentShortcuts.insert(key, QKeySequence(*pHost->profileShortcuts.value(key)));
-        auto sequenceEdit = new QKeySequenceEdit(currentShortcuts.value(key));
+        auto shortcutIt = pHost->profileShortcuts.find(key);
+        QKeySequence currentSequence = (shortcutIt != pHost->profileShortcuts.end()) ? QKeySequence(*shortcutIt->second) : QKeySequence();
+        currentShortcuts.insert(key, currentSequence);
+        auto sequenceEdit = new QKeySequenceEdit(currentSequence);
 
         gridLayout_groupBox_shortcuts->addWidget(new QLabel(mudlet::self()->mpShortcutsManager->getLabel(key)), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
@@ -3300,7 +3302,10 @@ void dlgProfilePreferences::slot_saveAndClose()
         while (iterator.hasNext()) {
             auto key = iterator.next();
             QKeySequence sequence = currentShortcuts.value(key);
-            pHost->profileShortcuts.value(key)->swap(sequence);
+            auto it = pHost->profileShortcuts.find(key);
+            if (it != pHost->profileShortcuts.end()) {
+                it->second->swap(sequence);
+            }
         }
     }
 

@@ -39,6 +39,7 @@
 #include <QSet>
 #include <QVector3D>
 #include <stdlib.h>
+#include <memory>
 #include <optional>
 
 #define DIR_NORTH 1
@@ -208,7 +209,7 @@ public:
     bool getDefaultAreaShown() { return mShowDefaultArea; }
 
 
-    TRoomDB* mpRoomDB = nullptr;
+    std::unique_ptr<TRoomDB> mpRoomDB;
     TMapViewManager* mpViewManager = nullptr;
     QMap<int, int> mEnvColors;
     QPointer<Host> mpHost;

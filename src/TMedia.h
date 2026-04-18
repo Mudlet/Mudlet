@@ -43,24 +43,24 @@ public:
     TMediaPlayer(Host* pHost, TMediaData& mediaData)
     : mpHost(pHost)
     , mMediaData(mediaData)
-    , mMediaPlayer(new QMediaPlayer(pHost))
+    , mMediaPlayer(new QMediaPlayer(nullptr))
     , mPlaylist(std::make_unique<TMediaPlaylist>())
     , initialized(true)
     {
-        mMediaPlayer->setAudioOutput(new QAudioOutput());
+        // QAudioOutput is parented to mMediaPlayer so it is destroyed with it
+        mMediaPlayer->setAudioOutput(new QAudioOutput(mMediaPlayer.get()));
     }
     ~TMediaPlayer()
     {
         if (mMediaPlayer) {
-            auto* output = mMediaPlayer->audioOutput();
-            mMediaPlayer->setAudioOutput(nullptr);
-            delete output;
+            mMediaPlayer->stop();
+            mMediaPlayer->setSource(QUrl());
         }
     }
 
     TMediaData mediaData() const { return mMediaData; }
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
-    QMediaPlayer* mediaPlayer() const { return mMediaPlayer; }
+    QMediaPlayer* mediaPlayer() const { return mMediaPlayer.get(); }
     bool isInitialized() const { return initialized; }
     QMediaPlayer::PlaybackState getPlaybackState() const
     {
@@ -76,7 +76,12 @@ public:
             qWarning() << "TMediaPlayer::setVolume() - mMediaPlayer is nullptr!";
             return;
         }
-        mMediaPlayer->audioOutput()->setVolume(volume / 100.0f);
+        QAudioOutput* audioOutput = mMediaPlayer->audioOutput();
+        if (!audioOutput) {
+            qWarning() << "TMediaPlayer::setVolume() - audioOutput is nullptr!";
+            return;
+        }
+        audioOutput->setVolume(volume / 100.0f);
     }
     TMediaPlaylist* playlist() const { return mPlaylist.get(); }
     void setPlaylist(TMediaPlaylist* playlist)
@@ -94,7 +99,10 @@ public:
         float volume = oldOutput ? oldOutput->volume() : 1.0f;
         bool muted = oldOutput ? oldOutput->isMuted() : false;
 
-        auto* newOutput = new QAudioOutput();
+        // Parent the new output to mMediaPlayer so it is destroyed with the player.
+        // The old output's parent will be cleared by setAudioOutput; schedule it
+        // for deletion on the next event loop turn.
+        auto* newOutput = new QAudioOutput(mMediaPlayer.get());
         newOutput->setVolume(volume);
         newOutput->setMuted(muted);
         mMediaPlayer->setAudioOutput(newOutput);
@@ -106,7 +114,7 @@ public:
 private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
-    QMediaPlayer* mMediaPlayer = nullptr;
+    std::unique_ptr<QMediaPlayer> mMediaPlayer;
     std::unique_ptr<TMediaPlaylist> mPlaylist;
     bool initialized = false;
 };
@@ -124,6 +132,8 @@ public:
     int getMaxAllowedSoundPlayers() const;
     int getMaxAllowedMusicPlayers() const;
     int getMaxAllowedVideoPlayers() const;
+
+    void getMediaPlayerCounts(int& soundPlayers, int& musicPlayers, int& stoppedPlayers) const;
 
     void playMedia(TMediaData& mediaData);
     QList<TMediaData> playingMedia(TMediaData& mediaData);

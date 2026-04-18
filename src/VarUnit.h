@@ -23,6 +23,8 @@
  ***************************************************************************/
 
 
+#include <memory>
+
 #include <QCoreApplication>
 #include <QMap>
 #include <QSet>
@@ -61,10 +63,10 @@ public:
     void removeSavedVar(TVar*);
     void addHidden(TVar*, int);
     void addHidden(const QString&);
-    bool isHidden(TVar *var);
-    bool isHidden(const QString &fullname);
-    void removeHidden(TVar *var);
-    void removeHidden(const QString &name);
+    bool isHidden(TVar* var);
+    bool isHidden(const QString& fullname);
+    void removeHidden(TVar* var);
+    void removeHidden(const QString& name);
     bool isSaved(TVar*);
     void addPointer(const void*);
     QString getUnsaveableReason(TVar*);
@@ -74,7 +76,7 @@ public:
 
 private:
     int countTableItems(TVar*);
-    TVar* base;
+    std::unique_ptr<TVar> base;
     QSet<QString> variableSet;
     // ?? variables
     QMap<QTreeWidgetItem*, TVar*> wVars;

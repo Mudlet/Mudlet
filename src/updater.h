@@ -35,6 +35,8 @@ class UpdateDialog;
 #endif
 #endif
 
+#include <memory>
+
 class QAbstractButton;
 class QPushButton;
 class QSettings;
@@ -57,15 +59,15 @@ public:
     bool shouldShowChangelog();
 
 private:
-    dblsqd::Feed* mFeed;
-    dblsqd::UpdateDialog* mUpdateDialog{nullptr};
+    std::unique_ptr<dblsqd::Feed> feed;
+    dblsqd::UpdateDialog* updateDialog{nullptr};
 #if !defined(Q_OS_MACOS)
     QPushButton* mpInstallOrRestart;
 #endif
     bool mUpdateInstalled;
     bool mManualCheckInProgress{false};
     QSettings* mSettings;
-    std::unique_ptr<QTimer> mPeriodicCheck;
+    std::unique_ptr<QTimer> mDailyCheck;
 
 #if defined(Q_OS_LINUX)
     void setupOnLinux();

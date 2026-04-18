@@ -1943,9 +1943,17 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
 
                 switch (pItem->data(0, TypeRole).toInt()) {
                 case SearchResultIsScript: {
+                    // Defer moveCaretTo so it fires after restoreEditorState's QTimer::singleShot(0)
+                    // callback, ensuring the search result position takes precedence over the
+                    // previously-saved editor state.
+                    const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
+                    const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    auto controller = mpSourceEditorEdbee->controller();
-                    controller->moveCaretTo(static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt()), static_cast<size_t>(pItem->data(0, PositionRole).toInt()), false);
+                    QTimer::singleShot(0, this, [this, line, column]() {
+                        if (mpSourceEditorEdbee) {
+                            mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
+                        }
+                    });
                     break;
                 }
                 case SearchResultIsName:
@@ -1992,10 +2000,19 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
 
                 switch (pItem->data(0, TypeRole).toInt()) {
                 case SearchResultIsScript: {
+                    // Defer moveCaretTo so it fires after restoreEditorState's QTimer::singleShot(0)
+                    // callback, ensuring the search result position takes precedence over the
+                    // previously-saved editor state.
+                    const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
+                    const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    auto controller = mpSourceEditorEdbee->controller();
-                    controller->moveCaretTo(static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt()), static_cast<size_t>(pItem->data(0, PositionRole).toInt()), false);
-                    controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
+                    QTimer::singleShot(0, this, [this, line, column]() {
+                        if (mpSourceEditorEdbee) {
+                            auto controller = mpSourceEditorEdbee->controller();
+                            controller->moveCaretTo(line, column, false);
+                            controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
+                        }
+                    });
                     break;
                 }
                 case SearchResultIsName:
@@ -2036,9 +2053,17 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
 
                 switch (pItem->data(0, TypeRole).toInt()) {
                 case SearchResultIsScript: {
+                    // Defer moveCaretTo so it fires after restoreEditorState's QTimer::singleShot(0)
+                    // callback, ensuring the search result position takes precedence over the
+                    // previously-saved editor state.
+                    const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
+                    const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    auto controller = mpSourceEditorEdbee->controller();
-                    controller->moveCaretTo(static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt()), static_cast<size_t>(pItem->data(0, PositionRole).toInt()), false);
+                    QTimer::singleShot(0, this, [this, line, column]() {
+                        if (mpSourceEditorEdbee) {
+                            mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
+                        }
+                    });
                     break;
                 }
                 case SearchResultIsName:
@@ -2086,9 +2111,17 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
 
                 switch (pItem->data(0, TypeRole).toInt()) {
                 case SearchResultIsScript: {
+                    // Defer moveCaretTo so it fires after restoreEditorState's QTimer::singleShot(0)
+                    // callback, ensuring the search result position takes precedence over the
+                    // previously-saved editor state.
+                    const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
+                    const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    auto controller = mpSourceEditorEdbee->controller();
-                    controller->moveCaretTo(static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt()), static_cast<size_t>(pItem->data(0, PositionRole).toInt()), false);
+                    QTimer::singleShot(0, this, [this, line, column]() {
+                        if (mpSourceEditorEdbee) {
+                            mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
+                        }
+                    });
                     break;
                 }
                 case SearchResultIsName:
@@ -2146,9 +2179,17 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
 
                 switch (pItem->data(0, TypeRole).toInt()) {
                 case SearchResultIsScript: {
-                    auto controller = mpSourceEditorEdbee->controller();
+                    // Defer moveCaretTo so it fires after restoreEditorState's QTimer::singleShot(0)
+                    // callback, ensuring the search result position takes precedence over the
+                    // previously-saved editor state.
+                    const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
+                    const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    controller->moveCaretTo(static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt()), static_cast<size_t>(pItem->data(0, PositionRole).toInt()), false);
+                    QTimer::singleShot(0, this, [this, line, column]() {
+                        if (mpSourceEditorEdbee) {
+                            mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
+                        }
+                    });
                     break;
                 }
                 case SearchResultIsName:
@@ -2185,9 +2226,17 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
 
                 switch (pItem->data(0, TypeRole).toInt()) {
                 case SearchResultIsScript: {
-                    auto controller = mpSourceEditorEdbee->controller();
+                    // Defer moveCaretTo so it fires after restoreEditorState's QTimer::singleShot(0)
+                    // callback, ensuring the search result position takes precedence over the
+                    // previously-saved editor state.
+                    const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
+                    const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    controller->moveCaretTo(static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt()), static_cast<size_t>(pItem->data(0, PositionRole).toInt()), false);
+                    QTimer::singleShot(0, this, [this, line, column]() {
+                        if (mpSourceEditorEdbee) {
+                            mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
+                        }
+                    });
                     break;
                 }
                 case SearchResultIsName:
@@ -2241,9 +2290,17 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     mpVarsMainArea->lineEdit_var_name->setCursorPosition(pItem->data(0, PositionRole).toInt());
                     break;
                 case SearchResultIsValue: {
-                    auto controller = mpSourceEditorEdbee->controller();
+                    // Defer moveCaretTo so it fires after restoreEditorState's QTimer::singleShot(0)
+                    // callback, ensuring the search result position takes precedence over the
+                    // previously-saved editor state.
+                    const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
+                    const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    controller->moveCaretTo(static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt()), static_cast<size_t>(pItem->data(0, PositionRole).toInt()), false);
+                    QTimer::singleShot(0, this, [this, line, column]() {
+                        if (mpSourceEditorEdbee) {
+                            mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
+                        }
+                    });
                     break;
                 }
                 default:

@@ -771,6 +771,9 @@ public:
     static int timeStampsEnabled(lua_State*);
     static int setActiveProfile(lua_State*);
     static int getKeyCode(lua_State*);
+    static int getProcessMemoryUsage(lua_State*);
+    static int getSubsystemMemoryStats(lua_State*);
+
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 

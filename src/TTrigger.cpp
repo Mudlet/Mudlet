@@ -63,24 +63,8 @@ TTrigger::TTrigger(const QString& name, const QStringList& patterns, const QList
 
 TTrigger::~TTrigger()
 {
-    QMutableListIterator<TColorTable*> itColorTable(mColorPatternList);
-    while (itColorTable.hasNext()) {
-        if (itColorTable.next()) {
-            //            qDebug() << "TTrigger::~TTrigger() INFO: removing TColorTable from mColorPatternList: (ansiFg:"
-            //                     << itColorTable.peekPrevious()->ansiFg
-            //                     << itColorTable.peekPrevious()->mFgColor
-            //                     << "ansiBg:"
-            //                     << itColorTable.peekPrevious()->ansiBg
-            //                     << itColorTable.peekPrevious()->mBgColor
-            //                     << ").";
-            delete itColorTable.peekPrevious();
-        }
-        itColorTable.remove();
-    }
-
-    for (auto&& [key, value] : mConditionMap) {
-        delete value;
-    }
+    mColorPatternList.clear();
+    mConditionMap.clear();
 
     if (!mpHost) {
         return;
@@ -118,22 +102,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     mRegexMap.clear();
     mPatternKinds.clear();
     mLuaConditionMap.clear();
-    // mColorPatternList is filled with pointers to TColorTable instances that
-    // were created with "new" and they need to be "delete"-d:
-    QMutableListIterator<TColorTable*> itColorTable(mColorPatternList);
-    while (itColorTable.hasNext()) {
-        if (itColorTable.next()) {
-            //            qDebug() << "TTrigger::setRegexCodeList() INFO: removing TColorTable from mColorPatternList: (ansiFg:"
-            //                     << itColorTable.peekPrevious()->ansiFg
-            //                     << itColorTable.peekPrevious()->mFgColor
-            //                     << "ansiBg:"
-            //                     << itColorTable.peekPrevious()->ansiBg
-            //                     << itColorTable.peekPrevious()->mBgColor
-            //                     << ").";
-            delete itColorTable.peekPrevious();
-        }
-        itColorTable.remove();
-    }
+    mColorPatternList.clear();
     mTriggerContainsPerlRegex = false;
 
     if (patternKinds.size() != patterns.size()) {
@@ -228,12 +197,12 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                 // The setupColorTrigger(...) method will push_back the created
                 // TColorTable instance if it is successful:
                 if (!setupColorTrigger(textAnsiFg, textAnsiBg)) {
-                    mColorPatternList.push_back(nullptr);
+                    mColorPatternList.emplace_back(nullptr);
                     state = false;
                     continue;
                 }
             } else {
-                mColorPatternList.push_back(nullptr);
+                mColorPatternList.emplace_back(nullptr);
             }
         }
     }
@@ -532,14 +501,15 @@ inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>&
 {
     if (regexNumber == 0) {
         // automatically set to #1
-        auto pCondition = new TMatchState(mPatterns.size(), mConditionLineDelta);
-        mConditionMap[pCondition] = pCondition;
-        pCondition->multiCaptureList.push_back(captureList);
-        pCondition->multiCapturePosList.push_back(posList);
+        auto pCondition = std::make_unique<TMatchState>(mPatterns.size(), mConditionLineDelta);
+        auto* pConditionRaw = pCondition.get();
+        mConditionMap[pConditionRaw] = std::move(pCondition);
+        pConditionRaw->multiCaptureList.push_back(captureList);
+        pConditionRaw->multiCapturePosList.push_back(posList);
         if (nameMatches) {
-            pCondition->nameCaptures.push_back(*nameMatches);
+            pConditionRaw->nameCaptures.push_back(*nameMatches);
         } else {
-            pCondition->nameCaptures.push_back(QVector<QPair<QString, QString>>());
+            pConditionRaw->nameCaptures.push_back(QVector<QPair<QString, QString>>());
         }
         if (mudlet::smDebugMode) {
             TDebug(Qt::darkYellow, Qt::black) << "match state " << mConditionMap.size() << "/" << mConditionMap.size() << " condition #" << regexNumber << "=true (" << regexNumber << "/"
@@ -680,7 +650,7 @@ bool TTrigger::match_color_pattern(int line, int patternNumber)
     int matchBegin = -1;
     bool matching = false;
 
-    TColorTable* pCT = mColorPatternList[patternNumber];
+    TColorTable* pCT = mColorPatternList[patternNumber].get();
     if (!pCT) {
         return false; // no color pattern created
     }
@@ -1068,7 +1038,6 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
             }
             for (auto& matchState : removeList) {
                 if (mConditionMap.find(matchState) != mConditionMap.end()) {
-                    delete mConditionMap[matchState];
                     if (mudlet::smDebugMode) {
                         TDebug(Qt::darkBlue, Qt::black) << "removing condition from condition table.\n" >> mpHost;
                     }
@@ -1211,7 +1180,7 @@ bool TTrigger::setupColorTrigger(int ansiFg, int ansiBg)
     //             << pCT->ansiBg
     //             << pCT->mBgColor
     //             << ").";
-    mColorPatternList.push_back(pCT);
+    mColorPatternList.emplace_back(pCT);
     return true;
 }
 
@@ -1228,7 +1197,7 @@ bool TTrigger::setupTmpColorTrigger(int ansiFg, int ansiBg)
     // codes are the scmIgnored ones:
     mPatterns << createColorPatternText(ansiFg, ansiBg);
     mPatternKinds << REGEX_COLOR_PATTERN;
-    mColorPatternList.push_back(pCT);
+    mColorPatternList.emplace_back(pCT);
     return true;
 }
 

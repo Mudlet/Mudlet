@@ -63,6 +63,17 @@
 #include <limits>
 #include <math.h>
 
+#if defined(Q_OS_LINUX)
+#include <fstream>
+#include <malloc.h>
+#elif defined(Q_OS_MACOS)
+#include <mach/mach.h>
+#include <malloc/malloc.h>
+#elif defined(Q_OS_WINDOWS)
+#include <windows.h>
+#include <psapi.h>
+#endif
+
 #include <QtConcurrent>
 #include <QCollator>
 #include <QCoreApplication>
@@ -2857,4 +2868,210 @@ int TLuaInterpreter::closeProfile(lua_State* L)
         return 1;
     }
     return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProcessMemoryUsage
+int TLuaInterpreter::getProcessMemoryUsage(lua_State* L)
+{
+    long rssKb = 0;
+
+#if defined(Q_OS_LINUX)
+    std::ifstream statusFile(qsl("/proc/self/status").toStdString());
+    std::string line;
+    while (std::getline(statusFile, line)) {
+        if (line.rfind("VmRSS:", 0) == 0) {
+            // Line format: "VmRSS:    12345 kB"
+            const char* p = line.c_str() + 6;
+            while (*p == ' ' || *p == '\t') {
+                ++p;
+            }
+            rssKb = std::strtol(p, nullptr, 10);
+            break;
+        }
+    }
+#elif defined(Q_OS_MACOS)
+    mach_task_basic_info info;
+    mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
+    if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &infoCount) == KERN_SUCCESS) {
+        rssKb = static_cast<long>(info.resident_size / 1024);
+    }
+#elif defined(Q_OS_WINDOWS)
+    PROCESS_MEMORY_COUNTERS pmc;
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+        rssKb = static_cast<long>(pmc.WorkingSetSize / 1024);
+    }
+#endif
+
+    lua_pushnumber(L, static_cast<lua_Number>(rssKb));
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getSubsystemMemoryStats
+int TLuaInterpreter::getSubsystemMemoryStats(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    lua_newtable(L);
+
+    // Lua heap: collectgarbage('count') returns KB as a float
+    lua_pushstring(L, "lua_heap_kb");
+    lua_getglobal(L, "collectgarbage");
+    lua_pushstring(L, "count");
+    lua_call(L, 1, 1);
+    // result is already on stack; move it into the table
+    lua_settable(L, -3);
+
+    // Lua heap in MB for convenience
+    lua_pushstring(L, "lua_heap_mb");
+    lua_getglobal(L, "collectgarbage");
+    lua_pushstring(L, "count");
+    lua_call(L, 1, 1);
+    lua_pushnumber(L, lua_tonumber(L, -1) / 1024.0);
+    lua_remove(L, -2);
+    lua_settable(L, -3);
+
+    // Trigger counts (total, temp) via assembleReport()
+    {
+        const auto [_msg, total, _patterns, temp, _active, _activePatterns] = host.getTriggerUnit()->assembleReport();
+        lua_pushstring(L, "triggers_total");
+        lua_pushnumber(L, total);
+        lua_settable(L, -3);
+        lua_pushstring(L, "triggers_temp");
+        lua_pushnumber(L, temp);
+        lua_settable(L, -3);
+    }
+
+    // Timer counts
+    {
+        const auto [_msg, total, temp, _active] = host.getTimerUnit()->assembleReport();
+        lua_pushstring(L, "timers_total");
+        lua_pushnumber(L, total);
+        lua_settable(L, -3);
+        lua_pushstring(L, "timers_temp");
+        lua_pushnumber(L, temp);
+        lua_settable(L, -3);
+    }
+
+    // Alias counts
+    {
+        const auto [_msg, total, temp, _active] = host.getAliasUnit()->assembleReport();
+        lua_pushstring(L, "aliases_total");
+        lua_pushnumber(L, total);
+        lua_settable(L, -3);
+        lua_pushstring(L, "aliases_temp");
+        lua_pushnumber(L, temp);
+        lua_settable(L, -3);
+    }
+
+    // Event handler count (total registered handlers across all event names)
+    {
+        int handlerCount = 0;
+        for (const auto& handlerList : host.mEventHandlerMap) {
+            handlerCount += handlerList.size();
+        }
+        lua_pushstring(L, "event_handlers");
+        lua_pushnumber(L, handlerCount);
+        lua_settable(L, -3);
+    }
+
+    // Map room and area counts
+    if (host.mpMap && host.mpMap->mpRoomDB) {
+        lua_pushstring(L, "map_rooms");
+        lua_pushnumber(L, host.mpMap->mpRoomDB->size());
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "map_areas");
+        lua_pushnumber(L, host.mpMap->mpRoomDB->getAreaMap().size());
+        lua_settable(L, -3);
+    } else {
+        lua_pushstring(L, "map_rooms");
+        lua_pushnumber(L, 0);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "map_areas");
+        lua_pushnumber(L, 0);
+        lua_settable(L, -3);
+    }
+
+    // Main console buffer line count
+    if (host.mpConsole) {
+        lua_pushstring(L, "console_buffer_lines");
+        lua_pushnumber(L, host.mpConsole->buffer.size());
+        lua_settable(L, -3);
+    }
+
+    // Media player counts: total live players per type and count of idle (stopped) players
+    if (host.mpMedia) {
+        int soundPlayers = 0;
+        int musicPlayers = 0;
+        int stoppedPlayers = 0;
+        host.mpMedia->getMediaPlayerCounts(soundPlayers, musicPlayers, stoppedPlayers);
+
+        lua_pushstring(L, "media_sound_players");
+        lua_pushnumber(L, soundPlayers);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "media_music_players");
+        lua_pushnumber(L, musicPlayers);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "media_stopped_players");
+        lua_pushnumber(L, stoppedPlayers);
+        lua_settable(L, -3);
+    }
+
+    // C heap statistics: bytes in use by live allocations vs total bytes obtained
+    // from the OS, summed across all malloc zones and broken out per zone.
+    // The gap between in_use and allocated is fragmented free space that has been
+    // freed but not yet returned to the OS.
+    {
+        long heapInUseMb = 0;
+        long heapAllocatedMb = 0;
+#if defined(Q_OS_MACOS)
+        vm_address_t* zones = nullptr;
+        unsigned int zoneCount = 0;
+        // zones subtable: { [zone_name] = { in_use_mb = N, allocated_mb = N } }
+        lua_pushstring(L, "heap_zones");
+        lua_newtable(L);
+        if (malloc_get_all_zones(mach_task_self(), nullptr, &zones, &zoneCount) == KERN_SUCCESS) {
+            size_t totalInUse = 0;
+            size_t totalAllocated = 0;
+            for (unsigned int i = 0; i < zoneCount; ++i) {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                auto* zone = reinterpret_cast<malloc_zone_t*>(zones[i]);
+                malloc_statistics_t zoneStats = {};
+                malloc_zone_statistics(zone, &zoneStats);
+                totalInUse += zoneStats.size_in_use;
+                totalAllocated += zoneStats.size_allocated;
+
+                const char* zoneName = zone->zone_name ? zone->zone_name : "unnamed";
+                lua_pushstring(L, zoneName);
+                lua_newtable(L);
+                lua_pushstring(L, "in_use_mb");
+                lua_pushnumber(L, static_cast<lua_Number>(zoneStats.size_in_use) / (1024.0 * 1024.0));
+                lua_settable(L, -3);
+                lua_pushstring(L, "allocated_mb");
+                lua_pushnumber(L, static_cast<lua_Number>(zoneStats.size_allocated) / (1024.0 * 1024.0));
+                lua_settable(L, -3);
+                lua_settable(L, -3);
+            }
+            heapInUseMb = static_cast<long>(totalInUse / (1024 * 1024));
+            heapAllocatedMb = static_cast<long>(totalAllocated / (1024 * 1024));
+        }
+        lua_settable(L, -3);
+#elif defined(Q_OS_LINUX)
+        struct mallinfo2 mi = mallinfo2();
+        heapInUseMb = static_cast<long>(mi.uordblks / (1024 * 1024));
+        heapAllocatedMb = static_cast<long>((mi.arena + mi.hblkhd) / (1024 * 1024));
+#endif
+        lua_pushstring(L, "heap_in_use_mb");
+        lua_pushnumber(L, heapInUseMb);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "heap_allocated_mb");
+        lua_pushnumber(L, heapAllocatedMb);
+        lua_settable(L, -3);
+    }
+
+    return 1;
 }

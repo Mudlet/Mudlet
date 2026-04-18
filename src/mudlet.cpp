@@ -3695,7 +3695,10 @@ void mudlet::slot_assignShortcutsFromProfile(Host* pHost)
         auto iterator = mpShortcutsManager->iterator();
         while (iterator.hasNext()) {
             auto key = iterator.next();
-            mpShortcutsManager->setShortcut(key, pHost->profileShortcuts.value(key));
+            auto it = pHost->profileShortcuts.find(key);
+            if (it != pHost->profileShortcuts.end()) {
+                mpShortcutsManager->setShortcut(key, it->second.get());
+            }
         }
     }
     assignKeySequences();
@@ -4908,7 +4911,10 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
 
         for (auto pHost : mHostManager) {
             if (mudlet::self()->showMuteAllMediaTutorial()) {
-                const QKeySequence* sequence = pHost->profileShortcuts.value(qsl("Mute all media"));
+                const QKeySequence* sequence = nullptr;
+                if (auto it = pHost->profileShortcuts.find(qsl("Mute all media")); it != pHost->profileShortcuts.end()) {
+                    sequence = it->second.get();
+                }
 
                 if (sequence && !sequence->toString().isEmpty()) {
                     const QString seq = sequence->toString(QKeySequence::NativeText);
@@ -4990,12 +4996,6 @@ void mudlet::slot_compactInputLine(const bool state)
 
 mudlet::~mudlet()
 {
-    // There may be a corner case if a replay is running AND the application is
-    // closing down AND the updater on a particular platform pauses the
-    // application destruction...?
-    delete (mpTimerReplay);
-    mpTimerReplay = nullptr;
-
     if (mpHunspell_sharedDictionary) {
         saveDictionary(getMudletPath(enums::mainDataItemPath, qsl("mudlet")), mWordSet_shared);
         Hunspell_destroy(mpHunspell_sharedDictionary);
