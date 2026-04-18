@@ -23,7 +23,9 @@
 
 #include <QTextBoundaryFinder>
 #include "TAccessibleTextEdit.h"
+#include "TBuffer.h"
 #include "TConsole.h"
+#include "Host.h"
 #include "mudlet.h"
 
 TTextEdit* TAccessibleTextEdit::textEdit() const
@@ -238,6 +240,20 @@ void TAccessibleTextEdit::setCursorPosition(int position)
 // performance note - this is called extremely frequently on the same line, should be cached
 QString TAccessibleTextEdit::text(QAccessible::Text text) const
 {
+    if (text == QAccessible::Description) {
+        TTextEdit* edit = textEdit();
+        if (!edit || !edit->mpHost || !edit->mpBuffer) {
+            return QString();
+        }
+        if (edit->mpHost->caretEnabled()) {
+            int linkIndex = edit->mpBuffer->getLinkIndexAt(edit->mCaretLine, edit->mCaretColumn);
+            if (linkIndex > 0) {
+                return edit->mpBuffer->getLinkTooltip(linkIndex);
+            }
+        }
+        return QAccessibleWidget::text(text);
+    }
+
     if (text != QAccessible::Value) {
         return QAccessibleWidget::text(text);
     }
@@ -425,6 +441,53 @@ QString TAccessibleTextEdit::attributes(int offset, int* startOffset, int* endOf
     }
     ret += QString::fromLatin1("color:rgb(%1,%2,%3);").arg(fgColor.red()).arg(fgColor.green()).arg(fgColor.blue());
     ret += QString::fromLatin1("background-color:rgb(%1,%2,%3);").arg(bgColor.red()).arg(bgColor.green()).arg(bgColor.blue());
+
+    const int linkIndex = charStyle.linkIndex();
+    if (linkIndex > 0) {
+        TTextEdit* edit = textEdit();
+        if (!edit || !edit->mpBuffer) {
+            return ret;
+        }
+
+        // Mark this character as part of a hyperlink (only if not already underlined)
+        if (!isUnderline) {
+            ret += QLatin1String("text-underline-type:single;");
+        }
+
+        // Expose the link URL if available (first command is typically the URL)
+        const QStringList commands = edit->mpBuffer->mLinkStore.getLinksConst(linkIndex);
+        if (!commands.isEmpty() && !commands.first().isEmpty()) {
+            QString url = commands.first();
+            // Sanitize: escape semicolons and colons per IAccessible2 spec
+            url = url.replace('\\', QLatin1String("\\\\"));
+            url = url.replace(';', QLatin1String("\\;"));
+            url = url.replace(':', QLatin1String("\\:"));
+            ret += QLatin1String("text-link:") + url + QLatin1Char(';');
+        }
+
+        if (edit->mpBuffer->isLinkVisited(linkIndex)) {
+            ret += QLatin1String("text-link-visited:true;");
+        }
+
+        const auto linkState = edit->mpBuffer->getLinkState(linkIndex);
+        if (linkState == Mudlet::HyperlinkStyling::StateDisabled) {
+            ret += QLatin1String("text-link-disabled:true;");
+        }
+        if (edit->mpBuffer->isLinkSelected(linkIndex)) {
+            ret += QLatin1String("text-link-selected:true;");
+        }
+
+        if (edit->mpBuffer->mLinkStore.hasStyling(linkIndex)) {
+            const auto styling = edit->mpBuffer->mLinkStore.getStyling(linkIndex);
+            if (!styling.selection.group.isEmpty()) {
+                QString group = styling.selection.group;
+                group = group.replace('\\', QLatin1String("\\\\"));
+                group = group.replace(';', QLatin1String("\\;"));
+                group = group.replace(':', QLatin1String("\\:"));
+                ret += QLatin1String("text-link-group:") + group + QLatin1Char(';');
+            }
+        }
+    }
 
     return ret;
 }

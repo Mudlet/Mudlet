@@ -559,7 +559,14 @@ public:
     int getHoveredLink() const { return mCurrentHoveredLinkIndex; }
     int getActiveLink() const { return mCurrentActiveLinkIndex; }
     int getFocusedLink() const { return mCurrentFocusedLinkIndex; }
-    int getLinkIndexAt(int line, int column) const;                                     // Get link index at specific position
+    int getLinkIndexAt(int line, int column) const; // Get link index at specific position
+
+    // Accessibility: find next/previous link from a given position for Tab navigation
+    // Returns true if found, and sets outLine/outColumn to the start of the link
+    bool findNextLink(int fromLine, int fromColumn, int& outLine, int& outColumn) const;
+    bool findPreviousLink(int fromLine, int fromColumn, int& outLine, int& outColumn) const;
+    // Get the tooltip text for a link (from hints or styling)
+    QString getLinkTooltip(int linkIndex) const;
     void clearLinkIndices(int lineNumber, int startColumn, int count);                  // Clear link indices in a range
     void restoreLinkIndices(int lineNumber, int startColumn, int count, int linkIndex); // Restore link indices in a range
 

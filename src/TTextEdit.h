@@ -106,6 +106,8 @@ public:
     void initializeCaret();
     void setCaretPosition(int line, int column);
     void updateCaret();
+    void showLinkContextMenu();
+    void announceLinkFocus(int linkIndex);
 
     QColor mBgColor;
     // position of cursor, in characters, across the entire buffer
@@ -158,6 +160,7 @@ public slots:
     void slot_mouseAction(const QString&);
 
 protected:
+    bool focusNextPrevChild(bool next) override;
     void keyPressEvent(QKeyEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
 

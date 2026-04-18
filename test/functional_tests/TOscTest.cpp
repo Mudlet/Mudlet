@@ -29,6 +29,12 @@
 
 #include <QtTest/QtTest>
 
+#include <optional>
+#include <tuple>
+
+#include "Host.h"
+#include "TAccessibleTextEdit.h"
+#include "TBuffer.h"
 #include "THyperlinkStyling.h"
 #include "TLinkStore.h"
 #include "TMainConsole.h"
@@ -110,6 +116,63 @@ private:
            qsl("\x1b]8;;\x1b\\");
   }
 
+  // Scans forward through the buffer to find the first hyperlink and returns
+  // its (line, column) position, or std::nullopt if none found.
+  std::optional<std::pair<int, int>> findFirstLinkPosition() {
+    if (!mpHost || !mpHost->mpConsole) {
+      return std::nullopt;
+    }
+    TMainConsole *console = mpHost->mpConsole;
+    for (int line = 0; line <= console->buffer.getLastLineNumber(); ++line) {
+      for (int col = 0; col < console->buffer.line(line).length(); ++col) {
+        if (console->buffer.getLinkIndexAt(line, col) > 0) {
+          return std::pair{line, col};
+        }
+      }
+    }
+    return std::nullopt;
+  }
+
+  // Scans forward through the buffer to find the first hyperlink and returns
+  // its (line, column, linkId), or std::nullopt if none found.
+  std::optional<std::tuple<int, int, int>> findFirstLinkPositionWithId() {
+    if (!mpHost || !mpHost->mpConsole) {
+      return std::nullopt;
+    }
+    TMainConsole *console = mpHost->mpConsole;
+    for (int line = 0; line <= console->buffer.getLastLineNumber(); ++line) {
+      for (int col = 0; col < console->buffer.line(line).length(); ++col) {
+        int lid = console->buffer.getLinkIndexAt(line, col);
+        if (lid > 0) {
+          return std::tuple{line, col, lid};
+        }
+      }
+    }
+    return std::nullopt;
+  }
+
+  // Scans forward through the buffer to find the nth distinct hyperlink
+  // (1-based) and returns its (line, column, linkId), or std::nullopt.
+  std::optional<std::tuple<int, int, int>> findNthDistinctLinkPosition(int n) {
+    if (!mpHost || !mpHost->mpConsole) {
+      return std::nullopt;
+    }
+    TMainConsole *console = mpHost->mpConsole;
+    QSet<int> seenIds;
+    for (int line = 0; line <= console->buffer.getLastLineNumber(); ++line) {
+      for (int col = 0; col < console->buffer.line(line).length(); ++col) {
+        int lid = console->buffer.getLinkIndexAt(line, col);
+        if (lid > 0 && !seenIds.contains(lid)) {
+          seenIds.insert(lid);
+          if (seenIds.size() == n) {
+            return std::tuple{line, col, lid};
+          }
+        }
+      }
+    }
+    return std::nullopt;
+  }
+
 private slots:
   // Start mudlet and create a profile once for all tests.
   void initTestCase() {
@@ -180,20 +243,18 @@ private slots:
     QTest::addColumn<bool>("exactMatch");
 
     QTest::newRow("BEL-terminated OSC 2 (window title)")
-        << QString("\x1b]2;Window Title\x07Hello World")
-        << qsl("Hello World") << true;
+        << QString("\x1b]2;Window Title\x07Hello World") << qsl("Hello World")
+        << true;
     QTest::newRow("ST-terminated OSC P (color redefine)")
-        << QString("\x1b]P0FF0000\x1b\\Hello")
-        << qsl("Hello") << true;
+        << QString("\x1b]P0FF0000\x1b\\Hello") << qsl("Hello") << true;
     QTest::newRow("BEL-terminated OSC 8 (hyperlink)")
-        << QString("\x1b]8;;http://example.com\x07Link Text\x1b]8;;\x07 After Link")
+        << QString(
+               "\x1b]8;;http://example.com\x07Link Text\x1b]8;;\x07 After Link")
         << qsl("Link Text After Link") << false;
     QTest::newRow("BEL-terminated OSC P")
-        << QString("\x1b]P0FF0000\x07Hello")
-        << qsl("Hello") << true;
+        << QString("\x1b]P0FF0000\x07Hello") << qsl("Hello") << true;
     QTest::newRow("empty OSC sequence")
-        << QString("\x1b]\x07Normal text")
-        << qsl("Normal text") << true;
+        << QString("\x1b]\x07Normal text") << qsl("Normal text") << true;
     QTest::newRow("OSC exceeds length limit")
         << QString("\x1b]2;") + QString(5000, 'A') + QString("\x07Normal text")
         << qsl("Normal text") << true;
@@ -233,33 +294,34 @@ private slots:
     QTest::addColumn<QStringList>("mustNotContain");
 
     QTest::newRow("preserves web URL query params")
-        << qsl("\x1b]8;;https://example.com/?id=42&lang=en\x1b\\Link\x1b]8;;\x1b\\")
-        << QStringList{"id=42&lang=en"}
-        << QStringList{};
+        << qsl("\x1b]8;;https://example.com/"
+               "?id=42&lang=en\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"id=42&lang=en"} << QStringList{};
     QTest::newRow("strips config param")
-        << qsl("\x1b]8;;https://example.com/?config=%7B%22style%22%3A%7B%22color%22%3A%22red%22%7D%7D\x1b\\Styled\x1b]8;;\x1b\\")
-        << QStringList{}
-        << QStringList{"config="};
+        << qsl("\x1b]8;;https://example.com/"
+               "?config=%7B%22style%22%3A%7B%22color%22%3A%22red%22%7D%"
+               "7D\x1b\\Styled\x1b]8;;\x1b\\")
+        << QStringList{} << QStringList{"config="};
     QTest::newRow("strips preset, preserves other params")
-        << qsl("\x1b]8;;https://example.com/?page=1&preset=danger\x1b\\Link\x1b]8;;\x1b\\")
-        << QStringList{"page=1"}
-        << QStringList{"preset="};
+        << qsl("\x1b]8;;https://example.com/"
+               "?page=1&preset=danger\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"page=1"} << QStringList{"preset="};
     QTest::newRow("strips preset with encoded equals")
-        << qsl("\x1b]8;;https://example.com/?preset%3Ddefault&page=1\x1b\\Link\x1b]8;;\x1b\\")
-        << QStringList{"page=1"}
-        << QStringList{"preset%3D"};
+        << qsl("\x1b]8;;https://example.com/"
+               "?preset%3Ddefault&page=1\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"page=1"} << QStringList{"preset%3D"};
     QTest::newRow("strips config with encoded equals (lowercase)")
-        << qsl("\x1b]8;;https://example.com/?config%3dvalue&foo=bar\x1b\\Link\x1b]8;;\x1b\\")
-        << QStringList{"foo=bar"}
-        << QStringList{"config%3d"};
+        << qsl("\x1b]8;;https://example.com/"
+               "?config%3dvalue&foo=bar\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"foo=bar"} << QStringList{"config%3d"};
     QTest::newRow("preserves percent-encoded reserved names")
-        << qsl("\x1b]8;;https://example.com/?%63%6F%6E%66%69%67=value\x1b\\Link\x1b]8;;\x1b\\")
-        << QStringList{"%63%6F%6E%66%69%67=value"}
-        << QStringList{};
+        << qsl("\x1b]8;;https://example.com/"
+               "?%63%6F%6E%66%69%67=value\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"%63%6F%6E%66%69%67=value"} << QStringList{};
     QTest::newRow("send URL strips all query params")
-        << qsl("\x1b]8;;send:attack?config=%7B%22style%22%3A%7B%22color%22%3A%22red%22%7D%7D\x1b\\Attack\x1b]8;;\x1b\\")
-        << QStringList{"attack"}
-        << QStringList{"config="};
+        << qsl("\x1b]8;;send:attack?config=%7B%22style%22%3A%7B%22color%22%3A%"
+               "22red%22%7D%7D\x1b\\Attack\x1b]8;;\x1b\\")
+        << QStringList{"attack"} << QStringList{"config="};
   }
 
   void test_Osc8UrlParams() {
@@ -272,12 +334,15 @@ private slots:
     QStringList commands = findFirstLinkCommands();
     QVERIFY2(!commands.isEmpty(), "No hyperlink found in buffer");
     for (const auto &expected : mustContain) {
-      QVERIFY2(commands.first().contains(expected),
-               qPrintable(qsl("Expected '%1' in: %2").arg(expected, commands.first())));
+      QVERIFY2(
+          commands.first().contains(expected),
+          qPrintable(
+              qsl("Expected '%1' in: %2").arg(expected, commands.first())));
     }
     for (const auto &forbidden : mustNotContain) {
       QVERIFY2(!commands.first().contains(forbidden),
-               qPrintable(qsl("Did not expect '%1' in: %2").arg(forbidden, commands.first())));
+               qPrintable(qsl("Did not expect '%1' in: %2")
+                              .arg(forbidden, commands.first())));
     }
   }
 
@@ -299,14 +364,12 @@ private slots:
         << qsl(R"({"ti":"Rusty Sword","m":[{"Equip":"send:wield sword"}]})")
         << qsl("Rusty Sword") << false;
     QTest::newRow("title without menu")
-        << qsl(R"({"title":"Lonely Title"})")
-        << qsl("Lonely Title") << false;
+        << qsl(R"({"title":"Lonely Title"})") << qsl("Lonely Title") << false;
     QTest::newRow("menu without title")
-        << qsl(R"({"menu":[{"North":"send:north"}]})")
-        << QString() << false;
+        << qsl(R"({"menu":[{"North":"send:north"}]})") << QString() << false;
     QTest::newRow("empty string")
-        << qsl(R"({"title":"","menu":[{"Action":"send:action"}]})")
-        << QString() << false;
+        << qsl(R"({"title":"","menu":[{"Action":"send:action"}]})") << QString()
+        << false;
     QTest::newRow("object with empty text")
         << qsl(R"({"title":{"text":"","style":{"color":"#ff0000"}},"menu":[{"Action":"send:action"}]})")
         << QString() << true;
@@ -326,8 +389,8 @@ private slots:
         << qsl(R"({"title":"Full Config","tooltip":"A helpful tooltip","style":{"color":"#00ffff"},"menu":[{"Action 1":"send:action1"}]})")
         << qsl("Full Config") << true;
     QTest::newRow("numeric value ignored")
-        << qsl(R"({"title":42,"menu":[{"Action":"send:action"}]})")
-        << QString() << false;
+        << qsl(R"({"title":42,"menu":[{"Action":"send:action"}]})") << QString()
+        << false;
     QTest::newRow("boolean value ignored")
         << qsl(R"({"title":true,"menu":[{"Action":"send:action"}]})")
         << QString() << false;
@@ -371,46 +434,41 @@ private slots:
 
     QTest::newRow("bold and color")
         << qsl(R"({"title":{"text":"Magic Shop - Potions","style":{"color":"#ffd700","bold":true}},"menu":[{"Buy":"send:buy potion"}]})")
-        << qsl("Magic Shop - Potions")
-        << true << false << false << false
+        << qsl("Magic Shop - Potions") << true << false << false << false
         << qsl("#ffd700") << QString() << -1 << QString();
     QTest::newRow("italic and background")
         << qsl(R"({"title":{"text":"Sir Galahad the Brave","style":{"color":"#ffffff","bg":"#333333","italic":true}},"menu":[{"Talk":"send:talk galahad"}]})")
-        << qsl("Sir Galahad the Brave")
-        << false << true << false << false
+        << qsl("Sir Galahad the Brave") << false << true << false << false
         << qsl("#ffffff") << qsl("#333333") << -1 << QString();
     QTest::newRow("all text decorations")
         << qsl(R"({"title":{"text":"Decorated Title","style":{"color":"#ff0000","bold":true,"italic":true,"underline":true,"strikethrough":true}},"menu":[{"Action":"send:action"}]})")
-        << qsl("Decorated Title")
-        << true << true << true << true
+        << qsl("Decorated Title") << true << true << true << true
         << qsl("#ff0000") << QString() << -1 << QString();
     QTest::newRow("wavy underline")
         << qsl(R"({"title":{"text":"Wavy Title","style":{"color":"#00ff00","underline":"wavy"}},"menu":[{"Test":"send:test"}]})")
-        << qsl("Wavy Title")
-        << false << false << true << false
+        << qsl("Wavy Title") << false << false << true << false
         << qsl("#00ff00") << QString()
-        << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineWavy) << QString();
+        << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineWavy)
+        << QString();
     QTest::newRow("dotted underline")
         << qsl(R"({"title":{"text":"Dotted Title","style":{"color":"#00ff00","underline":"dotted"}},"menu":[{"Test":"send:test"}]})")
-        << qsl("Dotted Title")
-        << false << false << true << false
+        << qsl("Dotted Title") << false << false << true << false
         << qsl("#00ff00") << QString()
-        << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineDotted) << QString();
+        << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineDotted)
+        << QString();
     QTest::newRow("dashed underline")
         << qsl(R"({"title":{"text":"Dashed Title","style":{"color":"#00ff00","underline":"dashed"}},"menu":[{"Test":"send:test"}]})")
-        << qsl("Dashed Title")
-        << false << false << true << false
+        << qsl("Dashed Title") << false << false << true << false
         << qsl("#00ff00") << QString()
-        << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineDashed) << QString();
+        << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineDashed)
+        << QString();
     QTest::newRow("background-color CSS property")
         << qsl(R"({"title":{"text":"CSS BG Title","style":{"color":"#ffffff","background-color":"#660000"}},"menu":[{"Action":"send:action"}]})")
-        << qsl("CSS BG Title")
-        << false << false << false << false
+        << qsl("CSS BG Title") << false << false << false << false
         << qsl("#ffffff") << qsl("#660000") << -1 << QString();
     QTest::newRow("text-decoration-color")
         << qsl(R"({"title":{"text":"Color Decoration","style":{"color":"#ffffff","underline":true,"text-decoration-color":"#ff00ff"}},"menu":[{"Action":"send:action"}]})")
-        << qsl("Color Decoration")
-        << false << false << true << false
+        << qsl("Color Decoration") << false << false << true << false
         << qsl("#ffffff") << QString() << -1 << qsl("#ff00ff");
   }
 
@@ -444,7 +502,8 @@ private slots:
     }
     if (underlineStyle >= 0) {
       QCOMPARE(styling.menuTitleStyle.underlineStyle,
-               static_cast<Mudlet::HyperlinkStyling::UnderlineStyle>(underlineStyle));
+               static_cast<Mudlet::HyperlinkStyling::UnderlineStyle>(
+                   underlineStyle));
     }
     if (!underlineColor.isEmpty()) {
       QVERIFY(styling.menuTitleStyle.hasUnderlineColor);
@@ -455,8 +514,8 @@ private slots:
   void test_Osc8Title_LinkTextDisplayedInBuffer() {
     QString config = qsl(
         R"({"title":"Lamb and Barley Stew","menu":[{"View Details":"send:look stew"}]})");
-    injectData(buildOsc8WithConfig(
-        qsl("send:look stew"), qsl("[Lamb and Barley Stew]"), config));
+    injectData(buildOsc8WithConfig(qsl("send:look stew"),
+                                   qsl("[Lamb and Barley Stew]"), config));
 
     TMainConsole *console = mpHost->mpConsole;
     QString allText;
@@ -465,8 +524,537 @@ private slots:
     }
     QVERIFY2(
         allText.contains(qsl("[Lamb and Barley Stew]")),
-        qPrintable(qsl("Expected link text in buffer but got '%1'")
-                       .arg(allText)));
+        qPrintable(
+            qsl("Expected link text in buffer but got '%1'").arg(allText)));
+  }
+
+  // =====================================================================
+  // OSC 8 Hyperlink Navigation Tests (Tab/Shift+Tab support)
+  // =====================================================================
+
+  void test_FindNextLink_MultipleLinks() {
+    // Inject two distinct links on the same line
+    injectData(qsl("\x1b]8;;send:north\x1b\\North\x1b]8;;\x1b\\ - "
+                   "\x1b]8;;send:south\x1b\\South\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+
+    // Starting from position 0 (on the first link), findNextLink should find
+    // the second
+    int outLine = -1, outCol = -1;
+    bool found = console->buffer.findNextLink(0, 0, outLine, outCol);
+    QVERIFY2(found, "Expected to find a second link after the first");
+
+    // The second link should be at a column past "North - "
+    int secondLinkIndex = console->buffer.getLinkIndexAt(outLine, outCol);
+    QVERIFY2(secondLinkIndex > 0,
+             "Expected a valid link index at the found position");
+
+    // Verify it's actually a different link from the first
+    int firstLinkIndex = console->buffer.getLinkIndexAt(0, 0);
+    QVERIFY2(
+        firstLinkIndex != secondLinkIndex,
+        "findNextLink should return a different link than the starting one");
+  }
+
+  void test_FindNextLink_NoLinks() {
+    // Inject plain text with no links
+    injectData(qsl("Just some plain text with no links"));
+
+    TMainConsole *console = mpHost->mpConsole;
+
+    int outLine = -1, outCol = -1;
+    bool found = console->buffer.findNextLink(0, 0, outLine, outCol);
+    QVERIFY2(!found, "findNextLink should return false when no links exist");
+  }
+
+  void test_FindNextLink_SkipsCurrentLink() {
+    // Inject a single link
+    injectData(qsl("\x1b]8;;send:look\x1b\\Look around\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+
+    // Find where the link starts
+    auto pos = findFirstLinkPosition();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol] = *pos;
+
+    // Starting from the link, there should be no "next" link
+    int outLine = -1, outCol = -1;
+    bool found2 =
+        console->buffer.findNextLink(linkLine, linkCol, outLine, outCol);
+    QVERIFY2(!found2,
+             "findNextLink should skip the current link and find nothing else");
+  }
+
+  void test_FindPreviousLink_MultipleLinks() {
+    // Inject two distinct links
+    injectData(qsl("\x1b]8;;send:north\x1b\\North\x1b]8;;\x1b\\ - "
+                   "\x1b]8;;send:south\x1b\\South\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+
+    // Find the first and second distinct links
+    auto first = findNthDistinctLinkPosition(1);
+    QVERIFY2(first.has_value(), "Expected to find a first link in the buffer");
+    auto [firstLine, firstCol, firstLinkId] = *first;
+
+    auto second = findNthDistinctLinkPosition(2);
+    QVERIFY2(second.has_value(),
+             "Expected to find a second link in the buffer");
+    auto [secondLine, secondCol, secondLinkId] = *second;
+
+    // From the second link, findPreviousLink should find the first
+    int outLine = -1, outCol = -1;
+    bool found = console->buffer.findPreviousLink(secondLine, secondCol,
+                                                  outLine, outCol);
+    QVERIFY2(found, "Expected to find the first link when scanning backward "
+                    "from the second");
+
+    int foundLinkId = console->buffer.getLinkIndexAt(outLine, outCol);
+    QCOMPARE(foundLinkId, firstLinkId);
+  }
+
+  void test_FindPreviousLink_AtStartOfBuffer() {
+    // Inject a single link
+    injectData(qsl("\x1b]8;;send:look\x1b\\Look\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+
+    // Starting from 0,0 there should be no previous link
+    int outLine = -1, outCol = -1;
+    bool found = console->buffer.findPreviousLink(0, 0, outLine, outCol);
+    QVERIFY2(!found,
+             "findPreviousLink should return false at the start of the buffer");
+  }
+
+  // =====================================================================
+  // OSC 8 Hyperlink Tooltip Tests
+  // =====================================================================
+
+  void test_GetLinkTooltip_data() {
+    QTest::addColumn<QString>("config");
+    QTest::addColumn<QString>("expectedTooltip");
+
+    QTest::newRow("tooltip from config")
+        << qsl(R"({"tooltip":"A magical sword","style":{"color":"#ff0000"}})")
+        << qsl("A magical sword");
+    QTest::newRow("no tooltip in config - uses default send hint")
+        << qsl(R"({"style":{"color":"#00ff00"}})") << qsl("Send: look sword");
+    QTest::newRow("empty config - uses default send hint")
+        << QString() << qsl("Send: look sword");
+  }
+
+  void test_GetLinkTooltip() {
+    QFETCH(QString, config);
+    QFETCH(QString, expectedTooltip);
+
+    injectData(
+        buildOsc8WithConfig(qsl("send:look sword"), qsl("[Sword]"), config));
+
+    TMainConsole *console = mpHost->mpConsole;
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    QString tooltip = console->buffer.getLinkTooltip(linkId);
+    QCOMPARE(tooltip, expectedTooltip);
+  }
+
+  void test_GetLinkTooltip_InvalidIndex() {
+    TMainConsole *console = mpHost->mpConsole;
+
+    // Index 0 and negative should return empty
+    QCOMPARE(console->buffer.getLinkTooltip(0), QString());
+    QCOMPARE(console->buffer.getLinkTooltip(-1), QString());
+    // Non-existent positive index should return empty
+    QCOMPARE(console->buffer.getLinkTooltip(99999), QString());
+  }
+
+  // =====================================================================
+  // OSC 8 Hyperlink Visited State Tests
+  // =====================================================================
+
+  void test_LinkVisitedState() {
+    injectData(qsl("\x1b]8;;send:look\x1b\\Look\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    // Should not be visited initially
+    QVERIFY2(!console->buffer.isLinkVisited(linkId),
+             "Link should not be visited initially");
+
+    // Mark as visited
+    console->buffer.markLinkAsVisited(linkId);
+    QVERIFY2(console->buffer.isLinkVisited(linkId),
+             "Link should be visited after markLinkAsVisited");
+  }
+
+  // =====================================================================
+  // OSC 8 Hyperlink Accessible Attributes Tests
+  // =====================================================================
+
+  void test_LinkAttributes_ExposedInAccessible() {
+    injectData(qsl("\x1b]8;;https://example.com\x1b\\Click me\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+
+    // Find the link position in the buffer
+    auto pos = findFirstLinkPosition();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol] = *pos;
+
+    // Create the accessible interface for the upper pane
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY2(pane, "Expected upper pane to exist");
+
+    TAccessibleTextEdit accessible(pane);
+
+    // Compute the offset for the link position
+    int offset = 0;
+    for (int i = 0; i < linkLine; ++i) {
+      offset += console->buffer.line(i).length() + 1; // +1 for \n
+    }
+    offset += linkCol;
+
+    // Query attributes at the link offset
+    int startOffset = 0, endOffset = 0;
+    QString attrs = accessible.attributes(offset, &startOffset, &endOffset);
+
+    // Verify link-specific attributes are present
+    QVERIFY2(
+        attrs.contains(qsl("text-link:")),
+        qPrintable(
+            qsl("Expected 'text-link:' in attributes but got: %1").arg(attrs)));
+    QVERIFY2(
+        attrs.contains(qsl("example.com")),
+        qPrintable(qsl("Expected URL in attributes but got: %1").arg(attrs)));
+  }
+
+  void test_LinkAttributes_NotPresentOnPlainText() {
+    injectData(qsl("Just plain text here"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY2(pane, "Expected upper pane to exist");
+
+    TAccessibleTextEdit accessible(pane);
+
+    // Query attributes at position 0 (plain text)
+    int startOffset = 0, endOffset = 0;
+    QString attrs = accessible.attributes(0, &startOffset, &endOffset);
+
+    // Verify no link attributes are present
+    QVERIFY2(!attrs.contains(qsl("text-link:")),
+             qPrintable(
+                 qsl("Did not expect 'text-link:' in plain text attributes: %1")
+                     .arg(attrs)));
+  }
+
+  void test_LinkAttributes_VisitedState() {
+    injectData(qsl("\x1b]8;;send:look\x1b\\Look\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+
+    // Find the link
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY(pane);
+    TAccessibleTextEdit accessible(pane);
+
+    int offset = 0;
+    for (int i = 0; i < linkLine; ++i) {
+      offset += console->buffer.line(i).length() + 1;
+    }
+    offset += linkCol;
+
+    // Before visiting: should not have visited attribute
+    int s = 0, e = 0;
+    QString attrsBefore = accessible.attributes(offset, &s, &e);
+    QVERIFY2(!attrsBefore.contains(qsl("text-link-visited:true")),
+             "Link should not show visited before being visited");
+
+    // Mark as visited
+    console->buffer.markLinkAsVisited(linkId);
+
+    // After visiting: should have visited attribute
+    QString attrsAfter = accessible.attributes(offset, &s, &e);
+    QVERIFY2(
+        attrsAfter.contains(qsl("text-link-visited:true")),
+        qPrintable(
+            qsl("Expected 'text-link-visited:true' after visiting but got: %1")
+                .arg(attrsAfter)));
+  }
+
+  void test_LinkAttributes_DisabledState() {
+    injectData(qsl("\x1b]8;;send:look\x1b\\Disabled Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+
+    // Set link state to disabled
+    console->buffer.setLinkState(linkId,
+                                 Mudlet::HyperlinkStyling::StateDisabled);
+
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY(pane);
+    TAccessibleTextEdit accessible(pane);
+
+    int offset = 0;
+    for (int i = 0; i < linkLine; ++i) {
+      offset += console->buffer.line(i).length() + 1;
+    }
+    offset += linkCol;
+
+    int s = 0, e = 0;
+    QString attrs = accessible.attributes(offset, &s, &e);
+    QVERIFY2(
+        attrs.contains(qsl("text-link-disabled:true;")),
+        qPrintable(
+            qsl("Expected 'text-link-disabled:true;' in attributes but got: %1")
+                .arg(attrs)));
+  }
+
+  void test_LinkAttributes_SelectedState() {
+    injectData(qsl("\x1b]8;;send:look\x1b\\Select Me\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY(pane);
+    TAccessibleTextEdit accessible(pane);
+
+    int offset = 0;
+    for (int i = 0; i < linkLine; ++i) {
+      offset += console->buffer.line(i).length() + 1;
+    }
+    offset += linkCol;
+
+    // Before selecting: should not have selected attribute
+    int s = 0, e = 0;
+    QString attrsBefore = accessible.attributes(offset, &s, &e);
+    QVERIFY2(!attrsBefore.contains(qsl("text-link-selected:true")),
+             "Link should not show selected before being selected");
+
+    // Mark as selected
+    console->buffer.setLinkSelected(linkId, true);
+
+    // After selecting: should have selected attribute
+    QString attrsAfter = accessible.attributes(offset, &s, &e);
+    QVERIFY2(attrsAfter.contains(qsl("text-link-selected:true;")),
+             qPrintable(qsl("Expected 'text-link-selected:true;' after "
+                            "selecting but got: %1")
+                            .arg(attrsAfter)));
+  }
+
+  void test_LinkAttributes_UrlSanitization() {
+    injectData(
+        qsl("\x1b]8;;https://example.com:8080/path\x1b\\Look\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+
+    auto pos = findFirstLinkPosition();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol] = *pos;
+
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY(pane);
+    TAccessibleTextEdit accessible(pane);
+
+    int offset = 0;
+    for (int i = 0; i < linkLine; ++i) {
+      offset += console->buffer.line(i).length() + 1;
+    }
+    offset += linkCol;
+
+    int s = 0, e = 0;
+    QString attrs = accessible.attributes(offset, &s, &e);
+    // Colons in the URL should be escaped as \:
+    QVERIFY2(attrs.contains(qsl("\\:")),
+             qPrintable(qsl("Expected escaped colons (\\:) in text-link "
+                            "attribute but got: %1")
+                            .arg(attrs)));
+    // Verify the attribute does not contain an unescaped colon after
+    // "text-link:" The "text-link:" prefix itself has an unescaped colon, but
+    // colons within the URL value must be escaped
+    int linkAttrStart = attrs.indexOf(qsl("text-link:"));
+    QVERIFY(linkAttrStart >= 0);
+    QString linkValue = attrs.mid(linkAttrStart + 10); // after "text-link:"
+    int semiPos = linkValue.indexOf(QLatin1Char(';'));
+    QVERIFY(semiPos > 0);
+    linkValue = linkValue.left(semiPos);
+    // Every colon in the value should be preceded by a backslash
+    for (int i = 0; i < linkValue.size(); ++i) {
+      if (linkValue.at(i) == QLatin1Char(':')) {
+        QVERIFY2(i > 0 && linkValue.at(i - 1) == QLatin1Char('\\'),
+                 qPrintable(qsl("Found unescaped colon in text-link value: %1")
+                                .arg(linkValue)));
+      }
+    }
+  }
+
+  void test_LinkAttributes_SemicolonAndBackslashEscaping() {
+    // URL contains semicolons and backslashes that must be escaped in
+    // IAccessible2 text attributes
+    injectData(qsl("\x1b]8;;https://example.com/"
+                   "path;param\\extra\x1b\\Look\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+
+    auto pos = findFirstLinkPosition();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol] = *pos;
+
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY(pane);
+    TAccessibleTextEdit accessible(pane);
+
+    int offset = 0;
+    for (int i = 0; i < linkLine; ++i) {
+      offset += console->buffer.line(i).length() + 1;
+    }
+    offset += linkCol;
+
+    int s = 0, e = 0;
+    QString attrs = accessible.attributes(offset, &s, &e);
+
+    // Extract the text-link value, skipping escaped semicolons (\;)
+    int linkAttrStart = attrs.indexOf(qsl("text-link:"));
+    QVERIFY(linkAttrStart >= 0);
+    QString linkValue = attrs.mid(linkAttrStart + 10);
+    int semiEnd = -1;
+    for (int i = 0; i < linkValue.length(); ++i) {
+      if (linkValue.at(i) == QLatin1Char(';') &&
+          (i == 0 || linkValue.at(i - 1) != QLatin1Char('\\'))) {
+        semiEnd = i;
+        break;
+      }
+    }
+    QVERIFY(semiEnd > 0);
+    linkValue = linkValue.left(semiEnd);
+
+    // Semicolons within the URL value should be escaped as \;
+    QVERIFY2(linkValue.contains(qsl("\\;")),
+             qPrintable(qsl("Expected escaped semicolons in text-link "
+                            "value but got: %1")
+                            .arg(linkValue)));
+    // Backslashes within the URL value should be escaped as double backslash
+    const QString escapedBackslash = qsl("\\\\");
+    QVERIFY2(linkValue.contains(escapedBackslash),
+             qPrintable(qsl("Expected escaped backslashes in text-link "
+                            "value but got: %1")
+                            .arg(linkValue)));
+  }
+
+  void test_LinkAttributes_GroupAttribute() {
+    // Link with a selection group should expose text-link-group attribute
+    QString config = qsl(
+        R"({"selection":{"group":"combat","value":"sword","toggle":true}})");
+    injectData(
+        buildOsc8WithConfig(qsl("send:equip sword"), qsl("[Sword]"), config));
+
+    TMainConsole *console = mpHost->mpConsole;
+
+    auto pos = findFirstLinkPosition();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol] = *pos;
+
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY(pane);
+    TAccessibleTextEdit accessible(pane);
+
+    int offset = 0;
+    for (int i = 0; i < linkLine; ++i) {
+      offset += console->buffer.line(i).length() + 1;
+    }
+    offset += linkCol;
+
+    int s = 0, e = 0;
+    QString attrs = accessible.attributes(offset, &s, &e);
+
+    QVERIFY2(attrs.contains(qsl("text-link-group:")),
+             qPrintable(qsl("Expected 'text-link-group:' in attributes "
+                            "but got: %1")
+                            .arg(attrs)));
+    // The group value should contain the group name (may be escaped)
+    QVERIFY2(attrs.contains(qsl("combat")),
+             qPrintable(qsl("Expected group name 'combat' in attributes "
+                            "but got: %1")
+                            .arg(attrs)));
+  }
+
+  // =====================================================================
+  // OSC 8 Hyperlink QAccessible::Description Tests
+  // =====================================================================
+
+  void test_Description_CaretOnLink() {
+    QString config = qsl(
+        R"({"tooltip":"A magical sword","menu":[{"View Details":"send:look sword"}]})");
+    injectData(
+        buildOsc8WithConfig(qsl("send:look sword"), qsl("[Sword]"), config));
+
+    TMainConsole *console = mpHost->mpConsole;
+
+    // Find the link position
+    auto pos = findFirstLinkPosition();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol] = *pos;
+
+    // Enable caret mode and move caret to the link
+    mpHost->setCaretEnabled(true);
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY(pane);
+    pane->setCaretPosition(linkLine, linkCol);
+
+    TAccessibleTextEdit accessible(pane);
+    QString desc = accessible.text(QAccessible::Description);
+
+    QVERIFY2(
+        desc.contains(qsl("A magical sword")),
+        qPrintable(
+            qsl("Expected tooltip in Description but got: '%1'").arg(desc)));
+
+    // Cleanup: disable caret mode
+    mpHost->setCaretEnabled(false);
+  }
+
+  void test_Description_CaretNotOnLink() {
+    injectData(qsl("Plain text with no links"));
+
+    TMainConsole *console = mpHost->mpConsole;
+
+    // Enable caret mode, caret at line 0 col 0 (plain text)
+    mpHost->setCaretEnabled(true);
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY(pane);
+    pane->setCaretPosition(0, 0);
+
+    TAccessibleTextEdit accessible(pane);
+    QString desc = accessible.text(QAccessible::Description);
+
+    QVERIFY(desc.isEmpty());
+
+    // Cleanup
+    mpHost->setCaretEnabled(false);
   }
 
   void cleanupTestCase() {

@@ -23,8 +23,10 @@
 #include "TConsole.h"
 #include "TTextEdit.h"
 #include "Host.h"
+#include "mudlet.h"
 #include "widechar_width.h"
 
+#include <QAccessible>
 #include <QDateTime>
 #include <QDebug>
 #include <limits>
@@ -42,12 +44,18 @@ THyperlinkVisibilityManager::THyperlinkVisibilityManager(TConsole* pConsole)
     mpOutputGapTimer = new QTimer(this);
     mpOutputGapTimer->setSingleShot(true);
     connect(mpOutputGapTimer, &QTimer::timeout, this, &THyperlinkVisibilityManager::slot_outputGapExpired);
+
+    mpAnnouncementTimer = new QTimer(this);
+    mpAnnouncementTimer->setSingleShot(true);
+    mpAnnouncementTimer->setInterval(300);
+    connect(mpAnnouncementTimer, &QTimer::timeout, this, &THyperlinkVisibilityManager::slot_announceHiddenLinks);
 }
 
 THyperlinkVisibilityManager::~THyperlinkVisibilityManager()
 {
     mpTimer->stop();
     mpOutputGapTimer->stop();
+    mpAnnouncementTimer->stop();
 }
 
 bool THyperlinkVisibilityManager::registerHyperlink(int linkId, int lineNumber, int startColumn, int length, const QString& originalText, const Mudlet::HyperlinkStyling& styling)
@@ -664,6 +672,8 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
 
             mTrackedLinks.remove(currentLinkId);
 
+            queueHiddenAnnouncement();
+
             // SAFE line number adjustment: Only adjust links that are on lines > targetLine
             // Update in-place to avoid copying the entire map
             for (auto it = mTrackedLinks.begin(); it != mTrackedLinks.end(); ++it) {
@@ -714,6 +724,8 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
                 // Only mark as concealed and update panes after successful text replacement
                 link.isConcealed = true;
 
+                queueHiddenAnnouncement();
+
                 if (mpConsole->mUpperPane) {
                     mpConsole->mUpperPane->update();
                 }
@@ -723,6 +735,29 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
             }
         }
     }
+}
+
+void THyperlinkVisibilityManager::queueHiddenAnnouncement()
+{
+    ++mPendingHiddenCount;
+    mpAnnouncementTimer->start();
+}
+
+void THyperlinkVisibilityManager::slot_announceHiddenLinks()
+{
+    if (mPendingHiddenCount <= 0 || !QAccessible::isActive() || !mudlet::self()) {
+        mPendingHiddenCount = 0;
+        return;
+    }
+
+    if (mPendingHiddenCount == 1) {
+        //: Screen-reader announcement when an OSC 8 hyperlink is hidden by the visibility manager
+        mudlet::self()->announce(tr("Link hidden"), QString(), true);
+    } else {
+        //: Screen-reader announcement when multiple OSC 8 hyperlinks are hidden at once; %n is the count
+        mudlet::self()->announce(tr("%n link(s) hidden", nullptr, mPendingHiddenCount), QString(), true);
+    }
+    mPendingHiddenCount = 0;
 }
 
 void THyperlinkVisibilityManager::performReveal(TrackedHyperlink& link)
@@ -750,6 +785,11 @@ void THyperlinkVisibilityManager::performReveal(TrackedHyperlink& link)
             // Restore the link indices so the text is clickable again
             buffer.restoreLinkIndices(link.lineNumber, link.startColumn, link.length, link.linkId);
             link.isConcealed = false;
+
+            if (QAccessible::isActive() && mudlet::self()) {
+                //: Screen-reader announcement when a previously hidden OSC 8 link is revealed; %1 is the original link text
+                mudlet::self()->announce(tr("Link revealed: %1").arg(link.originalText), QString(), true);
+            }
 
             if (mpConsole->mUpperPane) {
                 mpConsole->mUpperPane->update();
