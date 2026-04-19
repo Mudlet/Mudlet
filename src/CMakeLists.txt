@@ -121,6 +121,8 @@ set(mudlet_SRCS
     TAction.cpp
     TAlias.cpp
     TArea.cpp
+    TAreaGridIndex.cpp
+    TAreaZLevelIndex.cpp
     TBuffer.cpp
     TCommandLine.cpp
     TConsole.cpp
@@ -341,6 +343,8 @@ set(mudlet_HDRS
     TAction.h
     TAlias.h
     TArea.h
+    TAreaGridIndex.h
+    TAreaZLevelIndex.h
     TAstar.h
     TBuffer.h
     TCommandLine.h
@@ -569,6 +573,9 @@ add_library(${LIB_MUDLET_TARGET} STATIC
     ${mudlet_HDRS}
     ${mudlet_UIS}
 )
+
+# Enable Lua 5.1 compatibility layer for LUA_GLOBALSINDEX and other legacy constants
+target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE LUA_COMPAT_5_1)
 
 ########################### Debugging code inclusions ##########################
 # Controls the include/selection of extra code to aide developers debug various

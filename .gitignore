@@ -12,6 +12,9 @@ qrc_*.cpp
 mudlet
 app-build.txt
 src/crash_reporter/build/
+/package*
+/portable*
+/Mudlet*
 
 
 # Qt creator's clangd cache
