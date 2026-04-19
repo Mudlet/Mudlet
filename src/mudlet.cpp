@@ -3138,6 +3138,11 @@ void mudlet::writeSettings()
     settings.setValue(qsl("enableMuteAPI"), mMuteAPI);
     settings.setValue(qsl("enableMuteGame"), mMuteGame);
     settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
+#if !defined(Q_OS_MACOS)
+    if (!settings.contains(qsl("highDpiScaleFactorRoundingPolicy"))) {
+        settings.setValue(qsl("highDpiScaleFactorRoundingPolicy"), qsl("PassThrough"));
+    }
+#endif
     settings.sync();
     switch (settings.status()) {
     case QSettings::NoError:
