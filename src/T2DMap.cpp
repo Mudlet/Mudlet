@@ -401,11 +401,9 @@ T2DMap::T2DMap(QWidget* parent)
             //: Room name in the mapper widget
             tr("Name");
     mMultiSelectionListWidget.setHeaderLabels(headerLabels);
-    //: Tooltip for the room selection list. This text will be formatted with HTML line breaks between sentences.
-    mMultiSelectionListWidget.setToolTip(utils::richText(tr("Click on a line to select or deselect that room number "
-                                                            "(it will have a name if the room is named).<br><br>"
-                                                            "Click on a column header to sort by that column.<br><br>"
-                                                            "The name column only appears if at least one room has a name.")));
+    //: Tooltip for multi-room selection widget in mapper
+    mMultiSelectionListWidget.setToolTip(utils::richText(tr("Click to select/deselect rooms. Click headers to sort. "
+                                                            "Name column shows only if rooms are named.")));
     mMultiSelectionListWidget.setUniformRowHeights(true);
     mMultiSelectionListWidget.setItemsExpandable(false);
     mMultiSelectionListWidget.setSelectionMode(QAbstractItemView::MultiSelection); // Was ExtendedSelection
