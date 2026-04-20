@@ -97,8 +97,8 @@ bool RoomContextMenuHandler::handle(T2DMap::MapInteractionContext& context)
         auto loadMap = new QAction(T2DMap::tr("Load map..."), &mMapWidget);
         QObject::connect(loadMap, &QAction::triggered, &mMapWidget, &T2DMap::slot_loadMap);
 
-        popup->addAction(createMap);
         popup->addAction(loadMap);
+        popup->addAction(createMap);
 
         mMapWidget.mPopupMenu = true;
         popup->popup(mMapWidget.mapToGlobal(context.widgetPosition));
