@@ -31,7 +31,7 @@ signals:
     void profileChanged(const QString& name);
 ```    
 * in general: write modern C++20 code, but avoid C++ exceptions, templates, and concepts as those have performance/complexity considerations, avoiding which has made Mudlet the success it is today.
-* use clang-format for formatting your code with [src/.clang-format](https://github.com/Mudlet/Mudlet/blob/development/src/.clang-format) settings. To get started, check out Clang Format in the [Setting up IDE's](https://wiki.mudlet.org/w/Compiling_Mudlet) section.
+* use clang-format for formatting your code with [.clang-format](https://github.com/Mudlet/Mudlet/blob/development/.clang-format) settings. To get started, check out Clang Format in the [Setting up IDE's](https://wiki.mudlet.org/w/Compiling_Mudlet) section.
 * use clang-tidy linting with [.clang-tidy](https://github.com/Mudlet/Mudlet/blob/development/.clang-tidy) settings. To get started, check out Clang Tidy in the [Setting up IDE's](https://wiki.mudlet.org/w/Compiling_Mudlet) section
 * additionally, use [clazy]([url](https://github.com/KDE/clazy)) for linting as well
 * use braces {} around all statements (ie, `if`'s and so on), even if they are one line
