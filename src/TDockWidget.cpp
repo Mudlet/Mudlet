@@ -96,7 +96,7 @@ void TDockWidget::setVisible(bool visible)
 
 /* We need to have this method defined in this file as the TConsole class is
  * forward declared in the header file and it is problematic to define any
- * deferencing of it there:*/
+ * dereferencing of it there:*/
 TConsole* TDockWidget::getConsole()
 {
     return mpConsole;

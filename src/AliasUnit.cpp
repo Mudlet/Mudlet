@@ -28,8 +28,8 @@
 
 #include <functional>
 
-/* We need an explict constructor in this file as the Host class is forward
- * declared in the header file and it is problematic to define any deferencing
+/* We need an explicit constructor in this file as the Host class is forward
+ * declared in the header file and it is problematic to define any dereferencing
  * of it there:*/
 AliasUnit::AliasUnit(Host* pHost)
 : mpHost(pHost)
