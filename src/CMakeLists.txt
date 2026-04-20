@@ -574,9 +574,6 @@ add_library(${LIB_MUDLET_TARGET} STATIC
     ${mudlet_UIS}
 )
 
-# Enable Lua 5.1 compatibility layer for LUA_GLOBALSINDEX and other legacy constants
-target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE LUA_COMPAT_5_1)
-
 ########################### Debugging code inclusions ##########################
 # Controls the include/selection of extra code to aide developers debug various
 # features of Mudlet, generally speaking they will not be '#define'd in

@@ -131,15 +131,15 @@ QList<int> TAreaGridIndex::roomsInViewport(int z, int minX, int maxX, int minY, 
         return result;
     }
     const auto& xyMap = *zIt;
-    for (int x = minX; x <= maxX; ++x) {
-        const auto xIt = xyMap.constFind(x);
-        if (xIt == xyMap.constEnd()) {
+    for (auto xIt = xyMap.constBegin(); xIt != xyMap.constEnd(); ++xIt) {
+        const int x = xIt.key();
+        if (x < minX || x > maxX) {
             continue;
         }
         const auto& yMap = *xIt;
-        for (int y = minY; y <= maxY; ++y) {
-            const auto yIt = yMap.constFind(y);
-            if (yIt == yMap.constEnd()) {
+        for (auto yIt = yMap.constBegin(); yIt != yMap.constEnd(); ++yIt) {
+            const int y = yIt.key();
+            if (y < minY || y > maxY) {
                 continue;
             }
             for (const int roomId : *yIt) {
@@ -158,15 +158,15 @@ QList<QPair<int, bool>> TAreaGridIndex::roomsInViewportWithCollisions(int z, int
         return result;
     }
     const auto& xyMap = *zIt;
-    for (int x = minX; x <= maxX; ++x) {
-        const auto xIt = xyMap.constFind(x);
-        if (xIt == xyMap.constEnd()) {
+    for (auto xIt = xyMap.constBegin(); xIt != xyMap.constEnd(); ++xIt) {
+        const int x = xIt.key();
+        if (x < minX || x > maxX) {
             continue;
         }
         const auto& yMap = *xIt;
-        for (int y = minY; y <= maxY; ++y) {
-            const auto yIt = yMap.constFind(y);
-            if (yIt == yMap.constEnd()) {
+        for (auto yIt = yMap.constBegin(); yIt != yMap.constEnd(); ++yIt) {
+            const int y = yIt.key();
+            if (y < minY || y > maxY) {
                 continue;
             }
             const bool collision = yIt->size() > 1;

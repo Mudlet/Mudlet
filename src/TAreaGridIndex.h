@@ -65,8 +65,9 @@ public:
     // O(1) — counts are maintained incrementally by add/remove/rebuild.
     int size() const { return mCachedSize; }
 
-    // O(1) — computed once at rebuild time and updated incrementally.
-    // Rough memory usage estimate in bytes, for profiling/diagnostics.
+    // O(1) — rough memory usage estimate in bytes, for profiling/diagnostics.
+    // Refreshed by rebuild() and reset by clear(); may be stale after
+    // incremental add/remove/move updates until the next rebuild().
     int memoryEstimateBytes() const { return mCachedMemoryEstimate; }
 
 private:
