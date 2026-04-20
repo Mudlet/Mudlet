@@ -22,6 +22,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "utils.h" // For NameGroupMatches
+
 #include <list>
 #include <string>
 
@@ -29,7 +31,6 @@
 #include <QPair>
 #include <QVector>
 
-using NameGroupMatches = QVector<QPair<QString, QString>>;
 
 class TMatchState
 {

@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2018, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,6 +25,7 @@
 
 
 #include "Tree.h"
+#include "utils.h" // For NameGroupMatches
 
 #include <QColor>
 #include <QDebug>
@@ -50,8 +52,6 @@ class TMatchState;
 #define REGEX_LINE_SPACER 5
 #define REGEX_COLOR_PATTERN 6
 #define REGEX_PROMPT 7
-
-using NameGroupMatches = QVector<QPair<QString, QString>>;
 
 struct TColorTable
 {

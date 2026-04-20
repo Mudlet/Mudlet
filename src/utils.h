@@ -36,6 +36,8 @@
 
 using TEnterEvent = QEnterEvent;
 
+using NameGroupMatches = QVector<QPair<QString, QString>>;
+
 // Common enum for specifying insertion mode for tree items
 // Used across all editor item types (triggers, aliases, timers, scripts, actions, keys)
 enum class TreeItemInsertMode {
