@@ -182,11 +182,11 @@ void dlgMapper::setupEmptyStateOverlay()
     mpEmptyStateDownloadButton->setAutoDefault(true);
 
     //: Button in the mapper empty-state. Opens a file dialog to load a .dat/.json/.xml map saved on disk.
-    auto* loadFileButton = new QPushButton(tr("Load from file..."), mpEmptyStateOverlay);
+    auto* loadFileButton = new QPushButton(tr("Load map..."), mpEmptyStateOverlay);
     loadFileButton->setAutoDefault(false);
 
     //: Button in the mapper empty-state. Dismisses the prompt so the user can map from scratch.
-    auto* startBlankButton = new QPushButton(tr("Start blank"), mpEmptyStateOverlay);
+    auto* startBlankButton = new QPushButton(tr("Create new map"), mpEmptyStateOverlay);
     startBlankButton->setAutoDefault(false);
 
     auto* layout = new QVBoxLayout(mpEmptyStateOverlay);
@@ -386,12 +386,18 @@ void dlgMapper::updateEmptyStateOverlay()
     if (!mpMap->mpRoomDB->isEmpty()) {
         mEmptyStateDismissed = false;
     }
-    const bool shouldShow = mpMap->mpRoomDB->isEmpty() && !mpMap->getMmpMapLocation().isEmpty() && !mEmptyStateDismissed;
+    const bool shouldShow = mpMap->mpRoomDB->isEmpty() && !mEmptyStateDismissed;
+    const bool canDownload = !mpMap->getMmpMapLocation().isEmpty();
+    if (mpEmptyStateDownloadButton) {
+        mpEmptyStateDownloadButton->setVisible(canDownload);
+    }
     if (shouldShow) {
         repositionEmptyStateOverlay();
         mpEmptyStateOverlay->raise();
         mpEmptyStateOverlay->show();
-        mpEmptyStateDownloadButton->setFocus();
+        if (canDownload && mpEmptyStateDownloadButton) {
+            mpEmptyStateDownloadButton->setFocus();
+        }
     } else {
         mpEmptyStateOverlay->hide();
     }

@@ -94,7 +94,7 @@ bool RoomContextMenuHandler::handle(T2DMap::MapInteractionContext& context)
         auto createMap = new QAction(T2DMap::tr("Create new map"), &mMapWidget);
         QObject::connect(createMap, &QAction::triggered, &mMapWidget, &T2DMap::slot_newMap);
         //: 2D Mapper context menu (no map found) item
-        auto loadMap = new QAction(T2DMap::tr("Load map"), &mMapWidget);
+        auto loadMap = new QAction(T2DMap::tr("Load map..."), &mMapWidget);
         QObject::connect(loadMap, &QAction::triggered, &mMapWidget, &T2DMap::slot_loadMap);
 
         popup->addAction(createMap);
