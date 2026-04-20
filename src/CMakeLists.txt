@@ -265,6 +265,7 @@ set(mudlet_HDRS
     AliasUnit.h
     AltFocusMenuBarDisable.h
     ctelnet.h
+    CredentialManager.h
     DarkTheme.h
     discord.h
     dlgAboutDialog.h
