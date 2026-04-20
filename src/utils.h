@@ -102,7 +102,7 @@ public:
         return QDir::cleanPath(base + "/" + path);
     }
 
-    inline static const auto scmfileSystemUnsafeChars = QRegularExpression(R"REGEX([/\\:*?"<>|])REGEX");
+    inline static const auto scmfileSystemUnsafeChars = QRegularExpression(qsl(R"REGEX([/\\:*?"<>|])REGEX"));
     // Sanitize a string for safe use as filename/path component
     // Replaces filesystem-unsafe characters with underscores and limits length
     static QString sanitizeForPath(const QString& input)
