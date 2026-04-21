@@ -1431,7 +1431,12 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
 
         // Only use of TBuffer::wrap(), breaks up new text
         // NOTE: it MAY have been clobbered by the trigger engine!
-        const int addedLines = wrapLine(line, mWrapAt, mWrapIndent, mWrapHangingIndent);
+        // If deleteLine() was called in a trigger, 'line' may now be past the end
+        // of the buffer; clamp to the last valid line so that any text inserted
+        // via echo() into the preceding line (which may contain embedded '\n'
+        // characters from insertInLine) is still wrapped correctly.
+        const int wrapStartLine = std::min(line, static_cast<int>(lineBuffer.size()) - 1);
+        const int addedLines = wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
 
         // Start a new, but empty line in the various buffers
         log(lineBuffer.size() - 1, lineBuffer.size() - 1);
