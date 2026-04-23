@@ -348,7 +348,11 @@ void TRoom::setId(const int roomId)
 // alternative means to do them as a fault recovery
 bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
 {
-    static QSet<TArea*> dirtyAreas;
+    // Track dirty areas by ID rather than TArea* across calls: a TArea* held
+    // through a deferred window can dangle if the map is cleared in between
+    // (e.g. clearMapDB(), profile close, bulk map reload). Looking up the
+    // pointer freshly at flush time safely skips areas that no longer exist.
+    static QSet<int> dirtyAreaIds;
     TArea* pA = mpRoomDB->getArea(areaID);
     if (!pA) {
         // There is no TArea instance with that _areaID
@@ -373,7 +377,7 @@ bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
         // areas are still "out of area exits" UNLESS the room moves to the SAME
         // area that the other exits are in.
         // Add to local store of dirty areas
-        dirtyAreas.insert(pA2);
+        dirtyAreaIds.insert(area);
         // Flag the area itself in case something goes
         // wrong on last room in a series
         pA2->mIsDirty = true;
@@ -386,16 +390,20 @@ bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
     area = areaID;
     pA->addRoom(id);
 
-    dirtyAreas.insert(pA);
+    dirtyAreaIds.insert(areaID);
     pA->mIsDirty = true;
 
     if (!deferAreaRecalculations) {
-        QSetIterator<TArea*> itpArea = dirtyAreas;
-        while (itpArea.hasNext()) {
-            TArea* pArea = itpArea.next();
-            pArea->clean();
+        // Swap out the set before iterating so that reentrant calls into
+        // setArea() from within clean()/determineAreaExits() (e.g. via Lua
+        // event handlers) don't mutate the container we're walking.
+        QSet<int> toClean;
+        toClean.swap(dirtyAreaIds);
+        for (const int aid : toClean) {
+            if (TArea* pArea = mpRoomDB->getArea(aid)) {
+                pArea->clean();
+            }
         }
-        dirtyAreas.clear();
     }
 
     mpRoomDB->mpMap->setUnsaved(__func__);
