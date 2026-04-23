@@ -5766,6 +5766,11 @@ void TLuaInterpreter::initLuaGlobals()
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
 
+    loadLuaModule(modLoadMessageQueue, QLatin1String("lpeg"), tr("lpeg.* Lua functions won't be available."), QString(), QLatin1String("lpeg"));
+    while (!modLoadMessageQueue.isEmpty()) {
+        mpHost->postMessage(modLoadMessageQueue.dequeue());
+    }
+
     QString tn = "atcp";
     QStringList args;
     set_lua_table(tn, args);

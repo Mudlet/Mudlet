@@ -331,6 +331,7 @@ jobs:
 
         $LUAROCKS LuaFileSystem
         $LUAROCKS luautf8
+        $LUAROCKS lpeg
 
         if [ "$RUNNER_OS" = "macOS" ]; then
           $LUAROCKS lua-zip ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip
