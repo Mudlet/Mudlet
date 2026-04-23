@@ -231,6 +231,18 @@ bool TMap::setRoomCoordinates(int id, int x, int y, int z)
         return false;
     }
 
+    const int oldX = pR->x();
+    const int oldY = pR->y();
+    const int oldZ = pR->z();
+
+    if (oldX != x || oldY != y || oldZ != z) {
+        TArea* pA = mpRoomDB->getArea(pR->getArea());
+        if (pA) {
+            // Atomically update both indices for any coordinate change.
+            pA->moveRoom(id, oldZ, oldX, oldY, z, x, y);
+        }
+    }
+
     pR->setCoordinates(x, y, z);
 
     setUnsaved(__func__);

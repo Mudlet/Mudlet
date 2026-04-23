@@ -530,6 +530,10 @@ int dlgMapper::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffs
     font.setBold(properties.isBold);
     font.setItalic(properties.isItalic);
     painter.setFont(font);
+    // Set the pen before calling boundingRect: Qt6's drawTextItem early-returns
+    // when pen().style() == Qt::NoPen, which causes boundingRect to return
+    // height=0 and makes drawText render nothing (grey box with no text).
+    painter.setPen(properties.color);
     const int infoHeight = fontHeight;
     QRect testRect;
     QRect mapInfoRect = QRect(xOffset, yOffset, widgetWidth - 10 - xOffset, infoHeight);
@@ -541,7 +545,6 @@ int dlgMapper::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffs
                                     infoText);
     mapInfoRect.setHeight(testRect.height() + 10);
     painter.fillRect(mapInfoRect, bgColor);
-    painter.setPen(properties.color);
     painter.drawText(mapInfoRect.left() + 10,
                      mapInfoRect.top(),
                      mapInfoRect.width() - 20,
