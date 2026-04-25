@@ -4814,10 +4814,13 @@ void cTelnet::slot_processReplayChunk()
                 }
             }
 
-            cleandata.push_back('\n');
             recvdGA = false;
-            gotPrompt(cleandata);
-            cleandata = "";
+            // Skip empty GA-only prompts: see processSocketData() for issue #9223.
+            if (!cleandata.empty()) {
+                cleandata.push_back('\n');
+                gotPrompt(cleandata);
+                cleandata = "";
+            }
         }
     } //for
 
