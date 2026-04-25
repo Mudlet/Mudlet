@@ -2919,7 +2919,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         if (triedToEnable.test(idxOption)) {
             hisOptionState.reset(idxOption);
             triedToEnable.reset(idxOption);
-            heAnnouncedState.reset(idxOption);
+            heAnnouncedState.set(idxOption);
         } else {
             if (option == OPT_NEW_ENVIRON) {
                 // NEW_ENVIRON got turned off
