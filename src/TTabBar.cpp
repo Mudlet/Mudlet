@@ -75,12 +75,10 @@ void TStyle::drawControl(ControlElement element, const QStyleOption* option, QPa
         appStyle->drawControl(element, option, painter, widget);
     }
 
-    // Paint the connection-status indicator on top of the rendered tab.
-    // We hook CE_TabBarTab (rather than CE_TabBarTabLabel) because the macOS
-    // native style draws the whole tab in CE_TabBarTab without sub-dispatching
-    // to CE_TabBarTabLabel - see issue #9213.
-    // tabAt() may return -1 (e.g. style previewing); tabConnectionIndicator()
-    // guards that case and returns None, which is then a no-op.
+    // Hook CE_TabBarTab (not CE_TabBarTabLabel) - the macOS native style
+    // draws the whole tab in CE_TabBarTab and never sub-dispatches to
+    // CE_TabBarTabLabel. tabAt() may return -1; tabConnectionIndicator()
+    // treats that as None.
     if (element == QStyle::CE_TabBarTab) {
         const auto* tabOption = qstyleoption_cast<const QStyleOptionTab*>(option);
         if (tabOption) {
@@ -96,15 +94,13 @@ QRect TStyle::subElementRect(SubElement element, const QStyleOption* option, con
 {
     QRect rect = QProxyStyle::subElementRect(element, option, widget);
 
-    // Reserve space at the leading edge of the tab for the connection
-    // indicator so that long tab text is not painted underneath it.
-    // tabAt() may return -1; tabConnectionIndicator() guards that case.
+    // Reserve space at the leading edge of the tab so long tab text is not
+    // painted underneath the indicator.
     if (element == SE_TabBarTabText) {
         const auto* tabOption = qstyleoption_cast<const QStyleOptionTab*>(option);
         if (tabOption && mpTabBar) {
             const TabConnectionIndicator state = tabConnectionIndicator(mpTabBar->tabAt(tabOption->rect.center()));
             if (state != TabConnectionIndicator::None) {
-                // Place reserved space after the leading close button (if any).
                 const QRect leftBtn = QProxyStyle::subElementRect(SE_TabBarTabLeftButton, option, widget);
                 const int reservationStart = leftBtn.isValid() ? leftBtn.right() + 1 : rect.left();
                 rect.setLeft(qMax(rect.left(), reservationStart) + sIndicatorReservedWidth);
@@ -120,10 +116,9 @@ void TStyle::paintConnectionIndicator(QPainter* painter, const QStyleOptionTab* 
     constexpr int diameter = 8;
     constexpr int leftMargin = 6;
     const QRect& tabRect = tabOption->rect;
-    // On macOS the close button sits at the leading edge of the tab; place the
-    // indicator just to the right of it so they do not overlap. On platforms
-    // without a leading close button the indicator falls back to the tab's
-    // leading edge.
+    // Sit just past the close button (which is on the leading edge on macOS)
+    // so the two do not overlap; fall back to the tab's leading edge when
+    // there is no close button.
     const QRect leftBtn = QProxyStyle::subElementRect(SE_TabBarTabLeftButton, tabOption, mpTabBar);
     const int startX = leftBtn.isValid() ? leftBtn.right() + 1 : tabRect.left();
     const int x = startX + leftMargin;
@@ -169,9 +164,9 @@ bool TStyle::setTabConnectionIndicator(const QString& tabName, TabConnectionIndi
     if (tabName.isEmpty()) {
         return false;
     }
-    // Removing a stale indicator must always be allowed (e.g. from removeTab),
-    // even if the tab no longer exists. For inserts, verify the tab name
-    // corresponds to a real tab to avoid leaking phantom entries.
+    // Removing a stale indicator is always safe (the tab may already be gone,
+    // e.g. from removeTab); for inserts, refuse unknown names so we don't
+    // accumulate phantom entries.
     if (state == TabConnectionIndicator::None) {
         return mConnectionIndicators.remove(tabName) > 0;
     }
@@ -300,9 +295,8 @@ QSize TTabBar::tabSizeHint(int index) const
         s.setWidth(s.width() - w + bw);
     }
 
-    // Reserve space at the trailing edge for our manually-painted connection
-    // indicator (issue #9213). We paint it ourselves rather than via
-    // setTabIcon() so the native macOS tab style does not add its own padding.
+    // Reserve room for the connection indicator we paint ourselves
+    // (see TabConnectionIndicator declaration for why).
     if (mStyle.tabConnectionIndicator(index) != TabConnectionIndicator::None) {
         s.setWidth(s.width() + TStyle::sIndicatorReservedWidth);
     }

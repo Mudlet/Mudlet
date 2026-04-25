@@ -1418,7 +1418,6 @@ void TDetachedWindow::updateTabIndicator(int tabIndex)
         }
     }
 
-    // Set the tab text and indicator, accounting for CDC identifiers
     QString displayText = profileName;
 
     // Apply CDC identifier prefix if debug mode is active (like main window does)

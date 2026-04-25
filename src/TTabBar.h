@@ -27,10 +27,9 @@
 #include <QString>
 #include <QTabBar>
 
-// Connection status indicator drawn at the right edge of a tab. Drawn by
-// TStyle directly (rather than using QTabBar::setTabIcon), to avoid native
-// style icon padding inflating tab width and miscentering on macOS - see
-// issue #9213.
+// Connection status indicator drawn next to the tab text by TStyle. We paint
+// it ourselves rather than via QTabBar::setTabIcon() because the macOS native
+// style adds substantial padding around any tab icon - see issue #9213.
 enum class TabConnectionIndicator {
     None,
     Connected,
@@ -42,8 +41,7 @@ enum class TabConnectionIndicator {
 class TStyle : public QProxyStyle
 {
 public:
-    // Reserved horizontal space (in logical pixels) added to the tab when an
-    // indicator is shown: indicator diameter + left margin + right margin.
+    // Indicator diameter + left margin + right margin, in logical pixels.
     static constexpr int sIndicatorReservedWidth = 14;
 
     explicit TStyle(QTabBar* bar)
@@ -67,8 +65,8 @@ public:
     bool tabItalic(const int index) const { return indexedTabState(index, mItalicTabsSet); }
     bool tabUnderline(const QString& tabName) const { return namedTabState(tabName, mUnderlineTabsSet); }
     bool tabUnderline(const int index) const { return indexedTabState(index, mUnderlineTabsSet); }
-    // Returns true if the stored state changed (caller can use this to
-    // avoid unnecessary repaints).
+    // Returns true only if the stored state actually changed, so callers
+    // can skip unnecessary repaints.
     bool setTabConnectionIndicator(const QString& tabName, TabConnectionIndicator state);
     bool setTabConnectionIndicator(int index, TabConnectionIndicator state);
     TabConnectionIndicator tabConnectionIndicator(const QString& tabName) const;
