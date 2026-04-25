@@ -116,6 +116,15 @@ private:
       Q_ASSERT_X(mudlet::self()->mpConnectionDialog->new_profile_button,
                  "startProfile", "New profile button not found");
 
+      // Dismiss tutorial invitation if shown on first launch
+      auto *skipBtn =
+          mudlet::self()->mpConnectionDialog->findChild<QPushButton *>(
+              qsl("skipToGamesButton"));
+      if (skipBtn && skipBtn->isVisible()) {
+        QTest::mouseClick(skipBtn, Qt::LeftButton);
+        QTest::qWait(100);
+      }
+
       QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
                         Qt::LeftButton);
       QTest::qWait(100);
@@ -137,7 +146,7 @@ private:
     });
 
     QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-    if (!spy.wait(2000)) {
+    if (!spy.wait(5000)) {
       QFAIL("Profile took too long to load.");
     }
 

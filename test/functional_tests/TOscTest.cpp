@@ -132,10 +132,12 @@ private slots:
     QTimer::singleShot(0, qApp, [this]() {
       mudlet::self()->startAutoLogin({});
       QTest::qWait(100);
-      auto* skipBtn = mudlet::self()->mpConnectionDialog->findChild<QPushButton*>(qsl("skipToGamesButton"));
+      auto *skipBtn =
+          mudlet::self()->mpConnectionDialog->findChild<QPushButton *>(
+              qsl("skipToGamesButton"));
       if (skipBtn && skipBtn->isVisible()) {
-          QTest::mouseClick(skipBtn, Qt::LeftButton);
-          QTest::qWait(100);
+        QTest::mouseClick(skipBtn, Qt::LeftButton);
+        QTest::qWait(100);
       }
       QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
                         Qt::LeftButton);
@@ -154,7 +156,7 @@ private slots:
     });
 
     QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-    if (!spy.wait(1000)) {
+    if (!spy.wait(5000)) {
       QFAIL("Profile took too long to load.");
     }
     mpHost = mudlet::self()->getActiveHost();
@@ -185,20 +187,18 @@ private slots:
     QTest::addColumn<bool>("exactMatch");
 
     QTest::newRow("BEL-terminated OSC 2 (window title)")
-        << QString("\x1b]2;Window Title\x07Hello World")
-        << qsl("Hello World") << true;
+        << QString("\x1b]2;Window Title\x07Hello World") << qsl("Hello World")
+        << true;
     QTest::newRow("ST-terminated OSC P (color redefine)")
-        << QString("\x1b]P0FF0000\x1b\\Hello")
-        << qsl("Hello") << true;
+        << QString("\x1b]P0FF0000\x1b\\Hello") << qsl("Hello") << true;
     QTest::newRow("BEL-terminated OSC 8 (hyperlink)")
-        << QString("\x1b]8;;http://example.com\x07Link Text\x1b]8;;\x07 After Link")
+        << QString(
+               "\x1b]8;;http://example.com\x07Link Text\x1b]8;;\x07 After Link")
         << qsl("Link Text After Link") << false;
     QTest::newRow("BEL-terminated OSC P")
-        << QString("\x1b]P0FF0000\x07Hello")
-        << qsl("Hello") << true;
+        << QString("\x1b]P0FF0000\x07Hello") << qsl("Hello") << true;
     QTest::newRow("empty OSC sequence")
-        << QString("\x1b]\x07Normal text")
-        << qsl("Normal text") << true;
+        << QString("\x1b]\x07Normal text") << qsl("Normal text") << true;
     QTest::newRow("OSC exceeds length limit")
         << QString("\x1b]2;") + QString(5000, 'A') + QString("\x07Normal text")
         << qsl("Normal text") << true;
@@ -238,33 +238,34 @@ private slots:
     QTest::addColumn<QStringList>("mustNotContain");
 
     QTest::newRow("preserves web URL query params")
-        << qsl("\x1b]8;;https://example.com/?id=42&lang=en\x1b\\Link\x1b]8;;\x1b\\")
-        << QStringList{"id=42&lang=en"}
-        << QStringList{};
+        << qsl("\x1b]8;;https://example.com/"
+               "?id=42&lang=en\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"id=42&lang=en"} << QStringList{};
     QTest::newRow("strips config param")
-        << qsl("\x1b]8;;https://example.com/?config=%7B%22style%22%3A%7B%22color%22%3A%22red%22%7D%7D\x1b\\Styled\x1b]8;;\x1b\\")
-        << QStringList{}
-        << QStringList{"config="};
+        << qsl("\x1b]8;;https://example.com/"
+               "?config=%7B%22style%22%3A%7B%22color%22%3A%22red%22%7D%"
+               "7D\x1b\\Styled\x1b]8;;\x1b\\")
+        << QStringList{} << QStringList{"config="};
     QTest::newRow("strips preset, preserves other params")
-        << qsl("\x1b]8;;https://example.com/?page=1&preset=danger\x1b\\Link\x1b]8;;\x1b\\")
-        << QStringList{"page=1"}
-        << QStringList{"preset="};
+        << qsl("\x1b]8;;https://example.com/"
+               "?page=1&preset=danger\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"page=1"} << QStringList{"preset="};
     QTest::newRow("strips preset with encoded equals")
-        << qsl("\x1b]8;;https://example.com/?preset%3Ddefault&page=1\x1b\\Link\x1b]8;;\x1b\\")
-        << QStringList{"page=1"}
-        << QStringList{"preset%3D"};
+        << qsl("\x1b]8;;https://example.com/"
+               "?preset%3Ddefault&page=1\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"page=1"} << QStringList{"preset%3D"};
     QTest::newRow("strips config with encoded equals (lowercase)")
-        << qsl("\x1b]8;;https://example.com/?config%3dvalue&foo=bar\x1b\\Link\x1b]8;;\x1b\\")
-        << QStringList{"foo=bar"}
-        << QStringList{"config%3d"};
+        << qsl("\x1b]8;;https://example.com/"
+               "?config%3dvalue&foo=bar\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"foo=bar"} << QStringList{"config%3d"};
     QTest::newRow("preserves percent-encoded reserved names")
-        << qsl("\x1b]8;;https://example.com/?%63%6F%6E%66%69%67=value\x1b\\Link\x1b]8;;\x1b\\")
-        << QStringList{"%63%6F%6E%66%69%67=value"}
-        << QStringList{};
+        << qsl("\x1b]8;;https://example.com/"
+               "?%63%6F%6E%66%69%67=value\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"%63%6F%6E%66%69%67=value"} << QStringList{};
     QTest::newRow("send URL strips all query params")
-        << qsl("\x1b]8;;send:attack?config=%7B%22style%22%3A%7B%22color%22%3A%22red%22%7D%7D\x1b\\Attack\x1b]8;;\x1b\\")
-        << QStringList{"attack"}
-        << QStringList{"config="};
+        << qsl("\x1b]8;;send:attack?config=%7B%22style%22%3A%7B%22color%22%3A%"
+               "22red%22%7D%7D\x1b\\Attack\x1b]8;;\x1b\\")
+        << QStringList{"attack"} << QStringList{"config="};
   }
 
   void test_Osc8UrlParams() {
@@ -277,12 +278,15 @@ private slots:
     QStringList commands = findFirstLinkCommands();
     QVERIFY2(!commands.isEmpty(), "No hyperlink found in buffer");
     for (const auto &expected : mustContain) {
-      QVERIFY2(commands.first().contains(expected),
-               qPrintable(qsl("Expected '%1' in: %2").arg(expected, commands.first())));
+      QVERIFY2(
+          commands.first().contains(expected),
+          qPrintable(
+              qsl("Expected '%1' in: %2").arg(expected, commands.first())));
     }
     for (const auto &forbidden : mustNotContain) {
       QVERIFY2(!commands.first().contains(forbidden),
-               qPrintable(qsl("Did not expect '%1' in: %2").arg(forbidden, commands.first())));
+               qPrintable(qsl("Did not expect '%1' in: %2")
+                              .arg(forbidden, commands.first())));
     }
   }
 
@@ -304,14 +308,12 @@ private slots:
         << qsl(R"({"ti":"Rusty Sword","m":[{"Equip":"send:wield sword"}]})")
         << qsl("Rusty Sword") << false;
     QTest::newRow("title without menu")
-        << qsl(R"({"title":"Lonely Title"})")
-        << qsl("Lonely Title") << false;
+        << qsl(R"({"title":"Lonely Title"})") << qsl("Lonely Title") << false;
     QTest::newRow("menu without title")
-        << qsl(R"({"menu":[{"North":"send:north"}]})")
-        << QString() << false;
+        << qsl(R"({"menu":[{"North":"send:north"}]})") << QString() << false;
     QTest::newRow("empty string")
-        << qsl(R"({"title":"","menu":[{"Action":"send:action"}]})")
-        << QString() << false;
+        << qsl(R"({"title":"","menu":[{"Action":"send:action"}]})") << QString()
+        << false;
     QTest::newRow("object with empty text")
         << qsl(R"({"title":{"text":"","style":{"color":"#ff0000"}},"menu":[{"Action":"send:action"}]})")
         << QString() << true;
@@ -331,8 +333,8 @@ private slots:
         << qsl(R"({"title":"Full Config","tooltip":"A helpful tooltip","style":{"color":"#00ffff"},"menu":[{"Action 1":"send:action1"}]})")
         << qsl("Full Config") << true;
     QTest::newRow("numeric value ignored")
-        << qsl(R"({"title":42,"menu":[{"Action":"send:action"}]})")
-        << QString() << false;
+        << qsl(R"({"title":42,"menu":[{"Action":"send:action"}]})") << QString()
+        << false;
     QTest::newRow("boolean value ignored")
         << qsl(R"({"title":true,"menu":[{"Action":"send:action"}]})")
         << QString() << false;
@@ -376,46 +378,41 @@ private slots:
 
     QTest::newRow("bold and color")
         << qsl(R"({"title":{"text":"Magic Shop - Potions","style":{"color":"#ffd700","bold":true}},"menu":[{"Buy":"send:buy potion"}]})")
-        << qsl("Magic Shop - Potions")
-        << true << false << false << false
+        << qsl("Magic Shop - Potions") << true << false << false << false
         << qsl("#ffd700") << QString() << -1 << QString();
     QTest::newRow("italic and background")
         << qsl(R"({"title":{"text":"Sir Galahad the Brave","style":{"color":"#ffffff","bg":"#333333","italic":true}},"menu":[{"Talk":"send:talk galahad"}]})")
-        << qsl("Sir Galahad the Brave")
-        << false << true << false << false
+        << qsl("Sir Galahad the Brave") << false << true << false << false
         << qsl("#ffffff") << qsl("#333333") << -1 << QString();
     QTest::newRow("all text decorations")
         << qsl(R"({"title":{"text":"Decorated Title","style":{"color":"#ff0000","bold":true,"italic":true,"underline":true,"strikethrough":true}},"menu":[{"Action":"send:action"}]})")
-        << qsl("Decorated Title")
-        << true << true << true << true
+        << qsl("Decorated Title") << true << true << true << true
         << qsl("#ff0000") << QString() << -1 << QString();
     QTest::newRow("wavy underline")
         << qsl(R"({"title":{"text":"Wavy Title","style":{"color":"#00ff00","underline":"wavy"}},"menu":[{"Test":"send:test"}]})")
-        << qsl("Wavy Title")
-        << false << false << true << false
+        << qsl("Wavy Title") << false << false << true << false
         << qsl("#00ff00") << QString()
-        << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineWavy) << QString();
+        << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineWavy)
+        << QString();
     QTest::newRow("dotted underline")
         << qsl(R"({"title":{"text":"Dotted Title","style":{"color":"#00ff00","underline":"dotted"}},"menu":[{"Test":"send:test"}]})")
-        << qsl("Dotted Title")
-        << false << false << true << false
+        << qsl("Dotted Title") << false << false << true << false
         << qsl("#00ff00") << QString()
-        << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineDotted) << QString();
+        << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineDotted)
+        << QString();
     QTest::newRow("dashed underline")
         << qsl(R"({"title":{"text":"Dashed Title","style":{"color":"#00ff00","underline":"dashed"}},"menu":[{"Test":"send:test"}]})")
-        << qsl("Dashed Title")
-        << false << false << true << false
+        << qsl("Dashed Title") << false << false << true << false
         << qsl("#00ff00") << QString()
-        << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineDashed) << QString();
+        << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineDashed)
+        << QString();
     QTest::newRow("background-color CSS property")
         << qsl(R"({"title":{"text":"CSS BG Title","style":{"color":"#ffffff","background-color":"#660000"}},"menu":[{"Action":"send:action"}]})")
-        << qsl("CSS BG Title")
-        << false << false << false << false
+        << qsl("CSS BG Title") << false << false << false << false
         << qsl("#ffffff") << qsl("#660000") << -1 << QString();
     QTest::newRow("text-decoration-color")
         << qsl(R"({"title":{"text":"Color Decoration","style":{"color":"#ffffff","underline":true,"text-decoration-color":"#ff00ff"}},"menu":[{"Action":"send:action"}]})")
-        << qsl("Color Decoration")
-        << false << false << true << false
+        << qsl("Color Decoration") << false << false << true << false
         << qsl("#ffffff") << QString() << -1 << qsl("#ff00ff");
   }
 
@@ -449,7 +446,8 @@ private slots:
     }
     if (underlineStyle >= 0) {
       QCOMPARE(styling.menuTitleStyle.underlineStyle,
-               static_cast<Mudlet::HyperlinkStyling::UnderlineStyle>(underlineStyle));
+               static_cast<Mudlet::HyperlinkStyling::UnderlineStyle>(
+                   underlineStyle));
     }
     if (!underlineColor.isEmpty()) {
       QVERIFY(styling.menuTitleStyle.hasUnderlineColor);
@@ -460,8 +458,8 @@ private slots:
   void test_Osc8Title_LinkTextDisplayedInBuffer() {
     QString config = qsl(
         R"({"title":"Lamb and Barley Stew","menu":[{"View Details":"send:look stew"}]})");
-    injectData(buildOsc8WithConfig(
-        qsl("send:look stew"), qsl("[Lamb and Barley Stew]"), config));
+    injectData(buildOsc8WithConfig(qsl("send:look stew"),
+                                   qsl("[Lamb and Barley Stew]"), config));
 
     TMainConsole *console = mpHost->mpConsole;
     QString allText;
@@ -470,8 +468,8 @@ private slots:
     }
     QVERIFY2(
         allText.contains(qsl("[Lamb and Barley Stew]")),
-        qPrintable(qsl("Expected link text in buffer but got '%1'")
-                       .arg(allText)));
+        qPrintable(
+            qsl("Expected link text in buffer but got '%1'").arg(allText)));
   }
 
   void cleanupTestCase() {

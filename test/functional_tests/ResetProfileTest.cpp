@@ -685,10 +685,12 @@ private slots:
     QTimer::singleShot(0, qApp, [hostname, address, port]() {
       mudlet::self()->startAutoLogin({});
       QTest::qWait(100);
-      auto* skipBtn = mudlet::self()->mpConnectionDialog->findChild<QPushButton*>(qsl("skipToGamesButton"));
+      auto *skipBtn =
+          mudlet::self()->mpConnectionDialog->findChild<QPushButton *>(
+              qsl("skipToGamesButton"));
       if (skipBtn && skipBtn->isVisible()) {
-          QTest::mouseClick(skipBtn, Qt::LeftButton);
-          QTest::qWait(100);
+        QTest::mouseClick(skipBtn, Qt::LeftButton);
+        QTest::qWait(100);
       }
       QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
                         Qt::LeftButton);
@@ -707,7 +709,7 @@ private slots:
     });
 
     QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-    if (!spy.wait(1000)) {
+    if (!spy.wait(5000)) {
       QFAIL("Profile took too long to load.");
     }
     auto host = mudlet::self()->getActiveHost();
