@@ -30,7 +30,7 @@ AI agents MUST NOT add Signed-off-by tags. The human submitter is responsible fo
 
 ### Attribution
 
-When AI tools contribute to kernel development, proper attribution
+When AI tools contribute to Mudlet development, proper attribution
 helps track the evolving role of AI in the development process.
 Contributions should include an Assisted-by tag in the following format:
 
