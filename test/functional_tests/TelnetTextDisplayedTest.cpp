@@ -32,136 +32,141 @@ extern void qInitResources_mudlet_fonts_common();
 extern void qInitResources_mudlet_fonts_posix();
 void initializeQRCResources();
 
-class TelnetTextDisplayedTest : public QObject
-{
-    Q_OBJECT
+class TelnetTextDisplayedTest : public QObject {
+  Q_OBJECT
 
 private:
-    TelnetServerStub* mpServer = nullptr;
-    const QString mpHostname = "Test-Telnet";
-    const QString mpPort = "4000";
-    const QString mpLocalhost = "localhost";
+  TelnetServerStub *mpServer = nullptr;
+  const QString mpHostname = "Test-Telnet";
+  const QString mpPort = "4000";
+  const QString mpLocalhost = "localhost";
 
 private slots:
-    void initTestCase() { initializeQRCResources(); }
+  void initTestCase() { initializeQRCResources(); }
 
-    void init()
-    {
-        mpServer = new TelnetServerStub(qApp);
-        mpServer->start(mpLocalhost, mpPort.toUShort());
-        mudlet::start();
-        mudlet::self()->setupConfig();
-        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
-        mudlet::self()->init();
-        mudlet::self()->setStorePasswordsSecurely(false);
-        deleteProfileDirectory(mpHostname);
+  void init() {
+    mpServer = new TelnetServerStub(qApp);
+    mpServer->start(mpLocalhost, mpPort.toUShort());
+    mudlet::start();
+    mudlet::self()->setupConfig();
+    mudlet::self()->takeOwnershipOfInstanceCoordinator(
+        std::make_unique<MudletInstanceCoordinator>(
+            "MudletInstanceCoordinator"));
+    mudlet::self()->init();
+    mudlet::self()->setStorePasswordsSecurely(false);
+    deleteProfileDirectory(mpHostname);
+  }
+
+  void test_TelnetTextDisplayed() {
+    QString messageFromTheMud(
+        "\x1B[1z<B>Greetings < hunters & sorcerers</B>\x1B[7z");
+    QString messageToExpect("Greetings < hunters & sorcerers");
+
+    mpServer->setWelcomeMessage(messageFromTheMud);
+    startProfile(mpHostname, mpLocalhost, mpPort);
+
+    QVERIFY2(waitForTextInBuffer(messageToExpect),
+             qPrintable(qsl("Expected text '%1' not found in console buffer")
+                            .arg(messageToExpect)));
+  }
+
+  void cleanup() {
+    delete mpServer;
+    mpServer = nullptr;
+    deleteProfileDirectory(mpHostname);
+    delete mudlet::self();
+  }
+
+  // Utility function to manually start a profile like a user would do via the
+  // GUI
+  void startProfile(const QString &hostname, const QString &address,
+                    const QString &port) {
+    QObject::connect(
+        mudlet::self(), &mudlet::signal_connectionDialogShown, qApp,
+        [] {
+          auto *dialog = mudlet::self()->mpConnectionDialog.data();
+          if (dialog && dialog->showingTutorialInvitation()) {
+            dialog->dismissTutorialInvitation();
+          }
+        },
+        Qt::SingleShotConnection);
+
+    QTimer::singleShot(0, qApp, [hostname, address, port]() {
+      mudlet::self()->startAutoLogin({});
+      QTest::qWait(100);
+      QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
+                        Qt::LeftButton);
+      QTest::qWait(100);
+      QTest::keyClicks(QApplication::focusWidget(), hostname);
+      QTest::qWait(100);
+      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+      QTest::qWait(100);
+      QTest::keyClicks(QApplication::focusWidget(), address);
+      QTest::qWait(100);
+      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+      QTest::qWait(100);
+      QTest::keyClicks(QApplication::focusWidget(), port);
+      QTest::qWait(100);
+      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
+    });
+
+    QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
+    if (!spy.wait(5000)) {
+      QFAIL("Profile took too long to load.");
+    }
+    auto host = mudlet::self()->getActiveHost();
+    if (!host) {
+      QFAIL("No active host available for the test.");
     }
 
-    void test_TelnetTextDisplayed()
-    {
-        QString messageFromTheMud("\x1B[1z<B>Greetings < hunters & sorcerers</B>\x1B[7z");
-        QString messageToExpect("Greetings < hunters & sorcerers");
-
-        mpServer->setWelcomeMessage(messageFromTheMud);
-        startProfile(mpHostname, mpLocalhost, mpPort);
-
-        QVERIFY2(waitForTextInBuffer(messageToExpect), qPrintable(qsl("Expected text '%1' not found in console buffer").arg(messageToExpect)));
+    QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
+    if (!spy2.wait(2000)) {
+      QFAIL("Could not connect with the host.");
     }
+  }
 
-    void cleanup()
-    {
-        delete mpServer;
-        mpServer = nullptr;
-        deleteProfileDirectory(mpHostname);
-        delete mudlet::self();
-    }
-
-    // Utility function to manually start a profile like a user would do via the
-    // GUI
-    void startProfile(const QString& hostname, const QString& address, const QString& port)
-    {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
-            auto* skipBtn = mudlet::self()->mpConnectionDialog->findChild<QPushButton*>(qsl("skipToGamesButton"));
-            if (skipBtn && skipBtn->isVisible()) {
-                QTest::mouseClick(skipBtn, Qt::LeftButton);
-                QTest::qWait(100);
+  // Polls the console buffer until the expected text appears on any line, with
+  // a timeout
+  bool waitForTextInBuffer(const QString &text, int timeoutMs = 5000) {
+    auto console = mudlet::self()->getActiveHost()->mpConsole;
+    return QTest::qWaitFor(
+        [&]() {
+          for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
+            if (console->buffer.line(i) == text) {
+              return true;
             }
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
+          }
+          return false;
+        },
+        timeoutMs);
+  }
 
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        auto host = mudlet::self()->getActiveHost();
-        if (!host) {
-            QFAIL("No active host available for the test.");
-        }
+  // Utility function
+  void deleteProfileDirectory(const QString &profileName) {
+    const QString path =
+        mudlet::getMudletPath(enums::profileHomePath, profileName);
+    QDir dir(path);
 
-        QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
-            QFAIL("Could not connect with the host.");
-        }
+    if (!dir.exists()) {
+      qInfo() << "Profile directory does not exist:" << path;
+      return;
     }
-
-    // Polls the console buffer until the expected text appears on any line, with
-    // a timeout
-    bool waitForTextInBuffer(const QString& text, int timeoutMs = 5000)
-    {
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
-        return QTest::qWaitFor(
-                [&]() {
-                    for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
-                        if (console->buffer.line(i) == text) {
-                            return true;
-                        }
-                    }
-                    return false;
-                },
-                timeoutMs);
-    }
-
-    // Utility function
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
-        QDir dir(path);
-
-        if (!dir.exists()) {
-            qInfo() << "Profile directory does not exist:" << path;
-            return;
-        }
-        dir.removeRecursively();
-    }
+    dir.removeRecursively();
+  }
 };
 
-void initializeQRCResources()
-{
+void initializeQRCResources() {
 #ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
+  qInitResources_additional_splash_screens();
 #endif
 #ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
+  qInitResources_mudlet_fonts_common();
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
+  qInitResources_mudlet_fonts_posix();
 #endif
 #endif
-    qInitResources_mudlet();
-    qInitResources_qm();
+  qInitResources_mudlet();
+  qInitResources_qm();
 }
 
 #include "TelnetTextDisplayedTest.moc"

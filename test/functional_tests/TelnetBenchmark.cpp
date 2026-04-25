@@ -83,16 +83,21 @@ private:
 
   void startProfile(const QString &hostname, const QString &address,
                     const QString &port) {
+    // Dismiss the first-launch tutorial as soon as the dialog is shown so
+    // that new_profile_button is visible/clickable below.
+    QObject::connect(
+        mudlet::self(), &mudlet::signal_connectionDialogShown, qApp,
+        [] {
+          auto *dialog = mudlet::self()->mpConnectionDialog.data();
+          if (dialog && dialog->showingTutorialInvitation()) {
+            dialog->dismissTutorialInvitation();
+          }
+        },
+        Qt::SingleShotConnection);
+
     QTimer::singleShot(0, qApp, [hostname, address, port]() {
       mudlet::self()->startAutoLogin({});
       QTest::qWait(100);
-      auto *skipBtn =
-          mudlet::self()->mpConnectionDialog->findChild<QPushButton *>(
-              qsl("skipToGamesButton"));
-      if (skipBtn && skipBtn->isVisible()) {
-        QTest::mouseClick(skipBtn, Qt::LeftButton);
-        QTest::qWait(100);
-      }
       QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
                         Qt::LeftButton);
       QTest::qWait(100);

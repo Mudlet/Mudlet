@@ -101,21 +101,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mpSkipToGamesButton->hide();
     horizontalLayout_3->insertWidget(0, mpSkipToGamesButton);
 
-    connect(mpSkipToGamesButton, &QPushButton::clicked, this, [this]() {
-        mTutorialDismissed = true;
-        widget_topLeft->show();
-        welcome_message->hide();
-        tabWidget_connectionInfo->show();
-        informationArea->show();
-        mpSkipToGamesButton->hide();
-        connect_button->show();
-        offline_button->show();
-        resize(minimumSize().width(), height());
-        const auto items = findData(*listWidget_profiles, qsl("Mudlet Tutorial"), csmNameRole);
-        if (!items.isEmpty()) {
-            listWidget_profiles->setCurrentItem(items.first());
-        }
-    });
+    connect(mpSkipToGamesButton, &QPushButton::clicked, this, &dlgConnectionProfiles::dismissTutorialInvitation);
 
     // Test and set if needed mudlet::mIsIconShownOnDialogButtonBoxes - if there
     // is already a Qt provided icon on a predefined button, this is probably
@@ -322,6 +308,28 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
     // Check if QCoreApplication is still valid during shutdown
     if (QCoreApplication::instance()) {
         QCoreApplication::instance()->removeEventFilter(this);
+    }
+}
+
+bool dlgConnectionProfiles::showingTutorialInvitation() const
+{
+    return mpSkipToGamesButton && mpSkipToGamesButton->isVisible();
+}
+
+void dlgConnectionProfiles::dismissTutorialInvitation()
+{
+    mTutorialDismissed = true;
+    widget_topLeft->show();
+    welcome_message->hide();
+    tabWidget_connectionInfo->show();
+    informationArea->show();
+    mpSkipToGamesButton->hide();
+    connect_button->show();
+    offline_button->show();
+    resize(minimumSize().width(), height());
+    const auto items = findData(*listWidget_profiles, qsl("Mudlet Tutorial"), csmNameRole);
+    if (!items.isEmpty()) {
+        listWidget_profiles->setCurrentItem(items.first());
     }
 }
 
