@@ -5057,10 +5057,15 @@ Some data loss is likely - please mention this problem to the game admins.)",
                     }
                 }
 
-                cleandata.push_back('\xff');
                 recvdGA = false;
-                gotPrompt(cleandata);
-                cleandata = "";
+                // Skip empty GA-only prompts: some servers emit stray GAs
+                // (issue #9223) which would otherwise produce one empty
+                // prompt line per GA.
+                if (!cleandata.empty()) {
+                    cleandata.push_back('\xff');
+                    gotPrompt(cleandata);
+                    cleandata = "";
+                }
             } else {
                 cleandata.push_back('\n');
             }
