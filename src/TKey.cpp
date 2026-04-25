@@ -226,7 +226,7 @@ QString TKey::packageName(TKey* pKey)
     }
 
     if (!pKey->mPackageName.isEmpty()) {
-        return !mpHost->mModuleInfo.contains(pKey->mPackageName) ? pKey->mPackageName : QString();
+        return !mpHost->mInstalledModules.contains(pKey->mPackageName) ? pKey->mPackageName : QString();
     }
 
     if (pKey->getParent()) {
@@ -243,7 +243,7 @@ QString TKey::moduleName(TKey* pKey)
     }
 
     if (!pKey->mPackageName.isEmpty()) {
-        return mpHost->mModuleInfo.contains(pKey->mPackageName) ? pKey->mPackageName : QString();
+        return mpHost->mInstalledModules.contains(pKey->mPackageName) ? pKey->mPackageName : QString();
     }
 
     if (pKey->getParent()) {

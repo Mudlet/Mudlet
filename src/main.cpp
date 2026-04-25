@@ -63,6 +63,11 @@
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
 #include "SentryWrapper.h"
+#include "utils.h"
+#include <QFileInfo>
+#include <QGuiApplication>
+#include <QProcessEnvironment>
+#include <QTextStream>
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 #include <windows.h>
@@ -177,6 +182,87 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 }
 #endif
 
+#if !defined(Q_OS_MACOS)
+// Reads highDpiScaleFactorRoundingPolicy from Mudlet.ini before QApplication
+// creation, since Qt requires this to be set before the application is constructed.
+// Replicates setupConfig() config path detection using argv[0] instead of
+// QCoreApplication::applicationDirPath() which isn't available yet.
+static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
+{
+    if (!qEnvironmentVariableIsEmpty("QT_SCALE_FACTOR_ROUNDING_POLICY")) {
+        return;
+    }
+
+    QString execDir;
+    const QProcessEnvironment sysEnv = QProcessEnvironment::systemEnvironment();
+    if (sysEnv.contains(qsl("APPIMAGE"))) {
+        execDir = QFileInfo(sysEnv.value(qsl("APPIMAGE"))).absolutePath();
+    } else if (argc > 0) {
+        execDir = QFileInfo(QString::fromLocal8Bit(argv[0])).absolutePath();
+    } else {
+        return;
+    }
+
+    const QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
+    QString confPath;
+
+    const QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
+    const QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
+
+    if (QFileInfo(markerExecDir).isFile()) {
+        QFile file(markerExecDir);
+        QString portPath;
+        if (file.open(QIODevice::ReadOnly)) {
+            QTextStream(&file).readLineInto(&portPath);
+        }
+        if (portPath.isEmpty()) {
+            portPath = qsl("./portable");
+        }
+        confPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
+    } else if (QFileInfo(markerHomeDir).isFile()) {
+        QFile file(markerHomeDir);
+        QString portPath;
+        if (file.open(QIODevice::ReadOnly)) {
+            QTextStream(&file).readLineInto(&portPath);
+        }
+        confPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
+    } else {
+        confPath = confDirDefault;
+    }
+
+    if (confPath.isEmpty()) {
+        return;
+    }
+
+    const QString iniPath = qsl("%1/Mudlet.ini").arg(confPath);
+    if (!QFileInfo::exists(iniPath)) {
+        return;
+    }
+
+    const QSettings settings(iniPath, QSettings::IniFormat);
+    const QString value = settings.value(qsl("highDpiScaleFactorRoundingPolicy")).toString();
+    if (value.isEmpty()) {
+        return;
+    }
+
+    static const QMap<QString, Qt::HighDpiScaleFactorRoundingPolicy> policies = {
+            {qsl("round"), Qt::HighDpiScaleFactorRoundingPolicy::Round},
+            {qsl("ceil"), Qt::HighDpiScaleFactorRoundingPolicy::Ceil},
+            {qsl("floor"), Qt::HighDpiScaleFactorRoundingPolicy::Floor},
+            {qsl("roundpreferfloor"), Qt::HighDpiScaleFactorRoundingPolicy::RoundPreferFloor},
+            {qsl("passthrough"), Qt::HighDpiScaleFactorRoundingPolicy::PassThrough},
+    };
+
+    const auto it = policies.find(value.toLower());
+    if (it == policies.end()) {
+        qWarning().noquote() << qsl("main: ignoring invalid highDpiScaleFactorRoundingPolicy value in Mudlet.ini: \"%1\"").arg(value);
+        return;
+    }
+
+    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(it.value());
+}
+#endif // !defined(Q_OS_MACOS)
+
 int main(int argc, char* argv[])
 {
     initializeQRCResources();
@@ -221,6 +307,10 @@ int main(int argc, char* argv[])
             qInstallMessageHandler(msys2QtMessageHandler);
         }
     }
+#endif
+
+#if !defined(Q_OS_MACOS)
+    applyHighDpiRoundingPolicyFromConfig(argc, argv);
 #endif
 
 #if defined(Q_OS_MACOS)
@@ -314,9 +404,6 @@ int main(int argc, char* argv[])
 
     const QCommandLineOption steamMode(QStringList() << qsl("steammode"), qsl("Adjusts Mudlet settings to match Steam's requirements."));
     parser.addOption(steamMode);
-
-    const QCommandLineOption runUndoTests(QStringList() << qsl("run-undo-tests"), qsl("Run internal undo/redo tests (requires 'Mudlet self-test' profile) and exit."));
-    parser.addOption(runUndoTests);
 
     parser.addPositionalArgument("package", "Path to .mpackage file");
 
@@ -462,8 +549,8 @@ int main(int argc, char* argv[])
     if (!positionalArguments.isEmpty()) {
         const QString firstArg = positionalArguments.first();
 
-        // Check if it's a telnet:// URI
-        if (firstArg.startsWith(qsl("telnet://"), Qt::CaseInsensitive)) {
+        // Check if it's a telnet:// or telnets:// URI
+        if (firstArg.startsWith(qsl("telnet://"), Qt::CaseInsensitive) || firstArg.startsWith(qsl("telnets://"), Qt::CaseInsensitive)) {
             telnetUri = firstArg;
             instanceCoordinator->queueTelnetUri(telnetUri);
 
@@ -826,13 +913,13 @@ int main(int argc, char* argv[])
 
         if (existingHandlerFound) {
             QMessageBox msgBox;
-            //: Title for the dialog asking if Mudlet should handle telnet:// links
+            //: Title for the dialog asking if Mudlet should handle telnet:// and telnets:// links
             msgBox.setWindowTitle(QObject::tr("Telnet Protocol Handler"));
-            //: Text shown when another application is already handling telnet:// links
-            msgBox.setText(QObject::tr("Another application is set to handle telnet:// links."));
+            //: Text shown when another application is already handling telnet:// and telnets:// links
+            msgBox.setText(QObject::tr("Another application is set to handle telnet:// and telnets:// links."));
             //: Detailed explanation for telnet handler override prompt
-            msgBox.setInformativeText(QObject::tr("Would you like Mudlet to handle telnet:// links instead?\n\n"
-                                                  "This will allow you to click on telnet:// links in your browser "
+            msgBox.setInformativeText(QObject::tr("Would you like Mudlet to handle telnet:// and telnets:// links instead?\n\n"
+                                                  "This will allow you to click on telnet:// and telnets:// links in your browser "
                                                   "to automatically open them in Mudlet.\n\n"
                                                   "You can change this later in Settings > General."));
             msgBox.setIcon(QMessageBox::Question);
@@ -861,13 +948,17 @@ int main(int argc, char* argv[])
 
     if (shouldRegisterTelnet) {
 #if defined(Q_OS_WIN)
-        // Register telnet:// protocol handler (per-user, no admin rights required)
+        // Register telnet:// and telnets:// protocol handlers (per-user, no admin rights required)
         const QString mudletExe = QCoreApplication::applicationFilePath().replace('/', '\\');
         settings.setValue("telnet/.", "URL:Telnet Protocol");
         settings.setValue("telnet/URL Protocol", "");
         settings.setValue("telnet/DefaultIcon/.", mudletExe + ",1");
         settings.setValue("telnet/shell/open/command/.", QString("\"%1\" \"%2\"").arg(mudletExe, "%1"));
-        qDebug() << "main: Registered Mudlet as telnet:// protocol handler (per-user)";
+        settings.setValue("telnets/.", "URL:Telnet Protocol (TLS)");
+        settings.setValue("telnets/URL Protocol", "");
+        settings.setValue("telnets/DefaultIcon/.", mudletExe + ",1");
+        settings.setValue("telnets/shell/open/command/.", QString("\"%1\" \"%2\"").arg(mudletExe, "%1"));
+        qDebug() << "main: Registered Mudlet as telnet:// and telnets:// protocol handler (per-user)";
 #endif
 
 #if defined(Q_OS_LINUX)
@@ -889,7 +980,7 @@ int main(int argc, char* argv[])
                     out << "Name=Mudlet\n";
                     out << "Exec=\"" << exePath << "\" %u\n";
                     out << "Type=Application\n";
-                    out << "MimeType=x-scheme-handler/telnet;\n";
+                    out << "MimeType=x-scheme-handler/telnet;x-scheme-handler/telnets;\n";
                     out << "Icon=mudlet\n";
                     out << "NoDisplay=false\n";
                     desktopFile.close();
@@ -913,7 +1004,15 @@ int main(int argc, char* argv[])
         if (xdgMime.waitForFinished(3000) && xdgMime.exitCode() == 0) {
             qDebug() << "main: Registered Mudlet as telnet:// protocol handler (Linux)";
         } else {
-            qWarning() << "main: xdg-mime registration failed:" << xdgMime.errorString();
+            qWarning() << "main: xdg-mime telnet registration failed:" << xdgMime.errorString();
+        }
+
+        QProcess xdgMimeTls;
+        xdgMimeTls.start(qsl("xdg-mime"), QStringList() << qsl("default") << qsl("mudlet.desktop") << qsl("x-scheme-handler/telnets"));
+        if (xdgMimeTls.waitForFinished(3000) && xdgMimeTls.exitCode() == 0) {
+            qDebug() << "main: Registered Mudlet as telnets:// protocol handler (Linux)";
+        } else {
+            qWarning() << "main: xdg-mime telnets registration failed:" << xdgMimeTls.errorString();
         }
 #endif
 
@@ -926,6 +1025,14 @@ int main(int argc, char* argv[])
                 qDebug() << "main: Registered Mudlet as telnet:// protocol handler (macOS)";
             } else {
                 qWarning() << "main: Failed to register telnet:// handler on macOS, error:" << result;
+            }
+
+            CFStringRef telnetsScheme = CFSTR("telnets");
+            OSStatus tlsResult = LSSetDefaultHandlerForURLScheme(telnetsScheme, bundleId);
+            if (tlsResult == noErr) {
+                qDebug() << "main: Registered Mudlet as telnets:// protocol handler (macOS)";
+            } else {
+                qWarning() << "main: Failed to register telnets:// handler on macOS, error:" << tlsResult;
             }
         } else {
             qWarning() << "main: Cannot register telnet handler - CFBundleGetIdentifier returned null";
@@ -963,7 +1070,6 @@ int main(int argc, char* argv[])
 
     mudlet::self()->smMirrorToStdOut = parser.isSet(mirrorToStdout);
     mudlet::smSteamMode = parser.isSet(steamMode);
-    const bool shouldRunUndoTests = parser.isSet(runUndoTests);
     if (!onlyProfiles.isEmpty()) {
         mudlet::self()->onlyShowProfiles(onlyProfiles);
     }
@@ -975,7 +1081,7 @@ int main(int argc, char* argv[])
         });
     }
 
-    QTimer::singleShot(0, qApp, [cliProfiles, telnetUri, shouldRunUndoTests]() {
+    QTimer::singleShot(0, qApp, [cliProfiles, telnetUri]() {
         // Migrate portable password files to secure storage before any
         // profile dialog or auto-login code runs.  The migration is
         // synchronous (uses static CredentialManager helpers) so it is
@@ -996,42 +1102,6 @@ int main(int argc, char* argv[])
         // Then handle telnet URI if provided
         if (!telnetUri.isEmpty()) {
             mudlet::self()->handleTelnetUri(telnetUri);
-        }
-
-        // If --run-undo-tests was specified, run tests after profile loads
-        if (shouldRunUndoTests) {
-            QTimer::singleShot(3000, qApp, []() {
-                // Find the first loaded host and run tests on its trigger editor
-                Host* firstHost = nullptr;
-                for (auto host : mudlet::self()->getHostManager()) {
-                    if (host) {
-                        firstHost = host.data();
-                        break;
-                    }
-                }
-
-                if (firstHost && firstHost->mpEditorDialog) {
-                    // Verify we're running in the test profile
-                    if (firstHost->getName() != qsl("Mudlet self-test")) {
-                        qDebug() << "ERROR: Undo/Redo tests can only be run in the 'Mudlet self-test' profile";
-                        qDebug() << "Current profile:" << firstHost->getName();
-                        QCoreApplication::exit(1);
-                        return;
-                    }
-
-                    qDebug() << "Running undo/redo tests via --run-undo-tests flag";
-                    firstHost->mpEditorDialog->slot_runUndoRedoTests();
-
-                    // Exit after tests complete
-                    QTimer::singleShot(1000, qApp, []() {
-                        qDebug() << "Tests complete, exiting...";
-                        QCoreApplication::exit(0);
-                    });
-                } else {
-                    qDebug() << "ERROR: No profile loaded or editor not available for undo tests";
-                    QCoreApplication::exit(1);
-                }
-            });
         }
     });
 

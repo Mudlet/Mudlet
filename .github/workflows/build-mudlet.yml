@@ -79,11 +79,11 @@ jobs:
         modules: qt5compat qtmultimedia qtspeech
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.3.1
+      uses: lukka/get-cmake@v4.3.2
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
-      uses: leafo/gh-actions-lua@v12
+      uses: leafo/gh-actions-lua@v13
       with:
         luaVersion: ${{ env.LUA_VERSION }}
         buildCache: false
@@ -156,7 +156,7 @@ jobs:
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
     - name: (Linux) Install Lua via GitHub Actions
-      uses: leafo/gh-actions-lua@v12
+      uses: leafo/gh-actions-lua@v13
       if: runner.os == 'Linux'
       with:
         luaVersion: ${{ env.LUA_VERSION }}
@@ -331,6 +331,7 @@ jobs:
 
         $LUAROCKS LuaFileSystem
         $LUAROCKS luautf8
+        $LUAROCKS lpeg
 
         if [ "$RUNNER_OS" = "macOS" ]; then
           $LUAROCKS lua-zip ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip
@@ -502,30 +503,5 @@ jobs:
         if [ -e /tmp/busted-tests-failed ]
         then
           echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
-          exit 1
-        fi
-
-    - name: (Linux) Run C++ undo/redo tests
-      if: matrix.run_tests == 'true' && runner.os == 'Linux'
-      timeout-minutes: 5
-      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --run-undo-tests
-      env:
-        ASAN_OPTIONS: detect_leaks=0
-        MUDLET_TEST_MODE: 1
-
-    - name: (macOS) Run C++ undo/redo tests
-      if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      timeout-minutes: 5
-      run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --run-undo-tests
-      env:
-        ASAN_OPTIONS: detect_leaks=0
-        MUDLET_TEST_MODE: 1
-
-    - name: Passed C++ undo/redo tests
-      if: matrix.run_tests == 'true'
-      run: |
-        if [ -e /tmp/undo-tests-failed ]
-        then
-          echo "C++ undo/redo tests failed - see the action called 'Run C++ undo/redo tests' above for detailed output."
           exit 1
         fi

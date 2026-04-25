@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2021, 2026 by Stephen Lyons - slysven@virginmedia.com   *
  *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -46,7 +46,7 @@ TScript::~TScript()
     if (!mpHost) {
         return;
     }
-    for (const auto& handler : mEventHandlerList) {
+    for (const auto& handler : std::as_const(mEventHandlerList)) {
         mpHost->unregisterEventHandler(handler, this);
     }
     mpHost->getScriptUnit()->unregisterScript(this);
@@ -63,7 +63,7 @@ bool TScript::registerScript()
 
 void TScript::setEventHandlerList(QStringList handlerList)
 {
-    for (const QString& handler : mEventHandlerList) {
+    for (const QString& handler : std::as_const(mEventHandlerList)) {
         mpHost->unregisterEventHandler(handler, this);
     }
     mEventHandlerList.clear();
@@ -183,7 +183,7 @@ QString TScript::packageName(TScript* pScript)
     }
 
     if (!pScript->mPackageName.isEmpty()) {
-        return !mpHost->mModuleInfo.contains(pScript->mPackageName) ? pScript->mPackageName : QString();
+        return !mpHost->mInstalledModules.contains(pScript->mPackageName) ? pScript->mPackageName : QString();
     }
 
     if (pScript->getParent()) {
@@ -200,7 +200,7 @@ QString TScript::moduleName(TScript* pScript)
     }
 
     if (!pScript->mPackageName.isEmpty()) {
-        return mpHost->mModuleInfo.contains(pScript->mPackageName) ? pScript->mPackageName : QString();
+        return mpHost->mInstalledModules.contains(pScript->mPackageName) ? pScript->mPackageName : QString();
     }
 
     if (pScript->getParent()) {

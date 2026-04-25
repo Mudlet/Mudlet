@@ -853,6 +853,8 @@ void XMLimport::readHost(Host* pHost)
         pHost->mEditorTheme = qsl("Mudlet");
         pHost->mEditorThemeFile = qsl("Mudlet.tmTheme");
     }
+    pHost->mEditorThemeDark = attributes().value(QLatin1String("mEditorThemeDark")).toString();
+    pHost->mEditorThemeFileDark = attributes().value(QLatin1String("mEditorThemeFileDark")).toString();
     pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
     pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
     pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2020, 2022-2025 by Stephen Lyons                   *
+ *   Copyright (C) 2018-2020, 2022-2026 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2023-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
@@ -917,7 +917,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     * only) argument given.
     */
 
-    auto separator_aboveStandardMenu = popup->insertSeparator(popup->actions().first());
+    auto separator_aboveStandardMenu = popup->insertSeparator(popup->actions().constFirst());
     if (handle_profile) {
         popup->insertAction(separator_aboveStandardMenu, action_removeWord);
         popup->insertAction(action_removeWord, action_addWord);
@@ -1884,4 +1884,12 @@ void TCommandLine::resizeEvent(QResizeEvent* event)
     if (mpPasswordToggleButton && mpPasswordToggleButton->isVisible()) {
         positionPasswordToggleButton();
     }
+}
+
+/* We need to have this method defined in this file as the TConsole class is
+ * forward declared in the header file and it is problematic to define any
+ * dereferencing of it there:*/
+TConsole* TCommandLine::console() const
+{
+    return mpConsole;
 }

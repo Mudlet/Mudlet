@@ -2,7 +2,8 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
- *   Copyright (C) 2017-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2023, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -477,6 +478,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mEditorShowBidi") = pHost->getEditorShowBidi() ? "yes" : "no";
     host.append_attribute("mEditorTheme") = pHost->mEditorTheme.toUtf8().constData();
     host.append_attribute("mEditorThemeFile") = pHost->mEditorThemeFile.toUtf8().constData();
+    host.append_attribute("mEditorThemeDark") = pHost->mEditorThemeDark.toUtf8().constData();
+    host.append_attribute("mEditorThemeFileDark") = pHost->mEditorThemeFileDark.toUtf8().constData();
     host.append_attribute("mThemePreviewItemID") = QString::number(pHost->mThemePreviewItemID).toUtf8().constData();
     host.append_attribute("mThemePreviewType") = pHost->mThemePreviewType.toUtf8().constData();
     host.append_attribute("mSearchEngineName") = pHost->mSearchEngineName.toUtf8().constData();
@@ -559,7 +562,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
 
         auto mInstalledPackages = host.append_child("mInstalledPackages");
 
-        for (const auto& package : pHost->mInstalledPackages) {
+        for (const auto& package : std::as_const(pHost->mInstalledPackages)) {
             mInstalledPackages.append_child("string").text().set(package.toUtf8().constData());
         }
 
@@ -726,7 +729,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     {
         QStringList allExperiments = pHost->getAllExperiments();
         if (!allExperiments.isEmpty()) {
-            for (const auto& experimentKey : allExperiments) {
+            for (const auto& experimentKey : std::as_const(allExperiments)) {
                 auto experiment = host.append_child("experiment");
                 experiment.append_attribute("key") = experimentKey.toUtf8().constData();
                 experiment.append_attribute("enabled") = "yes";
@@ -1228,7 +1231,7 @@ void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent)
             writeScriptElement(pT->mScript, scriptContents);
 
             auto eventHandlerList = scriptContents.append_child("eventHandlerList");
-            for (const auto& handler : pT->mEventHandlerList) {
+            for (const auto& handler : std::as_const(pT->mEventHandlerList)) {
                 eventHandlerList.append_child("string").text().set(handler.toUtf8().constData());
             }
         }

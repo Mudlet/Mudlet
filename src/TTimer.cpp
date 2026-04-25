@@ -391,7 +391,7 @@ QString TTimer::packageName(TTimer* pTimer)
     }
 
     if (!pTimer->mPackageName.isEmpty()) {
-        return !mpHost->mModuleInfo.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
+        return !mpHost->mInstalledModules.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
     }
 
     if (pTimer->getParent()) {
@@ -408,7 +408,7 @@ QString TTimer::moduleName(TTimer* pTimer)
     }
 
     if (!pTimer->mPackageName.isEmpty()) {
-        return mpHost->mModuleInfo.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
+        return mpHost->mInstalledModules.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
     }
 
     if (pTimer->getParent()) {

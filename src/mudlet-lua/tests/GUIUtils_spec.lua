@@ -981,6 +981,20 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end)
     end)
   end)
+
+  describe("Tests the functionality of selectAll with window name", function()
+
+    it("Should call the function for each match in the window", function()
+      local windowName = "selectAllTestBuffer"
+      createBuffer(windowName)
+      clearWindow(windowName)
+      echo(windowName, "cat dog cat dog cat")
+      selectCurrentLine(windowName)
+      local funcCalls = 0
+      selectAll(windowName, "cat", function() funcCalls = funcCalls + 1 end)
+      assert.equals(3, funcCalls)
+    end)
+  end)
 end)
 
 --[[

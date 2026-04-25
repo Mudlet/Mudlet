@@ -28,6 +28,8 @@ set(UNIT_TESTS
     SecureStringUtilsTest
     CredentialManagerTest
     DiscordTest
+    TAreaZLevelIndexTest
+    TAreaGridIndexTest
 )
 
 foreach(test_name ${UNIT_TESTS})

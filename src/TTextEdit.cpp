@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2023, 2026 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -1800,13 +1800,13 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                                 // For exclusive groups, update visual state of all other members that may have been deselected
                                 if (mgr->isGroupExclusive(group)) {
                                     QStringList groupMembers = mgr->getGroupMembers(group);
-                                    for (const QString& member : groupMembers) {
+                                    for (const QString& member : std::as_const(groupMembers)) {
                                         if (member != value) {
                                             // Get all link IDs with this group/value combination using the reverse index
                                             bool memberSelected = mgr->isSelected(group, member);
                                             QList<int> matchingLinkIds = mpBuffer->mLinkStore.getLinkIdsByGroupValue(group, member);
 
-                                            for (int otherLinkId : matchingLinkIds) {
+                                            for (const int otherLinkId : std::as_const(matchingLinkIds)) {
                                                 mpBuffer->setLinkSelected(otherLinkId, memberSelected);
                                                 mpBuffer->setLinkState(otherLinkId, memberSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
                                                 mpBuffer->updateLinkCharacters(otherLinkId);
@@ -2983,31 +2983,30 @@ void TTextEdit::slot_analyseSelection()
             quint8 columnsToUse = qMax(size_t{2}, utf8Width);
 
             if (includeThisCodePoint) {
-                utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2 & %3</center></th>").arg(QString::number(columnsToUse), QString::number(index + 1), QString::number(index + 2)));
+                utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2 & %3</center></th>")
+                                            .arg(QString::number(columnsToUse),
+                                                 QString::number(index + 1),
+                                                 QString::number(index + 2)));
 
                 // The use of one qsl inside another is because it is
                 // impossible to force an upper-case alphabet to Hex digits otherwise
                 // just for that number (and not the rest of the resultant String):
-                // &#8232; is the Unicode Line Separator
-                utf16Vals.append(
-                        qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
-                                .arg(QString::number(columnsToUse))
-#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
-                                .arg(qsl("%1")
-                                             .arg(static_cast<uint32_t>(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1))), 4, 16, zero)
-                                             .toUpper())
-                                .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index).unicode()), 4, 16, zero)
-                                .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index + 1).unicode()), 4, 16, zero));
-#else
-                                .arg(qsl("%1").arg(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1)), 4, 16, zero).toUpper())
-                                .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(), 4, 16, zero)
-                                .arg(mpBuffer->lineBuffer.at(line).at(index + 1).unicode(), 4, 16, zero));
-#endif
+                // &#8232; is the Unicode Line Separator.
+                // The static casts are only needed since Qt 6.9.0 but they
+                // shouldn't do any harm prior to that:
+                utf16Vals.append(qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
+                                         .arg(QString::number(columnsToUse),
+                                              qsl("%1").arg(static_cast<uint32_t>(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index),
+                                                                                                         mpBuffer->lineBuffer.at(line).at(index + 1))),
+                                                            4, 16, zero).toUpper())
+                                         .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index).unicode()), 4, 16, zero)
+                                         .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index + 1).unicode()), 4, 16, zero));
 
                 // Note the addition to the index here to jump over the low-surrogate:
                 graphemes.append(qsl("<td colspan=\"%1\">%2</td>")
-                                         .arg(QString::number(columnsToUse))
-                                         .arg(convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1))));
+                                         .arg(QString::number(columnsToUse),
+                                              convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index),
+                                                                        mpBuffer->lineBuffer.at(line).at(index + 1))));
             }
 
             switch (utf8Width) {
@@ -3666,7 +3665,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 mpBuffer->markLinkAsVisited(focusedLink);
 
                 // Execute the command(s)
-                for (const auto& cmd : commands) {
+                for (const auto& cmd : std::as_const(commands)) {
                     mpHost->send(cmd);
                 }
 

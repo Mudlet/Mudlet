@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2011 by Heiko Koehn - KoehnHeiko@googlemail.com         *
  *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2022, 2026 by Stephen Lyons - slysven@virginmedia.com   *
  *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -205,7 +205,7 @@ void dlgPackageManager::populatePackagesWithUpdates()
 {
     mPackagesWithUpdates.clear();
 
-    for (const QString& packageName : mpHost->mInstalledPackages) {
+    for (const QString& packageName : std::as_const(mpHost->mInstalledPackages)) {
         if (!packageLookup.contains(packageName)) {
             continue;
         }
@@ -248,7 +248,7 @@ bool dlgPackageManager::readPackageRepositoryFile()
 
     repositoryPackages = obj[qsl("packages")].toArray();
     packageLookup.clear();
-    for (const QJsonValue& val : repositoryPackages) {
+    for (const QJsonValue& val : std::as_const(repositoryPackages)) {
         QJsonObject pkg = val.toObject();
         packageLookup.insert(pkg["mpackage"].toString(), pkg);
     }
@@ -619,7 +619,7 @@ void dlgPackageManager::slot_removePackages()
         removePackages << item->text();
     }
 
-    for (const QString& package : removePackages) {
+    for (const QString& package : std::as_const(removePackages)) {
         mpHost->uninstallPackage(package, enums::PackageModuleType::Package);
     }
 
@@ -632,7 +632,7 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
     packageList->clear();
 
     if (mCurrentView == NavigationView::Installed) {
-        for (const auto& value : mpHost->mPackageInfo) {
+        for (const auto& value : std::as_const(mpHost->mPackageInfo)) {
             const QString name = value.value(qsl("mpackage"));
             const QString title = value.value(qsl("title"));
             const QString description = value.value(qsl("description"));
@@ -657,7 +657,7 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
             }
         }
     } else if (mCurrentView == NavigationView::Explore) {
-        for (const QJsonValue& value : repositoryPackages) {
+        for (const QJsonValue& value : std::as_const(repositoryPackages)) {
             const QJsonObject pkg = value.toObject();
             const QString name = pkg[qsl("mpackage")].toString();
             const QString title = pkg[qsl("title")].toString();
@@ -678,7 +678,7 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
             }
         }
     } else if (mCurrentView == NavigationView::Updates) {
-        for (const QString& packageName : mPackagesWithUpdates) {
+        for (const QString& packageName : std::as_const(mPackagesWithUpdates)) {
             const auto packageInfo = mpHost->mPackageInfo.value(packageName);
             const QString title = packageInfo.value(qsl("title"));
             const QString description = packageInfo.value(qsl("description"));
@@ -743,7 +743,7 @@ void dlgPackageManager::slot_setPackageList()
         if (!readPackageRepositoryFile()) {
             return;
         }
-        for (const QJsonValue& packageVal : repositoryPackages) {
+        for (const QJsonValue& packageVal : std::as_const(repositoryPackages)) {
             auto item = new QListWidgetItem();
             const QJsonObject packageObj = packageVal.toObject();
             const QString packageName = packageObj.value("mpackage").toString();
@@ -762,7 +762,7 @@ void dlgPackageManager::slot_setPackageList()
             packageDescription->setPlainText(tr("All packages are up to date."));
         }
 
-        for (const QString& packageName : mPackagesWithUpdates) {
+        for (const QString& packageName : std::as_const(mPackagesWithUpdates)) {
             auto item = new QListWidgetItem();
             item->setText(packageName);
             const auto packageInfo{mpHost->mPackageInfo.value(packageName)};

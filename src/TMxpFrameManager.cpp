@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
+ *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -44,7 +45,7 @@ TMxpFrame::~TMxpFrame()
     parentFrame = nullptr;
 
     // Orphan children - we do NOT delete them since TMxpFrameManager owns all frames
-    for (TMxpFrame* child : childFrames) {
+    for (TMxpFrame* child : std::as_const(childFrames)) {
         if (child && !child->mBeingDestroyed) {
             child->parentFrame = nullptr;
         }
@@ -252,7 +253,7 @@ void TMxpFrameManager::resetAllFrames()
     // Called on reconnect - MXP frames don't persist between sessions
     QStringList frameNames = mFrames.keys();
 
-    for (const QString& name : frameNames) {
+    for (const QString& name : std::as_const(frameNames)) {
         closeFrame(name);
     }
 
@@ -921,7 +922,7 @@ void TMxpFrameManager::removeFrameFromHierarchy(TMxpFrame* frame)
     frame->parentFrame = nullptr;
 
     // Orphan children (set their parentFrame to nullptr)
-    for (TMxpFrame* child : frame->childFrames) {
+    for (TMxpFrame* child : std::as_const(frame->childFrames)) {
         if (child && !child->mBeingDestroyed) {
             child->parentFrame = nullptr;
         }

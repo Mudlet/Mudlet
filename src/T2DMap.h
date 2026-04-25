@@ -65,6 +65,7 @@ class QComboBox;
 class QElapsedTimer;
 class QListWidgetItem;
 class QPushButton;
+class QTimer;
 class QTreeWidgetItem;
 class QMouseEvent;
 class QMenu;
@@ -180,6 +181,13 @@ public:
     void switchArea(const QString& newAreaName);
     void switchArea(int areaId);
     void clearSelection();
+
+    // Schedules a repaint through a single-shot timer, coalescing multiple
+    // rapid requests (e.g. during mouse wheel zoom or pan drag) into at most
+    // one repaint per csmRenderThrottleMs.  Use this instead of update() for
+    // continuously-firing input events; call update() directly for discrete
+    // user actions where an immediate repaint is expected.
+    void scheduleRender();
 
     // Secondary view support (for multiple map views feature)
     void setSecondaryView(bool isSecondary) { mIsSecondaryView = isSecondary; }
@@ -428,6 +436,22 @@ private:
                          const float,
                          const QMap<int, QPointF>&,
                          const bool showRoomCollision);
+    // Batch rendering for large grid mode areas - draws rooms grouped by color
+    void drawGridModeRooms(QPainter&,
+                           const TArea* pDrawnArea,
+                           const int zLevel,
+                           const int playerRoomId,
+                           const float mRX,
+                           const float mRY,
+                           const float mRoomWidth,
+                           const float mRoomHeight,
+                           const float widgetWidth,
+                           const float widgetHeight,
+                           QFont& roomVNumFont,
+                           bool& isPlayerRoomVisible,
+                           QPointF& playerRoomOnWidgetCoordinates,
+                           bool areRoomIdsLegible,
+                           QString* profileOutput = nullptr);
     void paintRoomExits(QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int, float, QMap<int, QPointF>&);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
@@ -440,6 +464,12 @@ private:
         int x;
         int y;
     } mContextMenuClickPosition;
+
+    // Throttle repaint requests from continuous mouse events (pan drag, scroll
+    // wheel zoom) to avoid saturating the main thread at high event rates.
+    // Maximum of one repaint per csmRenderThrottleMs is allowed via scheduleRender().
+    static constexpr int csmRenderThrottleMs = 16; // ~60 fps cap
+    QTimer* mpRenderThrottleTimer = nullptr;
 
     // This holds the ID of the room highlighted in yellow when multiple
     // rooms are selected. It is either the first selected room, or the

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2020, 2022-2025 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2020, 2022-2026 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
@@ -146,7 +146,7 @@ QList<TMediaData> TMedia::playingMedia(TMediaData& mediaData)
         }
     }
 
-    for (const auto& pPlayer : mediaPlayerList) {
+    for (const auto& pPlayer : std::as_const(mediaPlayerList)) {
         if (!pPlayer) {
             continue;
         }
@@ -197,7 +197,7 @@ QList<TMediaData> TMedia::pausedMedia(TMediaData& mediaData)
         }
     }
 
-    for (const auto& pPlayer : mediaPlayerList) {
+    for (const auto& pPlayer : std::as_const(mediaPlayerList)) {
         if (!pPlayer) {
             continue;
         }
@@ -246,7 +246,7 @@ void TMedia::pauseMedia(TMediaData& mediaData)
         }
     }
 
-    for (const auto& pPlayer : mediaPlayerList) {
+    for (const auto& pPlayer : std::as_const(mediaPlayerList)) {
         if (!pPlayer) {
             continue;
         }
@@ -396,7 +396,7 @@ void TMedia::refreshAudioDevices()
 
     QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
-    for (const auto& player : mediaPlayerList) {
+    for (const auto& player : std::as_const(mediaPlayerList)) {
         if (player) {
             player->refreshAudioOutput();
         }
@@ -519,7 +519,7 @@ bool TMedia::resume(TMediaData mediaData)
         }
     }
 
-    for (const auto& pPlayer : mediaPlayerList) {
+    for (const auto& pPlayer : std::as_const(mediaPlayerList)) {
         if (!pPlayer) {
             continue;
         }
@@ -548,7 +548,7 @@ void TMedia::stopAllMediaPlayers()
 
     QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
-    for (const auto& pPlayer : mediaPlayerList) {
+    for (const auto& pPlayer : std::as_const(mediaPlayerList)) {
         if (!pPlayer) {
             continue;
         }
@@ -564,7 +564,7 @@ void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol,
 
     QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
-    for (const auto& player : mediaPlayerList) {
+    for (const auto& player : std::as_const(mediaPlayerList)) {
         if (!player) {
             continue;
         }
@@ -1353,7 +1353,7 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& a
 
     QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = TMedia::findMediaPlayersByCriteria(mediaData);
 
-    for (const auto& pTestPlayer : mediaPlayerList) {
+    for (const auto& pTestPlayer : std::as_const(mediaPlayerList)) {
         if (!pTestPlayer) {
             continue;
         }
@@ -1387,7 +1387,7 @@ void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QStr
 {
     QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = TMedia::findMediaPlayersByCriteria(mediaData);
 
-    for (const auto& pTestPlayer : mediaPlayerList) {
+    for (const auto& pTestPlayer : std::as_const(mediaPlayerList)) {
         if (!pTestPlayer) {
             continue;
         }

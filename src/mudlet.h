@@ -744,6 +744,7 @@ private:
         QString host;
         int port = 23;
         QString username;
+        bool useTls = false;
     };
 
     std::optional<TelnetUriData> parseTelnetUri(const QString& uri);

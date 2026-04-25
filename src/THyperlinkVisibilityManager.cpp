@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
+ *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -240,7 +241,7 @@ void THyperlinkVisibilityManager::onDataReceived()
     quint32 minOutputDelay = 0;
     bool hasOutputLinks = false;
 
-    for (const auto& link : mTrackedLinks) {
+    for (const auto& link : std::as_const(mTrackedLinks)) {
         if (link.expireOnOutput) {
             hasOutputLinks = true;
             if (minOutputDelay == 0 || link.outputDelayMs < minOutputDelay) {
@@ -579,7 +580,7 @@ void THyperlinkVisibilityManager::stopTimerIfNotNeeded()
 {
     if (mpTimer && mpTimer->isActive()) {
         bool hasTimerLinks = false;
-        for (const auto& link : mTrackedLinks) {
+        for (const auto& link : std::as_const(mTrackedLinks)) {
             // Only skip zero-delay links if they don't require the timer
             // RevealThenConceal links in certain phases still need the timer even with zero delay
             if (link.delayMs == 0) {
@@ -685,7 +686,7 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
 
             // Stop timer if no more timer-based links exist
             bool hasTimers = false;
-            for (const auto& remainingLink : mTrackedLinks) {
+            for (const auto& remainingLink : std::as_const(mTrackedLinks)) {
                 if (remainingLink.delayMs > 0 || remainingLink.expireOnOutput) {
                     hasTimers = true;
                     break;

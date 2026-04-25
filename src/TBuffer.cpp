@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018, 2020, 2022-2024 by Stephen Lyons             *
+ *   Copyright (C) 2014-2018, 2020, 2022-2024, 2026 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -4751,7 +4751,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         }
         const QString qIndent(indent, QChar::Space);
         const QString qHangingIndent(hangingIndent, QChar::Space);
-        for (WrapInfo w : lineBreaks) {
+        for (const WrapInfo w : std::as_const(lineBreaks)) {
             // skip TChars as needed
             while (newBufferCharPosition < w.firstChar && !buffer[i].empty()) {
                 buffer[i].pop_front();
@@ -7074,7 +7074,7 @@ void TBuffer::applyPendingSelectionStyling()
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC] Processing pending selection styling for" << mPendingSelectionStyling.size() << "links";
 #endif
-        for (int linkId : mPendingSelectionStyling) {
+        for (const int linkId : std::as_const(mPendingSelectionStyling)) {
             updateLinkCharacters(linkId);
         }
         mPendingSelectionStyling.clear();
