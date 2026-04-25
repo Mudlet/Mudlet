@@ -43,7 +43,7 @@ private slots:
 
     auto nodes = TMxpTagParser::parseToMxpNodeList(input, false);
     QCOMPARE(nodes.size(), 3);
-    for (const auto &node : nodes) {
+    for (const auto &node : std::as_const(nodes)) {
       processor.handleNode(processor, stub, node.get());
     }
 
@@ -130,7 +130,7 @@ private slots:
     TMxpStubClient stub;
 
     auto nodes = TMxpTagParser::parseToMxpNodeList(input, false);
-    for (const auto &node : nodes) {
+    for (const auto &node : std::as_const(nodes)) {
       processor.handleNode(processor, stub, node.get());
     }
 
