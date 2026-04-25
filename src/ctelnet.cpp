@@ -2174,8 +2174,9 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
     for (int i = 0; i < payload.size(); ++i) {
         if (!i && payload.at(i) == NEW_ENVIRON_SEND) {
             continue;
-        } else if (!i) { // NOLINT(readability-else-after-return)
-            return;      // Invalid response;
+        }
+        if (!i) {
+            return; // Invalid response;
         }
 
         if (payload.at(i) == NEW_ENVIRON_VAR) {
@@ -2324,8 +2325,9 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
     for (int i = 0; i < payload.size(); ++i) {
         if (!i && payload.at(i) == NEW_ENVIRON_SEND) {
             continue;
-        } else if (!i) { // NOLINT(readability-else-after-return)
-            return;      // Invalid response;
+        }
+        if (!i) {
+            return; // Invalid response;
         }
 
         if (payload.at(i) == NEW_ENVIRON_VAR) {

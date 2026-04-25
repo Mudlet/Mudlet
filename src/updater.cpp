@@ -282,7 +282,6 @@ void Updater::setupPlatformUpdater()
         }
         emit signal_updateAvailable(updates.size());
         if (!updateAutomatically()) {
-            emit signal_updateAvailable(updates.size());
             return;
         }
         downloadReleaseIfValid(updates.first());
