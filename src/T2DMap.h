@@ -298,6 +298,9 @@ public:
     bool mBubbleMode = false;
     bool mMapperUseAntiAlias = true;
 
+    // Toggled by dlgMapper so its overlays don't stack on the painted empty-state text.
+    bool mSuppressEmptyStateMessage = false;
+
     // Controls if the mapper is in view-only mode
     bool mMapViewOnly = true;
 

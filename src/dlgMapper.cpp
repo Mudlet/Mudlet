@@ -25,17 +25,27 @@
 
 #include "Host.h"
 #include "TConsole.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 
 #include <QElapsedTimer>
+#include <QEvent>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QFrame>
+#include <QLabel>
 #include <QListWidget>
 #include <QMenu>
 #include <QMessageBox>
 #include <QPainter>
+#include <QProgressBar>
 #include <QProgressDialog>
+#include <QPushButton>
+#include <QSettings>
+#include <QVBoxLayout>
 
 using namespace std::chrono_literals;
 
@@ -120,6 +130,295 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
 
     connect(mpMap->mMapInfoContributorManager, &MapInfoContributorManager::signal_contributorsUpdated, this, &dlgMapper::slot_updateInfoContributors);
     slot_updateInfoContributors();
+
+    setupEmptyStateOverlay();
+    setupProgressOverlay();
+    connect(mpMap, &TMap::signal_mmpMapLocationChanged, this, &dlgMapper::updateEmptyStateOverlay);
+    connect(mpMap, &TMap::signal_areaChanged, this, [this](int) {
+        updateEmptyStateOverlay();
+    });
+    updateEmptyStateOverlay();
+}
+
+static QFrame* createOverlayFrame(QWidget* parent, const QString& objectName)
+{
+    auto* frame = new QFrame(parent);
+    frame->setObjectName(objectName);
+    frame->setAutoFillBackground(true);
+    frame->setFrameShape(QFrame::StyledPanel);
+    frame->setStyleSheet(qsl("QFrame#%1 {"
+                             " background-color: palette(window);"
+                             " border: 1px solid palette(mid);"
+                             " border-radius: 8px;"
+                             "}")
+                                 .arg(objectName));
+    return frame;
+}
+
+static void centerOverlayIn(QFrame* overlay, QWidget* parent, int minWidth)
+{
+    if (!overlay || !parent) {
+        return;
+    }
+    const QSize hint = overlay->sizeHint();
+    const int available = qMax(20, parent->width() - 20);
+    const int w = qMin(qMax(hint.width(), minWidth), available);
+    const int h = hint.height();
+    overlay->setGeometry((parent->width() - w) / 2, (parent->height() - h) / 2, w, h);
+}
+
+void dlgMapper::setupEmptyStateOverlay()
+{
+    mpEmptyStateOverlay = createOverlayFrame(mp2dMap, qsl("emptyStateOverlay"));
+
+    //: Empty-state text shown in the mapper when the profile has no local map yet.
+    auto* label = new QLabel(tr("No map yet for this profile."), mpEmptyStateOverlay);
+    label->setAlignment(Qt::AlignCenter);
+    label->setWordWrap(true);
+
+    //: Button in the mapper empty-state. Downloads a shared map offered by the game server via MMP.
+    mpEmptyStateDownloadButton = new QPushButton(tr("Download from game"), mpEmptyStateOverlay);
+    mpEmptyStateDownloadButton->setDefault(true);
+    mpEmptyStateDownloadButton->setAutoDefault(true);
+
+    //: Button in the mapper empty-state. Opens a file dialog to load a .dat/.json/.xml map saved on disk.
+    auto* loadFileButton = new QPushButton(tr("Load map..."), mpEmptyStateOverlay);
+    loadFileButton->setAutoDefault(false);
+
+    //: Button in the mapper empty-state. Dismisses the prompt so the user can map from scratch.
+    auto* startBlankButton = new QPushButton(tr("Create new map"), mpEmptyStateOverlay);
+    startBlankButton->setAutoDefault(false);
+
+    auto* layout = new QVBoxLayout(mpEmptyStateOverlay);
+    layout->setContentsMargins(20, 16, 20, 16);
+    layout->setSpacing(10);
+    layout->addWidget(label);
+    layout->addWidget(mpEmptyStateDownloadButton);
+    layout->addWidget(loadFileButton);
+    layout->addWidget(startBlankButton);
+
+    connect(mpEmptyStateDownloadButton, &QPushButton::clicked, this, [this]() {
+        mEmptyStateDismissed = true;
+        if (mpMap) {
+            mpMap->downloadMap();
+        }
+        updateEmptyStateOverlay();
+    });
+    connect(loadFileButton, &QPushButton::clicked, this, [this]() {
+        loadMapFromFile();
+    });
+    connect(startBlankButton, &QPushButton::clicked, this, [this]() {
+        mEmptyStateDismissed = true;
+        if (mp2dMap) {
+            mp2dMap->slot_newMap();
+        }
+        updateEmptyStateOverlay();
+    });
+
+    mpEmptyStateOverlay->hide();
+    mp2dMap->installEventFilter(this);
+}
+
+void dlgMapper::setupProgressOverlay()
+{
+    mpProgressOverlay = createOverlayFrame(mp2dMap, qsl("mapProgressOverlay"));
+
+    mpProgressLabel = new QLabel(mpProgressOverlay);
+    mpProgressLabel->setAlignment(Qt::AlignCenter);
+    mpProgressLabel->setWordWrap(true);
+
+    mpProgressBar = new QProgressBar(mpProgressOverlay);
+    mpProgressBar->setRange(0, 0);
+    mpProgressBar->setValue(0);
+    mpProgressBar->setTextVisible(false);
+
+    //: Button label to abort an in-progress map download or import.
+    mpProgressCancelButton = new QPushButton(tr("Abort"), mpProgressOverlay);
+    mpProgressCancelButton->setAutoDefault(false);
+
+    auto* layout = new QVBoxLayout(mpProgressOverlay);
+    layout->setContentsMargins(20, 16, 20, 16);
+    layout->setSpacing(10);
+    layout->addWidget(mpProgressLabel);
+    layout->addWidget(mpProgressBar);
+    layout->addWidget(mpProgressCancelButton, 0, Qt::AlignHCenter);
+
+    connect(mpProgressCancelButton, &QPushButton::clicked, this, [this]() {
+        emit signal_mapProgressCanceled();
+    });
+
+    mpProgressOverlay->hide();
+}
+
+void dlgMapper::repositionProgressOverlay()
+{
+    centerOverlayIn(mpProgressOverlay, mp2dMap, 320);
+}
+
+void dlgMapper::showMapProgress(const QString& label, bool cancelable)
+{
+    if (!mpProgressOverlay) {
+        return;
+    }
+    if (mpEmptyStateOverlay) {
+        mpEmptyStateOverlay->hide();
+    }
+    if (mp2dMap) {
+        mp2dMap->mSuppressEmptyStateMessage = true;
+        mp2dMap->update();
+    }
+    mpProgressLabel->setText(label);
+    mpProgressBar->setRange(0, 0);
+    mpProgressBar->setValue(0);
+    mpProgressCancelButton->setVisible(cancelable);
+    mpProgressOverlay->show();
+    repositionProgressOverlay();
+    mpProgressOverlay->raise();
+}
+
+void dlgMapper::setMapProgressLabel(const QString& text)
+{
+    if (!mpProgressLabel || mpProgressLabel->text() == text) {
+        return;
+    }
+    mpProgressLabel->setText(text);
+    if (mpProgressOverlay && mpProgressOverlay->sizeHint().height() != mpProgressOverlay->height()) {
+        repositionProgressOverlay();
+    }
+}
+
+void dlgMapper::setMapProgressRange(int minimum, int maximum)
+{
+    if (mpProgressBar) {
+        mpProgressBar->setRange(minimum, maximum);
+    }
+}
+
+void dlgMapper::setMapProgressValue(int value)
+{
+    if (mpProgressBar) {
+        mpProgressBar->setValue(value);
+    }
+}
+
+int dlgMapper::mapProgressMaximum() const
+{
+    return mpProgressBar ? mpProgressBar->maximum() : 0;
+}
+
+void dlgMapper::setMapProgressCancelable(bool cancelable)
+{
+    if (mpProgressCancelButton) {
+        mpProgressCancelButton->setVisible(cancelable);
+    }
+}
+
+void dlgMapper::hideMapProgress()
+{
+    if (mpProgressOverlay) {
+        mpProgressOverlay->hide();
+    }
+    updateEmptyStateOverlay();
+}
+
+bool dlgMapper::isMapProgressVisible() const
+{
+    return mpProgressOverlay && mpProgressOverlay->isVisible();
+}
+
+void dlgMapper::loadMapFromFile()
+{
+    if (!mpHost) {
+        return;
+    }
+    //: File dialog filter. Keep the extensions (in braces) unchanged - they are used programmatically.
+    auto filters = QStringList() << tr("Any map file (*.dat *.json *.xml)") << tr("Mudlet binary map (*.dat)") << tr("Mudlet JSON map (*.json)") << tr("Mudlet XML map (*.xml)") << tr("Any file (*)");
+
+    auto* dialog = new QFileDialog(this);
+    //: Title of the file dialog used to pick a map file to load.
+    dialog->setWindowTitle(tr("Load Mudlet map"));
+    QSettings& settings = *mudlet::getQSettings();
+    const QString lastDir = settings.value(qsl("lastFileDialogLocation"), mudlet::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
+    dialog->setDirectory(lastDir);
+    dialog->setNameFilter(filters.join(qsl(";;")));
+    connect(dialog, &QDialog::finished, this, [this, dialog](int result) {
+        dialog->deleteLater();
+        if (result != QDialog::Accepted || dialog->selectedFiles().isEmpty()) {
+            return;
+        }
+        const QString fileName = dialog->selectedFiles().constFirst();
+        Host* pHost = mpHost;
+        if (!pHost || !pHost->mpConsole) {
+            return;
+        }
+        bool success = false;
+        if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
+            success = pHost->mpConsole->importMap(fileName);
+        } else if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
+            auto [ok, errorMessage] = pHost->mpMap->readJsonMapFile(fileName);
+            success = ok;
+            if (!ok) {
+                pHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\nreason: %2.").arg(fileName, errorMessage));
+            }
+        } else {
+            success = pHost->mpConsole->loadMap(fileName);
+        }
+        if (success) {
+            pHost->mpMap->audit();
+            mEmptyStateDismissed = true;
+            mudlet::getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
+        }
+        updateEmptyStateOverlay();
+    });
+    dialog->open();
+}
+
+void dlgMapper::repositionEmptyStateOverlay()
+{
+    centerOverlayIn(mpEmptyStateOverlay, mp2dMap, 0);
+}
+
+void dlgMapper::updateEmptyStateOverlay()
+{
+    if (!mpEmptyStateOverlay || !mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+    if (!mpMap->mpRoomDB->isEmpty()) {
+        mEmptyStateDismissed = false;
+    }
+    const bool shouldShow = mpMap->mpRoomDB->isEmpty() && !mEmptyStateDismissed;
+    const bool canDownload = !mpMap->getMmpMapLocation().isEmpty();
+    if (mpEmptyStateDownloadButton) {
+        mpEmptyStateDownloadButton->setVisible(canDownload);
+    }
+    if (shouldShow) {
+        repositionEmptyStateOverlay();
+        mpEmptyStateOverlay->raise();
+        mpEmptyStateOverlay->show();
+        if (canDownload && mpEmptyStateDownloadButton) {
+            mpEmptyStateDownloadButton->setFocus();
+        }
+    } else {
+        mpEmptyStateOverlay->hide();
+    }
+    // Don't clobber the progress overlay's own suppression of the empty-state text.
+    if (mp2dMap && !isMapProgressVisible() && mp2dMap->mSuppressEmptyStateMessage != shouldShow) {
+        mp2dMap->mSuppressEmptyStateMessage = shouldShow;
+        mp2dMap->update();
+    }
+}
+
+bool dlgMapper::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == mp2dMap && event->type() == QEvent::Resize) {
+        if (mpEmptyStateOverlay && mpEmptyStateOverlay->isVisible()) {
+            repositionEmptyStateOverlay();
+        }
+        if (mpProgressOverlay && mpProgressOverlay->isVisible()) {
+            repositionProgressOverlay();
+        }
+    }
+    return QWidget::eventFilter(watched, event);
 }
 
 int dlgMapper::getCurrentShownAreaIndex()
