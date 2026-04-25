@@ -99,9 +99,8 @@ void dlgModuleManager::layoutModules()
                 masterModule->setCheckState(Qt::Unchecked);
             }
             masterModule->setText(QString());
-            masterModule->setToolTip(utils::richText(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
-                                                        "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
-                                                        "is saved at the end of the session.")));
+            //: Tooltip for master module checkbox
+            masterModule->setToolTip(utils::richText(tr("Master module: saved and resynchronized across all sessions on Save Profile or session end.")));
 
             // Although there is now no text used here this may help to make the
             // checkbox more central in the column

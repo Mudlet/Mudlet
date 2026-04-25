@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2018, 2020-2023, 2025 by Stephen Lyons       *
+ *   Copyright (C) 2014, 2016-2018, 2020-2023, 2025-2026 by Stephen Lyons  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
@@ -211,60 +211,28 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
 
     // Set the tooltip on the containing widget so both the label and the
     // control have the same tool-tip:
-    widget_timerDebugOutputMinimumInterval->setToolTip(tr("<p>A timer with a short interval will quickly fill up the <i>Central Debug Console</i> "
-                                                          "windows with messages that it ran correctly on <i>each</i> occasion it is called.  This (per profile) "
-                                                          "control adjusts a threshold that will hide those messages in just that window for those timers which "
-                                                          "run <b>correctly</b> when the timer's interval is less than this setting.</p>"
-                                                          "<p><u>Any timer script that has errors will still have its error messages reported whatever the setting.</u></p>"));
+    //: Tooltip for timer debug output minimum interval
+    widget_timerDebugOutputMinimumInterval->setToolTip(tr("<p>Hide success messages in Central Debug Console for timers with intervals below this threshold. "
+                                                          "Error messages always display.</p>"));
 
-    pushButton_showGlyphUsage->setToolTip(utils::richText(tr("This will bring up a display showing all the symbols used in the current "
-                                                             "map and whether they can be drawn using just the specified font, any other "
-                                                             "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
-                                                             "that make up that symbol, so that they can be identified even if they "
-                                                             "cannot be displayed; also, up to the first thirty two rooms that are using "
-                                                             "that symbol are listed, which may help to identify any unexpected or odd cases.")));
+    //: Tooltip for show glyph usage button
+    pushButton_showGlyphUsage->setToolTip(utils::richText(tr("Show all map symbols, their Unicode code-points, font availability, and which rooms use them.")));
     fontComboBox_mapSymbols->setToolTip(utils::richText(tr("Select the only or the primary font used (depending on <i>Only use symbols "
                                                            "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.")));
-    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(utils::richText(tr("Using a single font is likely to produce a more consistent style but may "
-                                                                        "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
-                                                                        "does not have a needed glyph (a font's individual character/symbol) to represent "
-                                                                        "the grapheme (what is to be represented).  Clearing this checkbox will allow "
-                                                                        "the best alternative glyph from another font to be used to draw that grapheme.")));
-    checkBox_runAllKeyBindings->setToolTip(tr("<p>If <b>not</b> checked Mudlet will only react to the first matching keybinding "
-                                              "(combination of key and modifiers) even if more than one of them is set to be "
-                                              "active. This means that a temporary keybinding (not visible in the Editor) "
-                                              "created by a script or package may be used in preference to a permanent one "
-                                              "that is shown and is set to be active. If checked then all matching keybindings "
-                                              "will be run.</p>"
-                                              "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
-                                              "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>"));
-    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(tr("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
-                                                            "of <i>Ambiguous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
-                                                            "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
-                                                            "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
-                                                            "chose the right width automatically but you can override the setting for each profile.</p>"
-                                                            "<p>This control has three settings:"
-                                                            "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
-                                                            "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
-                                                            "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
-                                                            "encodings of <b>Big5</b>/<b>Big5-HKSCS</b>, <b>GBK</b>, <b>GBK18030</b> or <b>EUC-KR</b> and 'narrow' for all others.</li></ul></p>"
-                                                            "<p><i>This is a temporary arrangement and will probably change when Mudlet gains "
-                                                            "full support for languages other than English.</i></p>"));
-    checkBox_enableTextAnalyzer->setToolTip(tr("<p>Enable a context (right click) menu action on any console/user window that, "
-                                               "when the mouse cursor is hovered over it, will display the UTF-16 and UTF-8 items "
-                                               "that make up each Unicode codepoint on the <b>first</b> line of any selection.</p>"
-                                               "<p>This utility feature is intended to help the user identify any grapheme "
-                                               "(visual equivalent to a <i>character</i>) that a Game server may send even "
-                                               "if it is composed of multiple bytes as any non-ASCII character will be in the "
-                                               "Lua sub-system which uses the UTF-8 encoding system.<p>"));
-    checkBox_showIconsOnMenus->setToolTip(tr("<p>Some Desktop Environments tell Qt applications like Mudlet whether they should "
-                                             "shown icons on menus, others, however do not. This control allows the user to override "
-                                             "the setting, if needed, as follows:"
-                                             "<ul><li><b>Unchecked</b> '<i>off</i>' = Prevent menus from being drawn with icons.</li>"
-                                             "<li><b>Checked</b> '<i>on</i>' = Allow menus to be drawn with icons.</li>"
-                                             "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
-                                             "<p><i>This setting is only processed when individual menus are created and changes may not "
-                                             "propagate everywhere until Mudlet is restarted.</i></p>"));
+    //: Tooltip for map symbol font usage option
+    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(utils::richText(tr("Use only the selected font (may show � for missing symbols) or allow fallback fonts for better coverage.")));
+    //: Tooltip for run all keybindings option
+    checkBox_runAllKeyBindings->setToolTip(tr("<p>Run all matching keybindings instead of just the first one. "
+                                              "Disable for compatibility with pre-3.9.0 scripts.</p>"));
+    //: Tooltip for East Asian ambiguous width character option
+    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(tr("<p>Controls display width for ambiguous East Asian characters. "
+                                                            "Auto-detects correct width for most encodings (default), or choose narrow/wide.</p>"));
+    //: Tooltip for text analyzer option
+    checkBox_enableTextAnalyzer->setToolTip(tr("<p>Enable context menu to analyze UTF-16/UTF-8 encoding of selected text. "
+                                               "Useful for identifying multi-byte characters.</p>"));
+    //: Tooltip for show icons on menus option
+    checkBox_showIconsOnMenus->setToolTip(tr("<p>Control menu icon display: on, off, or auto (system default). "
+                                             "May require restart.</p>"));
     lineEdit_mmcpPort->setPlaceholderText(QString::number(csDefaultMMCPHostPort));
     lineEdit_mmcpChatName->setPlaceholderText(csDefaultMMCPChatName);
     connect(lineEdit_mmcpChatName, &QLineEdit::editingFinished, this, &dlgProfilePreferences::slot_mmcpChatNameChanged);
@@ -381,9 +349,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     connect(comboBox_crashReportPolicy, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_crashReportPolicyChanged);
 
     setupPasswordsMigration();
-
-    connect(label_darkEditorPrompt, &QLabel::linkActivated, this, &dlgProfilePreferences::slot_enableDarkEditor);
-    label_darkEditorPrompt->hide();
 }
 
 void dlgProfilePreferences::setupPasswordsMigration()
@@ -1744,7 +1709,7 @@ void dlgProfilePreferences::loadEditorTab()
     config->setUseTabChar(false); // when you press Enter for a newline, pad with spaces and not tabs
     config->setCaretBlinkRate(200);
     config->setIndentSize(2);
-    config->setThemeName(pHost->mEditorTheme);
+    config->setThemeName(pHost->getEditorTheme());
     config->setCaretWidth(1);
     config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces) ? edbee::TextEditorConfig::ShowWhitespaces : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
@@ -1758,12 +1723,12 @@ void dlgProfilePreferences::loadEditorTab()
     edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
 
     populateThemesList();
-    mudlet::loadEdbeeTheme(pHost->mEditorTheme, pHost->mEditorThemeFile);
+    mudlet::loadEdbeeTheme(pHost->getEditorTheme(), pHost->getEditorThemeFile());
     populateScriptsList();
 
     // pre-select the current theme
     code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(qsl("Select theme"));
-    auto themeIndex = code_editor_theme_selection_combobox->findText(pHost->mEditorTheme);
+    auto themeIndex = code_editor_theme_selection_combobox->findText(pHost->getEditorTheme());
     code_editor_theme_selection_combobox->setCurrentIndex(themeIndex);
     slot_themeSelected(themeIndex);
 
@@ -2679,7 +2644,7 @@ void dlgProfilePreferences::slot_saveMap()
             return;
         }
 
-        auto fileName = dialog->selectedFiles().first();
+        auto fileName = dialog->selectedFiles().constFirst();
 
         QSettings& settings = *mudlet::getQSettings();
         QString lastDir = QFileInfo(fileName).absolutePath();
@@ -3180,13 +3145,19 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
         pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
         pHost->setEnableBlinkText(checkBox_enableBlinkText->isChecked());
-        pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
-        pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
+        if (mudlet::self()->inDarkMode()) {
+            pHost->mEditorThemeDark = code_editor_theme_selection_combobox->currentText();
+            pHost->mEditorThemeFileDark = code_editor_theme_selection_combobox->currentData().toString();
+        } else {
+            pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
+            pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
+        }
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
         pHost->setEditorShowBidi(checkBox_showBidi->isChecked());
         pHost->setShowIdsInEditor(checkBox_showIdNumbers->isChecked());
+        const auto activeEditorTheme = code_editor_theme_selection_combobox->currentText();
         if (pHost->mpEditorDialog) {
-            pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
+            pHost->mpEditorDialog->setThemeAndOtherSettings(activeEditorTheme);
         }
 
         auto data = script_preview_combobox->currentData().value<QPair<QString, int>>();
@@ -3711,6 +3682,54 @@ void dlgProfilePreferences::populateThemesList()
     code_editor_theme_selection_combobox->setCurrentIndex(code_editor_theme_selection_combobox->findText(currentSelection));
     code_editor_theme_selection_combobox->setUpdatesEnabled(true);
     code_editor_theme_selection_combobox->blockSignals(false);
+}
+
+// Given a theme name, try to find its dark or light counterpart in the combobox.
+// Handles naming patterns like "Solarized light" <-> "Solarized dark",
+// "Kimbie (light)" <-> "Kimbie (dark)", "Kary Foundation - Light" <-> "Kary Foundation - Dark".
+// Returns the counterpart theme name if found, or empty string if not.
+QString dlgProfilePreferences::findThemeCounterpart(const QString& themeName, const QComboBox* themeComboBox, bool toDark)
+{
+    const QString from = toDark ? qsl("light") : qsl("dark");
+    const QString to = toDark ? qsl("dark") : qsl("light");
+
+    // Try case-insensitive replacement of "light" with "dark" (or vice versa)
+    const QRegularExpression re(QRegularExpression::escape(from), QRegularExpression::CaseInsensitiveOption);
+    auto match = re.match(themeName);
+    if (match.hasMatch()) {
+        QString candidate = themeName;
+        // Preserve the case style of the original: if the matched text starts uppercase, capitalize the replacement
+        const QString matched = match.captured(0);
+        const QString replacement = matched[0].isUpper() ? (to[0].toUpper() + to.mid(1)) : to;
+        candidate.replace(match.capturedStart(), match.capturedLength(), replacement);
+
+        if (themeComboBox->findText(candidate) != -1) {
+            return candidate;
+        }
+    }
+
+    return {};
+}
+
+// Switches the editor theme combobox to the given theme name, triggering the
+// preview update. If themes haven't loaded yet, defers until they're available.
+void dlgProfilePreferences::switchEditorTheme(const QString& themeName)
+{
+    auto index = code_editor_theme_selection_combobox->findText(themeName);
+    if (index != -1) {
+        code_editor_theme_selection_combobox->setCurrentIndex(index);
+        return;
+    }
+
+    // theme may not be in the list yet (still downloading), so switch once the download completes
+    KDToolBox::connectSingleShot(this, &dlgProfilePreferences::signal_themeUpdateCompleted, this, [=, this]() {
+        auto deferredIndex = code_editor_theme_selection_combobox->findText(themeName);
+        if (deferredIndex != -1) {
+            code_editor_theme_selection_combobox->setCurrentIndex(deferredIndex);
+        } else {
+            qWarning() << "dlgProfilePreferences::switchEditorTheme() - theme" << themeName << "not found after theme update completed";
+        }
+    });
 }
 
 // user has picked a different theme to preview, so apply it
@@ -4422,9 +4441,38 @@ void dlgProfilePreferences::slot_setAppearance(const enums::Appearance state)
         comboBox_appearance->setCurrentIndex(state);
     }
 
+    const bool wasDarkMode = mudlet::self()->inDarkMode();
     mudlet::self()->setAppearance(state);
+    const bool isDarkMode = mudlet::self()->inDarkMode();
 
-    label_darkEditorPrompt->setVisible(mudlet::self()->inDarkMode());
+    if (wasDarkMode == isDarkMode) {
+        return;
+    }
+
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    const auto currentTheme = code_editor_theme_selection_combobox->currentText();
+
+    if (isDarkMode) {
+        const auto counterpart = findThemeCounterpart(currentTheme, code_editor_theme_selection_combobox, true);
+        if (!counterpart.isEmpty()) {
+            // save current as the light theme before switching
+            pHost->mEditorTheme = currentTheme;
+            pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
+            switchEditorTheme(counterpart);
+        }
+    } else {
+        const auto counterpart = findThemeCounterpart(currentTheme, code_editor_theme_selection_combobox, false);
+        if (!counterpart.isEmpty()) {
+            // save current as the dark theme before switching
+            pHost->mEditorThemeDark = currentTheme;
+            pHost->mEditorThemeFileDark = code_editor_theme_selection_combobox->currentData().toString();
+            switchEditorTheme(counterpart);
+        }
+    }
 }
 
 // This slot is called when the mudlet singleton tells everything that the
@@ -4630,35 +4678,6 @@ void dlgProfilePreferences::slot_changeControlCharacterHandling()
     pHost->setControlCharacterMode(comboBox_controlCharacterHandling->currentData().value<ControlCharacterMode>());
 }
 
-void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)
-{
-    if (link == qsl("dark-code-editor")) {
-        const auto darkTheme = qsl("Monokai");
-
-        label_darkEditorPrompt->hide();
-
-        // switch to code editor tab
-        tabWidget->setCurrentIndex(3);
-
-        auto monokaiIndex = code_editor_theme_selection_combobox->findText(darkTheme);
-        if (monokaiIndex != -1) {
-            code_editor_theme_selection_combobox->setCurrentIndex(monokaiIndex);
-            return;
-        }
-
-        // in case no theme index is available yet, so it as soon as one is available
-        KDToolBox::connectSingleShot(this, &dlgProfilePreferences::signal_themeUpdateCompleted, this, [=, this]() {
-            auto index = code_editor_theme_selection_combobox->findText(darkTheme);
-            if (index != -1) {
-                code_editor_theme_selection_combobox->setCurrentIndex(index);
-            }
-        });
-
-        return;
-    }
-
-    qWarning() << "unknown link clicked in profile preferences:" << link;
-}
 
 void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
 {

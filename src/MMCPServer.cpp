@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2024 by John McKisson - john.mckisson@gmail.com         *
- *   Copyright (C) 2024 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2024, 2026 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -232,9 +232,7 @@ QPair<bool, QString> MMCPServer::chatTo(const QVariant& target, const QString& m
 
     if (pClient) {
         const QString outMsg = qsl("%1%2 chats to you, '%3'\n%4")
-                                       .arg(static_cast<char>(TextPersonal))
-                                       .arg(getChatName(), msg)
-                                       .arg(static_cast<char>(End));
+                                       .arg(static_cast<char>(TextPersonal), getChatName(), msg, static_cast<char>(End));
         pClient->writeData(outMsg);
 
         using namespace AnsiColors;
@@ -264,10 +262,7 @@ QPair<bool, QString> MMCPServer::chatAll(const QString& msg)
     }
 
     const QString outMsg = qsl("%1\n%2 chats to everybody, '%3'%4")
-                                   .arg(static_cast<char>(TextEveryone))
-                                   .arg(getChatName())
-                                   .arg(msg)
-                                   .arg(static_cast<char>(End));
+                                   .arg(static_cast<char>(TextEveryone), getChatName(), msg, static_cast<char>(End));
 
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
@@ -466,9 +461,7 @@ QPair<bool, QString> MMCPServer::chatName(const QString& name)
 
     if (!mPeersList.isEmpty()) {
         const QString outMsg = qsl("%1%2%3")
-                                       .arg(static_cast<char>(NameChange))
-                                       .arg(name)
-                                       .arg(static_cast<char>(End));
+                                       .arg(static_cast<char>(NameChange), name, static_cast<char>(End));
 
         QListIterator<QPointer<MMCPClient>> it(mPeersList);
         while (it.hasNext()) {
@@ -495,9 +488,7 @@ QPair<bool, QString> MMCPServer::sendSideChannel(const QString& channel, const Q
     }
 
     const QString outMsg = qsl("%1%2,%3%4")
-                                   .arg(static_cast<char>(SideChannel))
-                                   .arg(channel, msg)
-                                   .arg(static_cast<char>(End));
+                                   .arg(static_cast<char>(SideChannel), channel, msg, static_cast<char>(End));
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
@@ -578,9 +569,7 @@ QPair<bool, QString> MMCPServer::emoteAll(const QString& msg)
     }
 
     const QString outMsg = qsl("%1%2 %3\n%4")
-                                   .arg(static_cast<char>(TextEveryone))
-                                   .arg(getChatName(), msg)
-                                   .arg(static_cast<char>(End));
+                                   .arg(static_cast<char>(TextEveryone), getChatName(), msg, static_cast<char>(End));
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
@@ -1078,9 +1067,7 @@ void MMCPServer::sendPublicPeek(MMCPClient* pClient)
 void MMCPServer::sendServedMessage(MMCPClient* pClient, const QString& msg, bool onlyToServed)
 {
     const QString cmdStr = qsl("%1%2%3")
-                                   .arg(static_cast<char>(TextEveryone))
-                                   .arg(msg)
-                                   .arg(static_cast<char>(End));
+                                   .arg(static_cast<char>(TextEveryone), msg, static_cast<char>(End));
 
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {

@@ -264,29 +264,14 @@
             </item>
            </widget>
           </item>
-          <item row="1" column="0" colspan="2">
-           <widget class="QLabel" name="label_darkEditorPrompt">
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>Set dark theme in &lt;a href=&quot;dark-code-editor&quot;&gt;code editor&lt;/a&gt; as well?</string>
-            </property>
-            <property name="textFormat">
-             <enum>Qt::TextFormat::RichText</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
+          <item row="1" column="0">
            <widget class="QCheckBox" name="mFORCE_SAVE_ON_EXIT">
             <property name="text">
              <string>Auto save on exit</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="1" column="1">
            <widget class="QCheckBox" name="mAlertOnNewData">
             <property name="toolTip">
              <string>&lt;p&gt;Show a toolbar notification if Mudlet is minimized and new data arrives.&lt;/p&gt;</string>
@@ -296,13 +281,13 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="0" colspan="2">
+          <item row="2" column="0" colspan="2">
            <widget class="QCheckBox" name="telnetHandlerEnabled">
             <property name="text">
-             <string>Mudlet handles telnet:// links</string>
+             <string>Mudlet handles telnet:// and telnets:// links</string>
             </property>
             <property name="toolTip">
-             <string>&lt;p&gt;If checked, Mudlet will be registered as the default handler for telnet:// links in your system.&lt;/p&gt;</string>
+             <string>&lt;p&gt;If checked, Mudlet will be registered as the default handler for telnet:// and telnets:// (secure) links in your system.&lt;/p&gt;</string>
             </property>
            </widget>
           </item>

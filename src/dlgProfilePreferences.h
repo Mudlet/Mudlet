@@ -164,7 +164,6 @@ private slots:
     void slot_setPlayerRoomInnerDiameter(const int);
     void slot_setPostingTimeout(const double);
     void slot_changeControlCharacterHandling();
-    void slot_enableDarkEditor(const QString&);
     void slot_toggleAdvertiseScreenReader(const bool);
     void slot_changeWrapAt();
     void slot_toggleUseMaxBufferSize(bool checked);
@@ -221,6 +220,8 @@ private:
     void fillOutMapHistory();
     bool updateDisplayFont();
     void cancelShortcutCaptures();
+    void switchEditorTheme(const QString& themeName);
+    static QString findThemeCounterpart(const QString& themeName, const QComboBox* themeComboBox, bool toDark);
 
 
     QPointer<Host> mpHost;
