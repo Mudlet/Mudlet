@@ -1557,7 +1557,7 @@ QString cTelnet::decodeOption(const unsigned char ch) const
     case 3:
         return QLatin1String("SUPPRESS_GO_AHEAD (3)");
     case 4:
-        return QLatin1String("APROX_MSG_SIZE (4)");
+        return QLatin1String("APPROX_MSG_SIZE (4)");
     case 5:
         return QLatin1String("STATUS (5)");
     case 6:
@@ -1623,11 +1623,11 @@ QString cTelnet::decodeOption(const unsigned char ch) const
     case 36:
         return QLatin1String("ENVIRONMENT_OPTION (36)");
     case 37:
-        return QLatin1String("AUTHENTICATION_OPTIOM (37)");
+        return QLatin1String("AUTHENTICATION_OPTION (37)");
     case 38:
         return QLatin1String("ENCRYPTION_OPTION (38)");
     case 39:
-        return QLatin1String("NEW_ENVIRONMENT_OPTION (39)");
+        return QLatin1String("NEW-ENVIRON (39)");
     case 40:
         return QLatin1String("TN3270E (40)");
     case 41:
@@ -1673,11 +1673,11 @@ QString cTelnet::decodeOption(const unsigned char ch) const
         return QLatin1String("ZENITH (93)");
 
     case 102:
-        return QLatin1String("AARDWULF (102)");
+        return QLatin1String("AARDWOLF (102)");
 
     // Official:
     case 138:
-        return QLatin1String("TELOPT_PRAGRMA_LOGON (138)");
+        return QLatin1String("TELOPT_PRAGMA_LOGON (138)");
     case 139:
         return QLatin1String("TELOPT_SSPI_LOGON (139)");
     case 140:
