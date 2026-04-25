@@ -24,6 +24,8 @@
  ***************************************************************************/
 
 
+#include "TAreaGridIndex.h"
+#include "TAreaZLevelIndex.h"
 #include "TMap.h"
 
 #include "TMapLabel.h"
@@ -40,7 +42,7 @@ class TArea
     Q_DECLARE_TR_FUNCTIONS(TArea) // Needed so we can use tr() even though TArea is NOT derived from QObject
 
     friend bool TMap::serialize(QDataStream&, int);
-    friend bool TMap::restore(QString, bool);
+    friend bool TMap::restore(QString);
     friend bool TMap::retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
 
 public:
@@ -51,6 +53,20 @@ public:
     const QSet<int>& getAreaRooms() const { return rooms; }
     const QList<int> getAreaExitRoomIds() const { return mAreaExits.uniqueKeys(); }
     const QMultiMap<int, QPair<QString, int>> getAreaExitRoomData() const;
+    // Atomically updates both the Z-level index and the grid index when a room
+    // moves to a new position.  All callers should use this instead of calling
+    // moveRoomZ and moveRoomInGridIndex separately.
+    void moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, int toY)
+    {
+        mZLevelIndex.moveRoom(id, fromZ, toZ);
+        mGridIndex.moveRoom(id, fromZ, fromX, fromY, toZ, toX, toY);
+    }
+    // Returns the set of room IDs on the given Z level.  The returned reference
+    // is stable for the lifetime of the index (an internal empty set is used
+    // for Z levels with no rooms), so it can be safely iterated immediately.
+    const QSet<int>& getRoomsForZ(int z) const { return mZLevelIndex.roomsForZ(z); }
+    // Returns a const reference to the grid index for read-only access by the renderer.
+    const TAreaGridIndex& getGridIndex() const { return mGridIndex; }
     void calcSpan();
     void fast_calcSpan(int);
     void determineAreaExits();
@@ -79,7 +95,7 @@ public:
     QSet<int> rooms; // rooms of this area
     // TODO: These next 2 members have not been used for some time - if at all
     // - maybe they can go?
-    QVector3D pos;   // pos auf der map und 0 punkt des area internen koordinatensystems
+    QVector3D pos; // pos auf der map und 0 punkt des area internen koordinatensystems
     QVector3D span;
     int min_x = 0;
     int min_y = 0;
@@ -124,7 +140,7 @@ private:
     void writeJson3DCoordinates(QJsonObject&, const QString&, const QVector3D&) const;
 
     QList<QByteArray> convertImageToBase64Data(const QPixmap&) const;
-    QPixmap convertBase64DataToImage(const QList<QByteArray> &) const;
+    QPixmap convertBase64DataToImage(const QList<QByteArray>&) const;
 
 
     // Supplied by C'tor and now needed to pass an error message upwards:
@@ -133,6 +149,13 @@ private:
     // key=in_area room id, pair.first=out_of_area room id pair.second=direction
     // Made private as we may change implementation detail
     QMultiMap<int, QPair<int, int>> mAreaExits;
+
+    // Per-Z-level room index. Maintained incrementally alongside TArea::rooms.
+    // Allows paintEvent to iterate only the rooms on a given Z level, avoiding
+    // an O(N-total) scan just to find which rooms match the current Z.
+    TAreaZLevelIndex mZLevelIndex;
+    // Per-(z,x,y) grid index for efficient viewport queries in grid mode.
+    TAreaGridIndex mGridIndex;
 
     // In use this has a minimum of 3.0 and a default of 20.0, the latter will
     // be applied in the constructor initialisation list:

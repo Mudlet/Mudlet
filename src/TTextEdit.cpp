@@ -2953,31 +2953,30 @@ void TTextEdit::slot_analyseSelection()
             quint8 columnsToUse = qMax(size_t{2}, utf8Width);
 
             if (includeThisCodePoint) {
-                utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2 & %3</center></th>").arg(QString::number(columnsToUse), QString::number(index + 1), QString::number(index + 2)));
+                utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2 & %3</center></th>")
+                                            .arg(QString::number(columnsToUse),
+                                                 QString::number(index + 1),
+                                                 QString::number(index + 2)));
 
                 // The use of one qsl inside another is because it is
                 // impossible to force an upper-case alphabet to Hex digits otherwise
                 // just for that number (and not the rest of the resultant String):
-                // &#8232; is the Unicode Line Separator
-                utf16Vals.append(
-                        qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
-                                .arg(QString::number(columnsToUse))
-#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
-                                .arg(qsl("%1")
-                                             .arg(static_cast<uint32_t>(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1))), 4, 16, zero)
-                                             .toUpper())
-                                .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index).unicode()), 4, 16, zero)
-                                .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index + 1).unicode()), 4, 16, zero));
-#else
-                                .arg(qsl("%1").arg(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1)), 4, 16, zero).toUpper())
-                                .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(), 4, 16, zero)
-                                .arg(mpBuffer->lineBuffer.at(line).at(index + 1).unicode(), 4, 16, zero));
-#endif
+                // &#8232; is the Unicode Line Separator.
+                // The static casts are only needed since Qt 6.9.0 but they
+                // shouldn't do any harm prior to that:
+                utf16Vals.append(qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
+                                         .arg(QString::number(columnsToUse),
+                                              qsl("%1").arg(static_cast<uint32_t>(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index),
+                                                                                                         mpBuffer->lineBuffer.at(line).at(index + 1))),
+                                                            4, 16, zero).toUpper())
+                                         .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index).unicode()), 4, 16, zero)
+                                         .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index + 1).unicode()), 4, 16, zero));
 
                 // Note the addition to the index here to jump over the low-surrogate:
                 graphemes.append(qsl("<td colspan=\"%1\">%2</td>")
-                                         .arg(QString::number(columnsToUse))
-                                         .arg(convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1))));
+                                         .arg(QString::number(columnsToUse),
+                                              convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index),
+                                                                        mpBuffer->lineBuffer.at(line).at(index + 1))));
             }
 
             switch (utf8Width) {

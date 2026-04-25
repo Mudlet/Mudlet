@@ -766,6 +766,24 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "combat in a modern text-only experience. Build a character with up to three "
                  "classes, pursue epic quests and rebirth bonuses, and enjoy quality-of-life "
                  "features like a custom Mudlet UI and real-time maps.")},
+
+            {qsl("Pku XKX MUD"),
+             qsl("pkuxkx.net"),
+             8081,
+             false,
+             qsl("<a href='https://www.pkuxkx.net/'>https://www.pkuxkx.net/</a>"),
+             qsl(":/icons/pkuxkx.png"),
+             qsl("Peking University Heroes (pkuxkx) was first launched on Peking University in 1996. "
+                 "To date, it has over 80 map areas, 10000+ rooms and more than 20 martial arts sects. "
+                 "It boasts over 200 daily active users and is the oldest and most popular "
+                 "Chinese MUD in the Chinese community.\n"
+                 "Website: https://pkuxkx.net/"
+                 "\n\n"
+                 "北大侠客行(pkuxkx)于1996年开始架于北大. 迄今为止，它已经拥有了超过80个地图区域，10000多个房间，20多个武林门派。"
+                 "每日活跃用户有200多人。是华人社区中历史最悠久玩家最多的中文MUD。\n"
+                 "官网: https://pkuxkx.net/；论坛：https://pkuxkx.net/forum/forum.php；WIKI：https://pkuxkx.net/wiki/\n"
+                 "国内(GBK编码) mud.pkuxkx.net:8080； 国内(UTF编码) mud.pkuxkx.net 8081；\n"
+                 "海外转发：https://pkuxkx.net/proxy_status.php 查找推荐线路")},
             };
     // clang-format on
 };

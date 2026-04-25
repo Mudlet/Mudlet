@@ -1885,3 +1885,11 @@ void TCommandLine::resizeEvent(QResizeEvent* event)
         positionPasswordToggleButton();
     }
 }
+
+/* We need to have this method defined in this file as the TConsole class is
+ * forward declared in the header file and it is problematic to define any
+ * dereferencing of it there:*/
+TConsole* TCommandLine::console() const
+{
+    return mpConsole;
+}

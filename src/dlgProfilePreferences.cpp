@@ -212,60 +212,28 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
 
     // Set the tooltip on the containing widget so both the label and the
     // control have the same tool-tip:
-    widget_timerDebugOutputMinimumInterval->setToolTip(tr("<p>A timer with a short interval will quickly fill up the <i>Central Debug Console</i> "
-                                                          "windows with messages that it ran correctly on <i>each</i> occasion it is called.  This (per profile) "
-                                                          "control adjusts a threshold that will hide those messages in just that window for those timers which "
-                                                          "run <b>correctly</b> when the timer's interval is less than this setting.</p>"
-                                                          "<p><u>Any timer script that has errors will still have its error messages reported whatever the setting.</u></p>"));
+    //: Tooltip for timer debug output minimum interval
+    widget_timerDebugOutputMinimumInterval->setToolTip(tr("<p>Hide success messages in Central Debug Console for timers with intervals below this threshold. "
+                                                          "Error messages always display.</p>"));
 
-    pushButton_showGlyphUsage->setToolTip(utils::richText(tr("This will bring up a display showing all the symbols used in the current "
-                                                             "map and whether they can be drawn using just the specified font, any other "
-                                                             "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
-                                                             "that make up that symbol, so that they can be identified even if they "
-                                                             "cannot be displayed; also, up to the first thirty two rooms that are using "
-                                                             "that symbol are listed, which may help to identify any unexpected or odd cases.")));
+    //: Tooltip for show glyph usage button
+    pushButton_showGlyphUsage->setToolTip(utils::richText(tr("Show all map symbols, their Unicode code-points, font availability, and which rooms use them.")));
     fontComboBox_mapSymbols->setToolTip(utils::richText(tr("Select the only or the primary font used (depending on <i>Only use symbols "
                                                            "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.")));
-    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(utils::richText(tr("Using a single font is likely to produce a more consistent style but may "
-                                                                        "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
-                                                                        "does not have a needed glyph (a font's individual character/symbol) to represent "
-                                                                        "the grapheme (what is to be represented).  Clearing this checkbox will allow "
-                                                                        "the best alternative glyph from another font to be used to draw that grapheme.")));
-    checkBox_runAllKeyBindings->setToolTip(tr("<p>If <b>not</b> checked Mudlet will only react to the first matching keybinding "
-                                              "(combination of key and modifiers) even if more than one of them is set to be "
-                                              "active. This means that a temporary keybinding (not visible in the Editor) "
-                                              "created by a script or package may be used in preference to a permanent one "
-                                              "that is shown and is set to be active. If checked then all matching keybindings "
-                                              "will be run.</p>"
-                                              "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
-                                              "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>"));
-    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(tr("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
-                                                            "of <i>Ambiguous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
-                                                            "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
-                                                            "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
-                                                            "chose the right width automatically but you can override the setting for each profile.</p>"
-                                                            "<p>This control has three settings:"
-                                                            "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
-                                                            "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
-                                                            "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
-                                                            "encodings of <b>Big5</b>/<b>Big5-HKSCS</b>, <b>GBK</b>, <b>GBK18030</b> or <b>EUC-KR</b> and 'narrow' for all others.</li></ul></p>"
-                                                            "<p><i>This is a temporary arrangement and will probably change when Mudlet gains "
-                                                            "full support for languages other than English.</i></p>"));
-    checkBox_enableTextAnalyzer->setToolTip(tr("<p>Enable a context (right click) menu action on any console/user window that, "
-                                               "when the mouse cursor is hovered over it, will display the UTF-16 and UTF-8 items "
-                                               "that make up each Unicode codepoint on the <b>first</b> line of any selection.</p>"
-                                               "<p>This utility feature is intended to help the user identify any grapheme "
-                                               "(visual equivalent to a <i>character</i>) that a Game server may send even "
-                                               "if it is composed of multiple bytes as any non-ASCII character will be in the "
-                                               "Lua sub-system which uses the UTF-8 encoding system.<p>"));
-    checkBox_showIconsOnMenus->setToolTip(tr("<p>Some Desktop Environments tell Qt applications like Mudlet whether they should "
-                                             "shown icons on menus, others, however do not. This control allows the user to override "
-                                             "the setting, if needed, as follows:"
-                                             "<ul><li><b>Unchecked</b> '<i>off</i>' = Prevent menus from being drawn with icons.</li>"
-                                             "<li><b>Checked</b> '<i>on</i>' = Allow menus to be drawn with icons.</li>"
-                                             "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
-                                             "<p><i>This setting is only processed when individual menus are created and changes may not "
-                                             "propagate everywhere until Mudlet is restarted.</i></p>"));
+    //: Tooltip for map symbol font usage option
+    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(utils::richText(tr("Use only the selected font (may show � for missing symbols) or allow fallback fonts for better coverage.")));
+    //: Tooltip for run all keybindings option
+    checkBox_runAllKeyBindings->setToolTip(tr("<p>Run all matching keybindings instead of just the first one. "
+                                              "Disable for compatibility with pre-3.9.0 scripts.</p>"));
+    //: Tooltip for East Asian ambiguous width character option
+    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(tr("<p>Controls display width for ambiguous East Asian characters. "
+                                                            "Auto-detects correct width for most encodings (default), or choose narrow/wide.</p>"));
+    //: Tooltip for text analyzer option
+    checkBox_enableTextAnalyzer->setToolTip(tr("<p>Enable context menu to analyze UTF-16/UTF-8 encoding of selected text. "
+                                               "Useful for identifying multi-byte characters.</p>"));
+    //: Tooltip for show icons on menus option
+    checkBox_showIconsOnMenus->setToolTip(tr("<p>Control menu icon display: on, off, or auto (system default). "
+                                             "May require restart.</p>"));
     lineEdit_mmcpPort->setPlaceholderText(QString::number(csDefaultMMCPHostPort));
     lineEdit_mmcpChatName->setPlaceholderText(csDefaultMMCPChatName);
     connect(lineEdit_mmcpChatName, &QLineEdit::editingFinished, this, &dlgProfilePreferences::slot_mmcpChatNameChanged);

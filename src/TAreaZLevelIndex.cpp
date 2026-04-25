@@ -1,9 +1,5 @@
-#ifndef MUDLET_GIFUNIT_H
-#define MUDLET_GIFUNIT_H
-
 /***************************************************************************
- *   Copyright (C) 2023 by Adam Robinson - seldon1951@hotmail.com          *
- *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2026 by Mudlet Makers                                   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,32 +17,51 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TAreaZLevelIndex.h"
 
-#include <QMovie>
-#include <QPointer>
-#include <QString>
+const QSet<int> TAreaZLevelIndex::csmEmptySet;
 
-#include <list>
-
-class Host;
-class TLabel;
-
-
-class GifTracker
+void TAreaZLevelIndex::addRoom(int id, int z)
 {
+    mIndex[z].insert(id);
+}
 
-public:
-    GifTracker() = default;
-    explicit GifTracker(Host* pHost);
+void TAreaZLevelIndex::removeRoom(int id, int z)
+{
+    auto it = mIndex.find(z);
+    if (it == mIndex.end()) {
+        return;
+    }
+    it->remove(id);
+    if (it->isEmpty()) {
+        mIndex.erase(it);
+    }
+}
 
-    bool registerGif(QMovie* pT);
-    void unregisterGif(QMovie* pT);
-    std::tuple<QString, int, int> assembleReport();
+void TAreaZLevelIndex::moveRoom(int id, int fromZ, int toZ)
+{
+    if (fromZ == toZ) {
+        return;
+    }
+    removeRoom(id, fromZ);
+    addRoom(id, toZ);
+}
 
+void TAreaZLevelIndex::rebuild(const QHash<int, int>& roomIdToZ)
+{
+    mIndex.clear();
+    QHashIterator<int, int> it(roomIdToZ);
+    while (it.hasNext()) {
+        it.next();
+        mIndex[it.value()].insert(it.key());
+    }
+}
 
-private:
-    QPointer<Host> mpHost;
-    std::list<QMovie*> mMovieList;
-};
-
-#endif // MUDLET_GIFUNIT_H
+const QSet<int>& TAreaZLevelIndex::roomsForZ(int z) const
+{
+    const auto it = mIndex.constFind(z);
+    if (it == mIndex.constEnd()) {
+        return csmEmptySet;
+    }
+    return *it;
+}

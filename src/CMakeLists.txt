@@ -121,6 +121,8 @@ set(mudlet_SRCS
     TAction.cpp
     TAlias.cpp
     TArea.cpp
+    TAreaGridIndex.cpp
+    TAreaZLevelIndex.cpp
     TBuffer.cpp
     TCommandLine.cpp
     TConsole.cpp
@@ -265,6 +267,7 @@ set(mudlet_HDRS
     AliasUnit.h
     AltFocusMenuBarDisable.h
     ctelnet.h
+    CredentialManager.h
     DarkTheme.h
     discord.h
     dlgAboutDialog.h
@@ -341,6 +344,8 @@ set(mudlet_HDRS
     TAction.h
     TAlias.h
     TArea.h
+    TAreaGridIndex.h
+    TAreaZLevelIndex.h
     TAstar.h
     TBuffer.h
     TCommandLine.h

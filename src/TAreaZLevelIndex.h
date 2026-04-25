@@ -1,9 +1,8 @@
-#ifndef MUDLET_GIFUNIT_H
-#define MUDLET_GIFUNIT_H
+#ifndef MUDLET_TAREA_ZLEVEL_INDEX_H
+#define MUDLET_TAREA_ZLEVEL_INDEX_H
 
 /***************************************************************************
- *   Copyright (C) 2023 by Adam Robinson - seldon1951@hotmail.com          *
- *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2026 by Mudlet Makers                                   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,32 +20,33 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QHash>
+#include <QSet>
 
-#include <QMovie>
-#include <QPointer>
-#include <QString>
-
-#include <list>
-
-class Host;
-class TLabel;
-
-
-class GifTracker
+/*
+ * Maintains an incrementally-updated reverse index of room IDs by Z level.
+ * Allows roomsForZ() to return only the rooms on a given level without
+ * scanning the full area room set.
+ */
+class TAreaZLevelIndex
 {
-
 public:
-    GifTracker() = default;
-    explicit GifTracker(Host* pHost);
+    void addRoom(int id, int z);
+    void removeRoom(int id, int z);
+    void moveRoom(int id, int fromZ, int toZ);
 
-    bool registerGif(QMovie* pT);
-    void unregisterGif(QMovie* pT);
-    std::tuple<QString, int, int> assembleReport();
+    // Replaces the entire index from a roomId → Z mapping.
+    void rebuild(const QHash<int, int>& roomIdToZ);
 
+    // Returns all room IDs on the given Z level, or a stable empty set.
+    const QSet<int>& roomsForZ(int z) const;
+
+    bool isEmpty() const { return mIndex.isEmpty(); }
+    void clear() { mIndex.clear(); }
 
 private:
-    QPointer<Host> mpHost;
-    std::list<QMovie*> mMovieList;
+    QHash<int, QSet<int>> mIndex;
+    static const QSet<int> csmEmptySet;
 };
 
-#endif // MUDLET_GIFUNIT_H
+#endif // MUDLET_TAREA_ZLEVEL_INDEX_H

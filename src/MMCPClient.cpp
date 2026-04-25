@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2024 by John McKisson - john.mckisson@gmail.com         *
- *   Copyright (C) 2024 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2024, 2026 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -111,7 +111,10 @@ void MMCPClient::slot_connected()
     mPeerAddress = convertToIPv4(mTcpSocket.peerAddress());
     mPeerPort = mTcpSocket.peerPort();
 
-    QString str = qsl("CHAT:%1\n%2%3").arg(mpMMCPServer->getChatName()).arg(mPeerAddress).arg(mPeerPort, -5);
+    QString str = qsl("CHAT:%1\n%2%3")
+                          .arg(mpMMCPServer->getChatName(),
+                               mPeerAddress)
+                          .arg(mPeerPort, -5);
 
     mTcpSocket.write(str.toLatin1());
 
@@ -444,9 +447,7 @@ void MMCPClient::slot_displayError(QAbstractSocket::SocketError socketError)
 void MMCPClient::sendMessage(const QString& msg)
 {
     writeData(qsl("%1%2%3")
-                      .arg(static_cast<char>(Message))
-                      .arg(msg)
-                      .arg(static_cast<char>(End)));
+                      .arg(static_cast<char>(Message), msg, static_cast<char>(End)));
 }
 
 
@@ -500,9 +501,7 @@ void MMCPClient::sendRequestConnections()
 void MMCPClient::sendVersion()
 {
     writeData(qsl("%1%2%4")
-                      .arg(static_cast<char>(Version))
-                      .arg(mudlet::self()->scmVersion)
-                      .arg(static_cast<char>(End)));
+                      .arg(static_cast<char>(Version), mudlet::self()->scmVersion, static_cast<char>(End)));
 }
 
 /**
@@ -763,14 +762,14 @@ void MMCPClient::handleIncomingChatGroup(const QString& msg)
 
     using namespace AnsiColors;
 
-    //: Incoming group message
+    //: Incoming group message, %1, %2 and %4 are ANSI Escape codes
     const QString groupMsg = tr("%1%2%3%4(%5)%1%2%6%1")
-                                     .arg(RST)
-                                     .arg(FBLDRED)
-                                     .arg(mpHost->getMMCPChatPrefix())
-                                     .arg(FBLDCYN)
-                                     .arg(groupStr)
-                                     .arg(trimmedMsg);
+                                     .arg(RST,
+                                          FBLDRED,
+                                          mpHost->getMMCPChatPrefix(),
+                                          FBLDCYN,
+                                          groupStr,
+                                          trimmedMsg);
 
     mpMMCPServer->clientMessage(this, groupMsg);
 }
@@ -780,7 +779,7 @@ void MMCPClient::handleIncomingChatGroup(const QString& msg)
  */
 void MMCPClient::handleIncomingNameChange(const QString& newName)
 {
-    const QString infoMsg = tr("[ CHAT ]  - %1 is now known as %2.").arg(mPeerName).arg(newName);
+    const QString infoMsg = tr("[ CHAT ]  - %1 is now known as %2.").arg(mPeerName, newName);
     mpHost->postMessage(infoMsg);
     mPeerName = newName;
 }
@@ -857,9 +856,7 @@ void MMCPClient::handleIncomingPeekList(const QString& list)
 void MMCPClient::handleIncomingPingRequest(const QString& msg)
 {
     writeData(qsl("%1%2%3")
-                      .arg(static_cast<char>(PingResponse))
-                      .arg(msg)
-                      .arg(static_cast<char>(End)));
+                      .arg(static_cast<char>(PingResponse), msg, static_cast<char>(End)));
 }
 
 /**
@@ -874,7 +871,7 @@ void MMCPClient::handleIncomingPingResponse(const QString& data)
         const QString infoMsg = tr("[ CHAT ]  - Ping returned from %1: %2 ms").arg(mPeerName).arg(QDateTime::currentMSecsSinceEpoch() - returnTime);
         mpHost->postMessage(infoMsg);
     } else {
-        const QString infoMsg = tr("[ CHAT ]  - Bad Ping response from %1: %2").arg(mPeerName).arg(data);
+        const QString infoMsg = tr("[ CHAT ]  - Bad Ping response from %1: %2").arg(mPeerName, data);
         mpHost->postMessage(infoMsg);
     }
 }

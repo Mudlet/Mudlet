@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
+ *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -181,8 +182,8 @@ bool CredentialManager::isPortableModeActive() const
     QString execDir;
     QProcessEnvironment systemEnvironment = QProcessEnvironment::systemEnvironment();
 
-    if (systemEnvironment.contains("APPIMAGE")) {
-        QString appimgPath = systemEnvironment.value("APPIMAGE", QString());
+    if (systemEnvironment.contains(qsl("APPIMAGE"))) {
+        QString appimgPath = systemEnvironment.value(qsl("APPIMAGE"), QString());
         execDir = QFileInfo(appimgPath).dir().path();
     } else {
         execDir = QCoreApplication::applicationDirPath();
@@ -286,7 +287,7 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
                 if (oldSuccess && !oldPassword.isEmpty()) {
                     attemptCollidingMigration(profileName, key, legacyService, oldPassword, callback);
                 } else {
-                    if (key == "password" || key == "character") {
+                    if (!key.compare(qsl("password")) || !key.compare(qsl("character"))) {
                         attemptLegacyKeychainMigration(profileName, key, callback);
                     } else {
                         fallbackFileRetrieval(profileName, key, callback);
@@ -456,7 +457,7 @@ void CredentialManager::attemptOldFormatMigration(const QString& service, const 
             qDebug() << "CredentialManager: Old format not found, trying other fallbacks";
             // Continue with existing legacy format checks
             // The legacy "Mudlet profile" keychain format was only used for character and password keys
-            if (account == "character" || account == "password") {
+            if (!account.compare(qsl("character")) || !account.compare(qsl("password"))) {
                 attemptLegacyKeychainMigration(profileName, account, callback);
             } else {
                 fallbackFileRetrieval(profileName, account, callback);
@@ -699,19 +700,19 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                     QString errorContext;
                     switch (readJob->error()) {
                     case QKeychain::EntryNotFound:
-                        errorContext = "No password stored in keychain";
+                        errorContext = qsl("No password stored in keychain");
                         break;
                     case QKeychain::AccessDeniedByUser:
-                        errorContext = "User denied keychain access";
+                        errorContext = qsl("User denied keychain access");
                         break;
                     case QKeychain::AccessDenied:
-                        errorContext = "Keychain access denied by system";
+                        errorContext = qsl("Keychain access denied by system");
                         break;
                     case QKeychain::NoBackendAvailable:
-                        errorContext = "No keychain service available";
+                        errorContext = qsl("No keychain service available");
                         break;
                     case QKeychain::NotImplemented:
-                        errorContext = "Keychain not supported on this platform";
+                        errorContext = qsl("Keychain not supported on this platform");
                         break;
                     default:
                         errorContext = qsl("Keychain error: %1").arg(readJob->errorString());
@@ -834,14 +835,14 @@ void CredentialManager::isKeychainAvailable(AvailabilityCallback callback)
 
     // Check if we're in test environment
     if (SecureStringUtils::isTestEnvironment()) {
-        callback(false, "Keychain disabled in test environment");
+        callback(false, qsl("Keychain disabled in test environment"));
         return;
     }
 
     // Safety check: Don't start new operations during shutdown
     if (QCoreApplication::closingDown()) {
         qWarning() << "CredentialManager: Rejecting isKeychainAvailable operation during shutdown";
-        callback(false, "Application is shutting down");
+        callback(false, qsl("Application is shutting down"));
         return;
     }
 
@@ -849,8 +850,8 @@ void CredentialManager::isKeychainAvailable(AvailabilityCallback callback)
     cleanupCurrentOperation();
 
     // Test keychain availability by trying to read a non-existent key
-    auto* testJob = new QKeychain::ReadPasswordJob("MudletKeychainTest", this);
-    testJob->setKey("availability_test");
+    auto* testJob = new QKeychain::ReadPasswordJob(qsl("MudletKeychainTest"), this);
+    testJob->setKey(qsl("availability_test"));
     testJob->setAutoDelete(false);
 
     mCurrentJob = testJob;
@@ -875,7 +876,7 @@ void CredentialManager::isKeychainAvailable(AvailabilityCallback callback)
                 cleanupTimeout();
 
                 bool available = true;
-                QString message = "Keychain is available";
+                QString message = qsl("Keychain is available");
 
                 // Check for specific errors that indicate keychain is not available
                 if (testJob->error() == QKeychain::AccessDenied || testJob->error() == QKeychain::OtherError) {
@@ -1093,16 +1094,19 @@ bool CredentialManager::removeCredentialFromFile(const QString& profileName, con
 
 QString CredentialManager::generateServiceName(const QString& profileName, const QString& key)
 {
+    // Regular Expression to detect unwanted characters:
+    static const auto sanitizeCharacterPattern = QRegularExpression(qsl(R"REGEX([^\w\-\.])REGEX"));
+
     // Use SHA-256 hash to generate unique service names that won't collide
     // even when profile names differ only in special characters
-    QByteArray data = (profileName + qsl(":") + key).toUtf8();
+    QByteArray data = qsl("%1:%2").arg(profileName, key).toUtf8();
     QByteArray hash = QCryptographicHash::hash(data, QCryptographicHash::Sha256);
     QString hashHex = QString::fromLatin1(hash.toHex()).left(16);
 
     // Include a readable prefix with sanitized profile name and key for easier keychain debugging
     auto sanitizeForDisplay = [](const QString& input) -> QString {
         QString sanitized = input;
-        sanitized.replace(QRegularExpression(R"([^\w\-\.])"), "_");
+        sanitized.replace(sanitizeCharacterPattern, qsl("_"));
         if (sanitized.length() > 20) {
             sanitized = sanitized.left(20);
         }
@@ -1116,11 +1120,14 @@ QString CredentialManager::generateServiceName(const QString& profileName, const
 
 QString CredentialManager::generateLegacyServiceName(const QString& profileName, const QString& key)
 {
+    // Regular Expression to detect unwanted characters:
+    static const auto sanitizeCharacterPattern = QRegularExpression(qsl(R"REGEX([^\w\-\.])REGEX"));
+
     // Original service name generation that caused collisions
     // Kept for backwards compatibility to migrate existing passwords
     auto sanitizeForService = [](const QString& input) -> QString {
         QString sanitized = input;
-        sanitized.replace(QRegularExpression(R"([^\w\-\.])"), "_");
+        sanitized.replace(sanitizeCharacterPattern, qsl("_"));
         if (sanitized.length() > 50) {
             sanitized = sanitized.left(50);
         }
@@ -1142,7 +1149,7 @@ QString CredentialManager::generateFilePath(const QString& profileName, const QS
     }
 
     // Check for invalid characters that could cause path traversal or filesystem issues
-    QRegularExpression pathTraversalPattern(R"(\.\.|[<>:"|?*\x00-\x1f])");
+    static const QRegularExpression pathTraversalPattern(qsl(R"REGEX(\.\.|[<>:"|?*\x00-\x1f])REGEX"));
 
     if (profileName.contains(pathTraversalPattern) || key.contains(pathTraversalPattern)) {
         auto match = pathTraversalPattern.match(profileName);
@@ -1151,7 +1158,7 @@ QString CredentialManager::generateFilePath(const QString& profileName, const QS
             match = pathTraversalPattern.match(key);
         }
 
-        QString invalidChar = match.hasMatch() ? match.captured(0) : "unknown";
+        QString invalidChar = match.hasMatch() ? match.captured(0) : qsl("unknown");
         qWarning() << "CredentialManager: Invalid characters detected in path components:" << invalidChar;
         return QString();
     }
@@ -1172,7 +1179,7 @@ bool CredentialManager::isValidKeyName(const QString& key)
     }
 
     // Disallow dangerous characters and patterns
-    QRegularExpression dangerousPattern(R"(\.\.|[<>:"|?*\x00-\x1f/\\])");
+    static const QRegularExpression dangerousPattern(qsl(R"REGEX(\.\.|[<>:"|?*\x00-\x1f/\\])REGEX"));
     return !key.contains(dangerousPattern);
 }
 
@@ -1187,7 +1194,7 @@ void CredentialManager::checkLegacyKeychainFormat(const QString& profileName, st
     }
 
     // Legacy format used service="Mudlet profile" and key=profileName
-    const QString legacyService = "Mudlet profile";
+    const QString legacyService = qsl("Mudlet profile");
 
     auto* readJob = new QKeychain::ReadPasswordJob(legacyService, this);
     readJob->setKey(profileName);
@@ -1217,7 +1224,7 @@ void CredentialManager::deleteLegacyKeychainEntry(const QString& profileName)
     }
 
     // Legacy format used service="Mudlet profile" and key=profileName
-    const QString legacyService = "Mudlet profile";
+    const QString legacyService = qsl("Mudlet profile");
 
     auto* deleteJob = new QKeychain::DeletePasswordJob(legacyService, this);
     deleteJob->setKey(profileName);

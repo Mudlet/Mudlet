@@ -231,13 +231,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         //: Name of a selectable option for the Button intro
         {qsl("button1"), tr("How to add a new button now"),
         //: Help contents of a selectable option for the Button intro
-            tr("<ol><li>Add a new group to define a new <strong>button bar</strong> in case you don't have any.</li>"
-               "<li>Add new groups as <strong>menus</strong> to a button bar or sub-menus to menus.<li>"
-               "<li>Add new items as <strong>buttons</strong> to a button bar or menu or sub-menu.</li>"
-               "<li>Define a clear text <strong>command</strong> that you want to send to the game if the button is pressed, or write a script for more complicated needs.</li>"
-               "<li><strong>Activate</strong> the toolbar, menu or button. </li></ol>"
-               "<p><strong>Note:</strong> Deactivated items will be hidden and if they are toolbars or menus then all the items they contain will be also be hidden.</p>"
-               "<p><strong>Note:</strong> If a button is made a <strong>click-down</strong> button then you may also define a clear text command that you want to send to the game when the button is pressed a second time to uncheck it or to write a script to run when it happens - within such a script the Lua 'getButtonState()' function reports whether the button is up or down.</p>")},
+            tr("<ol><li>Add a new group to create a <strong>button bar</strong>.</li>"
+               "<li>Add groups as <strong>menus</strong> or sub-menus.</li>"
+               "<li>Add items as <strong>buttons</strong> to a bar or menu.</li>"
+               "<li>Define a <strong>command</strong> or script to execute when pressed.</li>"
+               "<li><strong>Activate</strong> the item. </li></ol>"
+               "<p><strong>Note:</strong> Deactivated items are hidden, including all items they contain.</p>"
+               "<p><strong>Click-down buttons:</strong> Can define separate commands for press/release. Use getButtonState() to check state.</p>")},
 //        {qsl("button2"), tr("How to add a new button from the input line"),
 //            tr("")},
         {qsl("button3"), tr("Where to find more information"),
@@ -965,8 +965,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                       "also cause them to be saved and reloaded into other profiles if they too are "
                                       "active.</p>")
                                            .arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_S).toString(QKeySequence::NativeText)));
-    mProfileSaveAction->setStatusTip(
-            tr(R"(Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also "synchronizes" modules that are so marked.)"));
+    //: Status tip for saving profile
+    mProfileSaveAction->setStatusTip(tr("Save profile (triggers, aliases, scripts, timers, buttons, keys - not the map) and synchronize modules."));
 
     mProfileSaveAsAction = new QAction(QIcon(qsl(":/icons/utilities-file-archiver.png")), tr("Save Profile As"), this);
 
@@ -9703,7 +9703,8 @@ void dlgTriggerEditor::changeView(EditorViewType view)
         mDeleteItem->setText(tr("Delete Trigger"));
         mDeleteItem->setStatusTip(tr("Delete the selected trigger"));
         mSaveItem->setText(tr("Save Trigger"));
-        mSaveItem->setStatusTip(tr("Saves the selected trigger, causing new changes to take effect - does not save to disk though..."));
+        //: Status tip for saving trigger changes
+        mSaveItem->setStatusTip(tr("Apply trigger changes (does not save to disk)."));
         break;
     case EditorViewType::cmTimerView:
         mAddItem->setText(tr("Add Timer"));
@@ -9713,7 +9714,8 @@ void dlgTriggerEditor::changeView(EditorViewType view)
         mDeleteItem->setText(tr("Delete Timer"));
         mDeleteItem->setStatusTip(tr("Delete the selected timer"));
         mSaveItem->setText(tr("Save Timer"));
-        mSaveItem->setStatusTip(tr("Saves the selected timer, causing new changes to take effect - does not save to disk though..."));
+        //: Status tip for saving timer changes
+        mSaveItem->setStatusTip(tr("Apply timer changes (does not save to disk)."));
         break;
     case EditorViewType::cmAliasView:
         mAddItem->setText(tr("Add Alias"));
@@ -9723,7 +9725,8 @@ void dlgTriggerEditor::changeView(EditorViewType view)
         mDeleteItem->setText(tr("Delete Alias"));
         mDeleteItem->setStatusTip(tr("Delete the selected alias"));
         mSaveItem->setText(tr("Save Alias"));
-        mSaveItem->setStatusTip(tr("Saves the selected alias, causing new changes to take effect - does not save to disk though..."));
+        //: Status tip for saving alias changes
+        mSaveItem->setStatusTip(tr("Apply alias changes (does not save to disk)."));
         break;
     case EditorViewType::cmScriptView:
         mAddItem->setText(tr("Add Script"));
@@ -9733,7 +9736,8 @@ void dlgTriggerEditor::changeView(EditorViewType view)
         mDeleteItem->setText(tr("Delete Script"));
         mDeleteItem->setStatusTip(tr("Delete the selected script"));
         mSaveItem->setText(tr("Save Script"));
-        mSaveItem->setStatusTip(tr("Saves the selected script, causing new changes to take effect - does not save to disk though..."));
+        //: Status tip for saving script changes
+        mSaveItem->setStatusTip(tr("Apply script changes (does not save to disk)."));
         break;
     case EditorViewType::cmActionView:
         mAddItem->setText(tr("Add Button"));
@@ -9743,7 +9747,8 @@ void dlgTriggerEditor::changeView(EditorViewType view)
         mDeleteItem->setText(tr("Delete Button"));
         mDeleteItem->setStatusTip(tr("Delete the selected button"));
         mSaveItem->setText(tr("Save Button"));
-        mSaveItem->setStatusTip(tr("Saves the selected button, causing new changes to take effect - does not save to disk though..."));
+        //: Status tip for saving button changes
+        mSaveItem->setStatusTip(tr("Apply button changes (does not save to disk)."));
         break;
     case EditorViewType::cmKeysView:
         mAddItem->setText(tr("Add Key"));
@@ -9753,7 +9758,8 @@ void dlgTriggerEditor::changeView(EditorViewType view)
         mDeleteItem->setText(tr("Delete Key"));
         mDeleteItem->setStatusTip(tr("Delete the selected key"));
         mSaveItem->setText(tr("Save Key"));
-        mSaveItem->setStatusTip(tr("Saves the selected key, causing new changes to take effect - does not save to disk though..."));
+        //: Status tip for saving key changes
+        mSaveItem->setStatusTip(tr("Apply key changes (does not save to disk)."));
         break;
     case EditorViewType::cmVarsView:
         mAddItem->setText(tr("Add Variable"));
@@ -9763,7 +9769,8 @@ void dlgTriggerEditor::changeView(EditorViewType view)
         mDeleteItem->setText(tr("Delete Variable"));
         mDeleteItem->setStatusTip(tr("Delete the selected variable"));
         mSaveItem->setText(tr("Save Variable"));
-        mSaveItem->setStatusTip(tr("Saves the selected variable, causing new changes to take effect - does not save to disk though..."));
+        //: Status tip for saving variable changes
+        mSaveItem->setStatusTip(tr("Apply variable changes (does not save to disk)."));
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::changeView() undefined view";
