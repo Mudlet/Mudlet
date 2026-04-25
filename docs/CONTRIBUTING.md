@@ -43,7 +43,7 @@ Where:
 * `AGENT_NAME` is the name of the AI tool or framework
 * `MODEL_VERSION` is the specific model version used
 
-Basic development tools (git, gcc, make, editors) should not be listed.
+Basic development tools (git, cmake, make, editors) should not be listed.
 
 Example:
 
