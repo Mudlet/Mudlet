@@ -42,6 +42,20 @@ signals:
     void profileChanged(const QString& name);
 ```
 
+### QFlags and enums
+
+When working with Qt `Q_DECLARE_FLAGS` types, always use the proper enum/flags type - never pass them as raw `int`:
+
+```cpp
+// Good - uses the typed enum
+void setServerOrigin(Host*, const Host::DiscordOptionFlag);
+QMap<Host*, Host::DiscordOptionFlags> mServerOriginFlags;
+
+// Bad - loses type safety
+void setServerOrigin(Host*, int flag);
+QMap<Host*, int> mServerOriginFlags;
+```
+
 ### String handling
 
 ```cpp
@@ -168,7 +182,7 @@ On macOS, use the Homebrew-installed LLVM version to ensure compatibility:
 $(brew --prefix llvm)/bin/clang-format -i path/to/edited/file.cpp path/to/edited/file.h
 ```
 
-The project uses the `.clang-format` configuration in `src/`. This ensures consistent code style across the codebase.
+The project uses the `.clang-format` configuration in the repo root. This ensures consistent code style across the codebase.
 
 ### Static analysis
 

@@ -57,7 +57,6 @@ TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 TArea::~TArea()
 {
     if (!mpRoomDB) {
-        qDebug() << "ERROR: In TArea::~TArea(), instance has no mpRoomDB";
         return;
     }
     if (!mpRoomDB->mBulkDeletionMode) {
@@ -362,6 +361,8 @@ void TArea::addRoom(int id)
     if (pR) {
         if (!rooms.contains(id)) {
             rooms.insert(id);
+            mZLevelIndex.addRoom(id, pR->z());
+            mGridIndex.addRoom(id, pR->z(), pR->x(), pR->y());
         } else {
             qDebug() << "TArea::addRoom(" << id << ") No creation! room already exists";
         }
@@ -379,6 +380,13 @@ void TArea::calcSpan()
     ymaxForZ.clear();
     zLevels.clear();
 
+    // Collect the room-to-Z mapping in a single pass so mZLevelIndex can be
+    // rebuilt without a second iteration. Also collect the full z/x/y data
+    // so the grid index can be rebuilt at the same time.
+    QHash<int, int> roomIdToZ;
+    roomIdToZ.reserve(rooms.size());
+    QHash<int, QHash<int, QPair<int, int>>> zToRoomXY;
+
     bool isFirstDone = false;
     QSetIterator<int> itRoom(rooms);
     while (itRoom.hasNext()) {
@@ -387,6 +395,9 @@ void TArea::calcSpan()
         if (!pR) {
             continue;
         }
+
+        roomIdToZ.insert(id, pR->z());
+        zToRoomXY[pR->z()].insert(id, {pR->x(), pR->y()});
 
         if (!isFirstDone) {
             // Only do this initialization for the first valid room
@@ -465,6 +476,10 @@ void TArea::calcSpan()
         // The {x|y}{min|max}ForZ are, by definition!
         std::sort(zLevels.begin(), zLevels.end());
     }
+
+    // Rebuild the Z-level room index from the authoritative room set.
+    mZLevelIndex.rebuild(roomIdToZ);
+    mGridIndex.rebuild(zToRoomXY);
 }
 
 // Added a second argument to cut-out extremes recalculation if not required
@@ -481,11 +496,20 @@ void TArea::removeRoom(int room, bool deferAreaRecalculations)
 
     // Will use to flag whether some things have to be recalculated.
     bool isOnExtreme = false;
-    if (rooms.contains(room) && !deferAreaRecalculations) {
-        // just a check, if the area DOESN'T have the room then it is not wise
-        // to behave as if it did
-        TRoom* pR = mpRoomDB->getRoom(room);
-        if (pR) {
+    TRoom* pR = mpRoomDB->getRoom(room);
+    if (pR) {
+        // Always keep the Z-level index consistent regardless of whether area
+        // recalculations are deferred.  The incremental removal is O(1) and
+        // ensures getRoomsForZ() returns correct results until calcSpan() next
+        // runs (which rebuilds the index authoritatively).
+        if (rooms.contains(room)) {
+            mZLevelIndex.removeRoom(room, pR->z());
+            mGridIndex.removeRoom(room, pR->z(), pR->x(), pR->y());
+        }
+
+        if (rooms.contains(room) && !deferAreaRecalculations) {
+            // just a check, if the area DOESN'T have the room then it is not wise
+            // to behave as if it did
             // Now see if the room is on an extreme - if it the only room on a
             // particular z-coordinate it will be on all four
             if (xminForZ.contains(pR->z()) && xminForZ.value(pR->z()) >= pR->x()) {

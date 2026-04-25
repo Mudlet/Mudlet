@@ -400,7 +400,7 @@ QString TAction::packageName(TAction* pAction) const
     }
 
     if (!pAction->mPackageName.isEmpty()) {
-        return !mpHost->mModuleInfo.contains(pAction->mPackageName) ? pAction->mPackageName : QString();
+        return !mpHost->mInstalledModules.contains(pAction->mPackageName) ? pAction->mPackageName : QString();
     }
 
     if (pAction->getParent()) {
@@ -417,7 +417,7 @@ QString TAction::moduleName(TAction* pAction) const
     }
 
     if (!pAction->mPackageName.isEmpty()) {
-        return mpHost->mModuleInfo.contains(pAction->mPackageName) ? pAction->mPackageName : QString();
+        return mpHost->mInstalledModules.contains(pAction->mPackageName) ? pAction->mPackageName : QString();
     }
 
     if (pAction->getParent()) {

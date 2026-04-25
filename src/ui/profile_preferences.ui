@@ -264,35 +264,30 @@
             </item>
            </widget>
           </item>
-          <item row="1" column="0" colspan="2">
-           <widget class="QLabel" name="label_darkEditorPrompt">
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>Set dark theme in &lt;a href=&quot;dark-code-editor&quot;&gt;code editor&lt;/a&gt; as well?</string>
-            </property>
-            <property name="textFormat">
-             <enum>Qt::TextFormat::RichText</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
+          <item row="1" column="0">
            <widget class="QCheckBox" name="mFORCE_SAVE_ON_EXIT">
             <property name="text">
              <string>Auto save on exit</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="1" column="1">
            <widget class="QCheckBox" name="mAlertOnNewData">
             <property name="toolTip">
              <string>&lt;p&gt;Show a toolbar notification if Mudlet is minimized and new data arrives.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Notify on new data</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QCheckBox" name="telnetHandlerEnabled">
+            <property name="text">
+             <string>Mudlet handles telnet:// and telnets:// links</string>
+            </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;If checked, Mudlet will be registered as the default handler for telnet:// and telnets:// (secure) links in your system.&lt;/p&gt;</string>
             </property>
            </widget>
           </item>
@@ -1461,7 +1456,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </widget>
           </item>
-          <item row="3" column="0">
+          <item row="3" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_showTabConnectionIndicators">
             <property name="toolTip">
              <string>Display whenever a tab is connected or a disconnected</string>
@@ -2458,7 +2453,7 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>Map view</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout">
+         <layout class="QGridLayout" name="gridLayout_groupBox_mapViewOptions">
           <item row="7" column="0">
            <spacer name="roomSizeTopMarginSpacer">
             <property name="orientation">
@@ -2702,7 +2697,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <string>Inner diameter: </string>
                </property>
                <property name="maximum">
-                <number>83</number>
+                <number>96</number>
                </property>
                <property name="value">
                 <number>70</number>
@@ -2794,6 +2789,44 @@ you can use it but there could be issues with aligning columns of text</string>
               </widget>
              </item>
              <item row="0" column="4">
+              <widget class="QLabel" name="label_borderSize">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Border size:</string>
+               </property>
+               <property name="buddy">
+                <cstring>spinBox_borderSize</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="5">
+              <widget class="QSpinBox" name="spinBox_borderSize">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+               <property name="minimum">
+                <number>1</number>
+               </property>
+               <property name="maximum">
+                <number>11</number>
+               </property>
+               <property name="value">
+                <number>5</number>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="6">
               <widget class="QLabel" name="label_gridSize">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
@@ -2821,17 +2854,17 @@ you can use it but there could be issues with aligning columns of text</string>
                 <set>Qt::AlignmentFlag::AlignCenter</set>
                </property>
                <property name="minimum">
-                <number>2</number>
+                <number>1</number>
                </property>
                <property name="maximum">
-                <number>20</number>
+                <number>11</number>
                </property>
                <property name="value">
-                <number>7</number>
+                <number>5</number>
                </property>
               </widget>
              </item>
-             <item row="0" column="5">
+             <item row="0" column="7">
               <widget class="QDoubleSpinBox" name="doubleSpinBox_gridSize">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
@@ -3411,161 +3444,380 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <widget class="QGroupBox" name="groupBox_discordPrivacy">
          <property name="title">
-          <string>Discord privacy</string>
+          <string>Discord Rich Presence</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_discordPrivacy" columnstretch="2,1,1,1">
-          <item row="0" column="0" colspan="2">
-           <widget class="QComboBox" name="comboBox_discordLargeIconPrivacy">
-            <item>
-             <property name="text">
-              <string>Don't hide large icon or tooltip</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Hide large icon tooltip</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Hide large icon and tooltip</string>
-             </property>
-            </item>
+         <layout class="QGridLayout" name="gridLayout_groupBox_discordRichPresence">
+          <item row="0" column="0">
+           <widget class="QRadioButton" name="radioButton_discordGameDetails">
+            <property name="text">
+             <string>Show full game details (if supported)</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">buttonGroup_discordMode</string>
+            </attribute>
            </widget>
           </item>
-          <item row="0" column="2" colspan="2">
-           <widget class="QCheckBox" name="checkBox_discordServerAccessToDetail">
+          <item row="1" column="0">
+           <widget class="QRadioButton" name="radioButton_discordMudletOnly">
             <property name="text">
-             <string>Hide detail</string>
+             <string>Show Mudlet only</string>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">buttonGroup_discordMode</string>
+            </attribute>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QRadioButton" name="radioButton_discordDisabled">
+            <property name="text">
+             <string>Disabled</string>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">buttonGroup_discordMode</string>
+            </attribute>
+           </widget>
+          </item>
+          <item row="0" column="1" rowspan="3">
+           <widget class="QFrame" name="frame_discordDivider">
+            <property name="frameShape">
+             <enum>QFrame::Shape::VLine</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Shadow::Sunken</enum>
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="2">
-           <widget class="QComboBox" name="comboBox_discordSmallIconPrivacy">
+          <item row="0" column="2">
+           <layout class="QHBoxLayout">
             <item>
-             <property name="text">
-              <string>Don't hide small icon or tooltip</string>
-             </property>
+             <widget class="QLabel" name="label_discordUserName">
+              <property name="text">
+               <string>Restrict to:</string>
+              </property>
+              <property name="buddy">
+               <cstring>lineEdit_discordUserName</cstring>
+              </property>
+             </widget>
             </item>
             <item>
-             <property name="text">
-              <string>Hide small icon tooltip</string>
-             </property>
+             <widget class="QLineEdit" name="lineEdit_discordUserName">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>120</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>120</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to. Discord usernames are always lowercase.&lt;/p&gt;</string>
+              </property>
+              <property name="placeholderText">
+               <string>Discord username</string>
+              </property>
+              <property name="clearButtonEnabled">
+               <bool>true</bool>
+              </property>
+             </widget>
             </item>
             <item>
-             <property name="text">
-              <string>Hide small icon and tooltip</string>
-             </property>
+             <widget class="QLabel" name="label_discordCurrentUser">
+              <property name="text">
+               <string notr="true"/>
+              </property>
+             </widget>
             </item>
-           </widget>
+            <item>
+             <spacer>
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
           </item>
-          <item row="1" column="2" colspan="2">
-           <widget class="QCheckBox" name="checkBox_discordServerAccessToState">
-            <property name="text">
-             <string>Hide state</string>
-            </property>
-           </widget>
+          <item row="1" column="2" rowspan="2">
+           <layout class="QGridLayout" name="gridLayout_discordPrivacyControls">
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_discordLargeIcon">
+              <property name="text">
+               <string>Large icon:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QComboBox" name="comboBox_discordLargeIconPrivacy">
+              <property name="sizeAdjustPolicy">
+               <enum>QComboBox::SizeAdjustPolicy::AdjustToContentsOnFirstShow</enum>
+              </property>
+              <property name="minimumContentsLength">
+               <number>18</number>
+              </property>
+              <item>
+               <property name="text">
+                <string>Show all</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Hide tooltip</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Hide tooltip and icon</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="0" column="2">
+             <widget class="QCheckBox" name="checkBox_discordServerAccessToDetail">
+              <property name="text">
+               <string>Hide details text</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="3">
+             <widget class="QCheckBox" name="checkBox_discordServerAccessToState">
+              <property name="text">
+               <string>Hide state text</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="4">
+             <spacer>
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_discordSmallIcon">
+              <property name="text">
+               <string>Small icon:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QComboBox" name="comboBox_discordSmallIconPrivacy">
+              <property name="sizeAdjustPolicy">
+               <enum>QComboBox::SizeAdjustPolicy::AdjustToContentsOnFirstShow</enum>
+              </property>
+              <property name="minimumContentsLength">
+               <number>18</number>
+              </property>
+              <item>
+               <property name="text">
+                <string>Show all</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Hide tooltip</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Hide tooltip and icon</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QCheckBox" name="checkBox_discordServerAccessToPartyInfo">
+              <property name="text">
+               <string>Hide party info</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="3">
+             <widget class="QCheckBox" name="checkBox_discordServerAccessToTimerInfo">
+              <property name="text">
+               <string>Hide server login time (Discord shows activity timer when hidden)</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
-          <item row="2" column="0" colspan="2">
-           <widget class="QCheckBox" name="checkBox_discordServerAccessToPartyInfo">
-            <property name="text">
-             <string>Hide party details</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="2" colspan="2">
-           <widget class="QCheckBox" name="checkBox_discordServerAccessToTimerInfo">
-            <property name="text">
-             <string>Hide timer</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0" colspan="3">
-           <widget class="QCheckBox" name="checkBox_discordLuaAPI">
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_MMCPOptions">
+         <property name="title">
+          <string>MudMaster Chat options</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_groupBox_MMCPOptions">
+          <item row="3" column="6">
+           <widget class="QCheckBox" name="checkBox_mmcpSnoopInMainConsole">
             <property name="toolTip">
-             <string>&lt;p&gt;Allow Lua to set Discord status.&lt;/p&gt;</string>
+             <string>&lt;p&gt;Show Snoop data in main console window.&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Enable Lua API</string>
+             <string>Show snoop data in main console</string>
             </property>
             <property name="checked">
              <bool>true</bool>
             </property>
            </widget>
           </item>
-          <item row="4" column="0" colspan="4">
-           <widget class="QWidget" name="widget_discordUser" native="true">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
+          <item row="0" column="2">
+           <widget class="QLineEdit" name="lineEdit_mmcpChatName">
             <property name="toolTip">
-             <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
+             <string>Chat name as seen by connected chat clients.</string>
             </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_widget_discordUser">
-             <item>
-              <widget class="QLabel" name="label_discordUserName">
-               <property name="text">
-                <string>Restrict to:</string>
-               </property>
-               <property name="buddy">
-                <cstring>lineEdit_discordUserName</cstring>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="lineEdit_discordUserName">
-               <property name="toolTip">
-                <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-               </property>
-               <property name="placeholderText">
-                <string>specific Discord username</string>
-               </property>
-               <property name="clearButtonEnabled">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLabel" name="label_discordUserDiscriminator">
-               <property name="toolTip">
-                <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
-               </property>
-               <property name="text">
-                <string notr="true"> # </string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="lineEdit_discordUserDiscriminator">
-               <property name="maximumSize">
-                <size>
-                 <width>75</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="toolTip">
-                <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
-               </property>
-               <property name="inputMethodHints">
-                <set>Qt::InputMethodHint::ImhDigitsOnly</set>
-               </property>
-               <property name="inputMask">
-                <string notr="true">9999;#</string>
-               </property>
-               <property name="maxLength">
-                <number>4</number>
-               </property>
-               <property name="clearButtonEnabled">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
+            <property name="placeholderText">
+             <string>MMCPUser123</string>
+            </property>
            </widget>
           </item>
+          <!-->
+          <item row="3" column="5">
+           <widget class="QCheckBox" name="checkBox_mmcpAllowPeekReq">
+            <property name="toolTip">
+             <string>Allow others to peek and request your public connections.</string>
+            </property>
+            <property name="text">
+             <string>Allow Peek/Connection requests</string>
+            </property>
+           </widget>
+          </item>
+          -->
+          <item row="2" column="2">
+           <widget class="QLineEdit" name="lineEdit_mmcpPort">
+            <property name="toolTip">
+             <string>Port to use when connecting to another client without specifying a port along with the IP address. This is also the default port that listened for incoming connections when running a local server.</string>
+            </property>
+           </widget>
+          </item>
+          <!-- Possible inclusion in 4.21.1
+          <item row="0" column="5">
+           <widget class="QCheckBox" name="checkBox_mmcpAutostartServer">
+            <property name="toolTip">
+             <string>Automatically start a chat server when your profile loads. Uses the default port setting.</string>
+            </property>
+            <property name="text">
+             <string>Auto-Start server</string>
+            </property>
+           </widget>
+          </item>
+          -->
+          <item row="0" column="7">
+           <spacer name="horizontalSpacer_2">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblMMCPName">
+            <property name="text">
+             <string>Chat Name:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_mmcpChatName</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="lblMMCPPort">
+            <property name="text">
+             <string>Default Port:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="lblMMCPChatMsgPrefix">
+            <property name="text">
+             <string>Chat Message Prefix:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="6">
+           <widget class="QCheckBox" name="checkBox_mmcpAddChatMessageNewline">
+            <property name="toolTip">
+             <string>Add an extra blank line to vertically space out chat messages.</string>
+            </property>
+            <property name="text">
+             <string>Add extra line to chat messages</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="6">
+           <widget class="QCheckBox" name="checkBox_mmcpPrefixEmotes">
+            <property name="toolTip">
+             <string>Prefix own EmoteAll messages with 'You emote to everybody'</string>
+            </property>
+            <property name="text">
+             <string>Prefix emote messages</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="2">
+           <widget class="QLineEdit" name="lineEdit_mmcpChatMessagePrefix">
+            <property name="toolTip">
+             <string>Text to display in front of chat messages.</string>
+            </property>
+            <property name="text">
+             <string>&lt;CHAT&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <!-->
+          <item row="2" column="5">
+           <widget class="QCheckBox" name="checkBox_mmcpAutoAcceptCalls">
+            <property name="toolTip">
+             <string>Automatically accept incoming calls from chat clients.</string>
+            </property>
+            <property name="text">
+             <string>Auto-Accept incoming calls</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          -->
          </layout>
         </widget>
        </item>
@@ -4214,6 +4466,16 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="6" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_enableBlinkText">
+            <property name="toolTip">
+             <string>&lt;p&gt;When enabled, text with the blinking attribute (SGR codes 5 and 6) is displayed with a smooth pulsing effect. When disabled, blinking text is shown in italics instead.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable blinking text</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -4785,15 +5047,27 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_Lcyan_2</tabstop>
   <tabstop>pushButton_Lwhite_2</tabstop>
   <tabstop>reset_colors_button_2</tabstop>
+  <tabstop>radioButton_discordGameDetails</tabstop>
+  <tabstop>radioButton_discordMudletOnly</tabstop>
+  <tabstop>radioButton_discordDisabled</tabstop>
   <tabstop>comboBox_discordLargeIconPrivacy</tabstop>
   <tabstop>comboBox_discordSmallIconPrivacy</tabstop>
   <tabstop>checkBox_discordServerAccessToPartyInfo</tabstop>
-  <tabstop>checkBox_discordLuaAPI</tabstop>
   <tabstop>lineEdit_discordUserName</tabstop>
   <tabstop>checkBox_discordServerAccessToDetail</tabstop>
   <tabstop>checkBox_discordServerAccessToState</tabstop>
   <tabstop>checkBox_discordServerAccessToTimerInfo</tabstop>
-  <tabstop>lineEdit_discordUserDiscriminator</tabstop>
+  <tabstop>lineEdit_mmcpChatName</tabstop>
+  <tabstop>lineEdit_mmcpPort</tabstop>
+  <tabstop>lineEdit_mmcpChatMessagePrefix</tabstop>
+  <!-->
+  <tabstop>checkBox_mmcpAutostartServer</tabstop>
+  <tabstop>checkBox_mmcpAutoAcceptCalls</tabstop>
+  <tabstop>checkBox_mmcpAllowPeekReq</tabstop>
+  -->
+  <tabstop>checkBox_mmcpAddChatMessageNewline</tabstop>
+  <tabstop>checkBox_mmcpPrefixEmotes</tabstop>
+  <tabstop>checkBox_mmcpSnoopInMainConsole</tabstop>
   <tabstop>groupBox_ssl</tabstop>
   <tabstop>checkBox_self_signed</tabstop>
   <tabstop>checkBox_ignore_all</tabstop>
@@ -4811,6 +5085,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>comboBox_blankLinesBehaviour</tabstop>
   <tabstop>comboBox_caretModeKey</tabstop>
   <tabstop>checkBox_f3SearchEnabled</tabstop>
+  <tabstop>checkBox_enableBlinkText</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
   <tabstop>mFORCE_GA_OFF</tabstop>
   <tabstop>checkBox_mVersionInTTYPE</tabstop>
@@ -4830,4 +5105,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <include location="../mudlet.qrc"/>
  </resources>
  <connections/>
+ <buttongroups>
+  <buttongroup name="buttonGroup_discordMode"/>
+ </buttongroups>
 </ui>

@@ -31,9 +31,10 @@
 #include <QElapsedTimer>
 #include <QMap>
 #include <QPointer>
+#include <QTimer>
 #include <QWidget>
-#include <chrono>
 
+#include <chrono>
 #include <string>
 
 
@@ -55,12 +56,13 @@ class TTextEdit : public QWidget
 public:
     Q_DISABLE_COPY(TTextEdit)
     TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isLowerPane);
+    ~TTextEdit();
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
-    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen, int *offset = nullptr) const;
+    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen, int* offset = nullptr) const;
     int drawGraphemeBackground(QPainter&, QVector<QColor>&, QVector<QRect>&, QVector<QString>&, QVector<int>&, QPoint&, const QString&, const int, const int, TChar&) const;
-    void drawGraphemeForeground(QPainter&, const QColor&, const QRect&, const QString&, TChar &) const;
+    void drawGraphemeForeground(QPainter&, const QColor&, const QRect&, const QString&, TChar&) const;
     void drawCustomDecorations(QPainter&, const QColor&, const QRect&, TChar&) const;
     void showNewLines();
     void forceUpdate();
@@ -84,9 +86,13 @@ public:
     void focusInEvent(QFocusEvent* event) override;
     int imageTopLine();
     int bufferScrollDown(int lines);
-// Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
-    void setConsoleBgColor(int r, int g, int b, int a ) { mBgColor = QColor(r, g, b, a); }
-    void resetHScrollbar() { mScreenOffset = 0; mMaxHRange = 0; }
+    // Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
+    void setConsoleBgColor(int r, int g, int b, int a) { mBgColor = QColor(r, g, b, a); }
+    void resetHScrollbar()
+    {
+        mScreenOffset = 0;
+        mMaxHRange = 0;
+    }
     int getScreenHeight() const { return mScreenHeight; }
     void searchSelectionOnline();
     int getColumnCount() const;
@@ -143,6 +149,9 @@ public slots:
     void slot_searchSelectionOnline();
     void slot_analyseSelection();
     void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
+    void slot_changeEnableBlinkText(bool);
+    void slot_blinkStateChanged();
+    void slot_scrollStoppedTimeout();
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     void slot_changeDebugShowAllProblemCodepoints(const bool);
 #endif
@@ -161,7 +170,7 @@ private:
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
     std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
-    int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool *isOutOfbounds, bool *isOverTimeStamp = nullptr) const;
+    int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool* isOutOfbounds, bool* isOverTimeStamp = nullptr) const;
     int getGraphemeWidth(uint unicode) const;
     void normaliseSelection();
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds);
@@ -188,11 +197,11 @@ private:
     int mLastRenderedOffset = 0;
     bool mMouseTracking = false;
     // 1/2/3 for single/double/triple click seen so far
-    int  mMouseTrackLevel = 0;
-    bool mCtrlSelecting {};
+    int mMouseTrackLevel = 0;
+    bool mCtrlSelecting{};
     // tracks status of the Shift key for keyboard-based selection
-    bool mShiftSelection {};
-    int mCtrlDragStartY {};
+    bool mShiftSelection{};
+    int mCtrlDragStartY{};
     QPoint mDragStart, mDragSelectionEnd;
     int mOldScrollPos = 0;
     // top-left point of the selection
@@ -213,6 +222,10 @@ private:
     QElapsedTimer mLastClickTimer;
     QPointer<QAction> mpContextMenuAnalyser;
     bool mWideAmbigousWidthGlyphs;
+    bool mEnableBlinkText = false;
+    mutable bool mHasBlinkingContent = false;
+    mutable bool mIsBlinkClientRegistered = false;
+    QPointer<QTimer> mpScrollStoppedTimer;
     std::chrono::high_resolution_clock::time_point mCopyImageStartTime;
     // How many "normal" width "characters" are each tab stop apart, while
     // there is no current mechanism to adjust this, sensible values will

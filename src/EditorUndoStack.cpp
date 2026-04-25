@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+ *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -80,7 +81,7 @@ void EditorUndoStack::emitChangesForCommand(const QUndoCommand* cmd)
         if (!itemIDs.isEmpty()) {
             // Double-check all IDs are valid before emitting
             bool allValid = true;
-            for (int id : itemIDs) {
+            for (const int id : itemIDs) {
                 if (id <= 0) {
                     allValid = false;
 #if defined(DEBUG_UNDO_REDO)
@@ -118,7 +119,7 @@ void EditorUndoStack::collectAffectedItems(const QUndoCommand* cmd, QMap<EditorV
         QList<int> itemIDs = mudletCmd->affectedItemIDs();
 
         // Add to the map, avoiding duplicates and invalid IDs
-        for (int id : itemIDs) {
+        for (int id : std::as_const(itemIDs)) {
             // Skip invalid IDs (0 or negative)
             if (id <= 0) {
                 continue;
@@ -207,7 +208,7 @@ void EditorUndoStack::undo()
 #if defined(DEBUG_UNDO_REDO)
             qDebug() << "EditorUndoStack::undo() - DeleteItemCommand restored items with ID changes:" << idChanges.size();
 #endif
-            for (const auto& change : idChanges) {
+            for (const auto& change : std::as_const(idChanges)) {
                 int oldID = change.first;
                 int newID = change.second;
 #if defined(DEBUG_UNDO_REDO)
@@ -264,7 +265,7 @@ void EditorUndoStack::redo()
 #if defined(DEBUG_UNDO_REDO)
                 qDebug() << "EditorUndoStack::redo() - AddItemCommand restored items with ID changes:" << idChanges.size();
 #endif
-                for (const auto& change : idChanges) {
+                for (const auto& change : std::as_const(idChanges)) {
                     int oldID = change.first;
                     int newID = change.second;
 #if defined(DEBUG_UNDO_REDO)

@@ -31,7 +31,7 @@
 #include "TMediaData.h"
 #include "TMediaPlaylist.h"
 
-#include <memory> // std::shared_ptr
+#include <memory>
 #include <QAudioOutput>
 #include <QMediaPlayer>
 
@@ -41,45 +41,73 @@ class TMediaPlayer
 public:
     TMediaPlayer() = default;
     TMediaPlayer(Host* pHost, TMediaData& mediaData)
-    : mpHost(pHost),
-      mMediaData(mediaData),
-      mMediaPlayer(new QMediaPlayer(pHost)),
-      mPlaylist(new TMediaPlaylist),
-      initialized(true)
+    : mpHost(pHost)
+    , mMediaData(mediaData)
+    , mMediaPlayer(new QMediaPlayer(pHost))
+    , mPlaylist(std::make_unique<TMediaPlaylist>())
+    , initialized(true)
     {
         mMediaPlayer->setAudioOutput(new QAudioOutput());
     }
-    ~TMediaPlayer() = default;
+    ~TMediaPlayer()
+    {
+        if (mMediaPlayer) {
+            auto* output = mMediaPlayer->audioOutput();
+            mMediaPlayer->setAudioOutput(nullptr);
+            delete output;
+        }
+    }
 
     TMediaData mediaData() const { return mMediaData; }
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
     QMediaPlayer* mediaPlayer() const { return mMediaPlayer; }
     bool isInitialized() const { return initialized; }
-    QMediaPlayer::PlaybackState getPlaybackState() const {
+    QMediaPlayer::PlaybackState getPlaybackState() const
+    {
         if (!mMediaPlayer) {
             qWarning() << "TMediaPlayer::getPlaybackState() - mMediaPlayer is nullptr!";
             return QMediaPlayer::StoppedState; // Safe default state
         }
         return mMediaPlayer->playbackState();
     }
-    void setVolume(int volume) const {
-        return mMediaPlayer->audioOutput()->setVolume(volume / 100.0f);
+    void setVolume(int volume) const
+    {
+        if (!mMediaPlayer) {
+            qWarning() << "TMediaPlayer::setVolume() - mMediaPlayer is nullptr!";
+            return;
+        }
+        mMediaPlayer->audioOutput()->setVolume(volume / 100.0f);
     }
-    TMediaPlaylist* playlist() const {
-        return mPlaylist;
+    TMediaPlaylist* playlist() const { return mPlaylist.get(); }
+    void setPlaylist(TMediaPlaylist* playlist)
+    {
+        if (mPlaylist.get() != playlist) {
+            mPlaylist.reset(playlist);
+        }
     }
-    void setPlaylist(TMediaPlaylist* playlist) {
-        if (mPlaylist != playlist) {
-            if (mPlaylist) delete mPlaylist;
-            mPlaylist = playlist;
+    void refreshAudioOutput()
+    {
+        if (!mMediaPlayer) {
+            return;
+        }
+        QAudioOutput* oldOutput = mMediaPlayer->audioOutput();
+        float volume = oldOutput ? oldOutput->volume() : 1.0f;
+        bool muted = oldOutput ? oldOutput->isMuted() : false;
+
+        auto* newOutput = new QAudioOutput();
+        newOutput->setVolume(volume);
+        newOutput->setMuted(muted);
+        mMediaPlayer->setAudioOutput(newOutput);
+        if (oldOutput) {
+            oldOutput->deleteLater();
         }
     }
 
 private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
-    QMediaPlayer* mMediaPlayer;
-    TMediaPlaylist* mPlaylist;
+    QMediaPlayer* mMediaPlayer = nullptr;
+    std::unique_ptr<TMediaPlaylist> mPlaylist;
     bool initialized = false;
 };
 
@@ -104,9 +132,11 @@ public:
     void stopMedia(TMediaData& mediaData);
     void parseGMCP(QString& packageMessage, QString& gmcp);
     bool purgeMediaCache();
+    void refreshAudioDevices();
     void muteMedia(const TMediaData::MediaProtocol mediaProtocol);
     void unmuteMedia(const TMediaData::MediaProtocol mediaProtocol);
     void printClosedCaption(const TMediaData& mediaData, const QString& action) const;
+    void stopAllMediaPlayers();
 
 private slots:
     void slot_writeFile(QNetworkReply* reply);
@@ -116,7 +146,6 @@ private:
     QList<std::shared_ptr<TMediaPlayer>> findMediaPlayersByCriteria(const TMediaData& mediaData);
     bool isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData);
     bool resume(TMediaData mediaData);
-    void stopAllMediaPlayers();
     void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state);
     void transitionNonRelativeFile(TMediaData& mediaData);
     QString getStreamUrl(const TMediaData& mediaData);
@@ -131,7 +160,7 @@ private:
     QString setupMediaAbsolutePathFileName(TMediaData& mediaData);
     void connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player);
     static void purgeStoppedMediaPlayers(QList<std::shared_ptr<TMediaPlayer>>& mediaList);
-    template<typename T>
+    template <typename T>
     static void updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_ptr<T> player, TMedia* mediaInstance);
     void updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player);
     std::shared_ptr<TMediaPlayer> getMediaPlayer(TMediaData& mediaData);
@@ -140,6 +169,7 @@ private:
     void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName);
     void handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const std::shared_ptr<TMediaPlayer>& player);
     bool setupVideo(const std::shared_ptr<TMediaPlayer>& player);
+    static QString mediaTypeToString(int mediaType);
 
     void play(TMediaData& mediaData);
 

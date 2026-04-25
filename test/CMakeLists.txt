@@ -1,113 +1,50 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.25.1)
+cmake_minimum_required(VERSION 3.25.1)
 
-SET(CMAKE_AUTOMOC ON)
-SET(CMAKE_INCLUDE_CURRENT_DIR ON)
-SET(CMAKE_CXX_STANDARD 20)
-SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-
-PROJECT(mudlet-tests
-        LANGUAGES CXX)
-
-ENABLE_TESTING()
-
-find_package(Qt6 6.8.2 REQUIRED
-    COMPONENTS Core
-    Multimedia
-    MultimediaWidgets
-    Network
-    OpenGL
-    UiTools
-    Widgets
-    Concurrent
-    Test)
-
-link_libraries(
-    Qt6::Test
-    Qt6::Concurrent
-    Qt6::Core
-    Qt6::Network
-    Qt6::Multimedia
-    Qt6::MultimediaWidgets
-    Qt6::UiTools
-    Qt6::Widgets)
-
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
-
-# Configure QtKeychain linking
-if(NOT USE_OWN_QTKEYCHAIN)
-    find_package(Qt6Keychain REQUIRED)
+if(NOT WIN32)
+    include(${CMAKE_SOURCE_DIR}/src/cmake/EnableSanitizers.cmake)
 endif()
-set(KEYCHAIN_LIBRARY qt6keychain)
 
+find_package(Qt6 6.8.2 REQUIRED COMPONENTS Test)
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src")
-
-add_executable(TEntityResolverTest TEntityResolverTest.cpp ../src/TEntityResolver.cpp)
-add_test(NAME TEntityResolverTest COMMAND TEntityResolverTest)
-
-add_executable(TEntityHandlerTest TEntityHandlerTest.cpp ../src/TEntityHandler.cpp ../src/TEntityResolver.cpp)
-add_test(NAME TEntityHandlerTest COMMAND TEntityHandlerTest)
-
-add_executable(TLinkStoreTest TLinkStoreTest.cpp ../src/TLinkStore.cpp ../src/TEntityResolver.cpp)
-add_test(NAME TLinkStoreTest COMMAND TLinkStoreTest)
-
-target_compile_definitions(TLinkStoreTest PRIVATE LinkStore_Test)
-
-file(GLOB MXP_SOURCE ../src/TMxp*.cpp ../src/MxpTag.cpp ../src/TEntityHandler.cpp ../src/TEntityResolver.cpp ../src/TStringUtils.cpp ../src/TEncodingHelper.cpp ../src/TTextCodec.cpp ../src/TEncodingTable.cpp)
-list(FILTER MXP_SOURCE EXCLUDE REGEX ".*/src/TMxpMudlet.cpp")
-list(FILTER MXP_SOURCE EXCLUDE REGEX ".*/src/TMxpFrameManager.cpp")
-
-add_executable(TMxpTagParserTest TMxpTagParserTest.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStringUtils.cpp)
-add_test(NAME TMxpTagParserTest COMMAND TMxpTagParserTest)
-
-add_executable(TMxpSendTagHandlerTest TMxpSendTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpSendTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
-add_test(NAME TMxpSendTagHandlerTest COMMAND TMxpSendTagHandlerTest)
-
-add_executable(TMxpEntityTagHandlerTest TMxpEntityTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpEntityTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
-add_test(NAME TMxpEntityTagHandlerTest COMMAND TMxpEntityTagHandlerTest)
-
-add_executable(TMxpFrameDestTagHandlerTest TMxpFrameDestTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpFrameTagHandler.cpp ../src/TMxpDestTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
-add_test(NAME TMxpFrameDestTagHandlerTest COMMAND TMxpFrameDestTagHandlerTest)
-
-add_executable(TMxpVersionTagTest TMxpVersionTagTest.cpp ../src/TMxpVersionTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStringUtils.cpp ../src/TMxpTagHandler.cpp)
-add_test(NAME TMxpVersionTagTest COMMAND TMxpVersionTagTest)
-
-add_executable(TMxpFormattingTagsTest TMxpFormattingTagsTest.cpp ../src/TMxpFormattingTagsHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStringUtils.cpp ../src/TMxpTagHandler.cpp)
-add_test(NAME TMxpFormattingTagsTest COMMAND TMxpFormattingTagsTest)
-
-add_executable(TMxpCustomElementTagHandlerTest TMxpCustomElementTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpSendTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp )
-add_test(NAME TMxpCustomElementTagHandlerTest COMMAND TMxpCustomElementTagHandlerTest)
-
-add_executable(TMxpModeSecurityTest TMxpModeSecurityTest.cpp ${MXP_SOURCE} ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
-add_test(NAME TMxpModeSecurityTest COMMAND TMxpModeSecurityTest)
-
-add_executable(TMxpEdgeCasesTest TMxpEdgeCasesTest.cpp ${MXP_SOURCE} ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
-add_test(NAME TMxpEdgeCasesTest COMMAND TMxpEdgeCasesTest)
-
-add_executable(TMxpElementDefinitionHandlerTest TMxpElementDefinitionHandlerTest.cpp ${MXP_SOURCE})
-add_test(NAME TMxpElementDefinitionHandlerTest COMMAND TMxpElementDefinitionHandlerTest)
-
-add_executable(TLuaInterfaceTest TLuaInterfaceTest.cpp ../src/LuaInterface.cpp ../src/TVar.cpp ../src/VarUnit.cpp)
-add_test(NAME TLuaInterfaceTest COMMAND TLuaInterfaceTest)
-
-find_package(Lua51 REQUIRED)
-target_link_libraries(
+set(UNIT_TESTS
+    TEntityResolverTest
+    TEntityHandlerTest
+    TLinkStoreTest
+    TMxpTagParserTest
+    TMxpSendTagHandlerTest
+    TMxpEntityTagHandlerTest
+    TMxpFrameDestTagHandlerTest
+    TMxpVersionTagTest
+    TMxpFormattingTagsTest
+    TMxpCustomElementTagHandlerTest
+    TMxpModeSecurityTest
+    TMxpEdgeCasesTest
+    TMxpElementDefinitionHandlerTest
     TLuaInterfaceTest
-    LUA51::LUA51)
+    TVariableEditorTest
+    SecureStringUtilsTest
+    CredentialManagerTest
+    DiscordTest
+    TAreaZLevelIndexTest
+    TAreaGridIndexTest
+)
 
-add_executable(SecureStringUtilsTest SecureStringUtilsTest.cpp ../src/SecureStringUtils.cpp)
-target_link_libraries(SecureStringUtilsTest ${KEYCHAIN_LIBRARY})
-if(USE_OWN_QTKEYCHAIN)
-    target_compile_definitions(SecureStringUtilsTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
-endif()
-add_test(NAME SecureStringUtilsTest COMMAND SecureStringUtilsTest)
+foreach(test_name ${UNIT_TESTS})
+    add_executable(${test_name} ${test_name}.cpp)
+    add_dependencies(${test_name} ${LIB_MUDLET_TARGET})
+    target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
+    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
+    set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+    )
+endforeach()
 
-add_executable(CredentialManagerTest CredentialManagerTest.cpp ../src/CredentialManager.cpp ../src/SecureStringUtils.cpp)
-target_link_libraries(CredentialManagerTest ${KEYCHAIN_LIBRARY})
-if(USE_OWN_QTKEYCHAIN)
-    target_compile_definitions(CredentialManagerTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
-endif()
-add_test(NAME CredentialManagerTest COMMAND CredentialManagerTest)
+add_executable(PasswordMigrationTest PasswordMigrationTest.cpp)
+add_dependencies(PasswordMigrationTest ${LIB_MUDLET_TARGET})
+target_link_libraries(PasswordMigrationTest PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
+add_test(NAME PasswordMigrationTest COMMAND $<TARGET_FILE:PasswordMigrationTest>)
 
 add_subdirectory(functional_tests)

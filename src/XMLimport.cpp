@@ -157,12 +157,19 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
 
                 readPackage();
             } else if (name() == qsl("map")) {
-                readMap();
-                mpHost->mpMap->audit();
-                mpHost->mpMap->mpMapper->mp2dMap->init();
-                mpHost->mpMap->mpMapper->updateAreaComboBox();
-                mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-                mpHost->mpMap->mpMapper->show();
+                if (!packName.isEmpty()) {
+                    qWarning() << "XMLimport::importPackage(...) WARNING: ignoring unexpected <map> element"
+                                  " - map data should not be present in package XML files";
+                } else {
+                    readMap();
+                    mpHost->mpMap->audit();
+                    if (mpHost->mpMap->mpMapper) {
+                        mpHost->mpMap->mpMapper->mp2dMap->init();
+                        mpHost->mpMap->mpMapper->updateAreaComboBox();
+                        mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+                        mpHost->mpMap->mpMapper->show();
+                    }
+                }
             } else {
                 qDebug().nospace() << "XMLimport::importPackage(...) ERROR: "
                                       "unrecognised element with name: "
@@ -756,6 +763,16 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);
     setBoolAttribute(qsl("mMapStrongHighlight"), pHost->mMapStrongHighlight);
     setBoolAttribute(qsl("mEnableSpellCheck"), pHost->mEnableSpellCheck);
+    if (attributes().hasAttribute(QLatin1String("mShowInfo"))) {
+        // Old - pre Map Info versions of Mudlet (those before
+        // https://github.com/Mudlet/Mudlet/pull/4718) used the above
+        // setting to control the showing of what is now the "Full"
+        // map info display. So treat it as that to reproduce that
+        // behaviour:
+        if (attributes().value(qsl("mShowInfo")).toString() == YES) {
+            mpHost->mMapInfoContributors.insert(qsl("Full"));
+        }
+    }
     setBoolAttribute(qsl("mAcceptServerGUI"), pHost->mAcceptServerGUI);
     setBoolAttribute(qsl("mAcceptServerMedia"), pHost->mAcceptServerMedia);
     setBoolAttribute(qsl("mMapperUseAntiAlias"), pHost->mMapperUseAntiAlias);
@@ -829,6 +846,8 @@ void XMLimport::readHost(Host* pHost)
         pHost->mEditorTheme = qsl("Mudlet");
         pHost->mEditorThemeFile = qsl("Mudlet.tmTheme");
     }
+    pHost->mEditorThemeDark = attributes().value(QLatin1String("mEditorThemeDark")).toString();
+    pHost->mEditorThemeFileDark = attributes().value(QLatin1String("mEditorThemeFileDark")).toString();
     pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
     pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
     pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));
@@ -851,6 +870,8 @@ void XMLimport::readHost(Host* pHost)
         // which is just as well as it is needed for the automatic case...
         pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
     }
+
+    pHost->setEnableBlinkText(attributes().value(qsl("mEnableBlinkText")) == qsl("yes"));
 
     if (attributes().hasAttribute("logFileNameFormat")) {
         // We previously mixed "yyyy-MM-dd{#|T}hh-MM-ss" with "yyyy-MM-dd{#|T}HH-MM-ss"
@@ -907,16 +928,17 @@ void XMLimport::readHost(Host* pHost)
         pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value(qsl("mDiscordAccessFlags")).toString().toInt());
     }
 
+    if (attributes().hasAttribute(QLatin1String("mDiscordMode"))) {
+        const int modeInt = attributes().value(qsl("mDiscordMode")).toString().toInt();
+        if (modeInt >= Host::DiscordDisabled && modeInt <= Host::DiscordShowGameDetails) {
+            pHost->mDiscordMode = static_cast<Host::DiscordMode>(modeInt);
+        }
+    }
+
     if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserName"))) {
         pHost->mRequiredDiscordUserName = attributes().value(QLatin1String("mRequiredDiscordUserName")).toString();
     } else {
         pHost->mRequiredDiscordUserName.clear();
-    }
-
-    if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserDiscriminator"))) {
-        pHost->mRequiredDiscordUserDiscriminator = attributes().value(QLatin1String("mRequiredDiscordUserDiscriminator")).toString();
-    } else {
-        pHost->mRequiredDiscordUserDiscriminator.clear();
     }
 
     if (attributes().hasAttribute(QLatin1String("playerRoomStyle"))) {
@@ -958,6 +980,14 @@ void XMLimport::readHost(Host* pHost)
 
     if (qFuzzyCompare(1.0 + pHost->mLineSize, 1.0)) {
         pHost->mLineSize = 10.0; // Same value as is in Host class initializer list
+    }
+
+    pHost->mRoomBorderSize = attributes().value(qsl("mRoomBorderSize")).toString().toDouble();
+
+    if (qFuzzyCompare(1.0 + pHost->mRoomBorderSize, 1.0)) {
+        // For old profiles without border size, use mLineSize to preserve
+        // the previous behavior where border and exit shared the same size
+        pHost->mRoomBorderSize = pHost->mLineSize;
     }
 
     pHost->mMapGridLineSize = attributes().value(qsl("mMapGridLineSize")).toString().toDouble();
@@ -1032,10 +1062,6 @@ void XMLimport::readHost(Host* pHost)
     } else {
         // The default (and for map/profile files from before 4.15.0):
         pHost->setLargeAreaExitArrows(false);
-    }
-
-    if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
-        mpHost->mMapInfoContributors.clear();
     }
 
     QMargins borders;
@@ -1153,6 +1179,8 @@ void XMLimport::readHost(Host* pHost)
                 readProfileShortcut();
             } else if (name() == qsl("stopwatches")) {
                 readStopWatchMap();
+            } else if (name() == qsl("MMCP")) {
+                readMMCPOptions();
             } else if (name() == qsl("experiment")) {
                 QString key = attributes().value(qsl("key")).toString();
                 bool enabled = attributes().value(qsl("enabled")) == YES;
@@ -1166,7 +1194,7 @@ void XMLimport::readHost(Host* pHost)
         }
     }
 
-    pHost->setBorders(borders);
+    pHost->setUserBorders(borders);
     pHost->loadPackageInfo();
 }
 
@@ -2043,6 +2071,22 @@ void XMLimport::readStopWatchMap()
             }
         }
     }
+}
+
+void XMLimport::readMMCPOptions()
+{
+    mpHost->mMMCPChatName = attributes().value(qsl("chatName")).toString();
+    mpHost->mMMCPChatPort = attributes().value(qsl("chatPort")).toUShort();
+    mpHost->mMMCPChatPrefix = attributes().value(qsl("chatPrefix")).toString();
+    mpHost->mMMCPAutostartServer = attributes().value(qsl("autostartServer")) == YES;
+    mpHost->mMMCPAllowPeekRequests = attributes().value(qsl("allowPeekRequests")) == YES;
+    mpHost->mMMCPPrefixEmotes = attributes().value(qsl("prefixEmotes")) == YES;
+    mpHost->mMMCPAddChatMessageNewline = attributes().value(qsl("chatMessageNewline")) == YES;
+    mpHost->mMMCPAutoAcceptCalls = attributes().value(qsl("autoAcceptCalls")) == YES;
+    mpHost->mMMCPShowSnoopInMainConsole = attributes().value(qsl("snoopInMain")) == YES;
+
+    // MMCP is a self-closing tag, need to call readNext to move along..
+    readNext();
 }
 
 void XMLimport::readMapInfoContributor()

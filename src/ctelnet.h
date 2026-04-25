@@ -102,9 +102,11 @@ const char TNSB_SEND = 1;
 
 
 const char OPT_ECHO = 1;
+const char OPT_SUPPRESS_GO_AHEAD = 3;
 const char OPT_STATUS = 5;
 const char OPT_TIMING_MARK = 6;
 const char OPT_TERMINAL_TYPE = 24;
+const char OPT_LINEMODE = 34;
 const char OPT_EOR = 25;
 const char OPT_NAWS = 31;
 // https://www.rfc-editor.org/rfc/rfc1572.txt && https://tintin.mudhalla.net/protocols/mnes/
@@ -204,6 +206,8 @@ public:
     const QByteArrayList& getEncodingsList() const { return mAcceptableEncodings; }
     std::optional<QAbstractSocket::SocketError> error() const;
     QString errorString();
+    bool oscHyperlinkConfigFeatureEnabled();
+    bool oscHyperlinkPresetsEnabled();
 #if !defined(QT_NO_SSL)
     QSslCertificate getPeerCertificate();
     QList<QSslError> getSslErrors();
@@ -220,7 +224,10 @@ public:
     bool isMXPEnabled() const { return enableMXP; }
     bool isChannel102Enabled() const { return enableChannel102; }
     void trackMXPElementDetection(const std::string&);
-    void requestDiscordInfo();
+    void sendDiscordHello();
+    void sendDiscordGet();
+    void sendGMCPSupportsAdd(const QString& package);
+    void sendGMCPSupportsRemove(const QString& package);
     QString decodeOption(const unsigned char) const;
     QString formatShortTelnetCommand(const std::string& telnetCommand, const QString& commandName) const;
     QAbstractSocket::SocketState getConnectionState() const;
@@ -378,6 +385,13 @@ private:
     // interconnections are not switched between the different patterns until
     // it is safe to do so:
     bool mCurrent_sslTsl = false;
+    // Stores SSL errors received in slot_socketSslError() so they can be
+    // reported in slot_socketDisconnected() even when mpSocket is null
+    // (which happens when the SSL handshake fails before mpSocket is assigned):
+    QList<QSslError> mSslErrors;
+    // Stores the peer certificate from slot_socketSslError() so it can be
+    // used by getPeerCertificate() when mpSocket is null:
+    QSslCertificate mPeerCertificate;
 #endif
     // Could be a URL ("www.game.com") or an IPv4 address ("192.168.1.1") or an
     // IPv6 address ("2001:db8::1"):
@@ -473,8 +487,18 @@ private:
     int mNaws_x = 0;
     int mNaws_y = 0;
 
+    bool mServerRequestedSGA = false;
+    QElapsedTimer mEchoToggleTimer;
+    int mEchoToggleCount = 0;
+    bool mEchoAnomalyDetected = false;
+    static constexpr int ECHO_ANOMALY_THRESHOLD = 5;
+    static constexpr int ECHO_ANOMALY_WINDOW_MS = 5000;
+
     // KaVir protocol negotiation tracking
     QVector<unsigned char> mNegotiationOrder;
+
+    void checkCharacterModePattern();
+    bool checkEchoAnomalyPattern();
 };
 
 #endif // MUDLET_CTELNET_H
