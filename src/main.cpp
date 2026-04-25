@@ -894,9 +894,7 @@ int main(int argc, char* argv[])
             QString existingHandler = checkSettings.value(".").toString();
             existingHandlerFound = !existingHandler.isEmpty() && !existingHandler.toLower().contains("mudlet");
             qDebug() << "main: Windows telnet handler check:" << (existingHandlerFound ? "found existing" : "none/mudlet");
-#endif
-
-#if defined(Q_OS_LINUX)
+#elif defined(Q_OS_LINUX)
             // Check Linux xdg-mime for existing handler
             QProcess xdgQuery;
             xdgQuery.start(qsl("xdg-mime"), QStringList() << qsl("query") << qsl("default") << qsl("x-scheme-handler/telnet"));
@@ -909,9 +907,7 @@ int main(int argc, char* argv[])
                 existingHandlerFound = !existingHandler.isEmpty() && !existingHandler.toLower().contains("mudlet");
                 qDebug() << "main: Linux telnet handler check:" << existingHandler << (existingHandlerFound ? "(existing)" : "(none/mudlet)");
             }
-#endif
-
-#if defined(Q_OS_MACOS)
+#elif defined(Q_OS_MACOS)
             if (forceAsk) {
                 existingHandlerFound = true;
             } else {
