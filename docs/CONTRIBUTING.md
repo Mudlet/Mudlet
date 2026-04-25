@@ -8,12 +8,48 @@ Have a look at the [UI design philosophy](UI-design-philosophy.md) when improvin
 
 # Coding guidelines
 
-If you're a first-timer, don't worry about conforming to all of these! We'll show you the ropes.
-
 ## Code style
-## Naming things? Check against antipatterns
+## Naming variables/functions/classes? Check against antipatterns
 
 Check https://www.linguistic-antipatterns.com when naming anything to help ensure it can be understood intuitively.
+
+## AI Coding Assistants
+
+### Licensing and Legal Requirements
+
+All code must be compatible with Mudlet's license.
+
+### Signed-off-by and Developer Certificate of Origin
+
+AI agents MUST NOT add Signed-off-by tags. The human submitter is responsible for:
+
+* Reviewing all AI-generated code
+* Ensuring compliance with licensing requirements
+* Adding their own Signed-off-by tag
+* Taking full responsibility for the contribution
+
+### Attribution
+
+When AI tools contribute to kernel development, proper attribution
+helps track the evolving role of AI in the development process.
+Contributions should include an Assisted-by tag in the following format:
+
+```
+Assisted-by: AGENT_NAME:MODEL_VERSION
+```
+
+Where:
+
+* `AGENT_NAME` is the name of the AI tool or framework
+* `MODEL_VERSION` is the specific model version used
+
+Basic development tools (git, gcc, make, editors) should not be listed.
+
+Example:
+
+```
+Assisted-by: Claude:claude-4.6-opus
+```
 
 ### C++
 
