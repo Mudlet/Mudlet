@@ -30,6 +30,7 @@
 
 #include <QApplication>
 #include <QStyleOption>
+#include <QStyleOptionTab>
 #include <QPainter>
 #include <QVariant>
 #include <QMouseEvent>
@@ -51,7 +52,7 @@ void TStyle::drawControl(ControlElement element, const QStyleOption* option, QPa
     // dark palette colors on Windows 10
     auto* appStyle = qApp->style();
 
-    if (element == QStyle::CE_TabBarTab) {
+    if (element == QStyle::CE_TabBarTab && widget) {
         QString tabName = mpTabBar->tabData(mpTabBar->tabAt(option->rect.center())).toString();
         QFont font = widget->font();
         bool isStyleChanged = false;
@@ -73,6 +74,147 @@ void TStyle::drawControl(ControlElement element, const QStyleOption* option, QPa
     } else {
         appStyle->drawControl(element, option, painter, widget);
     }
+
+    // Paint the connection-status indicator on top of the rendered tab.
+    // We hook CE_TabBarTab (rather than CE_TabBarTabLabel) because the macOS
+    // native style draws the whole tab in CE_TabBarTab without sub-dispatching
+    // to CE_TabBarTabLabel - see issue #9213.
+    // tabAt() may return -1 (e.g. style previewing); tabConnectionIndicator()
+    // guards that case and returns None, which is then a no-op.
+    if (element == QStyle::CE_TabBarTab) {
+        const auto* tabOption = qstyleoption_cast<const QStyleOptionTab*>(option);
+        if (tabOption) {
+            const TabConnectionIndicator state = tabConnectionIndicator(mpTabBar->tabAt(tabOption->rect.center()));
+            if (state != TabConnectionIndicator::None) {
+                paintConnectionIndicator(painter, tabOption, state);
+            }
+        }
+    }
+}
+
+QRect TStyle::subElementRect(SubElement element, const QStyleOption* option, const QWidget* widget) const
+{
+    QRect rect = QProxyStyle::subElementRect(element, option, widget);
+
+    // Reserve space at the leading edge of the tab for the connection
+    // indicator so that long tab text is not painted underneath it.
+    // tabAt() may return -1; tabConnectionIndicator() guards that case.
+    if (element == SE_TabBarTabText) {
+        const auto* tabOption = qstyleoption_cast<const QStyleOptionTab*>(option);
+        if (tabOption && mpTabBar) {
+            const TabConnectionIndicator state = tabConnectionIndicator(mpTabBar->tabAt(tabOption->rect.center()));
+            if (state != TabConnectionIndicator::None) {
+                // Place reserved space after the leading close button (if any).
+                const QRect leftBtn = QProxyStyle::subElementRect(SE_TabBarTabLeftButton, option, widget);
+                const int reservationStart = leftBtn.isValid() ? leftBtn.right() + 1 : rect.left();
+                rect.setLeft(qMax(rect.left(), reservationStart) + sIndicatorReservedWidth);
+            }
+        }
+    }
+
+    return rect;
+}
+
+void TStyle::paintConnectionIndicator(QPainter* painter, const QStyleOptionTab* tabOption, TabConnectionIndicator state) const
+{
+    constexpr int diameter = 8;
+    constexpr int leftMargin = 6;
+    const QRect& tabRect = tabOption->rect;
+    // On macOS the close button sits at the leading edge of the tab; place the
+    // indicator just to the right of it so they do not overlap. On platforms
+    // without a leading close button the indicator falls back to the tab's
+    // leading edge.
+    const QRect leftBtn = QProxyStyle::subElementRect(SE_TabBarTabLeftButton, tabOption, mpTabBar);
+    const int startX = leftBtn.isValid() ? leftBtn.right() + 1 : tabRect.left();
+    const int x = startX + leftMargin;
+    const int y = tabRect.center().y() - diameter / 2 + 1;
+    const QRect dotRect(x, y, diameter, diameter);
+
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, true);
+
+    switch (state) {
+    case TabConnectionIndicator::Connected:
+        painter->setBrush(QColor(50, 180, 50));
+        painter->setPen(QPen(QColor(40, 150, 40), 1));
+        painter->drawEllipse(dotRect);
+        break;
+    case TabConnectionIndicator::Connecting:
+        painter->setBrush(QColor(220, 180, 50));
+        painter->setPen(QPen(QColor(180, 150, 40), 1));
+        painter->drawEllipse(dotRect);
+        break;
+    case TabConnectionIndicator::Error: {
+        painter->setBrush(QColor(220, 50, 50));
+        painter->setPen(QPen(QColor(180, 40, 40), 1));
+        QPolygon triangle;
+        triangle << QPoint(dotRect.center().x(), dotRect.top()) << QPoint(dotRect.left(), dotRect.bottom()) << QPoint(dotRect.right(), dotRect.bottom());
+        painter->drawPolygon(triangle);
+        break;
+    }
+    case TabConnectionIndicator::Disconnected:
+        painter->setBrush(Qt::transparent);
+        painter->setPen(QPen(QColor(120, 120, 120), 2));
+        painter->drawEllipse(dotRect);
+        break;
+    case TabConnectionIndicator::None:
+        break;
+    }
+
+    painter->restore();
+}
+
+bool TStyle::setTabConnectionIndicator(const QString& tabName, TabConnectionIndicator state)
+{
+    if (tabName.isEmpty()) {
+        return false;
+    }
+    // Removing a stale indicator must always be allowed (e.g. from removeTab),
+    // even if the tab no longer exists. For inserts, verify the tab name
+    // corresponds to a real tab to avoid leaking phantom entries.
+    if (state == TabConnectionIndicator::None) {
+        return mConnectionIndicators.remove(tabName) > 0;
+    }
+    bool textIsInATab = false;
+    for (int i = 0, total = mpTabBar->count(); i < total; ++i) {
+        if (mpTabBar->tabData(i).toString() == tabName) {
+            textIsInATab = true;
+            break;
+        }
+    }
+    if (!textIsInATab) {
+        return false;
+    }
+    const auto it = mConnectionIndicators.constFind(tabName);
+    if (it != mConnectionIndicators.cend() && it.value() == state) {
+        return false;
+    }
+    mConnectionIndicators.insert(tabName, state);
+    return true;
+}
+
+bool TStyle::setTabConnectionIndicator(int index, TabConnectionIndicator state)
+{
+    if (index < 0 || index >= mpTabBar->count()) {
+        return false;
+    }
+    return setTabConnectionIndicator(mpTabBar->tabData(index).toString(), state);
+}
+
+TabConnectionIndicator TStyle::tabConnectionIndicator(const QString& tabName) const
+{
+    if (tabName.isEmpty()) {
+        return TabConnectionIndicator::None;
+    }
+    return mConnectionIndicators.value(tabName, TabConnectionIndicator::None);
+}
+
+TabConnectionIndicator TStyle::tabConnectionIndicator(int index) const
+{
+    if (index < 0 || index >= mpTabBar->count()) {
+        return TabConnectionIndicator::None;
+    }
+    return tabConnectionIndicator(mpTabBar->tabData(index).toString());
 }
 
 void TStyle::setNamedTabState(const QString& tabName, const bool state, QSet<QString>& effect)
@@ -137,8 +279,9 @@ bool TStyle::indexedTabState(const int index, const QSet<QString>& effect) const
 
 QSize TTabBar::tabSizeHint(int index) const
 {
+    QSize s = QTabBar::tabSizeHint(index);
+
     if (mStyle.tabBold(index) || mStyle.tabItalic(index) || mStyle.tabUnderline(index)) {
-        const QSize s = QTabBar::tabSizeHint(index);
         const QFontMetrics fm(font());
         // Note that this method must use (because it is associated with sizing
         // the text to show) the (possibly Qt modified to include an
@@ -154,9 +297,17 @@ QSize TTabBar::tabSizeHint(int index) const
 
         const int bw = bfm.horizontalAdvance(tabText(index));
 
-        return {s.width() - w + bw, s.height()};
+        s.setWidth(s.width() - w + bw);
     }
-    return QTabBar::tabSizeHint(index);
+
+    // Reserve space at the trailing edge for our manually-painted connection
+    // indicator (issue #9213). We paint it ourselves rather than via
+    // setTabIcon() so the native macOS tab style does not add its own padding.
+    if (mStyle.tabConnectionIndicator(index) != TabConnectionIndicator::None) {
+        s.setWidth(s.width() + TStyle::sIndicatorReservedWidth);
+    }
+
+    return s;
 }
 
 QString TTabBar::tabName(const int index) const
@@ -186,6 +337,7 @@ void TTabBar::removeTab(int index)
         setTabBold(index, false);
         setTabItalic(index, false);
         setTabUnderline(index, false);
+        setTabConnectionIndicator(index, TabConnectionIndicator::None);
         QTabBar::removeTab(index);
     }
 }
@@ -197,6 +349,7 @@ void TTabBar::removeTab(const QString& tabName)
         setTabBold(index, false);
         setTabItalic(index, false);
         setTabUnderline(index, false);
+        setTabConnectionIndicator(index, TabConnectionIndicator::None);
         QTabBar::removeTab(index);
     }
 }
