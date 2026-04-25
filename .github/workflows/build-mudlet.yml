@@ -83,7 +83,7 @@ jobs:
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
-      uses: leafo/gh-actions-lua@v12
+      uses: leafo/gh-actions-lua@v13
       with:
         luaVersion: ${{ env.LUA_VERSION }}
         buildCache: false
@@ -156,7 +156,7 @@ jobs:
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
     - name: (Linux) Install Lua via GitHub Actions
-      uses: leafo/gh-actions-lua@v12
+      uses: leafo/gh-actions-lua@v13
       if: runner.os == 'Linux'
       with:
         luaVersion: ${{ env.LUA_VERSION }}

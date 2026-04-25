@@ -101,7 +101,7 @@ jobs:
       uses: lukka/get-cmake@v4.3.1
 
     - name: (Linux) Install Lua via GitHub Actions
-      uses: leafo/gh-actions-lua@v12
+      uses: leafo/gh-actions-lua@v13
       if: runner.os == 'Linux'
       with:
         luaVersion: "5.1.5"
