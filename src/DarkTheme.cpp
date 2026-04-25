@@ -37,11 +37,9 @@ void DarkTheme::polish(QPalette& palette)
     // modify palette to dark
     palette.setColor(QPalette::Window, QColor(53, 53, 53));
     palette.setColor(QPalette::WindowText, Qt::white);
-    // Base is noticeably darker than Window so input fields (QLineEdit,
-    // QPlainTextEdit, QListWidget, ...) are clearly distinguishable from the
-    // surrounding dialog background, and Mid (45,45,45) reads as a visible
-    // border between them. AlternateBase is offset 15 units from Base so list
-    // and tree row striping stays visible. See issue #9214.
+    // Base must be noticeably darker than Window so input widgets stand out
+    // from the dialog background; AlternateBase is offset to keep list/tree
+    // row striping visible. Issue #9214.
     palette.setColor(QPalette::Base, QColor(25, 25, 25));
     palette.setColor(QPalette::AlternateBase, QColor(40, 40, 40));
     palette.setColor(QPalette::ToolTipBase, QColor(53, 53, 53));
