@@ -4340,7 +4340,7 @@ void T2DMap::slot_undoCustomLineLastPoint()
     if (mCustomLinesRoomFrom > 0) {
         TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
         if (room) {
-            if (room->customLines.value(mCustomLinesRoomExit).count() > 0) {
+            if (!room->customLines.value(mCustomLinesRoomExit).isEmpty()) {
                 room->customLines[mCustomLinesRoomExit].pop_back();
             }
             room->calcRoomDimensions();
