@@ -221,7 +221,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     fontComboBox_mapSymbols->setToolTip(utils::richText(tr("Select the only or the primary font used (depending on <i>Only use symbols "
                                                            "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.")));
     //: Tooltip for map symbol font usage option
-    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(utils::richText(tr("Use only the selected font (may show � for missing symbols) or allow fallback fonts for better coverage.")));
+    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(utils::richText(tr("Use only the selected font (may show \uFFFD for missing symbols) or allow fallback fonts for better coverage.")));
     //: Tooltip for run all keybindings option
     checkBox_runAllKeyBindings->setToolTip(tr("<p>Run all matching keybindings instead of just the first one. "
                                               "Disable for compatibility with pre-3.9.0 scripts.</p>"));
