@@ -1186,7 +1186,6 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 }
 
                 mSocket_ipV6.connectToHost(connectToText, mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
-
             }
             if (hasIPv4_address) {
                 connect(&mSocket_ipV4, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected, Qt::UniqueConnection);
@@ -1207,8 +1206,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 } else {
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
  is the port number for the connection.*/
-                    TDebug(QColorConstants::Blue, QColorConstants::White)
-                                    << tr("Trying open (IPv4) connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)).append(QChar::LineFeed)
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv4) connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
  is the port number for the connection.*/
@@ -1216,7 +1214,6 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 }
 
                 mSocket_ipV4.connectToHost(connectToText, mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
-
             }
         }
 #if !defined(QT_NO_SSL)
@@ -2177,9 +2174,8 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
     for (int i = 0; i < payload.size(); ++i) {
         if (!i && payload.at(i) == NEW_ENVIRON_SEND) {
             continue;
-        }
-        if (!i) {
-            return; // Invalid response;
+        } else if (!i) { // NOLINT(readability-else-after-return)
+            return;      // Invalid response;
         }
 
         if (payload.at(i) == NEW_ENVIRON_VAR) {
@@ -2328,9 +2324,8 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
     for (int i = 0; i < payload.size(); ++i) {
         if (!i && payload.at(i) == NEW_ENVIRON_SEND) {
             continue;
-        }
-        if (!i) {
-            return; // Invalid response;
+        } else if (!i) { // NOLINT(readability-else-after-return)
+            return;      // Invalid response;
         }
 
         if (payload.at(i) == NEW_ENVIRON_VAR) {
