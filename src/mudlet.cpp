@@ -6930,15 +6930,10 @@ void mudlet::activateProfile(Host* pHost)
 
     updateMultiViewControls();
 
-    // Deferred so the event loop processes pending show/visibility/resize
-    // events first and the upper pane's visibleRegion() reflects the final
-    // geometry. Otherwise mScreenWidth can snap to its qMax(40, ...) floor,
-    // sending a tiny NAWS to the server which then pre-wraps subsequent
-    // server-formatted output (broadcasts, prompts, room descriptions) far too
-    // narrowly until the next real resize.
-    // QTimer::singleShot with a receiver QObject* skips the call if the Host
-    // is destroyed before the timer fires - safe across profile teardown
-    // (do not refactor to a capturing lambda, which would lose this).
+    // Deferred so widget geometry is finalised before NAWS is recalculated;
+    // otherwise mScreenWidth hits its qMax(40, ...) floor and the server
+    // pre-wraps output too narrowly. Receiver-form singleShot is safe if the
+    // Host is destroyed first - do not change to a lambda.
     QTimer::singleShot(0, mpCurrentActiveHost.data(), &Host::updateDisplayDimensions);
 
     // Currently used to update the Discord Rich Presence
