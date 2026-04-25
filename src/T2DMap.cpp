@@ -1957,7 +1957,7 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
             // QLinearGradient (Qt::blue at alpha ~180 gives an equivalent look
             // over the env base colour that was already written into lodImage).
             const QColor selectionTint(0, 0, 255, 180);
-            for (const int selId : mMultiSelectionSet) {
+            for (const int selId : std::as_const(mMultiSelectionSet)) {
                 TRoom* room = mpMap->mpRoomDB->getRoom(selId);
                 if (!room || room->z() != zLevel) {
                     continue;
