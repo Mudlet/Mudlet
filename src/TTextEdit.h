@@ -37,6 +37,8 @@
 #include <chrono>
 #include <string>
 
+#include "THyperlinkStyling.h"
+
 
 class Host;
 class TBuffer;
@@ -108,6 +110,7 @@ public:
     void updateCaret();
     void showLinkContextMenu();
     void announceLinkFocus(int linkIndex);
+    void applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, const Mudlet::HyperlinkStyling::SelectionSettings& selection, const char* callerContext);
 
     QColor mBgColor;
     // position of cursor, in characters, across the entire buffer
@@ -136,6 +139,10 @@ public:
     // problems with duplicate texts:
     // Value: is the lua code as a string (first) or the lua function reference number (second)
     QMap<int, std::pair<QString, int>> mPopupCommands;
+    // The link index that the currently-displayed popup belongs to, or 0 if
+    // none. Used so that selection-group state is applied to the right link
+    // when a multi-command popup item is activated via slot_popupMenu().
+    int mPopupLinkIndex = 0;
     // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;
     QRegion mSelectedRegion;

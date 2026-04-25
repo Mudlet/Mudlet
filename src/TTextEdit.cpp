@@ -1652,14 +1652,33 @@ void TTextEdit::slot_popupMenu()
     // index is set to be greater than zero for every possible sender():
     const int index = pA->data().toInt();
     if (index && mPopupCommands.contains(index)) {
-        const QString cmd = mPopupCommands.value(index).first;
+        QString cmd = mPopupCommands.value(index).first;
         const int luaReference = mPopupCommands.value(index).second;
+
+        // Apply selection-group state to the chosen popup item, mirroring the
+        // direct-activation paths (mousePressEvent / showLinkContextMenu /
+        // keyPressEvent). Without this, multi-command links activated via the
+        // popup menu would silently skip toggle / exclusive-group propagation.
+        if (mPopupLinkIndex > 0 && mpBuffer) {
+            const auto styling = mpBuffer->mLinkStore.getStyling(mPopupLinkIndex);
+            if (styling.selection.hasSelectionSettings) {
+                applyHyperlinkSelectionGroupState(mPopupLinkIndex, cmd, styling.selection, "TTextEdit::slot_popupMenu");
+            }
+            if (mpConsole) {
+                mpConsole->getHyperlinkVisibilityManager().onLinkClicked(mPopupLinkIndex);
+            } else {
+                qWarning() << "TTextEdit::slot_popupMenu() - mpConsole is null, skipping visibility manager notification for link" << mPopupLinkIndex;
+            }
+            mpBuffer->markLinkAsVisited(mPopupLinkIndex);
+        }
+
         if (!luaReference) {
             mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
         } else {
             mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, qsl("echoPopup"));
         }
     }
+    mPopupLinkIndex = 0;
 }
 
 void TTextEdit::mousePressEvent(QMouseEvent* event)
@@ -1758,66 +1777,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                         }
 
                         if (hyperlinkStyling.selection.hasSelectionSettings) {
-                            auto* mgr = mpConsole ? &mpConsole->getHyperlinkSelectionManager() : nullptr;
-                            if (!mgr) {
-                                qWarning() << "TTextEdit::mousePressEvent - Selection manager is null, skipping selection handling for link" << linkIndex;
-                            } else {
-                                const QString& group = hyperlinkStyling.selection.group;
-                                const QString& value = hyperlinkStyling.selection.value;
-
-                                // Configure group exclusivity mode if needed
-                                mgr->setGroupExclusive(group, hyperlinkStyling.selection.exclusive);
-
-                                bool currentlySelected = mgr->isSelected(group, value);
-
-                                if (hyperlinkStyling.selection.toggle) {
-                                    mgr->toggleSelection(group, value);
-                                } else {
-                                    mgr->setSelected(group, value, true);
-                                }
-
-                                bool newSelected = mgr->isSelected(group, value);
-
-                                func = mgr->modifyUriForSelection(func, group, value);
-
-#if defined(DEBUG_OSC_PROCESSING)
-                                qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "selected=" << newSelected;
-#endif
-                                mpBuffer->setLinkSelected(linkIndex, newSelected);
-                                if (newSelected) {
-#if defined(DEBUG_OSC_PROCESSING)
-                                    qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "to StateSelected";
-#endif
-                                    mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateSelected);
-                                } else {
-#if defined(DEBUG_OSC_PROCESSING)
-                                    qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "to StateDefault";
-#endif
-                                    mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
-                                }
-                                mpBuffer->updateLinkCharacters(linkIndex);
-
-                                // For exclusive groups, update visual state of all other members that may have been deselected
-                                if (mgr->isGroupExclusive(group)) {
-                                    QStringList groupMembers = mgr->getGroupMembers(group);
-                                    for (const QString& member : std::as_const(groupMembers)) {
-                                        if (member != value) {
-                                            // Get all link IDs with this group/value combination using the reverse index
-                                            bool memberSelected = mgr->isSelected(group, member);
-                                            QList<int> matchingLinkIds = mpBuffer->mLinkStore.getLinkIdsByGroupValue(group, member);
-
-                                            for (const int otherLinkId : std::as_const(matchingLinkIds)) {
-                                                mpBuffer->setLinkSelected(otherLinkId, memberSelected);
-                                                mpBuffer->setLinkState(otherLinkId, memberSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
-                                                mpBuffer->updateLinkCharacters(otherLinkId);
-#if defined(DEBUG_OSC_PROCESSING)
-                                                qDebug() << "TTextEdit::mousePressEvent - Updated exclusive group member link" << otherLinkId << "to selected=" << memberSelected;
-#endif
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            applyHyperlinkSelectionGroupState(linkIndex, func, hyperlinkStyling.selection, "TTextEdit::mousePressEvent");
                         }
 
                         // Clear hover to show selection immediately; mouse move will restore it
@@ -2380,6 +2340,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                         }
 
                         mPopupCommands.clear();
+                        mPopupLinkIndex = linkIndex;
                         for (int i = 0, total = command.size(); i < total; ++i) {
                             QAction* pA = nullptr;
                             // Check to see if this item has a command/function
@@ -3499,6 +3460,60 @@ void TTextEdit::announceLinkFocus(int linkIndex)
     }
 }
 
+void TTextEdit::applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, const Mudlet::HyperlinkStyling::SelectionSettings& selection, const char* callerContext)
+{
+    if (!selection.hasSelectionSettings) {
+        return;
+    }
+    if (!mpBuffer) {
+        qWarning() << callerContext << "- mpBuffer is null, skipping selection-group state update for link" << linkIndex;
+        return;
+    }
+    auto* mgr = mpConsole ? &mpConsole->getHyperlinkSelectionManager() : nullptr;
+    if (!mgr) {
+        qWarning() << callerContext << "- Selection manager is null, skipping selection-group state update for link" << linkIndex;
+        return;
+    }
+
+    const QString& group = selection.group;
+    const QString& value = selection.value;
+
+    mgr->setGroupExclusive(group, selection.exclusive);
+
+    if (selection.toggle) {
+        mgr->toggleSelection(group, value);
+    } else {
+        mgr->setSelected(group, value, true);
+    }
+
+    const bool newSelected = mgr->isSelected(group, value);
+    uri = mgr->modifyUriForSelection(uri, group, value);
+
+    mpBuffer->setLinkSelected(linkIndex, newSelected);
+    mpBuffer->setLinkState(linkIndex, newSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
+    mpBuffer->updateLinkCharacters(linkIndex);
+
+    if (!mgr->isGroupExclusive(group)) {
+        return;
+    }
+
+    // For exclusive groups, propagate visual state to all other members
+    // that may have been deselected by the toggle/setSelected call above.
+    const QStringList groupMembers = mgr->getGroupMembers(group);
+    for (const QString& member : std::as_const(groupMembers)) {
+        if (member == value) {
+            continue;
+        }
+        const bool memberSelected = mgr->isSelected(group, member);
+        const QList<int> matchingLinkIds = mpBuffer->mLinkStore.getLinkIdsByGroupValue(group, member);
+        for (const int otherLinkId : std::as_const(matchingLinkIds)) {
+            mpBuffer->setLinkSelected(otherLinkId, memberSelected);
+            mpBuffer->setLinkState(otherLinkId, memberSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
+            mpBuffer->updateLinkCharacters(otherLinkId);
+        }
+    }
+}
+
 void TTextEdit::showLinkContextMenu()
 {
     if (!mpBuffer || !mpHost) {
@@ -3533,43 +3548,8 @@ void TTextEdit::showLinkContextMenu()
     if (command.size() <= 1 && hint.size() <= command.size()) {
         // No menu needed: one command and no extra hints means direct activation
         if (!command.isEmpty()) {
-            // Handle selection group state changes
             if (hyperlinkStyling.selection.hasSelectionSettings) {
-                auto* mgr = mpConsole ? &mpConsole->getHyperlinkSelectionManager() : nullptr;
-                if (mgr) {
-                    const QString& group = hyperlinkStyling.selection.group;
-                    const QString& value = hyperlinkStyling.selection.value;
-
-                    mgr->setGroupExclusive(group, hyperlinkStyling.selection.exclusive);
-
-                    if (hyperlinkStyling.selection.toggle) {
-                        mgr->toggleSelection(group, value);
-                    } else {
-                        mgr->setSelected(group, value, true);
-                    }
-
-                    bool newSelected = mgr->isSelected(group, value);
-                    command[0] = mgr->modifyUriForSelection(command[0], group, value);
-
-                    mpBuffer->setLinkSelected(focusedLink, newSelected);
-                    mpBuffer->setLinkState(focusedLink, newSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
-                    mpBuffer->updateLinkCharacters(focusedLink);
-
-                    if (mgr->isGroupExclusive(group)) {
-                        QStringList groupMembers = mgr->getGroupMembers(group);
-                        for (const QString& member : std::as_const(groupMembers)) {
-                            if (member != value) {
-                                bool memberSelected = mgr->isSelected(group, member);
-                                QList<int> matchingLinkIds = mpBuffer->mLinkStore.getLinkIdsByGroupValue(group, member);
-                                for (const int otherLinkId : std::as_const(matchingLinkIds)) {
-                                    mpBuffer->setLinkSelected(otherLinkId, memberSelected);
-                                    mpBuffer->setLinkState(otherLinkId, memberSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
-                                    mpBuffer->updateLinkCharacters(otherLinkId);
-                                }
-                            }
-                        }
-                    }
-                }
+                applyHyperlinkSelectionGroupState(focusedLink, command[0], hyperlinkStyling.selection, "TTextEdit::showLinkContextMenu");
             }
 
             if (mpConsole) {
@@ -3628,6 +3608,7 @@ void TTextEdit::showLinkContextMenu()
     }
 
     mPopupCommands.clear();
+    mPopupLinkIndex = focusedLink;
     for (int i = 0, total = command.size(); i < total; ++i) {
         QAction* pA = nullptr;
         const bool doesSomething = !command.at(i).isEmpty() || luaReference.value(i, 0);
@@ -3706,6 +3687,34 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 mOldCaretColumn = 0;
             } else {
                 newCaretColumn = newLineLength - 1;
+            }
+        }
+    };
+
+    auto navigateToLink = [&](bool forward) {
+        if (!mpBuffer) {
+            return;
+        }
+        int outLine = 0;
+        int outCol = 0;
+        bool wrapped = false;
+        const bool found = forward ? mpBuffer->findNextLink(mCaretLine, mCaretColumn, outLine, outCol, &wrapped) : mpBuffer->findPreviousLink(mCaretLine, mCaretColumn, outLine, outCol, &wrapped);
+        if (!found) {
+            return;
+        }
+        newCaretLine = outLine;
+        newCaretColumn = outCol;
+        if (wrapped) {
+            if (auto* pMudlet = mudlet::self()) {
+                QString message;
+                if (forward) {
+                    //: Screen-reader announcement when forward link navigation (Tab / Ctrl+]) wraps past the last link back to the first
+                    message = tr("Wrapping to first link");
+                } else {
+                    //: Screen-reader announcement when backward link navigation (Shift+Tab / Ctrl+[) wraps past the first link back to the last
+                    message = tr("Wrapping to last link");
+                }
+                pMudlet->announce(message, QString(), true);
             }
         }
     };
@@ -3840,6 +3849,10 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
             newCaretLine = 0;
             newCaretColumn = 0;
+            if (auto* app = mudlet::self()) {
+                //: Screen-reader announcement when the user presses Ctrl+Home in caret mode to jump to the start of the buffer
+                app->announce(tr("Jumped to start of buffer."), QString(), true);
+            }
         } else {
             newCaretColumn = 0;
         }
@@ -3850,6 +3863,10 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             const int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty() ? 1 : 0;
             newCaretLine = mpBuffer->lineBuffer.length() - 1 - emptyLastLine;
             newCaretColumn = std::max(0, static_cast<int>(mpBuffer->lineBuffer[newCaretLine].length()) - 1);
+            if (auto* app = mudlet::self()) {
+                //: Screen-reader announcement when the user presses Ctrl+End in caret mode to jump to the latest (most recent) content in the buffer
+                app->announce(tr("Jumped to latest content."), QString(), true);
+            }
         } else {
             newCaretColumn = mpBuffer->lineBuffer.at(mCaretLine).length() - 1;
         }
@@ -3893,48 +3910,14 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 return;
             }
 
-            // Handle selection group state changes
             if (hyperlinkStyling.selection.hasSelectionSettings) {
-                auto* mgr = mpConsole ? &mpConsole->getHyperlinkSelectionManager() : nullptr;
-                if (mgr) {
-                    const QString& group = hyperlinkStyling.selection.group;
-                    const QString& value = hyperlinkStyling.selection.value;
-
-                    mgr->setGroupExclusive(group, hyperlinkStyling.selection.exclusive);
-
-                    if (hyperlinkStyling.selection.toggle) {
-                        mgr->toggleSelection(group, value);
-                    } else {
-                        mgr->setSelected(group, value, true);
-                    }
-
-                    bool newSelected = mgr->isSelected(group, value);
-                    commands[0] = mgr->modifyUriForSelection(commands[0], group, value);
-
-                    mpBuffer->setLinkSelected(focusedLink, newSelected);
-                    mpBuffer->setLinkState(focusedLink, newSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
-                    mpBuffer->updateLinkCharacters(focusedLink);
-
-                    // For exclusive groups, update visual state of all other members
-                    if (mgr->isGroupExclusive(group)) {
-                        QStringList groupMembers = mgr->getGroupMembers(group);
-                        for (const QString& member : std::as_const(groupMembers)) {
-                            if (member != value) {
-                                bool memberSelected = mgr->isSelected(group, member);
-                                QList<int> matchingLinkIds = mpBuffer->mLinkStore.getLinkIdsByGroupValue(group, member);
-                                for (const int otherLinkId : std::as_const(matchingLinkIds)) {
-                                    mpBuffer->setLinkSelected(otherLinkId, memberSelected);
-                                    mpBuffer->setLinkState(otherLinkId, memberSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
-                                    mpBuffer->updateLinkCharacters(otherLinkId);
-                                }
-                            }
-                        }
-                    }
-                }
+                applyHyperlinkSelectionGroupState(focusedLink, commands[0], hyperlinkStyling.selection, "TTextEdit::keyPressEvent");
             }
 
             if (mpConsole) {
                 mpConsole->getHyperlinkVisibilityManager().onLinkClicked(focusedLink);
+            } else {
+                qWarning() << "TTextEdit::keyPressEvent() - mpConsole is null, skipping visibility manager notification for link" << focusedLink;
             }
 
             QVector<int> luaReference = mpBuffer->mLinkStore.getReference(focusedLink);
@@ -3967,35 +3950,25 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         }
 
         if (!(event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier))) {
-            int nextLine = 0;
-            int nextCol = 0;
-            bool wrapped = false;
-            if (mpBuffer->findNextLink(mCaretLine, mCaretColumn, nextLine, nextCol, &wrapped)) {
-                newCaretLine = nextLine;
-                newCaretColumn = nextCol;
-                if (wrapped) {
-                    if (auto* pMudlet = mudlet::self()) {
-                        //: Screen-reader announcement when Tab wraps past the last link back to the first
-                        pMudlet->announce(tr("Wrapping to first link"), QString(), true);
-                    }
-                }
-            }
+            navigateToLink(true);
         }
         break;
     }
     case Qt::Key_Backtab: {
-        int prevLine = 0;
-        int prevCol = 0;
-        bool wrapped = false;
-        if (mpBuffer->findPreviousLink(mCaretLine, mCaretColumn, prevLine, prevCol, &wrapped)) {
-            newCaretLine = prevLine;
-            newCaretColumn = prevCol;
-            if (wrapped) {
-                if (auto* pMudlet = mudlet::self()) {
-                    //: Screen-reader announcement when Shift+Tab wraps past the first link back to the last
-                    pMudlet->announce(tr("Wrapping to last link"), QString(), true);
-                }
-            }
+        navigateToLink(false);
+        break;
+    }
+    // Alternate forward/backward link navigation for cases where Tab or
+    // Shift+Tab is consumed by the caret-mode toggle or reassigned by the user.
+    case Qt::Key_BracketRight: {
+        if (event->modifiers().testFlag(Qt::ControlModifier)) {
+            navigateToLink(true);
+        }
+        break;
+    }
+    case Qt::Key_BracketLeft: {
+        if (event->modifiers().testFlag(Qt::ControlModifier)) {
+            navigateToLink(false);
         }
         break;
     }

@@ -27,6 +27,7 @@
  * Run with: ctest -R TOscTest -V
  */
 
+#include <QKeyEvent>
 #include <QtTest/QtTest>
 
 #include <optional>
@@ -1054,6 +1055,242 @@ private slots:
     QVERIFY(desc.isEmpty());
 
     // Cleanup
+    mpHost->setCaretEnabled(false);
+  }
+
+  // =====================================================================
+  // OSC 8 attributes() run-range / caret-cell isolation Tests
+  // =====================================================================
+
+  // Helper: compute the offset of a (line, column) position the same way the
+  // accessible interface does it (one '\n' per line break).
+  int offsetForPosition(TMainConsole *console, int line, int column) {
+    int offset = 0;
+    for (int i = 0; i < line; ++i) {
+      offset += console->buffer.line(i).length() + 1;
+    }
+    return offset + column;
+  }
+
+  void test_Attributes_RunRangeCoversFullLink() {
+    // A whole link run should be returned in a single attributes() call
+    // (start..end describe the contiguous range with these attributes).
+    injectData(qsl("\x1b]8;;https://example.com\x1b\\Click me\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY(pane);
+    TAccessibleTextEdit accessible(pane);
+
+    const int offset = offsetForPosition(console, linkLine, linkCol);
+    int startOffset = -1, endOffset = -1;
+    QString attrs = accessible.attributes(offset, &startOffset, &endOffset);
+
+    QVERIFY2(attrs.contains(qsl("text-link:")),
+             qPrintable(qsl("Expected link attributes; got: %1").arg(attrs)));
+
+    // The reported range must include the queried offset and stay within the
+    // link span on this line.
+    QVERIFY2(startOffset <= offset && offset < endOffset,
+             qPrintable(qsl("Range [%1,%2) must include offset %3")
+                            .arg(startOffset)
+                            .arg(endOffset)
+                            .arg(offset)));
+
+    // Every column inside [startCol, endCol) on this line must belong to the
+    // same linkId, otherwise the run-expansion crossed a boundary.
+    const int lineStart = offsetForPosition(console, linkLine, 0);
+    for (int o = startOffset; o < endOffset; ++o) {
+      const int col = o - lineStart;
+      QVERIFY2(col >= 0 && col < console->buffer.line(linkLine).length(),
+               "run range should not cross a line boundary");
+      QCOMPARE(console->buffer.getLinkIndexAt(linkLine, col), linkId);
+    }
+  }
+
+  void test_Attributes_RunRangeStopsAtLinkBoundary() {
+    // " " between "X" and the link must not be merged with the link's run.
+    injectData(qsl("X \x1b]8;;https://example.com\x1b\\L\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    QVERIFY2(linkCol >= 1, "Link should be preceded by plain text");
+
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY(pane);
+    TAccessibleTextEdit accessible(pane);
+
+    // Query attributes at the plain-text character immediately before the link.
+    const int plainOffset = offsetForPosition(console, linkLine, linkCol - 1);
+    int s = -1, e = -1;
+    QString plainAttrs = accessible.attributes(plainOffset, &s, &e);
+    QVERIFY2(!plainAttrs.contains(qsl("text-link:")),
+             "Plain text before link should not have link attributes");
+    // The run from the plain-text query must end at or before the link starts.
+    const int linkOffset = offsetForPosition(console, linkLine, linkCol);
+    QVERIFY2(e <= linkOffset,
+             qPrintable(qsl("Plain run [%1,%2) leaked into link starting at %3")
+                            .arg(s)
+                            .arg(e)
+                            .arg(linkOffset)));
+  }
+
+  void test_Attributes_CaretCellIsolatedFromRun() {
+    // The caret cell renders inverted; it must not be merged into a
+    // neighbouring run even when they otherwise share styling.
+    injectData(qsl("\x1b]8;;https://example.com\x1b\\Hello\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+
+    mpHost->setCaretEnabled(true);
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY(pane);
+    // Park the caret on the second character of the link.
+    pane->setCaretPosition(linkLine, linkCol + 1);
+
+    TAccessibleTextEdit accessible(pane);
+
+    const int caretOffset = offsetForPosition(console, linkLine, linkCol + 1);
+    int sCaret = -1, eCaret = -1;
+    QString attrsCaret = accessible.attributes(caretOffset, &sCaret, &eCaret);
+    QVERIFY2(attrsCaret.contains(qsl("text-link:")),
+             "Caret-on-link should still report link attributes");
+    // The caret cell's range must be just the caret cell, not the whole link.
+    QCOMPARE(eCaret - sCaret, 1);
+
+    // The character before the caret must form its own run that ends at the
+    // caret cell (does not engulf it).
+    const int beforeOffset = offsetForPosition(console, linkLine, linkCol);
+    int sBefore = -1, eBefore = -1;
+    accessible.attributes(beforeOffset, &sBefore, &eBefore);
+    QVERIFY2(eBefore == caretOffset,
+             qPrintable(qsl("Run before caret should end at caret offset %1, "
+                            "got [%2,%3)")
+                            .arg(caretOffset)
+                            .arg(sBefore)
+                            .arg(eBefore)));
+
+    mpHost->setCaretEnabled(false);
+  }
+
+  // =====================================================================
+  // OSC 8 link navigation key Tests
+  // =====================================================================
+
+  void test_FindLink_WrapForward() {
+    // With only one link in the buffer, starting from after it we should wrap
+    // to the start and rediscover the same link (and report wrapped == true).
+    injectData(qsl("\x1b]8;;send:look\x1b\\Look\x1b]8;;\x1b\\ trailing text"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    Q_UNUSED(linkLine);
+    Q_UNUSED(linkCol);
+
+    // Scan forward starting at a position past the only link: the search must
+    // fall through to the wrap-around branch and rediscover the same link.
+    const int lastLine = console->buffer.getLastLineNumber();
+    const int lastCol = console->buffer.line(lastLine).length() - 1;
+    int outLine2 = -1, outCol2 = -1;
+    bool wrapped2 = false;
+    bool found2 = console->buffer.findNextLink(lastLine, lastCol, outLine2,
+                                               outCol2, &wrapped2);
+    QVERIFY2(found2, "findNextLink with wrap should rediscover the only link");
+    QVERIFY2(wrapped2, "wrapped should be set to true when the search wrapped");
+    QCOMPARE(console->buffer.getLinkIndexAt(outLine2, outCol2), linkId);
+  }
+
+  void test_FindLink_WrapBackward() {
+    // Place the link on a later line so that a backward search from line 0
+    // exhausts the pre-start range and falls through to the wrap path.
+    injectData(qsl("plain leading line"));
+    injectData(qsl("\x1b]8;;send:look\x1b\\Look\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    QVERIFY2(linkLine > 0,
+             "Test setup expects the link on a line after the leading text");
+    Q_UNUSED(linkCol);
+
+    // Searching backward from the very start of the buffer must wrap to find
+    // the only link further down the buffer.
+    int outLine = -1, outCol = -1;
+    bool wrapped = false;
+    bool found =
+        console->buffer.findPreviousLink(0, 0, outLine, outCol, &wrapped);
+    QVERIFY2(found,
+             "findPreviousLink with wrap should rediscover the only link");
+    QVERIFY2(wrapped,
+             "wrapped should be set to true when backward search wrapped");
+    QCOMPARE(outLine, linkLine);
+    QCOMPARE(console->buffer.getLinkIndexAt(outLine, outCol), linkId);
+  }
+
+  void test_KeyNav_CtrlBracketRight_MovesToNextLink() {
+    injectData(qsl("\x1b]8;;send:north\x1b\\North\x1b]8;;\x1b\\ - "
+                   "\x1b]8;;send:south\x1b\\South\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    auto first = findNthDistinctLinkPosition(1);
+    auto second = findNthDistinctLinkPosition(2);
+    QVERIFY(first.has_value() && second.has_value());
+    auto [firstLine, firstCol, firstLinkId] = *first;
+    auto [secondLine, secondCol, secondLinkId] = *second;
+    Q_UNUSED(firstLinkId);
+
+    mpHost->setCaretEnabled(true);
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY(pane);
+    pane->setCaretPosition(firstLine, firstCol);
+
+    QKeyEvent press(QEvent::KeyPress, Qt::Key_BracketRight,
+                    Qt::ControlModifier);
+    QApplication::sendEvent(pane, &press);
+
+    QCOMPARE(pane->mCaretLine, secondLine);
+    QCOMPARE(pane->mCaretColumn, secondCol);
+    QCOMPARE(console->buffer.getFocusedLink(), secondLinkId);
+
+    mpHost->setCaretEnabled(false);
+  }
+
+  void test_KeyNav_CtrlBracketLeft_MovesToPreviousLink() {
+    injectData(qsl("\x1b]8;;send:north\x1b\\North\x1b]8;;\x1b\\ - "
+                   "\x1b]8;;send:south\x1b\\South\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    auto first = findNthDistinctLinkPosition(1);
+    auto second = findNthDistinctLinkPosition(2);
+    QVERIFY(first.has_value() && second.has_value());
+    auto [firstLine, firstCol, firstLinkId] = *first;
+    auto [secondLine, secondCol, secondLinkId] = *second;
+    Q_UNUSED(secondLinkId);
+
+    mpHost->setCaretEnabled(true);
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY(pane);
+    pane->setCaretPosition(secondLine, secondCol);
+
+    QKeyEvent press(QEvent::KeyPress, Qt::Key_BracketLeft, Qt::ControlModifier);
+    QApplication::sendEvent(pane, &press);
+
+    QCOMPARE(pane->mCaretLine, firstLine);
+    QCOMPARE(pane->mCaretColumn, firstCol);
+    QCOMPARE(console->buffer.getFocusedLink(), firstLinkId);
+
     mpHost->setCaretEnabled(false);
   }
 

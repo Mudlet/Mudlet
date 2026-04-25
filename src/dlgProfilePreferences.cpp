@@ -47,6 +47,7 @@
 
 #include <chrono>
 #include <QtConcurrent>
+#include <QAccessible>
 #include <QCloseEvent>
 #include <QColorDialog>
 #include <QDir>
@@ -1327,7 +1328,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
@@ -1365,7 +1366,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
     doubleSpinBox_networkPacketTimeout->setValue(pHost->mTelnet.getPostingTimeout() / 1000.0);
-    comboBox_caretModeKey->setCurrentIndex(static_cast<int>(pHost->mCaretShortcut));
+    {
+        const QSignalBlocker blocker(comboBox_caretModeKey);
+        comboBox_caretModeKey->setCurrentIndex(static_cast<int>(pHost->mCaretShortcut));
+    }
     checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
     checkBox_invertMapZoom->setChecked(mudlet::self()->invertMapZoom());
     comboBox_blankLinesBehaviour->setCurrentIndex(static_cast<int>(pHost->mBlankLineBehaviour));
@@ -1464,6 +1468,36 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_loadMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_loadMap);
     connect(pushButton_saveMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_saveMap);
     connect(comboBox_encoding, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_setEncoding);
+
+    // Progressive disclosure for screen-reader users: surface the hyperlink
+    // navigation/activation/menu shortcuts at the moment the user picks a
+    // pane-switching key, so they don't have to consult the wiki to discover
+    // them. Picking Tab additionally warns about the shared binding.
+    connect(comboBox_caretModeKey, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int index) {
+        if (index < 0) {
+            return;
+        }
+        if (!QAccessible::isActive()) {
+            return;
+        }
+        auto* app = mudlet::self();
+        if (!app) {
+            return;
+        }
+        QString announcement;
+        const auto choice = static_cast<Host::CaretShortcut>(index);
+        if (choice == Host::CaretShortcut::Tab) {
+            //: Screen-reader hint when the user picks Tab as the caret-mode pane-switching key, warning Tab is shared with hyperlink navigation and explaining how to activate links, open their menu, and jump to latest content. Do not translate the key names "Tab", "Ctrl+]", "Ctrl+[", "Enter", "Space", "Menu", "Shift+F10", "Ctrl+End" or "Ctrl+Home".
+            announcement = tr("Tab will switch between the input line and main window, and also step through hyperlinks while in caret mode. Ctrl+] and Ctrl+[ navigate links without conflicting with "
+                              "pane-switching. Press Enter or Space to activate the focused link, and the Menu key or Shift+F10 to open its context menu. Press Ctrl+End to jump to the latest "
+                              "content or Ctrl+Home to jump to the start of the buffer.");
+        } else {
+            //: Screen-reader hint when the user picks any caret-mode pane-switching key other than Tab, explaining how to navigate, activate and open menus on hyperlinks, and jump to latest content. Do not translate the key names "Ctrl+]", "Ctrl+[", "Enter", "Space", "Menu", "Shift+F10", "Ctrl+End" or "Ctrl+Home".
+            announcement = tr("In caret mode, use Ctrl+] for the next hyperlink and Ctrl+[ for the previous hyperlink. Press Enter or Space to activate the focused link, and the Menu key or "
+                              "Shift+F10 to open its context menu. Press Ctrl+End to jump to the latest content or Ctrl+Home to jump to the start of the buffer.");
+        }
+        app->announce(announcement, QString(), true);
+    });
 
     connect(pushButton_whereToLog, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setLogDir);
     connect(pushButton_resetLogDir, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetLogDir);
