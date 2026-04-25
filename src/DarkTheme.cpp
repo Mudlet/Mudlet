@@ -37,8 +37,12 @@ void DarkTheme::polish(QPalette& palette)
     // modify palette to dark
     palette.setColor(QPalette::Window, QColor(53, 53, 53));
     palette.setColor(QPalette::WindowText, Qt::white);
-    palette.setColor(QPalette::Base, QColor(42, 42, 42));
-    palette.setColor(QPalette::AlternateBase, QColor(66, 66, 66));
+    // Base is noticeably darker than Window so input fields (QLineEdit,
+    // QPlainTextEdit, QListWidget, ...) are clearly distinguishable from the
+    // surrounding dialog background, and Mid (45,45,45) reads as a visible
+    // border between them. See issue #9214.
+    palette.setColor(QPalette::Base, QColor(25, 25, 25));
+    palette.setColor(QPalette::AlternateBase, QColor(35, 35, 35));
     palette.setColor(QPalette::ToolTipBase, QColor(53, 53, 53));
     palette.setColor(QPalette::ToolTipText, Qt::white);
     palette.setColor(QPalette::Text, Qt::white);
