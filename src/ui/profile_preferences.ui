@@ -4317,7 +4317,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item>
            <widget class="QLabel" name="label_shortcutsInstructions">
             <property name="text">
-             <string>To disable shortcut input 'Esc' key.</string>
+             <string>To clear a shortcut, focus its field and press Esc.</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
@@ -4337,6 +4337,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QToolButton" name="toolButton_resetMainWindowShortcuts">
             <property name="text">
              <string>Reset to defaults</string>
+            </property>
+            <property name="accessibleName">
+             <string>Reset main window shortcuts to defaults</string>
             </property>
            </widget>
           </item>

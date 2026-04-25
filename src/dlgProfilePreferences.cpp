@@ -60,11 +60,39 @@
 #include <QTableWidget>
 #include <QToolBar>
 #include <QUiLoader>
+#include <QKeyEvent>
 #include <QKeySequenceEdit>
 #include <QHBoxLayout>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 
 using namespace std::chrono_literals;
+
+namespace {
+// QKeySequenceEdit subclass that lets Shift+Tab traverse focus instead of
+// being captured as a shortcut binding (issue #8873). Plain Tab already
+// traverses focus because QDialog's default event handling promotes it
+// before keyPressEvent runs; Shift+Tab arrives here as Qt::Key_Backtab and
+// must be intercepted explicitly.
+class TabFriendlyKeySequenceEdit : public QKeySequenceEdit
+{
+public:
+    using QKeySequenceEdit::QKeySequenceEdit;
+
+protected:
+    void keyPressEvent(QKeyEvent* event) override
+    {
+        if (event->key() == Qt::Key_Backtab) {
+            if (focusPreviousChild()) {
+                event->ignore();
+                return;
+            }
+            // No previous focusable widget: fall through so the event can
+            // propagate normally rather than being silently swallowed.
+        }
+        QKeySequenceEdit::keyPressEvent(event);
+    }
+};
+} // namespace
 
 dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost)
 : QDialog(pParentWidget)
@@ -1484,9 +1512,15 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     while (shortcutKeys.hasNext()) {
         auto key = shortcutKeys.next();
         currentShortcuts.insert(key, QKeySequence(*pHost->profileShortcuts.value(key)));
-        auto sequenceEdit = new QKeySequenceEdit(currentShortcuts.value(key));
+        const QString labelText = mudlet::self()->mpShortcutsManager->getLabel(key);
+        auto sequenceEdit = new TabFriendlyKeySequenceEdit(currentShortcuts.value(key));
+        sequenceEdit->setAccessibleName(labelText.isEmpty() ? key : labelText);
+        //: Accessible description for a shortcut entry, read by screen readers when focus enters the field. Do not translate "Esc".
+        sequenceEdit->setAccessibleDescription(tr("Press a key combination to set the shortcut, or Esc to clear it."));
 
-        gridLayout_groupBox_shortcuts->addWidget(new QLabel(mudlet::self()->mpShortcutsManager->getLabel(key)), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
+        auto shortcutLabel = new QLabel(labelText);
+        shortcutLabel->setBuddy(sequenceEdit);
+        gridLayout_groupBox_shortcuts->addWidget(shortcutLabel, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
         shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
@@ -1498,9 +1532,17 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             currentShortcuts[key] = newSequence;
         });
         connect(this, &dlgProfilePreferences::signal_resetMainWindowShortcutsToDefaults, sequenceEdit, [=]() {
-            const auto defaultSequence = *mudlet::self()->mpShortcutsManager->getDefault(key);
-            sequenceEdit->setKeySequence(defaultSequence);
-            currentShortcuts[key] = defaultSequence;
+            auto* pMudlet = mudlet::self();
+            if (!pMudlet || !pMudlet->mpShortcutsManager) {
+                return;
+            }
+            const auto* pDefaultSequence = pMudlet->mpShortcutsManager->getDefault(key);
+            if (!pDefaultSequence) {
+                qWarning() << "dlgProfilePreferences: no default shortcut registered for key:" << key;
+                return;
+            }
+            sequenceEdit->setKeySequence(*pDefaultSequence);
+            currentShortcuts[key] = *pDefaultSequence;
         });
     }
 }
