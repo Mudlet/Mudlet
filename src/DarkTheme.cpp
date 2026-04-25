@@ -37,9 +37,6 @@ void DarkTheme::polish(QPalette& palette)
     // modify palette to dark
     palette.setColor(QPalette::Window, QColor(53, 53, 53));
     palette.setColor(QPalette::WindowText, Qt::white);
-    // Base must be noticeably darker than Window so input widgets stand out
-    // from the dialog background; AlternateBase is offset to keep list/tree
-    // row striping visible. Issue #9214.
     palette.setColor(QPalette::Base, QColor(25, 25, 25));
     palette.setColor(QPalette::AlternateBase, QColor(40, 40, 40));
     palette.setColor(QPalette::ToolTipBase, QColor(53, 53, 53));
