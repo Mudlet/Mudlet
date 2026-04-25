@@ -38,7 +38,7 @@ class TConsole : public QWidget
 // avoid starting with the `is` prefix
 QString mProfileName;
 
-// avoid starting function names `is` prefix as well
+// avoid starting function names with the `is` prefix as well
 bool ready();
 
 // Qt signals/slots: camelCase
