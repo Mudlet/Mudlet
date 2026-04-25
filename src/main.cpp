@@ -829,39 +829,23 @@ int main(int argc, char* argv[])
 
     bool forceAsk = false;
 #if defined(Q_OS_MACOS)
+    // Detect whether the current scheme handler still points at *this* Mudlet
+    // bundle. We compare bundle identifiers via LSCopyDefaultHandlerForURLScheme
+    // because that reflects the user's chosen default. LSCopyDefaultApplicationURLForURL
+    // resolves a full URL to *some* app that can open it, which always returns
+    // Mudlet itself when our Info.plist declares the telnet/telnets schemes —
+    // even when the user has set a different default.
     if (!headlessMode) {
-        CFURLRef testUrl = CFURLCreateWithString(kCFAllocatorDefault, CFSTR("telnet://test"), nullptr);
-        if (testUrl) {
-            CFURLRef appUrl = LSCopyDefaultApplicationURLForURL(testUrl, kLSRolesAll, nullptr);
-            if (appUrl) {
-                char pathBuffer[4096];
-                if (CFURLGetFileSystemRepresentation(appUrl, true, reinterpret_cast<UInt8*>(pathBuffer), sizeof(pathBuffer))) {
-                    QString handlerPath = QString::fromUtf8(pathBuffer);
-                    QString myPath = QCoreApplication::applicationFilePath();
-                    QFileInfo myInfo(myPath);
-                    QDir myBundleDir = myInfo.absoluteDir();
-                    if (myBundleDir.dirName() == qsl("MacOS")) {
-                        myBundleDir.cdUp();
-                    }
-                    if (myBundleDir.dirName() == qsl("Contents")) {
-                        myBundleDir.cdUp();
-                    }
-                    QString myBundlePath = myBundleDir.absolutePath();
-
-                    if (QFileInfo(handlerPath).canonicalFilePath() != QFileInfo(myBundlePath).canonicalFilePath()) {
-                        qDebug() << "main: macOS telnet handler path mismatch. Registered:" << handlerPath << "Current:" << myBundlePath;
-                        forceAsk = true;
-                    }
-                } else {
-                    forceAsk = true;
-                }
-                CFRelease(appUrl);
-            } else {
+        CFStringRef registeredHandler = LSCopyDefaultHandlerForURLScheme(CFSTR("telnet"));
+        if (registeredHandler) {
+            QString registeredBundleId = QString::fromCFString(registeredHandler).toLower();
+            CFStringRef myBundleId = CFBundleGetIdentifier(CFBundleGetMainBundle());
+            QString myBundleIdStr = myBundleId ? QString::fromCFString(myBundleId).toLower() : QString();
+            if (!myBundleIdStr.isEmpty() && registeredBundleId != myBundleIdStr) {
+                qDebug() << "main: macOS telnet handler bundle id mismatch. Registered:" << registeredBundleId << "Current:" << myBundleIdStr;
                 forceAsk = true;
             }
-            CFRelease(testUrl);
-        } else {
-            qWarning() << "main: CFURLCreateWithString returned null for telnet://test";
+            CFRelease(registeredHandler);
         }
     }
 #endif
