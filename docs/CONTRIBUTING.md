@@ -23,7 +23,7 @@ All code must be compatible with Mudlet's license.
 
 AI agents MUST NOT add Signed-off-by tags. The human submitter is responsible for:
 
-* Reviewing all AI-generated code
+* Reviewing all AI-generated code and testing it (Mudlet developers should not be the first ones testing the PR code)
 * Ensuring compliance with licensing requirements
 * Adding their own Signed-off-by tag
 * Taking full responsibility for the contribution
