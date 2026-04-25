@@ -1596,6 +1596,11 @@ void TMainConsole::showStatistics()
     }
 
     const QString itemScript = "setFgColor(190,150,0); setUnderline(true); echo([[\n\n%1\n]]); setBold(false);setUnderline(false);setFgColor(150,120,0)";
+
+    //: Heading for the system's statistics information displayed in the console
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Telnet Options:")));
+    print(pHost->mTelnet.assembleTelnetOptionsReport(), QColor(150, 120, 0), Qt::black);
+
     //: Heading for the system's statistics information displayed in the console
     mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Trigger Report:")));
     QString itemMsg = std::get<0>(mpHost->getTriggerUnit()->assembleReport());

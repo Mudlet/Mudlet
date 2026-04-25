@@ -1316,6 +1316,25 @@ void cTelnet::sendNAWS(int width, int height)
 
 void cTelnet::sendTelnetOption(char type, unsigned char option)
 {
+    const auto idxOption = static_cast<size_t>(option);
+    switch (type) {
+    case TN_WILL:
+        announcedState.set(idxOption);
+        myOptionState.set(idxOption);
+        break;
+    case TN_WONT:
+        announcedState.set(idxOption);
+        myOptionState.reset(idxOption);
+        break;
+    case TN_DO:
+        hisOptionState.set(idxOption);
+        break;
+    case TN_DONT:
+        hisOptionState.reset(idxOption);
+        break;
+    default:
+        break;
+    }
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
     QString _type;
     switch ((quint8)type) {
@@ -2420,6 +2439,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         option = telnetCommand[2];
         trackKaVirNegotiation(option); // Track for KaVir protocol
         const auto idxOption = static_cast<size_t>(option);
+        heAnnouncedState.set(idxOption);
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
         qDebug().nospace().noquote() << "Server sent telnet IAC WILL " << decodeOption(option);
 #endif
@@ -5195,7 +5215,31 @@ QAbstractSocket::SocketState cTelnet::getConnectionState() const
     return isRawIPv6AddressRegExp.match(text).hasMatch();
 }
 
-std::tuple<std::bitset<256>, std::bitset<256>, std::bitset<256>, std::bitset<256>> cTelnet::getTelnetOptionStatus() const
+QString cTelnet::assembleTelnetOptionsReport() const
 {
-    return {heAnnouncedState, hisOptionState, announcedState, myOptionState};
+    QStringList lines;
+    for (size_t i = 0; i < heAnnouncedState.size(); ++i) {
+        const bool serverAnnounced = heAnnouncedState.test(i);
+        const bool clientAnnounced = announcedState.test(i);
+        if (!serverAnnounced && !clientAnnounced) {
+            continue;
+        }
+        const QString optionName = decodeOption(static_cast<unsigned char>(i));
+        QStringList sides;
+        if (serverAnnounced) {
+            //: Telnet options report: server side of an option, %1 is "enabled" or "disabled"
+            sides << tr("server %1").arg(hisOptionState.test(i) ? tr("enabled") : tr("disabled"));
+        }
+        if (clientAnnounced) {
+            //: Telnet options report: client side of an option, %1 is "enabled" or "disabled"
+            sides << tr("client %1").arg(myOptionState.test(i) ? tr("enabled") : tr("disabled"));
+        }
+        //: Telnet option line: %1 is the option name (e.g. "NAWS (31)"), %2 is one or both sides
+        lines << tr("  %1: %2").arg(optionName, sides.join(QLatin1String(", ")));
+    }
+    if (lines.isEmpty()) {
+        //: Shown in the Telnet options statistics report when no options have been negotiated yet
+        return tr("  (none negotiated yet)\n");
+    }
+    return lines.join(QLatin1Char('\n')).append(QLatin1Char('\n'));
 }

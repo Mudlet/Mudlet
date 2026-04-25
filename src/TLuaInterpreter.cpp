@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2023, 2025-2026 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2023, 2025 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
@@ -5568,7 +5568,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "aiPrompt", TLuaInterpreter::aiPrompt);
     lua_register(pGlobalLua, "aiPromptStream", TLuaInterpreter::aiPromptStream);
     lua_register(pGlobalLua, "setActiveProfile", TLuaInterpreter::setActiveProfile);
-    lua_register(pGlobalLua, "getTelnetOptionsStatus", TLuaInterpreter::getTelnetOptionsStatus);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
