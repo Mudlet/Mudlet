@@ -124,12 +124,16 @@ public:
     void setTabConnectionIndicator(const QString& tabName, TabConnectionIndicator state)
     {
         if (mStyle.setTabConnectionIndicator(tabName, state)) {
+            // updateGeometry() invalidates the cached tab sizes so tabSizeHint()
+            // is consulted again; update() then triggers the repaint.
+            updateGeometry();
             update();
         }
     }
     void setTabConnectionIndicator(const int index, TabConnectionIndicator state)
     {
         if (mStyle.setTabConnectionIndicator(index, state)) {
+            updateGeometry();
             update();
         }
     }
