@@ -396,10 +396,19 @@ void TMedia::refreshAudioDevices()
 
     QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
-    for (const auto& player : std::as_const(mediaPlayerList)) {
-        if (player) {
-            player->refreshAudioOutput();
+    for (const auto& player : mediaPlayerList) {
+        if (!player) {
+            continue;
         }
+        // Skip stopped players — Qt reconnects to the current default device
+        // when playback starts, so refreshing now is unnecessary.
+        // Muted players are NOT skipped: if the audio device changes while muted,
+        // the player must be rebound to the new device so unmute works correctly.
+        auto* mp = player->mediaPlayer();
+        if (mp->playbackState() == QMediaPlayer::StoppedState) {
+            continue;
+        }
+        player->refreshAudioOutput();
     }
 }
 
@@ -1256,6 +1265,10 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
             mpHost->raiseEvent(mediaFinished);
         }
 
+        // Release the native decode buffer immediately on playback end — do not
+        // wait for list eviction, which may never come if no new sound is queued.
+        player->mediaPlayer()->setSource(QUrl());
+
         if (player->mediaData().mediaWidget() == TMediaData::MediaWidgetLabel && player->mediaData().mediaClose() == TMediaData::MediaCloseEnabled && player->mediaPlayer()->videoOutput() != nullptr) {
             QVideoWidget* videoOutput = qobject_cast<QVideoWidget*>(player->mediaPlayer()->videoOutput());
 
@@ -1639,14 +1652,19 @@ void TMedia::play(TMediaData& mediaData)
     pPlayer->mediaPlayer()->setPosition(mediaData.mediaStart());
 
     // Set mute state based on protocol
-    switch (mediaData.mediaProtocol()) {
-    case TMediaData::MediaProtocolAPI:
-        pPlayer->mediaPlayer()->audioOutput()->setMuted(mudlet::self()->muteAPI());
-        break;
-    case TMediaData::MediaProtocolGMCP:
-    case TMediaData::MediaProtocolMSP:
-        pPlayer->mediaPlayer()->audioOutput()->setMuted(mudlet::self()->muteGame());
-        break;
+    QAudioOutput* audioOutput = pPlayer->mediaPlayer()->audioOutput();
+    if (audioOutput) {
+        switch (mediaData.mediaProtocol()) {
+        case TMediaData::MediaProtocolAPI:
+            audioOutput->setMuted(mudlet::self()->muteAPI());
+            break;
+        case TMediaData::MediaProtocolGMCP:
+        case TMediaData::MediaProtocolMSP:
+            audioOutput->setMuted(mudlet::self()->muteGame());
+            break;
+        }
+    } else {
+        qWarning() << "TMedia::play() - audioOutput is nullptr, skipping mute state update.";
     }
 
     // Handle video setup if applicable
