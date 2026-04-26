@@ -67,14 +67,22 @@ void FontManager::loadFont(const QString& filePath, const QString& profileName, 
         return;
     }
 
-    auto fontID = QFontDatabase::addApplicationFont(filePath);
+    int fontID;
+    // Reuse existing Qt font ID if another profile already loaded this file — Qt's global
+    // font database is shared, so calling addApplicationFont twice returns the same ID,
+    // and a later removeApplicationFont by the first profile would orphan the second.
+    const int sharedId = sharedFontPaths.value(filePath, -2);
+    if (sharedId > -1) {
+        fontID = sharedId;
+    } else {
+        fontID = QFontDatabase::addApplicationFont(filePath);
+        if (fontID == -1) {
+            qWarning() << "FontManager::loadFont() WARNING - Could not load the font(s) in the file: " << filePath;
+        }
+    }
 
     // remember even if the font failed to load so we don't spam messages on fonts that repeat
     rememberFont(filePath, fontID, profileName, belongsTo);
-
-    if (fontID == -1) {
-        qWarning() << "FontManager::loadFont() WARNING - Could not load the font(s) in the file: " << filePath;
-    }
 }
 
 bool FontManager::fontAlreadyLoaded(const QString& filePath, const QString& profileName)
@@ -93,10 +101,15 @@ void FontManager::rememberFont(const QString& filePath, int fontID, const QStrin
         return;
     }
 
+    loadedFontPaths.insert(key, fontID);
+
+    if (fontID != -1 && !sharedFontPaths.contains(filePath)) {
+        sharedFontPaths.insert(filePath, fontID);
+    }
+
     // Affiliation key combines profile and package so that unloading one profile's
     // fonts does not affect another profile's copy of the same package.
     const QString affiliationKey = profileName.isEmpty() ? belongsTo : qsl("%1/%2").arg(profileName, belongsTo);
-    loadedFontPaths.insert(key, fontID);
     loadedFontAffiliation.insert(affiliationKey, fontID);
 }
 
@@ -104,17 +117,32 @@ void FontManager::unloadFonts(const QString& profileName, const QString& belongs
 {
     const QString affiliationKey = profileName.isEmpty() ? belongsTo : qsl("%1/%2").arg(profileName, belongsTo);
     const auto fontIds = loadedFontAffiliation.values(affiliationKey);
-    for (const int id : fontIds) {
-        QFontDatabase::removeApplicationFont(id);
-    }
     loadedFontAffiliation.remove(affiliationKey);
 
+    for (const int id : fontIds) {
+        if (id == -1) {
+            continue;
+        }
+        // Only remove from Qt when no other profile still references this font ID.
+        if (!loadedFontAffiliation.values().contains(id)) {
+            QFontDatabase::removeApplicationFont(id);
+            for (auto it = sharedFontPaths.begin(); it != sharedFontPaths.end();) {
+                if (it.value() == id) {
+                    it = sharedFontPaths.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+        }
+    }
+
     // Remove stale path entries for this profile+package so fonts can be reloaded
-    // correctly if the package is reinstalled later.
+    // correctly if the package is reinstalled later. Exclude -1 entries from the
+    // predicate to avoid matching failed-load entries from unrelated packages.
     const QString pathPrefix = profileName.isEmpty() ? QString() : qsl("%1/").arg(profileName);
     auto it = loadedFontPaths.begin();
     while (it != loadedFontPaths.end()) {
-        if (fontIds.contains(it.value()) && (pathPrefix.isEmpty() || it.key().startsWith(pathPrefix))) {
+        if (it.value() != -1 && fontIds.contains(it.value()) && (pathPrefix.isEmpty() || it.key().startsWith(pathPrefix))) {
             it = loadedFontPaths.erase(it);
         } else {
             ++it;

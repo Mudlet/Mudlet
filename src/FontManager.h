@@ -40,8 +40,10 @@ private:
     void loadFonts(const QString& folder);
     void rememberFont(const QString& filePath, int fontID, const QString& profileName, const QString& belongsTo);
 
-    // map of font file basename to font ID (-1 if load failed)
+    // map of profile-prefixed file path to Qt font ID (-1 if load failed), per-profile deduplication
     QMap<QString, int> loadedFontPaths;
+    // map of file path to Qt font ID, global deduplication (load each file into Qt only once)
+    QMap<QString, int> sharedFontPaths;
     // map of font affiliation ("main" or profileName/packageName for package fonts) & font IDs
     QMultiMap<QString, int> loadedFontAffiliation;
 };
