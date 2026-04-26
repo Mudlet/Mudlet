@@ -1249,7 +1249,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             ssl_expires_label->setStyleSheet(QString());
 
             const QList<QSslError> sslErrors = pHost->mTelnet.getSslErrors();
-            if (sslErrors.count()) {
+            if (!sslErrors.isEmpty()) {
                 // handle ssl errors
                 notificationAreaIconLabelWarning->show();
                 frame_notificationArea->show();
