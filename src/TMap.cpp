@@ -1357,7 +1357,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             ofs << pR->mSymbol;
         } else {
             qint8 oldCharacterCode = 0;
-            if (pR->mSymbol.length()) {
+            if (!pR->mSymbol.isEmpty()) {
                 // There is something for a symbol
                 const QChar firstChar = pR->mSymbol.at(0);
                 if (pR->mSymbol.length() == 1 && firstChar.row() == 0 && firstChar.cell() > 32) {
