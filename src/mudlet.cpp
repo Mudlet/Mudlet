@@ -2159,6 +2159,15 @@ void mudlet::addConsoleForNewHost(Host* pH)
      */
     mpTabBar->setTabData(newTabID, tabName);
 
+    // Caller blocks the event loop next (loadGlobal, installModulesList,
+    // loadMap, ...), so a deferred update() would leave the tab blank until
+    // that finishes. Paint synchronously instead. Seeded as Connecting; the
+    // offline branch of slot_connectionDialogueFinished resets it.
+    if (mShowTabConnectionIndicators) {
+        mpTabBar->setTabConnectionIndicator(newTabID, TabConnectionIndicator::Connecting);
+    }
+    mpTabBar->repaint();
+
     // update the window title for the currently selected profile
     updateMainWindowTitle();
 
@@ -4767,6 +4776,9 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     } else {
         const QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
         pHost->postMessage(infoMsg);
+
+        // Reconcile the Connecting placeholder seeded in addConsoleForNewHost.
+        updateMainWindowTabIndicators();
 
         // Bring main window to focus when new profile loads offline
         show();
