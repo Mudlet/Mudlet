@@ -1912,7 +1912,7 @@ bool Host::killTrigger(const QString& name)
     return mTriggerUnit.killTrigger(name);
 }
 
-std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing)
+std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet)
 {
     // Wait for profile save to complete before installing package
     // to prevent Lua state corruption during concurrent operations
@@ -1920,7 +1920,14 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // Auto-retry installation after save completes
         QObject* obj = new QObject(this);
         connect(this, &Host::profileSaveFinished, obj, [=, this]() {
-            installPackage(fileName, thing);
+            // The synchronous caller has already been told {true, ""} below;
+            // surface any deferred failure via the warning log and the
+            // profile's message area so it isn't lost silently.
+            auto [ok, msg] = installPackage(fileName, thing, quiet);
+            if (!ok) {
+                qWarning() << "Host::installPackage() deferred install of" << fileName << "failed:" << msg;
+                postMessage(tr("[ ERROR ] - Package install failed for \"%1\": %2").arg(fileName, msg));
+            }
             obj->deleteLater();
         });
         return {true, QString()};
@@ -2017,8 +2024,11 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             return {false, qsl("could not create destination folder")};
         }
 
-        // Skip the unpacking dialog for modules created from UI to avoid unwanted popups
-        if (thing != enums::PackageModuleType::ModuleFromUI) {
+        // Skip the unpacking dialog for modules created from UI, and for
+        // script-initiated installs (passed via quiet) to avoid stealing
+        // window-manager focus from the user's other applications - see
+        // issue #9170.
+        if (thing != enums::PackageModuleType::ModuleFromUI && !quiet) {
             QUiLoader loader(this);
             QFile uiFile(qsl(":/ui/package_manager_unpack.ui"));
             if (!uiFile.open(QFile::ReadOnly)) {
