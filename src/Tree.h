@@ -66,7 +66,7 @@ public:
     bool ancestorsActive() const;
     QString& getError();
     void setError(QString);
-    bool state() const;
+    inline bool state() const;
 /* No longer used - most cases were accessing the member directly
     QString getPackageName() const { return mPackageName; }
     void setPackageName(const QString& n) { mPackageName = n; }
@@ -92,7 +92,7 @@ public:
 // Not used:    QString mModuleName;
 
 protected:
-    virtual bool canBeActivated() const;
+    inline virtual bool canBeActivated() const;
 
     bool mOK_init;
     bool mOK_code;
@@ -205,13 +205,13 @@ bool Tree<T>::setIsActive(bool b)
 }
 
 template <class T>
-inline bool Tree<T>::state() const
+bool Tree<T>::state() const
 {
     return (mOK_init && mOK_code);
 }
 
 template <class T>
-inline bool Tree<T>::canBeActivated() const
+bool Tree<T>::canBeActivated() const
 {
     return (shouldBeActive() && state());
 }
