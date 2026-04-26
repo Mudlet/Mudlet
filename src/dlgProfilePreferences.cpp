@@ -83,11 +83,14 @@ protected:
     {
         if (event->key() == Qt::Key_Backtab) {
             if (focusPreviousChild()) {
-                event->ignore();
+                event->accept();
                 return;
             }
-            // No previous focusable widget: fall through so the event can
-            // propagate normally rather than being silently swallowed.
+            // No previous focusable widget: skip QKeySequenceEdit's handler
+            // so Shift+Tab isn't recorded as a shortcut binding, and let the
+            // event propagate up the parent chain instead.
+            QWidget::keyPressEvent(event);
+            return;
         }
         QKeySequenceEdit::keyPressEvent(event);
     }
