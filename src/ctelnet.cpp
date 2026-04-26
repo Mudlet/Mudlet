@@ -89,7 +89,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     // to set up the initial encoder
     encodingChanged("UTF-8");
     termType = qsl("Mudlet " APP_VERSION);
-    if (mudlet::self()->mAppBuild.trimmed().length()) {
+    if (!mudlet::self()->mAppBuild.trimmed().isEmpty()) {
         termType.append(mudlet::self()->mAppBuild);
     }
 
@@ -758,7 +758,7 @@ void cTelnet::slot_socketDisconnected()
                 }
             }
 
-            if (reasons.count()) {
+            if (!reasons.isEmpty()) {
                 /*: This message is used when we have been trying to connect or
  we were connected securely, but the connection has been lost.
  It is possible with a secure connection that there is MORE
@@ -1770,7 +1770,7 @@ QString cTelnet::getNewEnvironClientVersion()
     static const auto allInvalidCharacters = QRegularExpression(qsl("[^A-Z,0-9,-,\\/]"));
     static const auto multipleHyphens = QRegularExpression(qsl("-{2,}"));
 
-    if (auto build = mudlet::self()->mAppBuild; build.trimmed().length()) {
+    if (auto build = mudlet::self()->mAppBuild; !build.trimmed().isEmpty()) {
         clientVersion.append(build);
     }
 

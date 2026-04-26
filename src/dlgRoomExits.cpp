@@ -302,7 +302,7 @@ void dlgRoomExits::slot_endEditSpecialExits()
     if (mpEditItem != nullptr && mEditColumn >= 0) {
         specialExits->closePersistentEditor(mpEditItem, mEditColumn);
         // Restore placeholder text for the exitRoomID field
-        if (mEditColumn == ExitsTreeWidget::colIndex_exitRoomId && !mpEditItem->text(ExitsTreeWidget::colIndex_exitRoomId).trimmed().length()) {
+        if (mEditColumn == ExitsTreeWidget::colIndex_exitRoomId && mpEditItem->text(ExitsTreeWidget::colIndex_exitRoomId).trimmed().isEmpty()) {
             mpEditItem->setText(ExitsTreeWidget::colIndex_exitRoomId, mSpecialExitRoomIdPlaceholder);
         }
         mpEditItem = nullptr;
@@ -369,7 +369,7 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
             break;
 
         case ExitsTreeWidget::colIndex_command:
-            if (!mpEditItem->text(ExitsTreeWidget::colIndex_command).trimmed().length()) {
+            if (mpEditItem->text(ExitsTreeWidget::colIndex_command).trimmed().isEmpty()) {
                 // Restore the placeholder text if there is nothing but spaces in the entry:
                 mpEditItem->setText(ExitsTreeWidget::colIndex_command, mSpecialExitCommandPlaceholder);
             }
@@ -1050,7 +1050,7 @@ QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
 
 /* static */ QString dlgRoomExits::generateToolTip(const QString& exitRoomName, const QString& exitAreaName, const bool exitRoomLocked, const bool outOfAreaExit, const int exitRoomWeight)
 {
-    if (exitRoomName.trimmed().length()) {
+    if (!exitRoomName.trimmed().isEmpty()) {
         if (exitRoomLocked) {
             if (outOfAreaExit) {
                 return doubleParagraph.arg(tr("Exit to \"%1\" in area: \"%2\".").arg(exitRoomName.toHtmlEscaped(), exitAreaName.toHtmlEscaped()),
@@ -1626,7 +1626,7 @@ void dlgRoomExits::init()
     mAreaID = pR->getArea();
     roomWeight->setText(QString::number(pR->getWeight()));
     QString titleText;
-    if (pR->name.trimmed().length()) {
+    if (!pR->name.trimmed().isEmpty()) {
         titleText = tr(R"(Exits for room: "%1" [*])").arg(pR->name);
     } else {
         titleText = tr("Exits for room Id: %1 [*]").arg(mRoomID);
