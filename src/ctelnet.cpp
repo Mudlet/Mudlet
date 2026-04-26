@@ -449,6 +449,11 @@ void cTelnet::sendGMCPSupportsRemove(const QString& package)
 
 void cTelnet::connectIt(const QString& address, int port)
 {
+    // Set early - before the recursion-on-busy-socket block below - so the
+    // qApp->processEvents() call there cannot leave the indicator briefly
+    // showing Disconnected during a reconnect.
+    mIsLookingUpHost = true;
+
     if (mpHost) {
         mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
         mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
@@ -532,6 +537,7 @@ void cTelnet::reconnect()
 void cTelnet::disconnectIt()
 {
     mDontReconnect = true;
+    mIsLookingUpHost = false;
     if (mpSocket) {
         // This will write out any pending data before it disconnects...
         mpSocket->disconnectFromHost();
@@ -681,6 +687,7 @@ void cTelnet::slot_socketDisconnected()
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
     qDebug().noquote() << "cTelnet::slot_socketDisconnected() INFO - called.";
 #endif
+    mIsLookingUpHost = false;
     TEvent event{};
 #if !defined(QT_NO_SSL)
     bool sslerr = false;
@@ -904,6 +911,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
     qDebug().noquote() << "cTelnet::slot_socketHostFound(QHostInfo) INFO - called.";
 #endif
+    mIsLookingUpHost = false;
     QStringList addressList_ipV4;
     QStringList addressList_ipV6;
     for (const QHostAddress& address : hostInfo.addresses()) {
@@ -5310,7 +5318,9 @@ QAbstractSocket::SocketState cTelnet::getConnectionState() const
     if (mSocket_ipV4.state() == QAbstractSocket::HostLookupState || mSocket_ipV6.state() == QAbstractSocket::HostLookupState) {
         return QAbstractSocket::HostLookupState;
     }
-    if (mSocket_ipV4.state() == QAbstractSocket::HostLookupState || mSocket_ipV6.state() == QAbstractSocket::HostLookupState) {
+    // connectIt() has been called but QHostInfo::lookupHost has not yet
+    // returned, so neither socket has been told to connect.
+    if (mIsLookingUpHost) {
         return QAbstractSocket::HostLookupState;
     }
     if (mSocket_ipV4.state() == QAbstractSocket::ClosingState || mSocket_ipV6.state() == QAbstractSocket::ClosingState) {

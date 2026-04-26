@@ -2090,6 +2090,15 @@ void mudlet::slot_refreshTabIndicatorsDelayed()
     updateDetachedWindowToolbars();
 }
 
+void mudlet::slot_telnetConnectionStateChanged()
+{
+    // Without this the tab connection indicators only refresh on tab change,
+    // toolbar updates, or the 3 s post-load timer, so users typically miss
+    // the brief "Connecting" (yellow) state.
+    updateMainWindowTabIndicators();
+    updateDetachedWindowTabIndicators();
+}
+
 void mudlet::addConsoleForNewHost(Host* pH)
 {
     if (pH->mpConsole) {
@@ -2102,6 +2111,11 @@ void mudlet::addConsoleForNewHost(Host* pH)
     pH->mpConsole = pConsole;
     pConsole->setWindowTitle(pH->getName());
     pConsole->setObjectName(pH->getName());
+
+    // Refresh tab connection indicators on each socket state change.
+    connect(&pH->mTelnet, &cTelnet::signal_connecting, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
+    connect(&pH->mTelnet, &cTelnet::signal_connected, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
+    connect(&pH->mTelnet, &cTelnet::signal_disconnected, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
 
     // Apply Host's console buffer size settings to the newly created console
     int bufferSize = pH->getConsoleBufferSize();

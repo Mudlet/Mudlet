@@ -52,8 +52,11 @@ void TStyle::drawControl(ControlElement element, const QStyleOption* option, QPa
     // dark palette colors on Windows 10
     auto* appStyle = qApp->style();
 
+    const auto* tabOption = (element == QStyle::CE_TabBarTab) ? qstyleoption_cast<const QStyleOptionTab*>(option) : nullptr;
+    const int tabIndex = tabOption ? mpTabBar->tabAt(tabOption->rect.center()) : -1;
+
     if (element == QStyle::CE_TabBarTab && widget) {
-        QString tabName = mpTabBar->tabData(mpTabBar->tabAt(option->rect.center())).toString();
+        QString tabName = mpTabBar->tabData(tabIndex).toString();
         QFont font = widget->font();
         bool isStyleChanged = false;
         if (mBoldTabsSet.contains(tabName) || mItalicTabsSet.contains(tabName) || mUnderlineTabsSet.contains(tabName)) {
@@ -79,13 +82,10 @@ void TStyle::drawControl(ControlElement element, const QStyleOption* option, QPa
     // draws the whole tab in CE_TabBarTab and never sub-dispatches to
     // CE_TabBarTabLabel. tabAt() may return -1; tabConnectionIndicator()
     // treats that as None.
-    if (element == QStyle::CE_TabBarTab) {
-        const auto* tabOption = qstyleoption_cast<const QStyleOptionTab*>(option);
-        if (tabOption) {
-            const TabConnectionIndicator state = tabConnectionIndicator(mpTabBar->tabAt(tabOption->rect.center()));
-            if (state != TabConnectionIndicator::None) {
-                paintConnectionIndicator(painter, tabOption, state);
-            }
+    if (tabOption) {
+        const TabConnectionIndicator state = tabConnectionIndicator(tabIndex);
+        if (state != TabConnectionIndicator::None) {
+            paintConnectionIndicator(painter, tabOption, state);
         }
     }
 }

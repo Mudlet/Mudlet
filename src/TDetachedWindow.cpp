@@ -1380,7 +1380,9 @@ void TDetachedWindow::updateTabIndicator(int tabIndex)
 
     if (tabIndex < 0 || tabIndex >= mpTabBar->count()) {
         // Stale index can occur during tab-removal races; not an error.
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "TDetachedWindow::updateTabIndicator: invalid tab index" << tabIndex << "(tab count" << mpTabBar->count() << ")";
+#endif
         return;
     }
 

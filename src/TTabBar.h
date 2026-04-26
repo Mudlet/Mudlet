@@ -99,7 +99,7 @@ class TTabBar : public QTabBar
 public:
     explicit TTabBar(QWidget* parent)
     : QTabBar(parent)
-    , mStyle(qobject_cast<QTabBar*>(this))
+    , mStyle(this)
     {
         setStyle(&mStyle);
         setAcceptDrops(true);

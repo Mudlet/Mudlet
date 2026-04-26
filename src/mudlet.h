@@ -552,6 +552,7 @@ private slots:
     void slot_updateShortcuts();
     void slot_windowStateChanged(const Qt::WindowStates);
     void slot_refreshTabIndicatorsDelayed();
+    void slot_telnetConnectionStateChanged();
 
 
 private:

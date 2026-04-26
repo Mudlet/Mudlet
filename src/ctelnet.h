@@ -396,6 +396,9 @@ private:
     QString mHostUrl;
     int mHostPort = 0;
     bool mWaitingForResponse = false;
+    // True between connectIt() and slot_socketHostFound, so
+    // getConnectionState() reports HostLookupState during DNS lookup.
+    bool mIsLookingUpHost = false;
     std::queue<int> mCommandQueue;
 
     z_stream mZstream = {};
