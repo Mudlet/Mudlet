@@ -50,6 +50,8 @@
 #include <QStack>
 #include <QTextStream>
 
+#include <memory>
+
 #include "TMxpMudlet.h"
 #include "TMxpProcessor.h"
 #include "TMxpFrameManager.h"
@@ -284,7 +286,11 @@ public:
     QPair<bool, QString> startStopWatch(const QString&);
     QPair<bool, QString> stopStopWatch(const int);
     QPair<bool, QString> stopStopWatch(const QString&);
-    stopWatch* getStopWatch(const int id) const { return mStopWatchMap.value(id); }
+    stopWatch* getStopWatch(const int id) const
+    {
+        auto it = mStopWatchMap.find(id);
+        return (it != mStopWatchMap.end()) ? it->second.get() : nullptr;
+    }
     int findStopWatchId(const QString&) const;
     QPair<bool, QString> setStopWatchName(const int, const QString&);
     QPair<bool, QString> setStopWatchName(const QString&, const QString&);
@@ -814,7 +820,7 @@ public:
     // string list: 0 - event name, 1 - display label, 2 - tooltip text
     QMap<QString, QStringList> mConsoleActions;
 
-    QMap<QString, QKeySequence*> profileShortcuts;
+    std::map<QString, std::unique_ptr<QKeySequence>> profileShortcuts;
 
     bool mTutorialForCompactLineAlreadyShown = false;
 
@@ -928,7 +934,7 @@ private:
     // createStopWatch() to return 0 during script loading so that we do not get
     // superious stopwatches from being created then (when
     // mIsProfileLoadingSequence is true):
-    QMap<int, stopWatch*> mStopWatchMap;
+    std::map<int, std::unique_ptr<stopWatch>> mStopWatchMap;
 
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 

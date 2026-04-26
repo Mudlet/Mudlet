@@ -111,8 +111,8 @@ private:
     template <typename L>
     void loadSecuredPassword(const QString& profile, L callback);
     void migrateSecuredPassword(const QString& oldProfile, const QString& newProfile);
-    void writeSecurePassword(const QString& profile, const QString& pass) const;
-    void deleteSecurePassword(const QString& profile) const;
+    void writeSecurePassword(const QString& profile, const QString& pass);
+    void deleteSecurePassword(const QString& profile);
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void reallyDeleteProfile(const QString& profile);
     void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, const QString& newProfileHost, const QString& newProfilePort, const int newProfileSslTsl);
