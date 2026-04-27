@@ -400,10 +400,6 @@ void TMedia::refreshAudioDevices()
         if (!player) {
             continue;
         }
-        // Skip stopped players — Qt reconnects to the current default device
-        // when playback starts, so refreshing now is unnecessary.
-        // Muted players are NOT skipped: if the audio device changes while muted,
-        // the player must be rebound to the new device so unmute works correctly.
         auto* mp = player->mediaPlayer();
         if (mp->playbackState() == QMediaPlayer::StoppedState) {
             continue;
@@ -1265,8 +1261,6 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
             mpHost->raiseEvent(mediaFinished);
         }
 
-        // Release the native decode buffer immediately on playback end — do not
-        // wait for list eviction, which may never come if no new sound is queued.
         player->mediaPlayer()->setSource(QUrl());
 
         if (player->mediaData().mediaWidget() == TMediaData::MediaWidgetLabel && player->mediaData().mediaClose() == TMediaData::MediaCloseEnabled && player->mediaPlayer()->videoOutput() != nullptr) {
