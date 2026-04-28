@@ -63,13 +63,13 @@
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QFileDialog>
+#include <QSettings>
 #include <QTableWidget>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <QToolTip>
 #include <QFileInfo>
 #include <QVector>
-
 #include <limits>
 
 using namespace std::chrono_literals;
