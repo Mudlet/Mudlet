@@ -71,6 +71,7 @@
 #include <QMetaEnum>
 #include <QPalette>
 #include <QScrollBar>
+#include <QSettings>
 #include <QShortcut>
 #include <QSpinBox>
 #include <QStyle>

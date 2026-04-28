@@ -30,6 +30,7 @@
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QProgressDialog>
+#include <QSettings>
 #include <QTimer>
 #include <QVersionNumber>
 

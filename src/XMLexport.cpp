@@ -40,8 +40,10 @@
 #include "mudlet.h"
 
 #include <QVersionNumber>
-#include <QtConcurrent>
+#include <QtConcurrentRun>
+#include <QFutureWatcher>
 #include <QFile>
+
 #include <sstream>
 
 XMLexport::XMLexport(Host* pH)

@@ -57,6 +57,7 @@
 #include <QAction>
 #include <QCoreApplication>
 #include <QCursor>
+#include <QtConcurrentTask>
 #include <QMap>
 #include <QMapIterator>
 #include <QMenu>

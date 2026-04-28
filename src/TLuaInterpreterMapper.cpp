@@ -62,7 +62,7 @@
 #include <limits>
 #include <math.h>
 
-#include <QtConcurrent>
+//#include <QtConcurrent>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>

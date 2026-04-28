@@ -58,15 +58,18 @@
 
 #include <math.h>
 
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QTableWidget>
+#include <QTemporaryDir>
+#include <QTemporaryFile>
 #include <QToolTip>
 #include <QFileInfo>
 #include <QVector>
+
 #include <limits>
 
 using namespace std::chrono_literals;

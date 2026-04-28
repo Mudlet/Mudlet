@@ -34,13 +34,16 @@
 #include "TTrigger.h"
 #include "XMLexport.h"
 
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 #include <QDesktopServices>
 #include <QDirIterator>
 #include <QFileDialog>
+#include <QFutureWatcher>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QSettings>
+#include <QStandardPaths>
 #include <QTimer>
 
 // We are now using code that won't work with really old versions of libzip;
