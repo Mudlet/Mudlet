@@ -56,72 +56,96 @@ void FontManager::loadFonts(const QString& folder)
 
     for (auto fontFile : dir.entryList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot)) {
         const QString fontFilePathName = qsl("%1/%2").arg(dir.absolutePath(), fontFile);
-        loadFont(fontFilePathName);
+        // Global built-in fonts are not profile-specific — use empty profileName
+        loadFont(fontFilePathName, QString());
     }
 }
 
-void FontManager::loadFont(const QString& filePath, const QString& belongsTo)
+void FontManager::loadFont(const QString& filePath, const QString& profileName, const QString& belongsTo)
 {
-    const QFileInfo fontFile(filePath);
-    const auto fileName = fontFile.fileName();
-
-    if (loadedFontPaths.contains(fileName)) {
-        // Font is already loaded... record this additional affiliation
-        // so multiple profiles sharing the same font are tracked independently
-        const int existingID = loadedFontPaths.value(fileName);
-
-        // Don't track affiliation for failed loads (-1)
-        if (existingID == -1) {
-            return;
-        }
-
-        if (!loadedFontAffiliation.contains(belongsTo, existingID)) {
-            loadedFontAffiliation.insert(belongsTo, existingID);
-        }
+    if (fontAlreadyLoaded(filePath, profileName)) {
         return;
     }
 
-    auto fontID = QFontDatabase::addApplicationFont(filePath);
-
-    // Remember even if the font failed to load so we don't spam warnings on repeated attempts
-    loadedFontPaths.insert(fileName, fontID);
-
-    // Don't track affiliation for failed loads (-1)
-    if (fontID == -1) {
-        qWarning() << "FontManager::loadFont() WARNING - Could not load the font(s) in the file: " << filePath;
+    int fontID;
+    // Reuse existing Qt font ID if another profile already loaded this file — Qt's global
+    // font database is shared, so calling addApplicationFont twice returns the same ID,
+    // and a later removeApplicationFont by the first profile would orphan the second.
+    const int sharedId = sharedFontPaths.value(filePath, -2);
+    if (sharedId > -1) {
+        fontID = sharedId;
     } else {
-        loadedFontAffiliation.insert(belongsTo, fontID);
-        // Uncomment the next line to get details about fonts that ARE loaded:
-        // qDebug().noquote().nospace() << "FontManager::loadFont() INFO - Loaded font(s) in the file: \"" << filePath << "\"\n    with ID: " << fontID << " providing: \"" << QFontDatabase::applicationFontFamilies(fontID).join(QLatin1String("\", \"")).append(QLatin1String("\"\n"));
+        fontID = QFontDatabase::addApplicationFont(filePath);
+        if (fontID == -1) {
+            qWarning() << "FontManager::loadFont() WARNING - Could not load the font(s) in the file: " << filePath;
+        }
     }
+
+    // remember even if the font failed to load so we don't spam messages on fonts that repeat
+    rememberFont(filePath, fontID, profileName, belongsTo);
 }
 
-
-void FontManager::unloadFonts(const QString& belongsTo)
+bool FontManager::fontAlreadyLoaded(const QString& filePath, const QString& profileName)
 {
-    const auto fontIds = loadedFontAffiliation.values(belongsTo);
-    loadedFontAffiliation.remove(belongsTo);
+    // Use the full path prefixed by profile name as the key so that different profiles
+    // loading a font file with the same filename are tracked independently.
+    const QString key = profileName.isEmpty() ? filePath : qsl("%1/%2").arg(profileName, filePath);
+    return loadedFontPaths.contains(key);
+}
+
+void FontManager::rememberFont(const QString& filePath, int fontID, const QString& profileName, const QString& belongsTo)
+{
+    const QString key = profileName.isEmpty() ? filePath : qsl("%1/%2").arg(profileName, filePath);
+
+    if (loadedFontPaths.contains(key)) {
+        return;
+    }
+
+    loadedFontPaths.insert(key, fontID);
+
+    if (fontID != -1 && !sharedFontPaths.contains(filePath)) {
+        sharedFontPaths.insert(filePath, fontID);
+    }
+
+    // Affiliation key combines profile and package so that unloading one profile's
+    // fonts does not affect another profile's copy of the same package.
+    const QString affiliationKey = profileName.isEmpty() ? belongsTo : qsl("%1/%2").arg(profileName, belongsTo);
+    loadedFontAffiliation.insert(affiliationKey, fontID);
+}
+
+void FontManager::unloadFonts(const QString& profileName, const QString& belongsTo)
+{
+    const QString affiliationKey = profileName.isEmpty() ? belongsTo : qsl("%1/%2").arg(profileName, belongsTo);
+    const auto fontIds = loadedFontAffiliation.values(affiliationKey);
+    loadedFontAffiliation.remove(affiliationKey);
 
     for (const int id : fontIds) {
-        // -1 means the font failed to load - skip it to avoid matching
-        // unrelated failed fonts
         if (id == -1) {
             continue;
         }
-
-        // Only remove from Qt if no other owner still references this font
-        if (!loadedFontAffiliation.keys(id).isEmpty()) {
-            continue;
+        // Only remove from Qt when no other profile still references this font ID.
+        if (!loadedFontAffiliation.values().contains(id)) {
+            QFontDatabase::removeApplicationFont(id);
+            for (auto it = sharedFontPaths.begin(); it != sharedFontPaths.end();) {
+                if (it.value() == id) {
+                    it = sharedFontPaths.erase(it);
+                } else {
+                    ++it;
+                }
+            }
         }
+    }
 
-        // Proceed with unloading
-        QFontDatabase::removeApplicationFont(id);
-
-        // Remove from loadedFontPaths so the font can be re-registered
-        // if the package is reinstalled
-        const auto fileName = loadedFontPaths.key(id);
-        if (!fileName.isEmpty()) {
-            loadedFontPaths.remove(fileName);
+    // Remove stale path entries for this profile+package so fonts can be reloaded
+    // correctly if the package is reinstalled later. Exclude -1 entries from the
+    // predicate to avoid matching failed-load entries from unrelated packages.
+    const QString pathPrefix = profileName.isEmpty() ? QString() : qsl("%1/").arg(profileName);
+    auto it = loadedFontPaths.begin();
+    while (it != loadedFontPaths.end()) {
+        if (it.value() != -1 && fontIds.contains(it.value()) && (pathPrefix.isEmpty() || it.key().startsWith(pathPrefix))) {
+            it = loadedFontPaths.erase(it);
+        } else {
+            ++it;
         }
     }
 }
