@@ -32,6 +32,7 @@
 
 #include <QBuffer>
 #include <QElapsedTimer>
+#include <QJsonArray>
 
 // Previous direction #defines here did not match the DIR_ defines in TRoom.h,
 // but as they are stored in the map file they ought not to be redefined without

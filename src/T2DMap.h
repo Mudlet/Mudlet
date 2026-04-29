@@ -38,7 +38,6 @@
 #include <QString>
 #include <QTreeWidget>
 #include <QWidget>
-#include <QtConcurrent>
 
 #include <QList>
 #include <memory>

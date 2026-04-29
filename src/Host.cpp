@@ -59,7 +59,7 @@
 #include "SecureStringUtils.h"
 
 #include <chrono>
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 #include <QDialog>
 #include <QtUiTools>
 #include <QNetworkProxy>

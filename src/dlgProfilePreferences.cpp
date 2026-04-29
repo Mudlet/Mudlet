@@ -42,11 +42,10 @@
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "edbee/views/texteditorscrollarea.h"
-#include "edbee/models/textdocumentscopes.h"
 #include "MMCP.h"
 
 #include <chrono>
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 #include <QAccessible>
 #include <QCloseEvent>
 #include <QColorDialog>
@@ -54,10 +53,15 @@
 #include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QFontDialog>
+#include <QJsonArray>
 #include <QNetworkDiskCache>
 #include <QPainter>
+#include <QSettings>
+#include <QStandardPaths>
 #include <QString>
 #include <QTableWidget>
+#include <QTemporaryDir>
+#include <QTemporaryFile>
 #include <QToolBar>
 #include <QUiLoader>
 #include <QKeySequenceEdit>
