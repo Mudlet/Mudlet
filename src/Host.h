@@ -328,7 +328,7 @@ public:
 
     void updateDisplayDimensions();
 
-    std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing);
+    std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet = false);
     bool uninstallPackage(const QString&, enums::PackageModuleType thing);
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&, bool);

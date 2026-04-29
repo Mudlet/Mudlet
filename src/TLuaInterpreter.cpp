@@ -2631,7 +2631,7 @@ int TLuaInterpreter::installPackage(lua_State* L)
 {
     const QString location = getVerifiedString(L, __func__, 1, "package location path and file name");
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = host.installPackage(location, enums::PackageModuleType::Package); !success) {
+    if (auto [success, message] = host.installPackage(location, enums::PackageModuleType::Package, true); !success) {
         return warnArgumentValue(L, __func__, message);
     }
     lua_pushboolean(L, true);
@@ -2659,7 +2659,7 @@ int TLuaInterpreter::installModule(lua_State* L)
     Host& host = getHostFromLua(L);
     const QString module = QDir::fromNativeSeparators(modName);
 
-    if (auto [success, message] = host.installPackage(module, enums::PackageModuleType::ModuleFromScript); !success) {
+    if (auto [success, message] = host.installPackage(module, enums::PackageModuleType::ModuleFromScript, true); !success) {
         return warnArgumentValue(L, __func__, message);
     }
     auto moduleManager = host.mpModuleManager;
