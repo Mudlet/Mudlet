@@ -6930,7 +6930,11 @@ void mudlet::activateProfile(Host* pHost)
 
     updateMultiViewControls();
 
-    mpCurrentActiveHost->updateDisplayDimensions();
+    // Deferred so widget geometry is finalised before NAWS is recalculated;
+    // otherwise mScreenWidth hits its qMax(40, ...) floor and the server
+    // pre-wraps output too narrowly. Receiver-form singleShot is safe if the
+    // Host is destroyed first - do not change to a lambda.
+    QTimer::singleShot(0, mpCurrentActiveHost.data(), &Host::updateDisplayDimensions);
 
     // Currently used to update the Discord Rich Presence
     emit signal_tabChanged(mpCurrentActiveHost->getName());
