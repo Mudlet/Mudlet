@@ -57,7 +57,18 @@
 #include <QAction>
 #include <QCoreApplication>
 #include <QCursor>
+#if defined(Q_OS_LINUX)
+/* The Devuan package for qt6-base-dev - and presumably Debian and Ubuntu
+ * are missing the ./include/QtConcurrent/QtConcurrentTask file that
+ * contains the single line:
+ * #include "qtconcurrenttask.h" // IWYU pragma: export
+ * that is present in the Qt on-line installer installs - so building
+ * Mudlet using the latter succeed whereas it breaks on the GitHub CI
+ * runners. So use the less "pretty" direct include: */
+#include <qtconcurrenttask.h>
+#else
 #include <QtConcurrentTask>
+#endif
 #include <QMap>
 #include <QMapIterator>
 #include <QMenu>
