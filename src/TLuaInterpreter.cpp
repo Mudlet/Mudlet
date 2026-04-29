@@ -64,6 +64,10 @@
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QSettings>
+#if defined(Q_OS_MACOS)
+// Only used for this OS:
+#include <QStandardPaths>
+#endif
 #include <QTableWidget>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
