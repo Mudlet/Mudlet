@@ -43,6 +43,7 @@
 #include <QtConcurrentRun>
 #include <QFutureWatcher>
 #include <QFile>
+#include <QMetaEnum>
 
 #include <sstream>
 
