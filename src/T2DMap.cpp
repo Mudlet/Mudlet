@@ -1128,19 +1128,19 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
 // player's room if it is visible. This is so it is drawn LAST (and any effects,
 // or extra markings for it do not get overwritten by the drawing of the other
 // rooms)...
-/* inline */ void T2DMap::drawRoom(QPainter& painter,
-                                   QFont& roomVNumFont,
-                                   QFont& mapNameFont,
-                                   QPen& pen,
-                                   TRoom* pRoom,
-                                   const bool isGridMode,
-                                   const bool areRoomIdsLegible,
-                                   const bool showRoomName,
-                                   const int speedWalkStartRoomId,
-                                   const float rx,
-                                   const float ry,
-                                   const QMap<int, QPointF>& areaExitsMap,
-                                   const bool showRoomCollision)
+void T2DMap::drawRoom(QPainter& painter,
+                      QFont& roomVNumFont,
+                      QFont& mapNameFont,
+                      QPen& pen,
+                      TRoom* pRoom,
+                      const bool isGridMode,
+                      const bool areRoomIdsLegible,
+                      const bool showRoomName,
+                      const int speedWalkStartRoomId,
+                      const float rx,
+                      const float ry,
+                      const QMap<int, QPointF>& areaExitsMap,
+                      const bool showRoomCollision)
 {
     const int currentRoomId = pRoom->getId();
     if (pRoom->isHidden()) {
