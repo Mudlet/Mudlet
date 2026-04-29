@@ -57,14 +57,19 @@
 #include <QAction>
 #include <QCoreApplication>
 #include <QCursor>
-#if defined(Q_OS_LINUX)
-/* The Devuan package for qt6-base-dev - and presumably Debian and Ubuntu
- * are missing the ./include/QtConcurrent/QtConcurrentTask file that
- * contains the single line:
+#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
+/* The Devuan package for qt6-base-dev (for Qt 6.8.2) - and presumably
+ * Debian and Ubuntu are missing the
+ * ./include/QtConcurrent/QtConcurrentTask file that contains the single
+ * line:
  * #include "qtconcurrenttask.h" // IWYU pragma: export
- * that is present in the Qt on-line installer installs - so building
- * Mudlet using the latter succeed whereas it breaks on the GitHub CI
- * runners. So use the less "pretty" direct include: */
+ *
+ * that is present in the Qt on-line installer install (for Qt 6.10.1)
+ * - so building Mudlet using the latter succeed whereas it breaks on the
+ * GitHub CI runners (qt 6.9.0). So use the less "pretty" direct include.
+ * It appears that this is an upstream Qt bug as the MacOS builds (also
+ * for Qt 6.9.0) are failing in the same manner. Yet the Windows build
+ * using the later Qt 6.11.0 succeed!*/
 #include <qtconcurrenttask.h>
 #else
 #include <QtConcurrentTask>
