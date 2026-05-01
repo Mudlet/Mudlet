@@ -29,7 +29,6 @@
 #include "discord.h"
 #include "FontManager.h"
 #include "HostManager.h"
-#include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
 #include "utils.h"
 #include <memory>
@@ -39,20 +38,16 @@
 #endif
 
 #include "ui_main_window.h"
-#include <QAction>
-#include <QDir>
 #include <QElapsedTimer>
-#include <QFlags>
 #include <QKeySequence>
 #include <QMainWindow>
 #include <QMap>
 #include <QPointer>
-#include <QSettings>
 #include <QSystemTrayIcon>
 #include <QTextOption>
 #include <QTime>
 #include <QVersionNumber>
-#include <QWindow>
+
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
 #include <qtkeychain/keychain.h>
 #else
@@ -62,13 +57,16 @@
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
 
+class QAction;
 class QCloseEvent;
+class QDir;
 class QMediaDevices;
 class QMediaPlayer;
 class QMenu;
 class QLabel;
 class QListWidget;
 class QPushButton;
+class QSettings;
 class QShortcut;
 class QSplitter;
 class QTableWidget;
@@ -88,6 +86,7 @@ class dlgPackageExporter;
 class dlgProfilePreferences;
 class dlgTriggerEditor;
 class Host;
+class MudletInstanceCoordinator;
 class ShortcutManager;
 class TConsole;
 class TDetachedWindow;

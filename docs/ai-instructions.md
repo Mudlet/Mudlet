@@ -28,14 +28,18 @@ In general: write modern C++20 code, but avoid C++ exceptions, templates, and co
 
 Use range-based for loops instead of iterator-based or index-based loops where appropriate.
 
-See `.github/CONTRIBUTING.md` for the coding standards as well as the information below:
+See `docs/CONTRIBUTING.md` for the coding standards as well as the information below:
 
 ```cpp
 // Class names: PascalCase with 'T' prefix for main classes
 class TConsole : public QWidget
 
 // Member variables: camelCase with 'm' prefix
+// avoid starting with the `is` prefix
 QString mProfileName;
+
+// avoid starting function names with the `is` prefix as well
+bool ready();
 
 // Qt signals/slots: camelCase
 signals:

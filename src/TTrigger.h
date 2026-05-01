@@ -174,8 +174,8 @@ public:
 private:
     TTrigger() = default;
 
-    void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
-    void filter(std::string&, int&);
+    inline void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
+    inline void filter(std::string&, int&);
     void processExactMatch(const QString& line, int patternNumber, int posOffset);
     void processRegexMatch(const char* haystackC, const QString& haystack, int patternNumber, int posOffset,
                            const QSharedPointer<pcre2_code>& re, int haystackCLength, pcre2_match_data* match_data, int rc);

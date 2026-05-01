@@ -38,7 +38,6 @@
 #include <QString>
 #include <QTreeWidget>
 #include <QWidget>
-#include <QtConcurrent>
 
 #include <QList>
 #include <memory>
@@ -205,9 +204,9 @@ public:
 
 
     // default 2D zoom level
-    inline static const qreal csmDefaultXYZoom = 20.0;
+    static inline const qreal csmDefaultXYZoom = 20.0;
     // minimum 2D zoom level
-    inline static const qreal csmMinXYZoom = 3.0;
+    static inline const qreal csmMinXYZoom = 3.0;
 
 
     TMap* mpMap = nullptr;
