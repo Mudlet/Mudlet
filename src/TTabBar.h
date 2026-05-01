@@ -125,16 +125,27 @@ public:
     {
         if (mStyle.setTabConnectionIndicator(tabName, state)) {
             // updateGeometry() invalidates the cached tab sizes so tabSizeHint()
-            // is consulted again; update() then triggers the repaint.
+            // is consulted again. For the brief Connecting stage we paint
+            // synchronously so a fast follow-up Connected transition cannot
+            // coalesce the pending paint and skip the yellow dot entirely;
+            // other transitions can take the cheaper deferred update().
             updateGeometry();
-            update();
+            if (state == TabConnectionIndicator::Connecting) {
+                repaint();
+            } else {
+                update();
+            }
         }
     }
     void setTabConnectionIndicator(const int index, TabConnectionIndicator state)
     {
         if (mStyle.setTabConnectionIndicator(index, state)) {
             updateGeometry();
-            update();
+            if (state == TabConnectionIndicator::Connecting) {
+                repaint();
+            } else {
+                update();
+            }
         }
     }
     TabConnectionIndicator tabConnectionIndicator(const QString& tabName) const { return mStyle.tabConnectionIndicator(tabName); }

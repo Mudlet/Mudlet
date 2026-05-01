@@ -450,7 +450,7 @@ void cTelnet::connectIt(const QString& address, int port)
     // Set early - before the recursion-on-busy-socket block below - so the
     // qApp->processEvents() call there cannot leave the indicator briefly
     // showing Disconnected during a reconnect.
-    mIsLookingUpHost = true;
+    mLookingUpHost = true;
 
     if (mpHost) {
         mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
@@ -535,7 +535,7 @@ void cTelnet::reconnect()
 void cTelnet::disconnectIt()
 {
     mDontReconnect = true;
-    mIsLookingUpHost = false;
+    mLookingUpHost = false;
     if (mpSocket) {
         // This will write out any pending data before it disconnects...
         mpSocket->disconnectFromHost();
@@ -685,7 +685,7 @@ void cTelnet::slot_socketDisconnected()
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
     qDebug().noquote() << "cTelnet::slot_socketDisconnected() INFO - called.";
 #endif
-    mIsLookingUpHost = false;
+    mLookingUpHost = false;
     TEvent event{};
 #if !defined(QT_NO_SSL)
     bool sslerr = false;
@@ -909,7 +909,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
     qDebug().noquote() << "cTelnet::slot_socketHostFound(QHostInfo) INFO - called.";
 #endif
-    mIsLookingUpHost = false;
+    mLookingUpHost = false;
     QStringList addressList_ipV4;
     QStringList addressList_ipV6;
     for (const QHostAddress& address : hostInfo.addresses()) {
@@ -1192,7 +1192,6 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 }
 
                 mSocket_ipV6.connectToHost(connectToText, mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
-
             }
             if (hasIPv4_address) {
                 connect(&mSocket_ipV4, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected, Qt::UniqueConnection);
@@ -1213,8 +1212,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 } else {
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
  is the port number for the connection.*/
-                    TDebug(QColorConstants::Blue, QColorConstants::White)
-                                    << tr("Trying open (IPv4) connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)).append(QChar::LineFeed)
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv4) connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
  is the port number for the connection.*/
@@ -1222,7 +1220,6 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 }
 
                 mSocket_ipV4.connectToHost(connectToText, mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
-
             }
         }
 #if !defined(QT_NO_SSL)
@@ -5340,7 +5337,7 @@ QAbstractSocket::SocketState cTelnet::getConnectionState() const
     }
     // connectIt() has been called but QHostInfo::lookupHost has not yet
     // returned, so neither socket has been told to connect.
-    if (mIsLookingUpHost) {
+    if (mLookingUpHost) {
         return QAbstractSocket::HostLookupState;
     }
     if (mSocket_ipV4.state() == QAbstractSocket::ClosingState || mSocket_ipV6.state() == QAbstractSocket::ClosingState) {

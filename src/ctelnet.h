@@ -400,7 +400,7 @@ private:
     bool mWaitingForResponse = false;
     // True between connectIt() and slot_socketHostFound, so
     // getConnectionState() reports HostLookupState during DNS lookup.
-    bool mIsLookingUpHost = false;
+    bool mLookingUpHost = false;
     std::queue<int> mCommandQueue;
 
     z_stream mZstream = {};
