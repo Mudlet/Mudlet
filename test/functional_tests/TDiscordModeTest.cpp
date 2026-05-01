@@ -30,6 +30,7 @@
 
 #include <QtTest/QtTest>
 
+#include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
 #include "discord.h"
 #include "dlgConnectionProfiles.h"

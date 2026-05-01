@@ -34,6 +34,7 @@
 #include <QtTest/QtTest>
 
 #include "Host.h"
+#include "MudletInstanceCoordinator.h"
 #include "TEvent.h"
 #include "TKey.h"
 #include "TLuaInterpreter.h"

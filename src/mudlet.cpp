@@ -31,46 +31,33 @@
 #include "AltFocusMenuBarDisable.h"
 #include "CredentialManager.h"
 #include "DarkTheme.h"
-#include "EAction.h"
 #include "LuaInterface.h"
-#include "TCommandLine.h"
-#include "TConsole.h"
 #include "TDebug.h"
+#include "MudletInstanceCoordinator.h"
 #include "TDetachedWindow.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
-#include "TLabel.h"
-#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TGameDetails.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
-#include "TTextEdit.h"
-#include "TToolBar.h"
 #include "XMLimport.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
-#include "FileOpenHandler.h"
-#include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
 #include "dlgNotepad.h"
 #include "dlgPackageExporter.h"
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
-#include "dlgTriggerEditor.h"
-#include "TMediaData.h"
-#include "VarUnit.h"
 #include "MMCPServer.h"
-
-#include "edbee/models/textautocompleteprovider.h"
-#include "edbee/views/texttheme.h"
 
 #include <QAccessible>
 #include <QAccessibleAnnouncementEvent>
 #include <QApplication>
 #include <QtUiTools/quiloader.h>
+#include <QCollator>
 #include <QDesktopServices>
 #include <QFile>
 #include <QFileDialog>
@@ -79,24 +66,26 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QNetworkDiskCache>
+#include <QLibraryInfo>
 #include <QMediaDevices>
 #include <QMediaPlayer>
 #include <QMessageBox>
-#include <QPainter>
-#include <QPixmap>
 #include <QPoint>
 #include <QScreen>
 #include <QScrollBar>
+#include <QSettings>
 #include <QShortcut>
 #include <QSplitter>
 #include <QStyleFactory>
 #include <QStyleHints>
 #include <QTableWidget>
+#include <QTextBoundaryFinder>
 #include <QTextStream>
 #include <QTimer>
 #include <QToolBar>
 #include <QToolButton>
 #include <QToolTip>
+#include <QTranslator>
 #include <QVariantHash>
 
 #include <QRandomGenerator>
@@ -105,9 +94,6 @@
 #include <memory>
 #include <zip.h>
 #include <QStyle>
-#if defined(Q_OS_WINDOWS)
-#include <QSettings>
-#endif
 
 // for system physical memory info
 #if defined(Q_OS_WINDOWS)
@@ -2092,6 +2078,15 @@ void mudlet::slot_refreshTabIndicatorsDelayed()
     updateDetachedWindowToolbars();
 }
 
+void mudlet::slot_telnetConnectionStateChanged()
+{
+    // Without this the tab connection indicators only refresh on tab change,
+    // toolbar updates, or the 3 s post-load timer, so users typically miss
+    // the brief "Connecting" (yellow) state.
+    updateMainWindowTabIndicators();
+    updateDetachedWindowTabIndicators();
+}
+
 void mudlet::addConsoleForNewHost(Host* pH)
 {
     if (pH->mpConsole) {
@@ -2104,6 +2099,11 @@ void mudlet::addConsoleForNewHost(Host* pH)
     pH->mpConsole = pConsole;
     pConsole->setWindowTitle(pH->getName());
     pConsole->setObjectName(pH->getName());
+
+    // Refresh tab connection indicators on each socket state change.
+    connect(&pH->mTelnet, &cTelnet::signal_connecting, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
+    connect(&pH->mTelnet, &cTelnet::signal_connected, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
+    connect(&pH->mTelnet, &cTelnet::signal_disconnected, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
 
     // Apply Host's console buffer size settings to the newly created console
     int bufferSize = pH->getConsoleBufferSize();
@@ -2146,6 +2146,15 @@ void mudlet::addConsoleForNewHost(Host* pH)
      *    a shortcut key for switching to that tab." in 'QTabBar' documentation"
      */
     mpTabBar->setTabData(newTabID, tabName);
+
+    // Caller blocks the event loop next (loadGlobal, installModulesList,
+    // loadMap, ...), so a deferred update() would leave the tab blank until
+    // that finishes. Paint synchronously instead. Seeded as Connecting; the
+    // offline branch of slot_connectionDialogueFinished resets it.
+    if (mShowTabConnectionIndicators) {
+        mpTabBar->setTabConnectionIndicator(newTabID, TabConnectionIndicator::Connecting);
+    }
+    mpTabBar->repaint();
 
     // update the window title for the currently selected profile
     updateMainWindowTitle();
@@ -3372,7 +3381,7 @@ void mudlet::restoreProfileFocus(const QString& profileName)
         auto detachedWindows = mudletInstance->mDetachedWindows;
         TDetachedWindow* detachedWindow = nullptr;
 
-        for (const auto &window : detachedWindows) {
+        for (const auto& window : detachedWindows) {
             if (window && window->getProfileNames().contains(profileName)) {
                 detachedWindow = window;
                 break;
@@ -4756,6 +4765,9 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         const QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
         pHost->postMessage(infoMsg);
 
+        // Reconcile the Connecting placeholder seeded in addConsoleForNewHost.
+        updateMainWindowTabIndicators();
+
         // Bring main window to focus when new profile loads offline
         show();
         raise();
@@ -4953,7 +4965,7 @@ void mudlet::slot_muteMedia()
 
 void mudlet::slot_audioOutputDeviceChanged()
 {
-    for (const auto &pHost : mHostManager) {
+    for (const auto& pHost : mHostManager) {
         if (pHost && pHost->mpMedia) {
             pHost->mpMedia->refreshAudioDevices();
         }
@@ -6930,7 +6942,11 @@ void mudlet::activateProfile(Host* pHost)
 
     updateMultiViewControls();
 
-    mpCurrentActiveHost->updateDisplayDimensions();
+    // Deferred so widget geometry is finalised before NAWS is recalculated;
+    // otherwise mScreenWidth hits its qMax(40, ...) floor and the server
+    // pre-wraps output too narrowly. Receiver-form singleShot is safe if the
+    // Host is destroyed first - do not change to a lambda.
+    QTimer::singleShot(0, mpCurrentActiveHost.data(), &Host::updateDisplayDimensions);
 
     // Currently used to update the Discord Rich Presence
     emit signal_tabChanged(mpCurrentActiveHost->getName());
@@ -7565,6 +7581,10 @@ void mudlet::reattachTab(const QString& profileName, int insertIndex)
     const int newTabIndex = mpTabBar->insertTab(insertIndex, safeProfileName);
     mpTabBar->setTabData(newTabIndex, safeProfileName);
 
+    // Seed the connection indicator immediately so the re-attached tab does
+    // not render without one until slot_tabChanged() runs further down.
+    updateMainWindowTabIndicators();
+
     // Check for duplicate tabs
     int tabCount = 0;
 
@@ -7765,47 +7785,6 @@ void mudlet::updateDetachedWindowToolbars()
     }
 }
 
-QIcon mudlet::createConnectionStatusIcon(bool isConnected, bool isConnecting, bool hasError)
-{
-    // Create a 16x16 pixmap for the icon
-    QPixmap pixmap(16, 16);
-    pixmap.fill(Qt::transparent);
-
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-
-    // Set up the dot properties
-    const int centerX = 8;
-    const int centerY = 8;
-    const int radius = 4;
-
-    if (hasError) {
-        // Red filled triangle for error
-        painter.setBrush(QColor(220, 50, 50));
-        painter.setPen(QPen(QColor(180, 40, 40), 1));
-        QPolygon triangle;
-        triangle << QPoint(centerX, centerY - 4) << QPoint(centerX - 4, centerY + 3) << QPoint(centerX + 4, centerY + 3);
-        painter.drawPolygon(triangle);
-    } else if (isConnected) {
-        // Green filled circle for connected
-        painter.setBrush(QColor(50, 180, 50));
-        painter.setPen(QPen(QColor(40, 150, 40), 1));
-        painter.drawEllipse(centerX - radius, centerY - radius, radius * 2, radius * 2);
-    } else if (isConnecting) {
-        // Yellow filled circle for connecting
-        painter.setBrush(QColor(220, 180, 50));
-        painter.setPen(QPen(QColor(180, 150, 40), 1));
-        painter.drawEllipse(centerX - radius, centerY - radius, radius * 2, radius * 2);
-    } else {
-        // Empty circle (just outline) for disconnected
-        painter.setBrush(Qt::transparent);
-        painter.setPen(QPen(QColor(120, 120, 120), 2));
-        painter.drawEllipse(centerX - radius, centerY - radius, radius * 2, radius * 2);
-    }
-
-    return QIcon(pixmap);
-}
-
 void mudlet::updateMainWindowTabIndicators()
 {
     if (!mpTabBar) {
@@ -7820,22 +7799,29 @@ void mudlet::updateMainWindowTabIndicators()
         }
 
         Host* pHost = mHostManager.getHost(profileName);
-        QIcon tabIcon;
+        TabConnectionIndicator state = TabConnectionIndicator::None;
 
         // Only show connection indicators if the setting is enabled
-        if (mShowTabConnectionIndicators && pHost) {
-            bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
-            bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
-            tabIcon = createConnectionStatusIcon(isConnected, isConnecting, false);
-        } else if (mShowTabConnectionIndicators && !pHost) {
-            tabIcon = createConnectionStatusIcon(false, false, true);
-        } else {
-            // No icon when indicators are disabled
-            tabIcon = QIcon();
+        if (mShowTabConnectionIndicators) {
+            if (pHost) {
+                switch (pHost->mTelnet.getConnectionState()) {
+                case QAbstractSocket::ConnectedState:
+                    state = TabConnectionIndicator::Connected;
+                    break;
+                case QAbstractSocket::ConnectingState:
+                case QAbstractSocket::HostLookupState:
+                    state = TabConnectionIndicator::Connecting;
+                    break;
+                default:
+                    state = TabConnectionIndicator::Disconnected;
+                    break;
+                }
+            } else {
+                state = TabConnectionIndicator::Error;
+            }
         }
 
-        // Only set the tab icon, keep the original tab text as just the profile name
-        mpTabBar->setTabIcon(i, tabIcon);
+        mpTabBar->setTabConnectionIndicator(i, state);
     }
 }
 

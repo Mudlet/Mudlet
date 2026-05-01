@@ -21,6 +21,7 @@
 
 #include "EditorUndoStack.h"
 #include "Host.h"
+#include "MudletInstanceCoordinator.h"
 #include "TAction.h"
 #include "TTimer.h"
 #include "TTreeWidget.h"

@@ -4531,7 +4531,7 @@ int TBuffer::calculateWrapPosition(int lineNumber, int begin, int end)
     return lineSize;
 }
 
-inline int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
+int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
 {
     int offset = 0;
     int position = column;
