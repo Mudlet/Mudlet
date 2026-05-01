@@ -287,7 +287,9 @@ void Updater::setupPlatformUpdater()
         emit signal_updateCheckFailed(error);
     });
 
-    mUpdateDialog = new dblsqd::UpdateDialog(mFeed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
+    // OnLastWindowClosed flips setQuitOnLastWindowClosed(false) and re-shows the dialog on close,
+    // so Mudlet won't exit via the X button while an update is pending. Drive the dialog manually instead.
+    mUpdateDialog = new dblsqd::UpdateDialog(mFeed, dblsqd::UpdateDialog::Manual, mSettings);
     //: Label for the update button shown in the update dialog
     mpInstallOrRestart->setText(tr("Update"));
     mUpdateDialog->addInstallButton(mpInstallOrRestart);

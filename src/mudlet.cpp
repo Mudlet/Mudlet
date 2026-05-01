@@ -5774,8 +5774,13 @@ void mudlet::slot_updateInstalled()
 
     // rejig to restart Mudlet instead
     connect(dactionUpdate, &QAction::triggered, this, [=, this]() {
+#if defined(Q_OS_WINDOWS)
+        // On Windows the binary isn't swapped in place yet - the installer still has to run.
+        pUpdater->slot_installOrRestartClicked(nullptr, QString());
+#else
         forceClose();
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
+#endif
     });
     dactionUpdate->setText(tr("Update installed - restart to apply"));
 #endif // !Q_OS_MACOS
