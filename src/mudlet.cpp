@@ -31,46 +31,33 @@
 #include "AltFocusMenuBarDisable.h"
 #include "CredentialManager.h"
 #include "DarkTheme.h"
-#include "EAction.h"
 #include "LuaInterface.h"
-#include "TCommandLine.h"
-#include "TConsole.h"
 #include "TDebug.h"
+#include "MudletInstanceCoordinator.h"
 #include "TDetachedWindow.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
-#include "TLabel.h"
-#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TGameDetails.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
-#include "TTextEdit.h"
-#include "TToolBar.h"
 #include "XMLimport.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
-#include "FileOpenHandler.h"
-#include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
 #include "dlgNotepad.h"
 #include "dlgPackageExporter.h"
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
-#include "dlgTriggerEditor.h"
-#include "TMediaData.h"
-#include "VarUnit.h"
 #include "MMCPServer.h"
-
-#include "edbee/models/textautocompleteprovider.h"
-#include "edbee/views/texttheme.h"
 
 #include <QAccessible>
 #include <QAccessibleAnnouncementEvent>
 #include <QApplication>
 #include <QtUiTools/quiloader.h>
+#include <QCollator>
 #include <QDesktopServices>
 #include <QFile>
 #include <QFileDialog>
@@ -79,22 +66,26 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QNetworkDiskCache>
+#include <QLibraryInfo>
 #include <QMediaDevices>
 #include <QMediaPlayer>
 #include <QMessageBox>
 #include <QPoint>
 #include <QScreen>
 #include <QScrollBar>
+#include <QSettings>
 #include <QShortcut>
 #include <QSplitter>
 #include <QStyleFactory>
 #include <QStyleHints>
 #include <QTableWidget>
+#include <QTextBoundaryFinder>
 #include <QTextStream>
 #include <QTimer>
 #include <QToolBar>
 #include <QToolButton>
 #include <QToolTip>
+#include <QTranslator>
 #include <QVariantHash>
 
 #include <QRandomGenerator>
@@ -103,9 +94,6 @@
 #include <memory>
 #include <zip.h>
 #include <QStyle>
-#if defined(Q_OS_WINDOWS)
-#include <QSettings>
-#endif
 
 // for system physical memory info
 #if defined(Q_OS_WINDOWS)
@@ -6954,7 +6942,11 @@ void mudlet::activateProfile(Host* pHost)
 
     updateMultiViewControls();
 
-    mpCurrentActiveHost->updateDisplayDimensions();
+    // Deferred so widget geometry is finalised before NAWS is recalculated;
+    // otherwise mScreenWidth hits its qMax(40, ...) floor and the server
+    // pre-wraps output too narrowly. Receiver-form singleShot is safe if the
+    // Host is destroyed first - do not change to a lambda.
+    QTimer::singleShot(0, mpCurrentActiveHost.data(), &Host::updateDisplayDimensions);
 
     // Currently used to update the Discord Rich Presence
     emit signal_tabChanged(mpCurrentActiveHost->getName());

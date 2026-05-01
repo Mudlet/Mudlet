@@ -504,7 +504,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     }
 }
 
-/* inline */ void TTextEdit::replaceControlCharacterWith_Picture(const uint unicode, const QString& grapheme, const int column, QVector<QString>& graphemes, int& charWidth) const
+void TTextEdit::replaceControlCharacterWith_Picture(const uint unicode, const QString& grapheme, const int column, QVector<QString>& graphemes, int& charWidth) const
 {
     switch (unicode) {
     case 0:
@@ -647,7 +647,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     }
 }
 
-/* inline */ void TTextEdit::replaceControlCharacterWith_OEMFont(const uint unicode, const QString& grapheme, const int column, QVector<QString>& graphemes, int& charWidth) const
+void TTextEdit::replaceControlCharacterWith_OEMFont(const uint unicode, const QString& grapheme, const int column, QVector<QString>& graphemes, int& charWidth) const
 {
     Q_UNUSED(column)
     switch (unicode) {
@@ -2645,7 +2645,7 @@ int TTextEdit::getRowCount() const
     return qRound(height() / QFontMetricsF(font()).lineSpacing());
 }
 
-inline QString TTextEdit::htmlCenter(const QString& text)
+QString TTextEdit::htmlCenter(const QString& text)
 {
     return qsl("<center>%1</center>").arg(text);
 }
@@ -2654,7 +2654,7 @@ inline QString TTextEdit::htmlCenter(const QString& text)
 // that some entries do not work like this and we cannot just display a short
 // bit of text to indicate them in the analysis of the on-screen content- the
 // language directional controls may be like that:
-inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QChar& second)
+QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QChar& second)
 {
     // clang-format off
     if (second.isNull()) {
@@ -2856,7 +2856,7 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
     // clang-format on
 }
 
-inline QString TTextEdit::byteToLuaCodeOrChar(const char* byte)
+QString TTextEdit::byteToLuaCodeOrChar(const char* byte)
 {
     if (!byte) {
         return QString();

@@ -18,8 +18,10 @@
  ***************************************************************************/
 
 #include <QtTest/QtTest>
+
 #include <cstdlib>
 
+#include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"

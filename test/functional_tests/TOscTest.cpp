@@ -30,12 +30,8 @@
 #include <QKeyEvent>
 #include <QtTest/QtTest>
 
-#include <optional>
-#include <tuple>
-
-#include "Host.h"
+#include "MudletInstanceCoordinator.h"
 #include "TAccessibleTextEdit.h"
-#include "TBuffer.h"
 #include "THyperlinkStyling.h"
 #include "TLinkStore.h"
 #include "TMainConsole.h"

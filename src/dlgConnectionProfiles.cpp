@@ -35,7 +35,7 @@
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
 
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 #include <QtUiTools>
 #include <QColorDialog>
 #include <QDir>
