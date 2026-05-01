@@ -196,7 +196,7 @@ bool TStyle::setTabConnectionIndicator(const QString& tabName, TabConnectionIndi
 
 bool TStyle::setTabConnectionIndicator(int index, TabConnectionIndicator state)
 {
-    if (index < 0 || index >= mpTabBar->count()) {
+    if (!mpTabBar || index < 0 || index >= mpTabBar->count()) {
         return false;
     }
     return setTabConnectionIndicator(mpTabBar->tabData(index).toString(), state);
@@ -212,7 +212,7 @@ TabConnectionIndicator TStyle::tabConnectionIndicator(const QString& tabName) co
 
 TabConnectionIndicator TStyle::tabConnectionIndicator(int index) const
 {
-    if (index < 0 || index >= mpTabBar->count()) {
+    if (!mpTabBar || index < 0 || index >= mpTabBar->count()) {
         return TabConnectionIndicator::None;
     }
     return tabConnectionIndicator(mpTabBar->tabData(index).toString());

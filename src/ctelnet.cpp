@@ -500,6 +500,8 @@ void cTelnet::connectIt(const QString& address, int port)
         return;
     }
 
+    // mpHost is a QPointer and can in principle be cleared if the Host is
+    // destroyed mid-connect; slot authors must null-check before dereferencing.
     emit signal_connecting(mpHost);
 
     mHostUrl = address;
@@ -545,6 +547,10 @@ void cTelnet::disconnectIt()
 // Only called from terminateConnection() for a "secure" connection:
 void cTelnet::abortConnection()
 {
+    // Clear the DNS-lookup flag here as well as in slot_socketDisconnected so
+    // the tab's "Connecting" indicator is dropped immediately rather than
+    // lingering until the (asynchronous) disconnect signal arrives.
+    mLookingUpHost = false;
     mDontReconnect = true;
     if (mpSocket) {
         // One socket is probably active - and has signals connected - but will
