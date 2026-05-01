@@ -1520,8 +1520,21 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         auto key = shortcutKeys.next();
         currentShortcuts.insert(key, QKeySequence(*pHost->profileShortcuts.value(key)));
         const QString labelText = mudlet::self()->mpShortcutsManager->getLabel(key);
+        const QString fieldLabel = labelText.isEmpty() ? key : labelText;
         auto sequenceEdit = new TabFriendlyKeySequenceEdit(currentShortcuts.value(key));
-        sequenceEdit->setAccessibleName(labelText.isEmpty() ? key : labelText);
+
+        // Include the binding in the accessible name (issue #8873) so screen
+        // readers speak it on focus; otherwise the binding is only reachable
+        // via advanced screen-reader navigation.
+        auto accessibleNameFor = [fieldLabel](const QKeySequence& seq) -> QString {
+            if (seq.isEmpty()) {
+                //: Accessible name for a shortcut field with no key combination assigned. %1 is the shortcut's label, e.g. "Disconnect".
+                return tr("%1: not set").arg(fieldLabel);
+            }
+            //: Accessible name for a shortcut field showing the bound keys. %1 is the shortcut's label, %2 is the key combination, e.g. "Disconnect: Ctrl+Shift+K".
+            return tr("%1: %2").arg(fieldLabel, seq.toString(QKeySequence::NativeText));
+        };
+        sequenceEdit->setAccessibleName(accessibleNameFor(currentShortcuts.value(key)));
         //: Accessible description for a shortcut entry, read by screen readers when focus enters the field. Do not translate "Esc".
         sequenceEdit->setAccessibleDescription(tr("Press a key combination to set the shortcut, or Esc to clear it."));
 
@@ -1530,6 +1543,29 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         gridLayout_groupBox_shortcuts->addWidget(shortcutLabel, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
         shortcutsRow++;
+
+        // Without an explicit NameChanged event and announce() call, screen
+        // readers don't pick up the new binding until focus leaves and
+        // re-enters the field, so users get no confirmation of a capture.
+        auto refreshAccessibility = [=](const QKeySequence& seq) {
+            sequenceEdit->setAccessibleName(accessibleNameFor(seq));
+            QAccessibleEvent nameEvent(sequenceEdit, QAccessible::NameChanged);
+            QAccessible::updateAccessibility(&nameEvent);
+            auto* pMudlet = mudlet::self();
+            if (!pMudlet || !QAccessible::isActive()) {
+                return;
+            }
+            QString announcement;
+            if (seq.isEmpty()) {
+                //: Screen-reader announcement when a shortcut field is cleared. %1 is the shortcut's label, e.g. "Disconnect".
+                announcement = tr("%1 shortcut cleared").arg(fieldLabel);
+            } else {
+                //: Screen-reader announcement when a new key combination is captured. %1 is the shortcut's label, %2 is the key combination, e.g. "Disconnect set to Ctrl+Shift+K".
+                announcement = tr("%1 set to %2").arg(fieldLabel, seq.toString(QKeySequence::NativeText));
+            }
+            pMudlet->announce(announcement, QString(), true);
+        };
+
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
             QKeySequence newSequence;
             if (!sequenceEdit->keySequence().isEmpty() && !sequenceEdit->keySequence().matches(QKeySequence(Qt::Key_Escape))) {
@@ -1537,6 +1573,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             }
             sequenceEdit->setKeySequence(newSequence);
             currentShortcuts[key] = newSequence;
+            refreshAccessibility(newSequence);
         });
         connect(this, &dlgProfilePreferences::signal_resetMainWindowShortcutsToDefaults, sequenceEdit, [=]() {
             auto* pMudlet = mudlet::self();
@@ -1550,6 +1587,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             }
             sequenceEdit->setKeySequence(*pDefaultSequence);
             currentShortcuts[key] = *pDefaultSequence;
+            refreshAccessibility(*pDefaultSequence);
         });
     }
 }
