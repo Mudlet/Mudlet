@@ -104,6 +104,10 @@ QRect TStyle::subElementRect(SubElement element, const QStyleOption* option, con
                 const QRect leftBtn = QProxyStyle::subElementRect(SE_TabBarTabLeftButton, option, widget);
                 const int reservationStart = leftBtn.isValid() ? leftBtn.right() + 1 : rect.left();
                 rect.setLeft(qMax(rect.left(), reservationStart) + sIndicatorReservedWidth);
+                // Mirror the reservation on the trailing edge so Qt's centering
+                // lands on the tab's true center rather than being offset toward
+                // the close button - see PR #9231 review feedback.
+                rect.setRight(rect.right() - sIndicatorReservedWidth);
             }
         }
     }
@@ -114,7 +118,9 @@ QRect TStyle::subElementRect(SubElement element, const QStyleOption* option, con
 void TStyle::paintConnectionIndicator(QPainter* painter, const QStyleOptionTab* tabOption, TabConnectionIndicator state) const
 {
     constexpr int diameter = 8;
-    constexpr int leftMargin = 6;
+    // Leaves a ~4 px gap between the dot and the tab text, given
+    // sIndicatorReservedWidth (20) - leftMargin (8) - diameter (8) = 4.
+    constexpr int leftMargin = 8;
     const QRect& tabRect = tabOption->rect;
     // Sit just past the close button (which is on the leading edge on macOS)
     // so the two do not overlap; fall back to the tab's leading edge when
