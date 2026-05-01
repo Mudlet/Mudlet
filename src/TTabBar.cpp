@@ -53,10 +53,10 @@ void TStyle::drawControl(ControlElement element, const QStyleOption* option, QPa
     auto* appStyle = qApp->style();
 
     const auto* tabOption = (element == QStyle::CE_TabBarTab) ? qstyleoption_cast<const QStyleOptionTab*>(option) : nullptr;
-    const int tabIndex = tabOption ? mpTabBar->tabAt(tabOption->rect.center()) : -1;
+    const int tabIndex = (tabOption && mpTabBar) ? mpTabBar->tabAt(tabOption->rect.center()) : -1;
 
     if (element == QStyle::CE_TabBarTab && widget) {
-        QString tabName = mpTabBar->tabData(tabIndex).toString();
+        QString tabName = mpTabBar ? mpTabBar->tabData(tabIndex).toString() : QString();
         QFont font = widget->font();
         bool isStyleChanged = false;
         if (mBoldTabsSet.contains(tabName) || mItalicTabsSet.contains(tabName) || mUnderlineTabsSet.contains(tabName)) {
@@ -106,7 +106,7 @@ QRect TStyle::subElementRect(SubElement element, const QStyleOption* option, con
                 rect.setLeft(qMax(rect.left(), reservationStart) + sIndicatorReservedWidth);
                 // Mirror the reservation on the trailing edge so Qt's centering
                 // lands on the tab's true center rather than being offset toward
-                // the close button - see PR #9231 review feedback.
+                // the close button.
                 rect.setRight(rect.right() - sIndicatorReservedWidth);
             }
         }
@@ -118,8 +118,8 @@ QRect TStyle::subElementRect(SubElement element, const QStyleOption* option, con
 void TStyle::paintConnectionIndicator(QPainter* painter, const QStyleOptionTab* tabOption, TabConnectionIndicator state) const
 {
     constexpr int diameter = 8;
-    // Leaves a ~4 px gap between the dot and the tab text, given
-    // sIndicatorReservedWidth (20) - leftMargin (8) - diameter (8) = 4.
+    // Provides a comfortable gap from the close button on the leading
+    // edge and the tab text on the trailing edge.
     constexpr int leftMargin = 8;
     const QRect& tabRect = tabOption->rect;
     // Sit just past the close button (which is on the leading edge on macOS)

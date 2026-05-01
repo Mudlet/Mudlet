@@ -42,8 +42,8 @@ class TStyle : public QProxyStyle
 {
 public:
     // Indicator diameter + left margin + right margin, in logical pixels.
-    // Tuned so the dot is not crammed against the close button or the tab
-    // text - see PR #9231 review feedback.
+    // Tuned so the dot is not crammed against the close button or the
+    // tab text.
     static constexpr int sIndicatorReservedWidth = 20;
 
     explicit TStyle(QTabBar* bar)
