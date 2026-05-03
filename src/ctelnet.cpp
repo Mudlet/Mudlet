@@ -649,6 +649,7 @@ void cTelnet::slot_socketConnected()
 #endif
     }
 
+    mpSocket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
     reset();
     setKeepAlive(mpSocket->socketDescriptor());
 
