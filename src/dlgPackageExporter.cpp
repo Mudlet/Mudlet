@@ -56,7 +56,7 @@
 
 dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
 : QDialog(parent)
-, ui(new Ui::dlgPackageExporter)
+, ui(std::make_unique<Ui::dlgPackageExporter>())
 , mpHost(pHost)
 {
     ui->setupUi(this);
@@ -152,10 +152,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
     connect(mpHost, &QObject::destroyed, this, &dlgPackageExporter::close);
 }
 
-dlgPackageExporter::~dlgPackageExporter()
-{
-    delete ui;
-}
+dlgPackageExporter::~dlgPackageExporter() = default;
 
 void dlgPackageExporter::setModuleCreationMode(bool isModule)
 {
