@@ -448,7 +448,7 @@ void MMCPClient::sendMessage(const QString& msg)
 {
     QByteArray out;
     out.append(static_cast<char>(Message));
-    out.append(msg.toUtf8());
+    out.append(msg.toLatin1());
     out.append(static_cast<char>(End));
     writeData(out);
 }
@@ -505,7 +505,7 @@ void MMCPClient::sendVersion()
 {
     QByteArray versionData;
     versionData.append(static_cast<char>(Version));
-    versionData.append(mudlet::self()->scmVersion.toUtf8());
+    versionData.append(mudlet::self()->scmVersion.toLatin1());
     versionData.append(static_cast<char>(End));
     writeData(versionData);
 }
@@ -863,7 +863,7 @@ void MMCPClient::handleIncomingPingRequest(const QString& msg)
 {
     QByteArray out;
     out.append(static_cast<char>(PingResponse));
-    out.append(msg.toUtf8());
+    out.append(msg.toLatin1());
     out.append(static_cast<char>(End));
     writeData(out);
 }

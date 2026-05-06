@@ -233,9 +233,9 @@ QPair<bool, QString> MMCPServer::chatTo(const QVariant& target, const QString& m
     if (pClient) {
         QByteArray out;
         out.append(static_cast<char>(TextPersonal));
-        out.append(getChatName().toUtf8());
+        out.append(getChatName().toLatin1());
         out.append(" chats to you, '");
-        out.append(msg.toUtf8());
+        out.append(msg.toLatin1());
         out.append("'\n");
         out.append(static_cast<char>(End));
 
@@ -269,9 +269,9 @@ QPair<bool, QString> MMCPServer::chatAll(const QString& msg)
 
     QByteArray outMsg;
     outMsg.append(static_cast<char>(TextEveryone));
-    outMsg.append(getChatName().toUtf8());
+    outMsg.append(getChatName().toLatin1());
     outMsg.append(" chats to everybody, '");
-    outMsg.append(msg.toUtf8());
+    outMsg.append(msg.toLatin1());
     outMsg.append("'\n");
     outMsg.append(static_cast<char>(End));
 
@@ -474,7 +474,7 @@ QPair<bool, QString> MMCPServer::chatName(const QString& name)
     if (!mPeersList.isEmpty()) {
         QByteArray outMsg;
         outMsg.append(static_cast<char>(NameChange));
-        outMsg.append(name.toUtf8());
+        outMsg.append(name.toLatin1());
         outMsg.append(static_cast<char>(End));
 
         QListIterator<QPointer<MMCPClient>> it(mPeersList);
@@ -503,9 +503,9 @@ QPair<bool, QString> MMCPServer::sendSideChannel(const QString& channel, const Q
 
     QByteArray outMsg;
     outMsg.append(static_cast<char>(SideChannel));
-    outMsg.append(channel.toUtf8());
+    outMsg.append(channel.toLatin1());
     outMsg.append(',');
-    outMsg.append(msg.toUtf8());
+    outMsg.append(msg.toLatin1());
     outMsg.append(static_cast<char>(End));
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
@@ -588,9 +588,9 @@ QPair<bool, QString> MMCPServer::emoteAll(const QString& msg)
 
     QByteArray outMsg;
     outMsg.append(static_cast<char>(TextEveryone));
-    outMsg.append(getChatName().toUtf8());
+    outMsg.append(getChatName().toLatin1());
     outMsg.append(' ');
-    outMsg.append(msg.toUtf8());
+    outMsg.append(msg.toLatin1());
     outMsg.append('\n');
     outMsg.append(static_cast<char>(End));
 
@@ -1092,7 +1092,7 @@ void MMCPServer::sendServedMessage(MMCPClient* pClient, const QString& msg, bool
 {
     QByteArray cmdStr;
     cmdStr.append(static_cast<char>(TextEveryone));
-    cmdStr.append(msg.toUtf8());
+    cmdStr.append(msg.toLatin1());
     cmdStr.append(static_cast<char>(End));
 
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
