@@ -595,6 +595,7 @@ QPair<bool, QString> MMCPServer::emoteAll(const QString& msg)
     outMsg.append(getChatName().toUtf8());
     outMsg.append(' ');
     outMsg.append(msg.toUtf8());
+    outMsg.append('\n');
     outMsg.append(static_cast<char>(End));
 
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
