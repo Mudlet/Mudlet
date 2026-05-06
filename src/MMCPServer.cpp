@@ -241,10 +241,6 @@ QPair<bool, QString> MMCPServer::chatTo(const QVariant& target, const QString& m
 
         pClient->writeData(out);
 
-        //const QString outMsg = qsl("%1%2 chats to you, '%3'\n%4")
-        //                               .arg(static_cast<char>(TextPersonal), getChatName(), msg, static_cast<char>(End));
-        //pClient->writeData(outMsg);
-
         using namespace AnsiColors;
         //: %1 is the name of the peer receiving the message %2
 
