@@ -1303,14 +1303,6 @@ void T2DMap::drawRoom(QPainter& painter,
         // Expand radius by half border width so visible fill stays at original size
         const float roomRadius = (0.5 * rSize * mRoomWidth) + borderInset;
         const QPointF roomCenter = QPointF(rx, ry);
-        if (!isRoomSelected) {
-            // CHECK: The use of a gradient fill to a white center on round
-            // rooms might look nice in some situations but not in all:
-            QRadialGradient gradient(roomCenter, roomRadius);
-            gradient.setColorAt(0.85, roomColor);
-            gradient.setColorAt(0, Qt::white);
-            painter.setBrush(gradient);
-        }
         QPainterPath diameterPath;
         diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
         painter.drawPath(diameterPath);
