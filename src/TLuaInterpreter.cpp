@@ -68,6 +68,8 @@
 // Only used for this OS:
 #include <QStandardPaths>
 #endif
+#include <QJsonDocument>
+#include <QJsonParseError>
 #include <QTableWidget>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
