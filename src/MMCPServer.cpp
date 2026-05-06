@@ -271,11 +271,11 @@ QPair<bool, QString> MMCPServer::chatAll(const QString& msg)
         return {false, qsl("no connected clients")};
     }
 
-    QString outMsg;
+    QByteArray outMsg;
     outMsg.append(static_cast<char>(TextEveryone));
-    outMsg.append(getChatName());
+    outMsg.append(getChatName().toUtf8());
     outMsg.append(" chats to everybody, '");
-    outMsg.append(msg);
+    outMsg.append(msg.toUtf8());
     outMsg.append("'\n");
     outMsg.append(static_cast<char>(End));
 
