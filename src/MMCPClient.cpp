@@ -851,8 +851,7 @@ void MMCPClient::handleIncomingPeekList(const QString& list)
                                "==== ==================== =============== =====\n"
                                "%1\n"
                                "%2==== ==================== =============== =====%3\n")
-                                    .arg(messageList.join(QChar::LineFeed))
-                                    .arg(FBLDRED).arg(RST);
+                                .arg(messageList.join(QChar::LineFeed), FBLDRED, RST);
     mpMMCPServer->clientMessage(this, listOut);
 }
 
