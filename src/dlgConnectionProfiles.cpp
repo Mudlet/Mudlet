@@ -115,11 +115,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     mpCopyProfile = new QAction(tr("Copy"), this);
     mpCopyProfile->setObjectName(qsl("copyProfile"));
-    auto copyProfileSettings = new QAction(tr("Copy settings only"), this);
-    copyProfileSettings->setObjectName(qsl("copyProfileSettingsOnly"));
+    mpCopyProfileSettings = new QAction(tr("Copy settings only"), this);
+    mpCopyProfileSettings->setObjectName(qsl("copyProfileSettingsOnly"));
 
     copy_profile_toolbutton->addAction(mpCopyProfile);
-    copy_profile_toolbutton->addAction(copyProfileSettings);
+    copy_profile_toolbutton->addAction(mpCopyProfileSettings);
     copy_profile_toolbutton->setDefaultAction(mpCopyProfile);
 
     auto objectList = mpCopyProfile->associatedObjects();
@@ -135,7 +135,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     widgetList.first()->setAccessibleName(tr("copy profile"));
     widgetList.first()->setAccessibleDescription(tr("copy the entire profile to new one that will require a different new name."));
 
-    objectList = copyProfileSettings->associatedObjects();
+    objectList = mpCopyProfileSettings->associatedObjects();
     widgetList.clear();
     for (const auto pObjectItem : std::as_const(objectList)) {
         auto pWidgetItem = qobject_cast<QWidget*>(pObjectItem);
@@ -144,7 +144,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         }
     }
 
-    Q_ASSERT_X(!widgetList.isEmpty(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for copyProfileSettings QAction not found.");
+    Q_ASSERT_X(!widgetList.isEmpty(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for mpCopyProfileSettings QAction not found.");
     widgetList.first()->setAccessibleName(tr("copy profile settings"));
     widgetList.first()->setAccessibleDescription(tr("copy the settings and some other parts of the profile to a new one that will require a different new name."));
 
@@ -219,7 +219,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(abort, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_cancel);
     connect(new_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_addProfile);
     connect(mpCopyProfile, &QAction::triggered, this, &dlgConnectionProfiles::slot_copyProfile);
-    connect(copyProfileSettings, &QAction::triggered, this, &dlgConnectionProfiles::slot_copyOnlySettingsOfProfile);
+    connect(mpCopyProfileSettings, &QAction::triggered, this, &dlgConnectionProfiles::slot_copyOnlySettingsOfProfile);
     connect(remove_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_deleteProfile);
     connect(profile_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_updateName);
     connect(profile_name_entry, &QLineEdit::editingFinished, this, &dlgConnectionProfiles::slot_saveName);
@@ -1037,7 +1037,15 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     slot_togglePasswordVisibility(false);
 
     profile_name_entry->setText(profile_name);
-
+    if (!mCopyingProfile) {
+        const bool sourceHasFolder = QDir(mudlet::getMudletPath(enums::profileHomePath, profile_name)).exists();
+        if (mpCopyProfile) {
+            mpCopyProfile->setEnabled(sourceHasFolder);
+        }
+        if (mpCopyProfileSettings) {
+            mpCopyProfileSettings->setEnabled(sourceHasFolder);
+        }
+    }
     QString host_url = readProfileData(profile_name, qsl("url"));
     if (host_url.isEmpty()) {
         // Host to connect to, see below for port
@@ -1562,7 +1570,11 @@ void dlgConnectionProfiles::slot_cancel()
 void dlgConnectionProfiles::slot_copyProfile()
 {
     mCopyingProfile = true;
-
+    const QString sourceName = profile_name_entry->text().trimmed();
+    if (sourceName.isEmpty() || !QDir(mudlet::getMudletPath(enums::profileHomePath, sourceName)).exists()) {
+        mCopyingProfile = false;
+        return;
+    }
     QString profile_name;
     QString oldname;
     QListWidgetItem* pItem;
@@ -1573,16 +1585,12 @@ void dlgConnectionProfiles::slot_copyProfile()
         return;
     }
 
-    // copy the folder on-disk
-    const QDir dir(mudlet::getMudletPath(enums::profileHomePath, oldname));
-    if (!dir.exists()) {
-        mCopyingProfile = false;
-        return;
-    }
-
     QApplication::setOverrideCursor(Qt::BusyCursor);
     mpCopyProfile->setText(tr("Copying..."));
     mpCopyProfile->setEnabled(false);
+    if (mpCopyProfileSettings) {
+        mpCopyProfileSettings->setEnabled(false);
+    }
     auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(enums::profileHomePath, oldname), mudlet::getMudletPath(enums::profileHomePath, profile_name));
     auto watcher = new QFutureWatcher<bool>;
     connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
@@ -1602,6 +1610,9 @@ void dlgConnectionProfiles::slot_copyProfile()
         mCopyingProfile = false;
         mpCopyProfile->setText(tr("Copy"));
         mpCopyProfile->setEnabled(true);
+        if (mpCopyProfileSettings) {
+            mpCopyProfileSettings->setEnabled(true);
+        }
         QApplication::restoreOverrideCursor();
         validateProfile();
         watcher->deleteLater();
@@ -1611,6 +1622,10 @@ void dlgConnectionProfiles::slot_copyProfile()
 
 void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
 {
+    const QString sourceName = profile_name_entry->text().trimmed();
+    if (sourceName.isEmpty() || !QDir(mudlet::getMudletPath(enums::profileHomePath, sourceName)).exists()) {
+        return;
+    }
     QString profile_name;
     QString oldname;
     QListWidgetItem* pItem;

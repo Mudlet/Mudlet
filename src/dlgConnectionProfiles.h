@@ -135,6 +135,7 @@ private:
     QPalette mErrorPalette;
     QPalette mReadOnlyPalette;
     QAction* mpCopyProfile = nullptr;
+    QAction* mpCopyProfileSettings = nullptr;
     QPushButton* offline_button = nullptr;
     QPushButton* connect_button = nullptr;
     QLineEdit* delete_profile_lineedit = nullptr;
