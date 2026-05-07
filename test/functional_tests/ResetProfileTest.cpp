@@ -32,11 +32,13 @@
  */
 
 #include <QtTest/QtTest>
+#include <QMouseEvent>
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TEvent.h"
 #include "TKey.h"
+#include "TLabel.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -675,6 +677,73 @@ private slots:
     QVERIFY2(
         mpHost->mEventHandlerMap.contains(eventName),
         "Event handler should be re-registered after reset via compileAll");
+  }
+
+  // -----------------------------------------------------------------------
+  // Group 16: Lua Registry Corruption (TLabel destructor timing)
+  // -----------------------------------------------------------------------
+
+  // PR #9141 added a TLabel destructor that frees its 7 callback indices
+  // via luaL_unref. resetMainConsole() destroys labels via deleteLater(),
+  // so without an explicit drain those destructors fire AFTER phase2 has
+  // swapped in a new Lua state via initLuaGlobals(). The luaL_unref calls
+  // then write into the new state's registry — any slots already populated
+  // by compileAll() during the same phase2 (e.g. Adjustable.Container's
+  // many label callbacks) get overwritten with freelist-chain numbers,
+  // surfacing as "attempt to call a number value" the first time the user
+  // hovers a label.
+  //
+  // The fix in Host::resetProfile_phase2() drains DeferredDelete events
+  // between resetMainConsole() and initLuaGlobals(), so the old destructors
+  // run their unrefs against the still-live original state. This test
+  // reproduces the conditions: a script that creates many labels with
+  // click callbacks at top level, so compileAll re-executes it during
+  // phase2 and populates the new registry with the exact slot indices the
+  // queued old destructors would have corrupted.
+  void test_labelCallbacksWorkAfterResetWithManyLabels() {
+    const int kNumLabels = 50;
+
+    auto *pScript = new TScript(qsl("labelCallbackRegressionScript"), mpHost);
+    pScript->setScript(qsl("labelCallbackHits = 0\n"
+                           "for i = 1, %1 do\n"
+                           "  local n = 'cb_label_'..i\n"
+                           "  createLabel(n, 0, 0, 10, 10, true)\n"
+                           "  setLabelClickCallback(n, function()\n"
+                           "    labelCallbackHits = labelCallbackHits + 1\n"
+                           "  end)\n"
+                           "end\n")
+                           .arg(kNumLabels));
+    mpHost->getScriptUnit()->registerScript(pScript);
+    pScript->setIsActive(true);
+    pScript->compile();
+
+    performReset();
+    // Force any DeferredDelete events still pending after phase2 to fire
+    // before we trigger callbacks. With the fix, phase2 already drained
+    // them; without the fix, this is when corruption would land.
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+    for (int i = 1; i <= kNumLabels; ++i) {
+      auto *pL = mpHost->mpConsole->mLabelMap.value(qsl("cb_label_%1").arg(i));
+      QVERIFY2(pL, qPrintable(qsl("post-reset label cb_label_%1 missing").arg(i)));
+      QMouseEvent ev(QEvent::MouseButtonPress, QPointF(1, 1), QPointF(1, 1),
+                     QPointF(1, 1), Qt::LeftButton, Qt::LeftButton,
+                     Qt::NoModifier);
+      QCoreApplication::sendEvent(pL, &ev);
+    }
+
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_getglobal(L, "labelCallbackHits");
+    QVERIFY2(lua_isnumber(L, -1),
+             "labelCallbackHits should be a number after firing callbacks");
+    int hits = lua_tointeger(L, -1);
+    lua_pop(L, 1);
+    QCOMPARE(hits, kNumLabels);
+
+    // Neutralize the script so it doesn't keep recreating labels in
+    // subsequent tests' compileAll passes.
+    pScript->setScript(qsl(""));
+    pScript->setIsActive(false);
   }
 
   // -----------------------------------------------------------------------
