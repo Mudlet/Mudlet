@@ -447,6 +447,11 @@ void cTelnet::sendGMCPSupportsRemove(const QString& package)
 
 void cTelnet::connectIt(const QString& address, int port)
 {
+    // Set early - before the recursion-on-busy-socket block below - so the
+    // qApp->processEvents() call there cannot leave the indicator briefly
+    // showing Disconnected during a reconnect.
+    mLookingUpHost = true;
+
     if (mpHost) {
         mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
         mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
@@ -495,6 +500,8 @@ void cTelnet::connectIt(const QString& address, int port)
         return;
     }
 
+    // mpHost is a QPointer and can in principle be cleared if the Host is
+    // destroyed mid-connect; slot authors must null-check before dereferencing.
     emit signal_connecting(mpHost);
 
     mHostUrl = address;
@@ -530,6 +537,7 @@ void cTelnet::reconnect()
 void cTelnet::disconnectIt()
 {
     mDontReconnect = true;
+    mLookingUpHost = false;
     if (mpSocket) {
         // This will write out any pending data before it disconnects...
         mpSocket->disconnectFromHost();
@@ -539,6 +547,10 @@ void cTelnet::disconnectIt()
 // Only called from terminateConnection() for a "secure" connection:
 void cTelnet::abortConnection()
 {
+    // Clear the DNS-lookup flag here as well as in slot_socketDisconnected so
+    // the tab's "Connecting" indicator is dropped immediately rather than
+    // lingering until the (asynchronous) disconnect signal arrives.
+    mLookingUpHost = false;
     mDontReconnect = true;
     if (mpSocket) {
         // One socket is probably active - and has signals connected - but will
@@ -637,6 +649,7 @@ void cTelnet::slot_socketConnected()
 #endif
     }
 
+    mpSocket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
     reset();
     setKeepAlive(mpSocket->socketDescriptor());
 
@@ -679,6 +692,7 @@ void cTelnet::slot_socketDisconnected()
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
     qDebug().noquote() << "cTelnet::slot_socketDisconnected() INFO - called.";
 #endif
+    mLookingUpHost = false;
     TEvent event{};
 #if !defined(QT_NO_SSL)
     bool sslerr = false;
@@ -902,6 +916,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
     qDebug().noquote() << "cTelnet::slot_socketHostFound(QHostInfo) INFO - called.";
 #endif
+    mLookingUpHost = false;
     QStringList addressList_ipV4;
     QStringList addressList_ipV6;
     for (const QHostAddress& address : hostInfo.addresses()) {
@@ -1184,7 +1199,6 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 }
 
                 mSocket_ipV6.connectToHost(connectToText, mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
-
             }
             if (hasIPv4_address) {
                 connect(&mSocket_ipV4, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected, Qt::UniqueConnection);
@@ -1205,8 +1219,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 } else {
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
  is the port number for the connection.*/
-                    TDebug(QColorConstants::Blue, QColorConstants::White)
-                                    << tr("Trying open (IPv4) connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)).append(QChar::LineFeed)
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv4) connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
  is the port number for the connection.*/
@@ -1214,7 +1227,6 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 }
 
                 mSocket_ipV4.connectToHost(connectToText, mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
-
             }
         }
 #if !defined(QT_NO_SSL)
@@ -5330,7 +5342,9 @@ QAbstractSocket::SocketState cTelnet::getConnectionState() const
     if (mSocket_ipV4.state() == QAbstractSocket::HostLookupState || mSocket_ipV6.state() == QAbstractSocket::HostLookupState) {
         return QAbstractSocket::HostLookupState;
     }
-    if (mSocket_ipV4.state() == QAbstractSocket::HostLookupState || mSocket_ipV6.state() == QAbstractSocket::HostLookupState) {
+    // connectIt() has been called but QHostInfo::lookupHost has not yet
+    // returned, so neither socket has been told to connect.
+    if (mLookingUpHost) {
         return QAbstractSocket::HostLookupState;
     }
     if (mSocket_ipV4.state() == QAbstractSocket::ClosingState || mSocket_ipV6.state() == QAbstractSocket::ClosingState) {

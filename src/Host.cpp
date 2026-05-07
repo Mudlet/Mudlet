@@ -423,7 +423,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     auto i = mudlet::self()->mpShortcutsManager->iterator();
     while (i.hasNext()) {
         auto entry = i.next();
-        profileShortcuts.insert(entry, new QKeySequence(*mudlet::self()->mpShortcutsManager->getSequence(entry)));
+        profileShortcuts[entry] = std::make_unique<QKeySequence>(*mudlet::self()->mpShortcutsManager->getSequence(entry));
     }
 
     auto settings = mudlet::self()->getQSettings();
@@ -441,13 +441,7 @@ Host::~Host()
     // which can lead to a crash when closing multiple profiles at once.
     mpLastCommandLineUsed.clear();
 
-    qDeleteAll(profileShortcuts);
-    profileShortcuts.clear();
-
-    qDeleteAll(mStopWatchMap);
     mStopWatchMap.clear();
-
-    delete mMMCPServer;
 
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
@@ -1451,46 +1445,41 @@ QPair<int, QString> Host::createStopWatch(const QString& name)
         return qMakePair(0, qsl("unable to create a stopwatch at this time"));
     }
 
-    if (!mStopWatchMap.isEmpty() && !name.isEmpty()) {
-        QMapIterator<int, stopWatch*> itStopWatch(mStopWatchMap);
-        while (itStopWatch.hasNext()) {
-            itStopWatch.next();
-            if (itStopWatch.value()->name() == name) {
-                return qMakePair(0, qsl("stopwatch with id %1 called '%2' already exists").arg(QString::number(itStopWatch.key()), name));
+    if (!mStopWatchMap.empty() && !name.isEmpty()) {
+        for (auto it = mStopWatchMap.cbegin(); it != mStopWatchMap.cend(); ++it) {
+            if (it->second->name() == name) {
+                return qMakePair(0, qsl("stopwatch with id %1 called '%2' already exists").arg(QString::number(it->first), name));
             }
         }
     }
     int newWatchId = 1;
-    while (mStopWatchMap.contains(newWatchId)) {
+    while (mStopWatchMap.count(newWatchId) > 0) {
         ++newWatchId;
     }
 
-    // It is hard to imagine a situation in which this will fail - so we won't
-    // bother coding for it:
-    auto pStopWatch = new stopWatch();
-    Q_ASSERT_X(pStopWatch, "Host::createStopWatch", "out of memory, unable to create new stopwatch");
+    auto pStopWatch = std::make_unique<stopWatch>();
     if (!name.isEmpty()) {
         pStopWatch->setName(name);
     }
 
-    mStopWatchMap.insert(newWatchId, pStopWatch);
+    mStopWatchMap[newWatchId] = std::move(pStopWatch);
     return qMakePair(newWatchId, QString());
 }
 
 bool Host::destroyStopWatch(const int id)
 {
-    auto pStopWatch = mStopWatchMap.take(id);
-    if (!pStopWatch) {
+    auto it = mStopWatchMap.find(id);
+    if (it == mStopWatchMap.end()) {
         return false;
     }
 
-    delete pStopWatch;
+    mStopWatchMap.erase(it);
     return true;
 }
 
 bool Host::adjustStopWatch(const int id, const qint64 milliSeconds)
 {
-    auto pStopWatch = mStopWatchMap.value(id);
+    auto pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         pStopWatch->adjustMilliSeconds(milliSeconds);
         return true;
@@ -1504,16 +1493,10 @@ bool Host::adjustStopWatch(const int id, const qint64 milliSeconds)
 // unnamed one if a blank string is given:
 int Host::findStopWatchId(const QString& name) const
 {
-    // Scan through existing names, in ascending id order
-    QList<int> stopWatchIdList = mStopWatchMap.keys();
-    const int total = stopWatchIdList.size();
-    if (total > 1) {
-        std::sort(stopWatchIdList.begin(), stopWatchIdList.end());
-    }
-    for (const int currentId : std::as_const(stopWatchIdList)) {
-        auto pCurrentStopWatch = mStopWatchMap.value(currentId);
-        if (pCurrentStopWatch->name() == name) {
-            return currentId;
+    // Scan through existing names, in ascending id order (std::map is sorted)
+    for (auto it = mStopWatchMap.cbegin(); it != mStopWatchMap.cend(); ++it) {
+        if (it->second->name() == name) {
+            return it->first;
         }
     }
     return 0;
@@ -1521,7 +1504,7 @@ int Host::findStopWatchId(const QString& name) const
 
 QPair<bool, double> Host::getStopWatchTime(const int id) const
 {
-    auto pStopWatch = mStopWatchMap.value(id);
+    auto pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         return qMakePair(true, pStopWatch->getElapsedMilliSeconds() / 1000.0);
     }
@@ -1530,7 +1513,7 @@ QPair<bool, double> Host::getStopWatchTime(const int id) const
 
 QPair<bool, QString> Host::getBrokenDownStopWatchTime(const int id) const
 {
-    auto pStopWatch = mStopWatchMap.value(id);
+    auto pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         return qMakePair(true, pStopWatch->getElapsedDayTimeString());
     }
@@ -1547,7 +1530,7 @@ QPair<bool, QString> Host::startStopWatch(const QString& name)
         return qMakePair(false, qsl("stopwatch with name '%1' not found").arg(name));
     }
 
-    auto pStopWatch = mStopWatchMap.value(watchId);
+    auto pStopWatch = getStopWatch(watchId);
     if (Q_LIKELY(pStopWatch)) {
         if (pStopWatch->start()) {
             return qMakePair(true, QString());
@@ -1563,7 +1546,7 @@ QPair<bool, QString> Host::startStopWatch(const QString& name)
 
 QPair<bool, QString> Host::startStopWatch(int id)
 {
-    auto pStopWatch = mStopWatchMap.value(id);
+    auto pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         if (pStopWatch->start()) {
             return qMakePair(true, QString());
@@ -1585,7 +1568,7 @@ QPair<bool, QString> Host::stopStopWatch(const QString& name)
         return qMakePair(false, qsl("stopwatch with name '%1' not found").arg(name));
     }
 
-    auto pStopWatch = mStopWatchMap.value(watchId);
+    auto pStopWatch = getStopWatch(watchId);
     if (Q_LIKELY(pStopWatch)) {
         if (pStopWatch->stop()) {
             return qMakePair(true, QString());
@@ -1601,7 +1584,7 @@ QPair<bool, QString> Host::stopStopWatch(const QString& name)
 
 QPair<bool, QString> Host::stopStopWatch(const int id)
 {
-    auto pStopWatch = mStopWatchMap.value(id);
+    auto pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         if (pStopWatch->stop()) {
             return qMakePair(true, QString());
@@ -1623,7 +1606,7 @@ QPair<bool, QString> Host::resetStopWatch(const QString& name)
         return qMakePair(false, qsl("stopwatch with name '%1' not found").arg(name));
     }
 
-    auto pStopWatch = mStopWatchMap.value(watchId);
+    auto pStopWatch = getStopWatch(watchId);
     if (Q_LIKELY(pStopWatch)) {
         if (pStopWatch->reset()) {
             return qMakePair(true, QString());
@@ -1642,7 +1625,7 @@ QPair<bool, QString> Host::resetStopWatch(const QString& name)
 
 QPair<bool, QString> Host::resetStopWatch(const int id)
 {
-    auto pStopWatch = mStopWatchMap.value(id);
+    auto pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         if (pStopWatch->reset()) {
             return qMakePair(true, QString());
@@ -1659,7 +1642,7 @@ QPair<bool, QString> Host::resetStopWatch(const int id)
 // not a text name:
 QPair<bool, QString> Host::resetAndRestartStopWatch(const int id)
 {
-    auto pStopWatch = mStopWatchMap.value(id);
+    auto pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         pStopWatch->stop();
         pStopWatch->reset();
@@ -1672,7 +1655,7 @@ QPair<bool, QString> Host::resetAndRestartStopWatch(const int id)
 
 bool Host::makeStopWatchPersistent(const int id, const bool state)
 {
-    auto pStopWatch = mStopWatchMap.value(id);
+    auto pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         pStopWatch->setPersistent(state);
         return true;
@@ -1686,12 +1669,10 @@ QPair<bool, QString> Host::setStopWatchName(const int id, const QString& newName
     stopWatch* pStopWatch = nullptr;
     if (!newName.isEmpty()) {
         // Scan through existing names
-        QMutableMapIterator<int, stopWatch*> itStopWatch(mStopWatchMap);
-        while (itStopWatch.hasNext()) {
-            itStopWatch.next();
-            if (itStopWatch.value()->name() == newName) {
-                if (itStopWatch.key() != id) {
-                    return qMakePair(false, qsl("the name '%1' is already in use for another stopwatch (id:%2)").arg(newName, QString::number(itStopWatch.key())));
+        for (auto it = mStopWatchMap.cbegin(); it != mStopWatchMap.cend(); ++it) {
+            if (it->second->name() == newName) {
+                if (it->first != id) {
+                    return qMakePair(false, qsl("the name '%1' is already in use for another stopwatch (id:%2)").arg(newName, QString::number(it->first)));
                 } else {
                     // Trivial case - the stopwatch is already called by the NEW name:
                     return qMakePair(true, QString());
@@ -1700,7 +1681,7 @@ QPair<bool, QString> Host::setStopWatchName(const int id, const QString& newName
         }
     }
 
-    pStopWatch = mStopWatchMap.value(id);
+    pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         // Okay found the one we want:
         pStopWatch->setName(newName);
@@ -1713,12 +1694,6 @@ QPair<bool, QString> Host::setStopWatchName(const int id, const QString& newName
 QPair<bool, QString> Host::setStopWatchName(const QString& currentName, const QString& newName)
 {
     stopWatch* pStopWatch = nullptr;
-    // Scan through existing names, in ascending id order
-    QList<int> stopWatchIdList = mStopWatchMap.keys();
-    const int total = stopWatchIdList.size();
-    if (total > 1) {
-        std::sort(stopWatchIdList.begin(), stopWatchIdList.end());
-    }
     int id = 0;
     // Although it would be quicker code to return immediately if we detect the
     // newName is in use the run-time error about it being used will mask a
@@ -1728,9 +1703,10 @@ QPair<bool, QString> Host::setStopWatchName(const QString& currentName, const QS
     bool isAlreadyUsed = false;
     int alreadyUsedId = 0;
     // we are looking BOTH for the current name and checking that any other
-    // ones WITH names do not match the new name:
-    for (const int currentId : std::as_const(stopWatchIdList)) {
-        auto pCurrentStopWatch = mStopWatchMap.value(currentId);
+    // ones WITH names do not match the new name (std::map is sorted by key):
+    for (auto it = mStopWatchMap.cbegin(); it != mStopWatchMap.cend(); ++it) {
+        const int currentId = it->first;
+        stopWatch* pCurrentStopWatch = it->second.get();
         // This will also pick up the FIRST (lowest id) currently unnamed
         // stopwatch:
         if (!id && pCurrentStopWatch->name() == currentName) {
@@ -1768,7 +1744,12 @@ QPair<bool, QString> Host::setStopWatchName(const QString& currentName, const QS
 
 QList<int> Host::getStopWatchIds() const
 {
-    return mStopWatchMap.keys();
+    QList<int> ids;
+    ids.reserve(static_cast<int>(mStopWatchMap.size()));
+    for (auto it = mStopWatchMap.cbegin(); it != mStopWatchMap.cend(); ++it) {
+        ids.append(it->first);
+    }
+    return ids;
 }
 
 void Host::incomingStreamProcessor(const QString& data, int line)
@@ -3320,16 +3301,13 @@ void Host::setName(const QString& name)
 
 void Host::removeAllNonPersistentStopWatches()
 {
-    QMutableMapIterator<int, stopWatch*> itStopWatch(mStopWatchMap);
-    while (itStopWatch.hasNext()) {
-        itStopWatch.next();
-        auto pStopWatch = itStopWatch.value();
-        if (!pStopWatch || pStopWatch->persistent()) {
+    auto it = mStopWatchMap.begin();
+    while (it != mStopWatchMap.end()) {
+        if (!it->second || it->second->persistent()) {
+            ++it;
             continue;
         }
-
-        itStopWatch.remove();
-        delete pStopWatch;
+        it = mStopWatchMap.erase(it);
     }
 }
 
