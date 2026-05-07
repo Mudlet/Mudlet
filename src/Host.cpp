@@ -60,6 +60,7 @@
 
 #include <chrono>
 #include <QtConcurrentRun>
+#include <QCoreApplication>
 #include <QDialog>
 #include <QtUiTools>
 #include <QNetworkProxy>
@@ -871,6 +872,12 @@ void Host::resetProfile_phase2()
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
     mpConsole->resetMainConsole();
+    // Drain queued DeferredDelete events so old TLabel destructors run their
+    // luaL_unref against the still-live Lua state. Without this, those unrefs
+    // execute after initLuaGlobals() has swapped in a new state and corrupt
+    // freshly-issued registry indices in the new state, which surfaces as
+    // "attempt to call a number value" when label callbacks fire.
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     mEventHandlerMap.clear();
     mAnonymousEventHandlerFunctions.clear();
     mEventMap.clear();
