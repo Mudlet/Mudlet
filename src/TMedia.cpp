@@ -1234,6 +1234,27 @@ int TMedia::getMaxAllowedVideoPlayers() const
     return std::max(2, 10 / hostCount);
 }
 
+#ifdef MUDLET_MEMORY_TRACKING
+void TMedia::getMediaPlayerCounts(int& soundPlayers, int& musicPlayers, int& stoppedPlayers) const
+{
+    soundPlayers = mAPISoundList.size() + mMSPSoundList.size() + mGMCPSoundList.size();
+    musicPlayers = mAPIMusicList.size() + mMSPMusicList.size() + mGMCPMusicList.size();
+
+    const auto countStopped = [](const QList<std::shared_ptr<TMediaPlayer>>& lst) {
+        int n = 0;
+        for (const auto& p : lst) {
+            if (p && p->getPlaybackState() == QMediaPlayer::StoppedState) {
+                ++n;
+            }
+        }
+        return n;
+    };
+
+    stoppedPlayers = countStopped(mAPISoundList) + countStopped(mMSPSoundList) + countStopped(mGMCPSoundList) + countStopped(mAPIMusicList) + countStopped(mMSPMusicList) + countStopped(mGMCPMusicList)
+                     + countStopped(mAPIVideoList) + countStopped(mGMCPVideoList);
+}
+#endif // MUDLET_MEMORY_TRACKING
+
 void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const std::shared_ptr<TMediaPlayer>& player)
 {
     if (!player) {
