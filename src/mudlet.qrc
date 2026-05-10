@@ -219,6 +219,7 @@
         <file>icons/window-close.png</file>
         <file>icons/wotmudicon.png</file>
         <file>icons/zombiemud.png</file>
+        <file>icesus-loader.xml</file>
         <file>lua-function-list.json</file>
         <file>mg-loader.xml</file>
         <file>mudlet-lua/lua/generic-mapper/generic_mapper.mpackage</file>
