@@ -40,6 +40,10 @@
 #include <cstdlib>
 #include <algorithm>
 
+#ifdef WITH_SENTRY
+static bool s_sentryInitialized = false;
+#endif
+
 // Initializes Sentry options for crash/error reporting.
 // Crashes are first stored in a local cache folder, then automatically sent.
 //
@@ -50,6 +54,18 @@
 void initSentry()
 {
 #ifdef WITH_SENTRY
+    QString appBuild;
+    QFile gitShaFile(qsl(":/app-build.txt"));
+    if (gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
+    }
+
+    // Skip Sentry on PTB builds: sentry_close() blocks on shutdown which can
+    // prevent Mudlet from quitting cleanly and stall Sparkle/Squirrel updates.
+    if (appBuild.startsWith(qsl("-ptb"))) {
+        return;
+    }
+
     sentry_options_t* options = sentry_options_new();
     std::string runtimeAppDir = getExeDir();
     QString path = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/mudlet/sentry";
@@ -58,11 +74,6 @@ void initSentry()
         return;
     }
 
-    QString appBuild;
-    QFile gitShaFile(qsl(":/app-build.txt"));
-    if (gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
-    }
     const std::string release = qsl("mudlet@%1%2").arg(APP_VERSION, appBuild).toStdString();
 
     sentry_options_set_database_path(options, path.toUtf8().constData());
@@ -71,6 +82,17 @@ void initSentry()
     sentry_options_set_external_crash_reporter_path(options, makeExecutablePath(runtimeAppDir, "MudletCrashReporter").c_str());
 
     sentry_init(options);
+    s_sentryInitialized = true;
+#endif
+}
+
+void closeSentry()
+{
+#ifdef WITH_SENTRY
+    if (s_sentryInitialized) {
+        sentry_close();
+        s_sentryInitialized = false;
+    }
 #endif
 }
 
