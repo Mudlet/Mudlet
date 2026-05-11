@@ -76,11 +76,18 @@ namespace {
 // being captured as a shortcut binding (issue #8873). Plain Tab already
 // traverses focus because QDialog's default event handling promotes it
 // before keyPressEvent runs; Shift+Tab arrives here as Qt::Key_Backtab and
-// must be intercepted explicitly.
+// must be intercepted explicitly. Also tracks whether the user has actually
+// pressed any keys while the widget has focus, so editingFinished handlers
+// can distinguish a genuine edit from a focus-only traversal (which Qt also
+// reports as editingFinished, leading to spurious "shortcut cleared" reads
+// and accessible-name churn on simple Tab navigation).
 class TabFriendlyKeySequenceEdit : public QKeySequenceEdit
 {
 public:
     using QKeySequenceEdit::QKeySequenceEdit;
+
+    bool wasEdited() const { return mUserEdited; }
+    void clearEditedFlag() { mUserEdited = false; }
 
 protected:
     void keyPressEvent(QKeyEvent* event) override
@@ -96,8 +103,18 @@ protected:
             QWidget::keyPressEvent(event);
             return;
         }
+        mUserEdited = true;
         QKeySequenceEdit::keyPressEvent(event);
     }
+
+    void focusInEvent(QFocusEvent* event) override
+    {
+        mUserEdited = false;
+        QKeySequenceEdit::focusInEvent(event);
+    }
+
+private:
+    bool mUserEdited = false;
 };
 } // namespace
 
@@ -310,7 +327,17 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         dlgProfilePreferences::slot_setAppearance(enums::Appearance(index));
     });
     connect(toolButton_resetMainWindowShortcuts, &QPushButton::released, this, [=, this]() {
+        // Each per-field handler would otherwise announce its own reset, so
+        // suppress those and post a single summary announcement instead -
+        // otherwise screen-reader users hear ~20 individual reads in a row.
+        mResettingShortcutsToDefaults = true;
         emit signal_resetMainWindowShortcutsToDefaults();
+        mResettingShortcutsToDefaults = false;
+        auto* pMudlet = mudlet::self();
+        if (pMudlet && QAccessible::isActive()) {
+            //: Screen-reader announcement after the "Reset to defaults" button restores every main-window shortcut binding.
+            pMudlet->announce(tr("Main window shortcuts reset to defaults"), QString(), true);
+        }
     });
 
     generateDiscordTooltips();
@@ -1549,10 +1576,16 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         // Without an explicit NameChanged event and announce() call, screen
         // readers don't pick up the new binding until focus leaves and
         // re-enters the field, so users get no confirmation of a capture.
-        auto refreshAccessibility = [=](const QKeySequence& seq) {
+        // The `announce` flag lets the per-field reset handler update the
+        // accessible name silently when a bulk reset is in progress; the
+        // reset button posts a single summary announcement afterwards.
+        auto refreshAccessibility = [=](const QKeySequence& seq, bool announce) {
             sequenceEdit->setAccessibleName(accessibleNameFor(seq));
             QAccessibleEvent nameEvent(sequenceEdit, QAccessible::NameChanged);
             QAccessible::updateAccessibility(&nameEvent);
+            if (!announce) {
+                return;
+            }
             auto* pMudlet = mudlet::self();
             if (!pMudlet || !QAccessible::isActive()) {
                 return;
@@ -1568,16 +1601,32 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             pMudlet->announce(announcement, QString(), true);
         };
 
-        connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
+        connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=, this]() {
+            // editingFinished also fires on plain focus traversal (Tab /
+            // Shift+Tab); without this guard we would overwrite the stored
+            // binding with whatever QKeySequenceEdit currently shows (often
+            // empty) and announce a spurious "shortcut cleared" to screen
+            // readers on every Tab. Only act when the user actually pressed
+            // keys inside the field.
+            if (!sequenceEdit->wasEdited()) {
+                return;
+            }
+            sequenceEdit->clearEditedFlag();
             QKeySequence newSequence;
             if (!sequenceEdit->keySequence().isEmpty() && !sequenceEdit->keySequence().matches(QKeySequence(Qt::Key_Escape))) {
                 newSequence = sequenceEdit->keySequence();
             }
             sequenceEdit->setKeySequence(newSequence);
+            if (newSequence == currentShortcuts.value(key)) {
+                // Same binding as before - no need to refresh accessibility
+                // or announce; doing so would re-read the field on every
+                // focus change after a no-op edit attempt.
+                return;
+            }
             currentShortcuts[key] = newSequence;
-            refreshAccessibility(newSequence);
+            refreshAccessibility(newSequence, true);
         });
-        connect(this, &dlgProfilePreferences::signal_resetMainWindowShortcutsToDefaults, sequenceEdit, [=]() {
+        connect(this, &dlgProfilePreferences::signal_resetMainWindowShortcutsToDefaults, sequenceEdit, [=, this]() {
             auto* pMudlet = mudlet::self();
             if (!pMudlet || !pMudlet->mpShortcutsManager) {
                 return;
@@ -1588,8 +1637,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 return;
             }
             sequenceEdit->setKeySequence(*pDefaultSequence);
+            sequenceEdit->clearEditedFlag();
             currentShortcuts[key] = *pDefaultSequence;
-            refreshAccessibility(*pDefaultSequence);
+            // During bulk reset the parent handler posts a single summary
+            // announcement instead, to avoid spamming the user with one
+            // read per shortcut entry.
+            refreshAccessibility(*pDefaultSequence, !mResettingShortcutsToDefaults);
         });
     }
 }

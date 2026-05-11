@@ -232,6 +232,10 @@ private:
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
     QMap<QString, QKeySequence> currentShortcuts;
+    // Set while signal_resetMainWindowShortcutsToDefaults is being emitted so
+    // the per-field accessibility handlers can suppress their individual
+    // announcements in favour of a single "all shortcuts reset" announcement.
+    bool mResettingShortcutsToDefaults = false;
     QPointer<QMenu> protocolMenu;
     QPointer<QAction> mEnableGMCP;
     QPointer<QAction> mEnableMSDP;
