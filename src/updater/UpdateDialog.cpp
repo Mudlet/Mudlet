@@ -92,7 +92,7 @@ namespace dblsqd {
  */
 UpdateDialog::UpdateDialog(Feed* feed, Type type, QSettings* settings, QWidget* parent)
 : QDialog(parent)
-, mUi(new Ui::UpdateDialog)
+, mUi(std::make_unique<Ui::UpdateDialog>())
 , mFeed(feed)
 , mType(type)
 , mSettings(settings)
@@ -134,10 +134,7 @@ UpdateDialog::UpdateDialog(Feed* feed, Type type, QSettings* settings, QWidget* 
     }
 }
 
-UpdateDialog::~UpdateDialog()
-{
-    delete mUi;
-}
+UpdateDialog::~UpdateDialog() = default;
 
 /*!
  * \brief Sets the icon displayed in the update window.

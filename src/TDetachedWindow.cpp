@@ -1142,7 +1142,8 @@ QKeySequence TDetachedWindow::resolveShortcut(const QString& key, const QKeySequ
 
     if (!mCurrentProfileName.isEmpty()) {
         if (auto host = mudletInstance->getHostManager().getHost(mCurrentProfileName)) {
-            if (auto sequence = host->profileShortcuts.value(key)) {
+            if (auto it = host->profileShortcuts.find(key); it != host->profileShortcuts.end()) {
+                const QKeySequence* sequence = it->second.get();
                 if (sequence && !sequence->isEmpty()) {
                     return *sequence;
                 }

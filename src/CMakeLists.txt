@@ -679,6 +679,11 @@ if(USE_SHADER_HOT_RELOAD AND USE_3DMAPPER)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC MUDLET_SHADER_HOT_RELOAD=1)
 endif()
 
+# Define memory tracking if enabled
+if(USE_MEMORY_TRACKING)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC MUDLET_MEMORY_TRACKING)
+endif()
+
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
 # from windows.h - only needed on Windows builds but we cannot use Q_OS_WINDOWS
 # for an #ifdef because we need a symbol that is defined BEFORE we include

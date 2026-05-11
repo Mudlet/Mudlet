@@ -37,7 +37,9 @@
 #include <pcre2.h>
 
 #include <map>
+#include <memory>
 #include <string>
+#include <vector>
 
 class Host;
 class TLuaInterpreter;
@@ -134,7 +136,7 @@ public:
     void setSound(const QString& file) { mSoundFile = file; }
     bool setupColorTrigger(int, int);
     bool setupTmpColorTrigger(int ansiFg, int ansiBg);
-    TColorTable* createColorPattern(int, int);
+    std::unique_ptr<TColorTable> createColorPattern(int, int);
     static QString createColorPatternText(const int fgColorCode, const int bgColorCode);
     static void decodeColorPatternText(const QString& patternText, int& fgColorCode, int& bgColorCode);
     QString packageName(TTrigger* pTrigger);
@@ -148,7 +150,7 @@ public:
     QString mSoundFile;
     int mStayOpen = 0;
     bool mColorTrigger = false;
-    QList<TColorTable*> mColorPatternList;
+    std::vector<std::unique_ptr<TColorTable>> mColorPatternList;
     // The next four members refer to the details of the currently selected
     // color trigger pattern item - it is not obvious that they need to be
     // stored in the profile even though they are:
@@ -200,7 +202,10 @@ private:
     bool mIsMultiline = false;
     int mConditionLineDelta = 0;
     QString mCommand;
-    std::map<TMatchState*, TMatchState*> mConditionMap;
+    // Key is the raw address of the owned TMatchState — stable once inserted and
+    // used for O(1) lookup during the deferred-removal pass in match(). The map
+    // is the sole owner; the raw pointer is never passed out as an observer.
+    std::map<TMatchState*, std::unique_ptr<TMatchState>> mConditionMap;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;
     TLuaInterpreter* mpLua;

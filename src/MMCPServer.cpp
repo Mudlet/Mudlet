@@ -36,7 +36,7 @@
 #include <QVariant>
 
 MMCPServer::MMCPServer(Host* pHost)
-: QTcpServer()
+: QTcpServer(pHost)
 , mpHost(pHost)
 {
 }

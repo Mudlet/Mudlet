@@ -1518,10 +1518,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     int shortcutsRow = 0;
     while (shortcutKeys.hasNext()) {
         auto key = shortcutKeys.next();
-        currentShortcuts.insert(key, QKeySequence(*pHost->profileShortcuts.value(key)));
+        auto shortcutIt = pHost->profileShortcuts.find(key);
+        QKeySequence currentSequence = (shortcutIt != pHost->profileShortcuts.end()) ? QKeySequence(*shortcutIt->second) : QKeySequence();
+        currentShortcuts.insert(key, currentSequence);
         const QString labelText = mudlet::self()->mpShortcutsManager->getLabel(key);
         const QString fieldLabel = labelText.isEmpty() ? key : labelText;
-        auto sequenceEdit = new TabFriendlyKeySequenceEdit(currentShortcuts.value(key));
+        auto sequenceEdit = new TabFriendlyKeySequenceEdit(currentSequence);
 
         // Include the binding in the accessible name (issue #8873) so screen
         // readers speak it on focus; otherwise the binding is only reachable
@@ -3387,7 +3389,10 @@ void dlgProfilePreferences::slot_saveAndClose()
         while (iterator.hasNext()) {
             auto key = iterator.next();
             QKeySequence sequence = currentShortcuts.value(key);
-            pHost->profileShortcuts.value(key)->swap(sequence);
+            auto it = pHost->profileShortcuts.find(key);
+            if (it != pHost->profileShortcuts.end()) {
+                it->second->swap(sequence);
+            }
         }
     }
 
@@ -3723,7 +3728,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
 
                         const QByteArray downloadedArchive = reply->readAll();
 
-                        tempThemesArchive = new QTemporaryFile();
+                        tempThemesArchive = new QTemporaryFile(this);
                         if (!tempThemesArchive->open()) {
                             return;
                         }
@@ -3737,7 +3742,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
 
                         // perform unzipping in a worker thread so as not to freeze the UI
                         auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(enums::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
-                        auto watcher = new QFutureWatcher<bool>;
+                        auto watcher = new QFutureWatcher<bool>(this);
                         connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
                             if (future.result()) {
                                 populateThemesList();

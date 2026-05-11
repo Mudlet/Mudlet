@@ -82,7 +82,7 @@ void restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QS
 TMap::TMap(Host* pH, const QString& profileName)
 : mDefaultAreaName(tr("Default Area"))
 , mUnnamedAreaName(tr("Unnamed Area"))
-, mpRoomDB(new TRoomDB(this))
+, mpRoomDB(std::make_unique<TRoomDB>(this))
 , mpViewManager(new TMapViewManager(pH, this))
 , mpHost(pH)
 , mProfileName(profileName)
@@ -103,7 +103,6 @@ TMap::TMap(Host* pH, const QString& profileName)
 
 TMap::~TMap()
 {
-    delete mpRoomDB;
     if (!mStoredMessages.isEmpty()) {
         qWarning() << "TMap::~TMap() Instance being destroyed before it could display some messages,\n"
                    << "messages are:\n"
@@ -1729,7 +1728,7 @@ bool TMap::restore(QString location)
             ifs >> areaSize;
             // restore area table
             for (int i = 0; i < areaSize; i++) {
-                auto pA = new TArea(this, mpRoomDB);
+                auto pA = new TArea(this, mpRoomDB.get());
                 int areaID = 0;
                 ifs >> areaID;
                 if (mVersion >= 18) {
@@ -1804,7 +1803,7 @@ bool TMap::restore(QString location)
         }
 
         if (!mpRoomDB->getAreaMap().keys().contains(-1)) {
-            auto pDefaultA = new TArea(this, mpRoomDB);
+            auto pDefaultA = new TArea(this, mpRoomDB.get());
             mpRoomDB->restoreSingleArea(-1, pDefaultA);
             const QString defaultAreaInsertionMsg = tr("[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an\n"
                                                        "area) not found, adding reserved -1 id.");
@@ -1880,7 +1879,7 @@ bool TMap::restore(QString location)
         while (!ifs.atEnd()) {
             int i = 0;
             ifs >> i;
-            auto pT = new TRoom(mpRoomDB);
+            auto pT = new TRoom(mpRoomDB.get());
             pT->restore(ifs, i, mVersion);
             mpRoomDB->restoreSingleRoom(i, pT);
         }
@@ -3314,10 +3313,10 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         }
     }
 
-    TRoomDB* pNewRoomDB = new TRoomDB(this);
+    auto pNewRoomDB = std::make_unique<TRoomDB>(this);
     bool abort = false;
     for (int i = 0, total = mapObj.value(QLatin1String("areas")).toArray().count(); i < total; ++i) {
-        std::unique_ptr<TArea> pArea = std::make_unique<TArea>(this, pNewRoomDB);
+        std::unique_ptr<TArea> pArea = std::make_unique<TArea>(this, pNewRoomDB.get());
         auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i);
         ++mProgressDialogAreasCount;
         if (incrementJsonProgressDialog(false, true, 0)) {
@@ -3335,7 +3334,6 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         mpProgressDialog = nullptr;
         mDefaultAreaName = oldDefaultAreaName;
         mUnnamedAreaName = oldUnnamedName;
-        delete pNewRoomDB;
         return {false, (translatableTexts ? tr("aborted by user") : qsl("aborted by user"))};
     }
 
@@ -3358,15 +3356,13 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     qDebug().nospace().noquote() << "TMap::readJsonMapFile(...) INFO - parsed a file (version: " << formatVersion << ") containing " << mProgressDialogRoomsCount << " rooms.";
 
     // This is it - the point at which the new map gets activated:
-    TRoomDB* pOldRoomDB = mpRoomDB;
-    mpRoomDB = pNewRoomDB;
+    mpRoomDB = std::move(pNewRoomDB);
     // Need to update the master copy of these details in the Host class:
     mpHost->setPlayerRoomStyleDetails(mPlayerRoomStyle, mPlayerRoomOuterDiameterPercentage, mPlayerRoomInnerDiameterPercentage, mPlayerRoomOuterColor, mPlayerRoomInnerColor);
     // And redraw the indicator if a 2D map is being shown:
     if (mpMapper && mpMapper->mp2dMap) {
         mpMapper->mp2dMap->setPlayerRoomStyle(mPlayerRoomStyle);
     }
-    delete pOldRoomDB;
     mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
     mpProgressDialog->close();
     mpProgressDialog = nullptr;

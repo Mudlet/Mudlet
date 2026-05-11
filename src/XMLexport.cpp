@@ -690,7 +690,10 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             auto key = iterator.next();
             auto shortcut = host.append_child("profileShortcut");
             shortcut.append_attribute("key") = key.toUtf8().constData();
-            shortcut.text().set(pHost->profileShortcuts.value(key)->toString().toUtf8().constData());
+            auto it = pHost->profileShortcuts.find(key);
+            if (it != pHost->profileShortcuts.end()) {
+                shortcut.text().set(it->second->toString().toUtf8().constData());
+            }
         }
     }
     {
