@@ -234,7 +234,8 @@ private:
     QMap<QString, QKeySequence> currentShortcuts;
     // Set while signal_resetMainWindowShortcutsToDefaults is being emitted so
     // the per-field accessibility handlers can suppress their individual
-    // announcements in favour of a single "all shortcuts reset" announcement.
+    // announcements in favour of a single bulk-reset announcement posted by
+    // the reset button's handler.
     bool mResettingShortcutsToDefaults = false;
     QPointer<QMenu> protocolMenu;
     QPointer<QAction> mEnableGMCP;

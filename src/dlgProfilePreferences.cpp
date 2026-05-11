@@ -330,6 +330,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         // Each per-field handler would otherwise announce its own reset, so
         // suppress those and post a single summary announcement instead -
         // otherwise screen-reader users hear ~20 individual reads in a row.
+        // The receiving lambdas live on the same thread as this dialog, so
+        // Qt's AutoConnection dispatches them synchronously here and the
+        // flag is guaranteed to still be true while every slot runs.
         mResettingShortcutsToDefaults = true;
         emit signal_resetMainWindowShortcutsToDefaults();
         mResettingShortcutsToDefaults = false;
@@ -1560,7 +1563,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 //: Accessible name for a shortcut field with no key combination assigned. %1 is the shortcut's label, e.g. "Disconnect".
                 return tr("%1: not set").arg(fieldLabel);
             }
-            //: Accessible name for a shortcut field showing the bound keys. %1 is the shortcut's label, %2 is the key combination, e.g. "Disconnect: Ctrl+Shift+K".
+            //: Accessible name for a shortcut field showing the bound keys. %1 is the shortcut's label, %2 is the key combination. %2 uses native key names (e.g. "Ctrl+Shift+K" on Windows/Linux, "⌃⇧K" on macOS); please don't translate it.
             return tr("%1: %2").arg(fieldLabel, seq.toString(QKeySequence::NativeText));
         };
         sequenceEdit->setAccessibleName(accessibleNameFor(currentShortcuts.value(key)));
@@ -1595,19 +1598,19 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 //: Screen-reader announcement when a shortcut field is cleared. %1 is the shortcut's label, e.g. "Disconnect".
                 announcement = tr("%1 shortcut cleared").arg(fieldLabel);
             } else {
-                //: Screen-reader announcement when a new key combination is captured. %1 is the shortcut's label, %2 is the key combination, e.g. "Disconnect set to Ctrl+Shift+K".
+                //: Screen-reader announcement when a new key combination is captured. %1 is the shortcut's label, %2 is the key combination. %2 uses native key names (e.g. "Ctrl+Shift+K" on Windows/Linux, "⌃⇧K" on macOS); please don't translate it.
                 announcement = tr("%1 set to %2").arg(fieldLabel, seq.toString(QKeySequence::NativeText));
             }
             pMudlet->announce(announcement, QString(), true);
         };
 
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=, this]() {
-            // editingFinished also fires on plain focus traversal (Tab /
-            // Shift+Tab); without this guard we would overwrite the stored
-            // binding with whatever QKeySequenceEdit currently shows (often
-            // empty) and announce a spurious "shortcut cleared" to screen
-            // readers on every Tab. Only act when the user actually pressed
-            // keys inside the field.
+            // editingFinished also fires on plain Tab focus traversal
+            // (Shift+Tab is intercepted earlier in keyPressEvent and never
+            // reaches this signal). Without this guard we would react to a
+            // focus-out as if the user had finished editing and announce a
+            // spurious "shortcut cleared" to screen readers on every Tab.
+            // Only act when the user actually pressed keys inside the field.
             if (!sequenceEdit->wasEdited()) {
                 return;
             }
@@ -1618,9 +1621,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             }
             sequenceEdit->setKeySequence(newSequence);
             if (newSequence == currentShortcuts.value(key)) {
-                // Same binding as before - no need to refresh accessibility
-                // or announce; doing so would re-read the field on every
-                // focus change after a no-op edit attempt.
+                // User pressed keys but ended up with the same binding (e.g.
+                // started a capture and then pressed Esc); skip the
+                // NameChanged event and announcement so screen readers don't
+                // re-read the field for an effective no-op.
                 return;
             }
             currentShortcuts[key] = newSequence;
