@@ -300,7 +300,13 @@ void TriggerUnit::processDataStream(const QString& data, int line)
 
     mProcessingDepth++;
 
-    for (auto trigger : mTriggerRootNodeList) {
+    // Iterate a snapshot of the root list: a trigger's Lua script can call
+    // uninstallPackage()/installPackage() and mutate mTriggerRootNodeList
+    // mid-iteration (the underlying std::list::remove frees the iterator's
+    // current node → use-after-free on the next ++). AliasUnit dodges the
+    // same hazard for the same reason — see Mudlet issue #4297.
+    auto copyOfNodeList = mTriggerRootNodeList;
+    for (auto trigger : copyOfNodeList) {
         trigger->match(subject, data, line);
     }
     free(subject);
