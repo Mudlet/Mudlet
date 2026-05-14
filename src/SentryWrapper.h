@@ -28,7 +28,6 @@
 #include <string>
 
 void initSentry();
-void closeSentry();
 std::string makeExecutablePath(const std::string& dir, const std::string& name);
 std::string getExeDir();
 void crashIfRequested();

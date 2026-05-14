@@ -292,7 +292,7 @@ int main(int argc, char* argv[])
 #ifdef WITH_SENTRY
     initSentry();
     auto sentryClose = qScopeGuard([] {
-        closeSentry();
+        sentry_close();
     });
 #endif
 
