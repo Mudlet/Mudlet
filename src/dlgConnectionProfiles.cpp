@@ -779,6 +779,9 @@ void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QS
     } else {
         setItemName(pItem, newProfileName);
         pItem->setIcon(customIcon(newProfileName, std::nullopt));
+        // If this was a brand new profile, it did not previously have an icon. Setting an icon
+        // does not seem to cause the list widget to re-layout, so we'll do that manually.
+        QMetaObject::invokeMethod(listWidget_profiles, &QAbstractItemView::doItemsLayout, Qt::QueuedConnection);
     }
 }
 
@@ -1340,7 +1343,6 @@ void dlgConnectionProfiles::fillout_form()
     if (toselectRow != -1) {
         listWidget_profiles->setCurrentRow(toselectRow);
     }
-
 }
 
 void dlgConnectionProfiles::setProfileIcon() const
