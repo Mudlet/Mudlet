@@ -1555,37 +1555,51 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         const QString fieldLabel = labelText.isEmpty() ? key : labelText;
         auto sequenceEdit = new TabFriendlyKeySequenceEdit(currentSequence);
 
-        // Include the binding in the accessible name (issue #8873) so screen
-        // readers speak it on focus; otherwise the binding is only reachable
-        // via advanced screen-reader navigation.
+        // Build the screen-reader name from both the action label and the
+        // current binding. NVDA on Windows resolves a QKeySequenceEdit's
+        // accessible name from its buddy QLabel (UIA labelled-by); we
+        // therefore set the *label's* accessibleName (not its visible text)
+        // to include the binding. setAccessibleName() on the edit alone is
+        // not enough on Windows even though it works on macOS VoiceOver, so
+        // we mirror it on both for belt-and-suspenders. The visible label
+        // text stays as just the action so we don't duplicate the binding
+        // sighted users already see in the field next to it.
         auto accessibleNameFor = [fieldLabel](const QKeySequence& seq) -> QString {
             if (seq.isEmpty()) {
                 //: Accessible name for a shortcut field with no key combination assigned. %1 is the shortcut's label, e.g. "Disconnect".
                 return tr("%1: not set").arg(fieldLabel);
             }
-            //: Accessible name for a shortcut field showing the bound keys. %1 is the shortcut's label, %2 is the key combination. %2 uses native key names (e.g. "Ctrl+Shift+K" on Windows/Linux, "⌃⇧K" on macOS); please don't translate it.
+            //: Accessible name for a shortcut field showing the action and the bound keys. %1 is the shortcut's label, %2 is the key combination. %2 uses native key names (e.g. "Ctrl+Shift+K" on Windows/Linux, "⌃⇧K" on macOS); please don't translate it.
             return tr("%1: %2").arg(fieldLabel, seq.toString(QKeySequence::NativeText));
         };
-        sequenceEdit->setAccessibleName(accessibleNameFor(currentShortcuts.value(key)));
+        sequenceEdit->setAccessibleName(accessibleNameFor(currentSequence));
         //: Accessible description for a shortcut entry, read by screen readers when focus enters the field. Do not translate "Esc".
         sequenceEdit->setAccessibleDescription(tr("Press a key combination to set the shortcut, or Esc to clear it."));
 
         auto shortcutLabel = new QLabel(labelText);
+        shortcutLabel->setAccessibleName(accessibleNameFor(currentSequence));
         shortcutLabel->setBuddy(sequenceEdit);
         gridLayout_groupBox_shortcuts->addWidget(shortcutLabel, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
         shortcutsRow++;
 
-        // Without an explicit NameChanged event and announce() call, screen
-        // readers don't pick up the new binding until focus leaves and
-        // re-enters the field, so users get no confirmation of a capture.
-        // The `announce` flag lets the per-field reset handler update the
-        // accessible name silently when a bulk reset is in progress; the
-        // reset button posts a single summary announcement afterwards.
+        // Without explicit refresh and announce() calls, screen readers don't
+        // pick up the new binding until focus leaves and re-enters the field,
+        // so users get no confirmation of a capture. We push the new
+        // accessible name onto both the buddy QLabel (the source NVDA reads
+        // through UIA labelled-by) and the edit (which VoiceOver reads
+        // directly), then post a NameChanged event on each. The `announce`
+        // flag lets the per-field reset handler update names silently while
+        // a bulk reset is in progress; the reset button posts a single
+        // summary announcement afterwards.
         auto refreshAccessibility = [=](const QKeySequence& seq, bool announce) {
-            sequenceEdit->setAccessibleName(accessibleNameFor(seq));
-            QAccessibleEvent nameEvent(sequenceEdit, QAccessible::NameChanged);
-            QAccessible::updateAccessibility(&nameEvent);
+            const QString updatedName = accessibleNameFor(seq);
+            shortcutLabel->setAccessibleName(updatedName);
+            sequenceEdit->setAccessibleName(updatedName);
+            QAccessibleEvent labelNameEvent(shortcutLabel, QAccessible::NameChanged);
+            QAccessible::updateAccessibility(&labelNameEvent);
+            QAccessibleEvent editNameEvent(sequenceEdit, QAccessible::NameChanged);
+            QAccessible::updateAccessibility(&editNameEvent);
             if (!announce) {
                 return;
             }
