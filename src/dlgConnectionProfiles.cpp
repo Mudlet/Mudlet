@@ -804,6 +804,11 @@ void dlgConnectionProfiles::slot_addProfile()
         return;
     }
     setItemName(pItem, newname);
+    // Give the new item an icon immediately. In IconMode an item's size derives
+    // entirely from its icon, so an iconless item gets a degenerate size hint and
+    // is mis-placed; every other add path already sets an icon. The icon is
+    // replaced with the final one (same 120x30 size) when the profile is saved.
+    pItem->setIcon(customIcon(newname, std::nullopt));
 
     listWidget_profiles->addItem(pItem);
 
@@ -1340,7 +1345,6 @@ void dlgConnectionProfiles::fillout_form()
     if (toselectRow != -1) {
         listWidget_profiles->setCurrentRow(toselectRow);
     }
-
 }
 
 void dlgConnectionProfiles::setProfileIcon() const
