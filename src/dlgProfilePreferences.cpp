@@ -76,11 +76,14 @@ namespace {
 // being captured as a shortcut binding (issue #8873). Plain Tab already
 // traverses focus because QDialog's default event handling promotes it
 // before keyPressEvent runs; Shift+Tab arrives here as Qt::Key_Backtab and
-// must be intercepted explicitly. Also tracks whether the user has actually
-// pressed any keys while the widget has focus, so editingFinished handlers
-// can distinguish a genuine edit from a focus-only traversal (which Qt also
-// reports as editingFinished, leading to spurious "shortcut cleared" reads
-// and accessible-name churn on simple Tab navigation).
+// must be intercepted explicitly.
+//
+// Also tracks whether the user has actually pressed any keys while the
+// widget has focus, and skips QKeySequenceEdit's own focusOutEvent when
+// they haven't. The base implementation calls finishEditing() on every
+// focus-out, which both emits editingFinished and rewrites keySequence(),
+// producing spurious "shortcut cleared" / "<field> set to ..." reads in
+// NVDA on simple Tab navigation past a field the user never touched.
 class TabFriendlyKeySequenceEdit : public QKeySequenceEdit
 {
 public:
@@ -111,6 +114,19 @@ protected:
     {
         mUserEdited = false;
         QKeySequenceEdit::focusInEvent(event);
+    }
+
+    void focusOutEvent(QFocusEvent* event) override
+    {
+        if (!mUserEdited) {
+            // Bypass QKeySequenceEdit::focusOutEvent so it doesn't run its
+            // finishEditing() path, which would emit editingFinished and
+            // mutate keySequence() on a focus traversal the user never
+            // initiated.
+            QWidget::focusOutEvent(event);
+            return;
+        }
+        QKeySequenceEdit::focusOutEvent(event);
     }
 
 private:
@@ -1573,8 +1589,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             return tr("%1: %2").arg(fieldLabel, seq.toString(QKeySequence::NativeText));
         };
         sequenceEdit->setAccessibleName(accessibleNameFor(currentSequence));
-        //: Accessible description for a shortcut entry, read by screen readers when focus enters the field. Do not translate "Esc".
-        sequenceEdit->setAccessibleDescription(tr("Press a key combination to set the shortcut, or Esc to clear it."));
 
         auto shortcutLabel = new QLabel(labelText);
         shortcutLabel->setAccessibleName(accessibleNameFor(currentSequence));
@@ -1618,27 +1632,21 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             pMudlet->announce(announcement, QString(), true);
         };
 
-        connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=, this]() {
-            // editingFinished also fires on plain Tab focus traversal
-            // (Shift+Tab is intercepted earlier in keyPressEvent and never
-            // reaches this signal). Without this guard we would react to a
-            // focus-out as if the user had finished editing and announce a
-            // spurious "shortcut cleared" to screen readers on every Tab.
-            // Only act when the user actually pressed keys inside the field.
-            if (!sequenceEdit->wasEdited()) {
-                return;
+        connect(sequenceEdit, &QKeySequenceEdit::keySequenceChanged, this, [=, this](const QKeySequence& sequence) {
+            // keySequenceChanged fires only when QKeySequenceEdit actually
+            // commits a new sequence, never on bare focus traversal — so we
+            // don't need a wasEdited() guard here. Pressing Esc commits an
+            // empty sequence, which we treat as a clear.
+            QKeySequence newSequence = sequence;
+            if (newSequence.matches(QKeySequence(Qt::Key_Escape))) {
+                newSequence = QKeySequence();
+                sequenceEdit->setKeySequence(newSequence);
             }
             sequenceEdit->clearEditedFlag();
-            QKeySequence newSequence;
-            if (!sequenceEdit->keySequence().isEmpty() && !sequenceEdit->keySequence().matches(QKeySequence(Qt::Key_Escape))) {
-                newSequence = sequenceEdit->keySequence();
-            }
-            sequenceEdit->setKeySequence(newSequence);
             if (newSequence == currentShortcuts.value(key)) {
-                // User pressed keys but ended up with the same binding (e.g.
-                // started a capture and then pressed Esc); skip the
-                // NameChanged event and announcement so screen readers don't
-                // re-read the field for an effective no-op.
+                // No-op commit (e.g. user pressed the same combo that's
+                // already bound): skip the announcement so screen readers
+                // don't re-read the field.
                 return;
             }
             currentShortcuts[key] = newSequence;
