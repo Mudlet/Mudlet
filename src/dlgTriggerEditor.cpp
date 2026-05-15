@@ -3174,6 +3174,18 @@ void dlgTriggerEditor::delete_action()
         return indexA.row() < indexB.row();
     });
 
+    /* Note that selectedItems only contains the actually selected items and
+     * not necessarily their children - so it cannot be used to identify that
+     * multiple items were scheduled to be removed.*/
+    if (deletedItems.count() > 1) {
+        showWarning(tr("Sorry your selection will require the deletion of %n item(s) and due to a current limitation within Mudlet it is not possible to delete more than one button, or a menu or toolbar that contains any buttons or menus, at a time.<br><br>"
+                       "Please remove each individual button, one at a time, before any parent menu or toolbar.",
+                       nullptr,
+                       deletedItems.count()),
+                    true);
+        return;
+    }
+
     // Delete in reverse order to maintain valid indices
     std::reverse(selectedItems.begin(), selectedItems.end());
 
