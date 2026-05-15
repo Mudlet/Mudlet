@@ -208,6 +208,17 @@ For complete setup instructions on how to run static analysis during a build see
 
 Do not force-push to remote branches.
 
+#### Commit trailers for AI-assisted work
+
+When you (an AI assistant) help produce a commit, the commit message MUST include:
+
+- `Assisted-by: AGENT_NAME:MODEL_VERSION` - identifies the AI tool and model. Use the actual model ID you are running as (e.g. `Assisted-by: Claude:claude-4.6-opus`).
+- `Signed-off-by: Full Name <email>` - the human submitter's DCO sign-off. Do NOT fabricate or auto-add this on the human's behalf, and do NOT add a `Signed-off-by` for the AI itself.
+
+Before the human signs off, they must have built and manually tested the change to confirm it works. Mudlet developers should not be the first to test AI-generated code. Ask the human to confirm they've tested the PR, and to provide the name and email to use for sign-off; only then add the `Signed-off-by` trailer.
+
+Both trailers go at the end of the commit message. Apply this to every AI-assisted commit, not just the first. See the "AI Coding Assistants" section in `docs/CONTRIBUTING.md` for the full policy.
+
 ### Building on macOS
 
 For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_macOS
