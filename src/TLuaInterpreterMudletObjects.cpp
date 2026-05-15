@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2022, 2024 by Stephen Lyons                        *
+ *   Copyright (C) 2013-2022, 2024, 2026 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
@@ -1587,8 +1587,8 @@ int TLuaInterpreter::setButtonState(lua_State* L)
 
     if (pItem->mButtonState != checked) {
         pItem->mButtonState = checked;
-        if (pItem->mpEButton) {
-            pItem->mpEButton->setChecked(checked);
+        if (pItem->mpEAction) {
+            pItem->mpEAction->setChecked(checked);
         }
         if (pItem->mpFButton) {
             pItem->mpFButton->setChecked(checked);
