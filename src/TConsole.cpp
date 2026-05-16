@@ -1914,7 +1914,8 @@ void TConsole::echo(const QString& msg)
 {
     // Strip \r so that \r\n becomes \n and standalone \r disappears; without
     // this, \r is stored literally in the buffer and rendered as a glyph.
-    const QString normalizedMsg = QString(msg).remove(QChar::CarriageReturn);
+    QString normalizedMsg = msg;
+    normalizedMsg.remove(QChar::CarriageReturn);
     if (mTriggerEngineMode) {
         // Use insertInLine instead of appendLine so that newline characters
         // are embedded in the trigger line rather than creating new buffer
