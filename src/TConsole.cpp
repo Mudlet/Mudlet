@@ -715,6 +715,14 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
     }
 
+    // Keep mScreenWidth in sync so wrapLine() uses the actual available columns:
+    if ((mType & MainConsole) && !mpHost.isNull() && mUpperPane) {
+        const int availableColumns = mUpperPane->getColumnCount();
+        if (availableColumns > 0) {
+            mpHost->mScreenWidth = availableColumns;
+        }
+    }
+
     emit resized(event);
     QWidget::resizeEvent(event);
 
