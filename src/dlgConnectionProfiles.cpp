@@ -35,7 +35,7 @@
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
 
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 #include <QtUiTools>
 #include <QColorDialog>
 #include <QDir>
@@ -384,7 +384,7 @@ void dlgConnectionProfiles::slot_updateDescription()
 
 void dlgConnectionProfiles::indicatePackagesInstallOnConnect(QStringList packages)
 {
-    if (!packages.length()) {
+    if (packages.isEmpty()) {
         return;
     }
 
@@ -439,7 +439,7 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
     }
 }
 
-void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QString& pass) const
+void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QString& pass)
 {
     // Validate that we have a password to store
     if (pass.trimmed().isEmpty()) {
@@ -448,7 +448,7 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
     }
 
     // Use async API for QtKeychain integration with file fallback
-    auto* credManager = new CredentialManager();
+    auto* credManager = new CredentialManager(this);
 
     credManager->storePassword(profile, "character", pass, [credManager, profile](bool success, const QString& errorMessage) {
         if (success) {
@@ -462,10 +462,10 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
     });
 }
 
-void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
+void dlgConnectionProfiles::deleteSecurePassword(const QString& profile)
 {
     // Use async API for QtKeychain integration with file fallback
-    auto* credManager = new CredentialManager();
+    auto* credManager = new CredentialManager(this);
 
     credManager->removePassword(profile, "character", [credManager, profile](bool success, const QString& errorMessage) {
         if (success) {
@@ -1411,7 +1411,7 @@ template <typename L>
 void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callback)
 {
     // Use async API for QtKeychain integration with file fallback
-    auto* credManager = new CredentialManager();
+    auto* credManager = new CredentialManager(this);
 
     credManager->retrievePassword(profile, "character", [credManager, callback = std::move(callback)](bool success, const QString& password, const QString& errorMessage) {
         if (success) {

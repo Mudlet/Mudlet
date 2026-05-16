@@ -1,6 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
- *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmdedia.com        *
+ *   Copyright (C) 2026 by Mudlet Makers                                   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,42 +17,51 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "ShortcutsManager.h"
+#include "TAreaZLevelIndex.h"
 
-ShortcutsManager::~ShortcutsManager() = default;
+const QSet<int> TAreaZLevelIndex::csmEmptySet;
 
-void ShortcutsManager::registerShortcut(const QString& key, const QString& translation, QKeySequence* sequence)
+void TAreaZLevelIndex::addRoom(int id, int z)
 {
-    shortcutKeys << key;
-    shortcuts.insert(key, sequence);
-    translations.insert(key, translation);
-    defaults[key] = std::make_unique<QKeySequence>(*sequence);
+    mIndex[z].insert(id);
 }
 
-void ShortcutsManager::setShortcut(const QString& key, QKeySequence* sequence)
+void TAreaZLevelIndex::removeRoom(int id, int z)
 {
-    if (auto* existing = shortcuts.value(key)) {
-        *existing = *sequence;
+    auto it = mIndex.find(z);
+    if (it == mIndex.end()) {
+        return;
+    }
+    it->remove(id);
+    if (it->isEmpty()) {
+        mIndex.erase(it);
     }
 }
 
-QKeySequence* ShortcutsManager::getSequence(const QString& key)
+void TAreaZLevelIndex::moveRoom(int id, int fromZ, int toZ)
 {
-    return shortcuts.value(key);
+    if (fromZ == toZ) {
+        return;
+    }
+    removeRoom(id, fromZ);
+    addRoom(id, toZ);
 }
 
-QKeySequence* ShortcutsManager::getDefault(const QString& key)
+void TAreaZLevelIndex::rebuild(const QHash<int, int>& roomIdToZ)
 {
-    auto it = defaults.find(key);
-    return (it != defaults.end()) ? it->second.get() : nullptr;
+    mIndex.clear();
+    QHashIterator<int, int> it(roomIdToZ);
+    while (it.hasNext()) {
+        it.next();
+        mIndex[it.value()].insert(it.key());
+    }
 }
 
-QString ShortcutsManager::getLabel(const QString& key)
+const QSet<int>& TAreaZLevelIndex::roomsForZ(int z) const
 {
-    return translations.value(key);
-}
-
-QStringListIterator ShortcutsManager::iterator()
-{
-    return QStringListIterator(shortcutKeys);
+    const auto it = mIndex.constFind(z);
+    if (it == mIndex.constEnd()) {
+        return csmEmptySet;
+    }
+    return *it;
 }

@@ -21,6 +21,7 @@
 
 #include "EditorUndoStack.h"
 #include "Host.h"
+#include "MudletInstanceCoordinator.h"
 #include "TAction.h"
 #include "TTimer.h"
 #include "TTreeWidget.h"
@@ -564,7 +565,7 @@ private slots:
       QList<QTreeWidgetItem *> items;
       items << folder << child1 << child2;
       itemType.treeWidget()->clearSelection();
-      for (auto *item : items) {
+      for (auto *item : std::as_const(items)) {
         item->setSelected(true);
       }
       itemType.treeWidget()->setCurrentItem(folder);
@@ -603,7 +604,7 @@ private slots:
       QList<QTreeWidgetItem *> items;
       items << folder << folder->child(0);
       itemType.treeWidget()->clearSelection();
-      for (auto *item : items) {
+      for (auto *item : std::as_const(items)) {
         item->setSelected(true);
       }
       itemType.treeWidget()->setCurrentItem(folder);

@@ -291,16 +291,19 @@ bool TRoomDB::__removeRoom(int id)
             }
             ++i;
         }
+        const int areaID = pR->getArea();
+        TArea* pA = getArea(areaID);
+        if (pA) {
+            // removeRoom needs the TRoom to be present in the DB so it can look
+            // up coordinates for index maintenance; call it before removing the
+            // room from the rooms hash.
+            pA->removeRoom(id);
+        }
         rooms.remove(id);
         if (roomIDToHash.contains(id)) {
             const QString hash = roomIDToHash[id];
             roomIDToHash.remove(id);
             hashToRoomID.remove(hash);
-        }
-        const int areaID = pR->getArea();
-        TArea* pA = getArea(areaID);
-        if (pA) {
-            pA->removeRoom(id);
         }
         if ((!mpTempRoomDeletionSet) || mpTempRoomDeletionSet->size() == 1) { // if NOT deleting multiple rooms
             entranceMap.remove(id);                                           // Only removes matching keys

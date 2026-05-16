@@ -27,6 +27,7 @@
 
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QSettings>
 #include <QTimer>
 
 using namespace std::chrono_literals;

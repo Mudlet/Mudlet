@@ -27,9 +27,9 @@
 
 #include <QClipboard>
 
+#include "MudletInstanceCoordinator.h"
 #include "SingleLineTextEdit.h"
 #include "TelnetServerStub.h"
-#include "TrailingWhitespaceMarker.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 

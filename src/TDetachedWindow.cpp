@@ -586,7 +586,7 @@ void TDetachedWindow::closeEvent(QCloseEvent* event)
         }
 
         // Remove all consoles from the stacked widget and reset their parents
-        for (const auto &console : std::as_const(mProfileConsoleMap)) {
+        for (const auto& console : std::as_const(mProfileConsoleMap)) {
             if (console) {
                 mpConsoleContainer->removeWidget(console);
                 console->setParent(nullptr);
@@ -1142,7 +1142,8 @@ QKeySequence TDetachedWindow::resolveShortcut(const QString& key, const QKeySequ
 
     if (!mCurrentProfileName.isEmpty()) {
         if (auto host = mudletInstance->getHostManager().getHost(mCurrentProfileName)) {
-            if (auto sequence = host->profileShortcuts.value(key)) {
+            if (auto it = host->profileShortcuts.find(key); it != host->profileShortcuts.end()) {
+                const QKeySequence* sequence = it->second.get();
                 if (sequence && !sequence->isEmpty()) {
                     return *sequence;
                 }
@@ -1379,6 +1380,10 @@ void TDetachedWindow::updateTabIndicator(int tabIndex)
     }
 
     if (tabIndex < 0 || tabIndex >= mpTabBar->count()) {
+        // Stale index can occur during tab-removal races; not an error.
+#if defined(DEBUG_WINDOW_HANDLING)
+        qDebug() << "TDetachedWindow::updateTabIndicator: invalid tab index" << tabIndex << "(tab count" << mpTabBar->count() << ")";
+#endif
         return;
     }
 
@@ -1395,23 +1400,28 @@ void TDetachedWindow::updateTabIndicator(int tabIndex)
 
     // Get the host and determine connection status
     Host* pHost = pMudlet->getHostManager().getHost(profileName);
-    QIcon tabIcon;
+    TabConnectionIndicator state = TabConnectionIndicator::None;
 
     // Only show connection indicators if the global setting is enabled
     if (pMudlet->showTabConnectionIndicators()) {
         if (pHost) {
-            bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
-            bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
-            tabIcon = mudlet::createConnectionStatusIcon(isConnected, isConnecting, false);
+            switch (pHost->mTelnet.getConnectionState()) {
+            case QAbstractSocket::ConnectedState:
+                state = TabConnectionIndicator::Connected;
+                break;
+            case QAbstractSocket::ConnectingState:
+            case QAbstractSocket::HostLookupState:
+                state = TabConnectionIndicator::Connecting;
+                break;
+            default:
+                state = TabConnectionIndicator::Disconnected;
+                break;
+            }
         } else {
-            tabIcon = mudlet::createConnectionStatusIcon(false, false, true);
+            state = TabConnectionIndicator::Error;
         }
-    } else {
-        // No icon when indicators are disabled
-        tabIcon = QIcon();
     }
 
-    // Set the tab text and icon, accounting for CDC identifiers
     QString displayText = profileName;
 
     // Apply CDC identifier prefix if debug mode is active (like main window does)
@@ -1424,7 +1434,7 @@ void TDetachedWindow::updateTabIndicator(int tabIndex)
     }
 
     mpTabBar->setTabText(tabIndex, displayText);
-    mpTabBar->setTabIcon(tabIndex, tabIcon);
+    mpTabBar->setTabConnectionIndicator(tabIndex, state);
 }
 
 void TDetachedWindow::updateAllTabIndicators()

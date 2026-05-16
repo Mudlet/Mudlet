@@ -58,12 +58,19 @@
 
 #include <math.h>
 
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QFileDialog>
+#include <QSettings>
+#if defined(Q_OS_MACOS)
+// Only used for this OS:
+#include <QStandardPaths>
+#endif
 #include <QTableWidget>
+#include <QTemporaryDir>
+#include <QTemporaryFile>
 #include <QToolTip>
 #include <QFileInfo>
 #include <QVector>
@@ -2631,7 +2638,7 @@ int TLuaInterpreter::installPackage(lua_State* L)
 {
     const QString location = getVerifiedString(L, __func__, 1, "package location path and file name");
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = host.installPackage(location, enums::PackageModuleType::Package); !success) {
+    if (auto [success, message] = host.installPackage(location, enums::PackageModuleType::Package, true); !success) {
         return warnArgumentValue(L, __func__, message);
     }
     lua_pushboolean(L, true);
@@ -2659,7 +2666,7 @@ int TLuaInterpreter::installModule(lua_State* L)
     Host& host = getHostFromLua(L);
     const QString module = QDir::fromNativeSeparators(modName);
 
-    if (auto [success, message] = host.installPackage(module, enums::PackageModuleType::ModuleFromScript); !success) {
+    if (auto [success, message] = host.installPackage(module, enums::PackageModuleType::ModuleFromScript, true); !success) {
         return warnArgumentValue(L, __func__, message);
     }
     auto moduleManager = host.mpModuleManager;
@@ -5602,6 +5609,11 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "timeStampsEnabled", TLuaInterpreter::timeStampsEnabled);
     lua_register(pGlobalLua, "setActiveProfile", TLuaInterpreter::setActiveProfile);
     lua_register(pGlobalLua, "getKeyCode", TLuaInterpreter::getKeyCode);
+#ifdef MUDLET_MEMORY_TRACKING
+    lua_register(pGlobalLua, "getProcessMemoryUsage", TLuaInterpreter::getProcessMemoryUsage);
+    lua_register(pGlobalLua, "getSubsystemMemoryStats", TLuaInterpreter::getSubsystemMemoryStats);
+#endif
+
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -5762,6 +5774,11 @@ void TLuaInterpreter::initLuaGlobals()
     }
 
     loadLuaModule(modLoadMessageQueue, QLatin1String("yajl"), tr("yajl.* Lua functions won't be available."), QString(), QLatin1String("yajl"));
+    while (!modLoadMessageQueue.isEmpty()) {
+        mpHost->postMessage(modLoadMessageQueue.dequeue());
+    }
+
+    loadLuaModule(modLoadMessageQueue, QLatin1String("lpeg"), tr("lpeg.* Lua functions won't be available."), QString(), QLatin1String("lpeg"));
     while (!modLoadMessageQueue.isEmpty()) {
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }

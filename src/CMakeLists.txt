@@ -121,6 +121,8 @@ set(mudlet_SRCS
     TAction.cpp
     TAlias.cpp
     TArea.cpp
+    TAreaGridIndex.cpp
+    TAreaZLevelIndex.cpp
     TBuffer.cpp
     TCommandLine.cpp
     TConsole.cpp
@@ -265,6 +267,7 @@ set(mudlet_HDRS
     AliasUnit.h
     AltFocusMenuBarDisable.h
     ctelnet.h
+    CredentialManager.h
     DarkTheme.h
     discord.h
     dlgAboutDialog.h
@@ -341,6 +344,8 @@ set(mudlet_HDRS
     TAction.h
     TAlias.h
     TArea.h
+    TAreaGridIndex.h
+    TAreaZLevelIndex.h
     TAstar.h
     TBuffer.h
     TCommandLine.h
@@ -672,6 +677,11 @@ endif()
 # Define shader hot-reloading if enabled
 if(USE_SHADER_HOT_RELOAD AND USE_3DMAPPER)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC MUDLET_SHADER_HOT_RELOAD=1)
+endif()
+
+# Define memory tracking if enabled
+if(USE_MEMORY_TRACKING)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC MUDLET_MEMORY_TRACKING)
 endif()
 
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h

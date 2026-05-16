@@ -86,14 +86,20 @@ Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     mSettings = settings;
 
-    mFeed = new dblsqd::Feed(this);
-    mFeed->setRepo(qsl("Mudlet"), qsl("Mudlet"), testVersion);
+    feed.reset(new dblsqd::Feed(this));
+    feed->setRepo(qsl("Mudlet"), qsl("Mudlet"), testVersion);
     mPeriodicCheck = std::make_unique<QTimer>();
 }
 
 Updater::~Updater()
 {
-    delete mUpdateDialog;
+#if !defined(Q_OS_MACOS)
+    // QPointer::data() returns null if Qt already deleted the dialog; only
+    // delete if it hasn't been cleaned up yet.
+    if (updateDialog) {
+        delete updateDialog;
+    }
+#endif
 }
 
 void Updater::checkUpdatesOnStart()
@@ -108,8 +114,8 @@ void Updater::checkUpdatesOnStart()
 
     mPeriodicCheck->setInterval(12h);
     connect(mPeriodicCheck.get(), &QTimer::timeout, this, [this] {
-        KDToolBox::connectSingleShot(mFeed, &dblsqd::Feed::ready, this, [this]() {
-            auto updates = mFeed->getUpdates(dblsqd::Release::getCurrentRelease());
+        KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::ready, this, [this]() {
+            auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
             qWarning() << "Twice-daily check for updates:" << updates.size() << "update(s) available";
             if (updates.isEmpty()) {
                 return;
@@ -124,10 +130,10 @@ void Updater::checkUpdatesOnStart()
                 emit signal_updateAvailable(updates.size());
             }
         });
-        KDToolBox::connectSingleShot(mFeed, &dblsqd::Feed::loadError, this, [](const QString& error) {
+        KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::loadError, this, [](const QString& error) {
             qWarning() << "Twice-daily update check: failed to load feed:" << error;
         });
-        mFeed->load();
+        feed->load();
     });
     mPeriodicCheck->start();
 }
@@ -163,12 +169,12 @@ void Updater::manuallyCheckUpdates()
     }
     mManualCheckInProgress = true;
 
-    mFeed->load();
-    KDToolBox::connectSingleShot(mFeed, &dblsqd::Feed::ready, this, [this]() {
+    feed->load();
+    KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::ready, this, [this]() {
         mManualCheckInProgress = false;
         showDialogManually();
     });
-    KDToolBox::connectSingleShot(mFeed, &dblsqd::Feed::loadError, this, [this](const QString& error) {
+    KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::loadError, this, [this](const QString& error) {
         mManualCheckInProgress = false;
         emit signal_updateCheckFailed(error);
     });
@@ -177,16 +183,16 @@ void Updater::manuallyCheckUpdates()
 
 void Updater::showDialogManually() const
 {
-    if (!mUpdateDialog) {
+    if (!updateDialog) {
         qWarning() << "showDialogManually called but update dialog not initialized";
         return;
     }
-    mUpdateDialog->show();
+    updateDialog->show();
 }
 
 void Updater::showChangelog() const
 {
-    auto changelogDialog = new dblsqd::UpdateDialog(mFeed, dblsqd::UpdateDialog::ManualChangelog, mSettings);
+    auto changelogDialog = new dblsqd::UpdateDialog(feed.get(), dblsqd::UpdateDialog::ManualChangelog, mSettings);
     changelogDialog->setAttribute(Qt::WA_DeleteOnClose);
     changelogDialog->setPreviousVersion(getPreviousVersion());
     changelogDialog->show();
@@ -194,11 +200,11 @@ void Updater::showChangelog() const
 
 void Updater::showFullChangelog() const
 {
-    if (!mFeed->isReady()) {
-        KDToolBox::connectSingleShot(mFeed, &dblsqd::Feed::ready, mFeed, [=, this]() {
+    if (!feed->isReady()) {
+        KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::ready, feed.get(), [=, this]() {
             showFullChangelog();
         });
-        KDToolBox::connectSingleShot(mFeed, &dblsqd::Feed::loadError, mFeed, [](const QString& error) {
+        KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::loadError, feed.get(), [](const QString& error) {
             qWarning() << "Failed to load feed for changelog:" << error;
             //: Error title for dialog shown when changelog fails to load
             QMessageBox::warning(nullptr,
@@ -206,13 +212,13 @@ void Updater::showFullChangelog() const
                                  //: Error message shown when changelog fails to load from the server
                                  tr("Could not load the changelog. Please try again later."));
         });
-        mFeed->load();
+        feed->load();
         return;
     }
 
-    auto changelogDialog = new dblsqd::UpdateDialog(mFeed, dblsqd::UpdateDialog::ManualChangelog, mSettings);
+    auto changelogDialog = new dblsqd::UpdateDialog(feed.get(), dblsqd::UpdateDialog::ManualChangelog, mSettings);
     changelogDialog->setAttribute(Qt::WA_DeleteOnClose);
-    auto releases = mFeed->getReleases();
+    auto releases = feed->getReleases();
     if (!releases.isEmpty()) {
         changelogDialog->setMinVersion(releases.constLast().getVersion());
     }
@@ -231,13 +237,13 @@ bool Updater::downloadReleaseIfValid(const dblsqd::Release& release)
         }
         return false;
     }
-    mFeed->downloadRelease(release);
+    feed->downloadRelease(release);
     return true;
 }
 
 void Updater::finishSetup()
 {
-    auto updates = mFeed->getUpdates(dblsqd::Release::getCurrentRelease());
+    auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
 #if defined(Q_OS_LINUX)
     if (!updates.isEmpty()) {
         qWarning() << "Successfully updated Mudlet to" << updates.constFirst().getVersion();
@@ -269,29 +275,24 @@ void Updater::setupOnMacOS()
 #if !defined(Q_OS_MACOS)
 void Updater::setupPlatformUpdater()
 {
-    connect(mFeed, &dblsqd::Feed::ready, this, [=, this]() {
+    // Setup to automatically download the new release when an update is available
+    connect(feed.get(), &dblsqd::Feed::ready, this, [=, this]() {
         auto* pMudlet = mudlet::self();
         if (!pMudlet || pMudlet->developmentVersion) {
             return;
         }
 
-        auto updates = mFeed->getUpdates(dblsqd::Release::getCurrentRelease());
+        auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
         qWarning() << "Checked for updates:" << updates.size() << "update(s) available";
         if (!updates.isEmpty()) {
             emit signal_updateAvailable(updates.size());
         }
     });
 
-    connect(mFeed, &dblsqd::Feed::downloadError, this, [this](const QString& error) {
+    connect(feed.get(), &dblsqd::Feed::downloadError, this, [this](const QString& error) {
         qWarning() << "Automatic update download failed:" << error;
         emit signal_updateCheckFailed(error);
     });
-
-    mUpdateDialog = new dblsqd::UpdateDialog(mFeed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
-    //: Label for the update button shown in the update dialog
-    mpInstallOrRestart->setText(tr("Update"));
-    mUpdateDialog->addInstallButton(mpInstallOrRestart);
-    connect(mUpdateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
 #endif // !Q_OS_MACOS
 
@@ -301,14 +302,16 @@ void Updater::setupOnWindows()
     cleanupSquirrelTempFiles();
     setupPlatformUpdater();
 
-    connect(mFeed, &dblsqd::Feed::downloadFinished, this, [=, this]() {
-        if (!(updateAutomatically() && mUpdateDialog->isHidden())) {
+    // Setup to run setup.exe to replace the old installation
+    connect(feed.get(), &dblsqd::Feed::downloadFinished, this, [=, this]() {
+        // if automatic updates are enabled, and this isn't a manual check, perform the automatic update
+        if (!(updateAutomatically() && updateDialog && updateDialog->isHidden())) {
             return;
         }
 
-        const QString fileName = mFeed->getDownloadFilePath();
+        const QString fileName = feed->getDownloadFilePath();
         if (fileName.isEmpty()) {
-            qWarning() << "Download finished but no download file available - feed URL:" << mFeed->getUrl();
+            qWarning() << "Download finished but no download file available - feed URL:" << feed->getUrl();
             //: Error shown when the automatic update download finished but produced no file
             emit signal_updateCheckFailed(tr("Update download failed. Please try again or download manually from https://www.mudlet.org/download/"));
             return;
@@ -323,6 +326,13 @@ void Updater::setupOnWindows()
         connect(watcher, &QFutureWatcher<void>::finished, watcher, &QObject::deleteLater);
         watcher->setFuture(future);
     });
+
+    // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
+    updateDialog = new dblsqd::UpdateDialog(feed.get(), updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
+    //: Label for the update button shown in the update dialog
+    mpInstallOrRestart->setText(tr("Update"));
+    updateDialog->addInstallButton(mpInstallOrRestart);
+    connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
 
 void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
@@ -337,14 +347,16 @@ void Updater::setupOnLinux()
 {
     setupPlatformUpdater();
 
-    connect(mFeed, &dblsqd::Feed::downloadFinished, this, [=, this]() {
-        if (!(updateAutomatically() && mUpdateDialog->isHidden())) {
+    // Setup to unzip and replace old binary when the download is done
+    connect(feed.get(), &dblsqd::Feed::downloadFinished, this, [=, this]() {
+        // if automatic updates are enabled, and this isn't a manual check, perform the automatic update
+        if (!(updateAutomatically() && updateDialog && updateDialog->isHidden())) {
             return;
         }
 
-        const QString fileName = mFeed->getDownloadFilePath();
+        const QString fileName = feed->getDownloadFilePath();
         if (fileName.isEmpty()) {
-            qWarning() << "Download finished but no download file available - feed URL:" << mFeed->getUrl();
+            qWarning() << "Download finished but no download file available - feed URL:" << feed->getUrl();
             //: Error shown when the automatic update download finished but produced no file
             emit signal_updateCheckFailed(tr("Update download failed. Please try again or download manually from https://www.mudlet.org/download/"));
             return;
@@ -359,6 +371,13 @@ void Updater::setupOnLinux()
         connect(watcher, &QFutureWatcher<void>::finished, watcher, &QObject::deleteLater);
         watcher->setFuture(future);
     });
+
+    // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
+    updateDialog = new dblsqd::UpdateDialog(feed.get(), updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
+    //: Label for the update button shown in the update dialog
+    mpInstallOrRestart->setText(tr("Update"));
+    updateDialog->addInstallButton(mpInstallOrRestart);
+    connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
 
 void Updater::untarOnLinux(const QString& fileName)
@@ -471,8 +490,8 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
     if (mUpdateInstalled) {
         // defer to next event loop iteration so the dialog close happens after the button click handler returns
         QTimer::singleShot(0, this, [=, this]() {
-            mUpdateDialog->close();
-            mUpdateDialog->done(0);
+            updateDialog->close();
+            updateDialog->done(0);
         });
 
 #if defined(Q_OS_WINDOWS)

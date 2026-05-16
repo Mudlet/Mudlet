@@ -1,6 +1,8 @@
+#ifndef MUDLET_TAREA_ZLEVEL_INDEX_H
+#define MUDLET_TAREA_ZLEVEL_INDEX_H
+
 /***************************************************************************
- *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
- *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmdedia.com        *
+ *   Copyright (C) 2026 by Mudlet Makers                                   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,42 +20,33 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "ShortcutsManager.h"
+#include <QHash>
+#include <QSet>
 
-ShortcutsManager::~ShortcutsManager() = default;
-
-void ShortcutsManager::registerShortcut(const QString& key, const QString& translation, QKeySequence* sequence)
+/*
+ * Maintains an incrementally-updated reverse index of room IDs by Z level.
+ * Allows roomsForZ() to return only the rooms on a given level without
+ * scanning the full area room set.
+ */
+class TAreaZLevelIndex
 {
-    shortcutKeys << key;
-    shortcuts.insert(key, sequence);
-    translations.insert(key, translation);
-    defaults[key] = std::make_unique<QKeySequence>(*sequence);
-}
+public:
+    void addRoom(int id, int z);
+    void removeRoom(int id, int z);
+    void moveRoom(int id, int fromZ, int toZ);
 
-void ShortcutsManager::setShortcut(const QString& key, QKeySequence* sequence)
-{
-    if (auto* existing = shortcuts.value(key)) {
-        *existing = *sequence;
-    }
-}
+    // Replaces the entire index from a roomId → Z mapping.
+    void rebuild(const QHash<int, int>& roomIdToZ);
 
-QKeySequence* ShortcutsManager::getSequence(const QString& key)
-{
-    return shortcuts.value(key);
-}
+    // Returns all room IDs on the given Z level, or a stable empty set.
+    const QSet<int>& roomsForZ(int z) const;
 
-QKeySequence* ShortcutsManager::getDefault(const QString& key)
-{
-    auto it = defaults.find(key);
-    return (it != defaults.end()) ? it->second.get() : nullptr;
-}
+    bool isEmpty() const { return mIndex.isEmpty(); }
+    void clear() { mIndex.clear(); }
 
-QString ShortcutsManager::getLabel(const QString& key)
-{
-    return translations.value(key);
-}
+private:
+    QHash<int, QSet<int>> mIndex;
+    static const QSet<int> csmEmptySet;
+};
 
-QStringListIterator ShortcutsManager::iterator()
-{
-    return QStringListIterator(shortcutKeys);
-}
+#endif // MUDLET_TAREA_ZLEVEL_INDEX_H

@@ -42,21 +42,26 @@
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "edbee/views/texteditorscrollarea.h"
-#include "edbee/models/textdocumentscopes.h"
 #include "MMCP.h"
 
 #include <chrono>
-#include <QtConcurrent>
+#include <QtConcurrentRun>
+#include <QAccessible>
 #include <QCloseEvent>
 #include <QColorDialog>
 #include <QDir>
 #include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QFontDialog>
+#include <QJsonArray>
 #include <QNetworkDiskCache>
 #include <QPainter>
+#include <QSettings>
+#include <QStandardPaths>
 #include <QString>
 #include <QTableWidget>
+#include <QTemporaryDir>
+#include <QTemporaryFile>
 #include <QToolBar>
 #include <QUiLoader>
 #include <QKeySequenceEdit>
@@ -220,7 +225,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     fontComboBox_mapSymbols->setToolTip(utils::richText(tr("Select the only or the primary font used (depending on <i>Only use symbols "
                                                            "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.")));
     //: Tooltip for map symbol font usage option
-    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(utils::richText(tr("Use only the selected font (may show � for missing symbols) or allow fallback fonts for better coverage.")));
+    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(utils::richText(tr("Use only the selected font (may show \uFFFD for missing symbols) or allow fallback fonts for better coverage.")));
     //: Tooltip for run all keybindings option
     checkBox_runAllKeyBindings->setToolTip(tr("<p>Run all matching keybindings instead of just the first one. "
                                               "Disable for compatibility with pre-3.9.0 scripts.</p>"));
@@ -1248,7 +1253,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             ssl_expires_label->setStyleSheet(QString());
 
             const QList<QSslError> sslErrors = pHost->mTelnet.getSslErrors();
-            if (sslErrors.count()) {
+            if (!sslErrors.isEmpty()) {
                 // handle ssl errors
                 notificationAreaIconLabelWarning->show();
                 frame_notificationArea->show();
@@ -1295,7 +1300,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
@@ -1333,7 +1338,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
     doubleSpinBox_networkPacketTimeout->setValue(pHost->mTelnet.getPostingTimeout() / 1000.0);
-    comboBox_caretModeKey->setCurrentIndex(static_cast<int>(pHost->mCaretShortcut));
+    {
+        const QSignalBlocker blocker(comboBox_caretModeKey);
+        comboBox_caretModeKey->setCurrentIndex(static_cast<int>(pHost->mCaretShortcut));
+    }
     checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
     checkBox_invertMapZoom->setChecked(mudlet::self()->invertMapZoom());
     comboBox_blankLinesBehaviour->setCurrentIndex(static_cast<int>(pHost->mBlankLineBehaviour));
@@ -1433,6 +1441,36 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_saveMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_saveMap);
     connect(comboBox_encoding, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_setEncoding);
 
+    // Progressive disclosure for screen-reader users: surface the hyperlink
+    // navigation/activation/menu shortcuts at the moment the user picks a
+    // pane-switching key, so they don't have to consult the wiki to discover
+    // them. Picking Tab additionally warns about the shared binding.
+    connect(comboBox_caretModeKey, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int index) {
+        if (index < 0) {
+            return;
+        }
+        if (!QAccessible::isActive()) {
+            return;
+        }
+        auto* app = mudlet::self();
+        if (!app) {
+            return;
+        }
+        QString announcement;
+        const auto choice = static_cast<Host::CaretShortcut>(index);
+        if (choice == Host::CaretShortcut::Tab) {
+            //: Screen-reader hint when the user picks Tab as the caret-mode pane-switching key, warning Tab is shared with hyperlink navigation and explaining how to activate links, open their menu, and jump to latest content. Do not translate the key names "Tab", "Ctrl+]", "Ctrl+[", "Enter", "Space", "Menu", "Shift+F10", "Ctrl+End" or "Ctrl+Home".
+            announcement = tr("Tab will switch between the input line and main window, and also step through hyperlinks while in caret mode. Ctrl+] and Ctrl+[ navigate links without conflicting with "
+                              "pane-switching. Press Enter or Space to activate the focused link, and the Menu key or Shift+F10 to open its context menu. Press Ctrl+End to jump to the latest "
+                              "content or Ctrl+Home to jump to the start of the buffer.");
+        } else {
+            //: Screen-reader hint when the user picks any caret-mode pane-switching key other than Tab, explaining how to navigate, activate and open menus on hyperlinks, and jump to latest content. Do not translate the key names "Ctrl+]", "Ctrl+[", "Enter", "Space", "Menu", "Shift+F10", "Ctrl+End" or "Ctrl+Home".
+            announcement = tr("In caret mode, use Ctrl+] for the next hyperlink and Ctrl+[ for the previous hyperlink. Press Enter or Space to activate the focused link, and the Menu key or "
+                              "Shift+F10 to open its context menu. Press Ctrl+End to jump to the latest content or Ctrl+Home to jump to the start of the buffer.");
+        }
+        app->announce(announcement, QString(), true);
+    });
+
     connect(pushButton_whereToLog, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setLogDir);
     connect(pushButton_resetLogDir, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetLogDir);
     connect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_logFileNameFormatChange);
@@ -1449,8 +1487,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     int shortcutsRow = 0;
     while (shortcutKeys.hasNext()) {
         auto key = shortcutKeys.next();
-        currentShortcuts.insert(key, QKeySequence(*pHost->profileShortcuts.value(key)));
-        auto sequenceEdit = new QKeySequenceEdit(currentShortcuts.value(key));
+        auto shortcutIt = pHost->profileShortcuts.find(key);
+        QKeySequence currentSequence = (shortcutIt != pHost->profileShortcuts.end()) ? QKeySequence(*shortcutIt->second) : QKeySequence();
+        currentShortcuts.insert(key, currentSequence);
+        auto sequenceEdit = new QKeySequenceEdit(currentSequence);
 
         gridLayout_groupBox_shortcuts->addWidget(new QLabel(mudlet::self()->mpShortcutsManager->getLabel(key)), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
@@ -3266,7 +3306,10 @@ void dlgProfilePreferences::slot_saveAndClose()
         while (iterator.hasNext()) {
             auto key = iterator.next();
             QKeySequence sequence = currentShortcuts.value(key);
-            pHost->profileShortcuts.value(key)->swap(sequence);
+            auto it = pHost->profileShortcuts.find(key);
+            if (it != pHost->profileShortcuts.end()) {
+                it->second->swap(sequence);
+            }
         }
     }
 
@@ -3602,7 +3645,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
 
                         const QByteArray downloadedArchive = reply->readAll();
 
-                        tempThemesArchive = new QTemporaryFile();
+                        tempThemesArchive = new QTemporaryFile(this);
                         if (!tempThemesArchive->open()) {
                             return;
                         }
@@ -3616,7 +3659,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
 
                         // perform unzipping in a worker thread so as not to freeze the UI
                         auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(enums::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
-                        auto watcher = new QFutureWatcher<bool>;
+                        auto watcher = new QFutureWatcher<bool>(this);
                         connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
                             if (future.result()) {
                                 populateThemesList();
