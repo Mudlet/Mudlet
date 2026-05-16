@@ -715,11 +715,15 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
     }
 
-    // Keep mScreenWidth in sync so wrapLine() uses the actual available columns:
+    // Keep Host dimensions in sync for main-console wraps and NAWS.
     if ((mType & MainConsole) && !mpHost.isNull() && mUpperPane) {
-        const int availableColumns = mUpperPane->getColumnCount();
-        if (availableColumns > 0) {
-            mpHost->mScreenWidth = availableColumns;
+        const int fontWidth = QFontMetrics(mUpperPane->font()).averageCharWidth();
+        if (fontWidth > 0) {
+            const int availableColumns = qMax(40, mUpperPane->visibleRegion().boundingRect().width() / fontWidth);
+            if (availableColumns > 0 && availableColumns != mpHost->mScreenWidth) {
+                mpHost->setScreenDimensions(availableColumns, mpHost->mScreenHeight);
+                QTimer::singleShot(0, mpHost.data(), &Host::updateDisplayDimensions);
+            }
         }
     }
 
@@ -1226,7 +1230,10 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
             buffer.applyLink(P, P2, func, hint, luaReference);
             if (text.indexOf("\n") != -1) {
                 const int y_tmp = mUserCursor.y();
-                const int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+                const int wrapWidth = ((mType & MainConsole) && mUpperPane && (QFontMetrics(mUpperPane->font()).averageCharWidth() > 0))
+                                              ? qMax(40, mUpperPane->visibleRegion().boundingRect().width() / QFontMetrics(mUpperPane->font()).averageCharWidth())
+                                              : mpHost->mScreenWidth;
+                const int down = buffer.wrapLine(mUserCursor.y(), wrapWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
                 mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
                 const int y_neu = y_tmp + down;
                 const int x_adjust = text.lastIndexOf("\n");
@@ -1263,7 +1270,10 @@ void TConsole::insertText(const QString& text, QPoint P)
             buffer.insertInLine(mUserCursor, text, mFormatCurrent);
             const int y_tmp = mUserCursor.y();
             if (text.indexOf(QChar::LineFeed) != -1) {
-                const int down = buffer.wrapLine(y_tmp, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+                const int wrapWidth = ((mType & MainConsole) && mUpperPane && (QFontMetrics(mUpperPane->font()).averageCharWidth() > 0))
+                                              ? qMax(40, mUpperPane->visibleRegion().boundingRect().width() / QFontMetrics(mUpperPane->font()).averageCharWidth())
+                                              : mpHost->mScreenWidth;
+                const int down = buffer.wrapLine(y_tmp, wrapWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
                 mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
             } else {
                 mUpperPane->needUpdate(y_tmp, y_tmp + 1);
@@ -1844,7 +1854,10 @@ void TConsole::printCommand(QString& msg)
                 QPoint P(promptEnd, lineBeforeNewContent);
                 const TChar format(mCommandFgColor, mCommandBgColor);
                 buffer.insertInLine(P, msg, format);
-                const int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+                const int wrapWidth = ((mType & MainConsole) && mUpperPane && (QFontMetrics(mUpperPane->font()).averageCharWidth() > 0))
+                                              ? qMax(40, mUpperPane->visibleRegion().boundingRect().width() / QFontMetrics(mUpperPane->font()).averageCharWidth())
+                                              : mpHost->mScreenWidth;
+                const int down = buffer.wrapLine(lineBeforeNewContent, wrapWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
 
                 mUpperPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
                 mLowerPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
