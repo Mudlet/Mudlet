@@ -1435,7 +1435,8 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
         // of the buffer; clamp to the last valid line so that any text inserted
         // via echo() into the preceding line (which may contain embedded '\n'
         // characters from insertInLine) is still wrapped correctly.
-        const int wrapStartLine = std::min(line, static_cast<int>(lineBuffer.size()) - 1);
+        const int lastValidLine = static_cast<int>(lineBuffer.size()) - 1;
+        const int wrapStartLine = (lastValidLine >= 0) ? std::min(line, lastValidLine) : 0;
         const int addedLines = wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
 
         // Start a new, but empty line in the various buffers
