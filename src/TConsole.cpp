@@ -716,13 +716,57 @@ void TConsole::resizeEvent(QResizeEvent* event)
     }
 
     // Keep Host dimensions in sync for main-console wraps and NAWS.
-    if ((mType & MainConsole) && !mpHost.isNull() && mUpperPane) {
-        const int fontWidth = QFontMetrics(mUpperPane->font()).averageCharWidth();
-        if (fontWidth > 0) {
-            const int availableColumns = qMax(40, mUpperPane->visibleRegion().boundingRect().width() / fontWidth);
-            if (availableColumns > 0 && availableColumns != mpHost->mScreenWidth) {
-                mpHost->setScreenDimensions(availableColumns, mpHost->mScreenHeight);
-                QTimer::singleShot(0, mpHost.data(), &Host::updateDisplayDimensions);
+    // Each profile/host owns its own column count, derived from its own font;
+    // we only share the underlying pixel width with profiles that will be laid
+    // out in the same container when shown (i.e. main-window background tabs
+    // when this console is the active main-window profile). Detached-window
+    // profiles are sized by their own window and are not touched here.
+    if ((mType & MainConsole) && !mpHost.isNull() && mUpperPane && !mUpperPane->visibleRegion().isEmpty()) {
+        const int paneWidthPx = mUpperPane->visibleRegion().boundingRect().width();
+        auto syncHost = [paneWidthPx](Host* host, const QWidget* paneForFont) {
+            if (!host || !paneForFont) {
+                return;
+            }
+            const int fw = QFontMetrics(paneForFont->font()).averageCharWidth();
+            if (fw <= 0) {
+                return;
+            }
+            const int cols = qMax(40, paneWidthPx / fw);
+            if (cols > 0 && cols != host->mScreenWidth) {
+                host->setScreenDimensions(cols, host->mScreenHeight);
+                QTimer::singleShot(0, host, &Host::updateDisplayDimensions);
+            }
+        };
+
+        // Update this profile's own host using its own font.
+        syncHost(mpHost.data(), mUpperPane);
+
+        // Only propagate to siblings if this console is itself a main-window
+        // profile - detached windows have their own pixel width and must not
+        // receive ours.
+        mudlet* const app = mudlet::self();
+        const bool thisIsInMainWindow = app && !app->getDetachedWindows().contains(mpHost->getName());
+        if (thisIsInMainWindow) {
+            for (auto otherHostPtr : app->getHostManager()) {
+                Host* otherHost = otherHostPtr.data();
+                if (!otherHost || otherHost == mpHost.data()) {
+                    continue;
+                }
+                // Skip detached profiles: different container, different width.
+                if (app->getDetachedWindows().contains(otherHost->getName())) {
+                    continue;
+                }
+                if (!otherHost->mpConsole || !otherHost->mpConsole->mUpperPane) {
+                    continue;
+                }
+                // Visible siblings (multi-view) get their own resizeEvent and
+                // compute their own width - don't override it from here.
+                if (!otherHost->mpConsole->mUpperPane->visibleRegion().isEmpty()) {
+                    continue;
+                }
+                // Hidden main-window sibling: same pixel width when shown,
+                // but its own font determines the column count.
+                syncHost(otherHost, otherHost->mpConsole->mUpperPane);
             }
         }
     }
@@ -1230,10 +1274,7 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
             buffer.applyLink(P, P2, func, hint, luaReference);
             if (text.indexOf("\n") != -1) {
                 const int y_tmp = mUserCursor.y();
-                const int wrapWidth = ((mType & MainConsole) && mUpperPane && (QFontMetrics(mUpperPane->font()).averageCharWidth() > 0))
-                                              ? qMax(40, mUpperPane->visibleRegion().boundingRect().width() / QFontMetrics(mUpperPane->font()).averageCharWidth())
-                                              : mpHost->mScreenWidth;
-                const int down = buffer.wrapLine(mUserCursor.y(), wrapWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+                const int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
                 mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
                 const int y_neu = y_tmp + down;
                 const int x_adjust = text.lastIndexOf("\n");
@@ -1270,10 +1311,7 @@ void TConsole::insertText(const QString& text, QPoint P)
             buffer.insertInLine(mUserCursor, text, mFormatCurrent);
             const int y_tmp = mUserCursor.y();
             if (text.indexOf(QChar::LineFeed) != -1) {
-                const int wrapWidth = ((mType & MainConsole) && mUpperPane && (QFontMetrics(mUpperPane->font()).averageCharWidth() > 0))
-                                              ? qMax(40, mUpperPane->visibleRegion().boundingRect().width() / QFontMetrics(mUpperPane->font()).averageCharWidth())
-                                              : mpHost->mScreenWidth;
-                const int down = buffer.wrapLine(y_tmp, wrapWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+                const int down = buffer.wrapLine(y_tmp, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
                 mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
             } else {
                 mUpperPane->needUpdate(y_tmp, y_tmp + 1);
@@ -1854,10 +1892,7 @@ void TConsole::printCommand(QString& msg)
                 QPoint P(promptEnd, lineBeforeNewContent);
                 const TChar format(mCommandFgColor, mCommandBgColor);
                 buffer.insertInLine(P, msg, format);
-                const int wrapWidth = ((mType & MainConsole) && mUpperPane && (QFontMetrics(mUpperPane->font()).averageCharWidth() > 0))
-                                              ? qMax(40, mUpperPane->visibleRegion().boundingRect().width() / QFontMetrics(mUpperPane->font()).averageCharWidth())
-                                              : mpHost->mScreenWidth;
-                const int down = buffer.wrapLine(lineBeforeNewContent, wrapWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+                const int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
 
                 mUpperPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
                 mLowerPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
