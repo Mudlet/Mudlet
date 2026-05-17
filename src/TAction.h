@@ -61,11 +61,15 @@ public:
     int getButtonColumns() const { return mButtonColumns; }
     bool getButtonFlat() const { return mButtonFlat; }
     void setButtonFlat(bool flat) { if (flat != mButtonFlat) { setDataChanged(); mButtonFlat = flat; } }
+    // This should always be called AFTER setButtonColumns!
+    void setButtonFillerOffset(const int value) { mButtonFillerOffset = std::max(0, std::min(value, mButtonColumns - 1)); }
+    int getButtonFillerOffset() const { return mButtonFillerOffset; }
 
     void setSizeX(int size) { if (size != mSizeX) { setDataChanged(); mSizeX = size; } }
     int getSizeX() const { return mSizeX; }
     void setSizeY(int size) { if (size != mSizeY) { setDataChanged(); mSizeY = size; } }
     int getSizeY() const { return mSizeY; }
+    QSize getSize() const { return {mSizeX, mSizeY}; }
 
     void fillMenu(TEasyButtonBar* pT, QMenu* menu);
     void compile();
@@ -79,8 +83,8 @@ public:
     void setCommandButtonUp(const QString& cmd) { if (cmd != mCommandButtonUp) { setDataChanged(); mCommandButtonUp = cmd; } }
     void setCommandButtonDown(const QString& cmd) { if (cmd != mCommandButtonDown) { setDataChanged(); mCommandButtonDown = cmd; } }
     QString getCommandButtonDown() const { return mCommandButtonDown; }
-    bool isPushDownButton() { return mIsPushDownButton; }
-    void setIsPushDownButton(bool b) { if (b != mIsPushDownButton) { setDataChanged(); mIsPushDownButton = b; } }
+    bool isPushDownButton() const { return mIsPushDownButton; }
+    void setIsPushDownButton(const bool b) { if (b != mIsPushDownButton) { setDataChanged(); mIsPushDownButton = b; } }
 
     void setIsFolder(bool b) { if (b != isFolder()) { setDataChanged(); this->Tree::setIsFolder(b);} }
 
@@ -100,42 +104,33 @@ public:
     QPointer<TEasyButtonBar> mpEasyButtonBar;
     QPointer<EAction> mpEAction;
     QPointer<TFlipButton> mpFButton;
-    // The following was an int but there was confusion over:
-    // EITHER: "1" = released/unclicked/up & "2" = pressed/clicked/down
-    // OR:     "1" = pressed/clicked/down  & "0" = released/unclicked/up
-    // The Wiki says it should be "1" and "2" but the code sort of did "0"/"1"
-    // in some places.
-    // Now uses a boolean:
-    // "true" = pressed/clicked/down & "false" = released/unclicked/up
+    /* The following was an int but there was confusion over:
+     * EITHER: "1" = released/unclicked/up & "2" = pressed/clicked/down,
+     * OR:     "1" = pressed/clicked/down  & "0" = released/unclicked/up.
+     * The Wiki says it should be "1" and "2" but the code sort of did "0"/"1"
+     * in some places.
+     * Now uses a boolean:
+     * "true" = pressed/clicked/down & "false" = released/unclicked/up.
+     * Only relevant for "push-down" buttons*/
     bool mButtonState = false;
     int mPosX = 0;
     int mPosY = 0;
-    // THIS class uses 0 = horizontal, 1 = vertical; c.f. TFlipButton class
-    // which uses Qt::Orientation enum for the same thing:
+    /* THIS class uses 0 = horizontal, 1 = vertical.
+     * c.f. TFlipButton class which uses Qt::Orientation enum
+     * (1 = Qt::Horizontal, 2 = Qt::Vertical).*/
     int mOrientation = 0;
-    // 0 to 3 are only applicable to the Easy Button Bar buttons/menus (around
-    // edge of main console:
-    // 0 = Top "Toolbar" (Easy Button Bar)
-    // 2 = Left "Toolbar" (Easy Button Bar)
-    // 3 = Left "Toolbar" (Easy Button Bar)
-    // 4 = Dockable/floating Toolbar
+    /* 0, 2, 3 are only applicable to the Easy Button Bar buttons/menus (around
+     * edge of main console):
+     * 0 = Top "Toolbar" (Easy Button Bar).
+     * 1 = Not used since 2009 in commit: c5f404729d46976c6b2c7cf89fd098f5806440c8.
+     * 2 = Left "Toolbar" (Easy Button Bar).
+     * 3 = Right "Toolbar" (Easy Button Bar).
+     * 4 = Dockable/floating Toolbar.*/
     int mLocation = 0;
-    bool mIsPushDownButton = false;
 
     bool mNeedsToBeCompiled = true;
-    QString mIcon;
     QIcon mIconPix;
 
-    // 0 = Horizontal
-    // 1 = Vertical
-    // 2 = Vertical + Mirrored
-    int mButtonRotation = 0;
-    int mButtonColumns = 1;
-    // Not currently user accessible but was previously and maintained in game
-    // saves - and applied to buttons when drawn:
-    bool mButtonFlat = false;
-    int mSizeX = 0;
-    int mSizeY = 0;
     // Not currently user accessible but was previously and maintained in game
     // saves - and applied to buttons when drawn:
     bool mUseCustomLayout = false;
@@ -156,6 +151,26 @@ private:
     QString mFuncName;
     bool mModuleMember = false;
     bool mDataChanged = true;
+    bool mIsPushDownButton = false; // Make private
+
+    QString mIcon;
+    // 0 = Horizontal
+    // 1 = Vertical
+    // 2 = Vertical + Mirrored
+    int mButtonRotation = 0;
+    int mButtonColumns = 1;
+    /* Maximum is one less than the above, and is the number of columns/rows
+     * the first button/menu in a toolbar must be offset. This replaces the
+     * prior arrangement that incremented this by one (modulus the
+     * mButtonColums) each time the toolbar was saved. Since that now happens
+     * a lot with the undo/redo and auto-save features that is no longer
+     * sustainable. */
+    int mButtonFillerOffset = 0;
+    /* Not currently user accessible but was previously and maintained in game
+     * saves - and applied to buttons when drawn: */
+    bool mButtonFlat = false; // Make private
+    int mSizeX = 0; // Make private
+    int mSizeY = 0; // Make private
 };
 
 #ifndef QT_NO_DEBUG_STREAM

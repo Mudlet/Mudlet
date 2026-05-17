@@ -92,13 +92,11 @@ void ActionUnit::compileAll()
 
 TAction* ActionUnit::findAction(const QString& name)
 {
-    //QMap<int, TAction *>  mActionMap;
-
     QMapIterator<int, TAction*> it(mActionMap);
     while (it.hasNext()) {
         it.next();
         if (it.value()->getName() == name) {
-            qDebug() << it.value()->getName();
+            // qDebug().nospace().noquote() << "ActionUnit::findAction(const QString&) INFO - found: \"" << it.value()->getName() << "\".";
             TAction* pT = it.value();
             return pT;
         }
@@ -540,8 +538,9 @@ void ActionUnit::constructToolbar(TAction* pAction, TToolBar* pToolBar)
     pToolBar->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     if (pAction->mLocation == 4) {
         if (pAction->mToolbarLastDockArea == Qt::NoDockWidgetArea) {
-            qWarning() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\"" << pAction->getName()
-                       << "\"), for this toolbar forcing it to the Left one!";
+            qWarning().nospace().moquote() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\""
+                                           << pAction->getName()
+                                           << "\"), for this toolbar forcing it to the Left one!";
         }
         mudlet::self()->addDockWidget(((pAction->mToolbarLastDockArea != Qt::NoDockWidgetArea) ? pAction->mToolbarLastDockArea : Qt::LeftDockWidgetArea), pToolBar);
         if (pAction->mToolbarLastFloatingState) {

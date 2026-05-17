@@ -372,6 +372,7 @@ private slots:
     void slot_saveProperty_ActionCommandUp();
     void slot_saveProperty_ActionIsPushDown();
     void slot_saveProperty_ActionBarColumns();
+    void slot_saveProperty_ActionBarFillerOffset();
     void slot_saveProperty_ActionBarOrientation();
     void slot_saveProperty_ActionBarLocation();
     void slot_saveProperty_ActionButtonRotation();

@@ -1591,8 +1591,8 @@ int XMLimport::readAction(TAction* pParent)
     auto pT = new TAction(pParent, mpHost);
 
     pT->setIsFolder(attributes().value(qsl("isFolder")) == YES);
-    pT->mIsPushDownButton = attributes().value(qsl("isPushButton")) == YES;
-    pT->mButtonFlat = attributes().value(qsl("isFlatButton")) == YES;
+    pT->setIsPushDownButton(attributes().value(qsl("isPushButton")) == YES);
+    pT->setButtonFlat(attributes().value(qsl("isFlatButton")) == YES);
     pT->mUseCustomLayout = attributes().value(qsl("useCustomLayout")) == YES;
     mpHost->getActionUnit()->registerAction(pT);
     pT->setIsActive(attributes().value(qsl("isActive")) == YES);
@@ -1608,7 +1608,7 @@ int XMLimport::readAction(TAction* pParent)
             break;
         } else if (isStartElement()) {
             if (name() == qsl("name")) {
-                pT->mName = readElementText();
+                pT->setName(readElementText());
             } else if (name() == qsl("packageName")) {
                 pT->mPackageName = readElementText();
             } else if (name() == qsl("script")) {
@@ -1619,21 +1619,21 @@ int XMLimport::readAction(TAction* pParent)
             } else if (name() == qsl("css")) {
                 pT->css = readElementText();
             } else if (name() == qsl("commandButtonUp")) {
-                pT->mCommandButtonUp = readElementText();
+                pT->setCommandButtonUp(readElementText());
             } else if (name() == qsl("commandButtonDown")) {
-                pT->mCommandButtonDown = readElementText();
+                pT->setCommandButtonDown(readElementText());
             } else if (name() == qsl("icon")) {
-                pT->mIcon = readElementText();
+                pT->setIcon(readElementText());
             } else if (name() == qsl("orientation")) {
                 pT->mOrientation = readElementText().toInt();
             } else if (name() == qsl("location")) {
                 pT->mLocation = readElementText().toInt();
             } else if (name() == qsl("buttonRotation")) {
-                pT->mButtonRotation = readElementText().toInt();
+                pT->setButtonRotation(readElementText().toInt());
             } else if (name() == qsl("sizeX")) {
-                pT->mSizeX = readElementText().toInt();
+                pT->setSizeX(readElementText().toInt());
             } else if (name() == qsl("sizeY")) {
-                pT->mSizeY = readElementText().toInt();
+                pT->setSizeY(readElementText().toInt());
             } else if (name() == qsl("mButtonState")) {
                 // We now use a boolean but file must use original "1" (false)
                 // or "2" (true) for backward compatibility
@@ -1642,7 +1642,10 @@ int XMLimport::readAction(TAction* pParent)
                 // Not longer present/used, skip over it if it is still in file:
                 skipCurrentElement();
             } else if (name() == qsl("buttonColumn")) {
-                pT->mButtonColumns = readElementText().toInt();
+                // The above ought to have been plural!
+                pT->setButtonColumns(readElementText().toInt());
+            } else if (name() == qsl("buttonFillerOffset")) {
+                pT->setButtonFillerOffset(readElementText().toInt());
             } else if (name() == qsl("posX")) {
                 pT->mPosX = readElementText().toInt();
             } else if (name() == qsl("posY")) {

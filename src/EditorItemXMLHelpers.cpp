@@ -1179,8 +1179,8 @@ TAction* importActionFromXML(const QString& xmlSnapshot, TAction* pParent, Host*
     // Read attributes
     pA->setIsActive(QString::fromStdString(actionNode.attribute("isActive").value()) == "yes");
     pA->setIsFolder(QString::fromStdString(actionNode.attribute("isFolder").value()) == "yes");
-    pA->mIsPushDownButton = QString::fromStdString(actionNode.attribute("isPushButton").value()) == "yes";
-    pA->mButtonFlat = QString::fromStdString(actionNode.attribute("isFlatButton").value()) == "yes";
+    pA->setIsPushDownButton(QString::fromStdString(actionNode.attribute("isPushButton").value()) == "yes");
+    pA->setButtonFlat(QString::fromStdString(actionNode.attribute("isFlatButton").value()) == "yes");
     pA->mUseCustomLayout = QString::fromStdString(actionNode.attribute("useCustomLayout").value()) == "yes";
 
     // Read child elements
@@ -1207,13 +1207,15 @@ TAction* importActionFromXML(const QString& xmlSnapshot, TAction* pParent, Host*
         } else if (nodeName == "location") {
             pA->mLocation = nodeValue.toInt();
         } else if (nodeName == "buttonRotation") {
-            pA->mButtonRotation = nodeValue.toInt();
+            pA->setButtonRotation(nodeValue.toInt());
         } else if (nodeName == "sizeX") {
-            pA->mSizeX = nodeValue.toInt();
+            pA->setSizeX(nodeValue.toInt());
         } else if (nodeName == "sizeY") {
-            pA->mSizeY = nodeValue.toInt();
+            pA->setSizeY(nodeValue.toInt());
         } else if (nodeName == "buttonColumn") {
-            pA->mButtonColumns = nodeValue.toInt();
+            pA->setButtonColumns(nodeValue.toInt());
+        } else if (nodeName == "buttonFillerOffset") {
+            pA->setButtonFillerOffset(nodeValue.toInt());
         } else if (nodeName == "buttonColor") {
             // Deprecated - skip this element
         } else if (nodeName == "posX") {
@@ -1280,8 +1282,8 @@ bool updateActionFromXML(TAction* pA, const QString& xmlSnapshot)
     // Update attributes
     pA->setIsActive(QString::fromStdString(actionNode.attribute("isActive").value()) == "yes");
     pA->setIsFolder(QString::fromStdString(actionNode.attribute("isFolder").value()) == "yes");
-    pA->mIsPushDownButton = QString::fromStdString(actionNode.attribute("isPushButton").value()) == "yes";
-    pA->mButtonFlat = QString::fromStdString(actionNode.attribute("isFlatButton").value()) == "yes";
+    pA->setIsPushDownButton(QString::fromStdString(actionNode.attribute("isPushButton").value()) == "yes");
+    pA->setButtonFlat(QString::fromStdString(actionNode.attribute("isFlatButton").value()) == "yes");
     pA->mUseCustomLayout = QString::fromStdString(actionNode.attribute("useCustomLayout").value()) == "yes";
 
     // Update child elements
@@ -1306,13 +1308,15 @@ bool updateActionFromXML(TAction* pA, const QString& xmlSnapshot)
         } else if (nodeName == "location") {
             pA->mLocation = nodeValue.toInt();
         } else if (nodeName == "buttonRotation") {
-            pA->mButtonRotation = nodeValue.toInt();
+            pA->setButtonRotation(nodeValue.toInt());
         } else if (nodeName == "sizeX") {
-            pA->mSizeX = nodeValue.toInt();
+            pA->setSizeX(nodeValue.toInt());
         } else if (nodeName == "sizeY") {
-            pA->mSizeY = nodeValue.toInt();
+            pA->setSizeY(nodeValue.toInt());
         } else if (nodeName == "buttonColumn") {
-            pA->mButtonColumns = nodeValue.toInt();
+            pA->setButtonColumns(nodeValue.toInt());
+        } else if (nodeName == "buttonFillerOffset") {
+            pA->setButtonFillerOffset(nodeValue.toInt());
         } else if (nodeName == "buttonColor") {
             // Deprecated - skip this element
         } else if (nodeName == "posX") {

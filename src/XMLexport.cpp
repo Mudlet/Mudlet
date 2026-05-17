@@ -1128,6 +1128,8 @@ void XMLexport::writeAction(TAction* pT, pugi::xml_node xmlParent)
             actionContents.append_child("sizeX").text().set(QString::number(pT->mSizeX).toUtf8().constData());
             actionContents.append_child("sizeY").text().set(QString::number(pT->mSizeY).toUtf8().constData());
             actionContents.append_child("buttonColumn").text().set(QString::number(pT->mButtonColumns).toUtf8().constData());
+            // This will be noted as an unrecognised item in Mudlet versions prior to 4.22.0
+            actionContents.append_child("buttonFillerOffset").text().set(QString::number(pT->mButtonColumns).toUtf8().constData());
             actionContents.append_child("buttonRotation").text().set(QString::number(pT->mButtonRotation).toUtf8().constData());
         }
     }

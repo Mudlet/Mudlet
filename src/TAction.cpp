@@ -170,6 +170,8 @@ void TAction::execute()
 
 void TAction::expandToolbar(TToolBar* pT)
 {
+    // The -1 is needed to compensate for the initial pre-increment to TToolBar::mItemCount
+    pT->resetItemCount(mButtonFillerOffset - 1);
     for (auto pTAction : *mpMyChildrenList) {
         if (!pTAction->isActive()) {
             // This test and conditional loop abort was missing from this method
@@ -255,6 +257,8 @@ void TAction::insertActions(TToolBar* pT, QMenu* pMenu)
 
 void TAction::expandToolbar(TEasyButtonBar* pT)
 {
+    // The -1 is needed to compensate for the initial pre-increment to TEasyButtonBar::mItemCount
+    pT->resetItemCount(mButtonFillerOffset - 1);
     for (auto pTAction : *mpMyChildrenList) {
         if (!pTAction->isActive()) {
             continue;
