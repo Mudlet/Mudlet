@@ -727,11 +727,11 @@ void TConsole::resizeEvent(QResizeEvent* event)
             if (!host || !paneForFont) {
                 return;
             }
-            const int fw = QFontMetrics(paneForFont->font()).averageCharWidth();
-            if (fw <= 0) {
+            const int fontWidth = QFontMetrics(paneForFont->font()).averageCharWidth();
+            if (fontWidth <= 0) {
                 return;
             }
-            const int cols = qMax(40, paneWidthPx / fw);
+            const int cols = qMax(40, paneWidthPx / fontWidth);
             if (cols > 0 && cols != host->mScreenWidth) {
                 host->setScreenDimensions(cols, host->mScreenHeight);
                 QTimer::singleShot(0, host, &Host::updateDisplayDimensions);
@@ -745,9 +745,9 @@ void TConsole::resizeEvent(QResizeEvent* event)
         // profile - detached windows have their own pixel width and must not
         // receive ours.
         mudlet* const app = mudlet::self();
-        const bool thisIsInMainWindow = app && !app->getDetachedWindows().contains(mpHost->getName());
-        if (thisIsInMainWindow) {
-            for (auto otherHostPtr : app->getHostManager()) {
+        const bool inMainWindow = app && !app->getDetachedWindows().contains(mpHost->getName());
+        if (inMainWindow) {
+            for (const auto& otherHostPtr : app->getHostManager()) {
                 Host* otherHost = otherHostPtr.data();
                 if (!otherHost || otherHost == mpHost.data()) {
                     continue;
