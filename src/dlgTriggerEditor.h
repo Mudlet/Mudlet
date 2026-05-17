@@ -590,6 +590,9 @@ private:
                                                              {tr("Statistics"), qsl("Ctrl+9")},
                                                              {tr("Debug"), qsl("Ctrl+0")}};
 
+    static void findAllDescendants(QSet<QTreeWidgetItem*>&, QTreeWidgetItem*);
+
+
     std::unordered_map<SingleLineTextEdit*, bool> lineEditShouldMarkSpaces;
 
     QToolBar* toolBar = nullptr;

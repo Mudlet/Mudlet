@@ -3080,17 +3080,37 @@ void dlgTriggerEditor::delete_alias()
     }
 }
 
+/*static*/ void dlgTriggerEditor::findAllDescendants(QSet<QTreeWidgetItem*>& set, QTreeWidgetItem* pItem)
+{
+    if (!pItem) {
+        return;
+    }
+    set.insert(pItem);
+    for (int i = 0, count = pItem->childCount(); i < count; ++i) {
+        // Recursively call the function for each child
+        findAllDescendants(set, pItem->child(i));
+    }
+}
+
 void dlgTriggerEditor::delete_action()
 {
-    QList<QTreeWidgetItem*> selectedItems = treeWidget_actions->selectedItems();
-    if (selectedItems.isEmpty()) {
+    QList<QTreeWidgetItem*> initiallySelectedItems = treeWidget_actions->selectedItems();
+    if (initiallySelectedItems.isEmpty()) {
         return;
     }
 
+    // Capture each selected action and all its descendants
+    // and put them into here:
+    QSet<QTreeWidgetItem*> selectedItemsSet;
+    for (const auto& item : initiallySelectedItems) {
+        findAllDescendants(selectedItemsSet, item);
+    }
+
+    QList<QTreeWidgetItem*> selectedItems{selectedItemsSet.begin(), selectedItemsSet.end()};
+
     QStringList itemNames;
     QList<TAction*> actionsToDelete;
-
-    for (const QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
+    for (const QTreeWidgetItem* pItem : std::as_const(initiallySelectedItems)) {
         TAction* pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
             itemNames << pT->getName();
@@ -3104,10 +3124,14 @@ void dlgTriggerEditor::delete_action()
 
     // Show confirmation dialog for multiple items
     QString message;
-    if (actionsToDelete.size() == 1) {
-        message = tr("Do you really want to delete button \"%1\"?").arg(itemNames.first());
+    if (selectedItems.size() == 1) {
+        message = tr("Do you really want to delete button/menu/toolbar \"%1\"?").arg(itemNames.first());
     } else {
-        message = tr("Do you really want to delete %1 buttons?\n\nItems to be deleted:\n%2").arg(actionsToDelete.size()).arg(itemNames.join(", "));
+        //: This needs further work to properly in all locales as currently %1 is a ', ' spaced "quoted" list of items
+        message = tr("Do you really want to delete %n item(s) of type button, menu or toolbar?<br><br>Items to be deleted:<br>\"%1\".",
+                     nullptr,
+                     actionsToDelete.size())
+                .arg(itemNames.join(qsl("\", \"")));
     }
 
     // Capture state of all items BEFORE deletion for undo
@@ -3145,7 +3169,6 @@ void dlgTriggerEditor::delete_action()
         }
     };
 
-    // Capture each selected action and all its descendants
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         TAction* pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
@@ -3173,18 +3196,6 @@ void dlgTriggerEditor::delete_action()
         QModelIndex indexB = treeWidget_actions->indexFromItem(b);
         return indexA.row() < indexB.row();
     });
-
-    /* Note that selectedItems only contains the actually selected items and
-     * not necessarily their children - so it cannot be used to identify that
-     * multiple items were scheduled to be removed.*/
-    if (deletedItems.count() > 1) {
-        showWarning(tr("Sorry your selection will require the deletion of %n item(s) and due to a current limitation within Mudlet it is not possible to delete more than one button, or a menu or toolbar that contains any buttons or menus, at a time.<br><br>"
-                       "Please remove each individual button, one at a time, before any parent menu or toolbar.",
-                       nullptr,
-                       deletedItems.count()),
-                    true);
-        return;
-    }
 
     // Delete in reverse order to maintain valid indices
     std::reverse(selectedItems.begin(), selectedItems.end());
