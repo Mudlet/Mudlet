@@ -3080,18 +3080,6 @@ void dlgTriggerEditor::delete_alias()
     }
 }
 
-/*static*/ void dlgTriggerEditor::findAllDescendants(QSet<QTreeWidgetItem*>& set, QTreeWidgetItem* pItem)
-{
-    if (!pItem) {
-        return;
-    }
-    set.insert(pItem);
-    for (int i = 0, count = pItem->childCount(); i < count; ++i) {
-        // Recursively call the function for each child
-        findAllDescendants(set, pItem->child(i));
-    }
-}
-
 void dlgTriggerEditor::delete_action()
 {
     QList<QTreeWidgetItem*> initiallySelectedItems = treeWidget_actions->selectedItems();
@@ -3101,12 +3089,14 @@ void dlgTriggerEditor::delete_action()
 
     // Capture each selected action and all its descendants
     // and put them into here:
-    QSet<QTreeWidgetItem*> selectedItemsSet;
-    for (const auto& item : initiallySelectedItems) {
-        findAllDescendants(selectedItemsSet, item);
+    QList<QTreeWidgetItem*> selectedItems;
+    for (const auto& item : std::as_const(initiallySelectedItems)) {
+        treeWidget_actions->getAllChildren(item, selectedItems);
     }
 
-    QList<QTreeWidgetItem*> selectedItems{selectedItemsSet.begin(), selectedItemsSet.end()};
+    // Remove any duplicates by converting to a set and back to a list:
+    QSet<QTreeWidgetItem*> selectedItemsSet{selectedItems.cbegin(), selectedItems.cend()};
+    selectedItems = QList<QTreeWidgetItem*>{selectedItemsSet.cbegin(), selectedItemsSet.cend()};
 
     QStringList itemNames;
     QList<TAction*> actionsToDelete;
