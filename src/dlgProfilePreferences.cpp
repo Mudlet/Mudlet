@@ -54,6 +54,8 @@
 #include <QFileDialog>
 #include <QFontDialog>
 #include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonParseError>
 #include <QNetworkDiskCache>
 #include <QPainter>
 #include <QSettings>
@@ -4285,7 +4287,7 @@ void dlgProfilePreferences::slot_setMMCPChatName(const QString& name)
 
 /**
  * Notify connected clients that our chatname has been changed (via GUI)
- * 
+ *
  */
 void dlgProfilePreferences::slot_mmcpChatNameChanged()
 {
