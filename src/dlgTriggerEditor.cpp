@@ -2932,14 +2932,6 @@ void dlgTriggerEditor::delete_alias()
         return;
     }
 
-    // Show confirmation dialog for multiple items
-    QString message;
-    if (aliasesToDelete.size() == 1) {
-        message = tr("Do you really want to delete alias \"%1\"?").arg(itemNames.first());
-    } else {
-        message = tr("Do you really want to delete %1 aliases?\n\nItems to be deleted:\n%2").arg(aliasesToDelete.size()).arg(itemNames.join(", "));
-    }
-
     // Capture state of all items BEFORE deletion for undo
     QList<EditorDeleteItemCommand::DeletedItemInfo> deletedItems;
 
@@ -3102,14 +3094,6 @@ void dlgTriggerEditor::delete_action()
         return;
     }
 
-    // Show confirmation dialog for multiple items
-    QString message;
-    if (actionsToDelete.size() == 1) {
-        message = tr("Do you really want to delete button \"%1\"?").arg(itemNames.first());
-    } else {
-        message = tr("Do you really want to delete %1 buttons?\n\nItems to be deleted:\n%2").arg(actionsToDelete.size()).arg(itemNames.join(", "));
-    }
-
     // Capture state of all items BEFORE deletion for undo
     QList<EditorDeleteItemCommand::DeletedItemInfo> deletedItems;
 
@@ -3253,14 +3237,6 @@ void dlgTriggerEditor::delete_variable()
         return;
     }
 
-    // Show confirmation dialog for multiple items
-    QString message;
-    if (varsToDelete.size() == 1) {
-        message = tr("Do you really want to delete variable \"%1\"?").arg(itemNames.first());
-    } else {
-        message = tr("Do you really want to delete %1 variables?\n\nItems to be deleted:\n%2").arg(varsToDelete.size()).arg(itemNames.join(", "));
-    }
-
     // Sort items by their position in tree (top to bottom) to delete correctly
     std::sort(selectedItems.begin(), selectedItems.end(), [this](QTreeWidgetItem* a, QTreeWidgetItem* b) {
         QModelIndex indexA = treeWidget_variables->indexFromItem(a);
@@ -3325,14 +3301,6 @@ void dlgTriggerEditor::delete_script()
 
     if (scriptsToDelete.isEmpty()) {
         return;
-    }
-
-    // Show confirmation dialog for multiple items
-    QString message;
-    if (scriptsToDelete.size() == 1) {
-        message = tr("Do you really want to delete script \"%1\"?").arg(itemNames.first());
-    } else {
-        message = tr("Do you really want to delete %1 scripts?\n\nItems to be deleted:\n%2").arg(scriptsToDelete.size()).arg(itemNames.join(", "));
     }
 
     // Capture state of all items BEFORE deletion for undo
@@ -3469,14 +3437,6 @@ void dlgTriggerEditor::delete_key()
         return;
     }
 
-    // Show confirmation dialog for multiple items
-    QString message;
-    if (keysToDelete.size() == 1) {
-        message = tr("Do you really want to delete key \"%1\"?").arg(itemNames.first());
-    } else {
-        message = tr("Do you really want to delete %1 keys?\n\nItems to be deleted:\n%2").arg(keysToDelete.size()).arg(itemNames.join(", "));
-    }
-
     // Capture state of all items BEFORE deletion for undo
     QList<EditorDeleteItemCommand::DeletedItemInfo> deletedItems;
 
@@ -3609,14 +3569,6 @@ void dlgTriggerEditor::delete_trigger()
 
     if (triggersToDelete.isEmpty()) {
         return;
-    }
-
-    // Show confirmation dialog for multiple items
-    QString message;
-    if (triggersToDelete.size() == 1) {
-        message = tr("Do you really want to delete trigger \"%1\"?").arg(itemNames.first());
-    } else {
-        message = tr("Do you really want to delete %1 triggers?\n\nItems to be deleted:\n%2").arg(triggersToDelete.size()).arg(itemNames.join(", "));
     }
 
     // Capture state of all items BEFORE deletion for undo
@@ -3756,14 +3708,6 @@ void dlgTriggerEditor::delete_timer()
 
     if (timersToDelete.isEmpty()) {
         return;
-    }
-
-    // Show confirmation dialog for multiple items
-    QString message;
-    if (timersToDelete.size() == 1) {
-        message = tr("Do you really want to delete timer \"%1\"?").arg(itemNames.first());
-    } else {
-        message = tr("Do you really want to delete %1 timers?\n\nItems to be deleted:\n%2").arg(timersToDelete.size()).arg(itemNames.join(", "));
     }
 
     // Capture state of all items BEFORE deletion for undo
