@@ -237,11 +237,16 @@ void TRoom::setExitStub(int direction, bool status)
                 exitStubs.append(direction);
             }
         } else {
-            QString error = QString("Set exit stub in given direction in RoomID(%1) - there is already an exit there!").arg(id);
-            mpRoomDB->mpMap->logError(error);
+            mpRoomDB->mpMap->logError(tr("Cannot set exit stub in given direction in RoomID %1. There is already an exit there!")
+                                              .arg(QString::number(id)));
+            // Since there is no change don't proceed to mark map as needing saving
+            return;
         }
     } else {
-        exitStubs.removeAll(direction);
+        if (!exitStubs.removeAll(direction)) {
+            // Since there is no change don't proceed to mark map as needing saving
+            return;
+        }
     }
     mpRoomDB->mpMap->setUnsaved(__func__);
 }
@@ -277,10 +282,12 @@ void TRoom::setWeight(int w)
     mpRoomDB->mpMap->setUnsaved(__func__);
 }
 
-void TRoom::setHidden(bool isHidden)
+void TRoom::setHidden(const bool isHidden)
 {
-    hidden = isHidden;
-    mpRoomDB->mpMap->setUnsaved(__func__);
+    if (hidden != isHidden) {
+        hidden = isHidden;
+        mpRoomDB->mpMap->setUnsaved(__func__);
+    }
 }
 
 void TRoom::setExitWeight(const QString& cmd, int w)
@@ -341,7 +348,11 @@ void TRoom::setId(const int roomId)
 // alternative means to do them as a fault recovery
 bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
 {
-    static QSet<TArea*> dirtyAreas;
+    // Track dirty areas by ID rather than TArea* across calls: a TArea* held
+    // through a deferred window can dangle if the map is cleared in between
+    // (e.g. clearMapDB(), profile close, bulk map reload). Looking up the
+    // pointer freshly at flush time safely skips areas that no longer exist.
+    static QSet<int> dirtyAreaIds;
     TArea* pA = mpRoomDB->getArea(areaID);
     if (!pA) {
         // There is no TArea instance with that _areaID
@@ -349,8 +360,8 @@ bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
         mpRoomDB->addArea(areaID);
         pA = mpRoomDB->getArea(areaID);
         if (!pA) { // Oh dear, THAT didn't work
-            QString error = qApp->translate("TRoom", "No area created!  Requested area ID=%1. Note: Area IDs must be > 0").arg(areaID);
-            mpRoomDB->mpMap->logError(error);
+            mpRoomDB->mpMap->logError(tr("Requested AreaID %1 did not exist and could not be created. Note: Area numbers must be greater than zero!")
+                                              .arg(QString::number(areaID)));
             return false;
         }
     }
@@ -366,28 +377,33 @@ bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
         // areas are still "out of area exits" UNLESS the room moves to the SAME
         // area that the other exits are in.
         // Add to local store of dirty areas
-        dirtyAreas.insert(pA2);
+        dirtyAreaIds.insert(area);
         // Flag the area itself in case something goes
         // wrong on last room in a series
         pA2->mIsDirty = true;
     } else {
-        QString error = qApp->translate("TRoom", "Warning: When setting the Area for Room (Id: %1) it did not have a current area!").arg(id);
-        mpRoomDB->mpMap->logError(error);
+        //: Although this is reported as an error it is not a problem
+        mpRoomDB->mpMap->logError(tr("When setting the Area for RoomID %1 it did not have a current area, this is unexpected but not a problem!")
+                                          .arg(QString::number(id)));
     }
 
     area = areaID;
     pA->addRoom(id);
 
-    dirtyAreas.insert(pA);
+    dirtyAreaIds.insert(areaID);
     pA->mIsDirty = true;
 
     if (!deferAreaRecalculations) {
-        QSetIterator<TArea*> itpArea = dirtyAreas;
-        while (itpArea.hasNext()) {
-            TArea* pArea = itpArea.next();
-            pArea->clean();
+        // Swap out the set before iterating so that reentrant calls into
+        // setArea() from within clean()/determineAreaExits() (e.g. via Lua
+        // event handlers) don't mutate the container we're walking.
+        QSet<int> toClean;
+        toClean.swap(dirtyAreaIds);
+        for (const int aid : toClean) {
+            if (TArea* pArea = mpRoomDB->getArea(aid)) {
+                pArea->clean();
+            }
         }
-        dirtyAreas.clear();
     }
 
     mpRoomDB->mpMap->setUnsaved(__func__);
@@ -831,10 +847,8 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
     }
     ifs >> name;
     ifs >> isLocked;
-    if (version >= 22) {
-        ifs >> hidden;
-    }
     if (version >= 21) {
+        ifs >> hidden;
         ifs >> mSpecialExits;
     } else if (version >= 6) {
         // Before version 21 the special exits were stored as a QMultiMap<int, QString>
@@ -876,8 +890,14 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
 
     if (version >= 10) {
         ifs >> userData;
+        // Recover and remove fallback values from the user data:
+        if (version < 21) {
+            const QString hiddenString = userData.take(QLatin1String("system.fallback_hidden"));
+            if (!hiddenString.compare(QLatin1String("true"), Qt::CaseInsensitive)) {
+                hidden = true;
+            }
+        }
         if (version < 19) {
-            // Recover and remove backup values from the user data
             const QString symbolString = userData.take(QLatin1String("system.fallback_symbol"));
             if (!symbolString.isEmpty()) {
                 // There is a fallback in the user data
@@ -1540,7 +1560,6 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             mpRoomDB->mpMap->postMessage(infoMsg);
         }
         mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
-        exitRoomId = roomRemapping.value(exitRoomId);
         exitRoomId = roomRemapping.value(exitRoomId);
     }
 

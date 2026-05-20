@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018, 2020-2023, 2025 by Stephen Lyons             *
+ *   Copyright (C) 2016-2018, 2020-2023, 2025-2026 by Stephen Lyons        *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
@@ -35,7 +35,7 @@
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
 
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 #include <QtUiTools>
 #include <QColorDialog>
 #include <QDir>
@@ -124,7 +124,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     auto objectList = mpCopyProfile->associatedObjects();
     QList<QWidget*> widgetList;
-    for (auto pObjectItem : objectList) {
+    for (const auto pObjectItem : std::as_const(objectList)) {
         auto pWidgetItem = qobject_cast<QWidget*>(pObjectItem);
         if (pWidgetItem) {
             widgetList << pWidgetItem;
@@ -137,7 +137,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     objectList = copyProfileSettings->associatedObjects();
     widgetList.clear();
-    for (auto pObjectItem : objectList) {
+    for (const auto pObjectItem : std::as_const(objectList)) {
         auto pWidgetItem = qobject_cast<QWidget*>(pObjectItem);
         if (pWidgetItem) {
             widgetList << pWidgetItem;
@@ -254,12 +254,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(listWidget_profiles, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_itemClicked);
     connect(listWidget_profiles, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    connect(discord_optin_checkBox, &QCheckBox::checkStateChanged, this, &dlgConnectionProfiles::slot_updateDiscordOptIn);
-#else
-    connect(discord_optin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateDiscordOptIn);
-#endif
-
     // website_entry atm is only a label
     //connect(website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_updateWebsite(const QString)));
 
@@ -317,7 +311,10 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
     mKeychainOperationInProgress = false;
     mPendingProfileLoad.clear();
 
-    QCoreApplication::instance()->removeEventFilter(this);
+    // Check if QCoreApplication is still valid during shutdown
+    if (QCoreApplication::instance()) {
+        QCoreApplication::instance()->removeEventFilter(this);
+    }
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
@@ -387,7 +384,7 @@ void dlgConnectionProfiles::slot_updateDescription()
 
 void dlgConnectionProfiles::indicatePackagesInstallOnConnect(QStringList packages)
 {
-    if (!packages.length()) {
+    if (packages.isEmpty()) {
         return;
     }
 
@@ -442,7 +439,7 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
     }
 }
 
-void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QString& pass) const
+void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QString& pass)
 {
     // Validate that we have a password to store
     if (pass.trimmed().isEmpty()) {
@@ -451,7 +448,7 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
     }
 
     // Use async API for QtKeychain integration with file fallback
-    auto* credManager = new CredentialManager();
+    auto* credManager = new CredentialManager(this);
 
     credManager->storePassword(profile, "character", pass, [credManager, profile](bool success, const QString& errorMessage) {
         if (success) {
@@ -465,10 +462,10 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
     });
 }
 
-void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
+void dlgConnectionProfiles::deleteSecurePassword(const QString& profile)
 {
     // Use async API for QtKeychain integration with file fallback
-    auto* credManager = new CredentialManager();
+    auto* credManager = new CredentialManager(this);
 
     credManager->removePassword(profile, "character", [credManager, profile](bool success, const QString& errorMessage) {
         if (success) {
@@ -531,32 +528,6 @@ void dlgConnectionProfiles::slot_updateAutoReconnect(int state)
         return;
     }
     writeProfileData(pItem->data(csmNameRole).toString(), qsl("autoreconnect"), QString::number(state));
-}
-
-// This gets called when the QCheckBox that it is connect-ed to gets its
-// checked state set programmatically AS WELL as when the user clicks on it:
-void dlgConnectionProfiles::slot_updateDiscordOptIn(int state)
-{
-    QListWidgetItem* pItem = listWidget_profiles->currentItem();
-    if (!pItem) {
-        return;
-    }
-    writeProfileData(pItem->data(csmNameRole).toString(), qsl("discordserveroptin"), QString::number(state));
-
-    // in case the user is already connected, pull up stored GMCP data
-    auto& hostManager = mudlet::self()->getHostManager();
-    auto pHost = hostManager.getHost(profile_name_entry->text());
-    if (!pHost) {
-        return;
-    }
-
-    if (state == Qt::Checked) {
-        pHost->mDiscordDisableServerSide = false;
-        pHost->mTelnet.requestDiscordInfo();
-    } else {
-        pHost->mDiscordDisableServerSide = true;
-        pHost->clearDiscordData();
-    }
 }
 
 void dlgConnectionProfiles::slot_updatePort(const QString& ignoreBlank)
@@ -1139,19 +1110,6 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     mDiscordApplicationId = readProfileData(profile_name, qsl("discordApplicationId"));
     mDiscordInviteURL = readProfileData(profile_name, qsl("discordInviteURL"));
 
-    // val will be null if this is the first time the profile has been read
-    // since an update to a Mudlet version supporting Discord - so a toint()
-    // will return 0 - which just happens to be Qt::Unchecked() but let's not
-    // rely on that...
-    val = readProfileData(profile_name, qsl("discordserveroptin"));
-    if ((!val.isEmpty()) && val.toInt() == Qt::Checked) {
-        discord_optin_checkBox->setChecked(true);
-    } else {
-        discord_optin_checkBox->setChecked(false);
-    }
-
-    updateDiscordStatus();
-
     mud_description_textedit->setPlainText(getDescription(profile_name));
 
     val = readProfileData(profile_name, qsl("website"));
@@ -1257,26 +1215,6 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     }
 }
 
-void dlgConnectionProfiles::updateDiscordStatus()
-{
-    auto discordLoaded = mudlet::self()->mDiscord.libraryLoaded();
-
-    if (!discordLoaded) {
-        discord_optin_checkBox->setEnabled(false);
-        discord_optin_checkBox->setChecked(false);
-        discord_optin_checkBox->setToolTip(utils::richText(tr("Discord integration not available on this platform")));
-    } else if (mDiscordApplicationId.isEmpty() && !mudlet::self()->mDiscord.gameIntegrationSupported(host_name_entry->text().trimmed()).first) {
-        // Disable discord support if it is not recognised by name and a
-        // Application Id has not been previously entered:
-        discord_optin_checkBox->setEnabled(false);
-        discord_optin_checkBox->setChecked(false);
-        discord_optin_checkBox->setToolTip(utils::richText(tr("Discord integration not supported by game")));
-    } else {
-        discord_optin_checkBox->setEnabled(true);
-        discord_optin_checkBox->setToolTip(utils::richText(tr("Check to enable Discord integration")));
-    }
-}
-
 // (re-)creates the dialogs profile list
 void dlgConnectionProfiles::fillout_form()
 {
@@ -1314,10 +1252,14 @@ void dlgConnectionProfiles::fillout_form()
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
+    const bool showOnlyMyProfiles = settings.value(qsl("showOnlyMyProfiles"), false).toBool();
     if (onlyShownPredefinedProfiles.isEmpty()) {
         const auto defaultGames = TGameDetails::keys();
         for (auto& game : defaultGames) {
             if (!deletedDefaultMuds.contains(game)) {
+                if (showOnlyMyProfiles && !mProfileList.contains(game, Qt::CaseInsensitive)) {
+                    continue;
+                }
                 pItem = new QListWidgetItem();
                 auto details = TGameDetails::findGame(game);
                 setupMudProfile(pItem, game, (*details).description, (*details).icon);
@@ -1399,7 +1341,6 @@ void dlgConnectionProfiles::fillout_form()
         listWidget_profiles->setCurrentRow(toselectRow);
     }
 
-    updateDiscordStatus();
 }
 
 void dlgConnectionProfiles::setProfileIcon() const
@@ -1470,7 +1411,7 @@ template <typename L>
 void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callback)
 {
     // Use async API for QtKeychain integration with file fallback
-    auto* credManager = new CredentialManager();
+    auto* credManager = new CredentialManager(this);
 
     credManager->retrievePassword(profile, "character", [credManager, callback = std::move(callback)](bool success, const QString& password, const QString& errorMessage) {
         if (success) {
@@ -1537,6 +1478,20 @@ void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
                        this,
                        &dlgConnectionProfiles::slot_setCustomColor);
     }
+
+    menu.addSeparator();
+
+    auto& settings = *mudlet::self()->mpSettings;
+    const bool showOnlyMyProfiles = settings.value(qsl("showOnlyMyProfiles"), false).toBool();
+    //: Context menu action to toggle hiding default game profiles that have not been used yet
+    auto* pAction_showMyProfilesOnly = menu.addAction(tr("Show my profiles only"));
+    pAction_showMyProfilesOnly->setCheckable(true);
+    pAction_showMyProfilesOnly->setChecked(showOnlyMyProfiles);
+    connect(pAction_showMyProfilesOnly, &QAction::toggled, this, [this](const bool checked) {
+        auto& settings = *mudlet::self()->mpSettings;
+        settings.setValue(qsl("showOnlyMyProfiles"), checked);
+        fillout_form();
+    });
 
     menu.exec(globalPos);
 }
@@ -1633,10 +1588,6 @@ void dlgConnectionProfiles::slot_copyProfile()
     connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
         mProfileList << profile_name;
         slot_itemClicked(pItem);
-        // Clear the Discord optin on the copied profile - just because the source
-        // one may have had it enabled does not mean we can assume the new one would
-        // want it set:
-        discord_optin_checkBox->setChecked(false);
 
         // restore the password, which won't be copied by the disk copy if stored in the credential manager
         // Temporarily block textChanged signal to avoid triggering save on programmatic setText
@@ -1653,6 +1604,7 @@ void dlgConnectionProfiles::slot_copyProfile()
         mpCopyProfile->setEnabled(true);
         QApplication::restoreOverrideCursor();
         validateProfile();
+        watcher->deleteLater();
     });
     watcher->setFuture(future);
 }
@@ -1683,10 +1635,6 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
 
     mProfileList << profile_name;
     slot_itemClicked(pItem);
-    // Clear the Discord optin on the copied profile - just because the source
-    // one may have had it enabled does not mean we can assume the new one would
-    // want it set:
-    discord_optin_checkBox->setChecked(false);
 }
 
 bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const
@@ -2069,14 +2017,14 @@ bool dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QStrin
         destDir.mkdir(destFolder);
     }
     QStringList files = sourceDir.entryList(QDir::Files);
-    for (const QString& file : files) {
+    for (const QString& file : std::as_const(files)) {
         const QString srcName = sourceFolder + QDir::separator() + file;
         const QString destName = destFolder + QDir::separator() + file;
         QFile::copy(srcName, destName);
     }
     files.clear();
     files = sourceDir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot);
-    for (const QString& file : files) {
+    for (const QString& file : std::as_const(files)) {
         const QString srcName = sourceFolder + QDir::separator() + file;
         const QString destName = destFolder + QDir::separator() + file;
         copyFolder(srcName, destName);

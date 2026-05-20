@@ -29,8 +29,6 @@
 #include "discord.h"
 #include "FontManager.h"
 #include "HostManager.h"
-#include "LlamaFileManager.h"
-#include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
 #include "utils.h"
 #include <memory>
@@ -40,19 +38,16 @@
 #endif
 
 #include "ui_main_window.h"
-#include <QAction>
-#include <QDir>
-#include <QFlags>
+#include <QElapsedTimer>
 #include <QKeySequence>
 #include <QMainWindow>
 #include <QMap>
 #include <QPointer>
-#include <QSettings>
 #include <QSystemTrayIcon>
 #include <QTextOption>
 #include <QTime>
 #include <QVersionNumber>
-#include <QWindow>
+
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
 #include <qtkeychain/keychain.h>
 #else
@@ -62,12 +57,16 @@
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
 
+class QAction;
 class QCloseEvent;
+class QDir;
+class QMediaDevices;
 class QMediaPlayer;
 class QMenu;
 class QLabel;
 class QListWidget;
 class QPushButton;
+class QSettings;
 class QShortcut;
 class QSplitter;
 class QTableWidget;
@@ -78,6 +77,7 @@ class QTimer;
 
 class dlgAboutDialog;
 class dlgConnectionProfiles;
+class FileOpenHandler;
 class dlgIRC;
 class dlgNotepad;
 class dlgPackageManager;
@@ -86,6 +86,7 @@ class dlgPackageExporter;
 class dlgProfilePreferences;
 class dlgTriggerEditor;
 class Host;
+class MudletInstanceCoordinator;
 class ShortcutManager;
 class TConsole;
 class TDetachedWindow;
@@ -206,6 +207,8 @@ public:
     void attachDebugArea(const QString&);
     void checkUpdatesOnStart();
     void commitLayoutUpdates(bool flush = false);
+    bool saveFloatingDockGeometries();
+    void restoreFloatingDockGeometries();
     void deleteProfileData(const QString& profile, const QString& item);
     void disableToolbarButtons();
     void doAutoLogin(const QString&);
@@ -236,6 +239,7 @@ public:
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     bool loadWindowLayout();
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
+    bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
     bool migratePasswordsToProfileStorage();
     bool migratePasswordsToSecureStorage();
     // Helper function to check if current version is >= specified version for backward compatibility
@@ -321,6 +325,9 @@ public:
     void showedCharacterModeWarning();
     bool experiencedMudletPlayer();
 
+    // Telnet URI handling
+    void handleTelnetUri(const QString& uri);
+
     enums::Appearance mAppearance = enums::Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
     // issue:
@@ -353,6 +360,8 @@ public:
     QPointer<Host> mpCurrentActiveHost;
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
+    // Flag to prevent connection dialog from opening during telnet:// URI processing
+    bool mProcessingTelnetUri = false;
     QToolBar* mpMainToolBar = nullptr;
     QPointer<QSettings> mpSettings;
     QPointer<ShortcutsManager> mpShortcutsManager;
@@ -393,27 +402,10 @@ public:
     bool mDrawUpperLowerLevels = true;
     bool mShowTabConnectionIndicators = true; // Global preference for showing connection status indicators on tabs
 
-    // Global blink timer for SGR codes 5 and 6 (flashing text)
-    // Shared across all TTextEdit instances for synchronized blinking
-    // Uses 200ms base interval (WCAG 2.3.1 compliant - max 3 Hz)
-    // 4-state counter per ISO/IEC 8613-6: slow blink < 150 cycles/min, fast > 150
-    //   state 0: slow=on,  fast=on
-    //   state 1: slow=on,  fast=off
-    //   state 2: slow=off, fast=on
-    //   state 3: slow=off, fast=off
-    bool slowBlinkState() const { return mBlinkState < 2; }
-    bool fastBlinkState() const { return (mBlinkState % 2) == 0; }
+    qreal blinkPulseOpacity(bool isFastBlink) const;
+    static qreal computeBlinkPulseOpacity(qreal blinkTimeMs, bool isFastBlink);
     void registerBlinkClient();
     void unregisterBlinkClient();
-
-    // AI integration methods
-    LlamafileManager* getAIManager() const { return mpLlamafileManager.get(); }
-    bool aiModelAvailable() const;
-    bool aiRunning() const;
-    QString getAIModelPath() const { return mAIModelPath; }
-    void setAIModelPath(const QString& path);
-    bool getAIAutoStart() const { return mAIAutoStart; }
-    void setAIAutoStart(bool autoStart);
 
 
 #if defined(INCLUDE_UPDATER)
@@ -428,6 +420,7 @@ public slots:
     void slot_connectionDialogueFinished(const QString&, bool);
     void slot_disconnect();
     void slot_handleToolbarVisibilityChanged(bool);
+    void slot_toolbarToggleActionTriggered(bool);
 #if defined(INCLUDE_UPDATER)
     void slot_manualUpdateCheck();
     void slot_updateCheckFailed(const QString& error);
@@ -463,7 +456,7 @@ public slots:
     void slot_replaySpeedDown();
     void slot_replayTimeChanged();
     void slot_restoreMainMenu() { setMenuBarVisibility(enums::visibleAlways); }
-    void slot_restoreMainToolBar() { setToolBarVisibility(enums::visibleAlways); }
+    void slot_restoreMainToolBar() { synchronizeToolBarVisibility(true); }
     void slot_showAboutDialog();
     void slot_showHelpDialogForum();
     void slot_showHelpDialogIrc();
@@ -481,7 +474,6 @@ public slots:
     void slot_detachedWindowClosed(const QString& profileName);
     void slot_profileDetachToWindow(const QString& profileName, TDetachedWindow* targetWindow);
     void updateDetachedWindowToolbars();
-    static QIcon createConnectionStatusIcon(bool isConnected, bool isConnecting, bool hasError);
     void updateMainWindowTabIndicators();
     void updateMainWindowTabBarAutoHide();
     void updateTabIndicators();               // Update all tab indicators (main window)
@@ -502,8 +494,6 @@ public slots:
     void setupPreferencesFocusRestoration(dlgProfilePreferences* pPreferences);
     void slot_showTimerDialog();
     void slot_showTabContextMenu(const QPoint& position);
-    void slot_toggleMainToolBar();
-    void slot_showMainToolBarContextMenu(const QPoint& position);
     void synchronizeToolBarVisibility(bool visible);
     void slot_showTriggerDialog();
     void slot_showVariableDialog();
@@ -539,14 +529,13 @@ signals:
     void signal_tabChanged(const QString&);
     void signal_toolBarVisibilityChanged(const enums::controlsVisibility);
     void signal_windowStateChanged(const Qt::WindowStates);
-    void signal_aiStatusChanged(bool running);
-    void signal_aiModelChanged(const QString& modelPath);
     void signal_showTabConnectionIndicatorsChanged(bool);
-    void signal_blinkStateChanged(bool slowState, bool fastState);
+    void signal_blinkStateChanged();
     void signal_profileLoaded();
 
 private slots:
     void slot_assignShortcutsFromProfile(Host* pHost = nullptr);
+    void slot_audioOutputDeviceChanged();
     void slot_compactInputLine(const bool);
     void slot_passwordMigratedToPortableStorage(QKeychain::Job*);
     void slot_passwordMigratedToSecureStorage(QKeychain::Job*);
@@ -561,9 +550,8 @@ private slots:
 #endif
     void slot_updateShortcuts();
     void slot_windowStateChanged(const Qt::WindowStates);
-    void slot_aiStatusChanged(LlamafileManager::Status newStatus, LlamafileManager::Status oldStatus);
-    void slot_aiError(const QString& error);
     void slot_refreshTabIndicatorsDelayed();
+    void slot_telnetConnectionStateChanged();
 
 
 private:
@@ -639,6 +627,7 @@ private:
     bool mMultiView = false;
     bool mMuteAPI = false;
     bool mMuteGame = false;
+    QMediaDevices* mpMediaDevices = nullptr;
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;
     QPointer<QAction> mpActionAliases;
@@ -711,7 +700,8 @@ private:
     QPointer<QShortcut> mpShortcutToggleEmergencyStop;
     QPointer<QTimer> mpTimerReplay;
     QPointer<QTimer> mpBlinkTimer;
-    int mBlinkState = 0;
+    QElapsedTimer mBlinkElapsedTimer;
+    qreal mBlinkTimeMs = 0.0;
     int mBlinkClientCount = 0;
     QPointer<QToolBar> mpToolBarReplay;
     QWidget* mpWidget_profileContainer = nullptr;
@@ -747,16 +737,18 @@ private:
     static constexpr int mMuteAllMediaTutorialsMax = 3; // Mute all media
     static constexpr int mCharacterModeWarningsMax = 3; // Character mode
 
-    // AI/LlamaFile integration
-    std::unique_ptr<LlamafileManager> mpLlamafileManager;
-    QString mAIModelPath;
-    bool mAIAutoStart = true;
+    // Telnet URI handling structures and methods
+    struct TelnetUriData
+    {
+        QString host;
+        int port = 23;
+        QString username;
+        bool useTls = false;
+    };
 
-    // Helper methods for AI integration
-    void initializeAI();
-    void shutdownAI();
-    bool findAIModel();
-    void setupAIConfig();
+    std::optional<TelnetUriData> parseTelnetUri(const QString& uri);
+    QString findMatchingProfile(const QString& host, int port);
+    QString createProfileForUri(const TelnetUriData& uriData);
 
     // Helper method for detached windows cleanup
     void saveDetachedWindowsGeometry();

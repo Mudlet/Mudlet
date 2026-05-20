@@ -2,7 +2,7 @@
 #define MUDLET_TDOCKWIDGET_H
 /***************************************************************************
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
- *   Copyright (C) 2019, 2022-2023 by Stephen Lyons                        *
+ *   Copyright (C) 2019, 2022-2023, 2026 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -35,7 +35,7 @@ class TDockWidget : public QDockWidget {
 public:
     TDockWidget(Host *, const QString &);
     void setTConsole(TConsole*);
-    TConsole* getConsole() {return mpConsole;}
+    TConsole* getConsole();
     void setVisible(bool) override;
 
 

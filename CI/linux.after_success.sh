@@ -39,8 +39,6 @@ then
 #  fi
 
   # We refer to $BUILD_COMMIT in the environment to get the commit data now
-  COMMIT_DATE=$(git show -s --format="%cs" | tr -d '-')
-  YESTERDAY_DATE=$(date -d "yesterday" '+%F' | tr -d '-')
 
   git clone https://github.com/Mudlet/installers.git "${BUILD_DIR}/../installers"
 
@@ -73,11 +71,12 @@ then
   else # ptb/release build
     if [ "${public_test_build}" == "true" ]; then
 
-      # Skip commit check if this is a manually forced build
+      # Skip duplicate check if this is a manually forced build
       if [[ "${GITHUB_FORCE_BUILD}" == "true" ]]; then
-        echo "== Forced build requested, skipping commit date check =="
-      elif [[ "${COMMIT_DATE}" -lt "${YESTERDAY_DATE}" ]]; then
-        echo "== No new commits, aborting public test build generation =="
+        echo "== Forced build requested, skipping duplicate PTB check =="
+      elif gh release list --repo "${GITHUB_REPOSITORY}" --limit 20 --json tagName \
+              --jq '.[].tagName' 2>/dev/null | grep -qF -- "${BUILD_COMMIT}"; then
+        echo "== PTB already exists for commit ${BUILD_COMMIT}, aborting public test build generation =="
         exit 0
       fi
 
@@ -99,9 +98,11 @@ then
     fi
 
     if [ "${public_test_build}" == "true" ]; then
-      tar -cvf "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-linux-x64.AppImage.tar" "Mudlet PTB.AppImage"
+      RELEASE_ARTIFACT="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-linux-x64.AppImage.tar"
+      tar -cvf "${RELEASE_ARTIFACT}" "Mudlet PTB.AppImage"
     else
-      tar -cvf "Mudlet-${VERSION}-linux-x64.AppImage.tar" "Mudlet.AppImage"
+      RELEASE_ARTIFACT="Mudlet-${VERSION}-linux-x64.AppImage.tar"
+      tar -cvf "${RELEASE_ARTIFACT}" "Mudlet.AppImage"
       echo "=== Creating portable version for Linux ==="
       PORTABLE_NAME="Mudlet-${VERSION}-linux-x64-portable"
       touch "portable.txt"
@@ -110,16 +111,33 @@ then
       rm -f "portable.txt"
     fi
 
+    echo "=== Generating SHA256 checksum for GitHub Release ==="
+    sha256sum "${RELEASE_ARTIFACT}" > "${RELEASE_ARTIFACT}.sha256"
+
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Setting up for Github upload ==="
       mkdir "upload/"
-      mv "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-linux-x64.AppImage.tar" "upload/"
+      mv "${RELEASE_ARTIFACT}" "upload/"
+      mv "${RELEASE_ARTIFACT}.sha256" "upload/"
       {
         echo "FOLDER_TO_UPLOAD=$(pwd)/upload"
         echo "UPLOAD_FILENAME=Mudlet-$VERSION$MUDLET_VERSION_BUILD-${BUILD_COMMIT}-linux-x64"
+        echo "RELEASE_ASSET_PATH=$(pwd)/upload/${RELEASE_ARTIFACT}"
+        echo "RELEASE_ASSET_SHA256_PATH=$(pwd)/upload/${RELEASE_ARTIFACT}.sha256"
+        echo "VERSION=${VERSION}"
+        echo "MUDLET_VERSION_BUILD=${MUDLET_VERSION_BUILD}"
+        echo "BUILD_COMMIT=${BUILD_COMMIT}"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
     else
+      {
+        echo "RELEASE_ASSET_PATH=$(pwd)/${RELEASE_ARTIFACT}"
+        echo "RELEASE_ASSET_SHA256_PATH=$(pwd)/${RELEASE_ARTIFACT}.sha256"
+        echo "VERSION=${VERSION}"
+        echo "MUDLET_VERSION_BUILD=${MUDLET_VERSION_BUILD}"
+        echo "BUILD_COMMIT=${BUILD_COMMIT}"
+      } >> "$GITHUB_ENV"
+
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
 

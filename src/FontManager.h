@@ -31,18 +31,20 @@ class FontManager
 {
 public:
     void addFonts();
-    void loadFont(const QString& filePath, const QString& belongsTo = "main");
-    bool fontAlreadyLoaded(const QString& filePath);
-    void unloadFonts(const QString& belongsTo);
+    void loadFont(const QString& filePath, const QString& profileName, const QString& belongsTo = "main");
+    bool fontAlreadyLoaded(const QString& filePath, const QString& profileName);
+    void unloadFonts(const QString& profileName, const QString& belongsTo);
     void addEmojiFont();
 
 private:
     void loadFonts(const QString& folder);
-    void rememberFont(const QString& fileName, int fontID, const QString& belongsTo);
+    void rememberFont(const QString& filePath, int fontID, const QString& profileName, const QString& belongsTo);
 
-    // map of font file path & font ID
+    // map of profile-prefixed file path to Qt font ID (-1 if load failed), per-profile deduplication
     QMap<QString, int> loadedFontPaths;
-    // map of font affiliation ("main" or a specific package) & font IDs
+    // map of file path to Qt font ID, global deduplication (load each file into Qt only once)
+    QMap<QString, int> sharedFontPaths;
+    // map of font affiliation ("main" or profileName/packageName for package fonts) & font IDs
     QMultiMap<QString, int> loadedFontAffiliation;
 };
 

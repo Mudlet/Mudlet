@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2022-2023, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -99,7 +100,7 @@ void TLinkStore::expireLinks(const QString& expireName, Host* pH)
 
     QList<int> linkIds = mExpireToLinks.values(expireName);
 
-    for (int linkId : linkIds) {
+    for (const int linkId : std::as_const(linkIds)) {
         removeLinkById(linkId, pH);
     }
 }
