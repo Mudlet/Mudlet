@@ -588,7 +588,9 @@ void cTelnet::slot_send_login()
     if (!mpHost->getLogin().isEmpty()) {
         sendData(mpHost->getLogin());
     }
-    mTimerPass->start(std::chrono::milliseconds(mpHost->getAutoLoginPasswordDelay()));
+    if (mpHost->hasAutoLoginCredentials()) {
+        mTimerPass->start(std::chrono::milliseconds(mpHost->getAutoLoginPasswordDelay()));
+    }
 }
 
 void cTelnet::slot_send_pass()
