@@ -56,6 +56,7 @@
 #include "mudlet.h"
 #include "utils.h"
 #include "edbee/models/textdocumentscopes.h"
+#include "edbee/views/components/texteditorautocompletecomponent.h"
 
 #include <QCheckBox>
 #include <QAbstractButton>
@@ -393,6 +394,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpSourceEditorEdbee = mpSourceEditorArea->edbeeEditorWidget;
     mpSourceEditorEdbee->setAutoScrollMargin(20);
     mpSourceEditorEdbee->setPlaceholderText(tr("-- add your Lua code here"));
+    configureSourceEditorAutocompleteFocus();
     mpSourceEditorEdbeeDocument = mpSourceEditorEdbee->textDocument();
 
     // Update the status bar on changes
@@ -12198,6 +12200,13 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
 
 bool dlgTriggerEditor::eventFilter(QObject* watched, QEvent* event)
 {
+    if (watched == mpSourceEditorAutocompleteList && event->type() == QEvent::FocusIn) {
+        if (mpSourceEditorEdbee && mpSourceEditorEdbee->textEditorComponent()) {
+            mpSourceEditorEdbee->textEditorComponent()->setFocus(Qt::OtherFocusReason);
+        }
+        return true;
+    }
+
     if (mIsGrabKey) {
         if (event->type() == QEvent::KeyPress) {
             auto* keyEvent = static_cast<QKeyEvent*>(event);
@@ -12237,6 +12246,34 @@ bool dlgTriggerEditor::eventFilter(QObject* watched, QEvent* event)
     }
 
     return QMainWindow::eventFilter(watched, event);
+}
+
+void dlgTriggerEditor::configureSourceEditorAutocompleteFocus()
+{
+    if (!mpSourceEditorEdbee || !mpSourceEditorEdbee->autoCompleteComponent()) {
+        return;
+    }
+
+    auto* autocompleteList = mpSourceEditorEdbee->autoCompleteComponent()->listWidget();
+    if (!autocompleteList) {
+        return;
+    }
+
+    autocompleteList->setFocusPolicy(Qt::NoFocus);
+    autocompleteList->setAttribute(Qt::WA_ShowWithoutActivating);
+
+    if (auto* popupMenu = autocompleteList->parentWidget()) {
+        popupMenu->setFocusPolicy(Qt::NoFocus);
+        popupMenu->setAttribute(Qt::WA_ShowWithoutActivating);
+    }
+
+    if (mpSourceEditorAutocompleteList != autocompleteList) {
+        if (mpSourceEditorAutocompleteList) {
+            mpSourceEditorAutocompleteList->removeEventFilter(this);
+        }
+        mpSourceEditorAutocompleteList = autocompleteList;
+        mpSourceEditorAutocompleteList->installEventFilter(this);
+    }
 }
 
 bool dlgTriggerEditor::event(QEvent* event)

@@ -34,6 +34,7 @@
 #include "dlgTriggerEditor.h"
 #include "dlgTriggerPatternEdit.h"
 #include "dlgTriggersMainArea.h"
+#include "edbee/views/components/texteditorautocompletecomponent.h"
 #include "mudlet.h"
 
 extern void qInitResources_mudlet();
@@ -237,6 +238,37 @@ private slots:
   // ========================================================================
   // CATEGORY 1: Core Operations - Single Items
   // ========================================================================
+  void testSourceEditorAutocompleteDoesNotKeepFocus() {
+    QVERIFY2(mpEditor->mpSourceEditorEdbee,
+             "Source editor should be available");
+
+    auto *autocomplete =
+        mpEditor->mpSourceEditorEdbee->autoCompleteComponent();
+    QVERIFY2(autocomplete, "Autocomplete component should be available");
+
+    auto *autocompleteList = autocomplete->listWidget();
+    QVERIFY2(autocompleteList, "Autocomplete list should be available");
+    QCOMPARE(autocompleteList->focusPolicy(), Qt::NoFocus);
+    QVERIFY(autocompleteList->testAttribute(Qt::WA_ShowWithoutActivating));
+
+    auto *popupMenu = autocompleteList->parentWidget();
+    QVERIFY2(popupMenu, "Autocomplete popup should be available");
+    QCOMPARE(popupMenu->focusPolicy(), Qt::NoFocus);
+    QVERIFY(popupMenu->testAttribute(Qt::WA_ShowWithoutActivating));
+
+    auto *editorComponent =
+        mpEditor->mpSourceEditorEdbee->textEditorComponent();
+    QVERIFY2(editorComponent, "Source editor text component should exist");
+
+    editorComponent->setFocus();
+    QTRY_VERIFY(editorComponent->hasFocus());
+
+    autocompleteList->setFocus();
+    QCoreApplication::processEvents();
+    QTRY_VERIFY(editorComponent->hasFocus());
+    QVERIFY(!autocompleteList->hasFocus());
+  }
+
   void testCoreOperations_data() {
     QTest::addColumn<int>("itemTypeIndex");
     QTest::addColumn<QString>("itemTypeName");
