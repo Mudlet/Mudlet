@@ -2802,22 +2802,23 @@ int TLuaInterpreter::getProfiles(lua_State* L)
 int TLuaInterpreter::loadProfile(lua_State* L)
 {
     auto& hostManager = mudlet::self()->getHostManager();
-    const QString profileName = getVerifiedString(L, __func__, 1, "profile name");
+    const QString requestedName = getVerifiedString(L, __func__, 1, "profile name");
     bool offline = false;
 
     if (lua_gettop(L) > 1) {
         offline = getVerifiedBool(L, __func__, 2, "offline mode", true);
     }
 
-    if (profileName.isEmpty()) {
+    if (requestedName.isEmpty()) {
         lua_pushnil(L);
         lua_pushstring(L, "loadProfile: profile name cannot be empty");
         return 2;
     }
 
-    if (!mudlet::self()->profileExists(profileName)) {
+    const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+    if (profileName.isEmpty()) {
         lua_pushnil(L);
-        lua_pushfstring(L, "loadProfile: profile '%s' does not exist", profileName.toUtf8().constData());
+        lua_pushfstring(L, "loadProfile: profile '%s' does not exist", requestedName.toUtf8().constData());
         return 2;
     }
 
@@ -2845,18 +2846,19 @@ int TLuaInterpreter::loadProfile(lua_State* L)
 int TLuaInterpreter::closeProfile(lua_State* L)
 {
     auto& hostManager = mudlet::self()->getHostManager();
-    QString profileName;
+    QString requestedName;
 
     if (lua_gettop(L) == 0) {
         Host& host = getHostFromLua(L);
-        profileName = host.getName();
+        requestedName = host.getName();
     } else {
-        profileName = getVerifiedString(L, __func__, 1, "profile name");
+        requestedName = getVerifiedString(L, __func__, 1, "profile name");
     }
 
-    if (!mudlet::self()->profileExists(profileName)) {
+    const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+    if (profileName.isEmpty()) {
         lua_pushnil(L);
-        lua_pushfstring(L, "closeProfile: profile '%s' does not exist", profileName.toUtf8().constData());
+        lua_pushfstring(L, "closeProfile: profile '%s' does not exist", requestedName.toUtf8().constData());
         return 2;
     }
 
