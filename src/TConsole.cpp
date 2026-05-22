@@ -2105,10 +2105,16 @@ QSize TConsole::getMainWindowSize() const
         return mOldSize;
     }
 
-    // Reject suspicious shrinkage (more than 50% reduction) - geometry may not have settled yet
+    // Reject very dramatic shrinkage as a secondary safety net for profile-switch
+    // transitions where geometry may not have settled. The original threshold of 0.5
+    // also rejected legitimate fullscreen->half-screen transitions on tiling WMs
+    // (e.g. hyprland, sway, i3), suppressing sysWindowResize events. The 0.2 value
+    // still catches the near-zero transient sizes the original fix targets while
+    // letting half-screen resizes through. The primary defence is the minValidWidth
+    // check above.
     if (mOldSize.width() > 0) {
         const double shrinkageRatio = static_cast<double>(mainWindowSize.width()) / mOldSize.width();
-        if (shrinkageRatio < 0.5) {
+        if (shrinkageRatio < 0.2) {
             return mOldSize;
         }
     }
