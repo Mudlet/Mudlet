@@ -4436,6 +4436,85 @@ you can use it but there could be issues with aligning columns of text</string>
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="groupBox_autoLogin">
+         <property name="title">
+          <string>Auto-login</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_autoLogin">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_usernameDelay">
+            <property name="text">
+             <string>Delay before sending username:</string>
+            </property>
+            <property name="buddy">
+             <cstring>spinBox_usernameDelay</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QSpinBox" name="spinBox_usernameDelay">
+            <property name="toolTip">
+             <string>&lt;p&gt;Wait this long after connecting before sending the username.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>Wait this long after connecting before sending the username.</string>
+            </property>
+            <property name="suffix">
+             <string notr="true"> ms</string>
+            </property>
+            <property name="minimum">
+             <number>0</number>
+            </property>
+            <property name="maximum">
+             <number>60000</number>
+            </property>
+            <property name="singleStep">
+             <number>100</number>
+            </property>
+            <property name="value">
+             <number>2000</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_passwordDelay">
+            <property name="text">
+             <string>Delay before sending password:</string>
+            </property>
+            <property name="buddy">
+             <cstring>spinBox_passwordDelay</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QSpinBox" name="spinBox_passwordDelay">
+            <property name="toolTip">
+             <string>&lt;p&gt;Wait this long after sending the username before sending the password.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>Wait this long after sending the username before sending the password.</string>
+            </property>
+            <property name="suffix">
+             <string notr="true"> ms</string>
+            </property>
+            <property name="minimum">
+             <number>0</number>
+            </property>
+            <property name="maximum">
+             <number>60000</number>
+            </property>
+            <property name="singleStep">
+             <number>100</number>
+            </property>
+            <property name="value">
+             <number>1000</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer_chat">
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>
@@ -5285,6 +5364,8 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>lineEdit_proxyPort</tabstop>
   <tabstop>lineEdit_proxyUsername</tabstop>
   <tabstop>lineEdit_proxyPassword</tabstop>
+  <tabstop>spinBox_usernameDelay</tabstop>
+  <tabstop>spinBox_passwordDelay</tabstop>
   <tabstop>toolButton_resetMainWindowShortcuts</tabstop>
   <tabstop>checkBox_announceIncomingText</tabstop>
   <tabstop>checkBox_advertiseScreenReader</tabstop>

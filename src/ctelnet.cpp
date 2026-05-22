@@ -588,6 +588,7 @@ void cTelnet::slot_send_login()
     if (!mpHost->getLogin().isEmpty()) {
         sendData(mpHost->getLogin());
     }
+    mTimerPass->start(std::chrono::milliseconds(mpHost->getAutoLoginPasswordDelay()));
 }
 
 void cTelnet::slot_send_pass()
@@ -676,8 +677,7 @@ void cTelnet::slot_socketConnected()
 #endif
     mpHost->mLuaInterpreter.call(qsl("onConnect"), QString());
     mConnectionTimer.start();
-    mTimerLogin->start(2s);
-    mTimerPass->start(3s);
+    mTimerLogin->start(std::chrono::milliseconds(mpHost->getAutoLoginUsernameDelay()));
 
     emit signal_connected(mpHost);
 

@@ -1509,6 +1509,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             currentShortcuts[key] = defaultSequence;
         });
     }
+
+    spinBox_usernameDelay->setValue(pHost->getAutoLoginUsernameDelay());
+    spinBox_passwordDelay->setValue(pHost->getAutoLoginPasswordDelay());
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
@@ -3032,6 +3035,9 @@ void dlgProfilePreferences::slot_saveAndClose()
     mudlet* pMudlet = mudlet::self();
     Host* pHost = mpHost;
     if (pHost) {
+        pHost->setAutoLoginUsernameDelay(spinBox_usernameDelay->value());
+        pHost->setAutoLoginPasswordDelay(spinBox_passwordDelay->value());
+
         auto console = pHost->mpConsole;
         if (comboBox_dictionary->isEnabled() && comboBox_dictionary->currentIndex() >= 0) {
             pHost->setSpellDic(comboBox_dictionary->currentData().toString());

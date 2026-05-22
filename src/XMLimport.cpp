@@ -807,6 +807,13 @@ void XMLimport::readHost(Host* pHost)
         pHost->mProxyPort = 0;
     }
 
+    if (attributes().hasAttribute(QLatin1String("mAutoLoginUsernameDelay"))) {
+        pHost->mAutoLoginUsernameDelay = attributes().value(qsl("mAutoLoginUsernameDelay")).toInt();
+    }
+    if (attributes().hasAttribute(QLatin1String("mAutoLoginPasswordDelay"))) {
+        pHost->mAutoLoginPasswordDelay = attributes().value(qsl("mAutoLoginPasswordDelay")).toInt();
+    }
+
     pHost->mProxyUsername = attributes().value(qsl("mProxyUsername")).toString();
 
     // Handle backward compatibility based on application version, not profile version
