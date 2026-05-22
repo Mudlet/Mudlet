@@ -808,10 +808,10 @@ void XMLimport::readHost(Host* pHost)
     }
 
     if (attributes().hasAttribute(QLatin1String("mAutoLoginUsernameDelay"))) {
-        pHost->mAutoLoginUsernameDelay = attributes().value(qsl("mAutoLoginUsernameDelay")).toInt();
+        pHost->mAutoLoginUsernameDelay = qBound(0, attributes().value(qsl("mAutoLoginUsernameDelay")).toInt(), 60000);
     }
     if (attributes().hasAttribute(QLatin1String("mAutoLoginPasswordDelay"))) {
-        pHost->mAutoLoginPasswordDelay = attributes().value(qsl("mAutoLoginPasswordDelay")).toInt();
+        pHost->mAutoLoginPasswordDelay = qBound(0, attributes().value(qsl("mAutoLoginPasswordDelay")).toInt(), 60000);
     }
 
     pHost->mProxyUsername = attributes().value(qsl("mProxyUsername")).toString();
