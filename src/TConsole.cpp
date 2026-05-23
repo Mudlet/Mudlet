@@ -715,12 +715,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
     }
 
-    // Keep Host dimensions in sync for main-console wraps and NAWS.
-    // Each profile/host owns its own column count, derived from its own font;
-    // we only share the underlying pixel width with profiles that will be laid
-    // out in the same container when shown (i.e. main-window background tabs
-    // when this console is the active main-window profile). Detached-window
-    // profiles are sized by their own window and are not touched here.
+    // Sync Host dimensions on resize so wraps and NAWS reflect the current pane width.
     if ((mType & MainConsole) && !mpHost.isNull() && mUpperPane && !mUpperPane->visibleRegion().isEmpty()) {
         const int paneWidthPx = mUpperPane->visibleRegion().boundingRect().width();
         auto syncHost = [paneWidthPx](Host* host, const QWidget* paneForFont) {
@@ -738,12 +733,9 @@ void TConsole::resizeEvent(QResizeEvent* event)
             }
         };
 
-        // Update this profile's own host using its own font.
         syncHost(mpHost.data(), mUpperPane);
 
-        // Only propagate to siblings if this console is itself a main-window
-        // profile - detached windows have their own pixel width and must not
-        // receive ours.
+        // Detached profiles have their own pixel width; only propagate from a main-window console.
         mudlet* const app = mudlet::self();
         const bool inMainWindow = app && !app->getDetachedWindows().contains(mpHost->getName());
         if (inMainWindow) {
@@ -759,13 +751,10 @@ void TConsole::resizeEvent(QResizeEvent* event)
                 if (!otherHost->mpConsole || !otherHost->mpConsole->mUpperPane) {
                     continue;
                 }
-                // Visible siblings (multi-view) get their own resizeEvent and
-                // compute their own width - don't override it from here.
+                // Visible siblings (multi-view) handle their own resizeEvent.
                 if (!otherHost->mpConsole->mUpperPane->visibleRegion().isEmpty()) {
                     continue;
                 }
-                // Hidden main-window sibling: same pixel width when shown,
-                // but its own font determines the column count.
                 syncHost(otherHost, otherHost->mpConsole->mUpperPane);
             }
         }
