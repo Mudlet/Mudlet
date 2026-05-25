@@ -1451,6 +1451,13 @@ void T2DMap::drawRoom(QPainter& painter,
             roomNameRectangle.adjust(mRoomWidth * nameOffset.x(), mRoomHeight * nameOffset.y(), mRoomWidth * nameOffset.x(), mRoomHeight * nameOffset.y());
         }
         auto roomNameColor = QColor((mpHost->mBgColor_2.lightness() > 127) ? Qt::black : Qt::white);
+        const QString roomNameColorData = pRoom->userData.value(ROOM_UI_NAMECOLOR);
+        if (!roomNameColorData.isEmpty()) {
+            const QColor userColor(roomNameColorData);
+            if (userColor.isValid()) {
+                roomNameColor = userColor;
+            }
+        }
         painter.setPen(QPen(roomNameColor));
         painter.setFont(mapNameFont);
         painter.drawText(roomNameRectangle, Qt::AlignCenter, pRoom->name);
