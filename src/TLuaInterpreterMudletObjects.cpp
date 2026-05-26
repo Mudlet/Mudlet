@@ -239,6 +239,7 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
     cur.clearSelection();
     cur.movePosition(QTextCursor::EndOfLine);
     pN->setTextCursor(cur);
+    pN->adjustHeight();
     return 0;
 }
 
@@ -252,6 +253,7 @@ int TLuaInterpreter::clearCmdLine(lua_State* L)
     }
     auto pN = COMMANDLINE(L, name);
     pN->clear();
+    pN->adjustHeight();
     return 0;
 }
 
@@ -1376,6 +1378,7 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
     cur.clearSelection();
     cur.movePosition(QTextCursor::EndOfLine);
     pN->setTextCursor(cur);
+    pN->adjustHeight();
     return 0;
 }
 
