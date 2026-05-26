@@ -2023,8 +2023,10 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     // The last two of these tags were missing and meant the HTML was not terminated properly
     QClipboard* clipboard = QApplication::clipboard();
     clipboard->setText(text);
-    mSelectedRegion = QRegion(0, 0, 0, 0);
-    forceUpdate();
+    // Deliberately leave mSelectedRegion intact (unlike the now-removed clear
+    // here) so a follow-up plain Copy still sees the selection - otherwise
+    // establishSelectedText() bails and the HTML is left on the clipboard. This
+    // matches slot_copySelectionToClipboard(), which also keeps the selection.
 }
 
 bool TTextEdit::establishSelectedText()
