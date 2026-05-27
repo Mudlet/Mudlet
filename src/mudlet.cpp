@@ -7309,14 +7309,28 @@ void mudlet::changeEvent(QEvent* event)
 
 bool mudlet::profileExists(const QString& profileName)
 {
-    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    return !getCanonicalProfileName(profileName).isEmpty();
+}
 
-    if (profiles.contains(profileName, Qt::CaseInsensitive)) {
-        return true;
+QString mudlet::getCanonicalProfileName(const QString& profileName)
+{
+    if (profileName.isEmpty()) {
+        return QString();
     }
 
-    auto it = TGameDetails::findGame(profileName);
-    return it != TGameDetails::scmDefaultGames.end();
+    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    for (const auto& profile : profiles) {
+        if (profile.compare(profileName, Qt::CaseInsensitive) == 0) {
+            return profile;
+        }
+    }
+
+    const auto it = TGameDetails::findGame(profileName, Qt::CaseInsensitive);
+    if (it != TGameDetails::scmDefaultGames.constEnd()) {
+        return it->name;
+    }
+
+    return QString();
 }
 
 void mudlet::saveDetachedWindowsGeometry()
