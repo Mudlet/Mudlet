@@ -89,6 +89,7 @@ public slots:
     void slot_setupMapperMenu();
     void slot_toggleUpperLowerLevels(bool enabled);
     void slot_toggleShowRoomIDsFromMenu(bool enabled);
+    void slot_toggleShowRoomNamesFromMenu(bool enabled);
     void updateInfoMenu();
     void slot_showSaveWarningMenu();
     void slot_saveErrorChanged(bool hasError);

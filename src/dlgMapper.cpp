@@ -883,6 +883,14 @@ void dlgMapper::slot_setupMapperMenu()
     connect(showRoomIdsAction, &QAction::toggled, this, &dlgMapper::slot_toggleShowRoomIDsFromMenu);
     menu->addAction(showRoomIdsAction);
 
+    auto* showRoomNamesAction = new QAction(tr("Show room names"), this);
+    showRoomNamesAction->setCheckable(true);
+    showRoomNamesAction->setChecked(mpMap->getRoomNamesShown());
+    showRoomNamesAction->setToolTip(tr("When enabled, room names will be displayed on the map."));
+
+    connect(showRoomNamesAction, &QAction::toggled, this, &dlgMapper::slot_toggleShowRoomNamesFromMenu);
+    menu->addAction(showRoomNamesAction);
+
     auto* showMapGrid = new QAction(tr("Show map grid"), this);
     showMapGrid->setCheckable(true);
     showMapGrid->setChecked(mpHost->mMapperShowGrid);
@@ -926,6 +934,12 @@ void dlgMapper::slot_toggleShowRoomIDsFromMenu(bool enabled)
 {
     mp2dMap->mShowRoomID = enabled;
     mp2dMap->mpHost->mShowRoomID = enabled;
+    mp2dMap->update();
+}
+
+void dlgMapper::slot_toggleShowRoomNamesFromMenu(bool enabled)
+{
+    mpMap->setRoomNamesShown(enabled);
     mp2dMap->update();
 }
 
