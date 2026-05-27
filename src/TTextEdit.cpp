@@ -1468,6 +1468,17 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 
     QPoint cursorLocation(tCharIndex, lineIndex);
 
+    // A plain left-drag must not register a selection until the pointer has
+    // actually moved to a different character cell than where the button went
+    // down. Without this, the sub-pixel jitter of an ordinary focus-gaining
+    // click produces a one-character selection that then hijacks Ctrl+C away
+    // from the command line (see #3922). Multi-click (word/line) and Ctrl
+    // selections establish their selection in mousePressEvent and so are left
+    // untouched here.
+    if (!mCtrlSelecting && mMouseTrackLevel < 2 && cursorLocation == mDragStart) {
+        return;
+    }
+
     if ((mDragSelectionEnd.y() < cursorLocation.y() || (mDragSelectionEnd.y() == cursorLocation.y() && mDragSelectionEnd.x() < cursorLocation.x()))) {
         mPA = mDragSelectionEnd;
         mPB = cursorLocation;
