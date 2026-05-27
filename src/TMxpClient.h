@@ -29,13 +29,8 @@ class TMediaData;
 
 class TMxpClient
 {
-protected:
-    TMxpContext* mpContext = nullptr;
-
 public:
     TMxpClient() = default;
-
-    virtual void initialize(TMxpContext* context) { mpContext = context; }
 
     // Declaring the next functions as virtual = 0 makes this an abstract class:
     // That is, a derived class can only be instantiated when it actually
@@ -86,57 +81,64 @@ public:
 
     virtual bool tagReceived(MxpTag* tag) { return tag->isStartTag() ? startTagReceived(tag->asStartTag()) : endTagReceived(tag->asEndTag()); }
 
-    virtual bool startTagReceived(MxpStartTag* startTag) {
+    virtual bool startTagReceived(MxpStartTag* startTag)
+    {
         Q_UNUSED(startTag)
         return true;
     }
 
-    virtual bool endTagReceived(MxpEndTag* startTag) {
-        Q_UNUSED(startTag)
+    virtual bool endTagReceived(MxpEndTag* endTag)
+    {
+        Q_UNUSED(endTag)
         return true;
     }
 
-    virtual TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) {
+    virtual TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result, TMxpContext& context)
+    {
         Q_UNUSED(tag)
+        Q_UNUSED(context)
         return result;
     }
 
     virtual void setCaptionForSendEvent(const QString& caption) { Q_UNUSED(caption) }
-    
+
     // Get the encoding used by the connection (for proper decoding of MXP tags)
     // Default implementation returns UTF-8 for test clients
     virtual QByteArray getEncoding() const { return QByteArrayLiteral("UTF-8"); }
 
     // Get the console wrap width for layout purposes (e.g., HR tag)
     virtual int getWrapWidth() const { return 80; } // Default fallback
-    
+
     // Insert text directly into the output (e.g., for HR tag)
     virtual void insertText(const QString& text) { Q_UNUSED(text) }
-    
+
     // Check if force MXP should prevent server from changing default mode
     virtual bool shouldLockModeToSecure() const { return false; }
-    
+
     // MXP Frame management (FRAME and DEST tag support)
-    virtual bool createMxpFrame(const QString& name, const QMap<QString, QString>& attributes) {
+    virtual bool createMxpFrame(const QString& name, const QMap<QString, QString>& attributes)
+    {
         Q_UNUSED(name)
         Q_UNUSED(attributes)
         return false;
     }
-    
-    virtual bool closeMxpFrame(const QString& name) {
+
+    virtual bool closeMxpFrame(const QString& name)
+    {
         Q_UNUSED(name)
         return false;
     }
-    
-    virtual bool setMxpDestination(const QString& frameName, bool eol, bool eof) {
+
+    virtual bool setMxpDestination(const QString& frameName, bool eol, bool eof)
+    {
         Q_UNUSED(frameName)
         Q_UNUSED(eol)
         Q_UNUSED(eof)
         return false;
     }
-    
+
     virtual void clearMxpDestination() {}
-    
+
     virtual QString getMxpCurrentDestination() const { return QString(); }
 };
 

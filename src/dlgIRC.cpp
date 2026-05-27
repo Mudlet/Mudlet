@@ -34,6 +34,7 @@
 
 #include <QDesktopServices>
 #include <QScrollBar>
+#include <QSettings>
 #include <QShortcut>
 
 

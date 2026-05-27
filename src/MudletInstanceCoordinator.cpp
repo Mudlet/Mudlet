@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2023-2023 by Adam Robinson - seldon1951@hotmail.com     *
+ *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -39,15 +40,17 @@ void MudletInstanceCoordinator::queuePackage(const QString& packageName)
 // Returns true on success
 bool MudletInstanceCoordinator::installPackagesRemotely()
 {
-    // Pass the absolute path of the package to the active Mudlet Server
-    // The Mudlet Server may be owned by this process or another process.
     QLocalSocket socket;
     socket.connectToServer(mServerName);
 
     if (socket.waitForConnected(WAIT_FOR_RESPONSE_MS)) {
-        const QString packagePathsData = mQueuedPackagePaths.join(QChar::LineFeed);
-        socket.write(packagePathsData.toUtf8());
-        socket.waitForBytesWritten(WAIT_FOR_RESPONSE_MS);
+        const QString packagePathsData = mQueuedPackagePaths.join(QChar::LineFeed) + QChar::LineFeed;
+        if (socket.write(packagePathsData.toUtf8()) == -1) {
+            return false;
+        }
+        if (!socket.waitForBytesWritten(WAIT_FOR_RESPONSE_MS)) {
+            return false;
+        }
         socket.disconnectFromServer();
         return true;
     }
@@ -76,7 +79,7 @@ bool MudletInstanceCoordinator::tryToStart()
 void MudletInstanceCoordinator::installPackagesToHost(Host* activeProfile)
 {
     mMutex.lock();
-    for (const QString& path : mQueuedPackagePaths) {
+    for (const QString& path : std::as_const(mQueuedPackagePaths)) {
         auto ret = activeProfile->installPackage(path, enums::PackageModuleType::Package);
     }
     mQueuedPackagePaths.clear();
@@ -92,7 +95,6 @@ void MudletInstanceCoordinator::incomingConnection(quintptr socketDescriptor)
     connect(socket, &QLocalSocket::disconnected, this, &MudletInstanceCoordinator::handleDisconnected);
 }
 
-// Receive package paths and install them
 void MudletInstanceCoordinator::handleReadyRead()
 {
     QLocalSocket* socket = qobject_cast<QLocalSocket*>(sender());
@@ -100,14 +102,33 @@ void MudletInstanceCoordinator::handleReadyRead()
         return;
     }
 
-    mMutex.lock();
-    // Receive package paths and add them the install queue.
-    QByteArray data = socket->readAll();
-    const QStringList packagePaths = QString::fromUtf8(data).split(QChar::LineFeed, Qt::SkipEmptyParts);
-    mQueuedPackagePaths << packagePaths;
-    mMutex.unlock();
+    mSocketBuffers[socket].append(socket->readAll());
+    QByteArray& buffer = mSocketBuffers[socket];
 
-    installPackagesLocally();
+    // Process complete newline-terminated messages
+    for (int newlineIdx = buffer.indexOf('\n'); newlineIdx != -1; newlineIdx = buffer.indexOf('\n')) {
+        const QString message = QString::fromUtf8(buffer.left(newlineIdx));
+        buffer.remove(0, newlineIdx + 1);
+
+        if (message.startsWith(qsl("TELNET_URI:"))) {
+            const QString uri = message.mid(11);
+
+            QTimer::singleShot(0, this, [uri]() {
+                mudlet* app = mudlet::self();
+                if (app) {
+                    app->handleTelnetUri(uri);
+                }
+            });
+        } else {
+            QMutexLocker locker(&mMutex);
+            if (!message.isEmpty()) {
+                mQueuedPackagePaths << message;
+            }
+            locker.unlock();
+
+            installPackagesLocally();
+        }
+    }
 }
 
 // Find the active host and install queued packages to it
@@ -135,6 +156,47 @@ void MudletInstanceCoordinator::handleDisconnected()
 {
     QLocalSocket* socket = qobject_cast<QLocalSocket*>(sender());
     if (socket) {
+        mSocketBuffers.remove(socket);
         socket->deleteLater();
     }
 }
+
+void MudletInstanceCoordinator::queueTelnetUri(const QString& uri)
+{
+    QMutexLocker locker(&mMutex);
+    mQueuedTelnetUri = uri;
+}
+
+bool MudletInstanceCoordinator::forwardTelnetUriToRunningInstance()
+{
+    QString uri;
+    {
+        QMutexLocker locker(&mMutex);
+        if (mQueuedTelnetUri.isEmpty()) {
+            return false;
+        }
+        uri = mQueuedTelnetUri;
+    }
+
+    QLocalSocket socket;
+    socket.connectToServer(mServerName);
+
+    if (!socket.waitForConnected(WAIT_FOR_RESPONSE_MS)) {
+        return false;
+    }
+
+    const QByteArray data = qsl("TELNET_URI:%1\n").arg(uri).toUtf8();
+    if (socket.write(data) == -1) {
+        return false;
+    }
+    if (!socket.waitForBytesWritten(WAIT_FOR_RESPONSE_MS)) {
+        return false;
+    }
+
+    socket.disconnectFromServer();
+
+    QMutexLocker locker(&mMutex);
+    mQueuedTelnetUri.clear();
+    return true;
+}
+

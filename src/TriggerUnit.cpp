@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2022-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2022-2024, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -28,6 +29,16 @@
 #include "TTrigger.h"
 
 #include <functional>
+
+/* We need an explicit constructor in this file as the Host class is forward
+ * declared in the header file and it is problematic to define any dereferencing
+ * of it there:*/
+TriggerUnit::TriggerUnit(Host* pHost)
+: mpHost(pHost)
+, mMaxID(0)
+, mModuleMember()
+{
+}
 
 TriggerUnit::~TriggerUnit()
 {
@@ -289,7 +300,13 @@ void TriggerUnit::processDataStream(const QString& data, int line)
 
     mProcessingDepth++;
 
-    for (auto trigger : mTriggerRootNodeList) {
+    // Iterate a snapshot of the root list: a trigger's Lua script can call
+    // uninstallPackage()/installPackage() and mutate mTriggerRootNodeList
+    // mid-iteration (the underlying std::list::remove frees the iterator's
+    // current node → use-after-free on the next ++). AliasUnit dodges the
+    // same hazard for the same reason — see Mudlet issue #4297.
+    auto copyOfNodeList = mTriggerRootNodeList;
+    for (auto trigger : copyOfNodeList) {
         trigger->match(subject, data, line);
     }
     free(subject);

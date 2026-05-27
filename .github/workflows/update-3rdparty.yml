@@ -115,7 +115,7 @@ jobs:
 
       - name: Download file
         if: matrix.type == 'download'
-        uses: carlosperate/download-file-action@v2.0.2
+        uses: carlosperate/download-file-action@v2.0.3
         with:
           file-url: ${{ matrix.url }}
           file-name: ${{ matrix.file }}

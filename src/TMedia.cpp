@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2020, 2022-2025 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2020, 2022-2026 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
@@ -146,7 +146,7 @@ QList<TMediaData> TMedia::playingMedia(TMediaData& mediaData)
         }
     }
 
-    for (const auto& pPlayer : mediaPlayerList) {
+    for (const auto& pPlayer : std::as_const(mediaPlayerList)) {
         if (!pPlayer) {
             continue;
         }
@@ -197,7 +197,7 @@ QList<TMediaData> TMedia::pausedMedia(TMediaData& mediaData)
         }
     }
 
-    for (const auto& pPlayer : mediaPlayerList) {
+    for (const auto& pPlayer : std::as_const(mediaPlayerList)) {
         if (!pPlayer) {
             continue;
         }
@@ -246,7 +246,7 @@ void TMedia::pauseMedia(TMediaData& mediaData)
         }
     }
 
-    for (const auto& pPlayer : mediaPlayerList) {
+    for (const auto& pPlayer : std::as_const(mediaPlayerList)) {
         if (!pPlayer) {
             continue;
         }
@@ -397,9 +397,14 @@ void TMedia::refreshAudioDevices()
     QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     for (const auto& player : mediaPlayerList) {
-        if (player) {
-            player->refreshAudioOutput();
+        if (!player) {
+            continue;
         }
+        auto* mp = player->mediaPlayer();
+        if (mp->playbackState() == QMediaPlayer::StoppedState) {
+            continue;
+        }
+        player->refreshAudioOutput();
     }
 }
 
@@ -519,7 +524,7 @@ bool TMedia::resume(TMediaData mediaData)
         }
     }
 
-    for (const auto& pPlayer : mediaPlayerList) {
+    for (const auto& pPlayer : std::as_const(mediaPlayerList)) {
         if (!pPlayer) {
             continue;
         }
@@ -548,7 +553,7 @@ void TMedia::stopAllMediaPlayers()
 
     QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
-    for (const auto& pPlayer : mediaPlayerList) {
+    for (const auto& pPlayer : std::as_const(mediaPlayerList)) {
         if (!pPlayer) {
             continue;
         }
@@ -564,7 +569,7 @@ void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol,
 
     QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
-    for (const auto& player : mediaPlayerList) {
+    for (const auto& player : std::as_const(mediaPlayerList)) {
         if (!player) {
             continue;
         }
@@ -1229,6 +1234,27 @@ int TMedia::getMaxAllowedVideoPlayers() const
     return std::max(2, 10 / hostCount);
 }
 
+#ifdef MUDLET_MEMORY_TRACKING
+void TMedia::getMediaPlayerCounts(int& soundPlayers, int& musicPlayers, int& stoppedPlayers) const
+{
+    soundPlayers = mAPISoundList.size() + mMSPSoundList.size() + mGMCPSoundList.size();
+    musicPlayers = mAPIMusicList.size() + mMSPMusicList.size() + mGMCPMusicList.size();
+
+    const auto countStopped = [](const QList<std::shared_ptr<TMediaPlayer>>& lst) {
+        int n = 0;
+        for (const auto& p : lst) {
+            if (p && p->getPlaybackState() == QMediaPlayer::StoppedState) {
+                ++n;
+            }
+        }
+        return n;
+    };
+
+    stoppedPlayers = countStopped(mAPISoundList) + countStopped(mMSPSoundList) + countStopped(mGMCPSoundList) + countStopped(mAPIMusicList) + countStopped(mMSPMusicList) + countStopped(mGMCPMusicList)
+                     + countStopped(mAPIVideoList) + countStopped(mGMCPVideoList);
+}
+#endif // MUDLET_MEMORY_TRACKING
+
 void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const std::shared_ptr<TMediaPlayer>& player)
 {
     if (!player) {
@@ -1255,6 +1281,8 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
         if (mpHost) {
             mpHost->raiseEvent(mediaFinished);
         }
+
+        player->mediaPlayer()->setSource(QUrl());
 
         if (player->mediaData().mediaWidget() == TMediaData::MediaWidgetLabel && player->mediaData().mediaClose() == TMediaData::MediaCloseEnabled && player->mediaPlayer()->videoOutput() != nullptr) {
             QVideoWidget* videoOutput = qobject_cast<QVideoWidget*>(player->mediaPlayer()->videoOutput());
@@ -1354,7 +1382,7 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& a
 
     QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = TMedia::findMediaPlayersByCriteria(mediaData);
 
-    for (const auto& pTestPlayer : mediaPlayerList) {
+    for (const auto& pTestPlayer : std::as_const(mediaPlayerList)) {
         if (!pTestPlayer) {
             continue;
         }
@@ -1388,7 +1416,7 @@ void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QStr
 {
     QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = TMedia::findMediaPlayersByCriteria(mediaData);
 
-    for (const auto& pTestPlayer : mediaPlayerList) {
+    for (const auto& pTestPlayer : std::as_const(mediaPlayerList)) {
         if (!pTestPlayer) {
             continue;
         }
@@ -1639,14 +1667,19 @@ void TMedia::play(TMediaData& mediaData)
     pPlayer->mediaPlayer()->setPosition(mediaData.mediaStart());
 
     // Set mute state based on protocol
-    switch (mediaData.mediaProtocol()) {
-    case TMediaData::MediaProtocolAPI:
-        pPlayer->mediaPlayer()->audioOutput()->setMuted(mudlet::self()->muteAPI());
-        break;
-    case TMediaData::MediaProtocolGMCP:
-    case TMediaData::MediaProtocolMSP:
-        pPlayer->mediaPlayer()->audioOutput()->setMuted(mudlet::self()->muteGame());
-        break;
+    QAudioOutput* audioOutput = pPlayer->mediaPlayer()->audioOutput();
+    if (audioOutput) {
+        switch (mediaData.mediaProtocol()) {
+        case TMediaData::MediaProtocolAPI:
+            audioOutput->setMuted(mudlet::self()->muteAPI());
+            break;
+        case TMediaData::MediaProtocolGMCP:
+        case TMediaData::MediaProtocolMSP:
+            audioOutput->setMuted(mudlet::self()->muteGame());
+            break;
+        }
+    } else {
+        qWarning() << "TMedia::play() - audioOutput is nullptr, skipping mute state update.";
     }
 
     // Handle video setup if applicable

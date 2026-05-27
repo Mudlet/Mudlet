@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2025 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2026 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *   Copyright (C) 2023-2025 by Lecker Kebap - Leris@mudlet.org            *
@@ -59,7 +59,8 @@
 #include "SecureStringUtils.h"
 
 #include <chrono>
-#include <QtConcurrent>
+#include <QtConcurrentRun>
+#include <QCoreApplication>
 #include <QDialog>
 #include <QtUiTools>
 #include <QNetworkProxy>
@@ -324,6 +325,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
     mLogin = readProfileData(qsl("login"));
 
+    const QString sslVal = readProfileData(qsl("ssl_tsl"));
+    if (!sslVal.isEmpty() && sslVal.toInt() == Qt::Checked) {
+        mSslTsl = true;
+    }
+
     const QString val = readProfileData(qsl("autoreconnect"));
     setAutoReconnect(!val.isEmpty() && val.toInt() == Qt::Checked);
 
@@ -335,9 +341,19 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         mTelnet.setEncoding(savedEncoding, false);
     }
 
-    auto optin = readProfileData(qsl("discordserveroptin"));
-    if (!optin.isEmpty()) {
-        mDiscordDisableServerSide = optin.toInt() == Qt::Unchecked ? true : false;
+    auto modeStr = readProfileData(qsl("discordmode"));
+    if (!modeStr.isEmpty()) {
+        const int modeInt = modeStr.toInt();
+        if (modeInt >= DiscordDisabled && modeInt <= DiscordShowGameDetails) {
+            mDiscordMode = static_cast<DiscordMode>(modeInt);
+        }
+    } else {
+        // Migrate old profiles: if the user had opted out of server-side
+        // Discord, respect that choice by using ShowMudletOnly
+        auto oldOptin = readProfileData(qsl("discordserveroptin"));
+        if (!oldOptin.isEmpty() && oldOptin.toInt() != Qt::Checked) {
+            mDiscordMode = DiscordShowMudletOnly;
+        }
     }
 
     if (mudlet::self()->storingPasswordsSecurely()) {
@@ -407,7 +423,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     auto i = mudlet::self()->mpShortcutsManager->iterator();
     while (i.hasNext()) {
         auto entry = i.next();
-        profileShortcuts.insert(entry, new QKeySequence(*mudlet::self()->mpShortcutsManager->getSequence(entry)));
+        profileShortcuts[entry] = std::make_unique<QKeySequence>(*mudlet::self()->mpShortcutsManager->getSequence(entry));
     }
 
     auto settings = mudlet::self()->getQSettings();
@@ -425,17 +441,12 @@ Host::~Host()
     // which can lead to a crash when closing multiple profiles at once.
     mpLastCommandLineUsed.clear();
 
-    qDeleteAll(profileShortcuts);
-    profileShortcuts.clear();
-
-    qDeleteAll(mStopWatchMap);
     mStopWatchMap.clear();
-
-    delete mMMCPServer;
 
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
+
 
     mErrorLogStream.flush();
     mErrorLogFile.close();
@@ -547,7 +558,7 @@ void Host::closeChildren()
 void Host::loadMap()
 {
     qDebug() << "Host::loadMap() - restore map case 4.";
-    if (mpMap->restore(QString(), false)) {
+    if (mpMap->restore(QString())) {
         mpMap->audit();
         if (mpMap->mpMapper) {
             mpMap->mpMapper->mp2dMap->init();
@@ -597,7 +608,7 @@ void Host::autoSaveMap()
 
 void Host::loadPackageInfo()
 {
-    for (const auto& package : mInstalledPackages) {
+    for (const auto& package : std::as_const(mInstalledPackages)) {
         const QDir dir(mudlet::self()->getMudletPath(enums::profilePackagePath, getName(), package));
         if (dir.exists(qsl("config.lua"))) {
             getPackageConfig(dir.absoluteFilePath(qsl("config.lua")));
@@ -822,8 +833,13 @@ std::pair<bool, QString> Host::getModuleSync(const QString& moduleName)
     return {false, qsl("module name '%1' not found").arg(moduleName)};
 }
 
-void Host::resetProfile_phase1()
+bool Host::resetProfile_phase1()
 {
+    if (mResetProfile) {
+        qWarning() << "Host::resetProfile_phase1() called while reset is already in progress, ignoring";
+        return false;
+    }
+
     mAliasUnit.stopAllTriggers();
     mTriggerUnit.stopAllTriggers();
     mTimerUnit.stopAllTriggers();
@@ -833,6 +849,7 @@ void Host::resetProfile_phase1()
     QTimer::singleShot(0, this, [this]() {
         resetProfile_phase2();
     });
+    return true;
 }
 
 void Host::resetProfile_phase2()
@@ -842,14 +859,23 @@ void Host::resetProfile_phase2()
     getTriggerUnit()->removeAllTempTriggers();
     getKeyUnit()->removeAllTempKeys();
     removeAllNonPersistentStopWatches();
+    mpMedia->stopAllMediaPlayers();
 
     mAliasUnit.doCleanup();
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
     mpConsole->resetMainConsole();
+    // Drain queued DeferredDelete events so old TLabel destructors run their
+    // luaL_unref against the still-live Lua state. Without this, those unrefs
+    // execute after initLuaGlobals() has swapped in a new state and corrupt
+    // freshly-issued registry indices in the new state, which surfaces as
+    // "attempt to call a number value" when label callbacks fire.
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     mEventHandlerMap.clear();
+    mAnonymousEventHandlerFunctions.clear();
     mEventMap.clear();
+    mLuaInterpreter.abortAllDownloads();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
 
@@ -1051,7 +1077,7 @@ QString Host::getMmpMapLocation() const
 void Host::updateConsolesFont()
 {
     if (!mpConsole) {
-        qWarning().nospace().noquote() << "Host::updateConsolesFont() WARNING - no TMainConsole to deal with font releated operations.";
+        qWarning().nospace().noquote() << "Host::updateConsolesFont() WARNING - no TMainConsole to deal with font related operations.";
         return;
     }
 
@@ -1419,46 +1445,41 @@ QPair<int, QString> Host::createStopWatch(const QString& name)
         return qMakePair(0, qsl("unable to create a stopwatch at this time"));
     }
 
-    if (!mStopWatchMap.isEmpty() && !name.isEmpty()) {
-        QMapIterator<int, stopWatch*> itStopWatch(mStopWatchMap);
-        while (itStopWatch.hasNext()) {
-            itStopWatch.next();
-            if (itStopWatch.value()->name() == name) {
-                return qMakePair(0, qsl("stopwatch with id %1 called '%2' already exists").arg(QString::number(itStopWatch.key()), name));
+    if (!mStopWatchMap.empty() && !name.isEmpty()) {
+        for (auto it = mStopWatchMap.cbegin(); it != mStopWatchMap.cend(); ++it) {
+            if (it->second->name() == name) {
+                return qMakePair(0, qsl("stopwatch with id %1 called '%2' already exists").arg(QString::number(it->first), name));
             }
         }
     }
     int newWatchId = 1;
-    while (mStopWatchMap.contains(newWatchId)) {
+    while (mStopWatchMap.count(newWatchId) > 0) {
         ++newWatchId;
     }
 
-    // It is hard to imagine a situation in which this will fail - so we won't
-    // bother coding for it:
-    auto pStopWatch = new stopWatch();
-    Q_ASSERT_X(pStopWatch, "Host::createStopWatch", "out of memory, unable to create new stopwatch");
+    auto pStopWatch = std::make_unique<stopWatch>();
     if (!name.isEmpty()) {
         pStopWatch->setName(name);
     }
 
-    mStopWatchMap.insert(newWatchId, pStopWatch);
+    mStopWatchMap[newWatchId] = std::move(pStopWatch);
     return qMakePair(newWatchId, QString());
 }
 
 bool Host::destroyStopWatch(const int id)
 {
-    auto pStopWatch = mStopWatchMap.take(id);
-    if (!pStopWatch) {
+    auto it = mStopWatchMap.find(id);
+    if (it == mStopWatchMap.end()) {
         return false;
     }
 
-    delete pStopWatch;
+    mStopWatchMap.erase(it);
     return true;
 }
 
 bool Host::adjustStopWatch(const int id, const qint64 milliSeconds)
 {
-    auto pStopWatch = mStopWatchMap.value(id);
+    auto pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         pStopWatch->adjustMilliSeconds(milliSeconds);
         return true;
@@ -1472,16 +1493,10 @@ bool Host::adjustStopWatch(const int id, const qint64 milliSeconds)
 // unnamed one if a blank string is given:
 int Host::findStopWatchId(const QString& name) const
 {
-    // Scan through existing names, in ascending id order
-    QList<int> stopWatchIdList = mStopWatchMap.keys();
-    const int total = stopWatchIdList.size();
-    if (total > 1) {
-        std::sort(stopWatchIdList.begin(), stopWatchIdList.end());
-    }
-    for (const int currentId : stopWatchIdList) {
-        auto pCurrentStopWatch = mStopWatchMap.value(currentId);
-        if (pCurrentStopWatch->name() == name) {
-            return currentId;
+    // Scan through existing names, in ascending id order (std::map is sorted)
+    for (auto it = mStopWatchMap.cbegin(); it != mStopWatchMap.cend(); ++it) {
+        if (it->second->name() == name) {
+            return it->first;
         }
     }
     return 0;
@@ -1489,7 +1504,7 @@ int Host::findStopWatchId(const QString& name) const
 
 QPair<bool, double> Host::getStopWatchTime(const int id) const
 {
-    auto pStopWatch = mStopWatchMap.value(id);
+    auto pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         return qMakePair(true, pStopWatch->getElapsedMilliSeconds() / 1000.0);
     }
@@ -1498,7 +1513,7 @@ QPair<bool, double> Host::getStopWatchTime(const int id) const
 
 QPair<bool, QString> Host::getBrokenDownStopWatchTime(const int id) const
 {
-    auto pStopWatch = mStopWatchMap.value(id);
+    auto pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         return qMakePair(true, pStopWatch->getElapsedDayTimeString());
     }
@@ -1515,7 +1530,7 @@ QPair<bool, QString> Host::startStopWatch(const QString& name)
         return qMakePair(false, qsl("stopwatch with name '%1' not found").arg(name));
     }
 
-    auto pStopWatch = mStopWatchMap.value(watchId);
+    auto pStopWatch = getStopWatch(watchId);
     if (Q_LIKELY(pStopWatch)) {
         if (pStopWatch->start()) {
             return qMakePair(true, QString());
@@ -1531,7 +1546,7 @@ QPair<bool, QString> Host::startStopWatch(const QString& name)
 
 QPair<bool, QString> Host::startStopWatch(int id)
 {
-    auto pStopWatch = mStopWatchMap.value(id);
+    auto pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         if (pStopWatch->start()) {
             return qMakePair(true, QString());
@@ -1553,7 +1568,7 @@ QPair<bool, QString> Host::stopStopWatch(const QString& name)
         return qMakePair(false, qsl("stopwatch with name '%1' not found").arg(name));
     }
 
-    auto pStopWatch = mStopWatchMap.value(watchId);
+    auto pStopWatch = getStopWatch(watchId);
     if (Q_LIKELY(pStopWatch)) {
         if (pStopWatch->stop()) {
             return qMakePair(true, QString());
@@ -1569,7 +1584,7 @@ QPair<bool, QString> Host::stopStopWatch(const QString& name)
 
 QPair<bool, QString> Host::stopStopWatch(const int id)
 {
-    auto pStopWatch = mStopWatchMap.value(id);
+    auto pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         if (pStopWatch->stop()) {
             return qMakePair(true, QString());
@@ -1591,7 +1606,7 @@ QPair<bool, QString> Host::resetStopWatch(const QString& name)
         return qMakePair(false, qsl("stopwatch with name '%1' not found").arg(name));
     }
 
-    auto pStopWatch = mStopWatchMap.value(watchId);
+    auto pStopWatch = getStopWatch(watchId);
     if (Q_LIKELY(pStopWatch)) {
         if (pStopWatch->reset()) {
             return qMakePair(true, QString());
@@ -1610,7 +1625,7 @@ QPair<bool, QString> Host::resetStopWatch(const QString& name)
 
 QPair<bool, QString> Host::resetStopWatch(const int id)
 {
-    auto pStopWatch = mStopWatchMap.value(id);
+    auto pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         if (pStopWatch->reset()) {
             return qMakePair(true, QString());
@@ -1627,7 +1642,7 @@ QPair<bool, QString> Host::resetStopWatch(const int id)
 // not a text name:
 QPair<bool, QString> Host::resetAndRestartStopWatch(const int id)
 {
-    auto pStopWatch = mStopWatchMap.value(id);
+    auto pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         pStopWatch->stop();
         pStopWatch->reset();
@@ -1640,7 +1655,7 @@ QPair<bool, QString> Host::resetAndRestartStopWatch(const int id)
 
 bool Host::makeStopWatchPersistent(const int id, const bool state)
 {
-    auto pStopWatch = mStopWatchMap.value(id);
+    auto pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         pStopWatch->setPersistent(state);
         return true;
@@ -1654,12 +1669,10 @@ QPair<bool, QString> Host::setStopWatchName(const int id, const QString& newName
     stopWatch* pStopWatch = nullptr;
     if (!newName.isEmpty()) {
         // Scan through existing names
-        QMutableMapIterator<int, stopWatch*> itStopWatch(mStopWatchMap);
-        while (itStopWatch.hasNext()) {
-            itStopWatch.next();
-            if (itStopWatch.value()->name() == newName) {
-                if (itStopWatch.key() != id) {
-                    return qMakePair(false, qsl("the name '%1' is already in use for another stopwatch (id:%2)").arg(newName, QString::number(itStopWatch.key())));
+        for (auto it = mStopWatchMap.cbegin(); it != mStopWatchMap.cend(); ++it) {
+            if (it->second->name() == newName) {
+                if (it->first != id) {
+                    return qMakePair(false, qsl("the name '%1' is already in use for another stopwatch (id:%2)").arg(newName, QString::number(it->first)));
                 } else {
                     // Trivial case - the stopwatch is already called by the NEW name:
                     return qMakePair(true, QString());
@@ -1668,7 +1681,7 @@ QPair<bool, QString> Host::setStopWatchName(const int id, const QString& newName
         }
     }
 
-    pStopWatch = mStopWatchMap.value(id);
+    pStopWatch = getStopWatch(id);
     if (pStopWatch) {
         // Okay found the one we want:
         pStopWatch->setName(newName);
@@ -1681,12 +1694,6 @@ QPair<bool, QString> Host::setStopWatchName(const int id, const QString& newName
 QPair<bool, QString> Host::setStopWatchName(const QString& currentName, const QString& newName)
 {
     stopWatch* pStopWatch = nullptr;
-    // Scan through existing names, in ascending id order
-    QList<int> stopWatchIdList = mStopWatchMap.keys();
-    const int total = stopWatchIdList.size();
-    if (total > 1) {
-        std::sort(stopWatchIdList.begin(), stopWatchIdList.end());
-    }
     int id = 0;
     // Although it would be quicker code to return immediately if we detect the
     // newName is in use the run-time error about it being used will mask a
@@ -1696,9 +1703,10 @@ QPair<bool, QString> Host::setStopWatchName(const QString& currentName, const QS
     bool isAlreadyUsed = false;
     int alreadyUsedId = 0;
     // we are looking BOTH for the current name and checking that any other
-    // ones WITH names do not match the new name:
-    for (const int currentId : stopWatchIdList) {
-        auto pCurrentStopWatch = mStopWatchMap.value(currentId);
+    // ones WITH names do not match the new name (std::map is sorted by key):
+    for (auto it = mStopWatchMap.cbegin(); it != mStopWatchMap.cend(); ++it) {
+        const int currentId = it->first;
+        stopWatch* pCurrentStopWatch = it->second.get();
         // This will also pick up the FIRST (lowest id) currently unnamed
         // stopwatch:
         if (!id && pCurrentStopWatch->name() == currentName) {
@@ -1736,7 +1744,12 @@ QPair<bool, QString> Host::setStopWatchName(const QString& currentName, const QS
 
 QList<int> Host::getStopWatchIds() const
 {
-    return mStopWatchMap.keys();
+    QList<int> ids;
+    ids.reserve(static_cast<int>(mStopWatchMap.size()));
+    for (auto it = mStopWatchMap.cbegin(); it != mStopWatchMap.cend(); ++it) {
+        ids.append(it->first);
+    }
+    return ids;
 }
 
 void Host::incomingStreamProcessor(const QString& data, int line)
@@ -1887,7 +1900,7 @@ bool Host::killTrigger(const QString& name)
     return mTriggerUnit.killTrigger(name);
 }
 
-std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing)
+std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet)
 {
     // Wait for profile save to complete before installing package
     // to prevent Lua state corruption during concurrent operations
@@ -1895,7 +1908,14 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // Auto-retry installation after save completes
         QObject* obj = new QObject(this);
         connect(this, &Host::profileSaveFinished, obj, [=, this]() {
-            installPackage(fileName, thing);
+            // The synchronous caller has already been told {true, ""} below;
+            // surface any deferred failure via the warning log and the
+            // profile's message area so it isn't lost silently.
+            auto [ok, msg] = installPackage(fileName, thing, quiet);
+            if (!ok) {
+                qWarning() << "Host::installPackage() deferred install of" << fileName << "failed:" << msg;
+                postMessage(tr("[ ERROR ] - Package install failed for \"%1\": %2").arg(fileName, msg));
+            }
             obj->deleteLater();
         });
         return {true, QString()};
@@ -1992,8 +2012,11 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             return {false, qsl("could not create destination folder")};
         }
 
-        // Skip the unpacking dialog for modules created from UI to avoid unwanted popups
-        if (thing != enums::PackageModuleType::ModuleFromUI) {
+        // Skip the unpacking dialog for modules created from UI, and for
+        // script-initiated installs (passed via quiet) to avoid stealing
+        // window-manager focus from the user's other applications - see
+        // issue #9170.
+        if (thing != enums::PackageModuleType::ModuleFromUI && !quiet) {
             QUiLoader loader(this);
             QFile uiFile(qsl(":/ui/package_manager_unpack.ui"));
             if (!uiFile.open(QFile::ReadOnly)) {
@@ -2320,7 +2343,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     mActionUnit.uninstall(packageName);
     mScriptUnit.uninstall(packageName);
     mKeyUnit.uninstall(packageName);
-    mudlet::self()->mFontManager.unloadFonts(packageName);
+    mudlet::self()->mFontManager.unloadFonts(getName(), packageName);
     if (isModule) {
         //if ModuleSync, this is a temporary uninstall for reloading so we exit here
         QStringList entry = mInstalledModules[packageName];
@@ -2677,7 +2700,7 @@ void Host::installPackageFonts(const QString& packageName)
 
         if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive)
             || filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
-            mudlet::self()->mFontManager.loadFont(filePath, packageName);
+            mudlet::self()->mFontManager.loadFont(filePath, getName(), packageName);
         }
     }
 }
@@ -2814,6 +2837,10 @@ void Host::processDiscordGMCP(const QString& packageMessage, const QString& data
 
 void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
 {
+    if (mDiscordMode != DiscordShowGameDetails) {
+        return;
+    }
+
     mudlet* pMudlet = mudlet::self();
     bool hasInvite = false;
     auto inviteUrl = discordInfo.value(qsl("inviteurl"));
@@ -2837,6 +2864,7 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
             auto image = pMudlet->mDiscord.getLargeImage(this);
 
             if (image.isEmpty() || image == QLatin1String("mudlet")) {
+                pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIcon);
                 pMudlet->mDiscord.setLargeImage(this, qsl("server-icon"));
             }
         }
@@ -2861,7 +2889,7 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
 
 void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
 {
-    if (mDiscordDisableServerSide) {
+    if (mDiscordMode != DiscordShowGameDetails) {
         return;
     }
 
@@ -2872,17 +2900,23 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
         pMudlet->updateDiscordNamedIcon();
         QPair<bool, QString> const richPresenceSupported = pMudlet->mDiscord.gameIntegrationSupported(getUrl());
         if (richPresenceSupported.first && pMudlet->mDiscord.usingMudletsDiscordID(this)) {
+            pMudlet->mDiscord.setServerOrigin(this, DiscordSetDetail);
             pMudlet->mDiscord.setDetailText(this, tr("Playing %1").arg(richPresenceSupported.second));
+            pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIcon);
             pMudlet->mDiscord.setLargeImage(this, richPresenceSupported.second);
+            pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIconText);
             //: %1 is the game name and %2:%3 is game server address like: mudlet.org:23
             pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3").arg(gameName.toString(), getUrl(), QString::number(getPort())));
         } else {
             // We are using a custom application id, so the top line is
             // likely to be saying "Playing MudName"
             if (richPresenceSupported.first) {
+                pMudlet->mDiscord.setServerOrigin(this, DiscordSetDetail);
                 pMudlet->mDiscord.setDetailText(this, QString());
+                pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIconText);
                 //: %1 is the game name and %2:%3 is game server address like: mudlet.org:23
                 pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3").arg(gameName.toString(), getUrl(), QString::number(getPort())));
+                pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIcon);
                 pMudlet->mDiscord.setLargeImage(this, qsl("server-icon"));
             }
         }
@@ -2890,11 +2924,13 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
 
     auto details = discordInfo.value(qsl("details"));
     if (details != QJsonValue::Undefined) {
+        pMudlet->mDiscord.setServerOrigin(this, DiscordSetDetail);
         pMudlet->mDiscord.setDetailText(this, details.toString());
     }
 
     auto state = discordInfo.value(qsl("state"));
     if (state != QJsonValue::Undefined) {
+        pMudlet->mDiscord.setServerOrigin(this, DiscordSetState);
         pMudlet->mDiscord.setStateText(this, state.toString());
     }
 
@@ -2902,12 +2938,14 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
     if (largeImages != QJsonValue::Undefined) {
         auto largeImage = largeImages.toArray().first();
         if (largeImage != QJsonValue::Undefined) {
+            pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIcon);
             pMudlet->mDiscord.setLargeImage(this, largeImage.toString());
         }
     }
 
     auto largeImageText = discordInfo.value(qsl("largeimagetext"));
     if (largeImageText != QJsonValue::Undefined) {
+        pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIconText);
         pMudlet->mDiscord.setLargeImageText(this, largeImageText.toString());
     }
 
@@ -2915,56 +2953,53 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
     if (smallImages != QJsonValue::Undefined) {
         auto smallImage = smallImages.toArray().first();
         if (smallImage != QJsonValue::Undefined) {
+            pMudlet->mDiscord.setServerOrigin(this, DiscordSetSmallIcon);
             pMudlet->mDiscord.setSmallImage(this, smallImage.toString());
         }
     }
 
     auto smallImageText = discordInfo.value(qsl("smallimagetext"));
     if ((smallImageText != QJsonValue::Undefined)) {
+        pMudlet->mDiscord.setServerOrigin(this, DiscordSetSmallIconText);
         pMudlet->mDiscord.setSmallImageText(this, smallImageText.toString());
     }
 
-    // Use -1 so we can detect (at least during debugging) that a value of 0
-    // has been seen:
     int64_t timeStamp = -1;
     auto endTimeStamp = discordInfo.value(qsl("endtime"));
     if (endTimeStamp.isDouble()) {
-        // It is not entirely clear from the proposed specification
-        // whether the integral seconds since epoch is a string or a
-        // double, so handle both:
-        // This only works properly when the value is less than
-        // 9007199254740992 but since when I last checked it was
-        //       1533042027 second since beginning of 1970 it should be
-        // good enough!
         timeStamp = static_cast<int64_t>(endTimeStamp.toDouble());
+        pMudlet->mDiscord.setServerOrigin(this, DiscordSetTimeInfo);
         pMudlet->mDiscord.setEndTimeStamp(this, timeStamp);
     } else if (endTimeStamp.isString()) {
         timeStamp = endTimeStamp.toString().toLongLong();
+        pMudlet->mDiscord.setServerOrigin(this, DiscordSetTimeInfo);
         pMudlet->mDiscord.setEndTimeStamp(this, timeStamp);
     } else {
         auto startTimeStamp = discordInfo.value(qsl("starttime"));
         if (startTimeStamp.isDouble()) {
             timeStamp = static_cast<int64_t>(startTimeStamp.toDouble());
+            pMudlet->mDiscord.setServerOrigin(this, DiscordSetTimeInfo);
             pMudlet->mDiscord.setStartTimeStamp(this, timeStamp);
         } else if (startTimeStamp.isString()) {
             timeStamp = startTimeStamp.toString().toLongLong();
+            pMudlet->mDiscord.setServerOrigin(this, DiscordSetTimeInfo);
             pMudlet->mDiscord.setStartTimeStamp(this, timeStamp);
         }
     }
 
-    // Use -1 so we can detect (at least during debugging) that a value of 0
-    // has been seen:
     int partySizeValue = -1;
     int partyMaxValue = -1;
     auto partyMax = discordInfo.value(qsl("partymax"));
     auto partySize = discordInfo.value(qsl("partysize"));
+    if (partyMax != QJsonValue::Undefined || partySize != QJsonValue::Undefined) {
+        pMudlet->mDiscord.setServerOrigin(this, DiscordSetPartyInfo);
+    }
     if (partyMax.isDouble()) {
         partyMaxValue = static_cast<int>(partyMax.toDouble());
         if (partyMaxValue > 0 && partySize.isDouble()) {
             partySizeValue = static_cast<int>(partySize.toDouble());
             pMudlet->mDiscord.setParty(this, partySizeValue, partyMaxValue);
         } else {
-            // Switches off the party detail from the RP
             pMudlet->mDiscord.setParty(this, 0, 0);
         }
     } else {
@@ -2990,10 +3025,41 @@ void Host::clearDiscordData()
     pMudlet->mDiscord.setParty(this, 0, 0);
 }
 
+void Host::setDiscordMode(DiscordMode mode)
+{
+    const DiscordMode oldMode = mDiscordMode;
+    mDiscordMode = mode;
+
+    writeProfileData(qsl("discordmode"), QString::number(static_cast<int>(mode)));
+
+    auto pMudlet = mudlet::self();
+
+    if (mode == DiscordShowGameDetails && oldMode != DiscordShowGameDetails) {
+        // Switching to full integration - advertise Discord support to server.
+        // Per spec: Hello triggers Info (app ID, invite URL),
+        // Get triggers Status (rich presence fields).
+        if (mTelnet.isGMCPEnabled()) {
+            mTelnet.sendGMCPSupportsAdd(qsl("External.Discord 1"));
+            mTelnet.sendDiscordHello();
+            mTelnet.sendDiscordGet();
+        }
+    } else if (mode != DiscordShowGameDetails && oldMode == DiscordShowGameDetails) {
+        // Switching away from full integration - retract Discord support
+        // and reset all Discord data including server-origin flags and custom app ID
+        if (mTelnet.isGMCPEnabled()) {
+            mTelnet.sendGMCPSupportsRemove(qsl("External.Discord 1"));
+        }
+        pMudlet->mDiscord.resetData(this);
+        return;
+    }
+
+    pMudlet->mDiscord.UpdatePresence();
+}
+
 
 void Host::processDiscordMSDP(const QString& variable, QString value)
 {
-    if (mDiscordDisableServerSide) {
+    if (mDiscordMode != DiscordShowGameDetails) {
         return;
     }
 
@@ -3038,15 +3104,11 @@ void Host::setDiscordInviteURL(const QString& s)
     writeProfileData(qsl("discordInviteURL"), s);
 }
 
-// Compares the current discord username and discriminator against the non-empty
-// arguments. Returns true if neither match, otherwise false.
-bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const
+// Returns false if the profile is restricted to a specific Discord username
+// and the currently logged-in Discord user doesn't match.
+bool Host::discordUserIdMatch(const QString& userName) const
 {
-    if (!userName.isEmpty() && !mRequiredDiscordUserName.isEmpty() && userName != mRequiredDiscordUserName) {
-        return false;
-    }
-
-    if (!userDiscriminator.isEmpty() && !mRequiredDiscordUserDiscriminator.isEmpty() && userDiscriminator != mRequiredDiscordUserDiscriminator) {
+    if (!userName.isEmpty() && !mRequiredDiscordUserName.isEmpty() && userName.toLower() != mRequiredDiscordUserName.toLower()) {
         return false;
     }
     return true;
@@ -3239,16 +3301,13 @@ void Host::setName(const QString& name)
 
 void Host::removeAllNonPersistentStopWatches()
 {
-    QMutableMapIterator<int, stopWatch*> itStopWatch(mStopWatchMap);
-    while (itStopWatch.hasNext()) {
-        itStopWatch.next();
-        auto pStopWatch = itStopWatch.value();
-        if (!pStopWatch || pStopWatch->persistent()) {
+    auto it = mStopWatchMap.begin();
+    while (it != mStopWatchMap.end()) {
+        if (!it->second || it->second->persistent()) {
+            ++it;
             continue;
         }
-
-        itStopWatch.remove();
-        delete pStopWatch;
+        it = mStopWatchMap.erase(it);
     }
 }
 
@@ -4600,6 +4659,7 @@ void Host::createMapper(const bool loadDefaultMap)
     // always want it to be visible.
     pMap->mpMapper->show();
     mpDockableMapWidget->show();
+    pMap->mpMapper->updateEmptyStateOverlay();
 
     check_for_mappingscript();
     TEvent mapOpenEvent{};
@@ -4906,6 +4966,22 @@ void Host::setCommandLineHistorySaveSize(const int lines)
     }
 }
 
+QString Host::getEditorTheme() const
+{
+    if (mudlet::self()->inDarkMode() && !mEditorThemeDark.isEmpty() && !mEditorThemeFileDark.isEmpty()) {
+        return mEditorThemeDark;
+    }
+    return mEditorTheme;
+}
+
+QString Host::getEditorThemeFile() const
+{
+    if (mudlet::self()->inDarkMode() && !mEditorThemeDark.isEmpty() && !mEditorThemeFileDark.isEmpty()) {
+        return mEditorThemeFileDark;
+    }
+    return mEditorThemeFile;
+}
+
 void Host::editorThemeChanged()
 {
     emit signal_editorThemeChanged();
@@ -4949,6 +5025,12 @@ QFont Host::getDisplayFont()
 
 QFont Host::getAndClearTempDisplayFont()
 {
+    if (!mTempDisplayFontAttributes.has_value() || !mTempDisplayFont.has_value()) {
+        qWarning() << "Host::getAndClearTempDisplayFont() WARNING - no temp font was set, using default";
+        mTempDisplayFontAttributes = TFontAttributes(!mNoAntiAlias);
+        mTempDisplayFont = mTempDisplayFontAttributes.value().makeFont();
+    }
+
     QFont tempFont = mTempDisplayFont.value();
     mTempDisplayFont.reset();
     mTempDisplayFontAttributes.reset();

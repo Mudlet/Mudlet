@@ -34,13 +34,16 @@
 #include "TTrigger.h"
 #include "XMLexport.h"
 
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 #include <QDesktopServices>
 #include <QDirIterator>
 #include <QFileDialog>
+#include <QFutureWatcher>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QSettings>
+#include <QStandardPaths>
 #include <QTimer>
 
 // We are now using code that won't work with really old versions of libzip;
@@ -53,7 +56,7 @@
 
 dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
 : QDialog(parent)
-, ui(new Ui::dlgPackageExporter)
+, ui(std::make_unique<Ui::dlgPackageExporter>())
 , mpHost(pHost)
 {
     ui->setupUi(this);
@@ -149,10 +152,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
     connect(mpHost, &QObject::destroyed, this, &dlgPackageExporter::close);
 }
 
-dlgPackageExporter::~dlgPackageExporter()
-{
-    delete ui;
-}
+dlgPackageExporter::~dlgPackageExporter() = default;
 
 void dlgPackageExporter::setModuleCreationMode(bool isModule)
 {

@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
+ *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -535,8 +536,8 @@ void TDetachedWindow::createMenus()
 
     //: This is an item in the "About" menu in the menubar of a detached Mudlet window.
     auto aboutAction = new QAction(tr("About &Mudlet"), this);
-    //: This explains the "About Mudlet" item in the "About" menu in the menubar of a detached Mudlet window.
-    aboutAction->setStatusTip(tr("Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it."));
+    //: Tooltip for About Mudlet sub-menu item (Used in multiple places - please ensure all have the same translation).
+    aboutAction->setStatusTip(tr("About Mudlet version, creators, and license."));
     connect(aboutAction, &QAction::triggered, pMudlet, &mudlet::slot_showAboutDialog);
     aboutMenu->addAction(aboutAction);
 
@@ -586,7 +587,7 @@ void TDetachedWindow::closeEvent(QCloseEvent* event)
 
         // Properly close each profile - this ensures proper cleanup and save prompts
         auto pMudlet = mudlet::self();
-        for (const QString& profileName : profilesToClose) {
+        for (const QString& profileName : std::as_const(profilesToClose)) {
 #if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "TDetachedWindow::closeEvent() - Properly closing profile:" << profileName;
 #endif
@@ -596,7 +597,7 @@ void TDetachedWindow::closeEvent(QCloseEvent* event)
         }
 
         // Remove all consoles from the stacked widget and reset their parents
-        for (auto console : mProfileConsoleMap) {
+        for (const auto& console : std::as_const(mProfileConsoleMap)) {
             if (console) {
                 mpConsoleContainer->removeWidget(console);
                 console->setParent(nullptr);
@@ -606,7 +607,7 @@ void TDetachedWindow::closeEvent(QCloseEvent* event)
         mProfileConsoleMap.clear();
 
         // Emit signal to notify main window for any remaining cleanup
-        for (const QString& profileName : profilesToClose) {
+        for (const QString& profileName : std::as_const(profilesToClose)) {
             emit windowClosed(profileName);
         }
     }
@@ -857,8 +858,7 @@ void TDetachedWindow::createToolBar()
         }
         auto pMudlet = mudlet::self();
         if (!pMudlet) {
-            qWarning() << "TDetachedWindow::createToolBar() lambda - mudlet singleton is null;"
-                       << "cannot synchronize toolbar visibility.";
+            qWarning() << "TDetachedWindow::createToolBar() lambda - mudlet singleton is null;" << "cannot synchronize toolbar visibility.";
             return;
         }
         pMudlet->synchronizeToolBarVisibility(checked);
@@ -1099,7 +1099,8 @@ void TDetachedWindow::createToolBar()
 
     // About action (like main window)
     mpActionAbout = new QAction(QIcon(qsl(":/icons/mudlet_information.png")), tr("About"), this);
-    mpActionAbout->setToolTip(utils::richText(tr("Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.")));
+    //: Tooltip for About Mudlet toolbar button (Used in multiple places - please ensure all have the same translation).
+    mpActionAbout->setToolTip(utils::richText(tr("About Mudlet version, creators, and license.")));
     mpActionAbout->setObjectName(qsl("about_action"));
     mpToolBar->addAction(mpActionAbout);
 
@@ -1183,7 +1184,8 @@ QKeySequence TDetachedWindow::resolveShortcut(const QString& key, const QKeySequ
 
     if (!mCurrentProfileName.isEmpty()) {
         if (auto host = mudletInstance->getHostManager().getHost(mCurrentProfileName)) {
-            if (auto sequence = host->profileShortcuts.value(key)) {
+            if (auto it = host->profileShortcuts.find(key); it != host->profileShortcuts.end()) {
+                const QKeySequence* sequence = it->second.get();
                 if (sequence && !sequence->isEmpty()) {
                     return *sequence;
                 }
@@ -1425,6 +1427,10 @@ void TDetachedWindow::updateTabIndicator(int tabIndex)
     }
 
     if (tabIndex < 0 || tabIndex >= mpTabBar->count()) {
+        // Stale index can occur during tab-removal races; not an error.
+#if defined(DEBUG_WINDOW_HANDLING)
+        qDebug() << "TDetachedWindow::updateTabIndicator: invalid tab index" << tabIndex << "(tab count" << mpTabBar->count() << ")";
+#endif
         return;
     }
 
@@ -1441,23 +1447,28 @@ void TDetachedWindow::updateTabIndicator(int tabIndex)
 
     // Get the host and determine connection status
     Host* pHost = pMudlet->getHostManager().getHost(profileName);
-    QIcon tabIcon;
+    TabConnectionIndicator state = TabConnectionIndicator::None;
 
     // Only show connection indicators if the global setting is enabled
     if (pMudlet->showTabConnectionIndicators()) {
         if (pHost) {
-            bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
-            bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
-            tabIcon = mudlet::createConnectionStatusIcon(isConnected, isConnecting, false);
+            switch (pHost->mTelnet.getConnectionState()) {
+            case QAbstractSocket::ConnectedState:
+                state = TabConnectionIndicator::Connected;
+                break;
+            case QAbstractSocket::ConnectingState:
+            case QAbstractSocket::HostLookupState:
+                state = TabConnectionIndicator::Connecting;
+                break;
+            default:
+                state = TabConnectionIndicator::Disconnected;
+                break;
+            }
         } else {
-            tabIcon = mudlet::createConnectionStatusIcon(false, false, true);
+            state = TabConnectionIndicator::Error;
         }
-    } else {
-        // No icon when indicators are disabled
-        tabIcon = QIcon();
     }
 
-    // Set the tab text and icon, accounting for CDC identifiers
     QString displayText = profileName;
 
     // Apply CDC identifier prefix if debug mode is active (like main window does)
@@ -1470,7 +1481,7 @@ void TDetachedWindow::updateTabIndicator(int tabIndex)
     }
 
     mpTabBar->setTabText(tabIndex, displayText);
-    mpTabBar->setTabIcon(tabIndex, tabIcon);
+    mpTabBar->setTabConnectionIndicator(tabIndex, state);
 }
 
 void TDetachedWindow::updateAllTabIndicators()
@@ -1673,8 +1684,7 @@ void TDetachedWindow::slot_toggleToolBarVisibility()
 
     auto mudletInstance = mudlet::self();
     if (!mudletInstance) {
-        qWarning() << "TDetachedWindow::slot_toggleToolBarVisibility() - mudlet singleton is null;"
-                   << "cannot synchronize toolbar visibility.";
+        qWarning() << "TDetachedWindow::slot_toggleToolBarVisibility() - mudlet singleton is null;" << "cannot synchronize toolbar visibility.";
         return;
     }
 
@@ -1725,8 +1735,7 @@ bool TDetachedWindow::canHideToolBar() const
 {
     auto mudletInstance = mudlet::self();
     if (!mudletInstance) {
-        qWarning() << "TDetachedWindow::canHideToolBar() - mudlet singleton is null;"
-                   << "cannot determine menu bar visibility. Treating toolbar as non-hideable.";
+        qWarning() << "TDetachedWindow::canHideToolBar() - mudlet singleton is null;" << "cannot determine menu bar visibility. Treating toolbar as non-hideable.";
         return false;
     }
     return mudletInstance->canHideToolBar();
@@ -1770,7 +1779,7 @@ void TDetachedWindow::updateWindowMenu()
     }
 
     // Clean up existing window list actions
-    for (QAction* action : mWindowListActions) {
+    for (QAction* action : std::as_const(mWindowListActions)) {
         mpWindowMenu->removeAction(action);
         action->deleteLater();
     }
@@ -1841,7 +1850,7 @@ void TDetachedWindow::updateWindowMenu()
             // Get all profiles in this detached window
             QStringList profilesInWindow = detachedWindow->getProfileNames();
 
-            for (const QString& windowProfileName : profilesInWindow) {
+            for (const QString& windowProfileName : std::as_const(profilesInWindow)) {
                 //: This is an item in list of profiles in the "Window" menu of a detached Mudlet window. %1 is the name of the profile, and it is located not in Mudlet's main window, but in the detached window.
                 QString actionText = tr("%1 (Detached)").arg(windowProfileName);
                 QAction* profileAction = new QAction(actionText, this);
@@ -3268,7 +3277,7 @@ void TDetachedWindow::slot_closeAllProfiles()
     qDebug() << "TDetachedWindow::slot_closeAllProfiles() - Closing" << profilesToClose.size() << "profiles";
 
     auto pMudlet = mudlet::self();
-    for (const QString& profileName : profilesToClose) {
+    for (const QString& profileName : std::as_const(profilesToClose)) {
         qDebug() << "TDetachedWindow::slot_closeAllProfiles() - Closing profile:" << profileName;
         if (pMudlet) {
             pMudlet->slot_closeProfileByName(profileName);

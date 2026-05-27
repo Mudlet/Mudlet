@@ -93,8 +93,8 @@ bool TRoomDB::addRoom(int id)
         return true;
     }
     if (id <= 0) {
-        QString error = qsl("addRoom: illegal room id=%1. roomID must be > 0").arg(id);
-        mpMap->logError(error);
+        mpMap->logError(tr("Room not created. RoomID %1 is not allowed as room numbers must be greater than zero!")
+                                .arg(QString::number(id)));
     }
     return false;
 }
@@ -291,16 +291,19 @@ bool TRoomDB::__removeRoom(int id)
             }
             ++i;
         }
+        const int areaID = pR->getArea();
+        TArea* pA = getArea(areaID);
+        if (pA) {
+            // removeRoom needs the TRoom to be present in the DB so it can look
+            // up coordinates for index maintenance; call it before removing the
+            // room from the rooms hash.
+            pA->removeRoom(id);
+        }
         rooms.remove(id);
         if (roomIDToHash.contains(id)) {
             const QString hash = roomIDToHash[id];
             roomIDToHash.remove(id);
             hashToRoomID.remove(hash);
-        }
-        const int areaID = pR->getArea();
-        TArea* pA = getArea(areaID);
-        if (pA) {
-            pA->removeRoom(id);
         }
         if ((!mpTempRoomDeletionSet) || mpTempRoomDeletionSet->size() == 1) { // if NOT deleting multiple rooms
             entranceMap.remove(id);                                           // Only removes matching keys
@@ -540,11 +543,11 @@ bool TRoomDB::addArea(int id)
             areaNamesMap.insert(id, newAreaName);
         }
         return true;
-    } else {
-        QString error = tr("Area with ID %1 already exists!").arg(id);
-        mpMap->logError(error);
-        return false;
     }
+
+    mpMap->logError(tr("Area not added. An area with AreaID %1 already exists!")
+                            .arg(QString::number(id)));
+    return false;
 }
 
 int TRoomDB::createNewAreaID()
@@ -560,12 +563,11 @@ int TRoomDB::addArea(QString name)
 {
     // reject it if area name already exists or is empty
     if (name.isEmpty()) {
-        QString error = tr("An Unnamed Area is (no longer) permitted!");
-        mpMap->logError(error);
+        mpMap->logError(tr("Area not added. An unnamed area (empty area name) is (no longer) permitted!"));
         return 0;
-    } else if (areaNamesMap.values().contains(name)) {
-        QString error = tr("An area called %1 already exists!").arg(name);
-        mpMap->logError(error);
+    }
+    if (areaNamesMap.values().contains(name)) {
+        mpMap->logError(tr("Area not added. An area called \"%1\" already exists!").arg(name));
         return 0;
     }
 

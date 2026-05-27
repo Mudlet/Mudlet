@@ -94,6 +94,7 @@ public:
     void handleIreComposerEdit(const QString& jsonData);
     void msdp2Lua(const char*);
     void initLuaGlobals();
+    void abortAllDownloads();
     void initIndenterGlobals();
     lua_State* getLuaGlobalState();
 
@@ -793,6 +794,12 @@ public:
     static int enableTimeStamps(lua_State*);
     static int timeStampsEnabled(lua_State*);
     static int setActiveProfile(lua_State*);
+    static int getKeyCode(lua_State*);
+#ifdef MUDLET_MEMORY_TRACKING
+    static int getProcessMemoryUsage(lua_State*);
+    static int getSubsystemMemoryStats(lua_State*);
+#endif
+
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -840,7 +847,6 @@ private:
     static std::pair<bool, QString> discordApiEnabled(lua_State*, bool writeAccess = false);
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
     static int performHttpRequest(lua_State*, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const QString& verb);
-    static void raiseDownloadProgressEvent(lua_State*, QString, qint64, qint64);
     // The last argument is only needed if the third one is true:
     static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
     static std::tuple<bool, int> getWatchId(lua_State*, Host&);

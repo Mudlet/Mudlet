@@ -61,7 +61,6 @@
 #include <limits>
 #include <math.h>
 
-#include <QtConcurrent>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
@@ -2279,6 +2278,9 @@ int TLuaInterpreter::scaleMovie(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCaptureGroup
+// Note: numeric argument uses matches[] indexing, i.e. selectCaptureGroup(1)
+// selects matches[1] (full match), selectCaptureGroup(2) selects matches[2]
+// (first capture group), etc. Named arguments select the named group directly.
 int TLuaInterpreter::selectCaptureGroup(lua_State* L)
 {
     if (!(lua_isnumber(L, 1) || lua_isstring(L, 1))) {
@@ -2394,7 +2396,7 @@ int TLuaInterpreter::selectString(lua_State* L)
     const QString searchText = getVerifiedString(L, __func__, s++, "text to select");
     // CHECK: Do we need to qualify this for a non-blank string?
 
-    qint64 const numOfMatch = static_cast<qint64>(getVerifiedInt(L, __func__, s, "match count {1 for first}"));
+    const auto numOfMatch = getVerifiedInt(L, __func__, s, "match count {1 for first}");
 
     auto console = CONSOLE(L, windowName);
     lua_pushnumber(L, console->select(searchText, numOfMatch));
@@ -2404,17 +2406,18 @@ int TLuaInterpreter::selectString(lua_State* L)
 int TLuaInterpreter::setActiveProfile(lua_State* L)
 {
     auto& hostManager = mudlet::self()->getHostManager();
-    const QString profileName = getVerifiedString(L, __func__, 1, "profile name");
+    const QString requestedName = getVerifiedString(L, __func__, 1, "profile name");
 
-    if (profileName.isEmpty()) {
+    if (requestedName.isEmpty()) {
         lua_pushboolean(L, false);
         lua_pushstring(L, "setActiveProfile: profile name cannot be empty");
         return 2;
     }
 
-    if (!mudlet::self()->profileExists(profileName)) {
+    const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+    if (profileName.isEmpty()) {
         lua_pushboolean(L, false);
-        lua_pushfstring(L, "setActiveProfile: profile '%s' does not exist", profileName.toUtf8().constData());
+        lua_pushfstring(L, "setActiveProfile: profile '%s' does not exist", requestedName.toUtf8().constData());
         return 2;
     }
 
@@ -2790,6 +2793,7 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L)
     const int func = luaL_ref(L, LUA_REGISTRYINDEX);
 
     if (!host.setCmdLineAction(name, func)) {
+        luaL_unref(L, LUA_REGISTRYINDEX, func);
         return warnArgumentValue(L, __func__, qsl("command line name '%1' not found").arg(name));
     }
 

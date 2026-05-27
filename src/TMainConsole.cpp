@@ -454,10 +454,13 @@ TConsole* TMainConsole::createBuffer(const QString& name)
 
 void TMainConsole::resetMainConsole()
 {
-    //resetProfile should reset also UserWindows
+    // Delete DockWidgets first — their child UserWindow TConsoles will be
+    // cascade-deleted by Qt's parent-child ownership. Remove the corresponding
+    // TConsole entries from mSubConsoleMap to avoid dangling pointers.
     QMutableMapIterator<QString, TDockWidget*> itDockWidget(mDockWidgetMap);
     while (itDockWidget.hasNext()) {
         itDockWidget.next();
+        mSubConsoleMap.remove(itDockWidget.key());
         itDockWidget.value()->deleteLater();
         itDockWidget.remove();
     }
@@ -469,17 +472,20 @@ void TMainConsole::resetMainConsole()
         itCommandLine.remove();
     }
 
+    // Remaining SubConsole/Buffer entries (UserWindow ones were already removed above)
     QMutableMapIterator<QString, TConsole*> itSubConsole(mSubConsoleMap);
     while (itSubConsole.hasNext()) {
         itSubConsole.next();
-        // CHECK: Do we need to handle the float/dockable widgets here:
-        itSubConsole.value()->close();
+        itSubConsole.value()->deleteLater();
         itSubConsole.remove();
     }
 
     QMutableMapIterator<QString, TLabel*> itLabel(mLabelMap);
     while (itLabel.hasNext()) {
         itLabel.next();
+        if (itLabel.value()->mpMovie) {
+            mpHost->getGifTracker()->unregisterGif(itLabel.value()->mpMovie);
+        }
         itLabel.value()->deleteLater();
         itLabel.remove();
     }
@@ -1707,6 +1713,11 @@ void TMainConsole::showStatistics()
     }
 
     const QString itemScript = "setFgColor(190,150,0); setUnderline(true); echo([[\n\n%1\n]]); setBold(false);setUnderline(false);setFgColor(150,120,0)";
+
+    //: Heading for the system's statistics information displayed in the console
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Telnet Options:")));
+    print(pHost->mTelnet.assembleTelnetOptionsReport(), QColor(150, 120, 0), Qt::black);
+
     //: Heading for the system's statistics information displayed in the console
     mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Trigger Report:")));
     QString itemMsg = std::get<0>(mpHost->getTriggerUnit()->assembleReport());
