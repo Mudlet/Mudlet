@@ -1912,6 +1912,10 @@ void TConsole::printSystemMessage(const QString& msg)
 
 void TConsole::echo(const QString& msg)
 {
+    // Strip \r so that \r\n becomes \n and standalone \r disappears; without
+    // this, \r is stored literally in the buffer and rendered as a glyph.
+    QString normalizedMsg = msg;
+    normalizedMsg.remove(QChar::CarriageReturn);
     if (mTriggerEngineMode) {
         // Use insertInLine instead of appendLine so that newline characters
         // are embedded in the trigger line rather than creating new buffer
@@ -1922,12 +1926,12 @@ void TConsole::echo(const QString& msg)
         if (y >= 0) {
             const int x = buffer.lineBuffer.at(y).size();
             QPoint insertPoint(x, y);
-            buffer.insertInLine(insertPoint, msg, mFormatCurrent);
+            buffer.insertInLine(insertPoint, normalizedMsg, mFormatCurrent);
         } else {
-            buffer.appendLine(msg, 0, msg.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+            buffer.appendLine(normalizedMsg, 0, normalizedMsg.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
         }
     } else {
-        print(msg);
+        print(normalizedMsg);
     }
 }
 

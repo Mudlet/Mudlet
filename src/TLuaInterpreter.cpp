@@ -68,6 +68,8 @@
 // Only used for this OS:
 #include <QStandardPaths>
 #endif
+#include <QJsonDocument>
+#include <QJsonParseError>
 #include <QTableWidget>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
@@ -6904,19 +6906,19 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
         break;
     }
     default: {
-        QString profileName = getVerifiedString(L, __func__, 1, "profile name");
-        if (profileName.isEmpty()) {
+        const QString requestedName = getVerifiedString(L, __func__, 1, "profile name");
+        if (requestedName.isEmpty()) {
             lua_pushnil(L);
             lua_pushstring(L, "getProfileInformation: profile name cannot be empty");
             return 2;
         }
-        if (!mudlet::self()->profileExists(profileName)) {
+        const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+        if (profileName.isEmpty()) {
             lua_pushnil(L);
-            lua_pushfstring(L, "getProfileInformation: profile '%s' does not exist", profileName.toUtf8().constData());
+            lua_pushfstring(L, "getProfileInformation: profile '%s' does not exist", requestedName.toUtf8().constData());
             return 2;
-        } else {
-            info = mudlet::self()->readProfileData(profileName, qsl("description"));
         }
+        info = mudlet::self()->readProfileData(profileName, qsl("description"));
         break;
     }
     }
