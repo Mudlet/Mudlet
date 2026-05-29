@@ -595,7 +595,9 @@ void cTelnet::slot_send_login()
     }
     if (mpHost->hasAutoLoginCredentials()) {
         QSettings& settings = *mudlet::getQSettings();
-        const auto passwordDelay = qBound(0, settings.value(qsl("autoLoginPasswordDelay"), AUTO_LOGIN_PASSWORD_DELAY_MS).toInt(), AUTO_LOGIN_MAX_DELAY_MS);
+        bool passwordDelayOk = false;
+        const int passwordDelayRaw = settings.value(qsl("autoLoginPasswordDelay"), AUTO_LOGIN_PASSWORD_DELAY_MS).toInt(&passwordDelayOk);
+        const auto passwordDelay = qBound(0, passwordDelayOk ? passwordDelayRaw : AUTO_LOGIN_PASSWORD_DELAY_MS, AUTO_LOGIN_MAX_DELAY_MS);
         mTimerPass->start(std::chrono::milliseconds(passwordDelay));
     }
 }
