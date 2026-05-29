@@ -687,7 +687,9 @@ void cTelnet::slot_socketConnected()
     mpHost->mLuaInterpreter.call(qsl("onConnect"), QString());
     mConnectionTimer.start();
     QSettings& settings = *mudlet::getQSettings();
-    const auto usernameDelay = qBound(0, settings.value(qsl("autoLoginUsernameDelay"), AUTO_LOGIN_USERNAME_DELAY_MS).toInt(), AUTO_LOGIN_MAX_DELAY_MS);
+    bool usernameDelayOk = false;
+    const int usernameDelayRaw = settings.value(qsl("autoLoginUsernameDelay"), AUTO_LOGIN_USERNAME_DELAY_MS).toInt(&usernameDelayOk);
+    const auto usernameDelay = qBound(0, usernameDelayOk ? usernameDelayRaw : AUTO_LOGIN_USERNAME_DELAY_MS, AUTO_LOGIN_MAX_DELAY_MS);
     mTimerLogin->start(std::chrono::milliseconds(usernameDelay));
 
     emit signal_connected(mpHost);
