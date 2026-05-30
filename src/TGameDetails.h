@@ -784,6 +784,22 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "官网: https://pkuxkx.net/；论坛：https://pkuxkx.net/forum/forum.php；WIKI：https://pkuxkx.net/wiki/\n"
                  "国内(GBK编码) mud.pkuxkx.net:8080； 国内(UTF编码) mud.pkuxkx.net 8081；\n"
                  "海外转发：https://pkuxkx.net/proxy_status.php 查找推荐线路")},
+
+            {qsl("Icesus"),
+             qsl("icesus.org"),
+             4443,
+             true,
+             qsl("<a href='https://www.icesus.org/'>Website</a><br>"
+                 "<a href='https://discord.gg/j9cSPyAzQb'>Discord</a>"),
+             qsl(":/icons/icesus_480x120.png"),
+             qsl("Icesus is a free fantasy text RPG running since 1995. Actively developed, "
+                 "community-run, and full of deep systems."
+                 "\n\n"
+                 "Build a character from 27 races and 16 guilds. Fight in tactical party "
+                 "combat, explore the frozen Valley of Aegic, and earn your place in "
+                 "player-driven provinces."
+                 "\n\n"
+                 "Old-school depth. Modern access. New players welcome.")},
             };
     // clang-format on
 };
