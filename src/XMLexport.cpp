@@ -2,7 +2,8 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
- *   Copyright (C) 2017-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2023, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -39,8 +40,11 @@
 #include "mudlet.h"
 
 #include <QVersionNumber>
-#include <QtConcurrent>
+#include <QtConcurrentRun>
+#include <QFutureWatcher>
 #include <QFile>
+#include <QMetaEnum>
+
 #include <sstream>
 
 XMLexport::XMLexport(Host* pH)
@@ -446,9 +450,13 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     pHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     host.append_attribute("mEnableUserDictionary") = enableUserDictionary ? "yes" : "no";
     host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";
-    if (pHost->mMapInfoContributors.isEmpty()) {
-        host.append_attribute("mShowInfo") = "no";
-    }
+    // This is to reproduce the behaviour for Mudlet versions prior to the
+    // introduction of the Map Info system https://github.com/Mudlet/Mudlet/pull/4718
+    // where having the info showing would produce what is now the "Full" map info,
+    // this does duplicate the action, for the "Full" item, in later code which
+    // that handles all enabled Map Info items but as the container is a set that
+    // isn't a problem:
+    host.append_attribute("mShowInfo") = pHost->mMapInfoContributors.contains(qsl("Full")) ? "yes" : "no";
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
     host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
@@ -461,6 +469,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("enableTextAnalyzer") = pHost->mEnableTextAnalyzer ? "yes" : "no";
     host.append_attribute("mRoomSize") = QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mLineSize") = QString::number(pHost->mLineSize, 'f', 1).toUtf8().constData();
+    host.append_attribute("mRoomBorderSize") = QString::number(pHost->mRoomBorderSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mMapGridLineSize") = QString::number(pHost->mMapGridLineSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mBubbleMode") = pHost->mBubbleMode ? "yes" : "no";
     host.append_attribute("mMapViewOnly") = pHost->mMapViewOnly ? "yes" : "no";
@@ -472,6 +481,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mEditorShowBidi") = pHost->getEditorShowBidi() ? "yes" : "no";
     host.append_attribute("mEditorTheme") = pHost->mEditorTheme.toUtf8().constData();
     host.append_attribute("mEditorThemeFile") = pHost->mEditorThemeFile.toUtf8().constData();
+    host.append_attribute("mEditorThemeDark") = pHost->mEditorThemeDark.toUtf8().constData();
+    host.append_attribute("mEditorThemeFileDark") = pHost->mEditorThemeFileDark.toUtf8().constData();
     host.append_attribute("mThemePreviewItemID") = QString::number(pHost->mThemePreviewItemID).toUtf8().constData();
     host.append_attribute("mThemePreviewType") = pHost->mThemePreviewType.toUtf8().constData();
     host.append_attribute("mSearchEngineName") = pHost->mSearchEngineName.toUtf8().constData();
@@ -504,8 +515,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mSslIgnoreAll") = pHost->mSslIgnoreAll ? "yes" : "no";
     host.append_attribute("mAskTlsAvailable") = pHost->mAskTlsAvailable ? "yes" : "no";
     host.append_attribute("mDiscordAccessFlags") = QString::number(pHost->mDiscordAccessFlags).toUtf8().constData();
+    host.append_attribute("mDiscordMode") = static_cast<int>(pHost->mDiscordMode);
     host.append_attribute("mRequiredDiscordUserName") = pHost->mRequiredDiscordUserName.toUtf8().constData();
-    host.append_attribute("mRequiredDiscordUserDiscriminator") = pHost->mRequiredDiscordUserDiscriminator.toUtf8().constData();
     host.append_attribute("mSGRCodeHasColSpaceId") = pHost->getHaveColorSpaceId() ? "yes" : "no";
     host.append_attribute("mServerMayRedefineColors") = pHost->getMayRedefineColors() ? "yes" : "no";
     quint8 styleCode = 0;
@@ -554,7 +565,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
 
         auto mInstalledPackages = host.append_child("mInstalledPackages");
 
-        for (const auto& package : pHost->mInstalledPackages) {
+        for (const auto& package : std::as_const(pHost->mInstalledPackages)) {
             mInstalledPackages.append_child("string").text().set(package.toUtf8().constData());
         }
 
@@ -585,7 +596,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("serverPackageName").text().set(pHost->mServerGUI_Package_name.toUtf8().constData());
         host.append_child("serverPackageVersion").text().set(pHost->mServerGUI_Package_version.toUtf8().constData());
         host.append_child("port").text().set(QString::number(pHost->getPort()).toUtf8().constData());
-        auto borders = pHost->borders();
+        auto borders = pHost->userBorders();
         host.append_child("borderTopHeight").text().set(QString::number(borders.top()).toUtf8().constData());
         host.append_child("borderBottomHeight").text().set(QString::number(borders.bottom()).toUtf8().constData());
         host.append_child("borderLeftWidth").text().set(QString::number(borders.left()).toUtf8().constData());
@@ -679,7 +690,10 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             auto key = iterator.next();
             auto shortcut = host.append_child("profileShortcut");
             shortcut.append_attribute("key") = key.toUtf8().constData();
-            shortcut.text().set(pHost->profileShortcuts.value(key)->toString().toUtf8().constData());
+            auto it = pHost->profileShortcuts.find(key);
+            if (it != pHost->profileShortcuts.end()) {
+                shortcut.text().set(it->second->toString().toUtf8().constData());
+            }
         }
     }
     {
@@ -721,7 +735,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     {
         QStringList allExperiments = pHost->getAllExperiments();
         if (!allExperiments.isEmpty()) {
-            for (const auto& experimentKey : allExperiments) {
+            for (const auto& experimentKey : std::as_const(allExperiments)) {
                 auto experiment = host.append_child("experiment");
                 experiment.append_attribute("key") = experimentKey.toUtf8().constData();
                 experiment.append_attribute("enabled") = "yes";
@@ -1223,7 +1237,7 @@ void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent)
             writeScriptElement(pT->mScript, scriptContents);
 
             auto eventHandlerList = scriptContents.append_child("eventHandlerList");
-            for (const auto& handler : pT->mEventHandlerList) {
+            for (const auto& handler : std::as_const(pT->mEventHandlerList)) {
                 eventHandlerList.append_child("string").text().set(handler.toUtf8().constData());
             }
         }

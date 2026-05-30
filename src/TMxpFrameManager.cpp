@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
+ *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -44,7 +45,7 @@ TMxpFrame::~TMxpFrame()
     parentFrame = nullptr;
 
     // Orphan children - we do NOT delete them since TMxpFrameManager owns all frames
-    for (TMxpFrame* child : childFrames) {
+    for (TMxpFrame* child : std::as_const(childFrames)) {
         if (child && !child->mBeingDestroyed) {
             child->parentFrame = nullptr;
         }
@@ -252,14 +253,14 @@ void TMxpFrameManager::resetAllFrames()
     // Called on reconnect - MXP frames don't persist between sessions
     QStringList frameNames = mFrames.keys();
 
-    for (const QString& name : frameNames) {
+    for (const QString& name : std::as_const(frameNames)) {
         closeFrame(name);
     }
 
     mMxpBorders = QMargins();
 
     if (mpHost) {
-        mpHost->setBorders(QMargins());
+        mpHost->setMxpBorders(QMargins());
     }
 
     clearDestination();
@@ -525,7 +526,7 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
             y = containerY;
         }
 
-        mpHost->setBorders(mMxpBorders);
+        mpHost->setMxpBorders(mMxpBorders);
     }
 
     // FLOATING attribute, no explicit title, or very small height = borderless frame without header
@@ -585,11 +586,6 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         // Create console directly with tabPage as parent to avoid flash on mpMainFrame
         // (createMiniConsole parents to mpMainFrame and calls show() before we can intervene)
         console = new TConsole(mpHost, frame->name, TConsole::SubConsole, tabPage);
-        if (!console) {
-            qWarning() << "TMxpFrameManager::layoutInternalFrame: Failed to create console for" << frame->name;
-            delete containerWidget;
-            return;
-        }
 
         // Setup console properties (mirroring what createMiniConsole does)
         console->setObjectName(frame->name);
@@ -615,12 +611,6 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         // Floating/borderless: console directly in container, no tab header
         // Create console directly with containerWidget as parent to avoid flash
         console = new TConsole(mpHost, frame->name, TConsole::SubConsole, containerWidget);
-
-        if (!console) {
-            qWarning() << "TMxpFrameManager::layoutInternalFrame: Failed to create console for" << frame->name;
-            delete containerWidget;
-            return;
-        }
 
         // Setup console properties (mirroring what createMiniConsole does)
         console->setObjectName(frame->name);
@@ -784,12 +774,6 @@ void TMxpFrameManager::layoutTabFrame(TMxpFrame* frame)
     // Create console directly with tabPage as parent
     auto* console = new TConsole(mpHost, frame->name, TConsole::SubConsole, tabPage);
 
-    if (!console) {
-        qWarning() << "TMxpFrameManager::layoutTabFrame: Failed to create console";
-        delete tabPage;
-        return;
-    }
-
     // Setup console properties
     TMainConsole* mainConsole = mpHost->mpConsole;
     console->setObjectName(frame->name);
@@ -939,7 +923,7 @@ void TMxpFrameManager::removeFrameFromHierarchy(TMxpFrame* frame)
     frame->parentFrame = nullptr;
 
     // Orphan children (set their parentFrame to nullptr)
-    for (TMxpFrame* child : frame->childFrames) {
+    for (TMxpFrame* child : std::as_const(frame->childFrames)) {
         if (child && !child->mBeingDestroyed) {
             child->parentFrame = nullptr;
         }
@@ -1029,7 +1013,7 @@ void TMxpFrameManager::recalculateBorders()
     mMxpBorders = QMargins();
 
     if (!mpHost->mpConsole) {
-        mpHost->setBorders(mMxpBorders);
+        mpHost->setMxpBorders(mMxpBorders);
         return;
     }
 
@@ -1065,5 +1049,5 @@ void TMxpFrameManager::recalculateBorders()
     }
 
     // Apply the recalculated borders
-    mpHost->setBorders(mMxpBorders);
+    mpHost->setMxpBorders(mMxpBorders);
 }

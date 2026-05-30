@@ -1138,19 +1138,19 @@ end
 _Echos = {
   Patterns = {
     Hex = {
-      [[(\x5c?(?:#|\|c)?(?:[0-9a-fA-F]{6}|(?:#,|\|c,)[0-9a-fA-F]{6,8})(?:,[0-9a-fA-F]{6,8})?)|(?:\||#)(\/?[biruso])]],
+      rex.new [[(\x5c?(?:#|\|c)?(?:[0-9a-fA-F]{6}|(?:#,|\|c,)[0-9a-fA-F]{6,8})(?:,[0-9a-fA-F]{6,8})?)|(?:\||#)(\/?[biruso])]],
       rex.new [[(?:#|\|c)(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?)?]],
     },
     Decimal = {
-      [[(<[0-9,:]+>)|<(/?[biruso])>]],
+      rex.new [[(<[0-9,:]+>)|<(/?[biruso])>]],
       rex.new [[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}),?([0-9]{1,3})?)?>]],
     },
     Color = {
-      [[(</?[a-zA-Z0-9_,:]+>)]],
+      rex.new [[(</?[a-zA-Z0-9_,:]+>)]],
       rex.new [[<([a-zA-Z0-9_]+)?(?:[:,](?=>))?(?:[:,]([a-zA-Z0-9_]+))?>]],
     },
     Ansi = {
-      [[(<[0-9,:]+>)]],
+      rex.new [[(<[0-9,:]+>)]],
       rex.new [[<([0-9]{1,2})?(?::([0-9]{1,2}))?>]],
     },
   },
@@ -2885,20 +2885,48 @@ function hecho2html(str, resetFormat)
   return echoConverter(str, "Hex", "html", resetFormat)
 end
 
--- selects every instance of a string on the cursor's current line, and executes a provided function for each one
--- @tparam string str the string to select every instance of.
--- @tparam function func the function to run for every selected instance of the string.
-function selectAll(str, func)
+--- Selects all occurrences of a string on the current line and calls a function
+--- for each match. Optionally operates on a named window.
+---
+--- @usage Select all occurrences on the main window:
+---   <pre>
+---   selectAll("hello", function() setBgColor(255, 0, 0) end)
+---   </pre>
+--- @usage Select all occurrences on a named window:
+---   <pre>
+---   selectAll("myWindow", "hello", function() setBgColor("myWindow", 255, 0, 0) end)
+---   </pre>
+---
+--- @see selectString
+function selectAll(windowName, str, func)
+  if not func then
+    func = str
+    str = windowName
+    windowName = nil
+  end
+
   local strType = type(str)
   local funcType = type(func)
   if strType ~= "string" then
-    printError("selectAll: bad argument #1 type (string expected, got " .. strType .. "!)", true, true)
+    local argNum = windowName and "#2" or "#1"
+    printError("selectAll: bad argument " .. argNum .. " type (string expected, got " .. strType .. "!)", true, true)
+    return
   elseif funcType ~= "function" then
-    printError("selectAll: bad argument #2 type (function expected, got " .. funcType .. "!)", true, true)
+    local argNum = windowName and "#3" or "#2"
+    printError("selectAll: bad argument " .. argNum .. " type (function expected, got " .. funcType .. "!)", true, true)
+    return
   end
+
   local count = 1
-  while selectString(str, count) > -1 do
-    func()
-    count = count + 1
+  if windowName then
+    while selectString(windowName, str, count) > -1 do
+      func()
+      count = count + 1
+    end
+  else
+    while selectString(str, count) > -1 do
+      func()
+      count = count + 1
+    end
   end
 end

@@ -34,13 +34,16 @@
 #include "TTrigger.h"
 #include "XMLexport.h"
 
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 #include <QDesktopServices>
 #include <QDirIterator>
 #include <QFileDialog>
+#include <QFutureWatcher>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QSettings>
+#include <QStandardPaths>
 #include <QTimer>
 
 // We are now using code that won't work with really old versions of libzip;
@@ -53,7 +56,7 @@
 
 dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
 : QDialog(parent)
-, ui(new Ui::dlgPackageExporter)
+, ui(std::make_unique<Ui::dlgPackageExporter>())
 , mpHost(pHost)
 {
     ui->setupUi(this);
@@ -122,8 +125,6 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
     dlgPackageExporter* te_parent = static_cast<dlgPackageExporter*>(topLevelWidget());
     te_parent->mPlainDescription = ui->textEdit_description->toPlainText();
 
-    ui->packageList->addItem(tr("update installed package"));
-
     populateDependencies();
 
     listTriggers();
@@ -151,10 +152,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
     connect(mpHost, &QObject::destroyed, this, &dlgPackageExporter::close);
 }
 
-dlgPackageExporter::~dlgPackageExporter()
-{
-    delete ui;
-}
+dlgPackageExporter::~dlgPackageExporter() = default;
 
 void dlgPackageExporter::setModuleCreationMode(bool isModule)
 {
@@ -428,12 +426,23 @@ void dlgPackageExporter::populateDependencies()
 {
     ui->DependencyList->clear();
     ui->DependencyList->addItem(tr("add dependencies"));
+    const QSignalBlocker blocker(ui->packageList);
+    const QString previousSelection = ui->packageList->currentText();
+    ui->packageList->clear();
+    //: First item in package selection dropdown - when selected, allows updating an existing installed package
+    ui->packageList->addItem(tr("update installed package"));
     ui->packageList->addItems(mpHost->mInstalledPackages);
+
     ui->DependencyList->addItems(mpHost->mInstalledPackages);
     auto modules = mpHost->mInstalledModules;
     for (const auto& [moduleName, moduleData] : modules.asKeyValueRange()) {
         ui->packageList->addItem(moduleName);
         ui->DependencyList->addItem(moduleName);
+    }
+
+    const int previousIndex = ui->packageList->findText(previousSelection);
+    if (previousIndex >= 0) {
+        ui->packageList->setCurrentIndex(previousIndex);
     }
 }
 

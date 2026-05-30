@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015-2018, 2020, 2022, 2024-2025 by Stephen Lyons       #
+#    Copyright (C) 2015-2018, 2020, 2022, 2024-2026 by Stephen Lyons       #
 #                                                - slysven@virginmedia.com #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -41,6 +41,54 @@ if(APPLE)
 endif()
 
 project(mudlet)
+
+# All the other files that we want to see in the editor but which CMake doesn't
+# do anything with.
+# Gather non-compiled files for IDE visibility using glob patterns
+# Note: New files are picked up automatically on CMake reconfigure
+file(GLOB ROOT_FILES_LIST CONFIGURE_DEPENDS
+  .clang-tidy
+  .crowdin.yml
+  .cursorrules
+  .gitignore
+  .gitmodules
+  .imgbotconfig
+  .DirIcon
+  *.md
+  COMMITMENT
+  COMPILE
+  COPYING
+  CPPLINT.cfg
+  dangerfile.js
+  asan-suppressions.txt
+  mudlet.desktop
+  mudlet.png
+  mudlet.svg
+  icon_*.png
+)
+
+file(GLOB_RECURSE OTHER_FILES_LIST CONFIGURE_DEPENDS
+  .github/**
+  .devcontainer/**
+  .vscode/**
+  .claude/**
+  3rdparty/discord/rpc/lib/*
+  CI/**
+  docker/**
+  docs/**
+  .clang-format
+  src/.gitignore
+)
+
+# It is not clear that the "COMMENT" actually shows up anywhere - so include
+# a status message:
+message(STATUS "Refreshing OTHER_FILES list...")
+add_custom_target(OTHER_FILES
+  COMMENT "Refreshing OTHER_FILES list for passive file display in IDE"
+  SOURCES
+    ${ROOT_FILES_LIST}
+    ${OTHER_FILES_LIST}
+)
 
 if(CMAKE_CONFIGURATION_TYPES)
   add_custom_target(
@@ -87,7 +135,7 @@ else()
 endif()
 
 # Set APP_VERSION
-set(APP_VERSION 4.20.0)
+set(APP_VERSION 4.20.1)
 
 # Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD or default
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
@@ -133,6 +181,10 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_SHADER_HOT_RELOAD
                         OPTION_VARIABLE USE_SHADER_HOT_RELOAD
                         READABLE_NAME "shader hot-reloading"
                         DEFAULT OFF)
+include_optional_module(ENVIRONMENT_VARIABLE WITH_MEMORY_TRACKING
+                        OPTION_VARIABLE USE_MEMORY_TRACKING
+                        READABLE_NAME "memory tracking"
+                        DEFAULT OFF)
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
@@ -144,7 +196,7 @@ find_package(Qt6 COMPONENTS Core5Compat REQUIRED)
 
 find_package(Lua 5.1 EXACT)
 
-# Set Qt version for edbee-lib and dblsqd
+# Set Qt version for edbee-lib
 option(BUILD_WITH_QT5 "" OFF)
 option(BUILD_WITH_QT6 "" ON)
 
@@ -184,10 +236,6 @@ git_submodule_init(
 #     GIT_SHALLOW TRUE)
 # FetchContent_MakeAvailable(nanobench)
 
-if(USE_UPDATER)
-  git_submodule_init(CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt" SUBMODULE_PATH
-                     "3rdparty/dblsqd" READABLE_NAME "DBLSQD updater")
-endif()
 
 if(APPLE)
   if(USE_UPDATER)
@@ -219,9 +267,6 @@ add_subdirectory(translations/translated)
 add_subdirectory(src)
 add_subdirectory(test)
 
-if(USE_UPDATER)
-  add_subdirectory(3rdparty/dblsqd)
-endif()
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE -O3)

@@ -26,35 +26,28 @@
 #include <QPointer>
 #include <QString>
 
+#include "THyperlinkStyling.h"
+
 class TConsole;
 
-// Forward declaration for visibility settings
-namespace Mudlet {
-struct HyperlinkStyling;
-}
-
-struct TrackedHyperlink {
+struct TrackedHyperlink
+{
     int linkId = 0;
     int lineNumber = 0;
     int startColumn = 0;
     int length = 0;
     QString originalText;
     qint64 creationTimeMs = 0;
-    qint64 timerActivatedMs = 0;  // When the timer was activated (by click); 0 = not yet activated
-    
+    qint64 timerActivatedMs = 0; // When the timer was activated (by click); 0 = not yet activated
+
     enum class Action {
         None,
         Conceal,
         Reveal,
-        RevealThenConceal  // Combined: reveal first, then conceal after click
+        RevealThenConceal // Combined: reveal first, then conceal after click
     };
-    
-    enum class Phase {
-        Initial,
-        Revealed,
-        WaitingToConceal,
-        Concealed
-    };
+
+    enum class Phase { Initial, Revealed, WaitingToConceal, Concealed };
 
     Action action = Action::None;
     Phase phase = Phase::Initial;
@@ -63,13 +56,13 @@ struct TrackedHyperlink {
     bool isConcealed = false;
 
     // Expire triggers
-    bool expireOnInput = false;    // User types/submits something
-    bool expireOnPrompt = false;   // GA/EOR telnet signal received
-    bool expireOnOutput = false;   // New output after idle gap
-    quint32 outputDelayMs = 500;   // Idle gap for output trigger
-    bool expireActivated = false;  // Link has been clicked, expire triggers are active
-    bool skipFirstPrompt = false;  // Skip the immediate prompt after registration
-    bool skipFirstOutput = false;  // Skip the first output gap after registration
+    bool expireOnInput = false;   // User types/submits something
+    bool expireOnPrompt = false;  // GA/EOR telnet signal received
+    bool expireOnOutput = false;  // New output after idle gap
+    quint32 outputDelayMs = 500;  // Idle gap for output trigger
+    bool expireActivated = false; // Link has been clicked, expire triggers are active
+    bool skipFirstPrompt = false; // Skip the immediate prompt after registration
+    bool skipFirstOutput = false; // Skip the first output gap after registration
 };
 
 class THyperlinkVisibilityManager : public QObject
@@ -81,15 +74,14 @@ public:
     ~THyperlinkVisibilityManager() override;
 
     // Returns true if link should start hidden
-    bool registerHyperlink(int linkId, int lineNumber, int startColumn, int length,
-                          const QString& originalText, const Mudlet::HyperlinkStyling& styling);
+    bool registerHyperlink(int linkId, int lineNumber, int startColumn, int length, const QString& originalText, const Mudlet::HyperlinkStyling& styling);
     void unregisterHyperlink(int linkId);
     void onLinkClicked(int linkId);
-    
+
     void onUserInput();
     void onPromptReceived();
     void onDataReceived();
-    
+
     void concealLink(int linkId);
     void revealLink(int linkId);
     bool isLinkConcealed(int linkId) const;
@@ -103,19 +95,23 @@ signals:
 private slots:
     void slot_checkTimers();
     void slot_outputGapExpired();
+    void slot_announceHiddenLinks();
 
 private:
     void startTimerIfNeeded();
     void stopTimerIfNotNeeded();
     void performConcealment(TrackedHyperlink& link);
     void performReveal(TrackedHyperlink& link);
-    
+    void queueHiddenAnnouncement();
+
     void processExpireTriggeredLinks(bool input, bool prompt, bool output);
 
     QPointer<TConsole> mpConsole;
     QMap<int, TrackedHyperlink> mTrackedLinks;
     QTimer* mpTimer = nullptr;
     QTimer* mpOutputGapTimer = nullptr;
+    QTimer* mpAnnouncementTimer = nullptr;
+    int mPendingHiddenCount = 0;
     bool mHasTimerBasedLinks = false;
     qint64 mLastDataReceivedMs = 0;
 };

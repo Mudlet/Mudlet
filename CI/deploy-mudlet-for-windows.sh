@@ -1,6 +1,6 @@
 #!/bin/bash
 ###########################################################################
-#   Copyright (C) 2024-2024  by John McKisson - john.mckisson@gmail.com   #
+#   Copyright (C) 2024-2026  by John McKisson - john.mckisson@gmail.com   #
 #   Copyright (C) 2023-2025  by Stephen Lyons - slysven@virginmedia.com   #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
@@ -21,7 +21,9 @@
 
 set -x
 
-# Version: 2.3.0    Add build counter suffix for multiple builds from same commit
+# Version: 2.5.0    Replace date-based PTB skip with commit-hash check against GitHub releases
+#          2.4.0    Switch from MINGW64 to CLANG64
+#          2.3.0    Add build counter suffix for multiple builds from same commit
 #          2.2.0    Skip commit date check when build is manually forced
 #          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
@@ -29,22 +31,20 @@ set -x
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
-# 2 - Unsupported fork
-# 3 - Not used
+# 2 - Unsupported MSYS2 shell type
+# 3 - Unsupported fork
 # 4 - nuget error
 # 5 - squirrel error
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
+  echo "Please run this script from a CLANG64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
-  export BUILDCOMPONENT="x86_64"
-  # We only support "x86_64" architecture now but we used to do "x86" (32-bit)
-  # as well and exported this value as ARCH for use here and in other scripts
+elif [ "${MSYSTEM}" = "CLANG64" ]; then
+  echo "Building with CLANG64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
-  echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
+  echo "CLANG64 is currently supported. Please rerun this in a bash terminal of"
   echo "that type."
   exit 2
 fi
@@ -144,7 +144,7 @@ fi
 
 # Check if we're building from the Mudlet/Mudlet repository and not a fork
 if [[ "${GITHUB_REPO_NAME}" != "Mudlet/Mudlet" ]]; then
-  exit 2
+  exit 3
 fi
 
 # This will change to end in "-debug" if we ever do that type of build:
@@ -181,21 +181,13 @@ else
   # Check if it's a Public Test Build
   if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
 
-    # Skip commit check if this is a manually forced build
+    # Skip duplicate check if this is a manually forced build
     if [[ "${GITHUB_FORCE_BUILD}" == "true" ]]; then
-      echo "=== Forced build requested, skipping commit date check ==="
-    else
-      # Get the commit date of the last commit
-      COMMIT_DATE=$(git show -s --format="%cs")
-      # Get yesterday's date in the same format
-      YESTERDAY_DATE=$(date --date="yesterday" +%Y-%m-%d)
-
-      if [[ "${COMMIT_DATE}" < "${YESTERDAY_DATE}" ]]; then
-        echo "=== No new commits, aborting public test build generation ==="
-        exit 0
-      else
-        echo "=== New commits, continuing to create a public test build ==="
-      fi
+      echo "=== Forced build requested, skipping duplicate PTB check ==="
+    elif gh release list --repo "${GITHUB_REPOSITORY}" --limit 20 --json tagName \
+            --jq '.[].tagName' 2>/dev/null | grep -qF -- "${BUILD_COMMIT}"; then
+      echo "=== PTB already exists for commit ${BUILD_COMMIT}, aborting public test build generation ==="
+      exit 0
     fi
 
     # Squirrel uses the name of the binary for the Start menu, so need to rename
@@ -268,13 +260,15 @@ else
     # appended the short commit SHA1 - and just not worry about any sort of
     # sorting:
     INSTALLER_VERSION="${VERSION}-ptb-${BUILD_COMMIT,,}${BUILD_COUNTER_SUFFIX}"
-    # The name we want to use for the installer;
+    # The actual installer filename. Must NOT include '-installer' for PTBs —
+    # make.mudlet.org's gha_queue processor matches the extracted filename from
+    # the GHA artifact ZIP, and it expects this convention.
     # Typically of form: 'Mudlet-4.19.1-ptb-2025-01-01-012345678-windows-64.exe'
     # Or with build counter: 'Mudlet-4.19.1-ptb-2025-01-01-012345678rebuild2-windows-64.exe'
     INSTALLER_EXE="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64.exe"
     DBLSQD_VERSION_STRING="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}${BUILD_COUNTER_SUFFIX}"
-    # The name that has to be passed as the artifact so that the Mudlet website
-    # will accept it as a PTB:
+    # The GHA artifact name — includes '-installer' so make.mudlet.org
+    # recognises it as a PTB installer (distinct from the snapshot .zip):
     ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64-installer.exe"
   else
     NAME_SUFFIX='_64_'
@@ -326,6 +320,20 @@ else
   INSTALLER_EXE_PATHFILE="$(cygpath -au "${RELEASE_DIR}/${INSTALLER_EXE}")"
   echo "Renaming \"Mudlet${NAME_SUFFIX}Setup.exe\" to \"${INSTALLER_EXE}\""
   mv "${RELEASE_DIR}/Mudlet${NAME_SUFFIX}Setup.exe" "${INSTALLER_EXE_PATHFILE}"
+
+  echo "=== Generating SHA256 checksum for GitHub Release ==="
+  (cd "$(dirname "${INSTALLER_EXE_PATHFILE}")" && sha256sum "$(basename "${INSTALLER_EXE_PATHFILE}")") > "${INSTALLER_EXE_PATHFILE}.sha256"
+  if [ ! -s "${INSTALLER_EXE_PATHFILE}.sha256" ]; then
+    echo "Error: SHA256 checksum generation failed for ${INSTALLER_EXE_PATHFILE}"
+    exit 1
+  fi
+  {
+    echo "RELEASE_ASSET_PATH=${INSTALLER_EXE_WINPATHFILE}"
+    echo "RELEASE_ASSET_SHA256_PATH=$(cygpath -aw "${INSTALLER_EXE_PATHFILE}.sha256")"
+    echo "VERSION=${VERSION}"
+    echo "MUDLET_VERSION_BUILD=${MUDLET_VERSION_BUILD}"
+    echo "BUILD_COMMIT=${BUILD_COMMIT}"
+  } >> "${GITHUB_ENV}"
 
   if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
     echo "=== Preparing artifact for PTB for upload to make.mudlet.org ==="
@@ -408,7 +416,8 @@ EOF
     echo "=== Uploading portable ZIP to mudlet.org ==="
     # Define portable ZIP paths
     PORTABLE_ZIP_NAME="Mudlet-portable-${MSYSTEM,,}.zip"
-    PORTABLE_ZIP_PATH="${GITHUB_WORKSPACE_UNIX_PATH}/${PORTABLE_ZIP_NAME}"
+    PORTABLE_ZIP_PATH="$(cygpath -au "${GITHUB_WORKSPACE}")/${PORTABLE_ZIP_NAME}"
+    PORTABLE_ZIP_WINPATH="$(cygpath -aw "${PORTABLE_ZIP_PATH}")"
 
     # Check if portable ZIP exists
     if [[ -f "${PORTABLE_ZIP_PATH}" ]]; then
@@ -419,9 +428,9 @@ EOF
       powershell.exe -Command "icacls.exe temp_key_file_portable /inheritance:r"
 
       # Upload portable ZIP via SCP with proper naming
-      PORTABLE_REMOTE_NAME="Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
+      PORTABLE_REMOTE_NAME="Mudlet-${VERSION}-windows-64-portable.zip"
       powershell.exe <<EOF
-\$portableZipPath = "${PORTABLE_ZIP_PATH}"
+\$portableZipPath = "${PORTABLE_ZIP_WINPATH}"
 \$DEPLOY_PATH = "${DEPLOY_PATH}"
 \$remoteFileName = "${PORTABLE_REMOTE_NAME}"
 scp.exe -i temp_key_file_portable -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$portableZipPath mudmachine@mudlet.org:\${DEPLOY_PATH}/\$remoteFileName
@@ -430,7 +439,7 @@ EOF
       shred -u temp_key_file_portable
 
       # Define portable ZIP URL - should match the naming convention
-      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
+      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-64-portable.zip"
 
       # Verify portable ZIP was uploaded
       if ! curl --output /dev/null --silent --head --fail "${PORTABLE_DEPLOY_URL}"; then
@@ -449,7 +458,7 @@ EOF
       -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
       -F "file_type=2" \
       -F "file_remote=${PORTABLE_DEPLOY_URL}" \
-      -F "file_name=Mudlet ${VERSION} Portable (windows-${BUILD_BITNESS})" \
+      -F "file_name=Mudlet ${VERSION} Portable (windows-64)" \
       -F "file_des=sha256: ${PORTABLE_SHA256SUM}" \
       -F "file_cat=${FILE_CATEGORY}" \
       -F "file_permission=-1" \

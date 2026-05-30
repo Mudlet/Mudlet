@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2022-2023, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,11 +20,9 @@
  ***************************************************************************/
 
 #include "TLinkStore.h"
-#if !defined(LinkStore_Test)
 #include "TBuffer.h" // For Mudlet::HyperlinkStyling definition
 #include "Host.h"
 #include "utils.h" // For qsl() macro
-#endif
 
 #include <QSet>
 
@@ -63,9 +62,7 @@ void TLinkStore::freeReference(Host* pH, const QVector<int>& oldReference)
 
     for (int i = 0, total = oldReference.size(); i < total; ++i) {
         if (oldReference.value(i, 0)) {
-#if !defined(LinkStore_Test)
             pH->mLuaInterpreter.freeLuaRegistryIndex(oldReference.at(i));
-#endif
         }
     }
 }
@@ -74,7 +71,6 @@ void TLinkStore::removeLinkById(int id, Host* pH)
 {
     freeReference(pH, mReferenceStore.value(id));
 
-#if !defined(LinkStore_Test)
     if (mStylingStore.contains(id)) {
         const Mudlet::HyperlinkStyling& styling = mStylingStore[id];
         if (styling.selection.hasSelectionSettings) {
@@ -82,7 +78,6 @@ void TLinkStore::removeLinkById(int id, Host* pH)
             mSelectionGroupIndex.remove(key, id);
         }
     }
-#endif
 
     mLinkStore.remove(id);
     mHintStore.remove(id);
@@ -94,9 +89,7 @@ void TLinkStore::removeLinkById(int id, Host* pH)
         mExpireStore.remove(id);
     }
 
-#if !defined(LinkStore_Test)
     mStylingStore.remove(id);
-#endif
 }
 
 void TLinkStore::expireLinks(const QString& expireName, Host* pH)
@@ -107,7 +100,7 @@ void TLinkStore::expireLinks(const QString& expireName, Host* pH)
 
     QList<int> linkIds = mExpireToLinks.values(expireName);
 
-    for (int linkId : linkIds) {
+    for (const int linkId : std::as_const(linkIds)) {
         removeLinkById(linkId, pH);
     }
 }
@@ -127,7 +120,6 @@ void TLinkStore::removeUnreferencedLinks(const QSet<int>& referencedIds, Host* p
     }
 }
 
-#if !defined(LinkStore_Test)
 void TLinkStore::setStyling(int id, const Mudlet::HyperlinkStyling& styling)
 {
     // Remove old selection group index entry if it exists
@@ -163,4 +155,3 @@ QList<int> TLinkStore::getLinkIdsByGroupValue(const QString& group, const QStrin
     QPair<QString, QString> key = qMakePair(group, value);
     return mSelectionGroupIndex.values(key);
 }
-#endif
