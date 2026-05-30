@@ -96,15 +96,13 @@ if [ "${DEPLOY}" = "deploy" ]; then
       if [[ "${GITHUB_FORCE_BUILD}" == "true" ]]; then
         echo "== Forced build requested, skipping duplicate PTB check =="
       else
-        # gh needs GH_TOKEN in the environment - if the query fails (missing
-        # token or API error) we must not silently build a duplicate, so warn
-        # and carry on rather than swallowing the error and falling through.
+        # don't swallow a gh failure (e.g. missing GH_TOKEN) - warning and
+        # building beats silently shipping a duplicate PTB
         if existing_ptb_tags=$(gh release list --repo "${GITHUB_REPOSITORY}" --limit 100 \
               --json tagName --jq '.[].tagName | select(contains("-ptb-"))'); then
           while IFS= read -r existing_tag; do
             [[ -n "${existing_tag}" ]] || continue
-            # the short commit hash is the trailing field of the release tag;
-            # compare on prefix as git can vary the abbreviated length per run
+            # prefix-compare as git can vary the abbreviated hash length per run
             existing_commit="${existing_tag##*-}"
             if [[ -n "${BUILD_COMMIT}" ]] \
                 && { [[ "${BUILD_COMMIT}" == "${existing_commit}"* ]] \
