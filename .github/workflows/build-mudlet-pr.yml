@@ -406,6 +406,8 @@ jobs:
         APPLE_TEAM_ID: ${{secrets.APPLE_TEAM_ID}}
         WITH_SENTRY: "ON"
         GITHUB_FORCE_BUILD: ${{ github.event.inputs.scheduled == 'true' }}
+        # needed so CI/*.after_success.sh can query existing releases to skip duplicate PTBs
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v7
