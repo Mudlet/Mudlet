@@ -138,23 +138,23 @@ endif()
 set(APP_VERSION 4.21.0)
 
 # Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD or default
-# if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
-#     set(BUILD_VALUE "$ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
-# else()
-#     set(BUILD_VALUE "-dev-${GIT_SHA1}")
-# endif()
+if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
+    set(BUILD_VALUE "$ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
+else()
+    set(BUILD_VALUE "-dev-${GIT_SHA1}")
+endif()
 
 # Write to app-build.txt and set APP_BUILD
-# file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "${BUILD_VALUE}")
-# message(STATUS "Value written to app-build.txt file: ${BUILD_VALUE}")
-# set(APP_BUILD ${BUILD_VALUE} CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
+file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "${BUILD_VALUE}")
+message(STATUS "Value written to app-build.txt file: ${BUILD_VALUE}")
+set(APP_BUILD ${BUILD_VALUE} CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 set(LIB_MUDLET_TARGET "mudlet_core")
 
 # For release builds, comment out the above and uncomment below:
-file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
-message(STATUS "Value written to app-build.txt file: {nothing}")
-set(APP_BUILD "" CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
+# file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
+# message(STATUS "Value written to app-build.txt file: {nothing}")
+# set(APP_BUILD "" CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
