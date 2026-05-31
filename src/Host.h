@@ -194,6 +194,10 @@ public:
     QString& getPass() { return mPass; }
     void setPass(const QString& password) { mPass = password; }
     bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && !mPass.isEmpty(); }
+    int getAutoLoginUsernameDelay() const { return mAutoLoginUsernameDelay; }
+    void setAutoLoginUsernameDelay(const int delay) { mAutoLoginUsernameDelay = delay; }
+    int getAutoLoginPasswordDelay() const { return mAutoLoginPasswordDelay; }
+    void setAutoLoginPasswordDelay(const int delay) { mAutoLoginPasswordDelay = delay; }
     int getRetries() { return mRetries; }
     void setRetries(const int retries) { mRetries = retries; }
     int getTimeout() { return mTimeout; }
@@ -923,6 +927,9 @@ private:
     QString mLine;
     QString mLogin;
     QString mPass;
+
+    int mAutoLoginUsernameDelay = 2000;
+    int mAutoLoginPasswordDelay = 1000;
 
     int mPort;
 

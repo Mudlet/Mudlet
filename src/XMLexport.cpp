@@ -491,6 +491,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mProxyAddress") = pHost->mProxyAddress.toUtf8().constData();
     host.append_attribute("mProxyPort") = QString::number(pHost->mProxyPort).toUtf8().constData();
     host.append_attribute("mProxyUsername") = pHost->mProxyUsername.toUtf8().constData();
+    host.append_attribute("mAutoLoginUsernameDelay") = QString::number(pHost->mAutoLoginUsernameDelay).toUtf8().constData();
+    host.append_attribute("mAutoLoginPasswordDelay") = QString::number(pHost->mAutoLoginPasswordDelay).toUtf8().constData();
 
     // Handle proxy password based on application version for backward compatibility
     // For version 4.20.0+, use secure storage and clear XML; for older versions, maintain plaintext in XML
