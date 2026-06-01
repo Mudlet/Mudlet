@@ -263,10 +263,22 @@ private slots:
     editorComponent->setFocus();
     QTRY_VERIFY(editorComponent->hasFocus());
 
+    autocompleteList->addItems({qsl("alpha"), qsl("beta")});
+    autocompleteList->setCurrentRow(0);
+    popupMenu->show();
+    autocompleteList->show();
+
+    QKeyEvent downEvent(QEvent::KeyPress, Qt::Key_Down, Qt::NoModifier);
+    QCoreApplication::sendEvent(editorComponent, &downEvent);
+    QCOMPARE(autocompleteList->currentRow(), 1);
+    QTRY_VERIFY(editorComponent->hasFocus());
+
+    autocompleteList->setFocusPolicy(Qt::StrongFocus);
     autocompleteList->setFocus();
     QCoreApplication::processEvents();
     QTRY_VERIFY(editorComponent->hasFocus());
     QVERIFY(!autocompleteList->hasFocus());
+    autocompleteList->setFocusPolicy(Qt::NoFocus);
   }
 
   void testCoreOperations_data() {

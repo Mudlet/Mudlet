@@ -650,6 +650,7 @@ private:
     edbee::TextDocument* mpSourceEditorEdbeeDocument = nullptr;
     edbee::TextSearcher* mpSourceEditorSearcher = nullptr;
     QPointer<QWidget> mpSourceEditorAutocompleteList;
+    bool mForwardingSourceEditorAutocompleteKey = false;
 
     inline static const QRegularExpression csmSimplifyStatusBarRegex{qsl(R"(^(?:\[\*\] )?(.+?) \|)")};
 
