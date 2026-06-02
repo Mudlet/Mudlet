@@ -171,20 +171,20 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              false,
              qsl("<a href='https://darkmists.org'>https://darkmists.org</a>"),
              qsl(":/icons/banner_darkmists.png"),
-             QString("Dark Mists is a persistent online fantasy world featuring 24 races "
-                     "and 11 classes, 9 of which branch into distinct subclasses, with "
-                     "dozens of quests and hundreds of skills and spells tied to class, "
-                     "subclass, or race. The world is shaped by the players through "
-                     "active clans and a worship system with direct interaction with "
-                     "the Gods of Dark Mists. The Immortals are present in-game and "
-                     "continue developing new content for the world. The community is "
-                     "welcoming and helpful to newcomers while encouraging competition "
-                     "and growth. Houses remain active and provide guidance and support "
-                     "for new and returning players. Roleplay is required and "
-                     "playerkilling is an integral part of character growth, rewarding "
-                     "wit, courage, and ambition. The world continues to evolve with "
-                     "new discoveries and challenges. Come carve out your legacy in "
-                     "Dark Mists.")},
+             qsl("Dark Mists is a persistent online fantasy world featuring 24 races "
+                 "and 11 classes, 9 of which branch into distinct subclasses, with "
+                 "dozens of quests and hundreds of skills and spells tied to class, "
+                 "subclass, or race. The world is shaped by the players through "
+                 "active clans and a worship system with direct interaction with "
+                 "the Gods of Dark Mists. The Immortals are present in-game and "
+                 "continue developing new content for the world. The community is "
+                 "welcoming and helpful to newcomers while encouraging competition "
+                 "and growth. Houses remain active and provide guidance and support "
+                 "for new and returning players. Roleplay is required and "
+                 "playerkilling is an integral part of character growth, rewarding "
+                 "wit, courage, and ambition. The world continues to evolve with "
+                 "new discoveries and challenges. Come carve out your legacy in "
+                 "Dark Mists.")},
 
             {qsl("God Wars II"),
              qsl("godwars2.org"),
