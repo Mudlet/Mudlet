@@ -35,6 +35,12 @@
 # Should be called before PROJECT.
 cmake_minimum_required(VERSION 3.25.1)
 
+if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "FreeBSD")
+ set(FREEBSD true)
+else()
+ set(FREEBSD false)
+endif()
+
 if(APPLE)
   # minimum supported version by Qt6
   set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "")
@@ -200,6 +206,7 @@ find_package(Lua 5.1 EXACT)
 option(BUILD_WITH_QT5 "" OFF)
 option(BUILD_WITH_QT6 "" ON)
 
+if (NOT FREEBSD)
 include(InitGitSubmodule)
 
 git_submodule_init(
@@ -209,6 +216,9 @@ git_submodule_init(
   git_submodule_init(
     CHECK_FILE "3rdparty/qt-tags-widget/CMakeLists.txt" SUBMODULE_PATH
     "3rdparty/qt-tags-widget" READABLE_NAME "qt-tags-widget widget")
+else()
+ message(VERBOSE "FreeBSD Host. Be sure .gitsubmodules are fulfilled.")
+endif()
 
 # TODO: On macOS, we need to build qtkeychain from source because Homebrew's
 # qtkeychain package is built against Homebrew's Qt, which is incompatible with
@@ -223,9 +233,13 @@ if(APPLE)
   add_subdirectory(3rdparty/qtkeychain)
 endif()
 
+if (NOT FREEBSD)
 git_submodule_init(
   CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"
   READABLE_NAME "lua code formatter source code")
+else()
+ message(VERBOSE "FreeBSD Host. Be sure .gitsubmodules are fulfilled.")
+endif()
 
 # PLACEMARKER: sample benchmarking code
 # include(FetchContent)
