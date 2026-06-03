@@ -35,11 +35,7 @@ VarUnit::VarUnit()
 {
 }
 
-VarUnit::~VarUnit()
-{
-    // Delete the base TVar and all its children (recursively via TVar destructor)
-    delete base;
-}
+VarUnit::~VarUnit() = default;
 
 bool VarUnit::isHidden(TVar* var)
 {
@@ -216,14 +212,14 @@ QStringList VarUnit::varName(TVar* var)
 {
     QStringList names;
     names << "_G";
-    if (var == base || !var) {
+    if (var == base.get() || !var) {
         return names;
     }
     names << var->getName();
     TVar* p = var->getParent();
-    while (p && p != base) {
+    while (p && p != base.get()) {
         names.insert(1, p->getName());
-        if (p == base) {
+        if (p == base.get()) {
             break;
         }
         p = p->getParent();
@@ -319,19 +315,17 @@ bool VarUnit::varExists(TVar* var)
 
 TVar* VarUnit::getBase()
 {
-    return base;
+    return base.get();
 }
 
 void VarUnit::setBase(TVar* pVariable)
 {
-    base = pVariable;
+    base.reset(pVariable);
 }
 
 void VarUnit::clear()
 {
-    // Delete the base TVar and all its children (recursively via TVar destructor)
-    delete base;
-    base = nullptr;
+    base.reset();
     tVars.clear();
     wVars.clear();
     variableSet.clear();

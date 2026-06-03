@@ -28,19 +28,20 @@ class SingleLineTextEdit : public QPlainTextEdit
     Q_OBJECT
 
 public:
-    explicit SingleLineTextEdit(QWidget *parent = nullptr);
+    explicit SingleLineTextEdit(QWidget* parent = nullptr);
     void setHighlightingEnabled(bool enabled);
     void setTheme(const QString&);
     void rehighlight();
 
 protected:
-    void insertFromMimeData(const QMimeData *source) override;
-    void keyPressEvent(QKeyEvent *event) override;
-    void resizeEvent(QResizeEvent *event) override;
+    QMimeData* createMimeDataFromSelection() const override;
+    void insertFromMimeData(const QMimeData* source) override;
+    void keyPressEvent(QKeyEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
 
 private:
-    TriggerHighlighter *highlighter;
+    TriggerHighlighter* highlighter;
 };
 
 #endif // SINGLELINETEXTEDIT_H

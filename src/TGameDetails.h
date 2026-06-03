@@ -115,9 +115,17 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl("achaea.com"),
              23,
              false,
-             qsl("<a href='http://www.achaea.com/'>http://www.achaea.com</a>"),
-             qsl(":/icons/achaea_120_30.png"),
-             QString()},
+             qsl("<a href='http://www.achaea.com/'>Website</a><br>"
+                 "<a href='https://discord.gg/2v2upFTj8G'>Discord</a>"),
+             qsl(":/icons/achaea.png"),
+             qsl("In Achaea, your name carries weight."
+                 "\n\n"
+                 "Some worlds are easy to leave behind. Achaea is not one of them. The cities, the Houses, the rivalries, "
+                 "the faith, the politics all create the social gravity veterans remember."
+                 "\n\n"
+                 "Reputation matters here. History lingers. What you do shapes how people know you."
+                 "\n\n"
+                 "Come back to a world where identity means more than a build.")},
 
             {qsl("3Kingdoms"),
              qsl("3k.org"),
@@ -153,9 +161,18 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl("lusternia.com"),
              5000,
              false,
-             qsl("<a href='http://www.lusternia.com/'>http://www.lusternia.com</a>"),
-             qsl(":/icons/lusternia_120_30.png"),
-             QString()},
+             qsl("<a href='http://www.lusternia.com/'>Website</a><br>"
+                 "<a href='https://discord.gg/d8PECxD739'>Discord</a>"),
+             qsl(":/icons/lusternia.png"),
+             qsl("Lusternia feels like nowhere else."
+                 "\n\n"
+                 "Not because it tries to be strange for its own sake, but because it never settled for ordinary. "
+                 "The planes are stranger. The lore runs deeper. The factions feel less familiar, and the world keeps "
+                 "opening up long after the first impression."
+                 "\n\n"
+                 "Veterans do not come back to Lusternia for comfort. They come back for discovery."
+                 "\n\n"
+                 "Enter a world that keeps revealing more of itself.")},
 
             {qsl("BatMUD"),
              qsl("batmud.bat.org"),
@@ -309,9 +326,17 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl("aetolia.com"),
              23,
              false,
-             qsl("<a href='http://www.aetolia.com/'>http://www.aetolia.com</a>"),
-             qsl(":/icons/aetolia_120_30.png"),
-             QString()},
+             qsl("<a href='http://www.aetolia.com/'>Website</a><br>"
+                 "<a href='https://discord.gg/x2s7fY6'>Discord</a>"),
+             qsl(":/icons/aetolia.png"),
+             qsl("Aetolia does not do safe fantasy."
+                 "\n\n"
+                 "It never did."
+                 "\n\n"
+                 "This is a world of darkness, pressure, factional loyalty, and choices that leave scars. "
+                 "Allegiance matters. Hostility kills. The atmosphere is not decoration. It is part of the threat."
+                 "\n\n"
+                 "Step back into a world that does not let you stay comfortable.")},
 
             {qsl("Astaria"),
              qsl("astaria.net"),
@@ -328,9 +353,17 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl("imperian.com"),
              4000,
              false,
-             qsl("<a href='http://www.imperian.com/'>http://www.imperian.com</a>"),
-             qsl(":/icons/imperian_120_30.png"),
-             QString()},
+             qsl("<a href='http://www.imperian.com/'>Website</a><br>"
+                 "<a href='https://discord.gg/QX42sY8E7U'>Discord</a>"),
+             qsl(":/icons/imperian.png"),
+             qsl("Imperian was made for conflict."
+                 "\n\n"
+                 "Rivalry matters here. Pressure matters. Momentum matters. Nothing feels softened, "
+                 "and very little is handed to you. That harder edge is exactly what veterans remember."
+                 "\n\n"
+                 "Imperian has always been about conflict with teeth and reputation earned the hard way."
+                 "\n\n"
+                 "If you want fantasy that hits harder and asks more of you, start here.")},
 
             {qsl("WoTMUD"),
              qsl("game.wotmud.org"),
@@ -383,6 +416,21 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "destruction are rising from a long slumber to again wreak havoc on the realm.  "
                  "The gameplay of Luminari will be familiar to anyone who has played Dungeons and "
                  "Dragons, Pathfinder or any of the many RPG systems based on the d20 ruleset.")},
+
+            {qsl("Starmourn"),
+             qsl("starmourn.com"),
+             3000,
+             false,
+             qsl("<a href='http://www.starmourn.com/'>Website</a><br>"
+                 "<a href='https://discord.gg/H8m7pFV'>Discord</a>"),
+             qsl(":/icons/starmourn.png"),
+             qsl("Starmourn offers a galaxy with real edge."
+                 "\n\n"
+                 "Factions, syndicates, aliens, cybernetics, advanced tech, and a style all its own make "
+                 "Starmourn feel different from the usual fantasy loop. It is a universe built around danger, "
+                 "ambition, and the chance to carve out a name where safety was never promised."
+                 "\n\n"
+                 "The future is open. Take your place in it.")},
 
             {qsl("StickMUD"),
              qsl("stickmud.com"),
@@ -708,6 +756,71 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "but it is the most dynamic game ever attempted. The wind affects the ships, where "
                  "fire spreads, and even how some critters smell you if you are upwind from them.\n\n"
                  "Do you dare enter?")},
+
+            {qsl("Dragonfire MUD"),
+             qsl("dragonfiremud.com"),
+             1999,
+             false,
+             qsl("<a href='https://www.dragonfiremud.com/'>https://www.dragonfiremud.com/</a>"),
+             qsl(":/icons/dragonfire_icon.png"),
+             qsl("Dragonfire MUD is an ancient LPMUD that has been online since 1989, offering deep "
+                 "lore and a classic text-based RPG experience. It features 16 distinctive guilds, "
+                 "over 10,000 unique rooms, and hundreds of custom quests that you can tackle at your "
+                 "own pace."
+                 "\n\n"
+                 "Explore realms spanning fantasy, modern, future, and shadowy secrets, hunt dragons "
+                 "for experience and loot, and discover hidden areas and guilds. Optional player "
+                 "killing is allowed, and the community welcomes new adventurers and builders alike.")},
+
+            {qsl("Beyond the Void MUD"),
+             qsl("voidmud.com"),
+             2201,
+             false,
+             qsl("<a href='https://www.voidmud.com/'>https://www.voidmud.com/</a>"),
+             qsl(":/icons/voidmud_icon.png"),
+             qsl("Beyond the Void is an EverQuest-inspired text RPG that brings the world of Norrath "
+                 "to life with a reimagined storyline touched by an ancient alien race and its rift "
+                 "stones for fast travel. The Void serves as a central hub with trainers, guild "
+                 "masters, and trade for every profession."
+                 "\n\n"
+                 "Free to play and ready for adventurers, the game emphasizes classic EverQuest "
+                 "combat in a modern text-only experience. Build a character with up to three "
+                 "classes, pursue epic quests and rebirth bonuses, and enjoy quality-of-life "
+                 "features like a custom Mudlet UI and real-time maps.")},
+
+            {qsl("Pku XKX MUD"),
+             qsl("pkuxkx.net"),
+             8081,
+             false,
+             qsl("<a href='https://www.pkuxkx.net/'>https://www.pkuxkx.net/</a>"),
+             qsl(":/icons/pkuxkx.png"),
+             qsl("Peking University Heroes (pkuxkx) was first launched on Peking University in 1996. "
+                 "To date, it has over 80 map areas, 10000+ rooms and more than 20 martial arts sects. "
+                 "It boasts over 200 daily active users and is the oldest and most popular "
+                 "Chinese MUD in the Chinese community.\n"
+                 "Website: https://pkuxkx.net/"
+                 "\n\n"
+                 "北大侠客行(pkuxkx)于1996年开始架于北大. 迄今为止，它已经拥有了超过80个地图区域，10000多个房间，20多个武林门派。"
+                 "每日活跃用户有200多人。是华人社区中历史最悠久玩家最多的中文MUD。\n"
+                 "官网: https://pkuxkx.net/；论坛：https://pkuxkx.net/forum/forum.php；WIKI：https://pkuxkx.net/wiki/\n"
+                 "国内(GBK编码) mud.pkuxkx.net:8080； 国内(UTF编码) mud.pkuxkx.net 8081；\n"
+                 "海外转发：https://pkuxkx.net/proxy_status.php 查找推荐线路")},
+
+            {qsl("Icesus"),
+             qsl("icesus.org"),
+             4443,
+             true,
+             qsl("<a href='https://www.icesus.org/'>Website</a><br>"
+                 "<a href='https://discord.gg/j9cSPyAzQb'>Discord</a>"),
+             qsl(":/icons/icesus_480x120.png"),
+             qsl("Icesus is a free fantasy text RPG running since 1995. Actively developed, "
+                 "community-run, and full of deep systems."
+                 "\n\n"
+                 "Build a character from 27 races and 16 guilds. Fight in tactical party "
+                 "combat, explore the frozen Valley of Aegic, and earn your place in "
+                 "player-driven provinces."
+                 "\n\n"
+                 "Old-school depth. Modern access. New players welcome.")},
             };
     // clang-format on
 };

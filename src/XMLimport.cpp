@@ -38,6 +38,8 @@
 #include <QtMath>
 #include <QVersionNumber>
 
+#include <memory>
+
 XMLimport::XMLimport(Host* pH)
 : mpHost(pH)
 {
@@ -157,12 +159,19 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
 
                 readPackage();
             } else if (name() == qsl("map")) {
-                readMap();
-                mpHost->mpMap->audit();
-                mpHost->mpMap->mpMapper->mp2dMap->init();
-                mpHost->mpMap->mpMapper->updateAreaComboBox();
-                mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-                mpHost->mpMap->mpMapper->show();
+                if (!packName.isEmpty()) {
+                    qWarning() << "XMLimport::importPackage(...) WARNING: ignoring unexpected <map> element"
+                                  " - map data should not be present in package XML files";
+                } else {
+                    readMap();
+                    mpHost->mpMap->audit();
+                    if (mpHost->mpMap->mpMapper) {
+                        mpHost->mpMap->mpMapper->mp2dMap->init();
+                        mpHost->mpMap->mpMapper->updateAreaComboBox();
+                        mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+                        mpHost->mpMap->mpMapper->show();
+                    }
+                }
             } else {
                 qDebug().nospace() << "XMLimport::importPackage(...) ERROR: "
                                       "unrecognised element with name: "
@@ -469,7 +478,7 @@ void XMLimport::readRoomFeature(TRoom* pR)
 // TRoomDB::addRoom(...)
 void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int* roomCount)
 {
-    auto pT = new TRoom(mpHost->mpMap->mpRoomDB);
+    auto pT = new TRoom(mpHost->mpMap->mpRoomDB.get());
 
     pT->id = attributes().value(qsl("id")).toString().toInt();
     pT->area = attributes().value(qsl("area")).toString().toInt();
@@ -756,6 +765,16 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);
     setBoolAttribute(qsl("mMapStrongHighlight"), pHost->mMapStrongHighlight);
     setBoolAttribute(qsl("mEnableSpellCheck"), pHost->mEnableSpellCheck);
+    if (attributes().hasAttribute(QLatin1String("mShowInfo"))) {
+        // Old - pre Map Info versions of Mudlet (those before
+        // https://github.com/Mudlet/Mudlet/pull/4718) used the above
+        // setting to control the showing of what is now the "Full"
+        // map info display. So treat it as that to reproduce that
+        // behaviour:
+        if (attributes().value(qsl("mShowInfo")).toString() == YES) {
+            mpHost->mMapInfoContributors.insert(qsl("Full"));
+        }
+    }
     setBoolAttribute(qsl("mAcceptServerGUI"), pHost->mAcceptServerGUI);
     setBoolAttribute(qsl("mAcceptServerMedia"), pHost->mAcceptServerMedia);
     setBoolAttribute(qsl("mMapperUseAntiAlias"), pHost->mMapperUseAntiAlias);
@@ -829,6 +848,8 @@ void XMLimport::readHost(Host* pHost)
         pHost->mEditorTheme = qsl("Mudlet");
         pHost->mEditorThemeFile = qsl("Mudlet.tmTheme");
     }
+    pHost->mEditorThemeDark = attributes().value(QLatin1String("mEditorThemeDark")).toString();
+    pHost->mEditorThemeFileDark = attributes().value(QLatin1String("mEditorThemeFileDark")).toString();
     pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
     pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
     pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));
@@ -852,13 +873,7 @@ void XMLimport::readHost(Host* pHost)
         pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
     }
 
-    if (attributes().hasAttribute("mEnableBlinkText")) {
-        pHost->setEnableBlinkText(attributes().value(qsl("mEnableBlinkText")) == YES);
-    } else {
-        // Default to disabled for safety in a backwards compatible manner
-        // - so it doesn't start flashing unexpectedly:
-        pHost->setEnableBlinkText(false);
-    }
+    pHost->setEnableBlinkText(attributes().value(qsl("mEnableBlinkText")) == qsl("yes"));
 
     if (attributes().hasAttribute("logFileNameFormat")) {
         // We previously mixed "yyyy-MM-dd{#|T}hh-MM-ss" with "yyyy-MM-dd{#|T}HH-MM-ss"
@@ -915,16 +930,17 @@ void XMLimport::readHost(Host* pHost)
         pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value(qsl("mDiscordAccessFlags")).toString().toInt());
     }
 
+    if (attributes().hasAttribute(QLatin1String("mDiscordMode"))) {
+        const int modeInt = attributes().value(qsl("mDiscordMode")).toString().toInt();
+        if (modeInt >= Host::DiscordDisabled && modeInt <= Host::DiscordShowGameDetails) {
+            pHost->mDiscordMode = static_cast<Host::DiscordMode>(modeInt);
+        }
+    }
+
     if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserName"))) {
         pHost->mRequiredDiscordUserName = attributes().value(QLatin1String("mRequiredDiscordUserName")).toString();
     } else {
         pHost->mRequiredDiscordUserName.clear();
-    }
-
-    if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserDiscriminator"))) {
-        pHost->mRequiredDiscordUserDiscriminator = attributes().value(QLatin1String("mRequiredDiscordUserDiscriminator")).toString();
-    } else {
-        pHost->mRequiredDiscordUserDiscriminator.clear();
     }
 
     if (attributes().hasAttribute(QLatin1String("playerRoomStyle"))) {
@@ -966,6 +982,14 @@ void XMLimport::readHost(Host* pHost)
 
     if (qFuzzyCompare(1.0 + pHost->mLineSize, 1.0)) {
         pHost->mLineSize = 10.0; // Same value as is in Host class initializer list
+    }
+
+    pHost->mRoomBorderSize = attributes().value(qsl("mRoomBorderSize")).toString().toDouble();
+
+    if (qFuzzyCompare(1.0 + pHost->mRoomBorderSize, 1.0)) {
+        // For old profiles without border size, use mLineSize to preserve
+        // the previous behavior where border and exit shared the same size
+        pHost->mRoomBorderSize = pHost->mLineSize;
     }
 
     pHost->mMapGridLineSize = attributes().value(qsl("mMapGridLineSize")).toString().toDouble();
@@ -1040,10 +1064,6 @@ void XMLimport::readHost(Host* pHost)
     } else {
         // The default (and for map/profile files from before 4.15.0):
         pHost->setLargeAreaExitArrows(false);
-    }
-
-    if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
-        mpHost->mMapInfoContributors.clear();
     }
 
     QMargins borders;
@@ -2031,7 +2051,7 @@ void XMLimport::readStopWatchMap()
         } else if (isStartElement()) {
             if (name() == qsl("stopwatch")) {
                 const int watchId = attributes().value(qsl("id")).toInt();
-                auto pStopWatch = new stopWatch();
+                auto pStopWatch = std::make_unique<stopWatch>();
                 pStopWatch->setName(attributes().value(qsl("name")).toString());
                 pStopWatch->mIsPersistent = true;
                 pStopWatch->mIsInitialised = true;
@@ -2045,7 +2065,7 @@ void XMLimport::readStopWatchMap()
                     pStopWatch->mIsRunning = false;
                     pStopWatch->mElapsedTime = attributes().value(qsl("elapsedDateTimeMSecs")).toLongLong();
                 }
-                mpHost->mStopWatchMap.insert(watchId, pStopWatch);
+                mpHost->mStopWatchMap[watchId] = std::move(pStopWatch);
                 // A dummy read as there should not be any text for this element:
                 readElementText();
             } else {
@@ -2095,9 +2115,8 @@ void XMLimport::readProfileShortcut()
 {
     auto key = attributes().value(qsl("key"));
     auto sequenceString = readElementText();
-    if (mpHost->profileShortcuts.value(key.toString())) {
-        QKeySequence* sequence = !sequenceString.isEmpty() ? new QKeySequence(sequenceString) : new QKeySequence();
-        mpHost->profileShortcuts.value(key.toString())->swap(*sequence);
-        delete sequence;
+    if (auto it = mpHost->profileShortcuts.find(key.toString()); it != mpHost->profileShortcuts.end()) {
+        QKeySequence sequence = !sequenceString.isEmpty() ? QKeySequence(sequenceString) : QKeySequence();
+        it->second->swap(sequence);
     }
 }
