@@ -30,10 +30,10 @@ class MacMicrophonePermission
 {
 public:
     enum class AuthorizationStatus {
-        NotDetermined,  // User has not yet been asked for permission
-        Restricted,     // User cannot change this setting (parental controls, etc.)
-        Denied,         // User explicitly denied permission
-        Authorized      // User granted permission
+        NotDetermined, // User has not yet been asked for permission
+        Restricted,    // User cannot change this setting (parental controls, etc.)
+        Denied,        // User explicitly denied permission
+        Authorized     // User granted permission
     };
 
     // Prevent instantiation - this is a static-only utility class
@@ -45,7 +45,8 @@ public:
     static AuthorizationStatus checkStatus();
 
     // Request microphone access. The callback is called with true if granted, false otherwise.
-    // Note: The callback may be called on a background thread.
+    // Note: The callback is dispatched to the main thread by the implementation, so callers
+    // can safely interact with Qt UI objects from within it.
     static void requestAccess(std::function<void(bool)> callback);
 };
 

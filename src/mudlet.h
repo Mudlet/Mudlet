@@ -788,6 +788,7 @@ private:
     struct AddonButton
     {
         QPointer<QToolButton> button;
+        QPointer<QAction> toolbarAction;
         QPointer<QTimer> pulseTimer;
         QString name;
         Host* pHost = nullptr;

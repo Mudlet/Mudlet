@@ -26,6 +26,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "mudlet.h"
+#include "SpeechRecognizerFactory.h"
 #include "utils.h"
 #include "dlgMapper.h"
 #include "TRoomDB.h"
@@ -958,7 +959,9 @@ void TDetachedWindow::createToolBar()
     mpButtonSpeechToText->setToolTip(utils::richText(tr("Speech to text (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
     mpButtonSpeechToText->setAutoRaise(true);
     mpButtonSpeechToText->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    mpButtonSpeechToText->setEnabled(true);
+    // Initialize disabled; updateSpeechButton() will enable it when the backend
+    // is available and a profile is active in this detached window.
+    mpButtonSpeechToText->setEnabled(false);
     mpToolBar->addWidget(mpButtonSpeechToText);
     connect(mpButtonSpeechToText, &QToolButton::clicked, this, &TDetachedWindow::slot_toggleSpeechRecognition);
 
@@ -3188,6 +3191,16 @@ void TDetachedWindow::updateSpeechButton()
 
     // Use the global speech recognition state, treating as inactive if mudlet singleton is unavailable
     const bool isActive = mudlet::self() ? mudlet::self()->isSpeechRecognitionActive() : false;
+
+    // Enable button only when the backend is available and this window has an active profile,
+    // mirroring the main window's enable criteria.
+    const bool backendAvailable = SpeechRecognizerFactory::isBackendAvailable(SpeechRecognizerFactory::Backend::Auto);
+    const bool hasProfile = !mCurrentProfileName.isEmpty();
+    const bool enabled = backendAvailable && hasProfile;
+    mpButtonSpeechToText->setEnabled(enabled);
+    if (mpMenuSpeechToTextAction) {
+        mpMenuSpeechToTextAction->setEnabled(enabled);
+    }
 
     // Keep menu action in sync with speech state
     if (mpMenuSpeechToTextAction) {

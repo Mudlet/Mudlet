@@ -31,13 +31,22 @@
 
 #include <QDir>
 
-// stt.init(modelPath)
+// stt.init([modelPath])
 // Initialize speech recognition with a language model.
+// modelPath is optional - falls back to SpeechRecognizerFactory::defaultModelPath().
 // Returns true on success, or nil + error message on failure.
 int TLuaInterpreter::sttInit(lua_State* L)
 {
     const QString funcName = qsl("stt.init");
-    const QString modelPath = getVerifiedString(L, funcName.toUtf8().constData(), 1, "model path");
+    QString modelPath;
+    if (lua_gettop(L) >= 1 && !lua_isnoneornil(L, 1)) {
+        modelPath = getVerifiedString(L, funcName.toUtf8().constData(), 1, "model path");
+    } else {
+        modelPath = SpeechRecognizerFactory::defaultModelPath();
+        if (modelPath.isEmpty()) {
+            return warnArgumentValue(L, funcName.toUtf8().constData(), "no model path provided and no default model is installed - please install a language model via the speech-to-text setup");
+        }
+    }
 
     auto* pMudlet = mudlet::self();
     if (!pMudlet) {

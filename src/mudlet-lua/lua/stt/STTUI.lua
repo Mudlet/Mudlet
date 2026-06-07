@@ -487,6 +487,13 @@ function STT.UI._downloadModel(model)
     return
   end
 
+  -- Reject non-HTTPS URLs to prevent man-in-the-middle tampering of model archives,
+  -- which are consumed by a native library.
+  if not model.url or not model.url:lower():match("^https://") then
+    STT.UI._setDialogStatus("Refusing to download model: URL must use HTTPS", "red")
+    return
+  end
+
   STT.UI._downloading = true
   STT.UI._setDialogStatus("Downloading " .. model.name .. "...", "cyan")
 
@@ -534,6 +541,25 @@ function STT.UI._downloadModel(model)
     end
 
     STT.UI._setDialogStatus("Extracting model...", "cyan")
+
+    -- Basic integrity check: verify downloaded zip size is within a sane range of the
+    -- expected size (model.size is in MB). This catches truncated/corrupted downloads
+    -- and obvious substitutions but is not a substitute for a real checksum.
+    if model.size and model.size > 0 then
+      local attr = lfs.attributes(zipPath)
+      local actualBytes = attr and attr.size or 0
+      local expectedBytes = model.size * 1024 * 1024
+      local minBytes = math.floor(expectedBytes * 0.25)
+      local maxBytes = math.floor(expectedBytes * 3.0)
+      if actualBytes < minBytes or actualBytes > maxBytes then
+        STT.UI._setDialogStatus(string.format(
+          "Downloaded model size (%d bytes) is outside the expected range for %s (~%d MB); aborting.",
+          actualBytes, model.name, model.size), "red")
+        STT.UI._downloading = false
+        os.remove(zipPath)
+        return
+      end
+    end
 
     -- Register unzip completion handler
     STT.UI._unzipDoneHandlerId = registerAnonymousEventHandler("sysUnzipDone", function(evt, zip, dest)

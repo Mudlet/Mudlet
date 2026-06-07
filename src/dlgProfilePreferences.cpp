@@ -772,6 +772,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     label_speechDetectionTiming->setEnabled(voskAvailable);
 
     // Initialize speech recognition engine selector
+    comboBox_speechRecognitionEngine->clear();
     comboBox_speechRecognitionEngine->addItem(qsl("Vosk"));
     comboBox_speechRecognitionEngine->setCurrentIndex(0);
     comboBox_speechRecognitionEngine->setToolTip(utils::richText(tr("Select the speech recognition engine to use. Currently only Vosk is supported.")));

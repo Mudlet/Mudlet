@@ -671,6 +671,7 @@ void mudlet::init()
     connect(dactionMuteGame, &QAction::triggered, this, &mudlet::slot_muteGame);
     connect(dactionSpeechToText, &QAction::triggered, this, &mudlet::slot_toggleSpeechRecognition);
     dactionSpeechToText->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M));
+    dactionSpeechToText->setEnabled(false);
     connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_compactInputLine);
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::slot_showTriggerDialog);
     connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::slot_showEditorDialog);
@@ -2365,6 +2366,9 @@ void mudlet::disableToolbarButtons()
     }
 
     mpButtonSpeechToText->setEnabled(false);
+    if (dactionSpeechToText) {
+        dactionSpeechToText->setEnabled(false);
+    }
 
     dactionInputLine->setEnabled(false);
 
@@ -2552,6 +2556,9 @@ void mudlet::enableToolbarButtons()
     dactionToggleEmergencyStop->setEnabled(true);
 
     mpButtonSpeechToText->setEnabled(true);
+    if (dactionSpeechToText) {
+        dactionSpeechToText->setEnabled(true);
+    }
     updateSpeechButton();
 
 
@@ -5079,11 +5086,12 @@ int mudlet::addAddonToolbarButton(const QString& name, const QString& icon, cons
     button->setToolTip(utils::richText(tooltip));
     button->setAutoRaise(true);
     button->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
-    mpMainToolBar->addWidget(button);
+    QAction* pToolbarAction = mpMainToolBar->addWidget(button);
 
     const int buttonId = mNextAddonButtonId++;
     AddonButton addonButton;
     addonButton.button = button;
+    addonButton.toolbarAction = pToolbarAction;
     addonButton.name = name;
     addonButton.pHost = pHost;
     mAddonButtons[buttonId] = addonButton;
@@ -5120,8 +5128,10 @@ bool mudlet::removeAddonToolbarButton(int buttonId)
         delete addonButton.pulseTimer;
     }
 
+    if (addonButton.toolbarAction) {
+        mpMainToolBar->removeAction(addonButton.toolbarAction);
+    }
     if (addonButton.button) {
-        mpMainToolBar->removeAction(mpMainToolBar->actionAt(addonButton.button->pos()));
         delete addonButton.button;
     }
 
