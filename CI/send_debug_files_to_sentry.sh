@@ -20,6 +20,10 @@
 
 set -e
 
+# sentry-cli version to download; bump this single value to upgrade.
+# Releases: https://github.com/getsentry/sentry-cli/releases
+readonly SENTRY_CLI_VERSION="3.5.0"
+
 download_sentry_cli() {
     local os="$1"
     local arch="$2"
@@ -28,19 +32,19 @@ download_sentry_cli() {
 
     if [[ "$os" == "Darwin" ]]; then
         if [[ "$arch" == "x86_64" ]]; then
-            url="https://github.com/getsentry/sentry-cli/releases/download/3.5.0/sentry-cli-Darwin-x86_64"
+            url="https://github.com/getsentry/sentry-cli/releases/download/${SENTRY_CLI_VERSION}/sentry-cli-Darwin-x86_64"
         elif [[ "$arch" == "arm64" ]]; then
-            url="https://github.com/getsentry/sentry-cli/releases/download/3.5.0/sentry-cli-Darwin-arm64"
+            url="https://github.com/getsentry/sentry-cli/releases/download/${SENTRY_CLI_VERSION}/sentry-cli-Darwin-arm64"
         fi
     elif [[ "$os" == "Linux" ]]; then
         if [[ "$arch" == "x86_64" ]]; then
-            url="https://github.com/getsentry/sentry-cli/releases/download/3.5.0/sentry-cli-Linux-x86_64"
+            url="https://github.com/getsentry/sentry-cli/releases/download/${SENTRY_CLI_VERSION}/sentry-cli-Linux-x86_64"
         fi
     elif [[ "$os" == "MINGW"* || "$os" == "MSYS"* || "$os" == "CYGWIN"* ]]; then
         if [[ "$arch" == "x86_64" ]]; then
-            url="https://github.com/getsentry/sentry-cli/releases/download/3.5.0/sentry-cli-Windows-x86_64.exe"
+            url="https://github.com/getsentry/sentry-cli/releases/download/${SENTRY_CLI_VERSION}/sentry-cli-Windows-x86_64.exe"
         elif [[ "$arch" == "i686" || "$arch" == "i386" ]]; then
-            url="https://github.com/getsentry/sentry-cli/releases/download/3.5.0/sentry-cli-Windows-i686.exe"
+            url="https://github.com/getsentry/sentry-cli/releases/download/${SENTRY_CLI_VERSION}/sentry-cli-Windows-i686.exe"
         fi
     fi
 
