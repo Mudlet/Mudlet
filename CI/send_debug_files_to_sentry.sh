@@ -28,19 +28,19 @@ download_sentry_cli() {
 
     if [[ "$os" == "Darwin" ]]; then
         if [[ "$arch" == "x86_64" ]]; then
-            url="https://github.com/getsentry/sentry-cli/releases/download/2.58.2/sentry-cli-Darwin-x86_64"
+            url="https://github.com/getsentry/sentry-cli/releases/download/3.5.0/sentry-cli-Darwin-x86_64"
         elif [[ "$arch" == "arm64" ]]; then
-            url="https://github.com/getsentry/sentry-cli/releases/download/2.58.2/sentry-cli-Darwin-arm64"
+            url="https://github.com/getsentry/sentry-cli/releases/download/3.5.0/sentry-cli-Darwin-arm64"
         fi
     elif [[ "$os" == "Linux" ]]; then
         if [[ "$arch" == "x86_64" ]]; then
-            url="https://github.com/getsentry/sentry-cli/releases/download/2.58.2/sentry-cli-Linux-x86_64"
+            url="https://github.com/getsentry/sentry-cli/releases/download/3.5.0/sentry-cli-Linux-x86_64"
         fi
     elif [[ "$os" == "MINGW"* || "$os" == "MSYS"* || "$os" == "CYGWIN"* ]]; then
         if [[ "$arch" == "x86_64" ]]; then
-            url="https://github.com/getsentry/sentry-cli/releases/download/2.58.2/sentry-cli-Windows-x86_64.exe"
+            url="https://github.com/getsentry/sentry-cli/releases/download/3.5.0/sentry-cli-Windows-x86_64.exe"
         elif [[ "$arch" == "i686" || "$arch" == "i386" ]]; then
-            url="https://github.com/getsentry/sentry-cli/releases/download/2.58.2/sentry-cli-Windows-i686.exe"
+            url="https://github.com/getsentry/sentry-cli/releases/download/3.5.0/sentry-cli-Windows-i686.exe"
         fi
     fi
 
