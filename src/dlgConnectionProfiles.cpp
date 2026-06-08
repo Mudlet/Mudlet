@@ -1573,10 +1573,14 @@ void dlgConnectionProfiles::slot_copyProfile()
         return;
     }
 
-    // copy the folder on-disk
+    // A default profile (one of the predefined games) only exists in memory
+    // until it is connected to or saved, so there is no folder to copy on-disk.
+    // Write its currently displayed connection data into the new profile
+    // instead, so the copy is functional and persists on disk 
     const QDir dir(mudlet::getMudletPath(enums::profileHomePath, oldname));
     if (!dir.exists()) {
-        mCopyingProfile = false;
+        writeDisplayedProfileData(profile_name);
+        finishCopiedProfile(profile_name, pItem, oldPassword);
         return;
     }
 
@@ -1586,27 +1590,66 @@ void dlgConnectionProfiles::slot_copyProfile()
     auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(enums::profileHomePath, oldname), mudlet::getMudletPath(enums::profileHomePath, profile_name));
     auto watcher = new QFutureWatcher<bool>;
     connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
-        mProfileList << profile_name;
-        slot_itemClicked(pItem);
-
-        // restore the password, which won't be copied by the disk copy if stored in the credential manager
-        // Temporarily block textChanged signal to avoid triggering save on programmatic setText
-        {
-            const QSignalBlocker blocker(character_password_entry);
-            character_password_entry->setText(oldPassword);
-        }
-
-        if (mudlet::self()->storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
-            writeSecurePassword(profile_name, oldPassword);
-        }
-        mCopyingProfile = false;
+        finishCopiedProfile(profile_name, pItem, oldPassword);
         mpCopyProfile->setText(tr("Copy"));
         mpCopyProfile->setEnabled(true);
         QApplication::restoreOverrideCursor();
-        validateProfile();
         watcher->deleteLater();
     });
     watcher->setFuture(future);
+}
+
+// Common post-copy steps shared by the on-disk and in-memory (default profile)
+// copy paths: register the new profile, refresh the form, restore the password
+// (which is not copied by the on-disk folder copy when stored securely) and
+// re-validate so the connect button reflects the new profile's state.
+void dlgConnectionProfiles::finishCopiedProfile(const QString& newProfileName, QListWidgetItem* pItem, const QString& oldPassword)
+{
+    mProfileList << newProfileName;
+    slot_itemClicked(pItem);
+
+    // restore the password, which won't be copied by the disk copy if stored in the credential manager
+    // Temporarily block textChanged signal to avoid triggering save on programmatic setText
+    {
+        const QSignalBlocker blocker(character_password_entry);
+        character_password_entry->setText(oldPassword);
+    }
+
+    if (mudlet::self()->storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
+        writeSecurePassword(newProfileName, oldPassword);
+    }
+    mCopyingProfile = false;
+    validateProfile();
+}
+
+// Persists the connection data currently shown in the dialog into the given
+// profile. Used when copying a default profile that has no folder on disk yet:
+// the form already holds the values resolved from the built-in game details
+// (plus any edits the user made), so writing them makes the copy a real,
+// functional profile that survives reopening the connection screen.
+void dlgConnectionProfiles::writeDisplayedProfileData(const QString& profileName)
+{
+    const QDir profileDir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+    if (!profileDir.exists()) {
+        profileDir.mkpath(profileDir.path());
+    }
+
+    writeProfileData(profileName, qsl("url"), host_name_entry->text().trimmed());
+    writeProfileData(profileName, qsl("port"), port_entry->text().trimmed());
+    writeProfileData(profileName, qsl("ssl_tsl"), QString::number(port_ssl_tsl->isChecked() ? Qt::Checked : Qt::Unchecked));
+
+    const QString login = login_entry->text();
+    if (!login.isEmpty()) {
+        writeProfileData(profileName, qsl("login"), login);
+    }
+    const QString website = website_entry->text();
+    if (!website.isEmpty()) {
+        writeProfileData(profileName, qsl("website"), website);
+    }
+    const QString description = mud_description_textedit->toPlainText();
+    if (!description.isEmpty()) {
+        writeProfileData(profileName, qsl("description"), description);
+    }
 }
 
 void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
@@ -1621,6 +1664,17 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     const QDir newProfileDir(mudlet::getMudletPath(enums::profileHomePath, profile_name));
     newProfileDir.mkpath(newProfileDir.path());
     if (!newProfileDir.exists()) {
+        return;
+    }
+
+    // A default profile has no folder on disk, so there are no settings files
+    // or XML to copy; write its displayed connection data instead so the copy
+    // is usable
+    const QDir oldProfileDir(mudlet::getMudletPath(enums::profileHomePath, oldname));
+    if (!oldProfileDir.exists()) {
+        writeDisplayedProfileData(profile_name);
+        mProfileList << profile_name;
+        slot_itemClicked(pItem);
         return;
     }
 

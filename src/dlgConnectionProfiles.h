@@ -103,6 +103,8 @@ private:
     bool extractSettingsFromProfile(pugi::xml_document& newProfile, const QString& copySettingsFrom);
     void saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const;
     bool copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const;
+    void finishCopiedProfile(const QString& newProfileName, QListWidgetItem* pItem, const QString& oldPassword);
+    void writeDisplayedProfileData(const QString& profileName);
     bool hasCustomIcon(const QString&) const;
     void setProfileIcon() const;
     void loadCustomProfile(const QString&) const;
