@@ -184,10 +184,25 @@ else
     # Skip duplicate check if this is a manually forced build
     if [[ "${GITHUB_FORCE_BUILD}" == "true" ]]; then
       echo "=== Forced build requested, skipping duplicate PTB check ==="
-    elif gh release list --repo "${GITHUB_REPOSITORY}" --limit 20 --json tagName \
-            --jq '.[].tagName' 2>/dev/null | grep -qF -- "${BUILD_COMMIT}"; then
-      echo "=== PTB already exists for commit ${BUILD_COMMIT}, aborting public test build generation ==="
-      exit 0
+    else
+      # don't swallow a gh failure (e.g. missing GH_TOKEN) - warning and
+      # building beats silently shipping a duplicate PTB
+      if existing_ptb_tags=$(gh release list --repo "${GITHUB_REPOSITORY}" --limit 100 \
+            --json tagName --jq '.[].tagName | select(contains("-ptb-"))'); then
+        while IFS= read -r existing_tag; do
+          [[ -n "${existing_tag}" ]] || continue
+          # prefix-compare as git can vary the abbreviated hash length per run
+          existing_commit="${existing_tag##*-}"
+          if [[ -n "${BUILD_COMMIT}" ]] \
+              && { [[ "${BUILD_COMMIT}" == "${existing_commit}"* ]] \
+                || [[ "${existing_commit}" == "${BUILD_COMMIT}"* ]]; }; then
+            echo "=== PTB already exists for commit ${BUILD_COMMIT} (${existing_tag}), aborting public test build generation ==="
+            exit 0
+          fi
+        done <<< "${existing_ptb_tags}"
+      else
+        echo "::warning::Could not list releases to check for duplicate PTB (is GH_TOKEN set?) - proceeding with build"
+      fi
     fi
 
     # Squirrel uses the name of the binary for the Start menu, so need to rename

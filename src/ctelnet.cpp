@@ -57,11 +57,16 @@
 #include <QMessageBox>
 #include <QNetworkProxy>
 #include <QProgressDialog>
+#include <QSettings>
 #include <QSignalBlocker>
 #include <QSslError>
+#include <QtGlobal>
 
 using namespace std::chrono_literals;
 
+constexpr int AUTO_LOGIN_USERNAME_DELAY_MS = 2000;
+constexpr int AUTO_LOGIN_PASSWORD_DELAY_MS = 1000;
+constexpr int AUTO_LOGIN_MAX_DELAY_MS = 60000;
 
 constexpr size_t BUFFER_SIZE = 100000L;
 // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (1 of 7) - investigate switching from using `char[]` to `std::array<char>`
@@ -588,6 +593,13 @@ void cTelnet::slot_send_login()
     if (!mpHost->getLogin().isEmpty()) {
         sendData(mpHost->getLogin());
     }
+    if (mpHost->hasAutoLoginCredentials()) {
+        QSettings& settings = *mudlet::getQSettings();
+        bool passwordDelayOk = false;
+        const int passwordDelayRaw = settings.value(qsl("autoLoginPasswordDelay"), AUTO_LOGIN_PASSWORD_DELAY_MS).toInt(&passwordDelayOk);
+        const auto passwordDelay = qBound(0, passwordDelayOk ? passwordDelayRaw : AUTO_LOGIN_PASSWORD_DELAY_MS, AUTO_LOGIN_MAX_DELAY_MS);
+        mTimerPass->start(std::chrono::milliseconds(passwordDelay));
+    }
 }
 
 void cTelnet::slot_send_pass()
@@ -676,8 +688,11 @@ void cTelnet::slot_socketConnected()
 #endif
     mpHost->mLuaInterpreter.call(qsl("onConnect"), QString());
     mConnectionTimer.start();
-    mTimerLogin->start(2s);
-    mTimerPass->start(3s);
+    QSettings& settings = *mudlet::getQSettings();
+    bool usernameDelayOk = false;
+    const int usernameDelayRaw = settings.value(qsl("autoLoginUsernameDelay"), AUTO_LOGIN_USERNAME_DELAY_MS).toInt(&usernameDelayOk);
+    const auto usernameDelay = qBound(0, usernameDelayOk ? usernameDelayRaw : AUTO_LOGIN_USERNAME_DELAY_MS, AUTO_LOGIN_MAX_DELAY_MS);
+    mTimerLogin->start(std::chrono::milliseconds(usernameDelay));
 
     emit signal_connected(mpHost);
 
