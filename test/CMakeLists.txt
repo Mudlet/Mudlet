@@ -30,6 +30,7 @@ set(UNIT_TESTS
     DiscordTest
     TAreaZLevelIndexTest
     TAreaGridIndexTest
+    TKeySequenceEditTest
 )
 
 foreach(test_name ${UNIT_TESTS})

@@ -32,6 +32,7 @@
 #include "TKey.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TKeySequenceEdit.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
@@ -67,6 +68,7 @@
 #include <QToolBar>
 #include <QUiLoader>
 #include <QKeySequenceEdit>
+#include <QLineEdit>
 #include <QHBoxLayout>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 
@@ -1492,9 +1494,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         auto shortcutIt = pHost->profileShortcuts.find(key);
         QKeySequence currentSequence = (shortcutIt != pHost->profileShortcuts.end()) ? QKeySequence(*shortcutIt->second) : QKeySequence();
         currentShortcuts.insert(key, currentSequence);
-        auto sequenceEdit = new QKeySequenceEdit(currentSequence);
+        const QString labelText = mudlet::self()->mpShortcutsManager->getLabel(key);
+        auto sequenceEdit = new TKeySequenceEdit(currentSequence, labelText);
+        auto label = new QLabel(labelText);
+        label->setBuddy(sequenceEdit);
 
-        gridLayout_groupBox_shortcuts->addWidget(new QLabel(mudlet::self()->mpShortcutsManager->getLabel(key)), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
+        gridLayout_groupBox_shortcuts->addWidget(label, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
         shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
