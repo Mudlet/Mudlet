@@ -24,7 +24,8 @@
 
 // Applies Mudlet's application-wide style hint adjustments on top of whichever
 // base style is in use; previously named AltFocusMenuBarDisable when it
-// suppressed the Alt key menu bar navigation that it now ensures is enabled
+// unconditionally suppressed the Alt key menu bar navigation that it now
+// enables for screen reader users only
 class MudletProxyStyle : public QProxyStyle
 {
     Q_OBJECT

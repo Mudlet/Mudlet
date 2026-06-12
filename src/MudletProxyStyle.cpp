@@ -20,6 +20,7 @@
 
 #include "MudletProxyStyle.h"
 
+#include <QAccessible>
 #include <QStyleFactory>
 
 MudletProxyStyle::MudletProxyStyle()
@@ -35,11 +36,13 @@ MudletProxyStyle::MudletProxyStyle(const QString& style)
 int MudletProxyStyle::styleHint(StyleHint styleHint, const QStyleOption* opt, const QWidget* widget, QStyleHintReturn* returnData) const
 {
     if (styleHint == QStyle::SH_MenuBar_AltKeyNavigation) {
-        // Force-enable on every base style (Fusion defaults to off) so that a
-        // lone Alt press focuses the menu bar, as screen reader users expect;
-        // Qt only activates the menu bar when Alt is released without another
-        // key being pressed, so Alt+key keybindings still work (Mudlet/Mudlet#6145)
-        return 1;
+        // Screen reader users expect a lone Alt tap to focus the menu bar
+        // (Mudlet/Mudlet#6145), but for everyone else an accidental Alt tap
+        // stealing focus from the command line is a nuisance when using
+        // Alt-based keybindings (Mudlet/Mudlet#4280), so only enable the hint
+        // while assistive technology is in use. QMenuBar re-reads this hint on
+        // every Alt key event, so the gate applies live, on each keypress
+        return QAccessible::isActive() ? 1 : 0;
     }
     if (styleHint == QStyle::SH_ItemView_ActivateItemOnSingleClick) {
         return 0;
