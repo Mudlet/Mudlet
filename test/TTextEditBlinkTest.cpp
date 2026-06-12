@@ -11,11 +11,13 @@ private slots:
 
     void unregistersWhenBlinkingIsDisabled() { QVERIFY(!TTextEdit::shouldRegisterBlinkClient(false, true, true, true)); }
 
+    void unregistersWhenBlinkingIsDisabledRegardlessOfOtherFlags() { QVERIFY(!TTextEdit::shouldRegisterBlinkClient(false, false, false, false)); }
+
     void registersWhenCurrentPaintFindsBlinkingContent() { QVERIFY(TTextEdit::shouldRegisterBlinkClient(true, true, false, false)); }
 
-    void unregistersWhenNoBlinkingContentRemainsAfterFullScan() { QVERIFY(!TTextEdit::shouldRegisterBlinkClient(true, false, true, false)); }
+    void unregistersWhenPaintDidNotReuseCache() { QVERIFY(!TTextEdit::shouldRegisterBlinkClient(true, false, true, false)); }
 
-    void staysUnregisteredWithoutCurrentOrCachedBlinkingContent() { QVERIFY(!TTextEdit::shouldRegisterBlinkClient(true, false, false, true)); }
+    void unregistersWhenClientWasNotRegisteredEvenWithCachedContent() { QVERIFY(!TTextEdit::shouldRegisterBlinkClient(true, false, false, true)); }
 };
 
 QTEST_GUILESS_MAIN(TTextEditBlinkTest)

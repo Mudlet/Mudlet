@@ -1253,9 +1253,12 @@ bool TTextEdit::shouldRegisterBlinkClient(const bool enableBlinkText, const bool
         return true;
     }
 
-    // Incremental paints can copy existing blinking rows from the cached screen map
-    // without redrawing them. Keep the timer alive until a full repaint can
-    // definitively determine that no blinking content remains visible.
+    // When content is rendered by copying rows from mScreenMap (scroll or
+    // partial-height repaint), those rows are not re-scanned for blinking
+    // characters, so mHasBlinkingContent will be false even if blinking content
+    // is still visible. Preserve the blink timer in that case; the next full
+    // repaint will reset mHasBlinkingContent from scratch and unregister the
+    // timer if nothing blinking remains.
     return isBlinkClientRegistered && reusedCachedScreenContent;
 }
 
@@ -2973,7 +2976,10 @@ void TTextEdit::slot_analyseSelection()
             quint8 columnsToUse = qMax(size_t{2}, utf8Width);
 
             if (includeThisCodePoint) {
-                utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2 & %3</center></th>").arg(QString::number(columnsToUse), QString::number(index + 1), QString::number(index + 2)));
+                utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2 & %3</center></th>")
+                                            .arg(QString::number(columnsToUse),
+                                                 QString::number(index + 1),
+                                                 QString::number(index + 2)));
 
                 // The use of one qsl inside another is because it is
                 // impossible to force an upper-case alphabet to Hex digits otherwise
@@ -2981,18 +2987,19 @@ void TTextEdit::slot_analyseSelection()
                 // &#8232; is the Unicode Line Separator.
                 // The static casts are only needed since Qt 6.9.0 but they
                 // shouldn't do any harm prior to that:
-                utf16Vals.append(
-                        qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
-                                .arg(QString::number(columnsToUse),
-                                     qsl("%1")
-                                             .arg(static_cast<uint32_t>(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1))), 4, 16, zero)
-                                             .toUpper())
-                                .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index).unicode()), 4, 16, zero)
-                                .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index + 1).unicode()), 4, 16, zero));
+                utf16Vals.append(qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
+                                         .arg(QString::number(columnsToUse),
+                                              qsl("%1").arg(static_cast<uint32_t>(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index),
+                                                                                                         mpBuffer->lineBuffer.at(line).at(index + 1))),
+                                                            4, 16, zero).toUpper())
+                                         .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index).unicode()), 4, 16, zero)
+                                         .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index + 1).unicode()), 4, 16, zero));
 
                 // Note the addition to the index here to jump over the low-surrogate:
                 graphemes.append(qsl("<td colspan=\"%1\">%2</td>")
-                                         .arg(QString::number(columnsToUse), convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1))));
+                                         .arg(QString::number(columnsToUse),
+                                              convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index),
+                                                                        mpBuffer->lineBuffer.at(line).at(index + 1))));
             }
 
             switch (utf8Width) {
