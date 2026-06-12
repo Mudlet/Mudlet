@@ -1136,6 +1136,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
 void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
     mHasBlinkingContent = false;
+    bool reusedCachedScreenContent = false;
 
     qreal dpr = devicePixelRatioF();
     QPixmap screenPixmap;
@@ -1173,6 +1174,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     }
     if ((r.height() < rect().height()) && (lineOffset > 0)) {
         p.drawPixmap(0, 0, mScreenMap);
+        reusedCachedScreenContent = true;
         from = y_top;
         noScroll = true;
         if (!mForceUpdate && !mMouseTracking) {
@@ -1187,6 +1189,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             && (mScreenHeight - mScrollVector) * mFontHeight <= mScreenMap.height()) {
             screenPixmap = mScreenMap.copy(0, mScrollVector * mFontHeight * dpr, mScreenWidth * mFontWidth * dpr, (mScreenHeight - mScrollVector) * mFontHeight * dpr);
             p.drawPixmap(0, 0, screenPixmap);
+            reusedCachedScreenContent = true;
             from = mScreenHeight - mScrollVector - 1;
         }
     } else if ((!noScroll) && (mScrollVector < 0 && mScrollVector >= ((-1) * mScreenHeight)) && (!mForceUpdate)) {
@@ -1194,6 +1197,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             && (mScreenHeight - abs(mScrollVector)) * mFontHeight <= mScreenMap.height()) {
             screenPixmap = mScreenMap.copy(0, 0, mScreenWidth * mFontWidth * dpr, (mScreenHeight - abs(mScrollVector)) * mFontHeight * dpr);
             p.drawPixmap(0, abs(mScrollVector) * mFontHeight, screenPixmap);
+            reusedCachedScreenContent = true;
             from = 0;
             y_bottom = abs(mScrollVector);
         }
@@ -1227,7 +1231,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     mLastRenderedOffset = lineOffset;
     mForceUpdate = false;
 
-    const bool shouldBeRegistered = mEnableBlinkText && mHasBlinkingContent;
+    const bool shouldBeRegistered = shouldRegisterBlinkClient(mEnableBlinkText, mHasBlinkingContent, mIsBlinkClientRegistered, reusedCachedScreenContent);
     if (auto* pMudlet = mudlet::self()) {
         if (shouldBeRegistered && !mIsBlinkClientRegistered) {
             pMudlet->registerBlinkClient();
@@ -1237,6 +1241,22 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             mIsBlinkClientRegistered = false;
         }
     }
+}
+
+bool TTextEdit::shouldRegisterBlinkClient(const bool enableBlinkText, const bool hasBlinkingContentInRedrawnRegion, const bool isBlinkClientRegistered, const bool reusedCachedScreenContent)
+{
+    if (!enableBlinkText) {
+        return false;
+    }
+
+    if (hasBlinkingContentInRedrawnRegion) {
+        return true;
+    }
+
+    // Incremental paints can copy existing blinking rows from the cached screen map
+    // without redrawing them. Keep the timer alive until a full repaint can
+    // definitively determine that no blinking content remains visible.
+    return isBlinkClientRegistered && reusedCachedScreenContent;
 }
 
 void TTextEdit::paintEvent(QPaintEvent* e)
@@ -2953,10 +2973,7 @@ void TTextEdit::slot_analyseSelection()
             quint8 columnsToUse = qMax(size_t{2}, utf8Width);
 
             if (includeThisCodePoint) {
-                utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2 & %3</center></th>")
-                                            .arg(QString::number(columnsToUse),
-                                                 QString::number(index + 1),
-                                                 QString::number(index + 2)));
+                utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2 & %3</center></th>").arg(QString::number(columnsToUse), QString::number(index + 1), QString::number(index + 2)));
 
                 // The use of one qsl inside another is because it is
                 // impossible to force an upper-case alphabet to Hex digits otherwise
@@ -2964,19 +2981,18 @@ void TTextEdit::slot_analyseSelection()
                 // &#8232; is the Unicode Line Separator.
                 // The static casts are only needed since Qt 6.9.0 but they
                 // shouldn't do any harm prior to that:
-                utf16Vals.append(qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
-                                         .arg(QString::number(columnsToUse),
-                                              qsl("%1").arg(static_cast<uint32_t>(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index),
-                                                                                                         mpBuffer->lineBuffer.at(line).at(index + 1))),
-                                                            4, 16, zero).toUpper())
-                                         .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index).unicode()), 4, 16, zero)
-                                         .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index + 1).unicode()), 4, 16, zero));
+                utf16Vals.append(
+                        qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
+                                .arg(QString::number(columnsToUse),
+                                     qsl("%1")
+                                             .arg(static_cast<uint32_t>(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1))), 4, 16, zero)
+                                             .toUpper())
+                                .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index).unicode()), 4, 16, zero)
+                                .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index + 1).unicode()), 4, 16, zero));
 
                 // Note the addition to the index here to jump over the low-surrogate:
                 graphemes.append(qsl("<td colspan=\"%1\">%2</td>")
-                                         .arg(QString::number(columnsToUse),
-                                              convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index),
-                                                                        mpBuffer->lineBuffer.at(line).at(index + 1))));
+                                         .arg(QString::number(columnsToUse), convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1))));
             }
 
             switch (utf8Width) {

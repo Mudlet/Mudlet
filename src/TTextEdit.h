@@ -100,6 +100,7 @@ public:
     int getColumnCount() const;
     int getRowCount() const;
     void toggleTimeStamps(const bool);
+    static bool shouldRegisterBlinkClient(bool enableBlinkText, bool hasBlinkingContentInRedrawnRegion, bool isBlinkClientRegistered, bool reusedCachedScreenContent);
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     void reportCodepointErrors();
