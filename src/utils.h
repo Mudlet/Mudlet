@@ -28,6 +28,7 @@
 #include <QRegularExpression>
 #include <QString>
 #include <QScreen>
+#include <QTextDocument>
 #include <QWidget>
 
 #include <cstring>
@@ -65,6 +66,37 @@ public:
     // defining a static function/method here we can save using the same
     // qsl all over the place:
     static QString richText(const QString& text) { return qsl("<p>%1</p>").arg(text); }
+
+    inline static const auto scmWhitespaceRun = QRegularExpression(qsl(R"(\s+)"));
+    // Reduces text that may contain HTML markup (e.g. tooltips styled with
+    // richText()) to plain text suitable for the accessibility APIs - screen
+    // readers would otherwise read the markup aloud, see:
+    // https://github.com/Mudlet/Mudlet/issues/8547
+    static QString stripHtmlTags(const QString& text)
+    {
+        if (text.isEmpty()) {
+            return text;
+        }
+        QTextDocument document;
+        document.setHtml(text);
+        QString plainText = document.toPlainText();
+        // Block elements come out as separate lines but a single space between
+        // them reads better as a screen reader announcement:
+        plainText.replace(scmWhitespaceRun, qsl(" "));
+        return plainText.trimmed();
+    }
+
+    // Mirrors a widget's tooltip into its accessible description with the HTML
+    // stripped, for use where the tooltip is the only documentation a widget
+    // has - without this screen readers fall back to reading the tooltip with
+    // its raw markup:
+    static void setAccessibleDescriptionFromToolTip(QWidget* pWidget)
+    {
+        if (!pWidget) {
+            return;
+        }
+        pWidget->setAccessibleDescription(stripHtmlTags(pWidget->toolTip()));
+    }
 
     // Qt 6.9 deprecated QDateTime::setOffsetFromUtc(int) and made it hard to
     // replicate the exact strings that we had before:

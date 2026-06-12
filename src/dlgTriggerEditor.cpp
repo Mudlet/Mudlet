@@ -483,6 +483,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             mpUndoAction->setToolTip(utils::richText(undoText));
             mpUndoAction->setStatusTip(undoText);
         }
+        updateUndoRedoAccessibleDescriptions();
     });
     connect(mpUndoStack, &QUndoStack::redoTextChanged, this, [this](const QString& text) {
         QString shortcut = mpRedoAction->shortcut().toString(QKeySequence::NativeText);
@@ -497,6 +498,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             mpRedoAction->setToolTip(utils::richText(redoText));
             mpRedoAction->setStatusTip(redoText);
         }
+        updateUndoRedoAccessibleDescriptions();
     });
 
     // Store guarded pointer to text editor's undo stack for safe signal connections
@@ -1053,6 +1055,16 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar);
     QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
 
+    // The buttons that the toolbars create for the actions otherwise report
+    // the action's tooltip - with its raw HTML markup - as their accessible
+    // description, which screen readers read aloud verbatim:
+    for (auto* pToolBar : {toolBar, toolBar2}) {
+        const auto toolButtons = pToolBar->findChildren<QToolButton*>();
+        for (auto* pToolButton : toolButtons) {
+            utils::setAccessibleDescriptionFromToolTip(pToolButton);
+        }
+    }
+
     // (Top) "Actions" toolbar:
     //: This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.
     mpAction_restoreEditorActionsToolbar = new QAction(tr("Restore Actions toolbar"), this);
@@ -1573,6 +1585,18 @@ void dlgTriggerEditor::slot_updateUndoRedoButtonStates()
         mpRedoAction->setToolTip(utils::richText(redoText));
         mpRedoAction->setStatusTip(redoText);
     }
+    updateUndoRedoAccessibleDescriptions();
+}
+
+// The undo/redo tooltips change at runtime so the plain text mirrored into the
+// toolbar buttons' accessible descriptions has to be refreshed alongside them:
+void dlgTriggerEditor::updateUndoRedoAccessibleDescriptions()
+{
+    if (!toolBar) {
+        return;
+    }
+    utils::setAccessibleDescriptionFromToolTip(toolBar->widgetForAction(mpUndoAction));
+    utils::setAccessibleDescriptionFromToolTip(toolBar->widgetForAction(mpRedoAction));
 }
 
 void dlgTriggerEditor::applyPatternWidgetStyle(dlgTriggerPatternEdit* patternWidget)
@@ -6874,6 +6898,9 @@ void dlgTriggerEditor::saveVar()
     } else if (varUnit->isSaved(variable)) {
         pItem->setCheckState(0, Qt::Checked);
     }
+    // Item views fall back to the tooltip - with its raw HTML - for an item's
+    // accessible description unless this is set:
+    pItem->setData(0, Qt::AccessibleDescriptionRole, utils::stripHtmlTags(pItem->toolTip(0)));
     pItem->setData(0, Qt::UserRole, variable->getValueType());
     QIcon icon;
     switch (variable->getValueType()) {
@@ -7099,6 +7126,7 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
             pItem->label_prompt->setToolTip(utils::richText(tr("A Go-Ahead (GA) signal from the game is required to make this feature work")));
             pItem->label_prompt->setEnabled(false);
         }
+        utils::setAccessibleDescriptionFromToolTip(pItem->label_prompt);
         pItem->label_prompt->show();
         pItem->spinBox_lineSpacer->hide();
         break;
@@ -8078,6 +8106,7 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
     } else if (vu->isSaved(var)) {
         pItem->setCheckState(0, Qt::Checked);
     }
+    pItem->setData(0, Qt::AccessibleDescriptionRole, utils::stripHtmlTags(pItem->toolTip(0)));
     pItem->setData(0, Qt::UserRole, var->getValueType());
     pItem->setIcon(0, icon);
     mChangingVar = false;
@@ -13120,6 +13149,7 @@ void dlgTriggerEditor::slot_clearSoundFile()
     mpTriggersMainArea->lineEdit_soundFile->clear();
     mpTriggersMainArea->toolButton_clearSoundFile->setEnabled(false);
     mpTriggersMainArea->lineEdit_soundFile->setToolTip(utils::richText(tr("Sound file to play when the trigger fires.")));
+    utils::setAccessibleDescriptionFromToolTip(mpTriggersMainArea->lineEdit_soundFile);
 }
 
 void dlgTriggerEditor::slot_showAllTriggerControls(const bool isShown)
