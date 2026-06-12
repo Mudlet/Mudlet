@@ -19,11 +19,11 @@
  ***************************************************************************/
 
 #include "DarkTheme.h"
-#include "AltFocusMenuBarDisable.h"
+#include "MudletProxyStyle.h"
 
 //DarkTheme only works with Fusion style
 DarkTheme::DarkTheme()
-: DarkTheme(new AltFocusMenuBarDisable(qsl("Fusion")))
+: DarkTheme(new MudletProxyStyle(qsl("Fusion")))
 {
 }
 

@@ -59,7 +59,6 @@
 #include <QSplashScreen>
 #include <QStringList>
 #include <QTranslator>
-#include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"

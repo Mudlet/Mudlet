@@ -42,7 +42,6 @@ endif()
 set(mudlet_SRCS
     ActionUnit.cpp
     AliasUnit.cpp
-    AltFocusMenuBarDisable.cpp
     ctelnet.cpp
     DarkTheme.cpp
     discord.cpp
@@ -90,6 +89,7 @@ set(mudlet_SRCS
     MMCPServer.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
+    MudletProxyStyle.cpp
     EditorUndoStack.cpp
     MxpTag.cpp
     EditorAddItemCommand.cpp
@@ -265,7 +265,6 @@ set(mudlet_HDRS
     ../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h
     ActionUnit.h
     AliasUnit.h
-    AltFocusMenuBarDisable.h
     ctelnet.h
     CredentialManager.h
     DarkTheme.h
@@ -315,6 +314,7 @@ set(mudlet_HDRS
     mudlet.h
     EditorCommand.h
     MudletInstanceCoordinator.h
+    MudletProxyStyle.h
     EditorUndoStack.h
     MxpTag.h
     EditorAddItemCommand.h

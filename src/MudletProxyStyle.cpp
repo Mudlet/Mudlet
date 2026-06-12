@@ -18,22 +18,28 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "AltFocusMenuBarDisable.h"
+#include "MudletProxyStyle.h"
 
-AltFocusMenuBarDisable::AltFocusMenuBarDisable()
+#include <QStyleFactory>
+
+MudletProxyStyle::MudletProxyStyle()
 {
     setObjectName(baseStyle()->objectName());
 }
 
-AltFocusMenuBarDisable::AltFocusMenuBarDisable(const QString& style)
+MudletProxyStyle::MudletProxyStyle(const QString& style)
 : QProxyStyle(QStyleFactory::create(style))
 {
 }
 
-int AltFocusMenuBarDisable::styleHint(StyleHint styleHint, const QStyleOption* opt, const QWidget* widget, QStyleHintReturn* returnData) const
+int MudletProxyStyle::styleHint(StyleHint styleHint, const QStyleOption* opt, const QWidget* widget, QStyleHintReturn* returnData) const
 {
     if (styleHint == QStyle::SH_MenuBar_AltKeyNavigation) {
-        return 0;
+        // Force-enable on every base style (Fusion defaults to off) so that a
+        // lone Alt press focuses the menu bar, as screen reader users expect;
+        // Qt only activates the menu bar when Alt is released without another
+        // key being pressed, so Alt+key keybindings still work (Mudlet/Mudlet#6145)
+        return 1;
     }
     if (styleHint == QStyle::SH_ItemView_ActivateItemOnSingleClick) {
         return 0;
