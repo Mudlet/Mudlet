@@ -100,7 +100,6 @@ public:
     int getColumnCount() const;
     int getRowCount() const;
     void toggleTimeStamps(const bool);
-    static bool shouldRegisterBlinkClient(bool enableBlinkText, bool hasBlinkingContentInRedrawnRegion, bool isBlinkClientRegistered, bool reusedCachedScreenContent);
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     void reportCodepointErrors();
@@ -125,6 +124,9 @@ public:
     // previous column value so that we can return to it if the next line is
     // long enough again.
     int mOldCaretColumn = 0;
+
+    friend class TTextEditBlinkTest;
+    static bool shouldRegisterBlinkClient(bool enableBlinkText, bool hasBlinkingContentInRedrawnRegion, bool isBlinkClientRegistered, bool reusedCachedScreenContent);
 
     QColor mFgColor;
     bool mIsCommandPopup = false;
