@@ -20,20 +20,32 @@ sign_app_bundle () {
 
   local appBundle="$1"
   echo "Signing app bundle: ${appBundle}"
-  codesign -s "$IDENTITY" -o runtime --timestamp "${appBundle}"
+  # -f forces a re-sign: the portable flow adds portable.txt to the bundle, which
+  # invalidates the signature applied during the main dmg flow.
+  codesign -f -s "$IDENTITY" -o runtime --timestamp "${appBundle}"
   echo "Successfully signed app bundle"
 
   echo "Notarizing app bundle"
+  # notarytool needs an archive (zip/dmg/pkg), not a bare .app bundle.
+  local notarizeZip="${appBundle}.notarize.zip"
+  ditto -c -k --keepParent "${appBundle}" "${notarizeZip}"
+  local notarized="false"
   for i in {1..3}; do
     echo "Trying to notarize app bundle (attempt ${i})"
-    if xcrun notarytool submit "${appBundle}" --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait; then
+    if xcrun notarytool submit "${notarizeZip}" --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait; then
       echo "Successfully notarized app bundle"
+      notarized="true"
       break
     fi
   done
+  rm -f "${notarizeZip}"
 
-  echo "Stapling notarization ticket to app bundle"
-  xcrun stapler staple "${appBundle}"
+  if [ "${notarized}" = "true" ]; then
+    echo "Stapling notarization ticket to app bundle"
+    xcrun stapler staple "${appBundle}" || echo "::warning::failed to staple notarization ticket to ${appBundle}"
+  else
+    echo "::warning::could not notarize ${appBundle}; shipping a signed but un-notarized portable app bundle"
+  fi
 }
 
 BUILD_DIR="${BUILD_FOLDER}"
@@ -318,7 +330,9 @@ if [ "${DEPLOY}" = "deploy" ]; then
       # release registration and uploading will be manual for the time being
     else
       echo "=== Registering release with Dblsqd ==="
-      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:${ARCH_DBLSQD} "${DEPLOY_URL}"
+      # Non-fatal: dblsqd is legacy (GitHub releases are the primary distribution now),
+      # and the dblsqd release may not be pre-created. Do not let it block the build.
+      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:${ARCH_DBLSQD} "${DEPLOY_URL}" || echo "::warning::dblsqd push failed for mac:${ARCH_DBLSQD} - continuing (GitHub release is the primary distribution)"
     fi
   fi
 

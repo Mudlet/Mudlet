@@ -258,7 +258,9 @@ then
       # release registration and uploading will be manual for the time being
     else
       echo "=== Registering release with Dblsqd ==="
-      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${DEPLOY_URL}"
+      # Non-fatal: dblsqd is legacy (GitHub releases are the primary distribution now),
+      # and the dblsqd release may not be pre-created. Do not let it block the build.
+      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${DEPLOY_URL}" || echo "::warning::dblsqd push failed for linux:x86_64 - continuing (GitHub release is the primary distribution)"
     fi
 
     if [ "${public_test_build}" != "true" ]; then

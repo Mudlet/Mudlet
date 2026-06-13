@@ -564,7 +564,8 @@ EOF
   if [[ "${DBLSQD_CHANNEL}" == "release" ]]; then
     echo "=== Registering release with Dblsqd ==="
     echo "dblsqd push -a mudlet -c \"${DBLSQD_CHANNEL}\" -r \"${DBLSQD_VERSION_STRING}\" -s mudlet --type 'standalone' --attach win:x86_64 \"${DEPLOY_URL}\""
-    dblsqd push -a mudlet -c "${DBLSQD_CHANNEL}" -r "${DBLSQD_VERSION_STRING}" -s mudlet --type 'standalone' --attach win:x86_64 "${DEPLOY_URL}"
+    # Non-fatal: dblsqd is legacy (GitHub releases are the primary distribution now).
+    dblsqd push -a mudlet -c "${DBLSQD_CHANNEL}" -r "${DBLSQD_VERSION_STRING}" -s mudlet --type 'standalone' --attach win:x86_64 "${DEPLOY_URL}" || echo "::warning::dblsqd push failed for win:x86_64 - continuing (GitHub release is the primary distribution)"
   fi
 
 fi
