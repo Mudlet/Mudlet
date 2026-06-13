@@ -37,6 +37,7 @@
 #include "mudlet.h"
 #include "utils.h"
 
+#include <QKeySequence>
 #include <QRegularExpression>
 #include <QToolBar>
 #include <QToolButton>
@@ -1880,7 +1881,8 @@ private slots:
         qobject_cast<QToolButton *>(mpEditor->toolBar->widgetForAction(mpEditor->mAddItem));
     QVERIFY(addTriggerButton);
 
-    QCOMPARE(addTriggerButton->accessibleName(), qsl("Add Trigger (Ctrl+N)"));
+    const QString addShortcut = mpEditor->mAddItem->shortcut().toString(QKeySequence::NativeText);
+    QCOMPARE(addTriggerButton->accessibleName(), qsl("Add Trigger (%1)").arg(addShortcut));
     QVERIFY2(addTriggerButton->accessibleDescription().isEmpty(),
              qPrintable(qsl("Toolbar button exposes redundant accessible "
                             "description: %1")
