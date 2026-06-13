@@ -68,7 +68,6 @@ bool TKeySequenceEdit::eventFilter(QObject* pWatched, QEvent* pEvent)
     switch (pEvent->type()) {
     case QEvent::KeyPress:
     case QEvent::KeyRelease:
-    case QEvent::Shortcut:
     case QEvent::ShortcutOverride:
         // Run the capture logic; for the finishing combinations event() falls
         // through to QWidget::event() which performs the Tab/Backtab focus

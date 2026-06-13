@@ -67,7 +67,6 @@
 #include <QTemporaryFile>
 #include <QToolBar>
 #include <QUiLoader>
-#include <QKeySequenceEdit>
 #include <QLineEdit>
 #include <QHBoxLayout>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
