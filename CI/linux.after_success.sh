@@ -154,7 +154,10 @@ then
       } >> "$GITHUB_ENV"
 
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
+      if ! scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"; then
+        echo "::error::failed to upload Mudlet-${VERSION}-linux-x64.AppImage.tar to make.mudlet.org"
+        exit 1
+      fi
 
       DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
       # Retry to tolerate the delay between scp landing on make.mudlet.org and the
@@ -163,15 +166,18 @@ then
       until curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; do
         verify_attempt=$((verify_attempt + 1))
         if [ "$verify_attempt" -ge 18 ]; then
-          echo "Error: release not found as expected at $DEPLOY_URL"
-          exit 1
+          echo "::warning::release uploaded to make.mudlet.org but not yet downloadable at $DEPLOY_URL after $verify_attempt attempts (CloudFlare/publish lag); the scp above is the authoritative upload check"
+          break
         fi
         echo "Release not yet available at $DEPLOY_URL, retrying in 10s (attempt $verify_attempt/18)..."
         sleep 10
       done
 
       # upload an unzipped, unversioned release for appimage.github.io
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
+      if ! scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"; then
+        echo "::error::failed to upload Mudlet.AppImage to make.mudlet.org"
+        exit 1
+      fi
       DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
 
       SHA256SUM=$(shasum -a 256 "Mudlet-${VERSION}-linux-x64.AppImage.tar" | awk '{print $1}')
@@ -197,15 +203,18 @@ then
 
       echo "=== Uploading portable version ==="
       PORTABLE_NAME="Mudlet-${VERSION}-linux-x64-portable"
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PORTABLE_NAME}.tar.gz" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
+      if ! scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PORTABLE_NAME}.tar.gz" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"; then
+        echo "::error::failed to upload ${PORTABLE_NAME}.tar.gz to make.mudlet.org"
+        exit 1
+      fi
       PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
 
       verify_attempt=0
       until curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; do
         verify_attempt=$((verify_attempt + 1))
         if [ "$verify_attempt" -ge 18 ]; then
-          echo "Error: portable release not found as expected at $PORTABLE_DEPLOY_URL"
-          exit 1
+          echo "::warning::portable uploaded to make.mudlet.org but not yet downloadable at $PORTABLE_DEPLOY_URL after $verify_attempt attempts (CloudFlare/publish lag)"
+          break
         fi
         echo "Portable release not yet available at $PORTABLE_DEPLOY_URL, retrying in 10s (attempt $verify_attempt/18)..."
         sleep 10

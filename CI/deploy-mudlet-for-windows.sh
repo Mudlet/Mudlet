@@ -383,10 +383,17 @@ else
     powershell.exe <<EOF
 \$installerExePath = "${INSTALLER_EXE_WINPATHFILE}"
 \$DEPLOY_PATH = "${DEPLOY_PATH}"
-scp.exe -i temp_key_file -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$installerExePath mudmachine@mudlet.org:\${DEPLOY_PATH}
+scp.exe -i temp_key_file -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$installerExePath mudmachine@make.mudlet.org:\${DEPLOY_PATH}
+if (\$LASTEXITCODE -ne 0) { exit \$LASTEXITCODE }
 EOF
+    installer_scp_rc=$?
 
     shred -u temp_key_file
+
+    if [ "$installer_scp_rc" -ne 0 ]; then
+      echo "::error::failed to upload Windows installer to make.mudlet.org (scp exit ${installer_scp_rc})"
+      exit 1
+    fi
 
     DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-64-installer.exe"
 
@@ -396,8 +403,8 @@ EOF
     until curl --output /dev/null --silent --head --fail "${DEPLOY_URL}"; do
       verify_attempt=$((verify_attempt + 1))
       if [ "$verify_attempt" -ge 18 ]; then
-        echo "Error: release not found as expected at ${DEPLOY_URL}"
-        exit 1
+        echo "::warning::installer uploaded to make.mudlet.org but not yet downloadable at ${DEPLOY_URL} after $verify_attempt attempts (CloudFlare/publish lag); the scp above is the authoritative upload check"
+        break
       fi
       echo "Release not yet available at ${DEPLOY_URL}, retrying in 10s (attempt $verify_attempt/18)..."
       sleep 10
@@ -456,10 +463,17 @@ EOF
 \$portableZipPath = "${PORTABLE_ZIP_WINPATH}"
 \$DEPLOY_PATH = "${DEPLOY_PATH}"
 \$remoteFileName = "${PORTABLE_REMOTE_NAME}"
-scp.exe -i temp_key_file_portable -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$portableZipPath mudmachine@mudlet.org:\${DEPLOY_PATH}/\$remoteFileName
+scp.exe -i temp_key_file_portable -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$portableZipPath mudmachine@make.mudlet.org:\${DEPLOY_PATH}/\$remoteFileName
+if (\$LASTEXITCODE -ne 0) { exit \$LASTEXITCODE }
 EOF
+      portable_scp_rc=$?
 
       shred -u temp_key_file_portable
+
+      if [ "$portable_scp_rc" -ne 0 ]; then
+        echo "::error::failed to upload Windows portable ZIP to make.mudlet.org (scp exit ${portable_scp_rc})"
+        exit 1
+      fi
 
       # Define portable ZIP URL - should match the naming convention
       PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-64-portable.zip"
@@ -469,8 +483,8 @@ EOF
       until curl --output /dev/null --silent --head --fail "${PORTABLE_DEPLOY_URL}"; do
         verify_attempt=$((verify_attempt + 1))
         if [ "$verify_attempt" -ge 18 ]; then
-          echo "Error: portable ZIP not found as expected at ${PORTABLE_DEPLOY_URL}"
-          exit 1
+          echo "::warning::portable ZIP uploaded to make.mudlet.org but not yet downloadable at ${PORTABLE_DEPLOY_URL} after $verify_attempt attempts (CloudFlare/publish lag)"
+          break
         fi
         echo "Portable ZIP not yet available at ${PORTABLE_DEPLOY_URL}, retrying in 10s (attempt $verify_attempt/18)..."
         sleep 10
