@@ -21,8 +21,12 @@ sign_app_bundle () {
   local appBundle="$1"
   echo "Signing app bundle: ${appBundle}"
   # -f forces a re-sign: the portable flow adds portable.txt to the bundle, which
-  # invalidates the signature applied during the main dmg flow.
-  codesign -f -s "$IDENTITY" -o runtime --timestamp "${appBundle}"
+  # invalidates the signature applied during the main dmg flow. Return non-zero on
+  # failure so callers can skip the portable rather than ship a broken bundle.
+  if ! codesign -f -s "$IDENTITY" -o runtime --timestamp "${appBundle}"; then
+    echo "::warning::failed to codesign ${appBundle}"
+    return 1
+  fi
   echo "Successfully signed app bundle"
 
   echo "Notarizing app bundle"
@@ -231,38 +235,51 @@ if [ "${DEPLOY}" = "deploy" ]; then
           exit 1
         fi
 
-        # Sign the app bundle specifically for portable version
+        # Sign the app bundle for the portable version. portable.txt currently
+        # lives in Contents/MacOS/, which breaks codesign; until the marker is
+        # moved to a codesign-safe location (to be fixed on the development
+        # branch), the macOS portable is best-effort: skip it on signing failure
+        # rather than fail the whole release build.
+        PORTABLE_READY="true"
         if [ -n "$MACOS_SIGNING_PASS" ]; then
           echo "Signing app bundle for portable version"
-          sign_app_bundle "$APP_PATH"
+          if ! sign_app_bundle "$APP_PATH"; then
+            echo "::warning::macOS portable signing failed; skipping the macOS portable for this build"
+            PORTABLE_READY="false"
+          fi
         fi
 
-        tar -czf "${PORTABLE_NAME}.tar.gz" -C "$APP_DIR" "mudlet.app"
+        if [ "${PORTABLE_READY}" = "true" ]; then
+          tar -czf "${PORTABLE_NAME}.tar.gz" -C "$APP_DIR" "mudlet.app"
+        fi
       else
         echo "Error: Could not find mudlet.app anywhere in ${BUILD_DIR}"
         echo "Directory contents:"
         find "${BUILD_DIR}" -name "*.app" -type d
         exit 1
       fi
-      PORTABLE_SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" | awk '{print $1}')
 
-      echo "=== Uploading portable version ==="
-      if ! scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"; then
-        echo "::error::failed to upload ${PORTABLE_NAME}.tar.gz to make.mudlet.org"
-        exit 1
-      fi
-      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
+      if [ "${PORTABLE_READY}" = "true" ]; then
+        PORTABLE_SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" | awk '{print $1}')
 
-      verify_attempt=0
-      until curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; do
-        verify_attempt=$((verify_attempt + 1))
-        if [ "$verify_attempt" -ge 18 ]; then
-          echo "::warning::portable uploaded to make.mudlet.org but not yet downloadable at $PORTABLE_DEPLOY_URL after $verify_attempt attempts (CloudFlare/publish lag)"
-          break
+        echo "=== Uploading portable version ==="
+        if ! scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"; then
+          echo "::error::failed to upload ${PORTABLE_NAME}.tar.gz to make.mudlet.org"
+          exit 1
         fi
-        echo "Portable release not yet available at $PORTABLE_DEPLOY_URL, retrying in 10s (attempt $verify_attempt/18)..."
-        sleep 10
-      done
+        PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
+
+        verify_attempt=0
+        until curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; do
+          verify_attempt=$((verify_attempt + 1))
+          if [ "$verify_attempt" -ge 18 ]; then
+            echo "::warning::portable uploaded to make.mudlet.org but not yet downloadable at $PORTABLE_DEPLOY_URL after $verify_attempt attempts (CloudFlare/publish lag)"
+            break
+          fi
+          echo "Portable release not yet available at $PORTABLE_DEPLOY_URL, retrying in 10s (attempt $verify_attempt/18)..."
+          sleep 10
+        done
+      fi
 
       if [ "${ARCH}" = "arm64" ]; then
         FILE_CATEGORY="4"
@@ -292,7 +309,8 @@ if [ "${DEPLOY}" = "deploy" ]; then
       -F "output=json" \
       -F "do=Add File"
 
-      # Upload portable version
+      # Upload portable version (only when the portable was successfully built)
+      if [ "${PORTABLE_READY}" = "true" ]; then
       curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
@@ -309,6 +327,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       -F "file_timestamp_second=$second" \
       -F "output=json" \
       -F "do=Add File"
+      fi
 
     fi
 
