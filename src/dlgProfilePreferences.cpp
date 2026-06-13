@@ -767,9 +767,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
             comboBox_dictionary->addItem(displayText, entries.at(i));
             comboBox_dictionary->setItemData(comboBox_dictionary->count() - 1, toolTip, Qt::ToolTipRole);
-            // Item views fall back to the tooltip - with its raw HTML - for an
-            // item's accessible description unless this is set:
-            comboBox_dictionary->setItemData(comboBox_dictionary->count() - 1, utils::stripHtmlTags(toolTip), Qt::AccessibleDescriptionRole);
+            // Keep the tooltip for sighted mouse users, but do not announce the
+            // dictionary file path as extra screen-reader text for every item:
+            comboBox_dictionary->setItemData(comboBox_dictionary->count() - 1, QString(), Qt::AccessibleDescriptionRole);
 
             if (entries.at(i) == currentDictionary) {
                 currentIndex = comboBox_dictionary->count() - 1;

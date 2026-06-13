@@ -88,6 +88,7 @@ class dlgTriggersMainArea;
 class dlgActionMainArea;
 class dlgSearchArea;
 class dlgAliasMainArea;
+class QToolButton;
 class dlgScriptsMainArea;
 class dlgKeysMainArea;
 class dlgTriggerPatternEdit;
@@ -551,6 +552,8 @@ private:
 
     void showOrHideRestoreEditorActionsToolbarAction();
     void showOrHideRestoreEditorItemsToolbarAction();
+    void updateToolbarButtonAccessibleTexts();
+    void updateToolButtonAccessibleText(QToolButton* pToolButton);
     void updateUndoRedoAccessibleDescriptions();
     void checkForMoreThanOneTriggerItem();
     TTrigger* getTriggerFromTreeItem(QTreeWidgetItem* item);

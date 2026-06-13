@@ -1055,15 +1055,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar);
     QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
 
-    // The buttons that the toolbars create for the actions otherwise report
-    // the action's tooltip - with its raw HTML markup - as their accessible
-    // description, which screen readers read aloud verbatim:
-    for (auto* pToolBar : {toolBar, toolBar2}) {
-        const auto toolButtons = pToolBar->findChildren<QToolButton*>();
-        for (auto* pToolButton : toolButtons) {
-            utils::setAccessibleDescriptionFromToolTip(pToolButton);
-        }
-    }
+    updateToolbarButtonAccessibleTexts();
 
     // (Top) "Actions" toolbar:
     //: This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.
@@ -1599,8 +1591,58 @@ void dlgTriggerEditor::updateUndoRedoAccessibleDescriptions()
     if (!toolBar) {
         return;
     }
-    utils::setAccessibleDescriptionFromToolTip(toolBar->widgetForAction(mpUndoAction));
-    utils::setAccessibleDescriptionFromToolTip(toolBar->widgetForAction(mpRedoAction));
+    updateToolButtonAccessibleText(qobject_cast<QToolButton*>(toolBar->widgetForAction(mpUndoAction)));
+    updateToolButtonAccessibleText(qobject_cast<QToolButton*>(toolBar->widgetForAction(mpRedoAction)));
+}
+
+void dlgTriggerEditor::updateToolbarButtonAccessibleTexts()
+{
+    for (auto* pToolBar : {toolBar, toolBar2}) {
+        if (!pToolBar) {
+            continue;
+        }
+        const auto toolButtons = pToolBar->findChildren<QToolButton*>();
+        for (auto* pToolButton : toolButtons) {
+            updateToolButtonAccessibleText(pToolButton);
+        }
+    }
+}
+
+void dlgTriggerEditor::updateToolButtonAccessibleText(QToolButton* pToolButton)
+{
+    if (!pToolButton) {
+        return;
+    }
+
+    utils::setAccessibleDescriptionFromToolTip(pToolButton);
+
+    const auto* pAction = pToolButton->defaultAction();
+    if (!pAction) {
+        return;
+    }
+
+    QString accessibleName = pAction->text();
+    if (accessibleName.isEmpty()) {
+        accessibleName = pAction->iconText();
+    }
+
+    QString shortcut = pAction->shortcut().toString(QKeySequence::NativeText);
+    if (shortcut.isEmpty()) {
+        if (auto it = mButtonShortcuts.find(accessibleName); it != mButtonShortcuts.end()) {
+            shortcut = QKeySequence(it->second).toString(QKeySequence::NativeText);
+        }
+    }
+
+    if (!accessibleName.isEmpty() && !shortcut.isEmpty()) {
+        //: Accessible name for an editor toolbar button. %1 is the button label, %2 is a keyboard shortcut.
+        accessibleName = tr("%1 (%2)").arg(accessibleName, shortcut);
+    } else if (accessibleName.isEmpty()) {
+        accessibleName = utils::stripHtmlTags(pToolButton->toolTip());
+    }
+
+    if (!accessibleName.isEmpty()) {
+        pToolButton->setAccessibleName(accessibleName);
+    }
 }
 
 void dlgTriggerEditor::applyPatternWidgetStyle(dlgTriggerPatternEdit* patternWidget)
@@ -12340,6 +12382,7 @@ void dlgTriggerEditor::setShortcuts(const bool active)
 {
     setShortcuts(toolBar->actions(), active);
     setShortcuts(toolBar2->actions(), active);
+    updateToolbarButtonAccessibleTexts();
 }
 
 void dlgTriggerEditor::setShortcuts(QList<QAction*> actionList, const bool active)
