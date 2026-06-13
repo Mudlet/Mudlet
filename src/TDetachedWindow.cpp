@@ -1072,6 +1072,14 @@ void TDetachedWindow::createToolBar()
     mpActionFullScreenView->setObjectName(qsl("fullscreen_action"));
     mpToolBar->addAction(mpActionFullScreenView);
 
+    // The buttons that the toolbar creates for the actions otherwise report
+    // the action's tooltip - with its raw HTML markup - as their accessible
+    // description, which screen readers read aloud verbatim:
+    const auto toolBarButtons = mpToolBar->findChildren<QToolButton*>();
+    for (auto* pToolButton : toolBarButtons) {
+        utils::setAccessibleDescriptionFromToolTip(pToolButton);
+    }
+
     // Setup context menu for the toolbar
     mpToolBar->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(mpToolBar, &QToolBar::customContextMenuRequested, this, &TDetachedWindow::slot_showDetachedToolBarContextMenu);

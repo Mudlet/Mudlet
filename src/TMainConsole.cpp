@@ -340,6 +340,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
                                .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.")));
         }
         logButton->setToolTip(utils::richText(tr("Stop logging game output to log file.")));
+        utils::setAccessibleDescriptionFromToolTip(logButton);
     } else {
         // Logging is being turned off
         buffer.logRemainingOutput();
@@ -356,6 +357,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
         mLogFile.flush();
         mLogFile.close();
         logButton->setToolTip(utils::richText(tr("Start logging game output to log file.")));
+        utils::setAccessibleDescriptionFromToolTip(logButton);
     }
 }
 

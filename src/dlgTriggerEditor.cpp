@@ -1217,6 +1217,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpActionsMainArea->comboBox_action_button_rotation, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_saveProperty_ActionButtonRotation);
     connect(mpActionsMainArea->plainTextEdit_action_css, &QPlainTextEdit::textChanged, this, &dlgTriggerEditor::slot_saveProperty_ActionCSS);
 
+    // The search combobox's tooltip comes from the .ui file with HTML markup
+    // that screen readers would otherwise read aloud verbatim:
+    utils::setAccessibleDescriptionFromToolTip(comboBox_searchTerms);
+
     comboBox_searchTerms->lineEdit()->setClearButtonEnabled(true);
     auto pLineEdit_searchTerm = comboBox_searchTerms->lineEdit();
 

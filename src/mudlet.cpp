@@ -534,6 +534,14 @@ void mudlet::init()
     mpMainToolBar->addAction(mpActionFullScreenView);
     mpMainToolBar->widgetForAction(mpActionFullScreenView)->setObjectName(mpActionFullScreenView->objectName());
 
+    // The buttons that the toolbar creates for the actions otherwise report
+    // the action's tooltip - with its raw HTML markup - as their accessible
+    // description, which screen readers read aloud verbatim:
+    const auto mainToolBarButtons = mpMainToolBar->findChildren<QToolButton*>();
+    for (auto* pToolButton : mainToolBarButtons) {
+        utils::setAccessibleDescriptionFromToolTip(pToolButton);
+    }
+
     const QFont mainFont = QFont(qsl("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     mpWidget_profileContainer->setFont(mainFont);
     mpWidget_profileContainer->show();
@@ -2305,6 +2313,7 @@ void mudlet::disableToolbarButtons()
     // more texts to show {the default is to repeat the menu text which is not
     // useful} with a call to menuEditor->setToolTipsVisible(true);
     dactionReplay->setToolTip(mpActionReplay->toolTip());
+    utils::setAccessibleDescriptionFromToolTip(mpMainToolBar->widgetForAction(mpActionReplay));
     dactionReplay->setEnabled(false);
 
     mpActionReconnect->setEnabled(false);
@@ -2390,6 +2399,7 @@ void mudlet::updateMainWindowToolbarState()
                                       "<p><i>Disabled until a profile is loaded.</i></p>"));
         dactionReplay->setToolTip(mpActionReplay->toolTip());
     }
+    utils::setAccessibleDescriptionFromToolTip(mpMainToolBar->widgetForAction(mpActionReplay));
 
     mpActionMudletDiscord->setEnabled(true);
     dactionDiscord->setEnabled(true);
@@ -2495,6 +2505,7 @@ void mudlet::enableToolbarButtons()
         // more texts to show {the default is to repeat the menu text which is not
         // useful} with a call to menuEditor->setToolTipsVisible(true);
         dactionReplay->setToolTip(mpActionReplay->toolTip());
+        utils::setAccessibleDescriptionFromToolTip(mpMainToolBar->widgetForAction(mpActionReplay));
     }
 
     mpActionReconnect->setEnabled(true);
@@ -5172,6 +5183,7 @@ bool mudlet::replayStart()
     dactionReplay->setEnabled(false);
     mpActionReplay->setToolTip(utils::richText(tr("Cannot load a replay as one is already in progress in this or another profile.")));
     dactionReplay->setToolTip(mpActionReplay->toolTip());
+    utils::setAccessibleDescriptionFromToolTip(mpMainToolBar->widgetForAction(mpActionReplay));
 
     mpToolBarReplay = new QToolBar(this);
     mpToolBarReplay->setIconSize(QSize(8 * mToolbarIconSize, 8 * mToolbarIconSize));
@@ -5192,12 +5204,14 @@ bool mudlet::replayStart()
     mpActionReplaySpeedUp->setToolTip(utils::richText(tr("Replay each step with a shorter time interval between steps.")));
     mpToolBarReplay->addAction(mpActionReplaySpeedUp);
     mpToolBarReplay->widgetForAction(mpActionReplaySpeedUp)->setObjectName(mpActionReplaySpeedUp->objectName());
+    utils::setAccessibleDescriptionFromToolTip(mpToolBarReplay->widgetForAction(mpActionReplaySpeedUp));
 
     mpActionReplaySpeedDown = new QAction(QIcon(qsl(":/icons/import.png")), tr("Slower"), this);
     mpActionReplaySpeedDown->setObjectName(qsl("replay_speed_down_action"));
     mpActionReplaySpeedDown->setToolTip(utils::richText(tr("Replay each step with a longer time interval between steps.")));
     mpToolBarReplay->addAction(mpActionReplaySpeedDown);
     mpToolBarReplay->widgetForAction(mpActionReplaySpeedDown)->setObjectName(mpActionReplaySpeedDown->objectName());
+    utils::setAccessibleDescriptionFromToolTip(mpToolBarReplay->widgetForAction(mpActionReplaySpeedDown));
 
     mpLabelReplaySpeedDisplay = new QLabel(this);
     mpActionSpeedDisplay = mpToolBarReplay->addWidget(mpLabelReplaySpeedDisplay);
@@ -5267,6 +5281,7 @@ void mudlet::replayOver()
     dactionReplay->setEnabled(true);
     mpActionReplay->setToolTip(utils::richText(tr("Load a Mudlet replay.")));
     dactionReplay->setToolTip(mpActionReplay->toolTip());
+    utils::setAccessibleDescriptionFromToolTip(mpMainToolBar->widgetForAction(mpActionReplay));
 }
 
 void mudlet::slot_replaySpeedUp()
@@ -5740,6 +5755,7 @@ void mudlet::slot_updateAvailable(const int updateCount)
                                  // Intentional comment
                                  nullptr,
                                  updateCount));
+    utils::setAccessibleDescriptionFromToolTip(mpButtonAbout);
     mpButtonAbout->setText(tr("About"));
     mpButtonAbout->setPopupMode(QToolButton::InstantPopup);
     // Now insert our new button after the current QAction/QToolButton
