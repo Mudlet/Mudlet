@@ -390,10 +390,18 @@ EOF
 
     DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-64-installer.exe"
 
-    if ! curl --output /dev/null --silent --head --fail "${DEPLOY_URL}"; then
-      echo "Error: release not found as expected at ${DEPLOY_URL}"
-      exit 1
-    fi
+    # Retry to tolerate the delay between scp landing the file and it being served
+    # at www.mudlet.org - the publish step is not instantaneous.
+    verify_attempt=0
+    until curl --output /dev/null --silent --head --fail "${DEPLOY_URL}"; do
+      verify_attempt=$((verify_attempt + 1))
+      if [ "$verify_attempt" -ge 18 ]; then
+        echo "Error: release not found as expected at ${DEPLOY_URL}"
+        exit 1
+      fi
+      echo "Release not yet available at ${DEPLOY_URL}, retrying in 10s (attempt $verify_attempt/18)..."
+      sleep 10
+    done
 
     SHA256SUM=$(shasum -a 256 "${INSTALLER_EXE_PATHFILE}" | awk '{print $1}')
 
@@ -456,11 +464,17 @@ EOF
       # Define portable ZIP URL - should match the naming convention
       PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-64-portable.zip"
 
-      # Verify portable ZIP was uploaded
-      if ! curl --output /dev/null --silent --head --fail "${PORTABLE_DEPLOY_URL}"; then
-        echo "Error: portable ZIP not found as expected at ${PORTABLE_DEPLOY_URL}"
-        exit 1
-      fi
+      # Verify portable ZIP was uploaded (retry to tolerate publish propagation delay)
+      verify_attempt=0
+      until curl --output /dev/null --silent --head --fail "${PORTABLE_DEPLOY_URL}"; do
+        verify_attempt=$((verify_attempt + 1))
+        if [ "$verify_attempt" -ge 18 ]; then
+          echo "Error: portable ZIP not found as expected at ${PORTABLE_DEPLOY_URL}"
+          exit 1
+        fi
+        echo "Portable ZIP not yet available at ${PORTABLE_DEPLOY_URL}, retrying in 10s (attempt $verify_attempt/18)..."
+        sleep 10
+      done
 
       # Calculate SHA256 for portable ZIP
       PORTABLE_SHA256SUM=$(shasum -a 256 "${PORTABLE_ZIP_PATH}" | awk '{print $1}')

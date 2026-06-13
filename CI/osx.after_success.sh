@@ -182,10 +182,18 @@ if [ "${DEPLOY}" = "deploy" ]; then
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
       DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-${ARCH}.dmg"
 
-      if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
-        echo "Error: release not found as expected at $DEPLOY_URL"
-        exit 1
-      fi
+      # Retry to tolerate the delay between scp landing on make.mudlet.org and the
+      # file being served at www.mudlet.org - the publish step is not instantaneous.
+      verify_attempt=0
+      until curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; do
+        verify_attempt=$((verify_attempt + 1))
+        if [ "$verify_attempt" -ge 18 ]; then
+          echo "Error: release not found as expected at $DEPLOY_URL"
+          exit 1
+        fi
+        echo "Release not yet available at $DEPLOY_URL, retrying in 10s (attempt $verify_attempt/18)..."
+        sleep 10
+      done
 
       SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" | awk '{print $1}')
 
@@ -227,10 +235,16 @@ if [ "${DEPLOY}" = "deploy" ]; then
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
       PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
 
-      if ! curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; then
-        echo "Error: portable release not found as expected at $PORTABLE_DEPLOY_URL"
-        exit 1
-      fi
+      verify_attempt=0
+      until curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; do
+        verify_attempt=$((verify_attempt + 1))
+        if [ "$verify_attempt" -ge 18 ]; then
+          echo "Error: portable release not found as expected at $PORTABLE_DEPLOY_URL"
+          exit 1
+        fi
+        echo "Portable release not yet available at $PORTABLE_DEPLOY_URL, retrying in 10s (attempt $verify_attempt/18)..."
+        sleep 10
+      done
 
       if [ "${ARCH}" = "arm64" ]; then
         FILE_CATEGORY="4"
