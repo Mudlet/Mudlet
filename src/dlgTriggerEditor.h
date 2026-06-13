@@ -554,7 +554,7 @@ private:
     void showOrHideRestoreEditorItemsToolbarAction();
     void updateToolbarButtonAccessibleTexts();
     void updateToolButtonAccessibleText(QToolButton* pToolButton);
-    void updateUndoRedoAccessibleDescriptions();
+    void updateUndoRedoAccessibleTexts();
     void checkForMoreThanOneTriggerItem();
     TTrigger* getTriggerFromTreeItem(QTreeWidgetItem* item);
     TAlias* getAliasFromTreeItem(QTreeWidgetItem* item);

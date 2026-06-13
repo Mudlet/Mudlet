@@ -62,6 +62,7 @@
 #include <QStandardPaths>
 #include <QString>
 #include <QTableWidget>
+#include <QTextDocument>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <QToolBar>
@@ -3958,6 +3959,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
     anyFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpHost->mpMap->mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
 
     int row = -1;
+    QTextDocument accessibleTextDocument;
     QHashIterator<QString, QSet<int>> itUsedSymbol(roomSymbolsHash);
     while (itUsedSymbol.hasNext()) {
         itUsedSymbol.next();
@@ -3969,13 +3971,13 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         auto* pSymbolInFont = new QTableWidgetItem();
         pSymbolInFont->setTextAlignment(Qt::AlignCenter);
         pSymbolInFont->setToolTip(utils::richText(tr("The room symbol will appear like this if only symbols (glyphs) from the specific font are used.")));
-        pSymbolInFont->setData(Qt::AccessibleDescriptionRole, utils::stripHtmlTags(pSymbolInFont->toolTip()));
+        pSymbolInFont->setData(Qt::AccessibleDescriptionRole, utils::stripHtmlTags(accessibleTextDocument, pSymbolInFont->toolTip()));
         pSymbolInFont->setFont(selectedFont);
 
         auto* pSymbolAnyFont = new QTableWidgetItem();
         pSymbolAnyFont->setTextAlignment(Qt::AlignCenter);
         pSymbolAnyFont->setToolTip(utils::richText(tr("The room symbol will appear like this if symbols (glyphs) from any font can be used.")));
-        pSymbolAnyFont->setData(Qt::AccessibleDescriptionRole, utils::stripHtmlTags(pSymbolAnyFont->toolTip()));
+        pSymbolAnyFont->setData(Qt::AccessibleDescriptionRole, utils::stripHtmlTags(accessibleTextDocument, pSymbolAnyFont->toolTip()));
         pSymbolAnyFont->setFont(anyFont);
 
         const QFontMetrics SymbolInFontMetrics(selectedFont);
@@ -4011,13 +4013,13 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
                                          "on many Unix type operating systems will also use these numbers which cover "
                                          "everything from U+0020 {Space} to U+10FFFD the last usable number in the <i>Private Use "
                                          "Plane 16</i> via most of the written marks that humanity has ever made.</p>"));
-        pCodePointDisplay->setData(Qt::AccessibleDescriptionRole, utils::stripHtmlTags(pCodePointDisplay->toolTip()));
+        pCodePointDisplay->setData(Qt::AccessibleDescriptionRole, utils::stripHtmlTags(accessibleTextDocument, pCodePointDisplay->toolTip()));
 
         // Need to pad the numbers with spaces so that sorting works correctly:
         QTableWidgetItem* pUsageCount = new QTableWidgetItem(qsl("%1").arg(roomsWithSymbol.count(), 5, 10, QChar(' ')));
         pUsageCount->setTextAlignment(Qt::AlignCenter);
         pUsageCount->setToolTip(utils::richText(tr("How many rooms in the whole map have this symbol.")));
-        pUsageCount->setData(Qt::AccessibleDescriptionRole, utils::stripHtmlTags(pUsageCount->toolTip()));
+        pUsageCount->setData(Qt::AccessibleDescriptionRole, utils::stripHtmlTags(accessibleTextDocument, pUsageCount->toolTip()));
 
         QStringList roomNumberStringList;
         QListIterator<int> itRoom(roomsWithSymbol);
@@ -4037,7 +4039,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         QTableWidgetItem* pRoomNumbers = new QTableWidgetItem(roomNumberStringList.join(qsl(", ")));
         pRoomNumbers->setToolTip(utils::richText(tr("The rooms with this symbol, up to a maximum of thirty-two, if there are more "
                                                     "than this, it is indicated but they are not shown.")));
-        pRoomNumbers->setData(Qt::AccessibleDescriptionRole, utils::stripHtmlTags(pRoomNumbers->toolTip()));
+        pRoomNumbers->setData(Qt::AccessibleDescriptionRole, utils::stripHtmlTags(accessibleTextDocument, pRoomNumbers->toolTip()));
 
         auto* pDummyButton = new QToolButton();
         if (isSingleFontUsable) {
@@ -4071,7 +4073,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
                                                             "<i>getRoomChar</i> and <i>setRoomChar</i> functions.")));
             }
         }
-        utils::setAccessibleDescriptionFromToolTip(pDummyButton);
+        pDummyButton->setAccessibleDescription(utils::stripHtmlTags(accessibleTextDocument, pDummyButton->toolTip()));
         pTableWidget->setCellWidget(++row, 0, pDummyButton);
 
         pTableWidget->setItem(row, 1, pSymbolInFont);

@@ -72,18 +72,23 @@ public:
     // richText()) to plain text suitable for the accessibility APIs - screen
     // readers would otherwise read the markup aloud, see:
     // https://github.com/Mudlet/Mudlet/issues/8547
-    static QString stripHtmlTags(const QString& text)
+    static QString stripHtmlTags(QTextDocument& document, const QString& text)
     {
         if (text.isEmpty()) {
             return text;
         }
-        QTextDocument document;
         document.setHtml(text);
         QString plainText = document.toPlainText();
         // Block elements come out as separate lines but a single space between
         // them reads better as a screen reader announcement:
         plainText.replace(scmWhitespaceRun, qsl(" "));
         return plainText.trimmed();
+    }
+
+    static QString stripHtmlTags(const QString& text)
+    {
+        QTextDocument document;
+        return stripHtmlTags(document, text);
     }
 
     // Mirrors a widget's tooltip into its accessible description with the HTML
@@ -96,6 +101,37 @@ public:
             return;
         }
         pWidget->setAccessibleDescription(stripHtmlTags(pWidget->toolTip()));
+    }
+
+    static void setAccessibleDescriptionsFromToolTips(QWidget* pWidget)
+    {
+        if (!pWidget) {
+            return;
+        }
+
+        QTextDocument document;
+        const auto setAccessibleDescription = [&document](QWidget* pChildWidget) {
+            if (!pChildWidget || pChildWidget->toolTip().isEmpty()) {
+                return;
+            }
+            pChildWidget->setAccessibleDescription(stripHtmlTags(document, pChildWidget->toolTip()));
+        };
+
+        setAccessibleDescription(pWidget);
+        const auto childWidgets = pWidget->findChildren<QWidget*>();
+        for (auto* pChildWidget : childWidgets) {
+            setAccessibleDescription(pChildWidget);
+        }
+    }
+
+    static QString setPlainAccessibleText(QWidget* pWidget, const QString& text)
+    {
+        const QString plainText = stripHtmlTags(text);
+        if (pWidget) {
+            pWidget->setAccessibleName(plainText);
+            pWidget->setAccessibleDescription(plainText);
+        }
+        return plainText;
     }
 
     // Qt 6.9 deprecated QDateTime::setOffsetFromUtc(int) and made it hard to

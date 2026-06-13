@@ -35,6 +35,11 @@
 #include "dlgTriggerPatternEdit.h"
 #include "dlgTriggersMainArea.h"
 #include "mudlet.h"
+#include "utils.h"
+
+#include <QRegularExpression>
+#include <QToolBar>
+#include <QToolButton>
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -54,6 +59,16 @@ static void initializeQRCResources() {
 #endif
   qInitResources_mudlet();
   qInitResources_qm();
+}
+
+static bool containsHtmlTag(const QString &text) {
+  static const QRegularExpression htmlTag(qsl(R"(<[/A-Za-z][^>]*>)"));
+  return text.contains(htmlTag);
+}
+
+static bool toolbarActionButton(const QWidget *widget) {
+  const auto *toolButton = qobject_cast<const QToolButton *>(widget);
+  return toolButton && toolButton->defaultAction();
 }
 
 class dlgTriggerEditorUndoRedoTest : public QObject {
@@ -1828,6 +1843,65 @@ private slots:
 
     QVERIFY2(!canUndoBefore || countAfterUndo == initialCount,
              "No items should disappear when undo clicked without changes");
+  }
+
+  void testAccessibleDescriptionsStripRichTextTooltips() {
+    int checkedWidgets = 0;
+    const auto childWidgets = mpEditor->findChildren<QWidget *>();
+    for (const auto *widget : childWidgets) {
+      const QString tooltip = widget->toolTip();
+      if (!containsHtmlTag(tooltip)) {
+        continue;
+      }
+      if (toolbarActionButton(widget)) {
+        continue;
+      }
+
+      ++checkedWidgets;
+      QVERIFY2(!widget->accessibleDescription().isEmpty(),
+               qPrintable(qsl("%1 has a rich text tooltip but no accessible "
+                              "description")
+                              .arg(widget->objectName())));
+      QVERIFY2(!containsHtmlTag(widget->accessibleDescription()),
+               qPrintable(qsl("%1 exposes HTML markup in its accessible "
+                              "description: %2")
+                              .arg(widget->objectName(),
+                                   widget->accessibleDescription())));
+    }
+
+    QVERIFY2(checkedWidgets > 20,
+             "Expected to cover the trigger editor's rich text tooltips");
+  }
+
+  void testToolbarButtonAccessibleTextDoesNotDuplicateTooltip() {
+    mpEditor->slot_showTriggers();
+
+    auto *addTriggerButton =
+        qobject_cast<QToolButton *>(mpEditor->toolBar->widgetForAction(mpEditor->mAddItem));
+    QVERIFY(addTriggerButton);
+
+    QCOMPARE(addTriggerButton->accessibleName(), qsl("Add Trigger (Ctrl+N)"));
+    QVERIFY2(addTriggerButton->accessibleDescription().isEmpty(),
+             qPrintable(qsl("Toolbar button exposes redundant accessible "
+                            "description: %1")
+                            .arg(addTriggerButton->accessibleDescription())));
+  }
+
+  void testSystemMessageAccessibleTextStripsRichText() {
+    const QString richText = qsl("<p><b>Unable to activate trigger.</b></p>"
+                                 "<p><i>Fix the pattern and try again.</i></p>");
+
+    mpEditor->showInfo(richText);
+
+    auto *messageBox = mpEditor->mpSystemMessageArea->notificationAreaMessageBox;
+    QVERIFY(messageBox);
+    QVERIFY(containsHtmlTag(messageBox->text()));
+
+    const QString plainText = utils::stripHtmlTags(richText);
+    QCOMPARE(messageBox->accessibleName(), plainText);
+    QCOMPARE(messageBox->accessibleDescription(), plainText);
+    QVERIFY(!containsHtmlTag(messageBox->accessibleName()));
+    QVERIFY(!containsHtmlTag(messageBox->accessibleDescription()));
   }
 
   void testTriggerNameWiped() {
