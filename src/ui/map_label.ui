@@ -214,9 +214,6 @@
         <property name="toolTip">
          <string>&lt;p&gt;If deselected the label will have the same size when you zoom in and out in the mapper. If it is selected the label will scale when you zoom the mapper.&lt;/p&gt;</string>
         </property>
-        <property name="accessibleDescription">
-         <string>If deselected the label will have the same size when you zoom in and out in the mapper. If it is selected the label will scale when you zoom the mapper.</string>
-        </property>
         <property name="text">
          <string>Scale with zoom</string>
         </property>
