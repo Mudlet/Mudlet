@@ -176,6 +176,8 @@ private slots:
 
 private:
     static QString generateToolTip(const QString& exitRoomName, const QString& exitAreaName, const bool exitRoomLocked, const bool outOfAreaExit, const int exitRoomWeight);
+    void setItemAccessibleDescriptionFromToolTip(QTreeWidgetItem*, int column) const;
+    void setItemAccessibleDescriptionsFromToolTips(QTreeWidgetItem*) const;
     void init();
     void initExit(int direction, int exitId, QLineEdit* exitLineEdit,
                   QCheckBox* noRoute, QCheckBox* stub,

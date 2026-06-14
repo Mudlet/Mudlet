@@ -157,9 +157,11 @@ QWidget* RoomIdLineEditDelegate::createEditor(QWidget* parent, const QStyleOptio
         }
         // Set the tooltip for the QLineEdit:
         mpEditor->setToolTip(roomIdToolTipText);
+        utils::setAccessibleDescriptionFromToolTip(mpEditor);
         if (mpItem) {
             // And duplicate it in the status:
             mpItem->setToolTip(ExitsTreeWidget::colIndex_exitStatus, roomIdToolTipText);
+            mpDlgRoomExits->setItemAccessibleDescriptionFromToolTip(mpItem, ExitsTreeWidget::colIndex_exitStatus);
         }
     }
 
@@ -234,8 +236,10 @@ void RoomIdLineEditDelegate::slot_specialRoomExitIdEdited(const QString& text) c
                                                "If left like this, this exit will be deleted when <tt>save</tt> is clicked."));
     }
     mpEditor->setToolTip(roomIdToolTipText);
+    utils::setAccessibleDescriptionFromToolTip(mpEditor);
 
     mpItem->setToolTip(ExitsTreeWidget::colIndex_exitStatus, roomIdToolTipText);
+    mpDlgRoomExits->setItemAccessibleDescriptionFromToolTip(mpItem, ExitsTreeWidget::colIndex_exitStatus);
 }
 
 dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
@@ -244,6 +248,7 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 , mRoomID(roomNumber)
 {
     setupUi(this);
+    utils::setAccessibleDescriptionsFromToolTips(this);
 
     mIcon_invalidExit.addFile(qsl(":/icons/dialog-error.png"), QSize(24, 24));
     mIcon_inAreaExit.addFile(qsl(":/icons/dialog-ok-apply.png"), QSize(24, 24));
@@ -284,6 +289,38 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 }
 
 dlgRoomExits::~dlgRoomExits() = default;
+
+void dlgRoomExits::setItemAccessibleDescriptionFromToolTip(QTreeWidgetItem* pItem, const int column) const
+{
+    if (!pItem) {
+        return;
+    }
+
+    pItem->setData(column, Qt::AccessibleDescriptionRole, utils::stripHtmlTags(pItem->toolTip(column)));
+}
+
+void dlgRoomExits::setItemAccessibleDescriptionsFromToolTips(QTreeWidgetItem* pItem) const
+{
+    if (!pItem) {
+        return;
+    }
+
+    QTextDocument document;
+    const int columns[] = {ExitsTreeWidget::colIndex_exitRoomId,
+                           ExitsTreeWidget::colIndex_exitStatus,
+                           ExitsTreeWidget::colIndex_lockExit,
+                           ExitsTreeWidget::colIndex_exitWeight,
+                           ExitsTreeWidget::colIndex_doorNone,
+                           ExitsTreeWidget::colIndex_doorOpen,
+                           ExitsTreeWidget::colIndex_doorClosed,
+                           ExitsTreeWidget::colIndex_doorLocked,
+                           ExitsTreeWidget::colIndex_command};
+    for (const int column : columns) {
+        if (!pItem->toolTip(column).isEmpty()) {
+            pItem->setData(column, Qt::AccessibleDescriptionRole, utils::stripHtmlTags(document, pItem->toolTip(column)));
+        }
+    }
+}
 
 void dlgRoomExits::slot_endEditSpecialExits()
 {
@@ -472,6 +509,7 @@ void dlgRoomExits::slot_addSpecialExit()
     specialExits->addTopLevelItem(pI);
 
     setIconAndToolTipsOnSpecialExit(pI, true);
+    setItemAccessibleDescriptionsFromToolTips(pI);
 }
 
 void dlgRoomExits::save()
@@ -1036,6 +1074,8 @@ void dlgRoomExits::setIconAndToolTipsOnSpecialExit(QTreeWidgetItem* pSpecialExit
     } else {
         pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_command, utils::richText(tr("Some mapper scripts may require prefixing the keyword \"script:\").")));
     }
+
+    setItemAccessibleDescriptionsFromToolTips(pSpecialExit);
 }
 
 void dlgRoomExits::setActionOnExit(QLineEdit* pExitLineEdit, QAction* pWantedAction) const
@@ -1173,6 +1213,8 @@ void dlgRoomExits::normalExitEdited(const QString& roomExitIdText,
         pDoorType_locked->setEnabled(false);
         pStub->setEnabled(true);
     }
+
+    utils::setAccessibleDescriptionFromToolTip(pExit);
 }
 
 void dlgRoomExits::normalStubExitChanged(const int state,
@@ -1217,6 +1259,8 @@ void dlgRoomExits::normalStubExitChanged(const int state,
         pWeight->setEnabled(false);
         pWeight->setValue(0); // Prevent a weight to be set/changed on a also
     }
+
+    utils::setAccessibleDescriptionFromToolTip(pExit);
 }
 
 // These slots are called as the text for the exitID is edited
@@ -1629,6 +1673,7 @@ void dlgRoomExits::initExit(int direction,
             none->setChecked(true);
         }
     }
+    utils::setAccessibleDescriptionFromToolTip(exitLineEdit);
     originalExits[direction] = makeExitFromControls(direction);
 }
 
@@ -1644,6 +1689,7 @@ void dlgRoomExits::init()
         // Revise the tool tip:
         //: This text is a revision to the default tooltip text set for this widget in the 'room_exits.ui' file. Bold HTML tags are used to emphasis that this room's locked status overrides any weight or lock ("No route") setting of any exit that comes to it.
         roomID->setToolTip(utils::richText(tr("This is the Room ID number for this room; this <b>room is locked</b> so it will not be used for speed-walks at all.")));
+        utils::setAccessibleDescriptionFromToolTip(roomID);
     } else {
         // Hide the padlock icon to the right of the room number display to
         // show the unlocked status of the room:
