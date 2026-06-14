@@ -538,7 +538,7 @@ void ActionUnit::constructToolbar(TAction* pAction, TToolBar* pToolBar)
     pToolBar->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     if (pAction->mLocation == 4) {
         if (pAction->mToolbarLastDockArea == Qt::NoDockWidgetArea) {
-            qWarning().nospace().moquote() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\""
+            qWarning().nospace().noquote() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\""
                                            << pAction->getName()
                                            << "\"), for this toolbar forcing it to the Left one!";
         }
