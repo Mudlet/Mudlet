@@ -651,6 +651,37 @@ set_target_properties(${LIB_MUDLET_TARGET} PROPERTIES
   AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
   AUTOGEN_ORIGIN_DEPENDS OFF)
 
+# Precompiled headers: parse the most-included, stable Qt and standard-library
+# headers once for the whole library instead of in every translation unit. This
+# cuts a clean build's compile time noticeably. Only headers that are ubiquitous
+# and rarely change are listed - never Mudlet's own headers, which would make the
+# PCH invalidate on most edits. Gated behind an option (default ON) so it can be
+# turned off on memory-constrained machines (e.g. small single-board computers)
+# with -DUSE_PCH=OFF.
+option(USE_PCH "Use precompiled headers to speed up compilation" ON)
+if(USE_PCH)
+  target_precompile_headers(${LIB_MUDLET_TARGET} PRIVATE
+    <memory>
+    <string>
+    <functional>
+    <QtGlobal>
+    <QString>
+    <QStringList>
+    <QByteArray>
+    <QList>
+    <QVector>
+    <QMap>
+    <QHash>
+    <QSet>
+    <QPointer>
+    <QObject>
+    <QDebug>
+  )
+  # sparkleupdater.mm (macOS) is Objective-C++; the C++ precompiled header is
+  # built with Objective-C disabled and cannot be applied to it, so exclude it.
+  set_source_files_properties(sparkleupdater.mm PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+endif()
+
 if(USE_FONTS)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_FONTS)
 endif()
