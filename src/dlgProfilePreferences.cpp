@@ -1496,7 +1496,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         const QString labelText = mudlet::self()->mpShortcutsManager->getLabel(key);
         auto sequenceEdit = new TKeySequenceEdit(currentSequence, labelText);
         auto label = new QLabel(labelText);
-        label->setBuddy(sequenceEdit);
+        // Point the buddy at the control that actually receives focus (the
+        // editor's inner line edit, reached via its focus proxy) rather than the
+        // wrapper, so the accessible label attaches to the single announced
+        // node; naming the wrapper as well made screen readers read the label
+        // twice (#9322). The proxy is only null in the degraded fallback, where
+        // the wrapper itself is the focus target:
+        QWidget* const labelTarget = sequenceEdit->focusProxy() ? sequenceEdit->focusProxy() : sequenceEdit;
+        label->setBuddy(labelTarget);
 
         gridLayout_groupBox_shortcuts->addWidget(label, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);

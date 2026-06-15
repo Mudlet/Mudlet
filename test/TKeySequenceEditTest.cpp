@@ -45,45 +45,60 @@ private slots:
         QVERIFY(!lineEdit->focusProxy());
     }
 
-    void accessibleNameIsSetOnWidgetAndLineEdit()
+    void accessibleNameIsOnInnerFieldOnly()
     {
         const QString label = qsl("Open file");
         TKeySequenceEdit edit(QKeySequence(), label);
 
-        QCOMPARE(edit.accessibleName(), label);
+        // The inner field carries the accessible name; the wrapper is left
+        // unnamed so a screen reader does not announce the label twice - once
+        // for the wrapper's grouping and once for the focused field (#9322):
         QCOMPARE(innerLineEdit(edit)->accessibleName(), label);
+        QVERIFY(edit.accessibleName().isEmpty());
     }
 
-    void accessibleDescriptionReflectsBinding()
+    void populatedBindingIsAnnouncedOnlyAsTheFieldValue()
     {
         const QKeySequence sequence(qsl("Ctrl+O"));
         TKeySequenceEdit edit(sequence, qsl("Open file"));
+        auto* lineEdit = innerLineEdit(edit);
 
-        const QString description = edit.accessibleDescription();
-        QVERIFY(description.contains(sequence.toString(QKeySequence::NativeText)));
-        QCOMPARE(innerLineEdit(edit)->accessibleDescription(), description);
+        // The binding is shown as the field's text, which screen readers
+        // announce as its value, so it must not also appear in the accessible
+        // description of the field or the wrapper - otherwise the reader speaks
+        // the combination several times over (#9322):
+        QCOMPARE(edit.keySequence(), sequence);
+        QVERIFY(!lineEdit->text().isEmpty());
+        QVERIFY(lineEdit->accessibleDescription().isEmpty());
+        QVERIFY(edit.accessibleDescription().isEmpty());
     }
 
-    void accessibleDescriptionReportsUnsetBinding()
+    void emptyBindingIsDescribedAsUnset()
     {
         TKeySequenceEdit edit(QKeySequence(), qsl("Open file"));
+        auto* lineEdit = innerLineEdit(edit);
 
-        QVERIFY(!edit.accessibleDescription().isEmpty());
-        QCOMPARE(innerLineEdit(edit)->accessibleDescription(), edit.accessibleDescription());
+        // With no value to announce, the empty state is conveyed by the field's
+        // description instead - but still only once: the wrapper never carries
+        // it (#9322):
+        QVERIFY(!lineEdit->accessibleDescription().isEmpty());
+        QVERIFY(edit.accessibleDescription().isEmpty());
     }
 
     void accessibleDescriptionUpdatesOnSequenceChange()
     {
         TKeySequenceEdit edit(QKeySequence(), qsl("Open file"));
-        const QString unsetDescription = edit.accessibleDescription();
+        auto* lineEdit = innerLineEdit(edit);
+        const QString unsetDescription = lineEdit->accessibleDescription();
+        QVERIFY(!unsetDescription.isEmpty());
 
-        const QKeySequence sequence(qsl("Alt+F4"));
-        edit.setKeySequence(sequence);
-        QVERIFY(edit.accessibleDescription().contains(sequence.toString(QKeySequence::NativeText)));
-        QCOMPARE(innerLineEdit(edit)->accessibleDescription(), edit.accessibleDescription());
+        // Once there is a value to announce, the description is cleared so the
+        // binding is not read out twice:
+        edit.setKeySequence(QKeySequence(qsl("Alt+F4")));
+        QVERIFY(lineEdit->accessibleDescription().isEmpty());
 
         edit.clear();
-        QCOMPARE(edit.accessibleDescription(), unsetDescription);
+        QCOMPARE(lineEdit->accessibleDescription(), unsetDescription);
     }
 
     void lineEditRejectsDirectEditing()

@@ -26,8 +26,13 @@ TKeySequenceEdit::TKeySequenceEdit(const QKeySequence& sequence, const QString& 
 : QKeySequenceEdit(sequence, pParent)
 , mpLineEdit(findChild<QLineEdit*>())
 {
-    setAccessibleName(accessibleLabel);
-
+    // Only the inner QLineEdit - the control that actually receives focus - is
+    // given an accessible name (below); the wrapper is deliberately left
+    // unnamed so a screen reader announces the label once, for the focused
+    // field, rather than a second time for the wrapper's grouping (#9322). The
+    // preferences page points the buddy QLabel at that same inner control for
+    // the same reason.
+    //
     // The inner QLineEdit is a Qt implementation detail; if it ever goes away
     // we degrade to the stock (less accessible) behaviour instead of crashing:
     if (mpLineEdit) {
@@ -48,6 +53,10 @@ TKeySequenceEdit::TKeySequenceEdit(const QKeySequence& sequence, const QString& 
         mpLineEdit->setAttribute(Qt::WA_InputMethodEnabled, false);
         mpLineEdit->setContextMenuPolicy(Qt::NoContextMenu);
         mpLineEdit->setAccessibleName(accessibleLabel);
+    } else {
+        // Degraded fallback: with no inner field to carry the name, label the
+        // wrapper itself so the control is not left unnamed:
+        setAccessibleName(accessibleLabel);
     }
 
     slot_updateAccessibleDescription();
@@ -105,16 +114,16 @@ void TKeySequenceEdit::keyPressEvent(QKeyEvent* pEvent)
 
 void TKeySequenceEdit::slot_updateAccessibleDescription()
 {
-    const QKeySequence sequence = keySequence();
+    // The inner QLineEdit shows the binding as its text, which a screen reader
+    // announces as the field's value. Repeating that binding in the accessible
+    // description - and a second time on this wrapper widget - made readers
+    // speak the combination several times per editor (#9322). Only describe the
+    // empty state, where there is no value for the reader to fall back on:
     QString description;
-    if (sequence.isEmpty()) {
+    if (keySequence().isEmpty()) {
         //: Accessibility description of a keyboard shortcut editor in the preferences when no shortcut is assigned
         description = tr("No shortcut set");
-    } else {
-        //: Accessibility description of a keyboard shortcut editor in the preferences; %1 is the assigned key combination, e.g. "Ctrl+O"
-        description = tr("Current shortcut: %1").arg(sequence.toString(QKeySequence::NativeText));
     }
-    setAccessibleDescription(description);
     if (mpLineEdit) {
         mpLineEdit->setAccessibleDescription(description);
     }
