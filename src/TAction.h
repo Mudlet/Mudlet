@@ -55,19 +55,50 @@ public:
     void compileAll();
     QString getName() const { return mName; }
     void setName(const QString& name);
-    void setButtonRotation(int rotation) { if (rotation != mButtonRotation) { setDataChanged(); mButtonRotation = rotation; } }
+    void setButtonRotation(int rotation) {
+        if (rotation != mButtonRotation) {
+            setDataChanged();
+            mButtonRotation = rotation;
+        }
+    }
     int getButtonRotation() const { return mButtonRotation; }
-    void setButtonColumns(int columns) { if (columns != mButtonColumns) { setDataChanged(); mButtonColumns = columns; } }
+    void setButtonColumns(int columns) {
+        if (columns != mButtonColumns) {
+            setDataChanged();
+            mButtonColumns = columns;
+        }
+    }
     int getButtonColumns() const { return mButtonColumns; }
     bool getButtonFlat() const { return mButtonFlat; }
-    void setButtonFlat(bool flat) { if (flat != mButtonFlat) { setDataChanged(); mButtonFlat = flat; } }
+    void setButtonFlat(bool flat) {
+        if (flat != mButtonFlat) {
+            setDataChanged();
+            mButtonFlat = flat;
+        }
+    }
     // This should always be called AFTER setButtonColumns!
-    void setButtonFillerOffset(const int value) { mButtonFillerOffset = std::max(0, std::min(value, mButtonColumns - 1)); }
+    void setButtonFillerOffset(const int value)
+    {
+        const auto newValue = std::max(0, std::min(value, mButtonColumns - 1));
+        if (newValue != mButtonColumns) {
+            setDataChanged();
+            mButtonColumns = newValue;
+        }
+    }
     int getButtonFillerOffset() const { return mButtonFillerOffset; }
-
-    void setSizeX(int size) { if (size != mSizeX) { setDataChanged(); mSizeX = size; } }
+    void setSizeX(int size) {
+        if (size != mSizeX) {
+            setDataChanged();
+            mSizeX = size;
+        }
+    }
     int getSizeX() const { return mSizeX; }
-    void setSizeY(int size) { if (size != mSizeY) { setDataChanged(); mSizeY = size; } }
+    void setSizeY(int size) {
+        if (size != mSizeY) {
+            setDataChanged();
+            mSizeY = size;
+        }
+    }
     int getSizeY() const { return mSizeY; }
     QSize getSize() const { return {mSizeX, mSizeY}; }
 
@@ -76,25 +107,59 @@ public:
     bool compileScript();
     void execute();
     QString getIcon() const { return mIcon; }
-    void setIcon(const QString& icon) { if (icon != mIcon) { mIcon = icon; } }
+    void setIcon(const QString& icon) {
+        if (icon != mIcon) {
+            mIcon = icon;
+        }
+    }
     QString getScript() const { return mScript; }
     bool setScript(const QString& script);
     QString getCommandButtonUp() const { return mCommandButtonUp; }
-    void setCommandButtonUp(const QString& cmd) { if (cmd != mCommandButtonUp) { setDataChanged(); mCommandButtonUp = cmd; } }
-    void setCommandButtonDown(const QString& cmd) { if (cmd != mCommandButtonDown) { setDataChanged(); mCommandButtonDown = cmd; } }
+    void setCommandButtonUp(const QString& cmd) {
+        if (cmd != mCommandButtonUp) {
+            setDataChanged();
+            mCommandButtonUp = cmd;
+        }
+    }
+    void setCommandButtonDown(const QString& cmd) {
+        if (cmd != mCommandButtonDown) {
+            setDataChanged();
+            mCommandButtonDown = cmd;
+        }
+    }
     QString getCommandButtonDown() const { return mCommandButtonDown; }
     bool isPushDownButton() const { return mIsPushDownButton; }
-    void setIsPushDownButton(const bool b) { if (b != mIsPushDownButton) { setDataChanged(); mIsPushDownButton = b; } }
+    void setIsPushDownButton(const bool b) {
+        if (b != mIsPushDownButton) {
+            setDataChanged();
+            mIsPushDownButton = b;
+        }
+    }
 
-    void setIsFolder(bool b) { if (b != isFolder()) { setDataChanged(); this->Tree::setIsFolder(b);} }
+    void setIsFolder(bool b) {
+        if (b != isFolder()) {
+            setDataChanged();
+            this->Tree::setIsFolder(b);
+        }
+    }
 
     bool registerAction();
     void insertActions(TToolBar* pT, QMenu* menu);
     void expandToolbar(TToolBar* pT);
     void insertActions(TEasyButtonBar* pT, QMenu* menu);
     void expandToolbar(TEasyButtonBar* pT);
-    void setDataSaved() { if (mpParent) { mpParent->setDataSaved(); } mDataChanged = false; }
-    void setDataChanged() { if (mpParent) { mpParent->setDataChanged(); } mDataChanged = true; }
+    void setDataSaved() {
+        if (mpParent) {
+            mpParent->setDataSaved();
+        }
+        mDataChanged = false;
+    }
+    void setDataChanged() {
+        if (mpParent) {
+            mpParent->setDataChanged();
+        }
+        mDataChanged = true;
+    }
     bool isDataChanged() { return mDataChanged; }
     QString packageName(TAction* pAction) const;
     QString moduleName(TAction* pAction) const;
