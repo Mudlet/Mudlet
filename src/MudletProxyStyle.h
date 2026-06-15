@@ -17,20 +17,23 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_ALTFOCUSMENUBARDISABLE_H
-#define MUDLET_ALTFOCUSMENUBARDISABLE_H
+#ifndef MUDLET_MUDLETPROXYSTYLE_H
+#define MUDLET_MUDLETPROXYSTYLE_H
 
 #include <QProxyStyle>
-#include <QStyleFactory>
 
-class AltFocusMenuBarDisable : public QProxyStyle
+// Applies Mudlet's application-wide style hint adjustments on top of whichever
+// base style is in use; previously named AltFocusMenuBarDisable when it
+// unconditionally suppressed the Alt key menu bar navigation that it now
+// enables for screen reader users only
+class MudletProxyStyle : public QProxyStyle
 {
     Q_OBJECT
 
 public:
-    AltFocusMenuBarDisable();
-    explicit AltFocusMenuBarDisable(const QString &style);
-    int styleHint(StyleHint styleHint, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *returnData) const;
+    MudletProxyStyle();
+    explicit MudletProxyStyle(const QString& style);
+    int styleHint(StyleHint styleHint, const QStyleOption* opt, const QWidget* widget, QStyleHintReturn* returnData) const override;
 };
 
 #endif
