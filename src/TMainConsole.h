@@ -96,12 +96,7 @@ public:
     // Either returns the handle of the per profile or the shared Mudlet one or
     // nullptr depending on the state of the flags mEnableUserDictionary and
     // mUseSharedDictionary:
-    Hunhandle* getHunspellHandle_user() const {
-        return mEnableUserDictionary
-                ? (mUseSharedDictionary
-                   ? mpHunspell_shared
-                   : mpHunspell_profile)
-                : nullptr; }
+    Hunhandle* getHunspellHandle_user() const { return mEnableUserDictionary ? (mUseSharedDictionary ? mpHunspell_shared : mpHunspell_profile) : nullptr; }
     QSet<QString> getWordSet() const;
     QPair<bool, QString> addWordToSet(const QString&);
     QPair<bool, QString> removeWordFromSet(const QString&);
@@ -113,6 +108,7 @@ public:
     bool saveMap(const QString&, int saveVersion = 0);
     bool loadMap(const QString&);
     bool importMap(const QString&, QString* errMsg = nullptr);
+    void refreshSubconsoles();
 
 
     QMap<QString, TConsole*> mSubConsoleMap;
@@ -121,6 +117,7 @@ public:
     QMap<QString, TTextBox*> mTextBoxMap;
     QMap<QString, TLabel*> mLabelMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
+    mutable QMap<QString, QSize> mCachedWindowSizes;
     TBuffer mClipboard;
     QFile mLogFile;
     QString mLogFileName;
@@ -172,4 +169,3 @@ private:
 };
 
 #endif // MUDLET_TMAINCONSOLE_H
-

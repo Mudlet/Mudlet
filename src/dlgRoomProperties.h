@@ -43,7 +43,7 @@ public:
         QHash<QString, int>& pSymbols,
         QHash<int, int>& pWeights,
         QHash<bool, int> lockStatus,
-        QHash<bool, int> hiddenStatus,
+        int hiddenRoomCount,
         QSet<TRoom*>& pRooms);
     void accept() override;
     void reject() override;
@@ -74,7 +74,7 @@ private:
     void initWeightInstructions();
     QStringList getComboBoxWeightItems();
     void initLockInstructions();
-    void initHiddenInstructions();
+    void initHiddenInstructions(const int);
     void initBorderInstructions();
     void emitBorderPreview();
     void restoreOriginalBorders();

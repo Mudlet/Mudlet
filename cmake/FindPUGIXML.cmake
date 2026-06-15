@@ -1,3 +1,15 @@
+# FindPUGIXML.cmake by:
+#                      Vadim Peretokin - vperetokin@gmail.com 2018, 2020
+#                      Florian Scheel - keneanung@googlemail.com 2019
+#                      Stephen Lyons - slysven@virginmedia.com 2020
+#
+# To the extent possible under law, the person(s) above who associated CC0
+# with this file have waived all copyright and related or neighboring rights
+# to it.
+#
+# You should have received a copy of the CC0 legalcode along with this
+# work.  If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
+
 # Find the pugixml XML parsing library.
 #
 # This module exports the following targets that should be used to link against:

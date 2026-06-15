@@ -45,10 +45,6 @@ fi
 
 if [ "${DEPLOY}" = "deploy" ]; then
 
-  # get commit date now before we check out an change into another git repository
-  COMMIT_DATE=$(git show -s --pretty="tformat:%cI" | cut -d'T' -f1 | tr -d '-')
-  YESTERDAY_DATE=$(date -v-1d '+%F' | tr -d '-')
-
   git clone https://github.com/Mudlet/installers.git "${BUILD_DIR}/../installers"
 
   cd "${BUILD_DIR}/../installers/osx"
@@ -96,12 +92,28 @@ if [ "${DEPLOY}" = "deploy" ]; then
     app="${BUILD_DIR}/build/mudlet.app"
     if [ "${public_test_build}" == "true" ]; then
 
-      # Skip commit check if this is a manually forced build
+      # Skip duplicate check if this is a manually forced build
       if [[ "${GITHUB_FORCE_BUILD}" == "true" ]]; then
-        echo "== Forced build requested, skipping commit date check =="
-      elif [[ "${COMMIT_DATE}" -lt "${YESTERDAY_DATE}" ]]; then
-        echo "== No new commits, aborting public test build generation =="
-        exit 0
+        echo "== Forced build requested, skipping duplicate PTB check =="
+      else
+        # don't swallow a gh failure (e.g. missing GH_TOKEN) - warning and
+        # building beats silently shipping a duplicate PTB
+        if existing_ptb_tags=$(gh release list --repo "${GITHUB_REPOSITORY}" --limit 100 \
+              --json tagName --jq '.[].tagName | select(contains("-ptb-"))'); then
+          while IFS= read -r existing_tag; do
+            [[ -n "${existing_tag}" ]] || continue
+            # prefix-compare as git can vary the abbreviated hash length per run
+            existing_commit="${existing_tag##*-}"
+            if [[ -n "${BUILD_COMMIT}" ]] \
+                && { [[ "${BUILD_COMMIT}" == "${existing_commit}"* ]] \
+                  || [[ "${existing_commit}" == "${BUILD_COMMIT}"* ]]; }; then
+              echo "== PTB already exists for commit ${BUILD_COMMIT} (${existing_tag}), aborting public test build generation =="
+              exit 0
+            fi
+          done <<< "${existing_ptb_tags}"
+        else
+          echo "::warning::Could not list releases to check for duplicate PTB (is GH_TOKEN set?) - proceeding with build"
+        fi
       fi
 
       echo "== Creating a public test build =="
@@ -131,21 +143,41 @@ if [ "${DEPLOY}" = "deploy" ]; then
     fi
 
     if [ "${public_test_build}" == "true" ]; then
-      mv "${HOME}/Desktop/Mudlet PTB.dmg" "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}.dmg"
+      RELEASE_ARTIFACT="${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}.dmg"
+      mv "${HOME}/Desktop/Mudlet PTB.dmg" "${RELEASE_ARTIFACT}"
     else
-      mv "${HOME}/Desktop/Mudlet.dmg" "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg"
+      RELEASE_ARTIFACT="${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg"
+      mv "${HOME}/Desktop/Mudlet.dmg" "${RELEASE_ARTIFACT}"
     fi
+
+    echo "=== Generating SHA256 checksum for GitHub Release ==="
+    RELEASE_ARTIFACT_BASENAME=$(basename "${RELEASE_ARTIFACT}")
+    (cd "$(dirname "${RELEASE_ARTIFACT}")" && shasum -a 256 "${RELEASE_ARTIFACT_BASENAME}") > "${RELEASE_ARTIFACT}.sha256"
 
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Setting up for Github upload ==="
       mkdir -p "${BUILD_DIR}/upload/"
-      mv "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}.dmg" "${BUILD_DIR}/upload/"
+      mv "${RELEASE_ARTIFACT}" "${BUILD_DIR}/upload/"
+      mv "${RELEASE_ARTIFACT}.sha256" "${BUILD_DIR}/upload/"
       {
         echo "FOLDER_TO_UPLOAD=${BUILD_DIR}/upload"
         echo "UPLOAD_FILENAME=Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}"
+        echo "RELEASE_ASSET_PATH=${BUILD_DIR}/upload/$(basename "${RELEASE_ARTIFACT}")"
+        echo "RELEASE_ASSET_SHA256_PATH=${BUILD_DIR}/upload/$(basename "${RELEASE_ARTIFACT}").sha256"
+        echo "VERSION=${VERSION}"
+        echo "MUDLET_VERSION_BUILD=${MUDLET_VERSION_BUILD}"
+        echo "BUILD_COMMIT=${BUILD_COMMIT}"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
     else
+      {
+        echo "RELEASE_ASSET_PATH=${RELEASE_ARTIFACT}"
+        echo "RELEASE_ASSET_SHA256_PATH=${RELEASE_ARTIFACT}.sha256"
+        echo "VERSION=${VERSION}"
+        echo "MUDLET_VERSION_BUILD=${MUDLET_VERSION_BUILD}"
+        echo "BUILD_COMMIT=${BUILD_COMMIT}"
+      } >> "$GITHUB_ENV"
+
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
       DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-${ARCH}.dmg"

@@ -130,7 +130,7 @@ bool PanInteractionHandler::handleMouseMove(T2DMap::MapInteractionContext& conte
 
     map->m2DPanStart = panNewPosition;
     mMapWidget.mShiftMode = true;
-    mMapWidget.update();
+    mMapWidget.scheduleRender();
 
     return true;
 }

@@ -79,7 +79,6 @@ public slots:
 
     void slot_updateAutoConnect(int state);
     void slot_updateAutoReconnect(int state);
-    void slot_updateDiscordOptIn(int state);
     void slot_load();
     void slot_cancel();
     void slot_copyProfile();
@@ -98,7 +97,6 @@ private:
     static bool copyFolder(const QString& sourceFolder, const QString& destFolder);
     QString getDescription(const QString& profile_name) const;
     bool validateConnect();
-    void updateDiscordStatus();
     bool validateProfile();
     void loadProfile(bool alsoConnect);
     void copyProfileSettingsOnly(const QString& oldname, const QString& newname);
@@ -113,8 +111,8 @@ private:
     template <typename L>
     void loadSecuredPassword(const QString& profile, L callback);
     void migrateSecuredPassword(const QString& oldProfile, const QString& newProfile);
-    void writeSecurePassword(const QString& profile, const QString& pass) const;
-    void deleteSecurePassword(const QString& profile) const;
+    void writeSecurePassword(const QString& profile, const QString& pass);
+    void deleteSecurePassword(const QString& profile);
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void reallyDeleteProfile(const QString& profile);
     void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, const QString& newProfileHost, const QString& newProfilePort, const int newProfileSslTsl);
