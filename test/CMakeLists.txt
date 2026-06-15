@@ -28,6 +28,7 @@ set(UNIT_TESTS
     SecureStringUtilsTest
     CredentialManagerTest
     DiscordTest
+    TTextEditBlinkTest
     TAreaZLevelIndexTest
     TAreaGridIndexTest
     TKeySequenceEditTest
