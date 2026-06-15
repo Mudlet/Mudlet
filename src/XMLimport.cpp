@@ -779,7 +779,7 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mAcceptServerMedia"), pHost->mAcceptServerMedia);
     setBoolAttribute(qsl("mMapperUseAntiAlias"), pHost->mMapperUseAntiAlias);
     setBoolAttribute(qsl("mMapperShowGrid"), pHost->mMapperShowGrid);
-    setBoolAttribute(qsl("mMapperCenterSmallAreas"), pHost->mMapperCenterSmallAreas);
+    setBoolAttributeWithDefault(qsl("mMapperCenterSmallAreas"), pHost->mMapperCenterSmallAreas, true);
     setBoolAttribute(qsl("mEditorAutoComplete"), pHost->mEditorAutoComplete);
     setBoolAttribute(qsl("mVersionInTTYPE"), pHost->mVersionInTTYPE);
     setBoolAttribute(qsl("mPromptedForVersionInTTYPE"), pHost->mPromptedForVersionInTTYPE);
