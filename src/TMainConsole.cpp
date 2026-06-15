@@ -648,7 +648,10 @@ std::pair<bool, QString> TMainConsole::deleteMiniConsole(const QString& name)
         // it along with itself (mirrors the shutdown path in TConsole::closeEvent).
         if (pConsole->getType() == TConsole::UserWindow) {
             if (auto pDock = mDockWidgetMap.take(name)) {
-                pDock->setAttribute(Qt::WA_DeleteOnClose);
+                // deleteLater() alone is sufficient: the console is the dock's
+                // child widget, so destroying the dock destroys the console with
+                // it. (No WA_DeleteOnClose - we delete programmatically here, not
+                // in response to a close event.)
                 pDock->deleteLater();
             } else {
                 pConsole->deleteLater();
