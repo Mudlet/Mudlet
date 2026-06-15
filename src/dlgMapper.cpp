@@ -891,18 +891,19 @@ void dlgMapper::slot_setupMapperMenu()
     connect(showMapGrid, &QAction::toggled, this, &dlgMapper::slot_setShowGrid);
     menu->addAction(showMapGrid);
 
-    auto* centerOnAreaAction = new QAction(tr("Keep small areas centered, not player"), this);
-    centerOnAreaAction->setCheckable(true);
-    centerOnAreaAction->setChecked(mpHost->mMapCenterOnArea);
-    centerOnAreaAction->setToolTip(tr("When enabled, small areas that fit entirely in the map view will be kept centered. "
-                                      "When disabled, the map will always center on the current player room."));
-    connect(centerOnAreaAction, &QAction::toggled, this, [this](bool checked) {
-        mpHost->mMapCenterOnArea = checked;
+    auto* centerSmallAreasAction = new QAction(tr("Keep small areas centered, not player"), this);
+    centerSmallAreasAction->setCheckable(true);
+    centerSmallAreasAction->setChecked(mpHost->mMapperCenterSmallAreas);
+    centerSmallAreasAction->setToolTip(tr("When enabled, small areas that fit entirely in the map view will be kept centered. "
+                                          "When disabled, the map will always center on the current player room."));
+
+    connect(centerSmallAreasAction, &QAction::toggled, this, [this](bool checked) {
+        mpHost->mMapperCenterSmallAreas = checked;
         if (mp2dMap) {
             mp2dMap->update();
         }
     });
-    menu->addAction(centerOnAreaAction);
+    menu->addAction(centerSmallAreasAction);
 
 #if defined(INCLUDE_3DMAPPER)
     auto* show3DMapAction = new QAction(tr("Show map in 3D"), this);

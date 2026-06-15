@@ -1271,6 +1271,7 @@ function getConfig(...)
       "inputLineStrictUnixEndings",
       "logDirectory",                    -- read-only in getConfig
       "logInHTML",
+      "mapCenterSmallAreas",
       "mapExitSize",
       "mapInfoColor",
       "mapperPanelVisible", 

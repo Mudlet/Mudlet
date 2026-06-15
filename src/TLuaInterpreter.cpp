@@ -7539,10 +7539,15 @@ int TLuaInterpreter::setConfig(lua_State* L)
 
     if (key == qsl("mapShowRoomBorders")) {
         host.mMapperShowRoomBorders = getVerifiedBool(L, __func__, 2, "value");
+
+        if (host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
+            host.mpMap->mpMapper->mp2dMap->update();
+        }
+
         return success();
     }
     if (key == qsl("mapCenterSmallAreas")) {
-        host.mMapCenterOnArea = getVerifiedBool(L, __func__, 2, "value");
+        host.mMapperCenterSmallAreas = getVerifiedBool(L, __func__, 2, "value");
 
         if (host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
             host.mpMap->mpMapper->mp2dMap->update();
@@ -7961,7 +7966,7 @@ int TLuaInterpreter::getConfig(lua_State* L)
              }},
             {qsl("mapCenterSmallAreas"),
              [&]() {
-                 lua_pushboolean(L, host.mMapCenterOnArea);
+                 lua_pushboolean(L, host.mMapperCenterSmallAreas);
              }},
             {qsl("editorAutoComplete"),
              [&]() {

@@ -2494,7 +2494,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     // Center map on area when it fits entirely in viewport, but only when
     // following player movement - not during manual panning or editing
-    if (centeringOnPlayer && !mRoomBeingMoved && !mMultiSelection && mpHost->mMapCenterOnArea) {
+    if (centeringOnPlayer && !mRoomBeingMoved && !mMultiSelection && mpHost->mMapperCenterSmallAreas) {
         const int zLevel = mMapCenterZ;
 
         // Get area bounds for current Z level (use overall bounds as fallback)
