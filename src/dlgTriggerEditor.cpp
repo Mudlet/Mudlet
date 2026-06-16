@@ -12228,10 +12228,12 @@ bool dlgTriggerEditor::eventFilter(QObject* watched, QEvent* event)
     }
 
     if (watched == mpSourceEditorAutocompleteList && event->type() == QEvent::FocusIn) {
-        if (mpSourceEditorEdbee && mpSourceEditorEdbee->textEditorComponent()) {
-            mpSourceEditorEdbee->textEditorComponent()->setFocus(Qt::OtherFocusReason);
-            return true;
+        auto* editorComponent = mpSourceEditorEdbee ? mpSourceEditorEdbee->textEditorComponent() : nullptr;
+        if (!editorComponent) {
+            return false;
         }
+        editorComponent->setFocus(Qt::OtherFocusReason);
+        return true;
     }
 
     if (mIsGrabKey) {

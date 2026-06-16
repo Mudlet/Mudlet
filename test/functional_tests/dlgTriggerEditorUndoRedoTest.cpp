@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QtTest/QtTest>
+#include <QFocusEvent>
 
 #include "EditorUndoStack.h"
 #include "Host.h"
@@ -273,12 +274,11 @@ private slots:
     QCOMPARE(autocompleteList->currentRow(), 1);
     QTRY_VERIFY(editorComponent->hasFocus());
 
-    autocompleteList->setFocusPolicy(Qt::StrongFocus);
-    autocompleteList->setFocus();
+    QFocusEvent focusInEvent(QEvent::FocusIn, Qt::OtherFocusReason);
+    QCoreApplication::sendEvent(autocompleteList, &focusInEvent);
     QCoreApplication::processEvents();
     QTRY_VERIFY(editorComponent->hasFocus());
     QVERIFY(!autocompleteList->hasFocus());
-    autocompleteList->setFocusPolicy(Qt::NoFocus);
   }
 
   void testCoreOperations_data() {
