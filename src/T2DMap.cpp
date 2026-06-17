@@ -87,11 +87,11 @@
 #include <QLabel>
 #include <QListWidget>
 #include <QVBoxLayout>
-#include <QCollator>
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QComboBox>
 
 #include <climits>
 #include <cmath>
@@ -106,6 +106,24 @@
 
 // replacement parameter supplied at point of use:
 const QString& key_plain = qsl("%1");
+
+namespace {
+QStringList getMapperAreaNamesSorted(const QMap<int, QString>& areaNamesMap)
+{
+    QMap<QString, QString> sortedAreaNames;
+    QMapIterator<int, QString> itAreaNames(areaNamesMap);
+    while (itAreaNames.hasNext()) {
+        itAreaNames.next();
+        uint deduplicate = 0;
+        QString name;
+        do {
+            name = qsl("%1+%2").arg(itAreaNames.value().toLower(), QString::number(++deduplicate));
+        } while (sortedAreaNames.contains(name));
+        sortedAreaNames.insert(name, itAreaNames.value());
+    }
+    return sortedAreaNames.values();
+}
+}
 
 const QString& key_n = qsl("n");
 const QString& key_ne = qsl("ne");
@@ -5155,16 +5173,8 @@ void T2DMap::slot_setArea()
     label_info->setFont(font);
     arealist_combobox->setInsertPolicy(QComboBox::NoInsert);
 
-    QStringList sortedAreaList;
-    sortedAreaList = mpMap->mpRoomDB->getAreaNamesMap().values();
-
-    QCollator sorter;
-    sorter.setNumericMode(true);
-    sorter.setCaseSensitivity(Qt::CaseInsensitive);
-
-    std::sort(sortedAreaList.begin(), sortedAreaList.end(), sorter);
-
     const QMap<int, QString>& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
+    const QStringList sortedAreaList = getMapperAreaNamesSorted(areaNamesMap);
     for (const QString& areaName : std::as_const(sortedAreaList)) {
         const int areaId = areaNamesMap.key(areaName);
         arealist_combobox->addItem(qsl("%1 (%2)").arg(areaName, QString::number(areaId)), QString::number(areaId));
@@ -5258,13 +5268,9 @@ void T2DMap::slot_configureAreas()
 
     auto repopulate = [this, listWidget]() {
         listWidget->clear();
-        QStringList sortedAreaList = mpMap->mpRoomDB->getAreaNamesMap().values();
-        QCollator sorter;
-        sorter.setNumericMode(true);
-        sorter.setCaseSensitivity(Qt::CaseInsensitive);
-        std::sort(sortedAreaList.begin(), sortedAreaList.end(), sorter);
-
         const QMap<int, QString>& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
+        const QStringList sortedAreaList = getMapperAreaNamesSorted(areaNamesMap);
+
         for (const QString& areaName : std::as_const(sortedAreaList)) {
             const int areaId = areaNamesMap.key(areaName);
             auto* item = new QListWidgetItem(qsl("%1 (%2)").arg(areaName, QString::number(areaId)), listWidget);
@@ -5347,6 +5353,15 @@ void T2DMap::slot_configureAreas()
         }
 
         repopulate();
+        for (int i = 0; i < listWidget->count(); ++i) {
+            auto* it = listWidget->item(i);
+            if (it && it->data(Qt::UserRole).toInt() == areaId) {
+                listWidget->setCurrentRow(i);
+                listWidget->scrollToItem(it, QAbstractItemView::PositionAtCenter);
+                break;
+            }
+        }
+
         if (mpMap && mpMap->mpMapper) {
             mpMap->mpMapper->updateAreaComboBox();
             if (mpMap->mpMapper->comboBox_showArea) {
@@ -5424,6 +5439,7 @@ void T2DMap::slot_configureAreas()
                 mpMap->mpMapper->comboBox_showArea->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
             }
         }
+        update();
     });
 
     connect(closeBtn, &QPushButton::clicked, dialog, &QDialog::accept);
