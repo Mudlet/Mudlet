@@ -5256,9 +5256,6 @@ void T2DMap::slot_configureAreas()
     listWidget->setSelectionMode(QAbstractItemView::SingleSelection);
     layout->addWidget(listWidget);
 
-    // Helper to populate the list widget from TRoomDB
-    // Capture `this` and `listWidget` by value so the callable remains
-    // safe after this function returns (avoids stack-use-after-return).
     auto repopulate = [this, listWidget]() {
         listWidget->clear();
         QStringList sortedAreaList = mpMap->mpRoomDB->getAreaNamesMap().values();
@@ -5283,15 +5280,18 @@ void T2DMap::slot_configureAreas()
         listWidget->scrollToItem(listWidget->currentItem(), QAbstractItemView::PositionAtCenter);
     }
 
-    // Button bar (Rename, Close)
     auto* buttonBar = new QWidget(dialog);
     auto* hbox = new QHBoxLayout;
     hbox->setContentsMargins(0, 0, 0, 0);
     hbox->setSpacing(8);
     buttonBar->setLayout(hbox);
+    //: "Configure Areas" buttons: create new area
     auto* createBtn = new QPushButton(tr("Create"), buttonBar);
+    //: "Configure Areas" buttons: rename existing area
     auto* renameBtn = new QPushButton(tr("Rename"), buttonBar);
+    //: "Configure Areas" buttons: delete existing area
     auto* deleteBtn = new QPushButton(tr("Delete"), buttonBar);
+    //: "Configure Areas" buttons: close the dialog
     auto* closeBtn = new QPushButton(tr("Close"), buttonBar);
     const bool initialHasSelection = listWidget->currentItem() != nullptr;
     const int initialAreaId = initialHasSelection ? listWidget->currentItem()->data(Qt::UserRole).toInt() : 0;
@@ -5314,7 +5314,7 @@ void T2DMap::slot_configureAreas()
         }
 
         const int areaId = current->data(Qt::UserRole).toInt();
-        // Area id -1 is the reserved default area and must not be renamed or deleted
+        // default area (-1) must not be renamed or deleted
         const bool enabled = (areaId != -1);
         renameBtn->setEnabled(enabled);
         deleteBtn->setEnabled(enabled);
@@ -5326,9 +5326,7 @@ void T2DMap::slot_configureAreas()
             return;
         }
 
-        // Validate core pointers before proceeding
         if (!mpMap || !mpMap->mpRoomDB) {
-            QMessageBox::warning(dialog, tr("Rename failed"), tr("Internal error: map not available."));
             return;
         }
 
@@ -5340,14 +5338,12 @@ void T2DMap::slot_configureAreas()
             return;
         }
 
-        // Perform rename via TRoomDB API which performs validation
         const bool renamed = mpMap->mpRoomDB->setAreaName(areaId, newName);
         if (!renamed) {
             QMessageBox::warning(dialog, tr("Rename failed"), tr("Unable to rename area. Name may be invalid or already in use."));
             return;
         }
 
-        // Refresh list and mapper UI safely
         repopulate();
         if (mpMap && mpMap->mpMapper) {
             mpMap->mpMapper->updateAreaComboBox();
@@ -5365,7 +5361,6 @@ void T2DMap::slot_configureAreas()
         }
 
         if (!mpMap || !mpMap->mpRoomDB) {
-            QMessageBox::warning(dialog, tr("Create failed"), tr("Internal error: map not available."));
             return;
         }
 
@@ -5376,7 +5371,6 @@ void T2DMap::slot_configureAreas()
         }
 
         repopulate();
-        // Select newly created area in list
         for (int i = 0; i < listWidget->count(); ++i) {
             auto* it = listWidget->item(i);
             if (it && it->data(Qt::UserRole).toInt() == newAreaId) {
@@ -5401,7 +5395,6 @@ void T2DMap::slot_configureAreas()
         }
 
         if (!mpMap || !mpMap->mpRoomDB) {
-            QMessageBox::warning(dialog, tr("Delete failed"), tr("Internal error: map not available."));
             return;
         }
 
