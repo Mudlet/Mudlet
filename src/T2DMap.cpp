@@ -123,7 +123,7 @@ QStringList getMapperAreaNamesSorted(const QMap<int, QString>& areaNamesMap)
     }
     return sortedAreaNames.values();
 }
-}
+} // namespace
 
 const QString& key_n = qsl("n");
 const QString& key_ne = qsl("ne");
