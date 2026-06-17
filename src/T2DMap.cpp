@@ -5289,25 +5289,35 @@ void T2DMap::slot_configureAreas()
     hbox->setContentsMargins(0, 0, 0, 0);
     hbox->setSpacing(8);
     buttonBar->setLayout(hbox);
+    auto* createBtn = new QPushButton(tr("Create"), buttonBar);
     auto* renameBtn = new QPushButton(tr("Rename"), buttonBar);
+    auto* deleteBtn = new QPushButton(tr("Delete"), buttonBar);
     auto* closeBtn = new QPushButton(tr("Close"), buttonBar);
-    const bool initialRenameEnabled = listWidget->currentItem() != nullptr && listWidget->currentItem()->data(Qt::UserRole).toInt() != -1;
+    const bool initialHasSelection = listWidget->currentItem() != nullptr;
+    const int initialAreaId = initialHasSelection ? listWidget->currentItem()->data(Qt::UserRole).toInt() : 0;
+    const bool initialRenameEnabled = initialHasSelection && initialAreaId != -1;
+    const bool initialDeleteEnabled = initialHasSelection && initialAreaId != -1;
     renameBtn->setEnabled(initialRenameEnabled);
+    deleteBtn->setEnabled(initialDeleteEnabled);
     hbox->addStretch(1);
+    hbox->addWidget(createBtn);
     hbox->addWidget(renameBtn);
+    hbox->addWidget(deleteBtn);
     hbox->addWidget(closeBtn);
     layout->addWidget(buttonBar);
 
-    connect(listWidget, &QListWidget::currentItemChanged, this, [renameBtn, this](QListWidgetItem* current, QListWidgetItem*) {
+    connect(listWidget, &QListWidget::currentItemChanged, this, [renameBtn, deleteBtn, this](QListWidgetItem* current, QListWidgetItem*) {
         if (!current) {
             renameBtn->setEnabled(false);
+            deleteBtn->setEnabled(false);
             return;
         }
 
         const int areaId = current->data(Qt::UserRole).toInt();
-        // Area id -1 is the reserved default area and must not be renamed
+        // Area id -1 is the reserved default area and must not be renamed or deleted
         const bool enabled = (areaId != -1);
         renameBtn->setEnabled(enabled);
+        deleteBtn->setEnabled(enabled);
     });
 
     connect(renameBtn, &QPushButton::clicked, this, [this, dialog, listWidget, repopulate]() {
@@ -5343,6 +5353,76 @@ void T2DMap::slot_configureAreas()
             mpMap->mpMapper->updateAreaComboBox();
             if (mpMap->mpMapper->comboBox_showArea) {
                 mpMap->mpMapper->comboBox_showArea->setCurrentText(newName);
+            }
+        }
+    });
+
+    connect(createBtn, &QPushButton::clicked, this, [this, dialog, listWidget, repopulate]() {
+        bool ok = false;
+        const QString name = QInputDialog::getText(dialog, tr("Create area"), tr("Name:"), QLineEdit::Normal, QString(), &ok).trimmed();
+        if (!ok || name.isEmpty()) {
+            return;
+        }
+
+        if (!mpMap || !mpMap->mpRoomDB) {
+            QMessageBox::warning(dialog, tr("Create failed"), tr("Internal error: map not available."));
+            return;
+        }
+
+        const int newAreaId = mpMap->mpRoomDB->addArea(name);
+        if (!newAreaId) {
+            QMessageBox::warning(dialog, tr("Create failed"), tr("Unable to create area. Name may be invalid or already in use."));
+            return;
+        }
+
+        repopulate();
+        // Select newly created area in list
+        for (int i = 0; i < listWidget->count(); ++i) {
+            auto* it = listWidget->item(i);
+            if (it && it->data(Qt::UserRole).toInt() == newAreaId) {
+                listWidget->setCurrentRow(i);
+                listWidget->scrollToItem(it, QAbstractItemView::PositionAtCenter);
+                break;
+            }
+        }
+
+        if (mpMap && mpMap->mpMapper) {
+            mpMap->mpMapper->updateAreaComboBox();
+            if (mpMap->mpMapper->comboBox_showArea) {
+                mpMap->mpMapper->comboBox_showArea->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
+            }
+        }
+    });
+
+    connect(deleteBtn, &QPushButton::clicked, this, [this, dialog, listWidget, repopulate]() {
+        auto* item = listWidget->currentItem();
+        if (!item) {
+            return;
+        }
+
+        if (!mpMap || !mpMap->mpRoomDB) {
+            QMessageBox::warning(dialog, tr("Delete failed"), tr("Internal error: map not available."));
+            return;
+        }
+
+        const int areaId = item->data(Qt::UserRole).toInt();
+        if (areaId == -1) {
+            QMessageBox::warning(dialog, tr("Delete failed"), tr("The default area cannot be deleted."));
+            return;
+        }
+
+        // Delete immediately without confirmation
+        const bool removed = mpMap->mpRoomDB->removeArea(areaId);
+        if (!removed) {
+            QMessageBox::warning(dialog, tr("Delete failed"), tr("Unable to delete area."));
+            return;
+        }
+
+        repopulate();
+        if (mpMap && mpMap->mpMapper) {
+            mpMap->mpMapper->updateAreaComboBox();
+            if (mpMap->mpMapper->comboBox_showArea) {
+                mpMap->mpMapper->comboBox_showArea->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
             }
         }
     });
