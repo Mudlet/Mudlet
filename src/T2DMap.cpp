@@ -5333,6 +5333,7 @@ void T2DMap::slot_configureAreas()
         const int areaId = item->data(Qt::UserRole).toInt();
         const QString currentName = mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
         bool ok = false;
+        //: Dialog title for renaming an area
         const QString newName = QInputDialog::getText(dialog, tr("Rename area"), tr("New name:"), QLineEdit::Normal, currentName, &ok).trimmed();
         if (!ok || newName.isEmpty() || newName == currentName) {
             return;
@@ -5340,6 +5341,7 @@ void T2DMap::slot_configureAreas()
 
         const bool renamed = mpMap->mpRoomDB->setAreaName(areaId, newName);
         if (!renamed) {
+            //: Warning message shown when renaming an area fails.
             QMessageBox::warning(dialog, tr("Rename failed"), tr("Unable to rename area. Name may be invalid or already in use."));
             return;
         }
@@ -5366,6 +5368,7 @@ void T2DMap::slot_configureAreas()
 
         const int newAreaId = mpMap->mpRoomDB->addArea(name);
         if (!newAreaId) {
+            //: Warning message shown when creating a new area fails.
             QMessageBox::warning(dialog, tr("Create failed"), tr("Unable to create area. Name may be invalid or already in use."));
             return;
         }
@@ -5400,6 +5403,7 @@ void T2DMap::slot_configureAreas()
 
         const int areaId = item->data(Qt::UserRole).toInt();
         if (areaId == -1) {
+            //: Warning message shown when trying to delete the default area.
             QMessageBox::warning(dialog, tr("Delete failed"), tr("The default area cannot be deleted."));
             return;
         }
@@ -5407,6 +5411,7 @@ void T2DMap::slot_configureAreas()
         // Delete immediately without confirmation
         const bool removed = mpMap->mpRoomDB->removeArea(areaId);
         if (!removed) {
+            //: Warning message shown when trying to delete an area fails.
             QMessageBox::warning(dialog, tr("Delete failed"), tr("Unable to delete area."));
             return;
         }
