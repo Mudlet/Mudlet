@@ -5357,6 +5357,7 @@ void T2DMap::slot_configureAreas()
 
     connect(createBtn, &QPushButton::clicked, this, [this, dialog, listWidget, repopulate]() {
         bool ok = false;
+        //: Dialog title for creating a new area
         const QString name = QInputDialog::getText(dialog, tr("Create area"), tr("Name:"), QLineEdit::Normal, QString(), &ok).trimmed();
         if (!ok || name.isEmpty()) {
             return;
