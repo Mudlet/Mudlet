@@ -88,6 +88,10 @@
 #include <QListWidget>
 #include <QVBoxLayout>
 #include <QCollator>
+#include <QHBoxLayout>
+#include <QPushButton>
+#include <QInputDialog>
+#include <QMessageBox>
 
 #include <climits>
 #include <cmath>
@@ -5248,26 +5252,30 @@ void T2DMap::slot_configureAreas()
     layout->setContentsMargins(8, 8, 8, 8);
     layout->setSpacing(8);
 
-    auto* label = new QLabel(tr("Select an area from the list. This window is for reference only."), dialog);
-    label->setWordWrap(true);
-    layout->addWidget(label);
-
     auto* listWidget = new QListWidget(dialog);
     listWidget->setSelectionMode(QAbstractItemView::SingleSelection);
     layout->addWidget(listWidget);
 
-    QStringList sortedAreaList = mpMap->mpRoomDB->getAreaNamesMap().values();
-    QCollator sorter;
-    sorter.setNumericMode(true);
-    sorter.setCaseSensitivity(Qt::CaseInsensitive);
-    std::sort(sortedAreaList.begin(), sortedAreaList.end(), sorter);
+    // Helper to populate the list widget from TRoomDB
+    // Capture `this` and `listWidget` by value so the callable remains
+    // safe after this function returns (avoids stack-use-after-return).
+    auto repopulate = [this, listWidget]() {
+        listWidget->clear();
+        QStringList sortedAreaList = mpMap->mpRoomDB->getAreaNamesMap().values();
+        QCollator sorter;
+        sorter.setNumericMode(true);
+        sorter.setCaseSensitivity(Qt::CaseInsensitive);
+        std::sort(sortedAreaList.begin(), sortedAreaList.end(), sorter);
 
-    const QMap<int, QString>& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
-    for (const QString& areaName : std::as_const(sortedAreaList)) {
-        const int areaId = areaNamesMap.key(areaName);
-        auto* item = new QListWidgetItem(qsl("%1 (%2)").arg(areaName, QString::number(areaId)), listWidget);
-        item->setData(Qt::UserRole, areaId);
-    }
+        const QMap<int, QString>& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
+        for (const QString& areaName : std::as_const(sortedAreaList)) {
+            const int areaId = areaNamesMap.key(areaName);
+            auto* item = new QListWidgetItem(qsl("%1 (%2)").arg(areaName, QString::number(areaId)), listWidget);
+            item->setData(Qt::UserRole, areaId);
+        }
+    };
+
+    repopulate();
 
     const int currentAreaIndex = mpMap->mpMapper ? mpMap->mpMapper->getCurrentShownAreaIndex() : -1;
     if (currentAreaIndex >= 0 && currentAreaIndex < listWidget->count()) {
@@ -5275,7 +5283,71 @@ void T2DMap::slot_configureAreas()
         listWidget->scrollToItem(listWidget->currentItem(), QAbstractItemView::PositionAtCenter);
     }
 
-    connect(listWidget, &QListWidget::itemClicked, dialog, &QDialog::accept);
+    // Button bar (Rename, Close)
+    auto* buttonBar = new QWidget(dialog);
+    auto* hbox = new QHBoxLayout;
+    hbox->setContentsMargins(0, 0, 0, 0);
+    hbox->setSpacing(8);
+    buttonBar->setLayout(hbox);
+    auto* renameBtn = new QPushButton(tr("Rename"), buttonBar);
+    auto* closeBtn = new QPushButton(tr("Close"), buttonBar);
+    const bool initialRenameEnabled = listWidget->currentItem() != nullptr && listWidget->currentItem()->data(Qt::UserRole).toInt() != -1;
+    renameBtn->setEnabled(initialRenameEnabled);
+    hbox->addStretch(1);
+    hbox->addWidget(renameBtn);
+    hbox->addWidget(closeBtn);
+    layout->addWidget(buttonBar);
+
+    connect(listWidget, &QListWidget::currentItemChanged, this, [renameBtn, this](QListWidgetItem* current, QListWidgetItem*) {
+        if (!current) {
+            renameBtn->setEnabled(false);
+            return;
+        }
+
+        const int areaId = current->data(Qt::UserRole).toInt();
+        // Area id -1 is the reserved default area and must not be renamed
+        const bool enabled = (areaId != -1);
+        renameBtn->setEnabled(enabled);
+    });
+
+    connect(renameBtn, &QPushButton::clicked, this, [this, dialog, listWidget, repopulate]() {
+        auto* item = listWidget->currentItem();
+        if (!item) {
+            return;
+        }
+
+        // Validate core pointers before proceeding
+        if (!mpMap || !mpMap->mpRoomDB) {
+            QMessageBox::warning(dialog, tr("Rename failed"), tr("Internal error: map not available."));
+            return;
+        }
+
+        const int areaId = item->data(Qt::UserRole).toInt();
+        const QString currentName = mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
+        bool ok = false;
+        const QString newName = QInputDialog::getText(dialog, tr("Rename area"), tr("New name:"), QLineEdit::Normal, currentName, &ok).trimmed();
+        if (!ok || newName.isEmpty() || newName == currentName) {
+            return;
+        }
+
+        // Perform rename via TRoomDB API which performs validation
+        const bool renamed = mpMap->mpRoomDB->setAreaName(areaId, newName);
+        if (!renamed) {
+            QMessageBox::warning(dialog, tr("Rename failed"), tr("Unable to rename area. Name may be invalid or already in use."));
+            return;
+        }
+
+        // Refresh list and mapper UI safely
+        repopulate();
+        if (mpMap && mpMap->mpMapper) {
+            mpMap->mpMapper->updateAreaComboBox();
+            if (mpMap->mpMapper->comboBox_showArea) {
+                mpMap->mpMapper->comboBox_showArea->setCurrentText(newName);
+            }
+        }
+    });
+
+    connect(closeBtn, &QPushButton::clicked, dialog, &QDialog::accept);
 
     dialog->resize(400, 320);
     dialog->show();
