@@ -82,6 +82,12 @@
 #include <QtEvents>
 #include <QtUiTools>
 #include <QWidget>
+#include <QAbstractItemView>
+#include <QDialog>
+#include <QLabel>
+#include <QListWidget>
+#include <QVBoxLayout>
+#include <QCollator>
 
 #include <climits>
 #include <cmath>
@@ -5225,6 +5231,55 @@ void T2DMap::slot_setArea()
     set_room_area_dialog->raise();
 
     arealist_combobox->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
+}
+
+
+void T2DMap::slot_configureAreas()
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+
+    auto* dialog = new QDialog(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setWindowTitle(tr("Configure Areas"));
+
+    auto* layout = new QVBoxLayout(dialog);
+    layout->setContentsMargins(8, 8, 8, 8);
+    layout->setSpacing(8);
+
+    auto* label = new QLabel(tr("Select an area from the list. This window is for reference only."), dialog);
+    label->setWordWrap(true);
+    layout->addWidget(label);
+
+    auto* listWidget = new QListWidget(dialog);
+    listWidget->setSelectionMode(QAbstractItemView::SingleSelection);
+    layout->addWidget(listWidget);
+
+    QStringList sortedAreaList = mpMap->mpRoomDB->getAreaNamesMap().values();
+    QCollator sorter;
+    sorter.setNumericMode(true);
+    sorter.setCaseSensitivity(Qt::CaseInsensitive);
+    std::sort(sortedAreaList.begin(), sortedAreaList.end(), sorter);
+
+    const QMap<int, QString>& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
+    for (const QString& areaName : std::as_const(sortedAreaList)) {
+        const int areaId = areaNamesMap.key(areaName);
+        auto* item = new QListWidgetItem(qsl("%1 (%2)").arg(areaName, QString::number(areaId)), listWidget);
+        item->setData(Qt::UserRole, areaId);
+    }
+
+    const int currentAreaIndex = mpMap->mpMapper ? mpMap->mpMapper->getCurrentShownAreaIndex() : -1;
+    if (currentAreaIndex >= 0 && currentAreaIndex < listWidget->count()) {
+        listWidget->setCurrentRow(currentAreaIndex);
+        listWidget->scrollToItem(listWidget->currentItem(), QAbstractItemView::PositionAtCenter);
+    }
+
+    connect(listWidget, &QListWidget::itemClicked, dialog, &QDialog::accept);
+
+    dialog->resize(400, 320);
+    dialog->show();
+    dialog->raise();
 }
 
 
