@@ -40,9 +40,10 @@
  * and fails if any .cpp / .h is missing from the build file, or is listed more
  * than once. The src/ path is provided at configure time via MUDLET_SRC_DIR.
  *
- * Scope note: only top-level .cpp and .h files directly in src/ are checked.
- * Files in subdirectories (updater/, etc.) are listed with a path prefix and are
- * left for a future extension if needed.
+ * Scope note: only top-level .cpp, .h and .mm files directly in src/ are checked.
+ * Files in subdirectories (updater/, etc.) and any path-prefixed entries are
+ * excluded from both the presence and the duplicate checks, and are left for a
+ * future extension if needed.
  */
 class CMakeListsConsistencyTest : public QObject
 {
@@ -69,13 +70,19 @@ class CMakeListsConsistencyTest : public QObject
         return content;
     }
 
-    // All *.cpp / *.h base names referenced anywhere in the (comment-stripped)
-    // CMakeLists text. Used for the "is it listed at all?" check, so a file added
-    // only through a conditional list(APPEND ...) still counts as listed.
+    // Un-prefixed *.cpp / *.h / *.mm base names referenced in the (comment-stripped)
+    // CMakeLists text. The leading negative lookbehind requires the name to start a
+    // fresh token (not preceded by a path separator or another name character), so a
+    // path-prefixed mention such as "src/sparkleupdater.h" in set_source_files_properties
+    // is NOT counted - only its bare list entry "sparkleupdater.h" is. That way a file
+    // removed from mudlet_SRCS/mudlet_HDRS is still reported missing even when it is
+    // referenced elsewhere by full path. Bare list entries (including the last one,
+    // which carries the trailing set() ")"), conditional list(APPEND ...) entries, and
+    // the add_executable() source all match.
     static QSet<QString> referencedNames(const QString& content)
     {
         QSet<QString> names;
-        static const QRegularExpression re(QStringLiteral("([A-Za-z0-9_]+\\.(?:cpp|h))\\b"));
+        static const QRegularExpression re(QStringLiteral("(?<![/A-Za-z0-9_-])([A-Za-z0-9_-]+\\.(?:cpp|h|mm))\\b"));
         auto it = re.globalMatch(content);
         while (it.hasNext()) {
             names.insert(it.next().captured(1));
@@ -83,27 +90,24 @@ class CMakeListsConsistencyTest : public QObject
         return names;
     }
 
-    // Counts only "bare" list entries - a filename alone on its line, the form
-    // used inside the set(mudlet_SRCS ...) / set(mudlet_HDRS ...) lists. This is
-    // where accidental duplicates appear. Conditional list(APPEND ...) lines and
-    // OTHER_FILES references are deliberately excluded, since the same file may be
+    // Counts "bare" top-level list entries - a filename with no path, alone on its
+    // line, the form used inside the set(mudlet_SRCS ...) / set(mudlet_HDRS ...)
+    // lists. This is the form the duplicates removed in this PR took. Path-prefixed
+    // bare entries and conditional list(APPEND ...) lines are deliberately excluded:
+    // the former are outside the top-level scope this test checks, and a file may be
     // appended under several mutually-exclusive platform branches.
     static QMap<QString, int> bareEntryCounts(const QString& content)
     {
         QMap<QString, int> counts;
-        static const QRegularExpression re(QStringLiteral("^[ \\t]*([A-Za-z0-9_./]+\\.(?:cpp|h))[ \\t]*$"));
+        static const QRegularExpression re(QStringLiteral("^([A-Za-z0-9_-]+\\.(?:cpp|h|mm))$"));
         const auto lines = content.split(QLatin1Char('\n'));
         for (const QString& line : lines) {
-            const auto match = re.match(line);
+            // Trim first so a CRLF checkout (trailing '\r') still matches.
+            const auto match = re.match(line.trimmed());
             if (!match.hasMatch()) {
                 continue;
             }
-            QString name = match.captured(1);
-            const qsizetype slash = name.lastIndexOf(QLatin1Char('/'));
-            if (slash >= 0) {
-                name = name.mid(slash + 1);
-            }
-            counts[name] += 1;
+            counts[match.captured(1)] += 1;
         }
         return counts;
     }
@@ -111,7 +115,7 @@ class CMakeListsConsistencyTest : public QObject
     static QStringList topLevelSources()
     {
         QDir dir(srcDir());
-        return dir.entryList({QStringLiteral("*.cpp"), QStringLiteral("*.h")}, QDir::Files);
+        return dir.entryList({QStringLiteral("*.cpp"), QStringLiteral("*.h"), QStringLiteral("*.mm")}, QDir::Files);
     }
 
 private slots:
@@ -143,6 +147,22 @@ private slots:
         const QMap<QString, int> refs = bareEntryCounts(readCMakeLists());
         const QStringList files = topLevelSources();
         const QSet<QString> present(files.cbegin(), files.cend());
+
+        // Sanity floor: if the bare-entry parser recognised hardly any of the known
+        // files, the CMakeLists format has likely changed and an empty duplicate
+        // result would be meaningless. Fail loudly rather than silently stopping
+        // guarding.
+        int matched = 0;
+        for (auto it = refs.cbegin(); it != refs.cend(); ++it) {
+            if (present.contains(it.key())) {
+                ++matched;
+            }
+        }
+        QVERIFY2(matched > present.size() / 2,
+                 qPrintable(QStringLiteral("bare-entry parser matched only %1 of %2 src files - "
+                                           "src/CMakeLists.txt format likely changed; the duplicate check cannot be trusted")
+                                    .arg(matched)
+                                    .arg(present.size())));
 
         QStringList duplicates;
         for (auto it = refs.cbegin(); it != refs.cend(); ++it) {
