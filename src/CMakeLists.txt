@@ -353,6 +353,7 @@ set(mudlet_HDRS
     TDebug.h
     TDockWidget.h
     TEasyButtonBar.h
+    TEncodingHelper.h
     TEncodingTable.h
     TEntityHandler.h
     TEntityResolver.h
