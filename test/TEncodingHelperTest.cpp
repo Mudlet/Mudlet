@@ -17,7 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <TEncodingHelper.h>
+#include "TEncodingHelper.h"
 
 #include <QtTest/QtTest>
 

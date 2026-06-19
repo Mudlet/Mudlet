@@ -504,6 +504,7 @@ endif()
 
 find_package(Qt6 6.4.0 REQUIRED
     COMPONENTS Core
+               Core5Compat
                Multimedia
                MultimediaWidgets
                Network
