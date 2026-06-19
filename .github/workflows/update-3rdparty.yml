@@ -95,7 +95,7 @@ jobs:
     name: Update ${{ matrix.name }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: development
           submodules: ${{ (matrix.type == 'submodule' || matrix.type == 'submodule-branch') && 'recursive' || false }}
