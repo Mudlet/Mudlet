@@ -44,7 +44,8 @@ bool TEncodingHelper::isQtEncodingAvailable(const QByteArray& encoding)
 // builds whose Qt lacks runtime ICU those converters report invalid, which left CJK
 // users with garbled output and "no codec found" errors (issue #9344). The Qt5Compat
 // module ships self-contained codec tables for these encodings that do not depend on
-// ICU, so fall back to QTextCodec whenever QStringConverter is unavailable.
+// ICU; this returns the matching QTextCodec (or nullptr), which the callers use as an
+// ICU-independent fallback once QStringConverter and the lookup tables come up empty.
 QTextCodec* TEncodingHelper::legacyCodec(const QByteArray& encoding)
 {
     return QTextCodec::codecForName(encoding);
@@ -148,12 +149,12 @@ QString TEncodingHelper::decode(const QByteArray& bytes, const QByteArray& encod
         return decoder.decode(bytes);
     }
 
-    if (QTextCodec* codec = legacyCodec(encoding)) {
-        return codec->toUnicode(bytes);
-    }
-
     if (hasLookupTable(encoding)) {
         return decodeWithLookupTable(bytes, encoding);
+    }
+
+    if (QTextCodec* codec = legacyCodec(encoding)) {
+        return codec->toUnicode(bytes);
     }
 
     return QString::fromLatin1(bytes);
@@ -184,12 +185,12 @@ QByteArray TEncodingHelper::encode(const QString& str, const QByteArray& encodin
         return encoder.encode(str);
     }
 
-    if (QTextCodec* codec = legacyCodec(encoding)) {
-        return codec->fromUnicode(str);
-    }
-
     if (hasLookupTable(encoding)) {
         return encodeWithLookupTable(str, encoding);
+    }
+
+    if (QTextCodec* codec = legacyCodec(encoding)) {
+        return codec->fromUnicode(str);
     }
 
     return str.toLatin1();
@@ -213,16 +214,23 @@ bool TEncodingHelper::canEncode(const QString& str, const QByteArray& encoding)
     // and ICU-based encodings (Big5, GBK, EUC-KR, etc.) when Qt is built with ICU support
     QStringEncoder encoder(encoding.constData());
     if (encoder.isValid()) {
-        encoder.encode(str);
-        return !encoder.hasError();
-    }
-
-    if (QTextCodec* codec = legacyCodec(encoding)) {
-        return codec->canEncode(str);
+        const QByteArray encoded = encoder.encode(str);
+        if (encoder.hasError()) {
+            return false;
+        }
+        // hasError() does not flag characters the ICU codecs silently replace with
+        // '?' (e.g. Hangul in Big5), so confirm representability by round-tripping
+        // and checking the text survives unchanged.
+        QStringDecoder decoder(encoding.constData());
+        return decoder.isValid() && decoder.decode(encoded) == str;
     }
 
     if (hasLookupTable(encoding)) {
         return canEncodeWithLookupTable(str, encoding);
+    }
+
+    if (QTextCodec* codec = legacyCodec(encoding)) {
+        return codec->canEncode(str);
     }
 
     return false;

@@ -102,6 +102,14 @@ private slots:
         QVERIFY(TEncodingHelper::canEncode(input, "Big5"));
     }
 
+    // Big5 (Traditional Chinese) cannot represent Hangul, so canEncode must
+    // report false - the branch behind the "no codec found" send-error in #9344.
+    void canEncode_big5_hangul_false()
+    {
+        const QString input = fromCodepoints({0xD55C, 0xAD6D}); // 한국
+        QVERIFY(!TEncodingHelper::canEncode(input, "Big5"));
+    }
+
     void roundTrip_big5()
     {
         const QString input = fromCodepoints({0x4E2D, 0x6587, 0x0041}); // 中文A
@@ -150,6 +158,25 @@ private slots:
         const QString input = fromCodepoints({0xD55C, 0xAD6D});
         QVERIFY(TEncodingHelper::canEncode(input, "EUC-KR"));
     }
+
+    // -------------------------------------------------------------------------
+    // Unknown encoding - exercises the final fallthrough of each function once
+    // QStringConverter, the lookup tables and QTextCodec have all come up empty.
+    // -------------------------------------------------------------------------
+
+    void decode_unknown_fallsBackToLatin1()
+    {
+        const QByteArray bytes = QByteArrayLiteral("ABC");
+        QCOMPARE(TEncodingHelper::decode(bytes, "not-a-real-codec"), QStringLiteral("ABC"));
+    }
+
+    void encode_unknown_fallsBackToLatin1()
+    {
+        const QString input = QStringLiteral("ABC");
+        QCOMPARE(TEncodingHelper::encode(input, "not-a-real-codec"), QByteArrayLiteral("ABC"));
+    }
+
+    void canEncode_unknown_false() { QVERIFY(!TEncodingHelper::canEncode(QStringLiteral("ABC"), "not-a-real-codec")); }
 
     // -------------------------------------------------------------------------
     // Controls - encodings that never depended on the fallback, to ensure the
