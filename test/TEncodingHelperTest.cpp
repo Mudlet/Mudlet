@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2026 by Mudlet Makers                                   *
+ *   Copyright (C) 2026 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
