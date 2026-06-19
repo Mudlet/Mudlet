@@ -519,6 +519,7 @@ message(STATUS "Qt version: ${Qt6Core_VERSION}")
 set(QT_MAJOR_VERSION 6)
 set(QT_LIBS Qt6::Concurrent
               Qt6::Core
+              Qt6::Core5Compat
               Qt6::Network
               Qt6::Multimedia
               Qt6::MultimediaWidgets

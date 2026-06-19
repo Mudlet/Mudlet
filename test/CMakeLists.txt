@@ -31,6 +31,7 @@ set(UNIT_TESTS
     TTextEditBlinkTest
     TAreaZLevelIndexTest
     TAreaGridIndexTest
+    TEncodingHelperTest
 )
 
 foreach(test_name ${UNIT_TESTS})
