@@ -157,9 +157,6 @@ set(mudlet_SRCS
     TMapViewManager.cpp
     TMedia.cpp
     TMediaPlaylist.cpp
-    TMxpElementDefinitionHandler.cpp
-    TMxpElementRegistry.cpp
-    TMxpFormattingTagsHandler.cpp
     TMxpBRTagHandler.cpp
     TMxpHRTagHandler.cpp
     TMxpColorTagHandler.cpp
@@ -333,8 +330,10 @@ set(mudlet_HDRS
     CustomLineEditHandler.h
     CustomLineSession.h
     LabelInteractionHandler.h
+    MiddleMousePanHandler.h
     PackageItemDelegate.h
     PanInteractionHandler.h
+    RoomContextMenuHandler.h
     RoomMoveActivationHandler.h
     RoomMoveDragHandler.h
     SelectionRectangleHandler.h
@@ -377,6 +376,7 @@ set(mudlet_HDRS
     TMapViewManager.h
     TMatchState.h
     TMedia.h
+    TMediaData.h
     TMediaPlaylist.h
     TMxpBRTagHandler.h
     TMxpHRTagHandler.h
@@ -388,6 +388,7 @@ set(mudlet_HDRS
     TMxpElementDefinitionHandler.h
     TMxpElementRegistry.h
     TMxpEntityTagHandler.h
+    TMxpEvent.h
     TMxpExpireTagHandler.h
     TMxpFontTagHandler.h
     TMxpFormattingTagsHandler.h
@@ -404,6 +405,7 @@ set(mudlet_HDRS
     TMxpStatTagHandler.h
     TMxpSupportTagHandler.h
     TMxpTagHandler.h
+    TMxpTagHandlerResult.h
     TMxpTagParser.h
     TMxpTagProcessor.h
     TMxpVarTagHandler.h
@@ -424,6 +426,7 @@ set(mudlet_HDRS
     TTextCodec.h
     TTextBox.h
     TTextEdit.h
+    TTextProperties.h
     TTimer.h
     TToolBar.h
     TTreeWidget.h
