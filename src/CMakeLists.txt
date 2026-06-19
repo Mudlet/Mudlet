@@ -502,7 +502,7 @@ else()
   message(STATUS "Sanitizers disabled on Windows")
 endif()
 
-find_package(Qt6 6.4.0 REQUIRED
+find_package(Qt6 6.8.2 REQUIRED
     COMPONENTS Core
                Core5Compat
                Multimedia
