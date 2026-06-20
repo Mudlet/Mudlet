@@ -49,4 +49,14 @@ add_dependencies(PasswordMigrationTest ${LIB_MUDLET_TARGET})
 target_link_libraries(PasswordMigrationTest PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
 add_test(NAME PasswordMigrationTest COMMAND $<TARGET_FILE:PasswordMigrationTest>)
 
+# Build-file consistency check. Independent of the Mudlet library: it only reads
+# src/CMakeLists.txt and the src/ directory, so it does not link LIB_MUDLET_TARGET.
+add_executable(CMakeListsConsistencyTest CMakeListsConsistencyTest.cpp)
+target_link_libraries(CMakeListsConsistencyTest PRIVATE Qt6::Test)
+target_compile_definitions(CMakeListsConsistencyTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
+add_test(NAME CMakeListsConsistencyTest COMMAND $<TARGET_FILE:CMakeListsConsistencyTest>)
+set_tests_properties(CMakeListsConsistencyTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+)
+
 add_subdirectory(functional_tests)
