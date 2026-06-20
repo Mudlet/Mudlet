@@ -61,11 +61,11 @@ class CMakeListsConsistencyTest : public QObject
         // for a build-list entry.
         QString content;
         const QString raw = QString::fromUtf8(file.readAll());
-        const auto lines = raw.split(QLatin1Char('\n'));
+        const auto lines = raw.split(QChar::LineFeed);
         for (const QString& line : lines) {
             const qsizetype hash = line.indexOf(QLatin1Char('#'));
             content.append(hash >= 0 ? line.left(hash) : line);
-            content.append(QLatin1Char('\n'));
+            content.append(QChar::LineFeed);
         }
         return content;
     }
@@ -100,7 +100,7 @@ class CMakeListsConsistencyTest : public QObject
     {
         QMap<QString, int> counts;
         static const QRegularExpression re(QStringLiteral("^([A-Za-z0-9_-]+\\.(?:cpp|h|mm))$"));
-        const auto lines = content.split(QLatin1Char('\n'));
+        const auto lines = content.split(QChar::LineFeed);
         for (const QString& line : lines) {
             // Trim first so a CRLF checkout (trailing '\r') still matches.
             const auto match = re.match(line.trimmed());
