@@ -28,8 +28,10 @@ set(UNIT_TESTS
     SecureStringUtilsTest
     CredentialManagerTest
     DiscordTest
+    TTextEditBlinkTest
     TAreaZLevelIndexTest
     TAreaGridIndexTest
+    TEncodingHelperTest
 )
 
 foreach(test_name ${UNIT_TESTS})
