@@ -80,9 +80,9 @@ public:
     void setButtonFillerOffset(const int value)
     {
         const auto newValue = std::max(0, std::min(value, mButtonColumns - 1));
-        if (newValue != mButtonColumns) {
+        if (newValue != mButtonFillerOffset) {
             setDataChanged();
-            mButtonColumns = newValue;
+            mButtonFillerOffset = newValue;
         }
     }
     int getButtonFillerOffset() const { return mButtonFillerOffset; }
