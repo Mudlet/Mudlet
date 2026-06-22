@@ -184,7 +184,7 @@ then
       current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
       read -r day month year hour minute second <<< "$current_timestamp"
 
-      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+      curl --retry 5 -X POST 'https://make.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=$DEPLOY_URL" \
@@ -222,7 +222,7 @@ then
 
       PORTABLE_SHA256SUM=$(shasum -a 256 "${PORTABLE_NAME}.tar.gz" | awk '{print $1}')
 
-      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+      curl --retry 5 -X POST 'https://make.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=$PORTABLE_DEPLOY_URL" \
@@ -274,13 +274,16 @@ then
       chmod +x "${HOME}/git-archive-all.sh"
       "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
       xz "Mudlet-${VERSION}.tar"
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
+      if ! scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"; then
+        echo "::error::failed to upload Mudlet-${VERSION}.tar.xz to make.mudlet.org"
+        exit 1
+      fi
       FILE_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.tar.xz"
       SHA256SUM=$(shasum -a 256 "Mudlet-${VERSION}.tar.xz" | awk '{print $1}')
       current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
       read -r day month year hour minute second <<< "$current_timestamp"
 
-      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+      curl --retry 5 -X POST 'https://make.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=$FILE_URL" \

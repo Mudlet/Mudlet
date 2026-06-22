@@ -292,7 +292,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       read -r day month year hour minute second <<< "$current_timestamp"
 
       # Upload regular DMG version
-      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+      curl --retry 5 -X POST 'https://make.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=$DEPLOY_URL" \
@@ -311,7 +311,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
       # Upload portable version (only when the portable was successfully built)
       if [ "${PORTABLE_READY}" = "true" ]; then
-      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+      curl --retry 5 -X POST 'https://make.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=$PORTABLE_DEPLOY_URL" \
