@@ -135,7 +135,7 @@ else()
 endif()
 
 # Set APP_VERSION
-set(APP_VERSION 4.21.0)
+set(APP_VERSION 4.21.1)
 
 # Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD. An explicitly
 # empty value must be distinguished from an unset one so release builds (CI exports
