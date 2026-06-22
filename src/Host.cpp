@@ -429,6 +429,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     auto settings = mudlet::self()->getQSettings();
     const auto interval = settings->value("autosaveIntervalMinutes", 2).toInt();
     startMapAutosave(interval);
+
+    mMapperCenterSmallAreas = settings->value("mapCenterSmallAreas", false).toBool();
 }
 
 Host::~Host()
