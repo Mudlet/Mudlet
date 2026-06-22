@@ -1136,6 +1136,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
 void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
     mHasBlinkingContent = false;
+    bool reusedCachedScreenContent = false;
 
     qreal dpr = devicePixelRatioF();
     QPixmap screenPixmap;
@@ -1173,6 +1174,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     }
     if ((r.height() < rect().height()) && (lineOffset > 0)) {
         p.drawPixmap(0, 0, mScreenMap);
+        reusedCachedScreenContent = true;
         from = y_top;
         noScroll = true;
         if (!mForceUpdate && !mMouseTracking) {
@@ -1187,6 +1189,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             && (mScreenHeight - mScrollVector) * mFontHeight <= mScreenMap.height()) {
             screenPixmap = mScreenMap.copy(0, mScrollVector * mFontHeight * dpr, mScreenWidth * mFontWidth * dpr, (mScreenHeight - mScrollVector) * mFontHeight * dpr);
             p.drawPixmap(0, 0, screenPixmap);
+            reusedCachedScreenContent = true;
             from = mScreenHeight - mScrollVector - 1;
         }
     } else if ((!noScroll) && (mScrollVector < 0 && mScrollVector >= ((-1) * mScreenHeight)) && (!mForceUpdate)) {
@@ -1194,6 +1197,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             && (mScreenHeight - abs(mScrollVector)) * mFontHeight <= mScreenMap.height()) {
             screenPixmap = mScreenMap.copy(0, 0, mScreenWidth * mFontWidth * dpr, (mScreenHeight - abs(mScrollVector)) * mFontHeight * dpr);
             p.drawPixmap(0, abs(mScrollVector) * mFontHeight, screenPixmap);
+            reusedCachedScreenContent = true;
             from = 0;
             y_bottom = abs(mScrollVector);
         }
@@ -1227,7 +1231,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     mLastRenderedOffset = lineOffset;
     mForceUpdate = false;
 
-    const bool shouldBeRegistered = mEnableBlinkText && mHasBlinkingContent;
+    const bool shouldBeRegistered = shouldRegisterBlinkClient(mEnableBlinkText, mHasBlinkingContent, mIsBlinkClientRegistered, reusedCachedScreenContent);
     if (auto* pMudlet = mudlet::self()) {
         if (shouldBeRegistered && !mIsBlinkClientRegistered) {
             pMudlet->registerBlinkClient();
@@ -1237,6 +1241,25 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             mIsBlinkClientRegistered = false;
         }
     }
+}
+
+bool TTextEdit::shouldRegisterBlinkClient(const bool enableBlinkText, const bool hasBlinkingContentInRedrawnRegion, const bool isBlinkClientRegistered, const bool reusedCachedScreenContent)
+{
+    if (!enableBlinkText) {
+        return false;
+    }
+
+    if (hasBlinkingContentInRedrawnRegion) {
+        return true;
+    }
+
+    // When content is rendered by copying rows from mScreenMap (scroll or
+    // partial-height repaint), those rows are not re-scanned for blinking
+    // characters, so mHasBlinkingContent will be false even if blinking content
+    // is still visible. Preserve the blink timer in that case; the next full
+    // repaint will reset mHasBlinkingContent from scratch and unregister the
+    // timer if nothing blinking remains.
+    return isBlinkClientRegistered && reusedCachedScreenContent;
 }
 
 void TTextEdit::paintEvent(QPaintEvent* e)
