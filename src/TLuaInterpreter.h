@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2023, 2025 by Stephen Lyons             *
+ *   Copyright (C) 2013-2016, 2018-2023, 2025-2026 by Stephen Lyons        *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -883,6 +883,7 @@ private:
     bool loadLuaModule(
             QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
     void insertNativeSeparatorsFunction(lua_State*);
+    static std::pair<int, QString> roomExitDir(const char*, lua_State*, const int);
 
 
     const int LUA_FUNCTION_MAX_ARGS = 50;

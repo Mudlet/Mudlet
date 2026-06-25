@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018, 2020-2021, 2023 by Stephen Lyons       *
+ *   Copyright (C) 2014-2016, 2018, 2020-2021, 2023, 2026 by Stephen Lyons *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
@@ -642,16 +642,27 @@ QHash<int, int> TRoom::getExits() const
     return exitList;
 }
 
-void TRoom::setExitLock(int exit, bool state)
+bool TRoom::setExitLock(int exit, bool state)
 {
+    bool changed = false;
     if (state) {
         if ((!exitLocks.contains(exit)) && (exit >= DIR_NORTH && exit <= DIR_OUT)) {
             exitLocks.push_back(exit);
+            changed = true;
         }
     } else {
-        exitLocks.removeAll(exit);
+        if (exit >= DIR_NORTH && exit <= DIR_OUT) {
+            changed = exitLocks.removeAll(exit);
+        }
     }
-    mpRoomDB->mpMap->setUnsaved(__func__);
+
+    if (mpRoomDB && mpRoomDB->mpMap && changed) {
+        mpRoomDB->mpMap->setUnsaved(__func__);
+        mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
+        mpRoomDB->mpMap->updateArea(area);
+    }
+
+    return changed;
 }
 
 bool TRoom::setSpecialExitLock(const QString& cmd, const bool doLock)

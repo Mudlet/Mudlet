@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2022, 2025 by Stephen Lyons                        *
+ *   Copyright (C) 2013-2022, 2025-2026 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
@@ -85,6 +85,33 @@ static bool isMain(const QString& name)
         return true;
     }
     return false;
+}
+
+/* Helper to validate a real room exit direction - could, perhaps, be extended
+ * to handle translated exit directions...*/
+std::pair<int, QString> TLuaInterpreter::roomExitDir(const char* fname, lua_State* lState, const int index)
+{
+    if (lua_isnumber(lState, index)) {
+        int dirCode = lua_tonumber(lState, index);
+        if (dirCode < DIR_NORTH && dirCode > DIR_OUT) {
+            return {0, qsl("direction %1 as a number, is not a valid value").arg(dirCode)};
+        }
+        return {dirCode, QString()};
+    }
+
+    if (lua_isstring(lState, index)) {
+        const QString dirText = lua_tostring(lState, index);
+        int dirCode = dirToNumber(lState, index);
+        if (!dirCode) {
+            return {0, qsl("direction '%1' as a string, is not a valid value").arg(dirText)};
+        }
+        return {dirCode, QString()};
+    }
+
+    lua_pushfstring(lState, "%s: bad argument #%d type (exit direction as number or string expected, got %s!)",
+                   fname, index, luaL_typename(lState, index));
+    lua_error(lState);
+    Q_UNREACHABLE();
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCustomLines
@@ -1649,16 +1676,15 @@ int TLuaInterpreter::getDoors(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getExitStubs
 int TLuaInterpreter::getExitStubs(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
+    const auto& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
-    const int roomId = getVerifiedInt(L, __func__, 1, "roomID");
-
-    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
+    const int roomID = getVerifiedInt(L, __func__, 1, "roomID");
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
     if (!pR) {
-        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomID));
     }
     QList<int> const stubs = pR->exitStubs;
     lua_newtable(L);
@@ -1673,16 +1699,16 @@ int TLuaInterpreter::getExitStubs(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getExitStubs1
 int TLuaInterpreter::getExitStubs1(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
+    const auto& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
-    const int roomId = getVerifiedInt(L, __func__, 1, "roomID");
+    const int roomID = getVerifiedInt(L, __func__, 1, "roomID");
 
-    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
     if (!pR) {
-        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomID));
     }
     QList<int> const stubs = pR->exitStubs;
     lua_newtable(L);
@@ -1697,18 +1723,17 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getExitStubsNames
 int TLuaInterpreter::getExitStubsNames(lua_State* L)
 {
-    const QStringList stubmap = {"north", "northeast", "northwest", "east", "west", "south", "southeast", "southwest", "up", "down", "in", "out", "other"};
-
-    const Host& host = getHostFromLua(L);
+    const auto& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
-    const int roomId = getVerifiedInt(L, __func__, 1, "roomID");
+    const QStringList stubmap = {"north", "northeast", "northwest", "east", "west", "south", "southeast", "southwest", "up", "down", "in", "out", "other"};
+    const int roomID = getVerifiedInt(L, __func__, 1, "roomID");
 
-    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
     if (!pR) {
-        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomID));
     }
     QList<int> const stubs = pR->exitStubs;
     lua_newtable(L);
@@ -2539,21 +2564,25 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hasExitLock
 int TLuaInterpreter::hasExitLock(lua_State* L)
 {
-    const int id = getVerifiedInt(L, __func__, 1, "roomID");
-
-    const int dir = dirToNumber(L, 2);
+    const auto& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    const int roomID = getVerifiedInt(L, __func__, 1, "roomID");
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomID));
+    }
+    const auto [dir, message] = roomExitDir(__func__, L, 2);
     if (!dir) {
-        lua_pushfstring(L, "hasExitLock: bad argument #2 type (direction as number or string expected, got %s!)");
-        return lua_error(L);
+        return warnArgumentValue(L, __func__, message.toUtf8().constData());
+    }
+    if (!pR->hasExit(dir)) {
+        return warnArgumentValue(L, __func__, "there is not a real exit in that direction");
     }
 
-    const Host& host = getHostFromLua(L);
-    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
-    if (pR) {
-        lua_pushboolean(L, pR->hasExitLock(dir));
-        return 1;
-    }
-    return 0;
+    lua_pushboolean(L, pR->hasExitLock(dir));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hasSpecialExitLock
@@ -2689,25 +2718,26 @@ int TLuaInterpreter::loadMap(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#lockExit
 int TLuaInterpreter::lockExit(lua_State* L)
 {
-    const int id = getVerifiedInt(L, __func__, 1, "roomID");
-
-    const int dir = dirToNumber(L, 2);
+    const auto& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    const int roomID = getVerifiedInt(L, __func__, 1, "roomID");
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomID));
+    }
+    const auto [dir, message] = roomExitDir(__func__, L, 2);
     if (!dir) {
-        lua_pushfstring(L, "lockExit: bad argument #2 type (direction as number or string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
+        return warnArgumentValue(L, __func__, message.toUtf8().constData());
     }
-
-    const bool b = getVerifiedBool(L, __func__, 3, "lockIfTrue");
-
-    const Host& host = getHostFromLua(L);
-    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
-    if (pR) {
-        pR->setExitLock(dir, b);
-        host.mpMap->setUnsaved(__func__);
-        host.mpMap->updateArea(pR->getArea());
-        host.mpMap->mMapGraphNeedsUpdate = true;
+    if (!pR->hasExit(dir)) {
+        return warnArgumentValue(L, __func__, "there is not a real exit in that direction");
     }
-    return 0;
+    const bool state = getVerifiedBool(L, __func__, 3, "set/reset");
+
+    lua_pushboolean(L, pR->setExitLock(dir, state));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#lockRoom
