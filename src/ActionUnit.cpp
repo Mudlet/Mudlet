@@ -480,9 +480,6 @@ void ActionUnit::showToolBar(const QString& name)
         }
     }
     mudlet::self()->processEventLoopHack();
-    // If a toolbar is clicked on for a profile that is not the "current"
-    // one, this will switch the focus to THAT profile:
-    mudlet::self()->activateProfile(mpHost);
 }
 
 void ActionUnit::hideToolBar(const QString& name)
