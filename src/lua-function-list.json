@@ -579,7 +579,7 @@
     "startStopWatch": "startStopWatch(watchName or watchID, [resetAndRestart])",
     "stopAllNamedEventHandlers": "stopAllNamedEventHandlers(userName)",
     "stopAllNamedTimers": "stopAllNamedTimers(userName)",
-    "stopAllNamedTrigger": "stopAllNamedTrigger(userName)",
+    "stopAllNamedTriggers": "stopAllNamedTriggers(userName)",
     "stopMusic": "stopMusic(settings table)",
     "stopNamedEventHandler": "success = stopNamedEventHandler(userName, handlerName)",
     "stopNamedTimer": "success = stopNamedTimer(userName, handlerName)",
