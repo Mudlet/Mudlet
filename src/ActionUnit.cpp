@@ -295,7 +295,7 @@ void ActionUnit::unregisterAction(TAction* pT)
         } else {
             removeAction(pT);
         }
-        updateToolbar();
+        updateAllToolbars();
         return;
     }
 }
@@ -489,7 +489,7 @@ void ActionUnit::hideToolBar(const QString& name)
     for (auto& easyButtonBar : mEasyButtonBarList) {
         if (easyButtonBar->mpTAction->getName() == name) {
             easyButtonBar->mpTAction->setIsActive(false);
-            updateToolbar();
+            updateAllToolbars();
         }
     }
     mudlet::self()->processEventLoopHack();
