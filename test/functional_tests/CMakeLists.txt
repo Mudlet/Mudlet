@@ -9,6 +9,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TOscTest.cpp
     TUserWindowTest.cpp
     TriggerEditorTest.cpp
+    TFeedTriggersRecursionTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     TDiscordModeTest.cpp
 )

@@ -1076,7 +1076,7 @@ int TLuaInterpreter::feedTelnet(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#feedTriggers
 int TLuaInterpreter::feedTriggers(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L,
                         "feedTriggers: bad argument #1 type (imitation game server text as string\n"
@@ -1084,6 +1084,29 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
                         luaL_typename(L, 1));
         return lua_error(L);
     }
+
+    // A self-feeding trigger recurses the C++ stack one level per re-match; abort
+    // with a catchable Lua error before that overflows the stack into a crash.
+    auto* triggerUnit = host.getTriggerUnit();
+    if (triggerUnit->processingDepth() >= TriggerUnit::scmMaxProcessingDepth) {
+        qWarning().nospace() << "TLuaInterpreter::feedTriggers(...) aborting: trigger processing recursion reached the limit of " << TriggerUnit::scmMaxProcessingDepth
+                             << " - probably an endless feedTriggers loop.";
+        const QString* pName = triggerUnit->currentExecutingTriggerName();
+        QString message;
+        if (pName && !pName->isEmpty()) {
+            //: Lua error raised when feedTriggers() detects an endless loop; %1 is the offending trigger's name
+            message = tr("feedTriggers stopped to prevent a crash: trigger '%1' (or another trigger it feeds) is stuck in an endless loop - the text being fed keeps re-matching a trigger and firing "
+                         "it again and again. Change the trigger's pattern or the fed text so they don't match each other.")
+                              .arg(*pName);
+        } else {
+            //: Lua error raised when feedTriggers() detects an endless loop and the offending trigger has no name
+            message = tr("feedTriggers stopped to prevent a crash: a trigger (or another trigger it feeds) is stuck in an endless loop - the text being fed keeps re-matching a trigger and firing it "
+                         "again and again. Change the trigger's pattern or the fed text so they don't match each other.");
+        }
+        lua_pushstring(L, message.toUtf8().constData());
+        return lua_error(L);
+    }
+
     const QByteArray data{lua_tostring(L, 1)};
     bool dataIsUtf8Encoded = true;
     if (lua_gettop(L) > 1) {
