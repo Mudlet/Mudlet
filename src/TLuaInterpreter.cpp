@@ -1092,18 +1092,23 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         qWarning().nospace() << "TLuaInterpreter::feedTriggers(...) aborting: trigger processing recursion reached the limit of " << TriggerUnit::scmMaxProcessingDepth
                              << " - probably an endless feedTriggers loop.";
         const QString* pName = triggerUnit->currentExecutingTriggerName();
-        QString message;
-        if (pName && !pName->isEmpty()) {
-            //: Lua error raised when feedTriggers() detects an endless loop; %1 is the offending trigger's name
-            message = tr("feedTriggers stopped to prevent a crash: trigger '%1' (or another trigger it feeds) is stuck in an endless loop - the text being fed keeps re-matching a trigger and firing "
-                         "it again and again. Change the trigger's pattern or the fed text so they don't match each other.")
-                              .arg(*pName);
-        } else {
-            //: Lua error raised when feedTriggers() detects an endless loop and the offending trigger has no name
-            message = tr("feedTriggers stopped to prevent a crash: a trigger (or another trigger it feeds) is stuck in an endless loop - the text being fed keeps re-matching a trigger and firing it "
-                         "again and again. Change the trigger's pattern or the fed text so they don't match each other.");
+        // Scoped so the QString is destroyed before lua_error()'s longjmp, which skips C++ destructors.
+        {
+            QString message;
+            if (pName && !pName->isEmpty()) {
+                //: Lua error raised when feedTriggers() detects an endless loop; %1 is the offending trigger's name
+                message = tr("feedTriggers stopped to prevent a crash: trigger '%1' (or another trigger it feeds) is stuck in an endless loop - the text being fed keeps re-matching a trigger and "
+                             "firing "
+                             "it again and again. Change the trigger's pattern or the fed text so they don't match each other.")
+                                  .arg(*pName);
+            } else {
+                //: Lua error raised when feedTriggers() detects an endless loop and the offending trigger has no name
+                message = tr(
+                        "feedTriggers stopped to prevent a crash: a trigger (or another trigger it feeds) is stuck in an endless loop - the text being fed keeps re-matching a trigger and firing it "
+                        "again and again. Change the trigger's pattern or the fed text so they don't match each other.");
+            }
+            lua_pushstring(L, message.toUtf8().constData());
         }
-        lua_pushstring(L, message.toUtf8().constData());
         return lua_error(L);
     }
 

@@ -75,13 +75,22 @@ private slots:
         host->mEchoLuaErrors = true;
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("loopCount = 0\n"
-                                                               "tempRegexTrigger('^loopme$', [[loopCount = loopCount + 1; feedTriggers('loopme\\n')]])\n"
+                                                               "loopTriggerId = tempRegexTrigger('^loopme$', [[loopCount = loopCount + 1; feedTriggers('loopme\\n')]])\n"
                                                                "feedTriggers('loopme\\n')\n"));
 
         // The whole recursion runs synchronously inside the call above; if the
         // guard works we are back here (no crash) with everything unwound.
         QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
         QVERIFY2(bufferContains(qsl("stuck in an endless loop")), "Expected the feedTriggers loop-abort error in the console buffer");
+
+        // The abort message must name the offending trigger (a temp trigger's name
+        // is its id), proving the name-tracking guard actually identifies the culprit
+        // rather than silently falling back to the unnamed branch.
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "loopTriggerId");
+        const int loopTriggerId = static_cast<int>(lua_tointeger(L, -1));
+        lua_pop(L, 1);
+        QVERIFY2(bufferContains(qsl("trigger '%1'").arg(loopTriggerId)), "Expected the abort message to name the offending trigger by its id");
 
         // The trigger should have fired exactly up to the limit and no further.
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("echo('LOOPCOUNT='..loopCount..'\\n')"));
@@ -151,15 +160,18 @@ private slots:
         }
     }
 
+    // Joins every physical buffer line and normalises whitespace before matching,
+    // so a long needle that the console word-wraps (with added indents) across
+    // lines is still found - a per-line scan would miss it depending on where the
+    // wrap lands, which shifts with the trigger id width and console geometry.
     bool bufferContains(const QString& needle)
     {
         auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QString allText;
         for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
-            if (console->buffer.line(i).contains(needle)) {
-                return true;
-            }
+            allText.append(console->buffer.line(i)).append(QChar::Space);
         }
-        return false;
+        return allText.simplified().contains(needle);
     }
 
     void deleteProfileDirectory(const QString& profileName)
