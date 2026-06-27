@@ -20,8 +20,6 @@
 
 set -e
 
-# sentry-cli 3.5.0+ parses DWARF-in-PE debug companions, which lets us upload the
-# Qt Mingw-w64 ".debug" files directly (see the Windows section below).
 SENTRY_CLI_VERSION="3.6.0"
 
 download_sentry_cli() {
@@ -109,9 +107,9 @@ done
 # and MSYSTEM_PREFIX for the path (supports MINGW64, CLANG64, UCRT64, etc.)
 #
 # On Windows we build with MSYS2 + Mingw-w64, so the Qt libraries we link against
-# ship their debug information as separate DWARF ".debug" companion files rather
-# than PDBs. Since sentry-cli 3.5.0 Sentry parses DWARF-in-PE companions directly,
-# so we upload the ".debug" files as-is - no DWARF-to-PDB conversion needed.
+# ship their debug information as separate DWARF ".debug" companion files. Since
+# sentry-cli 3.5.0+ parses DWARF-in-PE companions, we upload these ".debug" files
+# straight to Sentry.
 # See https://github.com/getsentry/sentry/issues/104738
 if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
     MINGW_BIN="${MSYSTEM_PREFIX}/bin"
