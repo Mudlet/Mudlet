@@ -178,6 +178,32 @@ private slots:
         });
     }
 
+    // setTriggerStayOpen() looks triggers up by name through the same path as the
+    // enable/disable functions, so it must update EVERY same-named trigger too.
+    void test_setTriggerStayOpenAffectsAllMatches()
+    {
+        QStringList p1{qsl("stayopen_trig_1")};
+        QStringList p2{qsl("stayopen_trig_2")};
+        QStringList p3{qsl("stayopen_trig_3")};
+        auto [id1, m1] = mpHost->mLuaInterpreter.startPermSubstringTrigger(qsl("StayOpen Triggers"), qsl(""), p1, qsl(""));
+        auto [id2, m2] = mpHost->mLuaInterpreter.startPermSubstringTrigger(qsl("StayOpen Triggers"), qsl(""), p2, qsl(""));
+        auto [id3, m3] = mpHost->mLuaInterpreter.startPermSubstringTrigger(qsl("Solo StayOpen"), qsl(""), p3, qsl(""));
+        QVERIFY2(id1 > 0, qPrintable(m1));
+        QVERIFY2(id2 > 0, qPrintable(m2));
+        QVERIFY2(id3 > 0, qPrintable(m3));
+
+        auto* unit = mpHost->getTriggerUnit();
+        auto* t1 = unit->getTrigger(id1);
+        auto* t2 = unit->getTrigger(id2);
+        auto* t3 = unit->getTrigger(id3);
+        QVERIFY(t1 && t2 && t3);
+
+        runLua(qsl("setTriggerStayOpen('StayOpen Triggers', 5)"));
+        QVERIFY2(t1->mKeepFiring == 5, "first trigger should be set to stay open");
+        QVERIFY2(t2->mKeepFiring == 5, "second same-named trigger should ALSO be set to stay open");
+        QVERIFY2(t3->mKeepFiring == 0, "differently-named trigger must stay untouched");
+    }
+
     void test_timerEnableDisableAffectsAllMatches()
     {
         auto [id1, m1] = mpHost->mLuaInterpreter.startPermTimer(qsl("Dup Timers"), qsl(""), 60.0, qsl(""));

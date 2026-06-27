@@ -150,6 +150,13 @@ describe("Alias processing", function()
             _G.DuplicateAliasTest = {fired = {}}
         end)
 
+        -- permAlias aliases can't be removed via killAlias(); disable them here so
+        -- a failed assertion above doesn't leave them firing for later tests
+        after_each(function()
+            disableAlias("Druid Aliases")
+            disableAlias("Other Aliases")
+        end)
+
         it("toggles every alias sharing the same name, not just the first", function()
             -- permanent so two can share one name; distinct patterns reveal which fired
             local id1 = permAlias("Druid Aliases", "", "^druid_dup_one$", [[_G.DuplicateAliasTest.fired.one = true]])
@@ -183,10 +190,6 @@ describe("Alias processing", function()
             _G.DuplicateAliasTest.fired = {}
             expandAlias("druid_dup_other")
             assert.is_true(_G.DuplicateAliasTest.fired.other, "differently-named alias must stay enabled")
-
-            -- killAlias() only removes temporary aliases; leave these disabled
-            disableAlias("Druid Aliases")
-            disableAlias("Other Aliases")
         end)
 
     end)
