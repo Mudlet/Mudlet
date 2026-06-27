@@ -140,4 +140,64 @@ describe("Alias processing", function()
         end)
 
     end)
+
+    -- Reproduces a user report that enableAlias()/disableAlias() only affect the
+    -- FIRST item sharing a given name when several aliases share that name (e.g.
+    -- two alias groups both called "Druid Aliases"). AliasUnit::enableAlias and
+    -- AliasUnit::disableAlias iterate the whole multimap of same-named entries,
+    -- so EVERY alias with that name must be toggled, not just the first found.
+    --
+    -- killAlias() only removes temporary aliases, and there is no Lua API to
+    -- delete permanent ones, so these aliases are given a unique name and left
+    -- disabled at the end to avoid interfering with other specs.
+    describe("enable/disable with duplicate names", function()
+
+        before_each(function()
+            _G.DuplicateAliasTest = {fired = {}}
+        end)
+
+        it("toggles every alias sharing the same name, not just the first", function()
+            -- permanent aliases so two of them can share one name; distinct
+            -- patterns let us tell which one actually fired
+            local id1 = permAlias("Druid Aliases", "", "^druid_dup_one$", [[_G.DuplicateAliasTest.fired.one = true]])
+            local id2 = permAlias("Druid Aliases", "", "^druid_dup_two$", [[_G.DuplicateAliasTest.fired.two = true]])
+            assert.is_true(id1 > 0, "first duplicate-named alias should be created")
+            assert.is_true(id2 > 0, "second duplicate-named alias should be created")
+
+            -- sanity: permAlias creates them active, so both fire
+            expandAlias("druid_dup_one")
+            expandAlias("druid_dup_two")
+            assert.is_true(_G.DuplicateAliasTest.fired.one, "alias 1 should fire while enabled")
+            assert.is_true(_G.DuplicateAliasTest.fired.two, "alias 2 should fire while enabled")
+
+            -- disableAlias must disable BOTH, not only the first one found
+            _G.DuplicateAliasTest.fired = {}
+            disableAlias("Druid Aliases")
+            expandAlias("druid_dup_one")
+            expandAlias("druid_dup_two")
+            assert.is_nil(_G.DuplicateAliasTest.fired.one, "alias 1 should be disabled")
+            assert.is_nil(_G.DuplicateAliasTest.fired.two, "alias 2 (the second duplicate) should ALSO be disabled")
+
+            -- enableAlias must re-enable BOTH
+            _G.DuplicateAliasTest.fired = {}
+            enableAlias("Druid Aliases")
+            expandAlias("druid_dup_one")
+            expandAlias("druid_dup_two")
+            assert.is_true(_G.DuplicateAliasTest.fired.one, "alias 1 should be re-enabled")
+            assert.is_true(_G.DuplicateAliasTest.fired.two, "alias 2 (the second duplicate) should ALSO be re-enabled")
+
+            -- aliases with a DIFFERENT name must be unaffected (control)
+            local idOther = permAlias("Other Aliases", "", "^druid_dup_other$", [[_G.DuplicateAliasTest.fired.other = true]])
+            assert.is_true(idOther > 0)
+            disableAlias("Druid Aliases")
+            _G.DuplicateAliasTest.fired = {}
+            expandAlias("druid_dup_other")
+            assert.is_true(_G.DuplicateAliasTest.fired.other, "differently-named alias must stay enabled")
+
+            -- no Lua API removes permanent aliases; leave them disabled
+            disableAlias("Druid Aliases")
+            disableAlias("Other Aliases")
+        end)
+
+    end)
 end)
