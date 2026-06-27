@@ -331,7 +331,7 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
                 break;
             case TreeType::Action:
                 mpHost->getActionUnit()->reParentAction(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
-                mpHost->getActionUnit()->updateToolbar();
+                mpHost->getActionUnit()->updateAllToolbars();
                 break;
             case TreeType::Var:
             case TreeType::None:

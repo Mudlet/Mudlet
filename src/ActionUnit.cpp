@@ -269,7 +269,7 @@ void ActionUnit::unregisterAction(TAction* pT)
     }
     if (pT->getParent() && pT->getParent()->mPackageName.isEmpty()) {
         removeAction(pT);
-        updateToolbar();
+        updateAllToolbars();
         return;
     } else {
         if (pT->mpEasyButtonBar && pT->mPackageName.isEmpty()) {
@@ -295,7 +295,7 @@ void ActionUnit::unregisterAction(TAction* pT)
         } else {
             removeAction(pT);
         }
-        updateToolbar();
+        updateAllToolbars();
         return;
     }
 }
@@ -322,7 +322,6 @@ void ActionUnit::removeAction(TAction* pT)
 
     mActionMap.remove(pT->getID());
 }
-
 
 int ActionUnit::getNewID()
 {
@@ -476,7 +475,7 @@ void ActionUnit::showToolBar(const QString& name)
     for (auto& easyButtonBar : mEasyButtonBarList) {
         if (easyButtonBar->mpTAction->getName() == name) {
             easyButtonBar->mpTAction->setIsActive(true);
-            updateToolbar();
+            updateAllToolbars();
         }
     }
     mudlet::self()->processEventLoopHack();
@@ -487,7 +486,7 @@ void ActionUnit::hideToolBar(const QString& name)
     for (auto& easyButtonBar : mEasyButtonBarList) {
         if (easyButtonBar->mpTAction->getName() == name) {
             easyButtonBar->mpTAction->setIsActive(false);
-            updateToolbar();
+            updateAllToolbars();
         }
     }
     mudlet::self()->processEventLoopHack();
@@ -626,7 +625,7 @@ void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
 }
 
 
-void ActionUnit::updateToolbar()
+void ActionUnit::updateAllToolbars()
 {
     regenerateToolBars();
     regenerateEasyButtonBars();

@@ -2106,7 +2106,7 @@ int TLuaInterpreter::tempButton(lua_State* L)
 
     pT->registerAction();
     // N/U:     int childID = pT->getID();
-    host.getActionUnit()->updateToolbar();
+    host.getActionUnit()->updateAllToolbars();
     return 1;
 }
 
@@ -2152,7 +2152,7 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
     pT->setIsActive(true);
     pT->registerAction();
     // N/U:     int childID = pT->getID();
-    host.getActionUnit()->updateToolbar();
+    host.getActionUnit()->updateAllToolbars();
 
 
     return 1;

@@ -2376,7 +2376,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         mpEditorDialog->doCleanReset();
     }
 
-    getActionUnit()->updateToolbar();
+    getActionUnit()->updateAllToolbars();
 
     const QString dest = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
     removeDir(dest, dest);
