@@ -86,9 +86,12 @@ if(WIN32)
     # code_id), so nothing ever matched and Windows crashes stayed unsymbolicated.
     target_compile_options(${LIB_MUDLET_TARGET} PRIVATE -gcodeview)
     target_compile_options(${EXE_MUDLET_TARGET} PRIVATE -g -gcodeview)
+    # Derive the PDB name from the executable's base name so it always matches the
+    # shipped exe (and the script's "${MUDLET_EXEC%.exe}.pdb" lookup) even if the
+    # target's output name ever changes.
     target_link_options(${EXE_MUDLET_TARGET} PRIVATE
         -g -gcodeview
-        "-Wl,--pdb=$<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>/mudlet.pdb"
+        "-Wl,--pdb=$<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>/$<TARGET_FILE_BASE_NAME:${EXE_MUDLET_TARGET}>.pdb"
     )
     string(REPLACE "-Wl,-s" "" CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
     string(REPLACE "-Wl,-s" "" CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE}")

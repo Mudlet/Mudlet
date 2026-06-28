@@ -117,7 +117,9 @@ done
 # sentry-cli 3.5.0+ parses DWARF-in-PE companions, we upload these ".debug" files
 # straight to Sentry.
 # See https://github.com/getsentry/sentry/issues/104738
-if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
+# The bare MSYS environment (MSYSTEM=MSYS) is never used for official builds, so
+# skip it here to avoid walking/uploading symbols from an unintended runtime tree.
+if [[ -n "$MSYSTEM" && "$MSYSTEM" != "MSYS" && -n "$MSYSTEM_PREFIX" ]]; then
     MINGW_BIN="${MSYSTEM_PREFIX}/bin"
     QT_PLUGINS_DIR="${MSYSTEM_PREFIX}/share/qt6/plugins"
 
@@ -144,9 +146,10 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
                 [[ -f "$dll_path" ]] || continue
                 pending+=("$dll_path")
                 if [[ "$dll" == Qt6*.dll ]]; then
-                    # MSYS2 names the companion either "<name>.dll.debug" or "<name>.debug"
+                    # MSYS2 names the companion either "<name>.dll.debug" or "<name>.debug";
+                    # guard against adding the same resolved companion twice
                     for debug_file in "$MINGW_BIN/${dll}.debug" "$MINGW_BIN/${dll%.dll}.debug"; do
-                        [[ -f "$debug_file" ]] && DEBUG_FILES+=("$debug_file")
+                        [[ -f "$debug_file" && -z "${seen_dll[$debug_file]:-}" ]] && { seen_dll[$debug_file]=1; DEBUG_FILES+=("$debug_file"); }
                     done
                 fi
             done < <(objdump -p "$current" 2>/dev/null | sed -n 's/^[[:space:]]*DLL Name:[[:space:]]*//p')
