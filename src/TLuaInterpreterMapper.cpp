@@ -93,7 +93,7 @@ std::pair<int, QString> TLuaInterpreter::roomExitDir(const char* fname, lua_Stat
 {
     if (lua_isnumber(lState, index)) {
         int dirCode = lua_tonumber(lState, index);
-        if (dirCode < DIR_NORTH && dirCode > DIR_OUT) {
+        if (dirCode < DIR_NORTH || dirCode > DIR_OUT) {
             return {0, qsl("direction %1 as a number, is not a valid value").arg(dirCode)};
         }
         return {dirCode, QString()};
