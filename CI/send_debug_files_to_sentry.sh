@@ -93,7 +93,9 @@ if [[ "$OS" == "Linux" ]]; then
 elif [[ "$OS" == "Darwin" ]]; then
     DEBUG_FILE="${MUDLET_EXEC}.dSYM"
     [[ -d "$DEBUG_FILE" ]] && FILES_TO_UPLOAD+=("$DEBUG_FILE")
-elif [[ "$OS" == "MINGW"* || "$OS" == "MSYS"* ]]; then
+elif [[ "$OS" == "MINGW"* ]]; then
+    # Only the MINGW/CLANG/UCRT environments are used for official builds; the bare
+    # MSYS environment is not, so there is no need to test for it here.
     # lld writes a separate mudlet.pdb next to the executable (see WithSentry.cmake
     # -Wl,--pdb). The PDB carries the debug/line information and shares its debug-id
     # with the RSDS record kept in the shipped mudlet.exe, so uploading both lets
@@ -124,10 +126,37 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
 
     DEBUG_FILES=()
 
-    # Core Qt6 libraries (Qt6Core.debug, Qt6Gui.debug, ...) live next to their DLLs
-    for debug_file in "$MINGW_BIN"/Qt6*.debug; do
-        [[ -f "$debug_file" ]] && DEBUG_FILES+=("$debug_file")
-    done
+    # Core Qt6 libraries ship their debug info as separate ".debug" companions next
+    # to their DLLs. We only want the companions for the Qt6 modules Mudlet actually
+    # ships, not every Qt6*.dll present in the MSYS2 bin, otherwise the upload is far
+    # bigger than necessary. Walk mudlet.exe's import table (transitively) to find
+    # the Qt6 DLLs it really depends on and collect only those companions.
+    if command -v objdump >/dev/null 2>&1; then
+        declare -A seen_dll=()
+        pending=("$MUDLET_EXEC")
+        while [[ ${#pending[@]} -gt 0 ]]; do
+            current="${pending[0]}"
+            pending=("${pending[@]:1}")
+            while IFS= read -r dll; do
+                [[ -z "$dll" || -n "${seen_dll[$dll]:-}" ]] && continue
+                seen_dll[$dll]=1
+                dll_path="$MINGW_BIN/$dll"
+                [[ -f "$dll_path" ]] || continue
+                pending+=("$dll_path")
+                if [[ "$dll" == Qt6*.dll ]]; then
+                    # MSYS2 names the companion either "<name>.dll.debug" or "<name>.debug"
+                    for debug_file in "$MINGW_BIN/${dll}.debug" "$MINGW_BIN/${dll%.dll}.debug"; do
+                        [[ -f "$debug_file" ]] && DEBUG_FILES+=("$debug_file")
+                    done
+                fi
+            done < <(objdump -p "$current" 2>/dev/null | sed -n 's/^[[:space:]]*DLL Name:[[:space:]]*//p')
+        done
+    else
+        echo "objdump not found - falling back to uploading all Qt6 debug companions"
+        for debug_file in "$MINGW_BIN"/Qt6*.debug; do
+            [[ -f "$debug_file" ]] && DEBUG_FILES+=("$debug_file")
+        done
+    fi
 
     # Qt plugins (image formats, platforms, tls, ...) can appear in crash stack
     # traces too, so upload every plugin companion we can find
