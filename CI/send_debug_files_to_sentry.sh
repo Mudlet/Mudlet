@@ -94,6 +94,10 @@ elif [[ "$OS" == "Darwin" ]]; then
     DEBUG_FILE="${MUDLET_EXEC}.dSYM"
     [[ -d "$DEBUG_FILE" ]] && FILES_TO_UPLOAD+=("$DEBUG_FILE")
 elif [[ "$OS" == "MINGW"* || "$OS" == "MSYS"* ]]; then
+    # lld writes a separate mudlet.pdb next to the executable (see WithSentry.cmake
+    # -Wl,--pdb). The PDB carries the debug/line information and shares its debug-id
+    # with the RSDS record kept in the shipped mudlet.exe, so uploading both lets
+    # Sentry match crash minidumps (by debug-id) and symbolicate them.
     PDB_FILE="${MUDLET_EXEC%.exe}.pdb"
     [[ -f "$PDB_FILE" ]] && FILES_TO_UPLOAD+=("$PDB_FILE")
 fi
@@ -140,8 +144,6 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
     else
         echo "No Qt .debug files found - are the qt6-*-debug packages installed?"
     fi
-
-    strip --strip-debug "$MUDLET_EXEC"
 fi
 
 rm -f sentry-cli
