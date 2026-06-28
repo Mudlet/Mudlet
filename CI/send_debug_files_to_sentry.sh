@@ -117,9 +117,7 @@ done
 # sentry-cli 3.5.0+ parses DWARF-in-PE companions, we upload these ".debug" files
 # straight to Sentry.
 # See https://github.com/getsentry/sentry/issues/104738
-# The bare MSYS environment (MSYSTEM=MSYS) is never used for official builds, so
-# skip it here to avoid walking/uploading symbols from an unintended runtime tree.
-if [[ -n "$MSYSTEM" && "$MSYSTEM" != "MSYS" && -n "$MSYSTEM_PREFIX" ]]; then
+if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
     MINGW_BIN="${MSYSTEM_PREFIX}/bin"
     QT_PLUGINS_DIR="${MSYSTEM_PREFIX}/share/qt6/plugins"
 
