@@ -94,12 +94,8 @@ elif [[ "$OS" == "Darwin" ]]; then
     DEBUG_FILE="${MUDLET_EXEC}.dSYM"
     [[ -d "$DEBUG_FILE" ]] && FILES_TO_UPLOAD+=("$DEBUG_FILE")
 elif [[ "$OS" == "MINGW"* ]]; then
-    # Only the MINGW/CLANG/UCRT environments are used for official builds; the bare
-    # MSYS environment is not, so there is no need to test for it here.
-    # lld writes a separate mudlet.pdb next to the executable (see WithSentry.cmake
-    # -Wl,--pdb). The PDB carries the debug/line information and shares its debug-id
-    # with the RSDS record kept in the shipped mudlet.exe, so uploading both lets
-    # Sentry match crash minidumps (by debug-id) and symbolicate them.
+    # The PDB shares its debug-id with the shipped mudlet.exe, so uploading both
+    # lets Sentry match crash minidumps and symbolicate them (see WithSentry.cmake).
     PDB_FILE="${MUDLET_EXEC%.exe}.pdb"
     [[ -f "$PDB_FILE" ]] && FILES_TO_UPLOAD+=("$PDB_FILE")
 fi
@@ -109,14 +105,8 @@ for f in "${FILES_TO_UPLOAD[@]}"; do
     ./sentry-cli debug-files upload "$f" --project "mudlet"
 done
 
-# Use MSYSTEM variable for MSYS2 detection (consistent with other CI scripts)
-# and MSYSTEM_PREFIX for the path (supports MINGW64, CLANG64, UCRT64, etc.)
-#
-# On Windows we build with MSYS2 + Mingw-w64, so the Qt libraries we link against
-# ship their debug information as separate DWARF ".debug" companion files. Since
-# sentry-cli 3.5.0+ parses DWARF-in-PE companions, we upload these ".debug" files
-# straight to Sentry.
-# See https://github.com/getsentry/sentry/issues/104738
+# Qt ships its debug info as separate DWARF ".debug" companions; sentry-cli 3.5.0+
+# parses these, so upload them too. See https://github.com/getsentry/sentry/issues/104738
 if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
     MINGW_BIN="${MSYSTEM_PREFIX}/bin"
     QT_PLUGINS_DIR="${MSYSTEM_PREFIX}/share/qt6/plugins"
@@ -126,11 +116,8 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
 
     DEBUG_FILES=()
 
-    # Core Qt6 libraries ship their debug info as separate ".debug" companions next
-    # to their DLLs. We only want the companions for the Qt6 modules Mudlet actually
-    # ships, not every Qt6*.dll present in the MSYS2 bin, otherwise the upload is far
-    # bigger than necessary. Walk mudlet.exe's import table (transitively) to find
-    # the Qt6 DLLs it really depends on and collect only those companions.
+    # Upload .debug companions only for the Qt6 modules mudlet.exe actually depends
+    # on (walk its import table), not every Qt6 DLL in the bin.
     if command -v objdump >/dev/null 2>&1; then
         declare -A seen_dll=()
         pending=("$MUDLET_EXEC")
@@ -144,8 +131,7 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
                 [[ -f "$dll_path" ]] || continue
                 pending+=("$dll_path")
                 if [[ "$dll" == Qt6*.dll ]]; then
-                    # MSYS2 names the companion either "<name>.dll.debug" or "<name>.debug";
-                    # guard against adding the same resolved companion twice
+                    # companion may be "<name>.dll.debug" or "<name>.debug"; add once
                     for debug_file in "$MINGW_BIN/${dll}.debug" "$MINGW_BIN/${dll%.dll}.debug"; do
                         [[ -f "$debug_file" && -z "${seen_dll[$debug_file]:-}" ]] && { seen_dll[$debug_file]=1; DEBUG_FILES+=("$debug_file"); }
                     done
