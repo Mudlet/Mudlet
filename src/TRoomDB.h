@@ -37,10 +37,11 @@ class TRoom;
 // well-known userData tags
 extern const QString ROOM_UI_SHOWNAME;
 extern const QString ROOM_UI_NAMEPOS;
-extern const QString ROOM_UI_NAMEFONT;  // global only
-extern const QString ROOM_UI_NAMESIZE;  // TODO
+extern const QString ROOM_UI_NAMEFONT; // global only
+extern const QString ROOM_UI_NAMESIZE; // TODO
 extern const QString ROOM_UI_BORDERCOLOR;
 extern const QString ROOM_UI_BORDERTHICKNESS;
+extern const QString ROOM_UI_BORDERSTYLE;
 
 class TRoomDB
 {

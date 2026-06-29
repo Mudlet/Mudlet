@@ -1173,7 +1173,7 @@ void T2DMap::drawRoom(QPainter& painter,
     } else {
         borderWidth = qMax(1, static_cast<int>(1 / mBSize * mRoomWidth * rSize));
     }
-    const bool shouldDrawBorder = (mpHost->mMapperShowRoomBorders || pRoom->mBorderColor.isValid() || pRoom->mBorderThickness > 0) && !isGridMode;
+    const bool shouldDrawBorder = (mpHost->mMapperShowRoomBorders || pRoom->mBorderColor.isValid() || pRoom->mBorderThickness > 0 || pRoom->mRoomBorderStyle != Qt::SolidLine) && !isGridMode;
     bool showThisRoomName = showRoomName;
     if (isGridMode) {
         realHeight = mRoomHeight;
@@ -1280,6 +1280,8 @@ void T2DMap::drawRoom(QPainter& painter,
             fadingColor.setAlpha(255 * (mRoomWidth / 12));
             roomPen.setColor(fadingColor);
         }
+        // Dashed border patterns are applied per-edge in the drawing
+        // section below so each edge starts cleanly from its corner
     }
 
     // Expand the drawing rectangle outward by half the border width so that
@@ -1306,6 +1308,149 @@ void T2DMap::drawRoom(QPainter& painter,
         QPainterPath diameterPath;
         diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
         painter.drawPath(diameterPath);
+    } else if (pRoom->mRoomBorderStyle != Qt::SolidLine && isDrawingBorder) {
+        // Draw fill and dashed border separately so each edge gets its
+        // own pattern starting cleanly from the corner. FlatCap prevents
+        // dash end-caps from extending into gaps, and the repeat count
+        // is rounded to fit each edge exactly (no crawling when zooming).
+        // Dots are square: 1 pen-width long = borderWidth pixels.
+        painter.setPen(Qt::NoPen);
+        painter.drawRect(roomDrawRectangle);
+
+        const qreal bw = static_cast<qreal>(borderWidth);
+
+        // All elements use u=1.0 exactly (dots are perfectly square at
+        // bw x bw pixels, dashes are 2*bw long, gaps are 1*bw).
+        // Each edge is drawn as two halves from the corners toward the
+        // center; any leftover is absorbed as a wider gap in the middle.
+        // Horizontal edges own the corners (dashes reach outer edge).
+        // Vertical edges sit inside the horizontal strokes.
+
+        // Pattern and period per style (all in pen-width units, u=1.0)
+        QVector<qreal> pattern;
+        qreal period = 0;
+        qreal dashLen = 0;
+        switch (pRoom->mRoomBorderStyle) {
+        case Qt::DashLine:
+            pattern = {2.0, 1.0};
+            period = 3.0;
+            dashLen = 2.0;
+            break;
+        case Qt::DotLine:
+            pattern = {1.0, 1.0};
+            period = 2.0;
+            dashLen = 1.0;
+            break;
+        default:
+            break;
+        }
+
+        // Compute the max drawn length from a corner that ends on a
+        // complete dash, so no element is truncated at the center
+        auto drawnHalf = [&](qreal halfEdge, qreal firstElem) -> qreal {
+            const int k = qMax(0, static_cast<int>((halfEdge / bw - firstElem) / period));
+            return (firstElem + k * period) * bw;
+        };
+
+        roomPen.setCapStyle(Qt::FlatCap);
+        painter.setBrush(Qt::NoBrush);
+
+        const qreal hw = bw / 2.0;
+        const qreal yTop = roomDrawRectangle.top();
+        const qreal yBot = roomDrawRectangle.bottom();
+        const qreal xLeft = roomDrawRectangle.left();
+        const qreal xRight = roomDrawRectangle.right();
+
+        // --- Horizontal edge geometry ---
+        // Extend by hw at each end so FlatCap reaches the outer edge
+        const qreal hLeft = xLeft - hw;
+        const qreal hRight = xRight + hw;
+        const qreal hEdge = hRight - hLeft;
+
+        // --- Vertical edge geometry (sit inside horizontal strokes) ---
+        const qreal vTop = yTop + hw;
+        const qreal vBot = yBot - hw;
+        const qreal vEdge = vBot - vTop;
+
+        if (pRoom->mRoomBorderStyle == Qt::DashLine) {
+            // DashLine: manually position each dash as a solid segment.
+            // This avoids QPen pattern issues at small edge/borderWidth
+            // ratios and guarantees uniform spacing at any zoom level.
+            const qreal dashPx = dashLen * bw;
+            QPen solidPen(roomPen.color(), bw, Qt::SolidLine, Qt::FlatCap);
+            painter.setPen(solidPen);
+
+            // Horizontal: dashes anchored at outer corners
+            const int hN = qMax(1, static_cast<int>((hEdge / bw + 1.0) / period));
+            if (hN == 1) {
+                // Single centered dash
+                const qreal hCenter = (hLeft + hRight) / 2.0;
+                painter.drawLine(QPointF(hCenter - dashPx / 2.0, yTop), QPointF(hCenter + dashPx / 2.0, yTop));
+                painter.drawLine(QPointF(hCenter - dashPx / 2.0, yBot), QPointF(hCenter + dashPx / 2.0, yBot));
+            } else {
+                const qreal hGap = (hEdge - hN * dashPx) / (hN - 1);
+                for (int i = 0; i < hN; i++) {
+                    const qreal x1 = hLeft + i * (dashPx + hGap);
+                    const qreal x2 = x1 + dashPx;
+                    painter.drawLine(QPointF(x1, yTop), QPointF(x2, yTop));
+                    painter.drawLine(QPointF(x1, yBot), QPointF(x2, yBot));
+                }
+            }
+
+            // Vertical: gaps at corners, dashes evenly distributed
+            const int vN = qMax(1, static_cast<int>((vEdge / bw - 1.0) / period));
+            const qreal vGap = (vEdge - vN * dashPx) / (vN + 1);
+            for (int i = 0; i < vN; i++) {
+                const qreal y1 = vTop + vGap + i * (dashPx + vGap);
+                const qreal y2 = y1 + dashPx;
+                painter.drawLine(QPointF(xLeft, y1), QPointF(xLeft, y2));
+                painter.drawLine(QPointF(xRight, y1), QPointF(xRight, y2));
+            }
+
+        } else if (pRoom->mRoomBorderStyle == Qt::DotLine) {
+            // DotLine: two-half approach with center fill
+            const qreal hHalf = drawnHalf(hEdge / 2.0, dashLen);
+            const qreal vHalf = drawnHalf(vEdge / 2.0, 1.0 + dashLen);
+
+            roomPen.setDashPattern(pattern);
+            roomPen.setDashOffset(0.0);
+            painter.setPen(roomPen);
+            if (hHalf > 0 && hHalf <= hEdge / 2.0) {
+                painter.drawLine(QPointF(hLeft, yTop), QPointF(hLeft + hHalf, yTop));
+                painter.drawLine(QPointF(hRight, yTop), QPointF(hRight - hHalf, yTop));
+                painter.drawLine(QPointF(hLeft, yBot), QPointF(hLeft + hHalf, yBot));
+                painter.drawLine(QPointF(hRight, yBot), QPointF(hRight - hHalf, yBot));
+            }
+
+            // Center dot for horizontal if gap is large enough
+            const qreal hMiddleGap = hEdge - 2.0 * hHalf;
+            if (hMiddleGap > 2.5 * bw) {
+                const qreal hCenter = (hLeft + hRight) / 2.0;
+                QPen solidPen(roomPen.color(), bw, Qt::SolidLine, Qt::FlatCap);
+                painter.setPen(solidPen);
+                painter.drawLine(QPointF(hCenter - bw / 2.0, yTop), QPointF(hCenter + bw / 2.0, yTop));
+                painter.drawLine(QPointF(hCenter - bw / 2.0, yBot), QPointF(hCenter + bw / 2.0, yBot));
+            }
+
+            roomPen.setDashOffset(period - 1.0);
+            painter.setPen(roomPen);
+            if (vHalf > 0 && vHalf <= vEdge / 2.0) {
+                painter.drawLine(QPointF(xLeft, vTop), QPointF(xLeft, vTop + vHalf));
+                painter.drawLine(QPointF(xLeft, vBot), QPointF(xLeft, vBot - vHalf));
+                painter.drawLine(QPointF(xRight, vTop), QPointF(xRight, vTop + vHalf));
+                painter.drawLine(QPointF(xRight, vBot), QPointF(xRight, vBot - vHalf));
+            }
+
+            // Center dot for vertical if gap is large enough
+            const qreal vMiddleGap = vEdge - 2.0 * vHalf;
+            if (vMiddleGap > 2.5 * bw) {
+                const qreal vCenter = (vTop + vBot) / 2.0;
+                QPen solidPen(roomPen.color(), bw, Qt::SolidLine, Qt::FlatCap);
+                painter.setPen(solidPen);
+                painter.drawLine(QPointF(xLeft, vCenter - bw / 2.0), QPointF(xLeft, vCenter + bw / 2.0));
+                painter.drawLine(QPointF(xRight, vCenter - bw / 2.0), QPointF(xRight, vCenter + bw / 2.0));
+            }
+        }
     } else {
         painter.drawRect(roomDrawRectangle);
     }

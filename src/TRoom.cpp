@@ -931,6 +931,12 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             mBorderThickness = thickness;
         }
     }
+    if (userData.contains(ROOM_UI_BORDERSTYLE)) {
+        int style = userData.value(ROOM_UI_BORDERSTYLE).toInt();
+        if (style >= Qt::SolidLine && style <= Qt::DotLine) {
+            mRoomBorderStyle = static_cast<Qt::PenStyle>(style);
+        }
+    }
 
     if (version >= 11) {
         if (version >= 20) {
@@ -1772,7 +1778,7 @@ void TRoom::writeJsonRoom(QJsonArray& obj) const
         writeJsonSymbol(roomObj);
     }
 
-    if (mBorderColor.isValid() || mBorderThickness > 0) {
+    if (mBorderColor.isValid() || mBorderThickness > 0 || mRoomBorderStyle != Qt::SolidLine) {
         writeJsonBorder(roomObj);
     }
 
@@ -2456,6 +2462,23 @@ void TRoom::writeJsonBorder(QJsonObject& roomObj) const
         borderObj.insert(QLatin1String("thickness"), static_cast<double>(mBorderThickness));
     }
 
+    if (mRoomBorderStyle != Qt::SolidLine) {
+        QString styleStr;
+        switch (mRoomBorderStyle) {
+        case Qt::DashLine:
+            styleStr = QLatin1String("dash line");
+            break;
+        case Qt::DotLine:
+            styleStr = QLatin1String("dot line");
+            break;
+        default:
+            break;
+        }
+        if (!styleStr.isEmpty()) {
+            borderObj.insert(QLatin1String("style"), styleStr);
+        }
+    }
+
     if (!borderObj.isEmpty()) {
         const QJsonValue borderValue{borderObj};
         roomObj.insert(QLatin1String("border"), borderValue);
@@ -2475,6 +2498,15 @@ void TRoom::readJsonBorder(const QJsonObject& roomObj)
         int thickness = borderObj.value(QLatin1String("thickness")).toInt();
         if (thickness > 0 && thickness <= 10) {
             mBorderThickness = thickness;
+        }
+    }
+
+    if (borderObj.contains(QLatin1String("style")) && borderObj.value(QLatin1String("style")).isString()) {
+        const QString styleStr = borderObj.value(QLatin1String("style")).toString();
+        if (styleStr == QLatin1String("dash line")) {
+            mRoomBorderStyle = Qt::DashLine;
+        } else if (styleStr == QLatin1String("dot line")) {
+            mRoomBorderStyle = Qt::DotLine;
         }
     }
 }

@@ -1391,6 +1391,11 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         } else {
             pR->userData.remove(ROOM_UI_BORDERTHICKNESS);
         }
+        if (pR->mRoomBorderStyle != Qt::SolidLine) {
+            pR->userData.insert(ROOM_UI_BORDERSTYLE, QString::number(static_cast<int>(pR->mRoomBorderStyle)));
+        } else {
+            pR->userData.remove(ROOM_UI_BORDERSTYLE);
+        }
 
         ofs << pR->userData;
         if (mSaveVersion >= 20) {

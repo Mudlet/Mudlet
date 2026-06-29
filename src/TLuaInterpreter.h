@@ -266,6 +266,9 @@ public:
     static int setRoomBorderThickness(lua_State*);
     static int getRoomBorderThickness(lua_State*);
     static int clearRoomBorderThickness(lua_State*);
+    static int setRoomBorderStyle(lua_State*);
+    static int getRoomBorderStyle(lua_State*);
+    static int clearRoomBorderStyle(lua_State*);
     static int deleteArea(lua_State*);
     static int deleteRoom(lua_State*);
     static int getRoomAreaName(lua_State*);

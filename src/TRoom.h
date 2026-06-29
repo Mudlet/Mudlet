@@ -75,12 +75,14 @@ public:
     inline int x() const { return mX; }
     inline int y() const { return mY; }
     inline int z() const { return mZ; }
-    inline void setCoordinates(const int x, const int y, const int z) {
+    inline void setCoordinates(const int x, const int y, const int z)
+    {
         mX = x;
         mY = y;
         mZ = z;
     }
-    inline void offset(const int deltaX, const int deltaY, const int deltaZ) {
+    inline void offset(const int deltaX, const int deltaY, const int deltaZ)
+    {
         mX += deltaX;
         mY += deltaY;
         mZ += deltaZ;
@@ -148,8 +150,9 @@ public:
     qreal max_y = 0.0;
     QString mSymbol;
     QColor mSymbolColor;
-    QColor mBorderColor;      // Per-room border color (invalid = use global)
-    int mBorderThickness = 0; // Per-room border thickness (0 = use global)
+    QColor mBorderColor;                           // Per-room border color (invalid = use global)
+    int mBorderThickness = 0;                      // Per-room border thickness (0 = use global)
+    Qt::PenStyle mRoomBorderStyle = Qt::SolidLine; // Per-room border style (SolidLine = default/global)
     QString name;
 
     QList<int> exitStubs; //contains a list of: exittype (according to defined values above)
@@ -292,8 +295,8 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
     if (!customLines.isEmpty()) {
         debug.nospace() << ", customlines=(";
         for (auto it = customLines.constBegin(); it != customLines.constEnd(); ++it) {
-            debug.nospace() << it.key() << ": " << it.value() << " (color: " << customLinesColor.value(it.key()).name().toLower()
-                            << ", arrow: " << (customLinesArrow.value(it.key()) ? "yes" : "no") << ", style: " << static_cast<int>(customLinesStyle.value(it.key())) << "), ";
+            debug.nospace() << it.key() << ": " << it.value() << " (color: " << customLinesColor.value(it.key()).name().toLower() << ", arrow: " << (customLinesArrow.value(it.key()) ? "yes" : "no")
+                            << ", style: " << static_cast<int>(customLinesStyle.value(it.key())) << "), ";
         }
         debug.nospace() << ")";
     }
