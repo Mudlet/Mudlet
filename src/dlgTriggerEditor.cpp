@@ -3220,7 +3220,7 @@ void dlgTriggerEditor::delete_action()
         clearActionForm();
     }
 
-    mpHost->getActionUnit()->updateToolbar();
+    mpHost->getActionUnit()->updateAllToolbars();
 }
 
 void dlgTriggerEditor::delete_variable()
@@ -4657,7 +4657,7 @@ void dlgTriggerEditor::activeToggle_action()
     pItem->setText(0, pT->getName());
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 
-    mpHost->getActionUnit()->updateToolbar();
+    mpHost->getActionUnit()->updateAllToolbars();
     if (pItem->childCount() > 0) {
         children_icon_action(pItem);
     }
@@ -5412,7 +5412,7 @@ void dlgTriggerEditor::addAction(bool isFolder)
     // After the action is saved it may trigger the rebuild.
     pNewAction->setDataSaved();
 
-    mpHost->getActionUnit()->updateToolbar();
+    mpHost->getActionUnit()->updateAllToolbars();
 
     // Finalize selection
     mpCurrentActionItem = pNewItem;
@@ -6451,7 +6451,7 @@ void dlgTriggerEditor::saveAction()
         }
     }
 
-    mpHost->getActionUnit()->updateToolbar();
+    mpHost->getActionUnit()->updateAllToolbars();
     mudlet::self()->processEventLoopHack();
 }
 

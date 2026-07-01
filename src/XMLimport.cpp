@@ -202,7 +202,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         }
 
         if (gotAction) {
-            mpHost->getActionUnit()->updateToolbar();
+            mpHost->getActionUnit()->updateAllToolbars();
         } else {
             mpHost->getActionUnit()->unregisterAction(mpAction);
             delete mpAction;

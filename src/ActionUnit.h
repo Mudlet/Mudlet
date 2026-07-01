@@ -67,7 +67,7 @@ public:
     int getNewID();
     void uninstall(const QString&);
     void _uninstall(TAction* pChild, const QString& packageName);
-    void updateToolbar();
+    void updateAllToolbars();
     std::list<QPointer<TToolBar>> getToolBarList() { return mToolBarList; }
     TAction* getHeadAction(TToolBar*);
     TAction* getHeadAction(TEasyButtonBar*);
