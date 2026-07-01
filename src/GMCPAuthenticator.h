@@ -53,6 +53,7 @@ private:
     void handleAuthToken(const QString& packageMessage, const QString& data);
     void storeReconnectToken(const QString& account, const QString& token);
     void discardReconnectToken();
+    void resetPerConnectionState();
 
     Host* mpHost;
     QStringList mSupportedAuthTypes;

@@ -71,12 +71,20 @@ public:
 
     /**
      * @brief Securely clear a QString from memory
+     *
+     * Assumes sole ownership: because QString is implicitly shared, clearing a string that is still
+     * referenced elsewhere detaches and zeroes this copy while leaving the shared buffer intact. The
+     * overwrite is also not guaranteed against dead-store elimination - use secureStdStringClear() for
+     * the strongest guarantee. Pass only uniquely-owned secrets here.
      * @param str String to clear
      */
     static void secureStringClear(QString& str);
 
     /**
      * @brief Securely clear a QByteArray from memory
+     *
+     * Same ownership/elision caveats as secureStringClear(): implicitly shared, so pass only
+     * uniquely-owned buffers; secureStdStringClear() gives the strongest (elision-proof) guarantee.
      * @param array Array to clear
      */
     static void secureByteArrayClear(QByteArray& array);

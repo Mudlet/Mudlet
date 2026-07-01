@@ -546,6 +546,18 @@ public:
     bool mEnableNEWENVIRON = true;
     bool mPromptedForMXPProcessorOn = false;
     bool mAskTlsAvailable = true;
+    bool mPromptedForVersionInTTYPE = false;
+
+    // GMCP Char.Login sign-in preference/state. Kept private so their invariants live with the data:
+    // markSeenCharLoginSignInChoice() is set-only-true (the "seen" flag is sticky). XML (de)serialisation
+    // and the preferences dialog are friend classes and still touch the members directly.
+public:
+    bool useCharacterNamePasswordLogin() const { return mUseCharacterNamePasswordLogin; }
+    void setUseCharacterNamePasswordLogin(const bool b) { mUseCharacterNamePasswordLogin = b; }
+    bool seenCharLoginSignInChoice() const { return mSeenCharLoginSignInChoice; }
+    void markSeenCharLoginSignInChoice() { mSeenCharLoginSignInChoice = true; }
+
+private:
     // When true and the game offers GMCP Char.Login "password-credentials", skip the sign-in provider
     // picker and log in with the profile's character name and password directly.
     bool mUseCharacterNamePasswordLogin = false;
@@ -553,8 +565,8 @@ public:
     // password-credentials). Gates visibility of the "always use character name and password" option so
     // it never appears for the vast majority of games that do not use this flow.
     bool mSeenCharLoginSignInChoice = false;
-    bool mPromptedForVersionInTTYPE = false;
 
+public:
     int mMSSPTlsPort = 0;
     QString mMSSPHostName;
 

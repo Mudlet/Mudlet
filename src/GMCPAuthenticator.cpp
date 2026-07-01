@@ -41,13 +41,22 @@
 GMCPAuthenticator::GMCPAuthenticator(Host* pHost)
 : mpHost(pHost)
 {
+    resetPerConnectionState();
+}
+
+void GMCPAuthenticator::resetPerConnectionState()
+{
+    // mReconnectRejected is deliberately not reset here: it is a one-shot latch consumed by
+    // attemptReconnect() on the very next connection, so it must survive the reconnect it triggers.
+    mAwaitingReconnectResult = false;
+    mTokenPersistEnabled = false;
 }
 
 void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QString& data)
 {
     // Clear the cached capabilities up front so a malformed frame (an early return below) cannot leave
-    // stale provider/auth lists from a previous connection in place - reconnect decisions must be based
-    // only on the current input, and must never send a saved token off outdated capabilities.
+    // stale provider/auth lists from a previous connection in place - later reconnect/auth decisions must
+    // act only on the current input, never on outdated capabilities.
     mSupportedAuthTypes.clear();
     mOAuthProviders.clear();
 
@@ -67,14 +76,28 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
     if (jsonObj.contains("type")) {
         QJsonArray typesArray = jsonObj["type"].toArray();
         for (const auto& type : std::as_const(typesArray)) {
-            mSupportedAuthTypes.append(type.toString());
+            // A non-string or empty entry yields an empty QString; drop it so it cannot masquerade as a
+            // real method later (an all-empty list would otherwise slip past our isEmpty() guards).
+            const QString typeName = type.toString();
+            if (typeName.isEmpty()) {
+                qWarning().noquote().nospace() << "GMCP " << packageMessage << " - ignoring a malformed (non-string or empty) auth type entry.";
+                continue;
+            }
+            mSupportedAuthTypes.append(typeName);
         }
     }
 
     if (jsonObj.contains("providers")) {
         const QJsonArray providersArray = jsonObj["providers"].toArray();
         for (const auto& provider : std::as_const(providersArray)) {
-            mOAuthProviders.append(provider.toString());
+            // Skip empty/garbage ids so promptForOAuthProvider() never shows a blank picker row and
+            // mOAuthProviders.isEmpty() reliably means "no usable providers".
+            const QString providerId = provider.toString();
+            if (providerId.isEmpty()) {
+                qWarning().noquote().nospace() << "GMCP " << packageMessage << " - ignoring a malformed (non-string or empty) OAuth provider entry.";
+                continue;
+            }
+            mOAuthProviders.append(providerId);
         }
     }
 
@@ -84,7 +107,7 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
     // once seen it stays set so the preference (and its undo) remains available even if a later
     // connection advertises fewer methods.
     if (mSupportedAuthTypes.contains(qsl("oauth")) && mSupportedAuthTypes.contains(qsl("password-credentials"))) {
-        mpHost->mSeenCharLoginSignInChoice = true;
+        mpHost->markSeenCharLoginSignInChoice();
     }
 
 #if defined(DEBUG_GMCP_AUTHENTICATION)
@@ -119,7 +142,6 @@ void GMCPAuthenticator::sendCredentials()
     std::string plaintext = gmcpMessage.toStdString();
     std::string encoded = mpHost->mTelnet.encodeAndCookBytes(plaintext);
 
-    // Build and send the GMCP message
     std::string output;
     output += TN_IAC;
     output += TN_SB;
@@ -129,7 +151,6 @@ void GMCPAuthenticator::sendCredentials()
     output += TN_IAC;
     output += TN_SE;
 
-    // Send credentials to server
     mpHost->mTelnet.socketOutRaw(output);
 
     // Scrub every copy of the secret: the JSON message, the plaintext and encoded payloads, and the
@@ -212,6 +233,12 @@ void GMCPAuthenticator::promptForOAuthProvider()
     QObject::connect(dialog, &QDialog::accepted, mpHost, [this, combo, rememberMe]() {
         const QString choice = combo->currentData().toString();
         if (choice.isEmpty()) {
+            // The picker is only opened with usable entries, so an empty choice means something went
+            // wrong rather than a user decision; give feedback and a deterministic state instead of a
+            // silent no-op that leaves login stalled with the timers already cancelled.
+            mpHost->mTelnet.setDontReconnect(true);
+            //: Shown when the sign-in provider picker had no usable choice to act on.
+            mpHost->postMessage(tr("[ WARN ]  - No sign-in method was available to use."));
             return;
         }
         if (choice == qsl("password-credentials")) {
@@ -219,7 +246,7 @@ void GMCPAuthenticator::promptForOAuthProvider()
             // skip this picker entirely (see selectAuthMethod). Classic login never mints a reconnect
             // token, so drop any previously stored one.
             if (rememberMe->isChecked()) {
-                mpHost->mUseCharacterNamePasswordLogin = true;
+                mpHost->setUseCharacterNamePasswordLogin(true);
                 discardReconnectToken();
             }
             sendCredentials();
@@ -307,10 +334,18 @@ void GMCPAuthenticator::storeReconnectToken(const QString& account, const QStrin
     obj = QJsonObject();
     SecureStringUtils::secureByteArrayClear(json);
 
+    // One reconnect token per profile: the fixed "reconnect" key means signing a profile into a second
+    // account overwrites the first account's token. A stale-account token is simply rejected on the next
+    // connect and falls back to a fresh sign-in, so this is safe under the one-account-per-profile model.
+    QPointer<Host> safeHost = mpHost;
     QPointer<CredentialManager> credentialManager = new CredentialManager();
-    credentialManager->storePassword(mpHost->getName(), qsl("reconnect"), payload, [credentialManager](bool success, const QString& errorMessage) {
+    credentialManager->storePassword(mpHost->getName(), qsl("reconnect"), payload, [safeHost, credentialManager](bool success, const QString& errorMessage) {
         if (!success) {
             qWarning().noquote() << "GMCP Char.Login.Token - failed to store reconnect token:" << errorMessage;
+            if (safeHost) {
+                //: Shown when the user opted to stay signed in but saving the sign-in token failed, so they will have to sign in again next time.
+                safeHost->postMessage(tr("[ WARN ]  - Could not save your sign-in for next time; you may need to sign in again."));
+            }
         }
         if (credentialManager) {
             credentialManager->deleteLater();
@@ -326,7 +361,12 @@ void GMCPAuthenticator::discardReconnectToken()
     mTokenPersistEnabled = false;
 
     QPointer<CredentialManager> credentialManager = new CredentialManager();
-    credentialManager->removePassword(mpHost->getName(), qsl("reconnect"), [credentialManager](bool, const QString&) {
+    credentialManager->removePassword(mpHost->getName(), qsl("reconnect"), [credentialManager](bool success, const QString& errorMessage) {
+        // A failed removal leaves a now-invalid bearer token on disk, so make it visible rather than
+        // swallowing it - the security intent of this flow is to not keep stale tokens around.
+        if (!success) {
+            qWarning().noquote() << "GMCP Char.Login - failed to remove stored reconnect token:" << errorMessage;
+        }
         if (credentialManager) {
             credentialManager->deleteLater();
         }
@@ -358,6 +398,7 @@ void GMCPAuthenticator::handleAuthUrl(const QString& packageMessage, const QStri
     const QUrl parsedUrl(url);
     if (!parsedUrl.isValid() || (parsedUrl.scheme() != qsl("http") && parsedUrl.scheme() != qsl("https"))) {
         qWarning().noquote().nospace() << "GMCP " << packageMessage << " - Refusing to open sign-in link with unsupported scheme: \"" << url << "\"";
+        //: Shown when the game sends a sign-in link with an unsupported or invalid address (not an http/https web link).
         mpHost->postMessage(tr("[ WARN ]  - The game sent an invalid sign-in link; cannot continue."));
         return;
     }
@@ -402,7 +443,7 @@ void GMCPAuthenticator::handleAuthResult(const QString& packageMessage, const QS
     auto message = obj[qsl("message")].toString();
 
     // A failed password-less reconnect is not a dead end: discard the stale token and fall back to the
-    // normal sign-in (browser pairing or credentials) instead of giving up on the connection.
+    // normal sign-in (provider picker or credentials) instead of giving up on the connection.
     if (mAwaitingReconnectResult) {
         mAwaitingReconnectResult = false;
         if (success) {
@@ -459,8 +500,7 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
 
         // A fresh Char.Login.Default starts a new sign-in; reset the per-connection token state before
         // deciding how to authenticate.
-        mAwaitingReconnectResult = false;
-        mTokenPersistEnabled = false;
+        resetPerConnectionState();
 
         attemptReconnect();
         return;
@@ -541,7 +581,7 @@ void GMCPAuthenticator::attemptReconnect()
 
     // A standing "always use character name and password" preference takes precedence over any saved
     // OAuth reconnect token: hand off to method selection, which will send the credentials.
-    if (mpHost->mUseCharacterNamePasswordLogin && mSupportedAuthTypes.contains(qsl("password-credentials"))) {
+    if (mpHost->useCharacterNamePasswordLogin() && mSupportedAuthTypes.contains(qsl("password-credentials"))) {
         selectAuthMethod();
         return;
     }
@@ -591,7 +631,7 @@ void GMCPAuthenticator::selectAuthMethod()
 
     // If the user chose to always sign in with a character name and password, honour that whenever the
     // server offers it, skipping the provider picker regardless of the server's preferred order.
-    if (mpHost->mUseCharacterNamePasswordLogin && mSupportedAuthTypes.contains(qsl("password-credentials"))) {
+    if (mpHost->useCharacterNamePasswordLogin() && mSupportedAuthTypes.contains(qsl("password-credentials"))) {
         mpHost->mTelnet.cancelLoginTimers();
         sendCredentials();
         return;
@@ -624,6 +664,7 @@ void GMCPAuthenticator::selectAuthMethod()
         // Nothing the server offered is satisfiable; tell the user rather than stalling silently.
         mpHost->mTelnet.cancelLoginTimers();
         mpHost->mTelnet.setDontReconnect(true);
+        //: Shown when none of the sign-in methods the game advertised can be used by this client.
         mpHost->postMessage(tr("[ WARN ]  - The game offered no sign-in method this client supports."));
     }
 }
