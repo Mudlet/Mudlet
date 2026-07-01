@@ -172,11 +172,7 @@ public:
     };
     Q_DECLARE_FLAGS(DiscordOptionFlags, DiscordOptionFlag)
 
-    enum DiscordMode {
-        DiscordDisabled = 0,
-        DiscordShowMudletOnly = 1,
-        DiscordShowGameDetails = 2
-    };
+    enum DiscordMode { DiscordDisabled = 0, DiscordShowMudletOnly = 1, DiscordShowGameDetails = 2 };
 
 
     QString getName() { return mHostName; }
@@ -550,6 +546,13 @@ public:
     bool mEnableNEWENVIRON = true;
     bool mPromptedForMXPProcessorOn = false;
     bool mAskTlsAvailable = true;
+    // When true and the game offers GMCP Char.Login "password-credentials", skip the sign-in provider
+    // picker and log in with the profile's character name and password directly.
+    bool mUseCharacterNamePasswordLogin = false;
+    // Sticky once true: set when a game advertises a GMCP Char.Login sign-in choice (both oauth and
+    // password-credentials). Gates visibility of the "always use character name and password" option so
+    // it never appears for the vast majority of games that do not use this flow.
+    bool mSeenCharLoginSignInChoice = false;
     bool mPromptedForVersionInTTYPE = false;
 
     int mMSSPTlsPort = 0;

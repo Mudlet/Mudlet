@@ -795,6 +795,8 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mSslIgnoreSelfSigned"), pHost->mSslIgnoreSelfSigned);
     setBoolAttribute(qsl("mSslIgnoreAll"), pHost->mSslIgnoreAll);
     setBoolAttribute(qsl("mAskTlsAvailable"), pHost->mAskTlsAvailable);
+    setBoolAttribute(qsl("mUseCharacterNamePasswordLogin"), pHost->mUseCharacterNamePasswordLogin);
+    setBoolAttribute(qsl("mSeenCharLoginSignInChoice"), pHost->mSeenCharLoginSignInChoice);
     setBoolAttribute(qsl("mUseProxy"), pHost->mUseProxy);
     setBoolAttribute(qsl("f3SearchEnabled"), pHost->mF3SearchEnabled);
 

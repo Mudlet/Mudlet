@@ -4353,6 +4353,22 @@ you can use it but there could be issues with aligning columns of text</string>
         </widget>
        </item>
        <item>
+        <widget class="QCheckBox" name="checkBox_useCharacterNamePasswordLogin">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="toolTip">
+          <string>&lt;p&gt;When this game asks how you want to sign in, always use the character name and password from this profile instead of showing the sign-in chooser. If those fields are blank, the game's own login screen is used.&lt;/p&gt;</string>
+         </property>
+         <property name="accessibleDescription">
+          <string>When this game asks how you want to sign in, always use the character name and password from this profile instead of showing the sign-in chooser. If those fields are blank, the game's own login screen is used.</string>
+         </property>
+         <property name="text">
+          <string>When asked how to sign in, always use character name and password</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupBox_proxy">
          <property name="title">
           <string>Connect to the game via proxy</string>
@@ -5280,6 +5296,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_ignore_all</tabstop>
   <tabstop>checkBox_expired</tabstop>
   <tabstop>checkBox_askTlsAvailable</tabstop>
+  <tabstop>checkBox_useCharacterNamePasswordLogin</tabstop>
   <tabstop>groupBox_proxy</tabstop>
   <tabstop>lineEdit_proxyAddress</tabstop>
   <tabstop>lineEdit_proxyPort</tabstop>

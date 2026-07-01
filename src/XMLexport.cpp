@@ -514,6 +514,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mSslIgnoreSelfSigned") = pHost->mSslIgnoreSelfSigned ? "yes" : "no";
     host.append_attribute("mSslIgnoreAll") = pHost->mSslIgnoreAll ? "yes" : "no";
     host.append_attribute("mAskTlsAvailable") = pHost->mAskTlsAvailable ? "yes" : "no";
+    host.append_attribute("mUseCharacterNamePasswordLogin") = pHost->mUseCharacterNamePasswordLogin ? "yes" : "no";
+    host.append_attribute("mSeenCharLoginSignInChoice") = pHost->mSeenCharLoginSignInChoice ? "yes" : "no";
     host.append_attribute("mDiscordAccessFlags") = QString::number(pHost->mDiscordAccessFlags).toUtf8().constData();
     host.append_attribute("mDiscordMode") = static_cast<int>(pHost->mDiscordMode);
     host.append_attribute("mRequiredDiscordUserName") = pHost->mRequiredDiscordUserName.toUtf8().constData();

@@ -1328,6 +1328,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_askTlsAvailable->setChecked(pHost->mAskTlsAvailable);
 
+    checkBox_useCharacterNamePasswordLogin->setChecked(pHost->mUseCharacterNamePasswordLogin);
+    // Only show this option for profiles that have actually seen a GMCP Char.Login sign-in choice; the
+    // overwhelming majority of games never use this flow, so hiding it avoids tempting their users into
+    // toggling an option that does not apply to them.
+    checkBox_useCharacterNamePasswordLogin->setVisible(pHost->mSeenCharLoginSignInChoice);
+    // Even when shown, the preference only has meaning while GMCP is enabled for this profile.
+    checkBox_useCharacterNamePasswordLogin->setEnabled(mEnableGMCP->isChecked());
+
     groupBox_proxy->setEnabled(true);
     groupBox_proxy->setChecked(pHost->mUseProxy);
     lineEdit_proxyAddress->setText(pHost->mProxyAddress);
@@ -1412,6 +1420,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_mapGridColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapGridColor);
 
     connect(mEnableGMCP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    // The "always use character name and password" preference is only meaningful when GMCP is on.
+    connect(mEnableGMCP, &QAction::toggled, checkBox_useCharacterNamePasswordLogin, &QWidget::setEnabled);
     connect(mEnableMSDP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
@@ -1730,6 +1740,9 @@ void dlgProfilePreferences::clearHostDetails()
     groupBox_ssl_certificate->hide();
     frame_notificationArea->hide();
     checkBox_askTlsAvailable->setChecked(false);
+    checkBox_useCharacterNamePasswordLogin->setChecked(false);
+    checkBox_useCharacterNamePasswordLogin->setEnabled(false);
+    checkBox_useCharacterNamePasswordLogin->setVisible(false);
     groupBox_proxy->setDisabled(true);
 
     // Remove the reference to the Host/profile in the title:
@@ -3162,6 +3175,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
         pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
         pHost->mAskTlsAvailable = checkBox_askTlsAvailable->isChecked();
+        pHost->mUseCharacterNamePasswordLogin = checkBox_useCharacterNamePasswordLogin->isChecked();
 
         if (console) {
             console->changeColors();

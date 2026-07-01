@@ -35,7 +35,6 @@ class GMCPAuthenticator
     Q_DECLARE_TR_FUNCTIONS(GMCPAuthenticator)
 
 public:
-
     explicit GMCPAuthenticator(Host* pHost);
     ~GMCPAuthenticator() = default;
 
@@ -45,8 +44,25 @@ public:
     void handleAuthGMCP(const QString& packageMessage, const QString& data);
 
 private:
+    void sendOAuth(const QString& provider);
+    void promptForOAuthProvider();
+    void handleAuthUrl(const QString& packageMessage, const QString& data);
+    void selectAuthMethod();
+    void attemptReconnect();
+    void sendReconnect(const QString& account, const QString& token);
+    void handleAuthToken(const QString& packageMessage, const QString& data);
+    void storeReconnectToken(const QString& account, const QString& token);
+    void discardReconnectToken();
+
     Host* mpHost;
     QStringList mSupportedAuthTypes;
+    QStringList mOAuthProviders;
+    // True once the user opts into "remember me" for a fresh sign-in, or once a saved token is loaded
+    // at connect time (so a rotated token from the server overwrites the stored one).
+    bool mTokenPersistEnabled = false;
+    // True while we are waiting for the Char.Login.Result that answers a Char.Login.Reconnect attempt,
+    // so a failure can discard the stale token and fall back instead of aborting the login.
+    bool mAwaitingReconnectResult = false;
 };
 
 #endif // MUDLET_AUTHENTICATOR_H
