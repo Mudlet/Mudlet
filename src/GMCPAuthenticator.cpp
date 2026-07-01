@@ -105,12 +105,19 @@ void GMCPAuthenticator::sendCredentials()
     }
 
     QJsonDocument doc(credentials);
-    QString gmcpMessage = doc.toJson(QJsonDocument::Compact);
+    QByteArray json = doc.toJson(QJsonDocument::Compact);
+    QString gmcpMessage = QString::fromUtf8(json);
 
     // Clear sensitive data from memory as soon as possible
     credentials = QJsonObject();                    // Clear JSON object
     doc = QJsonDocument();                          // Clear document
     SecureStringUtils::secureStringClear(password); // Clear password copy
+    SecureStringUtils::secureByteArrayClear(json);  // Clear the plaintext JSON bytes toJson() produced
+
+    // Keep the plaintext and its telnet-cooked form in named buffers so both can be wiped; passing the
+    // toStdString()/encodeAndCookBytes() temporaries inline would leave un-scrubbed copies behind.
+    std::string plaintext = gmcpMessage.toStdString();
+    std::string encoded = mpHost->mTelnet.encodeAndCookBytes(plaintext);
 
     // Build and send the GMCP message
     std::string output;
@@ -118,20 +125,19 @@ void GMCPAuthenticator::sendCredentials()
     output += TN_SB;
     output += OPT_GMCP;
     output += "Char.Login.Credentials ";
-    output += mpHost->mTelnet.encodeAndCookBytes(gmcpMessage.toStdString());
+    output += encoded;
     output += TN_IAC;
     output += TN_SE;
 
     // Send credentials to server
     mpHost->mTelnet.socketOutRaw(output);
 
-    // Scrub both copies of the secret: the JSON message and the assembled telnet frame, which also holds
-    // the (encoded) password.
+    // Scrub every copy of the secret: the JSON message, the plaintext and encoded payloads, and the
+    // assembled telnet frame, which also holds the (encoded) password.
     SecureStringUtils::secureStringClear(gmcpMessage);
-    for (char& byte : output) {
-        byte = '\0';
-    }
-    output.clear();
+    SecureStringUtils::secureStdStringClear(plaintext);
+    SecureStringUtils::secureStdStringClear(encoded);
+    SecureStringUtils::secureStdStringClear(output);
 
 #if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Sent GMCP credentials";
@@ -257,27 +263,33 @@ void GMCPAuthenticator::sendReconnect(const QString& account, const QString& tok
     QJsonObject payload;
     payload[qsl("account")] = account;
     payload[qsl("token")] = token;
-    QString gmcpMessage = QJsonDocument(payload).toJson(QJsonDocument::Compact);
+    QByteArray json = QJsonDocument(payload).toJson(QJsonDocument::Compact);
+    QString gmcpMessage = QString::fromUtf8(json);
     payload = QJsonObject();
+    SecureStringUtils::secureByteArrayClear(json);
+
+    // Keep the plaintext and its telnet-cooked form in named buffers so both can be wiped; the
+    // toStdString()/encodeAndCookBytes() temporaries would otherwise leave un-scrubbed token copies.
+    std::string plaintext = gmcpMessage.toStdString();
+    std::string encoded = mpHost->mTelnet.encodeAndCookBytes(plaintext);
 
     std::string output;
     output += TN_IAC;
     output += TN_SB;
     output += OPT_GMCP;
     output += "Char.Login.Reconnect ";
-    output += mpHost->mTelnet.encodeAndCookBytes(gmcpMessage.toStdString());
+    output += encoded;
     output += TN_IAC;
     output += TN_SE;
 
     mpHost->mTelnet.socketOutRaw(output);
 
-    // The reconnect token is a bearer secret, so scrub both copies once it is sent: the JSON message and
-    // the assembled telnet frame, which also holds the (encoded) token.
+    // The reconnect token is a bearer secret, so scrub every copy once it is sent: the JSON message, the
+    // plaintext and encoded payloads, and the assembled telnet frame, which also holds the (encoded) token.
     SecureStringUtils::secureStringClear(gmcpMessage);
-    for (char& byte : output) {
-        byte = '\0';
-    }
-    output.clear();
+    SecureStringUtils::secureStdStringClear(plaintext);
+    SecureStringUtils::secureStdStringClear(encoded);
+    SecureStringUtils::secureStdStringClear(output);
 
 #if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Sent GMCP reconnect for account:" << account;
@@ -289,9 +301,11 @@ void GMCPAuthenticator::storeReconnectToken(const QString& account, const QStrin
     QJsonObject obj;
     obj[qsl("account")] = account;
     obj[qsl("token")] = token;
-    QString payload = QJsonDocument(obj).toJson(QJsonDocument::Compact);
-    // Release the JSON object that also holds the plaintext token.
+    QByteArray json = QJsonDocument(obj).toJson(QJsonDocument::Compact);
+    QString payload = QString::fromUtf8(json);
+    // Release the JSON object and the plaintext bytes that also hold the token.
     obj = QJsonObject();
+    SecureStringUtils::secureByteArrayClear(json);
 
     QPointer<CredentialManager> credentialManager = new CredentialManager();
     credentialManager->storePassword(mpHost->getName(), qsl("reconnect"), payload, [credentialManager](bool success, const QString& errorMessage) {

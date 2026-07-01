@@ -23,6 +23,8 @@
 #include <QString>
 #include <QByteArray>
 
+#include <string>
+
 /**
  * @brief Utility class for secure string operations
  *
@@ -78,6 +80,15 @@ public:
      * @param array Array to clear
      */
     static void secureByteArrayClear(QByteArray& array);
+
+    /**
+     * @brief Securely clear a std::string from memory
+     *
+     * Overwrites the buffer through a volatile pointer so the zeroing cannot be
+     * removed by dead-store elimination, unlike a plain assignment loop.
+     * @param str String to clear
+     */
+    static void secureStdStringClear(std::string& str);
 
     /**
      * @brief Check SSL backend configuration and report potential issues
@@ -196,9 +207,7 @@ private:
      * @param hmac Output parameter for 32-byte HMAC
      * @return Encrypted data, or empty on failure
      */
-    static QByteArray encryptData(const QByteArray& plaintext, const QByteArray& key,
-                                 const QByteArray& salt, const QByteArray& nonce,
-                                 QByteArray& hmac);
+    static QByteArray encryptData(const QByteArray& plaintext, const QByteArray& key, const QByteArray& salt, const QByteArray& nonce, QByteArray& hmac);
 
     /**
      * @brief Decrypt data using XOR cipher + HMAC-SHA256
@@ -209,17 +218,15 @@ private:
      * @param hmac 32-byte HMAC for verification
      * @return Decrypted data, or empty on failure/authentication error
      */
-    static QByteArray decryptData(const QByteArray& ciphertext, const QByteArray& key,
-                                 const QByteArray& salt, const QByteArray& nonce,
-                                 const QByteArray& hmac);
+    static QByteArray decryptData(const QByteArray& ciphertext, const QByteArray& key, const QByteArray& salt, const QByteArray& nonce, const QByteArray& hmac);
 
     // Constants for the encrypted format
     static constexpr quint8 ENCRYPTION_VERSION_CURRENT = 2; // Current version
     static constexpr int SALT_SIZE = 16;
-    static constexpr int NONCE_SIZE = 16; // Nonce size
-    static constexpr int HMAC_SIZE = 32;  // HMAC-SHA256 size
-    static constexpr int KEY_SIZE = 32;   // 256-bit key
-    static constexpr int PBKDF2_ITERATIONS = 100000; // Strong key derivation
+    static constexpr int NONCE_SIZE = 16;                                             // Nonce size
+    static constexpr int HMAC_SIZE = 32;                                              // HMAC-SHA256 size
+    static constexpr int KEY_SIZE = 32;                                               // 256-bit key
+    static constexpr int PBKDF2_ITERATIONS = 100000;                                  // Strong key derivation
     static constexpr int MIN_ENCRYPTED_SIZE = 1 + SALT_SIZE + NONCE_SIZE + HMAC_SIZE; // version + salt + nonce + hmac + at least some data
 };
 
