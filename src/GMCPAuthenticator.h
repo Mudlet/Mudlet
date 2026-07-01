@@ -63,6 +63,10 @@ private:
     // True while we are waiting for the Char.Login.Result that answers a Char.Login.Reconnect attempt,
     // so a failure can discard the stale token and fall back instead of aborting the login.
     bool mAwaitingReconnectResult = false;
+    // Set when a reconnect token is rejected and we reconnect for a clean sign-in. The saved token is
+    // cleared asynchronously, so this makes the next connection skip it explicitly rather than racing
+    // the keychain removal and looping back into another rejected reconnect.
+    bool mReconnectRejected = false;
 };
 
 #endif // MUDLET_AUTHENTICATOR_H

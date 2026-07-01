@@ -34,6 +34,7 @@
 #include <QHash>
 #include <QLabel>
 #include <QPointer>
+#include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -44,6 +45,12 @@ GMCPAuthenticator::GMCPAuthenticator(Host* pHost)
 
 void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QString& data)
 {
+    // Clear the cached capabilities up front so a malformed frame (an early return below) cannot leave
+    // stale provider/auth lists from a previous connection in place - reconnect decisions must be based
+    // only on the current input, and must never send a saved token off outdated capabilities.
+    mSupportedAuthTypes.clear();
+    mOAuthProviders.clear();
+
     QJsonParseError parseError;
     auto jsonDoc = QJsonDocument::fromJson(data.toUtf8(), &parseError);
     if (parseError.error != QJsonParseError::NoError) {
@@ -57,7 +64,6 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
     }
     auto jsonObj = jsonDoc.object();
 
-    mSupportedAuthTypes.clear();
     if (jsonObj.contains("type")) {
         QJsonArray typesArray = jsonObj["type"].toArray();
         for (const auto& type : std::as_const(typesArray)) {
@@ -65,7 +71,6 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
         }
     }
 
-    mOAuthProviders.clear();
     if (jsonObj.contains("providers")) {
         const QJsonArray providersArray = jsonObj["providers"].toArray();
         for (const auto& provider : std::as_const(providersArray)) {
@@ -120,8 +125,13 @@ void GMCPAuthenticator::sendCredentials()
     // Send credentials to server
     mpHost->mTelnet.socketOutRaw(output);
 
-    // Clear message from memory
+    // Scrub both copies of the secret: the JSON message and the assembled telnet frame, which also holds
+    // the (encoded) password.
     SecureStringUtils::secureStringClear(gmcpMessage);
+    for (char& byte : output) {
+        byte = '\0';
+    }
+    output.clear();
 
 #if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Sent GMCP credentials";
@@ -189,7 +199,11 @@ void GMCPAuthenticator::promptForOAuthProvider()
     QObject::connect(buttons, &QDialogButtonBox::accepted, dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
 
-    QObject::connect(dialog, &QDialog::accepted, dialog, [this, combo, rememberMe]() {
+    // Bind to the Host lifetime (not the dialog's): the lambda dereferences mpHost, so if the Host and
+    // this authenticator are torn down while the picker is still open, the connection is dropped and the
+    // handler cannot run against freed state. combo/rememberMe are children of the dialog and are alive
+    // whenever accepted() fires.
+    QObject::connect(dialog, &QDialog::accepted, mpHost, [this, combo, rememberMe]() {
         const QString choice = combo->currentData().toString();
         if (choice.isEmpty()) {
             return;
@@ -257,8 +271,13 @@ void GMCPAuthenticator::sendReconnect(const QString& account, const QString& tok
 
     mpHost->mTelnet.socketOutRaw(output);
 
-    // The reconnect token is a bearer secret, so scrub our copy of the message once it is sent.
+    // The reconnect token is a bearer secret, so scrub both copies once it is sent: the JSON message and
+    // the assembled telnet frame, which also holds the (encoded) token.
     SecureStringUtils::secureStringClear(gmcpMessage);
+    for (char& byte : output) {
+        byte = '\0';
+    }
+    output.clear();
 
 #if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Sent GMCP reconnect for account:" << account;
@@ -270,7 +289,9 @@ void GMCPAuthenticator::storeReconnectToken(const QString& account, const QStrin
     QJsonObject obj;
     obj[qsl("account")] = account;
     obj[qsl("token")] = token;
-    const QString payload = QJsonDocument(obj).toJson(QJsonDocument::Compact);
+    QString payload = QJsonDocument(obj).toJson(QJsonDocument::Compact);
+    // Release the JSON object that also holds the plaintext token.
+    obj = QJsonObject();
 
     QPointer<CredentialManager> credentialManager = new CredentialManager();
     credentialManager->storePassword(mpHost->getName(), qsl("reconnect"), payload, [credentialManager](bool success, const QString& errorMessage) {
@@ -281,6 +302,9 @@ void GMCPAuthenticator::storeReconnectToken(const QString& account, const QStrin
             credentialManager->deleteLater();
         }
     });
+
+    // The token is a bearer secret; storePassword has already taken its own copy, so scrub ours.
+    SecureStringUtils::secureStringClear(payload);
 }
 
 void GMCPAuthenticator::discardReconnectToken()
@@ -374,12 +398,24 @@ void GMCPAuthenticator::handleAuthResult(const QString& packageMessage, const QS
             return;
         }
 #if defined(DEBUG_GMCP_AUTHENTICATION)
-        qDebug() << "GMCP reconnect rejected, falling back:" << message;
+        qDebug() << "GMCP reconnect rejected, reconnecting for a fresh sign-in:" << message;
 #endif
+        // The saved token is no good. Servers commonly drop the connection right after rejecting a
+        // reconnect (and Mudlet will not auto-reconnect from such a fast rejection), which would leave the
+        // in-session sign-in picker writing into a dead socket - nothing happens when a provider is
+        // chosen. Discard the token and reconnect so the full sign-in runs on a fresh, stable connection.
+        // mReconnectRejected makes that next connection skip the now-asynchronously-clearing saved token
+        // instead of racing it and looping straight back into another rejected reconnect.
         discardReconnectToken();
-        //: Shown when a saved password-less sign-in is no longer accepted and the user must sign in again.
-        mpHost->postMessage(tr("[ INFO ]  - Your saved sign-in has expired; please sign in again."));
-        selectAuthMethod();
+        mReconnectRejected = true;
+        //: Shown when a saved password-less sign-in is no longer accepted; Mudlet reconnects so the user can sign in again.
+        mpHost->postMessage(tr("[ INFO ]  - Your saved sign-in has expired; reconnecting so you can sign in again."));
+        QPointer<Host> safeHost = mpHost;
+        QTimer::singleShot(0, mpHost, [safeHost]() {
+            if (safeHost) {
+                safeHost->mTelnet.reconnect();
+            }
+        });
         return;
     }
 
@@ -441,8 +477,10 @@ void GMCPAuthenticator::handleAuthToken(const QString& packageMessage, const QSt
     QJsonParseError parseError;
     auto doc = QJsonDocument::fromJson(data.toUtf8(), &parseError);
     if (parseError.error != QJsonParseError::NoError) {
-        qWarning().noquote().nospace() << "GMCP " << packageMessage << " - Failed to parse JSON: " << parseError.errorString() << " at offset " << parseError.offset << ". Received data: \"" << data
-                                       << "\"";
+        // The payload carries the reconnect token (a bearer secret), so never log its contents - report
+        // only the parse error and a non-sensitive length summary.
+        qWarning().noquote().nospace() << "GMCP " << packageMessage << " - Failed to parse JSON: " << parseError.errorString() << " at offset " << parseError.offset << " (withholding "
+                                       << data.length() << "-character payload as it may contain a token).";
         return;
     }
     if (!doc.isObject()) {
@@ -477,6 +515,15 @@ void GMCPAuthenticator::handleAuthToken(const QString& packageMessage, const QSt
 void GMCPAuthenticator::attemptReconnect()
 {
     mpHost->mTelnet.cancelLoginTimers();
+
+    // We reconnected after a rejected token (see handleAuthResult) to sign in cleanly. The stored token
+    // is being removed asynchronously, so skip it explicitly this once rather than risk reading a
+    // not-yet-removed token and looping straight back into another rejected reconnect.
+    if (mReconnectRejected) {
+        mReconnectRejected = false;
+        selectAuthMethod();
+        return;
+    }
 
     // A standing "always use character name and password" preference takes precedence over any saved
     // OAuth reconnect token: hand off to method selection, which will send the credentials.
