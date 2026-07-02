@@ -300,7 +300,7 @@ void GMCPAuthenticator::sendOAuth(const QString& provider)
 #endif
 }
 
-void GMCPAuthenticator::sendReconnect(const QString& account, const QString& token)
+void GMCPAuthenticator::sendReconnect(const QString& account, QString token)
 {
     QJsonObject payload;
     payload[qsl("account")] = account;
@@ -328,8 +328,10 @@ void GMCPAuthenticator::sendReconnect(const QString& account, const QString& tok
 
     mpHost->mTelnet.socketOutRaw(output);
 
-    // The reconnect token is a bearer secret, so scrub every copy once it is sent: the JSON message, the
+    // The reconnect token is a bearer secret, so scrub every copy once it is sent: the token argument
+    // (taken by value and moved in from the caller, so we own the sole copy), the JSON message, the
     // plaintext and encoded payloads, and the assembled telnet frame, which also holds the (encoded) token.
+    SecureStringUtils::secureStringClear(token);
     SecureStringUtils::secureStringClear(gmcpMessage);
     SecureStringUtils::secureStdStringClear(plaintext);
     SecureStringUtils::secureStdStringClear(encoded);
@@ -340,7 +342,7 @@ void GMCPAuthenticator::sendReconnect(const QString& account, const QString& tok
 #endif
 }
 
-void GMCPAuthenticator::storeReconnectToken(const QString& account, const QString& token)
+void GMCPAuthenticator::storeReconnectToken(const QString& account, QString token)
 {
     QJsonObject obj;
     obj[qsl("account")] = account;
@@ -369,8 +371,10 @@ void GMCPAuthenticator::storeReconnectToken(const QString& account, const QStrin
         }
     });
 
-    // The token is a bearer secret; storePassword has already taken its own copy, so scrub ours.
+    // The token is a bearer secret; storePassword has already taken its own copy (inside payload), so
+    // scrub both our serialized payload and the caller-owned token argument we took by value.
     SecureStringUtils::secureStringClear(payload);
+    SecureStringUtils::secureStringClear(token);
 }
 
 void GMCPAuthenticator::discardReconnectToken()
@@ -561,7 +565,7 @@ void GMCPAuthenticator::handleAuthToken(const QString& packageMessage, const QSt
 
     const auto obj = doc.object();
     const auto account = obj[qsl("account")].toString();
-    const auto token = obj[qsl("token")].toString();
+    auto token = obj[qsl("token")].toString();
     if (account.isEmpty() || token.isEmpty()) {
         qWarning().noquote().nospace() << "GMCP " << packageMessage << " - Missing 'account' or 'token' field.";
         return;
@@ -576,7 +580,8 @@ void GMCPAuthenticator::handleAuthToken(const QString& packageMessage, const QSt
         return;
     }
 
-    storeReconnectToken(account, token);
+    // Move the token in so storeReconnectToken owns the sole copy and can scrub it after persisting.
+    storeReconnectToken(account, std::move(token));
 
 #if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Stored GMCP reconnect token for account:" << account;
@@ -626,13 +631,14 @@ void GMCPAuthenticator::attemptReconnect()
             const auto doc = QJsonDocument::fromJson(value.toUtf8());
             if (doc.isObject()) {
                 const auto account = doc.object()[qsl("account")].toString();
-                const auto token = doc.object()[qsl("token")].toString();
+                auto token = doc.object()[qsl("token")].toString();
                 if (!account.isEmpty() && !token.isEmpty()) {
                     // A remembered token implies the user already opted in, so keep persistence enabled
                     // to capture any rotated token the server sends back.
                     mTokenPersistEnabled = true;
                     mAwaitingReconnectResult = true;
-                    sendReconnect(account, token);
+                    // Move the token in so sendReconnect owns the sole copy and can scrub it after sending.
+                    sendReconnect(account, std::move(token));
                     return;
                 }
             }

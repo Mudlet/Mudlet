@@ -49,9 +49,9 @@ private:
     void handleAuthUrl(const QString& packageMessage, const QString& data);
     void selectAuthMethod();
     void attemptReconnect();
-    void sendReconnect(const QString& account, const QString& token);
+    void sendReconnect(const QString& account, QString token);
     void handleAuthToken(const QString& packageMessage, const QString& data);
-    void storeReconnectToken(const QString& account, const QString& token);
+    void storeReconnectToken(const QString& account, QString token);
     void discardReconnectToken();
     void resetPerConnectionState();
 
