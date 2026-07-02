@@ -26,8 +26,11 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QPointer>
 #include <QString>
 #include <QVariantMap>
+
+class OAuthClientFlow;
 
 
 class GMCPAuthenticator
@@ -47,6 +50,10 @@ private:
     void sendOAuth(const QString& provider);
     void promptForOAuthProvider();
     void handleAuthUrl(const QString& packageMessage, const QString& data);
+    void startClientDrivenOAuth();
+    void cancelClientDrivenOAuth();
+    void announceBrowserHandoff();
+    void sendAuthCode(const QString& code, QString codeVerifier, const QString& redirectUri);
     void selectAuthMethod();
     void attemptReconnect();
     void sendReconnect(const QString& account, QString token);
@@ -68,6 +75,9 @@ private:
     QString mOAuthClientId;
     QStringList mOAuthScopes;
     bool mOAuthNonceRequired = false;
+    // The in-flight client-driven OAuth flow, if any. Parented to the Host so it cannot outlive the
+    // profile; guarded so a new Char.Login.Default aborts a stale attempt before starting over.
+    QPointer<OAuthClientFlow> mpOAuthFlow;
     // The negotiated Char.Login protocol version the server reported in Char.Login.Default. Absent (a
     // version 1 server or legacy exchange) is treated as 1; we echo this back on our client->server
     // messages so both ends agree on the version even though base GMCP negotiation is one-directional.

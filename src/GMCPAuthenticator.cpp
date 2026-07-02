@@ -22,6 +22,7 @@
 
 #include "Host.h"
 #include "CredentialManager.h"
+#include "OAuthClientFlow.h"
 #include "SecureStringUtils.h"
 #include "ctelnet.h"
 #include "mudlet.h"
@@ -38,6 +39,12 @@
 #include <QUrl>
 #include <QVBoxLayout>
 
+namespace {
+// Picker item-data marking the client-driven OAuth entry. Provider ids come off the wire, so use a
+// control character no sane server would put in an id to keep the two namespaces apart.
+const QString clientDrivenChoice = qsl("\u0001client-driven");
+} // namespace
+
 GMCPAuthenticator::GMCPAuthenticator(Host* pHost)
 : mpHost(pHost)
 {
@@ -50,6 +57,8 @@ void GMCPAuthenticator::resetPerConnectionState()
     // attemptReconnect() on the very next connection, so it must survive the reconnect it triggers.
     mAwaitingReconnectResult = false;
     mTokenPersistEnabled = false;
+    // A fresh sign-in supersedes any browser dance still in flight from the previous connection.
+    cancelClientDrivenOAuth();
 }
 
 void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QString& data)
@@ -245,6 +254,14 @@ void GMCPAuthenticator::promptForOAuthProvider()
 
     auto* combo = new QComboBox(dialog);
     promptLabel->setBuddy(combo);
+
+    // The optional client-driven flow - the game itself is the OpenID Provider - goes first: a server
+    // advertising itself is its own most-preferred provider, ahead of the brokered external ones.
+    if (clientDrivenOAuthAvailable()) {
+        //: Provider-picker entry for signing in with the game's own account through the user's web browser.
+        combo->addItem(tr("This game (in your browser)"), clientDrivenChoice);
+    }
+
     for (const auto& id : std::as_const(mOAuthProviders)) {
         QString display = brandNames.value(id.toLower());
         if (display.isEmpty()) {
@@ -287,6 +304,11 @@ void GMCPAuthenticator::promptForOAuthProvider()
             mpHost->mTelnet.setDontReconnect(true);
             //: Shown when the sign-in provider picker had no usable choice to act on.
             mpHost->postMessage(tr("[ WARN ]  - No sign-in method was available to use."));
+            return;
+        }
+        if (choice == clientDrivenChoice) {
+            mTokenPersistEnabled = rememberMe->isChecked();
+            startClientDrivenOAuth();
             return;
         }
         if (choice == qsl("password-credentials")) {
@@ -465,6 +487,11 @@ void GMCPAuthenticator::handleAuthUrl(const QString& packageMessage, const QStri
         return;
     }
 
+    announceBrowserHandoff();
+}
+
+void GMCPAuthenticator::announceBrowserHandoff()
+{
     //: Shown after the user's browser is launched to complete an OAuth/web sign-in.
     const QString message = tr("[ INFO ]  - Opening your browser to sign in. Complete the login there, then return here.");
     mpHost->postMessage(message);
@@ -475,6 +502,96 @@ void GMCPAuthenticator::handleAuthUrl(const QString& packageMessage, const QStri
         QAccessibleAnnouncementEvent announcement(mainWindow, message);
         QAccessible::updateAccessibility(&announcement);
     }
+}
+
+void GMCPAuthenticator::startClientDrivenOAuth()
+{
+    cancelClientDrivenOAuth();
+
+    // Parented to the Host so the flow (and its loopback listener) cannot outlive the profile.
+    mpOAuthFlow = new OAuthClientFlow(mpHost);
+    QObject::connect(mpOAuthFlow, &OAuthClientFlow::authorizationCaptured, mpHost, [this](const QString& code, const QString& codeVerifier, const QString& redirectUri) {
+        sendAuthCode(code, codeVerifier, redirectUri);
+    });
+    QObject::connect(mpOAuthFlow, &OAuthClientFlow::browserOpened, mpHost, [this]() {
+        announceBrowserHandoff();
+    });
+    QObject::connect(mpOAuthFlow, &OAuthClientFlow::browserOpenFailed, mpHost, [this](const QString& url) {
+        //: %1 is the sign-in web address the user should open manually in their browser.
+        mpHost->postMessage(tr("[ WARN ]  - Could not open your browser. Open this link manually to sign in: %1").arg(url));
+    });
+    QObject::connect(mpOAuthFlow, &OAuthClientFlow::flowFailed, mpHost, [this](const QString& logDetail) {
+        qWarning().noquote() << "GMCP Char.Login client-driven OAuth failed:" << logDetail;
+        mpHost->mTelnet.setDontReconnect(true);
+        //: Shown when a browser-based sign-in with the game's own account could not be completed.
+        mpHost->postMessage(tr("[ WARN ]  - The browser sign-in could not be completed; reconnect to try again."));
+    });
+
+    mpOAuthFlow->start(QUrl(mOAuthDiscoveryUrl), mOAuthClientId, mOAuthScopes, mOAuthNonceRequired);
+}
+
+void GMCPAuthenticator::cancelClientDrivenOAuth()
+{
+    if (mpOAuthFlow) {
+        mpOAuthFlow->abort();
+        mpOAuthFlow->deleteLater();
+        mpOAuthFlow = nullptr;
+    }
+}
+
+void GMCPAuthenticator::sendAuthCode(const QString& code, QString codeVerifier, const QString& redirectUri)
+{
+    // The spec forbids Char.Login.AuthCode on a cleartext connection: the authorization code and PKCE
+    // verifier together would let an eavesdropper redeem the code at the provider. The flow only starts
+    // on an encrypted connection, but re-check at send time in case the transport changed underneath us.
+    if (!mpHost->mTelnet.currentlySecure()) {
+        SecureStringUtils::secureStringClear(codeVerifier);
+        qWarning().noquote() << "GMCP Char.Login.AuthCode - refusing to send the authorization code over an unencrypted connection.";
+        mpHost->mTelnet.setDontReconnect(true);
+        //: Shown when a browser sign-in finished but the game connection is not encrypted, so completing it would be unsafe.
+        mpHost->postMessage(tr("[ WARN ]  - Cannot complete the sign-in because the connection is not encrypted."));
+        return;
+    }
+
+    QJsonObject payload;
+    payload[qsl("code")] = code;
+    payload[qsl("code_verifier")] = codeVerifier;
+    payload[qsl("redirect_uri")] = redirectUri;
+    // Echo the negotiated version so the server can confirm both ends agree.
+    payload[qsl("version")] = mNegotiatedVersion;
+    QByteArray json = QJsonDocument(payload).toJson(QJsonDocument::Compact);
+    QString gmcpMessage = QString::fromUtf8(json);
+    payload = QJsonObject();
+    SecureStringUtils::secureByteArrayClear(json);
+
+    // Keep the plaintext and its telnet-cooked form in named buffers so both can be wiped; the
+    // toStdString()/encodeAndCookBytes() temporaries would otherwise leave un-scrubbed copies behind.
+    std::string plaintext = gmcpMessage.toStdString();
+    std::string encoded = mpHost->mTelnet.encodeAndCookBytes(plaintext);
+
+    std::string output;
+    output += TN_IAC;
+    output += TN_SB;
+    output += OPT_GMCP;
+    output += "Char.Login.AuthCode ";
+    output += encoded;
+    output += TN_IAC;
+    output += TN_SE;
+
+    mpHost->mTelnet.socketOutRaw(output);
+
+    // The authorization code and PKCE verifier are single-use secrets; scrub every copy once sent: the
+    // verifier argument (taken by value), the JSON message, the plaintext and encoded payloads, and the
+    // assembled telnet frame.
+    SecureStringUtils::secureStringClear(codeVerifier);
+    SecureStringUtils::secureStringClear(gmcpMessage);
+    SecureStringUtils::secureStdStringClear(plaintext);
+    SecureStringUtils::secureStdStringClear(encoded);
+    SecureStringUtils::secureStdStringClear(output);
+
+#if defined(DEBUG_GMCP_AUTHENTICATION)
+    qDebug() << "Sent GMCP AuthCode to complete the client-driven OAuth sign-in";
+#endif
 }
 
 
@@ -699,9 +816,10 @@ void GMCPAuthenticator::selectAuthMethod()
     // first method we can satisfy is the server's most-preferred one.
     for (const auto& type : std::as_const(mSupportedAuthTypes)) {
         if (type == qsl("oauth")) {
-            // We can only drive the server-driven flow when the server told us which providers it
-            // accepts; without that list fall through to the next advertised method.
-            if (!mOAuthProviders.isEmpty()) {
+            // We can drive the server-driven flow when the server told us which providers it accepts,
+            // or the client-driven flow when it advertised itself as an OpenID Provider (over an
+            // encrypted transport); with neither, fall through to the next advertised method.
+            if (!mOAuthProviders.isEmpty() || clientDrivenOAuthAvailable()) {
                 mpHost->mTelnet.cancelLoginTimers();
                 promptForOAuthProvider();
                 return;
