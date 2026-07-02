@@ -523,7 +523,7 @@ public:
     QPointer<dlgModuleManager> mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
 
-    bool mDisablePasswordMasking;
+    bool mDisablePasswordMasking = false;
     int commandLineMinimumHeight = 30;
     bool mAlertOnNewData = true;
     bool mAllowToSendCommand = true;
@@ -795,6 +795,10 @@ public:
     bool mMapperUseAntiAlias = true;
     bool mMapperShowRoomBorders = true;
     bool mMapperShowGrid = false;
+    // Center the map on an area as a whole when it fits entirely in the
+    // viewport, instead of following the player room. Off by default;
+    // configurable via the mapCenterSmallAreas key in Mudlet.ini.
+    bool mMapperCenterSmallAreas = false;
     bool mVersionInTTYPE = false;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;

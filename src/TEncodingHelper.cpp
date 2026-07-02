@@ -23,6 +23,7 @@
 #include <QDebug>
 #include <QStringDecoder>
 #include <QStringEncoder>
+#include <QTextCodec>
 
 bool TEncodingHelper::isCustomEncoding(const QByteArray& encoding)
 {
@@ -36,6 +37,18 @@ bool TEncodingHelper::isQtEncodingAvailable(const QByteArray& encoding)
 {
     QStringDecoder decoder(encoding.constData());
     return decoder.isValid();
+}
+
+// Several multibyte CJK encodings (Big5, Big5-HKSCS, GBK, GB18030, EUC-KR, etc.)
+// are only offered by Qt6's QStringConverter when Qt is built with ICU support. On
+// builds whose Qt lacks runtime ICU those converters report invalid, which left CJK
+// users with garbled output and "no codec found" errors (issue #9344). The Qt5Compat
+// module ships self-contained codec tables for these encodings that do not depend on
+// ICU; this returns the matching QTextCodec (or nullptr), which the callers use as an
+// ICU-independent fallback once QStringConverter and the lookup tables come up empty.
+QTextCodec* TEncodingHelper::legacyCodec(const QByteArray& encoding)
+{
+    return QTextCodec::codecForName(encoding);
 }
 
 bool TEncodingHelper::hasLookupTable(const QByteArray& encoding)
@@ -140,6 +153,10 @@ QString TEncodingHelper::decode(const QByteArray& bytes, const QByteArray& encod
         return decodeWithLookupTable(bytes, encoding);
     }
 
+    if (QTextCodec* codec = legacyCodec(encoding)) {
+        return codec->toUnicode(bytes);
+    }
+
     return QString::fromLatin1(bytes);
 }
 
@@ -172,6 +189,10 @@ QByteArray TEncodingHelper::encode(const QString& str, const QByteArray& encodin
         return encodeWithLookupTable(str, encoding);
     }
 
+    if (QTextCodec* codec = legacyCodec(encoding)) {
+        return codec->fromUnicode(str);
+    }
+
     return str.toLatin1();
 }
 
@@ -193,12 +214,23 @@ bool TEncodingHelper::canEncode(const QString& str, const QByteArray& encoding)
     // and ICU-based encodings (Big5, GBK, EUC-KR, etc.) when Qt is built with ICU support
     QStringEncoder encoder(encoding.constData());
     if (encoder.isValid()) {
-        encoder.encode(str);
-        return !encoder.hasError();
+        const QByteArray encoded = encoder.encode(str);
+        if (encoder.hasError()) {
+            return false;
+        }
+        // hasError() does not flag characters the ICU codecs silently replace with
+        // '?' (e.g. Hangul in Big5), so confirm representability by round-tripping
+        // and checking the text survives unchanged.
+        QStringDecoder decoder(encoding.constData());
+        return decoder.isValid() && decoder.decode(encoded) == str;
     }
 
     if (hasLookupTable(encoding)) {
         return canEncodeWithLookupTable(str, encoding);
+    }
+
+    if (QTextCodec* codec = legacyCodec(encoding)) {
+        return codec->canEncode(str);
     }
 
     return false;
@@ -216,7 +248,12 @@ bool TEncodingHelper::isEncodingAvailable(const QByteArray& encoding)
 
     // Check Qt6's QStringDecoder which handles both built-in encodings (UTF-8, Latin1, etc.)
     // and ICU-based encodings (Big5, GBK, EUC-KR, etc.) when Qt is built with ICU support
-    return isQtEncodingAvailable(encoding);
+    if (isQtEncodingAvailable(encoding)) {
+        return true;
+    }
+
+    // Fall back to Qt5Compat's ICU-independent codecs for builds whose Qt lacks ICU
+    return legacyCodec(encoding) != nullptr;
 }
 
 QList<QByteArray> TEncodingHelper::aliases(const QByteArray& encoding)

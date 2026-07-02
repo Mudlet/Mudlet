@@ -2184,7 +2184,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(pH, &Host::profileSaveFinished, pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
     pEditor->fillout_form();
 
-    pH->getActionUnit()->updateToolbar();
+    pH->getActionUnit()->updateAllToolbars();
 
     pH->mpConsole->show();
     pH->mpConsole->repaint();
@@ -4376,8 +4376,19 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
     hostList.removeDuplicates();
     int loadedProfiles = 0;
 
-    for (auto& hostName : cliProfiles) {
-        if (hostList.contains(hostName)) {
+    for (const auto& requestedName : cliProfiles) {
+        // Resolve the requested name to the canonically-cased profile so that
+        // e.g. --profile="mY pRoFiLe" opens the "My Profile" directory. Matching
+        // against hostList (rather than getCanonicalProfileName) also covers the
+        // "Mudlet self-test" entry, which is not an on-disk or built-in profile.
+        QString hostName;
+        for (const auto& candidate : std::as_const(hostList)) {
+            if (candidate.compare(requestedName, Qt::CaseInsensitive) == 0) {
+                hostName = candidate;
+                break;
+            }
+        }
+        if (!hostName.isEmpty()) {
             QElapsedTimer timer;
             timer.start();
             doAutoLogin(hostName);
@@ -7086,6 +7097,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
         {qsl(":/mpkg.mpackage"),                     {qsl("*")}},
         {qsl(":/mudlet-lua/lua/gui-drop/gui-drop.mpackage"), {qsl("*")}},
         {qsl(":/CF-loader.xml"),                     {qsl("carrionfields.net")}},
+        {qsl(":/icesus-loader.xml"),                 {qsl("icesus.org")}},
         {qsl(":/mg-loader.xml"),                     {qsl("mg.mud.de"),
                                                       qsl("mud.morgengrauen.info"),
                                                       qsl("mg.morgengrauen.info"),

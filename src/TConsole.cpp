@@ -715,6 +715,51 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
     }
 
+    // Sync Host dimensions on resize so wraps and NAWS reflect the current pane width.
+    if ((mType & MainConsole) && !mpHost.isNull() && mUpperPane && !mUpperPane->visibleRegion().isEmpty()) {
+        const int paneWidthPx = mUpperPane->visibleRegion().boundingRect().width();
+        auto syncHost = [paneWidthPx](Host* host, const QWidget* paneForFont) {
+            if (!host || !paneForFont) {
+                return;
+            }
+            const int fontWidth = QFontMetrics(paneForFont->font()).averageCharWidth();
+            if (fontWidth <= 0) {
+                return;
+            }
+            const int cols = qMax(40, paneWidthPx / fontWidth);
+            if (cols > 0 && cols != host->mScreenWidth) {
+                host->setScreenDimensions(cols, host->mScreenHeight);
+                QTimer::singleShot(0, host, &Host::updateDisplayDimensions);
+            }
+        };
+
+        syncHost(mpHost.data(), mUpperPane);
+
+        // Detached profiles have their own pixel width; only propagate from a main-window console.
+        mudlet* const app = mudlet::self();
+        const bool inMainWindow = app && !app->getDetachedWindows().contains(mpHost->getName());
+        if (inMainWindow) {
+            for (const auto& otherHostPtr : app->getHostManager()) {
+                Host* otherHost = otherHostPtr.data();
+                if (!otherHost || otherHost == mpHost.data()) {
+                    continue;
+                }
+                // Skip detached profiles: different container, different width.
+                if (app->getDetachedWindows().contains(otherHost->getName())) {
+                    continue;
+                }
+                if (!otherHost->mpConsole || !otherHost->mpConsole->mUpperPane) {
+                    continue;
+                }
+                // Visible siblings (multi-view) handle their own resizeEvent.
+                if (!otherHost->mpConsole->mUpperPane->visibleRegion().isEmpty()) {
+                    continue;
+                }
+                syncHost(otherHost, otherHost->mpConsole->mUpperPane);
+            }
+        }
+    }
+
     emit resized(event);
     QWidget::resizeEvent(event);
 
