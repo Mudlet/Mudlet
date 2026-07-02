@@ -3074,15 +3074,25 @@ void dlgTriggerEditor::delete_alias()
 
 void dlgTriggerEditor::delete_action()
 {
-    QList<QTreeWidgetItem*> selectedItems = treeWidget_actions->selectedItems();
-    if (selectedItems.isEmpty()) {
+    QList<QTreeWidgetItem*> initiallySelectedItems = treeWidget_actions->selectedItems();
+    if (initiallySelectedItems.isEmpty()) {
         return;
     }
 
+    // Capture each selected action and all its descendants
+    // and put them into here:
+    QList<QTreeWidgetItem*> selectedItems;
+    for (const auto& item : std::as_const(initiallySelectedItems)) {
+        treeWidget_actions->getAllChildren(item, selectedItems);
+    }
+
+    // Remove any duplicates by converting to a set and back to a list:
+    QSet<QTreeWidgetItem*> selectedItemsSet{selectedItems.cbegin(), selectedItems.cend()};
+    selectedItems = QList<QTreeWidgetItem*>{selectedItemsSet.cbegin(), selectedItemsSet.cend()};
+
     QStringList itemNames;
     QList<TAction*> actionsToDelete;
-
-    for (const QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
+    for (const QTreeWidgetItem* pItem : std::as_const(initiallySelectedItems)) {
         TAction* pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
             itemNames << pT->getName();
@@ -3129,7 +3139,6 @@ void dlgTriggerEditor::delete_action()
         }
     };
 
-    // Capture each selected action and all its descendants
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         TAction* pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
@@ -3210,7 +3219,7 @@ void dlgTriggerEditor::delete_action()
         clearActionForm();
     }
 
-    mpHost->getActionUnit()->updateToolbar();
+    mpHost->getActionUnit()->updateAllToolbars();
 }
 
 void dlgTriggerEditor::delete_variable()
@@ -4647,7 +4656,7 @@ void dlgTriggerEditor::activeToggle_action()
     pItem->setText(0, pT->getName());
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 
-    mpHost->getActionUnit()->updateToolbar();
+    mpHost->getActionUnit()->updateAllToolbars();
     if (pItem->childCount() > 0) {
         children_icon_action(pItem);
     }
@@ -5404,7 +5413,7 @@ void dlgTriggerEditor::addAction(bool isFolder)
     // After the action is saved it may trigger the rebuild.
     pNewAction->setDataSaved();
 
-    mpHost->getActionUnit()->updateToolbar();
+    mpHost->getActionUnit()->updateAllToolbars();
 
     // Finalize selection
     mpCurrentActionItem = pNewItem;
@@ -6440,7 +6449,7 @@ void dlgTriggerEditor::saveAction()
         }
     }
 
-    mpHost->getActionUnit()->updateToolbar();
+    mpHost->getActionUnit()->updateAllToolbars();
     mudlet::self()->processEventLoopHack();
 }
 
