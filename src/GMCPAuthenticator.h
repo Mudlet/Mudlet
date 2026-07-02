@@ -58,6 +58,10 @@ private:
     Host* mpHost;
     QStringList mSupportedAuthTypes;
     QStringList mOAuthProviders;
+    // The negotiated Char.Login protocol version the server reported in Char.Login.Default. Absent (a
+    // version 1 server or legacy exchange) is treated as 1; we echo this back on our client->server
+    // messages so both ends agree on the version even though base GMCP negotiation is one-directional.
+    int mNegotiatedVersion = 1;
     // True once the user opts into "remember me" for a fresh sign-in, or once a saved token is loaded
     // at connect time (so a rotated token from the server overwrites the stored one).
     bool mTokenPersistEnabled = false;

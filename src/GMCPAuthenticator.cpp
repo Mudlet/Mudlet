@@ -59,6 +59,9 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
     // act only on the current input, never on outdated capabilities.
     mSupportedAuthTypes.clear();
     mOAuthProviders.clear();
+    // Reset to the version 1 default; a server that speaks version 2 or higher reports the negotiated
+    // version below, and its absence (a version 1 server) leaves us correctly acting as version 1.
+    mNegotiatedVersion = 1;
 
     QJsonParseError parseError;
     auto jsonDoc = QJsonDocument::fromJson(data.toUtf8(), &parseError);
@@ -72,6 +75,13 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
         return;
     }
     auto jsonObj = jsonDoc.object();
+
+    // The server reports the negotiated Char.Login version here; treat a missing, non-numeric, or
+    // out-of-range value as version 1 (per the spec, the version is a positive, non-zero integer).
+    if (jsonObj.contains("version")) {
+        const int reportedVersion = jsonObj["version"].toInt(1);
+        mNegotiatedVersion = (reportedVersion >= 1) ? reportedVersion : 1;
+    }
 
     if (jsonObj.contains("type")) {
         QJsonArray typesArray = jsonObj["type"].toArray();
@@ -125,6 +135,9 @@ void GMCPAuthenticator::sendCredentials()
     if (!character.isEmpty() && !password.isEmpty()) {
         credentials["account"] = character;
         credentials["password"] = password;
+        // Echo the negotiated version so the server can confirm both ends agree. The empty-object
+        // fallback below is left untouched: {} is the deliberate "fall back to interactive login" signal.
+        credentials["version"] = mNegotiatedVersion;
     }
 
     QJsonDocument doc(credentials);
@@ -267,6 +280,8 @@ void GMCPAuthenticator::sendOAuth(const QString& provider)
 {
     QJsonObject payload;
     payload[qsl("provider")] = provider;
+    // Echo the negotiated version so the server can confirm both ends agree.
+    payload[qsl("version")] = mNegotiatedVersion;
     QString gmcpMessage = QJsonDocument(payload).toJson(QJsonDocument::Compact);
 
     std::string output;
@@ -290,6 +305,8 @@ void GMCPAuthenticator::sendReconnect(const QString& account, const QString& tok
     QJsonObject payload;
     payload[qsl("account")] = account;
     payload[qsl("token")] = token;
+    // Echo the negotiated version so the server can confirm both ends agree.
+    payload[qsl("version")] = mNegotiatedVersion;
     QByteArray json = QJsonDocument(payload).toJson(QJsonDocument::Compact);
     QString gmcpMessage = QString::fromUtf8(json);
     payload = QJsonObject();
