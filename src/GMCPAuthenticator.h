@@ -55,9 +55,19 @@ private:
     void discardReconnectToken();
     void resetPerConnectionState();
 
+    bool clientDrivenOAuthAvailable() const;
+
     Host* mpHost;
     QStringList mSupportedAuthTypes;
     QStringList mOAuthProviders;
+    // Version 2 client-driven OAuth capability, advertised by a server that is itself an OpenID
+    // Provider. Only populated when the connection is encrypted: the flow's completing
+    // Char.Login.AuthCode message must never travel in the clear, so on plain telnet these stay
+    // empty and the sign-in transparently uses the server-driven flow instead.
+    QString mOAuthDiscoveryUrl;
+    QString mOAuthClientId;
+    QStringList mOAuthScopes;
+    bool mOAuthNonceRequired = false;
     // The negotiated Char.Login protocol version the server reported in Char.Login.Default. Absent (a
     // version 1 server or legacy exchange) is treated as 1; we echo this back on our client->server
     // messages so both ends agree on the version even though base GMCP negotiation is one-directional.

@@ -59,6 +59,10 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
     // act only on the current input, never on outdated capabilities.
     mSupportedAuthTypes.clear();
     mOAuthProviders.clear();
+    mOAuthDiscoveryUrl.clear();
+    mOAuthClientId.clear();
+    mOAuthScopes.clear();
+    mOAuthNonceRequired = false;
     // Reset to the version 1 default; a server that speaks version 2 or higher reports the negotiated
     // version below, and its absence (a version 1 server) leaves us correctly acting as version 1.
     mNegotiatedVersion = 1;
@@ -80,7 +84,9 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
     // out-of-range value as version 1 (per the spec, the version is a positive, non-zero integer).
     if (jsonObj.contains("version")) {
         const int reportedVersion = jsonObj["version"].toInt(1);
-        mNegotiatedVersion = (reportedVersion >= 1) ? reportedVersion : 1;
+        // Clamp to the highest version this client implements: the negotiated version is
+        // min(client, server), so we never act on - or echo back - a version we do not understand.
+        mNegotiatedVersion = qBound(1, reportedVersion, 2);
     }
 
     if (jsonObj.contains("type")) {
@@ -111,6 +117,28 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
         }
     }
 
+    // The optional client-driven OAuth fields (the server is itself an OpenID Provider). Per the spec
+    // these are only meaningful over an encrypted transport - the flow ends in a Char.Login.AuthCode
+    // that carries the authorization code and PKCE verifier together, which must never travel in the
+    // clear - so on a cleartext connection ignore them even if a non-conformant server sends them,
+    // which transparently steers the sign-in to the server-driven flow.
+    if (mpHost->mTelnet.currentlySecure()) {
+        mOAuthDiscoveryUrl = jsonObj["location"].toString();
+        mOAuthClientId = jsonObj["client_id"].toString();
+        if (jsonObj.contains("scopes")) {
+            const QJsonArray scopesArray = jsonObj["scopes"].toArray();
+            for (const auto& scope : std::as_const(scopesArray)) {
+                const QString scopeName = scope.toString();
+                if (scopeName.isEmpty()) {
+                    qWarning().noquote().nospace() << "GMCP " << packageMessage << " - ignoring a malformed (non-string or empty) OAuth scope entry.";
+                    continue;
+                }
+                mOAuthScopes.append(scopeName);
+            }
+        }
+        mOAuthNonceRequired = jsonObj["nonce"].toBool();
+    }
+
     // Remember (persistently) that this game presents a Char.Login sign-in choice, i.e. it offers both
     // OAuth and password-credentials. This gates the profile's "always use character name and password"
     // preference so that option is only ever shown for games that actually use this flow. It is sticky:
@@ -123,6 +151,13 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
 #if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Supported auth types:" << mSupportedAuthTypes;
 #endif
+}
+
+bool GMCPAuthenticator::clientDrivenOAuthAvailable() const
+{
+    // Both fields are only ever stored when the connection is encrypted (see saveSupportsSet), so
+    // their presence also means the transport is acceptable for Char.Login.AuthCode.
+    return mSupportedAuthTypes.contains(qsl("oauth")) && !mOAuthDiscoveryUrl.isEmpty() && !mOAuthClientId.isEmpty();
 }
 
 void GMCPAuthenticator::sendCredentials()
