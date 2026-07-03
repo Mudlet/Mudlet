@@ -137,6 +137,7 @@ public slots:
     void slot_guiLanguageChanged(const QString&);
 
 private slots:
+    void slot_forgetSavedSignIn();
     void slot_changeShowSpacesAndTabs(bool);
     void slot_changeShowLineFeedsAndParagraphs(bool);
     void slot_scriptSelected(int index);
