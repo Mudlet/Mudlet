@@ -226,6 +226,7 @@ private slots:
     void testStoredCredentialsAutofillWithVersionEcho()
     {
         Host* host = connectAndNegotiate();
+        QVERIFY(host);
         host->setLogin(qsl("player"));
         host->setPass(qsl("secret"));
 
@@ -242,6 +243,7 @@ private slots:
     void testAbsentServerVersionEchoesVersionOne()
     {
         Host* host = connectAndNegotiate();
+        QVERIFY(host);
         host->setLogin(qsl("player"));
         host->setPass(qsl("secret"));
 
@@ -258,6 +260,7 @@ private slots:
     void testNoCredentialsHandsOffWithEmptyCredentials()
     {
         Host* host = connectAndNegotiate();
+        QVERIFY(host);
         host->setLogin(QString());
         host->setPass(QString());
 
@@ -272,6 +275,7 @@ private slots:
     void testPartialCredentialsAreNotSent()
     {
         Host* host = connectAndNegotiate();
+        QVERIFY(host);
         host->setLogin(qsl("player"));
         host->setPass(QString()); // password missing - a partial pair must never be sent
 
@@ -286,6 +290,7 @@ private slots:
     void testClientDrivenOAuthFieldsIgnoredOnCleartext()
     {
         Host* host = connectAndNegotiate();
+        QVERIFY(host);
         host->setLogin(QString());
         host->setPass(QString());
 
@@ -305,6 +310,7 @@ private slots:
     void testAuthUrlWithUnsupportedSchemeIsRejected()
     {
         Host* host = connectAndNegotiate();
+        QVERIFY(host);
         mpServer->sendGmcp(qsl("Char.Login.URL {\"url\": \"file:///etc/passwd\"}"));
         QVERIFY2(waitForConsoleContains(host, qsl("invalid sign-in link")), "an unsupported-scheme sign-in URL should be rejected");
     }
@@ -312,6 +318,7 @@ private slots:
     void testUnpromptedAuthUrlIsOfferedNotOpened()
     {
         Host* host = connectAndNegotiate();
+        QVERIFY(host);
         // On a fresh connection the user has sent no input, so the client must not
         // auto-open the browser; it offers the link to open deliberately instead.
         QVERIFY2(!host->userSentInputThisConnection(), "precondition: no user input yet");
@@ -324,6 +331,7 @@ private slots:
     void testTokenIsPersistedAndAnnounced()
     {
         Host* host = connectAndNegotiate();
+        QVERIFY(host);
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
         QVERIFY2(waitForConsoleContains(host, qsl("signed in automatically next time")), "saving a reconnect token should be announced once");
         QVERIFY2(waitForStoredToken(host, qsl("opaque-token")), "the reconnect token should be persisted");
@@ -334,6 +342,7 @@ private slots:
     void testSavedTokenIsReplayedOnReconnect()
     {
         Host* host = connectAndNegotiate();
+        QVERIFY(host);
         host->setLogin(QString());
         host->setPass(QString());
         // Pre-seed a saved token as if a previous sign-in had stored one.
@@ -353,6 +362,7 @@ private slots:
     void testRejectedReconnectTokenIsDiscarded()
     {
         Host* host = connectAndNegotiate();
+        QVERIFY(host);
         host->setLogin(QString());
         host->setPass(QString());
         const QString tokenJson = qsl("{\"account\": \"acct:char\", \"token\": \"stale-token\"}");
@@ -374,6 +384,7 @@ private slots:
     void testFailedResultReportsError()
     {
         Host* host = connectAndNegotiate();
+        QVERIFY(host);
         host->setLogin(qsl("player"));
         host->setPass(qsl("secret"));
 
@@ -482,6 +493,9 @@ private:
 
     bool waitForStoredToken(Host* host, const QString& expectedToken, int timeoutMs = 4000)
     {
+        if (!host) {
+            return false;
+        }
         return QTest::qWaitFor(
                 [&]() {
                     const QString stored = CredentialManager::retrieveCredential(host->getName(), qsl("reconnect"));
