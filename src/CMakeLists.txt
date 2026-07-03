@@ -106,6 +106,7 @@ set(mudlet_SRCS
     mudlet.cpp
     MudletInstanceCoordinator.cpp
     MxpTag.cpp
+    OAuthClientFlow.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
@@ -330,6 +331,7 @@ set(mudlet_HDRS
     mudlet.h
     MudletInstanceCoordinator.h
     MxpTag.h
+    OAuthClientFlow.h
     PackageItemDelegate.h
     PanInteractionHandler.h
     RoomContextMenuHandler.h
@@ -650,6 +652,9 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 # * Produce qDebug() messages about undo/redo operations in the trigger editor,
 #   including command execution, stack operations, and edbee text undo integration:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE DEBUG_UNDO_REDO)
+#
+# * Produce qDebug() messages about the GMCP Char.Login authentication flow:
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_GMCP_AUTHENTICATION)
 
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
