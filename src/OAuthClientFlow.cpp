@@ -309,4 +309,10 @@ void OAuthClientFlow::cleanup()
         mRedirectServer.close();
     }
     mRequestBuffers.clear();
+    // The state and nonce are single-use anti-forgery values; scrub them once the flow reaches a
+    // terminal state rather than leaving them resident for the (possibly long) lifetime of this object,
+    // which is parented to the Host. The code verifier and redirect URI are deliberately not cleared
+    // here - the success path emits them right after cleanup() and their callers scrub them.
+    SecureStringUtils::secureStringClear(mState);
+    SecureStringUtils::secureStringClear(mNonce);
 }

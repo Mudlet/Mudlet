@@ -482,6 +482,12 @@ void GMCPAuthenticator::sendAuthCode(QString code, QString codeVerifier, const Q
     SecureStringUtils::secureStdStringClear(encoded);
     SecureStringUtils::secureStdStringClear(output);
 
+    // The flow has done its job: the loopback listener already closed when the code was captured, and the
+    // only remaining step is the server's Char.Login.Result. Tear the flow down now - deleteLater makes
+    // this safe from within its own authorizationCaptured handler - rather than leaving the object and
+    // its state resident until the next Char.Login.Default or profile teardown.
+    cancelClientDrivenOAuth();
+
 #if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Sent GMCP AuthCode to complete the client-driven OAuth sign-in";
 #endif
