@@ -771,6 +771,10 @@ int TLuaInterpreter::getStopWatches(lua_State* L)
     for (const int watchId : stopWatchIds) {
         lua_pushnumber(L, watchId);
         auto pStopWatch = host.getStopWatch(watchId);
+        if (!pStopWatch) {
+            lua_pop(L, 1);
+            continue;
+        }
         lua_newtable(L);
         {
             lua_pushstring(L, "name");
