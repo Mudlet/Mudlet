@@ -80,9 +80,8 @@ void GMCPAuthenticator::resetPerConnectionState()
 
 void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QString& data)
 {
-    // Clear the cached capabilities up front so a malformed frame (an early return below) cannot leave
-    // stale provider/auth lists from a previous connection in place - later reconnect/auth decisions must
-    // act only on the current input, never on outdated capabilities.
+    // Clear cached capabilities up front so a malformed frame (an early return below) cannot leave stale
+    // provider/auth lists from a previous connection driving later reconnect/auth decisions.
     mSupportedAuthTypes.clear();
     mOAuthDiscoveryUrl.clear();
     mOAuthClientId.clear();
@@ -128,11 +127,10 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
         }
     }
 
-    // The optional client-driven OAuth fields (the server is itself an OpenID Provider). Per the spec
-    // these are only meaningful over an encrypted transport - the flow ends in a Char.Login.AuthCode
-    // that carries the authorization code and PKCE verifier together, which must never travel in the
-    // clear - so on a cleartext connection ignore them even if a non-conformant server sends them,
-    // which transparently steers the sign-in to the server-driven flow.
+    // The optional client-driven OAuth fields (the server is itself an OpenID Provider) are honoured only
+    // on an encrypted transport: the completing Char.Login.AuthCode carries the code and PKCE verifier
+    // together and must never travel in the clear. On cleartext, ignore them and fall back to the
+    // server-driven flow.
     if (mpHost->mTelnet.currentlySecure()) {
         mOAuthDiscoveryUrl = jsonObj["location"].toString();
         mOAuthClientId = jsonObj["client_id"].toString();
@@ -353,10 +351,9 @@ void GMCPAuthenticator::handleAuthUrl(const QString& packageMessage, const QStri
         return;
     }
 
-    // This message may be pushed by the server (unsolicited) when the player reaches a browser step on
-    // the game's own sign-in screen. Auto-opening a browser is only appropriate as a consequence of the
-    // player's own action, so gate it on their having sent input this connection; otherwise offer the
-    // link for them to open deliberately, so a misbehaving server cannot pop a browser at an idle player.
+    // This message can arrive unsolicited, so only auto-open the browser when the player has sent input
+    // this connection (evidence they acted on the game's sign-in screen); otherwise offer the link to
+    // open deliberately, so a misbehaving server cannot pop a browser at an idle player.
     if (mpHost->userSentInputThisConnection()) {
         openSignInUrl(parsedUrl, provider);
         return;
