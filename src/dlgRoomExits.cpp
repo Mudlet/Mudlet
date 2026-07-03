@@ -1607,11 +1607,9 @@ void dlgRoomExits::initExit(int direction,
     } else {                                             //No exit is set on initialisation
         exitLineEdit->setText(QString());                //Nothing to put in exitID box
         setActionOnExit(exitLineEdit, mpAction_noExit);
-        noRoute->setEnabled(false); //Disable lock control, can't lock a non-existent exit..
-        noRoute->setChecked(false); //.. and ensure there isn't one
-        weight->setEnabled(false);  //Disable exit weight control...
-        weight->setValue(0);        //And reset to default value (which will now cause the room's one to be used
-        stub->setEnabled(true);     //Enable stub exit control
+        weight->setEnabled(false); //Disable exit weight control...
+        weight->setValue(0);       //And reset to default value (which will now cause the room's one to be used
+        stub->setEnabled(true);    //Enable stub exit control
         if (pR->hasExitStub(direction)) {
             exitLineEdit->setEnabled(false); //There is a stub exit, so prevent exit number entry...
             exitLineEdit->setToolTip(utils::richText(tr("Clear the stub exit for this exit to enter an exit roomID.")));
@@ -1626,8 +1624,10 @@ void dlgRoomExits::initExit(int direction,
             exitLineEdit->setEnabled(true);
             exitLineEdit->setToolTip(validExitToolTip);
             stub->setChecked(false);
-            none->setEnabled(false); //Disable door type controls, can't lock a non-existent exit..
-            open->setEnabled(false); //.. and ensure the "none" one is set if it ever gets enabled
+            noRoute->setEnabled(false); //Disable lock control, can't lock a non-existent exit..
+            noRoute->setChecked(false); //.. and ensure there isn't one
+            none->setEnabled(false);    //Disable door type controls, can't lock a non-existent exit..
+            open->setEnabled(false);    //.. and ensure the "none" one is set if it ever gets enabled
             closed->setEnabled(false);
             locked->setEnabled(false);
             none->setChecked(true);
