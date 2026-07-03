@@ -54,7 +54,10 @@ public:
         connect(&mServer, &QTcpServer::newConnection, this, &GmcpServerStub::onNewConnection);
     }
 
-    bool start(quint16 port) { return mServer.listen(QHostAddress::LocalHost, port); }
+    // Bind to an ephemeral port (0) so shared CI runners cannot collide on a fixed port; the caller
+    // reads the actual port back via serverPort().
+    bool start() { return mServer.listen(QHostAddress::LocalHost, 0); }
+    quint16 serverPort() const { return mServer.serverPort(); }
 
     bool gmcpEnabled() const { return mGmcpEnabled; }
     QStringList receivedGmcp() const { return mReceivedGmcp; }
@@ -187,7 +190,7 @@ class GMCPCharLoginTest : public QObject
 private:
     GmcpServerStub* mpServer = nullptr;
     const QString mHostname = qsl("Test-CharLogin");
-    const quint16 mPort = 4010;
+    quint16 mPort = 0; // assigned the stub's actual loopback port in init()
 
 private slots:
     void initTestCase()
@@ -201,7 +204,8 @@ private slots:
     void init()
     {
         mpServer = new GmcpServerStub(qApp);
-        QVERIFY2(mpServer->start(mPort), "GmcpServerStub failed to bind a loopback port");
+        QVERIFY2(mpServer->start(), "GmcpServerStub failed to bind a loopback port");
+        mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
