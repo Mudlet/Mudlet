@@ -339,14 +339,20 @@ void GMCPAuthenticator::storeResumeHint(const QString& account, const QString& p
     obj[qsl("provider")] = provider;
     const QString payload = QString::fromUtf8(QJsonDocument(obj).toJson(QJsonDocument::Compact));
 
+    QPointer<Host> safeHost = mpHost;
     QPointer<CredentialManager> credentialManager = new CredentialManager();
-    credentialManager->storePassword(mpHost->getName(), qsl("reconnect"), payload, [credentialManager](bool success, const QString& errorMessage) {
-        // Losing the hint only costs the player one provider menu next time, so a warning suffices.
-        if (!success) {
-            qWarning().noquote() << "GMCP Char.Login - failed to keep the sign-in resume hint after a rejected token:" << errorMessage;
-        }
+    credentialManager->storePassword(mpHost->getName(), qsl("reconnect"), payload, [this, safeHost, credentialManager](bool success, const QString& errorMessage) {
         if (credentialManager) {
             credentialManager->deleteLater();
+        }
+        if (!success) {
+            qWarning().noquote() << "GMCP Char.Login - failed to keep the sign-in resume hint after a rejected token:" << errorMessage;
+            // The stale bearer token is still stored under the reconnect key; delete the whole entry so
+            // it cannot be replayed on a later connection. Losing the resume hint only costs the player
+            // one provider menu. Guard on the Host (which owns this authenticator) still being alive.
+            if (safeHost) {
+                discardReconnectToken();
+            }
         }
     });
 }
@@ -617,7 +623,7 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
     QPointer<Host> safeHost = mpHost;
     QPointer<CredentialManager> credentialManager = new CredentialManager();
     const auto attemptGeneration = mAuthAttemptGeneration;
-    credentialManager->retrievePassword(mpHost->getName(), qsl("reconnect"), [this, safeHost, credentialManager, attemptGeneration](bool success, const QString& value, const QString&) {
+    credentialManager->retrievePassword(mpHost->getName(), qsl("reconnect"), [this, safeHost, credentialManager, attemptGeneration](bool success, QString value, const QString&) {
         if (credentialManager) {
             credentialManager->deleteLater();
         }
@@ -636,6 +642,9 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
             if (doc.isObject()) {
                 const auto account = doc.object()[qsl("account")].toString();
                 auto token = doc.object()[qsl("token")].toString();
+                // The stored JSON holds the bearer token; scrub our owned copy now that the fields are
+                // extracted (retrievePassword moved it in, so this is the sole live copy).
+                SecureStringUtils::secureStringClear(value);
                 if (!account.isEmpty() && !token.isEmpty()) {
                     QByteArray tokenBytes = token.toUtf8();
                     const QByteArray storedHash = QCryptographicHash::hash(tokenBytes, QCryptographicHash::Sha256);
@@ -801,7 +810,7 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
     // Capture the current auth attempt so a result arriving after a newer Char.Login.Default (which
     // bumps mAuthAttemptGeneration) is dropped rather than driving a sign-in on the wrong connection.
     const auto attemptGeneration = mAuthAttemptGeneration;
-    credentialManager->retrievePassword(mpHost->getName(), qsl("reconnect"), [this, safeHost, credentialManager, attemptGeneration, allowToken](bool success, const QString& value, const QString&) {
+    credentialManager->retrievePassword(mpHost->getName(), qsl("reconnect"), [this, safeHost, credentialManager, attemptGeneration, allowToken](bool success, QString value, const QString&) {
         if (credentialManager) {
             credentialManager->deleteLater();
         }
@@ -822,6 +831,9 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
                 const auto account = doc.object()[qsl("account")].toString();
                 auto token = doc.object()[qsl("token")].toString();
                 const auto provider = doc.object()[qsl("provider")].toString();
+                // The stored JSON holds the bearer token; scrub our owned copy now that the fields are
+                // extracted (retrievePassword moved it in, so this is the sole live copy).
+                SecureStringUtils::secureStringClear(value);
                 if (!provider.isEmpty()) {
                     mAccountProvider = provider;
                 }
