@@ -369,6 +369,7 @@ private slots:
         QVERIFY(host);
         host->setLogin(QString());
         host->setPass(QString());
+        // No provider in the entry: with nothing to resume, rejection removes the entry entirely.
         const QString tokenJson = qsl("{\"account\": \"acct:char\", \"token\": \"stale-token\"}");
         QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), tokenJson));
 
@@ -381,6 +382,109 @@ private slots:
         // The server rejects the reconnect; the client must discard the token and say so.
         mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
         QVERIFY2(waitForConsoleContains(host, qsl("saved sign-in has expired")), "a rejected reconnect should be reported");
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return !CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).contains(qsl("stale-token"));
+                         },
+                         4000),
+                 "a rejected token with no resume hint should be removed from storage");
+    }
+
+    void testRejectedReconnectKeepsResumeHint()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        // Provider present: rejection must drop only the token, keeping {account, provider} so the
+        // next sign-in can resume the same provider without a menu.
+        const QString tokenJson = qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"stale-token\"}");
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), tokenJson));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
+        QVERIFY2(waitForConsoleContains(host, qsl("saved sign-in has expired")), "a rejected reconnect should be reported");
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             const QString stored = CredentialManager::retrieveCredential(host->getName(), qsl("reconnect"));
+                             return !stored.contains(qsl("stale-token")) && stored.contains(qsl("discord")) && stored.contains(qsl("acct:char"));
+                         },
+                         4000),
+                 "rejection should rewrite the entry as an {account, provider} resume hint without the dead token");
+    }
+
+    void testResumeSentWhenTokenAbsentButProviderRemembered()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        // A resume hint left behind by an earlier rejection: no token, provider remembered.
+        const QString hintJson = qsl("{\"account\": \"acct:char\", \"provider\": \"discord\"}");
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), hintJson));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send the resume form");
+        QCOMPARE(sent.value(qsl("account")).toString(), qsl("acct:char"));
+        QCOMPARE(sent.value(qsl("provider")).toString(), qsl("discord"));
+        QVERIFY2(!sent.contains(qsl("password")), "the resume form must not carry a password");
+        QCOMPARE(sent.value(qsl("version")).toInt(), 2);
+    }
+
+    void testProviderFromUrlIsPersistedWithToken()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        // The provider named on Char.Login.URL must be remembered and stored with the token that
+        // follows, so a later connection can resume this provider's sign-in.
+        mpServer->sendGmcp(qsl("Char.Login.URL {\"url\": \"https://example.com/signin\", \"provider\": \"discord\"}"));
+        QVERIFY2(waitForConsoleContains(host, qsl("To sign in, open this link")), "the unprompted URL should be offered as a link");
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             const QString stored = CredentialManager::retrieveCredential(host->getName(), qsl("reconnect"));
+                             return stored.contains(qsl("opaque-token")) && stored.contains(qsl("discord"));
+                         },
+                         4000),
+                 "the token should be persisted together with the provider learned from Char.Login.URL");
+    }
+
+    void testRotatedTokenIsReplayedNotDiscarded()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        const QString tokenJson = qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"token-A\"}");
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), tokenJson));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+        QCOMPARE(sent.value(qsl("token")).toString(), qsl("token-A"));
+
+        // Another running instance sharing this profile's store rotates the (single-use) token while
+        // ours is in flight; our replay of token-A is therefore rejected.
+        const QString rotatedJson = qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"token-B\"}");
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), rotatedJson));
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
+
+        // The client must notice the store changed and replay the fresh token instead of destroying it.
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the rotated token");
+        QCOMPARE(sent.value(qsl("token")).toString(), qsl("token-B"));
+        const QString stored = CredentialManager::retrieveCredential(host->getName(), qsl("reconnect"));
+        QVERIFY2(stored.contains(qsl("token-B")), "the rotated token must not be discarded");
     }
 
     // ---- Char.Login.Result --------------------------------------------------

@@ -27,6 +27,7 @@
 #include "ctelnet.h"
 #include "mudlet.h"
 #include <QAccessible>
+#include <QCryptographicHash>
 #include <QDebug>
 #include <QDesktopServices>
 #include <QHash>
@@ -71,6 +72,10 @@ void GMCPAuthenticator::resetPerConnectionState()
     mAwaitingReconnectResult = false;
     mReconnectingWithToken = false;
     mAnnouncedTokenSaveThisConnection = false;
+    mRetriedRotatedToken = false;
+    mAccountProvider.clear();
+    mReconnectAccount.clear();
+    mSentReconnectTokenHash.clear();
     // Start a new auth attempt so any in-flight reconnect-token keychain read from a previous connection
     // is recognised as stale by its callback and ignored.
     ++mAuthAttemptGeneration;
@@ -263,6 +268,11 @@ void GMCPAuthenticator::storeReconnectToken(const QString& account, QString toke
     QJsonObject obj;
     obj[qsl("account")] = account;
     obj[qsl("token")] = token;
+    // Keep the provider with the token (in the same protected store) so a later connection can resume
+    // this provider's browser sign-in if the token has expired or been revoked by then.
+    if (!mAccountProvider.isEmpty()) {
+        obj[qsl("provider")] = mAccountProvider;
+    }
     QByteArray json = QJsonDocument(obj).toJson(QJsonDocument::Compact);
     QString payload = QString::fromUtf8(json);
     // Release the JSON object and the plaintext bytes that also hold the token.
@@ -291,6 +301,54 @@ void GMCPAuthenticator::storeReconnectToken(const QString& account, QString toke
     // scrub both our serialized payload and the caller-owned token argument we took by value.
     SecureStringUtils::secureStringClear(payload);
     SecureStringUtils::secureStringClear(token);
+}
+
+void GMCPAuthenticator::sendResume(const QString& account, const QString& provider)
+{
+    QJsonObject payload;
+    payload[qsl("account")] = account;
+    payload[qsl("provider")] = provider;
+    // Echo the negotiated version so the server can confirm both ends agree.
+    payload[qsl("version")] = mNegotiatedVersion;
+    const QString gmcpMessage = QString::fromUtf8(QJsonDocument(payload).toJson(QJsonDocument::Compact));
+
+    std::string output;
+    output += TN_IAC;
+    output += TN_SB;
+    output += OPT_GMCP;
+    output += "Char.Login.Credentials ";
+    output += mpHost->mTelnet.encodeAndCookBytes(gmcpMessage.toStdString());
+    output += TN_IAC;
+    output += TN_SE;
+
+    mpHost->mTelnet.socketOutRaw(output);
+
+    const QString display = providerDisplayName(provider);
+    //: Shown when Mudlet asks the game to restart the browser sign-in with the remembered provider; %1 is the provider name (e.g. Discord).
+    mpHost->postMessage(tr("[ INFO ]  - Resuming your %1 sign-in with the game.").arg(display.isEmpty() ? provider : display));
+
+#if defined(DEBUG_GMCP_AUTHENTICATION)
+    qDebug() << "Sent GMCP resume (Credentials{account, provider}) for provider:" << provider;
+#endif
+}
+
+void GMCPAuthenticator::storeResumeHint(const QString& account, const QString& provider)
+{
+    QJsonObject obj;
+    obj[qsl("account")] = account;
+    obj[qsl("provider")] = provider;
+    const QString payload = QString::fromUtf8(QJsonDocument(obj).toJson(QJsonDocument::Compact));
+
+    QPointer<CredentialManager> credentialManager = new CredentialManager();
+    credentialManager->storePassword(mpHost->getName(), qsl("reconnect"), payload, [credentialManager](bool success, const QString& errorMessage) {
+        // Losing the hint only costs the player one provider menu next time, so a warning suffices.
+        if (!success) {
+            qWarning().noquote() << "GMCP Char.Login - failed to keep the sign-in resume hint after a rejected token:" << errorMessage;
+        }
+        if (credentialManager) {
+            credentialManager->deleteLater();
+        }
+    });
 }
 
 void GMCPAuthenticator::forgetSavedSignIn(std::function<void(bool success)> callback)
@@ -339,7 +397,12 @@ void GMCPAuthenticator::handleAuthUrl(const QString& packageMessage, const QStri
         return;
     }
     // Optional label so the browser-handoff message can name the provider ("...to sign in with Discord").
+    // Also remembered (and persisted alongside any reconnect token) so a later connection can resume
+    // this provider's sign-in without the player re-answering "which provider did I use here?".
     const auto provider = obj[qsl("provider")].toString();
+    if (!provider.isEmpty()) {
+        mAccountProvider = provider;
+    }
 
     // The URL arrives unauthenticated over the wire, so only ever hand http(s) links to the OS - never
     // arbitrary scheme handlers (file:, javascript:, etc.), whether we auto-open or offer a manual link.
@@ -522,24 +585,12 @@ void GMCPAuthenticator::handleAuthResult(const QString& packageMessage, const QS
             return;
         }
 #if defined(DEBUG_GMCP_AUTHENTICATION)
-        qDebug() << "GMCP reconnect rejected, reconnecting for a fresh sign-in:" << message;
+        qDebug() << "GMCP reconnect rejected:" << message;
 #endif
-        // The saved token is no good. Servers commonly drop the connection right after rejecting a
-        // reconnect (and Mudlet will not auto-reconnect from such a fast rejection), which would leave the
-        // in-session sign-in picker writing into a dead socket - nothing happens when a provider is
-        // chosen. Discard the token and reconnect so the full sign-in runs on a fresh, stable connection.
-        // mReconnectRejected makes that next connection skip the now-asynchronously-clearing saved token
-        // instead of racing it and looping straight back into another rejected reconnect.
-        discardReconnectToken();
-        mReconnectRejected = true;
-        //: Shown when a saved password-less sign-in is no longer accepted; Mudlet reconnects so the user can sign in again.
-        mpHost->postMessage(tr("[ INFO ]  - Your saved sign-in has expired; reconnecting so you can sign in again."));
-        QPointer<Host> safeHost = mpHost;
-        QTimer::singleShot(0, mpHost, [safeHost]() {
-            if (safeHost) {
-                safeHost->mTelnet.reconnect();
-            }
-        });
+        // Before treating the saved token as dead, check whether another running instance sharing this
+        // profile's keychain rotated it while ours was in flight - destroying its fresh token here
+        // would sign that instance out too.
+        retryOrDropRejectedToken();
         return;
     }
 
@@ -559,6 +610,78 @@ void GMCPAuthenticator::handleAuthResult(const QString& packageMessage, const QS
             mpHost->postMessage(tr("[ WARN ]  - Could not log in to the game: %1").arg(message));
         }
     }
+}
+
+void GMCPAuthenticator::retryOrDropRejectedToken()
+{
+    QPointer<Host> safeHost = mpHost;
+    QPointer<CredentialManager> credentialManager = new CredentialManager();
+    const auto attemptGeneration = mAuthAttemptGeneration;
+    credentialManager->retrievePassword(mpHost->getName(), qsl("reconnect"), [this, safeHost, credentialManager, attemptGeneration](bool success, const QString& value, const QString&) {
+        if (credentialManager) {
+            credentialManager->deleteLater();
+        }
+        if (!safeHost) {
+            return;
+        }
+        if (attemptGeneration != mAuthAttemptGeneration) {
+            return;
+        }
+
+        // Shared-store rotation check: if the stored token no longer hashes to what this connection
+        // sent, another running instance rotated it (each token is single-use) - replay the fresh one,
+        // at most once per connection, instead of discarding it out from under that instance.
+        if (!mRetriedRotatedToken && success && !value.isEmpty()) {
+            const auto doc = QJsonDocument::fromJson(value.toUtf8());
+            if (doc.isObject()) {
+                const auto account = doc.object()[qsl("account")].toString();
+                auto token = doc.object()[qsl("token")].toString();
+                if (!account.isEmpty() && !token.isEmpty()) {
+                    QByteArray tokenBytes = token.toUtf8();
+                    const QByteArray storedHash = QCryptographicHash::hash(tokenBytes, QCryptographicHash::Sha256);
+                    SecureStringUtils::secureByteArrayClear(tokenBytes);
+                    if (!mSentReconnectTokenHash.isEmpty() && storedHash != mSentReconnectTokenHash) {
+#if defined(DEBUG_GMCP_AUTHENTICATION)
+                        qDebug() << "GMCP reconnect token was rotated by another instance; replaying the fresh token";
+#endif
+                        mRetriedRotatedToken = true;
+                        mSentReconnectTokenHash = storedHash;
+                        mReconnectingWithToken = true;
+                        mAwaitingReconnectResult = true;
+                        mReconnectAccount = account;
+                        sendReconnect(account, std::move(token));
+                        return;
+                    }
+                    SecureStringUtils::secureStringClear(token);
+                }
+            }
+        }
+
+        // The token really is dead. Keep the account+provider resume hint (dropping only the token) so
+        // the next attempt restarts the same provider's browser sign-in with no menu, then reconnect:
+        // servers commonly drop the connection right after rejecting a reconnect, so the fresh sign-in
+        // needs a fresh, stable connection. mReconnectRejected makes that next connection read the entry
+        // without replaying a possibly not-yet-rewritten token.
+        dropTokenKeepResumeHint();
+        mReconnectRejected = true;
+        //: Shown when a saved password-less sign-in is no longer accepted; Mudlet reconnects so the user can sign in again.
+        mpHost->postMessage(tr("[ INFO ]  - Your saved sign-in has expired; reconnecting so you can sign in again."));
+        QTimer::singleShot(0, mpHost, [safeHost]() {
+            if (safeHost) {
+                safeHost->mTelnet.reconnect();
+            }
+        });
+    });
+}
+
+void GMCPAuthenticator::dropTokenKeepResumeHint()
+{
+    // Without a remembered provider there is nothing to resume, so remove the whole entry.
+    if (mReconnectAccount.isEmpty() || mAccountProvider.isEmpty()) {
+        discardReconnectToken();
+        return;
+    }
+    storeResumeHint(mReconnectAccount, mAccountProvider);
 }
 
 // controller for GMCP authentication
@@ -642,12 +765,12 @@ void GMCPAuthenticator::attemptReconnect()
 {
     mpHost->mTelnet.cancelLoginTimers();
 
-    // We reconnected after a rejected token (see handleAuthResult) to sign in cleanly. The stored token
-    // is being removed asynchronously, so skip it explicitly this once rather than risk reading a
-    // not-yet-removed token and looping straight back into another rejected reconnect.
+    // We reconnected after a rejected token (see handleAuthResult) to sign in cleanly. The stored entry
+    // is being rewritten asynchronously into a token-less resume hint, so read it but never replay a
+    // token this once - a not-yet-rewritten entry must not loop us into another rejected reconnect.
     if (mReconnectRejected) {
         mReconnectRejected = false;
-        selectAuthMethod();
+        readStoredSignIn(false);
         return;
     }
 
@@ -660,19 +783,25 @@ void GMCPAuthenticator::attemptReconnect()
         return;
     }
 
-    // Reconnect tokens are part of the version 2 OAuth capability; if the server is not offering oauth
-    // there is nothing to reconnect against, so go straight to the normal method selection.
+    // Reconnect tokens and the provider resume are part of the version 2 OAuth capability; if the
+    // server is not offering oauth there is nothing to replay or resume against, so go straight to the
+    // normal method selection.
     if (!mSupportedAuthTypes.contains(qsl("oauth"))) {
         selectAuthMethod();
         return;
     }
 
+    readStoredSignIn(true);
+}
+
+void GMCPAuthenticator::readStoredSignIn(bool allowToken)
+{
     QPointer<Host> safeHost = mpHost;
     QPointer<CredentialManager> credentialManager = new CredentialManager();
     // Capture the current auth attempt so a result arriving after a newer Char.Login.Default (which
     // bumps mAuthAttemptGeneration) is dropped rather than driving a sign-in on the wrong connection.
     const auto attemptGeneration = mAuthAttemptGeneration;
-    credentialManager->retrievePassword(mpHost->getName(), qsl("reconnect"), [this, safeHost, credentialManager, attemptGeneration](bool success, const QString& value, const QString&) {
+    credentialManager->retrievePassword(mpHost->getName(), qsl("reconnect"), [this, safeHost, credentialManager, attemptGeneration, allowToken](bool success, const QString& value, const QString&) {
         if (credentialManager) {
             credentialManager->deleteLater();
         }
@@ -692,15 +821,34 @@ void GMCPAuthenticator::attemptReconnect()
             if (doc.isObject()) {
                 const auto account = doc.object()[qsl("account")].toString();
                 auto token = doc.object()[qsl("token")].toString();
-                if (!account.isEmpty() && !token.isEmpty()) {
+                const auto provider = doc.object()[qsl("provider")].toString();
+                if (!provider.isEmpty()) {
+                    mAccountProvider = provider;
+                }
+                if (allowToken && !account.isEmpty() && !token.isEmpty()) {
                     // This connection is logging in by replaying a saved token, so a Char.Login.Token
                     // that comes back is a silent rotation rather than a first-time save to announce.
                     mReconnectingWithToken = true;
                     mAwaitingReconnectResult = true;
+                    mReconnectAccount = account;
+                    // Remember only a hash of what we send: if the reconnect is rejected, comparing it
+                    // against a fresh read tells a dead token apart from one another running instance
+                    // (sharing this profile's keychain) rotated while ours was in flight.
+                    QByteArray tokenBytes = token.toUtf8();
+                    mSentReconnectTokenHash = QCryptographicHash::hash(tokenBytes, QCryptographicHash::Sha256);
+                    SecureStringUtils::secureByteArrayClear(tokenBytes);
                     // Move the token in so sendReconnect owns the sole copy and can scrub it after sending.
                     sendReconnect(account, std::move(token));
                     return;
                 }
+                if (!account.isEmpty() && !provider.isEmpty()) {
+                    // No usable token, but we remember how this account signs in: ask the game to
+                    // restart that provider's browser sign-in rather than fall to a provider menu.
+                    SecureStringUtils::secureStringClear(token);
+                    sendResume(account, provider);
+                    return;
+                }
+                SecureStringUtils::secureStringClear(token);
             }
         }
 

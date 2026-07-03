@@ -65,9 +65,26 @@ private:
     void sendAuthCode(QString code, QString codeVerifier, const QString& redirectUri);
     void selectAuthMethod();
     void attemptReconnect();
+    // Reads the stored sign-in entry ({account, provider?, token?}) and acts on it: replay the token
+    // (when allowToken), else send the resume form for a remembered provider, else fall through to
+    // selectAuthMethod(). allowToken is false on the connection straight after a rejection, so a
+    // not-yet-rewritten entry cannot loop us back into another rejected reconnect.
+    void readStoredSignIn(bool allowToken);
     void sendReconnect(const QString& account, QString token);
+    // Sends the resume form of Char.Login.Credentials: {account, provider}, no password - asking the
+    // game to restart the browser sign-in for the provider remembered from an earlier Char.Login.URL.
+    void sendResume(const QString& account, const QString& provider);
     void handleAuthToken(const QString& packageMessage, const QString& data);
     void storeReconnectToken(const QString& account, QString token);
+    // After a rejected reconnect: re-reads the store first - another Mudlet instance sharing this
+    // profile's keychain may have rotated the (single-use) token, in which case the fresh token is
+    // replayed once instead of destroyed. Only a genuinely dead token is dropped, keeping the
+    // account+provider resume hint so the next sign-in needs no provider menu.
+    void retryOrDropRejectedToken();
+    void dropTokenKeepResumeHint();
+    // Rewrites the stored entry as {account, provider} with no token: enough to resume later, nothing
+    // any longer a bearer secret.
+    void storeResumeHint(const QString& account, const QString& provider);
     void discardReconnectToken(std::function<void(bool success)> callback = {});
     void resetPerConnectionState();
 
@@ -108,6 +125,20 @@ private:
     // callback, so a result arriving after a newer connection began is discarded instead of driving a
     // sign-in on the wrong attempt.
     unsigned int mAuthAttemptGeneration = 0;
+    // The provider this profile's account signs in with, learned from the stored sign-in entry or from
+    // the provider field of a Char.Login.URL this connection. Persisted alongside the token so a later
+    // connection can resume the same provider's browser sign-in without a provider menu.
+    QString mAccountProvider;
+    // The account whose token this connection replayed, kept so a rejection can rewrite the stored
+    // entry into a resume hint for that same account.
+    QString mReconnectAccount;
+    // SHA-256 of the token this connection replayed. On rejection the store is re-read and compared
+    // against this, so a token rotated by another running instance (shared keychain) is replayed rather
+    // than destroyed. Only the hash is held - never the token itself.
+    QByteArray mSentReconnectTokenHash;
+    // One-shot guard: at most one rotated-token retry per connection, so two instances sharing a store
+    // cannot ping-pong retries indefinitely.
+    bool mRetriedRotatedToken = false;
 };
 
 #endif // MUDLET_AUTHENTICATOR_H
