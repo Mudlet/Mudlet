@@ -26,6 +26,9 @@
 #include <QtTest/QtTest>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <functional>
 
 #include "CredentialManager.h"
 #include "Host.h"
@@ -338,7 +341,11 @@ private slots:
         QVERIFY(host);
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
         QVERIFY2(waitForConsoleContains(host, qsl("signed in automatically next time")), "saving a reconnect token should be announced once");
-        QVERIFY2(waitForStoredToken(host, qsl("opaque-token")), "the reconnect token should be persisted");
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [](const QJsonObject& entry) {
+                                            return entry.value(qsl("account")).toString() == qsl("acct:char") && entry.value(qsl("token")).toString() == qsl("opaque-token");
+                                        }),
+                 "the reconnect token should be persisted with the announced account and token");
     }
 
     // ---- Char.Login.Reconnect ----------------------------------------------
@@ -382,12 +389,7 @@ private slots:
         // The server rejects the reconnect; the client must discard the token and say so.
         mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
         QVERIFY2(waitForConsoleContains(host, qsl("saved sign-in has expired")), "a rejected reconnect should be reported");
-        QVERIFY2(QTest::qWaitFor(
-                         [&]() {
-                             return !CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).contains(qsl("stale-token"));
-                         },
-                         4000),
-                 "a rejected token with no resume hint should be removed from storage");
+        QVERIFY2(waitForNoStoredReconnect(host), "a rejected token with no resume hint should be removed from storage");
     }
 
     void testRejectedReconnectKeepsResumeHint()
@@ -409,13 +411,12 @@ private slots:
 
         mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
         QVERIFY2(waitForConsoleContains(host, qsl("saved sign-in has expired")), "a rejected reconnect should be reported");
-        QVERIFY2(QTest::qWaitFor(
-                         [&]() {
-                             const QString stored = CredentialManager::retrieveCredential(host->getName(), qsl("reconnect"));
-                             return !stored.contains(qsl("stale-token")) && stored.contains(qsl("discord")) && stored.contains(qsl("acct:char"));
-                         },
-                         4000),
-                 "rejection should rewrite the entry as an {account, provider} resume hint without the dead token");
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [](const QJsonObject& entry) {
+                                            return entry.value(qsl("account")).toString() == qsl("acct:char") && entry.value(qsl("provider")).toString() == qsl("discord")
+                                                   && !entry.contains(qsl("token"));
+                                        }),
+                 "rejection should rewrite the entry as an {account, provider} resume hint with no leftover token");
     }
 
     void testResumeSentWhenTokenAbsentButProviderRemembered()
@@ -448,12 +449,11 @@ private slots:
         mpServer->sendGmcp(qsl("Char.Login.URL {\"url\": \"https://example.com/signin\", \"provider\": \"discord\"}"));
         QVERIFY2(waitForConsoleContains(host, qsl("To sign in, open this link")), "the unprompted URL should be offered as a link");
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
-        QVERIFY2(QTest::qWaitFor(
-                         [&]() {
-                             const QString stored = CredentialManager::retrieveCredential(host->getName(), qsl("reconnect"));
-                             return stored.contains(qsl("opaque-token")) && stored.contains(qsl("discord"));
-                         },
-                         4000),
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [](const QJsonObject& entry) {
+                                            return entry.value(qsl("account")).toString() == qsl("acct:char") && entry.value(qsl("token")).toString() == qsl("opaque-token")
+                                                   && entry.value(qsl("provider")).toString() == qsl("discord");
+                                        }),
                  "the token should be persisted together with the provider learned from Char.Login.URL");
     }
 
@@ -483,8 +483,10 @@ private slots:
         // The client must notice the store changed and replay the fresh token instead of destroying it.
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the rotated token");
         QCOMPARE(sent.value(qsl("token")).toString(), qsl("token-B"));
-        const QString stored = CredentialManager::retrieveCredential(host->getName(), qsl("reconnect"));
-        QVERIFY2(stored.contains(qsl("token-B")), "the rotated token must not be discarded");
+        const QJsonObject stored = readStoredReconnect(host);
+        QCOMPARE(stored.value(qsl("token")).toString(), qsl("token-B"));
+        QCOMPARE(stored.value(qsl("provider")).toString(), qsl("discord"));
+        QCOMPARE(stored.value(qsl("account")).toString(), qsl("acct:char"));
     }
 
     // ---- Char.Login.Result --------------------------------------------------
@@ -599,15 +601,36 @@ private:
                 timeoutMs);
     }
 
-    bool waitForStoredToken(Host* host, const QString& expectedToken, int timeoutMs = 4000)
+    // Parse the stored reconnect entry as JSON so tests can assert its exact shape rather than
+    // matching loose substrings (a rewritten or malformed entry could otherwise pass).
+    static QJsonObject readStoredReconnect(Host* host)
+    {
+        const QString stored = CredentialManager::retrieveCredential(host->getName(), qsl("reconnect"));
+        return QJsonDocument::fromJson(stored.toUtf8()).object();
+    }
+
+    // Wait until the parsed reconnect entry satisfies the predicate.
+    bool waitForStoredReconnect(Host* host, const std::function<bool(const QJsonObject&)>& predicate, int timeoutMs = 4000)
     {
         if (!host) {
             return false;
         }
         return QTest::qWaitFor(
                 [&]() {
-                    const QString stored = CredentialManager::retrieveCredential(host->getName(), qsl("reconnect"));
-                    return stored.contains(expectedToken);
+                    return predicate(readStoredReconnect(host));
+                },
+                timeoutMs);
+    }
+
+    // Wait until the reconnect entry has been removed from storage entirely.
+    bool waitForNoStoredReconnect(Host* host, int timeoutMs = 4000)
+    {
+        if (!host) {
+            return false;
+        }
+        return QTest::qWaitFor(
+                [&]() {
+                    return CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty();
                 },
                 timeoutMs);
     }
