@@ -65,7 +65,7 @@ public:
 
     // Callback types for asynchronous operations
     using CredentialCallback = std::function<void(bool success, const QString& errorMessage)>;
-    using CredentialRetrievalCallback = std::function<void(bool success, const QString& password, const QString& errorMessage)>;
+    using CredentialRetrievalCallback = std::function<void(bool success, QString password, const QString& errorMessage)>;
     using AvailabilityCallback = std::function<void(bool available, const QString& message)>;
 
     // Hybrid password management methods (preferred public API)

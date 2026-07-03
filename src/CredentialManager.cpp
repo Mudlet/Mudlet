@@ -296,10 +296,11 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
             });
         };
 
-        auto newFormatCallback = [this, profileName, key, callback, tryCollidingFormat](bool keychainSuccess, const QString& keychainPassword, const QString& keychainError) {
+        auto newFormatCallback = [this, profileName, key, callback, tryCollidingFormat](bool keychainSuccess, QString keychainPassword, const QString& keychainError) {
             if (keychainSuccess && !keychainPassword.isEmpty()) {
                 if (callback) {
-                    callback(true, keychainPassword, QString());
+                    // Move so ownership of the secret buffer threads through to the final callback.
+                    callback(true, std::move(keychainPassword), QString());
                 }
             } else {
                 tryCollidingFormat();
@@ -313,20 +314,22 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
         bool success = !password.isEmpty();
 
         if (callback) {
-            // Empty password is normal for first-time profiles - not an error
-            callback(success, password, success ? QString() : qsl("No password stored in encrypted file storage"));
+            // Empty password is normal for first-time profiles - not an error. Move the buffer so the
+            // receiver takes sole ownership and can scrub the secret in place.
+            callback(success, std::move(password), success ? QString() : qsl("No password stored in encrypted file storage"));
         }
     }
 }
 
 void CredentialManager::credentialExists(const QString& profileName, const QString& key, std::function<void(bool exists)> callback)
 {
-    retrievePassword(profileName, key, [callback](bool success, const QString& password, const QString&) {
-        // Scrub the retrieved secret at once and forward only whether a credential exists, so the value
-        // never reaches the caller.
-        QString value = password;
-        const bool exists = success && !value.isEmpty();
-        SecureStringUtils::secureStringClear(value);
+    // Take the password by value so this callback holds the sole owner of the secret buffer
+    // (retrievePassword moves it in), then zero it in place before forwarding only whether a credential
+    // exists. QString is copy-on-write, so scrubbing a shared copy would detach and leave the original
+    // intact - sole ownership is what makes the wipe effective.
+    retrievePassword(profileName, key, [callback](bool success, QString password, const QString&) {
+        const bool exists = success && !password.isEmpty();
+        SecureStringUtils::secureStringClear(password);
         if (callback) {
             callback(exists);
         }
@@ -413,7 +416,8 @@ void CredentialManager::fallbackFileRetrieval(const QString& profileName, const 
 
     if (callback) {
         if (!fallbackPassword.isEmpty()) {
-            callback(true, fallbackPassword, QString());
+            // Move so the receiver takes sole ownership and can scrub the secret buffer in place.
+            callback(true, std::move(fallbackPassword), QString());
         } else {
             callback(false, QString(), qsl("No stored credentials found for profile %1").arg(profileName));
         }
@@ -750,7 +754,8 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                     mCurrentRetrievalCallback = nullptr;
                     mCurrentJob = nullptr;
 
-                    callback(success, password, errorMessage);
+                    // Move so ownership of the secret buffer threads through to the final callback.
+                    callback(success, std::move(password), errorMessage);
                 }
 
                 readJob->deleteLater();
