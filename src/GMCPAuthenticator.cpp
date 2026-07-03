@@ -295,15 +295,15 @@ void GMCPAuthenticator::storeReconnectToken(const QString& account, QString toke
     SecureStringUtils::secureStringClear(token);
 }
 
-void GMCPAuthenticator::forgetSavedSignIn()
+void GMCPAuthenticator::forgetSavedSignIn(std::function<void(bool success)> callback)
 {
-    discardReconnectToken();
+    discardReconnectToken(std::move(callback));
 }
 
-void GMCPAuthenticator::discardReconnectToken()
+void GMCPAuthenticator::discardReconnectToken(std::function<void(bool success)> callback)
 {
     QPointer<CredentialManager> credentialManager = new CredentialManager();
-    credentialManager->removePassword(mpHost->getName(), qsl("reconnect"), [credentialManager](bool success, const QString& errorMessage) {
+    credentialManager->removePassword(mpHost->getName(), qsl("reconnect"), [credentialManager, callback = std::move(callback)](bool success, const QString& errorMessage) {
         // A failed removal leaves a now-invalid bearer token on disk, so make it visible rather than
         // swallowing it - the security intent of this flow is to not keep stale tokens around.
         if (!success) {
@@ -311,6 +311,11 @@ void GMCPAuthenticator::discardReconnectToken()
         }
         if (credentialManager) {
             credentialManager->deleteLater();
+        }
+        // Report the real outcome so callers (e.g. the preferences UI) only claim success once the token
+        // is actually gone, rather than before the asynchronous removal has resolved.
+        if (callback) {
+            callback(success);
         }
     });
 }

@@ -2365,13 +2365,35 @@ void dlgProfilePreferences::slot_forgetSavedSignIn()
     notificationAreaIconLabelInformation->show();
     notificationAreaMessageBox->show();
     if (reply == QMessageBox::Yes) {
-        pHost->mpAuth->forgetSavedSignIn();
-        // Nothing is left to forget until a fresh sign-in mints a new token.
-        pushButton_forgetSavedSignIn->setEnabled(false);
-        //: Shown after the user confirms removing their saved sign-in.
-        notificationAreaMessageBox->setText(tr("The saved sign-in has been forgotten."));
-        //: Shown in the main console after the user confirms removing their saved sign-in.
-        pHost->postMessage(tr("[  OK  ]  - The saved sign-in for this profile has been forgotten."));
+        // forgetSavedSignIn() removes the token asynchronously; only report success (and disable the
+        // button) once the removal actually resolves, so a failed keychain removal cannot leave a stale
+        // reconnect token behind while the UI claims it is gone. QPointers guard against the dialog or
+        // host closing before the removal answers.
+        QPointer<dlgProfilePreferences> safeDialog = this;
+        QPointer<Host> safeHost = pHost;
+        pHost->mpAuth->forgetSavedSignIn([safeDialog, safeHost](bool success) {
+            if (success) {
+                if (safeDialog) {
+                    // Nothing is left to forget until a fresh sign-in mints a new token.
+                    safeDialog->pushButton_forgetSavedSignIn->setEnabled(false);
+                    //: Shown after the user's saved sign-in has actually been removed.
+                    safeDialog->notificationAreaMessageBox->setText(dlgProfilePreferences::tr("The saved sign-in has been forgotten."));
+                }
+                if (safeHost) {
+                    //: Shown in the main console after the user's saved sign-in has actually been removed.
+                    safeHost->postMessage(dlgProfilePreferences::tr("[  OK  ]  - The saved sign-in for this profile has been forgotten."));
+                }
+            } else {
+                if (safeDialog) {
+                    //: Shown when removing the saved sign-in failed, so it may still be present.
+                    safeDialog->notificationAreaMessageBox->setText(dlgProfilePreferences::tr("Could not remove the saved sign-in; it may still be present."));
+                }
+                if (safeHost) {
+                    //: Shown in the main console when removing the saved sign-in failed, so it may still be present.
+                    safeHost->postMessage(dlgProfilePreferences::tr("[ WARN ]  - Could not remove the saved sign-in; it may still be present."));
+                }
+            }
+        });
     } else {
         //: Shown when the user cancels removing their saved sign-in.
         notificationAreaMessageBox->setText(tr("No changes were made to the saved sign-in."));

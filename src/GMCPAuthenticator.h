@@ -30,6 +30,8 @@
 #include <QString>
 #include <QVariantMap>
 
+#include <functional>
+
 class OAuthClientFlow;
 
 
@@ -49,8 +51,10 @@ public:
     void handleAuthResult(const QString& packageMessage, const QString& data);
     void handleAuthGMCP(const QString& packageMessage, const QString& data);
     // Clears any stored password-less reconnect token for this profile, so the next connection signs in
-    // afresh. Invoked from the profile preferences "Forget saved sign-in" control.
-    void forgetSavedSignIn();
+    // afresh. Invoked from the profile preferences "Forget saved sign-in" control. The optional callback
+    // reports whether the (asynchronous) keychain removal actually succeeded, so callers do not report
+    // success before the token is gone.
+    void forgetSavedSignIn(std::function<void(bool success)> callback = {});
 
 private:
     void handleAuthUrl(const QString& packageMessage, const QString& data);
@@ -64,7 +68,7 @@ private:
     void sendReconnect(const QString& account, QString token);
     void handleAuthToken(const QString& packageMessage, const QString& data);
     void storeReconnectToken(const QString& account, QString token);
-    void discardReconnectToken();
+    void discardReconnectToken(std::function<void(bool success)> callback = {});
     void resetPerConnectionState();
 
     bool clientDrivenOAuthAvailable() const;
