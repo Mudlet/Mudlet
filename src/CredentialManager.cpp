@@ -319,6 +319,20 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
     }
 }
 
+void CredentialManager::credentialExists(const QString& profileName, const QString& key, std::function<void(bool exists)> callback)
+{
+    retrievePassword(profileName, key, [callback](bool success, const QString& password, const QString&) {
+        // Scrub the retrieved secret at once and forward only whether a credential exists, so the value
+        // never reaches the caller.
+        QString value = password;
+        const bool exists = success && !value.isEmpty();
+        SecureStringUtils::secureStringClear(value);
+        if (callback) {
+            callback(exists);
+        }
+    });
+}
+
 void CredentialManager::attemptCollidingMigration(const QString& profileName, const QString& key, const QString& legacyService, const QString& password, CredentialRetrievalCallback callback)
 {
     qDebug() << "CredentialManager: Migrating password from colliding format for" << profileName;

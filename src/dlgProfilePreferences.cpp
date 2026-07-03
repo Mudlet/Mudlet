@@ -1340,11 +1340,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     pushButton_forgetSavedSignIn->setEnabled(mEnableGMCP->isChecked());
     QPointer<dlgProfilePreferences> safeDialog = this;
     QPointer<CredentialManager> credentialManager = new CredentialManager();
-    credentialManager->retrievePassword(pHost->getName(), qsl("reconnect"), [safeDialog, credentialManager](bool success, const QString& value, const QString&) {
+    credentialManager->credentialExists(pHost->getName(), qsl("reconnect"), [safeDialog, credentialManager](bool exists) {
         if (credentialManager) {
             credentialManager->deleteLater();
         }
-        if (safeDialog && success && !value.isEmpty()) {
+        if (safeDialog && exists) {
             safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
         }
     });

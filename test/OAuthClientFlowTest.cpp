@@ -36,7 +36,11 @@ public:
     : QObject(parent)
     {
         mBody = QJsonDocument(QJsonObject{{QStringLiteral("authorization_endpoint"), authorizationEndpoint}}).toJson(QJsonDocument::Compact);
-        mServer.listen(QHostAddress::LocalHost, 0);
+        const bool listening = mServer.listen(QHostAddress::LocalHost, 0);
+        if (!listening) {
+            qWarning() << "MiniDiscoveryServer failed to bind a loopback port:" << mServer.errorString();
+        }
+        Q_ASSERT_X(listening, "MiniDiscoveryServer", "failed to bind a loopback port for the test discovery server");
         connect(&mServer, &QTcpServer::newConnection, this, [this]() {
             while (mServer.hasPendingConnections()) {
                 QTcpSocket* socket = mServer.nextPendingConnection();
@@ -67,7 +71,11 @@ public:
     explicit MiniClosingServer(QObject* parent = nullptr)
     : QObject(parent)
     {
-        mServer.listen(QHostAddress::LocalHost, 0);
+        const bool listening = mServer.listen(QHostAddress::LocalHost, 0);
+        if (!listening) {
+            qWarning() << "MiniClosingServer failed to bind a loopback port:" << mServer.errorString();
+        }
+        Q_ASSERT_X(listening, "MiniClosingServer", "failed to bind a loopback port for the test discovery server");
         connect(&mServer, &QTcpServer::newConnection, this, [this]() {
             while (mServer.hasPendingConnections()) {
                 QTcpSocket* socket = mServer.nextPendingConnection();

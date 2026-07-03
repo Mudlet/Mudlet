@@ -58,7 +58,7 @@ private:
     void startClientDrivenOAuth();
     void cancelClientDrivenOAuth();
     void announceBrowserHandoff(const QString& provider);
-    void sendAuthCode(const QString& code, QString codeVerifier, const QString& redirectUri);
+    void sendAuthCode(QString code, QString codeVerifier, const QString& redirectUri);
     void selectAuthMethod();
     void attemptReconnect();
     void sendReconnect(const QString& account, QString token);
@@ -99,6 +99,11 @@ private:
     // cleared asynchronously, so this makes the next connection skip it explicitly rather than racing
     // the keychain removal and looping back into another rejected reconnect.
     bool mReconnectRejected = false;
+    // Incremented on every per-connection auth reset (each Char.Login.Default). The asynchronous
+    // reconnect-token keychain read captures the value current when it started and re-checks it in its
+    // callback, so a result arriving after a newer connection began is discarded instead of driving a
+    // sign-in on the wrong attempt.
+    unsigned int mAuthAttemptGeneration = 0;
 };
 
 #endif // MUDLET_AUTHENTICATOR_H

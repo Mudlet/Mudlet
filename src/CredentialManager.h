@@ -73,6 +73,10 @@ public:
     void storePassword(const QString& profileName, const QString& key, const QString& password, CredentialCallback callback);
     void retrievePassword(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
     void removePassword(const QString& profileName, const QString& key, CredentialCallback callback);
+    // Existence check that never hands the stored secret to the caller. QtKeychain has no metadata-only
+    // lookup, so this reads the credential internally but forwards only whether one exists (scrubbing the
+    // retrieved value), so callers such as UI code need not materialize the secret just to test presence.
+    void credentialExists(const QString& profileName, const QString& key, std::function<void(bool exists)> callback);
 
     // Static fallback methods (for migration and test cleanup - uses encrypted file storage)
     static bool storeCredential(const QString& profileName, const QString& key, const QString& credential);

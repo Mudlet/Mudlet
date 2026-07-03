@@ -257,7 +257,7 @@ void OAuthClientFlow::readRedirectRequest(QTcpSocket* socket)
         return;
     }
 
-    const QString code = query.queryItemValue(qsl("code"), QUrl::FullyDecoded);
+    QString code = query.queryItemValue(qsl("code"), QUrl::FullyDecoded);
     if (code.isEmpty()) {
         //: Shown in the user's web browser when the identity provider's redirect did not include an authorization code.
         respond(socket, "400 Bad Request", tr("The sign-in did not complete. Please return to Mudlet and try again."));
@@ -271,7 +271,9 @@ void OAuthClientFlow::readRedirectRequest(QTcpSocket* socket)
     mCompleted = true;
     cleanup();
     emit authorizationCaptured(code, mCodeVerifier, mRedirectUri);
-    // The receiver has taken (and is responsible for scrubbing) its own copy; drop ours now.
+    // The authorization code and verifier are single-use secrets; the receiver has taken its own copies
+    // (and is responsible for scrubbing them), so drop ours now.
+    SecureStringUtils::secureStringClear(code);
     SecureStringUtils::secureStringClear(mCodeVerifier);
 }
 

@@ -71,6 +71,9 @@ void GMCPAuthenticator::resetPerConnectionState()
     mAwaitingReconnectResult = false;
     mReconnectingWithToken = false;
     mAnnouncedTokenSaveThisConnection = false;
+    // Start a new auth attempt so any in-flight reconnect-token keychain read from a previous connection
+    // is recognised as stale by its callback and ignored.
+    ++mAuthAttemptGeneration;
     // A fresh sign-in supersedes any browser dance still in flight from the previous connection.
     cancelClientDrivenOAuth();
 }
@@ -419,12 +422,13 @@ void GMCPAuthenticator::cancelClientDrivenOAuth()
     }
 }
 
-void GMCPAuthenticator::sendAuthCode(const QString& code, QString codeVerifier, const QString& redirectUri)
+void GMCPAuthenticator::sendAuthCode(QString code, QString codeVerifier, const QString& redirectUri)
 {
     // The spec forbids Char.Login.AuthCode on a cleartext connection: the authorization code and PKCE
     // verifier together would let an eavesdropper redeem the code at the provider. The flow only starts
     // on an encrypted connection, but re-check at send time in case the transport changed underneath us.
     if (!mpHost->mTelnet.currentlySecure()) {
+        SecureStringUtils::secureStringClear(code);
         SecureStringUtils::secureStringClear(codeVerifier);
         qWarning().noquote() << "GMCP Char.Login.AuthCode - refusing to send the authorization code over an unencrypted connection.";
         mpHost->mTelnet.setDontReconnect(true);
@@ -464,8 +468,9 @@ void GMCPAuthenticator::sendAuthCode(const QString& code, QString codeVerifier, 
     mpHost->mTelnet.socketOutRaw(output);
 
     // The authorization code and PKCE verifier are single-use secrets; scrub every copy once sent: the
-    // verifier argument (taken by value), the JSON message, the plaintext and encoded payloads, and the
-    // assembled telnet frame.
+    // code and verifier arguments (both taken by value), the JSON message, the plaintext and encoded
+    // payloads, and the assembled telnet frame.
+    SecureStringUtils::secureStringClear(code);
     SecureStringUtils::secureStringClear(codeVerifier);
     SecureStringUtils::secureStringClear(gmcpMessage);
     SecureStringUtils::secureStdStringClear(plaintext);
@@ -656,13 +661,21 @@ void GMCPAuthenticator::attemptReconnect()
 
     QPointer<Host> safeHost = mpHost;
     QPointer<CredentialManager> credentialManager = new CredentialManager();
-    credentialManager->retrievePassword(mpHost->getName(), qsl("reconnect"), [this, safeHost, credentialManager](bool success, const QString& value, const QString&) {
+    // Capture the current auth attempt so a result arriving after a newer Char.Login.Default (which
+    // bumps mAuthAttemptGeneration) is dropped rather than driving a sign-in on the wrong connection.
+    const auto attemptGeneration = mAuthAttemptGeneration;
+    credentialManager->retrievePassword(mpHost->getName(), qsl("reconnect"), [this, safeHost, credentialManager, attemptGeneration](bool success, const QString& value, const QString&) {
         if (credentialManager) {
             credentialManager->deleteLater();
         }
         // The Host (which owns this authenticator) may have gone away while the keychain read was in
         // flight; bail out without touching any members if so.
         if (!safeHost) {
+            return;
+        }
+        // A newer connection started while this read was in flight; its result is stale, so ignore it
+        // rather than send a reconnect or pick a method for the connection that superseded it.
+        if (attemptGeneration != mAuthAttemptGeneration) {
             return;
         }
 
