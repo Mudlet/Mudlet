@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2026 by the Mudlet project                              *
+ *   Copyright (C) 2026 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -36,11 +36,11 @@ extern void qInitResources_mudlet_fonts_common();
 extern void qInitResources_mudlet_fonts_posix();
 void initializeQRCResources();
 
-// Validates the guard that stops a self-feeding trigger (one whose action calls
-// feedTriggers() with text that re-matches it) from recursing the C++ stack into
-// an EXCEPTION_STACK_OVERFLOW crash - see Sentry event fbda193d. The guard must
-// abort the loop with a catchable Lua error while leaving legitimate feedTriggers()
-// use untouched.
+// Validates the guards that stop a self-feeding trigger (one whose action calls
+// feedTriggers() or feedTelnet() with text that re-matches it) from recursing the
+// C++ stack into an EXCEPTION_STACK_OVERFLOW crash - see Sentry event fbda193d.
+// The guards must abort the loop with a catchable Lua error while leaving
+// legitimate feedTriggers()/feedTelnet() use untouched.
 class TFeedTriggersRecursionTest : public QObject
 {
     Q_OBJECT
@@ -113,6 +113,65 @@ private slots:
         QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
         QVERIFY2(!bufferContains(qsl("stuck in an endless loop")), "A normal feedTriggers() call must not be treated as a loop");
         QVERIFY2(bufferContains(qsl("NORMALCOUNT=1")), "Expected the non-looping trigger to fire exactly once");
+    }
+
+    // A trigger that re-feeds its own output through feedTelnet() must likewise be
+    // stopped - at a much lower depth limit, as each nested telnet processing frame
+    // holds ~100KB of stack, overflowing a 1MB (Windows) stack in only ~8 levels.
+    void test_selfFeedingTelnetTriggerIsStopped()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        host->mEchoLuaErrors = true;
+
+        // feedTelnet() refuses to work unless the profile is offline
+        host->mTelnet.disconnectIt();
+        QTRY_COMPARE(host->mTelnet.getConnectionState(), QAbstractSocket::UnconnectedState);
+
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("telnetLoopCount = 0\n"
+                                                               "telnetLoopTriggerId = tempRegexTrigger('^loopme$', [[telnetLoopCount = telnetLoopCount + 1; feedTelnet('loopme\\n')]])\n"
+                                                               "feedTelnet('loopme\\n')\n"));
+
+        QCOMPARE(host->mTelnet.loopbackProcessingDepth(), 0);
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(bufferContains(qsl("feedTelnet stopped to prevent a crash")), "Expected the feedTelnet loop-abort error in the console buffer");
+
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "telnetLoopTriggerId");
+        const int telnetLoopTriggerId = static_cast<int>(lua_tointeger(L, -1));
+        lua_pop(L, 1);
+        QVERIFY2(bufferContains(qsl("trigger '%1'").arg(telnetLoopTriggerId)), "Expected the abort message to name the offending trigger by its id");
+
+        // Unlike the linear feedTriggers path, nested telnet processing re-posts the
+        // ancestors' not-yet-cleared lines (mMudData in cTelnet is shared across the
+        // nested calls), so the trigger fires more often than the depth limit - just
+        // check the loop was cut off to a small bounded count rather than running away.
+        lua_getglobal(L, "telnetLoopCount");
+        const int telnetLoopCount = static_cast<int>(lua_tointeger(L, -1));
+        lua_pop(L, 1);
+        QVERIFY2(telnetLoopCount >= cTelnet::scmMaxLoopbackProcessingDepth && telnetLoopCount < 100,
+                 qPrintable(qsl("Expected the trigger to fire a small bounded number of times (>= %1, < 100), got %2").arg(cTelnet::scmMaxLoopbackProcessingDepth).arg(telnetLoopCount)));
+    }
+
+    // A single, non-self-matching feedTelnet() must still work normally and not be
+    // flagged as a loop.
+    void test_normalFeedTelnetIsUnaffected()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        host->mEchoLuaErrors = true;
+
+        host->mTelnet.disconnectIt();
+        QTRY_COMPARE(host->mTelnet.getConnectionState(), QAbstractSocket::UnconnectedState);
+
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("normalTelnetCount = 0\n"
+                                                               "tempRegexTrigger('^hello$', [[normalTelnetCount = normalTelnetCount + 1]])\n"
+                                                               "feedTelnet('hello\\n')\n"
+                                                               "echo('NORMALTELNETCOUNT='..normalTelnetCount..'\\n')\n"));
+
+        QCOMPARE(host->mTelnet.loopbackProcessingDepth(), 0);
+        QVERIFY2(!bufferContains(qsl("stuck in an endless loop")), "A normal feedTelnet() call must not be treated as a loop");
+        QVERIFY2(bufferContains(qsl("NORMALTELNETCOUNT=1")), "Expected the non-looping trigger to fire exactly once");
     }
 
     void cleanup()
