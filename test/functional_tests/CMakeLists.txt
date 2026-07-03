@@ -12,6 +12,7 @@ set(FUNCTIONAL_TEST_SOURCES
     dlgTriggerEditorUndoRedoTest.cpp
     TDiscordModeTest.cpp
     EnableDisableByNameTest.cpp
+    GMCPCharLoginTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
@@ -38,3 +39,6 @@ set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 
 # Undo/redo tests need a longer timeout due to large batch operations
 set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
+
+# GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
