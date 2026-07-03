@@ -11,6 +11,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TriggerEditorTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     TDiscordModeTest.cpp
+    EnableDisableByNameTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
