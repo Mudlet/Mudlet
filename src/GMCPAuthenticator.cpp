@@ -638,7 +638,11 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
         // sent, another running instance rotated it (each token is single-use) - replay the fresh one,
         // at most once per connection, instead of discarding it out from under that instance.
         if (!mRetriedRotatedToken && success && !value.isEmpty()) {
-            const auto doc = QJsonDocument::fromJson(value.toUtf8());
+            // The stored JSON holds the bearer token; parse from an owned buffer and scrub it once
+            // parsed so the token does not linger in an unscrubbed temporary.
+            QByteArray valueBytes = value.toUtf8();
+            const auto doc = QJsonDocument::fromJson(valueBytes);
+            SecureStringUtils::secureByteArrayClear(valueBytes);
             if (doc.isObject()) {
                 const auto account = doc.object()[qsl("account")].toString();
                 auto token = doc.object()[qsl("token")].toString();
@@ -730,7 +734,11 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
 void GMCPAuthenticator::handleAuthToken(const QString& packageMessage, const QString& data)
 {
     QJsonParseError parseError;
-    auto doc = QJsonDocument::fromJson(data.toUtf8(), &parseError);
+    // The payload carries a bearer token; parse from an owned buffer and scrub it once parsed so the
+    // token does not linger in an unscrubbed temporary.
+    QByteArray payloadBytes = data.toUtf8();
+    auto doc = QJsonDocument::fromJson(payloadBytes, &parseError);
+    SecureStringUtils::secureByteArrayClear(payloadBytes);
     if (parseError.error != QJsonParseError::NoError) {
         // The payload carries the reconnect token (a bearer secret), so never log its contents - report
         // only the parse error and a non-sensitive length summary.
@@ -826,7 +834,11 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
         }
 
         if (success && !value.isEmpty()) {
-            const auto doc = QJsonDocument::fromJson(value.toUtf8());
+            // The stored JSON holds the bearer token; parse from an owned buffer and scrub it once
+            // parsed so the token does not linger in an unscrubbed temporary.
+            QByteArray valueBytes = value.toUtf8();
+            const auto doc = QJsonDocument::fromJson(valueBytes);
+            SecureStringUtils::secureByteArrayClear(valueBytes);
             if (doc.isObject()) {
                 const auto account = doc.object()[qsl("account")].toString();
                 auto token = doc.object()[qsl("token")].toString();
