@@ -58,7 +58,7 @@ bool LabelInteractionHandler::matches(const T2DMap::MapInteractionContext& conte
         }
 
         if (context.button == Qt::RightButton) {
-            return true;
+            return !context.isMapViewOnly;
         }
 
         return false;

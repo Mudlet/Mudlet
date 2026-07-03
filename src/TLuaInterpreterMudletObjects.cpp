@@ -771,6 +771,10 @@ int TLuaInterpreter::getStopWatches(lua_State* L)
     for (const int watchId : stopWatchIds) {
         lua_pushnumber(L, watchId);
         auto pStopWatch = host.getStopWatch(watchId);
+        if (!pStopWatch) {
+            lua_pop(L, 1);
+            continue;
+        }
         lua_newtable(L);
         {
             lua_pushstring(L, "name");
@@ -947,14 +951,15 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getTimerUnit()->getTimer(id);
             cnt = (static_cast<bool>(pT) && (pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive()) && (!checkAncestors || pT->shouldAncestorsBeActive())) ? 1 : 0;
         } else {
-            auto itpItem = host.getTimerUnit()->mLookupTable.constFind(nameOrId);
-            while (itpItem != host.getTimerUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+            // equal_range visits every same-named item; constFind() + (++it) can
+            // start mid-run and skip duplicates on some QMultiMap implementations
+            const auto [begin, end] = host.getTimerUnit()->mLookupTable.equal_range(nameOrId);
+            for (auto itpItem = begin; itpItem != end; ++itpItem) {
                 auto pT = itpItem.value();
                 // Offset timer have their active state recorded differently
                 if ((pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive()) && (!checkAncestors || pT->shouldAncestorsBeActive())) {
                     ++cnt;
                 }
-                ++itpItem;
             }
         }
 
@@ -963,13 +968,12 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getTriggerUnit()->getTrigger(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            auto itpItem = host.getTriggerUnit()->mLookupTable.constFind(nameOrId);
-            while (itpItem != host.getTriggerUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+            const auto [begin, end] = host.getTriggerUnit()->mLookupTable.equal_range(nameOrId);
+            for (auto itpItem = begin; itpItem != end; ++itpItem) {
                 auto pT = itpItem.value();
                 if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
-                ++itpItem;
             }
         }
 
@@ -978,13 +982,12 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getAliasUnit()->getAlias(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            auto itpItem = host.getAliasUnit()->mLookupTable.constFind(nameOrId);
-            while (itpItem != host.getAliasUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+            const auto [begin, end] = host.getAliasUnit()->mLookupTable.equal_range(nameOrId);
+            for (auto itpItem = begin; itpItem != end; ++itpItem) {
                 auto pT = itpItem.value();
                 if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
-                ++itpItem;
             }
         }
 
@@ -993,13 +996,12 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getKeyUnit()->getKey(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            auto itpItem = host.getKeyUnit()->mLookupTable.constFind(nameOrId);
-            while (itpItem != host.getKeyUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+            const auto [begin, end] = host.getKeyUnit()->mLookupTable.equal_range(nameOrId);
+            for (auto itpItem = begin; itpItem != end; ++itpItem) {
                 auto pT = itpItem.value();
                 if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
-                ++itpItem;
             }
         }
 
