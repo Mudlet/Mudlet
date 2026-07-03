@@ -142,15 +142,16 @@ private slots:
         lua_pop(L, 1);
         QVERIFY2(bufferContains(qsl("trigger '%1'").arg(telnetLoopTriggerId)), "Expected the abort message to name the offending trigger by its id");
 
-        // Unlike the linear feedTriggers path, nested telnet processing re-posts the
-        // ancestors' not-yet-cleared lines (mMudData in cTelnet is shared across the
-        // nested calls), so the trigger fires more often than the depth limit - just
-        // check the loop was cut off to a small bounded count rather than running away.
+        // Exactly one abort for the whole loop: postData() detaches the pending data
+        // before posting, so the unwinding ancestor frames must not re-post the line
+        // and fire the trigger - and its abort error - all over again.
+        QCOMPARE(static_cast<int>(joinedBuffer().count(qsl("feedTelnet stopped to prevent a crash"))), 1);
+
+        // The trigger should have fired exactly up to the limit and no further.
         lua_getglobal(L, "telnetLoopCount");
         const int telnetLoopCount = static_cast<int>(lua_tointeger(L, -1));
         lua_pop(L, 1);
-        QVERIFY2(telnetLoopCount >= cTelnet::scmMaxLoopbackProcessingDepth && telnetLoopCount < 100,
-                 qPrintable(qsl("Expected the trigger to fire a small bounded number of times (>= %1, < 100), got %2").arg(cTelnet::scmMaxLoopbackProcessingDepth).arg(telnetLoopCount)));
+        QCOMPARE(telnetLoopCount, cTelnet::scmMaxLoopbackProcessingDepth);
     }
 
     // A single, non-self-matching feedTelnet() must still work normally and not be
@@ -223,15 +224,17 @@ private slots:
     // so a long needle that the console word-wraps (with added indents) across
     // lines is still found - a per-line scan would miss it depending on where the
     // wrap lands, which shifts with the trigger id width and console geometry.
-    bool bufferContains(const QString& needle)
+    QString joinedBuffer()
     {
         auto console = mudlet::self()->getActiveHost()->mpConsole;
         QString allText;
         for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
             allText.append(console->buffer.line(i)).append(QChar::Space);
         }
-        return allText.simplified().contains(needle);
+        return allText.simplified();
     }
+
+    bool bufferContains(const QString& needle) { return joinedBuffer().contains(needle); }
 
     void deleteProfileDirectory(const QString& profileName)
     {

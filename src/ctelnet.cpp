@@ -4623,11 +4623,16 @@ void cTelnet::postData()
         return;
     }
 
+    // Detach the pending data first: a trigger fired inside printOnDisplay() can
+    // call feedTelnet(), re-entering here - it must not post this data again.
+    std::string data{std::move(mMudData)};
+    mMudData.clear();
+
     // All data goes through main console's printOnDisplay which calls
     // translateToPlainText - MXP DEST routing happens inside that process
-    mpHost->mpConsole->printOnDisplay(mMudData, true);
+    mpHost->mpConsole->printOnDisplay(data, true);
     if (mpHost->mMMCPServer && !mpHost->mIsRemoteEchoingActive) {
-        mpHost->mMMCPServer->receiveFromPlayer(mMudData);
+        mpHost->mMMCPServer->receiveFromPlayer(data);
     }
 }
 
