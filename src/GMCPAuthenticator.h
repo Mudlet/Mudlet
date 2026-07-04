@@ -111,13 +111,11 @@ private:
     // hand-off, which carries no fields at all by design.
     int mNegotiatedVersion = 1;
 
-    // Sign-in/token state scoped to a single sign-in attempt, reset as one unit on every
-    // Char.Login.Default (see resetPerConnectionState). Grouping it means a field added here is reset
-    // automatically and cannot be forgotten - the failure mode the deliberately-persistent
-    // mReconnectRejected latch and the mAuthAttemptGeneration counter below sit outside the struct
-    // precisely to contrast with. (The capability/negotiation fields above - mSupportedAuthTypes, the
-    // mOAuth* set, mNegotiatedVersion - are also per-connection but reset separately at parse time in
-    // saveSupportsSet, keyed to the advertisement rather than the sign-in attempt.)
+    // Sign-in/token state for a single sign-in attempt, reset as one unit on every Char.Login.Default
+    // (see resetPerConnectionState), so a field added here cannot be forgotten. The persistent
+    // mReconnectRejected latch and mAuthAttemptGeneration counter deliberately sit outside the struct;
+    // the capability fields above (mSupportedAuthTypes, mOAuth*, mNegotiatedVersion) reset separately in
+    // saveSupportsSet, keyed to the advertisement rather than the sign-in attempt.
     struct PerConnectionState
     {
         // True while awaiting the Char.Login.Result that answers a Char.Login.Reconnect, so a failure

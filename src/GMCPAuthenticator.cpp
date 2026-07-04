@@ -222,7 +222,6 @@ void GMCPAuthenticator::sendReconnect(const QString& account, QString token)
     QJsonObject payload;
     payload[qsl("account")] = account;
     payload[qsl("token")] = token;
-    // Echo the negotiated version so the server can confirm both ends agree.
     payload[qsl("version")] = mNegotiatedVersion;
     QByteArray json = QJsonDocument(payload).toJson(QJsonDocument::Compact);
     QString gmcpMessage = QString::fromUtf8(json);
@@ -304,7 +303,6 @@ void GMCPAuthenticator::sendResume(const QString& account, const QString& provid
     QJsonObject payload;
     payload[qsl("account")] = account;
     payload[qsl("provider")] = provider;
-    // Echo the negotiated version so the server can confirm both ends agree.
     payload[qsl("version")] = mNegotiatedVersion;
     const QString gmcpMessage = QString::fromUtf8(QJsonDocument(payload).toJson(QJsonDocument::Compact));
 
@@ -511,7 +509,6 @@ void GMCPAuthenticator::sendAuthCode(QString code, QString codeVerifier, const Q
     payload[qsl("code")] = code;
     payload[qsl("code_verifier")] = codeVerifier;
     payload[qsl("redirect_uri")] = redirectUri;
-    // Echo the negotiated version so the server can confirm both ends agree.
     payload[qsl("version")] = mNegotiatedVersion;
     QByteArray json = QJsonDocument(payload).toJson(QJsonDocument::Compact);
     QString gmcpMessage = QString::fromUtf8(json);
@@ -639,11 +636,9 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
         }
 
         // Shared-store rotation check: if the stored token no longer hashes to what this connection
-        // sent, another running instance rotated it (each token is single-use) - replay the fresh one,
-        // at most once per connection, instead of discarding it out from under that instance. This is a
-        // best-effort recovery for the shared-store race: any rejection whose stored token still matches
-        // what we sent (a genuinely dead token, or a non-rotation rejection) falls through to the safe
-        // direction below - drop and re-sign-in.
+        // sent, another running instance rotated it (single-use) - replay the fresh one once, rather
+        // than discarding its token. A rejection whose stored token still matches (a genuinely dead
+        // token, or a non-rotation rejection) falls through to drop-and-re-sign-in below.
         if (!mConn.retriedRotatedToken && success && !value.isEmpty()) {
             // The stored JSON may hold a bearer token; parse from an owned buffer and scrub every owned
             // copy - the QByteArray and the QString value (retrievePassword moved it in) - on all paths,
