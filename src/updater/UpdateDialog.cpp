@@ -108,6 +108,10 @@ UpdateDialog::UpdateDialog(Feed* feed, Type type, QSettings* settings, QWidget* 
 
     connect(mUi->labelChangelog, &QTextBrowser::anchorClicked, this, &UpdateDialog::onLinkActivated);
 
+    if (mType != ManualChangelog) {
+        connect(mFeed, &Feed::compareReady, this, &UpdateDialog::handleCompareReady);
+    }
+
     switch (mType) {
     case OnUpdateAvailable: {
         connect(this, &UpdateDialog::ready, this, &UpdateDialog::showIfUpdatesAvailable);
@@ -531,6 +535,9 @@ QString UpdateDialog::generateChangelogDocument()
     QList<Release> changelogReleases;
     if (mMinVersion.isEmpty() && mMaxVersion.isEmpty()) {
         changelogReleases = mUpdates;
+        if (!mExactChangelog.isEmpty()) {
+            changelog.append(mExactChangelog + qsl("\n"));
+        }
     } else {
         Release minRelease(mMinVersion.isEmpty() ? QApplication::applicationVersion() : mMinVersion);
         Release maxRelease(mMaxVersion);
@@ -554,6 +561,83 @@ QString UpdateDialog::generateChangelogDocument()
         changelog.append(body + qsl("\n\n"));
     }
     return changelog;
+}
+
+QString UpdateDialog::buildExactChangelog(const QStringList& commitSubjects, int totalCommits, const QUrl& htmlUrl) const
+{
+    if (commitSubjects.isEmpty()) {
+        return QString();
+    }
+
+    static const QRegularExpression addedRx(qsl("^add\\w*:*\\s*(.*)"), QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression improvedRx(qsl("^improve\\w*:*\\s*(.*)"), QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression fixedRx(qsl("^fix\\w*:*\\s*(.*)"), QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression infraRx(qsl("^infra\\w*:*\\s*(.*)"), QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression autocommitRx(qsl("^\\(autocommit\\)\\s*(.*)"), QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression prReferenceRx(qsl("\\(#(\\d+)\\)"));
+
+    const QString prLink = qsl("[#\\1](https://github.com/%1/%2/pull/\\1)").arg(mFeed->getOwner(), mFeed->getRepo());
+
+    QStringList added, improved, fixed, infrastructure, other;
+    for (const auto& commitSubject : commitSubjects) {
+        QString subject = commitSubject.trimmed();
+        if (subject.isEmpty() || subject.startsWith(qsl("Merge "))) {
+            continue;
+        }
+        subject.replace(prReferenceRx, prLink);
+        if (const auto match = addedRx.match(subject); match.hasMatch()) {
+            added << match.captured(1);
+        } else if (const auto match = improvedRx.match(subject); match.hasMatch()) {
+            improved << match.captured(1);
+        } else if (const auto match = fixedRx.match(subject); match.hasMatch()) {
+            fixed << match.captured(1);
+        } else if (const auto match = infraRx.match(subject); match.hasMatch()) {
+            infrastructure << match.captured(1);
+        } else if (const auto match = autocommitRx.match(subject); match.hasMatch()) {
+            infrastructure << match.captured(1);
+        } else {
+            other << subject;
+        }
+    }
+
+    //: Heading in the update dialog above the list of changes between the user's installed version and the offered update. %1 is the installed version.
+    QString changelog = qsl("#### %1\n\n").arg(tr("Changes since your version (%1)").arg(QApplication::applicationVersion()));
+
+    auto appendCategory = [&changelog](const QString& heading, const QStringList& entries) {
+        if (entries.isEmpty()) {
+            return;
+        }
+        changelog.append(qsl("##### %1\n").arg(heading));
+        for (const auto& entry : entries) {
+            changelog.append(qsl("- %1\n").arg(entry));
+        }
+        changelog.append(qsl("\n"));
+    };
+    //: Category heading in the update changelog for new features
+    appendCategory(tr("Added:"), added);
+    //: Category heading in the update changelog for improvements to existing features
+    appendCategory(tr("Improved:"), improved);
+    //: Category heading in the update changelog for bug fixes
+    appendCategory(tr("Fixed:"), fixed);
+    //: Category heading in the update changelog for build system and internal changes
+    appendCategory(tr("Infrastructure:"), infrastructure);
+    //: Category heading in the update changelog for changes that do not fit any other category
+    appendCategory(tr("Other:"), other);
+
+    if (totalCommits > commitSubjects.count()) {
+        //: Appended to the update changelog when not all changes could be listed. %1 is the number of changes not shown, %2 is the address of the full list; keep the Markdown link syntax intact.
+        changelog.append(tr("...and %1 more changes - [full comparison](%2)").arg(QString::number(totalCommits - commitSubjects.count()), htmlUrl.toString()) + qsl("\n"));
+    }
+
+    return changelog;
+}
+
+void UpdateDialog::handleCompareReady(const QStringList& commitSubjects, int totalCommits, const QUrl& htmlUrl)
+{
+    mExactChangelog = buildExactChangelog(commitSubjects, totalCommits, htmlUrl);
+    if (!mExactChangelog.isEmpty() && !mUi->headerContainer->isHidden()) {
+        mUi->labelChangelog->setMarkdown(generateChangelogDocument());
+    }
 }
 
 void UpdateDialog::startDownload()
@@ -592,6 +676,15 @@ void UpdateDialog::handleFeedReady()
         setupChangelogUi();
         emit ready();
         return;
+    }
+
+    mExactChangelog.clear();
+    if (!mUpdates.isEmpty()) {
+        const QString baseRef = Feed::versionToRef(Release::getCurrentRelease().getVersion());
+        const QString headRef = Feed::versionToRef(mLatestRelease.getVersion());
+        if (!baseRef.isEmpty() && !headRef.isEmpty() && baseRef != headRef) {
+            mFeed->fetchCompare(baseRef, headRef);
+        }
     }
 
     mUpdateFilePath = settingsValue(qsl("updateFilePath"), "", mSettings).toString();

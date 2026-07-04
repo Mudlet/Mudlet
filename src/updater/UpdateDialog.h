@@ -24,6 +24,7 @@
 #include "Release.h"
 
 #include <QDialog>
+#include <QStringList>
 #include <QVariant>
 
 #include <memory>
@@ -84,6 +85,7 @@ private:
     QSettings* mSettings;
     void replaceAppVars(QString& string);
     QString generateChangelogDocument();
+    QString buildExactChangelog(const QStringList& commitSubjects, int totalCommits, const QUrl& htmlUrl) const;
 
     void disableButtons(bool disable = true);
     void resetUi();
@@ -110,6 +112,7 @@ private:
     QString mMinVersion;
     QString mMaxVersion;
     QString mPreviousVersion;
+    QString mExactChangelog;
 
     static void setSettingsValue(const QString& key, const QVariant& value, QSettings* settings);
     static QVariant settingsValue(const QString& key, const QVariant& defaultValue, QSettings* settings);
@@ -121,6 +124,7 @@ private slots:
     void handleLoadError(const QString& message);
     void handleDownloadFinished();
     void handleDownloadError(const QString& message);
+    void handleCompareReady(const QStringList& commitSubjects, int totalCommits, const QUrl& htmlUrl);
     void updateProgressBar(qint64, qint64);
     void autoDownloadCheckboxToggled(bool enabled = true);
     void onLinkActivated(const QUrl& link);

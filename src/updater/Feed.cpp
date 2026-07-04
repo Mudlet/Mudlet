@@ -105,6 +105,31 @@ QString Feed::getDownloadFilePath() const
     return mDownloadFilePath;
 }
 
+QString Feed::getOwner() const
+{
+    return mOwner;
+}
+
+QString Feed::getRepo() const
+{
+    return mRepo;
+}
+
+// Maps a Mudlet version string to a git ref usable with the GitHub compare API:
+// PTB/dev versions end in a short commit SHA, stable versions match a "Mudlet-" tag
+QString Feed::versionToRef(const QString& version)
+{
+    if (version.isEmpty()) {
+        return QString();
+    }
+    static const QRegularExpression shortShaRx(qsl("^[0-9a-f]{7,40}$"));
+    const QString lastToken = version.section(QLatin1Char('-'), -1);
+    if (lastToken.size() < version.size() && shortShaRx.match(lastToken).hasMatch()) {
+        return lastToken;
+    }
+    return qsl("Mudlet-") + version;
+}
+
 bool Feed::isReady() const
 {
     return mReady;
@@ -321,6 +346,70 @@ void Feed::handleFeedFinished()
 
     mReady = true;
     emit ready();
+}
+
+void Feed::fetchCompare(const QString& baseRef, const QString& headRef)
+{
+    if (mOwner.isEmpty() || mRepo.isEmpty()) {
+        qWarning() << "Cannot fetch commit comparison: repository not set";
+        emit compareError();
+        return;
+    }
+    if (mCompareReply != nullptr) {
+        if (!mCompareReply->isFinished()) {
+            qWarning() << "Commit comparison fetch already in progress, ignoring duplicate request";
+            return;
+        }
+        mCompareReply->deleteLater();
+        mCompareReply = nullptr;
+    }
+
+    QNetworkRequest request(QUrl(qsl("https://api.github.com/repos/%1/%2/compare/%3...%4?per_page=100").arg(mOwner, mRepo, baseRef, headRef)));
+    request.setRawHeader("Accept", "application/vnd.github+json");
+    request.setRawHeader("User-Agent", "Mudlet-Updater");
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setTransferTimeout(30000);
+    mCompareReply = mNam.get(request);
+    connect(mCompareReply, &QNetworkReply::finished, this, &Feed::handleCompareFinished);
+}
+
+void Feed::handleCompareFinished()
+{
+    auto* reply = mCompareReply;
+    mCompareReply = nullptr;
+    reply->deleteLater();
+
+    if (reply->error() != QNetworkReply::NoError) {
+        qWarning() << "Could not fetch commit comparison:" << reply->errorString();
+        emit compareError();
+        return;
+    }
+
+    const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
+    if (!doc.isObject()) {
+        qWarning() << "Could not parse commit comparison response";
+        emit compareError();
+        return;
+    }
+
+    const QJsonObject comparison = doc.object();
+    if (!comparison.contains(qsl("commits"))) {
+        qWarning() << "Commit comparison response has no commits:" << comparison.value(qsl("message")).toString();
+        emit compareError();
+        return;
+    }
+
+    QStringList subjects;
+    const QJsonArray commits = comparison.value(qsl("commits")).toArray();
+    for (const auto& commitVal : commits) {
+        const QString message = commitVal.toObject().value(qsl("commit")).toObject().value(qsl("message")).toString();
+        const QString subject = message.section(QLatin1Char('\n'), 0, 0).trimmed();
+        if (!subject.isEmpty()) {
+            subjects << subject;
+        }
+    }
+
+    emit compareReady(subjects, comparison.value(qsl("total_commits")).toInt(), QUrl(comparison.value(qsl("html_url")).toString()));
 }
 
 void Feed::handleDownloadReadyRead()

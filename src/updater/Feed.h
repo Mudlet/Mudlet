@@ -26,6 +26,7 @@
 #include <QList>
 #include <QNetworkAccessManager>
 #include <QObject>
+#include <QStringList>
 #include <QUrl>
 
 class QNetworkReply;
@@ -47,12 +48,17 @@ public:
 
     void load();
     void downloadRelease(const Release& release, bool requireChecksums = false);
+    void fetchCompare(const QString& baseRef, const QString& headRef);
 
     QList<Release> getUpdates(const Release& currentRelease) const;
     QList<Release> getReleases() const;
     QString getDownloadFilePath() const;
+    QString getOwner() const;
+    QString getRepo() const;
     bool isReady() const;
     bool isDownloading() const;
+
+    static QString versionToRef(const QString& version);
 
 signals:
     void ready();
@@ -60,6 +66,8 @@ signals:
     void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
     void downloadFinished();
     void downloadError(const QString& message);
+    void compareReady(const QStringList& commitSubjects, int totalCommits, const QUrl& htmlUrl);
+    void compareError();
 
 private:
     QUrl mUrl;
@@ -75,6 +83,7 @@ private:
 
     QNetworkAccessManager mNam;
     QNetworkReply* mFeedReply{nullptr};
+    QNetworkReply* mCompareReply{nullptr};
     Release mCurrentDownload;
     QNetworkReply* mDownloadReply{nullptr};
     QTemporaryFile* mDownloadFile{nullptr};
@@ -92,6 +101,7 @@ private:
 
 private slots:
     void handleFeedFinished();
+    void handleCompareFinished();
     void handleDownloadReadyRead();
     void handleDownloadFinished();
 };
