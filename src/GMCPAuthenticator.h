@@ -107,38 +107,50 @@ private:
     // version 1 server or legacy exchange) is treated as 1; we echo this back on our client->server
     // messages so both ends agree on the version even though base GMCP negotiation is one-directional.
     int mNegotiatedVersion = 1;
-    // True while we are waiting for the Char.Login.Result that answers a Char.Login.Reconnect attempt,
-    // so a failure can discard the stale token and fall back instead of aborting the login.
-    bool mAwaitingReconnectResult = false;
-    // True on a connection that logged in by replaying a saved token, so a Char.Login.Token arriving
-    // afterwards is a silent rotation rather than a first-time save worth announcing to the user.
-    bool mReconnectingWithToken = false;
-    // One-shot guard so the "you'll be signed in automatically next time" notice is shown at most once
-    // per connection, on the first token we persist.
-    bool mAnnouncedTokenSaveThisConnection = false;
-    // Set when a reconnect token is rejected and we reconnect for a clean sign-in. The saved token is
-    // cleared asynchronously, so this makes the next connection skip it explicitly rather than racing
-    // the keychain removal and looping back into another rejected reconnect.
+
+    // State scoped to a single sign-in attempt, reset as one unit on every Char.Login.Default (see
+    // resetPerConnectionState). Grouping it means a field added here is reset automatically and cannot
+    // be forgotten - the failure mode the deliberately-persistent mReconnectRejected latch and the
+    // mAuthAttemptGeneration counter below sit outside the struct precisely to contrast with.
+    struct PerConnectionState
+    {
+        // True while awaiting the Char.Login.Result that answers a Char.Login.Reconnect, so a failure
+        // can recover (rotation retry, or drop-and-resume) instead of aborting the login.
+        bool awaitingReconnectResult = false;
+        // True on a connection that logged in by replaying a saved token, so a Char.Login.Token arriving
+        // afterwards is a silent rotation rather than a first-time save worth announcing to the user.
+        bool reconnectingWithToken = false;
+        // One-shot guard so the "you'll be signed in automatically next time" notice is shown at most
+        // once per connection, on the first token we persist.
+        bool announcedTokenSave = false;
+        // One-shot guard: at most one rotated-token retry per connection, so two instances sharing a
+        // store cannot ping-pong retries indefinitely.
+        bool retriedRotatedToken = false;
+        // The provider this profile's account signs in with, learned from the stored sign-in entry or
+        // from the provider field of a Char.Login.URL this connection. Persisted alongside the token so
+        // a later connection can resume the same provider's browser sign-in without a provider menu.
+        QString accountProvider;
+        // The account whose token this connection replayed, kept so a rejection can rewrite the stored
+        // entry into a resume hint for that same account.
+        QString reconnectAccount;
+        // SHA-256 of the token this connection replayed. On rejection the store is re-read and compared
+        // against this, so a token rotated by another running instance (shared keychain) is replayed
+        // rather than destroyed. Only the hash is held - never the token itself.
+        QByteArray sentReconnectTokenHash;
+    };
+    PerConnectionState mConn;
+
+    // Set when a reconnect token is rejected and we reconnect for a clean sign-in. Deliberately NOT part
+    // of mConn: it is a one-shot latch consumed by attemptReconnect() on the very next connection, so it
+    // must survive the per-connection reset that the reconnect it triggers performs. The saved token is
+    // cleared asynchronously, so this makes that next connection skip a token replay rather than racing
+    // the keychain rewrite and looping back into another rejected reconnect.
     bool mReconnectRejected = false;
     // Incremented on every per-connection auth reset (each Char.Login.Default). The asynchronous
     // reconnect-token keychain read captures the value current when it started and re-checks it in its
     // callback, so a result arriving after a newer connection began is discarded instead of driving a
-    // sign-in on the wrong attempt.
+    // sign-in on the wrong attempt. Not part of mConn: it must monotonically increase, never reset.
     unsigned int mAuthAttemptGeneration = 0;
-    // The provider this profile's account signs in with, learned from the stored sign-in entry or from
-    // the provider field of a Char.Login.URL this connection. Persisted alongside the token so a later
-    // connection can resume the same provider's browser sign-in without a provider menu.
-    QString mAccountProvider;
-    // The account whose token this connection replayed, kept so a rejection can rewrite the stored
-    // entry into a resume hint for that same account.
-    QString mReconnectAccount;
-    // SHA-256 of the token this connection replayed. On rejection the store is re-read and compared
-    // against this, so a token rotated by another running instance (shared keychain) is replayed rather
-    // than destroyed. Only the hash is held - never the token itself.
-    QByteArray mSentReconnectTokenHash;
-    // One-shot guard: at most one rotated-token retry per connection, so two instances sharing a store
-    // cannot ping-pong retries indefinitely.
-    bool mRetriedRotatedToken = false;
 };
 
 #endif // MUDLET_AUTHENTICATOR_H

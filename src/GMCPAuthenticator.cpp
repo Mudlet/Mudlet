@@ -67,15 +67,10 @@ GMCPAuthenticator::GMCPAuthenticator(Host* pHost)
 
 void GMCPAuthenticator::resetPerConnectionState()
 {
-    // mReconnectRejected is deliberately not reset here: it is a one-shot latch consumed by
-    // attemptReconnect() on the very next connection, so it must survive the reconnect it triggers.
-    mAwaitingReconnectResult = false;
-    mReconnectingWithToken = false;
-    mAnnouncedTokenSaveThisConnection = false;
-    mRetriedRotatedToken = false;
-    mAccountProvider.clear();
-    mReconnectAccount.clear();
-    mSentReconnectTokenHash.clear();
+    // Reset the whole per-connection state as a unit. mReconnectRejected and mAuthAttemptGeneration are
+    // deliberately outside mConn (see their declarations) - the latch survives this reset, the counter
+    // only ever increments.
+    mConn = PerConnectionState{};
     // Start a new auth attempt so any in-flight reconnect-token keychain read from a previous connection
     // is recognised as stale by its callback and ignored.
     ++mAuthAttemptGeneration;
@@ -270,8 +265,8 @@ void GMCPAuthenticator::storeReconnectToken(const QString& account, QString toke
     obj[qsl("token")] = token;
     // Keep the provider with the token (in the same protected store) so a later connection can resume
     // this provider's browser sign-in if the token has expired or been revoked by then.
-    if (!mAccountProvider.isEmpty()) {
-        obj[qsl("provider")] = mAccountProvider;
+    if (!mConn.accountProvider.isEmpty()) {
+        obj[qsl("provider")] = mConn.accountProvider;
     }
     QByteArray json = QJsonDocument(obj).toJson(QJsonDocument::Compact);
     QString payload = QString::fromUtf8(json);
@@ -407,7 +402,7 @@ void GMCPAuthenticator::handleAuthUrl(const QString& packageMessage, const QStri
     // this provider's sign-in without the player re-answering "which provider did I use here?".
     const auto provider = obj[qsl("provider")].toString();
     if (!provider.isEmpty()) {
-        mAccountProvider = provider;
+        mConn.accountProvider = provider;
     }
 
     // The URL arrives unauthenticated over the wire, so only ever hand http(s) links to the OS - never
@@ -582,8 +577,8 @@ void GMCPAuthenticator::handleAuthResult(const QString& packageMessage, const QS
 
     // A failed password-less reconnect is not a dead end: discard the stale token and fall back to the
     // normal sign-in (provider picker or credentials) instead of giving up on the connection.
-    if (mAwaitingReconnectResult) {
-        mAwaitingReconnectResult = false;
+    if (mConn.awaitingReconnectResult) {
+        mConn.awaitingReconnectResult = false;
         if (success) {
 #if defined(DEBUG_GMCP_AUTHENTICATION)
             qDebug() << "GMCP reconnect successful";
@@ -636,32 +631,34 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
 
         // Shared-store rotation check: if the stored token no longer hashes to what this connection
         // sent, another running instance rotated it (each token is single-use) - replay the fresh one,
-        // at most once per connection, instead of discarding it out from under that instance.
-        if (!mRetriedRotatedToken && success && !value.isEmpty()) {
-            // The stored JSON holds the bearer token; parse from an owned buffer and scrub it once
-            // parsed so the token does not linger in an unscrubbed temporary.
+        // at most once per connection, instead of discarding it out from under that instance. This is a
+        // best-effort recovery for the shared-store race: any rejection whose stored token still matches
+        // what we sent (a genuinely dead token, or a non-rotation rejection) falls through to the safe
+        // direction below - drop and re-sign-in.
+        if (!mConn.retriedRotatedToken && success && !value.isEmpty()) {
+            // The stored JSON may hold a bearer token; parse from an owned buffer and scrub every owned
+            // copy - the QByteArray and the QString value (retrievePassword moved it in) - on all paths,
+            // including a corrupt entry that never parses.
             QByteArray valueBytes = value.toUtf8();
             const auto doc = QJsonDocument::fromJson(valueBytes);
             SecureStringUtils::secureByteArrayClear(valueBytes);
+            SecureStringUtils::secureStringClear(value);
             if (doc.isObject()) {
                 const auto account = doc.object()[qsl("account")].toString();
                 auto token = doc.object()[qsl("token")].toString();
-                // The stored JSON holds the bearer token; scrub our owned copy now that the fields are
-                // extracted (retrievePassword moved it in, so this is the sole live copy).
-                SecureStringUtils::secureStringClear(value);
                 if (!account.isEmpty() && !token.isEmpty()) {
                     QByteArray tokenBytes = token.toUtf8();
                     const QByteArray storedHash = QCryptographicHash::hash(tokenBytes, QCryptographicHash::Sha256);
                     SecureStringUtils::secureByteArrayClear(tokenBytes);
-                    if (!mSentReconnectTokenHash.isEmpty() && storedHash != mSentReconnectTokenHash) {
+                    if (!mConn.sentReconnectTokenHash.isEmpty() && storedHash != mConn.sentReconnectTokenHash) {
 #if defined(DEBUG_GMCP_AUTHENTICATION)
                         qDebug() << "GMCP reconnect token was rotated by another instance; replaying the fresh token";
 #endif
-                        mRetriedRotatedToken = true;
-                        mSentReconnectTokenHash = storedHash;
-                        mReconnectingWithToken = true;
-                        mAwaitingReconnectResult = true;
-                        mReconnectAccount = account;
+                        mConn.retriedRotatedToken = true;
+                        mConn.sentReconnectTokenHash = storedHash;
+                        mConn.reconnectingWithToken = true;
+                        mConn.awaitingReconnectResult = true;
+                        mConn.reconnectAccount = account;
                         sendReconnect(account, std::move(token));
                         return;
                     }
@@ -669,6 +666,10 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
                 }
             }
         }
+        // Scrub the retrieved store copy on the fall-through too: when the rotation block was skipped
+        // (a second rejection, or an empty read) value may still hold token JSON. Idempotent when the
+        // block above already cleared it.
+        SecureStringUtils::secureStringClear(value);
 
         // The token really is dead. Keep the account+provider resume hint (dropping only the token) so
         // the next attempt restarts the same provider's browser sign-in with no menu, then reconnect:
@@ -690,11 +691,11 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
 void GMCPAuthenticator::dropTokenKeepResumeHint()
 {
     // Without a remembered provider there is nothing to resume, so remove the whole entry.
-    if (mReconnectAccount.isEmpty() || mAccountProvider.isEmpty()) {
+    if (mConn.reconnectAccount.isEmpty() || mConn.accountProvider.isEmpty()) {
         discardReconnectToken();
         return;
     }
-    storeResumeHint(mReconnectAccount, mAccountProvider);
+    storeResumeHint(mConn.reconnectAccount, mConn.accountProvider);
 }
 
 // controller for GMCP authentication
@@ -767,8 +768,8 @@ void GMCPAuthenticator::handleAuthToken(const QString& packageMessage, const QSt
 
     // Let the player know their sign-in will be remembered - but only the first time this connection,
     // and never on a token-reconnect (where the arriving token is a silent rotation, not a new opt-in).
-    if (!mReconnectingWithToken && !mAnnouncedTokenSaveThisConnection) {
-        mAnnouncedTokenSaveThisConnection = true;
+    if (!mConn.reconnectingWithToken && !mConn.announcedTokenSave) {
+        mConn.announcedTokenSave = true;
         //: Shown once after a browser/OAuth sign-in whose reconnect token was saved, so future connects need no sign-in.
         mpHost->postMessage(tr("[ INFO ]  - You'll be signed in automatically next time. Manage this under Preferences, Connection."));
     }
@@ -834,32 +835,31 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
         }
 
         if (success && !value.isEmpty()) {
-            // The stored JSON holds the bearer token; parse from an owned buffer and scrub it once
-            // parsed so the token does not linger in an unscrubbed temporary.
+            // The stored JSON may hold a bearer token; parse from an owned buffer and scrub every owned
+            // copy - the QByteArray, and the QString value itself (retrievePassword moved it in, so this
+            // is the sole live copy) - on every path, including a corrupt entry that never parses.
             QByteArray valueBytes = value.toUtf8();
             const auto doc = QJsonDocument::fromJson(valueBytes);
             SecureStringUtils::secureByteArrayClear(valueBytes);
+            SecureStringUtils::secureStringClear(value);
             if (doc.isObject()) {
                 const auto account = doc.object()[qsl("account")].toString();
                 auto token = doc.object()[qsl("token")].toString();
                 const auto provider = doc.object()[qsl("provider")].toString();
-                // The stored JSON holds the bearer token; scrub our owned copy now that the fields are
-                // extracted (retrievePassword moved it in, so this is the sole live copy).
-                SecureStringUtils::secureStringClear(value);
                 if (!provider.isEmpty()) {
-                    mAccountProvider = provider;
+                    mConn.accountProvider = provider;
                 }
                 if (allowToken && !account.isEmpty() && !token.isEmpty()) {
                     // This connection is logging in by replaying a saved token, so a Char.Login.Token
                     // that comes back is a silent rotation rather than a first-time save to announce.
-                    mReconnectingWithToken = true;
-                    mAwaitingReconnectResult = true;
-                    mReconnectAccount = account;
+                    mConn.reconnectingWithToken = true;
+                    mConn.awaitingReconnectResult = true;
+                    mConn.reconnectAccount = account;
                     // Remember only a hash of what we send: if the reconnect is rejected, comparing it
                     // against a fresh read tells a dead token apart from one another running instance
                     // (sharing this profile's keychain) rotated while ours was in flight.
                     QByteArray tokenBytes = token.toUtf8();
-                    mSentReconnectTokenHash = QCryptographicHash::hash(tokenBytes, QCryptographicHash::Sha256);
+                    mConn.sentReconnectTokenHash = QCryptographicHash::hash(tokenBytes, QCryptographicHash::Sha256);
                     SecureStringUtils::secureByteArrayClear(tokenBytes);
                     // Move the token in so sendReconnect owns the sole copy and can scrub it after sending.
                     sendReconnect(account, std::move(token));

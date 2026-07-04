@@ -83,6 +83,17 @@ public:
         mClient->flush();
     }
 
+    int countReceived(const QString& packagePrefix) const
+    {
+        int n = 0;
+        for (const QString& msg : mReceivedGmcp) {
+            if (msg.startsWith(packagePrefix)) {
+                ++n;
+            }
+        }
+        return n;
+    }
+
 signals:
     void gmcpReceived(const QString& message);
 
@@ -488,6 +499,34 @@ private slots:
         QCOMPARE(stored.value(qsl("provider")).toString(), qsl("discord"));
         QCOMPARE(stored.value(qsl("account")).toString(), qsl("acct:char"));
     }
+
+    void testCorruptStoredEntryFallsThroughToHandoff()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        // A corrupt (non-JSON) reconnect entry must not stall the sign-in: the client cannot read a
+        // token or provider from it, so it falls through to the interactive hand-off.
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("this is not valid json {")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "a corrupt stored entry should fall through to the hand-off");
+        QVERIFY2(sent.isEmpty(), "the fall-through must be the empty {} hand-off, not a reconnect or a partial replay");
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+    }
+
+    // NOTE: the stale-callback (mAuthAttemptGeneration) guard in readStoredSignIn/retryOrDropRejectedToken
+    // - which drops a reconnect-token keychain read whose connection was superseded by a newer
+    // Char.Login.Default before the async read resolved - is intentionally NOT covered here. It is not
+    // deterministically testable with the current harness: in test/portable mode CredentialManager reads
+    // credentials synchronously and inline (see CredentialManager::retrievePassword), so a read always
+    // completes before any superseding Char.Login.Default can arrive, and the guarded race never occurs.
+    // Exercising it would require an injectable, genuinely-asynchronous credential manager. Documented
+    // rather than covered by a test that would pass without ever reaching the guard.
 
     // ---- Char.Login.Result --------------------------------------------------
 
