@@ -113,6 +113,7 @@ private slots:
     void testDiscoveryFetchFailureFailsFlow();
     void testNonLoopbackHttpDiscoveryUrlRejected();
     void testProviderErrorFailsFlow();
+    void testEmptyCodeFailsFlow();
 
 private:
     QUrl mBrowserUrl;
@@ -330,6 +331,31 @@ void OAuthClientFlowTest::testProviderErrorFailsFlow()
 
     QTRY_COMPARE(failedSpy.count(), 1);
     QCOMPARE(capturedSpy.count(), 0);
+}
+
+void OAuthClientFlowTest::testEmptyCodeFailsFlow()
+{
+    MiniDiscoveryServer discovery(QStringLiteral("http://127.0.0.1:1/authorize"));
+    OAuthClientFlow flow;
+    QSignalSpy capturedSpy(&flow, &OAuthClientFlow::authorizationCaptured);
+    QSignalSpy failedSpy(&flow, &OAuthClientFlow::flowFailed);
+
+    flow.start(discovery.discoveryUrl(), QStringLiteral("test-client"), {QStringLiteral("openid")}, false);
+    QTRY_VERIFY(!mBrowserUrl.isEmpty());
+    const QUrlQuery query(mBrowserUrl);
+    const QUrl redirectUri(query.queryItemValue(QStringLiteral("redirect_uri"), QUrl::FullyDecoded));
+
+    // A redirect with a matching state but an empty code (code= present but blank) must fail, not
+    // capture an empty authorization code - a distinct branch from an error= redirect.
+    QTcpSocket browser;
+    browser.connectToHost(redirectUri.host(), static_cast<quint16>(redirectUri.port()));
+    QVERIFY(browser.waitForConnected(3000));
+    browser.write("GET /?code=&state=" + query.queryItemValue(QStringLiteral("state")).toLatin1() + " HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
+
+    QTRY_COMPARE(failedSpy.count(), 1);
+    QCOMPARE(capturedSpy.count(), 0);
+    QTRY_VERIFY(browser.bytesAvailable() > 0);
+    QVERIFY(browser.readAll().startsWith("HTTP/1.1 400"));
 }
 
 #include "OAuthClientFlowTest.moc"

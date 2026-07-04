@@ -26,6 +26,7 @@
 #include <QtTest/QtTest>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
+#include <QDesktopServices>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <functional>
@@ -94,6 +95,10 @@ public:
         return n;
     }
 
+    // Number of client connections accepted so far. A reconnect (the client dropping and re-opening the
+    // socket after a rejected token) increments this, so a test can wait for the follow-on connection.
+    int connectionCount() const { return mConnectionCount; }
+
 signals:
     void gmcpReceived(const QString& message);
 
@@ -104,6 +109,8 @@ private slots:
         if (!mClient) {
             return;
         }
+        ++mConnectionCount;
+        mGmcpEnabled = false; // renegotiated per connection
         connect(mClient, &QTcpSocket::readyRead, this, &GmcpServerStub::onReadyRead);
         connect(mClient, &QTcpSocket::disconnected, mClient, &QObject::deleteLater);
         // Offer GMCP; the client answers IAC DO GMCP and sends Core.Hello + Core.Supports.Set.
@@ -195,20 +202,30 @@ private:
     QByteArray mBuffer;
     QStringList mReceivedGmcp;
     bool mGmcpEnabled = false;
+    int mConnectionCount = 0;
 };
 
 class GMCPCharLoginTest : public QObject
 {
     Q_OBJECT
 
+public slots:
+    // Registered as the http/https URL handler so a Char.Login.URL the client auto-opens routes here
+    // instead of launching a real browser during the test.
+    void captureOpenedUrl(const QUrl& url) { mOpenedUrl = url; }
+
 private:
     GmcpServerStub* mpServer = nullptr;
     const QString mHostname = qsl("Test-CharLogin");
     quint16 mPort = 0; // assigned the stub's actual loopback port in init()
+    QUrl mOpenedUrl;
 
 private slots:
     void initTestCase()
     {
+        // Intercept browser opens so an auto-opened Char.Login.URL does not launch a real browser.
+        QDesktopServices::setUrlHandler(qsl("http"), this, "captureOpenedUrl");
+        QDesktopServices::setUrlHandler(qsl("https"), this, "captureOpenedUrl");
         // Force CredentialManager to use its deterministic encrypted-file backend rather than the
         // system keychain, so reconnect-token storage/retrieval is synchronous and observable in tests.
         qputenv("MUDLET_TEST_MODE", "1");
@@ -225,6 +242,7 @@ private slots:
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
+        mOpenedUrl.clear();
         // Start each test from a clean credential state so a reconnect token saved by an earlier test
         // cannot leak into one that expects none (which would make the client replay it instead).
         CredentialManager::removeCredential(mHostname, qsl("reconnect"));
@@ -498,6 +516,15 @@ private slots:
         QCOMPARE(stored.value(qsl("token")).toString(), qsl("token-B"));
         QCOMPARE(stored.value(qsl("provider")).toString(), qsl("discord"));
         QCOMPARE(stored.value(qsl("account")).toString(), qsl("acct:char"));
+
+        // Reject token-B too. The one-shot retriedRotatedToken guard allows at most one rotation retry
+        // per connection, so this second rejection must NOT trigger a third Char.Login.Reconnect - the
+        // token is dropped (rewritten to a resume hint) and the client re-signs-in instead.
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
+        QVERIFY2(waitForConsoleContains(host, qsl("saved sign-in has expired")), "the second rejection should be reported, not retried");
+        QTest::qWait(300);
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
     }
 
     void testCorruptStoredEntryFallsThroughToHandoff()
@@ -516,6 +543,117 @@ private slots:
         QJsonObject sent;
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "a corrupt stored entry should fall through to the hand-off");
         QVERIFY2(sent.isEmpty(), "the fall-through must be the empty {} hand-off, not a reconnect or a partial replay");
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+    }
+
+    // ---- Version negotiation clamp -----------------------------------------
+
+    void testTooHighServerVersionIsClampedToTwo()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(qsl("player"));
+        host->setPass(qsl("secret"));
+
+        mpServer->clearReceived();
+        // A server claiming a version above what this client implements must be clamped to 2, not echoed
+        // verbatim - the client must never claim to speak a version it does not implement.
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 5, \"type\": [\"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send credentials");
+        QCOMPARE(sent.value(qsl("version")).toInt(), 2);
+    }
+
+    void testNonPositiveServerVersionIsTreatedAsOne()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(qsl("player"));
+        host->setPass(qsl("secret"));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 0, \"type\": [\"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send credentials");
+        QCOMPARE(sent.value(qsl("version")).toInt(), 1);
+    }
+
+    // ---- Precedence: stored credentials outrank a saved token --------------
+
+    void testStoredCredentialsOutrankSavedToken()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        // Both a saved reconnect token AND stored character name/password are present. The player's
+        // typed credentials name the exact character, so they must win: the client sends
+        // Char.Login.Credentials and never replays the token.
+        host->setLogin(qsl("player"));
+        host->setPass(qsl("secret"));
+        const QString tokenJson = qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"saved-token\"}");
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), tokenJson));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not autofill stored credentials");
+        QCOMPARE(sent.value(qsl("account")).toString(), qsl("player"));
+        QCOMPARE(sent.value(qsl("password")).toString(), qsl("secret"));
+        QTest::qWait(300);
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+    }
+
+    // ---- Char.Login.URL positive auto-open ---------------------------------
+
+    void testPromptedAuthUrlIsAutoOpened()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        // Simulate the player having acted on the game's sign-in screen this connection; an unsolicited
+        // Char.Login.URL is then a consequence of their input and must be auto-opened in the browser.
+        host->setUserSentInputThisConnection(true);
+        mOpenedUrl.clear();
+        mpServer->sendGmcp(qsl("Char.Login.URL {\"url\": \"https://example.com/signin\", \"provider\": \"discord\"}"));
+        QVERIFY2(waitForConsoleContains(host, qsl("Opening your browser to sign in with Discord")), "a prompted URL should be auto-opened with a provider-labelled handoff");
+        QCOMPARE(mOpenedUrl, QUrl(qsl("https://example.com/signin")));
+    }
+
+    // ---- Post-rejection loop guard (allowToken == false) -------------------
+
+    void testReconnectAfterRejectionDoesNotReplayToken()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        const QString tokenJson = qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"stale-token\"}");
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), tokenJson));
+
+        const int firstConnection = mpServer->connectionCount();
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+
+        // Reject the token. The client rewrites the entry to a resume hint and reconnects. On that
+        // follow-on connection the mReconnectRejected latch makes readStoredSignIn(false) run - it must
+        // NOT replay a token (even though the async rewrite may not have landed yet), or a rejected
+        // reconnect could loop. It sends the resume form instead.
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mpServer->connectionCount() > firstConnection && mpServer->gmcpEnabled();
+                         },
+                         8000),
+                 "client did not reconnect and renegotiate GMCP after the rejection");
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "the post-rejection connection should send the resume form");
+        QCOMPARE(sent.value(qsl("provider")).toString(), qsl("discord"));
+        QVERIFY2(!sent.contains(qsl("password")), "the resume form carries no password");
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
     }
 

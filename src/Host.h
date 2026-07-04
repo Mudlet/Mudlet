@@ -554,7 +554,6 @@ public:
     bool mAskTlsAvailable = true;
     bool mPromptedForVersionInTTYPE = false;
 
-public:
     int mMSSPTlsPort = 0;
     QString mMSSPHostName;
 

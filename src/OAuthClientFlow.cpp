@@ -115,6 +115,15 @@ QUrl OAuthClientFlow::buildAuthorizationUrl(
 // Single-use: create a fresh OAuthClientFlow for each sign-in attempt.
 void OAuthClientFlow::start(const QUrl& discoveryUrl, const QString& clientId, const QStringList& scopes, bool includeNonce)
 {
+    // Enforce the single-use contract rather than only documenting it: a second start() would issue a
+    // duplicate discovery request, re-arm the timeout, and overwrite the PKCE inputs. Callers create a
+    // fresh instance per attempt, so this only guards against future misuse.
+    if (mStarted) {
+        qWarning() << "OAuthClientFlow::start() called twice on one instance; ignoring the second call.";
+        return;
+    }
+    mStarted = true;
+
     mClientId = clientId;
     // The spec defaults the scopes to ["openid"] when the server sends none.
     mScopes = scopes.isEmpty() ? QStringList{qsl("openid")} : scopes;

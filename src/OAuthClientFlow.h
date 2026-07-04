@@ -84,6 +84,8 @@ private:
     // Latches once the flow has reached a terminal outcome (code captured, failed, or aborted) so a
     // late redirect request or the shared timeout cannot produce a second, contradictory signal.
     bool mCompleted = false;
+    // Set by start() to enforce this class's single-use contract: a second start() is refused.
+    bool mStarted = false;
 };
 
 #endif // MUDLET_OAUTHCLIENTFLOW_H

@@ -1336,6 +1336,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // sign-in-choice flag: an oauth-only game never sets that flag yet still mints tokens, and a token
     // is the only thing the button acts on. The keychain check is asynchronous, so start hidden and
     // reveal on a hit; the QPointer guards against the dialog closing before the store answers.
+    // credentialExists() collapses a read failure (locked/denied/timed-out keychain) to "no token", so
+    // the button deliberately stays hidden on any read failure - the only cost is not offering to forget
+    // a token that could not be read, and clicking would just yield a graceful "could not remove" warning.
     pushButton_forgetSavedSignIn->setVisible(false);
     pushButton_forgetSavedSignIn->setEnabled(mEnableGMCP->isChecked());
     QPointer<dlgProfilePreferences> safeDialog = this;

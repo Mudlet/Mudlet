@@ -71,8 +71,9 @@ private:
     // not-yet-rewritten entry cannot loop us back into another rejected reconnect.
     void readStoredSignIn(bool allowToken);
     void sendReconnect(const QString& account, QString token);
-    // Sends the resume form of Char.Login.Credentials: {account, provider}, no password - asking the
-    // game to restart the browser sign-in for the provider remembered from an earlier Char.Login.URL.
+    // Sends the resume form of Char.Login.Credentials: {account, provider, version}, no password -
+    // asking the game to restart the browser sign-in for the provider remembered from an earlier
+    // Char.Login.URL. The absence of a password (not the presence of provider) is what distinguishes it.
     void sendResume(const QString& account, const QString& provider);
     void handleAuthToken(const QString& packageMessage, const QString& data);
     void storeReconnectToken(const QString& account, QString token);
@@ -105,13 +106,18 @@ private:
     QPointer<OAuthClientFlow> mpOAuthFlow;
     // The negotiated Char.Login protocol version the server reported in Char.Login.Default. Absent (a
     // version 1 server or legacy exchange) is treated as 1; we echo this back on our client->server
-    // messages so both ends agree on the version even though base GMCP negotiation is one-directional.
+    // messages (Credentials, Reconnect, resume, AuthCode) so both ends agree on the version even though
+    // base GMCP negotiation is one-directional. The one exception is the empty Char.Login.Credentials {}
+    // hand-off, which carries no fields at all by design.
     int mNegotiatedVersion = 1;
 
-    // State scoped to a single sign-in attempt, reset as one unit on every Char.Login.Default (see
-    // resetPerConnectionState). Grouping it means a field added here is reset automatically and cannot
-    // be forgotten - the failure mode the deliberately-persistent mReconnectRejected latch and the
-    // mAuthAttemptGeneration counter below sit outside the struct precisely to contrast with.
+    // Sign-in/token state scoped to a single sign-in attempt, reset as one unit on every
+    // Char.Login.Default (see resetPerConnectionState). Grouping it means a field added here is reset
+    // automatically and cannot be forgotten - the failure mode the deliberately-persistent
+    // mReconnectRejected latch and the mAuthAttemptGeneration counter below sit outside the struct
+    // precisely to contrast with. (The capability/negotiation fields above - mSupportedAuthTypes, the
+    // mOAuth* set, mNegotiatedVersion - are also per-connection but reset separately at parse time in
+    // saveSupportsSet, keyed to the advertisement rather than the sign-in attempt.)
     struct PerConnectionState
     {
         // True while awaiting the Char.Login.Result that answers a Char.Login.Reconnect, so a failure
