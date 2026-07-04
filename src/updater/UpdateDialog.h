@@ -84,6 +84,7 @@ private:
     QSettings* mSettings;
     void replaceAppVars(QString& string);
     QString generateChangelogDocument();
+    QString generateCompareLink() const;
 
     void disableButtons(bool disable = true);
     void resetUi();

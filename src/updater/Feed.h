@@ -44,6 +44,8 @@ public:
 
     void setRepo(const QString& owner, const QString& repo, bool prerelease = false, const QString& os = QString(), const QString& arch = QString());
     QUrl getUrl() const;
+    QString getOwner() const;
+    QString getRepo() const;
 
     void load();
     void downloadRelease(const Release& release, bool requireChecksums = false);

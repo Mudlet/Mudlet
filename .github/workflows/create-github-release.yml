@@ -298,7 +298,7 @@ jobs:
             # Assemble the combined changelog
             if [[ -n "${PTB_CHANGELOG}" && -n "${FULL_CHANGELOG}" ]]; then
               {
-                echo "#### Changes since last PTB (${PTB_TAG})"
+                echo "#### Changes in this build since the previous PTB (${PTB_TAG})"
                 echo ""
                 echo "${PTB_CHANGELOG}"
                 echo ""

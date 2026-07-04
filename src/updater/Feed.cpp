@@ -84,6 +84,16 @@ QUrl Feed::getUrl() const
     return mUrl;
 }
 
+QString Feed::getOwner() const
+{
+    return mOwner;
+}
+
+QString Feed::getRepo() const
+{
+    return mRepo;
+}
+
 QList<Release> Feed::getReleases() const
 {
     return mReleases;
