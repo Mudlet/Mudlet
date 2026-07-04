@@ -233,8 +233,8 @@ void OAuthClientFlowTest::testFullFlowCapturesAuthorizationCode()
     QCOMPARE(args.at(2).toString(), redirectUri.toString());
     QCOMPARE(failedSpy.count(), 0);
 
-    QTRY_VERIFY(browser.bytesAvailable() > 0);
-    QVERIFY(browser.readAll().startsWith("HTTP/1.1 200"));
+    // Wait for the full status line (peek does not consume) so a split packet cannot yield a partial read.
+    QTRY_VERIFY(browser.peek(64).startsWith("HTTP/1.1 200"));
 }
 
 void OAuthClientFlowTest::testStateMismatchFailsFlow()
@@ -257,8 +257,8 @@ void OAuthClientFlowTest::testStateMismatchFailsFlow()
     QTRY_COMPARE(failedSpy.count(), 1);
     QCOMPARE(capturedSpy.count(), 0);
 
-    QTRY_VERIFY(browser.bytesAvailable() > 0);
-    QVERIFY(browser.readAll().startsWith("HTTP/1.1 400"));
+    // Wait for the full status line (peek does not consume) so a split packet cannot yield a partial read.
+    QTRY_VERIFY(browser.peek(64).startsWith("HTTP/1.1 400"));
 }
 
 void OAuthClientFlowTest::testNonRedirectRequestIgnored()
@@ -278,8 +278,8 @@ void OAuthClientFlowTest::testNonRedirectRequestIgnored()
     sideRequest.connectToHost(redirectUri.host(), static_cast<quint16>(redirectUri.port()));
     QVERIFY(sideRequest.waitForConnected(3000));
     sideRequest.write(QByteArray("GET /favicon.ico HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n"));
-    QTRY_VERIFY(sideRequest.bytesAvailable() > 0);
-    QVERIFY(sideRequest.readAll().startsWith("HTTP/1.1 404"));
+    // Wait for the full status line (peek does not consume) so a split packet cannot yield a partial read.
+    QTRY_VERIFY(sideRequest.peek(64).startsWith("HTTP/1.1 404"));
     QCOMPARE(failedSpy.count(), 0);
 
     // The real redirect still completes afterwards.
@@ -354,8 +354,8 @@ void OAuthClientFlowTest::testEmptyCodeFailsFlow()
 
     QTRY_COMPARE(failedSpy.count(), 1);
     QCOMPARE(capturedSpy.count(), 0);
-    QTRY_VERIFY(browser.bytesAvailable() > 0);
-    QVERIFY(browser.readAll().startsWith("HTTP/1.1 400"));
+    // Wait for the full status line (peek does not consume) so a split packet cannot yield a partial read.
+    QTRY_VERIFY(browser.peek(64).startsWith("HTTP/1.1 400"));
 }
 
 #include "OAuthClientFlowTest.moc"
