@@ -233,8 +233,8 @@ void TUiTour::buildSteps()
 void TUiTour::setStep(int index, int direction)
 {
     const int stepCount = static_cast<int>(mSteps.size());
-    // Skip over steps whose target isn't on screen right now, e.g. a toolbar
-    // button tucked away in the overflow area
+    // A step's target can be off screen right now, e.g. a toolbar button
+    // tucked away in the overflow area
     while (index >= 0 && index < stepCount) {
         const TourStep& step = mSteps.at(index);
         if (!step.spotlightResolver || !step.spotlightResolver().isEmpty()) {
@@ -298,9 +298,8 @@ void TUiTour::positionCard()
     if (spot.isEmpty()) {
         cardRect.moveCenter(rect().center());
     } else {
-        // Card is centered on the spotlight along the axis it doesn't extend
-        // away on, clamped so a spotlight near a window corner still gets its
-        // card alongside rather than falling back to the window center
+        // Clamped so a spotlight near a window corner still gets its card
+        // alongside rather than falling back to the window center
         const int clampedX = qBound(within.left(), spot.center().x() - cardRect.width() / 2, qMax(within.left(), within.right() - cardRect.width()));
         const int clampedY = qBound(within.top(), spot.center().y() - cardRect.height() / 2, qMax(within.top(), within.bottom() - cardRect.height()));
 
@@ -320,8 +319,8 @@ void TUiTour::positionCard()
         left.moveTop(clampedY);
         left.moveRight(spot.left() - cardSpotlightGap);
 
-        // First placement that fits wins; when nothing fits (the spotlight
-        // covers most of the window) the card floats over the spotlit area
+        // When nothing fits (the spotlight covers most of the window) the
+        // card floats over the spotlit area
         cardRect.moveCenter(rect().center());
         for (const QRect& candidate : {below, above, right, left}) {
             if (within.contains(candidate)) {

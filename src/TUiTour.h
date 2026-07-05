@@ -35,9 +35,7 @@ class QPushButton;
 class mudlet;
 
 // A one-time spotlight tour over the main window that points out the most
-// important parts of the interface to first-time players (issue #2823).
-// Modelled on Qt Creator's "UI Tour": the whole window is dimmed except for a
-// cutout around the current step's widget, with an explanatory card beside it.
+// important parts of the interface to first-time players (issue #2823)
 class TUiTour : public QWidget
 {
     Q_OBJECT
