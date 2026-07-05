@@ -42,6 +42,7 @@
 #include "TGameDetails.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
+#include "TUiTour.h"
 #include "XMLimport.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
@@ -581,6 +582,7 @@ void mudlet::init()
     connect(dactionNewMapWindow, &QAction::triggered, this, &mudlet::slot_newMapWindow);
 
     connect(dactionHelp, &QAction::triggered, this, &mudlet::slot_showHelpDialog);
+    connect(dactionUiTour, &QAction::triggered, this, &mudlet::slot_showUiTour);
     connect(dactionVideo, &QAction::triggered, this, &mudlet::slot_showHelpDialogVideo);
     connect(dactionForum, &QAction::triggered, this, &mudlet::slot_showHelpDialogForum);
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_profileDiscord);
@@ -3908,6 +3910,17 @@ void mudlet::slot_showHelpDialog()
     QDesktopServices::openUrl(QUrl("https://wiki.mudlet.org/w/Manual:Contents"));
 }
 
+void mudlet::slot_showUiTour()
+{
+    if (mpUiTour) {
+        mpUiTour->raise();
+        mpUiTour->setFocus();
+        return;
+    }
+    mpUiTour = new TUiTour(this);
+    mpUiTour->start();
+}
+
 void mudlet::slot_showHelpDialogVideo()
 {
     QDesktopServices::openUrl(QUrl("https://www.mudlet.org/media/"));
@@ -4812,6 +4825,13 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     pHost->raiseEvent(event);
     pHost->mIsProfileLoadingSequence = false;
     emit signal_profileLoaded();
+
+    if (TUiTour::shouldShowOnFirstProfile()) {
+        TUiTour::rememberShown();
+        // give the freshly opened profile a moment to finish laying out before
+        // the tour starts highlighting parts of it
+        QTimer::singleShot(1000, this, &mudlet::slot_showUiTour);
+    }
 }
 
 void mudlet::installModulesList(Host* pHost, QStringList modules)
