@@ -3919,6 +3919,7 @@ void mudlet::slot_showUiTour()
     }
     mpUiTour = new TUiTour(this);
     connect(mpUiTour, &QObject::destroyed, this, &mudlet::slot_uiTourClosed);
+    TUiTour::rememberShown();
     mpUiTour->start();
 }
 
@@ -4783,7 +4784,6 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     // tutorial package does this
     const bool showUiTour = TUiTour::shouldShowOnFirstProfile();
     if (showUiTour) {
-        TUiTour::rememberShown();
         pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("mudlet = mudlet or {} mudlet.uiTourPending = true"));
     }
 
