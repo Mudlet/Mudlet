@@ -3918,7 +3918,20 @@ void mudlet::slot_showUiTour()
         return;
     }
     mpUiTour = new TUiTour(this);
+    connect(mpUiTour, &QObject::destroyed, this, &mudlet::slot_uiTourClosed);
     mpUiTour->start();
+}
+
+// Covers every way the tour can go away: Finish, Skip and Esc all close it
+void mudlet::slot_uiTourClosed()
+{
+    for (auto pHost : mHostManager) {
+        pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("if mudlet then mudlet.uiTourPending = false end"));
+        TEvent event{};
+        event.mArgumentList.append(qsl("sysUiTourFinished"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        pHost->raiseEvent(event);
+    }
 }
 
 void mudlet::slot_showHelpDialogVideo()
@@ -4765,6 +4778,15 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         mudlet::installModulesList(pHost, modules);
     }
 
+    // Decided before packages install so their scripts can see the flag and
+    // hold off on their own introductions until the tour is done - the
+    // tutorial package does this
+    const bool showUiTour = TUiTour::shouldShowOnFirstProfile();
+    if (showUiTour) {
+        TUiTour::rememberShown();
+        pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("mudlet = mudlet or {} mudlet.uiTourPending = true"));
+    }
+
     // install default packages
     for (const auto& package : std::as_const(mPackagesToInstallList)) {
         pHost->installPackage(package, enums::PackageModuleType::Package);
@@ -4826,8 +4848,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     pHost->mIsProfileLoadingSequence = false;
     emit signal_profileLoaded();
 
-    if (TUiTour::shouldShowOnFirstProfile()) {
-        TUiTour::rememberShown();
+    if (showUiTour) {
         // give the freshly opened profile a moment to finish laying out before
         // the tour starts highlighting parts of it
         QTimer::singleShot(1000, this, &mudlet::slot_showUiTour);
