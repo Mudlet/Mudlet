@@ -35,7 +35,7 @@ class QPushButton;
 class mudlet;
 
 // A one-time spotlight tour over the main window that points out the most
-// important parts of the interface to first-time players (issue #2823)
+// important parts of the interface to first-time players
 class TUiTour : public QWidget
 {
     Q_OBJECT
