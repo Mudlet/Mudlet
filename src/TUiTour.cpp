@@ -415,5 +415,6 @@ void TUiTour::slot_back()
 
 void TUiTour::slot_finish()
 {
+    emit signal_tourFinished();
     close();
 }

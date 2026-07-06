@@ -3918,7 +3918,7 @@ void mudlet::slot_showUiTour()
         return;
     }
     mpUiTour = new TUiTour(this);
-    connect(mpUiTour, &QObject::destroyed, this, &mudlet::slot_uiTourClosed);
+    connect(mpUiTour, &TUiTour::signal_tourFinished, this, &mudlet::slot_uiTourClosed);
     TUiTour::rememberShown();
     mpUiTour->start();
 }

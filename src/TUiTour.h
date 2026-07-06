@@ -48,6 +48,11 @@ public:
 
     void start();
 
+signals:
+    // Emitted on user-driven dismissal only, not when the widget goes down
+    // with the application - handlers touch state that no longer exists then
+    void signal_tourFinished();
+
 protected:
     void paintEvent(QPaintEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
