@@ -335,8 +335,10 @@ void TUiTour::positionCard()
     mpCard->setGeometry(cardRect);
 }
 
-void TUiTour::paintEvent(QPaintEvent*)
+void TUiTour::paintEvent(QPaintEvent* event)
 {
+    Q_UNUSED(event)
+
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
