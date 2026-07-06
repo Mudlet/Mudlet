@@ -19,6 +19,8 @@
 
 #include "TFeatureCallout.h"
 
+#include "mudlet.h"
+
 #include <QEvent>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -26,17 +28,37 @@
 #include <QPainterPath>
 #include <QPushButton>
 #include <QScreen>
+#include <QSettings>
+#include <QTimer>
 #include <QVBoxLayout>
+
+using namespace std::chrono_literals;
 
 namespace {
 constexpr int arrowHeight = 10;
 constexpr int arrowWidth = 18;
 constexpr int cornerRadius = 8;
+// Stop showing a balloon the player keeps ignoring
+constexpr int maximumAppearances = 5;
+// Several features shipping in one release must not stack balloons
+constexpr int maximumPerSession = 2;
+
+QString dismissedKey(const QString& featureId)
+{
+    return qsl("whatsNew/%1/dismissed").arg(featureId);
 }
 
-TFeatureCallout::TFeatureCallout(QWidget* pAnchor, const QString& title, const QString& body)
+QString shownCountKey(const QString& featureId)
+{
+    return qsl("whatsNew/%1/shownCount").arg(featureId);
+}
+} // namespace
+
+TFeatureCallout::TFeatureCallout(const QString& featureId, QWidget* pAnchor, const QString& title, const QString& body)
 : QWidget(pAnchor->window(), Qt::ToolTip | Qt::FramelessWindowHint)
+, mFeatureId(featureId)
 , mpAnchor(pAnchor)
+, mAnnouncement(qsl("%1. %2").arg(title, body))
 {
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_ShowWithoutActivating);
@@ -62,7 +84,10 @@ TFeatureCallout::TFeatureCallout(QWidget* pAnchor, const QString& title, const Q
     //: Button that dismisses a balloon pointing out a newly added feature
     auto* gotItButton = new QPushButton(tr("Got it"), this);
     gotItButton->setCursor(Qt::PointingHandCursor);
-    connect(gotItButton, &QPushButton::clicked, this, &QWidget::close);
+    connect(gotItButton, &QPushButton::clicked, this, [this]() {
+        markDismissed();
+        close();
+    });
     buttonRow->addWidget(gotItButton);
     layout->addLayout(buttonRow);
 
@@ -70,6 +95,41 @@ TFeatureCallout::TFeatureCallout(QWidget* pAnchor, const QString& title, const Q
     for (QWidget* pWidget = pAnchor; pWidget; pWidget = pWidget->parentWidget()) {
         pWidget->installEventFilter(this);
     }
+}
+
+void TFeatureCallout::maybeShow(const QString& featureId, QWidget* pAnchor, const QString& title, const QString& body)
+{
+    if (!pAnchor) {
+        return;
+    }
+    auto* settings = mudlet::getQSettings();
+    // players installing today experience the current interface as the
+    // baseline, so nothing in it is "new" to them
+    if (mudlet::smFirstLaunch) {
+        settings->setValue(dismissedKey(featureId), true);
+        return;
+    }
+    if (settings->value(dismissedKey(featureId), false).toBool()) {
+        return;
+    }
+    if (settings->value(shownCountKey(featureId), 0).toInt() >= maximumAppearances) {
+        return;
+    }
+    if (smSessionShown.contains(featureId) || smSessionShown.size() >= maximumPerSession) {
+        return;
+    }
+    smSessionShown.insert(featureId);
+
+    // let the widget holding the anchor settle into its final place first
+    QTimer::singleShot(800ms, pAnchor, [featureId, pAnchor, title, body]() {
+        if (!pAnchor->isVisible()) {
+            return;
+        }
+        auto* settings = mudlet::getQSettings();
+        settings->setValue(shownCountKey(featureId), settings->value(shownCountKey(featureId), 0).toInt() + 1);
+        auto* pCallout = new TFeatureCallout(featureId, pAnchor, title, body);
+        pCallout->showAnchored();
+    });
 }
 
 void TFeatureCallout::showAnchored()
@@ -81,6 +141,12 @@ void TFeatureCallout::showAnchored()
     reposition();
     show();
     raise();
+    mudlet::self()->announce(mAnnouncement);
+}
+
+void TFeatureCallout::markDismissed()
+{
+    mudlet::getQSettings()->setValue(dismissedKey(mFeatureId), true);
 }
 
 void TFeatureCallout::reposition()
@@ -138,7 +204,12 @@ bool TFeatureCallout::eventFilter(QObject* watched, QEvent* event)
         reposition();
         break;
     case QEvent::Hide:
-        if (watched == mpAnchor) {
+        // any hidden ancestor means the anchor is no longer on screen; not a
+        // dismissal though - the player never engaged with the balloon
+        close();
+        break;
+    case QEvent::WindowStateChange:
+        if (watched->isWidgetType() && static_cast<QWidget*>(watched)->isMinimized()) {
             close();
         }
         break;
@@ -146,6 +217,7 @@ bool TFeatureCallout::eventFilter(QObject* watched, QEvent* event)
         // the anchor got clicked, so the feature has been discovered - the
         // balloon has served its purpose
         if (watched == mpAnchor) {
+            markDismissed();
             close();
         }
         break;

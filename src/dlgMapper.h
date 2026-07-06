@@ -129,9 +129,6 @@ private:
     QPushButton* mpProgressCancelButton = nullptr;
     bool mEmptyStateDismissed = false;
     bool mIs3DMode = false;
-
-    // Spans all mapper windows so the balloon only appears once per session
-    inline static bool smRoomNamesCalloutShown = false;
 };
 
 #endif // MUDLET_DLGMAPPER_H

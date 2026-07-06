@@ -101,21 +101,12 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
     connect(toolButton_togglePanel, &QAbstractButton::clicked, this, &dlgMapper::slot_togglePanel);
     connect(comboBox_showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
 
-    if (!smRoomNamesCalloutShown) {
-        smRoomNamesCalloutShown = true;
-        // let the mapper settle into its dock before pointing at part of it
-        QTimer::singleShot(800ms, this, [this]() {
-            if (!toolButton_mapperMenu->isVisible()) {
-                return;
-            }
-            //: Title of a balloon pointing out a newly added feature
-            auto* pCallout = new TFeatureCallout(toolButton_mapperMenu,
-                                                 tr("New: room names on the map"),
-                                                 //: Body of the balloon, pointing at the mapper options menu button
-                                                 tr("The map can now show room names. Toggle them from this menu."));
-            pCallout->showAnchored();
-        });
-    }
+    TFeatureCallout::maybeShow(qsl("map-room-names"),
+                               toolButton_mapperMenu,
+                               //: Title of a balloon pointing out a newly added feature
+                               tr("New: room names on the map"),
+                               //: Body of the balloon, pointing at the mapper options menu button
+                               tr("The map can now show room names. Toggle them from this menu."));
 #if defined(INCLUDE_3DMAPPER)
     mIs3DMode = mpHost->mShow3DView;
     if (mpHost->mShow3DView) {
