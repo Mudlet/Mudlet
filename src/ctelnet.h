@@ -296,6 +296,7 @@ private:
     void processSocketData(char* data, int size, const bool loopbackTesting = false);
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
+    void decompressPacketRemainder(char*& buffer, char* out_buffer, qint32& datalen, int& i);
     void reset();
     void sendLoginAndPass();
 

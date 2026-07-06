@@ -4555,6 +4555,33 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     return outSize;
 }
 
+// Everything after a just-detected MCCP start sequence (at position i in the
+// current packet) is compressed payload. Inflate it in place, and if the stream
+// happens to end within this same packet, append the raw bytes zlib left
+// unconsumed after Z_STREAM_END (see #8122). buffer/datalen are repointed at the
+// decompressed output and i is rewound so the main loop reprocesses from it.
+void cTelnet::decompressPacketRemainder(char*& buffer, char* out_buffer, qint32& datalen, int& i)
+{
+    // Data after the current position (i + 1) is compressed.
+    int restLength = datalen - i - 1;
+    if (restLength > 0) {
+        char* compressedData = buffer + i + 1;
+        datalen = decompressBuffer(compressedData, restLength, out_buffer);
+        buffer = out_buffer;
+
+        // decompressBuffer() updates compressedData/restLength to the bytes it
+        // did not consume; if the stream ended, those are post-stream raw bytes
+        // that still need to reach the user.
+        if (!mNeedDecompression && restLength > 0) {
+            memcpy(out_buffer + datalen, compressedData, restLength);
+            datalen += restLength;
+        }
+    } else {
+        datalen = 0;
+    }
+    i = -1;
+}
+
 
 void cTelnet::recordReplay()
 {
@@ -4883,22 +4910,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                         gotRest(cleandata);
                         cleandata = "";
                         initStreamDecompressor();
-                        // Data after current position (i+1) is compressed
-                        int restLength = datalen - i - 1;
-                        if (restLength > 0) {
-                            char* compressedData = buffer + i + 1;
-                            datalen = decompressBuffer(compressedData, restLength, out_buffer);
-                            buffer = out_buffer;
-
-                            if (!mNeedDecompression && restLength > 0) {
-                                memcpy(out_buffer + datalen, compressedData, restLength);
-                                datalen += restLength;
-                            }
-                            i = -1;
-                        } else {
-                            datalen = 0;
-                            i = -1;
-                        }
+                        decompressPacketRemainder(buffer, out_buffer, datalen, i);
                         command = "";
                         iac = false;
                         insb = false;
@@ -4920,21 +4932,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                         gotRest(cleandata);
                         cleandata = "";
                         initStreamDecompressor();
-                        // Data after current position (i+1) is compressed
-                        int restLength = datalen - i - 1;
-                        if (restLength > 0) {
-                            char* compressedData = buffer + i + 1;
-                            datalen = decompressBuffer(compressedData, restLength, out_buffer);
-                            buffer = out_buffer;
-
-                            if (!mNeedDecompression && restLength > 0) {
-                                memcpy(out_buffer + datalen, compressedData, restLength);
-                                datalen += restLength;
-                            }
-                        } else {
-                            datalen = 0;
-                        }
-                        i = -1;
+                        decompressPacketRemainder(buffer, out_buffer, datalen, i);
                         goto MAIN_LOOP_END;
                     }
                 } else if (iac && (ch == TN_IAC)) { // escaped TN_IAC
