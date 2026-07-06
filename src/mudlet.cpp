@@ -598,7 +598,7 @@ void mudlet::init()
         }
         host->mpEditorDialog->showCurrentTriggerItem();
         host->mpEditorDialog->raise();
-        host->mpEditorDialog->showNormal();
+        showEditorRestoringWindowState(host->mpEditorDialog);
         host->mpEditorDialog->activateWindow();
         host->mpEditorDialog->mpErrorConsole->setVisible(true);
     });
@@ -2184,7 +2184,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(pH, &Host::profileSaveFinished, pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
     pEditor->fillout_form();
 
-    pH->getActionUnit()->updateToolbar();
+    pH->getActionUnit()->updateAllToolbars();
 
     pH->mpConsole->show();
     pH->mpConsole->repaint();
@@ -3212,6 +3212,21 @@ void mudlet::slot_showConnectionDialog()
     });
 }
 
+void mudlet::showEditorRestoringWindowState(QWidget* editor)
+{
+    // The editor is a singleton that is repeatedly re-shown whenever the user
+    // toggles to it (e.g. with its keyboard shortcut). A plain showNormal()
+    // would drop a maximized or full-screen state, so restore whichever state
+    // the window was last left in instead.
+    if (editor->isMaximized()) {
+        editor->showMaximized();
+    } else if (editor->isFullScreen()) {
+        editor->showFullScreen();
+    } else {
+        editor->showNormal();
+    }
+}
+
 void mudlet::slot_showEditorDialog()
 {
     Host* pHost = getActiveHost();
@@ -3244,7 +3259,7 @@ void mudlet::slot_showEditorDialog()
 
     pEditor->showCurrentTriggerItem();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 
     // Force reposition after showing, since script editor is a singleton
@@ -3290,7 +3305,7 @@ void mudlet::slot_showTriggerDialog()
 
     pEditor->slot_showTriggers();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3326,7 +3341,7 @@ void mudlet::slot_showAliasDialog()
 
     pEditor->slot_showAliases();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3362,7 +3377,7 @@ void mudlet::slot_showTimerDialog()
 
     pEditor->slot_showTimers();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3539,7 +3554,7 @@ void mudlet::slot_showScriptDialog()
 
     pEditor->slot_showScripts();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3575,7 +3590,7 @@ void mudlet::slot_showKeyDialog()
 
     pEditor->slot_showKeys();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3611,7 +3626,7 @@ void mudlet::slot_showVariableDialog()
 
     pEditor->slot_showVariables();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3647,7 +3662,7 @@ void mudlet::slot_showActionDialog()
 
     pEditor->slot_showActions();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -4376,8 +4391,19 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
     hostList.removeDuplicates();
     int loadedProfiles = 0;
 
-    for (auto& hostName : cliProfiles) {
-        if (hostList.contains(hostName)) {
+    for (const auto& requestedName : cliProfiles) {
+        // Resolve the requested name to the canonically-cased profile so that
+        // e.g. --profile="mY pRoFiLe" opens the "My Profile" directory. Matching
+        // against hostList (rather than getCanonicalProfileName) also covers the
+        // "Mudlet self-test" entry, which is not an on-disk or built-in profile.
+        QString hostName;
+        for (const auto& candidate : std::as_const(hostList)) {
+            if (candidate.compare(requestedName, Qt::CaseInsensitive) == 0) {
+                hostName = candidate;
+                break;
+            }
+        }
+        if (!hostName.isEmpty()) {
             QElapsedTimer timer;
             timer.start();
             doAutoLogin(hostName);
@@ -7086,6 +7112,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
         {qsl(":/mpkg.mpackage"),                     {qsl("*")}},
         {qsl(":/mudlet-lua/lua/gui-drop/gui-drop.mpackage"), {qsl("*")}},
         {qsl(":/CF-loader.xml"),                     {qsl("carrionfields.net")}},
+        {qsl(":/icesus-loader.xml"),                 {qsl("icesus.org")}},
         {qsl(":/mg-loader.xml"),                     {qsl("mg.mud.de"),
                                                       qsl("mud.morgengrauen.info"),
                                                       qsl("mg.morgengrauen.info"),

@@ -575,6 +575,7 @@ private:
     void reshowRequiredMainConsoles();
     void toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText);
     dlgTriggerEditor* createMudletEditor();
+    static void showEditorRestoringWindowState(QWidget* editor);
 
     // Profile detachment helper methods
     void moveProfileFromMainToDetachedWindow(const QString& profileName, int tabIndex, TDetachedWindow* targetWindow);

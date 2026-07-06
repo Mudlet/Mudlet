@@ -7,10 +7,12 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetBenchmark.cpp
     ResetProfileTest.cpp
     TOscTest.cpp
+    TUserWindowTest.cpp
     TriggerEditorTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     TDiscordModeTest.cpp
     MainConsoleSelectionTest.cpp
+    EnableDisableByNameTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
