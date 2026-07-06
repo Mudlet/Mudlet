@@ -26,6 +26,7 @@
 
 #include "Host.h"
 #include "TConsole.h"
+#include "TFeatureCallout.h"
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -46,6 +47,7 @@
 #include <QProgressDialog>
 #include <QPushButton>
 #include <QSettings>
+#include <QTimer>
 #include <QVBoxLayout>
 
 using namespace std::chrono_literals;
@@ -98,6 +100,22 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
     connect(mpMap, &TMap::signal_saveErrorChanged, this, &dlgMapper::slot_saveErrorChanged);
     connect(toolButton_togglePanel, &QAbstractButton::clicked, this, &dlgMapper::slot_togglePanel);
     connect(comboBox_showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
+
+    if (!smRoomNamesCalloutShown) {
+        smRoomNamesCalloutShown = true;
+        // let the mapper settle into its dock before pointing at part of it
+        QTimer::singleShot(800ms, this, [this]() {
+            if (!toolButton_mapperMenu->isVisible()) {
+                return;
+            }
+            //: Title of a balloon pointing out a newly added feature
+            auto* pCallout = new TFeatureCallout(toolButton_mapperMenu,
+                                                 tr("New: room names on the map"),
+                                                 //: Body of the balloon, pointing at the mapper options menu button
+                                                 tr("The map can now show room names. Toggle them from this menu."));
+            pCallout->showAnchored();
+        });
+    }
 #if defined(INCLUDE_3DMAPPER)
     mIs3DMode = mpHost->mShow3DView;
     if (mpHost->mShow3DView) {
