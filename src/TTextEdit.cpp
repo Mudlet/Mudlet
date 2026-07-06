@@ -1472,10 +1472,13 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     // actually moved to a different character cell than where the button went
     // down. Without this, the sub-pixel jitter of an ordinary focus-gaining
     // click produces a one-character selection that then hijacks Ctrl+C away
-    // from the command line (see #3922). Multi-click (word/line) and Ctrl
-    // selections establish their selection in mousePressEvent and so are left
-    // untouched here.
-    if (!mCtrlSelecting && mMouseTrackLevel < 2 && cursorLocation == mDragStart) {
+    // from the command line (see #3922). Only the very first move off the press
+    // cell is suppressed (mDragSelectionEnd still equals mDragStart): once a
+    // drag has genuinely started we keep processing even when the pointer comes
+    // back to the origin cell, so the selection collapses down again instead of
+    // freezing at its last extent. Multi-click (word/line) and Ctrl selections
+    // establish their selection in mousePressEvent and so are left untouched here.
+    if (!mCtrlSelecting && mMouseTrackLevel < 2 && cursorLocation == mDragStart && mDragSelectionEnd == mDragStart) {
         return;
     }
 

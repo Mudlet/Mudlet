@@ -149,12 +149,52 @@ private slots:
         QVERIFY2(!pane->mSelectedRegion.isEmpty(), "A real drag failed to create a selection");
     }
 
+    // Regression case for the review fix: once a drag has genuinely selected
+    // text, dragging back to the original press cell must collapse the extent
+    // instead of leaving the previous selection frozen.
+    void test_dragBackToOriginCollapsesSelectionExtent()
+    {
+        mpServer->setWelcomeMessage(fillerText());
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(QString(100, QLatin1Char('X'))), "Filler text never reached the buffer");
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100);
+
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+
+        pane->unHighlight();
+        pane->mSelectedRegion = QRegion();
+
+        const QPointF startPos = QRectF(pane->rect()).center();
+        const QPointF endPos = startPos + QPointF(60, 0); // several character cells to the right
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, startPos);
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, endPos);
+
+        QVERIFY2(!pane->mSelectedRegion.isEmpty(), "The initial drag failed to create a selection");
+        const QRect expandedSelection = pane->mSelectedRegion.boundingRect();
+
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, startPos);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, startPos);
+
+        const QRect collapsedSelection = pane->mSelectedRegion.boundingRect();
+        QVERIFY2(collapsedSelection.width() < expandedSelection.width(),
+                 "Dragging back to the press cell left the earlier selection extent frozen");
+    }
+
     void cleanup()
     {
+        const QString profilePath = mudlet::getMudletPath(enums::profileHomePath, mpHostname);
+
+        // Tear down Mudlet (and with it the live cTelnet connection) before the
+        // stub server it is talking to, so the socket is closed from the client
+        // side rather than being yanked out from under an active connection when
+        // the server is destroyed - the latter ordering can flake or crash.
+        delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mpHostname);
-        delete mudlet::self();
+        deleteDirectory(profilePath);
     }
 
 private:
@@ -211,6 +251,11 @@ private:
     void deleteProfileDirectory(const QString& profileName)
     {
         const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        deleteDirectory(path);
+    }
+
+    void deleteDirectory(const QString& path)
+    {
         QDir dir(path);
         if (!dir.exists()) {
             return;
