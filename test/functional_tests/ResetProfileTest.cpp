@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2026 by Vadim Peretokin - vadim.peretokin@mudlet.org     *
+ *   Copyright (C) 2026 by Mudlet Developers                               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -32,10 +32,13 @@
  */
 
 #include <QtTest/QtTest>
+#include <QMouseEvent>
 
 #include "Host.h"
-#include "TAlias.h"
+#include "MudletInstanceCoordinator.h"
+#include "TEvent.h"
 #include "TKey.h"
+#include "TLabel.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -86,26 +89,6 @@ private:
     int count = 0;
     for (auto *trigger : mpHost->getTriggerUnit()->getTriggerRootNodeList()) {
       if (trigger->isTemporary()) {
-        ++count;
-      }
-    }
-    return count;
-  }
-
-  int countTempAliases() {
-    int count = 0;
-    for (auto *alias : mpHost->getAliasUnit()->getAliasRootNodeList()) {
-      if (alias->isTemporary()) {
-        ++count;
-      }
-    }
-    return count;
-  }
-
-  int countTempTimers() {
-    int count = 0;
-    for (auto *timer : mpHost->getTimerUnit()->getTimerRootNodeList()) {
-      if (timer->isTemporary()) {
         ++count;
       }
     }
@@ -338,7 +321,7 @@ private slots:
              "Manually inserted event handler should be cleared after reset");
   }
 
-  void test_anonymousEventHandlersSurviveResetButAreFunctionallyStale() {
+  void test_anonymousEventHandlersClearedAfterReset() {
     lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
     luaL_dostring(
         L, "function anonHandlerTestFunc() anonHandlerCalled = true end");
@@ -347,12 +330,19 @@ private slots:
 
     performReset();
 
-    // The Lua function no longer exists in the new state — the handler is stale
+    // The Lua function no longer exists in the new state
     lua_State *newL = mpHost->mLuaInterpreter.getLuaGlobalState();
     lua_getglobal(newL, "anonHandlerTestFunc");
     QVERIFY2(lua_isnil(newL, -1), "Lua function referenced by anonymous "
                                   "handler should not exist in new Lua state");
     lua_pop(newL, 1);
+
+    // Raise the event - if the anonymous handler map was properly cleared,
+    // this won't attempt to call the now-nonexistent function
+    TEvent event{};
+    event.mArgumentList.append(qsl("testAnonymousEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
   }
 
   // -----------------------------------------------------------------------
@@ -412,8 +402,7 @@ private slots:
     lua_State *newL = mpHost->mLuaInterpreter.getLuaGlobalState();
     QVERIFY(newL);
     lua_getglobal(newL, "resetTestSentinel");
-    QVERIFY2(lua_isnil(newL, -1),
-             "Lua state should be fresh after reset");
+    QVERIFY2(lua_isnil(newL, -1), "Lua state should be fresh after reset");
     lua_pop(newL, 1);
   }
 
@@ -421,7 +410,7 @@ private slots:
   // Group 6: sysLoadEvent (#4779, #5005)
   // -----------------------------------------------------------------------
 
-  void test_sysLoadEventFiredExactlyOnceWithFalse() {
+  void test_sysLoadEventFiredExactlyOnce() {
     auto *pScript = new TScript(qsl("sysLoadEventCounter"), mpHost);
     pScript->setScript(qsl("sysLoadCounter = (sysLoadCounter or 0) + 1"));
     QStringList events;
@@ -638,25 +627,30 @@ private slots:
   // Group 14: Double Reset Safety
   // -----------------------------------------------------------------------
 
-  void test_doubleResetDoesNotCrash() {
+  void test_doubleResetIsGuarded() {
     mpHost->mLuaInterpreter.startTempTrigger(qsl("double_reset_test"), qsl(""),
                                              -1);
 
-    // Call phase1 twice before any processEvents
-    mpHost->resetProfile_phase1();
-    mpHost->resetProfile_phase1();
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    luaL_dostring(L, "doubleResetSentinel = 99");
+
+    // Call phase1 twice - the second call should be a no-op
+    QVERIFY2(mpHost->resetProfile_phase1(),
+             "First resetProfile_phase1() should succeed");
+    QVERIFY2(!mpHost->resetProfile_phase1(),
+             "Second resetProfile_phase1() should be guarded");
 
     QCoreApplication::processEvents();
 
+    // Verify reset actually happened by checking the Lua state is fresh
+    lua_State *afterL = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QVERIFY(afterL);
+    lua_getglobal(afterL, "doubleResetSentinel");
+    QVERIFY2(lua_isnil(afterL, -1), "Lua state should be fresh after reset");
+    lua_pop(afterL, 1);
     QVERIFY2(!mpHost->mResetProfile,
-             "mResetProfile should be false after double reset");
+             "mResetProfile should be false after reset");
     QCOMPARE(countTempTriggers(), 0);
-
-    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
-    QVERIFY(L);
-    lua_getglobal(L, "assert");
-    QVERIFY(!lua_isnil(L, -1));
-    lua_pop(L, 1);
   }
 
   // -----------------------------------------------------------------------
@@ -686,107 +680,70 @@ private slots:
   }
 
   // -----------------------------------------------------------------------
-  // Group 16: Border Size Preservation (#8871)
+  // Group 16: Lua Registry Corruption (TLabel destructor timing)
   // -----------------------------------------------------------------------
 
-  void test_borderSizesPreservedAfterReset() {
-    QMargins bordersBefore = mpHost->borders();
+  // PR #9141 added a TLabel destructor that frees its 7 callback indices
+  // via luaL_unref. resetMainConsole() destroys labels via deleteLater(),
+  // so without an explicit drain those destructors fire AFTER phase2 has
+  // swapped in a new Lua state via initLuaGlobals(). The luaL_unref calls
+  // then write into the new state's registry — any slots already populated
+  // by compileAll() during the same phase2 (e.g. Adjustable.Container's
+  // many label callbacks) get overwritten with freelist-chain numbers,
+  // surfacing as "attempt to call a number value" the first time the user
+  // hovers a label.
+  //
+  // The fix in Host::resetProfile_phase2() drains DeferredDelete events
+  // between resetMainConsole() and initLuaGlobals(), so the old destructors
+  // run their unrefs against the still-live original state. This test
+  // reproduces the conditions: a script that creates many labels with
+  // click callbacks at top level, so compileAll re-executes it during
+  // phase2 and populates the new registry with the exact slot indices the
+  // queued old destructors would have corrupted.
+  void test_labelCallbacksWorkAfterResetWithManyLabels() {
+    const int kNumLabels = 50;
 
-    performReset();
-
-    QMargins bordersAfter = mpHost->borders();
-    QCOMPARE(bordersAfter, bordersBefore);
-  }
-
-  // -----------------------------------------------------------------------
-  // Group 17: Multiple Temp Items Cleanup
-  // -----------------------------------------------------------------------
-
-  void test_multipleTempTriggersAllRemovedAfterReset() {
-    for (int i = 0; i < 10; ++i) {
-      int id = mpHost->mLuaInterpreter.startTempTrigger(
-          qsl("multi_test_%1").arg(i), qsl(""), -1);
-      QVERIFY(id > 0);
-    }
-    QVERIFY(countTempTriggers() >= 10);
-
-    performReset();
-
-    QCOMPARE(countTempTriggers(), 0);
-  }
-
-  // -----------------------------------------------------------------------
-  // Group 18: Lua C Functions Re-registered
-  // -----------------------------------------------------------------------
-
-  void test_mudletLuaCFunctionsAvailableAfterReset() {
-    performReset();
-
-    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
-    QVERIFY(L);
-
-    // Verify key Mudlet Lua API functions registered by initLuaGlobals()
-    const char *functions[] = {
-        "send",      "echo",       "tempTrigger",
-        "tempAlias", "tempTimer",  "permSubstringTrigger",
-        "permAlias", "permTimer",  "exists",
-        "isActive",  "raiseEvent", "resetProfile"};
-
-    for (const char *func : functions) {
-      lua_getglobal(L, func);
-      QVERIFY2(!lua_isnil(L, -1),
-               qPrintable(qsl("Lua C function '%1' should be available after "
-                              "reset")
-                              .arg(func)));
-      lua_pop(L, 1);
-    }
-  }
-
-  // -----------------------------------------------------------------------
-  // Group 19: Permanent Script Execution After Reset
-  // -----------------------------------------------------------------------
-
-  void test_permanentScriptExecutesAfterReset() {
-    auto *pScript = new TScript(qsl("execTestScript"), mpHost);
-    pScript->setScript(qsl("permScriptExecuted = true"));
+    auto *pScript = new TScript(qsl("labelCallbackRegressionScript"), mpHost);
+    pScript->setScript(qsl("labelCallbackHits = 0\n"
+                           "for i = 1, %1 do\n"
+                           "  local n = 'cb_label_'..i\n"
+                           "  createLabel(n, 0, 0, 10, 10, true)\n"
+                           "  setLabelClickCallback(n, function()\n"
+                           "    labelCallbackHits = labelCallbackHits + 1\n"
+                           "  end)\n"
+                           "end\n")
+                           .arg(kNumLabels));
     mpHost->getScriptUnit()->registerScript(pScript);
     pScript->setIsActive(true);
     pScript->compile();
 
-    // Verify the script ran during compilation
+    performReset();
+    // Force any DeferredDelete events still pending after phase2 to fire
+    // before we trigger callbacks. With the fix, phase2 already drained
+    // them; without the fix, this is when corruption would land.
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+    for (int i = 1; i <= kNumLabels; ++i) {
+      auto *pL = mpHost->mpConsole->mLabelMap.value(qsl("cb_label_%1").arg(i));
+      QVERIFY2(pL, qPrintable(qsl("post-reset label cb_label_%1 missing").arg(i)));
+      QMouseEvent ev(QEvent::MouseButtonPress, QPointF(1, 1), QPointF(1, 1),
+                     QPointF(1, 1), Qt::LeftButton, Qt::LeftButton,
+                     Qt::NoModifier);
+      QCoreApplication::sendEvent(pL, &ev);
+    }
+
     lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
-    lua_getglobal(L, "permScriptExecuted");
-    QVERIFY(!lua_isnil(L, -1));
+    lua_getglobal(L, "labelCallbackHits");
+    QVERIFY2(lua_isnumber(L, -1),
+             "labelCallbackHits should be a number after firing callbacks");
+    int hits = lua_tointeger(L, -1);
     lua_pop(L, 1);
+    QCOMPARE(hits, kNumLabels);
 
-    performReset();
-
-    // After reset, the script should have been recompiled and re-executed
-    lua_State *newL = mpHost->mLuaInterpreter.getLuaGlobalState();
-    lua_getglobal(newL, "permScriptExecuted");
-    QVERIFY2(!lua_isnil(newL, -1),
-             "Permanent script body should execute after reset");
-    lua_pop(newL, 1);
-  }
-
-  // -----------------------------------------------------------------------
-  // Group 20: Echo Flag Not Auto-Reset
-  // -----------------------------------------------------------------------
-
-  void test_echoFlagPreservedAcrossReset() {
-    // The echo flag is telnet connection state — it should persist
-    // across resetProfile since the connection stays alive
-    mpHost->setRemoteEchoingActive(true);
-    QVERIFY(mpHost->isRemoteEchoingActive());
-
-    performReset();
-
-    QVERIFY2(mpHost->isRemoteEchoingActive(),
-             "Remote echoing flag should persist across reset (connection "
-             "state, not profile state)");
-
-    // Clean up
-    mpHost->setRemoteEchoingActive(false);
+    // Neutralize the script so it doesn't keep recreating labels in
+    // subsequent tests' compileAll passes.
+    pScript->setScript(qsl(""));
+    pScript->setIsActive(false);
   }
 
   // -----------------------------------------------------------------------

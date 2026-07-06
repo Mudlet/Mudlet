@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2024 by John McKisson - john.mckisson@gmail.com         *
- *   Copyright (C) 2024 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2024, 2026 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -36,7 +36,7 @@
 #include <QVariant>
 
 MMCPServer::MMCPServer(Host* pHost)
-: QTcpServer()
+: QTcpServer(pHost)
 , mpHost(pHost)
 {
 }
@@ -231,11 +231,15 @@ QPair<bool, QString> MMCPServer::chatTo(const QVariant& target, const QString& m
     MMCPClient* pClient = clientByNameOrId(target);
 
     if (pClient) {
-        const QString outMsg = qsl("%1%2 chats to you, '%3'\n%4")
-                                       .arg(static_cast<char>(TextPersonal))
-                                       .arg(getChatName(), msg)
-                                       .arg(static_cast<char>(End));
-        pClient->writeData(outMsg);
+        QByteArray out;
+        out.append(static_cast<char>(TextPersonal));
+        out.append(getChatName().toLatin1());
+        out.append(" chats to you, '");
+        out.append(msg.toLatin1());
+        out.append("'\n");
+        out.append(static_cast<char>(End));
+
+        pClient->writeData(out);
 
         using namespace AnsiColors;
         //: %1 is the name of the peer receiving the message %2
@@ -263,11 +267,14 @@ QPair<bool, QString> MMCPServer::chatAll(const QString& msg)
         return {false, qsl("no connected clients")};
     }
 
-    const QString outMsg = qsl("%1\n%2 chats to everybody, '%3'%4")
-                                   .arg(static_cast<char>(TextEveryone))
-                                   .arg(getChatName())
-                                   .arg(msg)
-                                   .arg(static_cast<char>(End));
+    QByteArray outMsg;
+    outMsg.append(static_cast<char>(TextEveryone));
+    outMsg.append(getChatName().toLatin1());
+    outMsg.append(" chats to everybody, '");
+    outMsg.append(msg.toLatin1());
+    outMsg.append("'\n");
+    outMsg.append(static_cast<char>(End));
+
 
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
@@ -377,7 +384,7 @@ QPair<bool, QString> MMCPServer::displayClientList()
 {
     using namespace AnsiColors;
 
-    // Translated column headers 
+    // Translated column headers
     const QString hdrId      = tr("Id");
     const QString hdrName    = tr("Name");
     const QString hdrAddress = tr("Address");
@@ -465,10 +472,10 @@ QPair<bool, QString> MMCPServer::chatName(const QString& name)
     }
 
     if (!mPeersList.isEmpty()) {
-        const QString outMsg = qsl("%1%2%3")
-                                       .arg(static_cast<char>(NameChange))
-                                       .arg(name)
-                                       .arg(static_cast<char>(End));
+        QByteArray outMsg;
+        outMsg.append(static_cast<char>(NameChange));
+        outMsg.append(name.toLatin1());
+        outMsg.append(static_cast<char>(End));
 
         QListIterator<QPointer<MMCPClient>> it(mPeersList);
         while (it.hasNext()) {
@@ -494,10 +501,12 @@ QPair<bool, QString> MMCPServer::sendSideChannel(const QString& channel, const Q
         return {false, qsl("no connected clients")};
     }
 
-    const QString outMsg = qsl("%1%2,%3%4")
-                                   .arg(static_cast<char>(SideChannel))
-                                   .arg(channel, msg)
-                                   .arg(static_cast<char>(End));
+    QByteArray outMsg;
+    outMsg.append(static_cast<char>(SideChannel));
+    outMsg.append(channel.toLatin1());
+    outMsg.append(',');
+    outMsg.append(msg.toLatin1());
+    outMsg.append(static_cast<char>(End));
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
@@ -577,10 +586,14 @@ QPair<bool, QString> MMCPServer::emoteAll(const QString& msg)
         return {false, qsl("no connected clients")};
     }
 
-    const QString outMsg = qsl("%1%2 %3\n%4")
-                                   .arg(static_cast<char>(TextEveryone))
-                                   .arg(getChatName(), msg)
-                                   .arg(static_cast<char>(End));
+    QByteArray outMsg;
+    outMsg.append(static_cast<char>(TextEveryone));
+    outMsg.append(getChatName().toLatin1());
+    outMsg.append(' ');
+    outMsg.append(msg.toLatin1());
+    outMsg.append('\n');
+    outMsg.append(static_cast<char>(End));
+
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
@@ -1064,7 +1077,7 @@ void MMCPServer::sendPublicPeek(MMCPClient* pClient)
                                        .prepend(static_cast<char>(PeekList))
                                        .append(QLatin1Char('~'))
                                        .append(static_cast<char>(End));
-        
+
         pClient->writeData(cmdStr);
     } else {
         pClient->sendMessage(qsl("<CHAT> %1 doesn't have any other connections").arg(getChatName()));
@@ -1077,10 +1090,10 @@ void MMCPServer::sendPublicPeek(MMCPClient* pClient)
  */
 void MMCPServer::sendServedMessage(MMCPClient* pClient, const QString& msg, bool onlyToServed)
 {
-    const QString cmdStr = qsl("%1%2%3")
-                                   .arg(static_cast<char>(TextEveryone))
-                                   .arg(msg)
-                                   .arg(static_cast<char>(End));
+    QByteArray cmdStr;
+    cmdStr.append(static_cast<char>(TextEveryone));
+    cmdStr.append(msg.toLatin1());
+    cmdStr.append(static_cast<char>(End));
 
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {

@@ -39,11 +39,18 @@ if(USE_FONTS)
   endif()
 endif()
 
+# Add every .cpp source file here, kept in alphabetical order (case-insensitive).
 set(mudlet_SRCS
     ActionUnit.cpp
     AliasUnit.cpp
     AltFocusMenuBarDisable.cpp
+    CredentialManager.cpp
     ctelnet.cpp
+    CustomLineDrawContextMenuHandler.cpp
+    CustomLineDrawHandler.cpp
+    CustomLineEditContextMenuHandler.cpp
+    CustomLineEditHandler.cpp
+    CustomLineSession.cpp
     DarkTheme.cpp
     discord.cpp
     dlgAboutDialog.cpp
@@ -69,12 +76,17 @@ set(mudlet_SRCS
     dlgSystemMessageArea.cpp
     dlgTimersMainArea.cpp
     dlgTriggerEditor.cpp
-    ../test/dlgTriggerEditorUndoRedoTest.cpp
     dlgTriggerPatternEdit.cpp
     dlgTriggersMainArea.cpp
     dlgVarsMainArea.cpp
-    EditorItemXMLHelpers.cpp
     EAction.cpp
+    EditorAddItemCommand.cpp
+    EditorDeleteItemCommand.cpp
+    EditorItemXMLHelpers.cpp
+    EditorModifyPropertyCommand.cpp
+    EditorMoveItemCommand.cpp
+    EditorToggleActiveCommand.cpp
+    EditorUndoStack.cpp
     exitstreewidget.cpp
     FileOpenHandler.cpp
     FontManager.cpp
@@ -84,50 +96,42 @@ set(mudlet_SRCS
     HostManager.cpp
     ircmessageformatter.cpp
     KeyUnit.cpp
+    LabelInteractionHandler.cpp
     LuaInterface.cpp
     main.cpp
     mapInfoContributorManager.cpp
+    MiddleMousePanHandler.cpp
     MMCPClient.cpp
     MMCPServer.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
-    EditorUndoStack.cpp
     MxpTag.cpp
-    EditorAddItemCommand.cpp
-    EditorDeleteItemCommand.cpp
-    EditorModifyPropertyCommand.cpp
-    EditorMoveItemCommand.cpp
-    EditorToggleActiveCommand.cpp
-    CredentialManager.cpp
-    ScriptUnit.cpp
-    SecureStringUtils.cpp
-    SentryWrapper.cpp
-    ShortcutsManager.cpp
-    SingleLineTextEdit.cpp
-    T2DMap.cpp
-    CustomLineDrawContextMenuHandler.cpp
-    CustomLineDrawHandler.cpp
-    CustomLineEditContextMenuHandler.cpp
-    CustomLineEditHandler.cpp
-    CustomLineSession.cpp
-    LabelInteractionHandler.cpp
-    MiddleMousePanHandler.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
     RoomMoveActivationHandler.cpp
     RoomMoveDragHandler.cpp
+    ScriptUnit.cpp
+    SecureStringUtils.cpp
     SelectionRectangleHandler.cpp
+    SentryWrapper.cpp
+    ShortcutsManager.cpp
+    SingleLineTextEdit.cpp
+    T2DMap.cpp
     TAccessibleTextEdit.cpp
     TAction.cpp
     TAlias.cpp
     TArea.cpp
+    TAreaGridIndex.cpp
+    TAreaZLevelIndex.cpp
     TBuffer.cpp
     TCommandLine.cpp
     TConsole.cpp
     TDebug.cpp
+    TDetachedWindow.cpp
     TDockWidget.cpp
     TEasyButtonBar.cpp
+    TEncodingHelper.cpp
     TEncodingTable.cpp
     TEntityHandler.cpp
     TEntityResolver.cpp
@@ -144,11 +148,11 @@ set(mudlet_SRCS
     TLuaInterpreterDiscord.cpp
     TLuaInterpreterMapper.cpp
     TLuaInterpreterMedia.cpp
+    TLuaInterpreterMMCP.cpp
     TLuaInterpreterMudletObjects.cpp
     TLuaInterpreterNetworking.cpp
     TLuaInterpreterTextToSpeech.cpp
     TLuaInterpreterUI.cpp
-    TLuaInterpreterMMCP.cpp
     TMainConsole.cpp
     TMap.cpp
     TMapLabel.cpp
@@ -156,13 +160,10 @@ set(mudlet_SRCS
     TMapViewManager.cpp
     TMedia.cpp
     TMediaPlaylist.cpp
-    TMxpElementDefinitionHandler.cpp
-    TMxpElementRegistry.cpp
-    TMxpFormattingTagsHandler.cpp
     TMxpBRTagHandler.cpp
-    TMxpHRTagHandler.cpp
     TMxpColorTagHandler.cpp
     TMxpCustomElementTagHandler.cpp
+    TMxpDestTagHandler.cpp
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
     TMxpEntityTagHandler.cpp
@@ -171,7 +172,7 @@ set(mudlet_SRCS
     TMxpFormattingTagsHandler.cpp
     TMxpFrameManager.cpp
     TMxpFrameTagHandler.cpp
-    TMxpDestTagHandler.cpp
+    TMxpHRTagHandler.cpp
     TMxpImageTagHandler.cpp
     TMxpLinkTagHandler.cpp
     TMxpMudlet.cpp
@@ -198,10 +199,8 @@ set(mudlet_SRCS
     TSplitterHandle.cpp
     TStringUtils.cpp
     TTabBar.cpp
-    TDetachedWindow.cpp
-    TTextCodec.cpp
-    TEncodingHelper.cpp
     TTextBox.cpp
+    TTextCodec.cpp
     TTextEdit.cpp
     TTimer.cpp
     TToolBar.cpp
@@ -229,6 +228,7 @@ if(APPLE)
 endif()
 
 # This is for compiled UI files, not those used at runtime
+# Add every .ui file here, kept in alphabetical order (case-insensitive).
 set(mudlet_UIS
     ui/about_dialog.ui
     ui/actions_main_area.ui
@@ -240,9 +240,9 @@ set(mudlet_UIS
     ui/irc.ui
     ui/keybindings_main_area.ui
     ui/main_window.ui
-    ui/module_manager.ui
     ui/map_label.ui
     ui/mapper.ui
+    ui/module_manager.ui
     ui/notes_editor.ui
     ui/package_manager.ui
     ui/profile_preferences.ui
@@ -253,11 +253,12 @@ set(mudlet_UIS
     ui/source_editor_find_area.ui
     ui/system_message_area.ui
     ui/timers_main_area.ui
-    ui/triggers_main_area.ui
     ui/trigger_editor.ui
     ui/trigger_pattern_edit.ui
+    ui/triggers_main_area.ui
     ui/vars_main_area.ui)
 
+# Add every .h header file here, kept in alphabetical order (case-insensitive).
 set(mudlet_HDRS
     ../3rdparty/discord/rpc/include/discord_register.h
     ../3rdparty/discord/rpc/include/discord_rpc.h
@@ -265,7 +266,13 @@ set(mudlet_HDRS
     ActionUnit.h
     AliasUnit.h
     AltFocusMenuBarDisable.h
+    CredentialManager.h
     ctelnet.h
+    CustomLineDrawContextMenuHandler.h
+    CustomLineDrawHandler.h
+    CustomLineEditContextMenuHandler.h
+    CustomLineEditHandler.h
+    CustomLineSession.h
     DarkTheme.h
     discord.h
     dlgAboutDialog.h
@@ -294,8 +301,16 @@ set(mudlet_HDRS
     dlgTriggerPatternEdit.h
     dlgTriggersMainArea.h
     dlgVarsMainArea.h
-    EditorItemXMLHelpers.h
     EAction.h
+    EditorAddItemCommand.h
+    EditorCommand.h
+    EditorDeleteItemCommand.h
+    EditorItemXMLHelpers.h
+    EditorModifyPropertyCommand.h
+    EditorMoveItemCommand.h
+    EditorToggleActiveCommand.h
+    EditorUndoStack.h
+    enums.h
     exitstreewidget.h
     FileOpenHandler.h
     FontManager.h
@@ -305,50 +320,44 @@ set(mudlet_HDRS
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h
+    LabelInteractionHandler.h
     LuaInterface.h
     mapInfoContributorManager.h
+    MiddleMousePanHandler.h
     MMCP.h
     MMCPClient.h
     MMCPServer.h
     mudlet.h
-    EditorCommand.h
     MudletInstanceCoordinator.h
-    EditorUndoStack.h
     MxpTag.h
-    EditorAddItemCommand.h
-    EditorDeleteItemCommand.h
-    EditorModifyPropertyCommand.h
-    EditorMoveItemCommand.h
-    EditorToggleActiveCommand.h
+    PackageItemDelegate.h
+    PanInteractionHandler.h
+    RoomContextMenuHandler.h
+    RoomMoveActivationHandler.h
+    RoomMoveDragHandler.h
     ScriptUnit.h
     SecureStringUtils.h
+    SelectionRectangleHandler.h
+    SentryWrapper.h
     ShortcutsManager.h
     SingleLineTextEdit.h
     T2DMap.h
-    CustomLineDrawContextMenuHandler.h
-    CustomLineDrawHandler.h
-    CustomLineEditContextMenuHandler.h
-    CustomLineEditHandler.h
-    CustomLineSession.h
-    LabelInteractionHandler.h
-    PackageItemDelegate.h
-    PanInteractionHandler.h
-    RoomMoveActivationHandler.h
-    RoomMoveDragHandler.h
-    SelectionRectangleHandler.h
-    SentryWrapper.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
     TAction.h
     TAlias.h
     TArea.h
+    TAreaGridIndex.h
+    TAreaZLevelIndex.h
     TAstar.h
     TBuffer.h
     TCommandLine.h
     TConsole.h
     TDebug.h
+    TDetachedWindow.h
     TDockWidget.h
     TEasyButtonBar.h
+    TEncodingHelper.h
     TEncodingTable.h
     TEntityHandler.h
     TEntityResolver.h
@@ -356,13 +365,13 @@ set(mudlet_HDRS
     TFlipButton.h
     TForkedProcess.h
     TGameDetails.h
-    TimerUnit.h
-    TKey.h
-    TLabel.h
     THyperlinkCompactManager.h
     THyperlinkSelectionManager.h
     THyperlinkStyling.h
     THyperlinkVisibilityManager.h
+    TimerUnit.h
+    TKey.h
+    TLabel.h
     TLinkStore.h
     TLuaInterpreter.h
     TMainConsole.h
@@ -372,9 +381,9 @@ set(mudlet_HDRS
     TMapViewManager.h
     TMatchState.h
     TMedia.h
+    TMediaData.h
     TMediaPlaylist.h
     TMxpBRTagHandler.h
-    TMxpHRTagHandler.h
     TMxpClient.h
     TMxpColorTagHandler.h
     TMxpContext.h
@@ -383,11 +392,13 @@ set(mudlet_HDRS
     TMxpElementDefinitionHandler.h
     TMxpElementRegistry.h
     TMxpEntityTagHandler.h
+    TMxpEvent.h
     TMxpExpireTagHandler.h
     TMxpFontTagHandler.h
     TMxpFormattingTagsHandler.h
     TMxpFrameManager.h
     TMxpFrameTagHandler.h
+    TMxpHRTagHandler.h
     TMxpImageTagHandler.h
     TMxpLinkTagHandler.h
     TMxpMudlet.h
@@ -399,6 +410,7 @@ set(mudlet_HDRS
     TMxpStatTagHandler.h
     TMxpSupportTagHandler.h
     TMxpTagHandler.h
+    TMxpTagHandlerResult.h
     TMxpTagParser.h
     TMxpTagProcessor.h
     TMxpVarTagHandler.h
@@ -415,10 +427,10 @@ set(mudlet_HDRS
     TSplitterHandle.h
     TStringUtils.h
     TTabBar.h
-    TDetachedWindow.h
-    TTextCodec.h
     TTextBox.h
+    TTextCodec.h
     TTextEdit.h
+    TTextProperties.h
     TTimer.h
     TToolBar.h
     TTreeWidget.h
@@ -429,8 +441,7 @@ set(mudlet_HDRS
     widechar_width.h
     WideComboBox.h
     XMLexport.h
-    XMLimport.h
-    enums.h)
+    XMLimport.h)
 
 
 if(USE_UPDATER)
@@ -498,8 +509,9 @@ else()
   message(STATUS "Sanitizers disabled on Windows")
 endif()
 
-find_package(Qt6 6.4.0 REQUIRED
+find_package(Qt6 6.8.2 REQUIRED
     COMPONENTS Core
+               Core5Compat
                Multimedia
                MultimediaWidgets
                Network
@@ -515,6 +527,7 @@ message(STATUS "Qt version: ${Qt6Core_VERSION}")
 set(QT_MAJOR_VERSION 6)
 set(QT_LIBS Qt6::Concurrent
               Qt6::Core
+              Qt6::Core5Compat
               Qt6::Network
               Qt6::Multimedia
               Qt6::MultimediaWidgets
@@ -674,6 +687,11 @@ endif()
 # Define shader hot-reloading if enabled
 if(USE_SHADER_HOT_RELOAD AND USE_3DMAPPER)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC MUDLET_SHADER_HOT_RELOAD=1)
+endif()
+
+# Define memory tracking if enabled
+if(USE_MEMORY_TRACKING)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC MUDLET_MEMORY_TRACKING)
 endif()
 
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h

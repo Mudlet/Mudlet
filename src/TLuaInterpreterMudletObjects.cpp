@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2022, 2024 by Stephen Lyons                        *
+ *   Copyright (C) 2013-2022, 2024, 2026 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
@@ -63,7 +63,23 @@
 #include <limits>
 #include <math.h>
 
-#include <QtConcurrent>
+#ifdef MUDLET_MEMORY_TRACKING
+#if defined(Q_OS_LINUX)
+#include <fstream>
+#include <malloc.h>
+#elif defined(Q_OS_MACOS)
+#include <mach/mach.h>
+#include <malloc/malloc.h>
+#elif defined(Q_OS_WINDOWS)
+#include <windows.h>
+#include <psapi.h>
+#elif defined(Q_OS_BSD4)
+#include <sys/resource.h>
+#if defined(Q_OS_FREEBSD)
+#include <malloc.h>
+#endif
+#endif
+#endif // MUDLET_MEMORY_TRACKING
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
@@ -755,6 +771,10 @@ int TLuaInterpreter::getStopWatches(lua_State* L)
     for (const int watchId : stopWatchIds) {
         lua_pushnumber(L, watchId);
         auto pStopWatch = host.getStopWatch(watchId);
+        if (!pStopWatch) {
+            lua_pop(L, 1);
+            continue;
+        }
         lua_newtable(L);
         {
             lua_pushstring(L, "name");
@@ -931,14 +951,15 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getTimerUnit()->getTimer(id);
             cnt = (static_cast<bool>(pT) && (pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive()) && (!checkAncestors || pT->shouldAncestorsBeActive())) ? 1 : 0;
         } else {
-            auto itpItem = host.getTimerUnit()->mLookupTable.constFind(nameOrId);
-            while (itpItem != host.getTimerUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+            // equal_range visits every same-named item; constFind() + (++it) can
+            // start mid-run and skip duplicates on some QMultiMap implementations
+            const auto [begin, end] = host.getTimerUnit()->mLookupTable.equal_range(nameOrId);
+            for (auto itpItem = begin; itpItem != end; ++itpItem) {
                 auto pT = itpItem.value();
                 // Offset timer have their active state recorded differently
                 if ((pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive()) && (!checkAncestors || pT->shouldAncestorsBeActive())) {
                     ++cnt;
                 }
-                ++itpItem;
             }
         }
 
@@ -947,13 +968,12 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getTriggerUnit()->getTrigger(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            auto itpItem = host.getTriggerUnit()->mLookupTable.constFind(nameOrId);
-            while (itpItem != host.getTriggerUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+            const auto [begin, end] = host.getTriggerUnit()->mLookupTable.equal_range(nameOrId);
+            for (auto itpItem = begin; itpItem != end; ++itpItem) {
                 auto pT = itpItem.value();
                 if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
-                ++itpItem;
             }
         }
 
@@ -962,13 +982,12 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getAliasUnit()->getAlias(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            auto itpItem = host.getAliasUnit()->mLookupTable.constFind(nameOrId);
-            while (itpItem != host.getAliasUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+            const auto [begin, end] = host.getAliasUnit()->mLookupTable.equal_range(nameOrId);
+            for (auto itpItem = begin; itpItem != end; ++itpItem) {
                 auto pT = itpItem.value();
                 if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
-                ++itpItem;
             }
         }
 
@@ -977,13 +996,12 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getKeyUnit()->getKey(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            auto itpItem = host.getKeyUnit()->mLookupTable.constFind(nameOrId);
-            while (itpItem != host.getKeyUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+            const auto [begin, end] = host.getKeyUnit()->mLookupTable.equal_range(nameOrId);
+            for (auto itpItem = begin; itpItem != end; ++itpItem) {
                 auto pT = itpItem.value();
                 if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
-                ++itpItem;
             }
         }
 
@@ -1571,8 +1589,8 @@ int TLuaInterpreter::setButtonState(lua_State* L)
 
     if (pItem->mButtonState != checked) {
         pItem->mButtonState = checked;
-        if (pItem->mpEButton) {
-            pItem->mpEButton->setChecked(checked);
+        if (pItem->mpEAction) {
+            pItem->mpEAction->setChecked(checked);
         }
         if (pItem->mpFButton) {
             pItem->mpFButton->setChecked(checked);
@@ -2090,7 +2108,7 @@ int TLuaInterpreter::tempButton(lua_State* L)
 
     pT->registerAction();
     // N/U:     int childID = pT->getID();
-    host.getActionUnit()->updateToolbar();
+    host.getActionUnit()->updateAllToolbars();
     return 1;
 }
 
@@ -2136,7 +2154,7 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
     pT->setIsActive(true);
     pT->registerAction();
     // N/U:     int childID = pT->getID();
-    host.getActionUnit()->updateToolbar();
+    host.getActionUnit()->updateAllToolbars();
 
 
     return 1;
@@ -2786,22 +2804,23 @@ int TLuaInterpreter::getProfiles(lua_State* L)
 int TLuaInterpreter::loadProfile(lua_State* L)
 {
     auto& hostManager = mudlet::self()->getHostManager();
-    const QString profileName = getVerifiedString(L, __func__, 1, "profile name");
+    const QString requestedName = getVerifiedString(L, __func__, 1, "profile name");
     bool offline = false;
 
     if (lua_gettop(L) > 1) {
         offline = getVerifiedBool(L, __func__, 2, "offline mode", true);
     }
 
-    if (profileName.isEmpty()) {
+    if (requestedName.isEmpty()) {
         lua_pushnil(L);
         lua_pushstring(L, "loadProfile: profile name cannot be empty");
         return 2;
     }
 
-    if (!mudlet::self()->profileExists(profileName)) {
+    const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+    if (profileName.isEmpty()) {
         lua_pushnil(L);
-        lua_pushfstring(L, "loadProfile: profile '%s' does not exist", profileName.toUtf8().constData());
+        lua_pushfstring(L, "loadProfile: profile '%s' does not exist", requestedName.toUtf8().constData());
         return 2;
     }
 
@@ -2829,18 +2848,19 @@ int TLuaInterpreter::loadProfile(lua_State* L)
 int TLuaInterpreter::closeProfile(lua_State* L)
 {
     auto& hostManager = mudlet::self()->getHostManager();
-    QString profileName;
+    QString requestedName;
 
     if (lua_gettop(L) == 0) {
         Host& host = getHostFromLua(L);
-        profileName = host.getName();
+        requestedName = host.getName();
     } else {
-        profileName = getVerifiedString(L, __func__, 1, "profile name");
+        requestedName = getVerifiedString(L, __func__, 1, "profile name");
     }
 
-    if (!mudlet::self()->profileExists(profileName)) {
+    const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+    if (profileName.isEmpty()) {
         lua_pushnil(L);
-        lua_pushfstring(L, "closeProfile: profile '%s' does not exist", profileName.toUtf8().constData());
+        lua_pushfstring(L, "closeProfile: profile '%s' does not exist", requestedName.toUtf8().constData());
         return 2;
     }
 
@@ -2858,3 +2878,249 @@ int TLuaInterpreter::closeProfile(lua_State* L)
     }
     return 0;
 }
+
+#ifdef MUDLET_MEMORY_TRACKING
+int TLuaInterpreter::getProcessMemoryUsage(lua_State* L)
+{
+    int64_t rssKb = 0;
+    bool success = false;
+
+#if defined(Q_OS_LINUX)
+    std::ifstream statusFile(qsl("/proc/self/status").toStdString());
+    std::string line;
+    while (std::getline(statusFile, line)) {
+        if (line.rfind("VmRSS:", 0) == 0) {
+            // Line format: "VmRSS:    12345 kB"
+            const char* p = line.c_str() + 6;
+            while (*p == ' ' || *p == '\t') {
+                ++p;
+            }
+            rssKb = static_cast<int64_t>(std::strtoll(p, nullptr, 10));
+            success = true;
+            break;
+        }
+    }
+#elif defined(Q_OS_MACOS)
+    mach_task_basic_info info;
+    mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
+    if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &infoCount) == KERN_SUCCESS) {
+        rssKb = static_cast<int64_t>(info.resident_size / 1024);
+        success = true;
+    }
+#elif defined(Q_OS_WINDOWS)
+    PROCESS_MEMORY_COUNTERS pmc;
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+        rssKb = static_cast<int64_t>(pmc.WorkingSetSize / 1024);
+        success = true;
+    }
+#elif defined(Q_OS_BSD4)
+    // ru_maxrss is in bytes on BSD (unlike Linux where it is kilobytes)
+    struct rusage ru = {};
+    if (getrusage(RUSAGE_SELF, &ru) == 0) {
+        rssKb = static_cast<int64_t>(ru.ru_maxrss / 1024);
+        success = true;
+    }
+#endif
+
+    if (success) {
+        lua_pushnumber(L, static_cast<lua_Number>(rssKb));
+    } else {
+        lua_pushnil(L);
+    }
+    return 1;
+}
+
+int TLuaInterpreter::getSubsystemMemoryStats(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    lua_newtable(L);
+
+    // Lua heap via C API — immune to user scripts replacing collectgarbage global
+    const lua_Number heapKb = static_cast<lua_Number>(lua_gc(L, LUA_GCCOUNT, 0)) + static_cast<lua_Number>(lua_gc(L, LUA_GCCOUNTB, 0)) / 1024.0;
+    lua_pushstring(L, "lua_heap_kb");
+    lua_pushnumber(L, heapKb);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "lua_heap_mb");
+    lua_pushnumber(L, heapKb / 1024.0);
+    lua_settable(L, -3);
+
+    // Trigger counts (total, temp) via assembleReport()
+    {
+        const auto [_msg, total, _patterns, temp, _active, _activePatterns] = host.getTriggerUnit()->assembleReport();
+        lua_pushstring(L, "triggers_total");
+        lua_pushnumber(L, total);
+        lua_settable(L, -3);
+        lua_pushstring(L, "triggers_temp");
+        lua_pushnumber(L, temp);
+        lua_settable(L, -3);
+    }
+
+    // Timer counts
+    {
+        const auto [_msg, total, temp, _active] = host.getTimerUnit()->assembleReport();
+        lua_pushstring(L, "timers_total");
+        lua_pushnumber(L, total);
+        lua_settable(L, -3);
+        lua_pushstring(L, "timers_temp");
+        lua_pushnumber(L, temp);
+        lua_settable(L, -3);
+    }
+
+    // Alias counts
+    {
+        const auto [_msg, total, temp, _active] = host.getAliasUnit()->assembleReport();
+        lua_pushstring(L, "aliases_total");
+        lua_pushnumber(L, total);
+        lua_settable(L, -3);
+        lua_pushstring(L, "aliases_temp");
+        lua_pushnumber(L, temp);
+        lua_settable(L, -3);
+    }
+
+    // Event handler count (total registered handlers across all event names)
+    {
+        int handlerCount = 0;
+        for (const auto& handlerList : host.mEventHandlerMap) {
+            handlerCount += handlerList.size();
+        }
+        lua_pushstring(L, "event_handlers");
+        lua_pushnumber(L, handlerCount);
+        lua_settable(L, -3);
+    }
+
+    // Map room and area counts
+    if (host.mpMap && host.mpMap->mpRoomDB) {
+        lua_pushstring(L, "map_rooms");
+        lua_pushnumber(L, host.mpMap->mpRoomDB->size());
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "map_areas");
+        lua_pushnumber(L, host.mpMap->mpRoomDB->getAreaMap().size());
+        lua_settable(L, -3);
+    } else {
+        lua_pushstring(L, "map_rooms");
+        lua_pushnumber(L, 0);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "map_areas");
+        lua_pushnumber(L, 0);
+        lua_settable(L, -3);
+    }
+
+    // Main console buffer line count
+    if (host.mpConsole) {
+        lua_pushstring(L, "console_buffer_lines");
+        lua_pushnumber(L, host.mpConsole->buffer.size());
+        lua_settable(L, -3);
+    }
+
+    // Media player counts: total live players per type and count of idle (stopped) players
+    if (host.mpMedia) {
+        int soundPlayers = 0;
+        int musicPlayers = 0;
+        int stoppedPlayers = 0;
+        host.mpMedia->getMediaPlayerCounts(soundPlayers, musicPlayers, stoppedPlayers);
+
+        lua_pushstring(L, "media_sound_players");
+        lua_pushnumber(L, soundPlayers);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "media_music_players");
+        lua_pushnumber(L, musicPlayers);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "media_stopped_players");
+        lua_pushnumber(L, stoppedPlayers);
+        lua_settable(L, -3);
+    }
+
+    // C heap statistics: bytes in use by live allocations vs total bytes obtained
+    // from the OS, summed across all malloc zones and broken out per zone.
+    // The gap between in_use and allocated is fragmented free space that has been
+    // freed but not yet returned to the OS.
+    {
+        bool heapStatsAvailable = false;
+        double heapInUseMb = 0.0;
+        double heapAllocatedMb = 0.0;
+        static constexpr double kBytesPerMb = 1024.0 * 1024.0;
+#if defined(Q_OS_MACOS)
+        heapStatsAvailable = true;
+        vm_address_t* zones = nullptr;
+        unsigned int zoneCount = 0;
+        // zones subtable: { [zone_name] = { in_use_mb = N, allocated_mb = N } }
+        lua_pushstring(L, "heap_zones");
+        lua_newtable(L);
+        if (malloc_get_all_zones(mach_task_self(), nullptr, &zones, &zoneCount) == KERN_SUCCESS) {
+            size_t totalInUse = 0;
+            size_t totalAllocated = 0;
+            for (unsigned int i = 0; i < zoneCount; ++i) {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                auto* zone = reinterpret_cast<malloc_zone_t*>(zones[i]);
+                malloc_statistics_t zoneStats = {};
+                malloc_zone_statistics(zone, &zoneStats);
+                totalInUse += zoneStats.size_in_use;
+                totalAllocated += zoneStats.size_allocated;
+
+                const char* zoneName = zone->zone_name ? zone->zone_name : "unnamed";
+                lua_pushstring(L, zoneName);
+                lua_newtable(L);
+                lua_pushstring(L, "in_use_mb");
+                lua_pushnumber(L, static_cast<double>(zoneStats.size_in_use) / kBytesPerMb);
+                lua_settable(L, -3);
+                lua_pushstring(L, "allocated_mb");
+                lua_pushnumber(L, static_cast<double>(zoneStats.size_allocated) / kBytesPerMb);
+                lua_settable(L, -3);
+                lua_settable(L, -3);
+            }
+            heapInUseMb = static_cast<double>(totalInUse) / kBytesPerMb;
+            heapAllocatedMb = static_cast<double>(totalAllocated) / kBytesPerMb;
+        }
+        lua_settable(L, -3);
+#elif defined(Q_OS_LINUX)
+        heapStatsAvailable = true;
+        struct mallinfo2 mi = mallinfo2();
+        heapInUseMb = static_cast<double>(mi.uordblks) / kBytesPerMb;
+        heapAllocatedMb = (static_cast<double>(mi.arena) + static_cast<double>(mi.hblkhd)) / kBytesPerMb;
+#elif defined(Q_OS_WINDOWS)
+        heapStatsAvailable = true;
+        constexpr DWORD kMaxHeaps = 128;
+        HANDLE heapHandles[kMaxHeaps];
+        const DWORD heapCount = GetProcessHeaps(kMaxHeaps, heapHandles);
+        SIZE_T totalInUse = 0;
+        SIZE_T totalAllocated = 0;
+        for (DWORD i = 0; i < heapCount; ++i) {
+            PROCESS_HEAP_ENTRY entry = {};
+            HeapLock(heapHandles[i]);
+            while (HeapWalk(heapHandles[i], &entry)) {
+                if (entry.wFlags & PROCESS_HEAP_ENTRY_BUSY) {
+                    totalInUse += entry.cbData;
+                }
+                totalAllocated += entry.cbData + entry.cbOverhead;
+            }
+            HeapUnlock(heapHandles[i]);
+        }
+        heapInUseMb = static_cast<double>(totalInUse) / kBytesPerMb;
+        heapAllocatedMb = static_cast<double>(totalAllocated) / kBytesPerMb;
+#elif defined(Q_OS_FREEBSD)
+        heapStatsAvailable = true;
+        // FreeBSD/DragonFly: jemalloc provides a mallinfo() compatibility shim
+        struct mallinfo mi = mallinfo();
+        heapInUseMb = static_cast<double>(mi.uordblks) / kBytesPerMb;
+        heapAllocatedMb = (static_cast<double>(mi.arena) + static_cast<double>(mi.hblkhd)) / kBytesPerMb;
+#endif
+        if (heapStatsAvailable) {
+            lua_pushstring(L, "heap_in_use_mb");
+            lua_pushnumber(L, heapInUseMb);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "heap_allocated_mb");
+            lua_pushnumber(L, heapAllocatedMb);
+            lua_settable(L, -3);
+        }
+    }
+
+    return 1;
+}
+#endif // MUDLET_MEMORY_TRACKING

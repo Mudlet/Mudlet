@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2022-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2022-2024, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,6 +27,14 @@
 #include "TAlias.h"
 
 #include <functional>
+
+/* We need an explicit constructor in this file as the Host class is forward
+ * declared in the header file and it is problematic to define any dereferencing
+ * of it there:*/
+AliasUnit::AliasUnit(Host* pHost)
+: mpHost(pHost)
+{
+}
 
 AliasUnit::~AliasUnit()
 {
@@ -331,11 +340,11 @@ std::vector<int> AliasUnit::findItems(const QString& name, const bool exactMatch
 bool AliasUnit::enableAlias(const QString& name)
 {
     bool found = false;
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
-        TAlias* pT = it.value();
-        pT->setIsActive(true);
-        ++it;
+    // equal_range visits every same-named alias; constFind() + (++it) can start
+    // mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        it.value()->setIsActive(true);
         found = true;
     }
     return found;
@@ -344,11 +353,11 @@ bool AliasUnit::enableAlias(const QString& name)
 bool AliasUnit::disableAlias(const QString& name)
 {
     bool found = false;
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
-        TAlias* pT = it.value();
-        pT->setIsActive(false);
-        ++it;
+    // equal_range visits every same-named alias; constFind() + (++it) can start
+    // mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        it.value()->setIsActive(false);
         found = true;
     }
     return found;

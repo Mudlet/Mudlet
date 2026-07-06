@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2018, 2020, 2022-2023 by Stephen Lyons       *
+ *   Copyright (C) 2015, 2017-2018, 2020, 2022-2023, 2026 by Stephen Lyons *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -284,12 +284,12 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 
 class TBuffer
 {
-    inline static const TEncodingTable& csmEncodingTable = TEncodingTable::csmDefaultInstance;
+    static inline const TEncodingTable& csmEncodingTable = TEncodingTable::csmDefaultInstance;
 
-    inline static const int TCHAR_IN_BYTES = sizeof(TChar);
+    static inline const int TCHAR_IN_BYTES = sizeof(TChar);
 
     // limit on how many characters a single echo can accept for performance reasons
-    inline static const int MAX_CHARACTERS_PER_ECHO = 1000000;
+    static inline const int MAX_CHARACTERS_PER_ECHO = 1000000;
 
 public:
     explicit TBuffer(Host* pH, TConsole* pConsole = nullptr);
@@ -301,7 +301,7 @@ public:
     void expandLine(int y, int count, TChar&);
     int wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize);
     void log(int, int);
-    int skipSpacesAtBeginOfLine(const int row, const int column);
+    inline int skipSpacesAtBeginOfLine(const int row, const int column);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference = QVector<int>());
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0, int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
@@ -559,7 +559,15 @@ public:
     int getHoveredLink() const { return mCurrentHoveredLinkIndex; }
     int getActiveLink() const { return mCurrentActiveLinkIndex; }
     int getFocusedLink() const { return mCurrentFocusedLinkIndex; }
-    int getLinkIndexAt(int line, int column) const;                                     // Get link index at specific position
+    int getLinkIndexAt(int line, int column) const; // Get link index at specific position
+
+    // Accessibility: find next/previous link from a given position for Tab navigation
+    // Returns true if found, and sets outLine/outColumn to the start of the link
+    // If wrapped is non-null, it is set to true when the search wrapped around the buffer
+    bool findNextLink(int fromLine, int fromColumn, int& outLine, int& outColumn, bool* wrapped = nullptr) const;
+    bool findPreviousLink(int fromLine, int fromColumn, int& outLine, int& outColumn, bool* wrapped = nullptr) const;
+    // Get the tooltip text for a link (from hints or styling)
+    QString getLinkTooltip(int linkIndex) const;
     void clearLinkIndices(int lineNumber, int startColumn, int count);                  // Clear link indices in a range
     void restoreLinkIndices(int lineNumber, int startColumn, int count, int linkIndex); // Restore link indices in a range
 

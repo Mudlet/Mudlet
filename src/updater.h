@@ -22,6 +22,7 @@
 
 // QObject must be included before Q_OS_MACOS checks below
 #include <QObject>
+#include <QPointer>
 
 // Guard for builds without the updater (INCLUDE_UPDATER is defined by CMake when USE_UPDATER is ON):
 #if defined(INCLUDE_UPDATER)
@@ -34,6 +35,8 @@ class UpdateDialog;
 #include "sparkleupdater.h"
 #endif
 #endif
+
+#include <memory>
 
 class QAbstractButton;
 class QPushButton;
@@ -57,8 +60,11 @@ public:
     bool shouldShowChangelog();
 
 private:
-    dblsqd::Feed* mFeed;
-    dblsqd::UpdateDialog* mUpdateDialog{nullptr};
+    std::unique_ptr<dblsqd::Feed> feed;
+    // Non-owning: Qt parent-child system or explicit deletion in ~Updater handles lifetime.
+    // QPointer<T> is used so that if Qt deletes the dialog (e.g. on last window closed),
+    // the pointer automatically becomes null and ~Updater's delete becomes a no-op.
+    QPointer<dblsqd::UpdateDialog> updateDialog;
 #if !defined(Q_OS_MACOS)
     QPushButton* mpInstallOrRestart;
 #endif

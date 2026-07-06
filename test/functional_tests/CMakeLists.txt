@@ -7,7 +7,11 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetBenchmark.cpp
     ResetProfileTest.cpp
     TOscTest.cpp
+    TUserWindowTest.cpp
+    TriggerEditorTest.cpp
+    dlgTriggerEditorUndoRedoTest.cpp
     TDiscordModeTest.cpp
+    EnableDisableByNameTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
@@ -31,3 +35,6 @@ endforeach()
 # ResetProfileTest creates a full profile per test method (30 tests),
 # so it needs a longer timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
+
+# Undo/redo tests need a longer timeout due to large batch operations
+set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
