@@ -5400,6 +5400,12 @@ void dlgTriggerEditor::addAction(bool isFolder)
     }
 
     // Reset UI
+    // Block property-save slots so the widget changes below don't fire write-backs
+    // into the previously selected action (mpCurrentActionItem still points at it).
+    // Unchecking checkBox_action_button_isPushDown otherwise calls
+    // slot_saveProperty_ActionIsPushDown on the old action. slot_actionSelected()
+    // clears the flag once the new item is loaded.
+    mBlockPropertySave = true;
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->checkBox_action_button_isPushDown->setChecked(false);
     clearDocument(mpSourceEditorEdbee); // New Action
