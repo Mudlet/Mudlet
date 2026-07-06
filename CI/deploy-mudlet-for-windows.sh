@@ -373,6 +373,13 @@ else
     DBLSQD_CHANNEL="public-test-build"
     CHANGELOG_MODE="ptb"
   else
+    # Expose the installer to the workflow's SignPath steps. Only the PTB branch
+    # above ever set these, so on tag builds the installer-signing chain silently
+    # skipped and releases shipped an unsigned installer wrapper:
+    {
+      echo "ARTIFACT_NAME=${INSTALLER_EXE}"
+      echo "ARTIFACT_WINPATHORFILE=${INSTALLER_EXE_WINPATHFILE}"
+    } >> "${GITHUB_ENV}"
 
     echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
     echo "${DEPLOY_SSH_KEY}" > temp_key_file
