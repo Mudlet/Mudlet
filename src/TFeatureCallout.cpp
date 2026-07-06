@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2026 by Vadim Peretokin - vperetokin@hey.com            *
+ *   Copyright (C) 2026 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -118,13 +118,19 @@ void TFeatureCallout::maybeShow(const QString& featureId, QWidget* pAnchor, cons
     if (smSessionShown.contains(featureId) || smSessionShown.size() >= maximumPerSession) {
         return;
     }
-    smSessionShown.insert(featureId);
 
     // let the widget holding the anchor settle into its final place first
     QTimer::singleShot(800ms, pAnchor, [featureId, pAnchor, title, body]() {
         if (!pAnchor->isVisible()) {
             return;
         }
+        // the session budget is claimed only once the balloon really appears,
+        // so an anchor that stayed hidden does not use it up - which is why
+        // the check runs again in here
+        if (smSessionShown.contains(featureId) || smSessionShown.size() >= maximumPerSession) {
+            return;
+        }
+        smSessionShown.insert(featureId);
         auto* settings = mudlet::getQSettings();
         settings->setValue(shownCountKey(featureId), settings->value(shownCountKey(featureId), 0).toInt() + 1);
         auto* pCallout = new TFeatureCallout(featureId, pAnchor, title, body);

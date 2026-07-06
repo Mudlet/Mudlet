@@ -2,7 +2,7 @@
 #define MUDLET_TFEATURECALLOUT_H
 
 /***************************************************************************
- *   Copyright (C) 2026 by Vadim Peretokin - vperetokin@hey.com            *
+ *   Copyright (C) 2026 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
