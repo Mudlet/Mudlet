@@ -73,7 +73,7 @@ public:
 
 signals:
     // Emitted when items are modified by undo/redo (allows targeted UI updates instead of full refresh)
-    void itemsChanged(EditorViewType viewType, QList<int> affectedItemIDs);
+    void itemsChanged(EditorViewTypes::EditorViewType viewType, QList<int> affectedItemIDs);
 
 protected:
     // Expose protected command() method for accessing commands on the stack

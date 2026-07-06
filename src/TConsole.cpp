@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2024, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2021 by Vadim Peretokin - vperetokin@gmail.com          *
@@ -38,7 +39,6 @@
 #include "TLabel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
-#include "TRoomDB.h"
 #include "TSplitter.h"
 #include "TTextEdit.h"
 #include "dlgMapper.h"
@@ -54,6 +54,7 @@
 #include <QMimeData>
 #include <QPainter>
 #include <QScrollBar>
+#include <QSettings>
 #include <QShortcut>
 #include <QSplitter>
 #include <QTextBoundaryFinder>
@@ -97,6 +98,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     initializeOSC8SpoilerFeature();
     initializeOSC8SelectionFeature();
     initializeOSC8VisibilityFeature();
+    initializeOSC8TitleFeature();
 
     auto quitShortcut = new QShortcut(this);
     quitShortcut->setKey(Qt::CTRL | Qt::Key_W);
@@ -403,8 +405,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         mpLineEdit_networkLatency->setReadOnly(true);
         mpLineEdit_networkLatency->setSizePolicy(sizePolicy4);
         mpLineEdit_networkLatency->setFocusPolicy(Qt::NoFocus);
-        mpLineEdit_networkLatency->setToolTip(utils::richText(tr("<i>N:</i> is the latency of the game server and network (aka ping, in seconds),<br>"
-                                                                 "<i>S:</i> is the system processing time - how long your triggers took to process the last line(s).")));
+        //: Tooltip for N and S network latency indicators
+        mpLineEdit_networkLatency->setToolTip(utils::richText(tr("<i>N:</i> network latency in seconds (ping),<br>"
+                                                                 "<i>S:</i> system processing time (triggers).")));
         mpLineEdit_networkLatency->setMaximumSize(120, 30);
         mpLineEdit_networkLatency->setMinimumSize(120, 30);
         mpLineEdit_networkLatency->setAutoFillBackground(true);
@@ -712,6 +715,51 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
     }
 
+    // Sync Host dimensions on resize so wraps and NAWS reflect the current pane width.
+    if ((mType & MainConsole) && !mpHost.isNull() && mUpperPane && !mUpperPane->visibleRegion().isEmpty()) {
+        const int paneWidthPx = mUpperPane->visibleRegion().boundingRect().width();
+        auto syncHost = [paneWidthPx](Host* host, const QWidget* paneForFont) {
+            if (!host || !paneForFont) {
+                return;
+            }
+            const int fontWidth = QFontMetrics(paneForFont->font()).averageCharWidth();
+            if (fontWidth <= 0) {
+                return;
+            }
+            const int cols = qMax(40, paneWidthPx / fontWidth);
+            if (cols > 0 && cols != host->mScreenWidth) {
+                host->setScreenDimensions(cols, host->mScreenHeight);
+                QTimer::singleShot(0, host, &Host::updateDisplayDimensions);
+            }
+        };
+
+        syncHost(mpHost.data(), mUpperPane);
+
+        // Detached profiles have their own pixel width; only propagate from a main-window console.
+        mudlet* const app = mudlet::self();
+        const bool inMainWindow = app && !app->getDetachedWindows().contains(mpHost->getName());
+        if (inMainWindow) {
+            for (const auto& otherHostPtr : app->getHostManager()) {
+                Host* otherHost = otherHostPtr.data();
+                if (!otherHost || otherHost == mpHost.data()) {
+                    continue;
+                }
+                // Skip detached profiles: different container, different width.
+                if (app->getDetachedWindows().contains(otherHost->getName())) {
+                    continue;
+                }
+                if (!otherHost->mpConsole || !otherHost->mpConsole->mUpperPane) {
+                    continue;
+                }
+                // Visible siblings (multi-view) handle their own resizeEvent.
+                if (!otherHost->mpConsole->mUpperPane->visibleRegion().isEmpty()) {
+                    continue;
+                }
+                syncHost(otherHost, otherHost->mpConsole->mUpperPane);
+            }
+        }
+    }
+
     emit resized(event);
     QWidget::resizeEvent(event);
 
@@ -954,7 +1002,7 @@ QString getColorCode(QColor color)
 void TConsole::changeColors()
 {
     if (mType == CentralDebugConsole) {
-        // No-op now?
+        // Font is managed via QWidget::font() inheritance, no font operations needed here
     } else if (mType & (ErrorConsole | SubConsole | UserWindow | Buffer)) {
         if (!mBgImageMode) {
             auto styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1);}").arg(getColorCode(mBgColor));
@@ -1472,15 +1520,14 @@ bool TConsole::setConsoleBackgroundImage(const QString& imgPath, int mode)
     }
 
     if (mode == 1) {
-        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); border-image: url(%2);}").arg(getColorCode(bgColor)).arg(imgPath);
+        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); border-image: url(%2);}").arg(getColorCode(bgColor), imgPath);
     } else if (mode == 2) {
         styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); background-image: url(%2); background-repeat: no-repeat; background-position: center; background-origin: margin;}")
-                             .arg(getColorCode(bgColor))
-                             .arg(imgPath);
+                             .arg(getColorCode(bgColor), imgPath);
     } else if (mode == 3) {
-        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); background-image: url(%2);}").arg(getColorCode(bgColor)).arg(imgPath);
+        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); background-image: url(%2);}").arg(getColorCode(bgColor), imgPath);
     } else if (mode == 4) {
-        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); %2}").arg(getColorCode(bgColor)).arg(imgPath);
+        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); %2}").arg(getColorCode(bgColor), imgPath);
     } else {
         return false;
     }
@@ -1580,7 +1627,7 @@ void TConsole::setFont(const QFont& newFont, const bool forceChange)
         QWidget::setFont(newFont);
         // Update associated TCommandLine's:
         if (mType & (MainConsole | SubConsole | UserWindow)) {
-            if (mpHost->mpConsole) {
+            if (mpHost && mpHost->mpConsole) {
                 for (auto& commandLine : mpHost->mpConsole->mSubCommandLineMap) {
                     auto pConsole = commandLine->console();
                     if (pConsole && (pConsole == this)) {
@@ -1603,7 +1650,6 @@ void TConsole::setFontName(const QString& fontName)
 {
     mDisplayFontDetails.mName = fontName;
     setFont(mDisplayFontDetails.makeFont(), true);
-    refreshView();
 }
 
 QString TConsole::getCurrentLine()
@@ -1911,10 +1957,26 @@ void TConsole::printSystemMessage(const QString& msg)
 
 void TConsole::echo(const QString& msg)
 {
+    // Strip \r so that \r\n becomes \n and standalone \r disappears; without
+    // this, \r is stored literally in the buffer and rendered as a glyph.
+    QString normalizedMsg = msg;
+    normalizedMsg.remove(QChar::CarriageReturn);
     if (mTriggerEngineMode) {
-        buffer.appendLine(msg, 0, msg.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+        // Use insertInLine instead of appendLine so that newline characters
+        // are embedded in the trigger line rather than creating new buffer
+        // lines (which would cause subsequent echo/cecho calls to append to
+        // the wrong line). The embedded newlines are properly handled during
+        // wrapping by getWrapInfo.
+        const int y = buffer.size() - 1;
+        if (y >= 0) {
+            const int x = buffer.lineBuffer.at(y).size();
+            QPoint insertPoint(x, y);
+            buffer.insertInLine(insertPoint, normalizedMsg, mFormatCurrent);
+        } else {
+            buffer.appendLine(normalizedMsg, 0, normalizedMsg.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+        }
     } else {
-        print(msg);
+        print(normalizedMsg);
     }
 }
 
@@ -1940,7 +2002,7 @@ void TConsole::paste()
     mLowerPane->showNewLines();
 }
 
-void TConsole::pasteWindow(TBuffer bufferSlice)
+void TConsole::pasteWindow(const TBuffer& bufferSlice)
 {
     mpHost->mpConsole->mClipboard = bufferSlice;
     paste();
@@ -2085,6 +2147,21 @@ QSize TConsole::getMainWindowSize() const
     const int toolbarHeight = mpTopToolBar->height();
     const int commandLineHeight = mpCommandLine->height();
     QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
+
+    // Reject obviously invalid or suspiciously small sizes during profile switch transitions
+    const int minValidWidth = 50;
+    if (mainWindowSize.width() < minValidWidth && mOldSize.width() >= minValidWidth) {
+        return mOldSize;
+    }
+
+    // Reject suspicious shrinkage (more than 50% reduction) - geometry may not have settled yet
+    if (mOldSize.width() > 0) {
+        const double shrinkageRatio = static_cast<double>(mainWindowSize.width()) / mOldSize.width();
+        if (shrinkageRatio < 0.5) {
+            return mOldSize;
+        }
+    }
+
     return mainWindowSize;
 }
 
@@ -2879,4 +2956,14 @@ void TConsole::initializeOSC8DisabledFeature()
 
     mpHyperlinkCompactManager->registerShorthand(qsl("d"), qsl("disabled"));
     mpHyperlinkCompactManager->registerPresetProperty(qsl("disabled"));
+}
+
+void TConsole::initializeOSC8TitleFeature()
+{
+    if (!mpHyperlinkCompactManager) {
+        return;
+    }
+
+    mpHyperlinkCompactManager->registerShorthand(qsl("ti"), qsl("title"));
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("title"));
 }

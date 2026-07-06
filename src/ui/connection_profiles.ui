@@ -26,19 +26,19 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <property name="spacing">
-    <number>0</number>
+    <number>12</number>
    </property>
    <property name="leftMargin">
-    <number>0</number>
+    <number>12</number>
    </property>
    <property name="topMargin">
-    <number>0</number>
+    <number>12</number>
    </property>
    <property name="rightMargin">
-    <number>0</number>
+    <number>12</number>
    </property>
    <property name="bottomMargin">
-    <number>0</number>
+    <number>12</number>
    </property>
    <item>
     <widget class="QWidget" name="widget_top" native="true">
@@ -56,7 +56,7 @@
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <property name="spacing">
-       <number>0</number>
+       <number>12</number>
       </property>
       <property name="leftMargin">
        <number>0</number>
@@ -86,9 +86,15 @@
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_3">
          <property name="spacing">
+          <number>12</number>
+         </property>
+         <property name="leftMargin">
           <number>0</number>
          </property>
          <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
           <number>0</number>
          </property>
          <property name="bottomMargin">
@@ -326,7 +332,7 @@
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>50</height>
+             <height>25</height>
             </size>
            </property>
            <property name="maximumSize">
@@ -336,6 +342,21 @@
             </size>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_5">
+            <property name="spacing">
+             <number>8</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
             <item>
              <spacer name="horizontalSpacer_4">
               <property name="orientation">
@@ -381,6 +402,11 @@
                 <width>0</width>
                 <height>25</height>
                </size>
+              </property>
+              <property name="font">
+               <font>
+                <pointsize>13</pointsize>
+               </font>
               </property>
               <property name="text">
                <string>Copy</string>
@@ -428,7 +454,7 @@
         </property>
         <property name="minimumSize">
          <size>
-          <width>340</width>
+          <width>328</width>
           <height>0</height>
          </size>
         </property>
@@ -439,6 +465,21 @@
          </size>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout">
+         <property name="spacing">
+          <number>12</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
          <item>
           <widget class="QTextBrowser" name="welcome_message">
            <property name="enabled">
@@ -718,37 +759,7 @@
                </item>
               </widget>
              </item>
-             <item row="3" column="0">
-              <widget class="QCheckBox" name="discord_optin_checkBox">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="toolTip">
-                <string>Enable Discord integration (not supported by game)</string>
-               </property>
-               <property name="accessibleName">
-                <string>Discord integration</string>
-               </property>
-               <property name="accessibleDescription">
-                <string>Allow this profile to use Mudlet's Discord "Rich Presence"  features</string>
-               </property>
-               <property name="text">
-                <string/>
-               </property>
-               <property name="icon">
-                <iconset resource="../mudlet.qrc">
-                 <normaloff>:/icons/Discord-Logo+Wordmark-Color.png</normaloff>:/icons/Discord-Logo+Wordmark-Color.png
-                </iconset>
-               </property>
-               <property name="iconSize">
-                <size>
-                 <width>65</width>
-                 <height>18</height>
-                </size>
-               </property>
-              </widget>
-             </item>
-             <item row="4" column="0" colspan="2">
+             <item row="3" column="0" colspan="2">
               <widget class="QCheckBox" name="autologin_checkBox">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
@@ -890,6 +901,21 @@
    <item>
     <widget class="QWidget" name="widget_bottom" native="true">
      <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <property name="spacing">
+       <number>12</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
       <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
@@ -957,7 +983,6 @@
   <tabstop>login_entry</tabstop>
   <tabstop>character_password_entry</tabstop>
   <tabstop>profile_history</tabstop>
-  <tabstop>discord_optin_checkBox</tabstop>
   <tabstop>autologin_checkBox</tabstop>
   <tabstop>auto_reconnect</tabstop>
   <tabstop>mud_description_textedit</tabstop>

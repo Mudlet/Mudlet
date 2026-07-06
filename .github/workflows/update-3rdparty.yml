@@ -40,18 +40,6 @@ jobs:
               #### Motivation for adding to Mudlet
               So people don't get attacked with a "your mapping script is out of date!" notification as soon as they create a profile for a new IRE game.
 
-          - name: dblsqd
-            type: submodule
-            submodule_path: 3rdparty/dblsqd/
-            path: 3rdparty/dblsqd
-            branch: update-dblsqd
-            title: "Infrastructure: Update dblsqd to latest in our fork"
-            body: |
-              #### Brief overview of PR changes/additions
-              :crown: An automated PR to update dblsqd to its latest version in our fork.
-              #### Motivation for adding to Mudlet
-              Get new features, bugfixes, improvements! Stay modern.
-
           - name: lcf
             type: submodule-branch
             submodule_path: 3rdparty/lcf/
@@ -107,7 +95,7 @@ jobs:
     name: Update ${{ matrix.name }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: development
           submodules: ${{ (matrix.type == 'submodule' || matrix.type == 'submodule-branch') && 'recursive' || false }}
@@ -115,7 +103,7 @@ jobs:
 
       - name: Download file
         if: matrix.type == 'download'
-        uses: carlosperate/download-file-action@v2.0.2
+        uses: carlosperate/download-file-action@v2.0.3
         with:
           file-url: ${{ matrix.url }}
           file-name: ${{ matrix.file }}
@@ -133,8 +121,8 @@ jobs:
         if: matrix.type == 'submodule-branch'
         run: |
           cd ${{ matrix.submodule_path }}
-          git checkout ${{ matrix.submodule_branch }}
-          git pull
+          git fetch origin ${{ matrix.submodule_branch }}
+          git checkout -B ${{ matrix.submodule_branch }} FETCH_HEAD
 
       - name: Check for changes
         id: getdiff

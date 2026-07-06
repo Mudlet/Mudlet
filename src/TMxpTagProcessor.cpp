@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2018, 2026 by Stephen Lyons -                      *
+ *                                                 slysven@virginmedia.com *
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -70,14 +71,14 @@ TMxpTagHandlerResult TMxpTagProcessor::handleTag(TMxpContext& ctx, TMxpClient& c
         return MXP_TAG_NOT_HANDLED;
     }
 
-    for (const auto& handler : mRegisteredHandlers) {
+    for (const auto& handler : std::as_const(mRegisteredHandlers)) {
         TMxpTagHandlerResult result = handler->handleTag(ctx, client, tag);
 
         if (result != MXP_TAG_NOT_HANDLED) {
 #ifdef DEBUG_MXP_PROCESSING
             qDebug() << "  Handler handled tag, result:" << result;
 #endif
-            result = client.tagHandled(tag, result);
+            result = client.tagHandled(tag, result, ctx);
             if (result != MXP_TAG_NOT_HANDLED) {
                 return result;
             }
@@ -92,7 +93,7 @@ TMxpTagHandlerResult TMxpTagProcessor::handleTag(TMxpContext& ctx, TMxpClient& c
 
 void TMxpTagProcessor::handleContent(char ch)
 {
-    for (const auto& handler : mRegisteredHandlers) {
+    for (const auto& handler : std::as_const(mRegisteredHandlers)) {
         handler->handleContent(ch);
     }
 }
@@ -185,6 +186,12 @@ TMxpElementRegistry& TMxpTagProcessor::getElementRegistry()
 {
     return mMxpElementRegistry;
 }
+
+const TMxpElementRegistry& TMxpTagProcessor::getElementRegistry() const
+{
+    return mMxpElementRegistry;
+}
+
 QMap<QString, QVector<QString>>& TMxpTagProcessor::getSupportedElements()
 {
     return mSupportedMxpElements;

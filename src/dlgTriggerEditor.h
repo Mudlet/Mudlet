@@ -105,8 +105,8 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
     Q_OBJECT
 
-    // Allow external test suite to access private members
-    friend void runUndoRedoTestSuite(dlgTriggerEditor* editor);
+    // Allow QTest-based test class to access private members
+    friend class dlgTriggerEditorUndoRedoTest;
 
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
@@ -309,7 +309,6 @@ public slots:
     void slot_smartUndo();
     void slot_smartRedo();
     void slot_updateUndoRedoButtonStates();
-    void slot_runUndoRedoTests();
 
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
@@ -334,7 +333,7 @@ private slots:
     void slot_clickedMessageBox(const QString&);
     void slot_addPattern();
     void slot_bannerDismissClicked();
-    void slot_itemsChanged(::EditorViewType viewType, QList<int> affectedItemIDs);
+    void slot_itemsChanged(EditorViewTypes::EditorViewType viewType, QList<int> affectedItemIDs);
 
     // Per-property immediate save slots for triggers (create individual undo entries)
     void slot_saveProperty_TriggerName();
@@ -687,7 +686,6 @@ private:
     // Smart undo/redo actions (route based on focus):
     QAction* mpUndoAction = nullptr;
     QAction* mpRedoAction = nullptr;
-    QAction* mpRunUndoRedoTestsAction = nullptr;
 
     // Undo system for item-level operations (using Qt's QUndoStack framework):
     EditorUndoStack* mpUndoStack = nullptr;

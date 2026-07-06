@@ -1,3 +1,5 @@
+# DUPLICATE WORKFLOW: This file is paired with build-mudlet-win.yml
+# Changes here likely need to be mirrored there as well.
 name: 🔨 Build Mudlet - PR (windows)
 on:
   pull_request:
@@ -29,7 +31,7 @@ jobs:
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         submodules: recursive
         fetch-depth: 0
@@ -52,7 +54,7 @@ jobs:
 
     - name: Restore ccache
       id: restore-ccache
-      uses: actions/cache/restore@v5
+      uses: actions/cache/restore@v6
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.buildname}}-clang-${{ github.sha }}
@@ -71,7 +73,7 @@ jobs:
 
     - name: Cache sentry-native
       id: cache-sentry
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: |
           3rdparty/sentry-native/install_without_transport
@@ -137,7 +139,7 @@ jobs:
 
     - name: Save ccache
       if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v5
+      uses: actions/cache/save@v6
       with:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
@@ -229,6 +231,8 @@ jobs:
         GITHUB_FORCE_BUILD: ${{ github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        # needed so deploy-mudlet-for-windows.sh can query existing releases to skip duplicate PTBs
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: $GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.sh
 
     - name: (Windows) Upload unsigned installer for signing

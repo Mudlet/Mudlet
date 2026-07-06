@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2022-2023, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -41,12 +42,7 @@ class TriggerUnit
     friend class XMLimport;
 
 public:
-    explicit TriggerUnit(Host* pHost)
-    : mpHost(pHost)
-    , mMaxID(0)
-    , mModuleMember()
-    {
-    }
+    explicit TriggerUnit(Host*);
     ~TriggerUnit();
 
     std::list<TTrigger*> getTriggerRootNodeList() { return mTriggerRootNodeList; }

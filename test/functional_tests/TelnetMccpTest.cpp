@@ -33,6 +33,7 @@
 #include <zlib.h>
 
 #include "TelnetServerStub.h"
+#include "MudletInstanceCoordinator.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"

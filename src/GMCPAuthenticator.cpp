@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2024 by Vadim Peretokin - vperetokin@gmail.com          *
+ *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -46,7 +47,7 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
 
     if (jsonObj.contains("type")) {
         QJsonArray typesArray = jsonObj["type"].toArray();
-        for (const auto& type : typesArray) {
+        for (const auto& type : std::as_const(typesArray)) {
             mSupportedAuthTypes.append(type.toString());
         }
     }

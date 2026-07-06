@@ -21,12 +21,12 @@ jobs:
 
     steps:
     - name: Checkout Mudlet repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         fetch-depth: 0
 
     - name: Install Lua 5.1.5
-      uses: leafo/gh-actions-lua@v12
+      uses: leafo/gh-actions-lua@v13
       with:
         luaVersion: "5.1.5"
 

@@ -1,0 +1,848 @@
+-- -----------------------------------------------------------------------------
+-- Copyright (c) 2023-2025 by Josef Friedrich <josef@friedrich.rocks>
+-- -----------------------------------------------------------------------------
+--
+-- MIT License
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this software and associated documentation files (the "Software"), to deal
+-- in the Software without restriction, including without limitation the rights
+-- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+-- copies of the Software, and to permit persons to whom the Software is
+-- furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Software.
+--
+-- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+-- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+-- SOFTWARE.
+--
+-- -----------------------------------------------------------------------------
+
+---
+---@meta
+---The definitions are developed in this repository: https://github.com/LuaCATS/lpeg
+
+---
+---*LPeg* is a new pattern-matching library for Lua, based on [Parsing
+---Expression Grammars](https://bford.info/packrat/) (PEGs). This text is a
+---reference manual for the library. For a more formal treatment of LPeg, as
+---well as some discussion about its implementation, see [A Text
+---Pattern-Matching Tool based on Parsing Expression
+---Grammars](http://www.inf.puc-rio.br/~roberto/docs/peg.pdf). (You may also be
+---interested in my [talk about LPeg](https://vimeo.com/1485123) given at the
+---III Lua Workshop.)
+---
+---This type definition is based on the [HTML
+---documentation](http://www.inf.puc-rio.br/~roberto/lpeg/) of the LPeg library.
+---A different HTML documentation can be found at
+---[stevedonovan.github.io/lua-stdlibs](http://stevedonovan.github.io/lua-stdlibs/modules/lpeg.html).
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+local lpeg = {}
+
+---
+---Following the Snobol tradition, LPeg defines patterns as first-class objects.
+---That is, patterns are regular Lua values (represented by userdata). The
+---library offers several functions to create and compose patterns. With the use
+---of metamethods, several of these functions are provided as infix or prefix
+---operators. On the one hand, the result is usually much more verbose than the
+---typical encoding of patterns using the so called *regular expressions* (which
+---typically are not regular expressions in the formal sense). On the other
+---hand, first-class patterns allow much better documentation (as it is easy to
+---comment the code, to break complex definitions in smaller parts, etc.) and
+---are extensible, as we can define new functions to create and compose
+---patterns.
+---
+---For a quick glance of the library, the following table summarizes its basic
+---operations for creating patterns:
+---
+---| Operator              | Description                                                    |
+---| --------------------- | -------------------------------------------------------------- |
+---| `lpeg.P(string)`      | Matches `string` literally                                     |
+---| `lpeg.P(n)`           | Matches exactly `n` characters                                 |
+---| `lpeg.S(string)`      | Matches any character in `string` (Set)                        |
+---| `lpeg.R("xy")`        | Matches any character between `x` and `y` (Range)              |
+---| `lpeg.utfR(cp1, cp2)` | Matches an UTF-8 code point between `cp1` and `cp2`            |
+---| `patt^n`              | Matches at least `n` repetitions of `patt`                     |
+---| `patt^-n`             | Matches at most `n` repetitions of `patt`                      |
+---| `patt1 * patt2`       | Matches `patt1` followed by `patt2`                            |
+---| `patt1 + patt2`       | Matches `patt1` or `patt2` (ordered choice)                    |
+---| `patt1 - patt2`       | Matches `patt1` if `patt2` does not match                      |
+---| `-patt`               | Equivalent to (`"" - patt`)                                    |
+---| `#patt`               | Matches `patt` but consumes no input                           |
+---| `lpeg.B(patt)`        | Matches `patt` behind the current position, consuming no input |
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+---@class lpeg.Pattern
+---@operator len: lpeg.Pattern
+---@operator unm: lpeg.Pattern
+---@operator add(lpeg.Pattern): lpeg.Pattern
+---@operator sub(lpeg.Pattern): lpeg.Pattern
+---@operator mul(lpeg.Pattern): lpeg.Pattern
+---@operator mul(lpeg.Capture): lpeg.Pattern
+---@operator div(string): lpeg.Capture
+---@operator div(integer): lpeg.Capture
+---@operator div(table): lpeg.Capture
+---@operator div(function): lpeg.Capture
+---@operator pow(integer): lpeg.Pattern
+---@operator mod(function): lpeg.Capture
+local Pattern = {}
+
+---
+---With the use of Lua variables, it is possible to define patterns
+---incrementally, with each new pattern using previously defined ones. However,
+---this technique does not allow the definition of recursive patterns. For
+---recursive patterns, we need real grammars.
+---
+---LPeg represents grammars with tables, where each entry is a rule.
+---
+---The call `lpeg.V(v)` creates a pattern that represents the nonterminal (or
+---*variable*) with index `v` in a grammar. Because the grammar still does not
+---exist when this function is evaluated, the result is an *open reference* to
+---the respective rule.
+---
+---A table is *fixed* when it is converted to a pattern (either by calling
+---`lpeg.P` or by using it wherein a pattern is expected). Then every open
+---reference created by `lpeg.V(v)` is corrected to refer to the rule indexed by
+---`v` in the table.
+---
+---When a table is fixed, the result is a pattern that matches its *initial*
+---rule. The entry with index `1` in the table defines its initial rule. If that
+---entry is a string, it is assumed to be the name of the initial rule.
+---Otherwise, LPeg assumes that the entry `1` itself is the initial rule.
+---
+---As an example, the following grammar matches strings of `a`'s and `b`'s that
+---have the same number of a's and b's:
+---
+---```lua
+---equalcount = lpeg.P{
+---  "S";   -- initial rule name
+---  S = "a" * lpeg.V"B" + "b" * lpeg.V"A" + "",
+---  A = "a" * lpeg.V"S" + "b" * lpeg.V"A" * lpeg.V"A",
+---  B = "b" * lpeg.V"S" + "a" * lpeg.V"B" * lpeg.V"B",
+---} * -1
+---```
+---
+---It is equivalent to the following grammar in standard PEG notation:
+---```
+---S <- 'a' B / 'b' A / ''
+---A <- 'a' S / 'b' A A
+---B <- 'b' S / 'a' B B
+---```
+---
+---__Reference:__
+---
+---* HTML documentation: [#grammar](https://www.inf.puc-rio.br/~roberto/lpeg#grammar)
+---@alias lpeg.Grammar table
+
+---
+---A *capture* is a pattern that produces values (the so called *semantic
+---information*) according to what it matches. LPeg offers several kinds of
+---captures, which produces values based on matches and combine these values to
+---produce new values. Each capture may produce zero or more values.
+---
+---The following table summarizes the basic captures:
+---
+---| Operation                  | What it Produces                                                                                           |
+---| -------------------------- | ---------------------------------------------------------------------------------------------------------- |
+---| `lpeg.C(patt)`             | the match for `patt` plus all captures made by `patt`                                                      |
+---| `lpeg.Carg(n)`             | the value of the `nth` extra argument to `lpeg.match` (matches the empty string)                           |
+---| `lpeg.Cb(key)`             | the values produced by the previous group capture named `key` (matches the empty string)                   |
+---| `lpeg.Cc(values)`          | the given values (matches the empty string)                                                                |
+---| `lpeg.Cf(patt, func)`      | folding capture (deprecated)                                                                               |
+---| `lpeg.Cg(patt [, key])`    | the values produced by `patt`, optionally tagged with key                                                  |
+---| `lpeg.Cp()`                | the current position (matches the empty string)                                                            |
+---| `lpeg.Cs(patt)`            | the match for `patt` with the values from nested captures replacing their matches                          |
+---| `lpeg.Ct(patt)`            | a table with all captures from `patt`                                                                      |
+---| `patt / string`            | string, with some marks replaced by captures of `patt`                                                     |
+---| `patt / number`            | the n-th value captured by patt, or no value when number is zero.                                          |
+---| `patt / table`             | `table[c]`, where `c` is the (first) capture of `patt`                                                     |
+---| `patt / function`          | the returns of `function` applied to the captures of `patt`                                                |
+---| `patt % function`          | produces no value; it *accummulates* the captures from `patt` into the previous capture through `function` |
+---| `lpeg.Cmt(patt, function)` | the returns of `function` applied to the captures of `patt`; the application is done at match time         |
+---
+---A capture pattern produces its values only when it succeeds. For instance,
+---the pattern `lpeg.C(lpeg.P"a"^-1)` produces the empty string when there is no
+---`"a"` (because the pattern `"a"?` succeeds), while the pattern
+---`lpeg.C("a")^-1` does not produce any value when there is no `"a"` (because
+---the pattern `"a"` fails). A pattern inside a loop or inside a recursive
+---structure produces values for each match.
+---
+---Usually, LPeg does not specify when, if, or how many times it evaluates its
+---captures. Therefore, captures should avoid side effects. As an example, LPeg
+---may or may not call func in the pattern `lpeg.P"a" / func / 0`, given that
+---the ["division" by 0](https://www.inf.puc-rio.br/~roberto/lpeg#cap-num)
+---instructs LPeg to throw away the results from the pattern. Similarly, a
+---capture nested inside a [named
+---group](https://www.inf.puc-rio.br/~roberto/lpeg/#cap-g) may be evaluated only
+---when that group is referred in a [back
+---capture](https://www.inf.puc-rio.br/~roberto/lpeg/#cap-b); if there are
+---multiple back captures, the group may be evaluated multiple times.
+---
+---Moreover, captures cannot affect the way a pattern matches a subject. The
+---only exception to this rule is the so-called [match-time
+---capture](https://www.inf.puc-rio.br/~roberto/lpeg/#matchtime). When a
+---match-time capture matches, it forces the immediate evaluation of all its
+---nested captures and then calls its corresponding function, which defines
+---whether the match succeeds and also what values are produced.
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+---@alias lpeg.Capture lpeg.Pattern
+---@operator len: lpeg.Pattern
+---@operator add(lpeg.Capture): lpeg.Pattern
+---@operator mul(lpeg.Capture): lpeg.Pattern
+---@operator mul(lpeg.Pattern): lpeg.Pattern
+---@operator div(string): lpeg.Capture
+---@operator div(integer): lpeg.Capture
+---@operator div(table): lpeg.Capture
+---@operator div(function): lpeg.Capture
+---@operator pow(integer): lpeg.Pattern
+
+---
+---Match the given `pattern` against the `subject` string.
+---
+---If the match succeeds, returns the index in the subject of the first
+---character after the match, or the [captured
+---values](https://www.inf.puc-rio.br/~roberto/lpeg#captures) (if the pattern
+---captured any value).
+---
+---An optional numeric argument `init` makes the match start at that position in
+---the subject string. As usual in Lua libraries, a negative value counts from
+---the end.
+---
+---Unlike typical pattern-matching functions, `match` works only in *anchored*
+---mode; that is, it tries to match the pattern with a prefix of the given
+---subject string (at position `init`), not with an arbitrary substring of the
+---subject. So, if we want to find a pattern anywhere in a string, we must
+---either write a loop in Lua or write a pattern that matches anywhere. This
+---second approach is easy and quite efficient;
+---
+---__Example:__
+---
+---```lua
+---local pattern = lpeg.R('az') ^ 1 * -1
+---assert(pattern:match('hello') == 6)
+---assert(lpeg.match(pattern, 'hello') == 6)
+---assert(pattern:match('1 hello') == nil)
+---```
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L1247-L1266](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L1247-L1266)
+---* HTML documentation: [#f-match](https://www.inf.puc-rio.br/~roberto/lpeg#f-match)
+---
+---@param pattern lpeg.Pattern|string|integer|boolean|lpeg.Grammar|function
+---@param subject string # A string to be matched with the pattern.
+---@param init? integer # Make the match start at that position in the subject string. As usual in Lua libraries, a negative value counts from the end.
+---@param ... any
+---
+---@return any ...
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.match(pattern, subject, init, ...) end
+
+---
+---Match the given `pattern` against the `subject` string.
+---
+---If the match succeeds, returns the index in the subject of the first
+---character after the match, or the [captured
+---values](https://www.inf.puc-rio.br/~roberto/lpeg#captures) (if the pattern
+---captured any value).
+---
+---An optional numeric argument `init` makes the match start at that position in
+---the subject string. As usual in Lua libraries, a negative value counts from
+---the end.
+---
+---Unlike typical pattern-matching functions, `match` works only in *anchored*
+---mode; that is, it tries to match the pattern with a prefix of the given
+---subject string (at position `init`), not with an arbitrary substring of the
+---subject. So, if we want to find a pattern anywhere in a string, we must
+---either write a loop in Lua or write a pattern that matches anywhere. This
+---second approach is easy and quite efficient;
+---
+---__Example:__
+---
+---```lua
+---local pattern = lpeg.R('az') ^ 1 * -1
+---assert(pattern:match('hello') == 6)
+---assert(lpeg.match(pattern, 'hello') == 6)
+---assert(pattern:match('1 hello') == nil)
+---```
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L1247-L1266](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L1247-L1266)
+---* HTML documentation: [#f-match](https://www.inf.puc-rio.br/~roberto/lpeg#f-match)
+---
+---@param subject string # A string to be matched with the pattern.
+---@param init? integer # Make the match start at that position in the subject string. As usual in Lua libraries, a negative value counts from the end.
+---@param ... any
+---
+---@return any ... # If the match succeeds, returns the index in the subject of the first
+---character after the match, or the captured values (if the pattern captured
+---any value).
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function Pattern:match(subject, init, ...) end
+
+---
+---Return the string `"pattern"` if the given value is a pattern, otherwise
+---`nil`.
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L1288-L1294](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L1288-L1294)
+---* HTML documentation: [#f-type](https://www.inf.puc-rio.br/~roberto/lpeg#f-type)
+---
+---@return 'pattern'|nil
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.type(value) end
+
+---
+---A string (not a function) with the running version (for example `"1.0.1"`) of
+---LPeg.
+---
+---Note: In earlier versions of LPeg this field was a function.
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L1395](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L1395)
+---* HTML documentation: [#f-version](https://www.inf.puc-rio.br/~roberto/lpeg#f-version)
+---
+---@type string
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+lpeg.version = ""
+
+---
+---Set a limit for the size of the backtrack stack used by LPeg to track calls
+---and choices.
+---
+---The default limit is `400`. Most well-written patterns need little backtrack
+---levels and therefore you seldom need to change this limit; before changing it
+---you should try to rewrite your pattern to avoid the need for extra space.
+---Nevertheless, a few useful patterns may overflow. Also, with recursive
+---grammars, subjects with deep recursion may also need larger limits.
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L1279-L1285](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L1279-L1285)
+---* HTML documentation: [#f-setstack](https://www.inf.puc-rio.br/~roberto/lpeg#f-setstack)
+---
+---@param max integer
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.setmaxstack(max) end
+
+---
+---Convert the given value into a proper pattern.
+---
+---The following rules are applied:
+---
+---* If the argument is a pattern, it is returned unmodified.
+---* If the argument is a string, it is translated to a pattern that matches the
+---  string literally.
+---* If the argument is a non-negative number `n`, the result is a pattern that
+---  matches exactly `n` characters.
+---* If the argument is a negative number `-n`, the result is a pattern that
+---  succeeds only if the input string has less than `n` characters left:
+---  `lpeg.P(-n)` is equivalent to `-lpeg.P(n)` (see the   [unary minus
+---operation](https://www.inf.puc-rio.br/~roberto/lpeg/#op-unm)).
+---* If the argument is a boolean, the result is a pattern that always succeeds
+---  or always fails (according to the boolean value), without consuming any
+---  input.
+---* If the argument is a table, it is interpreted as a grammar (see
+---  [Grammars](https://www.inf.puc-rio.br/~roberto/lpeg/#grammar)).
+---* If the argument is a function, returns a pattern equivalent to a
+---  [match-time capture](https://www.inf.puc-rio.br/~roberto/lpeg/#matchtime)
+---  over the empty string.
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L543-L548](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L543-L548)
+---* HTML documentation: [#op-p](https://www.inf.puc-rio.br/~roberto/lpeg#op-p)
+---
+---@param value lpeg.Pattern|string|integer|boolean|lpeg.Grammar|function
+---
+---@return lpeg.Pattern
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.P(value) end
+
+---
+---Return a pattern that matches only if the input string at the current
+---position is preceded by `patt`. (The `B` stands for *Behind* (Look-behind
+---predicate).)
+---
+---Pattern `patt` must match only strings with some fixed length, and it cannot
+---contain captures.
+---
+---Like the [`and` predicate](https://www.inf.puc-rio.br/~roberto/lpeg/#op-len),
+---this pattern never consumes any input, independently of success or failure.
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L760-L770](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L760-L770)
+---* HTML documentation: [#op-behind](https://www.inf.puc-rio.br/~roberto/lpeg#op-behind)
+---
+---@param pattern lpeg.Pattern|string|integer|boolean|table
+---
+---@return lpeg.Pattern
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.B(pattern) end
+
+---
+---Return a pattern that matches any single character belonging to one of the
+---given *ranges*. (The `R` stands for *`R`ange*.)
+---
+---Each `range` is a string `xy` of length 2, representing all characters with
+---code between the codes of `x` and `y` (both inclusive).
+---
+---As an example, the pattern `lpeg.R('09')` matches any digit, and
+---`lpeg.R('az', 'AZ')` matches any ASCII letter.
+---
+---__Example:__
+---
+---```lua
+---local pattern = lpeg.R('az') ^ 1 * -1
+---assert(pattern:match('hello') == 6)
+---```
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L687-L702](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L687-L702)
+---* HTML documentation: [#op-r](https://www.inf.puc-rio.br/~roberto/lpeg#op-r)
+---
+---@param ... string
+---
+---@return lpeg.Pattern
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.R(...) end
+
+---
+---Return a pattern that matches any single character that appears in the given
+---string. (The `S` stands for *`S`et*.)
+---
+---As an example, the pattern `lpeg.S('+-*/')` matches any arithmetic operator.
+---
+---Note that, if `s` is a character (that is, a string of length `1`), then
+---`lpeg.P(s)` is equivalent to `lpeg.S(s)` which is equivalent to
+---`lpeg.R(s..s)`. Note also that both `lpeg.S('')` and `lpeg.R()` are patterns
+---that always fail.
+---
+---__Example:__
+---
+---```lua
+---local pattern = lpeg.S('+-*/')
+---assert.equals(pattern:match("+"), 2)
+---assert.equals(pattern:match("-"), 2)
+---assert.equals(pattern:match("*"), 2)
+---assert.equals(pattern:match("/"), 2)
+---assert.is_nil(pattern:match("x"))
+---```
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L673-L684](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L673-L684)
+---* HTML documentation: [#op-s](https://www.inf.puc-rio.br/~roberto/lpeg#op-s)
+---
+---@param string string
+---
+---@return lpeg.Pattern
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.S(string) end
+
+---
+---Return a pattern that matches a valid UTF-8 byte sequence representing a code
+---point in the range `[cp1, cp2]`. (The `utfR` stands for *`U`nicode
+---`T`ransformation `F`ormat `R`ange*.)
+---
+---The range is limited by the natural Unicode limit of `0x10FFFF`, but may
+---include surrogates.
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L734-L754](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L734-L754)
+---* HTML documentation: [#op-utfR](https://www.inf.puc-rio.br/~roberto/lpeg#op-utfR)
+---
+---@param cp1 integer
+---@param cp2 integer
+---
+---@return lpeg.Pattern
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.utfR(cp1, cp2) end
+
+---
+---Create a non-terminal (a *variable*) for a grammar. (The `V` stands for
+---*`V`ariable*.)
+---
+---This operation creates a non-terminal (a variable) for a grammar. The created
+---non-terminal refers to the rule indexed by `v` in the enclosing grammar.
+---
+---__Example:__
+---
+---```lua
+---local b = lpeg.P({'(' * ((1 - lpeg.S '()') + lpeg.V(1)) ^ 0 * ')'})
+---assert(b:match('((string))') == 11)
+---assert(b:match('(') == nil)
+---```
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L773-L781](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L773-L781)
+---* HTML documentation: [#op-v](https://www.inf.puc-rio.br/~roberto/lpeg#op-v)
+---
+---@param variable boolean|string|number|function|table|thread|userdata|lightuserdata
+---
+---@return lpeg.Pattern
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.V(variable) end
+
+---
+---__Reference:__
+---
+---* Corresponding C source code: [](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L1319-L1340)
+---* HTML documentation: [#op-locale](https://www.inf.puc-rio.br/~roberto/lpeg#op-locale)
+---
+---@class lpeg.Locale
+---@field alnum userdata
+---@field alpha userdata
+---@field cntrl userdata
+---@field digit userdata
+---@field graph userdata
+---@field lower userdata
+---@field print userdata
+---@field punct userdata
+---@field space userdata
+---@field upper userdata
+---@field xdigit userdata
+
+---
+---Return a table with patterns for matching some character classes according to
+---the current locale.
+---
+---The table has fields named `alnum`, `alpha`, `cntrl`, `digit`, `graph`,
+---`lower`, `print`, `punct`, `space`, `upper`, and `xdigit`, each one
+---containing a correspondent pattern. Each pattern matches any single character
+---that belongs to its class.
+---
+---If called with an argument `table`, then it creates those fields inside the
+---given table and returns that table.
+---
+---__Example:__
+---
+---```lua
+---lpeg.locale(lpeg)
+---local space = lpeg.space ^ 0
+---local name = lpeg.C(lpeg.alpha ^ 1) * space
+---local sep = lpeg.S(',;') * space
+---local pair = lpeg.Cg(name * '=' * space * name) * sep ^ -1
+---local list = lpeg.Cf(lpeg.Ct('') * pair ^ 0, rawset)
+---local t = list:match('a=b, c = hi; next = pi')
+---assert(t.a == 'b')
+---assert(t.c == 'hi')
+---assert(t.next == 'pi')
+---
+---local locale = lpeg.locale()
+---assert(type(locale.digit) == 'userdata')
+---```
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L1319-L1340](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L1319-L1340)
+---* HTML documentation: [#op-locale](https://www.inf.puc-rio.br/~roberto/lpeg#op-locale)
+---
+---@param tab? table
+---
+---@return lpeg.Locale
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.locale(tab) end
+
+---
+---Create a simple capture. (The `C` stands for *`C`apture*.)
+---
+---Creates a simple capture, which captures the substring of the subject that
+---matches `patt`. The captured value is a string. If `patt` has other captures,
+---their values are returned after this one.
+---
+---__Example:__
+---
+---```lua
+---local function split (s, sep)
+---  sep = lpeg.P(sep)
+---  local elem = lpeg.C((1 - sep) ^ 0)
+---  local p = elem * (sep * elem) ^ 0
+---  return lpeg.match(p, s)
+---end
+---
+---local a, b, c = split('a,b,c', ',')
+---assert(a == 'a')
+---assert(b == 'b')
+---assert(c == 'c')
+---```
+---
+---__Reference:__
+---
+---* HTML documentation: [#cap-c](https://www.inf.puc-rio.br/~roberto/lpeg#cap-c)
+---
+---@param patt lpeg.Pattern|string|integer|boolean|table|function
+---
+---@return lpeg.Capture
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.C(patt) end
+
+---
+---Create an argument capture. (The `Carg` stands for *`C`apture `arg`ument*.)
+---
+---This pattern matches the empty string and produces the value given as the nth
+---extra argument given in the call to `lpeg.match`.
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L901-L905](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L901-L905)
+---* HTML documentation: [#cap-arg](https://www.inf.puc-rio.br/~roberto/lpeg#cap-arg)
+---
+---@param n integer
+---
+---@return lpeg.Capture
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.Carg(n) end
+
+---
+---Create a back capture. (The `Cb` stands for *`C`apture `b`ack*.)
+---
+---This pattern matches the empty string and produces the values produced by the
+---most recent group capture named `name` (where `name` can be any Lua value).
+---
+---Most recent means the last complete outermost group capture with the given
+---name. A *complete* capture means that the entire pattern corresponding to the
+---capture has matched. An *outermost* capture means that the capture is not
+---inside another complete capture.
+---
+---In the same way that LPeg does not specify when it evaluates captures, it
+---does not specify whether it reuses values previously produced by the group or
+---re-evaluates them.
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L901-L905](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L901-L905)
+---* HTML documentation: [#cap-b](https://www.inf.puc-rio.br/~roberto/lpeg#cap-b)
+---
+---@param name any
+---
+---@return lpeg.Capture
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.Cb(name) end
+
+---
+---Create a constant capture. (The `Cc` stands for *`C`apture `c`onstant*.)
+---
+---This pattern matches the empty string and produces all given values as its
+---captured values.
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L911-L936](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L911-L936)
+---* HTML documentation: [#cap-c](https://www.inf.puc-rio.br/~roberto/lpeg#cap-c)
+---
+---@param ... any
+---
+---@return lpeg.Capture
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.Cc(...) end
+
+---
+---Create a fold capture. (The `Cf` stands for *`C`apture `f`fold*.)
+---
+---If `patt` produces a list of captures `C1 C2 ... Cn`, this capture will
+---produce the value `func(...func(func(C1, C2), C3)...,Cn)`, that is, it will
+---fold (or accumulate, or reduce) the captures from `patt` using function
+---`func`.
+---
+---This capture assumes that `patt` should produce at least one capture with at
+---least one value (of any type), which becomes the initial value of an
+---accumulator. (If you need a specific initial value, you may prefix a constant
+---capture to `patt`.) For each subsequent capture, LPeg calls `func` with this
+---accumulator as the first argument and all values produced by the capture as
+---extra arguments; the first result from this call becomes the new value for
+---the accumulator. The final value of the accumulator becomes the captured
+---value.
+---
+---__Example:__
+---
+---```lua
+---local number = lpeg.R('09') ^ 1 / tonumber
+---local list = number * (',' * number) ^ 0
+---local function add(acc, newvalue) return acc + newvalue end
+---local sum = lpeg.Cf(list, add)
+---assert(sum:match('10,30,43') == 83)
+---```
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L876-L879](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L876-L879)
+---* HTML documentation: [#cap-f](https://www.inf.puc-rio.br/~roberto/lpeg#cap-f)
+---
+---@param patt lpeg.Pattern|string|integer|boolean|table|function
+---@param func fun(acc, newvalue): (acc: any)
+---
+---@return lpeg.Capture
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.Cf(patt, func) end
+
+---
+---Create a group capture.(The `Cg` stands for *`C`apture `g`roup*.)
+---
+---It groups all values returned by `patt` into a single capture. The group may
+---be anonymous (if no name is given) or named with the given name (which can be
+---any non-nil Lua value).
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L868-L873](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L868-L873)
+---* HTML documentation: [#cap-g](https://www.inf.puc-rio.br/~roberto/lpeg#cap-g)
+---
+---@param patt lpeg.Pattern|string|integer|boolean|table|function
+---@param name? string
+---
+---@return lpeg.Capture
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.Cg(patt, name) end
+
+---
+---Create a position capture.(The `Cp` stands for *`C`apture `p`osition*.)
+---
+---It matches the empty string and captures the position in the subject where
+---the match occurs. The captured value is a number.
+---
+---__Example:__
+---
+---```lua
+---local I = lpeg.Cp()
+---local function anywhere(p) return lpeg.P({I * p * I + 1 * lpeg.V(1)}) end
+---
+---local match_start, match_end = anywhere('world'):match('hello world!')
+---assert(match_start == 7)
+---assert(match_end == 12)
+---```
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L887-L890](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L887-L890)
+---* HTML documentation: [#cap-p](https://www.inf.puc-rio.br/~roberto/lpeg#cap-p)
+---
+---@return lpeg.Capture
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.Cp() end
+
+---
+---Create a substitution capture. (The `Cs` stands for *`C`apture
+---`s`ubstitution*.)
+---
+---This function creates a substitution capture, which captures the substring of
+---the subject that matches `patt`, with substitutions. For any capture inside
+---`patt` with a value, the substring that matched the capture is replaced by
+---the capture value (which should be a string). The final captured value is the
+---string resulting from all replacements.
+---
+---__Example:__
+---
+---```lua
+---local function gsub (s, patt, repl)
+---  patt = lpeg.P(patt)
+---  patt = lpeg.Cs((patt / repl + 1) ^ 0)
+---  return lpeg.match(patt, s)
+---end
+---assert(gsub('Hello, xxx!', 'xxx', 'World') == 'Hello, World!')
+---```
+---
+---__Reference:__
+---
+---* Corresponding C source code: [L858-L860](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L858-L860)
+---* HTML documentation: [#cap-s](https://www.inf.puc-rio.br/~roberto/lpeg#cap-s)
+---
+---@param patt lpeg.Pattern|string|integer|boolean|table|function
+---
+---@return lpeg.Capture
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.Cs(patt) end
+
+---
+---Create a table capture. (The `Ct` stands for *`C`apture `t`able*.)
+---
+---This capture returns a table with all values from all anonymous captures made
+---by `patt` inside this table in successive integer keys, starting at 1.
+---Moreover, for each named capture group created by `patt`, the first value of
+---the group is put into the table with the group name as its key. The captured
+---value is only the table.
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L863-L865](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L863-L865)
+---* HTML documentation: [#cap-t](https://www.inf.puc-rio.br/~roberto/lpeg#cap-t)
+---
+---@param patt lpeg.Pattern|string|integer|boolean|table|function
+---
+---@return lpeg.Capture
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.Ct(patt) end
+
+---
+---Create a match-time capture. (The `Cmt` stands for *`C`apture `m`atch
+---`t`ime*.)
+---
+---Unlike all other captures, this one is evaluated immediately when a match
+---occurs (even if it is part of a larger pattern that fails later). It forces
+---the immediate evaluation of all its nested captures and then calls
+---`function`.
+---
+---The given function gets as arguments the entire subject, the current position
+---(after the match of `patt`), plus any capture values produced by `patt`.
+---
+---The first value returned by `fn` defines how the match happens. If the call
+---returns a number, the match succeeds and the returned number becomes the new
+---current position. (Assuming a subject and current position `i`, the returned
+---number must be in the range `[i, len(s) + 1]`.) If the call returns true, the
+---match succeeds without consuming any input. (So, to return true is equivalent
+---to return `i`.) If the call returns `false`, `nil`, or no value, the match
+---fails.
+---
+---Any extra values returned by the function become the values produced by the
+---capture.
+---
+---__Reference:__
+---
+---* Corresponding C source code: [lptree.c#L939-L945](https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/lptree.c#L939-L945)
+---* HTML documentation: [#matchtime](https://www.inf.puc-rio.br/~roberto/lpeg#matchtime)
+---
+---@param patt lpeg.Pattern|string|integer|boolean|table|function
+---@param fn fun(s: string, i: integer, ...: any): (position: boolean|integer, ...: any)
+---
+---@return lpeg.Capture
+---
+---😱 [Types](https://github.com/LuaCATS/lpeg/blob/main/library/lpeg.lua) incomplete or incorrect? 🙏 [Please contribute!](https://github.com/LuaCATS/lpeg/pulls)
+function lpeg.Cmt(patt, fn) end
+
+return lpeg

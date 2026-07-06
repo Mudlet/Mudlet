@@ -50,6 +50,8 @@
 #include <QStack>
 #include <QTextStream>
 
+#include <memory>
+
 #include "TMxpMudlet.h"
 #include "TMxpProcessor.h"
 #include "TMxpFrameManager.h"
@@ -165,9 +167,16 @@ public:
         DiscordSetPartyInfo = 0x80,
         DiscordSetTimeInfo = 0x100,
         DiscordSetSubMask = 0x3ff,
+        // Kept for backward compatibility with saved profiles but no longer checked:
         DiscordLuaAccessEnabled = 0x800
     };
     Q_DECLARE_FLAGS(DiscordOptionFlags, DiscordOptionFlag)
+
+    enum DiscordMode {
+        DiscordDisabled = 0,
+        DiscordShowMudletOnly = 1,
+        DiscordShowGameDetails = 2
+    };
 
 
     QString getName() { return mHostName; }
@@ -195,11 +204,13 @@ public:
     // Is used to set preference dialog control directly:
     Qt::CheckState getWideAmbiguousEAsianGlyphsControlState() { return mAutoAmbigousWidthGlyphsSetting ? Qt::PartiallyChecked : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
     bool getEnableBlinkText() const { return mEnableBlinkText; }
-    void setEnableBlinkText(const bool enabled);
+    void setEnableBlinkText(bool enable);
     void setHaveColorSpaceId(const bool state) { mSGRCodeHasColSpaceId = state; }
     bool getHaveColorSpaceId() { return mSGRCodeHasColSpaceId; }
     void setMayRedefineColors(const bool state) { mServerMayRedefineColors = state; }
     bool getMayRedefineColors() { return mServerMayRedefineColors; }
+    bool shouldStripOscHyperlinkConfigParam();
+    bool shouldStripOscHyperlinkPresetParam();
     void setDiscordApplicationID(const QString& s);
     const QString& getDiscordApplicationID();
     void setDiscordInviteURL(const QString& s);
@@ -275,7 +286,11 @@ public:
     QPair<bool, QString> startStopWatch(const QString&);
     QPair<bool, QString> stopStopWatch(const int);
     QPair<bool, QString> stopStopWatch(const QString&);
-    stopWatch* getStopWatch(const int id) const { return mStopWatchMap.value(id); }
+    stopWatch* getStopWatch(const int id) const
+    {
+        auto it = mStopWatchMap.find(id);
+        return (it != mStopWatchMap.end()) ? it->second.get() : nullptr;
+    }
     int findStopWatchId(const QString&) const;
     QPair<bool, QString> setStopWatchName(const int, const QString&);
     QPair<bool, QString> setStopWatchName(const QString&, const QString&);
@@ -299,7 +314,7 @@ public:
     // produce this action will be purged from the Lua system as part of the
     // reset - which causes nasty existential issues (and crashes) from deleting
     // a script as it is being interpreted!
-    void resetProfile_phase1();
+    bool resetProfile_phase1();
     // This actually does the bulk of the reset but must wait until the profile
     // is quiescent:
     void resetProfile_phase2();
@@ -319,7 +334,7 @@ public:
 
     void updateDisplayDimensions();
 
-    std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing);
+    std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet = false);
     bool uninstallPackage(const QString&, enums::PackageModuleType thing);
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&, bool);
@@ -336,10 +351,11 @@ public:
     void waitForProfileSave();
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
-    bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
-    QString getMMCPChatName();
+    void setDiscordMode(DiscordMode mode);
+    bool discordUserIdMatch(const QString& userName) const;
+    const QString& getMMCPChatName() const;
     quint16 getMMCPPort();
-    QString getMMCPChatPrefix();
+    const QString& getMMCPChatPrefix() const;
     bool getMMCPAutoStartServer();
     bool getMMCPAllowPeekRequests();
     bool getMMCPPrefixEmotes();
@@ -352,7 +368,7 @@ public:
     QString mediaLocationGMCP() const;
     void setMediaLocationMSP(const QString& mediaUrl);
     QString mediaLocationMSP() const;
-    // Use this rather than accessng the TMainConsole::font() as the latter
+    // Use this rather than accessing the TMainConsole::font() as the latter
     // isn't always around during profile start-up:
     QFont getDisplayFont();
     QFont getAndClearTempDisplayFont();
@@ -462,7 +478,7 @@ public:
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void initMMCPServer();
-    void setMMCPChatName(const QString&, bool shouldSignal = true);
+    bool setMMCPChatName(const QString&);
     void setShowIdsInEditor(const bool isShown)
     {
         mShowIDsInEditor = isShown;
@@ -500,14 +516,14 @@ public:
     // Make this the first public member instantiated so we can use ITS font
     // as the "reference" or "master" font for whole profile - and so we don't
     // have to maintain a separate one here in this class which does not, as
-    // something derived from a QOject, have one:
+    // something derived from a QObject, have one:
     QPointer<TMainConsole> mpConsole;
     cTelnet mTelnet;
     QPointer<dlgPackageManager> mpPackageManager;
     QPointer<dlgModuleManager> mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
 
-    bool mDisablePasswordMasking;
+    bool mDisablePasswordMasking = false;
     int commandLineMinimumHeight = 30;
     bool mAlertOnNewData = true;
     bool mAllowToSendCommand = true;
@@ -660,10 +676,16 @@ public:
 
     bool mEditorAutoComplete = true;
 
-    // code editor theme (human-friendly name)
+    // code editor theme for light mode (human-friendly name)
     QString mEditorTheme = QLatin1String("Mudlet");
-    // code editor theme file on disk for edbee to load
+    // code editor theme file for light mode on disk for edbee to load
     QString mEditorThemeFile = QLatin1String("Mudlet.tmTheme");
+    // code editor theme for dark mode (human-friendly name), auto-populated on first dark mode switch
+    QString mEditorThemeDark;
+    // code editor theme file for dark mode on disk for edbee to load
+    QString mEditorThemeFileDark;
+    QString getEditorTheme() const;
+    QString getEditorThemeFile() const;
     void editorThemeChanged();
 
     // search engine URL prefix to search query
@@ -744,17 +766,21 @@ public:
     // module name = {"helpURL" = custom link}
     QMap<QString, QMap<QString, QString>> moduleHelp;
 
-    // Privacy option to allow the game to set Discord Rich Presence information
-    bool mDiscordDisableServerSide = true;
+    // Controls how Discord Rich Presence behaves:
+    // DiscordDisabled - RPC shut down, server unaware
+    // DiscordShowMudletOnly - shows "Playing Mudlet", server unaware, Lua can still set fields
+    // DiscordShowGameDetails - full integration with server GMCP/MSDP
+    DiscordMode mDiscordMode = DiscordShowGameDetails;
 
     // Discord privacy options to give the user control over what data a Server
-    // can set over OOB protocols (MSDP & GMCP) and the user via Lua API:
-    DiscordOptionFlags mDiscordAccessFlags{DiscordLuaAccessEnabled | DiscordSetSubMask};
+    // can set over OOB protocols (MSDP & GMCP):
+    DiscordOptionFlags mDiscordAccessFlags{DiscordSetSubMask};
 
     double mLineSize = 10.0;
+    double mRoomBorderSize = 10.0;
     double mRoomSize = 0.5;
     double mMapGridLineSize = 0.5;
-    QSet<QString> mMapInfoContributors{qsl("Short")};
+    QSet<QString> mMapInfoContributors;
     bool mBubbleMode = false;
     bool mMapViewOnly = true;
     bool mShowRoomID = false;
@@ -769,6 +795,10 @@ public:
     bool mMapperUseAntiAlias = true;
     bool mMapperShowRoomBorders = true;
     bool mMapperShowGrid = false;
+    // Center the map on an area as a whole when it fits entirely in the
+    // viewport, instead of following the player room. Off by default;
+    // configurable via the mapCenterSmallAreas key in Mudlet.ini.
+    bool mMapperCenterSmallAreas = false;
     bool mVersionInTTYPE = false;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
@@ -794,7 +824,7 @@ public:
     // string list: 0 - event name, 1 - display label, 2 - tooltip text
     QMap<QString, QStringList> mConsoleActions;
 
-    QMap<QString, QKeySequence*> profileShortcuts;
+    std::map<QString, std::unique_ptr<QKeySequence>> profileShortcuts;
 
     bool mTutorialForCompactLineAlreadyShown = false;
 
@@ -820,7 +850,7 @@ signals:
     // width characters:
     void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
     // Tells TTextEdit instances for this profile whether to animate blinking text:
-    void signal_changeEnableBlinkText(const bool);
+    void signal_changeEnableBlinkText(bool);
     void profileSaveStarted();
     void profileSaveFinished();
     void signal_changeSpellDict(const QString&);
@@ -908,7 +938,7 @@ private:
     // createStopWatch() to return 0 during script loading so that we do not get
     // superious stopwatches from being created then (when
     // mIsProfileLoadingSequence is true):
-    QMap<int, stopWatch*> mStopWatchMap;
+    std::map<int, std::unique_ptr<stopWatch>> mStopWatchMap;
 
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
@@ -926,7 +956,7 @@ private:
     // in the TTextEdit classes are only made when necessary:
     bool mWideAmbigousWidthGlyphs = false;
 
-    // Whether to animate blinking text (SGR codes 5 and 6) - if false, displays as italics
+    // Whether to animate blinking text (SGR codes 5 and 6) with a pulse effect
     bool mEnableBlinkText = false;
 
     // keeps track of all of the array writers we're currently operating with
@@ -940,13 +970,9 @@ private:
     // Will be null/empty if they have not set their own invite
     QString mDiscordInviteURL;
 
-    // Will be null/empty if we are not concerned to check the use of Discord
-    // Rich Presence against the local user currently logged into Discord -
-    // these two will be checked against the values from the Discord instance
-    // with which we are linked to by the RPC library - and if they do not match
-    // we won't use Discord functions.
+    // If non-empty, Rich Presence will only be shown when logged into this
+    // Discord username - useful if multiple people share a machine.
     QString mRequiredDiscordUserName;
-    QString mRequiredDiscordUserDiscriminator;
 
     QString mMMCPChatName;
     QString mMMCPChatPrefix;

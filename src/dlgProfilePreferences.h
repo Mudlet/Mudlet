@@ -154,6 +154,9 @@ private slots:
     void slot_setTreeWidgetIconSize(const int);
     void slot_changeMenuBarVisibility(const enums::controlsVisibility);
     void slot_changeToolBarVisibility(const enums::controlsVisibility);
+    // Greys out the "Never" entry in the other toolbar-visibility comboBox so
+    // both bars cannot be hidden simultaneously (issue #7079).
+    void slot_syncMenuToolBarNeverItem();
     void slot_changeShowIconsOnMenus(const Qt::CheckState);
     void slot_changeGuiLanguage(int);
     void slot_passwordStorageLocationChanged(int);
@@ -164,7 +167,6 @@ private slots:
     void slot_setPlayerRoomInnerDiameter(const int);
     void slot_setPostingTimeout(const double);
     void slot_changeControlCharacterHandling();
-    void slot_enableDarkEditor(const QString&);
     void slot_toggleAdvertiseScreenReader(const bool);
     void slot_changeWrapAt();
     void slot_toggleUseMaxBufferSize(bool checked);
@@ -175,6 +177,7 @@ private slots:
     void slot_loadHistoryMap();
     void slot_roomSizeChanged(int size);
     void slot_exitSizeChanged(int size);
+    void slot_borderSizeChanged(int size);
     void slot_gridSizeChanged(double size);
     void slot_displayFontChanged();
     void slot_displayFontSizeChanged();
@@ -220,6 +223,8 @@ private:
     void fillOutMapHistory();
     bool updateDisplayFont();
     void cancelShortcutCaptures();
+    void switchEditorTheme(const QString& themeName);
+    static QString findThemeCounterpart(const QString& themeName, const QComboBox* themeComboBox, bool toDark);
 
 
     QPointer<Host> mpHost;
@@ -229,7 +234,7 @@ private:
     QPointer<QDialog> mpDialogMapGlyphUsage;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
-    QMap<QString, QKeySequence*> currentShortcuts;
+    QMap<QString, QKeySequence> currentShortcuts;
     QPointer<QMenu> protocolMenu;
     QPointer<QAction> mEnableGMCP;
     QPointer<QAction> mEnableMSDP;

@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2022-2023 by Stephen Lyons                        *
+ *   Copyright (C) 2017, 2022-2023, 2026 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -43,9 +43,7 @@ class ActionUnit
     friend class XMLimport;
 
 public:
-    explicit ActionUnit(Host* pHost)
-    : mpHost(pHost)
-    {}
+    explicit ActionUnit(Host*);
     ~ActionUnit();
 
     std::list<TAction*> getActionRootNodeList()
@@ -69,7 +67,7 @@ public:
     int getNewID();
     void uninstall(const QString&);
     void _uninstall(TAction* pChild, const QString& packageName);
-    void updateToolbar();
+    void updateAllToolbars();
     std::list<QPointer<TToolBar>> getToolBarList() { return mToolBarList; }
     TAction* getHeadAction(TToolBar*);
     TAction* getHeadAction(TEasyButtonBar*);

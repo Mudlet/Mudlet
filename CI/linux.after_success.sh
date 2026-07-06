@@ -39,8 +39,6 @@ then
 #  fi
 
   # We refer to $BUILD_COMMIT in the environment to get the commit data now
-  COMMIT_DATE=$(git show -s --format="%cs" | tr -d '-')
-  YESTERDAY_DATE=$(date -d "yesterday" '+%F' | tr -d '-')
 
   git clone https://github.com/Mudlet/installers.git "${BUILD_DIR}/../installers"
 
@@ -73,12 +71,28 @@ then
   else # ptb/release build
     if [ "${public_test_build}" == "true" ]; then
 
-      # Skip commit check if this is a manually forced build
+      # Skip duplicate check if this is a manually forced build
       if [[ "${GITHUB_FORCE_BUILD}" == "true" ]]; then
-        echo "== Forced build requested, skipping commit date check =="
-      elif [[ "${COMMIT_DATE}" -lt "${YESTERDAY_DATE}" ]]; then
-        echo "== No new commits, aborting public test build generation =="
-        exit 0
+        echo "== Forced build requested, skipping duplicate PTB check =="
+      else
+        # don't swallow a gh failure (e.g. missing GH_TOKEN) - warning and
+        # building beats silently shipping a duplicate PTB
+        if existing_ptb_tags=$(gh release list --repo "${GITHUB_REPOSITORY}" --limit 100 \
+              --json tagName --jq '.[].tagName | select(contains("-ptb-"))'); then
+          while IFS= read -r existing_tag; do
+            [[ -n "${existing_tag}" ]] || continue
+            # prefix-compare as git can vary the abbreviated hash length per run
+            existing_commit="${existing_tag##*-}"
+            if [[ -n "${BUILD_COMMIT}" ]] \
+                && { [[ "${BUILD_COMMIT}" == "${existing_commit}"* ]] \
+                  || [[ "${existing_commit}" == "${BUILD_COMMIT}"* ]]; }; then
+              echo "== PTB already exists for commit ${BUILD_COMMIT} (${existing_tag}), aborting public test build generation =="
+              exit 0
+            fi
+          done <<< "${existing_ptb_tags}"
+        else
+          echo "::warning::Could not list releases to check for duplicate PTB (is GH_TOKEN set?) - proceeding with build"
+        fi
       fi
 
       echo "== Creating a public test build =="
@@ -99,9 +113,11 @@ then
     fi
 
     if [ "${public_test_build}" == "true" ]; then
-      tar -cvf "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-linux-x64.AppImage.tar" "Mudlet PTB.AppImage"
+      RELEASE_ARTIFACT="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-linux-x64.AppImage.tar"
+      tar -cvf "${RELEASE_ARTIFACT}" "Mudlet PTB.AppImage"
     else
-      tar -cvf "Mudlet-${VERSION}-linux-x64.AppImage.tar" "Mudlet.AppImage"
+      RELEASE_ARTIFACT="Mudlet-${VERSION}-linux-x64.AppImage.tar"
+      tar -cvf "${RELEASE_ARTIFACT}" "Mudlet.AppImage"
       echo "=== Creating portable version for Linux ==="
       PORTABLE_NAME="Mudlet-${VERSION}-linux-x64-portable"
       touch "portable.txt"
@@ -110,34 +126,65 @@ then
       rm -f "portable.txt"
     fi
 
+    echo "=== Generating SHA256 checksum for GitHub Release ==="
+    sha256sum "${RELEASE_ARTIFACT}" > "${RELEASE_ARTIFACT}.sha256"
+
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Setting up for Github upload ==="
       mkdir "upload/"
-      mv "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-linux-x64.AppImage.tar" "upload/"
+      mv "${RELEASE_ARTIFACT}" "upload/"
+      mv "${RELEASE_ARTIFACT}.sha256" "upload/"
       {
         echo "FOLDER_TO_UPLOAD=$(pwd)/upload"
         echo "UPLOAD_FILENAME=Mudlet-$VERSION$MUDLET_VERSION_BUILD-${BUILD_COMMIT}-linux-x64"
+        echo "RELEASE_ASSET_PATH=$(pwd)/upload/${RELEASE_ARTIFACT}"
+        echo "RELEASE_ASSET_SHA256_PATH=$(pwd)/upload/${RELEASE_ARTIFACT}.sha256"
+        echo "VERSION=${VERSION}"
+        echo "MUDLET_VERSION_BUILD=${MUDLET_VERSION_BUILD}"
+        echo "BUILD_COMMIT=${BUILD_COMMIT}"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
     else
-      echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
+      {
+        echo "RELEASE_ASSET_PATH=$(pwd)/${RELEASE_ARTIFACT}"
+        echo "RELEASE_ASSET_SHA256_PATH=$(pwd)/${RELEASE_ARTIFACT}.sha256"
+        echo "VERSION=${VERSION}"
+        echo "MUDLET_VERSION_BUILD=${MUDLET_VERSION_BUILD}"
+        echo "BUILD_COMMIT=${BUILD_COMMIT}"
+      } >> "$GITHUB_ENV"
 
-      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
-      if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
-        echo "Error: release not found as expected at $DEPLOY_URL"
+      echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
+      if ! scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"; then
+        echo "::error::failed to upload Mudlet-${VERSION}-linux-x64.AppImage.tar to make.mudlet.org"
         exit 1
       fi
 
+      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
+      # Retry to tolerate the delay between scp landing on make.mudlet.org and the
+      # file being served at www.mudlet.org - the publish step is not instantaneous.
+      verify_attempt=0
+      until curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; do
+        verify_attempt=$((verify_attempt + 1))
+        if [ "$verify_attempt" -ge 18 ]; then
+          echo "::warning::release uploaded to make.mudlet.org but not yet downloadable at $DEPLOY_URL after $verify_attempt attempts (CloudFlare/publish lag); the scp above is the authoritative upload check"
+          break
+        fi
+        echo "Release not yet available at $DEPLOY_URL, retrying in 10s (attempt $verify_attempt/18)..."
+        sleep 10
+      done
+
       # upload an unzipped, unversioned release for appimage.github.io
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
+      if ! scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"; then
+        echo "::error::failed to upload Mudlet.AppImage to make.mudlet.org"
+        exit 1
+      fi
       DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
 
       SHA256SUM=$(shasum -a 256 "Mudlet-${VERSION}-linux-x64.AppImage.tar" | awk '{print $1}')
       current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
       read -r day month year hour minute second <<< "$current_timestamp"
 
-      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+      curl --retry 5 -X POST 'https://make.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=$DEPLOY_URL" \
@@ -156,17 +203,26 @@ then
 
       echo "=== Uploading portable version ==="
       PORTABLE_NAME="Mudlet-${VERSION}-linux-x64-portable"
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PORTABLE_NAME}.tar.gz" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
-      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
-
-      if ! curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; then
-        echo "Error: portable release not found as expected at $PORTABLE_DEPLOY_URL"
+      if ! scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PORTABLE_NAME}.tar.gz" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"; then
+        echo "::error::failed to upload ${PORTABLE_NAME}.tar.gz to make.mudlet.org"
         exit 1
       fi
+      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
+
+      verify_attempt=0
+      until curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; do
+        verify_attempt=$((verify_attempt + 1))
+        if [ "$verify_attempt" -ge 18 ]; then
+          echo "::warning::portable uploaded to make.mudlet.org but not yet downloadable at $PORTABLE_DEPLOY_URL after $verify_attempt attempts (CloudFlare/publish lag)"
+          break
+        fi
+        echo "Portable release not yet available at $PORTABLE_DEPLOY_URL, retrying in 10s (attempt $verify_attempt/18)..."
+        sleep 10
+      done
 
       PORTABLE_SHA256SUM=$(shasum -a 256 "${PORTABLE_NAME}.tar.gz" | awk '{print $1}')
 
-      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+      curl --retry 5 -X POST 'https://make.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=$PORTABLE_DEPLOY_URL" \
@@ -202,7 +258,9 @@ then
       # release registration and uploading will be manual for the time being
     else
       echo "=== Registering release with Dblsqd ==="
-      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${DEPLOY_URL}"
+      # Non-fatal: dblsqd is legacy (GitHub releases are the primary distribution now),
+      # and the dblsqd release may not be pre-created. Do not let it block the build.
+      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${DEPLOY_URL}" || echo "::warning::dblsqd push failed for linux:x86_64 - continuing (GitHub release is the primary distribution)"
     fi
 
     if [ "${public_test_build}" != "true" ]; then
@@ -216,13 +274,16 @@ then
       chmod +x "${HOME}/git-archive-all.sh"
       "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
       xz "Mudlet-${VERSION}.tar"
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
+      if ! scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"; then
+        echo "::error::failed to upload Mudlet-${VERSION}.tar.xz to make.mudlet.org"
+        exit 1
+      fi
       FILE_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.tar.xz"
       SHA256SUM=$(shasum -a 256 "Mudlet-${VERSION}.tar.xz" | awk '{print $1}')
       current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
       read -r day month year hour minute second <<< "$current_timestamp"
 
-      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+      curl --retry 5 -X POST 'https://make.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=$FILE_URL" \
