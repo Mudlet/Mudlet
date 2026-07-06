@@ -3773,6 +3773,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     initStreamDecompressor();
                 }
 
+                // BEGIN_ENCODING may also arrive when the server restarts
+                // compression after a completed zstd frame ended the previous
+                // run, so restore the full MCCP4 state here
+                mMCCP_version_4 = true;
                 mNeedDecompression = true;
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
                 qDebug() << "MCCP4: Compression started with" << compressionType.c_str();
@@ -4792,6 +4796,31 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     mZstream.next_in = Z_NULL;
     mZstream.next_out = Z_NULL;
 
+    if (zval == Z_NEED_DICT || zval == Z_DATA_ERROR || zval == Z_STREAM_ERROR || zval == Z_MEM_ERROR) {
+        // The compressed stream is broken (e.g. the server sent uncompressed
+        // data where compressed data was announced). Without this check the
+        // failed inflate() used to eat all further data silently, leaving the
+        // connection looking dead. Warn, drop compression and let the caller
+        // treat the unconsumed input as plain text.
+        qWarning() << "cTelnet::decompressBuffer() ERROR - inflate() failed:" << zError(zval) << "- disabling compression";
+        //: %1 is the decompression error description. Shown when the server sends a corrupted MCCP compressed stream.
+        postMessage(tr("[ WARN  ]  - MCCP decompression error (%1), compression disabled.\n"
+                       "If the display looks garbled, please reconnect to the game.")
+                            .arg(QString::fromUtf8(zError(zval))));
+        if (mMCCP_version_4 && mMCCP4_encoding == MCCP4_ENCODING_DEFLATE) {
+            sendTelnetOption(TN_DONT, OPT_COMPRESS4);
+            cleanupMCCP4();
+        } else {
+            sendTelnetOption(TN_DONT, mMCCP_version_1 ? OPT_COMPRESS : OPT_COMPRESS2);
+            inflateEnd(&mZstream);
+            mNeedDecompression = false;
+            hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
+            hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
+        }
+        initStreamDecompressor();
+        return outSize;
+    }
+
     if (zval == Z_STREAM_END) {
         inflateEnd(&mZstream);
         qDebug() << "recv Z_STREAM_END, ending compression";
@@ -4873,35 +4902,18 @@ int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buff
         totalOutput += output.pos;
 
         if (result == 0) {
-            // Full zstd frame decoded - remaining input is either raw telnet
-            // or another compressed frame
+            // Full zstd frame decoded. The end of the frame ends compression
+            // (the MCCP4 counterpart of MCCP2's Z_STREAM_END): reference
+            // servers announce any restart with a fresh BEGIN_ENCODING
+            // subnegotiation, so whatever follows the frame is raw telnet
+            // for the caller to reprocess.
             size_t remainingInput = input.size - input.pos;
 
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 2)
-            qDebug() << "MCCP4: Frame complete - consumed:" << input.pos << "remaining:" << remainingInput;
+            qDebug() << "MCCP4: Frame complete, ending compression - consumed:" << input.pos << "remaining:" << remainingInput;
 #endif
 
-            if (remainingInput > 0 && in_buffer[input.pos] == TN_IAC) {
-#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 2)
-                qDebug() << "MCCP4: Frame end with IAC, switching to raw telnet mode";
-#endif
-                cleanupMCCP4();
-            } else if (remainingInput > 0) {
-                // Remaining data is likely another zstd frame - reset the
-                // context for the next frame and let the caller re-process
-                size_t const initResult = ZSTD_initDStream(mZstdDstream);
-                if (ZSTD_isError(initResult)) {
-                    qWarning() << "MCCP4: Failed to reinitialize ZSTD stream:" << ZSTD_getErrorName(initResult);
-                    //: Message shown in the main console when MCCP4 decompression encounters an internal error
-                    postMessage(tr("[ WARN  ]  - MCCP4 compression error, disabling. The connection may need to be restarted."));
-                    sendTelnetOption(TN_DONT, OPT_COMPRESS4);
-                    cleanupMCCP4();
-                    // Discard remaining compressed data - it cannot be decompressed
-                    in_buffer += input.size;
-                    length = 0;
-                    return static_cast<int>(totalOutput);
-                }
-            }
+            cleanupMCCP4();
 
             in_buffer += input.pos;
             length = static_cast<int>(remainingInput);
@@ -5175,20 +5187,27 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     qint32 datalen = amount;
     char* buffer = in_buffer;
 
-    char* mccp4RemainingData = nullptr;
-    int mccp4RemainingAmount = 0;
+    char* remainingData = nullptr;
+    int remainingAmount = 0;
 
     if (mNeedDecompression) {
         if (mMCCP_version_4 && mMCCP4_encoding == MCCP4_ENCODING_ZSTD) {
             datalen = decompressMCCP4Buffer(in_buffer, amount, out_buffer);
             buffer = out_buffer;
             if (amount > 0) {
-                mccp4RemainingData = in_buffer;
-                mccp4RemainingAmount = amount;
+                remainingData = in_buffer;
+                remainingAmount = amount;
             }
         } else if (mMCCP_version_4 && mMCCP4_encoding == MCCP4_ENCODING_DEFLATE) {
             datalen = decompressBuffer(in_buffer, amount, out_buffer);
             buffer = out_buffer;
+            // decompressBuffer() drops out of compression mode on
+            // Z_STREAM_END or a broken stream; anything it did not consume
+            // is plain data that must still be processed
+            if (!mNeedDecompression && amount > 0) {
+                remainingData = in_buffer;
+                remainingAmount = amount;
+            }
         } else if (mMCCP_version_4) {
             qWarning() << "MCCP4: Unknown encoding type, disabling MCCP4";
             //: Message shown in the main console when MCCP4 decompression encounters an internal error
@@ -5199,6 +5218,10 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
         } else {
             datalen = decompressBuffer(in_buffer, amount, out_buffer);
             buffer = out_buffer;
+            if (!mNeedDecompression && amount > 0) {
+                remainingData = in_buffer;
+                remainingAmount = amount;
+            }
         }
     }
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
@@ -5286,6 +5309,13 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
 
                             if (restLength > 0) {
                                 datalen = decompressBuffer(buffer, restLength, out_buffer);
+                                // the same chunk may contain data past the end of the
+                                // compressed stream (decompressBuffer() advanced
+                                // 'buffer' to it); queue it for reprocessing
+                                if (!mNeedDecompression && restLength > 0) {
+                                    remainingData = buffer;
+                                    remainingAmount = restLength;
+                                }
                                 buffer = out_buffer;
                                 i = -1; // start processing buffer from the beginning.
                             } else {
@@ -5322,11 +5352,15 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                             if (mMCCP4_encoding == MCCP4_ENCODING_ZSTD) {
                                 datalen = decompressMCCP4Buffer(restBuffer, restLength, out_buffer);
                                 if (restLength > 0) {
-                                    mccp4RemainingData = restBuffer;
-                                    mccp4RemainingAmount = restLength;
+                                    remainingData = restBuffer;
+                                    remainingAmount = restLength;
                                 }
                             } else {
                                 datalen = decompressBuffer(restBuffer, restLength, out_buffer);
+                                if (!mNeedDecompression && restLength > 0) {
+                                    remainingData = restBuffer;
+                                    remainingAmount = restLength;
+                                }
                             }
                             buffer = out_buffer;
                             i = -1;
@@ -5417,10 +5451,11 @@ Some data loss is likely - please mention this problem to the game admins.)",
         gotRest(cleandata);
     }
 
-    // Process remaining data from MCCP4 frame completion (e.g. raw telnet
-    // after compression ends, or another zstd frame in the same TCP read)
-    if (mccp4RemainingData && mccp4RemainingAmount > 0) {
-        processSocketData(mccp4RemainingData, mccp4RemainingAmount, loopbackTesting);
+    // Process data left over after a compressed stream ended mid-chunk
+    // (e.g. raw telnet after compression ends, or another zstd frame in
+    // the same TCP read)
+    if (remainingData && remainingAmount > 0) {
+        processSocketData(remainingData, remainingAmount, loopbackTesting);
         --recursionDepth;
         return;
     }
