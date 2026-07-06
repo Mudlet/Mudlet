@@ -726,7 +726,11 @@ void mudlet::init()
     connect(this, &mudlet::signal_windowStateChanged, this, &mudlet::slot_windowStateChanged);
 
 #if defined(INCLUDE_UPDATER)
-    pUpdater = new Updater(this, mpSettings, !releaseVersion);
+    // The main window deletes itself on close (WA_DeleteOnClose). The updater
+    // shows its "an update is ready" dialog only after the last window closes,
+    // so it must outlive the main window - parent it to the application, not to
+    // the window that is about to be destroyed:
+    pUpdater = new Updater(qApp, mpSettings, !releaseVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(pUpdater, &Updater::signal_updateCheckFailed, this, &mudlet::slot_updateCheckFailed);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
@@ -5785,8 +5789,15 @@ void mudlet::slot_updateInstalled()
 
     // rejig to restart Mudlet instead
     connect(dactionUpdate, &QAction::triggered, this, [=, this]() {
+#if defined(Q_OS_WINDOWS)
+        // On Windows the new binary is not in place yet - the downloaded
+        // installer still has to run, which slot_installOrRestartClicked
+        // arranges via a batch file that waits for Mudlet to exit:
+        pUpdater->slot_installOrRestartClicked(nullptr, QString());
+#else
         forceClose();
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
+#endif
     });
     dactionUpdate->setText(tr("Update installed - restart to apply"));
 #endif // !Q_OS_MACOS
