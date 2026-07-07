@@ -391,11 +391,11 @@ std::vector<int> TriggerUnit::findItems(const QString& name, const bool exactMat
 bool TriggerUnit::enableTrigger(const QString& name)
 {
     bool found = false;
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
-        TTrigger* pT = it.value();
-        pT->setIsActive(true);
-        ++it;
+    // equal_range visits every same-named trigger; constFind() + (++it) can
+    // start mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        it.value()->setIsActive(true);
         found = true;
     }
     return found;
@@ -404,11 +404,11 @@ bool TriggerUnit::enableTrigger(const QString& name)
 bool TriggerUnit::disableTrigger(const QString& name)
 {
     bool found = false;
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
-        TTrigger* pT = it.value();
-        pT->setIsActive(false);
-        ++it;
+    // equal_range visits every same-named trigger; constFind() + (++it) can
+    // start mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        it.value()->setIsActive(false);
         found = true;
     }
     return found;
@@ -416,11 +416,11 @@ bool TriggerUnit::disableTrigger(const QString& name)
 
 void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
 {
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
-        TTrigger* pT = it.value();
-        pT->mKeepFiring = lines;
-        ++it;
+    // equal_range visits every same-named trigger; constFind() + (++it) can
+    // start mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        it.value()->mKeepFiring = lines;
     }
 }
 

@@ -2762,7 +2762,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
         }
         action->css = css;
     }
-    host.getActionUnit()->updateToolbar();
+    host.getActionUnit()->updateAllToolbars();
     lua_pushboolean(L, 1);
     return 1;
 }

@@ -598,7 +598,7 @@ void mudlet::init()
         }
         host->mpEditorDialog->showCurrentTriggerItem();
         host->mpEditorDialog->raise();
-        host->mpEditorDialog->showNormal();
+        showEditorRestoringWindowState(host->mpEditorDialog);
         host->mpEditorDialog->activateWindow();
         host->mpEditorDialog->mpErrorConsole->setVisible(true);
     });
@@ -2184,7 +2184,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(pH, &Host::profileSaveFinished, pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
     pEditor->fillout_form();
 
-    pH->getActionUnit()->updateToolbar();
+    pH->getActionUnit()->updateAllToolbars();
 
     pH->mpConsole->show();
     pH->mpConsole->repaint();
@@ -3212,6 +3212,21 @@ void mudlet::slot_showConnectionDialog()
     });
 }
 
+void mudlet::showEditorRestoringWindowState(QWidget* editor)
+{
+    // The editor is a singleton that is repeatedly re-shown whenever the user
+    // toggles to it (e.g. with its keyboard shortcut). A plain showNormal()
+    // would drop a maximized or full-screen state, so restore whichever state
+    // the window was last left in instead.
+    if (editor->isMaximized()) {
+        editor->showMaximized();
+    } else if (editor->isFullScreen()) {
+        editor->showFullScreen();
+    } else {
+        editor->showNormal();
+    }
+}
+
 void mudlet::slot_showEditorDialog()
 {
     Host* pHost = getActiveHost();
@@ -3244,7 +3259,7 @@ void mudlet::slot_showEditorDialog()
 
     pEditor->showCurrentTriggerItem();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 
     // Force reposition after showing, since script editor is a singleton
@@ -3290,7 +3305,7 @@ void mudlet::slot_showTriggerDialog()
 
     pEditor->slot_showTriggers();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3326,7 +3341,7 @@ void mudlet::slot_showAliasDialog()
 
     pEditor->slot_showAliases();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3362,7 +3377,7 @@ void mudlet::slot_showTimerDialog()
 
     pEditor->slot_showTimers();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3539,7 +3554,7 @@ void mudlet::slot_showScriptDialog()
 
     pEditor->slot_showScripts();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3575,7 +3590,7 @@ void mudlet::slot_showKeyDialog()
 
     pEditor->slot_showKeys();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3611,7 +3626,7 @@ void mudlet::slot_showVariableDialog()
 
     pEditor->slot_showVariables();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3647,7 +3662,7 @@ void mudlet::slot_showActionDialog()
 
     pEditor->slot_showActions();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
