@@ -1118,6 +1118,286 @@ int TLuaInterpreter::permAlias(lua_State* L)
     return 1;
 }
 
+bool TLuaInterpreter::validateColorCode(const int colorCode)
+{
+    if (colorCode >= 0 && colorCode <= 255) {
+        // Valid 256 color index
+        return true;
+    } else if (colorCode == TTrigger::scmIgnored) {
+        // Valid "ignore" color
+        return true;
+    } else if (colorCode == TTrigger::scmDefault) {
+        // Valid "default" color
+        return true;
+    }
+
+    // Else not something we currently understand (maybe from a newer Mudlet?)
+    return false;
+}
+
+// The "regList" in this function is that produced from
+// (QString) TTrigger::createColorPatternText(const int fgColorCode, const int bgColorCode)
+// which currently only handles fore and background colors. It is possible that
+// color triggers can/will be extended to also handle the presence/absence of
+// other (TChar) attributes - bold, underline, etc. - I anticipate adding those
+// as a third (or maybe more) items to the {fgColorCode, bgColorCode, ...} sub-
+// tables to the table as the third argument. SlySven 2024/11
+int TLuaInterpreter::permColorTrigger(lua_State* L)
+{
+    const QString name = getVerifiedString(L, __func__, 1, "trigger name");
+    const QString parent = getVerifiedString(L, __func__, 2, "trigger parent");
+    bool issueExcessArgumentWarning = false;
+
+    QStringList regList;
+    if (!lua_istable(L, 3)) {
+        lua_pushfstring(L, "%s: bad argument #3 type (foreground and background color pair sub-table list as table expected, got %s!)", __func__, luaL_typename(L, 3));
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+
+    auto errorOutOnWrongType = [&](lua_State* pLuaState, const char* functionName, const int mainTableIndex, const int subTableIndex, const char* argumentTypeName) {
+        lua_pushfstring(pLuaState,
+                        "%s: bad argument #3, outer table index #%d inner table index #%d type (color or "
+                        "text attributes list as table containing tables of zero to two numbers followed "
+                        "by zero or more strings {[fg[, bg],][attributes]} expected, but got a %s as "
+                        "the item at that index!)",
+                        functionName,
+                        mainTableIndex,
+                        subTableIndex,
+                        argumentTypeName);
+        lua_error(pLuaState);
+        Q_UNREACHABLE();
+    };
+
+    lua_pushnil(L);
+    // Indexes sub-tables in the table:
+    int i = 0;
+    while (lua_next(L, 3) != 0) {
+        ++i;
+        if (lua_type(L, -1) != LUA_TTABLE) {
+            lua_pushfstring(L,
+                            "%s: bad argument #3 table item index #%d type (text attributes list must be a table containing tables of zero, one (foreground) or two color (foreground, background) "
+                            "numbers, followed by additional strings for other format attributes {NOT currently supported}, got %s as indicated item!)",
+                            __func__,
+                            i,
+                            luaL_typename(L, -1));
+            lua_error(L);
+            Q_UNREACHABLE();
+        }
+
+        lua_pushnil(L);
+        // Indexes items (individual colors {+ other things in future}) in
+        // current sub (inner) table:
+        int j = 0;
+        std::optional<int> foregroundColor;
+        std::optional<int> backgroundColor;
+        QStringList otherOptions;
+        while (lua_next(L, -2) != 0) {
+            switch (++j) {
+            // First two elements could be color number codes - so that this
+            // code accepts zero, one or two color numbers and then string(s)
+            // for future other options - but currently will moan if the latter
+            // are seen:
+            case 1: // (optional) fg-colour
+                if (lua_type(L, -1) == LUA_TNUMBER) {
+                    foregroundColor = lua_tonumber(L, -1);
+                    if (!validateColorCode(foregroundColor.value())) {
+                        return warnArgumentValue(
+                                L,
+                                __func__,
+                                qsl("number %1 is not a valid foreground color code - is it from a later version of Mudlet that handles more values?").arg(QString::number(foregroundColor.value())));
+                    }
+
+                } else {
+                    if (lua_type(L, -1) == LUA_TSTRING) {
+                        QString otherOption{lua_tostring(L, -1)};
+                        otherOptions.append(otherOption);
+                        issueExcessArgumentWarning = true;
+                        // Remove prior line and do the following once we
+                        // handle "other" things in a color&format trigger
+                        // validateFormatCode(otherOption);
+                    } else {
+                        // Error out on duff entry.
+                        errorOutOnWrongType(L, __func__, i, j, luaL_typename(L, -1));
+                        Q_UNREACHABLE();
+                    }
+                }
+                break;
+
+            case 2: // (optional, if have a fg-color) bg-colour
+                if (lua_type(L, -1) == LUA_TNUMBER) {
+                    if (foregroundColor.has_value()) {
+                        backgroundColor = lua_tonumber(L, -1);
+                        if (!validateColorCode(backgroundColor.value())) {
+                            return warnArgumentValue(
+                                    L, __func__, qsl("number %1 is not a valid background color code - is it from a later version of Mudlet?").arg(QString::number(backgroundColor.value())));
+                        }
+
+                    } else {
+                        return warnArgumentValue(L,
+                                                 __func__,
+                                                 qsl("to set a background code to %1 you must provide a foreground code though it may be the 'ignored' (%2) one first.")
+                                                         .arg(QString::number(backgroundColor.value()), QString::number(TTrigger::scmIgnored)));
+                    }
+
+                } else {
+                    if (lua_type(L, -1) == LUA_TSTRING) {
+                        QString otherOption{lua_tostring(L, -1)};
+                        otherOptions.append(otherOption);
+                        issueExcessArgumentWarning = true;
+                        // Remove prior line and do the following once we
+                        // handle "other" things in a color&format trigger
+                        // validateFormatCode(otherOption);
+                    } else {
+                        errorOutOnWrongType(L, __func__, i, j, luaL_typename(L, -1));
+                        Q_UNREACHABLE();
+                    }
+                }
+                break;
+
+            default:
+                // Other options, not currently handled but possible in future
+                if (lua_type(L, -1) == LUA_TSTRING) {
+                    QString otherOption{lua_tostring(L, -1)};
+                    otherOptions.append(otherOption);
+                    issueExcessArgumentWarning = true;
+                    // Remove prior line and do the following once we
+                    // handle "other" things in a color&format trigger
+                    // validateFormatCode(otherOption);
+                } else {
+                    // Error out on duff entry.
+                    errorOutOnWrongType(L, __func__, i, j, luaL_typename(L, -1));
+                    Q_UNREACHABLE();
+                }
+            }
+            lua_pop(L, 1);
+        }
+        lua_pop(L, 1);
+
+        const auto patternText{TTrigger::createColorPatternText(foregroundColor.value_or(TTrigger::scmIgnored), backgroundColor.value_or(TTrigger::scmIgnored))};
+        if (!patternText.isEmpty()) {
+            // This test will fail for a trigger with just a ignore foreground
+            // or ignore both fore and background colors and we do not want those
+            // in the items:
+            regList << patternText;
+        }
+    }
+
+    if (regList.isEmpty()) {
+        return warnArgumentValue(L, __func__, "no valid items found in argument #3, trigger not created");
+    }
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
+        lua_pushfstring(L, "%s: bad argument #%d (%s)", __func__, 4, validationMessage.toUtf8().constData());
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+
+    const QString script{lua_tostring(L, 4)};
+    auto [triggerId, message] = pLuaInterpreter->startPermColorTrigger(name, parent, regList, script);
+    if (triggerId == -1) {
+        lua_pushfstring(L, "%s: cannot create trigger (%s)", __func__, message.toUtf8().constData());
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+
+    if (issueExcessArgumentWarning) {
+        const QString warningMessage{tr("[ WARN ]  - a permanent Color trigger \"%1\" with ID: %2 has just been\n"
+                                        "created by a 'permColorTrigger(...)' call from the Lua API. However it\n"
+                                        "contained extra string arguments that are anticipated but not currently\n"
+                                        "implemented in this Mudlet version. As such the trigger concerned will\n"
+                                        "probably not work as scripted.")
+                                             .arg(name, QString::number(triggerId))};
+        host.postMessage(warningMessage);
+    }
+
+    lua_pushnumber(L, triggerId);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permExactMatchStringTrigger
+int TLuaInterpreter::permExactMatchStringTrigger(lua_State* L)
+{
+    const QString name = getVerifiedString(L, __func__, 1, "trigger name");
+    const QString parent = getVerifiedString(L, __func__, 2, "trigger parent");
+
+    QStringList regList;
+    if (!lua_istable(L, 3)) {
+        lua_pushfstring(L, "%s: bad argument #3 type (exact-match strings list as table expected, got %s!)", __func__, luaL_typename(L, 3));
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+    lua_pushnil(L);
+    while (lua_next(L, 3) != 0) {
+        // key at index -2 and value at index -1
+        if (lua_type(L, -1) == LUA_TSTRING) {
+            regList << lua_tostring(L, -1);
+        }
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
+        lua_pushfstring(L, "%s: bad argument #%d (%s)", __func__, 4, validationMessage.toUtf8().constData());
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+
+    const QString script{lua_tostring(L, 4)};
+    auto [triggerId, message] = pLuaInterpreter->startPermExactStringTrigger(name, parent, regList, script);
+    if (triggerId == -1) {
+        lua_pushfstring(L, "%s: cannot create trigger (%s)", __func__, message.toUtf8().constData());
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+    lua_pushnumber(L, triggerId);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permLuaFunctionTrigger
+int TLuaInterpreter::permLuaFunctionTrigger(lua_State* L)
+{
+    const QString name = getVerifiedString(L, __func__, 1, "trigger name");
+    const QString parent = getVerifiedString(L, __func__, 2, "trigger parent");
+
+    QStringList regList;
+    if (!lua_istable(L, 3)) {
+        lua_pushfstring(L, "%s: bad argument #3 type (lua function strings list as table expected, got %s!)", __func__, luaL_typename(L, 3));
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+    lua_pushnil(L);
+    while (lua_next(L, 3) != 0) {
+        // key at index -2 and value at index -1
+        if (lua_type(L, -1) == LUA_TSTRING) {
+            regList << lua_tostring(L, -1);
+        }
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
+        lua_pushfstring(L, "%s: bad argument #%d (%s)", __func__, 4, validationMessage.toUtf8().constData());
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+
+    const QString script{lua_tostring(L, 4)};
+    auto [triggerId, message] = pLuaInterpreter->startPermLuaFunctionTrigger(name, parent, regList, script);
+    if (triggerId == -1) {
+        lua_pushfstring(L, "%s: cannot create trigger (%s)", __func__, message.toUtf8().constData());
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+    lua_pushnumber(L, triggerId);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permPromptTrigger
 int TLuaInterpreter::permPromptTrigger(lua_State* L)
 {
@@ -1148,7 +1428,7 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
 
     QStringList regList;
     if (!lua_istable(L, 3)) {
-        lua_pushfstring(L, "permRegexTrigger: bad argument #3 type (sub-strings list as table expected, got %s!)", luaL_typename(L, 3));
+        lua_pushfstring(L, "%s: bad argument #3 type (regexs strings list as table expected, got %s!)", __func__, luaL_typename(L, 3));
         return lua_error(L);
     }
     lua_pushnil(L);
@@ -1164,14 +1444,14 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
-        lua_pushfstring(L, "permRegexTrigger: bad argument #%d (%s)", 4, validationMessage.toUtf8().constData());
+        lua_pushfstring(L, "%s: bad argument #%d (%s)", __func__, 4, validationMessage.toUtf8().constData());
         return lua_error(L);
     }
 
     const QString script{lua_tostring(L, 4)};
     auto [triggerId, message] = pLuaInterpreter->startPermRegexTrigger(name, parent, regList, script);
     if (triggerId == -1) {
-        lua_pushfstring(L, "permRegexTrigger: cannot create trigger (%s)", message.toUtf8().constData());
+        lua_pushfstring(L, "%s: cannot create trigger (%s)", __func__, message.toUtf8().constData());
         return lua_error(L);
     }
     lua_pushnumber(L, triggerId);
@@ -1186,7 +1466,7 @@ int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
 
     QStringList regList;
     if (!lua_istable(L, 3)) {
-        lua_pushfstring(L, "permBeginOfLineStringTrigger: bad argument #3 type (sub-strings list as table expected, got %s!)", luaL_typename(L, 3));
+        lua_pushfstring(L, "%s: bad argument #3 type (beginning of line strings list as table expected, got %s!)", __func__, luaL_typename(L, 3));
         return lua_error(L);
     }
     lua_pushnil(L);
@@ -1202,14 +1482,14 @@ int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
-        lua_pushfstring(L, "permBeginOfLineStringTrigger: bad argument #%d (%s)", 4, validationMessage.toUtf8().constData());
+        lua_pushfstring(L, "%s: bad argument #%d (%s)", __func__, 4, validationMessage.toUtf8().constData());
         return lua_error(L);
     }
 
     const QString script{lua_tostring(L, 4)};
     auto [triggerId, message] = pLuaInterpreter->startPermBeginOfLineStringTrigger(name, parent, regList, script);
     if (triggerId == -1) {
-        lua_pushfstring(L, "permRegexTrigger: cannot create trigger (%s)", message.toUtf8().constData());
+        lua_pushfstring(L, "%s: cannot create trigger (%s)", __func__, message.toUtf8().constData());
         return lua_error(L);
     }
     lua_pushnumber(L, triggerId);
@@ -1223,7 +1503,7 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
     const QString parent = getVerifiedString(L, __func__, 2, "trigger parent");
     QStringList regList;
     if (!lua_istable(L, 3)) {
-        lua_pushfstring(L, "permSubstringTrigger: bad argument #3 type (sub-strings list as table expected, got %s!)", luaL_typename(L, 3));
+        lua_pushfstring(L, "%s: bad argument #3 type (sub-strings list as table expected, got %s!)", __func__, luaL_typename(L, 3));
         return lua_error(L);
     }
     lua_pushnil(L);
@@ -1239,14 +1519,14 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
-        lua_pushfstring(L, "permSubstringTrigger: bad argument #%d (%s)", 4, validationMessage.toUtf8().constData());
+        lua_pushfstring(L, "%s: bad argument #%d (%s)", __func__, 4, validationMessage.toUtf8().constData());
         return lua_error(L);
     }
 
     const QString script{lua_tostring(L, 4)};
     auto [triggerID, message] = pLuaInterpreter->startPermSubstringTrigger(name, parent, regList, script);
     if (triggerID == -1) {
-        lua_pushfstring(L, "permSubstringTrigger: cannot create trigger (%s)", message.toUtf8().constData());
+        lua_pushfstring(L, "%s: cannot create trigger (%s)", __func__, message.toUtf8().constData());
         return lua_error(L);
     }
     lua_pushnumber(L, triggerID);
@@ -2012,6 +2292,9 @@ int TLuaInterpreter::tempAlias(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempBeginOfLineTrigger
+// For consistency this should be renamed to tempBeginOfLineStringTrigger -
+// leaving the identifier "tempBeginOfLineTrigger" registered to the same
+// function:
 int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -2420,6 +2703,9 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempExactMatchTrigger
+// For consistency this should be renamed to tempExactMatchStringTrigger -
+// leaving the identifier "tempExactMatchTrigger" registered to the same
+// function:
 int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -2691,6 +2977,8 @@ int TLuaInterpreter::tempTimer(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempTrigger
+// For consistency this should be renamed to tempSubstringTrigger -
+// leaving the identifier "tempTrigger" registered to the same function:
 int TLuaInterpreter::tempTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);

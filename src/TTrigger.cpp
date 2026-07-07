@@ -1392,7 +1392,9 @@ QString TTrigger::createColorPatternText(const int fgColorCode, const int bgColo
     // non-zero (boolean true) on no match - and we want to detect when BOTH
     // texts are IGNORE so we return an empty string in that case only - so that
     // it is equivalent to an empty other trigger type:
-    return (fgText.compare(QLatin1String("IGNORE")) || bgText.compare(QLatin1String("IGNORE"))) ? qsl("ANSI_COLORS_F{%1}_B{%2}").arg(fgText, bgText) : QString();
+    return (fgText.compare(QLatin1String("IGNORE")) || bgText.compare(QLatin1String("IGNORE")))
+                   ? qsl("ANSI_COLORS_F{%1}_B{%2}").arg(fgText, bgText)
+                   : QString();
 }
 
 void TTrigger::decodeColorPatternText(const QString& patternText, int& fgColorCode, int& bgColorCode)

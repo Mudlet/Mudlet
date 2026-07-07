@@ -164,6 +164,9 @@ public:
     std::pair<int, QString> startPermExactMatchTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
+    std::pair<int, QString> startPermExactStringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
+    std::pair<int, QString> startPermColorTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
+    std::pair<int, QString> startPermLuaFunctionTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     std::pair<int, QString> createPermScript(const QString& name, const QString& parent, const QString& luaCode);
     std::pair<int, QString> setScriptCode(const QString& name, const QString& luaCode, const int pos);
@@ -595,6 +598,9 @@ public:
     static int disableAlias(lua_State*);
     static int killAlias(lua_State*);
     static int permBeginOfLineStringTrigger(lua_State*);
+    static int permExactMatchStringTrigger(lua_State*);
+    static int permColorTrigger(lua_State*);
+    static int permLuaFunctionTrigger(lua_State*);
     static int setUserWindowStyleSheet(lua_State*);
     static int getTime(lua_State*);
     static int getEpoch(lua_State*);
@@ -857,6 +863,7 @@ private:
     static void parseCommandsOrFunctionsTable(lua_State*, const char*, int&, QStringList&, QVector<int>&);
     static void parseHintsTable(lua_State*, const char*, int&, QStringList&);
     static QByteArray parseTelnetCodes(const QByteArray&);
+    static bool validateColorCode(const int);
 
     bool callReference(lua_State*, QString name, int parameters);
     void logError(std::string& e, const QString&, const QString& function);

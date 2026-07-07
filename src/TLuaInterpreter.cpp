@@ -5251,6 +5251,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "permSubstringTrigger", TLuaInterpreter::permSubstringTrigger);
     lua_register(pGlobalLua, "permExactMatchTrigger", TLuaInterpreter::permExactMatchTrigger);
     lua_register(pGlobalLua, "permBeginOfLineStringTrigger", TLuaInterpreter::permBeginOfLineStringTrigger);
+    lua_register(pGlobalLua, "permExactMatchStringTrigger", TLuaInterpreter::permExactMatchStringTrigger);
+    lua_register(pGlobalLua, "permColorTrigger", TLuaInterpreter::permColorTrigger);
+    lua_register(pGlobalLua, "permLuaFunctionTrigger", TLuaInterpreter::permLuaFunctionTrigger);
     lua_register(pGlobalLua, "tempComplexRegexTrigger", TLuaInterpreter::tempComplexRegexTrigger);
     lua_register(pGlobalLua, "permTimer", TLuaInterpreter::permTimer);
     lua_register(pGlobalLua, "permScript", TLuaInterpreter::permScript);
@@ -6566,6 +6569,93 @@ std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const
     pT->setTemporary(false);
     pT->registerTrigger();
     pT->setScript(function);
+    pT->setName(name);
+    updateEditor();
+    return std::pair(pT->getID(), QString());
+}
+
+// No documentation available in wiki - internal function
+std::pair<int, QString> TLuaInterpreter::startPermColorTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function)
+{
+    TTrigger* pT = nullptr;
+    QList<int> propertyList;
+    for (int i = 0; i < patterns.size(); i++) {
+        propertyList << REGEX_COLOR_PATTERN;
+    }
+    if (parent.isEmpty()) {
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
+    } else {
+        TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
+        if (!pP) {
+            return {-1, qsl("parent '%1' not found").arg(parent)};
+        }
+        pT = new TTrigger(pP, mpHost);
+
+        pT->setRegexCodeList(patterns, propertyList);
+    }
+    pT->setIsFolder(patterns.empty());
+    pT->setIsActive(true);
+    pT->setTemporary(false);
+    pT->registerTrigger();
+    pT->setScript(function);
+
+    pT->setName(name);
+    updateEditor();
+    return std::pair(pT->getID(), QString());
+}
+
+// No documentation available in wiki - internal function
+std::pair<int, QString> TLuaInterpreter::startPermExactStringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function)
+{
+    TTrigger* pT = nullptr;
+    QList<int> propertyList;
+    for (int i = 0; i < patterns.size(); i++) {
+        propertyList << REGEX_EXACT_MATCH;
+    }
+    if (parent.isEmpty()) {
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
+    } else {
+        TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
+        if (!pP) {
+            return {-1, qsl("parent '%1' not found").arg(parent)};
+        }
+        pT = new TTrigger(pP, mpHost);
+        pT->setRegexCodeList(patterns, propertyList);
+    }
+    pT->setIsFolder(patterns.empty());
+    pT->setIsActive(true);
+    pT->setTemporary(false);
+    pT->registerTrigger();
+    pT->setScript(function);
+
+    pT->setName(name);
+    updateEditor();
+    return std::pair(pT->getID(), QString());
+}
+
+std::pair<int, QString> TLuaInterpreter::startPermLuaFunctionTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function)
+{
+    TTrigger* pT = nullptr;
+    QList<int> propertyList;
+    for (int i = 0; i < patterns.size(); i++) {
+        propertyList << REGEX_LUA_CODE;
+    }
+    if (parent.isEmpty()) {
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
+    } else {
+        TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
+        if (!pP) {
+            return {-1, qsl("parent '%1' not found").arg(parent)};
+        }
+        pT = new TTrigger(pP, mpHost);
+        pT->setRegexCodeList(patterns, propertyList);
+    }
+    pT->setIsFolder(patterns.empty());
+    pT->setIsActive(true);
+    pT->setTemporary(false);
+    pT->registerTrigger();
+    pT->setScript(function);
+
     pT->setName(name);
     updateEditor();
     return std::pair(pT->getID(), QString());
