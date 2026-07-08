@@ -1257,7 +1257,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 // This uses UTF-16BE encoded data but needs to be converted to the selected
 // Mud Server encoding - it should NOT contain any Telnet protocol byte
 // sequences:
-bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, const bool isUserCommand)
+bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, const bool isGameCommand)
 {
     data.remove(QChar::LineFeed);
 
@@ -1324,12 +1324,14 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         // Character-at-a-time detection: a genuine character-at-a-time server keeps
         // ECHO (with SGA) active across every submitted line, whereas a server that
         // is only masking a password releases ECHO (WONT ECHO) right after this line.
-        // Only a genuine user command line (isUserCommand) that is actually written to
-        // the server may arm detection: internal protocol replies (e.g. MXP) also route
-        // through sendData() and must not arm it, or they could trip the timer while a
-        // password prompt is still open. Not re-armed while running, so a laggy password
-        // prompt (or the user pressing Enter twice) cannot trip it early.
-        const bool armCharacterModeDetection = isUserCommand && !mCharacterModeDetected && mServerRequestedSGA && mpHost->isRemoteEchoingActive();
+        // Only a game command (isGameCommand) that is actually written to the server may
+        // arm detection: internal protocol replies (e.g. MXP) and the auto-login
+        // credentials also route through sendData() and must not arm it. The timer is
+        // (re)started on every such command so it always measures from the most recent
+        // submission - an earlier command (e.g. a script firing while a password prompt
+        // is still open) therefore cannot make it fire while the user is mid-input; the
+        // server's WONT ECHO cancels it first.
+        const bool armCharacterModeDetection = isGameCommand && !mCharacterModeDetected && mServerRequestedSGA && mpHost->isRemoteEchoingActive();
 
         const bool sent = socketOutRaw(outData);
 
@@ -1341,9 +1343,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
                     checkCharacterModePattern();
                 });
             }
-            if (!mTimerCharacterModeDetect->isActive()) {
-                mTimerCharacterModeDetect->start(CHARACTER_MODE_DETECT_MS);
-            }
+            mTimerCharacterModeDetect->start(CHARACTER_MODE_DETECT_MS);
         }
 
         return sent;
@@ -5468,6 +5468,13 @@ void cTelnet::checkCharacterModePattern()
     // after the masked line, which stops this timer before it fires. So if
     // ECHO+SGA are still active here, a full input line has been submitted
     // without the server releasing ECHO - which a password prompt never does.
+    //
+    // Accepted limitation: this cannot distinguish genuine character-at-a-time
+    // from the rarer cases where a server keeps ECHO active for other reasons - a
+    // buggy password prompt that never sends WONT ECHO (mTimerPasswordModeTimeout
+    // is the safety net for that), or an unusual line-mode server using persistent
+    // server-side echo. Mudlet stays in line mode regardless and this message is
+    // only advisory, so the ambiguity is accepted rather than chased.
     if (mCharacterModeDetected || !mServerRequestedSGA || !mpHost || !mpHost->isRemoteEchoingActive()) {
         return;
     }
