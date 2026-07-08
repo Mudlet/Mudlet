@@ -4552,10 +4552,14 @@ bool Host::setWindowBackgroundImage(QString& imgPath, int mode)
         return false;
     }
 
-    if (QDir::homePath().contains('\\')) {
-        imgPath.replace('/', R"(\)");
-    } else {
-        imgPath.replace('\\', "/");
+    // Mode 4 ('style') is a raw QSS fragment (e.g. a gradient), not a literal file
+    // path - normalising separators would corrupt any url()/gradient syntax in it:
+    if (mode != 4) {
+        if (QDir::homePath().contains('\\')) {
+            imgPath.replace('/', R"(\)");
+        } else {
+            imgPath.replace('\\', "/");
+        }
     }
 
     return mpConsole->setWindowBackgroundImage(imgPath, mode);

@@ -2562,7 +2562,7 @@ int TLuaInterpreter::setWindowBackgroundImage(lua_State* L)
 
     Host* host = &getHostFromLua(L);
     if (!host->setWindowBackgroundImage(imgPath, mode)) {
-        return warnArgumentValue(L, __func__, qsl("could not load image '%1'").arg(imgPath));
+        return warnArgumentValue(L, __func__, qsl("could not set window background using '%1'").arg(imgPath));
     }
 
     lua_pushboolean(L, true);

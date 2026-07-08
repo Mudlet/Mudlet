@@ -2537,7 +2537,7 @@ end
 local setWindowBackgroundImageLayer = setWindowBackgroundImage
 function setWindowBackgroundImage(...)
   local mode = arg[arg.n]
-  if type(mode) == "string" then
+  if arg.n > 1 and type(mode) == "string" then
     mode = mudlet.BgImageMode[mode] or mode
   end
   arg[arg.n] = mode
