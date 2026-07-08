@@ -1257,7 +1257,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 // This uses UTF-16BE encoded data but needs to be converted to the selected
 // Mud Server encoding - it should NOT contain any Telnet protocol byte
 // sequences:
-bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
+bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, const bool isUserCommand)
 {
     data.remove(QChar::LineFeed);
 
@@ -1324,11 +1324,16 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
         // Character-at-a-time detection: a genuine character-at-a-time server keeps
         // ECHO (with SGA) active across every submitted line, whereas a server that
         // is only masking a password releases ECHO (WONT ECHO) right after this line.
-        // Arm a short timer on the first line submitted while both are active; if the
-        // server has not released ECHO by the time it fires, checkCharacterModePattern()
-        // treats it as character-at-a-time. Not re-armed while running, so a laggy
-        // password prompt (or the user pressing Enter twice) cannot trip it early.
-        if (!mCharacterModeDetected && mServerRequestedSGA && mpHost->isRemoteEchoingActive()) {
+        // Only a genuine user command line (isUserCommand) that is actually written to
+        // the server may arm detection: internal protocol replies (e.g. MXP) also route
+        // through sendData() and must not arm it, or they could trip the timer while a
+        // password prompt is still open. Not re-armed while running, so a laggy password
+        // prompt (or the user pressing Enter twice) cannot trip it early.
+        const bool armCharacterModeDetection = isUserCommand && !mCharacterModeDetected && mServerRequestedSGA && mpHost->isRemoteEchoingActive();
+
+        const bool sent = socketOutRaw(outData);
+
+        if (sent && armCharacterModeDetection) {
             if (!mTimerCharacterModeDetect) {
                 mTimerCharacterModeDetect = new QTimer(this);
                 mTimerCharacterModeDetect->setSingleShot(true);
@@ -1341,7 +1346,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
             }
         }
 
-        return socketOutRaw(outData);
+        return sent;
     } else {
         mpHost->mAllowToSendCommand = true;
         return false;

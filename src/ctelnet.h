@@ -176,8 +176,10 @@ public:
     void disconnectIt();
     void abortConnection();
     // Second argument needs to be set false when sending password to prevent
-    // it being sniffed by scripts/packages:
-    bool sendData(QString& data, bool permitDataSendRequestEvent = true);
+    // it being sniffed by scripts/packages. Third argument marks genuine user
+    // command lines (as opposed to internal protocol replies that also route
+    // through here, e.g. MXP) so only those can arm character-at-a-time detection:
+    bool sendData(QString& data, bool permitDataSendRequestEvent = true, bool isUserCommand = false);
     QMap<QString, QPair<bool, QString>> getNewEnvironDataMap();
     bool isMNESVariable(const QString&);
     void sendInfoNewEnvironValue(const QString&);
