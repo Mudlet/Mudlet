@@ -2547,6 +2547,40 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowBackgroundImage
+int TLuaInterpreter::setWindowBackgroundImage(lua_State* L)
+{
+    QString imgPath = getVerifiedString(L, __func__, 1, "image path");
+    int mode = 1;
+    if (lua_gettop(L) > 1) {
+        mode = getVerifiedInt(L, __func__, 2, "mode");
+    }
+
+    if (mode < 1 || mode > 5) {
+        return warnArgumentValue(L, __func__, qsl("%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style', 5 'cover'").arg(mode));
+    }
+
+    Host* host = &getHostFromLua(L);
+    if (!host->setWindowBackgroundImage(imgPath, mode)) {
+        return warnArgumentValue(L, __func__, qsl("could not load image '%1'").arg(imgPath));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetWindowBackgroundImage
+int TLuaInterpreter::resetWindowBackgroundImage(lua_State* L)
+{
+    Host* host = &getHostFromLua(L);
+    if (!host->resetWindowBackgroundImage()) {
+        return warnArgumentValue(L, __func__, qsl("console 'main' not found"));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBgColor
 int TLuaInterpreter::setBgColor(lua_State* L)
 {

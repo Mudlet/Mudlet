@@ -4546,6 +4546,30 @@ bool Host::resetBackgroundImage(const QString& name)
     return false;
 }
 
+bool Host::setWindowBackgroundImage(QString& imgPath, int mode)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (QDir::homePath().contains('\\')) {
+        imgPath.replace('/', R"(\)");
+    } else {
+        imgPath.replace('\\', "/");
+    }
+
+    return mpConsole->setWindowBackgroundImage(imgPath, mode);
+}
+
+bool Host::resetWindowBackgroundImage()
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    return mpConsole->resetWindowBackgroundImage();
+}
+
 bool Host::setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha)
 {
     if (!mpConsole) {

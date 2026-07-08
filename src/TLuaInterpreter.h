@@ -472,6 +472,8 @@ public:
     static int setTextFormat(lua_State*);
     static int setBackgroundImage(lua_State*);
     static int resetBackgroundImage(lua_State*);
+    static int setWindowBackgroundImage(lua_State*);
+    static int resetWindowBackgroundImage(lua_State*);
     static int setBackgroundColor(lua_State*);
     static int setCommandBackgroundColor(lua_State*);
     static int setCommandForegroundColor(lua_State*);

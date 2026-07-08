@@ -5145,6 +5145,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "appendBuffer", TLuaInterpreter::appendBuffer);
     lua_register(pGlobalLua, "setBackgroundImage", TLuaInterpreter::setBackgroundImage);
     lua_register(pGlobalLua, "resetBackgroundImage", TLuaInterpreter::resetBackgroundImage);
+    lua_register(pGlobalLua, "setWindowBackgroundImage", TLuaInterpreter::setWindowBackgroundImage);
+    lua_register(pGlobalLua, "resetWindowBackgroundImage", TLuaInterpreter::resetWindowBackgroundImage);
     lua_register(pGlobalLua, "setBackgroundColor", TLuaInterpreter::setBackgroundColor);
     lua_register(pGlobalLua, "setCommandBackgroundColor", TLuaInterpreter::setCommandBackgroundColor);
     lua_register(pGlobalLua, "setCommandForegroundColor", TLuaInterpreter::setCommandForegroundColor);
