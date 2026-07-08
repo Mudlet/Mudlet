@@ -486,8 +486,10 @@ void CredentialManager::attemptCompatNamingMigration(const QString& service, con
     // "key@service", so entries stored by builds linked against an older qtkeychain (which used
     // TargetName == key == service) are no longer found by the primary read. A read with an empty
     // service resolves to TargetName == key on every qtkeychain version - pre-0.17 ignores the
-    // service and 0.17+ falls back to the bare key - so it recovers those entries on both, and
-    // never fires on pre-0.17 because the primary read already succeeds there.
+    // service and 0.17+ falls back to the bare key - so it recovers those entries on both. On
+    // pre-0.17 this normally stays dormant (the primary read already looks up the bare key), but
+    // a transient primary-read failure can still route here, where the compat read is merely a
+    // retry of the same TargetName.
     qDebug() << "CredentialManager: Checking for pre-0.17 qtkeychain naming for service:" << service;
 #if defined(QTKEYCHAIN_LINKED_VERSION)
     qDebug() << "CredentialManager: Linked qtkeychain version:" << QTKEYCHAIN_LINKED_VERSION;
@@ -513,15 +515,24 @@ void CredentialManager::attemptCompatNamingMigration(const QString& service, con
 
             connect(migrateJob, &QKeychain::WritePasswordJob::finished, this, [migrateJob, service, password, callback]() {
                 if (migrateJob->error() == QKeychain::NoError) {
-                    qDebug() << "CredentialManager: Migration to current naming successful, cleaning up old entry";
+                    qDebug() << "CredentialManager: Migration to current naming successful";
 
-                    auto* cleanupJob = new QKeychain::DeletePasswordJob(QString());
-                    cleanupJob->setKey(service);
-                    cleanupJob->setAutoDelete(true);
-                    connect(cleanupJob, &QKeychain::DeletePasswordJob::finished, cleanupJob, [service]() {
-                        qDebug() << "CredentialManager: Pre-0.17 entry cleaned up for service:" << service;
-                    });
-                    cleanupJob->start();
+                    // On pre-0.17 qtkeychain the write above resolves to the same bare TargetName
+                    // as the old entry, so deleting it would remove the credential that was just
+                    // restored - only clean up when the linked qtkeychain uses the new naming scheme
+#if defined(QTKEYCHAIN_LINKED_VERSION)
+                    if (QVersionNumber::fromString(qsl(QTKEYCHAIN_LINKED_VERSION)) >= QVersionNumber(0, 17, 0)) {
+                        qDebug() << "CredentialManager: Cleaning up pre-0.17 entry";
+
+                        auto* cleanupJob = new QKeychain::DeletePasswordJob(QString());
+                        cleanupJob->setKey(service);
+                        cleanupJob->setAutoDelete(true);
+                        connect(cleanupJob, &QKeychain::DeletePasswordJob::finished, cleanupJob, [service]() {
+                            qDebug() << "CredentialManager: Pre-0.17 entry cleaned up for service:" << service;
+                        });
+                        cleanupJob->start();
+                    }
+#endif
                 } else {
                     qWarning() << "CredentialManager: Migration to current naming failed:" << migrateJob->errorString();
                 }
