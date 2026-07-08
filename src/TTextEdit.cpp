@@ -3760,7 +3760,12 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             mDragStart.setY(mCaretLine);
             mDragStart.setX(mCaretColumn);
             mDragSelectionEnd.setY(newCaretLine);
-            mDragSelectionEnd.setX(mCaretColumn);
+            // Anchor the moving end at the new caret position (mirroring the
+            // continuation branch below). Using the old column here made the
+            // first Shift+Arrow press produce a zero-width selection, so the
+            // selection lagged one character/word behind the caret and an
+            // immediate Ctrl+C copied nothing.
+            mDragSelectionEnd.setX(useNewColumn ? newCaretColumn : mCaretColumn);
             unHighlight();
             normaliseSelection();
             highlightSelection();
