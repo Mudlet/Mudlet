@@ -144,6 +144,10 @@ void cTelnet::reset()
     if (mTimerPasswordModeTimeout) {
         mTimerPasswordModeTimeout->stop();
     }
+    // Stop any pending character-at-a-time detection
+    if (mTimerCharacterModeDetect) {
+        mTimerCharacterModeDetect->stop();
+    }
     // Ensure we do not think that the game server is echoing for us:
     mpHost->setRemoteEchoingActive(false);
     mGA_Driver = false;
@@ -151,6 +155,7 @@ void cTelnet::reset()
     mMudData = "";
 
     mServerRequestedSGA = false;
+    mCharacterModeDetected = false;
     mEchoToggleCount = 0;
     mEchoAnomalyDetected = false;
 
@@ -1315,6 +1320,27 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
         // we need to cook any byte values from the encoding process that are
         // 0xff (assuming that there are no Telnet protocol sequences in here):
         outData = mudlet::replaceString(outData, "\xff", "\xff\xff");
+
+        // Character-at-a-time detection: a genuine character-at-a-time server keeps
+        // ECHO (with SGA) active across every submitted line, whereas a server that
+        // is only masking a password releases ECHO (WONT ECHO) right after this line.
+        // Arm a short timer on the first line submitted while both are active; if the
+        // server has not released ECHO by the time it fires, checkCharacterModePattern()
+        // treats it as character-at-a-time. Not re-armed while running, so a laggy
+        // password prompt (or the user pressing Enter twice) cannot trip it early.
+        if (!mCharacterModeDetected && mServerRequestedSGA && mpHost->isRemoteEchoingActive()) {
+            if (!mTimerCharacterModeDetect) {
+                mTimerCharacterModeDetect = new QTimer(this);
+                mTimerCharacterModeDetect->setSingleShot(true);
+                connect(mTimerCharacterModeDetect, &QTimer::timeout, this, [this]() {
+                    checkCharacterModePattern();
+                });
+            }
+            if (!mTimerCharacterModeDetect->isActive()) {
+                mTimerCharacterModeDetect->start(CHARACTER_MODE_DETECT_MS);
+            }
+        }
+
         return socketOutRaw(outData);
     } else {
         mpHost->mAllowToSendCommand = true;
@@ -2826,7 +2852,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             mServerRequestedSGA = true;
             qDebug() << "SUPPRESS-GO-AHEAD: Rejected (Mudlet operates in line mode only)";
             raiseProtocolEvent("sysProtocolRejected", "SUPPRESS_GO_AHEAD");
-            checkCharacterModePattern();
             break;
         }
 
@@ -2858,7 +2883,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         hisOptionState[idxOption] = true;
                         mpHost->setRemoteEchoingActive(true);
                         qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
-                        checkCharacterModePattern();
 
                         // Start a safety timeout for password mode, but only during
                         // the first 5 minutes of a connection (login phase). This
@@ -3020,6 +3044,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         // Cancel any pending password mode timeout since we got the proper WONT ECHO
                         if (mTimerPasswordModeTimeout) {
                             mTimerPasswordModeTimeout->stop();
+                        }
+                        // The server released ECHO right after the masked line, so this was a
+                        // transient password prompt, not character-at-a-time mode: cancel detection.
+                        if (mTimerCharacterModeDetect) {
+                            mTimerCharacterModeDetect->stop();
                         }
                         mpHost->setRemoteEchoingActive(false);
                         qDebug() << "ECHO: Server ending password mode - restoring normal operation and preserved content";
@@ -5426,12 +5455,22 @@ QString cTelnet::assembleTelnetOptionsReport() const
 
 void cTelnet::checkCharacterModePattern()
 {
-    if (!mServerRequestedSGA || !mpHost || !mpHost->isRemoteEchoingActive()) {
+    // Called when the character-at-a-time detection timer elapses (armed in
+    // sendData() when a line is submitted while ECHO+SGA are active). The same
+    // ECHO+SGA negotiation is produced both by a genuine character-at-a-time
+    // server and by an ordinary line-mode server masking a password. The two are
+    // told apart by behaviour: a password mask releases ECHO (WONT ECHO) right
+    // after the masked line, which stops this timer before it fires. So if
+    // ECHO+SGA are still active here, a full input line has been submitted
+    // without the server releasing ECHO - which a password prompt never does.
+    if (mCharacterModeDetected || !mServerRequestedSGA || !mpHost || !mpHost->isRemoteEchoingActive()) {
         return;
     }
 
+    mCharacterModeDetected = true;
+
     raiseProtocolEvent("sysCharacterModeDetected", "");
-    qDebug() << "Character-at-a-time mode pattern detected (ECHO + SGA)";
+    qDebug() << "Character-at-a-time mode pattern detected (ECHO + SGA persisted past a submitted line)";
 
     if (mudlet::self()->showCharacterModeWarning()) {
         mudlet::self()->showedCharacterModeWarning();

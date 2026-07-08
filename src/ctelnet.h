@@ -497,6 +497,16 @@ private:
     static constexpr int ECHO_ANOMALY_THRESHOLD = 5;
     static constexpr int ECHO_ANOMALY_WINDOW_MS = 5000;
 
+    // Character-at-a-time (ECHO + SGA) detection. A server that only masks a
+    // password produces the exact same negotiation, so we do not conclude
+    // character-at-a-time until ECHO+SGA has outlived a submitted input line:
+    // a password mask releases ECHO (WONT ECHO) right after the masked line and
+    // stops the timer before it fires, whereas a real character-at-a-time server
+    // never releases it. See cTelnet::checkCharacterModePattern().
+    bool mCharacterModeDetected = false;
+    QTimer* mTimerCharacterModeDetect = nullptr;
+    static constexpr int CHARACTER_MODE_DETECT_MS = 3000;
+
     // KaVir protocol negotiation tracking
     QVector<unsigned char> mNegotiationOrder;
 
