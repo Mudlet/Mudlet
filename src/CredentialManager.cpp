@@ -926,6 +926,23 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
             Qt::QueuedConnection); // Use queued connection for additional safety
 
     deleteJob->start();
+
+#if defined(Q_OS_WIN)
+    // A pre-0.17 bare entry (TargetName == service) may still exist if it was written by a build
+    // linked against an older qtkeychain and no read has migrated it yet; on 0.17+ the delete
+    // above resolves to "service@service" and would leave that copy behind to be resurrected by
+    // the compat migration on a later read. Sweep the bare name too - on pre-0.17 both deletes
+    // resolve to the same TargetName, so this is a harmless no-op there.
+    auto* bareCleanupJob = new QKeychain::DeletePasswordJob(QString());
+    bareCleanupJob->setKey(service);
+    bareCleanupJob->setAutoDelete(true);
+    connect(bareCleanupJob, &QKeychain::DeletePasswordJob::finished, bareCleanupJob, [bareCleanupJob, service]() {
+        if (bareCleanupJob->error() != QKeychain::NoError && bareCleanupJob->error() != QKeychain::EntryNotFound) {
+            qWarning() << "CredentialManager: Failed to remove pre-0.17 entry for service:" << service << "-" << bareCleanupJob->errorString();
+        }
+    });
+    bareCleanupJob->start();
+#endif
 }
 
 void CredentialManager::isKeychainAvailable(AvailabilityCallback callback)
