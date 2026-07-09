@@ -34,7 +34,9 @@
 // Exercises CredentialManager's real keychain paths against the live platform credential
 // store, in particular the migrations for the qtkeychain 0.17.0 Windows naming change
 // (TargetName moved from the bare key to "key@service"). Unlike CredentialManagerTest,
-// this deliberately does NOT set MUDLET_TEST_MODE, which would force file storage.
+// this deliberately does NOT set MUDLET_TEST_MODE, which would force file storage. It is
+// kept as a separate executable so these environment-dependent tests cannot affect that
+// hermetic unit suite, and so ctest can rerun or exclude them independently.
 //
 // The historical entry layouts are simulated with raw QKeychain jobs using an empty
 // service, which resolves to TargetName == key on every qtkeychain version - the same
