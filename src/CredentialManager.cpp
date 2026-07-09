@@ -447,8 +447,12 @@ void CredentialManager::attemptOldFormatMigration(const QString& service, const 
                     auto* cleanupJob = new QKeychain::DeletePasswordJob(lookupService);
                     cleanupJob->setKey(account); // Old format key
                     cleanupJob->setAutoDelete(true);
-                    connect(cleanupJob, &QKeychain::DeletePasswordJob::finished, cleanupJob, [service]() {
-                        qDebug() << "CredentialManager: Old format entry cleaned up for service:" << service;
+                    connect(cleanupJob, &QKeychain::DeletePasswordJob::finished, cleanupJob, [cleanupJob, service]() {
+                        if (cleanupJob->error() == QKeychain::NoError || cleanupJob->error() == QKeychain::EntryNotFound) {
+                            qDebug() << "CredentialManager: Old format entry cleaned up for service:" << service;
+                        } else {
+                            qWarning() << "CredentialManager: Failed to clean up old format entry for service:" << service << "-" << cleanupJob->errorString();
+                        }
                     });
                     cleanupJob->start();
                 } else {
@@ -527,8 +531,12 @@ void CredentialManager::attemptCompatNamingMigration(const QString& service, con
                         auto* cleanupJob = new QKeychain::DeletePasswordJob(QString());
                         cleanupJob->setKey(service);
                         cleanupJob->setAutoDelete(true);
-                        connect(cleanupJob, &QKeychain::DeletePasswordJob::finished, cleanupJob, [service]() {
-                            qDebug() << "CredentialManager: Pre-0.17 entry cleaned up for service:" << service;
+                        connect(cleanupJob, &QKeychain::DeletePasswordJob::finished, cleanupJob, [cleanupJob, service]() {
+                            if (cleanupJob->error() == QKeychain::NoError || cleanupJob->error() == QKeychain::EntryNotFound) {
+                                qDebug() << "CredentialManager: Pre-0.17 entry cleaned up for service:" << service;
+                            } else {
+                                qWarning() << "CredentialManager: Failed to clean up pre-0.17 entry for service:" << service << "-" << cleanupJob->errorString();
+                            }
                         });
                         cleanupJob->start();
                     }
