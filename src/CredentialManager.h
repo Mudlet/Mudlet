@@ -85,6 +85,8 @@ private:
     void storeCredential(const QString& service, const QString& account, const QString& password, const QString& profileName, CredentialCallback callback);
     void retrieveCredential(const QString& service, const QString& account, const QString& profileName, CredentialRetrievalCallback callback);
     void removeCredential(const QString& service, const QString& account, const QString& profileName, CredentialCallback callback);
+    // Combines the keychain delete outcome(s) with the file-fallback removal and reports the result
+    void finishRemoveCredential(const QString& account, const QString& profileName, bool keychainSuccess, const QString& keychainError);
 
     // Check if QtKeychain is available and working (asynchronous)
     void isKeychainAvailable(AvailabilityCallback callback);

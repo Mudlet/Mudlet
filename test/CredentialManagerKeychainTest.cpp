@@ -371,6 +371,16 @@ void CredentialManagerKeychainTest::testBareEntryMigration()
         QVERIFY(readTarget(service, &still));
         QCOMPARE(still, secret);
     }
+
+    // A second retrieve must serve the value from the migrated location and must not re-fire
+    // the migration (which would churn the store or resurrect the old entry)
+    const OperationResult again = retrievePassword(manager, mProfile, mKey);
+    QVERIFY(again.success);
+    QCOMPARE(again.password, secret);
+    if (qtkeychainHonoursService()) {
+        QVERIFY(!readTarget(service));
+        QVERIFY(waitUntilTargetHolds(combinedTargetName(service), secret));
+    }
 }
 
 void CredentialManagerKeychainTest::testRemoveSweepsBareEntry()
@@ -420,6 +430,12 @@ void CredentialManagerKeychainTest::testOldFormatMigration()
     const QString service = expectedServiceName(mProfile, mKey);
     QVERIFY(waitUntilTargetHolds(currentTargetName(service), secret));
     QVERIFY(waitUntilTargetGone(mKey));
+
+    // A second retrieve serves from the migrated entry and does not re-create the old one
+    const OperationResult again = retrievePassword(manager, mProfile, mKey);
+    QVERIFY(again.success);
+    QCOMPARE(again.password, secret);
+    QVERIFY(!readTarget(mKey));
 }
 
 void CredentialManagerKeychainTest::testCollidingFormatRecovery()
@@ -451,6 +467,12 @@ void CredentialManagerKeychainTest::testCollidingFormatRecovery()
     if (qtkeychainHonoursService()) {
         QVERIFY(waitUntilTargetGone(combinedTargetName(legacyService)));
     }
+
+    // A second retrieve serves from the migrated entry and does not re-create the colliding one
+    const OperationResult again = retrievePassword(manager, mProfile, mKey);
+    QVERIFY(again.success);
+    QCOMPARE(again.password, secret);
+    QVERIFY(!readTarget(legacyService));
 }
 
 QTEST_GUILESS_MAIN(CredentialManagerKeychainTest)
