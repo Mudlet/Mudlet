@@ -35,12 +35,6 @@
 # Should be called before PROJECT.
 cmake_minimum_required(VERSION 3.25.1)
 
-if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "FreeBSD")
- set(FREEBSD true)
-else()
- set(FREEBSD false)
-endif()
-
 if(APPLE)
   # minimum supported version by Qt6
   set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "")
@@ -141,11 +135,20 @@ else()
 endif()
 
 # Set APP_VERSION
-set(APP_VERSION 4.20.1)
+set(APP_VERSION 4.22.0)
 
-# Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD or default
-if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
-    set(BUILD_VALUE "$ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
+# Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD. An explicitly
+# empty value must be distinguished from an unset one so release builds (CI exports
+# MUDLET_VERSION_BUILD="") get a clean version with no "-dev-<sha>" suffix:
+#   unset (local dev build)         -> "-dev-<sha>"
+#   defined but empty (release)     -> "" (no suffix)
+#   defined with a value (ptb/test) -> "<value>-<sha>"
+if(DEFINED ENV{MUDLET_VERSION_BUILD})
+    if("$ENV{MUDLET_VERSION_BUILD}" STREQUAL "")
+        set(BUILD_VALUE "")
+    else()
+        set(BUILD_VALUE "$ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
+    endif()
 else()
     set(BUILD_VALUE "-dev-${GIT_SHA1}")
 endif()
@@ -156,11 +159,6 @@ message(STATUS "Value written to app-build.txt file: ${BUILD_VALUE}")
 set(APP_BUILD ${BUILD_VALUE} CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 set(LIB_MUDLET_TARGET "mudlet_core")
-
-# For release builds, comment out the above and uncomment below:
-# file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
-# message(STATUS "Value written to app-build.txt file: {nothing}")
-# set(APP_BUILD "" CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
@@ -206,7 +204,6 @@ find_package(Lua 5.1 EXACT)
 option(BUILD_WITH_QT5 "" OFF)
 option(BUILD_WITH_QT6 "" ON)
 
-if (NOT FREEBSD)
 include(InitGitSubmodule)
 
 git_submodule_init(
@@ -216,9 +213,6 @@ git_submodule_init(
   git_submodule_init(
     CHECK_FILE "3rdparty/qt-tags-widget/CMakeLists.txt" SUBMODULE_PATH
     "3rdparty/qt-tags-widget" READABLE_NAME "qt-tags-widget widget")
-else()
- message(VERBOSE "FreeBSD Host. Be sure .gitsubmodules are fulfilled.")
-endif()
 
 # TODO: On macOS, we need to build qtkeychain from source because Homebrew's
 # qtkeychain package is built against Homebrew's Qt, which is incompatible with
@@ -233,13 +227,9 @@ if(APPLE)
   add_subdirectory(3rdparty/qtkeychain)
 endif()
 
-if (NOT FREEBSD)
 git_submodule_init(
   CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"
   READABLE_NAME "lua code formatter source code")
-else()
- message(VERBOSE "FreeBSD Host. Be sure .gitsubmodules are fulfilled.")
-endif()
 
 # PLACEMARKER: sample benchmarking code
 # include(FetchContent)
