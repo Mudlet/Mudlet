@@ -296,8 +296,10 @@ void TimerUnit::_removeTimer(TTimer* pT)
 bool TimerUnit::enableTimer(const QString& name)
 {
     bool found = false;
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
+    // equal_range visits every same-named timer; constFind() + (++it) can start
+    // mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
         TTimer* pT = it.value();
 
         if (!pT->isOffsetTimer()) {
@@ -326,7 +328,6 @@ bool TimerUnit::enableTimer(const QString& name)
             }
         }
 
-        ++it;
         found = true;
     }
     return found;
@@ -335,8 +336,10 @@ bool TimerUnit::enableTimer(const QString& name)
 bool TimerUnit::disableTimer(const QString& name)
 {
     bool found = false;
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
+    // equal_range visits every same-named timer; constFind() + (++it) can start
+    // mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
         TTimer* pT = it.value();
         if (pT->isOffsetTimer()) {
             pT->setShouldBeActive(false);
@@ -345,7 +348,6 @@ bool TimerUnit::disableTimer(const QString& name)
         }
 
         pT->disableTimer();
-        ++it;
         found = true;
     }
     return found;
