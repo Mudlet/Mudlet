@@ -108,7 +108,15 @@ bool TRoomDB::addRoom(int id, TRoom* pR, bool isMapLoading)
         updateEntranceMap(pR, isMapLoading);
         return true;
     }
-    if (rooms.contains(id)) {
+    if (rooms.contains(id) && !isMapLoading) {
+        // A map can end up being restored more than once in the same session
+        // (for example Host::loadMap() runs at profile startup, and then
+        // TMainConsole::createMapper() restores it again the first time an
+        // embedded mapper widget is created). The second restore re-inserts
+        // every room that is already in memory, so without this guard the
+        // warning fires once per room in the whole map instead of only for
+        // an actual duplicate room id bug, which can add many seconds to
+        // startup on a large map for no useful diagnostic benefit.
         qWarning() << "TRoomDB::addRoom() - Room" << id << "already exists";
     }
     if (id <= 0) {
