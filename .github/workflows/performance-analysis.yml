@@ -22,13 +22,13 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         fetch-depth: 0
         submodules: recursive
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.3.2
+      uses: lukka/get-cmake@v4.3.4
 
     - name: Install dependencies
       run: |

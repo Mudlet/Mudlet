@@ -373,6 +373,13 @@ else
     DBLSQD_CHANNEL="public-test-build"
     CHANGELOG_MODE="ptb"
   else
+    # Expose the installer to the workflow's SignPath steps. Only the PTB branch
+    # above ever set these, so on tag builds the installer-signing chain silently
+    # skipped and releases shipped an unsigned installer wrapper:
+    {
+      echo "ARTIFACT_NAME=${INSTALLER_EXE}"
+      echo "ARTIFACT_WINPATHORFILE=${INSTALLER_EXE_WINPATHFILE}"
+    } >> "${GITHUB_ENV}"
 
     echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
     echo "${DEPLOY_SSH_KEY}" > temp_key_file
@@ -383,17 +390,32 @@ else
     powershell.exe <<EOF
 \$installerExePath = "${INSTALLER_EXE_WINPATHFILE}"
 \$DEPLOY_PATH = "${DEPLOY_PATH}"
-scp.exe -i temp_key_file -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$installerExePath mudmachine@mudlet.org:\${DEPLOY_PATH}
+scp.exe -i temp_key_file -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$installerExePath mudmachine@make.mudlet.org:\${DEPLOY_PATH}
+if (\$LASTEXITCODE -ne 0) { exit \$LASTEXITCODE }
 EOF
+    installer_scp_rc=$?
 
     shred -u temp_key_file
 
-    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-64-installer.exe"
-
-    if ! curl --output /dev/null --silent --head --fail "${DEPLOY_URL}"; then
-      echo "Error: release not found as expected at ${DEPLOY_URL}"
+    if [ "$installer_scp_rc" -ne 0 ]; then
+      echo "::error::failed to upload Windows installer to make.mudlet.org (scp exit ${installer_scp_rc})"
       exit 1
     fi
+
+    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-64-installer.exe"
+
+    # Retry to tolerate the delay between scp landing the file and it being served
+    # at www.mudlet.org - the publish step is not instantaneous.
+    verify_attempt=0
+    until curl --output /dev/null --silent --head --fail "${DEPLOY_URL}"; do
+      verify_attempt=$((verify_attempt + 1))
+      if [ "$verify_attempt" -ge 18 ]; then
+        echo "::warning::installer uploaded to make.mudlet.org but not yet downloadable at ${DEPLOY_URL} after $verify_attempt attempts (CloudFlare/publish lag); the scp above is the authoritative upload check"
+        break
+      fi
+      echo "Release not yet available at ${DEPLOY_URL}, retrying in 10s (attempt $verify_attempt/18)..."
+      sleep 10
+    done
 
     SHA256SUM=$(shasum -a 256 "${INSTALLER_EXE_PATHFILE}" | awk '{print $1}')
 
@@ -411,7 +433,7 @@ EOF
     current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
     read -r day month year hour minute second <<< "${current_timestamp}"
 
-    curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+    curl --retry 5 -X POST 'https://make.mudlet.org/download-add.php' \
     -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
     -F "file_type=2" \
     -F "file_remote=${DEPLOY_URL}" \
@@ -448,19 +470,32 @@ EOF
 \$portableZipPath = "${PORTABLE_ZIP_WINPATH}"
 \$DEPLOY_PATH = "${DEPLOY_PATH}"
 \$remoteFileName = "${PORTABLE_REMOTE_NAME}"
-scp.exe -i temp_key_file_portable -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$portableZipPath mudmachine@mudlet.org:\${DEPLOY_PATH}/\$remoteFileName
+scp.exe -i temp_key_file_portable -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$portableZipPath mudmachine@make.mudlet.org:\${DEPLOY_PATH}/\$remoteFileName
+if (\$LASTEXITCODE -ne 0) { exit \$LASTEXITCODE }
 EOF
+      portable_scp_rc=$?
 
       shred -u temp_key_file_portable
+
+      if [ "$portable_scp_rc" -ne 0 ]; then
+        echo "::error::failed to upload Windows portable ZIP to make.mudlet.org (scp exit ${portable_scp_rc})"
+        exit 1
+      fi
 
       # Define portable ZIP URL - should match the naming convention
       PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-64-portable.zip"
 
-      # Verify portable ZIP was uploaded
-      if ! curl --output /dev/null --silent --head --fail "${PORTABLE_DEPLOY_URL}"; then
-        echo "Error: portable ZIP not found as expected at ${PORTABLE_DEPLOY_URL}"
-        exit 1
-      fi
+      # Verify portable ZIP was uploaded (retry to tolerate publish propagation delay)
+      verify_attempt=0
+      until curl --output /dev/null --silent --head --fail "${PORTABLE_DEPLOY_URL}"; do
+        verify_attempt=$((verify_attempt + 1))
+        if [ "$verify_attempt" -ge 18 ]; then
+          echo "::warning::portable ZIP uploaded to make.mudlet.org but not yet downloadable at ${PORTABLE_DEPLOY_URL} after $verify_attempt attempts (CloudFlare/publish lag)"
+          break
+        fi
+        echo "Portable ZIP not yet available at ${PORTABLE_DEPLOY_URL}, retrying in 10s (attempt $verify_attempt/18)..."
+        sleep 10
+      done
 
       # Calculate SHA256 for portable ZIP
       PORTABLE_SHA256SUM=$(shasum -a 256 "${PORTABLE_ZIP_PATH}" | awk '{print $1}')
@@ -469,7 +504,7 @@ EOF
       echo "sha256 of portable ZIP: ${PORTABLE_SHA256SUM}"
 
       # Register portable ZIP with download manager
-      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+      curl --retry 5 -X POST 'https://make.mudlet.org/download-add.php' \
       -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
       -F "file_type=2" \
       -F "file_remote=${PORTABLE_DEPLOY_URL}" \
@@ -536,7 +571,8 @@ EOF
   if [[ "${DBLSQD_CHANNEL}" == "release" ]]; then
     echo "=== Registering release with Dblsqd ==="
     echo "dblsqd push -a mudlet -c \"${DBLSQD_CHANNEL}\" -r \"${DBLSQD_VERSION_STRING}\" -s mudlet --type 'standalone' --attach win:x86_64 \"${DEPLOY_URL}\""
-    dblsqd push -a mudlet -c "${DBLSQD_CHANNEL}" -r "${DBLSQD_VERSION_STRING}" -s mudlet --type 'standalone' --attach win:x86_64 "${DEPLOY_URL}"
+    # Non-fatal: dblsqd is legacy (GitHub releases are the primary distribution now).
+    dblsqd push -a mudlet -c "${DBLSQD_CHANNEL}" -r "${DBLSQD_VERSION_STRING}" -s mudlet --type 'standalone' --attach win:x86_64 "${DEPLOY_URL}" || echo "::warning::dblsqd push failed for win:x86_64 - continuing (GitHub release is the primary distribution)"
   fi
 
 fi
