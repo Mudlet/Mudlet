@@ -878,15 +878,18 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_discordServerAccessToPartyInfo->setChecked(!(discordFlags & Host::DiscordSetPartyInfo));
         checkBox_discordServerAccessToTimerInfo->setChecked(!(discordFlags & Host::DiscordSetTimeInfo));
         lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
+        lineEdit_discordUserName->setToolTip(utils::richText(tr("Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted lowercase ASCII character set and not any \"Nickname\" that you may have set for a particular Server.")));
+        lineEdit_discordUserName->setAccessibleDescription(tr("Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted lowercase ASCII character set and not any \"Nickname\" that you may have set for a particular Server."));
+
         const QString currentDiscordUser = Discord::getLoggedInUserName();
         if (!currentDiscordUser.isEmpty()) {
-            //: Shows which Discord account is logged in, e.g. "Discord user: morquin"
-            label_discordCurrentUser->setText(tr("Discord user: %1").arg(currentDiscordUser));
-            label_discordCurrentUser->setToolTip(QString());
+            //: Shows which Discord account is logged in:
+            label_data_discordCurrentUser->setText(currentDiscordUser);
+            label_data_discordCurrentUser->setToolTip(utils::richText(tr("This is the unique username using a restricted character set for the Discord account, and not necessarily the nickname that you might have set for a particular Server.")));
         } else {
-            label_discordCurrentUser->setText(tr("(Discord not connected)"));
+            label_data_discordCurrentUser->setText(tr("(Not connected)"));
             //: Tooltip shown when Discord Rich Presence cannot detect a logged-in user
-            label_discordCurrentUser->setToolTip(tr("The Discord desktop app must be running for Rich Presence to work. Browser and mobile clients are not supported."));
+            label_data_discordCurrentUser->setToolTip(utils::richText(tr("The Discord desktop app must be running for Rich Presence to work. Browser and mobile clients are not supported.")));
         }
     }
 
@@ -1711,7 +1714,7 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_discordServerAccessToPartyInfo->setChecked(false);
     checkBox_discordServerAccessToTimerInfo->setChecked(false);
     lineEdit_discordUserName->clear();
-    label_discordCurrentUser->clear();
+    label_data_discordCurrentUser->clear();
 
     lineEdit_mmcpChatName->clear();
     lineEdit_mmcpPort->clear();
