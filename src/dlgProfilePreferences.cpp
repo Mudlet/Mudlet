@@ -469,28 +469,27 @@ void dlgProfilePreferences::disableHostDetails()
     pushButton_deleteMap->setEnabled(false);
     label_copyMap->setEnabled(false);
     label_mapFileSaveFormatVersion->setEnabled(false);
+    label_loadHistoricMap->setEnabled(false);
+    comboBox_mapHistory->setEnabled(false);
+    comboBox_mapHistory->clear();
+    pushButton_loadHistoricMap->setEnabled(false);
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     comboBox_mapFileSaveFormatVersion->clear();
     label_mapFileActionResult->hide();
 
-    groupBox_downloadMapOptions->setEnabled(false);
+    // This is hidden until we have a valid map download location:
+    groupBox_downloadMapOptions->setVisible(false);
 
-    groupBox_mapViewOptions->setEnabled(false);
     // ----- groupBox_mapViewOptions -----
-    label_mapSymbolsFont->setEnabled(false);
-    fontComboBox_mapSymbols->setEnabled(false);
-    checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(false);
-    pushButton_showGlyphUsage->setEnabled(false);
+    groupBox_mapViewOptions->setEnabled(false);
 
-
-    // The above is actually normally hidden:
-    groupBox_downloadMapOptions->hide();
-
-    // This is actually normally hidden until a map is loaded:
+    // This is normally hidden until a map is loaded:
     checkBox_showDefaultArea->hide();
 
     // ===== tab_mapperColors =====
     groupBox_mapperColors->setEnabled(false);
+
+    groupBox_playerRoomStyle->setEnabled(false);
 
     // ===== tab security =====
     groupBox_ssl->setEnabled(false);
@@ -592,14 +591,16 @@ void dlgProfilePreferences::enableHostDetails()
     pushButton_deleteMap->setEnabled(true);
     label_copyMap->setEnabled(true);
     label_mapFileSaveFormatVersion->setEnabled(true);
-
-
-    groupBox_downloadMapOptions->setEnabled(true);
+    label_loadHistoricMap->setEnabled(true);
+    comboBox_mapHistory->setEnabled(true);
+    pushButton_loadHistoricMap->setEnabled(true);
 
     groupBox_mapViewOptions->setEnabled(true);
 
     // ===== tab_mapperColors =====
     groupBox_mapperColors->setEnabled(true);
+    groupBox_playerRoomStyle->setEnabled(true);
+
 
     // ===== tab security =====
 #if defined(QT_NO_SSL)
@@ -769,10 +770,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     } else {
         groupBox_downloadMapOptions->setVisible(false);
     }
-
-    setColors();
-    setColors2();
-
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     checkBox_debugShowAllCodepointProblems->setChecked(pHost->debugShowAllProblemCodepoints());
@@ -1134,7 +1131,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(fontComboBox_mapSymbols, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setMapSymbolFont, Qt::UniqueConnection);
         connect(checkBox_isOnlyMapSymbolFontToBeUsed, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapSymbolFontStrategy, Qt::UniqueConnection);
 
-        widget_playerRoomStyle->show();
+        groupBox_playerRoomStyle->setEnabled(true);
         comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mPlayerRoomStyle);
         // Custom colours only available in style '3' (of '0' to '3'):
         pushButton_playerRoomPrimaryColor->setEnabled(pHost->mpMap->mPlayerRoomStyle == 3);
@@ -1200,7 +1197,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         pushButton_showGlyphUsage->setEnabled(false);
 
         checkBox_showDefaultArea->hide();
-        widget_playerRoomStyle->hide();
+        groupBox_playerRoomStyle->setEnabled(false);
     }
 
     comboBox_encoding->addItem(mudlet::self()->getEncodingNamesMap().value(QByteArray("ASCII")), QByteArray("ASCII"));
@@ -1355,6 +1352,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // on tab_general:
     // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
     enableHostDetails();
+
+    /* These require the color controls to be correctly enabled/disabled before
+     * they are called:*/
+    setColors();
+    setColors2();
+    setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor, true);
+    setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
 
     // Identify which Profile we are showing the settings for:
     setWindowTitle(tr("Profile preferences - %1").arg(pHost->getName()));
@@ -1605,7 +1609,6 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
     disconnect(mIsToLogInHtml, &QAbstractButton::clicked, nullptr, nullptr);
 
-    widget_playerRoomStyle->hide();
     disconnect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
     disconnect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1652,9 +1655,6 @@ void dlgProfilePreferences::clearHostDetails()
     need_reconnect_for_data_protocol->hide();
 
     need_reconnect_for_specialoption->hide();
-
-    setColors();
-    setColors2();
 
     wrap_at_spinBox->clear();
     indent_wrapped_spinBox->clear();
@@ -3290,7 +3290,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
         pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
         pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
-        if (widget_playerRoomStyle->isVisible()) {
+        if (groupBox_playerRoomStyle->isEnabled()) {
             // Although the controls have been interactively modifying the
             // TMap cached values for these, they were not being committed to
             // the master values in the Host instance - but now we should write
@@ -3911,6 +3911,13 @@ void dlgProfilePreferences::slot_handleHostDeletion(Host* pHost)
         clearHostDetails();
         // and we can then use the following to disable the Host specific controls:
         disableHostDetails();
+
+        // And redraw the color controls in their cleared state
+        setColors();
+        setColors2();
+
+        setButtonColor(pushButton_playerRoomPrimaryColor, QColor(), true);
+        setButtonColor(pushButton_playerRoomSecondaryColor, QColor(), true);
     }
 }
 

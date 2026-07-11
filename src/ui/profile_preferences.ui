@@ -3430,11 +3430,11 @@ you can use it but there could be issues with aligning columns of text</string>
         </widget>
        </item>
        <item>
-        <widget class="QGroupBox" name="widget_playerRoomStyle">
+        <widget class="QGroupBox" name="groupBox_playerRoomStyle">
          <property name="title">
           <string>Player room marker</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_widget_playerRoomStyle">
+         <layout class="QGridLayout" name="gridLayout_groupBox_playerRoomStyle">
           <item row="0" column="0">
            <widget class="QLabel" name="label_playerRoomStyle">
             <property name="text">
