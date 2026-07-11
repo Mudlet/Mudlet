@@ -99,6 +99,7 @@
 #if defined(Q_OS_WINDOWS)
 #include <Windows.h>
 #include <Psapi.h>
+#include "uiawrapper.h"
 #elif defined(Q_OS_MACOS)
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -7151,6 +7152,18 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
 
 void mudlet::announce(const QString& text, const QString& processing, bool isPlain)
 {
+#if defined(Q_OS_WINDOWS)
+    // QAccessible::isActive() latches true permanently on Windows once any
+    // UI Automation client has interrogated the process - which need not be a
+    // screen reader. Raising announcement events through Qt's UIA bridge when
+    // nothing is listening retains memory in the provider process, so check
+    // whether a UIA client is actually receiving events first (this restores
+    // the gate that existed before the custom announcer was removed in #8083)
+    if (UiaWrapper::self()->ready() && !UiaWrapper::self()->clientsAreListening()) {
+        return;
+    }
+#endif
+
     QString textToAnnounce;
     if (isPlain) {
         textToAnnounce = text;

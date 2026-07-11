@@ -225,6 +225,8 @@ if(APPLE)
       COMPILE_OPTIONS "-fobjc-arc"
   )
   endif()
+elseif(WIN32)
+  list(APPEND mudlet_SRCS uiawrapper.cpp)
 endif()
 
 # This is for compiled UI files, not those used at runtime
@@ -443,6 +445,9 @@ set(mudlet_HDRS
     XMLexport.h
     XMLimport.h)
 
+if(WIN32)
+  list(APPEND mudlet_HDRS uiawrapper.h)
+endif()
 
 if(USE_UPDATER)
   list(APPEND mudlet_SRCS updater.cpp)
