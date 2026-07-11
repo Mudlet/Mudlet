@@ -21,7 +21,6 @@
 
 #include "uiawrapper.h"
 #include "utils.h"
-#include <QDebug>
 #include <QLibrary>
 
 // this class is largely inspired from Qt's QWindowsUiaWrapper:
@@ -38,7 +37,7 @@ UiaWrapper::UiaWrapper()
     }
 }
 
-UiaWrapper::~UiaWrapper() {};
+UiaWrapper::~UiaWrapper() = default;
 
 UiaWrapper* UiaWrapper::self()
 {

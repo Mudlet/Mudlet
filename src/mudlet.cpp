@@ -7158,8 +7158,10 @@ void mudlet::announce(const QString& text, const QString& processing, bool isPla
     // screen reader. Raising announcement events through Qt's UIA bridge when
     // nothing is listening retains memory in the provider process, so check
     // whether a UIA client is actually receiving events first (this restores
-    // the gate that existed before the custom announcer was removed in #8083)
-    if (UiaWrapper::self()->ready() && !UiaWrapper::self()->clientsAreListening()) {
+    // the gate that existed before the custom announcer was removed in #8083).
+    // If UiaClientsAreListening cannot be resolved the gate falls through and
+    // announcements are raised as before
+    if (UiaWrapper::self()->canDetectClients() && !UiaWrapper::self()->clientsAreListening()) {
         return;
     }
 #endif

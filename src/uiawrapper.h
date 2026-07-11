@@ -22,11 +22,9 @@
 #ifndef UIAWRAPPER_H
 #define UIAWRAPPER_H
 
-#include <memory>
 #include <ole2.h>
 #include <tlhelp32.h>
 #include <uiautomation.h>
-#include <utility>
 
 #include <oleacc.h>
 #include <uiautomationclient.h>
@@ -42,7 +40,10 @@ class UiaWrapper
 public:
     static UiaWrapper* self();
     BOOL ready();
-    LRESULT returnRawElementProvider(HWND hwnd, WPARAM wParam, LPARAM lParam, IRawElementProviderSimple* el);
+    // Whether UiaClientsAreListening could be resolved - the announcement
+    // gate must only depend on this symbol, not on ready(), as some of the
+    // other entry points need a newer Windows than the gate does
+    BOOL canDetectClients() { return m_pUiaClientsAreListening != nullptr; }
     HRESULT raiseNotificationEvent(IRawElementProviderSimple* provider, NotificationKind notificationKind, NotificationProcessing notificationProcessing, BSTR displayString, BSTR activityId);
     HRESULT disconnectAllProviders();
     HRESULT disconnectProvider(IRawElementProviderSimple* pProvider);
