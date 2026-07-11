@@ -41,6 +41,16 @@ int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Hos
         mExpireToLinks.remove(oldExpireName, mLinkID);
     }
 
+    // Remove old styling and its selection-group index entry too, so a
+    // recycled id does not inherit the previous link's styling
+    if (mStylingStore.contains(mLinkID)) {
+        const Mudlet::HyperlinkStyling& oldStyling = mStylingStore[mLinkID];
+        if (oldStyling.selection.hasSelectionSettings) {
+            mSelectionGroupIndex.remove(qMakePair(oldStyling.selection.group, oldStyling.selection.value), mLinkID);
+        }
+        mStylingStore.remove(mLinkID);
+    }
+
     mLinkStore[mLinkID] = links;
     mHintStore[mLinkID] = hints;
     mReferenceStore[mLinkID] = luaReference;
