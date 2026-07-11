@@ -63,6 +63,10 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
   git clone https://github.com/Mudlet/installers.git "${BUILD_DIR}/../installers"
 
+  # make-installer.sh cd's into the build folder and expects the vendored
+  # macdeployqtfix.py (shipped in installers/osx alongside it) to be there
+  cp "${BUILD_DIR}/../installers/osx/macdeployqtfix.py" "${BUILD_DIR}/"
+
   cd "${BUILD_DIR}/../installers/osx"
 
   # setup macOS keychain for code signing on ptb/release builds.
