@@ -990,6 +990,7 @@ void mudlet::loadMaps()
             {qsl("bn_bd"), tr("Bangla (Bangladesh)")},
             {qsl("bn_in"), tr("Bangla (India)")},
             {qsl("bo"), tr("Tibetan")},
+            {qsl("bo_bt"), tr("Tibetan (Bhutan)")},
             {qsl("bo_cn"), tr("Tibetan (China)")},
             {qsl("bo_in"), tr("Tibetan (India)")},
             {qsl("br"), tr("Breton")},
