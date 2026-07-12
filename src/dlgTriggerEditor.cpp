@@ -14524,7 +14524,8 @@ void dlgTriggerEditor::slot_saveProperty_AliasPattern()
         return;
     }
 
-    const QString newPattern = mpAliasMainArea->lineEdit_alias_pattern->text();
+    QString newPattern = mpAliasMainArea->lineEdit_alias_pattern->text();
+    unmarkQString(&newPattern);
 
     if (pT->getRegexCode() == newPattern) {
         return;
