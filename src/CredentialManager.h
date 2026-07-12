@@ -85,6 +85,8 @@ private:
     void storeCredential(const QString& service, const QString& account, const QString& password, const QString& profileName, CredentialCallback callback);
     void retrieveCredential(const QString& service, const QString& account, const QString& profileName, CredentialRetrievalCallback callback);
     void removeCredential(const QString& service, const QString& account, const QString& profileName, CredentialCallback callback);
+    // Combines the keychain delete outcome(s) with the file-fallback removal and reports the result
+    void finishRemoveCredential(const QString& account, const QString& profileName, bool keychainSuccess, const QString& keychainError);
 
     // Check if QtKeychain is available and working (asynchronous)
     void isKeychainAvailable(AvailabilityCallback callback);
@@ -122,6 +124,7 @@ private:
     void attemptCollidingMigration(const QString& profileName, const QString& key, const QString& legacyService, const QString& password, CredentialRetrievalCallback callback);
     void attemptLegacyKeychainMigration(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
     void attemptOldFormatMigration(const QString& service, const QString& account, const QString& profileName, CredentialRetrievalCallback callback);
+    void attemptCompatNamingMigration(const QString& service, const QString& account, const QString& profileName, CredentialRetrievalCallback callback);
     void fallbackFileRetrieval(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
 
     // Current operation state

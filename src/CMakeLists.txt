@@ -685,6 +685,21 @@ if(USE_OWN_QTKEYCHAIN)
     target_include_directories(${LIB_MUDLET_TARGET} PUBLIC ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain)
 endif()
 
+# Surface the linked qtkeychain version for diagnostics - the QTKEYCHAIN_VERSION macro in
+# qtkeychain's own header is stale (hardcoded to 0x000100), so the CMake package version is
+# the only reliable signal. Relevant since qtkeychain 0.17.0 changed the Windows credential
+# naming scheme (see CredentialManager::attemptCompatNamingMigration).
+if(USE_OWN_QTKEYCHAIN)
+  get_directory_property(QTKEYCHAIN_LINKED_VERSION
+    DIRECTORY ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain
+    DEFINITION QTKEYCHAIN_VERSION)
+else()
+  set(QTKEYCHAIN_LINKED_VERSION ${Qt${QT_MAJOR_VERSION}Keychain_VERSION})
+endif()
+if(QTKEYCHAIN_LINKED_VERSION)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC QTKEYCHAIN_LINKED_VERSION="${QTKEYCHAIN_LINKED_VERSION}")
+endif()
+
 # Define shader hot-reloading if enabled
 if(USE_SHADER_HOT_RELOAD AND USE_3DMAPPER)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC MUDLET_SHADER_HOT_RELOAD=1)
