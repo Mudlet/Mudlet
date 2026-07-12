@@ -843,24 +843,29 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
         }
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;
-        qDebug() << "TConsole::createMapper() - restore map case 2.";
-        mpHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(2) report"), true);
-        const QDateTime now(QDateTime::currentDateTime());
 
-        if (mpHost->mpMap->restore(QString())) {
-            mpHost->mpMap->audit();
-            mpMapper->mp2dMap->init();
-            mpMapper->updateAreaComboBox();
-            mpMapper->resetAreaComboBoxToPlayerRoomArea();
-            mpMapper->show();
+        if (mpHost->mpMap->mpRoomDB->isEmpty()) {
+            // Don't load a map if we already have one around!
+            qDebug() << "TConsole::createMapper() - restore map case 2.";
+            mpHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(2) report"), true);
+            const QDateTime now(QDateTime::currentDateTime());
+
+            if (mpHost->mpMap->restore(QString())) {
+                mpHost->mpMap->audit();
+                mpMapper->mp2dMap->init();
+                mpMapper->updateAreaComboBox();
+                mpMapper->resetAreaComboBoxToPlayerRoomArea();
+                mpMapper->show();
+            }
+
+            mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
+
+            TEvent mapOpenEvent{};
+            mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
+            mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mpHost->raiseEvent(mapOpenEvent);
         }
 
-        mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
-
-        TEvent mapOpenEvent{};
-        mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
-        mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(mapOpenEvent);
     }
     mpMapper->resize(width, height);
     mpMapper->move(x, y);
