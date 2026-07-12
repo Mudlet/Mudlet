@@ -60,6 +60,7 @@
 #include <QPainter>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QStandardItemModel>
 #include <QString>
 #include <QTableWidget>
 #include <QTemporaryDir>
@@ -155,6 +156,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     default:
         comboBox_toolBarVisibility->setCurrentIndex(2);
     }
+
+    // Sync "Never" item deactivation so the dialog opens with consistent state
+    // if either visibility was already "Never" on previous save (issue #7079).
+    slot_syncMenuToolBarNeverItem();
 
     checkBox_showTabConnectionIndicators->setChecked(pMudlet->mShowTabConnectionIndicators);
     connect(checkBox_showTabConnectionIndicators, &QCheckBox::toggled, this, [=](bool checked) {
@@ -4249,6 +4254,10 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont& font)
 // of access to the setting/controls completely - once there is a profile loaded
 // access to the settings/controls can be overridden by a context menu action on
 // any TConsole instance:
+//
+// Additionally the "Never" entry in the other toolbar-visibility comboBox is
+// greyed out (deactivated) while this control is set to "Never", so the user
+// cannot even temporarily select "Never" for both - see issue #7079.
 void dlgProfilePreferences::slot_changeShowMenuBar(int newIndex)
 {
     if (!newIndex && !comboBox_toolBarVisibility->currentIndex()) {
@@ -4256,6 +4265,7 @@ void dlgProfilePreferences::slot_changeShowMenuBar(int newIndex)
         // control - so force it back to the "Only if no profile one
         comboBox_menuBarVisibility->setCurrentIndex(1);
     }
+    slot_syncMenuToolBarNeverItem();
 }
 
 void dlgProfilePreferences::slot_changeShowToolBar(int newIndex)
@@ -4264,6 +4274,30 @@ void dlgProfilePreferences::slot_changeShowToolBar(int newIndex)
         // This control has been set to the "Never" setting but so is the other
         // control - so force it back to the "Only if no profile one
         comboBox_toolBarVisibility->setCurrentIndex(1);
+    }
+    slot_syncMenuToolBarNeverItem();
+}
+
+// Deactivate (grey out) the "Never" item of comboBox_toolBarVisibility when
+// the menu bar is set to "Never", and vice versa. This makes the existing
+// mutual-exclusion visible to the user instead of silently snapping the
+// selected value back (issue #7079).
+void dlgProfilePreferences::slot_syncMenuToolBarNeverItem()
+{
+    const int menuIndex = comboBox_menuBarVisibility->currentIndex();
+    const int toolIndex = comboBox_toolBarVisibility->currentIndex();
+    const bool menuIsNever = (menuIndex == 0);
+    const bool toolIsNever = (toolIndex == 0);
+
+    if (auto* toolModel = qobject_cast<QStandardItemModel*>(comboBox_toolBarVisibility->model())) {
+        if (QStandardItem* item = toolModel->item(0)) {
+            item->setEnabled(!menuIsNever);
+        }
+    }
+    if (auto* menuModel = qobject_cast<QStandardItemModel*>(comboBox_menuBarVisibility->model())) {
+        if (QStandardItem* item = menuModel->item(0)) {
+            item->setEnabled(!toolIsNever);
+        }
     }
 }
 
