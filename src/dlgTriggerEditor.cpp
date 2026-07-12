@@ -10055,8 +10055,11 @@ void dlgTriggerEditor::showIntro(const QString& desiredOption)
 
     introTextParts introAddCurrentItem = introAddItem.value(mCurrentView);
     QString introTextOptions;
+    // Qt's rich text does not understand 'color: inherit' and renders it as
+    // black, so spell the theme's text colour out explicitly
+    const QString linkColor = mudlet::self()->inDarkMode() ? qsl("rgb(230, 230, 230)") : qsl("black");
     for (const auto& [name, headline, contents] : std::as_const(introAddCurrentItem.options)) {
-        introTextOptions.append((name != desiredOption) ? qsl("<li><a href='%1' style='color: inherit; text-decoration: underline;'>%2</a></li>").arg(name, headline)
+        introTextOptions.append((name != desiredOption) ? qsl("<li><a href='%1' style='color: %3; text-decoration: underline;'>%2</a></li>").arg(name, headline, linkColor)
                                                         : qsl("<li><strong>%1</strong>%2</li>").arg(headline, contents));
     }
 
@@ -14069,6 +14072,9 @@ void dlgTriggerEditor::showBannerUndoToast()
     //: Toast notification shown when user dismisses an editor tip banner. Allows them to undo or permanently hide the tips for this editor view type.
     QString toastMessage = tr("Banner hidden. <a href='undo' style='color: inherit; text-decoration: underline;'>Undo</a> | <a href='hide-permanently' style='color: inherit; text-decoration: "
                               "underline;'>Hide permanently</a>");
+    // Qt's rich text renders 'color: inherit' as black; fix it up here rather
+    // than in the tr() text so existing translations stay valid
+    toastMessage.replace(qsl("color: inherit"), qsl("color: ") + (mudlet::self()->inDarkMode() ? qsl("rgb(230, 230, 230)") : qsl("black")));
 
     mpSystemMessageArea->notificationAreaIconLabelError->hide();
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
