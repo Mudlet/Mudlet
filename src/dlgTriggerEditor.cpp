@@ -3937,7 +3937,7 @@ void dlgTriggerEditor::slot_itemMoved(int itemID, int oldParentID, int newParent
     QString itemName;
 
     // Check which tree widget has focus or which view is active
-    switch (mCurrentView) {
+    switch (resolveCurrentView()) {
     case EditorViewType::cmTriggerView: {
         TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(itemID);
         if (pT) {
@@ -9537,6 +9537,7 @@ void dlgTriggerEditor::enterEvent(TEnterEvent* event)
         treeWidget_variables->clear();
         fillout_form();
         mNeedUpdateData = false;
+        resolveCurrentView();
     }
 }
 
@@ -9554,6 +9555,7 @@ void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
         treeWidget_variables->clear();
         fillout_form();
         mNeedUpdateData = false;
+        resolveCurrentView();
     }
 
     if (mCurrentView == EditorViewType::cmUnknownView) {
@@ -9616,6 +9618,7 @@ void dlgTriggerEditor::changeView(EditorViewType view)
         treeWidget_variables->clear();
         fillout_form();
         mNeedUpdateData = false;
+        resolveCurrentView();
     }
 
     // in lieu of readonly
@@ -11325,7 +11328,8 @@ void dlgTriggerEditor::exportMultipleKeysToClipboard(const QList<TKey*>& keys)
 
 void dlgTriggerEditor::slot_export()
 {
-    if (mCurrentView == EditorViewType::cmUnknownView || mCurrentView == EditorViewType::cmVarsView) {
+    const EditorViewType currentView = resolveCurrentView();
+    if (currentView == EditorViewType::cmUnknownView || currentView == EditorViewType::cmVarsView) {
         return;
     }
 
@@ -11355,7 +11359,7 @@ void dlgTriggerEditor::slot_export()
     // Should close the checkWriteability that we have confirmed can be opened:
     checkWriteability.close();
 
-    switch (mCurrentView) {
+    switch (currentView) {
     case EditorViewType::cmTriggerView:
         exportTrigger(fileName);
         break;
@@ -11385,7 +11389,8 @@ void dlgTriggerEditor::slot_export()
 
 void dlgTriggerEditor::slot_createModule()
 {
-    if (mCurrentView == EditorViewType::cmUnknownView || mCurrentView == EditorViewType::cmVarsView) {
+    const EditorViewType currentView = resolveCurrentView();
+    if (currentView == EditorViewType::cmUnknownView || currentView == EditorViewType::cmVarsView) {
         return;
     }
 
@@ -11393,7 +11398,7 @@ void dlgTriggerEditor::slot_createModule()
     auto* packageExporter = new dlgPackageExporter(this, mpHost);
 
     // Pre-select the current item for export
-    switch (mCurrentView) {
+    switch (currentView) {
     case EditorViewType::cmTriggerView:
         if (mpCurrentTriggerItem) {
             packageExporter->preselectTrigger(mpCurrentTriggerItem);
@@ -11435,7 +11440,7 @@ void dlgTriggerEditor::slot_createModule()
 
 void dlgTriggerEditor::slot_copyXml()
 {
-    switch (mCurrentView) {
+    switch (resolveCurrentView()) {
     case EditorViewType::cmTriggerView:
         exportTriggerToClipboard();
         break;
@@ -11468,7 +11473,7 @@ void dlgTriggerEditor::slot_pasteXml()
 {
     XMLimport reader(mpHost);
 
-    switch (mCurrentView) {
+    switch (resolveCurrentView()) {
     case EditorViewType::cmTriggerView:
         saveTrigger();
         break;
