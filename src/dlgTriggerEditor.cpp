@@ -725,6 +725,14 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpErrorConsole->hide();
 
     connect(mpTriggersMainArea->toolButton_toggleExtraControls, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_showAllTriggerControls);
+    if (mudlet::self()->inDarkMode()) {
+        // the grey arrows set in the .ui file are invisible against a dark
+        // background so swap in the green ones used for the Active state
+        QIcon icon;
+        icon.addFile(qsl(":/icons/arrow-right-16x.png"), QSize(), QIcon::Normal, QIcon::Off);
+        icon.addFile(qsl(":/icons/arrow-down-16x.png"), QSize(), QIcon::Normal, QIcon::On);
+        mpTriggersMainArea->toolButton_toggleExtraControls->setIcon(icon);
+    }
     slot_showAllTriggerControls(true);
 
     connect(splitter_right, &QSplitter::splitterMoved, this, &dlgTriggerEditor::slot_rightSplitterMoved);
