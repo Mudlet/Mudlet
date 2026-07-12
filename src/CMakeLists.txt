@@ -206,6 +206,7 @@ set(mudlet_SRCS
     TToolBar.cpp
     TTreeWidget.cpp
     TTrigger.cpp
+    TUiTour.cpp
     TVar.cpp
     VarUnit.cpp
     WideComboBox.cpp
@@ -435,6 +436,7 @@ set(mudlet_HDRS
     TToolBar.h
     TTreeWidget.h
     TTrigger.h
+    TUiTour.h
     TVar.h
     utils.h
     VarUnit.h
