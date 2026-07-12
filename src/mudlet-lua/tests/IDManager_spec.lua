@@ -223,6 +223,16 @@ describe("Tests the functionality of IDMgr", function()
         assert.is_nil(result)
         assert.is_equal("timer is inactive", err)
       end)
+
+      it("Should return nil and a message when the underlying timer is gone", function()
+        registerNamedTimer(user, timerName, time, function() end)
+        -- kill the tempTimer behind the manager's back, as happens when a
+        -- one-shot timer fires naturally
+        killTimer(getManager(user).timers[timerName].handlerID)
+        local result, err = remainingNamedTimer(user, timerName)
+        assert.is_nil(result)
+        assert.is_equal("timer is inactive", err)
+      end)
     end)
 
     it("Should raise an error if the handlerName is missing or wrong type", function()

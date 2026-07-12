@@ -205,7 +205,12 @@ function IDMgr:remainingTime(name)
   if object.handlerID == -1 then
     return nil, "timer is inactive"
   end
-  return remainingTime(object.handlerID)
+  local remaining = remainingTime(object.handlerID)
+  if remaining == nil then
+    -- underlying tempTimer is gone, e.g. an already-fired one-shot
+    return nil, "timer is inactive"
+  end
+  return remaining
 end
 
 function IDMgr:new()
