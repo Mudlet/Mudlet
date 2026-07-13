@@ -471,6 +471,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         _Echos.Process('#oOverline#/o', 'Hex'),
         { "", "\27overline", "Overline", "\27overlineoff", "" }
       )
+
+      assert.are.same(
+        _Echos.Process('\\#ff0000Escaped', 'Hex'),
+        { "#ff0000", "Escaped" }
+      )
     end)
 
     it("Should parse decimal patterns correctly", function()
@@ -508,6 +513,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         _Echos.Process('<o>Overline</o>', 'Decimal'),
         { "", "\27overline", "Overline", "\27overlineoff", "" }
       )
+
+      assert.are.same(
+        _Echos.Process('<:0,0,255>OnBlue', 'Decimal'),
+        { "", { bg = { "0", "0", "255", 255 } }, "OnBlue" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<1234,0,0>NotAColour', 'Decimal'),
+        { "", "<1234,0,0>", "NotAColour" }
+      )
     end)
 
     it("Should parse color patterns correctly", function()
@@ -544,6 +559,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.are.same(
         _Echos.Process('<o>Overline</o>', 'Color'),
         { "", "\27overline", "Overline", "\27overlineoff", "" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<red:blue>RedOnBlue', 'Color'),
+        { "", { fg = { 255, 0, 0 }, bg = { 0, 0, 255 } }, "RedOnBlue" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<:blue>OnBlue', 'Color'),
+        { "", { bg = { 0, 0, 255 } }, "OnBlue" }
       )
     end)
   end)
