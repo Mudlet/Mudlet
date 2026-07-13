@@ -1266,22 +1266,16 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 frame_notificationArea->show();
                 notificationAreaMessageBox->show();
 
-                // same warning palette as the system message area: soft yellow in
-                // light mode, muted amber in dark mode
-                const bool darkMode = mudlet::self()->inDarkMode();
-                const QString warningBackground = darkMode ? qsl("rgb(64, 60, 40)") : qsl("rgb(255, 254, 215)");
-                const QString warningCheckBoxStyle = qsl("font-weight: bold; color: %1; background: %2").arg(darkMode ? qsl("rgb(230, 230, 230)") : qsl("black"), warningBackground);
-                const QString warningLabelStyle = qsl("font-weight: bold; color: %1; background: %2").arg(darkMode ? qsl("tomato") : qsl("red"), warningBackground);
                 QStringList errorTexts;
                 for (const auto& sslError : sslErrors) {
                     errorTexts.append(qsl("<li>%1</li>").arg(sslError.errorString()));
                     if (QSslError::SelfSignedCertificate == sslError.error()) {
-                        checkBox_self_signed->setStyleSheet(warningCheckBoxStyle);
-                        ssl_issuer_label->setStyleSheet(warningLabelStyle);
+                        checkBox_self_signed->setStyleSheet(certificateWarningCheckBoxStyle());
+                        ssl_issuer_label->setStyleSheet(certificateWarningLabelStyle());
                     }
                     if (QSslError::CertificateExpired == sslError.error()) {
-                        checkBox_expired->setStyleSheet(warningCheckBoxStyle);
-                        ssl_expires_label->setStyleSheet(warningLabelStyle);
+                        checkBox_expired->setStyleSheet(certificateWarningCheckBoxStyle());
+                        ssl_expires_label->setStyleSheet(certificateWarningLabelStyle());
                     }
                 }
                 notificationAreaMessageBox->setText(qsl("<ul>%1</ul>").arg(errorTexts.join(QChar::LineFeed)));
@@ -4530,6 +4524,34 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
     pHost->mTelnet.sendInfoNewEnvironValue(qsl("LANGUAGE"));
 }
 
+// same warning palette as the system message area: soft yellow in light mode,
+// muted amber in dark mode
+QString dlgProfilePreferences::certificateWarningCheckBoxStyle() const
+{
+    const bool darkMode = mudlet::self()->inDarkMode();
+    return qsl("font-weight: bold; color: %1; background: %2").arg(darkMode ? qsl("rgb(230, 230, 230)") : qsl("black"), darkMode ? qsl("rgb(64, 60, 40)") : qsl("rgb(255, 254, 215)"));
+}
+
+QString dlgProfilePreferences::certificateWarningLabelStyle() const
+{
+    const bool darkMode = mudlet::self()->inDarkMode();
+    return qsl("font-weight: bold; color: %1; background: %2").arg(darkMode ? qsl("lightsalmon") : qsl("red"), darkMode ? qsl("rgb(64, 60, 40)") : qsl("rgb(255, 254, 215)"));
+}
+
+void dlgProfilePreferences::restyleCertificateWarnings()
+{
+    for (auto* checkBox : {checkBox_self_signed, checkBox_expired}) {
+        if (!checkBox->styleSheet().isEmpty()) {
+            checkBox->setStyleSheet(certificateWarningCheckBoxStyle());
+        }
+    }
+    for (auto* label : {ssl_issuer_label, ssl_expires_label}) {
+        if (!label->styleSheet().isEmpty()) {
+            label->setStyleSheet(certificateWarningLabelStyle());
+        }
+    }
+}
+
 void dlgProfilePreferences::slot_setAppearance(const enums::Appearance state)
 {
     if (comboBox_appearance->currentIndex() != state) {
@@ -4543,6 +4565,8 @@ void dlgProfilePreferences::slot_setAppearance(const enums::Appearance state)
     if (wasDarkMode == isDarkMode) {
         return;
     }
+
+    restyleCertificateWarnings();
 
     Host* pHost = mpHost;
     if (!pHost) {
