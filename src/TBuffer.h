@@ -307,6 +307,9 @@ public:
     int size() { return static_cast<int>(buffer.size()); }
     bool isEmpty() const { return buffer.size() == 0; }
     QString& line(int lineNumber);
+    // Colors of the current trigger-pass line as committed, before any
+    // trigger ran; nullptr when lineNumber is not the line being processed:
+    const std::deque<TChar>* preTriggerPassLine(int lineNumber) const;
     int find(int line, const QString& what, int pos);
     QStringList split(int line, const QString& splitter);
     QStringList split(int line, const QRegularExpression& splitter);
@@ -383,6 +386,7 @@ public:
 private:
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
+    void syncPreTriggerPassLine(int y);
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
@@ -483,6 +487,8 @@ private:
 
     QString mMudLine;
     std::deque<TChar> mMudBuffer;
+    std::deque<TChar> mPreTriggerPassLine;
+    int mPreTriggerPassLineNumber = -1;
     // Used to hold the unprocessed bytes that could be left at the end of a
     // packet if we detect that there should be more - will be prepended to the
     // next chunk of data - PROVIDED it is flagged as coming from the MUD Server
