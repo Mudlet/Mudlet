@@ -96,6 +96,10 @@ using namespace std::chrono_literals;
 // it is disabled):
 static const char* cButtonBaseColor = "baseColor";
 
+// Separates the XML packages of individually copied items on the clipboard so
+// that pasting can import and place each one
+static const QString cMultiItemPasteSeparator = qsl("\n<!--MUDLET_MULTI_ITEM_SEPARATOR-->\n");
+
 // Track whether the shared auto-complete provider has been initialized
 bool dlgTriggerEditor::smAutoCompleteInitialized = false;
 
@@ -11039,7 +11043,7 @@ void dlgTriggerEditor::exportMultipleTriggersToClipboard(const QList<TTrigger*>&
     }
 
     // Combine all XML packages with a special separator that paste can recognize
-    QString combinedXml = xmlPackages.join("\n<!--MUDLET_MULTI_ITEM_SEPARATOR-->\n");
+    QString combinedXml = xmlPackages.join(cMultiItemPasteSeparator);
     QApplication::clipboard()->setText(combinedXml);
 }
 
@@ -11095,7 +11099,7 @@ void dlgTriggerEditor::exportMultipleTimersToClipboard(const QList<TTimer*>& tim
         QApplication::clipboard()->setText(originalClipboard);
     }
 
-    QString combinedXml = xmlParts.join("\n");
+    QString combinedXml = xmlParts.join(cMultiItemPasteSeparator);
     QApplication::clipboard()->setText(combinedXml);
 }
 
@@ -11151,7 +11155,7 @@ void dlgTriggerEditor::exportMultipleAliasesToClipboard(const QList<TAlias*>& al
         QApplication::clipboard()->setText(originalClipboard);
     }
 
-    QString combinedXml = xmlParts.join("\n");
+    QString combinedXml = xmlParts.join(cMultiItemPasteSeparator);
     QApplication::clipboard()->setText(combinedXml);
 }
 
@@ -11207,7 +11211,7 @@ void dlgTriggerEditor::exportMultipleActionsToClipboard(const QList<TAction*>& a
         QApplication::clipboard()->setText(originalClipboard);
     }
 
-    QString combinedXml = xmlParts.join("\n");
+    QString combinedXml = xmlParts.join(cMultiItemPasteSeparator);
     QApplication::clipboard()->setText(combinedXml);
 }
 
@@ -11263,7 +11267,7 @@ void dlgTriggerEditor::exportMultipleScriptsToClipboard(const QList<TScript*>& s
         QApplication::clipboard()->setText(originalClipboard);
     }
 
-    QString combinedXml = xmlParts.join("\n");
+    QString combinedXml = xmlParts.join(cMultiItemPasteSeparator);
     QApplication::clipboard()->setText(combinedXml);
 }
 
@@ -11319,7 +11323,7 @@ void dlgTriggerEditor::exportMultipleKeysToClipboard(const QList<TKey*>& keys)
         QApplication::clipboard()->setText(originalClipboard);
     }
 
-    QString combinedXml = xmlParts.join("\n");
+    QString combinedXml = xmlParts.join(cMultiItemPasteSeparator);
     QApplication::clipboard()->setText(combinedXml);
 }
 
@@ -11464,6 +11468,101 @@ void dlgTriggerEditor::slot_copyXml()
 }
 
 // FIXME: The switch cases in here need to handle EditorViewType::cmVarsView but how is not clear
+// Applies the same placement to every pasted item that pasting a single item
+// would get: into the selected group/folder, or next to the selected item.
+void dlgTriggerEditor::placePastedItems(EditorViewType itemType, const QList<int>& itemIDs)
+{
+    QTreeWidget* targetTree = nullptr;
+    std::function<bool(int)> itemIsFolder;
+    std::function<void(int, int)> reParentItem;
+
+    switch (itemType) {
+    case EditorViewType::cmTriggerView:
+        targetTree = treeWidget_triggers;
+        itemIsFolder = [this](int id) {
+            auto* pItem = mpHost->getTriggerUnit()->getTrigger(id);
+            return pItem && pItem->isFolder();
+        };
+        reParentItem = [this](int id, int parentId) {
+            mpHost->getTriggerUnit()->reParentTrigger(id, 0, parentId, -1, -1);
+        };
+        break;
+    case EditorViewType::cmTimerView:
+        targetTree = treeWidget_timers;
+        itemIsFolder = [this](int id) {
+            auto* pItem = mpHost->getTimerUnit()->getTimer(id);
+            return pItem && pItem->isFolder();
+        };
+        reParentItem = [this](int id, int parentId) {
+            mpHost->getTimerUnit()->reParentTimer(id, 0, parentId, -1, -1);
+        };
+        break;
+    case EditorViewType::cmAliasView:
+        targetTree = treeWidget_aliases;
+        itemIsFolder = [this](int id) {
+            auto* pItem = mpHost->getAliasUnit()->getAlias(id);
+            return pItem && pItem->isFolder();
+        };
+        reParentItem = [this](int id, int parentId) {
+            mpHost->getAliasUnit()->reParentAlias(id, 0, parentId, -1, -1);
+        };
+        break;
+    case EditorViewType::cmScriptView:
+        targetTree = treeWidget_scripts;
+        itemIsFolder = [this](int id) {
+            auto* pItem = mpHost->getScriptUnit()->getScript(id);
+            return pItem && pItem->isFolder();
+        };
+        reParentItem = [this](int id, int parentId) {
+            mpHost->getScriptUnit()->reParentScript(id, 0, parentId, -1, -1);
+        };
+        break;
+    case EditorViewType::cmActionView:
+        targetTree = treeWidget_actions;
+        itemIsFolder = [this](int id) {
+            auto* pItem = mpHost->getActionUnit()->getAction(id);
+            return pItem && pItem->isFolder();
+        };
+        reParentItem = [this](int id, int parentId) {
+            mpHost->getActionUnit()->reParentAction(id, 0, parentId, -1, -1);
+        };
+        break;
+    case EditorViewType::cmKeysView:
+        targetTree = treeWidget_keys;
+        itemIsFolder = [this](int id) {
+            auto* pItem = mpHost->getKeyUnit()->getKey(id);
+            return pItem && pItem->isFolder();
+        };
+        reParentItem = [this](int id, int parentId) {
+            mpHost->getKeyUnit()->reParentKey(id, 0, parentId, -1, -1);
+        };
+        break;
+    case EditorViewType::cmVarsView:
+    case EditorViewType::cmUnknownView:
+        return;
+    }
+
+    QModelIndex targetIndex = targetTree->currentIndex();
+    if (!targetIndex.isValid()) {
+        QList<QTreeWidgetItem*> selectedItems = targetTree->selectedItems();
+        if (!selectedItems.isEmpty()) {
+            targetIndex = targetTree->indexFromItem(selectedItems.first());
+        }
+    }
+    if (!targetIndex.isValid()) {
+        return;
+    }
+
+    QTreeWidgetItem* targetItem = targetTree->itemFromIndex(targetIndex);
+    const int targetId = targetIndex.data(Qt::UserRole).toInt();
+    const bool isGroup = (targetItem && targetItem->childCount() > 0) || itemIsFolder(targetId);
+    const int newParentId = isGroup ? targetId : targetIndex.parent().data(Qt::UserRole).toInt();
+
+    for (const int itemID : itemIDs) {
+        reParentItem(itemID, newParentId);
+    }
+}
+
 void dlgTriggerEditor::slot_pasteXml()
 {
     XMLimport reader(mpHost);
@@ -11497,7 +11596,7 @@ void dlgTriggerEditor::slot_pasteXml()
 
     // Check if clipboard contains multiple items (separated by our delimiter)
     QString clipboardText = QApplication::clipboard()->text();
-    QStringList xmlPackages = clipboardText.split("\n<!--MUDLET_MULTI_ITEM_SEPARATOR-->\n");
+    QStringList xmlPackages = clipboardText.split(cMultiItemPasteSeparator);
 
     EditorViewType importedItemType;
     int importedItemID;
@@ -11535,34 +11634,7 @@ void dlgTriggerEditor::slot_pasteXml()
         if (!importedIDs.isEmpty()) {
             // For multiple items, we need to handle the reparenting here instead of later
             // since the later logic only handles one item at a time
-            if (firstImportType == EditorViewType::cmTriggerView) {
-                QModelIndex targetIndex = treeWidget_triggers->currentIndex();
-                if (!targetIndex.isValid()) {
-                    QList<QTreeWidgetItem*> selectedItems = treeWidget_triggers->selectedItems();
-                    if (!selectedItems.isEmpty()) {
-                        targetIndex = treeWidget_triggers->indexFromItem(selectedItems.first());
-                    }
-                }
-
-                // Apply the same group detection logic for all imported triggers
-                if (targetIndex.isValid()) {
-                    QTreeWidgetItem* targetItem = treeWidget_triggers->itemFromIndex(targetIndex);
-                    int targetId = targetIndex.data(Qt::UserRole).toInt();
-                    TTrigger* targetTrigger = mpHost->getTriggerUnit()->getTrigger(targetId);
-
-                    bool isGroup = (targetItem && targetItem->childCount() > 0) || (targetTrigger && targetTrigger->isFolder());
-
-                    for (const int itemID : std::as_const(importedIDs)) {
-                        if (isGroup) {
-                            mpHost->getTriggerUnit()->reParentTrigger(itemID, 0, targetId, -1, -1);
-                        } else {
-                            auto parent = targetIndex.parent();
-                            auto parentId = parent.data(Qt::UserRole).toInt();
-                            mpHost->getTriggerUnit()->reParentTrigger(itemID, 0, parentId, -1, -1);
-                        }
-                    }
-                }
-            }
+            placePastedItems(firstImportType, importedIDs);
 
             // Use the first imported item's type and ID for the rest of the function
             importedItemType = firstImportType;
@@ -11639,6 +11711,10 @@ void dlgTriggerEditor::slot_pasteXml()
         break;
     }
     case EditorViewType::cmTimerView: {
+        if (xmlPackages.size() > 1) {
+            // multi-item pastes were already reparented above
+            break;
+        }
         QModelIndex targetIndex = treeWidget_timers->currentIndex();
         if (!targetIndex.isValid()) {
             QList<QTreeWidgetItem*> selectedItems = treeWidget_timers->selectedItems();
@@ -11660,6 +11736,10 @@ void dlgTriggerEditor::slot_pasteXml()
         break;
     }
     case EditorViewType::cmAliasView: {
+        if (xmlPackages.size() > 1) {
+            // multi-item pastes were already reparented above
+            break;
+        }
         QModelIndex targetIndex = treeWidget_aliases->currentIndex();
         if (!targetIndex.isValid()) {
             QList<QTreeWidgetItem*> selectedItems = treeWidget_aliases->selectedItems();
@@ -11681,6 +11761,10 @@ void dlgTriggerEditor::slot_pasteXml()
         break;
     }
     case EditorViewType::cmScriptView: {
+        if (xmlPackages.size() > 1) {
+            // multi-item pastes were already reparented above
+            break;
+        }
         QModelIndex targetIndex = treeWidget_scripts->currentIndex();
         if (!targetIndex.isValid()) {
             QList<QTreeWidgetItem*> selectedItems = treeWidget_scripts->selectedItems();
@@ -11702,6 +11786,10 @@ void dlgTriggerEditor::slot_pasteXml()
         break;
     }
     case EditorViewType::cmActionView: {
+        if (xmlPackages.size() > 1) {
+            // multi-item pastes were already reparented above
+            break;
+        }
         QModelIndex targetIndex = treeWidget_actions->currentIndex();
         if (!targetIndex.isValid()) {
             QList<QTreeWidgetItem*> selectedItems = treeWidget_actions->selectedItems();
@@ -11723,6 +11811,10 @@ void dlgTriggerEditor::slot_pasteXml()
         break;
     }
     case EditorViewType::cmKeysView: {
+        if (xmlPackages.size() > 1) {
+            // multi-item pastes were already reparented above
+            break;
+        }
         QModelIndex targetIndex = treeWidget_keys->currentIndex();
         if (!targetIndex.isValid()) {
             QList<QTreeWidgetItem*> selectedItems = treeWidget_keys->selectedItems();

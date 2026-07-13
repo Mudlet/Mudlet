@@ -453,6 +453,8 @@ private:
     void exportMultipleScriptsToClipboard(const QList<TScript*>& scripts);
     void exportMultipleKeysToClipboard(const QList<TKey*>& keys);
 
+    void placePastedItems(EditorViewType itemType, const QList<int>& itemIDs);
+
     void clearDocument(edbee::TextEditorWidget* pEditorWidget, const QString& initialText = QString());
 
     void setAllSearchData(QTreeWidgetItem* pItem,
