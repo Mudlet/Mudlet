@@ -1266,16 +1266,22 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 frame_notificationArea->show();
                 notificationAreaMessageBox->show();
 
+                // same warning palette as the system message area: soft yellow in
+                // light mode, muted amber in dark mode
+                const bool darkMode = mudlet::self()->inDarkMode();
+                const QString warningBackground = darkMode ? qsl("rgb(64, 60, 40)") : qsl("rgb(255, 254, 215)");
+                const QString warningCheckBoxStyle = qsl("font-weight: bold; color: %1; background: %2").arg(darkMode ? qsl("rgb(230, 230, 230)") : qsl("black"), warningBackground);
+                const QString warningLabelStyle = qsl("font-weight: bold; color: %1; background: %2").arg(darkMode ? qsl("tomato") : qsl("red"), warningBackground);
                 QStringList errorTexts;
                 for (const auto& sslError : sslErrors) {
                     errorTexts.append(qsl("<li>%1</li>").arg(sslError.errorString()));
                     if (QSslError::SelfSignedCertificate == sslError.error()) {
-                        checkBox_self_signed->setStyleSheet(qsl("font-weight: bold; background: yellow"));
-                        ssl_issuer_label->setStyleSheet(qsl("font-weight: bold; color: red; background: yellow"));
+                        checkBox_self_signed->setStyleSheet(warningCheckBoxStyle);
+                        ssl_issuer_label->setStyleSheet(warningLabelStyle);
                     }
                     if (QSslError::CertificateExpired == sslError.error()) {
-                        checkBox_expired->setStyleSheet(qsl("font-weight: bold; background: yellow"));
-                        ssl_expires_label->setStyleSheet(qsl("font-weight: bold; color: red; background: yellow"));
+                        checkBox_expired->setStyleSheet(warningCheckBoxStyle);
+                        ssl_expires_label->setStyleSheet(warningLabelStyle);
                     }
                 }
                 notificationAreaMessageBox->setText(qsl("<ul>%1</ul>").arg(errorTexts.join(QChar::LineFeed)));
