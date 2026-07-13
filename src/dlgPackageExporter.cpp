@@ -1069,8 +1069,9 @@ QString dlgPackageExporter::copyNewImagesToTmp(const QString& tempPath) const
             }
             //replaces spaces with %20 in image file name to create a compatible url
             const QString imageName = QUrl::toPercentEncoding(imageFile.fileName()).constData();
-            //replace temporary path with the path that is now inside the package
-            plainDescription.replace(qsl("$%1").arg(imageFile.fileName()), qsl("$packagePath/.mudlet/description_images/%1").arg(imageName));
+            //replace temporary path with the path that is now inside the package; angle brackets
+            //keep the Markdown link destination intact once $packagePath expands to a path with spaces
+            plainDescription.replace(qsl("$%1").arg(imageFile.fileName()), qsl("<$packagePath/.mudlet/description_images/%1>").arg(imageName));
         }
     }
     return plainDescription;
