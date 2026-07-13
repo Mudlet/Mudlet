@@ -669,6 +669,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       createBuffer("mybuffer")
       -- clear the buffer in case it already exists
       clearWindow("mybuffer")
+      -- clearWindow does not reset the user cursor, so tests that move it
+      -- would otherwise leak position into the next test
+      moveCursor("mybuffer", 0, 0)
     end)
 
     it("should append text to the buffer", function()
@@ -678,11 +681,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   
     -- https://github.com/Mudlet/Mudlet/issues/6575
-    pending("should append multiple lines of text to the buffer", function()
-      echo("mybuffer", "Line 1\n")
-      echo("mybuffer", "Line 2\n")
-      echo("mybuffer", "Line 3\n")
-      moveCursorEnd()
+    it("selects the last line after moveCursorEnd in a buffer", function()
+      echo("mybuffer", "Line 1\nLine 2\nLine 3")
+      moveCursorEnd("mybuffer")
       selectCurrentLine("mybuffer")
       assert.are.equal("Line 3", getSelection("mybuffer"))
     end)
