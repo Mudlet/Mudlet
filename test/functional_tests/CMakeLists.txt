@@ -13,6 +13,7 @@ set(FUNCTIONAL_TEST_SOURCES
     dlgTriggerEditorUndoRedoTest.cpp
     TDiscordModeTest.cpp
     EnableDisableByNameTest.cpp
+    ColorTriggerFilterChildTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS

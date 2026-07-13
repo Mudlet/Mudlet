@@ -211,7 +211,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     return state;
 }
 
-bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternNumber, int posOffset)
+bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternNumber, int posOffset, int lineNumber)
 {
     assert(mRegexMap.contains(patternNumber));
 
@@ -241,14 +241,21 @@ bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternN
         return false;
     }
 
-    processRegexMatch(haystackC, haystack, patternNumber, posOffset, re, haystackCLength, match_data, rc);
+    processRegexMatch(haystackC, haystack, patternNumber, posOffset, re, haystackCLength, match_data, rc, lineNumber);
 
     pcre2_match_data_free(match_data);
     return true;
 }
 
-void TTrigger::processRegexMatch(
-        const char* haystackC, const QString& haystack, int patternNumber, int posOffset, const QSharedPointer<pcre2_code>& re, int haystackCLength, pcre2_match_data* match_data, int rc)
+void TTrigger::processRegexMatch(const char* haystackC,
+                                 const QString& haystack,
+                                 int patternNumber,
+                                 int posOffset,
+                                 const QSharedPointer<pcre2_code>& re,
+                                 int haystackCLength,
+                                 pcre2_match_data* match_data,
+                                 int rc,
+                                 int lineNumber)
 {
     PCRE2_SIZE* ovector = pcre2_get_ovector_pointer(match_data);
 
@@ -422,10 +429,10 @@ END: {
                         // to enable people to highlight capture groups if there are any
                         // otherwise highlight complete expression match
                         if (filterPosition % numberOfCaptureGroups != 1) {
-                            filter(s, begin);
+                            filter(s, begin, lineNumber);
                         }
                     } else {
-                        filter(s, begin);
+                        filter(s, begin, lineNumber);
                     }
                 }
             }
@@ -435,16 +442,16 @@ END: {
 }
 }
 
-bool TTrigger::match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset)
+bool TTrigger::match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber)
 {
     if (haystack.startsWith(needle)) {
-        processBeginOfLine(needle, patternNumber, posOffset);
+        processBeginOfLine(needle, patternNumber, posOffset, lineNumber);
         return true;
     }
     return false;
 }
 
-void TTrigger::processBeginOfLine(const QString& needle, int patternNumber, int posOffset)
+void TTrigger::processBeginOfLine(const QString& needle, int patternNumber, int posOffset, int lineNumber)
 {
     std::list<std::string> captureList;
     std::list<int> posList;
@@ -491,7 +498,7 @@ void TTrigger::processBeginOfLine(const QString& needle, int patternNumber, int 
         pL->clearCaptureGroups();
         if (mFilterTrigger) {
             if (!captureList.empty()) {
-                filter(captureList.front(), posList.front());
+                filter(captureList.front(), posList.front(), lineNumber);
             }
         }
     }
@@ -539,14 +546,14 @@ void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captur
     }
 }
 
-void TTrigger::filter(std::string& capture, int& posOffset)
+void TTrigger::filter(std::string& capture, int& posOffset, int lineNumber)
 {
     if (capture.empty()) {
         return;
     }
     const QString text = QString::fromStdString(capture);
     for (auto& trigger : *mpMyChildrenList) {
-        trigger->match(capture.data(), text, -1, posOffset);
+        trigger->match(capture.data(), text, lineNumber, posOffset);
     }
 }
 
@@ -560,17 +567,17 @@ void TTrigger::setExpiryCount(int expiryCount)
     mExpiryCount = expiryCount;
 }
 
-bool TTrigger::match_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset)
+bool TTrigger::match_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber)
 {
     const int where = haystack.indexOf(needle);
     if (where != -1) {
-        processSubstringMatch(haystack, needle, patternNumber, posOffset, where);
+        processSubstringMatch(haystack, needle, patternNumber, posOffset, where, lineNumber);
         return true;
     }
     return false;
 }
 
-void TTrigger::processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where)
+void TTrigger::processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where, int lineNumber)
 {
     std::list<std::string> captureList;
     std::list<int> posList;
@@ -624,13 +631,13 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
         pL->clearCaptureGroups();
         if (mFilterTrigger) {
             if (!captureList.empty()) {
-                filter(captureList.front(), posList.front());
+                filter(captureList.front(), posList.front(), lineNumber);
             }
         }
     }
 }
 
-bool TTrigger::match_color_pattern(int line, int patternNumber)
+bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, int length)
 {
     if (patternNumber >= mColorPatternList.size()) {
         return false;
@@ -646,7 +653,12 @@ bool TTrigger::match_color_pattern(int line, int patternNumber)
     }
     std::deque<TChar>& bufferLine = mpHost->mpConsole->buffer.buffer[line];
     const QString& lineBuffer = mpHost->mpConsole->buffer.lineBuffer[line];
-    int pos = 0;
+    // Filter ("only pass matches") parents hand children just the matched
+    // capture, so restrict the scan to that window; for top-level triggers
+    // the window covers the whole line:
+    const int start = qBound(0, posOffset, static_cast<int>(bufferLine.size()));
+    const int end = qBound(start, posOffset + length, static_cast<int>(bufferLine.size()));
+    int pos = start;
     int matchBegin = -1;
     bool matching = false;
 
@@ -661,7 +673,7 @@ bool TTrigger::match_color_pattern(int line, int patternNumber)
         return false; // no color settings to match against
     }
 
-    for (auto it = bufferLine.begin(); it != bufferLine.end(); ++it, ++pos) {
+    for (auto it = bufferLine.begin() + start; pos < end; ++it, ++pos) {
         // This now allows matching against the current default colours (-1) and
         // allows ONE of the foreground or background to NOT be considered (-2)
         // Ideally we should base the matching on only the ANSI code but not
@@ -677,7 +689,7 @@ bool TTrigger::match_color_pattern(int line, int patternNumber)
             matching = false;
         }
 
-        if ((!matching) || (matching && (pos + 1 >= static_cast<int>(bufferLine.size())))) {
+        if ((!matching) || (matching && (pos + 1 >= end))) {
             if (matchBegin > -1) {
                 std::string got;
                 if (matching) {
@@ -695,13 +707,13 @@ bool TTrigger::match_color_pattern(int line, int patternNumber)
     }
 
     if (canExecute) {
-        processColorPattern(patternNumber, captureList, posList);
+        processColorPattern(patternNumber, captureList, posList, line);
         return true;
     }
     return false;
 }
 
-void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList)
+void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList, int lineNumber)
 {
     if (mIsColorizerTrigger) {
         const int r1 = mBgColor.red();
@@ -745,7 +757,7 @@ void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& ca
                 auto it1 = captureList.begin();
                 auto it2 = posList.begin();
                 for (; it1 != captureList.end(); it1++, it2++) {
-                    filter(*it1, *it2);
+                    filter(*it1, *it2, lineNumber);
                 }
             }
         }
@@ -826,7 +838,7 @@ void TTrigger::processPromptMatch(int patternNumber)
     execute();
 }
 
-bool TTrigger::match_exact_match(const QString& haystack, const QString& needle, int patternNumber, int posOffset)
+bool TTrigger::match_exact_match(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber)
 {
     QString text = haystack;
     if (text.endsWith(QChar('\n'))) {
@@ -834,17 +846,17 @@ bool TTrigger::match_exact_match(const QString& haystack, const QString& needle,
     }
 
     if (text == needle) {
-        processExactMatch(needle, patternNumber, posOffset);
+        processExactMatch(needle, patternNumber, posOffset, lineNumber);
         return true;
     }
     return false;
 }
 
-void TTrigger::processExactMatch(const QString& line, int patternNumber, int posOffset)
+void TTrigger::processExactMatch(const QString& needle, int patternNumber, int posOffset, int lineNumber)
 {
     std::list<std::string> captureList;
     std::list<int> posList;
-    captureList.emplace_back(line.toUtf8().constData());
+    captureList.emplace_back(needle.toUtf8().constData());
     posList.push_back(0 + posOffset);
     if (mudlet::smDebugMode) {
         TDebug(Qt::yellow, Qt::black) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
@@ -886,7 +898,7 @@ void TTrigger::processExactMatch(const QString& line, int patternNumber, int pos
         pL->clearCaptureGroups();
         if (mFilterTrigger) {
             if (!captureList.empty()) {
-                filter(captureList.front(), posList.front());
+                filter(captureList.front(), posList.front(), lineNumber);
             }
         }
     }
@@ -944,19 +956,19 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
             ret = false;
             switch (mPatternKinds.value(patternNumber)) {
             case REGEX_SUBSTRING:
-                ret = match_substring(haystack, mPatterns.at(patternNumber), patternNumber, posOffset);
+                ret = match_substring(haystack, mPatterns.at(patternNumber), patternNumber, posOffset, line);
                 break;
 
             case REGEX_PERL:
-                ret = match_perl(haystackC, haystack, patternNumber, posOffset);
+                ret = match_perl(haystackC, haystack, patternNumber, posOffset, line);
                 break;
 
             case REGEX_BEGIN_OF_LINE_SUBSTRING:
-                ret = match_begin_of_line_substring(haystack, mPatterns.at(patternNumber), patternNumber, posOffset);
+                ret = match_begin_of_line_substring(haystack, mPatterns.at(patternNumber), patternNumber, posOffset, line);
                 break;
 
             case REGEX_EXACT_MATCH:
-                ret = match_exact_match(haystack, mPatterns.at(patternNumber), patternNumber, posOffset);
+                ret = match_exact_match(haystack, mPatterns.at(patternNumber), patternNumber, posOffset, line);
                 break;
 
             case REGEX_LUA_CODE:
@@ -968,7 +980,9 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
                 break;
 
             case REGEX_COLOR_PATTERN:
-                ret = match_color_pattern(line, patternNumber);
+                // for a filter child the haystack is just the parent's capture,
+                // so its length bounds the color scan window on that line
+                ret = match_color_pattern(line, patternNumber, posOffset, static_cast<int>(haystack.length()));
                 break;
 
             case REGEX_PROMPT:
@@ -1019,12 +1033,14 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
                                 for (int i = 1; its != (*mit).end(); ++its, i++) {
                                     std::string s = *its;
                                     int p = 0;
+                                    // multiline captures may come from earlier lines, so no
+                                    // single line number applies here
                                     if (total > 1) {
                                         if (i % total != 1) {
-                                            filter(s, p);
+                                            filter(s, p, -1);
                                         }
                                     } else {
-                                        filter(s, p);
+                                        filter(s, p, -1);
                                     }
                                 }
                             }
