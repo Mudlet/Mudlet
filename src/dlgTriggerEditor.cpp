@@ -11474,7 +11474,7 @@ void dlgTriggerEditor::placePastedItems(EditorViewType itemType, const QList<int
 {
     QTreeWidget* targetTree = nullptr;
     std::function<bool(int)> itemIsFolder;
-    std::function<void(int, int)> reParentItem;
+    std::function<void(int, int, int, int)> reParentItem;
 
     switch (itemType) {
     case EditorViewType::cmTriggerView:
@@ -11483,8 +11483,8 @@ void dlgTriggerEditor::placePastedItems(EditorViewType itemType, const QList<int
             auto* pItem = mpHost->getTriggerUnit()->getTrigger(id);
             return pItem && pItem->isFolder();
         };
-        reParentItem = [this](int id, int parentId) {
-            mpHost->getTriggerUnit()->reParentTrigger(id, 0, parentId, -1, -1);
+        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
+            mpHost->getTriggerUnit()->reParentTrigger(id, 0, parentId, parentPos, childPos);
         };
         break;
     case EditorViewType::cmTimerView:
@@ -11493,8 +11493,8 @@ void dlgTriggerEditor::placePastedItems(EditorViewType itemType, const QList<int
             auto* pItem = mpHost->getTimerUnit()->getTimer(id);
             return pItem && pItem->isFolder();
         };
-        reParentItem = [this](int id, int parentId) {
-            mpHost->getTimerUnit()->reParentTimer(id, 0, parentId, -1, -1);
+        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
+            mpHost->getTimerUnit()->reParentTimer(id, 0, parentId, parentPos, childPos);
         };
         break;
     case EditorViewType::cmAliasView:
@@ -11503,8 +11503,8 @@ void dlgTriggerEditor::placePastedItems(EditorViewType itemType, const QList<int
             auto* pItem = mpHost->getAliasUnit()->getAlias(id);
             return pItem && pItem->isFolder();
         };
-        reParentItem = [this](int id, int parentId) {
-            mpHost->getAliasUnit()->reParentAlias(id, 0, parentId, -1, -1);
+        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
+            mpHost->getAliasUnit()->reParentAlias(id, 0, parentId, parentPos, childPos);
         };
         break;
     case EditorViewType::cmScriptView:
@@ -11513,8 +11513,8 @@ void dlgTriggerEditor::placePastedItems(EditorViewType itemType, const QList<int
             auto* pItem = mpHost->getScriptUnit()->getScript(id);
             return pItem && pItem->isFolder();
         };
-        reParentItem = [this](int id, int parentId) {
-            mpHost->getScriptUnit()->reParentScript(id, 0, parentId, -1, -1);
+        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
+            mpHost->getScriptUnit()->reParentScript(id, 0, parentId, parentPos, childPos);
         };
         break;
     case EditorViewType::cmActionView:
@@ -11523,8 +11523,8 @@ void dlgTriggerEditor::placePastedItems(EditorViewType itemType, const QList<int
             auto* pItem = mpHost->getActionUnit()->getAction(id);
             return pItem && pItem->isFolder();
         };
-        reParentItem = [this](int id, int parentId) {
-            mpHost->getActionUnit()->reParentAction(id, 0, parentId, -1, -1);
+        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
+            mpHost->getActionUnit()->reParentAction(id, 0, parentId, parentPos, childPos);
         };
         break;
     case EditorViewType::cmKeysView:
@@ -11533,8 +11533,8 @@ void dlgTriggerEditor::placePastedItems(EditorViewType itemType, const QList<int
             auto* pItem = mpHost->getKeyUnit()->getKey(id);
             return pItem && pItem->isFolder();
         };
-        reParentItem = [this](int id, int parentId) {
-            mpHost->getKeyUnit()->reParentKey(id, 0, parentId, -1, -1);
+        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
+            mpHost->getKeyUnit()->reParentKey(id, 0, parentId, parentPos, childPos);
         };
         break;
     case EditorViewType::cmVarsView:
@@ -11556,10 +11556,20 @@ void dlgTriggerEditor::placePastedItems(EditorViewType itemType, const QList<int
     QTreeWidgetItem* targetItem = targetTree->itemFromIndex(targetIndex);
     const int targetId = targetIndex.data(Qt::UserRole).toInt();
     const bool isGroup = (targetItem && targetItem->childCount() > 0) || itemIsFolder(targetId);
-    const int newParentId = isGroup ? targetId : targetIndex.parent().data(Qt::UserRole).toInt();
 
-    for (const int itemID : itemIDs) {
-        reParentItem(itemID, newParentId);
+    if (isGroup) {
+        for (const int itemID : itemIDs) {
+            reParentItem(itemID, targetId, -1, -1);
+        }
+    } else {
+        // mirror single-item paste: insert as siblings right after the selected item
+        const QModelIndex parentIndex = targetIndex.parent();
+        const int parentId = parentIndex.data(Qt::UserRole).toInt();
+        const int parentRow = parentIndex.row();
+        int childRow = targetIndex.row() + 1;
+        for (const int itemID : itemIDs) {
+            reParentItem(itemID, parentId, parentRow, childRow++);
+        }
     }
 }
 

@@ -1918,6 +1918,50 @@ private slots:
     cleanupAll(mItemTypes[0]);
   }
 
+  void testMultiTriggerPasteAfterSibling() {
+    mpEditor->slot_showTriggers();
+    cleanupAll(mItemTypes[0]);
+
+    mpEditor->addTrigger(true);
+    QTreeWidgetItem *group = mpEditor->mpTriggerBaseItem->child(0);
+    int groupID = group->data(0, Qt::UserRole).toInt();
+    TTrigger *pGroup = mpHost->getTriggerUnit()->getTrigger(groupID);
+    QVERIFY(pGroup != nullptr);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(group);
+    mpEditor->addTrigger(false);
+    mpEditor->addTrigger(false);
+    QCOMPARE(group->childCount(), 2);
+    const int firstID = group->child(0)->data(0, Qt::UserRole).toInt();
+    const int secondID = group->child(1)->data(0, Qt::UserRole).toInt();
+
+    // copy both triggers, then paste them onto the first (non-folder) trigger
+    mpEditor->treeWidget_triggers->clearSelection();
+    mpEditor->treeWidget_triggers->setCurrentItem(group->child(0));
+    group->child(0)->setSelected(true);
+    group->child(1)->setSelected(true);
+    mpEditor->slot_copyXml();
+
+    mpEditor->treeWidget_triggers->clearSelection();
+    mpEditor->treeWidget_triggers->setCurrentItem(group->child(0));
+    mpEditor->slot_pasteXml();
+
+    // pasted triggers must be inserted right after the selected sibling,
+    // not appended at the end of the group
+    auto *children = pGroup->getChildrenList();
+    QCOMPARE(static_cast<int>(children->size()), 4);
+    QList<int> childIDs;
+    for (auto *child : *children) {
+      childIDs << child->getID();
+    }
+    QCOMPARE(childIDs.at(0), firstID);
+    QVERIFY(childIDs.at(1) != firstID && childIDs.at(1) != secondID);
+    QVERIFY(childIDs.at(2) != firstID && childIDs.at(2) != secondID);
+    QCOMPARE(childIDs.at(3), secondID);
+
+    cleanupAll(mItemTypes[0]);
+  }
+
   void testMultiAliasPasteIntoGroup() {
     mpEditor->slot_showAliases();
     cleanupAll(mItemTypes[2]);
