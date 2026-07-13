@@ -1425,6 +1425,7 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
         mMudLine.clear();
         mMudBuffer.clear();
         const int line = lineBuffer.size() - 1;
+        mCommitLineIndex = line;
         if (!mSkipTriggerProcessing) {
             mpHost->mpConsole->runTriggers(line);
         }
@@ -1439,8 +1440,12 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
         const int wrapStartLine = (lastValidLine >= 0) ? std::min(line, lastValidLine) : 0;
         const int addedLines = wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
 
-        // Start a new, but empty line in the various buffers
-        log(lineBuffer.size() - 1, lineBuffer.size() - 1);
+        // Skip logging if a trigger deleted the line that was being committed;
+        // deleteLines() has already adjusted the deferred logging state
+        if (mCommitLineIndex >= 0) {
+            log(lineBuffer.size() - 1, lineBuffer.size() - 1);
+        }
+        mCommitLineIndex = -1;
 
         ++localBufferPosition;
         // Suppress new empty line IFF echoes already created a new empty line
@@ -5101,6 +5106,22 @@ bool TBuffer::deleteLines(int from, int to)
         }
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
+
+        // Keep the deferred logging state in step with the removed lines so
+        // pending text is only dropped when the line it holds was deleted
+        if (lastloggedToLine >= from && lastLoggedFromLine <= to) {
+            lastTextToLog.clear();
+            lastLoggedFromLine = -1;
+            lastloggedToLine = -1;
+        } else if (lastLoggedFromLine > to) {
+            lastLoggedFromLine -= delta;
+            lastloggedToLine -= delta;
+        }
+        if (mCommitLineIndex >= from && mCommitLineIndex <= to) {
+            mCommitLineIndex = -1;
+        } else if (mCommitLineIndex > to) {
+            mCommitLineIndex -= delta;
+        }
         return true;
     }
     return false;

@@ -495,6 +495,10 @@ private:
     int lastLoggedFromLine = 0;
     int lastloggedToLine = 0;
     QString lastTextToLog;
+    // index of the line being committed while its triggers run, -1 otherwise;
+    // deleteLines() adjusts it so commitLine() can tell whether that line
+    // survived trigger processing
+    int mCommitLineIndex = -1;
 
     QByteArray mEncoding;
 
