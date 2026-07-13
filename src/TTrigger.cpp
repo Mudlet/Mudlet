@@ -1264,8 +1264,33 @@ bool TTrigger::compileScript()
     }
 }
 
+namespace {
+// Tracks the innermost trigger running its script so feedTriggers() can name the
+// culprit when aborting an endless loop; RAII restores the prior value on exit.
+class ExecutingTriggerNameGuard
+{
+public:
+    ExecutingTriggerNameGuard(TriggerUnit* pUnit, const QString* pName)
+    : mpUnit(pUnit)
+    , mpPrevious(pUnit->currentExecutingTriggerName())
+    {
+        mpUnit->setCurrentExecutingTriggerName(pName);
+    }
+    ~ExecutingTriggerNameGuard() { mpUnit->setCurrentExecutingTriggerName(mpPrevious); }
+
+    ExecutingTriggerNameGuard(const ExecutingTriggerNameGuard&) = delete;
+    ExecutingTriggerNameGuard& operator=(const ExecutingTriggerNameGuard&) = delete;
+
+private:
+    TriggerUnit* mpUnit;
+    const QString* mpPrevious;
+};
+} // namespace
+
 void TTrigger::execute()
 {
+    const ExecutingTriggerNameGuard executingTriggerNameGuard(mpHost->getTriggerUnit(), &mName);
+
     if (mSoundTrigger) { /* eventually something should be added to the gui to change sound volumes. 100=full volume */
         QString mediaFileName = mSoundFile;
 
