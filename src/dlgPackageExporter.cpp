@@ -1357,7 +1357,9 @@ dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& pac
     qEnableNtfsPermissionChecks();
 #endif
 #endif // defined(Q_OS_WINDOWS)
-    QDirIterator stagingFile(stagingDirName, QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files, QDirIterator::Subdirectories);
+    // QDir::Hidden is needed so the .mudlet staging directory (description
+    // images and other assets) makes it into the archive on Unix systems:
+    QDirIterator stagingFile(stagingDirName, QDir::NoDotAndDotDot | QDir::Hidden | QDir::AllDirs | QDir::Files, QDirIterator::Subdirectories);
     // relative names to use in archive:
     QStringList directoryEntries;
     // Key is relative name to use in archive
