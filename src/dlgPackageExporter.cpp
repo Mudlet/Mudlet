@@ -857,9 +857,9 @@ void dlgPackageExporter::slot_exportPackage()
 
     // if packageName changed allow to create a new package in the same path
     if (mIsModuleCreationMode) {
-        // For modules, save to the profile directory instead of user's last dialog location
-        QString profileDir = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName());
-        mPackagePathFileName = qsl("%1/%2.mpackage").arg(profileDir, mPackageName);
+        // Modules default to the profile directory unless the user picked a save location
+        const QString moduleDir = mPackagePath.isEmpty() ? mudlet::getMudletPath(enums::profileHomePath, mpHost->getName()) : mPackagePath;
+        mPackagePathFileName = qsl("%1/%2.mpackage").arg(moduleDir, mPackageName);
     } else {
         mPackagePathFileName = qsl("%1/%2.mpackage").arg(getActualPath(), mPackageName);
     }
@@ -963,7 +963,10 @@ void dlgPackageExporter::slot_exportPackage()
                         auto [installSuccess, installMessage] = mpHost->installPackage(mPackagePathFileName, enums::PackageModuleType::ModuleFromUI);
                         if (installSuccess) {
                             // Show embedded success message (better UX than popup)
-                            displayResultMessage(tr("Module \"%1\" created and installed successfully! You can now close this dialog.").arg(mPackageName.toHtmlEscaped()), true);
+                            //: %1 is the module name, %2 is a clickable link to the folder the module file was saved in
+                            displayResultMessage(tr("Module \"%1\" created and installed successfully! Saved to: %2. You can now close this dialog.")
+                                                         .arg(mPackageName.toHtmlEscaped(), qsl("<a href=\"file:///%1\">%1</a>").arg(QFileInfo(mPackagePathFileName).absolutePath().toHtmlEscaped())),
+                                                 true);
 
                             // Clear the form to allow creating another module
                             ui->lineEdit_packageName->clear();
