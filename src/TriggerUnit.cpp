@@ -88,6 +88,20 @@ void TriggerUnit::uninstall(const QString& packageName)
             uninstallList.append(rootTrigger);
         }
     }
+    // Re-entrant uninstall (#9337): a trigger's own script (e.g. uninstallPackage())
+    // is removing its package while match()/processDataStream() are still on the
+    // stack for that trigger. Deleting now would be a use-after-free, so defer to
+    // doCleanup() at depth 0. Deactivating is enough to stop them firing for the
+    // rest of this pass: processDataStream()'s loop skips deactivated triggers
+    // and match() runs its whole body inside if (isActive()) for those reached
+    // via a parent chain or filter.
+    if (mProcessingDepth > 0) {
+        for (auto trigger : uninstallList) {
+            trigger->setIsActive(false);
+            mCleanupSet.remove(trigger); // keep the two deferred-delete paths disjoint
+        }
+        return;
+    }
     for (auto& trigger : uninstallList) {
         delete trigger;
     }
@@ -307,6 +321,9 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // same hazard for the same reason — see Mudlet issue #4297.
     auto copyOfNodeList = mTriggerRootNodeList;
     for (auto trigger : copyOfNodeList) {
+        if (!trigger->isActive()) {
+            continue;
+        }
         trigger->match(subject, data, line);
     }
     free(subject);
@@ -474,6 +491,18 @@ void TriggerUnit::doCleanup()
         itTrigger.remove();
         delete pTrigger;
     }
+    // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
+    // children-before-parents and each ~Tree unlinks from its parent, so deleting
+    // children first empties the parent's child list (no double free); the seen
+    // set guards a node queued twice by re-entrant uninstalls.
+    QSet<TTrigger*> deletedTriggers;
+    for (auto trigger : uninstallList) {
+        if (!deletedTriggers.contains(trigger)) {
+            deletedTriggers.insert(trigger);
+            delete trigger;
+        }
+    }
+    uninstallList.clear();
 }
 
 void TriggerUnit::markCleanup(TTrigger* pT)
