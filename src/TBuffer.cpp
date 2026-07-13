@@ -1425,7 +1425,7 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
         mMudLine.clear();
         mMudBuffer.clear();
         const int line = lineBuffer.size() - 1;
-        mCommitLineIndex = line;
+        mCommitLineIndices.append(line);
         if (!mSkipTriggerProcessing) {
             mpHost->mpConsole->runTriggers(line);
         }
@@ -1442,10 +1442,9 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
 
         // Skip logging if a trigger deleted the line that was being committed;
         // deleteLines() has already adjusted the deferred logging state
-        if (mCommitLineIndex >= 0) {
+        if (mCommitLineIndices.takeLast() >= 0) {
             log(lineBuffer.size() - 1, lineBuffer.size() - 1);
         }
-        mCommitLineIndex = -1;
 
         ++localBufferPosition;
         // Suppress new empty line IFF echoes already created a new empty line
@@ -4682,6 +4681,15 @@ void TBuffer::log(int fromLine, int toLine)
         mpHost->mpConsole->mLogStream.flush();
     }
 
+    // record the last log call into a temporary buffer - we'll actually log
+    // on the next iteration after duplication detection has run
+    lastTextToLog = assembleLog(fromLine, toLine);
+    lastLoggedFromLine = fromLine;
+    lastloggedToLine = toLine;
+}
+
+QString TBuffer::assembleLog(int fromLine, int toLine)
+{
     QStringList linesToLog;
     for (int i = fromLine; i <= toLine; ++i) {
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
@@ -4691,12 +4699,7 @@ void TBuffer::log(int fromLine, int toLine)
             linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(mudlet::smTimeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
         }
     }
-
-    // record the last log call into a temporary buffer - we'll actually log
-    // on the next iteration after duplication detection has run
-    lastTextToLog = linesToLog.join(QString());
-    lastLoggedFromLine = fromLine;
-    lastloggedToLine = toLine;
+    return linesToLog.join(QString());
 }
 
 // logs the remaining output when logging gets stopped, without duplication checks
@@ -5078,6 +5081,21 @@ void TBuffer::shrinkBuffer()
     // away:
     mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
 
+    // The removed leading lines shift every remaining index down; keep the
+    // deferred logging state pointing at the same lines
+    if (lastloggedToLine >= mBatchDeleteSize) {
+        lastLoggedFromLine = qMax(0, lastLoggedFromLine - mBatchDeleteSize);
+        lastloggedToLine -= mBatchDeleteSize;
+    } else if (lastLoggedFromLine >= 0) {
+        lastLoggedFromLine = -1;
+        lastloggedToLine = -1;
+    }
+    for (auto& commitLineIndex : mCommitLineIndices) {
+        if (commitLineIndex >= 0) {
+            commitLineIndex = (commitLineIndex < mBatchDeleteSize) ? -1 : commitLineIndex - mBatchDeleteSize;
+        }
+    }
+
     // Clean up unreferenced links after removing old lines
     clearLinkState();
 
@@ -5108,19 +5126,29 @@ bool TBuffer::deleteLines(int from, int to)
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
 
         // Keep the deferred logging state in step with the removed lines so
-        // pending text is only dropped when the line it holds was deleted
+        // pending text is only dropped when the lines it holds were deleted
         if (lastloggedToLine >= from && lastLoggedFromLine <= to) {
-            lastTextToLog.clear();
-            lastLoggedFromLine = -1;
-            lastloggedToLine = -1;
+            if ((from <= lastLoggedFromLine && lastloggedToLine <= to) || lastTextToLog.isEmpty() || mpHost.isNull()) {
+                lastTextToLog.clear();
+                lastLoggedFromLine = -1;
+                lastloggedToLine = -1;
+            } else {
+                // only part of the pending range was deleted - rebuild the
+                // pending text from the lines that survived
+                lastLoggedFromLine = (lastLoggedFromLine < from) ? lastLoggedFromLine : from;
+                lastloggedToLine = (lastloggedToLine > to) ? lastloggedToLine - delta : from - 1;
+                lastTextToLog = assembleLog(lastLoggedFromLine, lastloggedToLine);
+            }
         } else if (lastLoggedFromLine > to) {
             lastLoggedFromLine -= delta;
             lastloggedToLine -= delta;
         }
-        if (mCommitLineIndex >= from && mCommitLineIndex <= to) {
-            mCommitLineIndex = -1;
-        } else if (mCommitLineIndex > to) {
-            mCommitLineIndex -= delta;
+        for (auto& commitLineIndex : mCommitLineIndices) {
+            if (commitLineIndex >= from && commitLineIndex <= to) {
+                commitLineIndex = -1;
+            } else if (commitLineIndex > to) {
+                commitLineIndex -= delta;
+            }
         }
         return true;
     }
