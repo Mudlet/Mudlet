@@ -629,21 +629,21 @@ void LuaInterface::renameVar(TVar* var)
 
     for (int i = 1; i < vars.size(); i++) {
         const int kType = vars[i]->getKeyType();
-        if (kType == LUA_TNUMBER) {
+        // numbers and booleans use unquoted subscripts: t[3.14], t[true]
+        if (kType == LUA_TNUMBER || kType == LUA_TBOOLEAN) {
             oldVariable.append(qsl("[%1]").arg(vars.at(i)->getName()));
             if (i < vars.size() - 1) {
                 newName.append(qsl("[%1]").arg(vars[i]->getName()));
             }
-
         } else if (kType == LUA_TTABLE) {
             renameCVar(vars);
             return;
-        }
-
-        // That leaves LUA_TSTRING:
-        oldVariable.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
-        if (i < vars.size() - 1) {
-            newName.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
+        } else {
+            // that leaves LUA_TSTRING
+            oldVariable.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
+            if (i < vars.size() - 1) {
+                newName.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
+            }
         }
     }
 
@@ -652,7 +652,7 @@ void LuaInterface::renameVar(TVar* var)
         newName.append(qsl("_G[\"%1\"]").arg(vars.last()->getNewName()));
     } else {
         // this variable is nested in a table
-        if (var->getNewKeyType() == LUA_TNUMBER) {
+        if (var->getNewKeyType() == LUA_TNUMBER || var->getNewKeyType() == LUA_TBOOLEAN) {
             newName.append(qsl("[%1]").arg(vars.last()->getNewName()));
         } else {
             newName.append(qsl(R"(["%1"])").arg(vars.last()->getNewName()));
