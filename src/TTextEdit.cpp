@@ -871,7 +871,18 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter,
     if (caretIsHere) {
         bgColor = mCaretColor;
     }
-    if (!textRect.isNull() && (mpConsole->getType() == TConsole::MainConsole) || bgColor != mpConsole->getConsoleBgColor()) {
+    // Fill the cell background when:
+    //  - the text bg differs from the console bg (e.g. coloured text), or
+    //  - the main console has a background image to paint the text bg over (#8885), or
+    //  - the main console bg is partially transparent and would otherwise let
+    //    the underlying surface bleed through.
+    // Skipping the fill when the bg matches an opaque console bg lets glyph
+    // descenders that extend slightly past mFontHeight (e.g. underscores at
+    // certain font sizes) survive the next line's drawing (#9070).
+    const bool fillNeeded = bgColor != mpConsole->getConsoleBgColor()
+                            || (mpConsole->getType() == TConsole::MainConsole
+                                && (mpConsole->mBgImageMode > 0 || bgColor.alpha() < 255));
+    if (!textRect.isNull() && fillNeeded) {
         painter.fillRect(textRect, bgColor);
     }
     return charWidth;
