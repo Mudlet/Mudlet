@@ -434,6 +434,10 @@ private:
     // Second stage in decoding OSC sequences - set true when we see the ASCII
     // ESC character followed by the ']' one:
     bool mGotOSC = false;
+    // Set alongside mGotOSC for the other ANSI string sequences (DCS, SOS, PM
+    // and APC, i.e. ESC followed by 'P', 'X', '^' or '_' respectively) whose
+    // payload must be consumed up to the terminator but not decoded:
+    bool mGotString = false;
     bool mIsDefaultColor = true;
 
 
