@@ -865,7 +865,8 @@ void cTelnet::slot_socketDisconnected()
 #if !defined(QT_NO_SSL)
     if (sslerr) {
         // Got a secure connection error that should be shown in the preferences
-        mudlet::self()->showOptionsDialog(qsl("tab_connection"));
+        // of the profile that raised it, not whichever profile is active
+        mudlet::self()->showOptionsDialog(qsl("tab_connection"), mpHost);
     }
 #endif
 
