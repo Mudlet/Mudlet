@@ -1425,6 +1425,7 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
         mMudLine.clear();
         mMudBuffer.clear();
         const int line = lineBuffer.size() - 1;
+        const int sizeBeforeTriggers = static_cast<int>(lineBuffer.size());
         if (!mSkipTriggerProcessing) {
             mpHost->mpConsole->runTriggers(line);
         }
@@ -1440,7 +1441,15 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
         const int addedLines = wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
 
         // Start a new, but empty line in the various buffers
-        log(lineBuffer.size() - 1, lineBuffer.size() - 1);
+        if (static_cast<int>(lineBuffer.size()) < sizeBeforeTriggers) {
+            // Triggers deleted lines - discard stale buffered log content to
+            // avoid logging deleted lines or duplicating the line above them
+            lastTextToLog.clear();
+            lastLoggedFromLine = -1;
+            lastloggedToLine = -1;
+        } else {
+            log(lineBuffer.size() - 1, lineBuffer.size() - 1);
+        }
 
         ++localBufferPosition;
         // Suppress new empty line IFF echoes already created a new empty line
