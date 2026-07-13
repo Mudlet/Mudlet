@@ -1876,6 +1876,46 @@ private slots:
     cleanupAll(mItemTypes[3]);
   }
 
+  void testMultiTriggerPasteIntoGroup() {
+    mpEditor->slot_showTriggers();
+    cleanupAll(mItemTypes[0]);
+
+    mpEditor->addTrigger(true);
+    QCOMPARE(mpEditor->mpTriggerBaseItem->childCount(), 1);
+
+    QTreeWidgetItem *group = mpEditor->mpTriggerBaseItem->child(0);
+    int groupID = group->data(0, Qt::UserRole).toInt();
+    TTrigger *pGroup = mpHost->getTriggerUnit()->getTrigger(groupID);
+    QVERIFY(pGroup != nullptr);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(group);
+    mpEditor->addTrigger(false);
+    mpEditor->addTrigger(false);
+    QCOMPARE(group->childCount(), 2);
+
+    // copy both triggers, then paste them into the group
+    mpEditor->treeWidget_triggers->clearSelection();
+    mpEditor->treeWidget_triggers->setCurrentItem(group->child(0));
+    group->child(0)->setSelected(true);
+    group->child(1)->setSelected(true);
+    mpEditor->slot_copyXml();
+
+    mpEditor->treeWidget_triggers->clearSelection();
+    mpEditor->treeWidget_triggers->setCurrentItem(group);
+    mpEditor->slot_pasteXml();
+
+    // each pasted trigger must be linked into the group exactly once
+    QCOMPARE(static_cast<int>(pGroup->getChildrenList()->size()), 4);
+
+    // re-render the tree and verify the group shows exactly four children
+    QEnterEvent enterEvent{QPointF(), QPointF(), QPointF()};
+    QApplication::sendEvent(mpEditor, &enterEvent);
+    QCOMPARE(mpEditor->mpTriggerBaseItem->childCount(), 1);
+    QCOMPARE(mpEditor->mpTriggerBaseItem->child(0)->childCount(), 4);
+
+    cleanupAll(mItemTypes[0]);
+  }
+
   // ========================================================================
   // CATEGORY 14: UI Pattern Clearing Tests
   // ========================================================================

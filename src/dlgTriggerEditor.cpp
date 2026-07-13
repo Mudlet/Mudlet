@@ -11596,6 +11596,11 @@ void dlgTriggerEditor::slot_pasteXml()
     // of the currently selected item instead
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView: {
+        if (xmlPackages.size() > 1) {
+            // multi-item pastes were already reparented above; reparenting the
+            // first trigger again would link it into its parent's children twice
+            break;
+        }
         // Handle multi-selection: use the first selected item as reference
         QModelIndex targetIndex = treeWidget_triggers->currentIndex();
         if (!targetIndex.isValid()) {
