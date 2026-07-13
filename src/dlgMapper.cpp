@@ -26,7 +26,6 @@
 
 #include "Host.h"
 #include "TConsole.h"
-#include "TFeatureCallout.h"
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -100,13 +99,6 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
     connect(mpMap, &TMap::signal_saveErrorChanged, this, &dlgMapper::slot_saveErrorChanged);
     connect(toolButton_togglePanel, &QAbstractButton::clicked, this, &dlgMapper::slot_togglePanel);
     connect(comboBox_showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
-
-    TFeatureCallout::maybeShow(qsl("map-room-names"),
-                               toolButton_mapperMenu,
-                               //: Title of a balloon pointing out a newly added feature
-                               tr("New: room names on the map"),
-                               //: Body of the balloon, pointing at the mapper options menu button
-                               tr("The map can now show room names. Toggle them from this menu."));
 #if defined(INCLUDE_3DMAPPER)
     mIs3DMode = mpHost->mShow3DView;
     if (mpHost->mShow3DView) {
