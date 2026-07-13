@@ -879,6 +879,9 @@ void Host::resetProfile_phase2()
     mEventMap.clear();
     mLuaInterpreter.abortAllDownloads();
     mLuaInterpreter.initLuaGlobals();
+    // initLuaGlobals() closed the old lua_State, so the LuaInterface (and its
+    // VarUnit tree of registry references) must be rebuilt against the new one:
+    mLuaInterface.reset(new LuaInterface(mLuaInterpreter.getLuaGlobalState()));
     mLuaInterpreter.loadGlobal();
 
     // Have to recopy the values into the Lua "color_table"
