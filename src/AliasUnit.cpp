@@ -75,6 +75,19 @@ void AliasUnit::uninstall(const QString& packageName)
             uninstallList.append(rootAlias);
         }
     }
+    // Re-entrant uninstall (#9337): an alias's own script (e.g. uninstallPackage())
+    // is removing its package while match()/processDataStream() are still on the
+    // stack for that alias. Deleting now would be a use-after-free, so defer to
+    // doCleanup() at depth 0. Deactivating is enough to stop them firing for the
+    // rest of this pass: processDataStream()'s loop skips deactivated items and
+    // match() returns early on !isActive() for those reached via a parent.
+    if (mProcessingDepth > 0) {
+        for (auto alias : uninstallList) {
+            alias->setIsActive(false);
+            mCleanupSet.remove(alias); // keep the two deferred-delete paths disjoint
+        }
+        return;
+    }
     for (auto& alias : uninstallList) {
         delete alias;
     }
@@ -273,6 +286,9 @@ bool AliasUnit::processDataStream(const QString& data)
     mProcessingDepth++;
 
     for (auto alias : copyOfNodeList) {
+        if (!alias->isActive() && !alias->shouldBeActive()) {
+            continue;
+        }
         // = data.replace( "\n", "" );
         if (alias->match(data)) {
             state = true;
@@ -340,11 +356,11 @@ std::vector<int> AliasUnit::findItems(const QString& name, const bool exactMatch
 bool AliasUnit::enableAlias(const QString& name)
 {
     bool found = false;
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
-        TAlias* pT = it.value();
-        pT->setIsActive(true);
-        ++it;
+    // equal_range visits every same-named alias; constFind() + (++it) can start
+    // mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        it.value()->setIsActive(true);
         found = true;
     }
     return found;
@@ -353,11 +369,11 @@ bool AliasUnit::enableAlias(const QString& name)
 bool AliasUnit::disableAlias(const QString& name)
 {
     bool found = false;
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
-        TAlias* pT = it.value();
-        pT->setIsActive(false);
-        ++it;
+    // equal_range visits every same-named alias; constFind() + (++it) can start
+    // mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        it.value()->setIsActive(false);
         found = true;
     }
     return found;
@@ -427,6 +443,18 @@ void AliasUnit::doCleanup()
         itAlias.remove();
         delete pAlias;
     }
+    // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
+    // children-before-parents and each ~Tree unlinks from its parent, so deleting
+    // children first empties the parent's child list (no double free); the seen
+    // set guards a node queued twice by re-entrant uninstalls.
+    QSet<TAlias*> deletedAliases;
+    for (auto alias : uninstallList) {
+        if (!deletedAliases.contains(alias)) {
+            deletedAliases.insert(alias);
+            delete alias;
+        }
+    }
+    uninstallList.clear();
 }
 
 void AliasUnit::markCleanup(TAlias* pT)
