@@ -28,6 +28,7 @@ set(UNIT_TESTS
     SecureStringUtilsTest
     CredentialManagerTest
     CredentialManagerKeychainTest
+    OAuthClientFlowTest
     DiscordTest
     TTextEditBlinkTest
     TAreaZLevelIndexTest

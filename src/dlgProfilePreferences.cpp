@@ -25,6 +25,8 @@
 
 #include "dlgProfilePreferences.h"
 
+#include "CredentialManager.h"
+#include "GMCPAuthenticator.h"
 #include "Host.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -56,8 +58,10 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonParseError>
+#include <QMessageBox>
 #include <QNetworkDiskCache>
 #include <QPainter>
+#include <QPointer>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QStandardItemModel>
@@ -1333,6 +1337,26 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_askTlsAvailable->setChecked(pHost->mAskTlsAvailable);
 
+    // The "forget saved sign-in" button is gated on a reconnect token actually existing, not on the
+    // sign-in-choice flag: an oauth-only game never sets that flag yet still mints tokens, and a token
+    // is the only thing the button acts on. The keychain check is asynchronous, so start hidden and
+    // reveal on a hit; the QPointer guards against the dialog closing before the store answers.
+    // credentialExists() collapses a read failure (locked/denied/timed-out keychain) to "no token", so
+    // the button deliberately stays hidden on any read failure - the only cost is not offering to forget
+    // a token that could not be read, and clicking would just yield a graceful "could not remove" warning.
+    pushButton_forgetSavedSignIn->setVisible(false);
+    pushButton_forgetSavedSignIn->setEnabled(mEnableGMCP->isChecked());
+    QPointer<dlgProfilePreferences> safeDialog = this;
+    QPointer<CredentialManager> credentialManager = new CredentialManager();
+    credentialManager->credentialExists(pHost->getName(), qsl("reconnect"), [safeDialog, credentialManager](bool exists) {
+        if (credentialManager) {
+            credentialManager->deleteLater();
+        }
+        if (safeDialog && exists) {
+            safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+        }
+    });
+
     groupBox_proxy->setEnabled(true);
     groupBox_proxy->setChecked(pHost->mUseProxy);
     lineEdit_proxyAddress->setText(pHost->mProxyAddress);
@@ -1424,6 +1448,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_mapGridColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapGridColor);
 
     connect(mEnableGMCP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    // The GMCP Char.Login "forget saved sign-in" control is only meaningful when GMCP is on.
+    connect(mEnableGMCP, &QAction::toggled, pushButton_forgetSavedSignIn, &QWidget::setEnabled);
+    connect(pushButton_forgetSavedSignIn, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_forgetSavedSignIn);
     connect(mEnableMSDP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
@@ -1738,6 +1765,8 @@ void dlgProfilePreferences::clearHostDetails()
     groupBox_ssl_certificate->hide();
     frame_notificationArea->hide();
     checkBox_askTlsAvailable->setChecked(false);
+    pushButton_forgetSavedSignIn->setEnabled(false);
+    pushButton_forgetSavedSignIn->setVisible(false);
     groupBox_proxy->setDisabled(true);
 
     // Remove the reference to the Host/profile in the title:
@@ -2326,6 +2355,61 @@ void dlgProfilePreferences::slot_setMapGridColor()
     Host* pHost = mpHost;
     if (pHost) {
         setButtonAndProfileColor(pushButton_mapGridColor, pHost->mMapGridColor, true);
+    }
+}
+
+void dlgProfilePreferences::slot_forgetSavedSignIn()
+{
+    Host* pHost = mpHost;
+    if (!pHost || !pHost->mpAuth) {
+        return;
+    }
+
+    const auto reply = QMessageBox::question(this,
+                                             //: Title of the dialog asking the user to confirm removing their saved sign-in.
+                                             tr("Forget saved sign-in?"),
+                                             //: Body of the dialog asking the user to confirm removing their saved sign-in; they will need to sign in again next time.
+                                             tr("This will remove the saved sign-in for this profile. You will need to sign in again next time. Continue?"),
+                                             QMessageBox::Yes | QMessageBox::No,
+                                             QMessageBox::No);
+    frame_notificationArea->show();
+    notificationAreaIconLabelInformation->show();
+    notificationAreaMessageBox->show();
+    if (reply == QMessageBox::Yes) {
+        // forgetSavedSignIn() removes the token asynchronously; only report success (and disable the
+        // button) once the removal actually resolves, so a failed keychain removal cannot leave a stale
+        // reconnect token behind while the UI claims it is gone. QPointers guard against the dialog or
+        // host closing before the removal answers.
+        QPointer<dlgProfilePreferences> safeDialog = this;
+        QPointer<Host> safeHost = pHost;
+        pHost->mpAuth->forgetSavedSignIn([safeDialog, safeHost](bool success) {
+            if (success) {
+                if (safeDialog) {
+                    // Nothing is left to forget until a fresh sign-in mints a new token.
+                    safeDialog->pushButton_forgetSavedSignIn->setEnabled(false);
+                    //: Shown after the user's saved sign-in has actually been removed.
+                    safeDialog->notificationAreaMessageBox->setText(dlgProfilePreferences::tr("The saved sign-in has been forgotten."));
+                }
+                if (safeHost) {
+                    //: Shown in the main console after the user's saved sign-in has actually been removed.
+                    safeHost->postMessage(dlgProfilePreferences::tr("[  OK  ]  - The saved sign-in for this profile has been forgotten."));
+                }
+            } else {
+                if (safeDialog) {
+                    //: Shown when removing the saved sign-in failed, so it may still be present.
+                    safeDialog->notificationAreaMessageBox->setText(dlgProfilePreferences::tr("Could not remove the saved sign-in; it may still be present."));
+                }
+                if (safeHost) {
+                    //: Shown in the main console when removing the saved sign-in failed, so it may still be present.
+                    safeHost->postMessage(dlgProfilePreferences::tr("[ WARN ]  - Could not remove the saved sign-in; it may still be present."));
+                }
+            }
+        });
+    } else {
+        //: Shown when the user cancels removing their saved sign-in.
+        notificationAreaMessageBox->setText(tr("No changes were made to the saved sign-in."));
+        //: Shown in the main console when the user cancels removing their saved sign-in.
+        pHost->postMessage(tr("[ INFO ]  - Cancelled: no changes were made to the saved sign-in."));
     }
 }
 

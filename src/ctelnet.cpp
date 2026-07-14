@@ -155,6 +155,10 @@ void cTelnet::reset()
     mEchoAnomalyDetected = false;
 
     mNegotiationOrder.clear();
+
+    // A fresh connection: the player has not interacted yet, so an unsolicited Char.Login.URL must
+    // not auto-open the browser until they do (see Host::userSentInputThisConnection()).
+    mpHost->setUserSentInputThisConnection(false);
 }
 
 
@@ -2732,7 +2736,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && mudlet::self()->mDiscord.libraryLoaded()) {
                     supportsList += R"(, "External.Discord 1")";
                 }
-                supportsList += R"(, "Client.Media 1", "Char.Login 1"])";
+                supportsList += R"(, "Client.Media 1", "Char.Login 2"])";
                 output += supportsList;
             }
             output += TN_IAC;
