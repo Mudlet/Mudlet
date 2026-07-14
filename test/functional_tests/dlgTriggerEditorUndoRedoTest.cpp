@@ -1674,6 +1674,56 @@ private slots:
     cleanupAll(mItemTypes[0]);
   }
 
+  void testAddTriggerDoesNotClearSelectedMultilineState() {
+    mpEditor->slot_showTriggers();
+    cleanupAll(mItemTypes[0]);
+
+    mpEditor->addTrigger(false);
+    QVERIFY(mpEditor->mpTriggerBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *firstTriggerItem = mpEditor->mpTriggerBaseItem->child(0);
+    QVERIFY(firstTriggerItem != nullptr);
+
+    const int firstTriggerID = firstTriggerItem->data(0, Qt::UserRole).toInt();
+    TTrigger *firstTrigger =
+        mpHost->getTriggerUnit()->getTrigger(firstTriggerID);
+    QVERIFY(firstTrigger != nullptr);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(firstTriggerItem);
+    mpEditor->slot_triggerSelected(firstTriggerItem);
+    mpEditor->mpUndoStack->clear();
+
+    mpEditor->showPatternItems(2);
+    QVERIFY(mpEditor->mTriggerPatternEdit.size() >= 2);
+    mpEditor->mTriggerPatternEdit[0]->singleLineTextEdit_pattern->setPlainText(
+        qsl("first line"));
+    mpEditor->mTriggerPatternEdit[1]->singleLineTextEdit_pattern->setPlainText(
+        qsl("second line"));
+    mpEditor->mpTriggersMainArea->spinBox_lineMargin->setValue(2);
+    QCoreApplication::processEvents();
+    mpEditor->saveTrigger();
+
+    QVERIFY(firstTrigger->isMultiline());
+    QCOMPARE(firstTrigger->getConditionLineDelta(), 2);
+    QCOMPARE(firstTrigger->getPatternsList().size(), 2);
+
+    mpEditor->addTrigger(false);
+    QCoreApplication::processEvents();
+
+    QCOMPARE(mpEditor->mpTriggerBaseItem->childCount(), 2);
+    QVERIFY2(firstTrigger->isMultiline(),
+             "Adding a sibling trigger should not clear the previously "
+             "selected trigger's multi-line state");
+    QCOMPARE(firstTrigger->getConditionLineDelta(), 2);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(firstTriggerItem);
+    mpEditor->slot_triggerSelected(firstTriggerItem);
+
+    QCOMPARE(mpEditor->mpTriggersMainArea->spinBox_lineMargin->value(), 2);
+
+    cleanupAll(mItemTypes[0]);
+  }
+
   void testTriggerHighlightingColor() {
     mpEditor->slot_showTriggers();
     cleanupAll(mItemTypes[0]);
@@ -1759,6 +1809,51 @@ private slots:
     QCOMPARE(mpEditor->mpActionsMainArea->comboBox_action_button_rotation
                  ->currentIndex(),
              newRotationIndex);
+
+    cleanupAll(mItemTypes[5]);
+  }
+
+  void testAddActionDoesNotClearSelectedPushDownButton() {
+    mpEditor->slot_showActions();
+    cleanupAll(mItemTypes[5]);
+
+    mpEditor->addAction(false);
+    QVERIFY(mpEditor->mpActionBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *firstActionItem = mpEditor->mpActionBaseItem->child(0);
+    QVERIFY(firstActionItem != nullptr);
+
+    const int firstActionID = firstActionItem->data(0, Qt::UserRole).toInt();
+    TAction *firstAction = mpHost->getActionUnit()->getAction(firstActionID);
+    QVERIFY(firstAction != nullptr);
+
+    mpEditor->treeWidget_actions->setCurrentItem(firstActionItem);
+    mpEditor->slot_actionSelected(firstActionItem);
+    mpEditor->mpUndoStack->clear();
+
+    mpEditor->mpActionsMainArea->checkBox_action_button_isPushDown->setChecked(
+        true);
+    QCoreApplication::processEvents();
+
+    QVERIFY(firstAction->isPushDownButton());
+    QVERIFY(
+        mpEditor->mpActionsMainArea->checkBox_action_button_isPushDown
+            ->isChecked());
+
+    mpEditor->addAction(false);
+    QCoreApplication::processEvents();
+
+    QCOMPARE(mpEditor->mpActionBaseItem->childCount(), 2);
+    QVERIFY2(firstAction->isPushDownButton(),
+             "Adding a sibling action should not clear the previously "
+             "selected action's push-down state");
+
+    mpEditor->treeWidget_actions->setCurrentItem(firstActionItem);
+    mpEditor->slot_actionSelected(firstActionItem);
+
+    QVERIFY(
+        mpEditor->mpActionsMainArea->checkBox_action_button_isPushDown
+            ->isChecked());
 
     cleanupAll(mItemTypes[5]);
   }

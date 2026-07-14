@@ -64,6 +64,7 @@
 #include <QPointer>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QStandardItemModel>
 #include <QString>
 #include <QTableWidget>
 #include <QTemporaryDir>
@@ -159,6 +160,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     default:
         comboBox_toolBarVisibility->setCurrentIndex(2);
     }
+
+    // Sync "Never" item deactivation so the dialog opens with consistent state
+    // if either visibility was already "Never" on previous save (issue #7079).
+    slot_syncMenuToolBarNeverItem();
 
     checkBox_showTabConnectionIndicators->setChecked(pMudlet->mShowTabConnectionIndicators);
     connect(checkBox_showTabConnectionIndicators, &QCheckBox::toggled, this, [=](bool checked) {
@@ -473,28 +478,27 @@ void dlgProfilePreferences::disableHostDetails()
     pushButton_deleteMap->setEnabled(false);
     label_copyMap->setEnabled(false);
     label_mapFileSaveFormatVersion->setEnabled(false);
+    label_loadHistoricMap->setEnabled(false);
+    comboBox_mapHistory->setEnabled(false);
+    comboBox_mapHistory->clear();
+    pushButton_loadHistoricMap->setEnabled(false);
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     comboBox_mapFileSaveFormatVersion->clear();
     label_mapFileActionResult->hide();
 
-    groupBox_downloadMapOptions->setEnabled(false);
+    // This is hidden until we have a valid map download location:
+    groupBox_downloadMapOptions->setVisible(false);
 
-    groupBox_mapViewOptions->setEnabled(false);
     // ----- groupBox_mapViewOptions -----
-    label_mapSymbolsFont->setEnabled(false);
-    fontComboBox_mapSymbols->setEnabled(false);
-    checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(false);
-    pushButton_showGlyphUsage->setEnabled(false);
+    groupBox_mapViewOptions->setEnabled(false);
 
-
-    // The above is actually normally hidden:
-    groupBox_downloadMapOptions->hide();
-
-    // This is actually normally hidden until a map is loaded:
+    // This is normally hidden until a map is loaded:
     checkBox_showDefaultArea->hide();
 
     // ===== tab_mapperColors =====
     groupBox_mapperColors->setEnabled(false);
+
+    groupBox_playerRoomStyle->setEnabled(false);
 
     // ===== tab security =====
     groupBox_ssl->setEnabled(false);
@@ -596,14 +600,16 @@ void dlgProfilePreferences::enableHostDetails()
     pushButton_deleteMap->setEnabled(true);
     label_copyMap->setEnabled(true);
     label_mapFileSaveFormatVersion->setEnabled(true);
-
-
-    groupBox_downloadMapOptions->setEnabled(true);
+    label_loadHistoricMap->setEnabled(true);
+    comboBox_mapHistory->setEnabled(true);
+    pushButton_loadHistoricMap->setEnabled(true);
 
     groupBox_mapViewOptions->setEnabled(true);
 
     // ===== tab_mapperColors =====
     groupBox_mapperColors->setEnabled(true);
+    groupBox_playerRoomStyle->setEnabled(true);
+
 
     // ===== tab security =====
 #if defined(QT_NO_SSL)
@@ -774,10 +780,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         groupBox_downloadMapOptions->setVisible(false);
     }
 
-    setColors();
-    setColors2();
-
-
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     checkBox_debugShowAllCodepointProblems->setChecked(pHost->debugShowAllProblemCodepoints());
 #else
@@ -882,15 +884,18 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_discordServerAccessToPartyInfo->setChecked(!(discordFlags & Host::DiscordSetPartyInfo));
         checkBox_discordServerAccessToTimerInfo->setChecked(!(discordFlags & Host::DiscordSetTimeInfo));
         lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
+        lineEdit_discordUserName->setToolTip(utils::richText(tr("Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted lowercase ASCII character set and not any \"Nickname\" that you may have set for a particular Server.")));
+        lineEdit_discordUserName->setAccessibleDescription(tr("Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted lowercase ASCII character set and not any \"Nickname\" that you may have set for a particular Server."));
+
         const QString currentDiscordUser = Discord::getLoggedInUserName();
         if (!currentDiscordUser.isEmpty()) {
-            //: Shows which Discord account is logged in, e.g. "Discord user: morquin"
-            label_discordCurrentUser->setText(tr("Discord user: %1").arg(currentDiscordUser));
-            label_discordCurrentUser->setToolTip(QString());
+            //: Shows which Discord account is logged in:
+            label_data_discordCurrentUser->setText(currentDiscordUser);
+            label_data_discordCurrentUser->setToolTip(utils::richText(tr("This is the unique username using a restricted character set for the Discord account, and not necessarily the nickname that you might have set for a particular Server.")));
         } else {
-            label_discordCurrentUser->setText(tr("(Discord not connected)"));
+            label_data_discordCurrentUser->setText(tr("(Not connected)"));
             //: Tooltip shown when Discord Rich Presence cannot detect a logged-in user
-            label_discordCurrentUser->setToolTip(tr("The Discord desktop app must be running for Rich Presence to work. Browser and mobile clients are not supported."));
+            label_data_discordCurrentUser->setToolTip(utils::richText(tr("The Discord desktop app must be running for Rich Presence to work. Browser and mobile clients are not supported.")));
         }
     }
 
@@ -1135,7 +1140,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(fontComboBox_mapSymbols, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setMapSymbolFont, Qt::UniqueConnection);
         connect(checkBox_isOnlyMapSymbolFontToBeUsed, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapSymbolFontStrategy, Qt::UniqueConnection);
 
-        widget_playerRoomStyle->show();
+        groupBox_playerRoomStyle->setEnabled(true);
         comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mPlayerRoomStyle);
         // Custom colours only available in style '3' (of '0' to '3'):
         pushButton_playerRoomPrimaryColor->setEnabled(pHost->mpMap->mPlayerRoomStyle == 3);
@@ -1201,7 +1206,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         pushButton_showGlyphUsage->setEnabled(false);
 
         checkBox_showDefaultArea->hide();
-        widget_playerRoomStyle->hide();
+        groupBox_playerRoomStyle->setEnabled(false);
     }
 
     comboBox_encoding->addItem(mudlet::self()->getEncodingNamesMap().value(QByteArray("ASCII")), QByteArray("ASCII"));
@@ -1376,6 +1381,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // on tab_general:
     // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
     enableHostDetails();
+
+    /* These require the color controls to be correctly enabled/disabled before
+     * they are called:*/
+    setColors();
+    setColors2();
+    setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor, true);
+    setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
 
     // Identify which Profile we are showing the settings for:
     setWindowTitle(tr("Profile preferences - %1").arg(pHost->getName()));
@@ -1629,7 +1641,6 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
     disconnect(mIsToLogInHtml, &QAbstractButton::clicked, nullptr, nullptr);
 
-    widget_playerRoomStyle->hide();
     disconnect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
     disconnect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1676,9 +1687,6 @@ void dlgProfilePreferences::clearHostDetails()
     need_reconnect_for_data_protocol->hide();
 
     need_reconnect_for_specialoption->hide();
-
-    setColors();
-    setColors2();
 
     wrap_at_spinBox->clear();
     indent_wrapped_spinBox->clear();
@@ -1738,7 +1746,7 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_discordServerAccessToPartyInfo->setChecked(false);
     checkBox_discordServerAccessToTimerInfo->setChecked(false);
     lineEdit_discordUserName->clear();
-    label_discordCurrentUser->clear();
+    label_data_discordCurrentUser->clear();
 
     lineEdit_mmcpChatName->clear();
     lineEdit_mmcpPort->clear();
@@ -3371,7 +3379,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
         pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
         pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
-        if (widget_playerRoomStyle->isVisible()) {
+        if (groupBox_playerRoomStyle->isEnabled()) {
             // Although the controls have been interactively modifying the
             // TMap cached values for these, they were not being committed to
             // the master values in the Host instance - but now we should write
@@ -3992,6 +4000,13 @@ void dlgProfilePreferences::slot_handleHostDeletion(Host* pHost)
         clearHostDetails();
         // and we can then use the following to disable the Host specific controls:
         disableHostDetails();
+
+        // And redraw the color controls in their cleared state
+        setColors();
+        setColors2();
+
+        setButtonColor(pushButton_playerRoomPrimaryColor, QColor(), true);
+        setButtonColor(pushButton_playerRoomSecondaryColor, QColor(), true);
     }
 }
 
@@ -4323,6 +4338,10 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont& font)
 // of access to the setting/controls completely - once there is a profile loaded
 // access to the settings/controls can be overridden by a context menu action on
 // any TConsole instance:
+//
+// Additionally the "Never" entry in the other toolbar-visibility comboBox is
+// greyed out (deactivated) while this control is set to "Never", so the user
+// cannot even temporarily select "Never" for both - see issue #7079.
 void dlgProfilePreferences::slot_changeShowMenuBar(int newIndex)
 {
     if (!newIndex && !comboBox_toolBarVisibility->currentIndex()) {
@@ -4330,6 +4349,7 @@ void dlgProfilePreferences::slot_changeShowMenuBar(int newIndex)
         // control - so force it back to the "Only if no profile one
         comboBox_menuBarVisibility->setCurrentIndex(1);
     }
+    slot_syncMenuToolBarNeverItem();
 }
 
 void dlgProfilePreferences::slot_changeShowToolBar(int newIndex)
@@ -4338,6 +4358,30 @@ void dlgProfilePreferences::slot_changeShowToolBar(int newIndex)
         // This control has been set to the "Never" setting but so is the other
         // control - so force it back to the "Only if no profile one
         comboBox_toolBarVisibility->setCurrentIndex(1);
+    }
+    slot_syncMenuToolBarNeverItem();
+}
+
+// Deactivate (grey out) the "Never" item of comboBox_toolBarVisibility when
+// the menu bar is set to "Never", and vice versa. This makes the existing
+// mutual-exclusion visible to the user instead of silently snapping the
+// selected value back (issue #7079).
+void dlgProfilePreferences::slot_syncMenuToolBarNeverItem()
+{
+    const int menuIndex = comboBox_menuBarVisibility->currentIndex();
+    const int toolIndex = comboBox_toolBarVisibility->currentIndex();
+    const bool menuIsNever = (menuIndex == 0);
+    const bool toolIsNever = (toolIndex == 0);
+
+    if (auto* toolModel = qobject_cast<QStandardItemModel*>(comboBox_toolBarVisibility->model())) {
+        if (QStandardItem* item = toolModel->item(0)) {
+            item->setEnabled(!menuIsNever);
+        }
+    }
+    if (auto* menuModel = qobject_cast<QStandardItemModel*>(comboBox_menuBarVisibility->model())) {
+        if (QStandardItem* item = menuModel->item(0)) {
+            item->setEnabled(!toolIsNever);
+        }
     }
 }
 

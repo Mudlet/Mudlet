@@ -42,6 +42,7 @@
 #include "TGameDetails.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
+#include "TUiTour.h"
 #include "XMLimport.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
@@ -581,6 +582,7 @@ void mudlet::init()
     connect(dactionNewMapWindow, &QAction::triggered, this, &mudlet::slot_newMapWindow);
 
     connect(dactionHelp, &QAction::triggered, this, &mudlet::slot_showHelpDialog);
+    connect(dactionUiTour, &QAction::triggered, this, &mudlet::slot_showUiTour);
     connect(dactionVideo, &QAction::triggered, this, &mudlet::slot_showHelpDialogVideo);
     connect(dactionForum, &QAction::triggered, this, &mudlet::slot_showHelpDialogForum);
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_profileDiscord);
@@ -598,7 +600,7 @@ void mudlet::init()
         }
         host->mpEditorDialog->showCurrentTriggerItem();
         host->mpEditorDialog->raise();
-        host->mpEditorDialog->showNormal();
+        showEditorRestoringWindowState(host->mpEditorDialog);
         host->mpEditorDialog->activateWindow();
         host->mpEditorDialog->mpErrorConsole->setVisible(true);
     });
@@ -726,7 +728,11 @@ void mudlet::init()
     connect(this, &mudlet::signal_windowStateChanged, this, &mudlet::slot_windowStateChanged);
 
 #if defined(INCLUDE_UPDATER)
-    pUpdater = new Updater(this, mpSettings, !releaseVersion);
+    // The main window deletes itself on close (WA_DeleteOnClose). The updater
+    // shows its "an update is ready" dialog only after the last window closes,
+    // so it must outlive the main window - parent it to the application, not to
+    // the window that is about to be destroyed:
+    pUpdater = new Updater(qApp, mpSettings, !releaseVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(pUpdater, &Updater::signal_updateCheckFailed, this, &mudlet::slot_updateCheckFailed);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
@@ -990,6 +996,7 @@ void mudlet::loadMaps()
             {qsl("bn_bd"), tr("Bangla (Bangladesh)")},
             {qsl("bn_in"), tr("Bangla (India)")},
             {qsl("bo"), tr("Tibetan")},
+            {qsl("bo_bt"), tr("Tibetan (Bhutan)")},
             {qsl("bo_cn"), tr("Tibetan (China)")},
             {qsl("bo_in"), tr("Tibetan (India)")},
             {qsl("br"), tr("Breton")},
@@ -3212,6 +3219,21 @@ void mudlet::slot_showConnectionDialog()
     });
 }
 
+void mudlet::showEditorRestoringWindowState(QWidget* editor)
+{
+    // The editor is a singleton that is repeatedly re-shown whenever the user
+    // toggles to it (e.g. with its keyboard shortcut). A plain showNormal()
+    // would drop a maximized or full-screen state, so restore whichever state
+    // the window was last left in instead.
+    if (editor->isMaximized()) {
+        editor->showMaximized();
+    } else if (editor->isFullScreen()) {
+        editor->showFullScreen();
+    } else {
+        editor->showNormal();
+    }
+}
+
 void mudlet::slot_showEditorDialog()
 {
     Host* pHost = getActiveHost();
@@ -3244,7 +3266,7 @@ void mudlet::slot_showEditorDialog()
 
     pEditor->showCurrentTriggerItem();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 
     // Force reposition after showing, since script editor is a singleton
@@ -3290,7 +3312,7 @@ void mudlet::slot_showTriggerDialog()
 
     pEditor->slot_showTriggers();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3326,7 +3348,7 @@ void mudlet::slot_showAliasDialog()
 
     pEditor->slot_showAliases();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3362,7 +3384,7 @@ void mudlet::slot_showTimerDialog()
 
     pEditor->slot_showTimers();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3539,7 +3561,7 @@ void mudlet::slot_showScriptDialog()
 
     pEditor->slot_showScripts();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3575,7 +3597,7 @@ void mudlet::slot_showKeyDialog()
 
     pEditor->slot_showKeys();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3611,7 +3633,7 @@ void mudlet::slot_showVariableDialog()
 
     pEditor->slot_showVariables();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3647,7 +3669,7 @@ void mudlet::slot_showActionDialog()
 
     pEditor->slot_showActions();
     pEditor->raise();
-    pEditor->showNormal();
+    showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
 }
 
@@ -3906,6 +3928,31 @@ void mudlet::slot_showPreferencesDialog()
 void mudlet::slot_showHelpDialog()
 {
     QDesktopServices::openUrl(QUrl("https://wiki.mudlet.org/w/Manual:Contents"));
+}
+
+void mudlet::slot_showUiTour()
+{
+    if (mpUiTour) {
+        mpUiTour->raise();
+        mpUiTour->setFocus();
+        return;
+    }
+    mpUiTour = new TUiTour(this);
+    connect(mpUiTour, &TUiTour::signal_tourFinished, this, &mudlet::slot_uiTourClosed);
+    TUiTour::rememberShown();
+    mpUiTour->start();
+}
+
+// Covers every way the tour can go away: Finish, Skip and Esc all close it
+void mudlet::slot_uiTourClosed()
+{
+    for (auto pHost : mHostManager) {
+        pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("if mudlet then mudlet.uiTourPending = false end"));
+        TEvent event{};
+        event.mArgumentList.append(qsl("sysUiTourFinished"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        pHost->raiseEvent(event);
+    }
 }
 
 void mudlet::slot_showHelpDialogVideo()
@@ -4752,6 +4799,14 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         mudlet::installModulesList(pHost, modules);
     }
 
+    // Decided before packages install so their scripts can see the flag and
+    // hold off on their own introductions until the tour is done - the
+    // tutorial package does this
+    const bool showUiTour = TUiTour::shouldShowOnFirstProfile();
+    if (showUiTour) {
+        pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("mudlet = mudlet or {} mudlet.uiTourPending = true"));
+    }
+
     // install default packages
     for (const auto& package : std::as_const(mPackagesToInstallList)) {
         pHost->installPackage(package, enums::PackageModuleType::Package);
@@ -4812,6 +4867,12 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     pHost->raiseEvent(event);
     pHost->mIsProfileLoadingSequence = false;
     emit signal_profileLoaded();
+
+    if (showUiTour) {
+        // give the freshly opened profile a moment to finish laying out before
+        // the tour starts highlighting parts of it
+        QTimer::singleShot(1000, this, &mudlet::slot_showUiTour);
+    }
 }
 
 void mudlet::installModulesList(Host* pHost, QStringList modules)
@@ -5785,8 +5846,15 @@ void mudlet::slot_updateInstalled()
 
     // rejig to restart Mudlet instead
     connect(dactionUpdate, &QAction::triggered, this, [=, this]() {
+#if defined(Q_OS_WINDOWS)
+        // On Windows the new binary is not in place yet - the downloaded
+        // installer still has to run, which slot_installOrRestartClicked
+        // arranges via a batch file that waits for Mudlet to exit:
+        pUpdater->slot_installOrRestartClicked(nullptr, QString());
+#else
         forceClose();
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
+#endif
     });
     dactionUpdate->setText(tr("Update installed - restart to apply"));
 #endif // !Q_OS_MACOS
