@@ -135,6 +135,7 @@ set(mudlet_SRCS
     TEncodingTable.cpp
     TEntityHandler.cpp
     TEntityResolver.cpp
+    TFeatureCallout.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
     THyperlinkCompactManager.cpp
@@ -363,6 +364,7 @@ set(mudlet_HDRS
     TEntityHandler.h
     TEntityResolver.h
     TEvent.h
+    TFeatureCallout.h
     TFlipButton.h
     TForkedProcess.h
     TGameDetails.h
