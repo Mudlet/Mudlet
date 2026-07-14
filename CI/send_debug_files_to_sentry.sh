@@ -96,8 +96,16 @@ elif [[ "$OS" == "Darwin" ]]; then
 elif [[ "$OS" == "MINGW"* ]]; then
     # The PDB shares its debug-id with the shipped mudlet.exe, so uploading both
     # lets Sentry match crash minidumps and symbolicate them (see WithSentry.cmake).
+    # The PDB is expected on every Windows sentry build, so fail loudly if it is
+    # missing rather than silently uploading only the exe (which would revert to
+    # unsymbolicated crash reports if the --pdb link flag is ever lost).
     PDB_FILE="${MUDLET_EXEC%.exe}.pdb"
-    [[ -f "$PDB_FILE" ]] && FILES_TO_UPLOAD+=("$PDB_FILE")
+    if [[ -f "$PDB_FILE" ]]; then
+        FILES_TO_UPLOAD+=("$PDB_FILE")
+    else
+        echo "error: expected PDB at $PDB_FILE not found - Windows crash reports would be unsymbolicated"
+        exit 1
+    fi
 fi
 
 for f in "${FILES_TO_UPLOAD[@]}"; do
@@ -121,6 +129,15 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
     if command -v objdump >/dev/null 2>&1; then
         declare -A seen_dll=()
         pending=("$MUDLET_EXEC")
+        # Runtime-loaded Qt plugins can pull in Qt modules that mudlet.exe does not
+        # link directly (e.g. the svg imageformat/iconengine plugins pull in Qt6Svg,
+        # which is not in our components list). Seed the walk with the plugin DLLs too
+        # so their imports get their .debug companions collected as well.
+        if [[ -d "$QT_PLUGINS_DIR" ]]; then
+            while IFS= read -r -d '' plugin_dll; do
+                pending+=("$plugin_dll")
+            done < <(find "$QT_PLUGINS_DIR" -type f -name '*.dll' -print0)
+        fi
         while [[ ${#pending[@]} -gt 0 ]]; do
             current="${pending[0]}"
             pending=("${pending[@]:1}")
