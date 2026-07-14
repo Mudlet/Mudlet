@@ -421,6 +421,9 @@ private:
     bool iac = false;
     bool iac2 = false;
     bool insb = false;
+    // Set once a subnegotiation passes the size cap: drop the rest of it until
+    // IAC SE instead of buffering or leaking the unterminated payload.
+    bool mDiscardingOversizedSubnegotiation = false;
     // Set if we have negotiated the use of the option by us:
     std::bitset<256> myOptionState;
     // Set if he has negotiated the use of the option by him:
