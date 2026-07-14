@@ -4938,13 +4938,14 @@ void cTelnet::slot_socketReadyToBeRead()
 void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopbackTesting)
 {
     // Guard against deep re-entry when draining leftover (de)compressed data -
-    // each level allocates ~100 KB on the stack for out_buffer.
-    static thread_local int recursionDepth = 0;
-    if (++recursionDepth > MAX_DECOMPRESSION_RECURSION) {
+    // each level allocates ~100 KB on the stack for out_buffer. Per-connection
+    // (a member, not thread-wide) so one profile's drain - or a re-entrant
+    // feedTelnet() - cannot spend another connection's budget.
+    if (++mDecompressionRecursionDepth > MAX_DECOMPRESSION_RECURSION) {
         qWarning() << "cTelnet::processSocketData(...) WARNING - recursion depth exceeded, dropping remaining data";
         //: Shown when too much data expands out of one compressed read (e.g. a decompression bomb) to process safely.
         postMessage(tr("[ WARN  ]  - Too much data to process at once, some may have been lost."));
-        --recursionDepth;
+        --mDecompressionRecursionDepth;
         return;
     }
 
@@ -4954,12 +4955,12 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     in_buffer[amount + 1] = '\0';
 
     if (amount == -1) {
-        --recursionDepth;
+        --mDecompressionRecursionDepth;
         return;
     }
 
     if (amount == 0) {
-        --recursionDepth;
+        --mDecompressionRecursionDepth;
         return;
     }
 
@@ -4981,7 +4982,8 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
         // out of compression on stream end or a broken stream. Anything it did
         // not consume - more compressed data, or plain data past the stream -
         // must still be processed, so queue it (see the re-entry at the end).
-        if (amount > 0 && (!mNeedDecompression || datalen > 0)) {
+        // The recursion cap bounds this if a pass ever makes no progress.
+        if (amount > 0) {
             remainingData = in_buffer;
             remainingAmount = amount;
         }
@@ -5074,7 +5076,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                                 // queue input left over past this compressed chunk
                                 // (decompressBuffer() advanced 'buffer' to it) for
                                 // reprocessing at the end of this pass
-                                if (restLength > 0 && (!mNeedDecompression || datalen > 0)) {
+                                if (restLength > 0) {
                                     remainingData = buffer;
                                     remainingAmount = restLength;
                                 }
@@ -5187,7 +5189,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
     // compressed stream). finalize() runs only at the deepest level.
     if (remainingData && remainingAmount > 0) {
         processSocketData(remainingData, remainingAmount, loopbackTesting);
-        --recursionDepth;
+        --mDecompressionRecursionDepth;
         return;
     }
 
@@ -5196,7 +5198,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
     }
 
     mRecordLastChunkMSecTimeOffset = mRecordingChunkTimer.elapsed();
-    --recursionDepth;
+    --mDecompressionRecursionDepth;
 }
 
 void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
