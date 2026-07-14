@@ -69,6 +69,12 @@ constexpr int AUTO_LOGIN_PASSWORD_DELAY_MS = 1000;
 constexpr int AUTO_LOGIN_MAX_DELAY_MS = 60000;
 
 constexpr size_t BUFFER_SIZE = 100000L;
+
+// Upper bound on a single telnet subnegotiation (IAC SB ... IAC SE). Real ones
+// (GMCP/MSDP/ATCP/...) are far smaller; this only guards against a server that
+// opens an IAC SB and never sends IAC SE, which would otherwise grow the
+// accumulation buffer without bound across reads.
+constexpr size_t MAX_TELNET_SUBNEGOTIATION_LENGTH = 1024 * 1024;
 // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (1 of 7) - investigate switching from using `char[]` to `std::array<char>`
 char loadBuffer[BUFFER_SIZE + 1];
 int loadedBytes;
@@ -5036,6 +5042,18 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
 
                 //7. inside IAC SB
                 command += ch;
+
+                if (command.size() > MAX_TELNET_SUBNEGOTIATION_LENGTH) {
+                    // The server opened an IAC SB but never sent IAC SE: abort
+                    // the subnegotiation instead of buffering its payload
+                    // without bound, and resume normal processing.
+                    qWarning().nospace() << "cTelnet::processSocketData(...) WARNING - telnet subnegotiation exceeded " << MAX_TELNET_SUBNEGOTIATION_LENGTH
+                                         << " bytes without an IAC SE terminator, discarding it to recover.";
+                    command = "";
+                    iac = false;
+                    insb = false;
+                    continue;
+                }
 
                 if (iac && (ch == TN_SE)) { //IAC SE - end of subcommand
                     processTelnetCommand(command);
