@@ -965,9 +965,13 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         // but no MXP parsing.
 
                         // We replace the already processed text with the entity value into the buffer and restart
-                        // processing it for charset encoding but with limited MXP handling
-                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
-                        localBuffer.replace(0, localBufferPosition + 1, mpHost->mMxpProcessor.getEntityValue().toLatin1());
+                        // processing it for charset encoding but with limited MXP handling.
+                        // Encode with the session's encoding (not toLatin1(), which would flatten any
+                        // non-Latin1 characters to '?') so the value survives the re-decode below; the
+                        // byte length, not the QString length, is what the offset bookkeeping needs.
+                        const QByteArray entityValueBytes = TEncodingHelper::encode(mpHost->mMxpProcessor.getEntityValue(), mEncoding);
+                        size_t valueLength = entityValueBytes.size();
+                        localBuffer.replace(0, localBufferPosition + 1, entityValueBytes.constData(), entityValueBytes.size());
 
                         if (result == HANDLER_INSERT_ENTITY_LIT) {
                             if (localBufferPosition < endOfMXPEntity) {
