@@ -69,6 +69,14 @@ constexpr int AUTO_LOGIN_PASSWORD_DELAY_MS = 1000;
 constexpr int AUTO_LOGIN_MAX_DELAY_MS = 60000;
 
 constexpr size_t BUFFER_SIZE = 100000L;
+
+// How many times processSocketData() may re-enter itself to drain data left
+// over after a decompression pass (compressed input that did not fit in one
+// output buffer, or plain data following the compressed stream). Each level
+// puts ~100 KB (out_buffer) on the stack, so this also caps decompressed
+// output at ~MAX_DECOMPRESSION_RECURSION * BUFFER_SIZE per socket read, which
+// bounds a decompression bomb.
+constexpr int MAX_DECOMPRESSION_RECURSION = 8;
 // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (1 of 7) - investigate switching from using `char[]` to `std::array<char>`
 char loadBuffer[BUFFER_SIZE + 1];
 int loadedBytes;
@@ -4664,6 +4672,26 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     mZstream.next_in = Z_NULL;
     mZstream.next_out = Z_NULL;
 
+    if (zval == Z_NEED_DICT || zval == Z_DATA_ERROR || zval == Z_STREAM_ERROR || zval == Z_MEM_ERROR) {
+        // The compressed stream is broken (e.g. the server announced
+        // compression but sent uncompressed data). Only Z_STREAM_END used to be
+        // handled, so a failed inflate() silently ate all further input and the
+        // connection looked dead. Warn, drop compression, and let the caller
+        // reprocess the unconsumed input as plain data.
+        qWarning() << "cTelnet::decompressBuffer() ERROR - inflate() failed:" << zError(zval) << "- disabling compression";
+        //: %1 is the decompression error description. Shown when the server sends a corrupt MCCP (compressed) data stream.
+        postMessage(tr("[ WARN  ]  - MCCP decompression error (%1), compression disabled.\n"
+                       "If the display looks garbled, please reconnect to the game.")
+                            .arg(QString::fromUtf8(zError(zval))));
+        sendTelnetOption(TN_DONT, mMCCP_version_1 ? OPT_COMPRESS : OPT_COMPRESS2);
+        inflateEnd(&mZstream);
+        mNeedDecompression = false;
+        hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
+        hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
+        initStreamDecompressor();
+        return outSize;
+    }
+
     if (zval == Z_STREAM_END) {
         inflateEnd(&mZstream);
         qDebug() << "recv Z_STREAM_END, ending compression";
@@ -4909,16 +4937,29 @@ void cTelnet::slot_socketReadyToBeRead()
 
 void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopbackTesting)
 {
+    // Guard against deep re-entry when draining leftover (de)compressed data -
+    // each level allocates ~100 KB on the stack for out_buffer.
+    static thread_local int recursionDepth = 0;
+    if (++recursionDepth > MAX_DECOMPRESSION_RECURSION) {
+        qWarning() << "cTelnet::processSocketData(...) WARNING - recursion depth exceeded, dropping remaining data";
+        //: Shown when too much data expands out of one compressed read (e.g. a decompression bomb) to process safely.
+        postMessage(tr("[ WARN  ]  - Too much data to process at once, some may have been lost."));
+        --recursionDepth;
+        return;
+    }
+
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (3 of 7) - investigate switching from using `char[]` to `std::array<char>`
     char out_buffer[BUFFER_SIZE + 10];
 
     in_buffer[amount + 1] = '\0';
 
     if (amount == -1) {
+        --recursionDepth;
         return;
     }
 
     if (amount == 0) {
+        --recursionDepth;
         return;
     }
 
@@ -4930,9 +4971,20 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     datalen = amount;
     char* buffer = in_buffer;
 
+    char* remainingData = nullptr;
+    int remainingAmount = 0;
+
     if (mNeedDecompression) {
         datalen = decompressBuffer(in_buffer, amount, out_buffer);
         buffer = out_buffer;
+        // decompressBuffer() only fills one output buffer per call and drops
+        // out of compression on stream end or a broken stream. Anything it did
+        // not consume - more compressed data, or plain data past the stream -
+        // must still be processed, so queue it (see the re-entry at the end).
+        if (amount > 0 && (!mNeedDecompression || datalen > 0)) {
+            remainingData = in_buffer;
+            remainingAmount = amount;
+        }
     }
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
     buffer[static_cast<size_t>(datalen)] = '\0';
@@ -5019,6 +5071,13 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
 
                             if (restLength > 0) {
                                 datalen = decompressBuffer(buffer, restLength, out_buffer);
+                                // queue input left over past this compressed chunk
+                                // (decompressBuffer() advanced 'buffer' to it) for
+                                // reprocessing at the end of this pass
+                                if (restLength > 0 && (!mNeedDecompression || datalen > 0)) {
+                                    remainingData = buffer;
+                                    remainingAmount = restLength;
+                                }
                                 buffer = out_buffer;
                                 i = -1; // start processing buffer from the beginning.
                             } else {
@@ -5123,11 +5182,21 @@ Some data loss is likely - please mention this problem to the game admins.)",
         gotRest(cleandata);
     }
 
+    // Reprocess data left over after this decompression pass (more compressed
+    // data than fit in one output buffer, or plain data past the end of the
+    // compressed stream). finalize() runs only at the deepest level.
+    if (remainingData && remainingAmount > 0) {
+        processSocketData(remainingData, remainingAmount, loopbackTesting);
+        --recursionDepth;
+        return;
+    }
+
     if (mpHost && mpHost->mpConsole) {
         mpHost->mpConsole->finalize();
     }
 
     mRecordLastChunkMSecTimeOffset = mRecordingChunkTimer.elapsed();
+    --recursionDepth;
 }
 
 void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
