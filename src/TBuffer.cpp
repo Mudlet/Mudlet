@@ -694,6 +694,15 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             continue;
         }
 
+        if (mGotESC) {
+            // ESC was not followed by '[' or ']', so it does not introduce a
+            // CSI or OSC sequence (e.g. ESC c, ESC 7, or a charset designator
+            // like ESC(B). Clear the latch here - otherwise it stays set and a
+            // later literal '[' or ']' anywhere in the stream is misparsed as a
+            // sequence introducer, swallowing the text that follows it.
+            mGotESC = false;
+        }
+
         if (mGotCSI) {
             // Lookahead and try and see what we are processing
             // At the start of a CSI sequence the only valid character is one of:
