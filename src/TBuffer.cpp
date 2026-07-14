@@ -53,6 +53,12 @@ namespace {
 // Maximum length for an OSC sequence before aborting (defense against malformed sequences)
 constexpr size_t MAX_OSC_SEQUENCE_LENGTH = 4096;
 
+// Maximum length for a CSI sequence's parameter string before aborting - a
+// valid one is only a handful of bytes, so this only trips on a malformed or
+// hostile sequence that never sends a final byte (defense against a server
+// growing mIncompleteSequenceBytes without bound across packets)
+constexpr size_t MAX_CSI_SEQUENCE_LENGTH = 4096;
+
 // Helper to interpret JSON values as boolean
 // Accepts both boolean true and numeric non-zero values (servers may send 1 instead of true)
 bool jsonBoolValue(const QJsonValue& val)
@@ -721,6 +727,19 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                              << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\" which Mudlet cannot interpret.";
                 // So skip over it as far as we can - will still possibly have
                 // garbage beyond the end which will still be shown...
+                localBufferPosition += 1 + spanEnd - spanStart;
+                mGotCSI = false;
+                // Go around while loop again:
+                continue;
+            }
+
+            if (spanEnd - spanStart >= MAX_CSI_SEQUENCE_LENGTH) {
+                // The parameter string is far longer than any valid CSI (which
+                // is only a handful of bytes): discard it instead of buffering
+                // it without bound while waiting for a final byte that a hostile
+                // server may never send.
+                qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - CSI sequence exceeded " << MAX_CSI_SEQUENCE_LENGTH
+                                               << " bytes without a final byte, discarding it to recover.";
                 localBufferPosition += 1 + spanEnd - spanStart;
                 mGotCSI = false;
                 // Go around while loop again:
