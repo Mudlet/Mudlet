@@ -140,4 +140,57 @@ describe("Alias processing", function()
         end)
 
     end)
+
+    -- enableAlias()/disableAlias() must toggle EVERY alias sharing a name, not
+    -- just the first, since AliasUnit iterates the whole multimap of same-named
+    -- entries.
+    describe("enable/disable with duplicate names", function()
+
+        before_each(function()
+            _G.DuplicateAliasTest = {fired = {}}
+        end)
+
+        -- permAlias aliases can't be removed via killAlias(); disable them here so
+        -- a failed assertion above doesn't leave them firing for later tests
+        after_each(function()
+            disableAlias("Druid Aliases")
+            disableAlias("Other Aliases")
+        end)
+
+        it("toggles every alias sharing the same name, not just the first", function()
+            -- permanent so two can share one name; distinct patterns reveal which fired
+            local id1 = permAlias("Druid Aliases", "", "^druid_dup_one$", [[_G.DuplicateAliasTest.fired.one = true]])
+            local id2 = permAlias("Druid Aliases", "", "^druid_dup_two$", [[_G.DuplicateAliasTest.fired.two = true]])
+            assert.is_true(id1 > 0, "first duplicate-named alias should be created")
+            assert.is_true(id2 > 0, "second duplicate-named alias should be created")
+
+            expandAlias("druid_dup_one")
+            expandAlias("druid_dup_two")
+            assert.is_true(_G.DuplicateAliasTest.fired.one, "alias 1 should fire while enabled")
+            assert.is_true(_G.DuplicateAliasTest.fired.two, "alias 2 should fire while enabled")
+
+            _G.DuplicateAliasTest.fired = {}
+            disableAlias("Druid Aliases")
+            expandAlias("druid_dup_one")
+            expandAlias("druid_dup_two")
+            assert.is_nil(_G.DuplicateAliasTest.fired.one, "alias 1 should be disabled")
+            assert.is_nil(_G.DuplicateAliasTest.fired.two, "alias 2 (the second duplicate) should ALSO be disabled")
+
+            _G.DuplicateAliasTest.fired = {}
+            enableAlias("Druid Aliases")
+            expandAlias("druid_dup_one")
+            expandAlias("druid_dup_two")
+            assert.is_true(_G.DuplicateAliasTest.fired.one, "alias 1 should be re-enabled")
+            assert.is_true(_G.DuplicateAliasTest.fired.two, "alias 2 (the second duplicate) should ALSO be re-enabled")
+
+            -- a differently-named alias must stay untouched
+            local idOther = permAlias("Other Aliases", "", "^druid_dup_other$", [[_G.DuplicateAliasTest.fired.other = true]])
+            assert.is_true(idOther > 0)
+            disableAlias("Druid Aliases")
+            _G.DuplicateAliasTest.fired = {}
+            expandAlias("druid_dup_other")
+            assert.is_true(_G.DuplicateAliasTest.fired.other, "differently-named alias must stay enabled")
+        end)
+
+    end)
 end)

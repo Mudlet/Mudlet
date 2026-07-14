@@ -4967,6 +4967,10 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     }
 
     // Reset UI
+    // Block property-save slots so the widget changes below don't fire write-backs
+    // into the previously selected trigger (mpCurrentTriggerItem still points at
+    // it). slot_triggerSelected() clears the flag once the new item is loaded.
+    mBlockPropertySave = true;
     mpTriggersMainArea->lineEdit_trigger_name->clear();
     mpTriggersMainArea->label_idNumber->clear();
     mpTriggersMainArea->checkBox_perlSlashGOption->setChecked(false);
@@ -5404,6 +5408,12 @@ void dlgTriggerEditor::addAction(bool isFolder)
     }
 
     // Reset UI
+    // Block property-save slots so the widget changes below don't fire write-backs
+    // into the previously selected action (mpCurrentActionItem still points at it).
+    // Unchecking checkBox_action_button_isPushDown otherwise calls
+    // slot_saveProperty_ActionIsPushDown on the old action. slot_actionSelected()
+    // clears the flag once the new item is loaded.
+    mBlockPropertySave = true;
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->checkBox_action_button_isPushDown->setChecked(false);
     clearDocument(mpSourceEditorEdbee); // New Action
@@ -6763,7 +6773,14 @@ void dlgTriggerEditor::saveVar()
             varUnit->addVariable(variable);
             varUnit->addTreeItem(pItem, variable);
             varUnit->removeTempVar(pItem);
-            varUnit->getBase()->addChild(variable);
+            // Attach to its real parent TVar (set in addVar) so the XML writer,
+            // which iterates from the base, nests it inside the parent table
+            // rather than at root level.
+            TVar* parentVar = variable->getParent();
+            if (!parentVar) {
+                parentVar = varUnit->getBase();
+            }
+            parentVar->addChild(variable);
             pItem->setText(0, newName);
             mpCurrentVarItem = nullptr;
         } else if (variable) {

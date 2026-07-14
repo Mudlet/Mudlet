@@ -702,6 +702,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         while (itStopWatchId.hasNext()) {
             auto stopWatchId = itStopWatchId.next();
             auto pStopWatch = pHost->getStopWatch(stopWatchId);
+            if (!pStopWatch) {
+                continue;
+            }
             if (pStopWatch->persistent()) {
                 auto stopwatch = stopwatches.append_child("stopwatch");
                 // Three QStrings used here are purely numeric so can be expressed in Latin1 encoding:

@@ -15,6 +15,9 @@ concurrency:
 
 jobs:
   danger:
+    # Skip release PRs (base main): their head is `development`, so every dev push
+    # would re-run danger and stamp a failing status onto each dev commit.
+    if: github.event.pull_request.base.ref != 'main'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout base branch for danger config

@@ -82,6 +82,16 @@
 #include <QtEvents>
 #include <QtUiTools>
 #include <QWidget>
+#include <QAbstractItemView>
+#include <QDialog>
+#include <QLabel>
+#include <QListWidget>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QPushButton>
+#include <QInputDialog>
+#include <QMessageBox>
+#include <QComboBox>
 
 #include <climits>
 #include <cmath>
@@ -96,6 +106,24 @@
 
 // replacement parameter supplied at point of use:
 const QString& key_plain = qsl("%1");
+
+namespace {
+QStringList getMapperAreaNamesSorted(const QMap<int, QString>& areaNamesMap)
+{
+    QMap<QString, QString> sortedAreaNames;
+    QMapIterator<int, QString> itAreaNames(areaNamesMap);
+    while (itAreaNames.hasNext()) {
+        itAreaNames.next();
+        uint deduplicate = 0;
+        QString name;
+        do {
+            name = qsl("%1+%2").arg(itAreaNames.value().toLower(), QString::number(++deduplicate));
+        } while (sortedAreaNames.contains(name));
+        sortedAreaNames.insert(name, itAreaNames.value());
+    }
+    return sortedAreaNames.values();
+}
+} // namespace
 
 const QString& key_n = qsl("n");
 const QString& key_ne = qsl("ne");
@@ -1047,7 +1075,12 @@ void T2DMap::drawScaledLabel(QPainter& painter, const QPointF& position, TMapLab
 {
     const QSize targetSize = paintRect.size().toSize();
     if (!label.text.isEmpty() && !label.font.family().isEmpty()) {
-        const QString cacheKey = qsl("%1_%2_%3x%4").arg(mAreaID).arg(labelKey).arg(targetSize.width()).arg(targetSize.height());
+        // Include the label's visual content in the cache key so that editing
+        // a label's text, font or colours (e.g. live-previewing from the
+        // create label dialog) invalidates the previously cached rendering:
+        const auto contentHash = qHash(
+                qsl("%1|%2|%3|%4|%5").arg(label.text, label.font.toString(), QString::number(label.fgColor.rgba()), QString::number(label.bgColor.rgba()), QString::number(label.outlineColor.rgba())));
+        const QString cacheKey = qsl("%1_%2_%3x%4_%5").arg(mAreaID).arg(labelKey).arg(targetSize.width()).arg(targetSize.height()).arg(contentHash);
         if (!mTextLabelPixmapCache.contains(cacheKey)) {
             addTextLabelToCache(cacheKey, label, targetSize);
         }
@@ -1451,6 +1484,13 @@ void T2DMap::drawRoom(QPainter& painter,
             roomNameRectangle.adjust(mRoomWidth * nameOffset.x(), mRoomHeight * nameOffset.y(), mRoomWidth * nameOffset.x(), mRoomHeight * nameOffset.y());
         }
         auto roomNameColor = QColor((mpHost->mBgColor_2.lightness() > 127) ? Qt::black : Qt::white);
+        const QString roomNameColorData = pRoom->userData.value(ROOM_UI_NAMECOLOR);
+        if (!roomNameColorData.isEmpty()) {
+            const QColor userColor(roomNameColorData);
+            if (userColor.isValid()) {
+                roomNameColor = userColor;
+            }
+        }
         painter.setPen(QPen(roomNameColor));
         painter.setFont(mapNameFont);
         painter.drawText(roomNameRectangle, Qt::AlignCenter, pRoom->name);
@@ -5146,16 +5186,8 @@ void T2DMap::slot_setArea()
     label_info->setFont(font);
     arealist_combobox->setInsertPolicy(QComboBox::NoInsert);
 
-    QStringList sortedAreaList;
-    sortedAreaList = mpMap->mpRoomDB->getAreaNamesMap().values();
-
-    QCollator sorter;
-    sorter.setNumericMode(true);
-    sorter.setCaseSensitivity(Qt::CaseInsensitive);
-
-    std::sort(sortedAreaList.begin(), sortedAreaList.end(), sorter);
-
     const QMap<int, QString>& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
+    const QStringList sortedAreaList = getMapperAreaNamesSorted(areaNamesMap);
     for (const QString& areaName : std::as_const(sortedAreaList)) {
         const int areaId = areaNamesMap.key(areaName);
         arealist_combobox->addItem(qsl("%1 (%2)").arg(areaName, QString::number(areaId)), QString::number(areaId));
@@ -5226,6 +5258,208 @@ void T2DMap::slot_setArea()
     set_room_area_dialog->raise();
 
     arealist_combobox->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
+}
+
+
+void T2DMap::slot_configureAreas()
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+
+    auto* dialog = new QDialog(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setWindowTitle(tr("Configure Areas"));
+
+    auto* layout = new QVBoxLayout(dialog);
+    layout->setContentsMargins(8, 8, 8, 8);
+    layout->setSpacing(8);
+
+    auto* listWidget = new QListWidget(dialog);
+    listWidget->setSelectionMode(QAbstractItemView::SingleSelection);
+    layout->addWidget(listWidget);
+
+    auto repopulate = [this, listWidget]() {
+        listWidget->clear();
+        const QMap<int, QString>& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
+        const QStringList sortedAreaList = getMapperAreaNamesSorted(areaNamesMap);
+
+        for (const QString& areaName : std::as_const(sortedAreaList)) {
+            const int areaId = areaNamesMap.key(areaName);
+            auto* item = new QListWidgetItem(qsl("%1 (%2)").arg(areaName, QString::number(areaId)), listWidget);
+            item->setData(Qt::UserRole, areaId);
+        }
+    };
+
+    repopulate();
+
+    const int currentAreaIndex = mpMap->mpMapper ? mpMap->mpMapper->getCurrentShownAreaIndex() : -1;
+    if (currentAreaIndex >= 0 && currentAreaIndex < listWidget->count()) {
+        listWidget->setCurrentRow(currentAreaIndex);
+        listWidget->scrollToItem(listWidget->currentItem(), QAbstractItemView::PositionAtCenter);
+    }
+
+    auto* buttonBar = new QWidget(dialog);
+    auto* hbox = new QHBoxLayout;
+    hbox->setContentsMargins(0, 0, 0, 0);
+    hbox->setSpacing(8);
+    buttonBar->setLayout(hbox);
+    //: "Configure Areas" buttons: create new area
+    auto* createBtn = new QPushButton(tr("Create"), buttonBar);
+    //: "Configure Areas" buttons: rename existing area
+    auto* renameBtn = new QPushButton(tr("Rename"), buttonBar);
+    //: "Configure Areas" buttons: delete existing area
+    auto* deleteBtn = new QPushButton(tr("Delete"), buttonBar);
+    //: "Configure Areas" buttons: close the dialog
+    auto* closeBtn = new QPushButton(tr("Close"), buttonBar);
+    const bool initialHasSelection = listWidget->currentItem() != nullptr;
+    const int initialAreaId = initialHasSelection ? listWidget->currentItem()->data(Qt::UserRole).toInt() : 0;
+    const bool initialRenameEnabled = initialHasSelection && initialAreaId != -1;
+    const bool initialDeleteEnabled = initialHasSelection && initialAreaId != -1;
+    renameBtn->setEnabled(initialRenameEnabled);
+    deleteBtn->setEnabled(initialDeleteEnabled);
+    hbox->addStretch(1);
+    hbox->addWidget(createBtn);
+    hbox->addWidget(renameBtn);
+    hbox->addWidget(deleteBtn);
+    hbox->addWidget(closeBtn);
+    layout->addWidget(buttonBar);
+
+    connect(listWidget, &QListWidget::currentItemChanged, this, [renameBtn, deleteBtn, this](QListWidgetItem* current, QListWidgetItem*) {
+        if (!current) {
+            renameBtn->setEnabled(false);
+            deleteBtn->setEnabled(false);
+            return;
+        }
+
+        const int areaId = current->data(Qt::UserRole).toInt();
+        // default area (-1) must not be renamed or deleted
+        const bool enabled = (areaId != -1);
+        renameBtn->setEnabled(enabled);
+        deleteBtn->setEnabled(enabled);
+    });
+
+    connect(renameBtn, &QPushButton::clicked, this, [this, dialog, listWidget, repopulate]() {
+        auto* item = listWidget->currentItem();
+        if (!item) {
+            return;
+        }
+
+        if (!mpMap || !mpMap->mpRoomDB) {
+            return;
+        }
+
+        const int areaId = item->data(Qt::UserRole).toInt();
+        const QString currentName = mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
+        bool ok = false;
+        //: Dialog title for renaming an area
+        const QString newName = QInputDialog::getText(dialog, tr("Rename area"), tr("New name:"), QLineEdit::Normal, currentName, &ok).trimmed();
+        if (!ok || newName.isEmpty() || newName == currentName) {
+            return;
+        }
+
+        const bool renamed = mpMap->mpRoomDB->setAreaName(areaId, newName);
+        if (!renamed) {
+            //: Warning message shown when renaming an area fails.
+            QMessageBox::warning(dialog, tr("Rename failed"), tr("Unable to rename area. Name may be invalid or already in use."));
+            return;
+        }
+
+        repopulate();
+        for (int i = 0; i < listWidget->count(); ++i) {
+            auto* it = listWidget->item(i);
+            if (it && it->data(Qt::UserRole).toInt() == areaId) {
+                listWidget->setCurrentRow(i);
+                listWidget->scrollToItem(it, QAbstractItemView::PositionAtCenter);
+                break;
+            }
+        }
+
+        if (mpMap && mpMap->mpMapper) {
+            mpMap->mpMapper->updateAreaComboBox();
+            if (mpMap->mpMapper->comboBox_showArea) {
+                mpMap->mpMapper->comboBox_showArea->setCurrentText(newName);
+            }
+        }
+    });
+
+    connect(createBtn, &QPushButton::clicked, this, [this, dialog, listWidget, repopulate]() {
+        bool ok = false;
+        //: Dialog title for creating a new area
+        const QString name = QInputDialog::getText(dialog, tr("Create area"), tr("Name:"), QLineEdit::Normal, QString(), &ok).trimmed();
+        if (!ok || name.isEmpty()) {
+            return;
+        }
+
+        if (!mpMap || !mpMap->mpRoomDB) {
+            return;
+        }
+
+        const int newAreaId = mpMap->mpRoomDB->addArea(name);
+        if (!newAreaId) {
+            //: Warning message shown when creating a new area fails.
+            QMessageBox::warning(dialog, tr("Create failed"), tr("Unable to create area. Name may be invalid or already in use."));
+            return;
+        }
+
+        repopulate();
+        for (int i = 0; i < listWidget->count(); ++i) {
+            auto* it = listWidget->item(i);
+            if (it && it->data(Qt::UserRole).toInt() == newAreaId) {
+                listWidget->setCurrentRow(i);
+                listWidget->scrollToItem(it, QAbstractItemView::PositionAtCenter);
+                break;
+            }
+        }
+
+        if (mpMap && mpMap->mpMapper) {
+            mpMap->mpMapper->updateAreaComboBox();
+            if (mpMap->mpMapper->comboBox_showArea) {
+                mpMap->mpMapper->comboBox_showArea->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
+            }
+        }
+    });
+
+    connect(deleteBtn, &QPushButton::clicked, this, [this, dialog, listWidget, repopulate]() {
+        auto* item = listWidget->currentItem();
+        if (!item) {
+            return;
+        }
+
+        if (!mpMap || !mpMap->mpRoomDB) {
+            return;
+        }
+
+        const int areaId = item->data(Qt::UserRole).toInt();
+        if (areaId == -1) {
+            //: Warning message shown when trying to delete the default area.
+            QMessageBox::warning(dialog, tr("Delete failed"), tr("The default area cannot be deleted."));
+            return;
+        }
+
+        // Delete immediately without confirmation
+        const bool removed = mpMap->mpRoomDB->removeArea(areaId);
+        if (!removed) {
+            //: Warning message shown when trying to delete an area fails.
+            QMessageBox::warning(dialog, tr("Delete failed"), tr("Unable to delete area."));
+            return;
+        }
+
+        repopulate();
+        if (mpMap && mpMap->mpMapper) {
+            mpMap->mpMapper->updateAreaComboBox();
+            if (mpMap->mpMapper->comboBox_showArea) {
+                mpMap->mpMapper->comboBox_showArea->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
+            }
+        }
+        update();
+    });
+
+    connect(closeBtn, &QPushButton::clicked, dialog, &QDialog::accept);
+
+    dialog->resize(400, 320);
+    dialog->show();
+    dialog->raise();
 }
 
 
