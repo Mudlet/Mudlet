@@ -25,6 +25,8 @@
 -- the game offers it; for everything else, additive triggers capture the
 -- common chat-line shapes (tells, says, channels) shared by most games - so
 -- on a game with no GMCP at all the UI appears on the first chat line.
+-- Chat is sorted into All/Tells/Channels tabs, and the map pane shows a
+-- placeholder until the profile actually has map data.
 -- Type "baseui" for options; "baseui hide" removes it until "baseui show".
 
 BaseUI = BaseUI or {}
@@ -35,17 +37,63 @@ BaseUI.recentCaptures = BaseUI.recentCaptures or {}
 
 local settingsFile = getMudletHomeDir() .. "/base_ui_settings.lua"
 
-local gaugeSlots = { "86%", "93%" }
+-- one dark theme for the whole dock; the accent appears only on section
+-- headers and the active chat tab so it stays an accent
+local theme = {
+  accent = "#4fc1e9",
+  bg = "#1b1e23",
+  panel = "#14171c",
+  border = "#3a4149",
+  borderSoft = "#2b3138",
+  text = "#e8eef4",
+  textDim = "#96a0ab",
+  font = "Ubuntu",
+}
 
-local gaugeBack = [[background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #3a3a3a, stop: 1 #1c1c1c); border: 1px solid black; border-radius: 4px;]]
+local layout = {
+  mapHeader = { y = "0%", height = "3%" },
+  map = { y = "3.5%", height = "33.5%" },
+  chatHeader = { y = "38.5%", height = "3%" },
+  tabs = { y = "42.5%", height = "3.8%" },
+  chat = { y = "46.3%", height = "29.7%" },
+  gaugeSlots = { "78%", "83.5%", "89%", "94.5%" },
+  gaugeHeight = "4.5%",
+}
+
+local headerCss = string.format(
+  [[background-color: transparent; border: 0px; border-bottom: 1px solid %s; padding-left: 2px;]],
+  theme.borderSoft)
+
+local placeholderCss = string.format(
+  [[background-color: %s; border: 1px solid %s; border-radius: 6px;]],
+  theme.panel, theme.borderSoft)
+
+local tabCss = {
+  active = string.format(
+    [[background-color: #2b323b; border: 1px solid %s; border-bottom: 2px solid %s; border-top-left-radius: 4px; border-top-right-radius: 4px;]],
+    theme.border, theme.accent),
+  inactive = string.format(
+    [[background-color: #1f242a; border: 1px solid %s; border-bottom: 2px solid %s; border-top-left-radius: 4px; border-top-right-radius: 4px;]],
+    theme.borderSoft, theme.borderSoft),
+}
+
+-- every gauge shares one look: light-to-dark vertical gradient over a dark
+-- inset track, rounded corners, bold centered value text
+local function gaugeStyle(top, mid, deep)
+  return string.format(
+    [[background-color: QLinearGradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 %s, stop: 0.45 %s, stop: 1 %s); border: 1px solid rgba(0,0,0,60%%); border-radius: 5px;]],
+    top, mid, deep)
+end
+
+local gaugeBack = string.format(
+  [[background-color: QLinearGradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #101317, stop: 1 #1d2126); border: 1px solid %s; border-radius: 5px;]],
+  theme.border)
 
 local gaugeDefs = {
-  hp = {
-    front = [[background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #7ddf7d, stop: 0.5 #2e8b2e, stop: 1 #1f6e1f); border: 1px solid #0c2f0c; border-radius: 4px;]],
-  },
-  mp = {
-    front = [[background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #7db8df, stop: 0.5 #2e6a8b, stop: 1 #1f4d6e); border: 1px solid #0c1f2f; border-radius: 4px;]],
-  },
+  hp = { front = gaugeStyle("#84dd7f", "#2f9e3f", "#1c6f28") },
+  mp = { front = gaugeStyle("#7fb8e5", "#2f6f9e", "#1c4a6f") },
+  xp = { front = gaugeStyle("#f2cf7a", "#c28f2c", "#8a6316") },
+  enemy = { front = gaugeStyle("#ef8f8f", "#b23a3a", "#7c2222") },
 }
 
 -- GMCP vitals arrive in several dialects: lowercase namespaces, maxima inside
@@ -58,9 +106,15 @@ local vitalsNodes = {
   { "char", "vitals" },
   { "Char", "Maxstats" },
   { "char", "maxstats" },
+  { "Char", "Status" },
+  { "char", "status" },
 }
 
--- one row per gauge; current/max list every key spelling observed in the wild
+-- one row per gauge; current/max/percent list every key spelling observed in
+-- the wild. A percent key is a ready 0-100 value and needs no max: nl (IRE
+-- next-level percent) and tnlpct for xp, opponent_hp_pct and enemypct for
+-- enemy health. transient rows hide their gauge when the value goes away
+-- (the enemy died or was cleared).
 local vitalsStats = {
   { key = "hp", label = "HP",
     current = { "hp", "health" },
@@ -69,6 +123,12 @@ local vitalsStats = {
     current = { "mp", "mana", "sp", "energy" },
     max = { "maxmp", "max_mp", "maxMp", "maxmana", "max_mana", "maxMana",
             "maxsp", "max_sp", "maxSp", "maxenergy", "max_energy", "maxEnergy" } },
+  { key = "xp", label = "XP",
+    percent = { "nl", "tnlpct" },
+    current = { "xp", "experience" },
+    max = { "maxxp", "max_xp", "maxXp", "maxexperience", "max_experience", "maxExperience" } },
+  { key = "enemy", label = "Enemy", transient = true,
+    percent = { "opponent_hp_pct", "enemypct" } },
 }
 
 local function gmcpNode(path)
@@ -87,9 +147,12 @@ end
 -- some games send numbers as strings, hence the tonumber()s; nested
 -- cur/max tables (vitals.hp = { cur = 10, max = 20 }) are handled too
 local function statReading(sources, stat)
-  local current, max
+  local current, max, percent
   for _, source in ipairs(sources) do
-    for _, name in ipairs(stat.current) do
+    for _, name in ipairs(stat.percent or {}) do
+      percent = percent or tonumber(source[name])
+    end
+    for _, name in ipairs(stat.current or {}) do
       local value = source[name]
       if type(value) == "table" then
         current = current or tonumber(value.cur)
@@ -98,11 +161,11 @@ local function statReading(sources, stat)
         current = current or tonumber(value)
       end
     end
-    for _, name in ipairs(stat.max) do
+    for _, name in ipairs(stat.max or {}) do
       max = max or tonumber(source[name])
     end
   end
-  return current, max
+  return current, max, percent
 end
 
 -- generic chat capture for games without GMCP chat: trigger shapes most games
@@ -121,13 +184,14 @@ BaseUI.chatChannelNames = {
   yell = true, form = true, town = true,
 }
 
--- entries with tagged = true capture a channel tag that must pass the list above
+-- entries with tagged = true capture a channel tag that must pass the list
+-- above; family routes a line into the Tells or Channels tab as well as All
 local chatPatterns = {
-  { regex = [=[^\w[\w'-]* tells you\b[^,:]{0,30}(?::|,?\s*['"])]=] },
-  { regex = [=[^You tell [\w'-]+[^,:]{0,30}(?::|,?\s*['"])]=] },
-  { regex = [=[^You tell the (?:group|formation)\b]=] },
-  { regex = [=[^\w[\w'-]* whispers to you\b[^,:]{0,30}(?::|,?\s*['"])]=] },
-  { regex = [=[^\w[\w'-]* tells the (?:group|formation)\b]=] },
+  { regex = [=[^\w[\w'-]* tells you\b[^,:]{0,30}(?::|,?\s*['"])]=], family = "tells" },
+  { regex = [=[^You tell [\w'-]+[^,:]{0,30}(?::|,?\s*['"])]=], family = "tells" },
+  { regex = [=[^You tell the (?:group|formation)\b]=], family = "tells" },
+  { regex = [=[^\w[\w'-]* whispers to you\b[^,:]{0,30}(?::|,?\s*['"])]=], family = "tells" },
+  { regex = [=[^\w[\w'-]* tells the (?:group|formation)\b]=], family = "tells" },
   { regex = [=[^\w[\w'-]* (?:says|asks|exclaims)[^,:]{0,20},?\s*['"]]=] },
   { regex = [=[^You (?:say|ask|exclaim)[^,:]{0,20},?\s*['"]]=] },
   { regex = [=[^\w[\w'-]* (?:yells|shouts)[^,:]{0,20},?\s*['"]]=] },
@@ -137,7 +201,13 @@ local chatPatterns = {
   { regex = [=[^&lt; ?([\w -]{1,18}) ?\|]=], tagged = true },
 }
 
-function BaseUI.routeChatLine()
+local chatTabs = {
+  { key = "all", label = "All" },
+  { key = "tells", label = "Tells" },
+  { key = "channels", label = "Channels" },
+}
+
+function BaseUI.routeChatLine(family)
   -- gmcpChat means the trigger layer is retired: killing a trigger does not
   -- stop it firing on lines from the batch already being processed
   -- several patterns can match the same line - copy it only once
@@ -155,10 +225,16 @@ function BaseUI.routeChatLine()
     -- marker so other patterns matching this same line stay deduplicated
     BaseUI.lastChatLine = getLineNumber()
   end
-  if not BaseUI.chat then
+  if not BaseUI.chats then
     return
   end
-  BaseUI.chat:appendBuffer()
+  BaseUI.chats.all:appendBuffer()
+  BaseUI.noteChatActivity("all")
+  if family and BaseUI.chats[family] then
+    BaseUI.chats[family]:appendBuffer()
+    BaseUI.noteChatActivity(family)
+  end
+  BaseUI.checkMapData()
   table.insert(BaseUI.recentCaptures, { text = line, time = getEpoch() })
   if #BaseUI.recentCaptures &gt; 10 then
     table.remove(BaseUI.recentCaptures, 1)
@@ -167,9 +243,15 @@ end
 
 function BaseUI.routeTaggedChatLine()
   local tag = matches[2]:match("(%S+)")
-  if tag and BaseUI.chatChannelNames[tag:lower()] then
-    BaseUI.routeChatLine()
+  if not tag then
+    return
   end
+  tag = tag:lower()
+  if not BaseUI.chatChannelNames[tag] then
+    return
+  end
+  local family = (tag == "tell" or tag == "tells" or tag == "gtell") and "tells" or "channels"
+  BaseUI.routeChatLine(family)
 end
 
 function BaseUI.createChatTriggers()
@@ -177,8 +259,14 @@ function BaseUI.createChatTriggers()
     return
   end
   for _, pattern in ipairs(chatPatterns) do
-    table.insert(BaseUI.chatTriggerIds,
-      tempRegexTrigger(pattern.regex, pattern.tagged and BaseUI.routeTaggedChatLine or BaseUI.routeChatLine))
+    local handler
+    if pattern.tagged then
+      handler = BaseUI.routeTaggedChatLine
+    else
+      local family = pattern.family
+      handler = function() BaseUI.routeChatLine(family) end
+    end
+    table.insert(BaseUI.chatTriggerIds, tempRegexTrigger(pattern.regex, handler))
   end
 end
 
@@ -201,6 +289,46 @@ function BaseUI.saveSettings()
   table.save(settingsFile, BaseUI.settings)
 end
 
+function BaseUI.sectionHeader(name, text, spot)
+  local label = Geyser.Label:new({
+    name = name,
+    x = "0%", y = spot.y, width = "100%", height = spot.height,
+    font = theme.font, fontSize = 9, fgColor = theme.accent,
+    format = "lb",
+  }, BaseUI.container)
+  label:setStyleSheet(headerCss)
+  label:echo(text:upper())
+  return label
+end
+
+function BaseUI.mapHasData()
+  return next(getRooms()) ~= nil
+end
+
+function BaseUI.createMapper()
+  BaseUI.map = Geyser.Mapper:new({
+    name = "BaseUI_map",
+    x = "0%", y = layout.map.y, width = "100%", height = layout.map.height,
+  }, BaseUI.container)
+end
+
+-- the embedded mapper shows a clipped "load or create a map" widget while the
+-- profile has no map data, so a placeholder holds its spot until the first
+-- room exists (made by a mapping script, a map download or a manual load).
+-- Cheap to poll: getRooms() stays empty right up until the swap happens.
+function BaseUI.checkMapData()
+  if not BaseUI.container or BaseUI.map or BaseUI.settings.hidden then
+    return
+  end
+  if not BaseUI.mapHasData() then
+    return
+  end
+  if BaseUI.mapPlaceholder then
+    BaseUI.mapPlaceholder:hide()
+  end
+  BaseUI.createMapper()
+end
+
 function BaseUI.build()
   if BaseUI.container then
     return
@@ -211,26 +339,61 @@ function BaseUI.build()
     width = "25%", height = "100%",
     attached = "right",
     titleText = "Mudlet UI",
-    titleTxtColor = "white",
-    adjLabelstyle = "background-color: rgba(25,25,25,100%); border: 1px solid grey;",
+    titleTxtColor = theme.text,
+    adjLabelstyle = string.format("background-color: %s; border: 1px solid %s;", theme.bg, theme.border),
+    buttonstyle = string.format(
+      [[QLabel{ border-color: %s; background-color: %s; } QLabel::hover{ background-color: rgba(90,100,110,50%%); }]],
+      theme.border, theme.bg),
     -- the container's own session persistence can restore a hidden, detached
     -- state that is impossible to bring back reliably - we persist the only
     -- choice that matters (hidden or not) ourselves
     autoLoad = false,
     autoSave = false,
   })
-  BaseUI.map = Geyser.Mapper:new({
-    name = "BaseUI_map",
-    x = "1%", y = "0%", width = "98%", height = "44%",
-  }, BaseUI.container)
-  BaseUI.chat = Geyser.MiniConsole:new({
-    name = "BaseUI_chat",
-    x = "1%", y = "45%", width = "98%", height = "40%",
-    autoWrap = true,
-    color = "black",
-    fontSize = 10,
-  }, BaseUI.container)
-  BaseUI.chat:echo("Tells, says and channel chat from the game will be collected here.\n")
+  BaseUI.mapHeader = BaseUI.sectionHeader("BaseUI_map_header", "Map", layout.mapHeader)
+  if BaseUI.mapHasData() then
+    BaseUI.createMapper()
+  else
+    BaseUI.mapPlaceholder = Geyser.Label:new({
+      name = "BaseUI_map_placeholder",
+      x = "0%", y = layout.map.y, width = "100%", height = layout.map.height,
+      font = theme.font, fontSize = 10, fgColor = theme.textDim,
+      format = "c",
+    }, BaseUI.container)
+    BaseUI.mapPlaceholder:setStyleSheet(placeholderCss)
+    BaseUI.mapPlaceholder:echo("Your map will appear&lt;br&gt;here as you explore")
+  end
+  BaseUI.chatHeader = BaseUI.sectionHeader("BaseUI_chat_header", "Chat", layout.chatHeader)
+  BaseUI.chats = {}
+  BaseUI.chatTabLabels = {}
+  BaseUI.unread = { all = 0, tells = 0, channels = 0 }
+  BaseUI.activeChatTab = "all"
+  local tabX = { "0%", "34%", "68%" }
+  for i, tab in ipairs(chatTabs) do
+    local label = Geyser.Label:new({
+      name = "BaseUI_tab_" .. tab.key,
+      x = tabX[i], y = layout.tabs.y, width = "32%", height = layout.tabs.height,
+      font = theme.font, fontSize = 9, format = "c",
+    }, BaseUI.container)
+    label:setClickCallback(BaseUI.selectChatTab, tab.key)
+    BaseUI.chatTabLabels[tab.key] = label
+    local console = Geyser.MiniConsole:new({
+      name = "BaseUI_chat_" .. tab.key,
+      x = "0%", y = layout.chat.y, width = "100%", height = layout.chat.height,
+      autoWrap = true,
+      -- plain black so trigger-captured lines (which keep the main console's
+      -- background colour) blend in seamlessly
+      color = "black",
+      fontSize = 10,
+    }, BaseUI.container)
+    BaseUI.chats[tab.key] = console
+    if tab.key ~= "all" then
+      console:hide()
+    end
+  end
+  BaseUI.chat = BaseUI.chats.all
+  BaseUI.refreshChatTabs()
+  BaseUI.chats.all:decho("&lt;150,158,167&gt;Tells, says and channel chat from the game will be collected here.\n")
   -- the container remembers its own hidden/detached state from the previous
   -- session (it saves on exit) - our setting says it should be visible, so
   -- override whatever it restored
@@ -243,12 +406,67 @@ function BaseUI.build()
   BaseUI.maybeAnnounce()
 end
 
+function BaseUI.refreshChatTabs()
+  for _, tab in ipairs(chatTabs) do
+    local label = BaseUI.chatTabLabels and BaseUI.chatTabLabels[tab.key]
+    if label then
+      local active = BaseUI.activeChatTab == tab.key
+      label:setStyleSheet(active and tabCss.active or tabCss.inactive)
+      local text = tab.label
+      local unread = BaseUI.unread[tab.key]
+      if unread &gt; 0 and not active then
+        text = string.format("%s (%d)", tab.label, math.min(unread, 99))
+      end
+      label:echo(text, active and theme.text or theme.textDim)
+    end
+  end
+end
+
+function BaseUI.selectChatTab(key)
+  if not BaseUI.chats or not BaseUI.chats[key] then
+    return
+  end
+  BaseUI.activeChatTab = key
+  BaseUI.unread[key] = 0
+  for _, tab in ipairs(chatTabs) do
+    local console = BaseUI.chats[tab.key]
+    if tab.key == key then
+      console:show()
+    else
+      console:hide()
+    end
+  end
+  BaseUI.refreshChatTabs()
+end
+
+function BaseUI.noteChatActivity(key)
+  if key == BaseUI.activeChatTab then
+    return
+  end
+  BaseUI.unread[key] = (BaseUI.unread[key] or 0) + 1
+  BaseUI.refreshChatTabs()
+end
+
+-- keep the created gauges in vitalsStats order and packed from the top,
+-- whatever order their data completed in (a percentage can be ready before
+-- the hp maxima have arrived)
+function BaseUI.layoutGauges()
+  local index = 0
+  for _, stat in ipairs(vitalsStats) do
+    local gauge = BaseUI.gauges[stat.key]
+    if gauge then
+      index = index + 1
+      gauge:move("0%", layout.gaugeSlots[index])
+    end
+  end
+end
+
 function BaseUI.ensureGauge(key)
   local gauge = BaseUI.gauges[key]
   if gauge then
     return gauge
   end
-  local slot = gaugeSlots[BaseUI.usedGaugeSlots + 1]
+  local slot = layout.gaugeSlots[BaseUI.usedGaugeSlots + 1]
   local def = gaugeDefs[key]
   if not slot or not def then
     return nil
@@ -256,14 +474,17 @@ function BaseUI.ensureGauge(key)
   BaseUI.usedGaugeSlots = BaseUI.usedGaugeSlots + 1
   gauge = Geyser.Gauge:new({
     name = "BaseUI_" .. key .. "_gauge",
-    x = "2%", y = slot,
-    width = "96%", height = "6%",
+    x = "0%", y = slot,
+    width = "100%", height = layout.gaugeHeight,
     strict = true,
+    font = theme.font,
+    fontSize = 9,
   }, BaseUI.container)
   gauge:setStyleSheet(def.front, gaugeBack)
   gauge:setFgColor("white")
   gauge:setAlignment("center")
   BaseUI.gauges[key] = gauge
+  BaseUI.layoutGauges()
   return gauge
 end
 
@@ -282,15 +503,33 @@ function BaseUI.updateVitals()
     return
   end
   BaseUI.build()
+  BaseUI.checkMapData()
   for _, stat in ipairs(vitalsStats) do
-    -- a gauge is only painted once both a current and a max are known;
-    -- maxima are never assumed, so a stat may wait for a Maxstats message
-    local current, max = statReading(sources, stat)
-    if current and max and max &gt; 0 then
+    -- a gauge is only painted once a full reading is known: either a ready
+    -- percentage, or both a current and a max (maxima are never assumed, so
+    -- a stat may wait for a Maxstats message)
+    local current, max, percent = statReading(sources, stat)
+    if percent and (percent &lt; 0 or percent &gt; 100) then
+      percent = nil
+    end
+    if percent then
+      local gauge = BaseUI.ensureGauge(stat.key)
+      if gauge then
+        gauge:setValue(percent, 100, string.format("%s %d%%", stat.label, math.floor(percent + 0.5)))
+        if gauge.hidden then
+          gauge:show()
+        end
+      end
+    elseif current and max and max &gt; 0 then
       local gauge = BaseUI.ensureGauge(stat.key)
       if gauge then
         gauge:setValue(current, max, string.format("%s %d/%d", stat.label, current, max))
+        if gauge.hidden then
+          gauge:show()
+        end
       end
+    elseif stat.transient and BaseUI.gauges[stat.key] and not BaseUI.gauges[stat.key].hidden then
+      BaseUI.gauges[stat.key]:hide()
     end
   end
 end
@@ -324,7 +563,13 @@ function BaseUI.addChatMessage()
       end
     end
   end
-  BaseUI.chat:decho(ansi2decho(message.text) .. "\n")
+  local text = ansi2decho(message.text) .. "\n"
+  BaseUI.chats.all:decho(text)
+  BaseUI.noteChatActivity("all")
+  local channel = type(message.channel) == "string" and message.channel:lower() or ""
+  local family = channel:find("tell", 1, true) and "tells" or "channels"
+  BaseUI.chats[family]:decho(text)
+  BaseUI.noteChatActivity(family)
 end
 
 -- ask the game to send channel text over GMCP (not all games do so unprompted)
@@ -381,6 +626,7 @@ function BaseUI.show()
     if not BaseUI.container.attached then
       BaseUI.container:attachToBorder("right")
     end
+    BaseUI.checkMapData()
     cecho("\n&lt;cyan&gt;[ Mudlet UI ] Shown.&lt;reset&gt;\n")
   else
     cecho("\n&lt;cyan&gt;[ Mudlet UI ] It will appear as soon as the game sends chat or character data.&lt;reset&gt;\n")
@@ -417,8 +663,15 @@ registerAnonymousEventHandler("gmcp.Char.Vitals", "BaseUI.updateVitals")
 registerAnonymousEventHandler("gmcp.char.vitals", "BaseUI.updateVitals")
 registerAnonymousEventHandler("gmcp.Char.Maxstats", "BaseUI.updateVitals")
 registerAnonymousEventHandler("gmcp.char.maxstats", "BaseUI.updateVitals")
+registerAnonymousEventHandler("gmcp.Char.Status", "BaseUI.updateVitals")
+registerAnonymousEventHandler("gmcp.char.status", "BaseUI.updateVitals")
 registerAnonymousEventHandler("gmcp.Comm.Channel.Text", "BaseUI.addChatMessage")
-registerAnonymousEventHandler("sysProtocolEnabled", "BaseUI.enableChannelCapture")</script>
+registerAnonymousEventHandler("sysProtocolEnabled", "BaseUI.enableChannelCapture")
+registerAnonymousEventHandler("mapOpenEvent", "BaseUI.checkMapData")
+registerAnonymousEventHandler("sysMapDownloadEvent", "BaseUI.checkMapData")
+registerAnonymousEventHandler("sysMapAreaChanged", "BaseUI.checkMapData")
+registerAnonymousEventHandler("gmcp.Room.Info", "BaseUI.checkMapData")
+registerAnonymousEventHandler("gmcp.room.info", "BaseUI.checkMapData")</script>
 			<eventHandlerList />
 		</Script>
 	</ScriptPackage>
