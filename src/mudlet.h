@@ -536,9 +536,6 @@ signals:
     void signal_showTabConnectionIndicatorsChanged(bool);
     void signal_blinkStateChanged();
     void signal_profileLoaded();
-    // Emitted from slot_showConnectionDialog after the dialog is shown.
-    // Tests use this to drive the dialog without polling for visibility.
-    void signal_connectionDialogShown();
 
 private slots:
     void slot_assignShortcutsFromProfile(Host* pHost = nullptr);

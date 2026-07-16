@@ -49,8 +49,6 @@ public:
     void accept() override;
     QList<QListWidgetItem*> findData(const QListWidget& listWidget, const QVariant& what, const int role = Qt::UserRole) const;
     QList<int> findProfilesBeginningWith(const QString&) const;
-    bool showingTutorialInvitation() const;
-    void dismissTutorialInvitation();
     static const int csmNameRole{Qt::UserRole};
 
     QString btn_connect_enabled_accessDesc;
@@ -97,6 +95,7 @@ protected:
 
 private:
     static bool copyFolder(const QString& sourceFolder, const QString& destFolder);
+    void dismissTutorialInvitation();
     QString getDescription(const QString& profile_name) const;
     bool validateConnect();
     bool validateProfile();
@@ -173,6 +172,7 @@ private:
 
 
 private slots:
+    void slot_skipToGamesList();
     void slot_profileContextMenu(QPoint pos);
     void slot_setCustomIcon();
     void slot_setCustomColor();

@@ -101,7 +101,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mpSkipToGamesButton->hide();
     horizontalLayout_3->insertWidget(0, mpSkipToGamesButton);
 
-    connect(mpSkipToGamesButton, &QPushButton::clicked, this, &dlgConnectionProfiles::dismissTutorialInvitation);
+    connect(mpSkipToGamesButton, &QPushButton::clicked, this, &dlgConnectionProfiles::slot_skipToGamesList);
 
     // Test and set if needed mudlet::mIsIconShownOnDialogButtonBoxes - if there
     // is already a Qt provided icon on a predefined button, this is probably
@@ -311,12 +311,9 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
     }
 }
 
-bool dlgConnectionProfiles::showingTutorialInvitation() const
-{
-    const bool result = mpSkipToGamesButton && mpSkipToGamesButton->isVisible();
-    return result;
-}
-
+// Restores the widgets that the first-launch tutorial invitation hides, so
+// every path out of the invitation (Skip button, New profile) leaves the
+// dialog in its regular state:
 void dlgConnectionProfiles::dismissTutorialInvitation()
 {
     mTutorialDismissed = true;
@@ -328,6 +325,11 @@ void dlgConnectionProfiles::dismissTutorialInvitation()
     connect_button->show();
     offline_button->show();
     resize(minimumSize().width(), height());
+}
+
+void dlgConnectionProfiles::slot_skipToGamesList()
+{
+    dismissTutorialInvitation();
     const auto items = findData(*listWidget_profiles, qsl("Mudlet Tutorial"), csmNameRole);
     if (!items.isEmpty()) {
         listWidget_profiles->setCurrentItem(items.first());
@@ -808,7 +810,7 @@ void dlgConnectionProfiles::slot_addProfile()
         const QSignalBlocker blocker(character_password_entry);
         character_password_entry->setText(QString());
     }
-    mTutorialDismissed = true;
+    dismissTutorialInvitation();
     fillout_form();
     welcome_message->hide();
     informationArea->show();
@@ -1353,7 +1355,9 @@ void dlgConnectionProfiles::fillout_form()
         listWidget_profiles->setCurrentRow(toselectRow);
     }
 
-    if (firstMudletLaunch && mProfileList.isEmpty() && !mTutorialDismissed) {
+    // Dedicated single-game builds go straight to their game's profile instead
+    // of the Mudlet tutorial invitation:
+    if (firstMudletLaunch && mProfileList.isEmpty() && !mTutorialDismissed && onlyShownPredefinedProfiles.isEmpty()) {
         // Hide the profile list and show only the tutorial-focused welcome
         widget_topLeft->hide();
         welcome_message->show();

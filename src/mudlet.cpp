@@ -3216,8 +3216,6 @@ void mudlet::slot_showConnectionDialog()
         mpConnectionDialog->show();
         mpConnectionDialog->raise();
         mpConnectionDialog->activateWindow();
-
-        emit signal_connectionDialogShown();
     });
 }
 
