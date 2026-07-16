@@ -39,6 +39,9 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
 {
     setupUi(this);
 
+    // nothing is selected yet, so there is no help to show
+    helpButton->setDisabled(true);
+
     layoutModules();
     connect(uninstallButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_uninstallModule);
     connect(installButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_installModule);
@@ -205,11 +208,17 @@ void dlgModuleManager::slot_moduleClicked(QTableWidgetItem* pItem)
         return;
     }
 
-    if (mpHost->moduleHelp.contains(entry->text())) {
-        helpButton->setDisabled((!mpHost->moduleHelp.value(entry->text()).contains(qsl("helpURL")) || mpHost->moduleHelp.value(entry->text()).value(qsl("helpURL")).isEmpty()));
-    } else {
-        helpButton->setDisabled(true);
+    helpButton->setDisabled(moduleHelpUrl(entry->text()).isEmpty());
+}
+
+QString dlgModuleManager::moduleHelpUrl(const QString& moduleName) const
+{
+    const QString url = mpHost->mModuleInfo.value(moduleName).value(qsl("helpURL"));
+    if (!url.isEmpty()) {
+        return url;
     }
+    // fall back to the legacy source populated by XML-imported <HelpPackage> data
+    return mpHost->moduleHelp.value(moduleName).value(qsl("helpURL"));
 }
 
 void dlgModuleManager::slot_moduleChanged(QTableWidgetItem* pItem)
@@ -247,22 +256,24 @@ void dlgModuleManager::slot_helpModule()
     if (!pI) {
         return;
     }
-    if (mpHost->moduleHelp.value(pI->text()).contains(QLatin1String("helpURL")) && !mpHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")).isEmpty()) {
-        if (!mudlet::self()->openWebPage(mpHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")))) {
-            //failed first open, try for a module related path
-            QTableWidgetItem* item = moduleTable->item(cRow, 3);
-            if (!item) {
-                return;
-            }
-            const QString itemPath = item->text();
-            QStringList path = itemPath.split(QDir::separator());
-            path.pop_back();
-            path.append(QDir::separator());
-            path.append(mpHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")));
-            const QString path2 = path.join(QString());
-            if (!mudlet::self()->openWebPage(path2)) {
-                helpButton->setDisabled(true);
-            }
+    const QString helpUrl = moduleHelpUrl(pI->text());
+    if (helpUrl.isEmpty()) {
+        return;
+    }
+    if (!mudlet::self()->openWebPage(helpUrl)) {
+        //failed first open, try for a module related path
+        QTableWidgetItem* item = moduleTable->item(cRow, 3);
+        if (!item) {
+            return;
+        }
+        const QString itemPath = item->text();
+        QStringList path = itemPath.split(QDir::separator());
+        path.pop_back();
+        path.append(QDir::separator());
+        path.append(helpUrl);
+        const QString path2 = path.join(QString());
+        if (!mudlet::self()->openWebPage(path2)) {
+            helpButton->setDisabled(true);
         }
     }
 }

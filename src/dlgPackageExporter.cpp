@@ -555,6 +555,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
     ui->textEdit_description->setMarkdown(description);
     const QString version = packageInfo.value(qsl("version"));
     ui->lineEdit_version->setText(version);
+    ui->lineEdit_helpUrl->setText(packageInfo.value(qsl("helpURL")));
     populateDependencies(); // available dependencies, as opposed to required ones which is next
     const QStringList dependencies = packageInfo.value(qsl("dependencies")).split(QLatin1Char(','));
     ui->comboBox_dependencies->clear();
@@ -1247,6 +1248,16 @@ void dlgPackageExporter::exportXml(bool& isOk,
     }
 }
 
+QString dlgPackageExporter::normalizedHelpUrl() const
+{
+    QString url = ui->lineEdit_helpUrl->text().trimmed();
+    if (!url.isEmpty() && !url.contains(QLatin1String("://"))) {
+        // scheme-less URLs silently fail to open in a browser later
+        url.prepend(qsl("https://"));
+    }
+    return url;
+}
+
 void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile, const QString& packageDescription)
 {
     QStringList dependencies;
@@ -1262,6 +1273,7 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
     appendToDetails(qsl("title"), ui->lineEdit_title->text());
     appendToDetails(qsl("description"), packageDescription);
     appendToDetails(qsl("version"), ui->lineEdit_version->text());
+    appendToDetails(qsl("helpURL"), normalizedHelpUrl());
     appendToDetails(qsl("dependencies"), dependencies.join(","));
     const auto iso8601timestamp = utils::dateStamp();
     mPackageConfig.append(qsl("created = \"%1\"\n").arg(iso8601timestamp));
