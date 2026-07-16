@@ -49,9 +49,10 @@ constexpr int cardSpotlightGap = 16;
 const QLatin1String settingsKeyTourShown("uiTourShown");
 }
 
-TUiTour::TUiTour(mudlet* pMainWindow)
+TUiTour::TUiTour(mudlet* pMainWindow, const bool skipIntroStep)
 : QWidget(pMainWindow)
 , mpMainWindow(pMainWindow)
+, mSkipIntroStep(skipIntroStep)
 {
     setObjectName(qsl("uiTour"));
     setAttribute(Qt::WA_DeleteOnClose);
@@ -176,12 +177,16 @@ void TUiTour::buildSteps()
 
     mSteps.clear();
 
-    mSteps.push_back({nullptr,
-                      //: Title of the first step of the interface tour
-                      tr("Welcome to Mudlet!"),
-                      //: Body of the first step of the interface tour
-                      tr("New here? This quick tour points out the most important parts of Mudlet - it takes less than a minute. "
-                         "Click anywhere or use the arrow keys to move through it.")});
+    // The tutorial profile greets new players itself, so when the tour runs
+    // on top of it the welcome step would be one welcome too many:
+    if (!mSkipIntroStep) {
+        mSteps.push_back({nullptr,
+                          //: Title of the first step of the interface tour
+                          tr("Welcome to Mudlet!"),
+                          //: Body of the first step of the interface tour
+                          tr("New here? This quick tour points out the most important parts of Mudlet - it takes less than a minute. "
+                             "Click anywhere or use the arrow keys to move through it.")});
+    }
 
     mSteps.push_back({[activeConsole, widgetRect]() -> QRect {
                           TMainConsole* console = activeConsole();

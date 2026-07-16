@@ -3932,12 +3932,17 @@ void mudlet::slot_showHelpDialog()
 
 void mudlet::slot_showUiTour()
 {
+    showUiTour(false);
+}
+
+void mudlet::showUiTour(const bool skipIntroStep)
+{
     if (mpUiTour) {
         mpUiTour->raise();
         mpUiTour->setFocus();
         return;
     }
-    mpUiTour = new TUiTour(this);
+    mpUiTour = new TUiTour(this, skipIntroStep);
     connect(mpUiTour, &TUiTour::signal_tourFinished, this, &mudlet::slot_uiTourClosed);
     TUiTour::rememberShown();
     mpUiTour->start();
@@ -4802,8 +4807,8 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     // Decided before packages install so their scripts can see the flag and
     // hold off on their own introductions until the tour is done - the
     // tutorial package does this
-    const bool showUiTour = TUiTour::shouldShowOnFirstProfile();
-    if (showUiTour) {
+    const bool wantUiTour = TUiTour::shouldShowOnFirstProfile();
+    if (wantUiTour) {
         pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("mudlet = mudlet or {} mudlet.uiTourPending = true"));
     }
 
@@ -4868,10 +4873,13 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     pHost->mIsProfileLoadingSequence = false;
     emit signal_profileLoaded();
 
-    if (showUiTour) {
+    if (wantUiTour) {
+        // The tutorial profile greets new players itself, so skip the tour's
+        // own welcome step there:
+        const bool skipIntroStep = profile == qsl("Mudlet Tutorial");
         // give the freshly opened profile a moment to finish laying out before
         // the tour starts highlighting parts of it
-        QTimer::singleShot(1000, this, &mudlet::slot_showUiTour);
+        QTimer::singleShot(1000, this, [this, skipIntroStep]() { showUiTour(skipIntroStep); });
     }
 }
 

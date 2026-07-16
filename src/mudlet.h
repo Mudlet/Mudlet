@@ -561,6 +561,7 @@ private slots:
 private:
     void assignKeySequences();
     QString autodetectPreferredLanguage();
+    void showUiTour(const bool skipIntroStep);
     static bool needsCustomDarkTheme();
     void closeHost(const QString&);
     int getDictionaryWordCount(const QString& dictionaryPath);
