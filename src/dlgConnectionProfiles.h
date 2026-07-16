@@ -132,6 +132,7 @@ private:
     void addLetterToProfileSearch(const int);
     void clearNotificationArea();
     void loadPasswordAsync(const QString& profileName);
+    void revealConnectionDetails();
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
@@ -155,6 +156,11 @@ private:
     QAction* mpAction_revealPassword;
     // true for the duration of the 'Copy profile' action
     bool mCopyingProfile = false;
+    // true while a profile is selected or refreshed programmatically, so that
+    // it is not mistaken for the user picking a game from the list
+    bool mProgrammaticProfileSelection = false;
+    // dialog height before it was shrunk to fit the welcome message
+    int mDialogHeightBeforeShrink = 0;
     QString mDateTimeFormat;
     QVector<QColor> mCustomIconColors;
     QTimer mSearchTextTimer;
