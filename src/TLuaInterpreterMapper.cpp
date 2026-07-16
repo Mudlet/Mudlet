@@ -1857,7 +1857,7 @@ int TLuaInterpreter::getMapLabels(lua_State* L)
 int TLuaInterpreter::getMapMenus(lua_State* L)
 {
     bool keyByUniqueName = false;
-    if (lua_gettop(L) > 0) {
+    if (!lua_isnoneornil(L, 1)) {
         keyByUniqueName = getVerifiedBool(L, __func__, 1, "key by unique name", true);
     }
     const Host& host = getHostFromLua(L);

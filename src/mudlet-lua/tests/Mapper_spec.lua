@@ -65,6 +65,13 @@ describe("Tests custom map event and menu functions", function()
       assert.is_nil(menus["TestMenu"])
     end)
 
+    it("should treat a nil argument like no argument", function()
+      addMapMenu("TestMenu")
+
+      local menus = getMapMenus(nil)
+      assert.are.equal("top-level", menus["TestMenu"])
+    end)
+
     it("should key menus by unique name when requested", function()
       addMapMenu("TestMenu", nil, "Test Display Name")
       addMapMenu("TestSubMenu", "TestMenu", "Sub Display Name")
