@@ -103,6 +103,16 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     connect(mpSkipToGamesButton, &QPushButton::clicked, this, &dlgConnectionProfiles::slot_skipToGamesList);
 
+    // Pressing Enter in the connection form must always mean "Connect". The
+    // tutorial invitation hides the Connect button on first show, which stops
+    // Qt's automatic default-button tracking from ever settling on it - Enter
+    // would then activate the first autoDefault button in the dialog, which
+    // happens to be Remove, silently deleting the profile being created:
+    remove_profile_button->setAutoDefault(false);
+    new_profile_button->setAutoDefault(false);
+    mpSkipToGamesButton->setAutoDefault(false);
+    connect_button->setDefault(true);
+
     // Test and set if needed mudlet::mIsIconShownOnDialogButtonBoxes - if there
     // is already a Qt provided icon on a predefined button, this is probably
     // the first and best place to test this as the "Cancel" button is a built-
@@ -324,7 +334,9 @@ void dlgConnectionProfiles::dismissTutorialInvitation()
     mpSkipToGamesButton->hide();
     connect_button->show();
     offline_button->show();
-    resize(minimumSize().width(), height());
+    // The invitation shrank the dialog to fit its short message; size the
+    // restored full interface from its own layout instead:
+    resize(sizeHint().expandedTo(minimumSize()));
 }
 
 void dlgConnectionProfiles::slot_skipToGamesList()
@@ -1247,8 +1259,12 @@ void dlgConnectionProfiles::fillout_form()
     port_entry->clear();
 
     mProfileList = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    // mProfileList gains non-disk entries (e.g. the QT_DEBUG-only self-test
+    // profile) further down, so capture whether the user has any saved
+    // profiles while it still only holds the on-disk ones:
+    const bool noSavedProfiles = mProfileList.isEmpty();
 
-    if (mProfileList.isEmpty()) {
+    if (noSavedProfiles) {
         welcome_message->show();
         tabWidget_connectionInfo->hide();
         informationArea->hide();
@@ -1357,7 +1373,7 @@ void dlgConnectionProfiles::fillout_form()
 
     // Dedicated single-game builds go straight to their game's profile instead
     // of the Mudlet tutorial invitation:
-    if (firstMudletLaunch && mProfileList.isEmpty() && !mTutorialDismissed && onlyShownPredefinedProfiles.isEmpty()) {
+    if (firstMudletLaunch && noSavedProfiles && !mTutorialDismissed && onlyShownPredefinedProfiles.isEmpty()) {
         // Hide the profile list and show only the tutorial-focused welcome
         widget_topLeft->hide();
         welcome_message->show();
