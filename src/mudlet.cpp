@@ -7194,10 +7194,9 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
         mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.mpackage"));
     }
 
-    // A modest starter UI for GMCP-capable games, only for players new to
-    // Mudlet - veterans will have their own layouts already:
-    const QStringList baseUiGames = {qsl("aetolia.com"), qsl("achaea.com"), qsl("lusternia.com"), qsl("imperian.com"), qsl("starmourn.com"), qsl("stickmud.com")};
-    if (baseUiGames.contains(gameUrl) && !mudlet::self()->experiencedMudletPlayer()) {
+    // A modest starter UI that adapts to whatever any game provides, only for
+    // players new to Mudlet - veterans will have their own layouts already:
+    if (!mudlet::self()->experiencedMudletPlayer()) {
         mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/base-ui/mudlet-base-ui.xml"));
     }
 
