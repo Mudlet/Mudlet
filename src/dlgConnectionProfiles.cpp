@@ -116,7 +116,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
                                     "<p><center>Play a short guided adventure to learn<br>"
                                     "how to navigate in games, use triggers, aliases, and scripting.</center></p>"
                                     "<p><center><a href=\"mudlet-tutorial\">Start Tutorial</a></center></p>"
-                                    "<p align=\"right\"><span style=\" font-family:’Sans’;\">The Mudlet Team </span>"
+                                    "<p align=\"right\"><span style=\" font-family:'Sans';\">The Mudlet Team </span>"
                                     "<img src=\":/icons/mudlet_main_16px.png\"/></p>");
 
     auto pWelcome_document = new QTextDocument(this);
@@ -314,15 +314,11 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
 bool dlgConnectionProfiles::showingTutorialInvitation() const
 {
     const bool result = mpSkipToGamesButton && mpSkipToGamesButton->isVisible();
-    qDebug() << "[CI-TRACE] dlgConnectionProfiles::showingTutorialInvitation() ->" << result
-             << "mpSkipToGamesButton=" << static_cast<void*>(mpSkipToGamesButton)
-             << "isVisible=" << (mpSkipToGamesButton ? mpSkipToGamesButton->isVisible() : false);
     return result;
 }
 
 void dlgConnectionProfiles::dismissTutorialInvitation()
 {
-    qDebug() << "[CI-TRACE] dlgConnectionProfiles::dismissTutorialInvitation() ENTER";
     mTutorialDismissed = true;
     widget_topLeft->show();
     welcome_message->hide();
@@ -336,9 +332,6 @@ void dlgConnectionProfiles::dismissTutorialInvitation()
     if (!items.isEmpty()) {
         listWidget_profiles->setCurrentItem(items.first());
     }
-    qDebug() << "[CI-TRACE] dlgConnectionProfiles::dismissTutorialInvitation() EXIT"
-             << "new_profile_button visible=" << new_profile_button->isVisible()
-             << "enabled=" << new_profile_button->isEnabled();
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
@@ -808,7 +801,6 @@ void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QS
 
 void dlgConnectionProfiles::slot_addProfile()
 {
-    qDebug() << "[CI-TRACE] dlgConnectionProfiles::slot_addProfile() ENTER";
     profile_name_entry->setReadOnly(false);
     // while normally handled by fillout_form, due to it's asynchronous nature it is better UX to reset it here
     // Block signals to prevent triggering password save for the previously selected profile
@@ -854,10 +846,6 @@ void dlgConnectionProfiles::slot_addProfile()
     offline_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
     connect_button->setEnabled(false);
     connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
-    qDebug() << "[CI-TRACE] dlgConnectionProfiles::slot_addProfile() EXIT"
-             << "profile_name_entry hasFocus=" << profile_name_entry->hasFocus()
-             << "text=" << profile_name_entry->text()
-             << "qApp focusWidget=" << QApplication::focusWidget();
 }
 
 // enables the deletion button once the correct text (profile name) is entered
@@ -1251,7 +1239,6 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 // (re-)creates the dialogs profile list
 void dlgConnectionProfiles::fillout_form()
 {
-    qDebug() << "[CI-TRACE] dlgConnectionProfiles::fillout_form() ENTER mTutorialDismissed=" << mTutorialDismissed;
     listWidget_profiles->clear();
     profile_name_entry->clear();
     host_name_entry->clear();
@@ -1377,11 +1364,6 @@ void dlgConnectionProfiles::fillout_form()
         mpSkipToGamesButton->show();
         adjustSize();
     }
-    qDebug() << "[CI-TRACE] dlgConnectionProfiles::fillout_form() EXIT firstMudletLaunch=" << firstMudletLaunch
-             << "mProfileList.isEmpty=" << mProfileList.isEmpty()
-             << "mTutorialDismissed=" << mTutorialDismissed
-             << "skipToGames visible=" << (mpSkipToGamesButton ? mpSkipToGamesButton->isVisible() : false)
-             << "new_profile_button visible=" << new_profile_button->isVisible();
 }
 
 void dlgConnectionProfiles::setProfileIcon() const
@@ -1951,7 +1933,6 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         mudlet::self()->mDiscord.setApplicationID(pHost, mDiscordApplicationId);
     }
 
-    qDebug() << "[CI-TRACE] dlgConnectionProfiles emitting signal_load_profile name=" << profile_name << "alsoConnect=" << alsoConnect;
     emit signal_load_profile(profile_name, alsoConnect);
     QDialog::accept();
 }

@@ -3203,8 +3203,6 @@ void mudlet::slot_showConnectionDialog()
     // Use a timer to ensure the main window is ready before showing the dialog
     // This is especially important at startup when the main window might not be fully initialized
     QTimer::singleShot(0, this, [this]() {
-        qDebug() << "[CI-TRACE] mudlet::slot_showConnectionDialog timer fired"
-                 << "mainWindow visible=" << isVisible();
         // Ensure the main window is visible and ready
         if (!isVisible()) {
             show();
@@ -3219,11 +3217,7 @@ void mudlet::slot_showConnectionDialog()
         mpConnectionDialog->raise();
         mpConnectionDialog->activateWindow();
 
-        qDebug() << "[CI-TRACE] mudlet::slot_showConnectionDialog about to emit signal_connectionDialogShown"
-                 << "dialog visible=" << mpConnectionDialog->isVisible()
-                 << "showingTutorial=" << mpConnectionDialog->showingTutorialInvitation();
         emit signal_connectionDialogShown();
-        qDebug() << "[CI-TRACE] mudlet::slot_showConnectionDialog signal_connectionDialogShown returned";
     });
 }
 
@@ -4760,10 +4754,8 @@ void mudlet::slot_processEventLoopHackTimerRun()
 
 void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connect)
 {
-    qDebug() << "[CI-TRACE] mudlet::slot_connectionDialogueFinished ENTER profile=" << profile << "connect=" << connect;
     Host* pHost = getHostManager().getHost(profile);
     if (!pHost) {
-        qDebug() << "[CI-TRACE] mudlet::slot_connectionDialogueFinished EARLY RETURN: getHost returned null";
         return;
     }
     pHost->mIsProfileLoadingSequence = true;
@@ -4876,7 +4868,6 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
     pHost->raiseEvent(event);
     pHost->mIsProfileLoadingSequence = false;
-    qDebug() << "[CI-TRACE] mudlet::slot_connectionDialogueFinished about to emit signal_profileLoaded for" << profile;
     emit signal_profileLoaded();
 
     if (showUiTour) {

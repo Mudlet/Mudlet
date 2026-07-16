@@ -366,14 +366,14 @@ jobs:
       run: ctest --output-on-failure
       env:
         QT_QPA_PLATFORM: offscreen
-        QT_FORCE_STDERR_LOGGING: 1
-        ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
-        LSAN_OPTIONS: ${{ matrix.enable_asan == 'true' && format('suppressions={0}/asan-suppressions.txt:exitcode=0', github.workspace) || '' }}
 
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
+
+    - name: Run QTest
+      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
       env:
         QT_FORCE_STDERR_LOGGING: 1
 
