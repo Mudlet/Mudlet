@@ -33,6 +33,7 @@ set(UNIT_TESTS
     TTextEditBlinkTest
     TAreaZLevelIndexTest
     TAreaGridIndexTest
+    TKeySequenceEditTest
     TEncodingHelperTest
 )
 

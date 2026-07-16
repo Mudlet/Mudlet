@@ -144,6 +144,7 @@ set(mudlet_SRCS
     THyperlinkVisibilityManager.cpp
     TimerUnit.cpp
     TKey.cpp
+    TKeySequenceEdit.cpp
     TLabel.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
@@ -376,6 +377,7 @@ set(mudlet_HDRS
     THyperlinkVisibilityManager.h
     TimerUnit.h
     TKey.h
+    TKeySequenceEdit.h
     TLabel.h
     TLinkStore.h
     TLuaInterpreter.h
