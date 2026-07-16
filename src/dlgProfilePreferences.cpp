@@ -194,6 +194,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     */
     pushButton_copyMap->setText(tr("copy to %n destination(s)", nullptr, 0));
 
+    // Must be explicitly hidden before initWithHost(...) can show it again for
+    // duplicates that were saved in a previous session:
+    label_shortcutsConflictWarning->hide();
+
     if (pHost) {
         initWithHost(pHost);
     } else {
@@ -292,6 +296,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     });
     connect(toolButton_resetMainWindowShortcuts, &QPushButton::released, this, [=, this]() {
         emit signal_resetMainWindowShortcutsToDefaults();
+        // Recompute once after every editor has been reset, rather than per
+        // editor, so transient clashes part-way through do not raise warnings:
+        updateShortcutConflictWarning();
     });
 
     generateDiscordTooltips();
@@ -1554,12 +1561,87 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             }
             sequenceEdit->setKeySequence(newSequence);
             currentShortcuts[key] = newSequence;
+            updateShortcutConflictWarning();
         });
         connect(this, &dlgProfilePreferences::signal_resetMainWindowShortcutsToDefaults, sequenceEdit, [=]() {
             const auto defaultSequence = *mudlet::self()->mpShortcutsManager->getDefault(key);
             sequenceEdit->setKeySequence(defaultSequence);
             currentShortcuts[key] = defaultSequence;
         });
+    }
+    updateShortcutConflictWarning();
+}
+
+// Recomputes the duplicate state of the whole shortcut map, not just the last
+// edited entry, so the warning always names every clash and disappears once
+// none remain. Duplicates are deliberately still accepted - taking away the
+// ability to set one would make rearranging shortcuts awkward - but Qt
+// disables ambiguous shortcuts, so the user has to be told about the clash.
+void dlgProfilePreferences::updateShortcutConflictWarning()
+{
+    ShortcutsManager* manager = mudlet::self()->mpShortcutsManager;
+    QStringList keys;
+    auto keysIterator = manager->iterator();
+    while (keysIterator.hasNext()) {
+        keys.append(keysIterator.next());
+    }
+
+    QStringList warnings;
+    QList<int> reported;
+    for (int i = 0; i < keys.size(); ++i) {
+        if (reported.contains(i)) {
+            continue;
+        }
+        const QKeySequence sequence = currentShortcuts.value(keys.at(i));
+        if (sequence.isEmpty()) {
+            continue;
+        }
+        QStringList labels{manager->getLabel(keys.at(i))};
+        for (int j = i + 1; j < keys.size(); ++j) {
+            const QKeySequence other = currentShortcuts.value(keys.at(j));
+            if (!other.isEmpty() && sequence.matches(other) == QKeySequence::ExactMatch) {
+                labels.append(manager->getLabel(keys.at(j)));
+                reported.append(j);
+            }
+        }
+        if (labels.size() < 2) {
+            continue;
+        }
+        const QString sequenceText = sequence.toString(QKeySequence::NativeText);
+        if (labels.size() == 2) {
+            //: Inline warning on the shortcuts preferences page when exactly two actions have been given the same shortcut. %1 and %2 are the action names, %3 is the shortcut itself.
+            warnings.append(tr("Warning: '%1' and '%2' now share the shortcut %3 - neither will work until one of them is changed.").arg(labels.at(0), labels.at(1), sequenceText));
+        } else {
+            QStringList quotedLabels;
+            for (const auto& label : labels) {
+                quotedLabels.append(qsl("'%1'").arg(label));
+            }
+            //: Inline warning on the shortcuts preferences page when three or more actions have been given the same shortcut. %1 is the list of action names (each already quoted), %2 is the shortcut itself.
+            warnings.append(tr("Warning: %1 now share the shortcut %2 - none of them will work until they are changed.").arg(quotedLabels.join(qsl(", ")), sequenceText));
+        }
+    }
+
+    const QString warningText = warnings.join(QChar::LineFeed);
+    if (warningText.isEmpty()) {
+        if (!label_shortcutsConflictWarning->isHidden()) {
+            label_shortcutsConflictWarning->hide();
+            label_shortcutsConflictWarning->clear();
+            if (QAccessible::isActive()) {
+                //: Screen-reader announcement when editing the shortcuts removed the last duplicated assignment.
+                mudlet::self()->announce(tr("Shortcut conflict resolved."), QString(), true);
+            }
+        }
+        return;
+    }
+
+    label_shortcutsConflictWarning->setStyleSheet(qsl("color: %1; font-weight: bold;").arg(mudlet::self()->inDarkMode() ? qsl("#ff8080") : qsl("#aa0000")));
+    if (!label_shortcutsConflictWarning->isHidden() && warningText == label_shortcutsConflictWarning->text()) {
+        return;
+    }
+    label_shortcutsConflictWarning->setText(warningText);
+    label_shortcutsConflictWarning->show();
+    if (QAccessible::isActive()) {
+        mudlet::self()->announce(warningText, QString(), true);
     }
 }
 
@@ -1679,6 +1761,9 @@ void dlgProfilePreferences::clearHostDetails()
     code_editor_theme_selection_combobox->clear();
     script_preview_combobox->clear();
     edbeePreviewWidget->textDocument()->setText(QString());
+
+    label_shortcutsConflictWarning->hide();
+    label_shortcutsConflictWarning->clear();
 
     checkBox_mVersionInTTYPE->setChecked(false);
     checkBox_mForceMXPProcessorOn->setChecked(false);
@@ -4632,6 +4717,10 @@ void dlgProfilePreferences::slot_setAppearance(const enums::Appearance state)
     if (wasDarkMode == isDarkMode) {
         return;
     }
+
+    // Restyle the shortcut clash warning (if it is showing) for the new
+    // palette:
+    updateShortcutConflictWarning();
 
     Host* pHost = mpHost;
     if (!pHost) {

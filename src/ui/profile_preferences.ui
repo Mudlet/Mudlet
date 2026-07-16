@@ -4468,6 +4468,22 @@ you can use it but there could be issues with aligning columns of text</string>
             </layout>
            </widget>
           </item>
+          <item>
+           <widget class="QLabel" name="label_shortcutsConflictWarning">
+            <property name="text">
+             <string notr="true"/>
+            </property>
+            <property name="textFormat">
+             <enum>Qt::TextFormat::PlainText</enum>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
           <item alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QToolButton" name="toolButton_resetMainWindowShortcuts">
             <property name="text">
