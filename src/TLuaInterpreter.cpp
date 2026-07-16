@@ -1058,6 +1058,26 @@ int TLuaInterpreter::feedTelnet(lua_State* L)
         lua_pushstring(L, "feedTelnet: refused, telnet connection socket is not in the unconnected state");
         return 2;
     }
+
+    // Same self-feeding-loop guard as feedTriggers(), but each nested telnet
+    // processing frame is large - see scmMaxLoopbackProcessingDepth.
+    if (host.mTelnet.loopbackProcessingDepth() >= cTelnet::scmMaxLoopbackProcessingDepth) {
+        qWarning().nospace() << "TLuaInterpreter::feedTelnet(...) aborting: nested telnet data processing reached the limit of " << cTelnet::scmMaxLoopbackProcessingDepth
+                             << " - probably an endless feedTelnet loop.";
+        const QString* pName = host.getTriggerUnit()->currentExecutingTriggerName();
+        if (pName && !pName->isEmpty()) {
+            lua_pushfstring(L,
+                            "feedTelnet stopped to prevent a crash: trigger '%s' (or another trigger it feeds) is stuck in an endless loop - the data being fed keeps re-matching a trigger and "
+                            "firing it again and again. Change the trigger's pattern or the fed data so they don't match each other.",
+                            pName->toUtf8().constData());
+        } else {
+            lua_pushstring(L,
+                           "feedTelnet stopped to prevent a crash: a trigger (or another trigger it feeds) is stuck in an endless loop - the data being fed keeps re-matching a trigger and firing "
+                           "it again and again. Change the trigger's pattern or the fed data so they don't match each other.");
+        }
+        return lua_error(L);
+    }
+
     const QByteArray rawData{lua_tostring(L, 1)};
     // We need to convert any "<*>" codes to their raw byte forms:
     QByteArray cookedData{parseTelnetCodes(rawData)};
@@ -1076,7 +1096,7 @@ int TLuaInterpreter::feedTelnet(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#feedTriggers
 int TLuaInterpreter::feedTriggers(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L,
                         "feedTriggers: bad argument #1 type (imitation game server text as string\n"
@@ -1084,6 +1104,28 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
                         luaL_typename(L, 1));
         return lua_error(L);
     }
+
+    // A self-feeding trigger recurses the C++ stack one level per re-match; abort
+    // with a catchable Lua error before that overflows the stack into a crash.
+    auto* triggerUnit = host.getTriggerUnit();
+    if (triggerUnit->processingDepth() >= TriggerUnit::scmMaxProcessingDepth) {
+        qWarning().nospace() << "TLuaInterpreter::feedTriggers(...) aborting: trigger processing recursion reached the limit of " << TriggerUnit::scmMaxProcessingDepth
+                             << " - probably an endless feedTriggers loop.";
+        const QString* pName = triggerUnit->currentExecutingTriggerName();
+        // The QByteArray temporary dies before lua_error()'s longjmp, which skips C++ destructors.
+        if (pName && !pName->isEmpty()) {
+            lua_pushfstring(L,
+                            "feedTriggers stopped to prevent a crash: trigger '%s' (or another trigger it feeds) is stuck in an endless loop - the text being fed keeps re-matching a trigger and "
+                            "firing it again and again. Change the trigger's pattern or the fed text so they don't match each other.",
+                            pName->toUtf8().constData());
+        } else {
+            lua_pushstring(L,
+                           "feedTriggers stopped to prevent a crash: a trigger (or another trigger it feeds) is stuck in an endless loop - the text being fed keeps re-matching a trigger and firing "
+                           "it again and again. Change the trigger's pattern or the fed text so they don't match each other.");
+        }
+        return lua_error(L);
+    }
+
     const QByteArray data{lua_tostring(L, 1)};
     bool dataIsUtf8Encoded = true;
     if (lua_gettop(L) > 1) {

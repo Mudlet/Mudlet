@@ -45,6 +45,7 @@
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTimer>
+#include <QUrl>
 
 // We are now using code that won't work with really old versions of libzip;
 // some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
@@ -638,8 +639,11 @@ void dlgPackageExporter::slot_importIcon()
     }
     lastDir = QFileInfo(fileName).absolutePath();
     settings.setValue("lastFileDialogLocation", lastDir);
-    mPackagePath = lastDir;
-    emit signal_exportLocationChanged(mPackagePath);
+    if (!mIsModuleCreationMode) {
+        // browsing for an icon must not redirect where the module gets saved
+        mPackagePath = lastDir;
+        emit signal_exportLocationChanged(mPackagePath);
+    }
     mPackageIconPath = fileName;
     const QIcon myIcon(mPackageIconPath);
     ui->Icon->clear();
@@ -857,9 +861,9 @@ void dlgPackageExporter::slot_exportPackage()
 
     // if packageName changed allow to create a new package in the same path
     if (mIsModuleCreationMode) {
-        // For modules, save to the profile directory instead of user's last dialog location
-        QString profileDir = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName());
-        mPackagePathFileName = qsl("%1/%2.mpackage").arg(profileDir, mPackageName);
+        // Modules default to the profile directory unless the user picked a save location
+        const QString moduleDir = mPackagePath.isEmpty() ? mudlet::getMudletPath(enums::profileHomePath, mpHost->getName()) : mPackagePath;
+        mPackagePathFileName = qsl("%1/%2.mpackage").arg(moduleDir, mPackageName);
     } else {
         mPackagePathFileName = qsl("%1/%2.mpackage").arg(getActualPath(), mPackageName);
     }
@@ -962,8 +966,12 @@ void dlgPackageExporter::slot_exportPackage()
                     if (mIsModuleCreationMode) {
                         auto [installSuccess, installMessage] = mpHost->installPackage(mPackagePathFileName, enums::PackageModuleType::ModuleFromUI);
                         if (installSuccess) {
+                            const QString savedDir = QFileInfo(mPackagePathFileName).absolutePath();
+                            const QString savedDirLink = qsl("<a href=\"%1\">%2</a>").arg(QUrl::fromLocalFile(savedDir).toString(QUrl::FullyEncoded).toHtmlEscaped(), savedDir.toHtmlEscaped());
                             // Show embedded success message (better UX than popup)
-                            displayResultMessage(tr("Module \"%1\" created and installed successfully! You can now close this dialog.").arg(mPackageName.toHtmlEscaped()), true);
+                            //: %1 is the module name, %2 is a clickable link to the folder the module file was saved in
+                            displayResultMessage(tr("Module \"%1\" created and installed successfully! Saved to: %2. You can now close this dialog.").arg(mPackageName.toHtmlEscaped(), savedDirLink),
+                                                 true);
 
                             // Clear the form to allow creating another module
                             ui->lineEdit_packageName->clear();
@@ -1551,8 +1559,11 @@ void dlgPackageExporter::slot_addFiles()
 
         lastDir = fDialog->directory().absolutePath();
         settings.setValue("lastFileDialogLocation", lastDir);
-        mPackagePath = lastDir;
-        emit signal_exportLocationChanged(mPackagePath);
+        if (!mIsModuleCreationMode) {
+            // adding asset files must not redirect where the module gets saved
+            mPackagePath = lastDir;
+            emit signal_exportLocationChanged(mPackagePath);
+        }
     }
     fDialog->deleteLater();
 }

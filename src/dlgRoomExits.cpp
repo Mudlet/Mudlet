@@ -1191,11 +1191,10 @@ void dlgRoomExits::normalStubExitChanged(const int state,
             // Id still in that field - so clear it:
             pExit->setText(QString());
             setActionOnExit(pExit, mpAction_noExit);
-            pWeight->setValue(0);        // Can't have a weight for a stub pExit
-            pNoRoute->setChecked(false); // nor a "lock"
+            pWeight->setValue(0); // Can't have a weight for a stub pExit
         }
-        pNoRoute->setEnabled(false); // Disable "lock" on this exit
-        pExit->setEnabled(false);    // Prevent entry of an exit roomID
+        pNoRoute->setEnabled(true); // Permit a stub to be locked ("No route"), matching what the Lua API allows
+        pExit->setEnabled(false);   // Prevent entry of an exit roomID
         pExit->setToolTip(utils::richText(tr("Clear the stub exit for this exit to enter an exit roomID.")));
         pDoorType_none->setEnabled(true);
         pDoorType_open->setEnabled(true);
@@ -1206,8 +1205,11 @@ void dlgRoomExits::normalStubExitChanged(const int state,
         pExit->setEnabled(true);
         setActionOnExit(pExit, mpAction_noExit);
         pExit->setToolTip(noExitToolTipText);
-        //  pNoRoute->setEnabled(true); although this branch will enable the exit entry
-        //  there will not be a valid one there yet so don't enable the noroute(lock) control here!
+        // Although this branch enables the exit entry there will not be a valid
+        // exit nor a stub there yet, so there is nothing to lock - disable and
+        // clear the noroute(lock) control:
+        pNoRoute->setEnabled(false);
+        pNoRoute->setChecked(false);
         pDoorType_none->setEnabled(false);
         pDoorType_open->setEnabled(false);
         pDoorType_closed->setEnabled(false);
@@ -1605,16 +1607,16 @@ void dlgRoomExits::initExit(int direction,
     } else {                                             //No exit is set on initialisation
         exitLineEdit->setText(QString());                //Nothing to put in exitID box
         setActionOnExit(exitLineEdit, mpAction_noExit);
-        noRoute->setEnabled(false); //Disable lock control, can't lock a non-existent exit..
-        noRoute->setChecked(false); //.. and ensure there isn't one
-        weight->setEnabled(false);  //Disable exit weight control...
-        weight->setValue(0);        //And reset to default value (which will now cause the room's one to be used
-        stub->setEnabled(true);     //Enable stub exit control
+        weight->setEnabled(false); //Disable exit weight control...
+        weight->setValue(0);       //And reset to default value (which will now cause the room's one to be used
+        stub->setEnabled(true);    //Enable stub exit control
         if (pR->hasExitStub(direction)) {
             exitLineEdit->setEnabled(false); //There is a stub exit, so prevent exit number entry...
             exitLineEdit->setToolTip(utils::richText(tr("Clear the stub exit for this exit to enter an exit roomID.")));
             stub->setChecked(true);
-            none->setEnabled(true); //Enable door type controls, can have a door on a stub exit..
+            noRoute->setEnabled(true);                       //A stub can be locked ("No route"), matching the Lua API
+            noRoute->setChecked(pR->hasExitLock(direction)); //Set/reset "lock" control as appropriate
+            none->setEnabled(true);                          //Enable door type controls, can have a door on a stub exit..
             open->setEnabled(true);
             closed->setEnabled(true);
             locked->setEnabled(true);
@@ -1622,8 +1624,10 @@ void dlgRoomExits::initExit(int direction,
             exitLineEdit->setEnabled(true);
             exitLineEdit->setToolTip(validExitToolTip);
             stub->setChecked(false);
-            none->setEnabled(false); //Disable door type controls, can't lock a non-existent exit..
-            open->setEnabled(false); //.. and ensure the "none" one is set if it ever gets enabled
+            noRoute->setEnabled(false); //Disable lock control, can't lock a non-existent exit..
+            noRoute->setChecked(false); //.. and ensure there isn't one
+            none->setEnabled(false);    //Disable door type controls, can't lock a non-existent exit..
+            open->setEnabled(false);    //.. and ensure the "none" one is set if it ever gets enabled
             closed->setEnabled(false);
             locked->setEnabled(false);
             none->setChecked(true);

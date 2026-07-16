@@ -429,6 +429,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     auto settings = mudlet::self()->getQSettings();
     const auto interval = settings->value("autosaveIntervalMinutes", 2).toInt();
     startMapAutosave(interval);
+
+    mMapperCenterSmallAreas = settings->value("mapCenterSmallAreas", false).toBool();
 }
 
 Host::~Host()
@@ -877,6 +879,9 @@ void Host::resetProfile_phase2()
     mEventMap.clear();
     mLuaInterpreter.abortAllDownloads();
     mLuaInterpreter.initLuaGlobals();
+    // initLuaGlobals() closed the old lua_State, so the LuaInterface (and its
+    // VarUnit tree of registry references) must be rebuilt against the new one:
+    mLuaInterface.reset(new LuaInterface(mLuaInterpreter.getLuaGlobalState()));
     mLuaInterpreter.loadGlobal();
 
     // Have to recopy the values into the Lua "color_table"
@@ -1375,6 +1380,10 @@ QPair<QString, QString> Host::getSearchEngine()
 // cTelnet::sendData(...) call:
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
+    // Record that the player (or a script acting for them) has interacted this connection; a later
+    // unsolicited GMCP Char.Login.URL may then auto-open the browser (see GMCPAuthenticator).
+    mUserSentInputThisConnection = true;
+
     // Determine if we should print the command based on the echo mode
     bool shouldPrint = false;
     switch (mCommandEchoMode) {
@@ -2374,7 +2383,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         mpEditorDialog->doCleanReset();
     }
 
-    getActionUnit()->updateToolbar();
+    getActionUnit()->updateAllToolbars();
 
     const QString dest = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
     removeDir(dest, dest);

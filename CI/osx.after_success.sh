@@ -20,20 +20,36 @@ sign_app_bundle () {
 
   local appBundle="$1"
   echo "Signing app bundle: ${appBundle}"
-  codesign -s "$IDENTITY" -o runtime --timestamp "${appBundle}"
+  # -f forces a re-sign: the portable flow adds portable.txt to the bundle, which
+  # invalidates the signature applied during the main dmg flow. Return non-zero on
+  # failure so callers can skip the portable rather than ship a broken bundle.
+  if ! codesign -f -s "$IDENTITY" -o runtime --timestamp "${appBundle}"; then
+    echo "::warning::failed to codesign ${appBundle}"
+    return 1
+  fi
   echo "Successfully signed app bundle"
 
   echo "Notarizing app bundle"
+  # notarytool needs an archive (zip/dmg/pkg), not a bare .app bundle.
+  local notarizeZip="${appBundle}.notarize.zip"
+  ditto -c -k --keepParent "${appBundle}" "${notarizeZip}"
+  local notarized="false"
   for i in {1..3}; do
     echo "Trying to notarize app bundle (attempt ${i})"
-    if xcrun notarytool submit "${appBundle}" --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait; then
+    if xcrun notarytool submit "${notarizeZip}" --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait; then
       echo "Successfully notarized app bundle"
+      notarized="true"
       break
     fi
   done
+  rm -f "${notarizeZip}"
 
-  echo "Stapling notarization ticket to app bundle"
-  xcrun stapler staple "${appBundle}"
+  if [ "${notarized}" = "true" ]; then
+    echo "Stapling notarization ticket to app bundle"
+    xcrun stapler staple "${appBundle}" || echo "::warning::failed to staple notarization ticket to ${appBundle}"
+  else
+    echo "::warning::could not notarize ${appBundle}; shipping a signed but un-notarized portable app bundle"
+  fi
 }
 
 BUILD_DIR="${BUILD_FOLDER}"
@@ -107,8 +123,19 @@ if [ "${DEPLOY}" = "deploy" ]; then
             if [[ -n "${BUILD_COMMIT}" ]] \
                 && { [[ "${BUILD_COMMIT}" == "${existing_commit}"* ]] \
                   || [[ "${existing_commit}" == "${BUILD_COMMIT}"* ]]; }; then
-              echo "== PTB already exists for commit ${BUILD_COMMIT} (${existing_tag}), aborting public test build generation =="
-              exit 0
+              # A PTB exists for this commit, but the platforms (and each macOS
+              # arch) build in parallel and share one release - only skip if this
+              # arch's .dmg is already published. Otherwise a sibling build (or a
+              # re-run) created the release first and we still owe it our asset,
+              # so one build racing ahead or failing never blocks the others.
+              if gh release view "${existing_tag}" --repo "${GITHUB_REPOSITORY}" \
+                    --json assets --jq '.assets[].name' 2>/dev/null \
+                    | grep -q -- "-${ARCH}\.dmg$"; then
+                echo "== PTB ${existing_tag} already has the ${ARCH} macOS asset for ${BUILD_COMMIT}, skipping rebuild =="
+                exit 0
+              fi
+              echo "== PTB ${existing_tag} exists for ${BUILD_COMMIT} but has no ${ARCH} macOS asset yet - building to add it =="
+              break
             fi
           done <<< "${existing_ptb_tags}"
         else
@@ -179,13 +206,24 @@ if [ "${DEPLOY}" = "deploy" ]; then
       } >> "$GITHUB_ENV"
 
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
-      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-${ARCH}.dmg"
-
-      if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
-        echo "Error: release not found as expected at $DEPLOY_URL"
+      if ! scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"; then
+        echo "::error::failed to upload Mudlet-${VERSION}-${ARCH}.dmg to make.mudlet.org"
         exit 1
       fi
+      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-${ARCH}.dmg"
+
+      # Retry to tolerate the delay between scp landing on make.mudlet.org and the
+      # file being served at www.mudlet.org - the publish step is not instantaneous.
+      verify_attempt=0
+      until curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; do
+        verify_attempt=$((verify_attempt + 1))
+        if [ "$verify_attempt" -ge 18 ]; then
+          echo "::warning::release uploaded to make.mudlet.org but not yet downloadable at $DEPLOY_URL after $verify_attempt attempts (CloudFlare/publish lag); the scp above is the authoritative upload check"
+          break
+        fi
+        echo "Release not yet available at $DEPLOY_URL, retrying in 10s (attempt $verify_attempt/18)..."
+        sleep 10
+      done
 
       SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" | awk '{print $1}')
 
@@ -208,28 +246,50 @@ if [ "${DEPLOY}" = "deploy" ]; then
           exit 1
         fi
 
-        # Sign the app bundle specifically for portable version
+        # Sign the app bundle for the portable version. portable.txt currently
+        # lives in Contents/MacOS/, which breaks codesign; until the marker is
+        # moved to a codesign-safe location (to be fixed on the development
+        # branch), the macOS portable is best-effort: skip it on signing failure
+        # rather than fail the whole release build.
+        PORTABLE_READY="true"
         if [ -n "$MACOS_SIGNING_PASS" ]; then
           echo "Signing app bundle for portable version"
-          sign_app_bundle "$APP_PATH"
+          if ! sign_app_bundle "$APP_PATH"; then
+            echo "::warning::macOS portable signing failed; skipping the macOS portable for this build"
+            PORTABLE_READY="false"
+          fi
         fi
 
-        tar -czf "${PORTABLE_NAME}.tar.gz" -C "$APP_DIR" "mudlet.app"
+        if [ "${PORTABLE_READY}" = "true" ]; then
+          tar -czf "${PORTABLE_NAME}.tar.gz" -C "$APP_DIR" "mudlet.app"
+        fi
       else
         echo "Error: Could not find mudlet.app anywhere in ${BUILD_DIR}"
         echo "Directory contents:"
         find "${BUILD_DIR}" -name "*.app" -type d
         exit 1
       fi
-      PORTABLE_SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" | awk '{print $1}')
 
-      echo "=== Uploading portable version ==="
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"
-      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
+      if [ "${PORTABLE_READY}" = "true" ]; then
+        PORTABLE_SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" | awk '{print $1}')
 
-      if ! curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; then
-        echo "Error: portable release not found as expected at $PORTABLE_DEPLOY_URL"
-        exit 1
+        echo "=== Uploading portable version ==="
+        if ! scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" "mudmachine@make.mudlet.org:${DEPLOY_PATH}"; then
+          echo "::error::failed to upload ${PORTABLE_NAME}.tar.gz to make.mudlet.org"
+          exit 1
+        fi
+        PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
+
+        verify_attempt=0
+        until curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; do
+          verify_attempt=$((verify_attempt + 1))
+          if [ "$verify_attempt" -ge 18 ]; then
+            echo "::warning::portable uploaded to make.mudlet.org but not yet downloadable at $PORTABLE_DEPLOY_URL after $verify_attempt attempts (CloudFlare/publish lag)"
+            break
+          fi
+          echo "Portable release not yet available at $PORTABLE_DEPLOY_URL, retrying in 10s (attempt $verify_attempt/18)..."
+          sleep 10
+        done
       fi
 
       if [ "${ARCH}" = "arm64" ]; then
@@ -243,7 +303,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       read -r day month year hour minute second <<< "$current_timestamp"
 
       # Upload regular DMG version
-      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+      curl --retry 5 -X POST 'https://make.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=$DEPLOY_URL" \
@@ -260,8 +320,9 @@ if [ "${DEPLOY}" = "deploy" ]; then
       -F "output=json" \
       -F "do=Add File"
 
-      # Upload portable version
-      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+      # Upload portable version (only when the portable was successfully built)
+      if [ "${PORTABLE_READY}" = "true" ]; then
+      curl --retry 5 -X POST 'https://make.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=$PORTABLE_DEPLOY_URL" \
@@ -277,6 +338,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       -F "file_timestamp_second=$second" \
       -F "output=json" \
       -F "do=Add File"
+      fi
 
     fi
 
@@ -298,7 +360,9 @@ if [ "${DEPLOY}" = "deploy" ]; then
       # release registration and uploading will be manual for the time being
     else
       echo "=== Registering release with Dblsqd ==="
-      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:${ARCH_DBLSQD} "${DEPLOY_URL}"
+      # Non-fatal: dblsqd is legacy (GitHub releases are the primary distribution now),
+      # and the dblsqd release may not be pre-created. Do not let it block the build.
+      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:${ARCH_DBLSQD} "${DEPLOY_URL}" || echo "::warning::dblsqd push failed for mac:${ARCH_DBLSQD} - continuing (GitHub release is the primary distribution)"
     fi
   fi
 
