@@ -43,6 +43,7 @@
 #include <QRandomGenerator>
 #include <QSettings>
 #include <QSignalBlocker>
+#include <QTabBar>
 #include <QTime>
 #include <chrono>
 #include <sstream>
@@ -88,6 +89,40 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     listWidget_profiles->setSelectionMode(QAbstractItemView::SingleSelection);
     listWidget_profiles->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(listWidget_profiles, &QWidget::customContextMenuRequested, this, &dlgConnectionProfiles::slot_profileContextMenu);
+
+    mpTabBar = new QTabBar(this);
+    //: Tab showing only the games the user already has profiles for
+    mpTabBar->insertTab(scmMyGamesTab, tr("My games"));
+    //: Tab showing every game Mudlet has a built-in profile for
+    mpTabBar->insertTab(scmAllGamesTab, tr("All games"));
+    mpTabBar->setExpanding(false);
+    mpTabBar->setAccessibleName(tr("games shown"));
+    mpTabBar->setAccessibleDescription(tr("Switch between showing only your own games and all of the games Mudlet knows about."));
+    verticalLayout_gamesList->insertWidget(0, mpTabBar);
+    setTabOrder(mpTabBar, listWidget_profiles);
+
+    if (!mudlet::self()->mOnlyShownPredefinedProfiles.isEmpty()) {
+        // dedicated single-game builds only ever show their own game(s), so
+        // there is nothing to switch between
+        mpTabBar->hide();
+    } else {
+        auto& settings = *mudlet::self()->mpSettings;
+        int initialTab = scmMyGamesTab;
+        if (settings.contains(qsl("connectionDialogActiveTab"))) {
+            initialTab = settings.value(qsl("connectionDialogActiveTab")).toInt() == scmAllGamesTab ? scmAllGamesTab : scmMyGamesTab;
+        } else if (settings.value(qsl("showOnlyMyProfiles"), false).toBool()) {
+            // migrate the retired "Show my profiles only" context menu filter,
+            // which the "My games" tab replaces
+            initialTab = scmMyGamesTab;
+        } else if (QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty()) {
+            // a newcomer has no profiles yet, so show them the catalog
+            initialTab = scmAllGamesTab;
+        }
+        mpTabBar->setCurrentIndex(initialTab);
+    }
+    // connected only after the initial tab is set, so that setting it is not
+    // mistaken for the user switching tabs
+    connect(mpTabBar, &QTabBar::currentChanged, this, &dlgConnectionProfiles::slot_activeTabChanged);
 
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
@@ -782,6 +817,33 @@ void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QS
     }
 }
 
+bool dlgConnectionProfiles::showingOnlyMyProfiles() const
+{
+    // the tab bar is hidden for dedicated single-game builds, which list their
+    // own game(s) unfiltered
+    return !mpTabBar->isHidden() && mpTabBar->currentIndex() == scmMyGamesTab;
+}
+
+void dlgConnectionProfiles::slot_activeTabChanged(const int index)
+{
+    mudlet::self()->mpSettings->setValue(qsl("connectionDialogActiveTab"), index);
+
+    const auto* pCurrentItem = listWidget_profiles->currentItem();
+    const QString previousSelection = pCurrentItem ? pCurrentItem->data(csmNameRole).toString() : QString();
+
+    fillout_form();
+
+    if (previousSelection.isEmpty()) {
+        return;
+    }
+    // keep the same game selected if the newly shown tab also lists it,
+    // otherwise the automatic selection made by fillout_form() stands
+    const auto pPreviousItems = findData(*listWidget_profiles, previousSelection, csmNameRole);
+    if (!pPreviousItems.isEmpty()) {
+        listWidget_profiles->setCurrentItem(pPreviousItems.first());
+    }
+}
+
 void dlgConnectionProfiles::slot_addProfile()
 {
     profile_name_entry->setReadOnly(false);
@@ -1252,7 +1314,7 @@ void dlgConnectionProfiles::fillout_form()
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
-    const bool showOnlyMyProfiles = settings.value(qsl("showOnlyMyProfiles"), false).toBool();
+    const bool showOnlyMyProfiles = showingOnlyMyProfiles();
     if (onlyShownPredefinedProfiles.isEmpty()) {
         const auto defaultGames = TGameDetails::keys();
         for (auto& game : defaultGames) {
@@ -1329,6 +1391,11 @@ void dlgConnectionProfiles::fillout_form()
                 while (toselectRow == -1 || toselectRow == test_profile_row) {
                     toselectRow = QRandomGenerator::global()->bounded(listWidget_profiles->count());
                 }
+            } else if (listWidget_profiles->count() == 1 && test_profile_row != 0) {
+                // The "My games" tab can show a single profile that has not been
+                // saved to its XML yet, so select it to fill in its details
+                // instead of leaving the form blank with a game highlighted
+                toselectRow = 0;
             }
         } else if (predefined_profile_row >= 0) {
             // If the user is starting one of a MUD's "dedicated" Mudlet versions then
@@ -1478,20 +1545,6 @@ void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
                        this,
                        &dlgConnectionProfiles::slot_setCustomColor);
     }
-
-    menu.addSeparator();
-
-    auto& settings = *mudlet::self()->mpSettings;
-    const bool showOnlyMyProfiles = settings.value(qsl("showOnlyMyProfiles"), false).toBool();
-    //: Context menu action to toggle hiding default game profiles that have not been used yet
-    auto* pAction_showMyProfilesOnly = menu.addAction(tr("Show my profiles only"));
-    pAction_showMyProfilesOnly->setCheckable(true);
-    pAction_showMyProfilesOnly->setChecked(showOnlyMyProfiles);
-    connect(pAction_showMyProfilesOnly, &QAction::toggled, this, [this](const bool checked) {
-        auto& settings = *mudlet::self()->mpSettings;
-        settings.setValue(qsl("showOnlyMyProfiles"), checked);
-        fillout_form();
-    });
 
     menu.exec(globalPos);
 }

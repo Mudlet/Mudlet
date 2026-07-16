@@ -101,20 +101,27 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QListWidget" name="listWidget_profiles">
-           <property name="minimumSize">
-            <size>
-             <width>365</width>
-             <height>0</height>
-            </size>
+          <layout class="QVBoxLayout" name="verticalLayout_gamesList">
+           <property name="spacing">
+            <number>0</number>
            </property>
-           <property name="accessibleName">
-            <string>profiles list</string>
-           </property>
-           <property name="resizeMode">
-            <enum>QListView::Adjust</enum>
-           </property>
-          </widget>
+           <item>
+            <widget class="QListWidget" name="listWidget_profiles">
+             <property name="minimumSize">
+              <size>
+               <width>365</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="accessibleName">
+              <string>profiles list</string>
+             </property>
+             <property name="resizeMode">
+              <enum>QListView::Adjust</enum>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </item>
          <item>
           <widget class="QFrame" name="notificationArea">
