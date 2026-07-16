@@ -7194,6 +7194,13 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
         mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.mpackage"));
     }
 
+    // A modest starter UI for GMCP-capable games, only for players new to
+    // Mudlet - veterans will have their own layouts already:
+    const QStringList baseUiGames = {qsl("aetolia.com"), qsl("achaea.com"), qsl("lusternia.com"), qsl("imperian.com"), qsl("starmourn.com"), qsl("stickmud.com")};
+    if (baseUiGames.contains(gameUrl) && !mudlet::self()->experiencedMudletPlayer()) {
+        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/base-ui/mudlet-base-ui.xml"));
+    }
+
     // Don't play tutorial for every connection to localhost. There are legit other reasons to connect there.
     if (profileName == qsl("Mudlet Tutorial") && gameUrl == qsl("localhost")) {
         mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-tutorial.mpackage"));

@@ -222,6 +222,7 @@
         <file>icesus-loader.xml</file>
         <file>lua-function-list.json</file>
         <file>mg-loader.xml</file>
+        <file>mudlet-lua/lua/base-ui/mudlet-base-ui.xml</file>
         <file>mudlet-lua/lua/generic-mapper/generic_mapper.mpackage</file>
         <file>mudlet-lua/lua/gui-drop/gui-drop.mpackage</file>
         <file>enable-accessibility.mpackage</file>
