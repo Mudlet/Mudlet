@@ -38,6 +38,8 @@
 #include <QtMath>
 #include <QVersionNumber>
 
+#include <memory>
+
 XMLimport::XMLimport(Host* pH)
 : mpHost(pH)
 {
@@ -200,7 +202,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         }
 
         if (gotAction) {
-            mpHost->getActionUnit()->updateToolbar();
+            mpHost->getActionUnit()->updateAllToolbars();
         } else {
             mpHost->getActionUnit()->unregisterAction(mpAction);
             delete mpAction;
@@ -476,7 +478,7 @@ void XMLimport::readRoomFeature(TRoom* pR)
 // TRoomDB::addRoom(...)
 void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int* roomCount)
 {
-    auto pT = new TRoom(mpHost->mpMap->mpRoomDB);
+    auto pT = new TRoom(mpHost->mpMap->mpRoomDB.get());
 
     pT->id = attributes().value(qsl("id")).toString().toInt();
     pT->area = attributes().value(qsl("area")).toString().toInt();
@@ -2049,7 +2051,7 @@ void XMLimport::readStopWatchMap()
         } else if (isStartElement()) {
             if (name() == qsl("stopwatch")) {
                 const int watchId = attributes().value(qsl("id")).toInt();
-                auto pStopWatch = new stopWatch();
+                auto pStopWatch = std::make_unique<stopWatch>();
                 pStopWatch->setName(attributes().value(qsl("name")).toString());
                 pStopWatch->mIsPersistent = true;
                 pStopWatch->mIsInitialised = true;
@@ -2063,7 +2065,7 @@ void XMLimport::readStopWatchMap()
                     pStopWatch->mIsRunning = false;
                     pStopWatch->mElapsedTime = attributes().value(qsl("elapsedDateTimeMSecs")).toLongLong();
                 }
-                mpHost->mStopWatchMap.insert(watchId, pStopWatch);
+                mpHost->mStopWatchMap[watchId] = std::move(pStopWatch);
                 // A dummy read as there should not be any text for this element:
                 readElementText();
             } else {
@@ -2113,9 +2115,8 @@ void XMLimport::readProfileShortcut()
 {
     auto key = attributes().value(qsl("key"));
     auto sequenceString = readElementText();
-    if (mpHost->profileShortcuts.value(key.toString())) {
-        QKeySequence* sequence = !sequenceString.isEmpty() ? new QKeySequence(sequenceString) : new QKeySequence();
-        mpHost->profileShortcuts.value(key.toString())->swap(*sequence);
-        delete sequence;
+    if (auto it = mpHost->profileShortcuts.find(key.toString()); it != mpHost->profileShortcuts.end()) {
+        QKeySequence sequence = !sequenceString.isEmpty() ? QKeySequence(sequenceString) : QKeySequence();
+        it->second->swap(sequence);
     }
 }

@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2022-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2022-2024, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -28,6 +29,16 @@
 #include "TTrigger.h"
 
 #include <functional>
+
+/* We need an explicit constructor in this file as the Host class is forward
+ * declared in the header file and it is problematic to define any dereferencing
+ * of it there:*/
+TriggerUnit::TriggerUnit(Host* pHost)
+: mpHost(pHost)
+, mMaxID(0)
+, mModuleMember()
+{
+}
 
 TriggerUnit::~TriggerUnit()
 {
@@ -76,6 +87,20 @@ void TriggerUnit::uninstall(const QString& packageName)
             _uninstall(rootTrigger, packageName);
             uninstallList.append(rootTrigger);
         }
+    }
+    // Re-entrant uninstall (#9337): a trigger's own script (e.g. uninstallPackage())
+    // is removing its package while match()/processDataStream() are still on the
+    // stack for that trigger. Deleting now would be a use-after-free, so defer to
+    // doCleanup() at depth 0. Deactivating is enough to stop them firing for the
+    // rest of this pass: processDataStream()'s loop skips deactivated triggers
+    // and match() runs its whole body inside if (isActive()) for those reached
+    // via a parent chain or filter.
+    if (mProcessingDepth > 0) {
+        for (auto trigger : uninstallList) {
+            trigger->setIsActive(false);
+            mCleanupSet.remove(trigger); // keep the two deferred-delete paths disjoint
+        }
+        return;
     }
     for (auto& trigger : uninstallList) {
         delete trigger;
@@ -289,7 +314,16 @@ void TriggerUnit::processDataStream(const QString& data, int line)
 
     mProcessingDepth++;
 
-    for (auto trigger : mTriggerRootNodeList) {
+    // Iterate a snapshot of the root list: a trigger's Lua script can call
+    // uninstallPackage()/installPackage() and mutate mTriggerRootNodeList
+    // mid-iteration (the underlying std::list::remove frees the iterator's
+    // current node → use-after-free on the next ++). AliasUnit dodges the
+    // same hazard for the same reason — see Mudlet issue #4297.
+    auto copyOfNodeList = mTriggerRootNodeList;
+    for (auto trigger : copyOfNodeList) {
+        if (!trigger->isActive()) {
+            continue;
+        }
         trigger->match(subject, data, line);
     }
     free(subject);
@@ -357,11 +391,11 @@ std::vector<int> TriggerUnit::findItems(const QString& name, const bool exactMat
 bool TriggerUnit::enableTrigger(const QString& name)
 {
     bool found = false;
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
-        TTrigger* pT = it.value();
-        pT->setIsActive(true);
-        ++it;
+    // equal_range visits every same-named trigger; constFind() + (++it) can
+    // start mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        it.value()->setIsActive(true);
         found = true;
     }
     return found;
@@ -370,11 +404,11 @@ bool TriggerUnit::enableTrigger(const QString& name)
 bool TriggerUnit::disableTrigger(const QString& name)
 {
     bool found = false;
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
-        TTrigger* pT = it.value();
-        pT->setIsActive(false);
-        ++it;
+    // equal_range visits every same-named trigger; constFind() + (++it) can
+    // start mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        it.value()->setIsActive(false);
         found = true;
     }
     return found;
@@ -382,11 +416,11 @@ bool TriggerUnit::disableTrigger(const QString& name)
 
 void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
 {
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
-        TTrigger* pT = it.value();
-        pT->mKeepFiring = lines;
-        ++it;
+    // equal_range visits every same-named trigger; constFind() + (++it) can
+    // start mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        it.value()->mKeepFiring = lines;
     }
 }
 
@@ -457,6 +491,18 @@ void TriggerUnit::doCleanup()
         itTrigger.remove();
         delete pTrigger;
     }
+    // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
+    // children-before-parents and each ~Tree unlinks from its parent, so deleting
+    // children first empties the parent's child list (no double free); the seen
+    // set guards a node queued twice by re-entrant uninstalls.
+    QSet<TTrigger*> deletedTriggers;
+    for (auto trigger : uninstallList) {
+        if (!deletedTriggers.contains(trigger)) {
+            deletedTriggers.insert(trigger);
+            delete trigger;
+        }
+    }
+    uninstallList.clear();
 }
 
 void TriggerUnit::markCleanup(TTrigger* pT)

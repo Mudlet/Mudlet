@@ -21,26 +21,45 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QHash>
 #include <QProxyStyle>
 #include <QSet>
 #include <QString>
 #include <QTabBar>
 
+// Connection status indicator drawn next to the tab text by TStyle. We paint
+// it ourselves rather than via QTabBar::setTabIcon() because the macOS native
+// style adds substantial padding around any tab icon - see issue #9213.
+enum class TabConnectionIndicator {
+    None,
+    Connected,
+    Connecting,
+    Disconnected,
+    Error,
+};
+
 class TStyle : public QProxyStyle
 {
 public:
+    // Indicator diameter + left margin + right margin, in logical pixels.
+    // Tuned so the dot is not crammed against the close button or the
+    // tab text.
+    static constexpr int sIndicatorReservedWidth = 20;
+
     explicit TStyle(QTabBar* bar)
     : mpTabBar(bar)
-    {}
+    {
+    }
 
     ~TStyle() = default;
 
-    void drawControl(ControlElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget = nullptr) const;
+    void drawControl(ControlElement element, const QStyleOption* option, QPainter* painter, const QWidget* widget = nullptr) const override;
+    QRect subElementRect(SubElement element, const QStyleOption* option, const QWidget* widget = nullptr) const override;
     void setTabBold(const QString& tabName, const bool state) { setNamedTabState(tabName, state, mBoldTabsSet); }
     void setTabBold(const int index, const bool state) { setIndexedTabState(index, state, mBoldTabsSet); }
     void setTabItalic(const QString& tabName, const bool state) { setNamedTabState(tabName, state, mItalicTabsSet); }
     void setTabItalic(const int index, const bool state) { setIndexedTabState(index, state, mItalicTabsSet); }
-    void setTabUnderline(const QString& tabName, const bool state) {setNamedTabState(tabName, state, mUnderlineTabsSet); }
+    void setTabUnderline(const QString& tabName, const bool state) { setNamedTabState(tabName, state, mUnderlineTabsSet); }
     void setTabUnderline(const int index, const bool state) { setIndexedTabState(index, state, mUnderlineTabsSet); }
     bool tabBold(const QString& tabName) const { return namedTabState(tabName, mBoldTabsSet); }
     bool tabBold(const int index) const { return indexedTabState(index, mBoldTabsSet); }
@@ -48,14 +67,21 @@ public:
     bool tabItalic(const int index) const { return indexedTabState(index, mItalicTabsSet); }
     bool tabUnderline(const QString& tabName) const { return namedTabState(tabName, mUnderlineTabsSet); }
     bool tabUnderline(const int index) const { return indexedTabState(index, mUnderlineTabsSet); }
+    // Returns true only if the stored state actually changed, so callers
+    // can skip unnecessary repaints.
+    bool setTabConnectionIndicator(const QString& tabName, TabConnectionIndicator state);
+    bool setTabConnectionIndicator(int index, TabConnectionIndicator state);
+    TabConnectionIndicator tabConnectionIndicator(const QString& tabName) const;
+    TabConnectionIndicator tabConnectionIndicator(int index) const;
 
 private:
     bool indexedTabState(int index, const QSet<QString>& effect) const;
     bool namedTabState(const QString& tabName, const QSet<QString>& effect) const;
     void setNamedTabState(const QString& tabName, bool state, QSet<QString>& effect);
     void setIndexedTabState(int index, bool state, QSet<QString>& effect);
+    void paintConnectionIndicator(QPainter* painter, const QStyleOptionTab* tabOption, TabConnectionIndicator state) const;
 
-    QTabBar * mpTabBar;
+    QTabBar* mpTabBar;
     // The sets that hold the tab names that have the particular effect, we
     // use the text rather than the indexes because the tabs could be capable of
     // being reordered, but the names are expected to be constant (or if the
@@ -64,6 +90,8 @@ private:
     QSet<QString> mBoldTabsSet;
     QSet<QString> mItalicTabsSet;
     QSet<QString> mUnderlineTabsSet;
+    // Keyed by tab name (not index) for the same reorder-tolerance reason.
+    QHash<QString, TabConnectionIndicator> mConnectionIndicators;
 };
 
 class TTabBar : public QTabBar
@@ -73,7 +101,7 @@ class TTabBar : public QTabBar
 public:
     explicit TTabBar(QWidget* parent)
     : QTabBar(parent)
-    , mStyle(qobject_cast<QTabBar*>(this))
+    , mStyle(this)
     {
         setStyle(&mStyle);
         setAcceptDrops(true);
@@ -83,18 +111,47 @@ public:
     QSize tabSizeHint(int index) const override;
     void applyPrefixToDisplayedText(const int index, const QString& prefix = QString());
     void applyPrefixToDisplayedText(const QString& tabName, const QString& prefix = QString());
-    void setTabBold(const QString& tabName, const bool state) {mStyle.setTabBold(tabName, state); }
-    void setTabBold(const int index, const bool state) {mStyle.setTabBold(index, state); }
-    void setTabItalic(const QString& tabName, const bool state) {mStyle.setTabItalic(tabName, state); }
-    void setTabItalic(const int index, const bool state) {mStyle.setTabItalic(index, state); }
-    void setTabUnderline(const QString& tabName, const bool state) {mStyle.setTabUnderline(tabName, state); }
-    void setTabUnderline(const int index, const bool state) {mStyle.setTabUnderline(index, state); }
-    bool tabBold(const QString& tabName) const {return mStyle.tabBold(tabName);}
-    bool tabBold(const int index) const {return mStyle.tabBold(index);}
-    bool tabItalic(const QString& tabName) const {return mStyle.tabItalic(tabName);}
-    bool tabItalic(const int index) const {return mStyle.tabItalic(index);}
-    bool tabUnderline(const QString& tabName) const {return mStyle.tabUnderline(tabName);}
-    bool tabUnderline(const int index) const {return mStyle.tabUnderline(index);}
+    void setTabBold(const QString& tabName, const bool state) { mStyle.setTabBold(tabName, state); }
+    void setTabBold(const int index, const bool state) { mStyle.setTabBold(index, state); }
+    void setTabItalic(const QString& tabName, const bool state) { mStyle.setTabItalic(tabName, state); }
+    void setTabItalic(const int index, const bool state) { mStyle.setTabItalic(index, state); }
+    void setTabUnderline(const QString& tabName, const bool state) { mStyle.setTabUnderline(tabName, state); }
+    void setTabUnderline(const int index, const bool state) { mStyle.setTabUnderline(index, state); }
+    bool tabBold(const QString& tabName) const { return mStyle.tabBold(tabName); }
+    bool tabBold(const int index) const { return mStyle.tabBold(index); }
+    bool tabItalic(const QString& tabName) const { return mStyle.tabItalic(tabName); }
+    bool tabItalic(const int index) const { return mStyle.tabItalic(index); }
+    bool tabUnderline(const QString& tabName) const { return mStyle.tabUnderline(tabName); }
+    bool tabUnderline(const int index) const { return mStyle.tabUnderline(index); }
+    void setTabConnectionIndicator(const QString& tabName, TabConnectionIndicator state)
+    {
+        if (mStyle.setTabConnectionIndicator(tabName, state)) {
+            // updateGeometry() invalidates the cached tab sizes so tabSizeHint()
+            // is consulted again. For the brief Connecting stage we paint
+            // synchronously so a fast follow-up Connected transition cannot
+            // coalesce the pending paint and skip the yellow dot entirely;
+            // other transitions can take the cheaper deferred update().
+            updateGeometry();
+            if (state == TabConnectionIndicator::Connecting) {
+                repaint();
+            } else {
+                update();
+            }
+        }
+    }
+    void setTabConnectionIndicator(const int index, TabConnectionIndicator state)
+    {
+        if (mStyle.setTabConnectionIndicator(index, state)) {
+            updateGeometry();
+            if (state == TabConnectionIndicator::Connecting) {
+                repaint();
+            } else {
+                update();
+            }
+        }
+    }
+    TabConnectionIndicator tabConnectionIndicator(const QString& tabName) const { return mStyle.tabConnectionIndicator(tabName); }
+    TabConnectionIndicator tabConnectionIndicator(const int index) const { return mStyle.tabConnectionIndicator(index); }
     QString tabName(const int index) const;
     int tabIndex(const QString& tabName) const;
     void removeTab(const QString& tabName);

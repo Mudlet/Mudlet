@@ -4,8 +4,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2021-2022 by Stephen Lyons                        *
+ *   Copyright (C) 2016, 2021-2022, 2026 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2026 by Ethan Hussong - ethan@ethanhussong.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -29,6 +30,10 @@
 
 class Host;
 class TMap;
+class QFrame;
+class QLabel;
+class QProgressBar;
+class QPushButton;
 struct MapInfoProperties;
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
@@ -55,10 +60,22 @@ public:
     void setFont(const QFont&);
     void recreate3DWidget();
 
+    void showMapProgress(const QString& label, bool cancelable);
+    void setMapProgressLabel(const QString& text);
+    void setMapProgressRange(int minimum, int maximum);
+    void setMapProgressValue(int value);
+    int mapProgressMaximum() const;
+    void setMapProgressCancelable(bool cancelable);
+    void hideMapProgress();
+    bool isMapProgressVisible() const;
+
+signals:
+    void signal_mapProgressCanceled();
+
 public slots:
+    void updateEmptyStateOverlay();
     void slot_toggleRoundRooms(const bool);
     void slot_toggleShowRoomIDs(int toggle);
-    void slot_toggleShowRoomNames(int toggle);
     void slot_toggleStrongHighlight(int toggle);
     void slot_toggle3DView(const bool);
     void slot_togglePanel();
@@ -72,21 +89,45 @@ public slots:
     void slot_setupMapperMenu();
     void slot_toggleUpperLowerLevels(bool enabled);
     void slot_toggleShowRoomIDsFromMenu(bool enabled);
+    void slot_toggleShowRoomNames(const bool);
     void updateInfoMenu();
     void slot_showSaveWarningMenu();
     void slot_saveErrorChanged(bool hasError);
 
-    static void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, Host* pHost, TMap* pMap,
-                            int roomID, int displayAreaId, int selectionSize, QColor& infoColor,
-                            int xOffset, int yOffset, int widgetWidth, int fontHeight);
-    static int paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset,
-                                      const MapInfoProperties& properties, QColor bgColor, int fontHeight,
-                                      int widgetWidth);
+    static void paintMapInfo(const QElapsedTimer& renderTimer,
+                             QPainter& painter,
+                             Host* pHost,
+                             TMap* pMap,
+                             int roomID,
+                             int displayAreaId,
+                             int selectionSize,
+                             QColor& infoColor,
+                             int xOffset,
+                             int yOffset,
+                             int widgetWidth,
+                             int fontHeight);
+    static int paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties, QColor bgColor, int fontHeight, int widgetWidth);
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
+    void setupEmptyStateOverlay();
+    void repositionEmptyStateOverlay();
+    void setupProgressOverlay();
+    void repositionProgressOverlay();
+    void loadMapFromFile();
+
     TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
     QPointer<QMenu> mpInfoMenu;
+    QFrame* mpEmptyStateOverlay = nullptr;
+    QPushButton* mpEmptyStateDownloadButton = nullptr;
+    QFrame* mpProgressOverlay = nullptr;
+    QLabel* mpProgressLabel = nullptr;
+    QProgressBar* mpProgressBar = nullptr;
+    QPushButton* mpProgressCancelButton = nullptr;
+    bool mEmptyStateDismissed = false;
     bool mIs3DMode = false;
 };
 

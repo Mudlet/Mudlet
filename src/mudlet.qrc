@@ -126,6 +126,7 @@
         <file>icons/gw2.png</file>
         <file>icons/head.png</file>
         <file>icons/help-hint.png</file>
+        <file>icons/icesus_480x120.png</file>
         <file>icons/imperian.png</file>
         <file>icons/import.png</file>
         <file>icons/infinity_480x120.png</file>
@@ -175,6 +176,7 @@
         <file>icons/password-show-on.png</file>
         <file>icons/Patreon_Mark_Primary.png</file>
         <file>icons/place_of_interest.png</file>
+        <file>icons/pkuxkx.png</file>
         <file>icons/preferences-desktop-keyboard.png</file>
         <file>icons/preferences-web-browser-cache.png</file>
         <file>icons/profile-close.png</file>
@@ -217,6 +219,7 @@
         <file>icons/window-close.png</file>
         <file>icons/wotmudicon.png</file>
         <file>icons/zombiemud.png</file>
+        <file>icesus-loader.xml</file>
         <file>lua-function-list.json</file>
         <file>mg-loader.xml</file>
         <file>mudlet-lua/lua/generic-mapper/generic_mapper.mpackage</file>

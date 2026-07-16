@@ -29,7 +29,6 @@
 #include "discord.h"
 #include "FontManager.h"
 #include "HostManager.h"
-#include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
 #include "utils.h"
 #include <memory>
@@ -39,20 +38,16 @@
 #endif
 
 #include "ui_main_window.h"
-#include <QAction>
-#include <QDir>
 #include <QElapsedTimer>
-#include <QFlags>
 #include <QKeySequence>
 #include <QMainWindow>
 #include <QMap>
 #include <QPointer>
-#include <QSettings>
 #include <QSystemTrayIcon>
 #include <QTextOption>
 #include <QTime>
 #include <QVersionNumber>
-#include <QWindow>
+
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
 #include <qtkeychain/keychain.h>
 #else
@@ -62,13 +57,16 @@
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
 
+class QAction;
 class QCloseEvent;
+class QDir;
 class QMediaDevices;
 class QMediaPlayer;
 class QMenu;
 class QLabel;
 class QListWidget;
 class QPushButton;
+class QSettings;
 class QShortcut;
 class QSplitter;
 class QTableWidget;
@@ -88,6 +86,7 @@ class dlgPackageExporter;
 class dlgProfilePreferences;
 class dlgTriggerEditor;
 class Host;
+class MudletInstanceCoordinator;
 class ShortcutManager;
 class TConsole;
 class TDetachedWindow;
@@ -99,6 +98,7 @@ class TScrollBox;
 class TTabBar;
 class TTimer;
 class TToolBar;
+class TUiTour;
 
 class mudlet : public QMainWindow, public Ui::main_window
 {
@@ -318,6 +318,7 @@ public:
     bool mediaMuted() const { return mMuteAPI && mMuteGame; }
     bool mediaUnmuted() const { return !mMuteAPI && !mMuteGame; }
     bool profileExists(const QString& profileName);
+    QString getCanonicalProfileName(const QString& profileName);
     bool showSplitscreenTutorial();
     void showedSplitscreenTutorial();
     bool showMuteAllMediaTutorial();
@@ -475,7 +476,6 @@ public slots:
     void slot_detachedWindowClosed(const QString& profileName);
     void slot_profileDetachToWindow(const QString& profileName, TDetachedWindow* targetWindow);
     void updateDetachedWindowToolbars();
-    static QIcon createConnectionStatusIcon(bool isConnected, bool isConnecting, bool hasError);
     void updateMainWindowTabIndicators();
     void updateMainWindowTabBarAutoHide();
     void updateTabIndicators();               // Update all tab indicators (main window)
@@ -487,6 +487,8 @@ public slots:
     void slot_showKeyDialog();
     void slot_showPreferencesDialog();
     void slot_showScriptDialog();
+    void slot_showUiTour();
+    void slot_uiTourClosed();
     static void restoreProfileFocus(const QString& profileName);
     static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
     void setupNotepadFocusRestoration(dlgNotepad* pNotepad);
@@ -556,6 +558,7 @@ private slots:
     void slot_updateShortcuts();
     void slot_windowStateChanged(const Qt::WindowStates);
     void slot_refreshTabIndicatorsDelayed();
+    void slot_telnetConnectionStateChanged();
 
 
 private:
@@ -578,6 +581,7 @@ private:
     void reshowRequiredMainConsoles();
     void toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText);
     dlgTriggerEditor* createMudletEditor();
+    static void showEditorRestoringWindowState(QWidget* editor);
 
     // Profile detachment helper methods
     void moveProfileFromMainToDetachedWindow(const QString& profileName, int tabIndex, TDetachedWindow* targetWindow);
@@ -708,6 +712,7 @@ private:
     qreal mBlinkTimeMs = 0.0;
     int mBlinkClientCount = 0;
     QPointer<QToolBar> mpToolBarReplay;
+    QPointer<TUiTour> mpUiTour;
     QWidget* mpWidget_profileContainer = nullptr;
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead

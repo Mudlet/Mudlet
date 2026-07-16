@@ -30,6 +30,7 @@
 
 #include <QtTest/QtTest>
 
+#include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
 #include "discord.h"
 #include "dlgConnectionProfiles.h"
@@ -49,291 +50,290 @@ extern void qInitResources_mudlet_fonts_posix();
 void initializeQRCResourcesForDiscordModeTest();
 
 class TDiscordModeTest : public QObject {
-  Q_OBJECT
+    Q_OBJECT
 
 private:
-  TelnetServerStub *mpServer = nullptr;
-  Host *mpHost = nullptr;
-  const QString mHostname = "Discord-Mode-Test";
-  const QString mPort = "4004";
-  const QString mLocalhost = "localhost";
+    TelnetServerStub* mpServer = nullptr;
+    Host* mpHost = nullptr;
+    const QString mHostname = "Discord-Mode-Test";
+    const QString mPort = "4003";
+    const QString mLocalhost = "localhost";
 
 private slots:
-  void initTestCase() {
-    initializeQRCResourcesForDiscordModeTest();
+    void initTestCase()
+    {
+        initializeQRCResourcesForDiscordModeTest();
 
-    mpServer = new TelnetServerStub(qApp);
-    mpServer->start(mLocalhost, mPort.toUShort());
-    mudlet::start();
-    mudlet::self()->setupConfig();
-    mudlet::self()->takeOwnershipOfInstanceCoordinator(
-        std::make_unique<MudletInstanceCoordinator>(
-            "MudletInstanceCoordinator"));
-    mudlet::self()->init();
-    mudlet::self()->setStorePasswordsSecurely(false);
+        mpServer = new TelnetServerStub(qApp);
+        mpServer->start(mLocalhost, mPort.toUShort());
+        mudlet::start();
+        mudlet::self()->setupConfig();
+        mudlet::self()->takeOwnershipOfInstanceCoordinator(
+            std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
+        mudlet::self()->init();
+        mudlet::self()->setStorePasswordsSecurely(false);
 
-    const QString path =
-        mudlet::getMudletPath(enums::profileHomePath, mHostname);
-    QDir(path).removeRecursively();
+        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        QDir(path).removeRecursively();
 
-    QObject::connect(
-        mudlet::self(), &mudlet::signal_connectionDialogShown, qApp,
-        [] {
-          auto *dialog = mudlet::self()->mpConnectionDialog.data();
-          if (dialog && dialog->showingTutorialInvitation()) {
-            dialog->dismissTutorialInvitation();
-          }
-        },
-        Qt::SingleShotConnection);
+        QTimer::singleShot(0, qApp, [this]() {
+            mudlet::self()->startAutoLogin({});
+            QTest::qWait(100);
+            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
+            QTest::qWait(100);
+            QTest::keyClicks(QApplication::focusWidget(), mHostname);
+            QTest::qWait(100);
+            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+            QTest::qWait(100);
+            QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
+            QTest::qWait(100);
+            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+            QTest::qWait(100);
+            QTest::keyClicks(QApplication::focusWidget(), mPort);
+            QTest::qWait(100);
+            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
+        });
 
-    QTimer::singleShot(0, qApp, [this]() {
-      mudlet::self()->startAutoLogin({});
-      QTest::qWait(100);
-      QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
-                        Qt::LeftButton);
-      QTest::qWait(100);
-      QTest::keyClicks(QApplication::focusWidget(), mHostname);
-      QTest::qWait(100);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
-      QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
-      QTest::qWait(100);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
-      QTest::keyClicks(QApplication::focusWidget(), mPort);
-      QTest::qWait(100);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-    });
+        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
+        if (!spy.wait(1000)) {
+            QFAIL("Profile took too long to load.");
+        }
+        mpHost = mudlet::self()->getActiveHost();
+        if (!mpHost) {
+            QFAIL("No active host available for the test.");
+        }
 
-    QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-    if (!spy.wait(1000)) {
-      QFAIL("Profile took too long to load.");
-    }
-    mpHost = mudlet::self()->getActiveHost();
-    if (!mpHost) {
-      QFAIL("No active host available for the test.");
+        QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
+        if (!spy2.wait(500)) {
+            QFAIL("Could not connect with the host.");
+        }
     }
 
-    QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-    if (!spy2.wait(500)) {
-      QFAIL("Could not connect with the host.");
+    void init()
+    {
+        QVERIFY(mpHost);
+        auto& discord = mudlet::self()->mDiscord;
+        // Reset Discord state between tests
+        discord.resetData(mpHost);
+        mpHost->mDiscordMode = Host::DiscordShowGameDetails;
+        mpHost->mDiscordAccessFlags = Host::DiscordSetSubMask;
     }
-  }
 
-  void init() {
-    QVERIFY(mpHost);
-    auto &discord = mudlet::self()->mDiscord;
-    // Reset Discord state between tests
-    discord.resetData(mpHost);
-    mpHost->mDiscordMode = Host::DiscordShowGameDetails;
-    mpHost->mDiscordAccessFlags = Host::DiscordSetSubMask;
-  }
+    // -- Mode gating tests --
 
-  // -- Mode gating tests --
+    void testGMCPIgnoredInDisabledMode()
+    {
+        mpHost->mDiscordMode = Host::DiscordDisabled;
+        auto& discord = mudlet::self()->mDiscord;
 
-  void testGMCPIgnoredInDisabledMode() {
-    mpHost->mDiscordMode = Host::DiscordDisabled;
-    auto &discord = mudlet::self()->mDiscord;
+        mpHost->processDiscordGMCP(
+            qsl("External.Discord.Status"),
+            qsl(R"({"details":"Exploring the forest","state":"Level 50 Mage"})"));
 
-    mpHost->processDiscordGMCP(
-        qsl("External.Discord.Status"),
-        qsl(R"({"details":"Exploring the forest","state":"Level 50 Mage"})"));
+        QVERIFY2(discord.getDetailText(mpHost).isEmpty(),
+                 "GMCP details should be ignored in Disabled mode");
+        QVERIFY2(discord.getStateText(mpHost).isEmpty(),
+                 "GMCP state should be ignored in Disabled mode");
+    }
 
-    QVERIFY2(discord.getDetailText(mpHost).isEmpty(),
-             "GMCP details should be ignored in Disabled mode");
-    QVERIFY2(discord.getStateText(mpHost).isEmpty(),
-             "GMCP state should be ignored in Disabled mode");
-  }
+    void testGMCPIgnoredInMudletOnlyMode()
+    {
+        mpHost->mDiscordMode = Host::DiscordShowMudletOnly;
+        auto& discord = mudlet::self()->mDiscord;
 
-  void testGMCPIgnoredInMudletOnlyMode() {
-    mpHost->mDiscordMode = Host::DiscordShowMudletOnly;
-    auto &discord = mudlet::self()->mDiscord;
+        mpHost->processDiscordGMCP(
+            qsl("External.Discord.Status"),
+            qsl(R"({"details":"Exploring the forest","state":"Level 50 Mage"})"));
 
-    mpHost->processDiscordGMCP(
-        qsl("External.Discord.Status"),
-        qsl(R"({"details":"Exploring the forest","state":"Level 50 Mage"})"));
+        QVERIFY2(discord.getDetailText(mpHost).isEmpty(),
+                 "GMCP details should be ignored in MudletOnly mode");
+        QVERIFY2(discord.getStateText(mpHost).isEmpty(),
+                 "GMCP state should be ignored in MudletOnly mode");
+    }
 
-    QVERIFY2(discord.getDetailText(mpHost).isEmpty(),
-             "GMCP details should be ignored in MudletOnly mode");
-    QVERIFY2(discord.getStateText(mpHost).isEmpty(),
-             "GMCP state should be ignored in MudletOnly mode");
-  }
+    void testGMCPProcessedInGameDetailsMode()
+    {
+        mpHost->mDiscordMode = Host::DiscordShowGameDetails;
+        auto& discord = mudlet::self()->mDiscord;
 
-  void testGMCPProcessedInGameDetailsMode() {
-    mpHost->mDiscordMode = Host::DiscordShowGameDetails;
-    auto &discord = mudlet::self()->mDiscord;
+        mpHost->processDiscordGMCP(
+            qsl("External.Discord.Status"),
+            qsl(R"({"details":"Exploring the forest","state":"Level 50 Mage"})"));
 
-    mpHost->processDiscordGMCP(
-        qsl("External.Discord.Status"),
-        qsl(R"({"details":"Exploring the forest","state":"Level 50 Mage"})"));
+        QCOMPARE(discord.getDetailText(mpHost), qsl("Exploring the forest"));
+        QCOMPARE(discord.getStateText(mpHost), qsl("Level 50 Mage"));
+    }
 
-    QCOMPARE(discord.getDetailText(mpHost), qsl("Exploring the forest"));
-    QCOMPARE(discord.getStateText(mpHost), qsl("Level 50 Mage"));
-  }
+    void testGMCPInfoIgnoredOutsideGameDetailsMode()
+    {
+        mpHost->mDiscordMode = Host::DiscordShowMudletOnly;
+        auto& discord = mudlet::self()->mDiscord;
 
-  void testGMCPInfoIgnoredOutsideGameDetailsMode() {
-    mpHost->mDiscordMode = Host::DiscordShowMudletOnly;
-    auto &discord = mudlet::self()->mDiscord;
+        mpHost->processDiscordGMCP(
+            qsl("External.Discord.Info"),
+            qsl(R"({"applicationid":"123456789"})"));
 
-    mpHost->processDiscordGMCP(qsl("External.Discord.Info"),
-                               qsl(R"({"applicationid":"123456789"})"));
+        // Application ID should remain default (empty or Mudlet's) since Info was ignored
+        QVERIFY2(discord.getApplicationId(mpHost).isEmpty() || discord.getApplicationId(mpHost) == Discord::mMudletApplicationId,
+                 "GMCP Info should be ignored outside GameDetails mode");
+    }
 
-    // Application ID should remain default (empty or Mudlet's) since Info was
-    // ignored
-    QVERIFY2(discord.getApplicationId(mpHost).isEmpty() ||
-                 discord.getApplicationId(mpHost) ==
-                     Discord::mMudletApplicationId,
-             "GMCP Info should be ignored outside GameDetails mode");
-  }
+    // -- Server-origin tracking tests --
 
-  // -- Server-origin tracking tests --
+    void testGMCPSetsServerOrigin()
+    {
+        mpHost->mDiscordMode = Host::DiscordShowGameDetails;
+        auto& discord = mudlet::self()->mDiscord;
 
-  void testGMCPSetsServerOrigin() {
-    mpHost->mDiscordMode = Host::DiscordShowGameDetails;
-    auto &discord = mudlet::self()->mDiscord;
+        QVERIFY2(!discord.isServerOrigin(mpHost, Host::DiscordSetDetail),
+                 "Detail should not be server-origin before GMCP");
+        QVERIFY2(!discord.isServerOrigin(mpHost, Host::DiscordSetState),
+                 "State should not be server-origin before GMCP");
 
-    QVERIFY2(!discord.isServerOrigin(mpHost, Host::DiscordSetDetail),
-             "Detail should not be server-origin before GMCP");
-    QVERIFY2(!discord.isServerOrigin(mpHost, Host::DiscordSetState),
-             "State should not be server-origin before GMCP");
+        mpHost->processDiscordGMCP(
+            qsl("External.Discord.Status"),
+            qsl(R"({"details":"Hunting","state":"In Combat"})"));
 
-    mpHost->processDiscordGMCP(
-        qsl("External.Discord.Status"),
-        qsl(R"({"details":"Hunting","state":"In Combat"})"));
+        QVERIFY2(discord.isServerOrigin(mpHost, Host::DiscordSetDetail),
+                 "Detail should be server-origin after GMCP set it");
+        QVERIFY2(discord.isServerOrigin(mpHost, Host::DiscordSetState),
+                 "State should be server-origin after GMCP set it");
+    }
 
-    QVERIFY2(discord.isServerOrigin(mpHost, Host::DiscordSetDetail),
-             "Detail should be server-origin after GMCP set it");
-    QVERIFY2(discord.isServerOrigin(mpHost, Host::DiscordSetState),
-             "State should be server-origin after GMCP set it");
-  }
+    void testLuaSetterClearsServerOrigin()
+    {
+        auto& discord = mudlet::self()->mDiscord;
 
-  void testLuaSetterClearsServerOrigin() {
-    auto &discord = mudlet::self()->mDiscord;
+        // First, have the server set it
+        mpHost->processDiscordGMCP(
+            qsl("External.Discord.Status"),
+            qsl(R"({"details":"Server set this"})"));
+        QVERIFY(discord.isServerOrigin(mpHost, Host::DiscordSetDetail));
 
-    // First, have the server set it
-    mpHost->processDiscordGMCP(qsl("External.Discord.Status"),
-                               qsl(R"({"details":"Server set this"})"));
-    QVERIFY(discord.isServerOrigin(mpHost, Host::DiscordSetDetail));
+        // Now simulate what the Lua API does: clear server origin, then set
+        discord.clearServerOrigin(mpHost, Host::DiscordSetDetail);
+        discord.setDetailText(mpHost, qsl("Lua set this"));
 
-    // Now simulate what the Lua API does: clear server origin, then set
-    discord.clearServerOrigin(mpHost, Host::DiscordSetDetail);
-    discord.setDetailText(mpHost, qsl("Lua set this"));
+        QVERIFY2(!discord.isServerOrigin(mpHost, Host::DiscordSetDetail),
+                 "Detail should not be server-origin after Lua cleared it");
+        QCOMPARE(discord.getDetailText(mpHost), qsl("Lua set this"));
+    }
 
-    QVERIFY2(!discord.isServerOrigin(mpHost, Host::DiscordSetDetail),
-             "Detail should not be server-origin after Lua cleared it");
-    QCOMPARE(discord.getDetailText(mpHost), qsl("Lua set this"));
-  }
+    void testServerOriginNotSetForUnsentFields()
+    {
+        auto& discord = mudlet::self()->mDiscord;
 
-  void testServerOriginNotSetForUnsentFields() {
-    auto &discord = mudlet::self()->mDiscord;
+        // Send GMCP with only detail, not state
+        mpHost->processDiscordGMCP(
+            qsl("External.Discord.Status"),
+            qsl(R"({"details":"Only details"})"));
 
-    // Send GMCP with only detail, not state
-    mpHost->processDiscordGMCP(qsl("External.Discord.Status"),
-                               qsl(R"({"details":"Only details"})"));
+        QVERIFY2(discord.isServerOrigin(mpHost, Host::DiscordSetDetail),
+                 "Detail should be server-origin");
+        QVERIFY2(!discord.isServerOrigin(mpHost, Host::DiscordSetState),
+                 "State should NOT be server-origin when server didn't send it");
+    }
 
-    QVERIFY2(discord.isServerOrigin(mpHost, Host::DiscordSetDetail),
-             "Detail should be server-origin");
-    QVERIFY2(!discord.isServerOrigin(mpHost, Host::DiscordSetState),
-             "State should NOT be server-origin when server didn't send it");
-  }
+    // -- Privacy flag tests --
 
-  // -- Privacy flag tests --
+    void testPrivacyFlagBlocksServerField()
+    {
+        auto& discord = mudlet::self()->mDiscord;
 
-  void testPrivacyFlagBlocksServerField() {
-    auto &discord = mudlet::self()->mDiscord;
+        // Server sets detail
+        mpHost->processDiscordGMCP(
+            qsl("External.Discord.Status"),
+            qsl(R"({"details":"Secret details","state":"Visible state"})"));
 
-    // Server sets detail
-    mpHost->processDiscordGMCP(
-        qsl("External.Discord.Status"),
-        qsl(R"({"details":"Secret details","state":"Visible state"})"));
+        // Disable the detail privacy flag (user chose to hide it)
+        mpHost->mDiscordAccessFlags &= ~Host::DiscordSetDetail;
 
-    // Disable the detail privacy flag (user chose to hide it)
-    mpHost->mDiscordAccessFlags &= ~Host::DiscordSetDetail;
+        // Detail is server-origin and privacy flag is off - shouldShow would return false
+        QVERIFY2(discord.isServerOrigin(mpHost, Host::DiscordSetDetail),
+                 "Detail is server-origin");
+        QVERIFY2(!(mpHost->mDiscordAccessFlags & Host::DiscordSetDetail),
+                 "Detail privacy flag should be disabled");
 
-    // Detail is server-origin and privacy flag is off - shouldShow would return
-    // false
-    QVERIFY2(discord.isServerOrigin(mpHost, Host::DiscordSetDetail),
-             "Detail is server-origin");
-    QVERIFY2(!(mpHost->mDiscordAccessFlags & Host::DiscordSetDetail),
-             "Detail privacy flag should be disabled");
+        // State privacy flag is still on - shouldShow would return true
+        QVERIFY2(discord.isServerOrigin(mpHost, Host::DiscordSetState),
+                 "State is server-origin");
+        QVERIFY2(mpHost->mDiscordAccessFlags & Host::DiscordSetState,
+                 "State privacy flag should still be enabled");
+    }
 
-    // State privacy flag is still on - shouldShow would return true
-    QVERIFY2(discord.isServerOrigin(mpHost, Host::DiscordSetState),
-             "State is server-origin");
-    QVERIFY2(mpHost->mDiscordAccessFlags & Host::DiscordSetState,
-             "State privacy flag should still be enabled");
-  }
+    // -- GMCP Status field coverage --
 
-  // -- GMCP Status field coverage --
+    void testGMCPStatusSetsAllFields()
+    {
+        auto& discord = mudlet::self()->mDiscord;
 
-  void testGMCPStatusSetsAllFields() {
-    auto &discord = mudlet::self()->mDiscord;
+        mpHost->processDiscordGMCP(
+            qsl("External.Discord.Status"),
+            qsl(R"({"details":"Hunting","state":"Level 50","smallimagetext":"Warrior","largeimagetext":"Achaea","starttime":1234567890,"partysize":3,"partymax":6})"));
 
-    mpHost->processDiscordGMCP(
-        qsl("External.Discord.Status"),
-        qsl(R"({"details":"Hunting","state":"Level 50","smallimagetext":"Warrior","largeimagetext":"Achaea","starttime":1234567890,"partysize":3,"partymax":6})"));
+        QCOMPARE(discord.getDetailText(mpHost), qsl("Hunting"));
+        QCOMPARE(discord.getStateText(mpHost), qsl("Level 50"));
+        QCOMPARE(discord.getSmallImageText(mpHost), qsl("Warrior"));
+        QCOMPARE(discord.getLargeImageText(mpHost), qsl("Achaea"));
+        QCOMPARE(discord.getTimeStamps(mpHost).first, static_cast<int64_t>(1234567890));
+        QCOMPARE(discord.getParty(mpHost).first, 3);
+        QCOMPARE(discord.getParty(mpHost).second, 6);
 
-    QCOMPARE(discord.getDetailText(mpHost), qsl("Hunting"));
-    QCOMPARE(discord.getStateText(mpHost), qsl("Level 50"));
-    QCOMPARE(discord.getSmallImageText(mpHost), qsl("Warrior"));
-    QCOMPARE(discord.getLargeImageText(mpHost), qsl("Achaea"));
-    QCOMPARE(discord.getTimeStamps(mpHost).first,
-             static_cast<int64_t>(1234567890));
-    QCOMPARE(discord.getParty(mpHost).first, 3);
-    QCOMPARE(discord.getParty(mpHost).second, 6);
+        // All set fields should be server-origin
+        QVERIFY(discord.isServerOrigin(mpHost, Host::DiscordSetDetail));
+        QVERIFY(discord.isServerOrigin(mpHost, Host::DiscordSetState));
+        QVERIFY(discord.isServerOrigin(mpHost, Host::DiscordSetSmallIconText));
+        QVERIFY(discord.isServerOrigin(mpHost, Host::DiscordSetLargeIconText));
+        QVERIFY(discord.isServerOrigin(mpHost, Host::DiscordSetTimeInfo));
+        QVERIFY(discord.isServerOrigin(mpHost, Host::DiscordSetPartyInfo));
+    }
 
-    // All set fields should be server-origin
-    QVERIFY(discord.isServerOrigin(mpHost, Host::DiscordSetDetail));
-    QVERIFY(discord.isServerOrigin(mpHost, Host::DiscordSetState));
-    QVERIFY(discord.isServerOrigin(mpHost, Host::DiscordSetSmallIconText));
-    QVERIFY(discord.isServerOrigin(mpHost, Host::DiscordSetLargeIconText));
-    QVERIFY(discord.isServerOrigin(mpHost, Host::DiscordSetTimeInfo));
-    QVERIFY(discord.isServerOrigin(mpHost, Host::DiscordSetPartyInfo));
-  }
+    void testResetDataClearsEverything()
+    {
+        auto& discord = mudlet::self()->mDiscord;
 
-  void testResetDataClearsEverything() {
-    auto &discord = mudlet::self()->mDiscord;
+        // Set some data via GMCP
+        mpHost->processDiscordGMCP(
+            qsl("External.Discord.Status"),
+            qsl(R"({"details":"Test","state":"Test"})"));
+        QVERIFY(!discord.getDetailText(mpHost).isEmpty());
+        QVERIFY(discord.isServerOrigin(mpHost, Host::DiscordSetDetail));
 
-    // Set some data via GMCP
-    mpHost->processDiscordGMCP(qsl("External.Discord.Status"),
-                               qsl(R"({"details":"Test","state":"Test"})"));
-    QVERIFY(!discord.getDetailText(mpHost).isEmpty());
-    QVERIFY(discord.isServerOrigin(mpHost, Host::DiscordSetDetail));
+        // Reset
+        discord.resetData(mpHost);
 
-    // Reset
-    discord.resetData(mpHost);
+        QVERIFY2(discord.getDetailText(mpHost).isEmpty(),
+                 "Detail text should be cleared after resetData");
+        QVERIFY2(discord.getStateText(mpHost).isEmpty(),
+                 "State text should be cleared after resetData");
+        QVERIFY2(!discord.isServerOrigin(mpHost, Host::DiscordSetDetail),
+                 "Server-origin flags should be cleared after resetData");
+    }
 
-    QVERIFY2(discord.getDetailText(mpHost).isEmpty(),
-             "Detail text should be cleared after resetData");
-    QVERIFY2(discord.getStateText(mpHost).isEmpty(),
-             "State text should be cleared after resetData");
-    QVERIFY2(!discord.isServerOrigin(mpHost, Host::DiscordSetDetail),
-             "Server-origin flags should be cleared after resetData");
-  }
-
-  void cleanupTestCase() {
-    delete mpServer;
-    mpServer = nullptr;
-    mpHost = nullptr;
-    const QString path =
-        mudlet::getMudletPath(enums::profileHomePath, mHostname);
-    QDir(path).removeRecursively();
-    delete mudlet::self();
-  }
+    void cleanupTestCase()
+    {
+        delete mpServer;
+        mpServer = nullptr;
+        mpHost = nullptr;
+        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        QDir(path).removeRecursively();
+        delete mudlet::self();
+    }
 };
 
-void initializeQRCResourcesForDiscordModeTest() {
+void initializeQRCResourcesForDiscordModeTest()
+{
 #ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-  qInitResources_additional_splash_screens();
+    qInitResources_additional_splash_screens();
 #endif
 #ifdef INCLUDE_FONTS
-  qInitResources_mudlet_fonts_common();
+    qInitResources_mudlet_fonts_common();
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-  qInitResources_mudlet_fonts_posix();
+    qInitResources_mudlet_fonts_posix();
 #endif
 #endif
-  qInitResources_mudlet();
-  qInitResources_qm();
+    qInitResources_mudlet();
+    qInitResources_qm();
 }
 
 #include "TDiscordModeTest.moc"

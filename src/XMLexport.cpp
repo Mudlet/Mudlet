@@ -40,8 +40,11 @@
 #include "mudlet.h"
 
 #include <QVersionNumber>
-#include <QtConcurrent>
+#include <QtConcurrentRun>
+#include <QFutureWatcher>
 #include <QFile>
+#include <QMetaEnum>
+
 #include <sstream>
 
 XMLexport::XMLexport(Host* pH)
@@ -687,7 +690,10 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             auto key = iterator.next();
             auto shortcut = host.append_child("profileShortcut");
             shortcut.append_attribute("key") = key.toUtf8().constData();
-            shortcut.text().set(pHost->profileShortcuts.value(key)->toString().toUtf8().constData());
+            auto it = pHost->profileShortcuts.find(key);
+            if (it != pHost->profileShortcuts.end()) {
+                shortcut.text().set(it->second->toString().toUtf8().constData());
+            }
         }
     }
     {
@@ -696,6 +702,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         while (itStopWatchId.hasNext()) {
             auto stopWatchId = itStopWatchId.next();
             auto pStopWatch = pHost->getStopWatch(stopWatchId);
+            if (!pStopWatch) {
+                continue;
+            }
             if (pStopWatch->persistent()) {
                 auto stopwatch = stopwatches.append_child("stopwatch");
                 // Three QStrings used here are purely numeric so can be expressed in Latin1 encoding:

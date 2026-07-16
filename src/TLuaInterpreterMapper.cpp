@@ -62,7 +62,6 @@
 #include <limits>
 #include <math.h>
 
-#include <QtConcurrent>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
@@ -399,7 +398,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
             }
             lua_pop(L, 1);
         }
-        if (!i || !x.count()) {
+        if (!i || x.isEmpty()) {
             // If there is only an empty sub-table inside the table then i is
             // one but there is nothing in any of the QLists and things will
             // still blow up as per Issue #5272 - so also check for at least one

@@ -436,7 +436,7 @@ void Feed::cleanupDownloadFile()
 {
     if (mDownloadFile) {
         mDownloadFile->close();
-        delete mDownloadFile;
+        mDownloadFile->deleteLater();
         mDownloadFile = nullptr;
     }
 }

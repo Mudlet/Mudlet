@@ -27,9 +27,9 @@
 
 #include <QClipboard>
 
+#include "MudletInstanceCoordinator.h"
 #include "SingleLineTextEdit.h"
 #include "TelnetServerStub.h"
-#include "TrailingWhitespaceMarker.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
@@ -52,74 +52,29 @@ private:
 
   void startProfile(const QString &hostname, const QString &address,
                     const QString &port) {
-    qDebug() << "[CI-TRACE] TriggerEditorTest::startProfile ENTER" << hostname
-             << address << port;
-    // Dismiss the first-launch tutorial as soon as the dialog is shown so
-    // that new_profile_button is visible/clickable below.
-    QObject::connect(
-        mudlet::self(), &mudlet::signal_connectionDialogShown, qApp,
-        [] {
-          qDebug() << "[CI-TRACE] TriggerEditorTest signal_connectionDialogShown handler invoked";
-          auto *dialog = mudlet::self()->mpConnectionDialog.data();
-          qDebug() << "[CI-TRACE] dialog ptr=" << static_cast<void*>(dialog)
-                   << "showingTutorial=" << (dialog ? dialog->showingTutorialInvitation() : false);
-          if (dialog && dialog->showingTutorialInvitation()) {
-            dialog->dismissTutorialInvitation();
-          }
-        },
-        Qt::SingleShotConnection);
-
     QTimer::singleShot(0, qApp, [hostname, address, port]() {
-      qDebug() << "[CI-TRACE] TriggerEditorTest QTimer fired -> startAutoLogin";
       mudlet::self()->startAutoLogin({});
       QTest::qWait(100);
-      auto *dialog = mudlet::self()->mpConnectionDialog.data();
-      qDebug() << "[CI-TRACE] before mouseClick: dialog=" << static_cast<void*>(dialog)
-               << "new_profile_button visible=" << (dialog ? dialog->new_profile_button->isVisible() : false)
-               << "enabled=" << (dialog ? dialog->new_profile_button->isEnabled() : false);
       QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
                         Qt::LeftButton);
       QTest::qWait(100);
-      qDebug() << "[CI-TRACE] after mouseClick new_profile_button: focusWidget=" << QApplication::focusWidget()
-               << "objName=" << (QApplication::focusWidget() ? QApplication::focusWidget()->objectName() : QString());
       QTest::keyClicks(QApplication::focusWidget(), hostname);
       QTest::qWait(100);
-      qDebug() << "[CI-TRACE] after keyClicks hostname: focusWidget=" << QApplication::focusWidget()
-               << "profile_name_entry text=" << (dialog ? dialog->profile_name_entry->text() : QString());
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
       QTest::qWait(100);
-      qDebug() << "[CI-TRACE] after Tab: focusWidget=" << QApplication::focusWidget()
-               << "objName=" << (QApplication::focusWidget() ? QApplication::focusWidget()->objectName() : QString());
       QTest::keyClicks(QApplication::focusWidget(), address);
       QTest::qWait(100);
-      qDebug() << "[CI-TRACE] after keyClicks address: host_name_entry text="
-               << (dialog ? dialog->host_name_entry->text() : QString());
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
       QTest::qWait(100);
-      qDebug() << "[CI-TRACE] after Tab: focusWidget=" << QApplication::focusWidget()
-               << "objName=" << (QApplication::focusWidget() ? QApplication::focusWidget()->objectName() : QString());
       QTest::keyClicks(QApplication::focusWidget(), port);
       QTest::qWait(100);
-      qDebug() << "[CI-TRACE] after keyClicks port: port_entry text="
-               << (dialog ? dialog->port_entry->text() : QString());
-      qDebug() << "[CI-TRACE] sending Enter key";
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-      qDebug() << "[CI-TRACE] Enter sent; QTimer lambda finished";
     });
 
-    qDebug() << "[CI-TRACE] TriggerEditorTest waiting for signal_profileLoaded (timeout 5000ms)";
     QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-    if (!spy.wait(5000)) {
-      qDebug() << "[CI-TRACE] TriggerEditorTest spy.wait TIMED OUT";
-      auto *dialog = mudlet::self()->mpConnectionDialog.data();
-      qDebug() << "[CI-TRACE] post-timeout dialog=" << static_cast<void*>(dialog)
-               << "visible=" << (dialog ? dialog->isVisible() : false)
-               << "profile_name_entry text=" << (dialog ? dialog->profile_name_entry->text() : QString())
-               << "host_name_entry text=" << (dialog ? dialog->host_name_entry->text() : QString())
-               << "port_entry text=" << (dialog ? dialog->port_entry->text() : QString());
+    if (!spy.wait(1000)) {
       QFAIL("Profile took too long to load.");
     }
-    qDebug() << "[CI-TRACE] TriggerEditorTest signal_profileLoaded received";
     mpHost = mudlet::self()->getActiveHost();
     if (!mpHost) {
       QFAIL("No active host available.");
