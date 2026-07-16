@@ -719,6 +719,11 @@ private:
     // determined the first time the area is shrunk down by the user:
     int mTriggerMainAreaMinimumHeightToShowAll = 0;
 
+    // Persisted preference for showing the extra trigger controls; only
+    // changed by explicit clicks on the toggle button, not by the transient
+    // space-driven auto-collapse:
+    bool mShowAllTriggerControls = false;
+
     // tracks location of the splitter in the trigger editor for each tab
     QByteArray mTriggerEditorSplitterState;
     QByteArray mAliasEditorSplitterState;

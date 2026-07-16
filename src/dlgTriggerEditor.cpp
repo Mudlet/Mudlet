@@ -724,9 +724,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mpErrorConsole->hide();
 
-    connect(mpTriggersMainArea->toolButton_toggleExtraControls, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_showAllTriggerControls);
+    // Only explicit clicks change the persisted preference - the space-driven
+    // auto-collapse in slot_rightSplitterMoved must stay transient:
+    connect(mpTriggersMainArea->toolButton_toggleExtraControls, &QAbstractButton::clicked, this, [this](const bool checked) {
+        mShowAllTriggerControls = checked;
+        slot_showAllTriggerControls(checked);
+    });
     updateExtraControlsToggleIcon();
-    slot_showAllTriggerControls(true);
 
     connect(splitter_right, &QSplitter::splitterMoved, this, &dlgTriggerEditor::slot_rightSplitterMoved);
     // additional settings
@@ -1285,6 +1289,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_variables->hide();
 
     readSettings();
+    slot_showAllTriggerControls(mShowAllTriggerControls);
 
     treeWidget_searchResults->setColumnCount(4);
     QStringList labelList;
@@ -1893,6 +1898,8 @@ void dlgTriggerEditor::readSettings()
     mTimerEditorSplitterState = settings.value("mTimerEditorSplitterState", QByteArray()).toByteArray();
     mVarEditorSplitterState = settings.value("mVarEditorSplitterState", QByteArray()).toByteArray();
     mSearchSplitterState = settings.value("mSearchSplitterState", QByteArray()).toByteArray();
+
+    mShowAllTriggerControls = settings.value("showAllTriggerControls", false).toBool();
 }
 
 void dlgTriggerEditor::writeSettings()
@@ -1910,6 +1917,8 @@ void dlgTriggerEditor::writeSettings()
     settings.setValue("mTimerEditorSplitterState", mTimerEditorSplitterState);
     settings.setValue("mVarEditorSplitterState", mVarEditorSplitterState);
     settings.setValue("mSearchSplitterState", mSearchSplitterState);
+
+    settings.setValue("showAllTriggerControls", mShowAllTriggerControls);
 }
 
 void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
@@ -13146,9 +13155,10 @@ void dlgTriggerEditor::slot_showAllTriggerControls(const bool isShown)
         mpTriggersMainArea->toolButton_toggleExtraControls->setChecked(isShown);
     }
 
-    if (mpTriggersMainArea->widget_right->isVisible() != isShown) {
-        mpTriggersMainArea->widget_right->setVisible(isShown);
-    }
+    // Set unconditionally: isVisible() is also false while the whole triggers
+    // main area is hidden (e.g. during construction), which would skip the
+    // explicit hide needed to keep the extra controls hidden once it shows:
+    mpTriggersMainArea->widget_right->setVisible(isShown);
 
     updatePatternTabOrder();
 }
