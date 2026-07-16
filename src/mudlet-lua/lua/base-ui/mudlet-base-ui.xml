@@ -20,12 +20,16 @@
 			<script>-- Mudlet base UI: a small starter interface for games that support GMCP.
 -- Nothing is created until the game actually sends data: vitals gauges are
 -- built from gmcp.Char.Vitals (only for the fields that exist), the map and
--- chat windows appear alongside them, and chat captures gmcp.Comm.Channel.Text.
+-- chat windows appear alongside them. Chat comes from gmcp.Comm.Channel.Text
+-- when the game offers it; for everything else, additive triggers capture the
+-- common chat-line shapes (tells, says, channels) shared by most games.
 -- Type "baseui" for options; "baseui hide" removes it until "baseui show".
 
 BaseUI = BaseUI or {}
 BaseUI.gauges = BaseUI.gauges or {}
 BaseUI.usedGaugeSlots = BaseUI.usedGaugeSlots or 0
+BaseUI.chatTriggerIds = BaseUI.chatTriggerIds or {}
+BaseUI.recentCaptures = BaseUI.recentCaptures or {}
 
 local settingsFile = getMudletHomeDir() .. "/base_ui_settings.lua"
 
@@ -46,6 +50,81 @@ local vitalsList = {
   { key = "hp", label = "HP", current = "hp", max = "maxhp" },
   { key = "mp", label = "MP", current = "mp", max = "maxmp" },
 }
+
+-- generic chat capture for games without GMCP chat: trigger shapes most games
+-- share. Capture is additive - the matched line is copied into the chat window
+-- with its colours and never removed from the main one.
+-- a "[tag]", "(tag)" or "&lt; tag |" prefix only counts as chat when its first
+-- word is a well-known channel name - extend this list to cover more games
+BaseUI.chatChannelNames = {
+  chat = true, say = true, tell = true, tells = true, gtell = true,
+  newbie = true, newbies = true, gossip = true, grats = true, gratz = true,
+  congrats = true, ooc = true, ic = true, clan = true, guild = true,
+  order = true, house = true, city = true, market = true, auction = true,
+  trade = true, talk = true, ask = true, answer = true, question = true,
+  questions = true, music = true, quote = true, roleplay = true, rp = true,
+  imm = true, group = true, party = true, team = true, shout = true,
+  yell = true, form = true, town = true,
+}
+
+-- entries with tagged = true capture a channel tag that must pass the list above
+local chatPatterns = {
+  { regex = [=[^\w[\w'-]* tells you\b[^,:]{0,30}(?::|,?\s*['"])]=] },
+  { regex = [=[^You tell [\w'-]+[^,:]{0,30}(?::|,?\s*['"])]=] },
+  { regex = [=[^You tell the (?:group|formation)\b]=] },
+  { regex = [=[^\w[\w'-]* whispers to you\b[^,:]{0,30}(?::|,?\s*['"])]=] },
+  { regex = [=[^\w[\w'-]* tells the (?:group|formation)\b]=] },
+  { regex = [=[^\w[\w'-]* (?:says|asks|exclaims)[^,:]{0,20},?\s*['"]]=] },
+  { regex = [=[^You (?:say|ask|exclaim)[^,:]{0,20},?\s*['"]]=] },
+  { regex = [=[^\w[\w'-]* (?:yells|shouts)[^,:]{0,20},?\s*['"]]=] },
+  { regex = [=[^You (?:yell|shout)[^,:]{0,20},?\s*['"]]=] },
+  { regex = [=[^\[([\w][\w -]{0,18})\]]=], tagged = true },
+  { regex = [=[^\(([\w -]{1,18})\)[:\s]]=], tagged = true },
+  { regex = [=[^&lt; ?([\w -]{1,18}) ?\|]=], tagged = true },
+}
+
+function BaseUI.routeChatLine()
+  -- gmcpChat means the trigger layer is retired: killing a trigger does not
+  -- stop it firing on lines from the batch already being processed
+  -- several patterns can match the same line - copy it only once
+  local lineNumber = getLineNumber()
+  if not BaseUI.chat or BaseUI.gmcpChat or lineNumber == BaseUI.lastChatLine then
+    return
+  end
+  BaseUI.lastChatLine = lineNumber
+  selectCurrentLine()
+  copy()
+  BaseUI.chat:appendBuffer()
+  deselect()
+  table.insert(BaseUI.recentCaptures, { text = line, time = getEpoch() })
+  if #BaseUI.recentCaptures &gt; 10 then
+    table.remove(BaseUI.recentCaptures, 1)
+  end
+end
+
+function BaseUI.routeTaggedChatLine()
+  local tag = matches[2]:match("(%S+)")
+  if tag and BaseUI.chatChannelNames[tag:lower()] then
+    BaseUI.routeChatLine()
+  end
+end
+
+function BaseUI.createChatTriggers()
+  if not BaseUI.chat or BaseUI.settings.hidden or BaseUI.gmcpChat or next(BaseUI.chatTriggerIds) then
+    return
+  end
+  for _, pattern in ipairs(chatPatterns) do
+    table.insert(BaseUI.chatTriggerIds,
+      tempRegexTrigger(pattern.regex, pattern.tagged and BaseUI.routeTaggedChatLine or BaseUI.routeChatLine))
+  end
+end
+
+function BaseUI.killChatTriggers()
+  for _, id in ipairs(BaseUI.chatTriggerIds) do
+    killTrigger(id)
+  end
+  BaseUI.chatTriggerIds = {}
+end
 
 function BaseUI.loadSettings()
   BaseUI.settings = {}
@@ -88,7 +167,8 @@ function BaseUI.build()
     color = "black",
     fontSize = 10,
   }, BaseUI.container)
-  BaseUI.chat:echo("Chat will be captured here when the game provides it.\n")
+  BaseUI.chat:echo("Tells, says and channel chat from the game will be collected here.\n")
+  BaseUI.createChatTriggers()
   -- the container remembers its own hidden/detached state from the previous
   -- session (it saves on exit) - our setting says it should be visible, so
   -- override whatever it restored
@@ -147,14 +227,34 @@ function BaseUI.updateVitals()
 end
 
 function BaseUI.addChatMessage()
-  if BaseUI.settings.hidden then
-    return
-  end
   local message = gmcp and gmcp.Comm and gmcp.Comm.Channel and gmcp.Comm.Channel.Text
   if type(message) ~= "table" or type(message.text) ~= "string" then
     return
   end
+  -- the game sends chat over GMCP and usually echoes it as plain text too -
+  -- retire the generic triggers for this session so lines are not captured twice
+  BaseUI.gmcpChat = true
+  BaseUI.killChatTriggers()
+  if BaseUI.settings.hidden then
+    return
+  end
   BaseUI.build()
+  -- the first GMCP messages race their own plain-text echoes: an echo can be
+  -- trigger-captured moments before this handler learns the game speaks GMCP
+  -- chat, so drop a message whose text was just captured as a line
+  if next(BaseUI.recentCaptures) then
+    local plain = message.text:gsub("\27%[[0-9;:]*m", "")
+    local now = getEpoch()
+    for i = #BaseUI.recentCaptures, 1, -1 do
+      local capture = BaseUI.recentCaptures[i]
+      if now - capture.time &gt; 2 then
+        table.remove(BaseUI.recentCaptures, i)
+      elseif capture.text == plain then
+        table.remove(BaseUI.recentCaptures, i)
+        return
+      end
+    end
+  end
   BaseUI.chat:decho(ansi2decho(message.text) .. "\n")
 end
 
@@ -191,6 +291,7 @@ end
 function BaseUI.hide()
   BaseUI.settings.hidden = true
   BaseUI.saveSettings()
+  BaseUI.killChatTriggers()
   if BaseUI.container then
     BaseUI.container:hide()
     BaseUI.container:adjustBorder()
@@ -205,6 +306,7 @@ function BaseUI.show()
     gmod.enableModule("BaseUI", "Comm.Channel")
   end
   BaseUI.updateVitals()
+  BaseUI.createChatTriggers()
   if BaseUI.container then
     BaseUI.container:show()
     if not BaseUI.container.attached then
