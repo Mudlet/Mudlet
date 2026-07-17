@@ -73,7 +73,7 @@ jobs:
         modules: qt5compat qtmultimedia qtspeech
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.3.4
+      uses: lukka/get-cmake@v4.4.0
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
