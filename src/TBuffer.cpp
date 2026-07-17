@@ -1659,12 +1659,6 @@ void TBuffer::recordLineLengthForWrapDetection(const qsizetype length)
     }
 
     mpHost->mServerWrapHintShown = true;
-    TEvent detectedEvent{};
-    detectedEvent.mArgumentList.append(qsl("sysServerWrapDetected"));
-    detectedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    detectedEvent.mArgumentList.append(QString::number(ceiling));
-    detectedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mpHost->raiseEvent(detectedEvent);
 
     // Deferred so the hint does not interleave with the line being committed:
     QPointer<Host> hostGuard = mpHost;
