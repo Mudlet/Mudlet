@@ -27,6 +27,11 @@
 -- on a game with no GMCP at all the UI appears on the first chat line.
 -- Chat is sorted into All/Tells/Channels tabs, and the map pane shows a
 -- placeholder until the profile actually has map data.
+-- Gauges have their own fallback ladder when GMCP is missing: MSDP is
+-- negotiated quietly, self-sufficient prompt lines (labelled cur/max or
+-- percent) are trusted once they recur, score screens are read passively,
+-- and as a last resort "score" is sent once - visibly - to learn the maxima
+-- on games whose prompt only carries current values.
 -- Type "baseui" for options; "baseui hide" removes it until "baseui show".
 
 BaseUI = BaseUI or {}
@@ -34,6 +39,10 @@ BaseUI.gauges = BaseUI.gauges or {}
 BaseUI.usedGaugeSlots = BaseUI.usedGaugeSlots or 0
 BaseUI.chatTriggerIds = BaseUI.chatTriggerIds or {}
 BaseUI.recentCaptures = BaseUI.recentCaptures or {}
+BaseUI.vitalsTriggerIds = BaseUI.vitalsTriggerIds or {}
+BaseUI.shapeSightings = BaseUI.shapeSightings or {}
+BaseUI.vitalsData = BaseUI.vitalsData or {}
+BaseUI.vitalsLock = BaseUI.vitalsLock or 0
 
 local settingsFile = getMudletHomeDir() .. "/base_ui_settings.lua"
 
@@ -93,6 +102,7 @@ local gaugeDefs = {
   hp = { front = gaugeStyle("#84dd7f", "#2f9e3f", "#1c6f28") },
   mp = { front = gaugeStyle("#7fb8e5", "#2f6f9e", "#1c4a6f") },
   xp = { front = gaugeStyle("#f2cf7a", "#c28f2c", "#8a6316") },
+  mv = { front = gaugeStyle("#7fe0d0", "#2f9e8a", "#1c6f60") },
   enemy = { front = gaugeStyle("#ef8f8f", "#b23a3a", "#7c2222") },
 }
 
@@ -129,6 +139,28 @@ local vitalsStats = {
     max = { "maxxp", "max_xp", "maxXp", "maxexperience", "max_experience", "maxExperience" } },
   { key = "enemy", label = "Enemy", transient = true,
     percent = { "opponent_hp_pct", "enemypct" } },
+  -- last on purpose: when a game supplies more stats than there are gauge
+  -- slots, movement is the one to lose out
+  { key = "mv", label = "MV",
+    current = { "mv", "moves", "movement" },
+    max = { "maxmv", "max_mv", "maxMv", "maxmoves", "max_moves", "maxMoves",
+            "maxmovement", "max_movement", "maxMovement" } },
+}
+
+-- vitals can also come from MSDP or from prompt/score lines. A source lock
+-- keeps them from fighting: the first source to produce a complete hp
+-- reading owns the gauges, and only a higher-ranked source can take them
+-- over - so gauges built from a prompt hand themselves to GMCP whenever it
+-- turns up, however late
+local sourceRanks = { gmcp = 3, msdp = 2, prompt = 1 }
+
+-- the vitalsStats rows again, keyed by the conventional MSDP variable names
+local msdpStats = {
+  { key = "hp", current = "HEALTH", max = "HEALTH_MAX" },
+  { key = "mp", current = "MANA", max = "MANA_MAX" },
+  { key = "xp", current = "EXPERIENCE", max = "EXPERIENCE_MAX" },
+  { key = "mv", current = "MOVEMENT", max = "MOVEMENT_MAX" },
+  { key = "enemy", current = "OPPONENT_HEALTH", max = "OPPONENT_HEALTH_MAX", transient = true },
 }
 
 local function gmcpNode(path)
@@ -275,6 +307,213 @@ function BaseUI.killChatTriggers()
     killTrigger(id)
   end
   BaseUI.chatTriggerIds = {}
+end
+
+-- vitals from plain text, for games that offer no protocol at all. Only
+-- self-sufficient shapes may drive a gauge: a labelled cur/max pair, a
+-- labelled percentage, or a labelled score-screen line - current-only
+-- prompts never invent a maximum. kind = "bare" rows exist to recognise
+-- those current-only prompts: they update currents once a maximum is known
+-- and arm the one-time auto-"score" request, nothing more. gated rows only
+-- go live after matching on three separate lines (prompts recur; chat
+-- mentions do not); score-screen rows are trusted on first sight because a
+-- score may only ever be shown once.
+-- two disambiguation lookbehinds recur below. On label-after shapes,
+-- (?&lt;![\d:=])(?&lt;![:=][ ]) keeps the numbers of a label-first reading from
+-- being claimed by the NEXT label ("HP: 523/600 MP: ..." must not read as
+-- 523/600 mp). On label-first shapes, (?&lt;![\d%])(?&lt;!\d[ ]) keeps a label
+-- that closes a label-after reading from opening a new one ("87%hp 80%m"
+-- must not read as hp 80).
+local vitalsLinePatterns = {
+  -- self-sufficient prompt shapes: cur/max with the label after the numbers
+  { stat = "hp", kind = "curmax", gated = true,
+    regex = [=[(?i)(?&lt;![\d:=])(?&lt;![:=][ ])(\d+)\s*/\s*(\d+)\s*(?:hp|health|hits?)\b]=] },
+  { stat = "mp", kind = "curmax", gated = true,
+    regex = [=[(?i)(?&lt;![\d:=])(?&lt;![:=][ ])(\d+)\s*/\s*(\d+)\s*(?:mp|mana|sp|magic|energy|m)\b]=] },
+  { stat = "mv", kind = "curmax", gated = true,
+    regex = [=[(?i)(?&lt;![\d:=])(?&lt;![:=][ ])(\d+)\s*/\s*(\d+)\s*(?:mv|moves?|movement|end(?:urance)?|st(?:amina)?)\b]=] },
+  { stat = "xp", kind = "curmax", gated = true,
+    regex = [=[(?i)(?&lt;![\d:=])(?&lt;![:=][ ])(\d+)\s*/\s*(\d+)\s*(?:xp|exp|tnl)\b]=] },
+  -- self-sufficient prompt shapes: cur/max with the label first. The
+  -- explicit-separator form is trusted anywhere; the separator-less form
+  -- needs the digit lookbehinds so "523/600 hp ..." cannot have its own
+  -- trailing label re-read as the start of a new reading
+  { stat = "hp", kind = "curmax", gated = true,
+    regex = [=[(?i)(?&lt;!%)\b(?:hp|health|hits?)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
+  { stat = "hp", kind = "curmax", gated = true,
+    regex = [=[(?i)(?&lt;![\d%])(?&lt;!\d[ ])\b(?:hp|health|hits?)\s*(\d+)\s*/\s*(\d+)]=] },
+  { stat = "mp", kind = "curmax", gated = true,
+    regex = [=[(?i)(?&lt;!%)\b(?:mp|mana|sp|magic|energy)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
+  { stat = "mp", kind = "curmax", gated = true,
+    regex = [=[(?i)(?&lt;![\d%])(?&lt;!\d[ ])\b(?:mp|mana|sp|magic|energy)\s*(\d+)\s*/\s*(\d+)]=] },
+  { stat = "mv", kind = "curmax", gated = true,
+    regex = [=[(?i)(?&lt;!%)\b(?:mv|moves?|movement|end(?:urance)?|st(?:amina)?)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
+  { stat = "mv", kind = "curmax", gated = true,
+    regex = [=[(?i)(?&lt;![\d%])(?&lt;!\d[ ])\b(?:mv|moves?|movement|end(?:urance)?|st(?:amina)?)\s*(\d+)\s*/\s*(\d+)]=] },
+  { stat = "xp", kind = "curmax", gated = true,
+    regex = [=[(?i)(?&lt;!%)\b(?:xp|exp|tnl)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
+  { stat = "xp", kind = "curmax", gated = true,
+    regex = [=[(?i)(?&lt;![\d%])(?&lt;!\d[ ])\b(?:xp|exp|tnl)\s*(\d+)\s*/\s*(\d+)]=] },
+  -- labelled percentages need no maximum at all
+  { stat = "hp", kind = "percent", gated = true,
+    regex = [=[(?i)(?&lt;![\d:=])(?&lt;![:=][ ])(\d+)%\s*(?:hp|health)\b]=] },
+  { stat = "hp", kind = "percent", gated = true,
+    regex = [=[(?i)(?&lt;!%)\b(?:hp|health)[:=]\s*(\d+)%]=] },
+  { stat = "hp", kind = "percent", gated = true,
+    regex = [=[(?i)(?&lt;![\d%])(?&lt;!\d[ ])\b(?:hp|health)\s*(\d+)%]=] },
+  { stat = "mp", kind = "percent", gated = true,
+    regex = [=[(?i)(?&lt;![\d:=])(?&lt;![:=][ ])(\d+)%\s*(?:mp|mana|sp|m)\b]=] },
+  { stat = "mp", kind = "percent", gated = true,
+    regex = [=[(?i)(?&lt;!%)\b(?:mp|mana|sp)[:=]\s*(\d+)%]=] },
+  { stat = "mp", kind = "percent", gated = true,
+    regex = [=[(?i)(?&lt;![\d%])(?&lt;!\d[ ])\b(?:mp|mana|sp)\s*(\d+)%]=] },
+  -- score-screen lines: a label anchored at the start of a formatted line
+  { stat = "hp", kind = "curmax",
+    regex = [=[(?i)^\s*(?:health|hit\s*points?|hp)\s*[:\]]*\s*(\d+)\s*/\s*(\d+)]=] },
+  { stat = "mp", kind = "curmax",
+    regex = [=[(?i)^\s*(?:mana|magic|spell\s*points?|sp|mp)\s*[:\]]*\s*(\d+)\s*/\s*(\d+)]=] },
+  { stat = "mv", kind = "curmax",
+    regex = [=[(?i)^\s*(?:move(?:ment)?s?|vitality|stamina|mv)\s*[:\]]*\s*(\d+)\s*/\s*(\d+)]=] },
+  { stat = "hp", kind = "curmax",
+    regex = [=[(?i)(\d+)\s*/\s*(\d+)\s*hit points\b]=] },
+  -- current-only prompt shapes; the lookarounds keep them off cur/max and
+  -- percentage lines, which belong to the shapes above
+  { stat = "hp", kind = "bare", gated = true,
+    regex = [=[(?i)(?&lt;![\d/.,:%])(\d+)\s*h(?:p|its?)?\b(?!\s*[/%])]=] },
+  { stat = "hp", kind = "bare", gated = true,
+    regex = [=[(?i)\b(?:hp|health|hits?)[:=]\s*(\d+)\b(?!\s*[/%.])]=] },
+  { stat = "mp", kind = "bare", gated = true,
+    regex = [=[(?i)(?&lt;![\d/.,:%])(\d+)\s*m(?:p|ana)?\b(?!\s*[/%])]=] },
+  { stat = "mp", kind = "bare", gated = true,
+    regex = [=[(?i)\b(?:mp|mana|sp)[:=]\s*(\d+)\b(?!\s*[/%.])]=] },
+  { stat = "mv", kind = "bare", gated = true,
+    regex = [=[(?i)(?&lt;![\d/.,:%])(\d+)\s*(?:mv|moves?)\b(?!\s*[/%])]=] },
+}
+
+-- lines the chat layer would route are never harvested for vitals - a tell
+-- saying "I am on 100/120 hp" is conversation, not a prompt
+function BaseUI.chatLikeLine(text)
+  for _, pattern in ipairs(chatPatterns) do
+    local capture = rex.match(text, pattern.regex)
+    if capture then
+      if not pattern.tagged then
+        return true
+      end
+      local tag = type(capture) == "string" and capture:match("(%S+)")
+      if tag and BaseUI.chatChannelNames[tag:lower()] then
+        return true
+      end
+    end
+  end
+  return false
+end
+
+-- pure so the test suite can drive it: turns one plain-text line into a list
+-- of { stat, kind, current, max, percent, pattern } readings (kind "bare"
+-- means a current with no maximum). Chat-shaped lines yield nothing.
+function BaseUI.parseVitalsLine(text)
+  local readings = {}
+  if type(text) ~= "string" or BaseUI.chatLikeLine(text) then
+    return readings
+  end
+  for index, pattern in ipairs(vitalsLinePatterns) do
+    local first, second = rex.match(text, pattern.regex)
+    local reading
+    if pattern.kind == "curmax" and first then
+      local current, max = tonumber(first), tonumber(second)
+      -- overhealing exists, so a current above the max is fine; a max of
+      -- zero is not
+      if current and max and max &gt; 0 then
+        reading = { stat = pattern.stat, kind = pattern.kind, current = current, max = max }
+      end
+    elseif pattern.kind == "percent" and first then
+      local percent = tonumber(first)
+      if percent and percent &lt;= 100 then
+        reading = { stat = pattern.stat, kind = pattern.kind, percent = percent }
+      end
+    elseif pattern.kind == "bare" and first then
+      reading = { stat = pattern.stat, kind = pattern.kind, current = tonumber(first) }
+    end
+    if reading then
+      reading.pattern = index
+      table.insert(readings, reading)
+    end
+  end
+  return readings
+end
+
+-- one handler for every vitals pattern: the first trigger to fire on a line
+-- processes all shapes on it in one pass, later ones see the marker and stop
+function BaseUI.onVitalsLine()
+  local lineNumber = getLineNumber()
+  if lineNumber == BaseUI.lastVitalsLine or lineNumber == BaseUI.lastChatLine then
+    return
+  end
+  BaseUI.lastVitalsLine = lineNumber
+  local updates = {}
+  for _, reading in ipairs(BaseUI.parseVitalsLine(line)) do
+    local pattern = vitalsLinePatterns[reading.pattern]
+    local live = true
+    if pattern.gated then
+      local seen = (BaseUI.shapeSightings[reading.pattern] or 0) + 1
+      BaseUI.shapeSightings[reading.pattern] = seen
+      live = seen &gt;= 3
+    end
+    if live then
+      if pattern.kind == "bare" then
+        BaseUI.maybeRequestScore()
+      end
+      local update = updates[reading.stat] or {}
+      update.current = reading.current or update.current
+      update.max = reading.max or update.max
+      update.percent = reading.percent or update.percent
+      updates[reading.stat] = update
+    end
+  end
+  if next(updates) then
+    BaseUI.applyVitals("prompt", updates)
+    -- building the dock resizes the main window, which can renumber lines;
+    -- refresh the marker so other patterns on this same line stay deduplicated
+    BaseUI.lastVitalsLine = getLineNumber()
+  end
+end
+
+function BaseUI.createVitalsTriggers()
+  if BaseUI.settings.hidden or next(BaseUI.vitalsTriggerIds) then
+    return
+  end
+  for _, pattern in ipairs(vitalsLinePatterns) do
+    table.insert(BaseUI.vitalsTriggerIds, tempRegexTrigger(pattern.regex, BaseUI.onVitalsLine))
+  end
+end
+
+function BaseUI.killVitalsTriggers()
+  for _, id in ipairs(BaseUI.vitalsTriggerIds) do
+    killTrigger(id)
+  end
+  BaseUI.vitalsTriggerIds = {}
+end
+
+-- last rung of the ladder: a game whose prompt only carries currents gets
+-- asked for its score screen - once per session, visibly, and only when no
+-- protocol has offered vitals and no maximum is known yet. The score output
+-- is picked up by the always-on score-screen shapes; if it teaches us
+-- nothing, that is the end of it - no retry, no error.
+function BaseUI.maybeRequestScore()
+  if BaseUI.scoreRequested or BaseUI.sawGmcpVitals or BaseUI.sawMsdpVitals then
+    return
+  end
+  local hp = BaseUI.vitalsData.hp
+  if hp and (hp.max or hp.percent) then
+    return
+  end
+  local _, _, connected = getConnectionInfo()
+  if not connected then
+    return
+  end
+  BaseUI.scoreRequested = true
+  send("score")
+  cecho("\n&lt;cyan&gt;[ Mudlet UI ] Sent \"score\" once to size your gauges - type &lt;yellow&gt;baseui&lt;cyan&gt; to adjust.&lt;reset&gt;\n")
 end
 
 function BaseUI.loadSettings()
@@ -488,10 +727,92 @@ function BaseUI.ensureGauge(key)
   return gauge
 end
 
-function BaseUI.updateVitals()
+local function completeReading(data)
+  if not data then
+    return false
+  end
+  if data.percent then
+    return true
+  end
+  return data.current ~= nil and data.max ~= nil and data.max &gt; 0
+end
+
+-- the single entry point every vitals source feeds. snapshot sources (GMCP,
+-- MSDP) resend everything they know each time, so their stats replace what
+-- is stored and a transient stat they no longer mention is gone; the prompt
+-- layer sees one line at a time and merges instead, letting a score screen's
+-- maxima complete a prompt's bare currents. A source ranked lower than the
+-- lock's owner is ignored outright.
+function BaseUI.applyVitals(source, readings, snapshot)
+  local rank = sourceRanks[source]
+  if BaseUI.settings.hidden or rank &lt; BaseUI.vitalsLock then
+    return
+  end
+  if rank &gt; BaseUI.vitalsLock and completeReading(readings.hp) then
+    -- a better source proved itself with a full hp reading: it takes over
+    -- the lock and everything the previous source reported is dropped
+    BaseUI.vitalsData = {}
+    BaseUI.vitalsLock = rank
+  end
+  for _, stat in ipairs(vitalsStats) do
+    local reading = readings[stat.key]
+    if snapshot then
+      BaseUI.vitalsData[stat.key] = reading
+    elseif reading and not stat.transient then
+      local data = BaseUI.vitalsData[stat.key] or {}
+      data.current = reading.current or data.current
+      data.max = reading.max or data.max
+      data.percent = reading.percent or data.percent
+      BaseUI.vitalsData[stat.key] = data
+    end
+  end
+  BaseUI.renderVitals()
+end
+
+function BaseUI.renderVitals()
   if BaseUI.settings.hidden then
     return
   end
+  local paintable = false
+  for _, stat in ipairs(vitalsStats) do
+    if completeReading(BaseUI.vitalsData[stat.key]) then
+      paintable = true
+      break
+    end
+  end
+  if not paintable and not BaseUI.container then
+    return
+  end
+  BaseUI.build()
+  BaseUI.checkMapData()
+  for _, stat in ipairs(vitalsStats) do
+    -- a gauge is only painted once a full reading is known: either a ready
+    -- percentage, or both a current and a max (maxima are never assumed, so
+    -- a stat may wait for a Maxstats message or a score screen)
+    local data = BaseUI.vitalsData[stat.key] or {}
+    if data.percent then
+      local gauge = BaseUI.ensureGauge(stat.key)
+      if gauge then
+        gauge:setValue(data.percent, 100, string.format("%s %d%%", stat.label, math.floor(data.percent + 0.5)))
+        if gauge.hidden then
+          gauge:show()
+        end
+      end
+    elseif data.current and data.max and data.max &gt; 0 then
+      local gauge = BaseUI.ensureGauge(stat.key)
+      if gauge then
+        gauge:setValue(data.current, data.max, string.format("%s %d/%d", stat.label, data.current, data.max))
+        if gauge.hidden then
+          gauge:show()
+        end
+      end
+    elseif stat.transient and BaseUI.gauges[stat.key] and not BaseUI.gauges[stat.key].hidden then
+      BaseUI.gauges[stat.key]:hide()
+    end
+  end
+end
+
+function BaseUI.updateVitals()
   local sources = {}
   for _, path in ipairs(vitalsNodes) do
     local node = gmcpNode(path)
@@ -502,36 +823,85 @@ function BaseUI.updateVitals()
   if not sources[1] then
     return
   end
+  BaseUI.sawGmcpVitals = true
+  if BaseUI.settings.hidden then
+    return
+  end
   BaseUI.build()
   BaseUI.checkMapData()
+  local readings = {}
   for _, stat in ipairs(vitalsStats) do
-    -- a gauge is only painted once a full reading is known: either a ready
-    -- percentage, or both a current and a max (maxima are never assumed, so
-    -- a stat may wait for a Maxstats message)
     local current, max, percent = statReading(sources, stat)
     if percent and (percent &lt; 0 or percent &gt; 100) then
       percent = nil
     end
-    if percent then
-      local gauge = BaseUI.ensureGauge(stat.key)
-      if gauge then
-        gauge:setValue(percent, 100, string.format("%s %d%%", stat.label, math.floor(percent + 0.5)))
-        if gauge.hidden then
-          gauge:show()
-        end
-      end
-    elseif current and max and max &gt; 0 then
-      local gauge = BaseUI.ensureGauge(stat.key)
-      if gauge then
-        gauge:setValue(current, max, string.format("%s %d/%d", stat.label, current, max))
-        if gauge.hidden then
-          gauge:show()
-        end
-      end
-    elseif stat.transient and BaseUI.gauges[stat.key] and not BaseUI.gauges[stat.key].hidden then
-      BaseUI.gauges[stat.key]:hide()
+    if current or max or percent then
+      readings[stat.key] = { current = current, max = max, percent = percent }
     end
   end
+  BaseUI.applyVitals("gmcp", readings, true)
+end
+
+function BaseUI.updateMsdpVitals()
+  if type(msdp) ~= "table" then
+    return
+  end
+  local readings = {}
+  for _, stat in ipairs(msdpStats) do
+    -- MSDP delivers numbers as strings more often than not
+    local current = tonumber(msdp[stat.current])
+    local max = tonumber(msdp[stat.max])
+    if stat.transient then
+      -- an opponent at zero health (or one no longer reported) is gone
+      if current and current &gt; 0 and max and max &gt; 0 then
+        readings[stat.key] = { current = current, max = max }
+      end
+    elseif current or max then
+      readings[stat.key] = { current = current, max = max }
+    end
+  end
+  if not next(readings) then
+    return
+  end
+  BaseUI.sawMsdpVitals = true
+  BaseUI.applyVitals("msdp", readings, true)
+end
+
+-- ask the game to keep our vitals variables reported; servers simply ignore
+-- the ones they do not know
+function BaseUI.requestMsdpVitals()
+  local variables = {}
+  for _, stat in ipairs(msdpStats) do
+    table.insert(variables, stat.current)
+    table.insert(variables, stat.max)
+  end
+  table.insert(variables, "OPPONENT_NAME")
+  table.insert(variables, "LEVEL")
+  sendMSDP("REPORT", unpack(variables))
+end
+
+function BaseUI.enableMsdpVitals(_, protocol)
+  if protocol ~= "MSDP" then
+    return
+  end
+  BaseUI.msdpReady = true
+  if not BaseUI.settings.hidden then
+    BaseUI.requestMsdpVitals()
+  end
+end
+
+-- a reconnect (possibly to a different game or character) starts the ladder
+-- fresh: recurrence counters, the source lock and the one-time score request
+-- are all per-connection state. Painted gauges keep their last values until
+-- fresh data arrives.
+function BaseUI.handleDisconnect()
+  BaseUI.vitalsData = {}
+  BaseUI.vitalsLock = 0
+  BaseUI.shapeSightings = {}
+  BaseUI.scoreRequested = false
+  BaseUI.sawGmcpVitals = false
+  BaseUI.sawMsdpVitals = false
+  BaseUI.msdpReady = false
 end
 
 function BaseUI.addChatMessage()
@@ -606,6 +976,7 @@ function BaseUI.hide()
   BaseUI.settings.hidden = true
   BaseUI.saveSettings()
   BaseUI.killChatTriggers()
+  BaseUI.killVitalsTriggers()
   if BaseUI.container then
     BaseUI.container:hide()
     BaseUI.container:adjustBorder()
@@ -619,8 +990,14 @@ function BaseUI.show()
   if type(gmcp) == "table" and next(gmcp) then
     gmod.enableModule("BaseUI", "Comm.Channel")
   end
+  if BaseUI.msdpReady then
+    BaseUI.requestMsdpVitals()
+  end
   BaseUI.updateVitals()
+  BaseUI.updateMsdpVitals()
   BaseUI.createChatTriggers()
+  BaseUI.createVitalsTriggers()
+  BaseUI.renderVitals()
   if BaseUI.container then
     BaseUI.container:show()
     if not BaseUI.container.attached then
@@ -656,8 +1033,14 @@ end
 
 BaseUI.loadSettings()
 -- the chat triggers exist from the start (unless the UI is hidden) so the
--- interface can appear on the first chat line even on games without GMCP
+-- interface can appear on the first chat line even on games without GMCP;
+-- the vitals triggers come second so a chat line is routed (and marked as
+-- chat) before the vitals layer gets a look at it
 BaseUI.createChatTriggers()
+BaseUI.createVitalsTriggers()
+-- negotiate MSDP up front: it costs nothing on servers without it and gives
+-- gauges to games that have it but lack GMCP
+setConfig("enableMSDP", true)
 
 registerAnonymousEventHandler("gmcp.Char.Vitals", "BaseUI.updateVitals")
 registerAnonymousEventHandler("gmcp.char.vitals", "BaseUI.updateVitals")
@@ -667,6 +1050,12 @@ registerAnonymousEventHandler("gmcp.Char.Status", "BaseUI.updateVitals")
 registerAnonymousEventHandler("gmcp.char.status", "BaseUI.updateVitals")
 registerAnonymousEventHandler("gmcp.Comm.Channel.Text", "BaseUI.addChatMessage")
 registerAnonymousEventHandler("sysProtocolEnabled", "BaseUI.enableChannelCapture")
+registerAnonymousEventHandler("sysProtocolEnabled", "BaseUI.enableMsdpVitals")
+registerAnonymousEventHandler("sysDisconnectionEvent", "BaseUI.handleDisconnect")
+for _, stat in ipairs(msdpStats) do
+  registerAnonymousEventHandler("msdp." .. stat.current, "BaseUI.updateMsdpVitals")
+  registerAnonymousEventHandler("msdp." .. stat.max, "BaseUI.updateMsdpVitals")
+end
 registerAnonymousEventHandler("mapOpenEvent", "BaseUI.checkMapData")
 registerAnonymousEventHandler("sysMapDownloadEvent", "BaseUI.checkMapData")
 registerAnonymousEventHandler("sysMapAreaChanged", "BaseUI.checkMapData")

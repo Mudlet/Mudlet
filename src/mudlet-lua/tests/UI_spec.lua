@@ -1456,4 +1456,149 @@ describe("Tests UI functions", function()
       assert.is_true(setLabelReleaseCallback(testLabelName, nil))
     end)
   end)
+
+  -- BaseUI.parseVitalsLine is the pure parser behind the starter UI's
+  -- prompt/score vitals fallback (the base-ui package installs into fresh
+  -- profiles, including the self-test one)
+  describe("Test the functionality of BaseUI.parseVitalsLine", function()
+    local parserAvailable = type(BaseUI) == "table" and type(BaseUI.parseVitalsLine) == "function"
+
+    if not parserAvailable then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.parseVitalsLine is unavailable in this profile")
+      end)
+      return
+    end
+
+    local function reading(hits, stat, kind)
+      for _, hit in ipairs(hits) do
+        if hit.stat == stat and (kind == nil or hit.kind == kind) then
+          return hit
+        end
+      end
+    end
+
+    local function kindCount(hits, kind)
+      local count = 0
+      for _, hit in ipairs(hits) do
+        if hit.kind == kind then
+          count = count + 1
+        end
+      end
+      return count
+    end
+
+    it("should parse a cur/max prompt with the labels after the numbers", function()
+      local hits = BaseUI.parseVitalsLine("<523/600hp 210/250m 80/100mv>")
+      local hp = reading(hits, "hp", "curmax")
+      assert.is_not_nil(hp)
+      assert.are.equal(523, hp.current)
+      assert.are.equal(600, hp.max)
+      local mp = reading(hits, "mp", "curmax")
+      assert.is_not_nil(mp)
+      assert.are.equal(210, mp.current)
+      assert.are.equal(250, mp.max)
+      local mv = reading(hits, "mv", "curmax")
+      assert.is_not_nil(mv)
+      assert.are.equal(80, mv.current)
+      assert.are.equal(100, mv.max)
+      assert.are.equal(0, kindCount(hits, "bare"))
+    end)
+
+    it("should parse a cur/max prompt with the labels first", function()
+      local hits = BaseUI.parseVitalsLine("HP: 523/600 MP: 210/250")
+      local hp = reading(hits, "hp", "curmax")
+      assert.is_not_nil(hp)
+      assert.are.equal(523, hp.current)
+      assert.are.equal(600, hp.max)
+      local mp = reading(hits, "mp", "curmax")
+      assert.is_not_nil(mp)
+      assert.are.equal(210, mp.current)
+      assert.are.equal(250, mp.max)
+    end)
+
+    it("should parse labelled percentages without needing a maximum", function()
+      local hits = BaseUI.parseVitalsLine("<87%hp 80%m>")
+      local hp = reading(hits, "hp", "percent")
+      assert.is_not_nil(hp)
+      assert.are.equal(87, hp.percent)
+      local mp = reading(hits, "mp", "percent")
+      assert.is_not_nil(mp)
+      assert.are.equal(80, mp.percent)
+      assert.are.equal(0, kindCount(hits, "curmax"))
+      assert.are.equal(0, kindCount(hits, "bare"))
+    end)
+
+    it("should parse score screen lines", function()
+      local hp = reading(BaseUI.parseVitalsLine("Health : 523/600"), "hp", "curmax")
+      assert.is_not_nil(hp)
+      assert.are.equal(523, hp.current)
+      assert.are.equal(600, hp.max)
+      local mp = reading(BaseUI.parseVitalsLine("Mana   : 210/250"), "mp", "curmax")
+      assert.is_not_nil(mp)
+      assert.are.equal(210, mp.current)
+      assert.are.equal(250, mp.max)
+      local mv = reading(BaseUI.parseVitalsLine("Moves  : 80/100"), "mv", "curmax")
+      assert.is_not_nil(mv)
+      assert.are.equal(80, mv.current)
+      assert.are.equal(100, mv.max)
+      local sentence = reading(BaseUI.parseVitalsLine("You have 100/120 hit points left."), "hp", "curmax")
+      assert.is_not_nil(sentence)
+      assert.are.equal(100, sentence.current)
+      assert.are.equal(120, sentence.max)
+    end)
+
+    it("should classify current-only prompts as bare, never self-sufficient", function()
+      local hits = BaseUI.parseVitalsLine("<523hp 210m 80mv>")
+      local hp = reading(hits, "hp", "bare")
+      assert.is_not_nil(hp)
+      assert.are.equal(523, hp.current)
+      assert.is_nil(hp.max)
+      assert.is_not_nil(reading(hits, "mp", "bare"))
+      assert.is_not_nil(reading(hits, "mv", "bare"))
+      assert.are.equal(0, kindCount(hits, "curmax"))
+      assert.are.equal(0, kindCount(hits, "percent"))
+    end)
+
+    it("should never mistake a self-sufficient line for a bare one", function()
+      local hits = BaseUI.parseVitalsLine("523/600hp")
+      assert.is_not_nil(reading(hits, "hp", "curmax"))
+      assert.are.equal(0, kindCount(hits, "bare"))
+    end)
+
+    it("should yield nothing for chat lines that merely mention vitals", function()
+      assert.are.same({}, BaseUI.parseVitalsLine("Bob says, 'I am somehow alive at 100/120 hp'"))
+      assert.are.same({}, BaseUI.parseVitalsLine("[chat] Ann: brags about her 100/120 hp"))
+    end)
+
+    it("should still read lines whose bracket tag is not a known channel", function()
+      assert.is_not_nil(reading(BaseUI.parseVitalsLine("[combat] 100/120 hp"), "hp", "curmax"))
+    end)
+
+    it("should yield nothing for unlabelled or unrelated numbers", function()
+      assert.are.same({}, BaseUI.parseVitalsLine("You see 100/120 on the door"))
+      assert.are.same({}, BaseUI.parseVitalsLine("There are 523 hippos in the river"))
+      assert.are.same({}, BaseUI.parseVitalsLine("You are carrying 210 mushrooms"))
+    end)
+
+    it("should reject a zero maximum and percentages above 100", function()
+      assert.are.same({}, BaseUI.parseVitalsLine("0/0 hp"))
+      assert.are.same({}, BaseUI.parseVitalsLine("150%hp"))
+    end)
+
+    it("should allow overheal (current above maximum)", function()
+      local hp = reading(BaseUI.parseVitalsLine("750/600hp"), "hp", "curmax")
+      assert.is_not_nil(hp)
+      assert.are.equal(750, hp.current)
+      assert.are.equal(600, hp.max)
+    end)
+
+    it("should not let one stat's numbers be claimed by the next label", function()
+      local hits = BaseUI.parseVitalsLine("HP: 523/600 MP:")
+      local hp = reading(hits, "hp", "curmax")
+      assert.is_not_nil(hp)
+      assert.are.equal(523, hp.current)
+      assert.is_nil(reading(hits, "mp"))
+    end)
+  end)
 end)
