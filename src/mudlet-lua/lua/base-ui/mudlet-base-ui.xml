@@ -86,24 +86,29 @@ local tabCss = {
     theme.borderSoft, theme.borderSoft),
 }
 
--- every gauge shares one look: light-to-dark vertical gradient over a dark
--- inset track, rounded corners, bold centered value text
-local function gaugeStyle(top, mid, deep)
+-- every gauge shares one look, a thin HUD line: bold value text floating
+-- over a transparent zone, with a slim stat-colored line along the bottom
+-- 30% tracking the value. The band edge is a hard gradient stop - Qt
+-- gradient stops don't alpha-composite, so each band is either fully
+-- transparent or fully opaque
+local function gaugeStyle(color)
   return string.format(
-    [[background-color: QLinearGradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 %s, stop: 0.45 %s, stop: 1 %s); border: 1px solid rgba(0,0,0,60%%); border-radius: 5px;]],
-    top, mid, deep)
+    [[background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(0,0,0,0), stop:0.6999 rgba(0,0,0,0), stop:0.70 %s, stop:1 %s); border: none;]],
+    color, color)
 end
 
-local gaugeBack = string.format(
-  [[background-color: QLinearGradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #101317, stop: 1 #1d2126); border: 1px solid %s; border-radius: 5px;]],
-  theme.border)
+local gaugeBack = gaugeStyle("#2c313a")
+
+-- the text label spans the whole gauge; the padding floats the value text
+-- above the line, inset from the left edge
+local gaugeText = [[background-color: transparent; padding-left: 8px; padding-bottom: 9px;]]
 
 local gaugeDefs = {
-  hp = { front = gaugeStyle("#84dd7f", "#2f9e3f", "#1c6f28") },
-  mp = { front = gaugeStyle("#7fb8e5", "#2f6f9e", "#1c4a6f") },
-  xp = { front = gaugeStyle("#f2cf7a", "#c28f2c", "#8a6316") },
-  mv = { front = gaugeStyle("#7fe0d0", "#2f9e8a", "#1c6f60") },
-  enemy = { front = gaugeStyle("#ef8f8f", "#b23a3a", "#7c2222") },
+  hp = { front = gaugeStyle("#2f9e3f") },
+  mp = { front = gaugeStyle("#2f6f9e") },
+  xp = { front = gaugeStyle("#c28f2c") },
+  mv = { front = gaugeStyle("#2f9e8a") },
+  enemy = { front = gaugeStyle("#b23a3a") },
 }
 
 -- GMCP vitals arrive in several dialects: lowercase namespaces, maxima inside
@@ -720,9 +725,10 @@ function BaseUI.ensureGauge(key)
     font = theme.font,
     fontSize = 9,
   }, BaseUI.container)
-  gauge:setStyleSheet(def.front, gaugeBack)
+  gauge:setStyleSheet(def.front, gaugeBack, gaugeText)
   gauge:setFgColor("white")
-  gauge:setAlignment("center")
+  gauge:setAlignment("l")
+  gauge:setBold(true)
   BaseUI.gauges[key] = gauge
   BaseUI.layoutGauges()
   return gauge
