@@ -519,8 +519,9 @@ end
 function BaseUI.loadSettings()
   BaseUI.settings = {}
   if io.exists(settingsFile) and not pcall(table.load, settingsFile, BaseUI.settings) then
-    -- corrupted settings file - start over with the defaults
+    -- corrupted settings file - start over with the defaults, but say so
     BaseUI.settings = {}
+    cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not read the saved settings - using the defaults.&lt;reset&gt;\n")
   end
 end
 
@@ -902,6 +903,12 @@ function BaseUI.handleDisconnect()
   BaseUI.sawGmcpVitals = false
   BaseUI.sawMsdpVitals = false
   BaseUI.msdpReady = false
+  -- the chat trigger layer retires itself once GMCP chat shows up; the next
+  -- connection may be to a game without it, so re-arm the triggers (the
+  -- first GMCP chat message will retire them again, and the recentCaptures
+  -- ring already covers the echo race that comes with that)
+  BaseUI.gmcpChat = false
+  BaseUI.createChatTriggers()
 end
 
 function BaseUI.addChatMessage()
