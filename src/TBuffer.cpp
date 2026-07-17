@@ -1665,13 +1665,31 @@ void TBuffer::recordLineLengthForWrapDetection(const qsizetype length)
     detectedEvent.mArgumentList.append(QString::number(ceiling));
     detectedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mpHost->raiseEvent(detectedEvent);
-    //: %1 is the screen column that the game appears to wrap its lines at
-    mpHost->postMessage(QObject::tr("[ INFO ]  - This game seems to wrap its own lines at %1 characters, which makes\n"
-                                    "triggers awkward to write. Mudlet can undo that so that triggers always see\n"
-                                    "whole lines and wrapping follows your window size instead - enable \"Undo the\n"
-                                    "game's own wrapping\" in the settings (Main display), or run:\n"
-                                    "lua setConfig(\"undoServerWrap\", true)")
-                                .arg(QString::number(ceiling)));
+
+    // Deferred so the hint does not interleave with the line being committed:
+    QPointer<Host> hostGuard = mpHost;
+    QTimer::singleShot(0, mpConsole, [hostGuard, ceiling]() {
+        if (!hostGuard || !hostGuard->mpConsole) {
+            return;
+        }
+        //: %1 is the screen column that the game appears to wrap its lines at
+        hostGuard->postMessage(QObject::tr("[ INFO ]  - This game seems to wrap its own lines at %1 characters, which\n"
+                                           "makes triggers awkward to write. Mudlet can undo that, so that triggers\n"
+                                           "always see whole lines and wrapping follows your window size instead:")
+                                       .arg(QString::number(ceiling)));
+        //: Confirmation shown after the player clicks the link that enables undoing the game's own line wrapping
+        QString confirmation = QObject::tr("Done - Mudlet now undoes the game's wrapping, and triggers see whole lines.");
+        // the text is embedded in a double-quoted Lua string:
+        confirmation.replace(QChar('\\'), qsl("\\\\")).replace(QChar('"'), qsl("\\\""));
+        const QString clickAction = qsl("setConfig(\"undoServerWrapWidth\", %1) setConfig(\"undoServerWrap\", true) cecho(\"\\n<light_green>%2\\n\")").arg(QString::number(ceiling), confirmation);
+        QStringList func(clickAction);
+        //: Tooltip on the link that enables the option to undo the game's own line wrapping
+        QStringList hint(QObject::tr("Turn on \"Undo the game's own wrapping\" - also found in the settings under Main display"));
+        //: Clickable link shown in the main window when a game that wraps its own lines is detected
+        const QString linkText = QObject::tr("  ➜ Click here to turn that on now");
+        hostGuard->mpConsole->echoLink(linkText, func, hint, false);
+        hostGuard->mpConsole->print("\n");
+    });
 }
 
 void TBuffer::processMxpWatchdogCallback()
