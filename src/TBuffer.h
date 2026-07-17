@@ -46,6 +46,7 @@
 #include <string>
 
 class Host;
+class QTimer;
 class TConsole;
 
 class WrapInfo
@@ -328,6 +329,9 @@ public:
     void clearLastLine();
     QPoint getEndPos();
     void translateToPlainText(std::string& incoming, bool isFromServer = false);
+    // Commits a line held back by the server-wrap undoing (Host::mUndoServerWrap)
+    // - public so that the connection teardown can flush it:
+    void flushPendingServerWrapJoin();
     void flushPendingDestinationContent();
     void resetCurrentTextFormat();
     void append(const QString& chunk, int sub_start, int sub_end, const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
@@ -395,7 +399,13 @@ private:
     void decodeSGR48(const QStringList&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
     void resetColors();
-    bool commitLine(char ch, size_t& localBufferPosition);
+    bool commitLine(char ch, size_t& localBufferPosition, bool isFromServer = false, bool forcedLineBreak = false);
+    void commitLineData(QString line, std::deque<TChar> chars, char ch);
+    bool endsAtServerWrapColumn() const;
+    bool looksLikeWrappedProse(const QString& line) const;
+    void joinPendingServerWrapOntoCurrent();
+    void startServerWrapFlushTimer();
+    void recordLineLengthForWrapDetection(qsizetype length);
     void processMxpWatchdogCallback();
     TChar::AttributeFlags computeCurrentAttributeFlags() const;
 
@@ -484,6 +494,19 @@ private:
 
     QString mMudLine;
     std::deque<TChar> mMudBuffer;
+    // A line that ended at the game's own wrap column (Host::mUndoServerWrap)
+    // is held here instead of being committed, so its continuation can be
+    // joined back on and triggers run once over the whole logical line:
+    QString mServerWrapPendingLine;
+    std::deque<TChar> mServerWrapPendingBuffer;
+    // Commits a held line if the game goes quiet without completing it - a
+    // full-width line that really was the end of the output:
+    QPointer<QTimer> mpServerWrapFlushTimer;
+    // Line length statistics used to detect that a game wraps its own output
+    // even though Host::mUndoServerWrap is off, to hint the option exists;
+    // keyed by line length, value is how often that length was seen:
+    QMap<qsizetype, int> mWrapDetectCounts;
+    int mWrapDetectSamples = 0;
     // Used to hold the unprocessed bytes that could be left at the end of a
     // packet if we detect that there should be more - will be prepended to the
     // next chunk of data - PROVIDED it is flagged as coming from the MUD Server
@@ -538,6 +561,19 @@ private:
 
     // Flag to skip trigger processing during documentation injection
     bool mSkipTriggerProcessing = false;
+
+    // Server wrap undoing: a line no shorter than this many characters below
+    // the configured wrap column is considered a wrapped segment (the game
+    // breaks at the last space, so segments fall a partial word short):
+    static constexpr int csmServerWrapSlack = 15;
+    // Stop joining once a logical line has grown this long - a runaway guard:
+    static constexpr qsizetype csmServerWrapMaxJoinedLength = 10000;
+    // How long to hold a full-width line for its continuation before deciding
+    // it really was complete:
+    static constexpr int csmServerWrapFlushDelayMs = 300;
+    // Wrap detection hint: how many lines ending within 8 characters of a
+    // stable ceiling column are needed before suggesting mUndoServerWrap:
+    static constexpr int csmWrapDetectThreshold = 40;
 
     // Timestamp to prevent duplicate OSC 8 documentation injection
     qint64 mLastOSC8DocsInjectionTime = 0;

@@ -192,6 +192,11 @@ TBuffer::~TBuffer()
     if (mTagWatchdog) {
         mTagWatchdog->stop();
     }
+    if (mpServerWrapFlushTimer) {
+        // The timeout lambda captures 'this':
+        mpServerWrapFlushTimer->stop();
+        QObject::disconnect(mpServerWrapFlushTimer, nullptr, nullptr, nullptr);
+    }
 }
 
 TBuffer::TBuffer(const TBuffer& other)
@@ -654,6 +659,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         }
 
         char& ch = localBuffer[localBufferPosition];
+        // Set when a line break is synthesised (MXP <br>/&newline;) rather
+        // than being a genuine newline in the game's output stream:
+        bool forcedLineBreak = false;
         if (ch == '\033') {
             if (!mGotOSC) {
                 // The terminator for an OSC is the String Terminator but that
@@ -956,6 +964,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         continue;
                     case HANDLER_COMMIT_LINE: // BR tag or &newline;
                         ch = '\n';
+                        forcedLineBreak = true;
                         goto COMMIT_LINE;
                     case HANDLER_INSERT_ENTITY_CUST:
                         // custom entity value set with <!EN>, recurse except for other custom entities
@@ -1086,7 +1095,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         }
 
     COMMIT_LINE:
-        if (commitLine(ch, localBufferPosition)) {
+        if (commitLine(ch, localBufferPosition, isFromServer, forcedLineBreak)) {
             continue;
         }
         // PLACEMARKER: Incoming text decoding
@@ -1341,137 +1350,328 @@ void TBuffer::resetCurrentTextFormat()
     mAltFont = 0;
 }
 
-bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
+bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFromServer, const bool forcedLineBreak)
 {
-    if (CHAR_IS_COMMIT_CHAR(ch)) {
-        // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
-        // EN: MUD lines are always written at the beginning of the line
-
-        // FIXME: This is the point where we should renormalise the new text
-        // data - of course there is the theoretical chance that the new
-        // text would alter the prior contents but as that is on a separate
-        // line there should not be any changes to text before a line feed
-        // which sort of seems to be implied by the current value of ch:
-
-        // Check if there's an active MXP DEST - route to destination frame
-        if (mpHost->mMxpFrameManager.hasActiveDestination()) {
-            TConsole* destConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
-            if (destConsole && destConsole != mpHost->mpConsole) {
-                if (!mMudLine.isEmpty()) {
-                    destConsole->printFormatted(mMudLine, mMudBuffer, mLinkStore);
-                }
-                mMudLine.clear();
-                mMudBuffer.clear();
-                ++localBufferPosition;
-                // Skip creating lines in main console while destination is active
-                return true;
-            }
-        }
-
-        // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
-        // https://bugreports.qt.io/browse/QTBUG-105035
-        if (Q_UNLIKELY(mMudLine.isEmpty())) {
-            if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
-                localBufferPosition++;
-                return true;
-            } else if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
-                // Note: we are using the background color for the
-                // foreground color as well so that we are transparent:
-                const TChar c(mBackGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
-                mMudLine.append(QChar::Space);
-                mMudBuffer.push_back(c);
-            }
-        }
-
-        if (static_cast<size_t>(mMudLine.size()) != mMudBuffer.size()) {
-            qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "
-                          "data character and attribute data items!";
-        }
-        if (!lineBuffer.back().isEmpty()) {
-            if (!mMudLine.isEmpty()) {
-                lineBuffer << mMudLine;
-            } else {
-                if (ch == '\r') {
-                    ++localBufferPosition;
-                    return true; //empty timer posting
-                }
-                lineBuffer << QString();
-            }
-            buffer.push_back(mMudBuffer);
-            timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
-            if (ch == '\xff') {
-                promptBuffer.append(true);
-            } else {
-                promptBuffer.append(false);
-            }
-        } else {
-            if (!mMudLine.isEmpty()) {
-                lineBuffer.back().append(mMudLine);
-            } else {
-                if (ch == '\r') {
-                    ++localBufferPosition;
-                    return true; //empty timer posting
-                }
-                lineBuffer.back().append(QString());
-            }
-            buffer.back() = mMudBuffer;
-            timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
-            if (ch == '\xff') {
-                promptBuffer.back() = true;
-            } else {
-                promptBuffer.back() = false;
-            }
-        }
-        mMudLine.clear();
-        mMudBuffer.clear();
-        const int line = lineBuffer.size() - 1;
-        mCommitLineIndices.append(line);
-        if (!mSkipTriggerProcessing) {
-            mpHost->mpConsole->runTriggers(line);
-        }
-
-        // Only use of TBuffer::wrap(), breaks up new text
-        // NOTE: it MAY have been clobbered by the trigger engine!
-        // If deleteLine() was called in a trigger, 'line' may now be past the end
-        // of the buffer; clamp to the last valid line so that any text inserted
-        // via echo() into the preceding line (which may contain embedded '\n'
-        // characters from insertInLine) is still wrapped correctly.
-        const int lastValidLine = static_cast<int>(lineBuffer.size()) - 1;
-        const int wrapStartLine = (lastValidLine >= 0) ? std::min(line, lastValidLine) : 0;
-        const int addedLines = wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
-
-        // Skip logging if a trigger deleted the line that was being committed;
-        // deleteLines() has already adjusted the deferred logging state
-        if (mCommitLineIndices.takeLast() >= 0) {
-            log(lineBuffer.size() - 1, lineBuffer.size() - 1);
-        }
-
-        ++localBufferPosition;
-        // Suppress new empty line IFF echoes already created a new empty line
-        // i.e. add newline if no added lines or the lastline isn't empty
-        if (addedLines == 0 || !lineBuffer.back().isEmpty()) {
-            std::deque<TChar> const newLine;
-            buffer.push_back(newLine);
-            lineBuffer.push_back(QString());
-            timeBuffer.push_back(QString());
-            promptBuffer << false;
-        }
-
-        if (static_cast<int>(buffer.size()) > mLinesLimit) {
-            // Whilst we also include a call to TConsole::handleLinesOverflowEvent(...)
-            // in all other methods where the following is used (because
-            // both need to monitor the number of lines of text in the
-            // buffer) the event that the former may be required to
-            // generate is NOT used for the TMainConsole case whereas this
-            // (translateToPlainText(...)) method is ONLY for that one:
-            shrinkBuffer();
-        }
-
-        applyPendingSelectionStyling();
-
-        return true;
+    if (!CHAR_IS_COMMIT_CHAR(ch)) {
+        return false;
     }
-    return false;
+
+    // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
+    // EN: MUD lines are always written at the beginning of the line
+
+    // FIXME: This is the point where we should renormalise the new text
+    // data - of course there is the theoretical chance that the new
+    // text would alter the prior contents but as that is on a separate
+    // line there should not be any changes to text before a line feed
+    // which sort of seems to be implied by the current value of ch:
+
+    // Check if there's an active MXP DEST - route to destination frame
+    if (mpHost->mMxpFrameManager.hasActiveDestination()) {
+        TConsole* destConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
+        if (destConsole && destConsole != mpHost->mpConsole) {
+            flushPendingServerWrapJoin();
+            if (!mMudLine.isEmpty()) {
+                destConsole->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+            }
+            mMudLine.clear();
+            mMudBuffer.clear();
+            ++localBufferPosition;
+            // Skip creating lines in main console while destination is active
+            return true;
+        }
+    }
+
+    if (mpHost->mUndoServerWrap && isFromServer && ch == '\n' && !forcedLineBreak && !mMudLine.isEmpty()) {
+        // The game wraps its own output and this is a genuine newline from
+        // it: a segment that runs right up to the game's wrap column is
+        // probably not a whole line, so hold it back and join its
+        // continuation on instead of committing it. Everything else -
+        // prompts ('\xff' from GA/EOR), timer-flushed fragments ('\r'),
+        // MXP <br> breaks and blank lines - is a real line boundary.
+        if (!mServerWrapPendingLine.isEmpty() && ((mMudLine.at(0).isSpace() && mMudLine.size() > 1 && mMudLine.at(1).isSpace()) || !looksLikeWrappedProse(mMudLine))) {
+            // A continuation of wrapped prose starts with a word - or with
+            // the single space some games move the break to instead of
+            // swallowing it. Deeper indentation or a symbol-heavy line
+            // instead belongs to centered ASCII art, menu columns, dividers
+            // and the like, so the held line was complete after all:
+            flushPendingServerWrapJoin();
+        }
+        const bool segmentLooksWrapped = endsAtServerWrapColumn() && looksLikeWrappedProse(mMudLine);
+        joinPendingServerWrapOntoCurrent();
+        if (segmentLooksWrapped && mMudLine.size() <= csmServerWrapMaxJoinedLength) {
+            mServerWrapPendingLine.swap(mMudLine);
+            mServerWrapPendingBuffer.swap(mMudBuffer);
+            startServerWrapFlushTimer();
+            ++localBufferPosition;
+            return true;
+        }
+    } else {
+        // Any other kind of line ending means held text was a complete line
+        // after all - commit it on its own first:
+        flushPendingServerWrapJoin();
+    }
+
+    if (isFromServer && ch == '\n' && !forcedLineBreak && !mpHost->mUndoServerWrap && !mpHost->mServerWrapHintShown) {
+        recordLineLengthForWrapDetection(mMudLine.size());
+    }
+
+    QString line;
+    std::deque<TChar> chars;
+    line.swap(mMudLine);
+    chars.swap(mMudBuffer);
+    commitLineData(std::move(line), std::move(chars), ch);
+    ++localBufferPosition;
+    return true;
+}
+
+void TBuffer::commitLineData(QString line, std::deque<TChar> chars, const char ch)
+{
+    // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
+    // https://bugreports.qt.io/browse/QTBUG-105035
+    if (Q_UNLIKELY(line.isEmpty())) {
+        if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
+            return;
+        } else if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
+            // Note: we are using the background color for the
+            // foreground color as well so that we are transparent:
+            const TChar c(mBackGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
+            line.append(QChar::Space);
+            chars.push_back(c);
+        }
+    }
+
+    if (static_cast<size_t>(line.size()) != chars.size()) {
+        qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "
+                      "data character and attribute data items!";
+    }
+    if (!lineBuffer.back().isEmpty()) {
+        if (!line.isEmpty()) {
+            lineBuffer << line;
+        } else {
+            if (ch == '\r') {
+                return; //empty timer posting
+            }
+            lineBuffer << QString();
+        }
+        buffer.push_back(chars);
+        timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
+        if (ch == '\xff') {
+            promptBuffer.append(true);
+        } else {
+            promptBuffer.append(false);
+        }
+    } else {
+        if (!line.isEmpty()) {
+            lineBuffer.back().append(line);
+        } else {
+            if (ch == '\r') {
+                return; //empty timer posting
+            }
+            lineBuffer.back().append(QString());
+        }
+        buffer.back() = chars;
+        timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
+        if (ch == '\xff') {
+            promptBuffer.back() = true;
+        } else {
+            promptBuffer.back() = false;
+        }
+    }
+    const int lineIndex = lineBuffer.size() - 1;
+    mCommitLineIndices.append(lineIndex);
+    if (!mSkipTriggerProcessing) {
+        mpHost->mpConsole->runTriggers(lineIndex);
+    }
+
+    // Only use of TBuffer::wrap(), breaks up new text
+    // NOTE: it MAY have been clobbered by the trigger engine!
+    // If deleteLine() was called in a trigger, 'lineIndex' may now be past the
+    // end of the buffer; clamp to the last valid line so that any text
+    // inserted via echo() into the preceding line (which may contain embedded
+    // '\n' characters from insertInLine) is still wrapped correctly.
+    const int lastValidLine = static_cast<int>(lineBuffer.size()) - 1;
+    const int wrapStartLine = (lastValidLine >= 0) ? std::min(lineIndex, lastValidLine) : 0;
+    const int addedLines = wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
+
+    // Skip logging if a trigger deleted the line that was being committed;
+    // deleteLines() has already adjusted the deferred logging state
+    if (mCommitLineIndices.takeLast() >= 0) {
+        log(lineBuffer.size() - 1, lineBuffer.size() - 1);
+    }
+
+    // Suppress new empty line IFF echoes already created a new empty line
+    // i.e. add newline if no added lines or the lastline isn't empty
+    if (addedLines == 0 || !lineBuffer.back().isEmpty()) {
+        std::deque<TChar> const newLine;
+        buffer.push_back(newLine);
+        lineBuffer.push_back(QString());
+        timeBuffer.push_back(QString());
+        promptBuffer << false;
+    }
+
+    if (static_cast<int>(buffer.size()) > mLinesLimit) {
+        // Whilst we also include a call to TConsole::handleLinesOverflowEvent(...)
+        // in all other methods where the following is used (because
+        // both need to monitor the number of lines of text in the
+        // buffer) the event that the former may be required to
+        // generate is NOT used for the TMainConsole case whereas this
+        // (translateToPlainText(...)) method is ONLY for that one:
+        shrinkBuffer();
+    }
+
+    applyPendingSelectionStyling();
+}
+
+// A line whose length is within csmServerWrapSlack characters below the
+// configured column ends where the game's own word wrap would have broken it
+// (the game breaks at the last space that fits, so wrapped segments fall up
+// to a word short of the column):
+bool TBuffer::endsAtServerWrapColumn() const
+{
+    const qsizetype width = mpHost->mUndoServerWrapWidth;
+    const qsizetype len = mMudLine.size();
+    return len <= width && len >= width - csmServerWrapSlack;
+}
+
+// Word-wrapped prose breaks between words, so a wrapped segment ends in a
+// word (or a sentence mark that happened to fall on the wrap column) and
+// consists mostly of letters. ASCII art, dividers and table borders - which
+// also run right up to the screen width - end in and are full of symbols;
+// those must not be glued back together:
+bool TBuffer::looksLikeWrappedProse(const QString& line) const
+{
+    // Some games keep the space they broke the line at rather than
+    // swallowing it - but only ever the one. A run of trailing whitespace
+    // means padding (or a blank line), which word wrap never produces:
+    qsizetype end = line.size();
+    while (end > 0 && line.at(end - 1).isSpace()) {
+        --end;
+    }
+    if (end == 0 || line.size() - end > 1) {
+        return false;
+    }
+    static const QString allowedFinals = qsl(".,;:!?'\")");
+    const QChar last = line.at(end - 1);
+    if (!last.isLetterOrNumber() && !allowedFinals.contains(last)) {
+        return false;
+    }
+    qsizetype letters = 0;
+    qsizetype nonSpace = 0;
+    for (const QChar& c : line) {
+        if (c.isSpace()) {
+            continue;
+        }
+        ++nonSpace;
+        if (c.isLetterOrNumber()) {
+            ++letters;
+        }
+    }
+    return nonSpace > 0 && letters * 10 >= nonSpace * 6;
+}
+
+void TBuffer::joinPendingServerWrapOntoCurrent()
+{
+    if (mServerWrapPendingLine.isEmpty()) {
+        return;
+    }
+    // The game's wrapper swallowed the space it broke the line at:
+    if (!mServerWrapPendingLine.endsWith(QChar::Space) && !mMudLine.startsWith(QChar::Space)) {
+        mServerWrapPendingLine.append(QChar::Space);
+        mServerWrapPendingBuffer.push_back(mServerWrapPendingBuffer.empty() ? TChar(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags()) : mServerWrapPendingBuffer.back());
+    }
+    mMudLine.prepend(mServerWrapPendingLine);
+    mMudBuffer.insert(mMudBuffer.begin(), mServerWrapPendingBuffer.begin(), mServerWrapPendingBuffer.end());
+    mServerWrapPendingLine.clear();
+    mServerWrapPendingBuffer.clear();
+}
+
+void TBuffer::flushPendingServerWrapJoin()
+{
+    if (mServerWrapPendingLine.isEmpty()) {
+        return;
+    }
+    QString line;
+    std::deque<TChar> chars;
+    line.swap(mServerWrapPendingLine);
+    chars.swap(mServerWrapPendingBuffer);
+    commitLineData(std::move(line), std::move(chars), '\n');
+}
+
+void TBuffer::startServerWrapFlushTimer()
+{
+    if (!mpServerWrapFlushTimer) {
+        if (!mpConsole) {
+            return;
+        }
+        mpServerWrapFlushTimer = new QTimer(mpConsole);
+        mpServerWrapFlushTimer->setSingleShot(true);
+        mpServerWrapFlushTimer->setInterval(csmServerWrapFlushDelayMs);
+        QObject::connect(mpServerWrapFlushTimer, &QTimer::timeout, mpConsole, [this]() {
+            if (!mpHost || !mpHost->mpConsole) {
+                return;
+            }
+            // Mimic TMainConsole::printOnDisplay() so that trigger-context
+            // functions behave the same as for any other committed line:
+            mpHost->mpConsole->mTriggerEngineMode = true;
+            flushPendingServerWrapJoin();
+            mpHost->mpConsole->mTriggerEngineMode = false;
+        });
+    }
+    mpServerWrapFlushTimer->start();
+}
+
+// Called for every genuine game line while mUndoServerWrap is off: when line
+// lengths pile up against a stable ceiling column, the game is most likely
+// wrapping its own output, so - once per profile - point out the option that
+// undoes that:
+void TBuffer::recordLineLengthForWrapDetection(const qsizetype length)
+{
+    if (length < 40) {
+        // too short to carry any signal
+        return;
+    }
+    ++mWrapDetectCounts[length];
+    if (++mWrapDetectSamples % 100) {
+        return;
+    }
+
+    // The ceiling is the longest line length seen more than incidentally:
+    qsizetype ceiling = 0;
+    for (auto it = mWrapDetectCounts.constBegin(); it != mWrapDetectCounts.constEnd(); ++it) {
+        if (it.value() >= 3) {
+            ceiling = it.key();
+        }
+    }
+    if (ceiling < 60 || ceiling > 160) {
+        return;
+    }
+    int atCeiling = 0;
+    int beyondCeiling = 0;
+    for (auto it = mWrapDetectCounts.constBegin(); it != mWrapDetectCounts.constEnd(); ++it) {
+        if (it.key() > ceiling) {
+            beyondCeiling += it.value();
+        } else if (it.key() >= ceiling - 8) {
+            atCeiling += it.value();
+        }
+    }
+    if (atCeiling < csmWrapDetectThreshold || beyondCeiling > 2) {
+        return;
+    }
+
+    mpHost->mServerWrapHintShown = true;
+    TEvent detectedEvent{};
+    detectedEvent.mArgumentList.append(qsl("sysServerWrapDetected"));
+    detectedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    detectedEvent.mArgumentList.append(QString::number(ceiling));
+    detectedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mpHost->raiseEvent(detectedEvent);
+    //: %1 is the screen column that the game appears to wrap its lines at
+    mpHost->postMessage(QObject::tr("[ INFO ]  - This game seems to wrap its own lines at %1 characters, which makes\n"
+                                    "triggers awkward to write. Mudlet can undo that so that triggers always see\n"
+                                    "whole lines and wrapping follows your window size instead - enable \"Undo the\n"
+                                    "game's own wrapping\" in the settings (Main display), or run:\n"
+                                    "lua setConfig(\"undoServerWrap\", true)")
+                                .arg(QString::number(ceiling)));
 }
 
 void TBuffer::processMxpWatchdogCallback()

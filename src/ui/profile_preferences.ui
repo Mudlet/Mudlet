@@ -1161,7 +1161,9 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>Word wrapping</string>
          </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_groupBox_wrapping">
+         <layout class="QVBoxLayout" name="verticalLayout_groupBox_wrapping">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_groupBox_wrapping">
           <item>
            <widget class="QFrame" name="frame_wrap_at">
             <property name="frameShape">
@@ -1329,6 +1331,58 @@ you can use it but there could be issues with aligning columns of text</string>
              </item>
             </layout>
            </widget>
+          </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_undo_server_wrap">
+            <item>
+             <widget class="QCheckBox" name="checkBox_undoServerWrap">
+              <property name="toolTip">
+               <string>&lt;p&gt;Some games wrap their own lines and offer no way to turn that off, which makes triggers awkward to write: the text a trigger sees can be split mid-sentence. This option joins those wrapped lines back together before triggers run, so triggers always see whole lines and the wrapping above applies for display instead.&lt;/p&gt;&lt;p&gt;Set the column to the width the game wraps at (very often 80). Only lines from the game are affected.&lt;/p&gt;</string>
+              </property>
+              <property name="text">
+               <string>Undo the game's own wrapping at:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="undo_server_wrap_width_spinBox">
+              <property name="minimum">
+               <number>20</number>
+              </property>
+              <property name="maximum">
+               <number>500</number>
+              </property>
+              <property name="value">
+               <number>80</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_undo_server_wrap_characters">
+              <property name="text">
+               <string>characters</string>
+              </property>
+              <property name="buddy">
+               <cstring>undo_server_wrap_width_spinBox</cstring>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_undo_server_wrap">
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
           </item>
          </layout>
         </widget>

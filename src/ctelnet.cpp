@@ -724,6 +724,11 @@ void cTelnet::slot_socketDisconnected()
     }
 
     postData();
+    if (mpHost->mpConsole) {
+        // A line held back for server-wrap undoing is complete now that the
+        // connection is gone - commit it before the disconnect messages:
+        mpHost->mpConsole->buffer.flushPendingServerWrapJoin();
+    }
 
     emit signal_disconnected(mpHost);
 

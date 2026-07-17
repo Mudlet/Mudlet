@@ -7621,6 +7621,18 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.mEnableNAWS = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("undoServerWrap")) {
+        host.mUndoServerWrap = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("undoServerWrapWidth")) {
+        const int width = getVerifiedInt(L, __func__, 2, "value");
+        if (width < 20 || width > 500) {
+            return warnArgumentValue(L, __func__, qsl("width %1 is outside of the supported range of 20 to 500").arg(width));
+        }
+        host.mUndoServerWrapWidth = width;
+        return success();
+    }
     if (key == qsl("askTlsAvailable")) {
         host.mAskTlsAvailable = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -8026,6 +8038,14 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("enableNAWS"),
              [&]() {
                  lua_pushboolean(L, host.mEnableNAWS);
+             }},
+            {qsl("undoServerWrap"),
+             [&]() {
+                 lua_pushboolean(L, host.mUndoServerWrap);
+             }},
+            {qsl("undoServerWrapWidth"),
+             [&]() {
+                 lua_pushnumber(L, host.mUndoServerWrapWidth);
              }},
             {qsl("logDirectory"),
              [&]() {
