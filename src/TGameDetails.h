@@ -620,6 +620,28 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "always innovating. Recent features include Discord integration "
                  "and areas written with artificial intelligence. Check us out!")},
 
+            {qsl("Legends of Future Past"),
+             qsl("lofp.metavert.io"),
+             4001,
+             true,
+             qsl("<a href='https://lofp.metavert.io'>lofp.metavert.io</a>"),
+             qsl(":/icons/lofp.png"),
+             qsl("Originally launched in 1992, Legends of Future Past was one of the first commercial "
+                 "MUDs. After years offline, it has been resurrected from the original script files with "
+                 "a modern engine."
+                 "\n\n"
+                 "Explore over 2,200 rooms across the Shattered Realms of Andor. Eight playable races "
+                 "including Humans, Aelfen, Drakin, and Ephemerals, each with unique racial abilities. "
+                 "Full combat system with 60+ spells across five schools of magic, 30+ psionic "
+                 "disciplines, and 36 skills with build point progression."
+                 "\n\n"
+                 "Features complete crafting (mining, smelting, forging, weaving, alchemy), a treasure "
+                 "system with monster loot tables, and a scripted world driven by thousands of "
+                 "interactive events."
+                 "\n\n"
+                 "Supports GMCP (automapper-ready with Room.Info), MCCP2, MSSP, MSDP, and MXP. "
+                 "Also accessible via SSH (port 4022) or web browser at lofp.metavert.io.")},
+
             {qsl("Legends of the Jedi"),
              qsl("legendsofthejedi.com"),
              5656,
@@ -645,28 +667,6 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "minimize griefing and ensure that all kills have sufficient in-character cause."
                  "\n\n"
                  "What role will you play? The legend awaits!")},
-
-            {qsl("Legends of Future Past"),
-             qsl("lofp.metavert.io"),
-             4001,
-             true,
-             qsl("<a href='https://lofp.metavert.io'>lofp.metavert.io</a>"),
-             qsl(":/icons/lofp.png"),
-             qsl("Originally launched in 1992, Legends of Future Past was one of the first commercial "
-                 "MUDs. After years offline, it has been resurrected from the original script files with "
-                 "a modern engine."
-                 "\n\n"
-                 "Explore over 2,200 rooms across the Shattered Realms of Andor. Eight playable races "
-                 "including Humans, Aelfen, Drakin, and Ephemerals, each with unique racial abilities. "
-                 "Full combat system with 60+ spells across five schools of magic, 30+ psionic "
-                 "disciplines, and 36 skills with build point progression."
-                 "\n\n"
-                 "Features complete crafting (mining, smelting, forging, weaving, alchemy), a treasure "
-                 "system with monster loot tables, and a scripted world driven by thousands of "
-                 "interactive events."
-                 "\n\n"
-                 "Supports GMCP (automapper-ready with Room.Info), MCCP2, MSSP, MSDP, and MXP. "
-                 "Also accessible via SSH (port 4022) or web browser at lofp.metavert.io.")},
 
             {qsl("Multi-Users in Middle-earth"),
              qsl("mume.org"),
