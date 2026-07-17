@@ -149,14 +149,18 @@ private slots:
   // -----------------------------------------------------------------------
 
   void test_tempTriggersRemovedAfterReset() {
+    // preinstalled packages (the starter UI) register their own temp triggers
+    // and re-register them when the profile comes back, so the count after a
+    // reset returns to that baseline rather than zero
+    const int baseline = countTempTriggers();
     int id = mpHost->mLuaInterpreter.startTempTrigger(qsl("test_pattern"),
                                                       qsl(""), -1);
     QVERIFY(id > 0);
-    QVERIFY(countTempTriggers() > 0);
+    QVERIFY(countTempTriggers() > baseline);
 
     performReset();
 
-    QCOMPARE(countTempTriggers(), 0);
+    QCOMPARE(countTempTriggers(), baseline);
   }
 
   void test_tempAliasesRemovedAfterReset() {
@@ -504,6 +508,7 @@ private slots:
   // -----------------------------------------------------------------------
 
   void test_phase2RunsDeferredNotImmediate() {
+    const int baseline = countTempTriggers();
     int triggerId = mpHost->mLuaInterpreter.startTempTrigger(
         qsl("deferred_test"), qsl(""), -1);
     QVERIFY(triggerId > 0);
@@ -513,14 +518,14 @@ private slots:
     // Phase2 has NOT run yet
     QVERIFY2(mpHost->mResetProfile,
              "mResetProfile should be true before processEvents");
-    QVERIFY2(countTempTriggers() > 0,
+    QVERIFY2(countTempTriggers() > baseline,
              "Temp triggers should still exist before processEvents");
 
     QCoreApplication::processEvents();
 
     QVERIFY2(!mpHost->mResetProfile,
              "mResetProfile should be false after processEvents");
-    QCOMPARE(countTempTriggers(), 0);
+    QCOMPARE(countTempTriggers(), baseline);
   }
 
   // -----------------------------------------------------------------------
@@ -628,6 +633,7 @@ private slots:
   // -----------------------------------------------------------------------
 
   void test_doubleResetIsGuarded() {
+    const int baseline = countTempTriggers();
     mpHost->mLuaInterpreter.startTempTrigger(qsl("double_reset_test"), qsl(""),
                                              -1);
 
@@ -650,7 +656,7 @@ private slots:
     lua_pop(afterL, 1);
     QVERIFY2(!mpHost->mResetProfile,
              "mResetProfile should be false after reset");
-    QCOMPARE(countTempTriggers(), 0);
+    QCOMPARE(countTempTriggers(), baseline);
   }
 
   // -----------------------------------------------------------------------
