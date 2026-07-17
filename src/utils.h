@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2021 by Vadim Peretokin - vperetokin@hey.com            *
- *   Copyright (C) 2021, 2023, 2025 by Stephen Lyons                       *
+ *   Copyright (C) 2021, 2023, 2025-2026 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -35,6 +35,8 @@
 #define qsl(s) QStringLiteral(s)
 
 using TEnterEvent = QEnterEvent;
+
+using NameGroupMatches = QVector<QPair<QString, QString>>;
 
 // Common enum for specifying insertion mode for tree items
 // Used across all editor item types (triggers, aliases, timers, scripts, actions, keys)
@@ -100,13 +102,14 @@ public:
         return QDir::cleanPath(base + "/" + path);
     }
 
+    inline static const auto scmfileSystemUnsafeChars = QRegularExpression(qsl(R"REGEX([/\\:*?"<>|])REGEX"));
     // Sanitize a string for safe use as filename/path component
     // Replaces filesystem-unsafe characters with underscores and limits length
     static QString sanitizeForPath(const QString& input)
     {
         QString sanitized = input;
         // Replace filesystem-unsafe characters with underscores
-        sanitized.replace(QRegularExpression(R"([/\\:*?"<>|])"), "_");
+        sanitized.replace(scmfileSystemUnsafeChars, qsl("_"));
         // Limit length to prevent filesystem issues
         if (sanitized.length() > 50) {
             sanitized = sanitized.left(50);

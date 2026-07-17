@@ -28,14 +28,18 @@ In general: write modern C++20 code, but avoid C++ exceptions, templates, and co
 
 Use range-based for loops instead of iterator-based or index-based loops where appropriate.
 
-See `.github/CONTRIBUTING.md` for the coding standards as well as the information below:
+See `docs/CONTRIBUTING.md` for the coding standards as well as the information below:
 
 ```cpp
 // Class names: PascalCase with 'T' prefix for main classes
 class TConsole : public QWidget
 
 // Member variables: camelCase with 'm' prefix
+// avoid starting with the `is` prefix
 QString mProfileName;
+
+// avoid starting function names with the `is` prefix as well
+bool ready();
 
 // Qt signals/slots: camelCase
 signals:
@@ -182,7 +186,7 @@ On macOS, use the Homebrew-installed LLVM version to ensure compatibility:
 $(brew --prefix llvm)/bin/clang-format -i path/to/edited/file.cpp path/to/edited/file.h
 ```
 
-The project uses the `.clang-format` configuration in `src/`. This ensures consistent code style across the codebase.
+The project uses the `.clang-format` configuration in the repo root. This ensures consistent code style across the codebase.
 
 ### Static analysis
 
@@ -203,6 +207,17 @@ For complete setup instructions on how to run static analysis during a build see
 ### Git
 
 Do not force-push to remote branches.
+
+#### Commit trailers for AI-assisted work
+
+When you (an AI assistant) help produce a commit, the commit message MUST include:
+
+- `Assisted-by: AGENT_NAME:MODEL_VERSION` - identifies the AI tool and model. Use the actual model ID you are running as (e.g. `Assisted-by: Claude:claude-4.6-opus`).
+- `Signed-off-by: Full Name <email>` - the human submitter's DCO sign-off. Do NOT fabricate or auto-add this on the human's behalf, and do NOT add a `Signed-off-by` for the AI itself.
+
+Before the human signs off, they must have built and manually tested the change to confirm it works. Mudlet developers should not be the first to test AI-generated code. Ask the human to confirm they've tested the PR, and to provide the name and email to use for sign-off; only then add the `Signed-off-by` trailer.
+
+Both trailers go at the end of the commit message. Apply this to every AI-assisted commit, not just the first. See the "AI Coding Assistants" section in `docs/CONTRIBUTING.md` for the full policy.
 
 ### Building on macOS
 

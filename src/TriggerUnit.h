@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2022-2023, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -41,12 +42,7 @@ class TriggerUnit
     friend class XMLimport;
 
 public:
-    explicit TriggerUnit(Host* pHost)
-    : mpHost(pHost)
-    , mMaxID(0)
-    , mModuleMember()
-    {
-    }
+    explicit TriggerUnit(Host*);
     ~TriggerUnit();
 
     std::list<TTrigger*> getTriggerRootNodeList() { return mTriggerRootNodeList; }
@@ -80,6 +76,17 @@ public:
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
 
+    int processingDepth() const { return mProcessingDepth; }
+    // Raw pointer is safe: a trigger outlives its own execute() frame, as deletion
+    // is deferred to doCleanup() once mProcessingDepth returns to 0.
+    const QString* currentExecutingTriggerName() const { return mpCurrentExecutingTriggerName; }
+    void setCurrentExecutingTriggerName(const QString* pName) { mpCurrentExecutingTriggerName = pName; }
+    // Turns an endless self-feeding-trigger loop into a catchable Lua error before
+    // it overflows the stack. Sized for the smallest platform stack (~1MB on
+    // Windows, where the original crash hit before Lua's own 200-C-call guard):
+    // a few times any legitimate nesting, comfortably below the native limit.
+    inline static const int scmMaxProcessingDepth = 50;
+
     QList<TTrigger*> uninstallList;
 
 private:
@@ -103,6 +110,7 @@ private:
     int statsPatternsActive = 0;
     // Counter for nested processing; cleanup deferred until 0
     int mProcessingDepth = 0;
+    const QString* mpCurrentExecutingTriggerName = nullptr;
 };
 
 #endif // MUDLET_TRIGGERUNIT_H

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018, 2020-2023, 2025 by Stephen Lyons             *
+ *   Copyright (C) 2016-2018, 2020-2023, 2025-2026 by Stephen Lyons        *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
@@ -35,7 +35,7 @@
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
 
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 #include <QtUiTools>
 #include <QColorDialog>
 #include <QDir>
@@ -124,7 +124,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     auto objectList = mpCopyProfile->associatedObjects();
     QList<QWidget*> widgetList;
-    for (auto pObjectItem : objectList) {
+    for (const auto pObjectItem : std::as_const(objectList)) {
         auto pWidgetItem = qobject_cast<QWidget*>(pObjectItem);
         if (pWidgetItem) {
             widgetList << pWidgetItem;
@@ -137,7 +137,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     objectList = copyProfileSettings->associatedObjects();
     widgetList.clear();
-    for (auto pObjectItem : objectList) {
+    for (const auto pObjectItem : std::as_const(objectList)) {
         auto pWidgetItem = qobject_cast<QWidget*>(pObjectItem);
         if (pWidgetItem) {
             widgetList << pWidgetItem;
@@ -384,7 +384,7 @@ void dlgConnectionProfiles::slot_updateDescription()
 
 void dlgConnectionProfiles::indicatePackagesInstallOnConnect(QStringList packages)
 {
-    if (!packages.length()) {
+    if (packages.isEmpty()) {
         return;
     }
 
@@ -439,7 +439,7 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
     }
 }
 
-void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QString& pass) const
+void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QString& pass)
 {
     // Validate that we have a password to store
     if (pass.trimmed().isEmpty()) {
@@ -448,7 +448,7 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
     }
 
     // Use async API for QtKeychain integration with file fallback
-    auto* credManager = new CredentialManager();
+    auto* credManager = new CredentialManager(this);
 
     credManager->storePassword(profile, "character", pass, [credManager, profile](bool success, const QString& errorMessage) {
         if (success) {
@@ -462,10 +462,10 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
     });
 }
 
-void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
+void dlgConnectionProfiles::deleteSecurePassword(const QString& profile)
 {
     // Use async API for QtKeychain integration with file fallback
-    auto* credManager = new CredentialManager();
+    auto* credManager = new CredentialManager(this);
 
     credManager->removePassword(profile, "character", [credManager, profile](bool success, const QString& errorMessage) {
         if (success) {
@@ -1252,10 +1252,14 @@ void dlgConnectionProfiles::fillout_form()
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
+    const bool showOnlyMyProfiles = settings.value(qsl("showOnlyMyProfiles"), false).toBool();
     if (onlyShownPredefinedProfiles.isEmpty()) {
         const auto defaultGames = TGameDetails::keys();
         for (auto& game : defaultGames) {
             if (!deletedDefaultMuds.contains(game)) {
+                if (showOnlyMyProfiles && !mProfileList.contains(game, Qt::CaseInsensitive)) {
+                    continue;
+                }
                 pItem = new QListWidgetItem();
                 auto details = TGameDetails::findGame(game);
                 setupMudProfile(pItem, game, (*details).description, (*details).icon);
@@ -1407,7 +1411,7 @@ template <typename L>
 void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callback)
 {
     // Use async API for QtKeychain integration with file fallback
-    auto* credManager = new CredentialManager();
+    auto* credManager = new CredentialManager(this);
 
     credManager->retrievePassword(profile, "character", [credManager, callback = std::move(callback)](bool success, const QString& password, const QString& errorMessage) {
         if (success) {
@@ -1474,6 +1478,20 @@ void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
                        this,
                        &dlgConnectionProfiles::slot_setCustomColor);
     }
+
+    menu.addSeparator();
+
+    auto& settings = *mudlet::self()->mpSettings;
+    const bool showOnlyMyProfiles = settings.value(qsl("showOnlyMyProfiles"), false).toBool();
+    //: Context menu action to toggle hiding default game profiles that have not been used yet
+    auto* pAction_showMyProfilesOnly = menu.addAction(tr("Show my profiles only"));
+    pAction_showMyProfilesOnly->setCheckable(true);
+    pAction_showMyProfilesOnly->setChecked(showOnlyMyProfiles);
+    connect(pAction_showMyProfilesOnly, &QAction::toggled, this, [this](const bool checked) {
+        auto& settings = *mudlet::self()->mpSettings;
+        settings.setValue(qsl("showOnlyMyProfiles"), checked);
+        fillout_form();
+    });
 
     menu.exec(globalPos);
 }
@@ -1549,16 +1567,19 @@ void dlgConnectionProfiles::slot_copyProfile()
     QString oldname;
     QListWidgetItem* pItem;
     const auto oldPassword = character_password_entry->text();
+    const CopiedProfileData data = captureProfileData();
 
     if (!copyProfileWidget(profile_name, oldname, pItem)) {
         mCopyingProfile = false;
         return;
     }
 
-    // copy the folder on-disk
+    // A default profile (one of the predefined games) only exists in memory, so
+    // there is no folder to copy on-disk. Persist the displayed connection data
+    // into the new profile the same way saving a profile does, so the copy is
     const QDir dir(mudlet::getMudletPath(enums::profileHomePath, oldname));
     if (!dir.exists()) {
-        mCopyingProfile = false;
+        saveDefaultProfileCopy(profile_name, data, oldPassword);
         return;
     }
 
@@ -1591,12 +1612,85 @@ void dlgConnectionProfiles::slot_copyProfile()
     watcher->setFuture(future);
 }
 
+dlgConnectionProfiles::CopiedProfileData dlgConnectionProfiles::captureProfileData() const
+{
+    return {host_name_entry->text(),
+            port_entry->text(),
+            port_ssl_tsl->isChecked() ? Qt::Checked : Qt::Unchecked,
+            login_entry->text(),
+            website_entry->text(),
+            mud_description_textedit->toPlainText()};
+}
+
+// Copying a default profile (one of the predefined games) has nothing to copy
+// on-disk, because such profiles only exist in memory until saved. Create the
+// new profile's folder and persist the captured connection data, so the copy is
+// a faithful, functional profile that survives reopening the connection screen.
+// url/port/SSL go through the same writers used when saving a profile (which
+// also re-enable the connect button); the remaining fields are written directly.
+void dlgConnectionProfiles::saveDefaultProfileCopy(const QString& profileName, const CopiedProfileData& data, const QString& oldPassword)
+{
+    const QDir dir;
+    if (!dir.mkpath(mudlet::getMudletPath(enums::profileHomePath, profileName))) {
+        notificationArea->show();
+        notificationAreaIconLabelWarning->show();
+        notificationAreaIconLabelError->hide();
+        notificationAreaIconLabelInformation->hide();
+        notificationAreaMessageBox->show();
+        notificationAreaMessageBox->setText(tr("Could not create the new profile folder on your computer."));
+        mCopyingProfile = false;
+        return;
+    }
+
+    mProfileList << profileName;
+    mCopyingProfile = false;
+    {
+        const QSignalBlocker urlBlocker(host_name_entry);
+        const QSignalBlocker portBlocker(port_entry);
+        const QSignalBlocker sslBlocker(port_ssl_tsl);
+        const QSignalBlocker loginBlocker(login_entry);
+        host_name_entry->setText(data.host);
+        port_entry->setText(data.port);
+        port_ssl_tsl->setChecked(data.sslTsl == Qt::Checked);
+        login_entry->setText(data.login);
+        website_entry->setText(data.website);
+        website_entry->setVisible(!data.website.isEmpty());
+        mud_description_textedit->setPlainText(data.description);
+    }
+    slot_updateUrl(data.host);
+    slot_updatePort(data.port);
+    slot_updateSslTslPort(data.sslTsl);
+    if (!data.login.isEmpty()) {
+        writeProfileData(profileName, qsl("login"), data.login);
+    }
+    if (!data.website.isEmpty()) {
+        writeProfileData(profileName, qsl("website"), data.website);
+    }
+    if (!data.description.isEmpty()) {
+        writeProfileData(profileName, qsl("description"), data.description);
+    }
+    {
+        const QSignalBlocker blocker(character_password_entry);
+        character_password_entry->setText(oldPassword);
+    }
+    if (mudlet::self()->storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
+        writeSecurePassword(profileName, oldPassword);
+    }
+}
+
 void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
 {
     QString profile_name;
     QString oldname;
     QListWidgetItem* pItem;
+    const auto oldPassword = character_password_entry->text();
+    const CopiedProfileData data = captureProfileData();
     if (!copyProfileWidget(profile_name, oldname, pItem)) {
+        return;
+    }
+    const QDir oldProfileDir(mudlet::getMudletPath(enums::profileHomePath, oldname));
+    if (!oldProfileDir.exists()) {
+        saveDefaultProfileCopy(profile_name, data, oldPassword);
         return;
     }
 
@@ -1999,14 +2093,14 @@ bool dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QStrin
         destDir.mkdir(destFolder);
     }
     QStringList files = sourceDir.entryList(QDir::Files);
-    for (const QString& file : files) {
+    for (const QString& file : std::as_const(files)) {
         const QString srcName = sourceFolder + QDir::separator() + file;
         const QString destName = destFolder + QDir::separator() + file;
         QFile::copy(srcName, destName);
     }
     files.clear();
     files = sourceDir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot);
-    for (const QString& file : files) {
+    for (const QString& file : std::as_const(files)) {
         const QString srcName = sourceFolder + QDir::separator() + file;
         const QString destName = destFolder + QDir::separator() + file;
         copyFolder(srcName, destName);

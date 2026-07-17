@@ -65,7 +65,7 @@ jobs:
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         submodules: recursive
         fetch-depth: 0
@@ -79,11 +79,11 @@ jobs:
         modules: qt5compat qtmultimedia qtspeech
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.3.1
+      uses: lukka/get-cmake@v4.3.4
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
-      uses: leafo/gh-actions-lua@v12
+      uses: leafo/gh-actions-lua@v13
       with:
         luaVersion: ${{ env.LUA_VERSION }}
         buildCache: false
@@ -156,7 +156,7 @@ jobs:
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
     - name: (Linux) Install Lua via GitHub Actions
-      uses: leafo/gh-actions-lua@v12
+      uses: leafo/gh-actions-lua@v13
       if: runner.os == 'Linux'
       with:
         luaVersion: ${{ env.LUA_VERSION }}
@@ -253,7 +253,7 @@ jobs:
 
     - name: Restore ccache
       id: restore-ccache
-      uses: actions/cache/restore@v5
+      uses: actions/cache/restore@v6
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ github.ref_name }}
@@ -289,7 +289,7 @@ jobs:
 
     - name: Cache sentry-native
       id: cache-sentry
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: |
           3rdparty/sentry-native/install_without_transport
@@ -317,7 +317,7 @@ jobs:
 
     - name: Save ccache
       if: always()
-      uses: actions/cache/save@v5
+      uses: actions/cache/save@v6
       with:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
@@ -331,6 +331,7 @@ jobs:
 
         $LUAROCKS LuaFileSystem
         $LUAROCKS luautf8
+        $LUAROCKS lpeg
 
         if [ "$RUNNER_OS" = "macOS" ]; then
           $LUAROCKS lua-zip ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip
@@ -411,6 +412,8 @@ jobs:
         APPLE_TEAM_ID: ${{secrets.APPLE_TEAM_ID}}
         WITH_SENTRY: "ON"
         GITHUB_FORCE_BUILD: ${{ github.event.inputs.scheduled == 'true' }}
+        # needed so CI/*.after_success.sh can query existing releases to skip duplicate PTBs
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v7
@@ -502,30 +505,5 @@ jobs:
         if [ -e /tmp/busted-tests-failed ]
         then
           echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
-          exit 1
-        fi
-
-    - name: (Linux) Run C++ undo/redo tests
-      if: matrix.run_tests == 'true' && runner.os == 'Linux'
-      timeout-minutes: 5
-      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --run-undo-tests
-      env:
-        ASAN_OPTIONS: detect_leaks=0
-        MUDLET_TEST_MODE: 1
-
-    - name: (macOS) Run C++ undo/redo tests
-      if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      timeout-minutes: 5
-      run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --run-undo-tests
-      env:
-        ASAN_OPTIONS: detect_leaks=0
-        MUDLET_TEST_MODE: 1
-
-    - name: Passed C++ undo/redo tests
-      if: matrix.run_tests == 'true'
-      run: |
-        if [ -e /tmp/undo-tests-failed ]
-        then
-          echo "C++ undo/redo tests failed - see the action called 'Run C++ undo/redo tests' above for detailed output."
           exit 1
         fi

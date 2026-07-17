@@ -137,6 +137,7 @@ public slots:
     void slot_guiLanguageChanged(const QString&);
 
 private slots:
+    void slot_forgetSavedSignIn();
     void slot_changeShowSpacesAndTabs(bool);
     void slot_changeShowLineFeedsAndParagraphs(bool);
     void slot_scriptSelected(int index);
@@ -154,6 +155,9 @@ private slots:
     void slot_setTreeWidgetIconSize(const int);
     void slot_changeMenuBarVisibility(const enums::controlsVisibility);
     void slot_changeToolBarVisibility(const enums::controlsVisibility);
+    // Greys out the "Never" entry in the other toolbar-visibility comboBox so
+    // both bars cannot be hidden simultaneously (issue #7079).
+    void slot_syncMenuToolBarNeverItem();
     void slot_changeShowIconsOnMenus(const Qt::CheckState);
     void slot_changeGuiLanguage(int);
     void slot_passwordStorageLocationChanged(int);
@@ -164,7 +168,6 @@ private slots:
     void slot_setPlayerRoomInnerDiameter(const int);
     void slot_setPostingTimeout(const double);
     void slot_changeControlCharacterHandling();
-    void slot_enableDarkEditor(const QString&);
     void slot_toggleAdvertiseScreenReader(const bool);
     void slot_changeWrapAt();
     void slot_toggleUseMaxBufferSize(bool checked);
@@ -221,6 +224,8 @@ private:
     void fillOutMapHistory();
     bool updateDisplayFont();
     void cancelShortcutCaptures();
+    void switchEditorTheme(const QString& themeName);
+    static QString findThemeCounterpart(const QString& themeName, const QComboBox* themeComboBox, bool toDark);
 
 
     QPointer<Host> mpHost;
