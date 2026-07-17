@@ -1675,7 +1675,7 @@ void TBuffer::recordLineLengthForWrapDetection(const qsizetype length)
         QString confirmation = QObject::tr("Done - Mudlet now undoes the game's wrapping, and triggers see whole lines.");
         // the text is embedded in a double-quoted Lua string:
         confirmation.replace(QChar('\\'), qsl("\\\\")).replace(QChar('"'), qsl("\\\""));
-        const QString clickAction = qsl("setConfig(\"undoServerWrapWidth\", %1) setConfig(\"undoServerWrap\", true) cecho(\"\\n<light_green>%2\\n\")").arg(QString::number(ceiling), confirmation);
+        const QString clickAction = qsl("setConfig(\"undoServerWrapWidth\", %1) setConfig(\"undoServerWrap\", true) cecho(\"\\n<green>%2\\n\")").arg(QString::number(ceiling), confirmation);
         QStringList func(clickAction);
         //: Tooltip on the link that enables the option to undo the game's own line wrapping
         QStringList hint(QObject::tr("Turn on \"Undo the game's own wrapping\" - also found in the settings under Main display"));
