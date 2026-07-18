@@ -1931,22 +1931,24 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
         }
     }
 
-    if (lua_isstring(L, ++s)) {
-        code = QString::fromUtf8(lua_tostring(L, s));
-    } else if (lua_isfunction(L, s)) {
+    const int codeIndex = ++s;
+    if (lua_isstring(L, codeIndex)) {
+        code = QString::fromUtf8(lua_tostring(L, codeIndex));
+    } else if (lua_isfunction(L, codeIndex)) {
         // leave code as a null QString(), see below
     } else {
-        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d type (code to run as a string or a function expected, got %s!)", s, luaL_typename(L, s));
+        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d type (code to run as a string or a function expected, got %s!)", codeIndex, luaL_typename(L, codeIndex));
         return lua_error(L);
     }
 
     int expiryCount = -1;
-    if (lua_isnumber(L, ++s)) {
+    ++s;
+    if (lua_isnumber(L, s)) {
         expiryCount = static_cast<int>(lua_tonumber(L, s));
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, qsl("trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
-    } else if (!lua_isnoneornil(L, ++s)) {
+    } else if (!lua_isnoneornil(L, s)) {
         lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d value (trigger expiration count must be a number, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
@@ -1963,7 +1965,7 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
-        lua_pushvalue(L, s - 1);
+        lua_pushvalue(L, codeIndex);
         lua_settable(L, LUA_REGISTRYINDEX);
     }
 
