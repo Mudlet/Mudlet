@@ -3224,9 +3224,7 @@ int TLuaInterpreter::searchRoom(lua_State* L)
             lua_pushstring(L, pR->name.toUtf8().constData());
             return 1;
         }
-        lua_pushfstring(L, "searchRoom: bad argument #1 value (roomID %d does not exist!)", room_id);
-        // Should've been a nil with this as an second returned string!
-        return 1;
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(room_id));
     }
     QList<TRoom*> const roomList = host.mpMap->mpRoomDB->getRoomPtrList();
     lua_newtable(L);
