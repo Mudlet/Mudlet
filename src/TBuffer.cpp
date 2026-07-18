@@ -212,6 +212,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mGotESC(other.mGotESC)
 , mGotCSI(other.mGotCSI)
 , mGotOSC(other.mGotOSC)
+, mGotString(other.mGotString)
 , mIsDefaultColor(other.mIsDefaultColor)
 , mBlack(other.mBlack)
 , mLightBlack(other.mLightBlack)
@@ -296,6 +297,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mGotESC = other.mGotESC;
         mGotCSI = other.mGotCSI;
         mGotOSC = other.mGotOSC;
+        mGotString = other.mGotString;
         mIsDefaultColor = other.mIsDefaultColor;
         mBlack = other.mBlack;
         mLightBlack = other.mLightBlack;
@@ -686,12 +688,33 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             }
         }
 
-        if (mGotESC && (ch == '[' || ch == ']')) {
+        if (mGotESC) {
             mGotESC = false;
-            mGotCSI = (ch == '[');
-            mGotOSC = (ch == ']');
-            ++localBufferPosition;
-            continue;
+            if (ch == '[' || ch == ']') {
+                mGotCSI = (ch == '[');
+                mGotOSC = (ch == ']');
+                ++localBufferPosition;
+                continue;
+            }
+            if (ch == 'P' || ch == 'X' || ch == '^' || ch == '_') {
+                // DCS, SOS, PM and APC string sequences carry data that
+                // Mudlet does not use - consume them with the OSC code below
+                // but skip decoding the payload:
+                mGotOSC = true;
+                mGotString = true;
+                ++localBufferPosition;
+                continue;
+            }
+            if (static_cast<unsigned char>(ch) >= 0x20) {
+                // The final byte of some other escape sequence (e.g. ESC 7
+                // or ESC M) that Mudlet does not handle - consume it silently
+                // as a real terminal would instead of showing it as text:
+                ++localBufferPosition;
+                continue;
+            }
+            // A control character straight after the ESC means the escape
+            // sequence is malformed - abandon it and process the character
+            // normally:
         }
 
         if (mGotCSI) {
@@ -864,6 +887,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         } // End of if (mGotCSI)
 
         if (mGotOSC) {
+            // Also reached - with mGotString set - for the DCS, SOS, PM and
+            // APC string sequences which are consumed identically but whose
+            // payload is not decoded.
             // Lookahead and find end of sequence - valid terminators are:
             // - ST (String Terminator): ESC followed by '\' (backslash)
             // - BEL (0x07): Common alternative used by xterm and many MUDs
@@ -880,7 +906,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             size_t spanEnd = spanStart;
             // It is safe to look at spanEnd-1 even at the starting position
             // because we already know that the localBuffer extends backwards
-            // that far (it will be the ']' character!)
+            // that far (it will be the ']' character - or 'P', 'X', '^' or
+            // '_' for a string sequence!)
             // Loop until we find ST (ESC \), BEL, exceed length limit, or run out of data
             while (spanEnd < localBufferLength && (spanEnd - spanStart) < MAX_OSC_SEQUENCE_LENGTH && localBuffer[spanEnd] != '\x07'
                    && !((spanEnd > 0 && localBuffer[spanEnd - 1] == '\033') && localBuffer[spanEnd] == '\\')) {
@@ -894,14 +921,20 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
             if (foundBEL) {
                 // BEL terminator - sequence content excludes the BEL
-                decodeOSC(QString(localBuffer.substr(spanStart, spanEnd - spanStart).c_str()));
+                if (!mGotString) {
+                    decodeOSC(QString(localBuffer.substr(spanStart, spanEnd - spanStart).c_str()));
+                }
                 mGotOSC = false;
+                mGotString = false;
                 localBufferPosition = spanEnd + 1; // Skip past BEL
                 continue;
             } else if (foundST) {
                 // ST terminator (ESC \) - sequence content excludes the ESC before backslash
-                decodeOSC(QString(localBuffer.substr(spanStart, spanEnd - spanStart - 1).c_str()));
+                if (!mGotString) {
+                    decodeOSC(QString(localBuffer.substr(spanStart, spanEnd - spanStart - 1).c_str()));
+                }
                 mGotOSC = false;
+                mGotString = false;
                 localBufferPosition = spanEnd + 1; // Skip past backslash
                 continue;
             } else if (exceededLength) {
@@ -916,11 +949,13 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 if (spanEnd < localBufferLength && localBuffer[spanEnd] == '\x07') {
                     // Found BEL - skip to after it
                     mGotOSC = false;
+                    mGotString = false;
                     localBufferPosition = spanEnd + 1;
                     continue;
                 } else if (spanEnd < localBufferLength && spanEnd > 0 && localBuffer[spanEnd - 1] == '\033' && localBuffer[spanEnd] == '\\') {
                     // Found ST - skip to after it
                     mGotOSC = false;
+                    mGotString = false;
                     localBufferPosition = spanEnd + 1;
                     continue;
                 } else {
