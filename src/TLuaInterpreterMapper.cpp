@@ -62,7 +62,6 @@
 #include <limits>
 #include <math.h>
 
-#include <QtConcurrent>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
@@ -401,7 +400,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
             }
             lua_pop(L, 1);
         }
-        if (!i || !x.count()) {
+        if (!i || x.isEmpty()) {
             // If there is only an empty sub-table inside the table then i is
             // one but there is nothing in any of the QLists and things will
             // still blow up as per Issue #5272 - so also check for at least one
@@ -1859,6 +1858,10 @@ int TLuaInterpreter::getMapLabels(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapMenus
 int TLuaInterpreter::getMapMenus(lua_State* L)
 {
+    bool keyByUniqueName = false;
+    if (!lua_isnoneornil(L, 1)) {
+        keyByUniqueName = getVerifiedBool(L, __func__, 1, "key by unique name", true);
+    }
     const Host& host = getHostFromLua(L);
     if (!(host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap)) {
         return warnArgumentValue(L, __func__, "you haven't opened a map yet");
@@ -1868,14 +1871,24 @@ int TLuaInterpreter::getMapMenus(lua_State* L)
     QMapIterator<QString, QStringList> it(host.mpMap->mpMapper->mp2dMap->mUserMenus);
     while (it.hasNext()) {
         it.next();
-        QString parent, display;
-        QStringList menuInfo = it.value();
-        parent = menuInfo[0];
-        display = menuInfo[1];
-        qDebug() << it.key() << parent << display;
-        lua_pushstring(L, display.toUtf8().constData());
-        lua_pushstring(L, parent.isEmpty() ? "top-level" : parent.toUtf8().constData());
-        lua_settable(L, -3);
+        const QStringList& menuInfo = it.value();
+        const QByteArray parent = menuInfo.at(0).isEmpty() ? QByteArrayLiteral("top-level") : menuInfo.at(0).toUtf8();
+        const QByteArray display = menuInfo.at(1).toUtf8();
+        if (keyByUniqueName) {
+            // Keyed by the unique name so entries can be matched up with the
+            // "parent" returned by getMapEvents():
+            const QByteArray uniqueName = it.key().toUtf8();
+            lua_createtable(L, 0, 2);
+            lua_pushstring(L, display.constData());
+            lua_setfield(L, -2, "display name");
+            lua_pushstring(L, parent.constData());
+            lua_setfield(L, -2, "parent");
+            lua_setfield(L, -2, uniqueName.constData());
+        } else {
+            lua_pushstring(L, display.constData());
+            lua_pushstring(L, parent.constData());
+            lua_settable(L, -3);
+        }
     }
 
     return 1;

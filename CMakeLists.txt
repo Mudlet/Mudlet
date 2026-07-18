@@ -78,6 +78,7 @@ file(GLOB_RECURSE OTHER_FILES_LIST CONFIGURE_DEPENDS
   docs/**
   .clang-format
   src/.gitignore
+  src/mudlet-lua/**
 )
 
 # It is not clear that the "COMMENT" actually shows up anywhere - so include
@@ -135,11 +136,20 @@ else()
 endif()
 
 # Set APP_VERSION
-set(APP_VERSION 4.20.1)
+set(APP_VERSION 4.22.0)
 
-# Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD or default
-if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
-    set(BUILD_VALUE "$ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
+# Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD. An explicitly
+# empty value must be distinguished from an unset one so release builds (CI exports
+# MUDLET_VERSION_BUILD="") get a clean version with no "-dev-<sha>" suffix:
+#   unset (local dev build)         -> "-dev-<sha>"
+#   defined but empty (release)     -> "" (no suffix)
+#   defined with a value (ptb/test) -> "<value>-<sha>"
+if(DEFINED ENV{MUDLET_VERSION_BUILD})
+    if("$ENV{MUDLET_VERSION_BUILD}" STREQUAL "")
+        set(BUILD_VALUE "")
+    else()
+        set(BUILD_VALUE "$ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
+    endif()
 else()
     set(BUILD_VALUE "-dev-${GIT_SHA1}")
 endif()
@@ -150,11 +160,6 @@ message(STATUS "Value written to app-build.txt file: ${BUILD_VALUE}")
 set(APP_BUILD ${BUILD_VALUE} CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 set(LIB_MUDLET_TARGET "mudlet_core")
-
-# For release builds, comment out the above and uncomment below:
-# file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
-# message(STATUS "Value written to app-build.txt file: {nothing}")
-# set(APP_BUILD "" CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
@@ -180,6 +185,10 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER
 include_optional_module(ENVIRONMENT_VARIABLE WITH_SHADER_HOT_RELOAD
                         OPTION_VARIABLE USE_SHADER_HOT_RELOAD
                         READABLE_NAME "shader hot-reloading"
+                        DEFAULT OFF)
+include_optional_module(ENVIRONMENT_VARIABLE WITH_MEMORY_TRACKING
+                        OPTION_VARIABLE USE_MEMORY_TRACKING
+                        READABLE_NAME "memory tracking"
                         DEFAULT OFF)
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN

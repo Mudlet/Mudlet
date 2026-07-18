@@ -185,6 +185,7 @@ public:
     bool event(QEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void changeEvent(QEvent* e) override;
+    void updateExtraControlsToggleIcon();
     void fillout_form();
     void showError(const QString&);
     void showWarning(const QString&, bool announce = true);
@@ -333,7 +334,7 @@ private slots:
     void slot_clickedMessageBox(const QString&);
     void slot_addPattern();
     void slot_bannerDismissClicked();
-    void slot_itemsChanged(::EditorViewType viewType, QList<int> affectedItemIDs);
+    void slot_itemsChanged(EditorViewTypes::EditorViewType viewType, QList<int> affectedItemIDs);
 
     // Per-property immediate save slots for triggers (create individual undo entries)
     void slot_saveProperty_TriggerName();
@@ -452,6 +453,8 @@ private:
     void exportMultipleActionsToClipboard(const QList<TAction*>& actions);
     void exportMultipleScriptsToClipboard(const QList<TScript*>& scripts);
     void exportMultipleKeysToClipboard(const QList<TKey*>& keys);
+
+    void placePastedItems(EditorViewType itemType, const QList<int>& itemIDs);
 
     void clearDocument(edbee::TextEditorWidget* pEditorWidget, const QString& initialText = QString());
 

@@ -38,7 +38,6 @@
 #include <QString>
 #include <QTreeWidget>
 #include <QWidget>
-#include <QtConcurrent>
 
 #include <QList>
 #include <memory>
@@ -205,9 +204,9 @@ public:
 
 
     // default 2D zoom level
-    inline static const qreal csmDefaultXYZoom = 20.0;
+    static inline const qreal csmDefaultXYZoom = 20.0;
     // minimum 2D zoom level
-    inline static const qreal csmMinXYZoom = 3.0;
+    static inline const qreal csmMinXYZoom = 3.0;
 
 
     TMap* mpMap = nullptr;
@@ -298,6 +297,9 @@ public:
     bool mBubbleMode = false;
     bool mMapperUseAntiAlias = true;
 
+    // Toggled by dlgMapper so its overlays don't stack on the painted empty-state text.
+    bool mSuppressEmptyStateMessage = false;
+
     // Controls if the mapper is in view-only mode
     bool mMapViewOnly = true;
 
@@ -326,6 +328,7 @@ public slots:
     void slot_editLabel();
     void slot_setPlayerLocation();
     void slot_toggleMapViewOnly();
+    void slot_configureAreas();
     void slot_createLabel();
     void slot_customLineColor();
     void slot_shiftZup();

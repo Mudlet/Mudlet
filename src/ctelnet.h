@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017-2019, 2021-2022, 2025 by Stephen Lyons       *
+ *   Copyright (C) 2015, 2017-2019, 2021-2022, 2025-2026 by Stephen Lyons  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -43,13 +43,14 @@
 #include <QSslSocket>
 #endif
 #include <QTime>
+#include <QVector>
 
 #include <zlib.h>
 
+#include <bitset>
 #include <iostream>
 #include <queue>
 #include <string>
-#include <QVector>
 
 #if defined(Q_OS_WINDOWS)
 #include <ws2tcpip.h>
@@ -233,7 +234,17 @@ public:
     std::tuple<QString, int, bool> getConnectionInfo() const;
     void setPostingTimeout(const int);
     int getPostingTimeout() const { return mTimeOut; }
-    void loopbackTest(QByteArray& data) { processSocketData(data.data(), data.size(), true); }
+    void loopbackTest(QByteArray& data)
+    {
+        ++mLoopbackProcessingDepth;
+        processSocketData(data.data(), data.size(), true);
+        --mLoopbackProcessingDepth;
+    }
+    int loopbackProcessingDepth() const { return mLoopbackProcessingDepth; }
+    // Each nested processSocketData() puts ~100KB of buffers on the stack, so a
+    // self-feeding feedTelnet() loop overflows a 1MB (Windows) stack in only ~8
+    // levels - hence a much lower cap than TriggerUnit::scmMaxProcessingDepth.
+    inline static const int scmMaxLoopbackProcessingDepth = 5;
     void cancelLoginTimers();
     void terminateConnection();
     bool currentlySecure() const
@@ -246,6 +257,7 @@ public:
     }
     static bool isRawIPv4Address(const QString&);
     static bool isRawIPv6Address(const QString&);
+    QString assembleTelnetOptionsReport() const;
 
 
     QMap<int, bool> supportedTelnetOptions;
@@ -396,6 +408,10 @@ private:
     QString mHostUrl;
     int mHostPort = 0;
     bool mWaitingForResponse = false;
+    // True between connectIt() and slot_socketHostFound, so
+    // getConnectionState() reports HostLookupState during DNS lookup.
+    bool mLookingUpHost = false;
+    int mLoopbackProcessingDepth = 0;
     std::queue<int> mCommandQueue;
 
     z_stream mZstream = {};
@@ -406,16 +422,16 @@ private:
     bool iac2 = false;
     bool insb = false;
     // Set if we have negotiated the use of the option by us:
-    bool myOptionState[256];
+    std::bitset<256> myOptionState;
     // Set if he has negotiated the use of the option by him:
-    bool hisOptionState[256];
+    std::bitset<256> hisOptionState;
     // Set if we have tried to negotiate the use of the option by us:
-    bool announcedState[256];
+    std::bitset<256> announcedState;
     // Set if the Server tried to negotiate the use of the option by him:
-    bool heAnnouncedState[256];
+    std::bitset<256> heAnnouncedState;
     // BUG: never set to be true - but seems to hold our intention to want to
     // enable our use of the option!
-    bool triedToEnable[256];
+    std::bitset<256> triedToEnable;
     bool recvdGA = false;
 
     QString termType;

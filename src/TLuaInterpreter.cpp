@@ -58,12 +58,21 @@
 
 #include <math.h>
 
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QFileDialog>
+#include <QSettings>
+#if defined(Q_OS_MACOS)
+// Only used for this OS:
+#include <QStandardPaths>
+#endif
+#include <QJsonDocument>
+#include <QJsonParseError>
 #include <QTableWidget>
+#include <QTemporaryDir>
+#include <QTemporaryFile>
 #include <QToolTip>
 #include <QFileInfo>
 #include <QVector>
@@ -1048,6 +1057,26 @@ int TLuaInterpreter::feedTelnet(lua_State* L)
         lua_pushstring(L, "feedTelnet: refused, telnet connection socket is not in the unconnected state");
         return 2;
     }
+
+    // Same self-feeding-loop guard as feedTriggers(), but each nested telnet
+    // processing frame is large - see scmMaxLoopbackProcessingDepth.
+    if (host.mTelnet.loopbackProcessingDepth() >= cTelnet::scmMaxLoopbackProcessingDepth) {
+        qWarning().nospace() << "TLuaInterpreter::feedTelnet(...) aborting: nested telnet data processing reached the limit of " << cTelnet::scmMaxLoopbackProcessingDepth
+                             << " - probably an endless feedTelnet loop.";
+        const QString* pName = host.getTriggerUnit()->currentExecutingTriggerName();
+        if (pName && !pName->isEmpty()) {
+            lua_pushfstring(L,
+                            "feedTelnet stopped to prevent a crash: trigger '%s' (or another trigger it feeds) is stuck in an endless loop - the data being fed keeps re-matching a trigger and "
+                            "firing it again and again. Change the trigger's pattern or the fed data so they don't match each other.",
+                            pName->toUtf8().constData());
+        } else {
+            lua_pushstring(L,
+                           "feedTelnet stopped to prevent a crash: a trigger (or another trigger it feeds) is stuck in an endless loop - the data being fed keeps re-matching a trigger and firing "
+                           "it again and again. Change the trigger's pattern or the fed data so they don't match each other.");
+        }
+        return lua_error(L);
+    }
+
     const QByteArray rawData{lua_tostring(L, 1)};
     // We need to convert any "<*>" codes to their raw byte forms:
     QByteArray cookedData{parseTelnetCodes(rawData)};
@@ -1066,7 +1095,7 @@ int TLuaInterpreter::feedTelnet(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#feedTriggers
 int TLuaInterpreter::feedTriggers(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L,
                         "feedTriggers: bad argument #1 type (imitation game server text as string\n"
@@ -1074,6 +1103,28 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
                         luaL_typename(L, 1));
         return lua_error(L);
     }
+
+    // A self-feeding trigger recurses the C++ stack one level per re-match; abort
+    // with a catchable Lua error before that overflows the stack into a crash.
+    auto* triggerUnit = host.getTriggerUnit();
+    if (triggerUnit->processingDepth() >= TriggerUnit::scmMaxProcessingDepth) {
+        qWarning().nospace() << "TLuaInterpreter::feedTriggers(...) aborting: trigger processing recursion reached the limit of " << TriggerUnit::scmMaxProcessingDepth
+                             << " - probably an endless feedTriggers loop.";
+        const QString* pName = triggerUnit->currentExecutingTriggerName();
+        // The QByteArray temporary dies before lua_error()'s longjmp, which skips C++ destructors.
+        if (pName && !pName->isEmpty()) {
+            lua_pushfstring(L,
+                            "feedTriggers stopped to prevent a crash: trigger '%s' (or another trigger it feeds) is stuck in an endless loop - the text being fed keeps re-matching a trigger and "
+                            "firing it again and again. Change the trigger's pattern or the fed text so they don't match each other.",
+                            pName->toUtf8().constData());
+        } else {
+            lua_pushstring(L,
+                           "feedTriggers stopped to prevent a crash: a trigger (or another trigger it feeds) is stuck in an endless loop - the text being fed keeps re-matching a trigger and firing "
+                           "it again and again. Change the trigger's pattern or the fed text so they don't match each other.");
+        }
+        return lua_error(L);
+    }
+
     const QByteArray data{lua_tostring(L, 1)};
     bool dataIsUtf8Encoded = true;
     if (lua_gettop(L) > 1) {
@@ -2626,7 +2677,7 @@ int TLuaInterpreter::installPackage(lua_State* L)
 {
     const QString location = getVerifiedString(L, __func__, 1, "package location path and file name");
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = host.installPackage(location, enums::PackageModuleType::Package); !success) {
+    if (auto [success, message] = host.installPackage(location, enums::PackageModuleType::Package, true); !success) {
         return warnArgumentValue(L, __func__, message);
     }
     lua_pushboolean(L, true);
@@ -2654,7 +2705,7 @@ int TLuaInterpreter::installModule(lua_State* L)
     Host& host = getHostFromLua(L);
     const QString module = QDir::fromNativeSeparators(modName);
 
-    if (auto [success, message] = host.installPackage(module, enums::PackageModuleType::ModuleFromScript); !success) {
+    if (auto [success, message] = host.installPackage(module, enums::PackageModuleType::ModuleFromScript, true); !success) {
         return warnArgumentValue(L, __func__, message);
     }
     auto moduleManager = host.mpModuleManager;
@@ -5594,6 +5645,11 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "timeStampsEnabled", TLuaInterpreter::timeStampsEnabled);
     lua_register(pGlobalLua, "setActiveProfile", TLuaInterpreter::setActiveProfile);
     lua_register(pGlobalLua, "getKeyCode", TLuaInterpreter::getKeyCode);
+#ifdef MUDLET_MEMORY_TRACKING
+    lua_register(pGlobalLua, "getProcessMemoryUsage", TLuaInterpreter::getProcessMemoryUsage);
+    lua_register(pGlobalLua, "getSubsystemMemoryStats", TLuaInterpreter::getSubsystemMemoryStats);
+#endif
+
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -6884,15 +6940,16 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
         break;
     }
     default: {
-        QString profileName = getVerifiedString(L, __func__, 1, "profile name");
-        if (profileName.isEmpty()) {
+        const QString requestedName = getVerifiedString(L, __func__, 1, "profile name");
+        if (requestedName.isEmpty()) {
             lua_pushnil(L);
             lua_pushstring(L, "getProfileInformation: profile name cannot be empty");
             return 2;
         }
-        if (!mudlet::self()->profileExists(profileName)) {
+        const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+        if (profileName.isEmpty()) {
             lua_pushnil(L);
-            lua_pushfstring(L, "getProfileInformation: profile '%s' does not exist", profileName.toUtf8().constData());
+            lua_pushfstring(L, "getProfileInformation: profile '%s' does not exist", requestedName.toUtf8().constData());
             return 2;
         }
         info = mudlet::self()->readProfileData(profileName, qsl("description"));

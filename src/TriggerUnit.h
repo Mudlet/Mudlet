@@ -76,6 +76,17 @@ public:
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
 
+    int processingDepth() const { return mProcessingDepth; }
+    // Raw pointer is safe: a trigger outlives its own execute() frame, as deletion
+    // is deferred to doCleanup() once mProcessingDepth returns to 0.
+    const QString* currentExecutingTriggerName() const { return mpCurrentExecutingTriggerName; }
+    void setCurrentExecutingTriggerName(const QString* pName) { mpCurrentExecutingTriggerName = pName; }
+    // Turns an endless self-feeding-trigger loop into a catchable Lua error before
+    // it overflows the stack. Sized for the smallest platform stack (~1MB on
+    // Windows, where the original crash hit before Lua's own 200-C-call guard):
+    // a few times any legitimate nesting, comfortably below the native limit.
+    inline static const int scmMaxProcessingDepth = 50;
+
     QList<TTrigger*> uninstallList;
 
 private:
@@ -99,6 +110,7 @@ private:
     int statsPatternsActive = 0;
     // Counter for nested processing; cleanup deferred until 0
     int mProcessingDepth = 0;
+    const QString* mpCurrentExecutingTriggerName = nullptr;
 };
 
 #endif // MUDLET_TRIGGERUNIT_H

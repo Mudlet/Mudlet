@@ -403,11 +403,6 @@
                 <height>25</height>
                </size>
               </property>
-              <property name="font">
-               <font>
-                <pointsize>13</pointsize>
-               </font>
-              </property>
               <property name="text">
                <string>Copy</string>
               </property>

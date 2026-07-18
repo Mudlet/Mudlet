@@ -23,6 +23,8 @@
  ***************************************************************************/
 
 
+#include <memory>
+
 #include <QCoreApplication>
 #include <QMap>
 #include <QSet>
@@ -74,7 +76,7 @@ public:
 
 private:
     int countTableItems(TVar*);
-    TVar* base;
+    std::unique_ptr<TVar> base;
     QSet<QString> variableSet;
     // ?? variables
     QMap<QTreeWidgetItem*, TVar*> wVars;

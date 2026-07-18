@@ -33,6 +33,7 @@
 
 
 #include <QAction>
+#include <set>
 
 // A template for tooltip HTML formatting so that we do not have
 // 30 copies of the same QString in the read-only segment of the code:
@@ -282,16 +283,7 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
     specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitWeight, new WeightSpinBoxDelegate);
 }
 
-dlgRoomExits::~dlgRoomExits()
-{
-    // QActions are children of this dialog (created with 'this' as parent),
-    // so Qt's parent-child system handles their deletion automatically.
-    // Manual deletion here would cause double-delete crashes.
-
-    // TExit objects are heap-allocated and not Qt-parented, so we must free them
-    qDeleteAll(originalExits);
-    qDeleteAll(originalSpecialExits);
-}
+dlgRoomExits::~dlgRoomExits() = default;
 
 void dlgRoomExits::slot_endEditSpecialExits()
 {
@@ -302,7 +294,7 @@ void dlgRoomExits::slot_endEditSpecialExits()
     if (mpEditItem != nullptr && mEditColumn >= 0) {
         specialExits->closePersistentEditor(mpEditItem, mEditColumn);
         // Restore placeholder text for the exitRoomID field
-        if (mEditColumn == ExitsTreeWidget::colIndex_exitRoomId && !mpEditItem->text(ExitsTreeWidget::colIndex_exitRoomId).trimmed().length()) {
+        if (mEditColumn == ExitsTreeWidget::colIndex_exitRoomId && mpEditItem->text(ExitsTreeWidget::colIndex_exitRoomId).trimmed().isEmpty()) {
             mpEditItem->setText(ExitsTreeWidget::colIndex_exitRoomId, mSpecialExitRoomIdPlaceholder);
         }
         mpEditItem = nullptr;
@@ -369,7 +361,7 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
             break;
 
         case ExitsTreeWidget::colIndex_command:
-            if (!mpEditItem->text(ExitsTreeWidget::colIndex_command).trimmed().length()) {
+            if (mpEditItem->text(ExitsTreeWidget::colIndex_command).trimmed().isEmpty()) {
                 // Restore the placeholder text if there is nothing but spaces in the entry:
                 mpEditItem->setText(ExitsTreeWidget::colIndex_command, mSpecialExitCommandPlaceholder);
             }
@@ -538,7 +530,8 @@ void dlgRoomExits::save()
 
     QString exitKey = qsl("nw");
     int dirCode = DIR_NORTHWEST;
-    auto pExit = originalExits.value(dirCode);
+    auto it_nw = originalExits.find(dirCode);
+    TExit* pExit = (it_nw != originalExits.end()) ? it_nw->second.get() : nullptr;
     if (nw->isEnabled() && !nw->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(nw->text().toInt()) != nullptr) {
         // There IS a valid exit on the dialogue in this direction
         if (pExit && pExit->destination != nw->text().toInt()) {
@@ -569,7 +562,10 @@ void dlgRoomExits::save()
 
     exitKey = qsl("n");
     dirCode = DIR_NORTH;
-    pExit = originalExits.value(dirCode);
+    {
+        auto it = originalExits.find(dirCode);
+        pExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+    }
     if (n->isEnabled() && !n->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(n->text().toInt()) != nullptr) {
         if (pExit && pExit->destination != n->text().toInt()) {
             pR->setExit(n->text().toInt(), dirCode);
@@ -598,7 +594,10 @@ void dlgRoomExits::save()
 
     exitKey = qsl("ne");
     dirCode = DIR_NORTHEAST;
-    pExit = originalExits.value(dirCode);
+    {
+        auto it = originalExits.find(dirCode);
+        pExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+    }
     if (ne->isEnabled() && !ne->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(ne->text().toInt()) != nullptr) {
         if (pExit && pExit->destination != ne->text().toInt()) {
             pR->setExit(ne->text().toInt(), dirCode);
@@ -627,7 +626,10 @@ void dlgRoomExits::save()
 
     exitKey = qsl("up");
     dirCode = DIR_UP;
-    pExit = originalExits.value(dirCode);
+    {
+        auto it = originalExits.find(dirCode);
+        pExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+    }
     if (up->isEnabled() && !up->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(up->text().toInt()) != nullptr) {
         if (pExit && pExit->destination != up->text().toInt()) {
             pR->setExit(up->text().toInt(), dirCode);
@@ -656,7 +658,10 @@ void dlgRoomExits::save()
 
     exitKey = qsl("w");
     dirCode = DIR_WEST;
-    pExit = originalExits.value(dirCode);
+    {
+        auto it = originalExits.find(dirCode);
+        pExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+    }
     if (w->isEnabled() && !w->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(w->text().toInt()) != nullptr) {
         if (pExit && pExit->destination != w->text().toInt()) {
             pR->setExit(w->text().toInt(), dirCode);
@@ -685,7 +690,10 @@ void dlgRoomExits::save()
 
     exitKey = qsl("e");
     dirCode = DIR_EAST;
-    pExit = originalExits.value(dirCode);
+    {
+        auto it = originalExits.find(dirCode);
+        pExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+    }
     if (e->isEnabled() && !e->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(e->text().toInt()) != nullptr) {
         if (pExit && pExit->destination != e->text().toInt()) {
             pR->setExit(e->text().toInt(), dirCode);
@@ -714,7 +722,10 @@ void dlgRoomExits::save()
 
     exitKey = qsl("down");
     dirCode = DIR_DOWN;
-    pExit = originalExits.value(dirCode);
+    {
+        auto it = originalExits.find(dirCode);
+        pExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+    }
     if (down->isEnabled() && !down->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(down->text().toInt()) != nullptr) {
         if (pExit && pExit->destination != down->text().toInt()) {
             pR->setExit(down->text().toInt(), dirCode);
@@ -743,7 +754,10 @@ void dlgRoomExits::save()
 
     exitKey = qsl("sw");
     dirCode = DIR_SOUTHWEST;
-    pExit = originalExits.value(dirCode);
+    {
+        auto it = originalExits.find(dirCode);
+        pExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+    }
     if (sw->isEnabled() && !sw->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(sw->text().toInt()) != nullptr) {
         if (pExit && pExit->destination != sw->text().toInt()) {
             pR->setExit(sw->text().toInt(), dirCode);
@@ -772,7 +786,10 @@ void dlgRoomExits::save()
 
     exitKey = qsl("s");
     dirCode = DIR_SOUTH;
-    pExit = originalExits.value(dirCode);
+    {
+        auto it = originalExits.find(dirCode);
+        pExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+    }
     if (s->isEnabled() && !s->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != nullptr) {
         if (pExit && pExit->destination != s->text().toInt()) {
             pR->setExit(s->text().toInt(), dirCode);
@@ -801,7 +818,10 @@ void dlgRoomExits::save()
 
     exitKey = qsl("se");
     dirCode = DIR_SOUTHEAST;
-    pExit = originalExits.value(dirCode);
+    {
+        auto it = originalExits.find(dirCode);
+        pExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+    }
     if (se->isEnabled() && !se->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(se->text().toInt()) != nullptr) {
         if (pExit && pExit->destination != se->text().toInt()) {
             pR->setExit(se->text().toInt(), dirCode);
@@ -830,7 +850,10 @@ void dlgRoomExits::save()
 
     exitKey = qsl("in");
     dirCode = DIR_IN;
-    pExit = originalExits.value(dirCode);
+    {
+        auto it = originalExits.find(dirCode);
+        pExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+    }
     if (in->isEnabled() && !in->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != nullptr) {
         if (pExit && pExit->destination != in->text().toInt()) {
             pR->setExit(in->text().toInt(), dirCode);
@@ -859,7 +882,10 @@ void dlgRoomExits::save()
 
     exitKey = qsl("out");
     dirCode = DIR_OUT;
-    pExit = originalExits.value(dirCode);
+    {
+        auto it = originalExits.find(dirCode);
+        pExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+    }
     if (out->isEnabled() && !out->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(out->text().toInt()) != nullptr) {
         if (pExit && pExit->destination != out->text().toInt()) {
             pR->setExit(out->text().toInt(), dirCode);
@@ -1050,7 +1076,7 @@ QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
 
 /* static */ QString dlgRoomExits::generateToolTip(const QString& exitRoomName, const QString& exitAreaName, const bool exitRoomLocked, const bool outOfAreaExit, const int exitRoomWeight)
 {
-    if (exitRoomName.trimmed().length()) {
+    if (!exitRoomName.trimmed().isEmpty()) {
         if (exitRoomLocked) {
             if (outOfAreaExit) {
                 return doubleParagraph.arg(tr("Exit to \"%1\" in area: \"%2\".").arg(exitRoomName.toHtmlEscaped(), exitAreaName.toHtmlEscaped()),
@@ -1165,11 +1191,10 @@ void dlgRoomExits::normalStubExitChanged(const int state,
             // Id still in that field - so clear it:
             pExit->setText(QString());
             setActionOnExit(pExit, mpAction_noExit);
-            pWeight->setValue(0);        // Can't have a weight for a stub pExit
-            pNoRoute->setChecked(false); // nor a "lock"
+            pWeight->setValue(0); // Can't have a weight for a stub pExit
         }
-        pNoRoute->setEnabled(false); // Disable "lock" on this exit
-        pExit->setEnabled(false);    // Prevent entry of an exit roomID
+        pNoRoute->setEnabled(true); // Permit a stub to be locked ("No route"), matching what the Lua API allows
+        pExit->setEnabled(false);   // Prevent entry of an exit roomID
         pExit->setToolTip(utils::richText(tr("Clear the stub exit for this exit to enter an exit roomID.")));
         pDoorType_none->setEnabled(true);
         pDoorType_open->setEnabled(true);
@@ -1180,8 +1205,11 @@ void dlgRoomExits::normalStubExitChanged(const int state,
         pExit->setEnabled(true);
         setActionOnExit(pExit, mpAction_noExit);
         pExit->setToolTip(noExitToolTipText);
-        //  pNoRoute->setEnabled(true); although this branch will enable the exit entry
-        //  there will not be a valid one there yet so don't enable the noroute(lock) control here!
+        // Although this branch enables the exit entry there will not be a valid
+        // exit nor a stub there yet, so there is nothing to lock - disable and
+        // clear the noroute(lock) control:
+        pNoRoute->setEnabled(false);
+        pNoRoute->setChecked(false);
         pDoorType_none->setEnabled(false);
         pDoorType_open->setEnabled(false);
         pDoorType_closed->setEnabled(false);
@@ -1579,16 +1607,16 @@ void dlgRoomExits::initExit(int direction,
     } else {                                             //No exit is set on initialisation
         exitLineEdit->setText(QString());                //Nothing to put in exitID box
         setActionOnExit(exitLineEdit, mpAction_noExit);
-        noRoute->setEnabled(false); //Disable lock control, can't lock a non-existent exit..
-        noRoute->setChecked(false); //.. and ensure there isn't one
-        weight->setEnabled(false);  //Disable exit weight control...
-        weight->setValue(0);        //And reset to default value (which will now cause the room's one to be used
-        stub->setEnabled(true);     //Enable stub exit control
+        weight->setEnabled(false); //Disable exit weight control...
+        weight->setValue(0);       //And reset to default value (which will now cause the room's one to be used
+        stub->setEnabled(true);    //Enable stub exit control
         if (pR->hasExitStub(direction)) {
             exitLineEdit->setEnabled(false); //There is a stub exit, so prevent exit number entry...
             exitLineEdit->setToolTip(utils::richText(tr("Clear the stub exit for this exit to enter an exit roomID.")));
             stub->setChecked(true);
-            none->setEnabled(true); //Enable door type controls, can have a door on a stub exit..
+            noRoute->setEnabled(true);                       //A stub can be locked ("No route"), matching the Lua API
+            noRoute->setChecked(pR->hasExitLock(direction)); //Set/reset "lock" control as appropriate
+            none->setEnabled(true);                          //Enable door type controls, can have a door on a stub exit..
             open->setEnabled(true);
             closed->setEnabled(true);
             locked->setEnabled(true);
@@ -1596,8 +1624,10 @@ void dlgRoomExits::initExit(int direction,
             exitLineEdit->setEnabled(true);
             exitLineEdit->setToolTip(validExitToolTip);
             stub->setChecked(false);
-            none->setEnabled(false); //Disable door type controls, can't lock a non-existent exit..
-            open->setEnabled(false); //.. and ensure the "none" one is set if it ever gets enabled
+            noRoute->setEnabled(false); //Disable lock control, can't lock a non-existent exit..
+            noRoute->setChecked(false); //.. and ensure there isn't one
+            none->setEnabled(false);    //Disable door type controls, can't lock a non-existent exit..
+            open->setEnabled(false);    //.. and ensure the "none" one is set if it ever gets enabled
             closed->setEnabled(false);
             locked->setEnabled(false);
             none->setChecked(true);
@@ -1626,7 +1656,7 @@ void dlgRoomExits::init()
     mAreaID = pR->getArea();
     roomWeight->setText(QString::number(pR->getWeight()));
     QString titleText;
-    if (pR->name.trimmed().length()) {
+    if (!pR->name.trimmed().isEmpty()) {
         titleText = tr(R"(Exits for room: "%1" [*])").arg(pR->name);
     } else {
         titleText = tr("Exits for room Id: %1 [*]").arg(mRoomID);
@@ -1786,9 +1816,7 @@ void dlgRoomExits::init()
         it.next();
         const int id_to = it.value();
         const QString dir = it.key();
-        auto pSpecialExit = new TExit();
-        // It should be impossible for this not to be valid:
-        Q_ASSERT_X(pSpecialExit, "dlgRoomExits::init(...)", "failed to generate a new TExit");
+        auto pSpecialExit = std::make_unique<TExit>();
         auto pI = new QTreeWidgetItem(specialExits);
         pSpecialExit->destination = id_to;
 
@@ -1856,7 +1884,9 @@ void dlgRoomExits::init()
                 qWarning().nospace().noquote() << "dlgRoomExits::init() WARNING - in room: " << mRoomID << "unexpected (special exit) doors[" << dir << "] value:" << pR->doors[dir] << " found!";
             }
             pSpecialExit->door = specialDoor;
-            originalSpecialExits[dir] = pSpecialExit;
+            // Not relevant for special exits but initialise before moving into map
+            pSpecialExit->hasStub = false;
+            originalSpecialExits[dir] = std::move(pSpecialExit);
         }
 
         //ExitsTreeWidget::colIndex_command holds the script/name
@@ -1865,9 +1895,6 @@ void dlgRoomExits::init()
         //Tooltip generation for this column and a couple of earlier ones is
         //done here:
         setIconAndToolTipsOnSpecialExit(pI, true);
-
-        // Not relevant for special exits but better initialise it
-        pSpecialExit->hasStub = false;
     }
     button_save->setEnabled(false);
 
@@ -1974,9 +2001,9 @@ void dlgRoomExits::init()
     // clang-format on
 }
 
-TExit* dlgRoomExits::makeExitFromControls(int direction)
+std::unique_ptr<TExit> dlgRoomExits::makeExitFromControls(int direction)
 {
-    auto exit = new TExit();
+    auto exit = std::make_unique<TExit>();
     switch (direction) {
     case DIR_NORTHWEST:
         exit->destination = nw->text().toInt();
@@ -2080,111 +2107,112 @@ void dlgRoomExits::slot_checkModified()
     // exit doors
     // exit weights
 
-    TExit* originalExit = originalExits.value(DIR_NORTHWEST);
-    TExit* currentExit = makeExitFromControls(DIR_NORTHWEST);
-
-    if (originalExit && currentExit && *originalExit != *currentExit) {
-        isModified = true;
-    }
-    delete currentExit;
-
-    if (!isModified) {
-        originalExit = originalExits.value(DIR_NORTH);
-        currentExit = makeExitFromControls(DIR_NORTH);
+    {
+        auto it = originalExits.find(DIR_NORTHWEST);
+        TExit* originalExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+        auto currentExit = makeExitFromControls(DIR_NORTHWEST);
         if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
         }
-        delete currentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_NORTHEAST);
-        currentExit = makeExitFromControls(DIR_NORTHEAST);
+        auto it = originalExits.find(DIR_NORTH);
+        TExit* originalExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+        auto currentExit = makeExitFromControls(DIR_NORTH);
         if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
         }
-        delete currentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_UP);
-        currentExit = makeExitFromControls(DIR_UP);
+        auto it = originalExits.find(DIR_NORTHEAST);
+        TExit* originalExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+        auto currentExit = makeExitFromControls(DIR_NORTHEAST);
         if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
         }
-        delete currentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_WEST);
-        currentExit = makeExitFromControls(DIR_WEST);
+        auto it = originalExits.find(DIR_UP);
+        TExit* originalExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+        auto currentExit = makeExitFromControls(DIR_UP);
         if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
         }
-        delete currentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_EAST);
-        currentExit = makeExitFromControls(DIR_EAST);
+        auto it = originalExits.find(DIR_WEST);
+        TExit* originalExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+        auto currentExit = makeExitFromControls(DIR_WEST);
         if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
         }
-        delete currentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_DOWN);
-        currentExit = makeExitFromControls(DIR_DOWN);
+        auto it = originalExits.find(DIR_EAST);
+        TExit* originalExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+        auto currentExit = makeExitFromControls(DIR_EAST);
         if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
         }
-        delete currentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_SOUTHWEST);
-        currentExit = makeExitFromControls(DIR_SOUTHWEST);
+        auto it = originalExits.find(DIR_DOWN);
+        TExit* originalExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+        auto currentExit = makeExitFromControls(DIR_DOWN);
         if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
         }
-        delete currentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_SOUTH);
-        currentExit = makeExitFromControls(DIR_SOUTH);
+        auto it = originalExits.find(DIR_SOUTHWEST);
+        TExit* originalExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+        auto currentExit = makeExitFromControls(DIR_SOUTHWEST);
         if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
         }
-        delete currentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_SOUTHEAST);
-        currentExit = makeExitFromControls(DIR_SOUTHEAST);
+        auto it = originalExits.find(DIR_SOUTH);
+        TExit* originalExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+        auto currentExit = makeExitFromControls(DIR_SOUTH);
         if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
         }
-        delete currentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_IN);
-        currentExit = makeExitFromControls(DIR_IN);
+        auto it = originalExits.find(DIR_SOUTHEAST);
+        TExit* originalExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+        auto currentExit = makeExitFromControls(DIR_SOUTHEAST);
         if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
         }
-        delete currentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_OUT);
-        currentExit = makeExitFromControls(DIR_OUT);
+        auto it = originalExits.find(DIR_IN);
+        TExit* originalExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+        auto currentExit = makeExitFromControls(DIR_IN);
         if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
         }
-        delete currentExit;
+    }
+
+    if (!isModified) {
+        auto it = originalExits.find(DIR_OUT);
+        TExit* originalExit = (it != originalExits.end()) ? it->second.get() : nullptr;
+        auto currentExit = makeExitFromControls(DIR_OUT);
+        if (originalExit && currentExit && *originalExit != *currentExit) {
+            isModified = true;
+        }
     }
 
     // Detecting actual changes in the special exits is hard because of the
@@ -2193,7 +2221,7 @@ void dlgRoomExits::slot_checkModified()
     // At the same time existing special exits which now have a empty/zero
     // value in the ExitsTreeWidget::colIndex_exitRoomId field will be deleted if "save"ed...
     if (!isModified) {
-        const int originalCount = originalSpecialExits.count();
+        const int originalCount = static_cast<int>(originalSpecialExits.size());
         int currentCount = 0;
         for (int i = 0; i < specialExits->topLevelItemCount(); i++) {
             QTreeWidgetItem* pI = specialExits->topLevelItem(i);
@@ -2214,10 +2242,14 @@ void dlgRoomExits::slot_checkModified()
             isModified = true;
         } else {
             if (originalCount) {
-                QMap<QString, TExit*> foundMap = originalSpecialExits;
+                // Track which original exits have been matched by key
+                std::set<QString> unmatchedKeys;
+                for (const auto& kv : originalSpecialExits) {
+                    unmatchedKeys.insert(kv.first);
+                }
                 // Now make a TExit value for each current (valid) specialExit
-                // and search for it in the foundMap; remove matches and
-                // if any non-matches or if any left in foundMap at end then
+                // and search for it in originalSpecialExits; remove matches and
+                // if any non-matches or if any left in unmatchedKeys at end then
                 // set isModified...
                 for (int i = 0; i < specialExits->topLevelItemCount(); i++) {
                     QTreeWidgetItem* pI = specialExits->topLevelItem(i);
@@ -2242,15 +2274,21 @@ void dlgRoomExits::slot_checkModified()
                                                                                                              : 0;
                     currentExit.weight = pI->text(ExitsTreeWidget::colIndex_exitWeight).toInt();
                     currentExit.hasStub = false;
-                    auto exit = foundMap.value(currentCmd);
-                    if (exit && exit->destination == currentExit.destination && exit->door == currentExit.door && exit->hasNoRoute == currentExit.hasNoRoute && exit->weight == currentExit.weight) {
-                        foundMap.remove(currentCmd);
+                    auto mapIt = originalSpecialExits.find(currentCmd);
+                    if (mapIt != originalSpecialExits.end()) {
+                        const TExit* exit = mapIt->second.get();
+                        if (exit->destination == currentExit.destination && exit->door == currentExit.door && exit->hasNoRoute == currentExit.hasNoRoute && exit->weight == currentExit.weight) {
+                            unmatchedKeys.erase(currentCmd);
+                        } else {
+                            isModified = true;
+                            break;
+                        }
                     } else {
                         isModified = true;
                         break;
                     }
                 }
-                if (!foundMap.isEmpty()) {
+                if (!unmatchedKeys.empty()) {
                     isModified = true;
                 }
             }

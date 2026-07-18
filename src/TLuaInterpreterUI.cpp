@@ -61,7 +61,6 @@
 #include <limits>
 #include <math.h>
 
-#include <QtConcurrent>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
@@ -2407,17 +2406,18 @@ int TLuaInterpreter::selectString(lua_State* L)
 int TLuaInterpreter::setActiveProfile(lua_State* L)
 {
     auto& hostManager = mudlet::self()->getHostManager();
-    const QString profileName = getVerifiedString(L, __func__, 1, "profile name");
+    const QString requestedName = getVerifiedString(L, __func__, 1, "profile name");
 
-    if (profileName.isEmpty()) {
+    if (requestedName.isEmpty()) {
         lua_pushboolean(L, false);
         lua_pushstring(L, "setActiveProfile: profile name cannot be empty");
         return 2;
     }
 
-    if (!mudlet::self()->profileExists(profileName)) {
+    const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+    if (profileName.isEmpty()) {
         lua_pushboolean(L, false);
-        lua_pushfstring(L, "setActiveProfile: profile '%s' does not exist", profileName.toUtf8().constData());
+        lua_pushfstring(L, "setActiveProfile: profile '%s' does not exist", requestedName.toUtf8().constData());
         return 2;
     }
 
@@ -2762,7 +2762,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
         }
         action->css = css;
     }
-    host.getActionUnit()->updateToolbar();
+    host.getActionUnit()->updateAllToolbars();
     lua_pushboolean(L, 1);
     return 1;
 }
@@ -3454,6 +3454,17 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, s, "wrapAt");
     auto console = CONSOLE(L, windowName);
     console->setWrapAt(luaFrom);
+    // only mirror values the preferences dialog itself accepts into the
+    // profile, otherwise an invalid width would reach NAWS and get saved
+    if (luaFrom >= 1 && console->getType() == TConsole::MainConsole) {
+        Host& host = getHostFromLua(L);
+        const int priorWrapAt = host.mWrapAt;
+        host.mWrapAt = luaFrom;
+        if (priorWrapAt != luaFrom) {
+            host.mTelnet.sendInfoNewEnvironValue(qsl("WORD_WRAP"));
+        }
+        host.updateDisplayDimensions();
+    }
     return 0;
 }
 
@@ -3464,6 +3475,10 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, windowName);
     console->setIndentCount(luaFrom);
+    if (luaFrom >= 0 && console->getType() == TConsole::MainConsole) {
+        Host& host = getHostFromLua(L);
+        host.mWrapIndentCount = luaFrom;
+    }
     return 0;
 }
 
@@ -3474,6 +3489,10 @@ int TLuaInterpreter::setWindowWrapHangingIndent(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, windowName);
     console->setHangingIndentCount(luaFrom);
+    if (luaFrom >= 0 && console->getType() == TConsole::MainConsole) {
+        Host& host = getHostFromLua(L);
+        host.mWrapHangingIndentCount = luaFrom;
+    }
     return 0;
 }
 

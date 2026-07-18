@@ -35,7 +35,7 @@
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
 
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 #include <QtUiTools>
 #include <QColorDialog>
 #include <QDir>
@@ -95,6 +95,24 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     offline_button = dialog_buttonbox->addButton(tr("Offline"), QDialogButtonBox::AcceptRole);
     offline_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
 
+    //: Button shown on first launch to skip the tutorial and show the full games list
+    mpSkipToGamesButton = new QPushButton(tr("Skip - show me the games list"), this);
+    mpSkipToGamesButton->setObjectName(qsl("skipToGamesButton"));
+    mpSkipToGamesButton->hide();
+    horizontalLayout_3->insertWidget(0, mpSkipToGamesButton);
+
+    connect(mpSkipToGamesButton, &QPushButton::clicked, this, &dlgConnectionProfiles::slot_skipToGamesList);
+
+    // Pressing Enter in the connection form must always mean "Connect". The
+    // tutorial invitation hides the Connect button on first show, which stops
+    // Qt's automatic default-button tracking from ever settling on it - Enter
+    // would then activate the first autoDefault button in the dialog, which
+    // happens to be Remove, silently deleting the profile being created:
+    remove_profile_button->setAutoDefault(false);
+    new_profile_button->setAutoDefault(false);
+    mpSkipToGamesButton->setAutoDefault(false);
+    connect_button->setDefault(true);
+
     // Test and set if needed mudlet::mIsIconShownOnDialogButtonBoxes - if there
     // is already a Qt provided icon on a predefined button, this is probably
     // the first and best place to test this as the "Cancel" button is a built-
@@ -102,16 +120,19 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     // settings suggest it:
     mudlet::self()->mShowIconsOnDialogs = !abort->icon().isNull();
 
-    auto Welcome_text_template = tr("<p><center><big><b>Welcome to Mudlet!</b></big></center></p>"
-                                    "<p><center><b>To get started, double-click on </b>Mudlet Tutorial<b> or select a game from the list.</b></center></p>"
-                                    "<p>Want to play a game that’s not listed?</p>"
-                                    "<p>Click %1 <span style=\" color:#555753;\">New</span>, then enter the <i>Profile Name</i>, <i>Server Address</i>, and <i>Port</i> in the required fields.</p>"
-                                    "<p>Once you're ready, click %2 <span style=\" color:#555753;\">Connect</span> to begin your adventure.</p>"
-                                    "<p>Have fun!</p><p align=\"right\"><span style=\" font-family:'Sans';\">The Mudlet Team </span>"
-                                    "<img src=\":/icons/mudlet_main_16px.png\"/></p>",
-                                    "Welcome message. Both %1 and %2 may be replaced by icons when this text is used.");
+    //: Welcome message shown on first launch, focused on starting the tutorial.
+    auto Welcome_text_template = tr("<p><center><img src=\"tutorialIcon\"/></center></p>"
+                                    "<p><center><big><b>Welcome to Mudlet!</b></big></center></p>"
+                                    "<p><center>Play a short guided adventure to learn<br>"
+                                    "how to navigate in games, use triggers, aliases, and scripting.</center></p>"
+                                    "<p><center><a href=\"mudlet-tutorial\">Start Tutorial</a></center></p>"
+                                    "<p align=\"right\"><span style=\" font-family:'Sans';\">The Mudlet Team </span>"
+                                    "<img src=\":/icons/mudlet_main_16px.png\"/></p>");
 
     auto pWelcome_document = new QTextDocument(this);
+    QPixmap tutorialIcon(qsl(":/icons/mudlet-tutorial.png"));
+    tutorialIcon = tutorialIcon.scaled(160, 40, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    pWelcome_document->addResource(QTextDocument::ImageResource, QUrl(qsl("tutorialIcon")), tutorialIcon);
 
     mpCopyProfile = new QAction(tr("Copy"), this);
     mpCopyProfile->setObjectName(qsl("copyProfile"));
@@ -149,17 +170,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     widgetList.first()->setAccessibleDescription(tr("copy the settings and some other parts of the profile to a new one that will require a different new name."));
 
     if (mudlet::self()->mShowIconsOnDialogs) {
-        // Since I've switched to allowing the possibility of theme replacement
-        // of icons we need a way to insert the current theme icons for
-        // "dialog-ok-apply" and "edit-copy" into the help message - this is
-        // awkward because Qt would normally expect to load them from a
-        // resource file but this is no good in this case as we only use the
-        // resource file if the icon is NOT supplied from the current theme.
-        // We can fix this with a bit of fancy editing of the text - replacing a
-        // particular sequence of characters with an image generated from the
-        // actual icon in use.
-        pWelcome_document->setHtml(qsl("<html><head/><body>%1</body></html>").arg(Welcome_text_template.arg(qsl("NEW_PROFILE_ICON"), qsl("CONNECT_PROFILE_ICON"))));
-
         // As we are repurposing the cancel to be a close button we do want to
         // change it anyhow:
         abort->setIcon(QIcon::fromTheme(qsl("dialog-close"), QIcon(qsl(":/icons/dialog-close.png"))));
@@ -175,31 +185,25 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         copy_profile_toolbutton->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
         copy_profile_toolbutton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
         mpCopyProfile->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
-
-        QTextCursor cursor = pWelcome_document->find(qsl("NEW_PROFILE_ICON"), 0, QTextDocument::FindWholeWords);
-        // The indicated piece of marker text should be selected by the cursor
-        Q_ASSERT_X(
-                !cursor.isNull(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "NEW_PROFILE_ICON text marker not found in welcome_message text for when icons are shown on dialogue buttons");
-        // Remove the marker:
-        cursor.removeSelectedText();
-        // Insert the current icon image into the same place:
-        const QImage image_new(QPixmap(icon_new.pixmap(new_profile_button->iconSize())).toImage());
-        cursor.insertImage(image_new);
-        cursor.clearSelection();
-
-        cursor = pWelcome_document->find(qsl("CONNECT_PROFILE_ICON"), 0, QTextDocument::FindWholeWords);
-        Q_ASSERT_X(!cursor.isNull(),
-                   "dlgConnectionProfiles::dlgConnectionProfiles(...)",
-                   "CONNECT_PROFILE_ICON text marker not found in welcome_message text for when icons are shown on dialogue buttons");
-        cursor.removeSelectedText();
-        const QImage image_connect(QPixmap(icon_connect.pixmap(connect_button->iconSize())).toImage());
-        cursor.insertImage(image_connect);
-        cursor.clearSelection();
-    } else {
-        pWelcome_document->setHtml(qsl("<html><head/><body>%1</body></html>").arg(Welcome_text_template.arg(QString(), QString())));
     }
 
+    pWelcome_document->setHtml(qsl("<html><head/><body>%1</body></html>").arg(Welcome_text_template));
     welcome_message->setDocument(pWelcome_document);
+    welcome_message->setOpenLinks(false);
+    welcome_message->setOpenExternalLinks(false);
+
+    connect(welcome_message, &QTextBrowser::anchorClicked, this, [this](const QUrl& link) {
+        if (link.toString() == qsl("mudlet-tutorial")) {
+            mTutorialDismissed = true;
+            profile_name_entry->setText(qsl("Mudlet Tutorial"));
+            host_name_entry->setText(qsl("localhost"));
+            port_entry->setText(qsl("0"));
+            validName = true;
+            validUrl = true;
+            validPort = true;
+            loadProfile(true);
+        }
+    });
 
     mpAction_revealPassword = new QAction(this);
     mpAction_revealPassword->setCheckable(true);
@@ -317,6 +321,33 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
     }
 }
 
+// Restores the widgets that the first-launch tutorial invitation hides, so
+// every path out of the invitation (Skip button, New profile) leaves the
+// dialog in its regular state:
+void dlgConnectionProfiles::dismissTutorialInvitation()
+{
+    mTutorialDismissed = true;
+    widget_topLeft->show();
+    welcome_message->hide();
+    tabWidget_connectionInfo->show();
+    informationArea->show();
+    mpSkipToGamesButton->hide();
+    connect_button->show();
+    offline_button->show();
+    // The invitation shrank the dialog to fit its short message; size the
+    // restored full interface from its own layout instead:
+    resize(sizeHint().expandedTo(minimumSize()));
+}
+
+void dlgConnectionProfiles::slot_skipToGamesList()
+{
+    dismissTutorialInvitation();
+    const auto items = findData(*listWidget_profiles, qsl("Mudlet Tutorial"), csmNameRole);
+    if (!items.isEmpty()) {
+        listWidget_profiles->setCurrentItem(items.first());
+    }
+}
+
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
 // accepting invalid data
 void dlgConnectionProfiles::accept()
@@ -384,7 +415,7 @@ void dlgConnectionProfiles::slot_updateDescription()
 
 void dlgConnectionProfiles::indicatePackagesInstallOnConnect(QStringList packages)
 {
-    if (!packages.length()) {
+    if (packages.isEmpty()) {
         return;
     }
 
@@ -439,7 +470,7 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
     }
 }
 
-void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QString& pass) const
+void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QString& pass)
 {
     // Validate that we have a password to store
     if (pass.trimmed().isEmpty()) {
@@ -448,7 +479,7 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
     }
 
     // Use async API for QtKeychain integration with file fallback
-    auto* credManager = new CredentialManager();
+    auto* credManager = new CredentialManager(this);
 
     credManager->storePassword(profile, "character", pass, [credManager, profile](bool success, const QString& errorMessage) {
         if (success) {
@@ -462,10 +493,10 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
     });
 }
 
-void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
+void dlgConnectionProfiles::deleteSecurePassword(const QString& profile)
 {
     // Use async API for QtKeychain integration with file fallback
-    auto* credManager = new CredentialManager();
+    auto* credManager = new CredentialManager(this);
 
     credManager->removePassword(profile, "character", [credManager, profile](bool success, const QString& errorMessage) {
         if (success) {
@@ -791,9 +822,9 @@ void dlgConnectionProfiles::slot_addProfile()
         const QSignalBlocker blocker(character_password_entry);
         character_password_entry->setText(QString());
     }
+    dismissTutorialInvitation();
     fillout_form();
     welcome_message->hide();
-
     informationArea->show();
     tabWidget_connectionInfo->show();
 
@@ -1036,6 +1067,10 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     slot_togglePasswordVisibility(false);
 
+    welcome_message->hide();
+    tabWidget_connectionInfo->show();
+    informationArea->show();
+
     profile_name_entry->setText(profile_name);
 
     QString host_url = readProfileData(profile_name, qsl("url"));
@@ -1224,20 +1259,15 @@ void dlgConnectionProfiles::fillout_form()
     port_entry->clear();
 
     mProfileList = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    // mProfileList gains non-disk entries (e.g. the QT_DEBUG-only self-test
+    // profile) further down, so capture whether the user has any saved
+    // profiles while it still only holds the on-disk ones:
+    const bool noSavedProfiles = mProfileList.isEmpty();
 
-    if (mProfileList.isEmpty()) {
+    if (noSavedProfiles) {
         welcome_message->show();
         tabWidget_connectionInfo->hide();
         informationArea->hide();
-
-// collapse the width as the default is too big and set the height to a reasonable default
-// to fit all of the 'Welcome' message
-#if defined(Q_OS_MACOS)
-        // macOS requires 15px more width to get 3 columns of MUD listings in
-        resize(minimumSize().width() + 15, 300);
-#else
-        resize(minimumSize().width(), 300);
-#endif
     } else {
         welcome_message->hide();
 
@@ -1323,11 +1353,11 @@ void dlgConnectionProfiles::fillout_form()
 
     if (firstMudletLaunch) {
         if (onlyShownPredefinedProfiles.isEmpty()) {
-            // Select a random pre-defined profile to give all MUDs a fair go first time
-            // make sure not to select the test_profile though
-            if (listWidget_profiles->count() > 1) {
-                while (toselectRow == -1 || toselectRow == test_profile_row) {
-                    toselectRow = QRandomGenerator::global()->bounded(listWidget_profiles->count());
+            // Select the tutorial profile on first launch
+            for (int i = 0; i < listWidget_profiles->count(); i++) {
+                if (listWidget_profiles->item(i)->data(csmNameRole).toString() == qsl("Mudlet Tutorial")) {
+                    toselectRow = i;
+                    break;
                 }
             }
         } else if (predefined_profile_row >= 0) {
@@ -1341,6 +1371,19 @@ void dlgConnectionProfiles::fillout_form()
         listWidget_profiles->setCurrentRow(toselectRow);
     }
 
+    // Dedicated single-game builds go straight to their game's profile instead
+    // of the Mudlet tutorial invitation:
+    if (firstMudletLaunch && noSavedProfiles && !mTutorialDismissed && onlyShownPredefinedProfiles.isEmpty()) {
+        // Hide the profile list and show only the tutorial-focused welcome
+        widget_topLeft->hide();
+        welcome_message->show();
+        tabWidget_connectionInfo->hide();
+        informationArea->hide();
+        connect_button->hide();
+        offline_button->hide();
+        mpSkipToGamesButton->show();
+        adjustSize();
+    }
 }
 
 void dlgConnectionProfiles::setProfileIcon() const
@@ -1411,7 +1454,7 @@ template <typename L>
 void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callback)
 {
     // Use async API for QtKeychain integration with file fallback
-    auto* credManager = new CredentialManager();
+    auto* credManager = new CredentialManager(this);
 
     credManager->retrievePassword(profile, "character", [credManager, callback = std::move(callback)](bool success, const QString& password, const QString& errorMessage) {
         if (success) {
@@ -1567,16 +1610,19 @@ void dlgConnectionProfiles::slot_copyProfile()
     QString oldname;
     QListWidgetItem* pItem;
     const auto oldPassword = character_password_entry->text();
+    const CopiedProfileData data = captureProfileData();
 
     if (!copyProfileWidget(profile_name, oldname, pItem)) {
         mCopyingProfile = false;
         return;
     }
 
-    // copy the folder on-disk
+    // A default profile (one of the predefined games) only exists in memory, so
+    // there is no folder to copy on-disk. Persist the displayed connection data
+    // into the new profile the same way saving a profile does, so the copy is
     const QDir dir(mudlet::getMudletPath(enums::profileHomePath, oldname));
     if (!dir.exists()) {
-        mCopyingProfile = false;
+        saveDefaultProfileCopy(profile_name, data, oldPassword);
         return;
     }
 
@@ -1609,12 +1655,85 @@ void dlgConnectionProfiles::slot_copyProfile()
     watcher->setFuture(future);
 }
 
+dlgConnectionProfiles::CopiedProfileData dlgConnectionProfiles::captureProfileData() const
+{
+    return {host_name_entry->text(),
+            port_entry->text(),
+            port_ssl_tsl->isChecked() ? Qt::Checked : Qt::Unchecked,
+            login_entry->text(),
+            website_entry->text(),
+            mud_description_textedit->toPlainText()};
+}
+
+// Copying a default profile (one of the predefined games) has nothing to copy
+// on-disk, because such profiles only exist in memory until saved. Create the
+// new profile's folder and persist the captured connection data, so the copy is
+// a faithful, functional profile that survives reopening the connection screen.
+// url/port/SSL go through the same writers used when saving a profile (which
+// also re-enable the connect button); the remaining fields are written directly.
+void dlgConnectionProfiles::saveDefaultProfileCopy(const QString& profileName, const CopiedProfileData& data, const QString& oldPassword)
+{
+    const QDir dir;
+    if (!dir.mkpath(mudlet::getMudletPath(enums::profileHomePath, profileName))) {
+        notificationArea->show();
+        notificationAreaIconLabelWarning->show();
+        notificationAreaIconLabelError->hide();
+        notificationAreaIconLabelInformation->hide();
+        notificationAreaMessageBox->show();
+        notificationAreaMessageBox->setText(tr("Could not create the new profile folder on your computer."));
+        mCopyingProfile = false;
+        return;
+    }
+
+    mProfileList << profileName;
+    mCopyingProfile = false;
+    {
+        const QSignalBlocker urlBlocker(host_name_entry);
+        const QSignalBlocker portBlocker(port_entry);
+        const QSignalBlocker sslBlocker(port_ssl_tsl);
+        const QSignalBlocker loginBlocker(login_entry);
+        host_name_entry->setText(data.host);
+        port_entry->setText(data.port);
+        port_ssl_tsl->setChecked(data.sslTsl == Qt::Checked);
+        login_entry->setText(data.login);
+        website_entry->setText(data.website);
+        website_entry->setVisible(!data.website.isEmpty());
+        mud_description_textedit->setPlainText(data.description);
+    }
+    slot_updateUrl(data.host);
+    slot_updatePort(data.port);
+    slot_updateSslTslPort(data.sslTsl);
+    if (!data.login.isEmpty()) {
+        writeProfileData(profileName, qsl("login"), data.login);
+    }
+    if (!data.website.isEmpty()) {
+        writeProfileData(profileName, qsl("website"), data.website);
+    }
+    if (!data.description.isEmpty()) {
+        writeProfileData(profileName, qsl("description"), data.description);
+    }
+    {
+        const QSignalBlocker blocker(character_password_entry);
+        character_password_entry->setText(oldPassword);
+    }
+    if (mudlet::self()->storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
+        writeSecurePassword(profileName, oldPassword);
+    }
+}
+
 void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
 {
     QString profile_name;
     QString oldname;
     QListWidgetItem* pItem;
+    const auto oldPassword = character_password_entry->text();
+    const CopiedProfileData data = captureProfileData();
     if (!copyProfileWidget(profile_name, oldname, pItem)) {
+        return;
+    }
+    const QDir oldProfileDir(mudlet::getMudletPath(enums::profileHomePath, oldname));
+    if (!oldProfileDir.exists()) {
+        saveDefaultProfileCopy(profile_name, data, oldPassword);
         return;
     }
 

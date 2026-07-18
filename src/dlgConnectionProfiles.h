@@ -95,6 +95,7 @@ protected:
 
 private:
     static bool copyFolder(const QString& sourceFolder, const QString& destFolder);
+    void dismissTutorialInvitation();
     QString getDescription(const QString& profile_name) const;
     bool validateConnect();
     bool validateProfile();
@@ -103,6 +104,17 @@ private:
     bool extractSettingsFromProfile(pugi::xml_document& newProfile, const QString& copySettingsFrom);
     void saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const;
     bool copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const;
+    struct CopiedProfileData
+    {
+        QString host;
+        QString port;
+        int sslTsl;
+        QString login;
+        QString website;
+        QString description;
+    };
+    CopiedProfileData captureProfileData() const;
+    void saveDefaultProfileCopy(const QString& profileName, const CopiedProfileData& data, const QString& oldPassword);
     bool hasCustomIcon(const QString&) const;
     void setProfileIcon() const;
     void loadCustomProfile(const QString&) const;
@@ -111,8 +123,8 @@ private:
     template <typename L>
     void loadSecuredPassword(const QString& profile, L callback);
     void migrateSecuredPassword(const QString& oldProfile, const QString& newProfile);
-    void writeSecurePassword(const QString& profile, const QString& pass) const;
-    void deleteSecurePassword(const QString& profile) const;
+    void writeSecurePassword(const QString& profile, const QString& pass);
+    void deleteSecurePassword(const QString& profile);
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void reallyDeleteProfile(const QString& profile);
     void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, const QString& newProfileHost, const QString& newProfilePort, const int newProfileSslTsl);
@@ -149,6 +161,8 @@ private:
     QTimer mSearchTextTimer;
     QString mSearchText;
     QTimer* mPasswordSaveTimer = nullptr;
+    QPushButton* mpSkipToGamesButton = nullptr;
+    bool mTutorialDismissed = false;
 
     // Async connection and password handling
     QString mPendingPasswordSaveProfile;
@@ -158,6 +172,7 @@ private:
 
 
 private slots:
+    void slot_skipToGamesList();
     void slot_profileContextMenu(QPoint pos);
     void slot_setCustomIcon();
     void slot_setCustomColor();
