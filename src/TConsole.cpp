@@ -694,6 +694,10 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layoutLayer2->activate();
     }
 
+    // Move before resizing: resizing first could leave the display overrunning
+    // its parent frame, clipping it and making TTextEdit::updateScreenView()
+    // undercount the visible rows:
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
     if (mType & (MainConsole | SubConsole | UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
@@ -706,7 +710,6 @@ void TConsole::resizeEvent(QResizeEvent* event)
         mpMainFrame->resize(x, y);
         mpMainDisplay->resize(x, y);
     }
-    mpMainDisplay->move(mBorders.left(), mBorders.top());
 
     if (mType & (CentralDebugConsole | ErrorConsole)) {
         layerCommandLine->hide();
@@ -824,13 +827,14 @@ void TConsole::refresh()
         y -= mpTopToolBar->height();
     }
 
+    // Move before resizing, see comment in resizeEvent():
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
     mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
 
     if (!mpCommandLine.isNull()) {
         mpCommandLine->adjustHeight();
     }
 
-    mpMainDisplay->move(mBorders.left(), mBorders.top());
     x = width();
     y = height();
     const QSize s = QSize(x, y);
