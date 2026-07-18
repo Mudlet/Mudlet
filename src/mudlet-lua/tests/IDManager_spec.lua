@@ -225,11 +225,12 @@ describe("Tests the functionality of IDMgr", function()
       end)
 
       it("Should return nil and a message when the underlying timer is gone", function()
-        registerNamedTimer(user, timerName, time, function() end)
+        local mgr = getNewIDManager()
+        mgr:registerTimer(timerName, time, function() end)
         -- kill the tempTimer behind the manager's back, as happens when a
         -- one-shot timer fires naturally
-        killTimer(getManager(user).timers[timerName].handlerID)
-        local result, err = remainingNamedTimer(user, timerName)
+        killTimer(mgr.timers[timerName].handlerID)
+        local result, err = mgr:remainingTime(timerName)
         assert.is_nil(result)
         assert.is_equal("timer is inactive", err)
       end)
