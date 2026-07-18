@@ -3,10 +3,28 @@
 # typically one-time initialization leaks or false positives from library
 # internal caching mechanisms.
 #
-# Usage: Set the LSAN_OPTIONS environment variable before running:
+# This file is embedded into sanitizer-enabled builds at compile time (see
+# LsanSuppressions.h.in and __lsan_default_suppressions in main.cpp), so
+# testing/PTB builds apply it automatically. To supply additional
+# suppressions at runtime:
 #   export LSAN_OPTIONS=suppressions=/path/to/asan-suppressions.txt
 #
+# Prefer listing the modules that ALLOCATE the leaked memory (graphics
+# drivers, font stacks, theme engines). Be wary of adding libraries that
+# appear mid-stack while dispatching events into Mudlet code (libX11, libxcb,
+# Qt modules) - a suppression matches if ANY frame does, so those can hide
+# genuine Mudlet leaks too.
+#
 # See: https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer
+
+# ==============================================================================
+# GPU driver leaks
+# One-time initialization allocations in the NVIDIA driver (cuInit is invoked
+# via FFmpeg/Qt Multimedia) and in Mesa's DRI drivers
+# ==============================================================================
+leak:libcuda.so
+leak:nvidia
+leak:_dri.so
 
 # ==============================================================================
 # Fontconfig library leaks

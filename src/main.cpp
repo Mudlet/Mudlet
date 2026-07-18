@@ -77,6 +77,29 @@
 
 using namespace std::chrono_literals;
 
+#include "LsanSuppressions.h"
+
+// These hooks are only consulted when the LeakSanitizer runtime is linked in
+// (USE_SANITIZER builds, i.e. PTBs and testing builds); elsewhere they are two
+// inert functions. They cannot be guarded with an "is ASAN on" macro check:
+// Mudlet only applies -fsanitize=address at link time, so no compiler macro is
+// set, and Qt's qcompilerdetection.h shims __has_feature to 0 on GCC anyway.
+
+// Embeds the suppression list into the binary so leak reports shown to users
+// by testing/PTB builds exclude third-party noise (GPU drivers, font stack)
+// with no LSAN_OPTIONS needed at runtime:
+extern "C" const char* __lsan_default_suppressions()
+{
+    return mudletLsanSuppressions;
+}
+
+// Without this, LeakSanitizer appends a "Suppressions used" summary to every
+// clean exit, which reads like an error to users:
+extern "C" const char* __lsan_default_options()
+{
+    return "print_suppressions=0";
+}
+
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
 extern void qInitResources_additional_splash_screens();

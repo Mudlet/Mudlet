@@ -764,6 +764,18 @@ if(USE_UPDATER)
   target_include_directories(${LIB_MUDLET_TARGET} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 endif(USE_UPDATER)
 
+# Embed the LeakSanitizer suppression list into the binary so that
+# sanitizer-enabled builds (PTBs, testing AppImages) filter third-party noise
+# out of leak reports without needing LSAN_OPTIONS set at runtime; picked up
+# by __lsan_default_suppressions() in main.cpp
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${mudlet_SOURCE_DIR}/asan-suppressions.txt")
+file(READ "${mudlet_SOURCE_DIR}/asan-suppressions.txt" MUDLET_LSAN_SUPPRESSIONS_CONTENT)
+string(REPLACE "\\" "\\\\" MUDLET_LSAN_SUPPRESSIONS_CONTENT "${MUDLET_LSAN_SUPPRESSIONS_CONTENT}")
+string(REPLACE "\"" "\\\"" MUDLET_LSAN_SUPPRESSIONS_CONTENT "${MUDLET_LSAN_SUPPRESSIONS_CONTENT}")
+string(REPLACE "\n" "\\n" MUDLET_LSAN_SUPPRESSIONS_CONTENT "${MUDLET_LSAN_SUPPRESSIONS_CONTENT}")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/LsanSuppressions.h.in" "${CMAKE_CURRENT_BINARY_DIR}/LsanSuppressions.h" @ONLY)
+target_include_directories(${LIB_MUDLET_TARGET} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+
 if(USE_3DMAPPER)
   target_link_libraries(${LIB_MUDLET_TARGET} OpenGL::GLU)
   target_link_libraries(${LIB_MUDLET_TARGET} assimp::assimp)

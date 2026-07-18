@@ -1,0 +1,7 @@
+#ifndef MUDLET_LSANSUPPRESSIONS_H
+#define MUDLET_LSANSUPPRESSIONS_H
+
+// Generated from asan-suppressions.txt at configure time - do not edit.
+constexpr const char* mudletLsanSuppressions = "@MUDLET_LSAN_SUPPRESSIONS_CONTENT@";
+
+#endif // MUDLET_LSANSUPPRESSIONS_H
