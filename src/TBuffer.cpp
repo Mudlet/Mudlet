@@ -4394,7 +4394,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     int lineEndPos = sub_end;
 
     if (lineEndPos >= length) {
-        lineEndPos = text.size() - 1;
+        lineEndPos = length - 1;
     }
 
     for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
