@@ -19,6 +19,7 @@
 
 #include <discord.h>
 #include <Host.h>
+#include <QFile>
 #include <QtTest/QtTest>
 
 class DiscordTest : public QObject {
@@ -192,6 +193,44 @@ private slots:
         QVERIFY(!matchesRequired(qsl("someone_else"), qsl("morquin")));
         // Empty logged-in user (not connected yet) should match
         QVERIFY(matchesRequired(QString(), qsl("morquin")));
+    }
+
+    // The Lua API permission gating contract: mutators (setDiscord* and
+    // resetDiscordData) must require write access - discordApiEnabled(L, true)
+    // denies them while the API is read-only because the logged-in Discord
+    // user differs from the profile's restriction - while getters only need
+    // read access. Exercising the real functions needs a live profile (see
+    // TDiscordModeTest); this scans the source instead, like
+    // CMakeListsConsistencyTest does, so a swapped flag fails here too.
+    void testLuaApiGatingContract()
+    {
+        QFile source(qsl(MUDLET_SRC_DIR "/TLuaInterpreterDiscord.cpp"));
+        QVERIFY2(source.open(QIODevice::ReadOnly | QIODevice::Text), "cannot open TLuaInterpreterDiscord.cpp");
+        const QString text = QString::fromUtf8(source.readAll());
+
+        const QStringList chunks = text.split(qsl("int TLuaInterpreter::"));
+        int checked = 0;
+        for (int i = 1; i < chunks.size(); ++i) {
+            const QString& chunk = chunks.at(i);
+            const QString name = chunk.left(chunk.indexOf(QLatin1Char('(')));
+            const bool readGate = chunk.contains(qsl("discordApiEnabled(L)"));
+            const bool writeGate = chunk.contains(qsl("discordApiEnabled(L, true)"));
+
+            if (name == qsl("setDiscordGameUrl")) {
+                // Intentionally ungated: the invite URL is not part of rich
+                // presence (see the comment in the function itself)
+                QVERIFY2(!readGate && !writeGate, qPrintable(qsl("%1 is documented as exempt from the Discord API gate").arg(name)));
+                ++checked;
+            } else if (name.startsWith(qsl("setDiscord")) || name == qsl("resetDiscordData")) {
+                QVERIFY2(writeGate && !readGate, qPrintable(qsl("%1 mutates Discord data so it must call discordApiEnabled(L, true)").arg(name)));
+                ++checked;
+            } else if (name.startsWith(qsl("getDiscord")) || name == qsl("usingMudletsDiscordID")) {
+                QVERIFY2(readGate && !writeGate, qPrintable(qsl("%1 only reads Discord data so it must call discordApiEnabled(L)").arg(name)));
+                ++checked;
+            }
+        }
+        // All 22 Discord Lua API functions should have been categorised:
+        QVERIFY2(checked >= 22, qPrintable(qsl("only categorised %1 Discord Lua functions - has the source moved?").arg(checked)));
     }
 
     void cleanupTestCase()

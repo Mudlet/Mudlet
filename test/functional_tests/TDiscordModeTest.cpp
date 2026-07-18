@@ -30,11 +30,24 @@
 
 #include <QtTest/QtTest>
 
+#include <utility>
+
 #include "MudletInstanceCoordinator.h"
+#include "TLuaInterpreter.h"
 #include "TelnetServerStub.h"
 #include "discord.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
+
+extern "C" {
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lauxlib.h>
+#include <lua5.1/lua.h>
+#else
+#include <lauxlib.h>
+#include <lua.h>
+#endif
+}
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -58,6 +71,33 @@ private:
     const QString mHostname = "Discord-Mode-Test";
     const QString mPort = "4003";
     const QString mLocalhost = "localhost";
+
+    // Evaluates a Lua expression in the profile's global state. Returns the
+    // first result (invalid QVariant for nil or a compile/runtime error) plus
+    // the second result as a string (the error message on denial).
+    std::pair<QVariant, QString> evalLua(const QString& expression)
+    {
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        const int base = lua_gettop(L);
+        QVariant first;
+        QString second;
+        if (luaL_dostring(L, qsl("return %1").arg(expression).toUtf8().constData()) == 0) {
+            if (lua_gettop(L) > base) {
+                if (lua_isboolean(L, base + 1)) {
+                    first = static_cast<bool>(lua_toboolean(L, base + 1));
+                } else if (lua_isnumber(L, base + 1)) {
+                    first = lua_tonumber(L, base + 1);
+                } else if (lua_isstring(L, base + 1)) {
+                    first = QString::fromUtf8(lua_tostring(L, base + 1));
+                }
+            }
+            if (lua_gettop(L) > base + 1 && lua_isstring(L, base + 2)) {
+                second = QString::fromUtf8(lua_tostring(L, base + 2));
+            }
+        }
+        lua_settop(L, base);
+        return {first, second};
+    }
 
 private slots:
     void initTestCase()
@@ -117,6 +157,8 @@ private slots:
         discord.resetData(mpHost);
         mpHost->mDiscordMode = Host::DiscordShowGameDetails;
         mpHost->mDiscordAccessFlags = Host::DiscordSetSubMask;
+        mpHost->mRequiredDiscordUserName.clear();
+        Discord::smUserName.clear();
     }
 
     // -- Mode gating tests --
@@ -308,6 +350,97 @@ private slots:
                  "State text should be cleared after resetData");
         QVERIFY2(!discord.isServerOrigin(mpHost, Host::DiscordSetDetail),
                  "Server-origin flags should be cleared after resetData");
+    }
+
+    // -- Lua API permission gating tests --
+    // Setters and resetDiscordData() need write access (denied while the API
+    // is read-only because the logged-in Discord user does not match the
+    // profile's restriction); getters only need read access.
+
+    void testLuaSetterDeniedWhenDisabled()
+    {
+        auto& discord = mudlet::self()->mDiscord;
+        discord.setDetailText(mpHost, qsl("original"));
+        mpHost->mDiscordMode = Host::DiscordDisabled;
+
+        auto [result, error] = evalLua(qsl("setDiscordDetail(\"changed\")"));
+        QVERIFY2(!result.isValid(), "setDiscordDetail() should be denied when Discord is disabled");
+        QVERIFY2(!error.isEmpty(), "denial should come with an error message");
+        QCOMPARE(discord.getDetailText(mpHost), qsl("original"));
+    }
+
+    void testLuaResetDeniedWhenDisabled()
+    {
+        auto& discord = mudlet::self()->mDiscord;
+        discord.setDetailText(mpHost, qsl("keep me"));
+        mpHost->mDiscordMode = Host::DiscordDisabled;
+
+        auto [result, error] = evalLua(qsl("resetDiscordData()"));
+        QVERIFY2(!result.isValid(), "resetDiscordData() should be denied when Discord is disabled");
+        QVERIFY2(!error.isEmpty(), "denial should come with an error message");
+        QCOMPARE(discord.getDetailText(mpHost), qsl("keep me"));
+    }
+
+    void testLuaSetterAndResetDeniedWhenReadOnly()
+    {
+        auto& discord = mudlet::self()->mDiscord;
+        if (!discord.libraryLoaded()) {
+            QSKIP("Discord RPC library not available - cannot test the read-only gate");
+        }
+
+        discord.setDetailText(mpHost, qsl("original"));
+        // Simulate being logged into Discord with a different account than
+        // the profile requires - that makes the Lua API read-only:
+        Discord::smUserName = qsl("someone_else");
+        mpHost->mRequiredDiscordUserName = qsl("profile_owner");
+
+        auto [setResult, setError] = evalLua(qsl("setDiscordDetail(\"changed\")"));
+        QVERIFY2(!setResult.isValid(), "setter should be denied while the API is read-only");
+        QVERIFY2(setError.contains(qsl("read-only")), "denial should say the API is read-only");
+        QCOMPARE(discord.getDetailText(mpHost), qsl("original"));
+
+        auto [resetResult, resetError] = evalLua(qsl("resetDiscordData()"));
+        QVERIFY2(!resetResult.isValid(), "resetDiscordData() should be denied while the API is read-only");
+        QVERIFY2(resetError.contains(qsl("read-only")), "denial should say the API is read-only");
+        QCOMPARE(discord.getDetailText(mpHost), qsl("original"));
+    }
+
+    void testLuaGettersAllowedWhenReadOnly()
+    {
+        auto& discord = mudlet::self()->mDiscord;
+        if (!discord.libraryLoaded()) {
+            QSKIP("Discord RPC library not available - cannot test the read-only gate");
+        }
+
+        discord.setSmallImage(mpHost, qsl("shield"));
+        discord.setSmallImageText(mpHost, qsl("Guardian"));
+        discord.setLargeImageText(mpHost, qsl("Achaea"));
+        discord.setParty(mpHost, 2, 5);
+
+        Discord::smUserName = qsl("someone_else");
+        mpHost->mRequiredDiscordUserName = qsl("profile_owner");
+
+        QCOMPARE(evalLua(qsl("getDiscordSmallIcon()")).first, QVariant(qsl("shield")));
+        QCOMPARE(evalLua(qsl("getDiscordSmallIconText()")).first, QVariant(qsl("Guardian")));
+        QCOMPARE(evalLua(qsl("getDiscordLargeIconText()")).first, QVariant(qsl("Achaea")));
+        QCOMPARE(evalLua(qsl("getDiscordParty()")).first, QVariant(2.0));
+    }
+
+    void testLuaSetterAndResetAllowedWithWriteAccess()
+    {
+        auto& discord = mudlet::self()->mDiscord;
+        if (!discord.libraryLoaded()) {
+            QSKIP("Discord RPC library not available - cannot test the write-access path");
+        }
+
+        // No username restriction - write access is granted:
+        auto [setResult, setError] = evalLua(qsl("setDiscordDetail(\"set from Lua\")"));
+        QCOMPARE(setResult, QVariant(true));
+        QCOMPARE(discord.getDetailText(mpHost), qsl("set from Lua"));
+
+        auto [resetResult, resetError] = evalLua(qsl("resetDiscordData()"));
+        QCOMPARE(resetResult, QVariant(true));
+        QVERIFY2(discord.getDetailText(mpHost).isEmpty(), "resetDiscordData() should clear the data when permitted");
     }
 
     void cleanupTestCase()

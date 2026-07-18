@@ -44,3 +44,15 @@ set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
+
+# Let TDiscordModeTest find the bundled discord-rpc library so the Lua API
+# permission gating tests can run (they skip when it is unavailable)
+if(WIN32)
+    set(DISCORD_RPC_PATH_VARIABLE "PATH")
+elseif(APPLE)
+    set(DISCORD_RPC_PATH_VARIABLE "DYLD_LIBRARY_PATH")
+else()
+    set(DISCORD_RPC_PATH_VARIABLE "LD_LIBRARY_PATH")
+endif()
+set_property(TEST TDiscordModeTest APPEND PROPERTY
+    ENVIRONMENT_MODIFICATION "${DISCORD_RPC_PATH_VARIABLE}=path_list_prepend:${CMAKE_SOURCE_DIR}/3rdparty/discord/rpc/lib")

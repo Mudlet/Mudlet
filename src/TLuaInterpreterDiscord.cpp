@@ -146,7 +146,7 @@ int TLuaInterpreter::getDiscordLargeIconText(lua_State* L)
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
-    auto result = discordApiEnabled(L, true);
+    auto result = discordApiEnabled(L);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -161,7 +161,7 @@ int TLuaInterpreter::getDiscordParty(lua_State* L)
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
-    auto result = discordApiEnabled(L, true);
+    auto result = discordApiEnabled(L);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -178,7 +178,7 @@ int TLuaInterpreter::getDiscordSmallIcon(lua_State* L)
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
-    auto result = discordApiEnabled(L, true);
+    auto result = discordApiEnabled(L);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -193,7 +193,7 @@ int TLuaInterpreter::getDiscordSmallIconText(lua_State* L)
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
-    auto result = discordApiEnabled(L, true);
+    auto result = discordApiEnabled(L);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -238,6 +238,11 @@ int TLuaInterpreter::resetDiscordData(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
 
     pMudlet->mDiscord.resetData(&host);
     lua_pushboolean(L, true);
@@ -291,7 +296,7 @@ int TLuaInterpreter::setDiscordDetail(lua_State* L)
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
-    auto result = discordApiEnabled(L);
+    auto result = discordApiEnabled(L, true);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -313,7 +318,7 @@ int TLuaInterpreter::setDiscordElapsedStartTime(lua_State* L)
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
-    auto result = discordApiEnabled(L);
+    auto result = discordApiEnabled(L, true);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -334,7 +339,7 @@ int TLuaInterpreter::setDiscordGame(lua_State* L)
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
-    auto result = discordApiEnabled(L);
+    auto result = discordApiEnabled(L, true);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -407,7 +412,7 @@ int TLuaInterpreter::setDiscordLargeIconText(lua_State* L)
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
-    auto result = discordApiEnabled(L);
+    auto result = discordApiEnabled(L, true);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -429,7 +434,7 @@ int TLuaInterpreter::setDiscordParty(lua_State* L)
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
-    auto result = discordApiEnabled(L);
+    auto result = discordApiEnabled(L, true);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -462,7 +467,7 @@ int TLuaInterpreter::setDiscordRemainingEndTime(lua_State* L)
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
-    auto result = discordApiEnabled(L);
+    auto result = discordApiEnabled(L, true);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -484,7 +489,7 @@ int TLuaInterpreter::setDiscordSmallIcon(lua_State* L)
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
-    auto result = discordApiEnabled(L);
+    auto result = discordApiEnabled(L, true);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -501,7 +506,7 @@ int TLuaInterpreter::setDiscordSmallIconText(lua_State* L)
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
-    auto result = discordApiEnabled(L);
+    auto result = discordApiEnabled(L, true);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -522,7 +527,7 @@ int TLuaInterpreter::setDiscordState(lua_State* L)
 {
     auto& host = getHostFromLua(L);
 
-    auto result = discordApiEnabled(L);
+    auto result = discordApiEnabled(L, true);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }

@@ -47,6 +47,9 @@ foreach(test_name ${UNIT_TESTS})
     )
 endforeach()
 
+# DiscordTest checks the Lua API permission gating contract by scanning the source
+target_compile_definitions(DiscordTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
+
 add_executable(PasswordMigrationTest PasswordMigrationTest.cpp)
 add_dependencies(PasswordMigrationTest ${LIB_MUDLET_TARGET})
 target_link_libraries(PasswordMigrationTest PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
