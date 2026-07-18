@@ -37,6 +37,7 @@
 #include "TDetachedWindow.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "TFeatureCallout.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TGameDetails.h"
@@ -2209,6 +2210,21 @@ void mudlet::addConsoleForNewHost(Host* pH)
         mpTabBar->setTabConnectionIndicator(newTabID, TabConnectionIndicator::Connecting);
     }
     mpTabBar->repaint();
+
+    // Tab switching only becomes relevant once a second profile is open; an
+    // empty sequence means the player cleared the shortcut and already knows
+    // about the feature:
+    if (mpTabBar->count() == 2 && !mKeySequenceNextProfile.isEmpty()) {
+        //: Title of a balloon pointing out the newly added profile tab switching shortcuts
+        TFeatureCallout::maybeShow(qsl("profileTabShortcuts"),
+                                   mpTabBar,
+                                   tr("Switch games with the keyboard"),
+                                   //: %1, %2 and %3 are keyboard shortcuts, e.g. Ctrl+Tab, Ctrl+1 and Ctrl+9
+                                   tr("Press %1 to cycle through your open games, or %2 to %3 to jump straight to one. You can change these keys in the preferences.")
+                                           .arg(mKeySequenceNextProfile.toString(QKeySequence::NativeText),
+                                                mKeySequencesSwitchToProfile.front().toString(QKeySequence::NativeText),
+                                                mKeySequencesSwitchToProfile.back().toString(QKeySequence::NativeText)));
+    }
 
     // update the window title for the currently selected profile
     updateMainWindowTitle();
