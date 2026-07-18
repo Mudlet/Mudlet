@@ -1764,6 +1764,10 @@ void dlgProfilePreferences::clearHostDetails()
 
     label_shortcutsConflictWarning->hide();
     label_shortcutsConflictWarning->clear();
+    // Drop the stale shortcut data as well, otherwise a later call to
+    // updateShortcutConflictWarning() (e.g. from slot_setAppearance()) would
+    // re-show the warning for the no longer active profile:
+    currentShortcuts.clear();
 
     checkBox_mVersionInTTYPE->setChecked(false);
     checkBox_mForceMXPProcessorOn->setChecked(false);
