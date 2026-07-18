@@ -288,10 +288,6 @@ void Updater::setupPlatformUpdater()
             return;
         }
         emit signal_updateAvailable(updates.size());
-        if (!updateAutomatically()) {
-            return;
-        }
-        downloadReleaseIfValid(updates.first());
     });
 
     connect(feed.get(), &dblsqd::Feed::downloadError, this, [this](const QString& error) {
