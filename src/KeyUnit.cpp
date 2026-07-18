@@ -329,9 +329,9 @@ bool KeyUnit::registerKey(TKey* pT)
 
     if (pT->getParent()) {
         addKey(pT);
-        return true;
+    } else {
+        addKeyRootNode(pT);
     }
-    addKeyRootNode(pT);
     return true;
 }
 

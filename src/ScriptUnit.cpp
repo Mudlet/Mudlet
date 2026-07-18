@@ -185,9 +185,9 @@ bool ScriptUnit::registerScript(TScript* pT)
 
     if (pT->getParent()) {
         addScript(pT);
-        return true;
+    } else {
+        addScriptRootNode(pT);
     }
-    addScriptRootNode(pT);
     return true;
 }
 
