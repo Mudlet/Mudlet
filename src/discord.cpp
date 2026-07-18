@@ -520,8 +520,9 @@ QString Discord::deduceGameName(const QString& address)
             // WoTMUD type case - so take remaining term in the middle of original
             otherName = otherName.split(QChar('.')).last();
             break;
-        } else if (otherName.startsWith(QLatin1String("www."))) {
-            // Error(?) in entering details so that a web-server name was give:
+        }
+        if (otherName.startsWith(QLatin1String("www."))) {
+            // Error(?) in entering details so that a web-server name was given:
             otherName = otherName.split(QChar('.')).last();
             break;
         }

@@ -150,11 +150,10 @@ bool TMxpProcessor::setMode(const QString& code)
     const int modeCode = code.toInt(&isOk);
     if (isOk) {
         return setMode(modeCode);
-    } else {
-        // isOk is false here as toInt(...) failed
-        qDebug().noquote().nospace() << "TMxpProcessor::setMode(...) INFO - Non-numeric MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
-        return false;
     }
+    // isOk is false here as toInt(...) failed
+    qDebug().noquote().nospace() << "TMxpProcessor::setMode(...) INFO - Non-numeric MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
+    return false;
 }
 
 /*
@@ -386,9 +385,9 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
             default:
                 return HANDLER_INSERT_ENTITY_LIT;
             }
-        } else { // ask for the next char
-            return HANDLER_NEXT_CHAR;
         }
+        // ask for the next char
+        return HANDLER_NEXT_CHAR;
     }
 
     mMxpTagProcessor.handleContent(ch);

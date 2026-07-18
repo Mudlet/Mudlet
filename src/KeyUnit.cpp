@@ -232,11 +232,10 @@ bool KeyUnit::killKey(QString& name)
             // only temporary Keys can be killed
             if (!pChild->isTemporary()) {
                 return false;
-            } else {
-                pChild->setIsActive(false);
-                markCleanup(pChild);
-                return true;
             }
+            pChild->setIsActive(false);
+            markCleanup(pChild);
+            return true;
         }
     }
     return false;
@@ -345,11 +344,10 @@ bool KeyUnit::registerKey(TKey* pT)
 
     if (pT->getParent()) {
         addKey(pT);
-        return true;
     } else {
         addKeyRootNode(pT);
-        return true;
     }
+    return true;
 }
 
 void KeyUnit::unregisterKey(TKey* pT)
@@ -360,10 +358,8 @@ void KeyUnit::unregisterKey(TKey* pT)
     if (pT->getParent()) {
         removeKey(pT);
         return;
-    } else {
-        removeKeyRootNode(pT);
-        return;
     }
+    removeKeyRootNode(pT);
 }
 
 

@@ -35,9 +35,7 @@ class TMxpTagHandler
 public:
     virtual TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag);
 
-    virtual void handleContent(char ch) {
-        Q_UNUSED(ch)
-    }
+    virtual void handleContent(char ch) { Q_UNUSED(ch) }
 
     void handleContent(const QString& text)
     {
@@ -46,36 +44,40 @@ public:
         }
     }
 
-    virtual void handleTextNode(TMxpContext& ctx, TMxpClient& client, MxpTextNode* tag) {
+    virtual void handleTextNode(TMxpContext& ctx, TMxpClient& client, MxpTextNode* tag)
+    {
         Q_UNUSED(ctx)
         Q_UNUSED(client)
         handleContent(tag->getContent());
     }
 
-    virtual TMxpTagHandlerResult handleNode(TMxpContext& ctx, TMxpClient& client, MxpNode* node) {
+    virtual TMxpTagHandlerResult handleNode(TMxpContext& ctx, TMxpClient& client, MxpNode* node)
+    {
         if (node->isTag()) {
             return handleTag(ctx, client, node->asTag());
-        } else {
-            handleTextNode(ctx, client, node->asText());
-            return MXP_TAG_HANDLED;
         }
+        handleTextNode(ctx, client, node->asText());
+        return MXP_TAG_HANDLED;
     }
 
-    virtual bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) {
+    virtual bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag)
+    {
         Q_UNUSED(ctx)
         Q_UNUSED(client)
         Q_UNUSED(tag)
         return true;
     }
 
-    virtual TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) {
+    virtual TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
+    {
         Q_UNUSED(ctx)
         Q_UNUSED(client)
         Q_UNUSED(tag)
         return MXP_TAG_NOT_HANDLED;
     }
 
-    virtual TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) {
+    virtual TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag)
+    {
         Q_UNUSED(ctx)
         Q_UNUSED(client)
         Q_UNUSED(tag)
@@ -95,7 +97,8 @@ class TMxpSingleTagHandler : public TMxpTagHandler
 public:
     virtual ~TMxpSingleTagHandler() = default;
 
-    virtual bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) {
+    virtual bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag)
+    {
         Q_UNUSED(ctx)
         Q_UNUSED(client)
         return tag->isNamed(tagName);
@@ -104,7 +107,8 @@ public:
 protected:
     explicit TMxpSingleTagHandler(QString tagName)
     : tagName(std::move(tagName))
-    {}
+    {
+    }
 };
 
 #endif //MUDLET_TMXPTAGHANDLER_H

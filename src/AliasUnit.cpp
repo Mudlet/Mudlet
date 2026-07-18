@@ -221,10 +221,9 @@ bool AliasUnit::registerAlias(TAlias* pT)
     if (pT->getParent()) {
         addAlias(pT);
         return true;
-    } else {
-        addAliasRootNode(pT);
-        return true;
     }
+    addAliasRootNode(pT);
+    return true;
 }
 
 void AliasUnit::unregisterAlias(TAlias* pT)
@@ -235,10 +234,8 @@ void AliasUnit::unregisterAlias(TAlias* pT)
     if (pT->getParent()) {
         removeAlias(pT);
         return;
-    } else {
-        removeAliasRootNode(pT);
-        return;
     }
+    removeAliasRootNode(pT);
 }
 
 
@@ -387,11 +384,10 @@ bool AliasUnit::killAlias(const QString& name)
             // only temporary Aliases can be killed
             if (!alias->isTemporary()) {
                 return false;
-            } else {
-                alias->setIsActive(false);
-                markCleanup(alias);
-                return true;
             }
+            alias->setIsActive(false);
+            markCleanup(alias);
+            return true;
         }
     }
     return false;

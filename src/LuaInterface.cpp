@@ -595,11 +595,12 @@ bool LuaInterface::loadVar(TVar* var)
             if (lua_istable(mL, -2)) {
                 lua_gettable(mL, -2);
                 return true;
-            } else {
-                lua_pop(mL, 1);
-                return false;
             }
-        } else if (vType == LUA_TNUMBER) {
+            lua_pop(mL, 1);
+            return false;
+        }
+
+        if (vType == LUA_TNUMBER) {
             lua_pushnumber(mL, QString(var->getValue()).toDouble());
         } else if (vType == LUA_TBOOLEAN) {
             lua_pushboolean(mL, var->getValue().toLower() == "true" ? 1 : 0);

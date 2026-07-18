@@ -192,7 +192,8 @@ bool TCommandLine::event(QEvent* event)
                 mpConsole->mUpperPane->slot_copySelectionToClipboard();
                 ke->accept();
                 return true;
-            } else if (hasLowerPaneSelection) {
+            }
+            if (hasLowerPaneSelection) {
                 // Copy from lower pane if it has a selection
                 mpConsole->mLowerPane->slot_copySelectionToClipboard();
                 ke->accept();
@@ -1175,9 +1176,8 @@ void TCommandLine::handleAutoCompletion()
             }
             moveCursor(QTextCursor::End, QTextCursor::KeepAnchor);
             return;
-        } else {
-            moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
         }
+        moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
     }
     mAutoCompletionCount = -1;
 }
