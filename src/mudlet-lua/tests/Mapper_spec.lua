@@ -1,3 +1,14 @@
+-- This block must stay first in the file: once a later spec calls
+-- openMapWidget(), the widget persists for the rest of the session and the
+-- no-widget branch becomes unreachable.
+describe("Tests getMapEvents before the map widget is opened", function()
+  it("should return nil+message when the map widget was never opened", function()
+    local events, err = getMapEvents()
+    assert.is_nil(events)
+    assert.are.equal("you haven't opened a map yet", err)
+  end)
+end)
+
 describe("Tests custom map event and menu functions", function()
 
   setup(function()
@@ -231,6 +242,27 @@ describe("Tests per-room border functions", function()
       assert.is_true(result)
       assert.is_nil(getRoomBorderThickness(testRoomId))
     end)
+  end)
+
+end)
+
+describe("Tests addRoom", function()
+
+  it("should return true when the room is created", function()
+    local roomID = createRoomID()
+    assert.is_true(addRoom(roomID))
+    deleteRoom(roomID)
+  end)
+
+  it("should report the requested areaID when it does not exist", function()
+    local roomID = createRoomID()
+    local ok, err = addRoom(roomID, 987654)
+    assert.is_nil(ok)
+    assert.is_string(err)
+    assert.is_not_nil(err:find("areaID 987654", 1, true), err)
+    -- the room is still created, parked in the default area (-1)
+    assert.are.equal(-1, getRoomArea(roomID))
+    deleteRoom(roomID)
   end)
 
 end)

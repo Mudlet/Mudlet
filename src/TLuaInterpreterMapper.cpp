@@ -581,6 +581,7 @@ int TLuaInterpreter::addRoom(lua_State* L)
         if (lua_gettop(L) > 1) {
             areaID = getVerifiedInt(L, __func__, 2, "areaID");
         }
+        const int requestedAreaID = areaID;
         // defer area calculations as all new rooms are initialised at 0,0,0 anyway
         if (!host.mpMap->setRoomArea(id, areaID, true)) {
             // The above will fail if the areaID does not exist (given that
@@ -594,7 +595,7 @@ int TLuaInterpreter::addRoom(lua_State* L)
 
         if (issueBadAreaWarning) {
             lua_pushnil(L);
-            lua_pushfstring(L, "addRoom: created roomID %d but failed to place it in areaID %d, does that area actually exist? (Room has been placed in areaID -1 instead.)", id, areaID);
+            lua_pushfstring(L, "addRoom: created roomID %d but failed to place it in areaID %d, does that area actually exist? (Room has been placed in areaID -1 instead.)", id, requestedAreaID);
             return 2;
         }
     }
@@ -1745,38 +1746,35 @@ int TLuaInterpreter::getGridMode(lua_State* L)
 int TLuaInterpreter::getMapEvents(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    if (host.mpMap) {
-        if (host.mpMap->mpMapper) {
-            if (host.mpMap->mpMapper->mp2dMap) {
-                // create the result table
-                lua_newtable(L);
-                QMapIterator<QString, QStringList> it(host.mpMap->mpMapper->mp2dMap->mUserActions);
-                while (it.hasNext()) {
-                    it.next();
-                    const QStringList eventInfo = it.value();
-                    lua_createtable(L, 0, 4);
-                    lua_pushstring(L, eventInfo.at(0).toUtf8().constData());
-                    lua_setfield(L, -2, "event name");
-                    lua_pushstring(L, eventInfo.at(1).toUtf8().constData());
-                    lua_setfield(L, -2, "parent");
-                    lua_pushstring(L, eventInfo.at(2).toUtf8().constData());
-                    lua_setfield(L, -2, "display name");
-                    lua_createtable(L, eventInfo.length() - 3, 0);
-                    for (int i = 3; i < eventInfo.length(); i++) {
-                        lua_pushinteger(L, i - 2); //lua indexes are 1 based!
-                        lua_pushstring(L, eventInfo.at(i).toUtf8().constData());
-                        lua_settable(L, -3);
-                    }
-                    lua_setfield(L, -2, "arguments");
-
-                    // Add the mapEvent object to the result table
-                    lua_setfield(L, -2, it.key().toUtf8().constData());
-                }
-            }
-            return 1;
-        }
+    if (!(host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap)) {
+        return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
-    return 0;
+
+    // create the result table
+    lua_newtable(L);
+    QMapIterator<QString, QStringList> it(host.mpMap->mpMapper->mp2dMap->mUserActions);
+    while (it.hasNext()) {
+        it.next();
+        const QStringList eventInfo = it.value();
+        lua_createtable(L, 0, 4);
+        lua_pushstring(L, eventInfo.at(0).toUtf8().constData());
+        lua_setfield(L, -2, "event name");
+        lua_pushstring(L, eventInfo.at(1).toUtf8().constData());
+        lua_setfield(L, -2, "parent");
+        lua_pushstring(L, eventInfo.at(2).toUtf8().constData());
+        lua_setfield(L, -2, "display name");
+        lua_createtable(L, eventInfo.length() - 3, 0);
+        for (int i = 3; i < eventInfo.length(); i++) {
+            lua_pushinteger(L, i - 2); //lua indexes are 1 based!
+            lua_pushstring(L, eventInfo.at(i).toUtf8().constData());
+            lua_settable(L, -3);
+        }
+        lua_setfield(L, -2, "arguments");
+
+        // Add the mapEvent object to the result table
+        lua_setfield(L, -2, it.key().toUtf8().constData());
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapLabel
