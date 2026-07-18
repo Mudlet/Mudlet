@@ -1207,7 +1207,7 @@ int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
     const QString script{lua_tostring(L, 4)};
     auto [triggerId, message] = pLuaInterpreter->startPermBeginOfLineStringTrigger(name, parent, regList, script);
     if (triggerId == -1) {
-        lua_pushfstring(L, "permRegexTrigger: cannot create trigger (%s)", message.toUtf8().constData());
+        lua_pushfstring(L, "permBeginOfLineStringTrigger: cannot create trigger (%s)", message.toUtf8().constData());
         return lua_error(L);
     }
     lua_pushnumber(L, triggerId);
@@ -2110,8 +2110,8 @@ int TLuaInterpreter::tempButton(lua_State* L)
 
 
     pT->registerAction();
-    // N/U:     int childID = pT->getID();
     host.getActionUnit()->updateAllToolbars();
+    lua_pushnumber(L, pT->getID());
     return 1;
 }
 
@@ -2156,10 +2156,9 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
     pT->setIsFolder(true);
     pT->setIsActive(true);
     pT->registerAction();
-    // N/U:     int childID = pT->getID();
     host.getActionUnit()->updateAllToolbars();
 
-
+    lua_pushnumber(L, pT->getID());
     return 1;
 }
 
