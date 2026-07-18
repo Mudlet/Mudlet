@@ -1856,13 +1856,10 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
     result = host.mpConsole->getBgColor(windowName);
     auto it = result.begin();
     if (result.size() < 3) {
-        return 0;
+        return warnArgumentValue(L, __func__, qsl("current selection invalid in window '%1'").arg(windowName));
     }
-    if (ansiBg < 0) {
-        return 0;
-    }
-    if (ansiBg > 16) {
-        return 0;
+    if (ansiBg < 0 || ansiBg > 16) {
+        return warnArgumentValue(L, __func__, qsl("ANSI color %1 out of range (0 to 16)").arg(ansiBg));
     }
 
 
@@ -1950,13 +1947,10 @@ int TLuaInterpreter::isAnsiFgColor(lua_State* L)
     result = host.mpConsole->getFgColor(windowName);
     auto it = result.begin();
     if (result.size() < 3) {
-        return 0;
+        return warnArgumentValue(L, __func__, qsl("current selection invalid in window '%1'").arg(windowName));
     }
-    if (ansiFg < 0) {
-        return 0;
-    }
-    if (ansiFg > 16) {
-        return 0;
+    if (ansiFg < 0 || ansiFg > 16) {
+        return warnArgumentValue(L, __func__, qsl("ANSI color %1 out of range (0 to 16)").arg(ansiFg));
     }
 
 
@@ -3740,9 +3734,7 @@ int TLuaInterpreter::enableScrolling(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
     if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, "scrolling cannot be enabled/disabled for the 'main' window");
     }
 
     auto console = CONSOLE(L, windowName);
@@ -3756,9 +3748,7 @@ int TLuaInterpreter::disableScrolling(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
     if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, "scrolling cannot be enabled/disabled for the 'main' window");
     }
 
     auto console = CONSOLE(L, windowName);
@@ -3814,11 +3804,13 @@ int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
         }
         movie->setScaledSize(pN->size());
         if (autoScale) {
-            connect(pN, &TLabel::resized, pN, [=] {
+            connect(pN, &TLabel::resized, movie, [=] {
                 movie->setScaledSize(pN->size());
             });
         } else {
-            pN->disconnect(SIGNAL(resized()));
+            // only drop the movie-scaling connection(s); other consumers of
+            // the label's resized signal must stay connected
+            QObject::disconnect(pN, &TLabel::resized, movie, nullptr);
         }
     } else {
         return warnArgumentValue(L, __func__, qsl("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));
