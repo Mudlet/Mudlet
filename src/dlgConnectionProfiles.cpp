@@ -114,10 +114,14 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
             // migrate the retired "Show my profiles only" context menu filter,
             // which the "My games" tab replaces
             initialTab = scmMyGamesTab;
+            settings.setValue(qsl("connectionDialogActiveTab"), initialTab);
         } else if (QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty()) {
             // a newcomer has no profiles yet, so show them the catalog
             initialTab = scmAllGamesTab;
         }
+        // the retired filter's setting is dropped even when it was false, so it
+        // cannot resurface should connectionDialogActiveTab ever go missing
+        settings.remove(qsl("showOnlyMyProfiles"));
         mpTabBar->setCurrentIndex(initialTab);
     }
     // connected only after the initial tab is set, so that setting it is not
