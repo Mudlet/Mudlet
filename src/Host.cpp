@@ -62,6 +62,7 @@
 #include <QtConcurrentRun>
 #include <QCoreApplication>
 #include <QDialog>
+#include <QKeyEvent>
 #include <QtUiTools>
 #include <QNetworkProxy>
 #include <QSettings>
@@ -4832,6 +4833,26 @@ void Host::setCaretEnabled(bool enabled)
 {
     mCaretEnabled = enabled;
     mpConsole->setCaretMode(enabled);
+}
+
+// Whether this key press is the one selected in the accessibility preferences
+// to toggle caret mode - such a press must reach the caret-toggling key
+// handlers instead of being swallowed by an application-wide QShortcut,
+// which the user could have remapped onto any of these keys:
+bool Host::caretShortcutMatches(const QKeyEvent* ke) const
+{
+    constexpr Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
+    switch (mCaretShortcut) {
+    case CaretShortcut::None:
+        return false;
+    case CaretShortcut::Tab:
+        return ke->key() == Qt::Key_Tab && !(ke->modifiers() & Qt::ControlModifier);
+    case CaretShortcut::CtrlTab:
+        return ke->key() == Qt::Key_Tab && (ke->modifiers() & Qt::ControlModifier);
+    case CaretShortcut::F6:
+        return ke->key() == Qt::Key_F6 && (ke->modifiers() & allModifiers) == Qt::NoModifier;
+    }
+    return false;
 }
 
 void Host::setFocusOnHostActiveCommandLine()

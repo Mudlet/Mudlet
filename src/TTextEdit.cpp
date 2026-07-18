@@ -3710,10 +3710,12 @@ bool TTextEdit::event(QEvent* event)
 {
     if (event->type() == QEvent::ShortcutOverride) {
         auto* ke = static_cast<QKeyEvent*>(event);
-        // The accessibility caret-mode shortcut must beat the application-wide
-        // next-profile QShortcut, so claim Ctrl+Tab here to make it arrive as
-        // a KeyPress for the caret-toggling code in keyPressEvent():
-        if (mpHost && mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && ke->key() == Qt::Key_Tab && ke->modifiers() == Qt::ControlModifier) {
+        // While caret mode is active its shortcut (Tab, Ctrl+Tab or F6) must
+        // beat any application-wide QShortcut - the profile-switching ones
+        // use Ctrl+Tab by default and all of them can be remapped onto these
+        // keys - so claim it here to make it arrive as a KeyPress for the
+        // caret-toggling code in keyPressEvent():
+        if (mpHost && mpHost->caretEnabled() && mpHost->caretShortcutMatches(ke)) {
             ke->accept();
             return true;
         }
@@ -4018,8 +4020,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         }
         break;
     case Qt::Key_Tab: {
-        if ((mpHost->mCaretShortcut == Host::CaretShortcut::Tab && !(event->modifiers() & Qt::ControlModifier))
-            || (mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && (event->modifiers() & Qt::ControlModifier))) {
+        if (mpHost->caretShortcutMatches(event)) {
             mpHost->setCaretEnabled(false);
             break;
         }
@@ -4053,7 +4054,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     }
 
     case Qt::Key_F6: {
-        if (mpHost->mCaretShortcut == Host::CaretShortcut::F6) {
+        if (mpHost->caretShortcutMatches(event)) {
             mpHost->setCaretEnabled(false);
         }
         break;
