@@ -253,6 +253,10 @@ TBuffer::TBuffer(const TBuffer& other)
 , mAltFont(other.mAltFont)
 , mMudLine(other.mMudLine)
 , mMudBuffer(other.mMudBuffer)
+, mServerWrapPendingLine(other.mServerWrapPendingLine)
+, mServerWrapPendingBuffer(other.mServerWrapPendingBuffer)
+, mWrapDetectCounts(other.mWrapDetectCounts)
+, mWrapDetectSamples(other.mWrapDetectSamples)
 , mIncompleteSequenceBytes(other.mIncompleteSequenceBytes)
 , lastLoggedFromLine(other.lastLoggedFromLine)
 , lastloggedToLine(other.lastloggedToLine)
@@ -337,6 +341,10 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mAltFont = other.mAltFont;
         mMudLine = other.mMudLine;
         mMudBuffer = other.mMudBuffer;
+        mServerWrapPendingLine = other.mServerWrapPendingLine;
+        mServerWrapPendingBuffer = other.mServerWrapPendingBuffer;
+        mWrapDetectCounts = other.mWrapDetectCounts;
+        mWrapDetectSamples = other.mWrapDetectSamples;
         mIncompleteSequenceBytes = other.mIncompleteSequenceBytes;
         lastLoggedFromLine = other.lastLoggedFromLine;
         lastloggedToLine = other.lastloggedToLine;
@@ -1388,7 +1396,8 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         // continuation on instead of committing it. Everything else -
         // prompts ('\xff' from GA/EOR), timer-flushed fragments ('\r'),
         // MXP <br> breaks and blank lines - is a real line boundary.
-        if (!mServerWrapPendingLine.isEmpty() && ((mMudLine.at(0).isSpace() && mMudLine.size() > 1 && mMudLine.at(1).isSpace()) || !looksLikeWrappedProse(mMudLine))) {
+        const bool proseSegment = looksLikeWrappedProse(mMudLine);
+        if (!mServerWrapPendingLine.isEmpty() && ((mMudLine.at(0).isSpace() && mMudLine.size() > 1 && mMudLine.at(1).isSpace()) || !proseSegment)) {
             // A continuation of wrapped prose starts with a word - or with
             // the single space some games move the break to instead of
             // swallowing it. Deeper indentation or a symbol-heavy line
@@ -1396,7 +1405,7 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
             // and the like, so the held line was complete after all:
             flushPendingServerWrapJoin();
         }
-        const bool segmentLooksWrapped = endsAtServerWrapColumn() && looksLikeWrappedProse(mMudLine);
+        const bool segmentLooksWrapped = endsAtServerWrapColumn() && proseSegment;
         joinPendingServerWrapOntoCurrent();
         if (segmentLooksWrapped && mMudLine.size() <= csmServerWrapMaxJoinedLength) {
             mServerWrapPendingLine.swap(mMudLine);
@@ -1541,17 +1550,25 @@ bool TBuffer::endsAtServerWrapColumn() const
 bool TBuffer::looksLikeWrappedProse(const QString& line) const
 {
     // Some games keep the space they broke the line at rather than
-    // swallowing it - but only ever the one. A run of trailing whitespace
-    // means padding (or a blank line), which word wrap never produces:
+    // swallowing it - but only ever the one, except right after the end of
+    // a sentence: games that put two spaces after a full stop keep both
+    // when the wrap point lands there. Any longer run of trailing
+    // whitespace means padding (or a blank line), which word wrap never
+    // produces:
     qsizetype end = line.size();
     while (end > 0 && line.at(end - 1).isSpace()) {
         --end;
     }
-    if (end == 0 || line.size() - end > 1) {
+    if (end == 0) {
         return false;
     }
     static const QString allowedFinals = qsl(".,;:!?'\")");
+    static const QString sentenceFinals = qsl(".!?'\")");
     const QChar last = line.at(end - 1);
+    const qsizetype trailingSpaces = line.size() - end;
+    if (trailingSpaces > 2 || (trailingSpaces == 2 && !sentenceFinals.contains(last))) {
+        return false;
+    }
     if (!last.isLetterOrNumber() && !allowedFinals.contains(last)) {
         return false;
     }

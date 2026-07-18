@@ -210,6 +210,32 @@ private slots:
         QVERIFY2(waitForLineInBuffer(mSegment2), "line after a padded line was not committed on its own");
     }
 
+    void test_sentenceGapWrapJoins()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        enableUndoServerWrap();
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return mpServer->clientConnected();
+                },
+                2000));
+
+        // Games that put two spaces after a full stop keep both when the
+        // wrap point lands right after a sentence - neither a held line
+        // nor a continuation ending in ".  " is padding:
+        const QString sentenceGap = QString(62, QChar('x')) + qsl(" alpha.  ");
+        mpServer->sendRaw(sentenceGap.toUtf8() + "\r\n" + mSegment2.toUtf8() + "\r\n");
+        QVERIFY2(waitForLineInBuffer(sentenceGap + mSegment2), "line ending in a sentence gap was mistaken for padding and not joined");
+
+        mpServer->sendRaw(mSegment1.toUtf8() + "\r\nbeta done.  \r\n");
+        QVERIFY2(waitForLineInBuffer(mSegment1 + qsl(" beta done.  ")), "continuation ending in a sentence gap was not joined onto the held line");
+
+        // Three or more trailing spaces are still padding, sentence or not:
+        const QString sentencePadded = QString(62, QChar('x')) + qsl(" alpha.") + QString(5, QChar::Space);
+        mpServer->sendRaw(sentencePadded.toUtf8() + "\r\n" + mSegment2.toUtf8() + "\r\n");
+        QVERIFY2(waitForLineInBuffer(sentencePadded), "sentence-final line padded with several spaces was not committed on its own");
+    }
+
     void test_wrapDetectionRaisesHint()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
