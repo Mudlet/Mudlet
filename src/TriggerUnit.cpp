@@ -28,6 +28,7 @@
 #include "TConsole.h"
 #include "TTrigger.h"
 
+#include <algorithm>
 #include <functional>
 
 /* We need an explicit constructor in this file as the Host class is forward
@@ -200,8 +201,10 @@ void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
     // A node can be removed and deleted mid-pass without going through the
     // deferred-cleanup paths (e.g. XMLimport discarding its placeholder trigger
     // when installPackage() runs from a trigger script), so it must not linger
-    // in the same-line match list.
-    mRootNodesAddedWhileProcessing.removeAll(pT);
+    // in the same-line match list. Null the slot instead of compacting:
+    // processDataStream() may be walking that list by index right now, and
+    // shifting entries under it would skip a trigger's same-line match.
+    std::replace(mRootNodesAddedWhileProcessing.begin(), mRootNodesAddedWhileProcessing.end(), pT, static_cast<TTrigger*>(nullptr));
 }
 
 TTrigger* TriggerUnit::getTrigger(int id)
@@ -347,7 +350,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // live-list iteration.
     for (qsizetype i = firstNodeAddedThisPass; i < mRootNodesAddedWhileProcessing.size(); ++i) {
         auto trigger = mRootNodesAddedWhileProcessing.at(i);
-        if (!trigger->isActive()) {
+        if (!trigger || !trigger->isActive()) {
             continue;
         }
         trigger->match(subject, data, line);
