@@ -23,6 +23,7 @@
 
 #include <QString>
 #include <QList>
+#include <QStringList>
 
 struct GameDetail
 {
@@ -33,6 +34,11 @@ struct GameDetail
     QString websiteInfo;
     QString icon;
     QString description;
+    // the game's bundled loader installs the game's own full interface, so
+    // the generic starter UI is not preinstalled for it:
+    bool providesOwnUi = false;
+    // other hostnames the game is reachable under:
+    QStringList alternateHostUrls;
 };
 
 class TGameDetails
@@ -57,6 +63,16 @@ public:
             result << (*i).name;
         }
         return result;
+    }
+
+    inline static bool gameProvidesOwnUi(const QString& hostUrl)
+    {
+        for (const auto& game : scmDefaultGames) {
+            if (game.providesOwnUi && (!game.hostUrl.compare(hostUrl, Qt::CaseInsensitive) || game.alternateHostUrls.contains(hostUrl, Qt::CaseInsensitive))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // clang-format off
@@ -593,7 +609,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "is supportive of new players - unforgiving though our world may be. Join us for a "
                  "real challenge and real rewards: adrenalin-pumping battles, memorable quests run "
                  "by our volunteer immortal staff, and stories that will stick with you for a "
-                 "lifetime.")},
+                 "lifetime."),
+             true}, // CF-loader installs CFGUI
 
             {qsl("Cleft of Dimensions"),
              qsl("cleftofdimensions.net"),
@@ -691,7 +708,9 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "\n\n"
                  "Unsere freundliche Spielerschaft hilft Dir gerne bei Deinen ersten Schritten."
                  "\n\n"
-                 "Spiel jetzt oder nie!")},
+                 "Spiel jetzt oder nie!"),
+             true, // mg-loader installs MorgenGrauen's own interface
+             {qsl("mg.mud.de"), qsl("mg.morgengrauen.info"), qsl("morgengrauen.info")}},
 
             {qsl("Infinity"),
              qsl("infinitymud.com"),
@@ -734,7 +753,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "    Weather, storms, wind, fire, floods, disease, even asteroids. This may be text "
                  "but it is the most dynamic game ever attempted. The wind affects the ships, where "
                  "fire spreads, and even how some critters smell you if you are upwind from them.\n\n"
-                 "Do you dare enter?")},
+                 "Do you dare enter?"),
+             true}, // MedBootstrap installs MedUI
 
             {qsl("Dragonfire MUD"),
              qsl("dragonfiremud.com"),
@@ -799,7 +819,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "combat, explore the frozen Valley of Aegic, and earn your place in "
                  "player-driven provinces."
                  "\n\n"
-                 "Old-school depth. Modern access. New players welcome.")},
+                 "Old-school depth. Modern access. New players welcome."),
+             true}, // icesus-loader installs Icesus' own interface
             };
     // clang-format on
 };

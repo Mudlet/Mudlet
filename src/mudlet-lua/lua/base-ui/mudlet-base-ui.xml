@@ -542,10 +542,10 @@ end
 
 -- a game that supplies its own interface wins: the moment Mudlet installs a
 -- Client.GUI package the starter UI stands aside - capture triggers retired,
--- dock hidden - and stays aside in later sessions. "baseui show" is the
--- deliberate way back for players who prefer this UI regardless.
+-- dock hidden - and stays aside in later sessions. Deliberately silent: the
+-- game's own install is announcement enough, and "baseui show" (surfaced by
+-- the "baseui" status alias) is the way back for players who prefer this UI.
 function BaseUI.standAside(_, packageName)
-  local alreadyAside = BaseUI.settings.standingAside ~= nil
   BaseUI.settings.standingAside = packageName or "the game's interface"
   BaseUI.saveSettings()
   BaseUI.killChatTriggers()
@@ -553,10 +553,6 @@ function BaseUI.standAside(_, packageName)
   if BaseUI.container then
     BaseUI.container:hide()
     BaseUI.container:adjustBorder()
-  end
-  -- only players who actually saw this UI need to hear that it is leaving
-  if not alreadyAside and not BaseUI.settings.hidden and (BaseUI.container or BaseUI.settings.announced) then
-    cecho("\n&lt;cyan&gt;[ Mudlet UI ] This game brings its own interface, so the starter UI is stepping aside - type &lt;yellow&gt;baseui show&lt;cyan&gt; if you would rather keep it.&lt;reset&gt;\n")
   end
 end
 
