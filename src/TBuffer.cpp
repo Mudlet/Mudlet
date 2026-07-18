@@ -1405,6 +1405,9 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
             // and the like, so the held line was complete after all:
             flushPendingServerWrapJoin();
         }
+        // Deliberately judged before the pending line is joined on: ending at
+        // the game's wrap column is a property of the segment as the game
+        // sent it, not of the longer joined line.
         const bool segmentLooksWrapped = endsAtServerWrapColumn() && proseSegment;
         joinPendingServerWrapOntoCurrent();
         if (segmentLooksWrapped && mMudLine.size() <= csmServerWrapMaxJoinedLength) {
