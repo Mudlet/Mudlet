@@ -38,4 +38,38 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end
       end)
     end)
+
+    describe("Tests the functionality of ttsGetQueue", function()
+      -- Mudlet compiled without TTS support installs dummy tts functions
+      -- which return nil, whereas the real ttsGetQueue() returns a table
+      local function ttsAvailable()
+        return type(ttsGetQueue()) == "table"
+      end
+
+      it("should return a table when called without an index", function()
+        if not ttsAvailable() then
+          pending("TTS is not available in this build")
+          return
+        end
+        assert.is_table(ttsGetQueue())
+      end)
+
+      it("should return false for an index just past the end of the queue", function()
+        if not ttsAvailable() then
+          pending("TTS is not available in this build")
+          return
+        end
+        ttsClearQueue()
+        -- on an empty queue, index 1 is exactly one past the end (index == size)
+        assert.is_false(ttsGetQueue(1))
+      end)
+
+      it("should return false for an index below the start of the queue", function()
+        if not ttsAvailable() then
+          pending("TTS is not available in this build")
+          return
+        end
+        assert.is_false(ttsGetQueue(0))
+      end)
+    end)
   end)
