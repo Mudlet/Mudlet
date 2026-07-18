@@ -93,9 +93,19 @@ if [[ "$OS" == "Linux" ]]; then
 elif [[ "$OS" == "Darwin" ]]; then
     DEBUG_FILE="${MUDLET_EXEC}.dSYM"
     [[ -d "$DEBUG_FILE" ]] && FILES_TO_UPLOAD+=("$DEBUG_FILE")
-elif [[ "$OS" == "MINGW"* || "$OS" == "MSYS"* ]]; then
+elif [[ "$OS" == "MINGW"* ]]; then
+    # The PDB shares its debug-id with the shipped mudlet.exe, so uploading both
+    # lets Sentry match crash minidumps and symbolicate them (see WithSentry.cmake).
+    # The PDB is expected on every Windows sentry build, so fail loudly if it is
+    # missing rather than silently uploading only the exe (which would revert to
+    # unsymbolicated crash reports if the --pdb link flag is ever lost).
     PDB_FILE="${MUDLET_EXEC%.exe}.pdb"
-    [[ -f "$PDB_FILE" ]] && FILES_TO_UPLOAD+=("$PDB_FILE")
+    if [[ -f "$PDB_FILE" ]]; then
+        FILES_TO_UPLOAD+=("$PDB_FILE")
+    else
+        echo "error: expected PDB at $PDB_FILE not found - Windows crash reports would be unsymbolicated"
+        exit 1
+    fi
 fi
 
 for f in "${FILES_TO_UPLOAD[@]}"; do
@@ -103,14 +113,8 @@ for f in "${FILES_TO_UPLOAD[@]}"; do
     ./sentry-cli debug-files upload "$f" --project "mudlet"
 done
 
-# Use MSYSTEM variable for MSYS2 detection (consistent with other CI scripts)
-# and MSYSTEM_PREFIX for the path (supports MINGW64, CLANG64, UCRT64, etc.)
-#
-# On Windows we build with MSYS2 + Mingw-w64, so the Qt libraries we link against
-# ship their debug information as separate DWARF ".debug" companion files. Since
-# sentry-cli 3.5.0+ parses DWARF-in-PE companions, we upload these ".debug" files
-# straight to Sentry.
-# See https://github.com/getsentry/sentry/issues/104738
+# Qt ships its debug info as separate DWARF ".debug" companions; sentry-cli 3.5.0+
+# parses these, so upload them too. See https://github.com/getsentry/sentry/issues/104738
 if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
     MINGW_BIN="${MSYSTEM_PREFIX}/bin"
     QT_PLUGINS_DIR="${MSYSTEM_PREFIX}/share/qt6/plugins"
@@ -120,10 +124,43 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
 
     DEBUG_FILES=()
 
-    # Core Qt6 libraries (Qt6Core.debug, Qt6Gui.debug, ...) live next to their DLLs
-    for debug_file in "$MINGW_BIN"/Qt6*.debug; do
-        [[ -f "$debug_file" ]] && DEBUG_FILES+=("$debug_file")
-    done
+    # Upload .debug companions only for the Qt6 modules mudlet.exe actually depends
+    # on (walk its import table), not every Qt6 DLL in the bin.
+    if command -v objdump >/dev/null 2>&1; then
+        declare -A seen_dll=()
+        pending=("$MUDLET_EXEC")
+        # Runtime-loaded Qt plugins can pull in Qt modules that mudlet.exe does not
+        # link directly (e.g. the svg imageformat/iconengine plugins pull in Qt6Svg,
+        # which is not in our components list). Seed the walk with the plugin DLLs too
+        # so their imports get their .debug companions collected as well.
+        if [[ -d "$QT_PLUGINS_DIR" ]]; then
+            while IFS= read -r -d '' plugin_dll; do
+                pending+=("$plugin_dll")
+            done < <(find "$QT_PLUGINS_DIR" -type f -name '*.dll' -print0)
+        fi
+        while [[ ${#pending[@]} -gt 0 ]]; do
+            current="${pending[0]}"
+            pending=("${pending[@]:1}")
+            while IFS= read -r dll; do
+                [[ -z "$dll" || -n "${seen_dll[$dll]:-}" ]] && continue
+                seen_dll[$dll]=1
+                dll_path="$MINGW_BIN/$dll"
+                [[ -f "$dll_path" ]] || continue
+                pending+=("$dll_path")
+                if [[ "$dll" == Qt6*.dll ]]; then
+                    # companion may be "<name>.dll.debug" or "<name>.debug"; add once
+                    for debug_file in "$MINGW_BIN/${dll}.debug" "$MINGW_BIN/${dll%.dll}.debug"; do
+                        [[ -f "$debug_file" && -z "${seen_dll[$debug_file]:-}" ]] && { seen_dll[$debug_file]=1; DEBUG_FILES+=("$debug_file"); }
+                    done
+                fi
+            done < <(objdump -p "$current" 2>/dev/null | sed -n 's/^[[:space:]]*DLL Name:[[:space:]]*//p')
+        done
+    else
+        echo "objdump not found - falling back to uploading all Qt6 debug companions"
+        for debug_file in "$MINGW_BIN"/Qt6*.debug; do
+            [[ -f "$debug_file" ]] && DEBUG_FILES+=("$debug_file")
+        done
+    fi
 
     # Qt plugins (image formats, platforms, tls, ...) can appear in crash stack
     # traces too, so upload every plugin companion we can find
@@ -140,8 +177,6 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
     else
         echo "No Qt .debug files found - are the qt6-*-debug packages installed?"
     fi
-
-    strip --strip-debug "$MUDLET_EXEC"
 fi
 
 rm -f sentry-cli

@@ -78,6 +78,7 @@ file(GLOB_RECURSE OTHER_FILES_LIST CONFIGURE_DEPENDS
   docs/**
   .clang-format
   src/.gitignore
+  src/mudlet-lua/**
 )
 
 # It is not clear that the "COMMENT" actually shows up anywhere - so include

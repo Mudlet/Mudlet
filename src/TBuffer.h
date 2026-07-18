@@ -301,6 +301,7 @@ public:
     void expandLine(int y, int count, TChar&);
     int wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize);
     void log(int, int);
+    QString assembleLog(int fromLine, int toLine);
     inline int skipSpacesAtBeginOfLine(const int row, const int column);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference = QVector<int>());
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0, int spacePadding = 0);
@@ -495,6 +496,11 @@ private:
     int lastLoggedFromLine = 0;
     int lastloggedToLine = 0;
     QString lastTextToLog;
+    // indices of lines being committed while their triggers run - a stack,
+    // because a trigger calling feedTriggers() re-enters commitLine();
+    // deleteLines() adjusts the entries so commitLine() can tell whether its
+    // line survived trigger processing
+    QList<int> mCommitLineIndices;
 
     QByteArray mEncoding;
 

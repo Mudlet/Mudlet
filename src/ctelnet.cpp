@@ -160,6 +160,10 @@ void cTelnet::reset()
     mEchoAnomalyDetected = false;
 
     mNegotiationOrder.clear();
+
+    // A fresh connection: the player has not interacted yet, so an unsolicited Char.Login.URL must
+    // not auto-open the browser until they do (see Host::userSentInputThisConnection()).
+    mpHost->setUserSentInputThisConnection(false);
 }
 
 
@@ -2739,7 +2743,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && mudlet::self()->mDiscord.libraryLoaded()) {
                     supportsList += R"(, "External.Discord 1")";
                 }
-                supportsList += R"(, "Client.Media 1", "Char.Login 1"])";
+                supportsList += R"(, "Client.Media 1", "Char.Login 2"])";
                 output += supportsList;
             }
             output += TN_IAC;
@@ -4742,11 +4746,16 @@ void cTelnet::postData()
         return;
     }
 
+    // Detach the pending data first: a trigger fired inside printOnDisplay() can
+    // call feedTelnet(), re-entering here - it must not post this data again.
+    std::string data{std::move(mMudData)};
+    mMudData.clear();
+
     // All data goes through main console's printOnDisplay which calls
     // translateToPlainText - MXP DEST routing happens inside that process
-    mpHost->mpConsole->printOnDisplay(mMudData, true);
+    mpHost->mpConsole->printOnDisplay(data, true);
     if (mpHost->mMMCPServer && !mpHost->mIsRemoteEchoingActive) {
-        mpHost->mMMCPServer->receiveFromPlayer(mMudData);
+        mpHost->mMMCPServer->receiveFromPlayer(data);
     }
 }
 

@@ -27,10 +27,13 @@ set(UNIT_TESTS
     TVariableEditorTest
     SecureStringUtilsTest
     CredentialManagerTest
+    CredentialManagerKeychainTest
+    OAuthClientFlowTest
     DiscordTest
     TTextEditBlinkTest
     TAreaZLevelIndexTest
     TAreaGridIndexTest
+    TKeySequenceEditTest
     TEncodingHelperTest
 )
 

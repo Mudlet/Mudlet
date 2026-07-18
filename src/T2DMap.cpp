@@ -1075,7 +1075,12 @@ void T2DMap::drawScaledLabel(QPainter& painter, const QPointF& position, TMapLab
 {
     const QSize targetSize = paintRect.size().toSize();
     if (!label.text.isEmpty() && !label.font.family().isEmpty()) {
-        const QString cacheKey = qsl("%1_%2_%3x%4").arg(mAreaID).arg(labelKey).arg(targetSize.width()).arg(targetSize.height());
+        // Include the label's visual content in the cache key so that editing
+        // a label's text, font or colours (e.g. live-previewing from the
+        // create label dialog) invalidates the previously cached rendering:
+        const auto contentHash = qHash(
+                qsl("%1|%2|%3|%4|%5").arg(label.text, label.font.toString(), QString::number(label.fgColor.rgba()), QString::number(label.bgColor.rgba()), QString::number(label.outlineColor.rgba())));
+        const QString cacheKey = qsl("%1_%2_%3x%4_%5").arg(mAreaID).arg(labelKey).arg(targetSize.width()).arg(targetSize.height()).arg(contentHash);
         if (!mTextLabelPixmapCache.contains(cacheKey)) {
             addTextLabelToCache(cacheKey, label, targetSize);
         }

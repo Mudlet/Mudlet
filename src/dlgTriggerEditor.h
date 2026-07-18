@@ -185,6 +185,7 @@ public:
     bool event(QEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void changeEvent(QEvent* e) override;
+    void updateExtraControlsToggleIcon();
     void fillout_form();
     void showError(const QString&);
     void showWarning(const QString&, bool announce = true);

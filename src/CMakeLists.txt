@@ -106,6 +106,7 @@ set(mudlet_SRCS
     mudlet.cpp
     MudletInstanceCoordinator.cpp
     MxpTag.cpp
+    OAuthClientFlow.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
@@ -135,6 +136,7 @@ set(mudlet_SRCS
     TEncodingTable.cpp
     TEntityHandler.cpp
     TEntityResolver.cpp
+    TFeatureCallout.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
     THyperlinkCompactManager.cpp
@@ -142,6 +144,7 @@ set(mudlet_SRCS
     THyperlinkVisibilityManager.cpp
     TimerUnit.cpp
     TKey.cpp
+    TKeySequenceEdit.cpp
     TLabel.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
@@ -206,6 +209,7 @@ set(mudlet_SRCS
     TToolBar.cpp
     TTreeWidget.cpp
     TTrigger.cpp
+    TUiTour.cpp
     TVar.cpp
     VarUnit.cpp
     WideComboBox.cpp
@@ -330,6 +334,7 @@ set(mudlet_HDRS
     mudlet.h
     MudletInstanceCoordinator.h
     MxpTag.h
+    OAuthClientFlow.h
     PackageItemDelegate.h
     PanInteractionHandler.h
     RoomContextMenuHandler.h
@@ -362,6 +367,7 @@ set(mudlet_HDRS
     TEntityHandler.h
     TEntityResolver.h
     TEvent.h
+    TFeatureCallout.h
     TFlipButton.h
     TForkedProcess.h
     TGameDetails.h
@@ -371,6 +377,7 @@ set(mudlet_HDRS
     THyperlinkVisibilityManager.h
     TimerUnit.h
     TKey.h
+    TKeySequenceEdit.h
     TLabel.h
     TLinkStore.h
     TLuaInterpreter.h
@@ -435,6 +442,7 @@ set(mudlet_HDRS
     TToolBar.h
     TTreeWidget.h
     TTrigger.h
+    TUiTour.h
     TVar.h
     utils.h
     VarUnit.h
@@ -651,6 +659,9 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 # * Produce qDebug() messages about undo/redo operations in the trigger editor,
 #   including command execution, stack operations, and edbee text undo integration:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE DEBUG_UNDO_REDO)
+#
+# * Produce qDebug() messages about the GMCP Char.Login authentication flow:
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_GMCP_AUTHENTICATION)
 
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
@@ -682,6 +693,21 @@ target_compile_definitions(${LIB_MUDLET_TARGET}
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
     target_include_directories(${LIB_MUDLET_TARGET} PUBLIC ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain)
+endif()
+
+# Surface the linked qtkeychain version for diagnostics - the QTKEYCHAIN_VERSION macro in
+# qtkeychain's own header is stale (hardcoded to 0x000100), so the CMake package version is
+# the only reliable signal. Relevant since qtkeychain 0.17.0 changed the Windows credential
+# naming scheme (see CredentialManager::attemptCompatNamingMigration).
+if(USE_OWN_QTKEYCHAIN)
+  get_directory_property(QTKEYCHAIN_LINKED_VERSION
+    DIRECTORY ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain
+    DEFINITION QTKEYCHAIN_VERSION)
+else()
+  set(QTKEYCHAIN_LINKED_VERSION ${Qt${QT_MAJOR_VERSION}Keychain_VERSION})
+endif()
+if(QTKEYCHAIN_LINKED_VERSION)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC QTKEYCHAIN_LINKED_VERSION="${QTKEYCHAIN_LINKED_VERSION}")
 endif()
 
 # Define shader hot-reloading if enabled

@@ -44,6 +44,17 @@
 // Forward declaration to avoid including mudlet.h
 class mudlet;
 
+namespace {
+// Whether a delete job's result means the credential is not left behind. EntryNotFound (nothing
+// to delete) and NoBackendAvailable/NotImplemented (the keychain isn't the store here, so the
+// file fallback is authoritative) are not failures; anything else is a genuine failure to remove
+// an entry that may still exist.
+bool keychainDeleteSucceeded(QKeychain::Error error)
+{
+    return error == QKeychain::NoError || error == QKeychain::EntryNotFound || error == QKeychain::NoBackendAvailable || error == QKeychain::NotImplemented;
+}
+} // namespace
+
 CredentialManager::CredentialManager(QObject* parent)
 : QObject(parent)
 {
@@ -274,11 +285,14 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
     }
 
     if (shouldUseKeychain(profileName)) {
-        // Use keychain storage with fallback chain:
+        // Use keychain storage with a fallback chain (simplified overview; the actual control flow
+        // lives in retrieveCredential and the attempt* helpers):
         // 1. New hash-based format (unique per profile name)
-        // 2. Old colliding format (profiles with similar names may share passwords)
-        // 3. Legacy keychain format (pre-4.20.0)
-        // 4. Encrypted file storage
+        // 2. Windows only: same format under the pre-0.17 qtkeychain naming scheme
+        // 3. Old key=account format (pre-Windows-fix, where all profiles shared "character")
+        // 4. Old colliding format (profiles with similar names may share passwords)
+        // 5. Legacy keychain format (pre-4.20.0)
+        // 6. Encrypted file storage
         QString service = generateServiceName(profileName, key);
         QString legacyService = generateLegacyServiceName(profileName, key);
 
@@ -296,10 +310,11 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
             });
         };
 
-        auto newFormatCallback = [this, profileName, key, callback, tryCollidingFormat](bool keychainSuccess, const QString& keychainPassword, const QString& keychainError) {
+        auto newFormatCallback = [this, profileName, key, callback, tryCollidingFormat](bool keychainSuccess, QString keychainPassword, const QString& keychainError) {
             if (keychainSuccess && !keychainPassword.isEmpty()) {
                 if (callback) {
-                    callback(true, keychainPassword, QString());
+                    // Move so ownership of the secret buffer threads through to the final callback.
+                    callback(true, std::move(keychainPassword), QString());
                 }
             } else {
                 tryCollidingFormat();
@@ -313,10 +328,26 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
         bool success = !password.isEmpty();
 
         if (callback) {
-            // Empty password is normal for first-time profiles - not an error
-            callback(success, password, success ? QString() : qsl("No password stored in encrypted file storage"));
+            // Empty password is normal for first-time profiles - not an error. Move the buffer so the
+            // receiver takes sole ownership and can scrub the secret in place.
+            callback(success, std::move(password), success ? QString() : qsl("No password stored in encrypted file storage"));
         }
     }
+}
+
+void CredentialManager::credentialExists(const QString& profileName, const QString& key, std::function<void(bool exists)> callback)
+{
+    // Take the password by value so this callback holds the sole owner of the secret buffer
+    // (retrievePassword moves it in), then zero it in place before forwarding only whether a credential
+    // exists. QString is copy-on-write, so scrubbing a shared copy would detach and leave the original
+    // intact - sole ownership is what makes the wipe effective.
+    retrievePassword(profileName, key, [callback](bool success, QString password, const QString&) {
+        const bool exists = success && !password.isEmpty();
+        SecureStringUtils::secureStringClear(password);
+        if (callback) {
+            callback(exists);
+        }
+    });
 }
 
 void CredentialManager::attemptCollidingMigration(const QString& profileName, const QString& key, const QString& legacyService, const QString& password, CredentialRetrievalCallback callback)
@@ -399,7 +430,8 @@ void CredentialManager::fallbackFileRetrieval(const QString& profileName, const 
 
     if (callback) {
         if (!fallbackPassword.isEmpty()) {
-            callback(true, fallbackPassword, QString());
+            // Move so the receiver takes sole ownership and can scrub the secret buffer in place.
+            callback(true, std::move(fallbackPassword), QString());
         } else {
             callback(false, QString(), qsl("No stored credentials found for profile %1").arg(profileName));
         }
@@ -413,11 +445,20 @@ void CredentialManager::attemptOldFormatMigration(const QString& service, const 
     // This function tries to read from the old format and migrate to the new format
     qDebug() << "CredentialManager: Checking for old format (key=account) for service:" << service;
 
-    auto* oldFormatJob = new QKeychain::ReadPasswordJob(service, this);
+#if defined(Q_OS_WIN)
+    // Old-format entries live at TargetName == account; qtkeychain 0.17+ would look up
+    // "account@service" and miss them, while an empty service resolves to the bare key on
+    // every qtkeychain version (pre-0.17 ignores the service entirely)
+    const QString lookupService;
+#else
+    const QString lookupService = service;
+#endif
+
+    auto* oldFormatJob = new QKeychain::ReadPasswordJob(lookupService, this);
     oldFormatJob->setKey(account); // Old format used account as key
     oldFormatJob->setAutoDelete(false);
 
-    connect(oldFormatJob, &QKeychain::ReadPasswordJob::finished, this, [this, oldFormatJob, service, account, profileName, callback]() {
+    connect(oldFormatJob, &QKeychain::ReadPasswordJob::finished, this, [this, oldFormatJob, service, lookupService, account, profileName, callback]() {
         bool found = (oldFormatJob->error() == QKeychain::NoError);
         QString password = found ? oldFormatJob->textData() : QString();
 
@@ -430,19 +471,26 @@ void CredentialManager::attemptOldFormatMigration(const QString& service, const 
             migrateJob->setTextData(password);
             migrateJob->setAutoDelete(false);
 
-            connect(migrateJob, &QKeychain::WritePasswordJob::finished, this, [migrateJob, service, account, password, callback]() {
+            connect(migrateJob, &QKeychain::WritePasswordJob::finished, this, [migrateJob, service, lookupService, account, password, callback]() {
                 if (migrateJob->error() == QKeychain::NoError) {
                     qDebug() << "CredentialManager: Migration to new format successful, cleaning up old entry";
 
-                    auto* cleanupJob = new QKeychain::DeletePasswordJob(service);
+                    auto* cleanupJob = new QKeychain::DeletePasswordJob(lookupService);
                     cleanupJob->setKey(account); // Old format key
                     cleanupJob->setAutoDelete(true);
-                    connect(cleanupJob, &QKeychain::DeletePasswordJob::finished, cleanupJob, [service]() {
-                        qDebug() << "CredentialManager: Old format entry cleaned up for service:" << service;
+                    connect(cleanupJob, &QKeychain::DeletePasswordJob::finished, cleanupJob, [cleanupJob, service]() {
+                        if (cleanupJob->error() == QKeychain::NoError || cleanupJob->error() == QKeychain::EntryNotFound) {
+                            qDebug() << "CredentialManager: Old format entry cleaned up for service:" << service;
+                        } else {
+                            qWarning() << "CredentialManager: Failed to clean up old format entry for service:" << service << "-" << cleanupJob->errorString();
+                        }
                     });
                     cleanupJob->start();
                 } else {
-                    qWarning() << "CredentialManager: Migration to new format failed:" << migrateJob->errorString();
+                    // The password was recovered and is returned below, but persisting it under the
+                    // new format failed - the primary read will keep missing, so this path re-runs
+                    // on every launch until the write succeeds
+                    qWarning() << "CredentialManager: Recovered the password but failed to persist it under the new format (will retry next read):" << migrateJob->errorString();
                 }
 
                 // Return password regardless of migration success
@@ -454,7 +502,14 @@ void CredentialManager::attemptOldFormatMigration(const QString& service, const 
 
             migrateJob->start();
         } else {
-            qDebug() << "CredentialManager: Old format not found, trying other fallbacks";
+            const QKeychain::Error oldFormatError = oldFormatJob->error();
+            if (oldFormatError != QKeychain::NoError && oldFormatError != QKeychain::EntryNotFound) {
+                // Distinguish a hard keychain error from a genuine "not found" so a vanished
+                // password can be diagnosed
+                qWarning() << "CredentialManager: Old-format read failed for account:" << account << "-" << oldFormatJob->errorString();
+            } else {
+                qDebug() << "CredentialManager: Old format not found, trying other fallbacks";
+            }
             // Continue with existing legacy format checks
             // The legacy "Mudlet profile" keychain format was only used for character and password keys
             if (!account.compare(qsl("character")) || !account.compare(qsl("password"))) {
@@ -468,6 +523,97 @@ void CredentialManager::attemptOldFormatMigration(const QString& service, const 
     });
 
     oldFormatJob->start();
+}
+
+void CredentialManager::attemptCompatNamingMigration(const QString& service, const QString& account, const QString& profileName, CredentialRetrievalCallback callback)
+{
+    // qtkeychain 0.17.0 changed the Windows Credential Manager TargetName from the bare key to
+    // "key@service", so entries stored by builds linked against an older qtkeychain (which used
+    // TargetName == key == service) are no longer found by the primary read. A read with an empty
+    // service resolves to TargetName == key on every qtkeychain version - pre-0.17 ignores the
+    // service and 0.17+ falls back to the bare key - so it recovers those entries on both. On
+    // pre-0.17 this normally stays dormant (the primary read already looks up the bare key), but
+    // a transient primary-read failure can still route here, where the compat read is merely a
+    // retry of the same TargetName.
+    qDebug() << "CredentialManager: Checking for pre-0.17 qtkeychain naming for service:" << service;
+#if defined(QTKEYCHAIN_LINKED_VERSION)
+    qDebug() << "CredentialManager: Linked qtkeychain version:" << QTKEYCHAIN_LINKED_VERSION;
+#endif
+
+    auto* compatJob = new QKeychain::ReadPasswordJob(QString(), this);
+    compatJob->setKey(service);
+    compatJob->setAutoDelete(false);
+
+    connect(compatJob, &QKeychain::ReadPasswordJob::finished, this, [this, compatJob, service, account, profileName, callback]() {
+        const bool found = (compatJob->error() == QKeychain::NoError);
+        const QString password = found ? compatJob->textData() : QString();
+
+        if (found && !password.isEmpty()) {
+            qDebug() << "CredentialManager: Found password under pre-0.17 naming, migrating to current scheme";
+
+            // Re-store through a normal write (key == service) so the entry lands under the
+            // naming scheme of the linked qtkeychain version
+            auto* migrateJob = new QKeychain::WritePasswordJob(service, this);
+            migrateJob->setKey(service);
+            migrateJob->setTextData(password);
+            migrateJob->setAutoDelete(false);
+
+            connect(migrateJob, &QKeychain::WritePasswordJob::finished, this, [migrateJob, service, password, callback]() {
+                if (migrateJob->error() == QKeychain::NoError) {
+                    qDebug() << "CredentialManager: Migration to current naming successful";
+
+                    // On pre-0.17 qtkeychain the write above resolves to the same bare TargetName
+                    // as the old entry, so deleting it would remove the credential that was just
+                    // restored - only clean up when the linked qtkeychain uses the new naming scheme
+#if defined(QTKEYCHAIN_LINKED_VERSION)
+                    if (QVersionNumber::fromString(qsl(QTKEYCHAIN_LINKED_VERSION)) >= QVersionNumber(0, 17, 0)) {
+                        qDebug() << "CredentialManager: Cleaning up pre-0.17 entry";
+
+                        auto* cleanupJob = new QKeychain::DeletePasswordJob(QString());
+                        cleanupJob->setKey(service);
+                        cleanupJob->setAutoDelete(true);
+                        connect(cleanupJob, &QKeychain::DeletePasswordJob::finished, cleanupJob, [cleanupJob, service]() {
+                            if (cleanupJob->error() == QKeychain::NoError || cleanupJob->error() == QKeychain::EntryNotFound) {
+                                qDebug() << "CredentialManager: Pre-0.17 entry cleaned up for service:" << service;
+                            } else {
+                                qWarning() << "CredentialManager: Failed to clean up pre-0.17 entry for service:" << service << "-" << cleanupJob->errorString();
+                            }
+                        });
+                        cleanupJob->start();
+                    }
+#endif
+                } else {
+                    // The password was recovered and is returned below, but persisting it under the
+                    // current scheme failed - the primary read will keep missing, so this path
+                    // re-runs on every launch until the write succeeds
+                    qWarning() << "CredentialManager: Recovered the password but failed to persist it under the current naming scheme (will retry next read):" << migrateJob->errorString();
+                }
+
+                // Return password regardless of migration success
+                if (callback) {
+                    callback(true, password, QString());
+                }
+                migrateJob->deleteLater();
+            });
+
+            migrateJob->start();
+        } else {
+            const QKeychain::Error compatError = compatJob->error();
+            if (compatError != QKeychain::NoError && compatError != QKeychain::EntryNotFound) {
+                // A hard keychain error here is distinct from "no such entry" and is the likely
+                // reason a saved password appears to have vanished - surface it rather than
+                // silently treating it as not found
+                qWarning() << "CredentialManager: Compat-naming read failed for service:" << service << "-" << compatJob->errorString();
+            } else {
+                qDebug() << "CredentialManager: No pre-0.17 entry found, trying other fallbacks";
+            }
+            attemptOldFormatMigration(service, account, profileName, callback);
+        }
+
+        compatJob->deleteLater();
+    });
+
+    compatJob->start();
 }
 
 void CredentialManager::removePassword(const QString& profileName, const QString& key, CredentialCallback callback)
@@ -495,14 +641,15 @@ void CredentialManager::removePassword(const QString& profileName, const QString
         QString legacyService = generateLegacyServiceName(profileName, key);
 
         auto combinedCallback = [this, profileName, key, legacyService, callback](bool keychainSuccess, const QString& keychainError) {
-            removeCredential(legacyService, key, profileName, [this, profileName, key, callback, keychainSuccess, keychainError](bool oldSuccess, const QString&) {
-                bool fileSuccess = removeCredentialFromFile(profileName, key);
-
+            removeCredential(legacyService, key, profileName, [profileName, key, callback, keychainSuccess, keychainError](bool oldSuccess, const QString& oldError) {
+                // The credential must be gone from the current-format entry, the legacy colliding
+                // entry, and the file fallback; a failure to remove any of them is a real failure
+                // rather than something the others can paper over
                 if (callback) {
-                    if (keychainSuccess || oldSuccess || fileSuccess) {
+                    if (keychainSuccess && oldSuccess) {
                         callback(true, QString());
                     } else {
-                        callback(false, qsl("Failed to remove from keychain: %1").arg(keychainError));
+                        callback(false, qsl("Failed to remove from keychain: %1").arg(!keychainSuccess ? keychainError : oldError));
                     }
                 }
             });
@@ -725,7 +872,14 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                     auto originalCallback = mCurrentRetrievalCallback;
                     mCurrentRetrievalCallback = nullptr;
                     mCurrentJob = nullptr;
+#if defined(Q_OS_WIN)
+                    // qtkeychain 0.17.0 started honouring the service name on Windows, moving
+                    // entries from TargetName "<key>" to "<key>@<service>" - recover entries
+                    // written by builds linked against older qtkeychain first
+                    attemptCompatNamingMigration(service, account, profileName, originalCallback);
+#else
                     attemptOldFormatMigration(service, account, profileName, originalCallback);
+#endif
                     readJob->deleteLater();
                     return;
                 }
@@ -736,7 +890,8 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                     mCurrentRetrievalCallback = nullptr;
                     mCurrentJob = nullptr;
 
-                    callback(success, password, errorMessage);
+                    // Move so ownership of the secret buffer threads through to the final callback.
+                    callback(success, std::move(password), errorMessage);
                 }
 
                 readJob->deleteLater();
@@ -797,34 +952,83 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
 
                 cleanupTimeout();
 
-                bool keychainSuccess = (deleteJob->error() == QKeychain::NoError || deleteJob->error() == QKeychain::EntryNotFound);
-
-                bool fileSuccess = removeCredentialFromFile(profileName, account);
-
-                // Consider success if either method succeeded
-                bool success = keychainSuccess || fileSuccess;
-                QString errorMessage;
-
-                if (!success) {
-                    errorMessage = qsl("Failed to remove from both keychain and file storage. Keychain error: %1").arg(deleteJob->errorString());
-                } else if (!keychainSuccess) {
-                    qDebug() << "Keychain removal failed but file removal succeeded:" << deleteJob->errorString();
-                }
-
-                // Final validity check before calling callback
-                if (mCurrentCallback && isOperationValid()) {
-                    auto callback = mCurrentCallback; // Copy callback to avoid use-after-free
-                    mCurrentCallback = nullptr;
-                    mCurrentJob = nullptr;
-
-                    callback(success, errorMessage);
-                }
-
+                const bool primarySuccess = keychainDeleteSucceeded(deleteJob->error());
+                const QString primaryError = primarySuccess ? QString() : deleteJob->errorString();
                 deleteJob->deleteLater();
+
+#if defined(Q_OS_WIN)
+                // A pre-0.17 bare entry (TargetName == service) may still exist if it was written by
+                // a build linked against an older qtkeychain and no read has migrated it yet; on
+                // 0.17+ the delete above resolved to "service@service" and left that copy behind,
+                // where the compat migration would resurrect it on a later read. Sweep the bare name
+                // too, and await it so a genuine failure to remove it is reported rather than
+                // silently dropped. On pre-0.17 both deletes resolve to the same TargetName, so this
+                // sweep is a harmless EntryNotFound no-op.
+                mCurrentJob = nullptr;
+                auto* bareJob = new QKeychain::DeletePasswordJob(QString(), this);
+                bareJob->setKey(service);
+                bareJob->setAutoDelete(false);
+                mCurrentJob = bareJob;
+                setupTimeout();
+
+                connect(
+                        bareJob,
+                        &QKeychain::DeletePasswordJob::finished,
+                        this,
+                        [this, bareJob, service, account, profileName, primarySuccess, primaryError]() {
+                            if (!isOperationValid()) {
+                                qWarning() << "CredentialManager: Ignoring keychain callback - operation no longer valid";
+                                bareJob->deleteLater();
+                                return;
+                            }
+
+                            cleanupTimeout();
+
+                            const bool bareSuccess = keychainDeleteSucceeded(bareJob->error());
+                            const QString bareError = bareSuccess ? QString() : bareJob->errorString();
+                            bareJob->deleteLater();
+
+                            const bool keychainSuccess = primarySuccess && bareSuccess;
+                            const QString keychainError = !primarySuccess ? primaryError : bareError;
+                            finishRemoveCredential(account, profileName, keychainSuccess, keychainError);
+                        },
+                        Qt::QueuedConnection);
+
+                bareJob->start();
+#else
+                finishRemoveCredential(account, profileName, primarySuccess, primaryError);
+#endif
             },
             Qt::QueuedConnection); // Use queued connection for additional safety
 
     deleteJob->start();
+}
+
+void CredentialManager::finishRemoveCredential(const QString& account, const QString& profileName, bool keychainSuccess, const QString& keychainError)
+{
+    const bool fileSuccess = removeCredentialFromFile(profileName, account);
+
+    // A removal only succeeds if the credential is gone from every store it could be in: a hard
+    // keychain error means an entry may still be readable, so it must not be masked by the file
+    // fallback reporting success simply because no file copy existed.
+    const bool success = keychainSuccess && fileSuccess;
+    QString errorMessage;
+
+    if (!success) {
+        if (!keychainSuccess) {
+            errorMessage = qsl("Failed to remove from keychain: %1").arg(keychainError);
+        } else {
+            errorMessage = qsl("Failed to remove encrypted credential file for profile %1").arg(profileName);
+        }
+    }
+
+    if (mCurrentCallback && isOperationValid()) {
+        auto callback = mCurrentCallback; // Copy callback to avoid use-after-free
+        mCurrentCallback = nullptr;
+        mCurrentJob = nullptr;
+
+        callback(success, errorMessage);
+    }
 }
 
 void CredentialManager::isKeychainAvailable(AvailabilityCallback callback)

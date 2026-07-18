@@ -282,6 +282,8 @@ void TTextEdit::updateScreenView()
         mBgColor = mpHost->mBgColor;
         mFgColor = mpHost->mFgColor;
     }
+    const int oldScreenWidth = mScreenWidth;
+    const int oldScreenHeight = mScreenHeight;
     mScreenHeight = visibleRegion().boundingRect().height() / mFontHeight;
     if (!mIsLowerPane) {
         updateScrollBar(mpBuffer->mCursorY);
@@ -298,6 +300,15 @@ void TTextEdit::updateScreenView()
         }
     } else {
         mScreenWidth = currentScreenWidth;
+    }
+    // When the pane dimensions change the cached mScreenMap pixmap no longer
+    // matches the current geometry. A subsequent partial-region repaint would
+    // otherwise reuse that stale cache (see drawForeground) and leave newly
+    // revealed columns/rows unpainted - e.g. growing the pane horizontally
+    // after it has been shrunk. Force a full repaint so the whole pane is
+    // re-rendered and the cache is rebuilt at the new size.
+    if (mScreenWidth != oldScreenWidth || mScreenHeight != oldScreenHeight) {
+        forceUpdate();
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
 }
@@ -860,7 +871,18 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter,
     if (caretIsHere) {
         bgColor = mCaretColor;
     }
-    if (!textRect.isNull() && (mpConsole->getType() == TConsole::MainConsole) || bgColor != mpConsole->getConsoleBgColor()) {
+    // Fill the cell background when:
+    //  - the text bg differs from the console bg (e.g. coloured text), or
+    //  - the main console has a background image to paint the text bg over (#8885), or
+    //  - the main console bg is partially transparent and would otherwise let
+    //    the underlying surface bleed through.
+    // Skipping the fill when the bg matches an opaque console bg lets glyph
+    // descenders that extend slightly past mFontHeight (e.g. underscores at
+    // certain font sizes) survive the next line's drawing (#9070).
+    const bool fillNeeded = bgColor != mpConsole->getConsoleBgColor()
+                            || (mpConsole->getType() == TConsole::MainConsole
+                                && (mpConsole->mBgImageMode > 0 || bgColor.alpha() < 255));
+    if (!textRect.isNull() && fillNeeded) {
         painter.fillRect(textRect, bgColor);
     }
     return charWidth;
@@ -1172,7 +1194,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         mScrollVector = 0;
         noScroll = true;
     }
-    if ((r.height() < rect().height()) && (lineOffset > 0)) {
+    if ((r.height() < rect().height()) && (lineOffset > 0) && (mScreenWidth * mFontWidth * dpr <= mScreenMap.width()) && (mScreenHeight * mFontHeight * dpr <= mScreenMap.height())) {
         p.drawPixmap(0, 0, mScreenMap);
         reusedCachedScreenContent = true;
         from = y_top;
@@ -1490,6 +1512,20 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     }
 
     QPoint cursorLocation(tCharIndex, lineIndex);
+
+    // A plain left-drag must not register a selection until the pointer has
+    // actually moved to a different character cell than where the button went
+    // down. Without this, the sub-pixel jitter of an ordinary focus-gaining
+    // click produces a one-character selection that then hijacks Ctrl+C away
+    // from the command line (see #3922). Only the very first move off the press
+    // cell is suppressed (mDragSelectionEnd still equals mDragStart): once a
+    // drag has genuinely started we keep processing even when the pointer comes
+    // back to the origin cell, so the selection collapses down again instead of
+    // freezing at its last extent. Multi-click (word/line) and Ctrl selections
+    // establish their selection in mousePressEvent and so are left untouched here.
+    if (!mCtrlSelecting && mMouseTrackLevel < 2 && cursorLocation == mDragStart && mDragSelectionEnd == mDragStart) {
+        return;
+    }
 
     if ((mDragSelectionEnd.y() < cursorLocation.y() || (mDragSelectionEnd.y() == cursorLocation.y() && mDragSelectionEnd.x() < cursorLocation.x()))) {
         mPA = mDragSelectionEnd;

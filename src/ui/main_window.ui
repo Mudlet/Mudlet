@@ -123,6 +123,7 @@
      <string>Help</string>
     </property>
     <addaction name="dactionHelp"/>
+    <addaction name="dactionUiTour"/>
     <addaction name="dactionVideo"/>
     <addaction name="dactionDiscord"/>
     <addaction name="dactionMudletDiscord"/>
@@ -274,6 +275,14 @@
    </property>
    <property name="menuRole">
     <enum>QAction::MenuRole::AboutRole</enum>
+   </property>
+  </action>
+  <action name="dactionUiTour">
+   <property name="text">
+    <string>Take a UI tour</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Shows a short interactive tour of the most important parts of Mudlet's interface.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionVideo">

@@ -83,7 +83,11 @@ private:
     void runLua(const QString& code)
     {
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
-        luaL_dostring(L, code.toUtf8().constData());
+        if (luaL_dostring(L, code.toUtf8().constData()) != 0) {
+            const QString error = QString::fromUtf8(lua_tostring(L, -1));
+            lua_pop(L, 1);
+            QFAIL(qPrintable(qsl("Lua error running test script: %1").arg(error)));
+        }
     }
 
     // Drives one item type through the shared expectation: enableX(dupName)

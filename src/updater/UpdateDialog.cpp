@@ -292,13 +292,19 @@ void UpdateDialog::showIfUpdatesAvailable()
 void UpdateDialog::showIfUpdatesAvailableOrQuit()
 {
     if (mType == OnLastWindowClosed) {
-        auto* app = qobject_cast<QGuiApplication*>(QApplication::instance());
-        app->setQuitOnLastWindowClosed(true);
-        disconnect(app, &QGuiApplication::lastWindowClosed, this, &UpdateDialog::showIfUpdatesAvailableOrQuit);
+        disconnect(qApp, &QGuiApplication::lastWindowClosed, this, &UpdateDialog::showIfUpdatesAvailableOrQuit);
     }
     QString latestVersion = mLatestRelease.getVersion();
     bool skipRelease = (settingsValue(qsl("skipRelease"), "", mSettings).toString() == latestVersion);
     if (!latestVersion.isEmpty() && !skipRelease) {
+        // The main window is already gone, so this dialog is the only thing
+        // keeping Mudlet alive - quit once the user dismisses it. We keep
+        // quitOnLastWindowClosed disabled: re-enabling it makes Qt quit the
+        // instant this dialog is shown (the lastWindowClosed re-check runs
+        // before the user can act on it), which is the whole bug being fixed.
+        KDToolBox::connectSingleShot(this, &QDialog::finished, qApp, []() {
+            QCoreApplication::quit();
+        });
         show();
     } else {
         QCoreApplication::quit();
