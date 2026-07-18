@@ -2142,6 +2142,29 @@ void mudlet::slot_telnetConnectionStateChanged()
     updateDetachedWindowTabIndicators();
 }
 
+// Renders a key sequence for use inside a sentence. NativeText produces the
+// macOS shortcut glyphs (like the tab glyph in "⌃⇥") which many users cannot
+// read, so on macOS spell the keys out the way Apple's docs do instead
+// ("Control-Tab", "Command-1"):
+static QString keySequenceForProse(const QKeySequence& sequence)
+{
+#if defined(Q_OS_MACOS)
+    QStringList keys = sequence.toString(QKeySequence::PortableText).split(QLatin1Char('+'));
+    for (auto& key : keys) {
+        if (key == qsl("Meta")) {
+            key = qsl("Control");
+        } else if (key == qsl("Ctrl")) {
+            key = qsl("Command");
+        } else if (key == qsl("Alt")) {
+            key = qsl("Option");
+        }
+    }
+    return keys.join(QLatin1Char('-'));
+#else
+    return sequence.toString(QKeySequence::NativeText);
+#endif
+}
+
 void mudlet::addConsoleForNewHost(Host* pH)
 {
     if (pH->mpConsole) {
@@ -2216,14 +2239,13 @@ void mudlet::addConsoleForNewHost(Host* pH)
     // about the feature:
     if (mpTabBar->count() == 2 && !mKeySequenceNextProfile.isEmpty()) {
         //: Title of a balloon pointing out the newly added profile tab switching shortcuts
-        TFeatureCallout::maybeShow(qsl("profileTabShortcuts"),
-                                   mpTabBar,
-                                   tr("Switch games with the keyboard"),
-                                   //: %1, %2 and %3 are keyboard shortcuts, e.g. Ctrl+Tab, Ctrl+1 and Ctrl+9
-                                   tr("Press %1 to cycle through your open games, or %2 to %3 to jump straight to one. You can change these keys in the preferences.")
-                                           .arg(mKeySequenceNextProfile.toString(QKeySequence::NativeText),
-                                                mKeySequencesSwitchToProfile.front().toString(QKeySequence::NativeText),
-                                                mKeySequencesSwitchToProfile.back().toString(QKeySequence::NativeText)));
+        TFeatureCallout::maybeShow(
+                qsl("profileTabShortcuts"),
+                mpTabBar,
+                tr("Switch games with the keyboard"),
+                //: %1, %2 and %3 are keyboard shortcuts, e.g. Ctrl+Tab, Ctrl+1 and Ctrl+9 (Control-Tab, Command-1 and Command-9 on macOS)
+                tr("Press %1 to cycle through your open games, or %2 to %3 to jump straight to one. You can change these keys in the preferences.")
+                        .arg(keySequenceForProse(mKeySequenceNextProfile), keySequenceForProse(mKeySequencesSwitchToProfile.front()), keySequenceForProse(mKeySequencesSwitchToProfile.back())));
     }
 
     // update the window title for the currently selected profile
