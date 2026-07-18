@@ -1251,7 +1251,9 @@ void dlgPackageExporter::exportXml(bool& isOk,
 QString dlgPackageExporter::normalizedHelpUrl() const
 {
     QString url = ui->lineEdit_helpUrl->text().trimmed();
-    if (!url.isEmpty() && !url.contains(QLatin1String("://"))) {
+    // anchored so a "://" buried in a query string does not count as a scheme
+    static const QRegularExpression schemePattern(qsl("^[a-zA-Z][a-zA-Z0-9+.-]*://"));
+    if (!url.isEmpty() && !url.contains(schemePattern)) {
         // scheme-less URLs silently fail to open in a browser later
         url.prepend(qsl("https://"));
     }
