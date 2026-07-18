@@ -412,6 +412,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpSourceEditorFindArea = new dlgSourceEditorFindArea(mpSourceEditorEdbee);
     mpSourceEditorEdbee->horizontalScrollBar()->installEventFilter(mpSourceEditorFindArea);
     mpSourceEditorEdbee->verticalScrollBar()->installEventFilter(mpSourceEditorFindArea);
+    // reposition the find area when the editor itself resizes, e.g. when the
+    // system message area above it appears or disappears
+    mpSourceEditorEdbee->installEventFilter(mpSourceEditorFindArea);
     mpSourceEditorFindArea->hide();
 
     connect(mpSourceEditorFindArea->lineEdit_findText, &QLineEdit::textChanged, this, &dlgTriggerEditor::slot_sourceFindTextChanges);
