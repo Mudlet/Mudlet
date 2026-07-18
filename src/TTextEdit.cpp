@@ -457,7 +457,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
     int currentSize = lineText.size();
     if (mpConsole->showTimeStamps()) {
-        TChar timeStampStyle(QColor(200, 150, 0), QColor(22, 22, 22));
+        TChar timeStampStyle(QColor(200, 150, 0), mpConsole->getConsoleBgColor());
         QString timestamp(mpBuffer->timeBuffer.at(lineNumber));
         QVector<QColor> fgColors;
         QVector<QRect> textRects;
