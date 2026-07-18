@@ -4550,8 +4550,11 @@ void T2DMap::slot_toggleMapViewOnly()
 
 void T2DMap::populateUserContextMenus(QMenu& menu)
 {
+    if (!mpMap) {
+        return;
+    }
     QMap<QString, QMenu*> userMenus;
-    QMapIterator<QString, QStringList> menuIterator(mUserMenus);
+    QMapIterator<QString, QStringList> menuIterator(mpMap->mUserMenus);
 
     while (menuIterator.hasNext()) {
         menuIterator.next();
@@ -4576,7 +4579,7 @@ void T2DMap::populateUserContextMenus(QMenu& menu)
         }
     }
 
-    QMapIterator<QString, QStringList> actionIterator(mUserActions);
+    QMapIterator<QString, QStringList> actionIterator(mpMap->mUserActions);
     while (actionIterator.hasNext()) {
         actionIterator.next();
         const QString uniqueName = actionIterator.key();
@@ -4603,7 +4606,7 @@ void T2DMap::populateUserContextMenus(QMenu& menu)
 void T2DMap::slot_userAction(QString uniqueName)
 {
     TEvent event{};
-    QStringList userEvent = mUserActions[uniqueName];
+    const QStringList userEvent = mpMap->mUserActions.value(uniqueName);
     event.mArgumentList.append(userEvent[0]);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(uniqueName);

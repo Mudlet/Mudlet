@@ -1,11 +1,34 @@
 -- This block must stay first in the file: once a later spec calls
 -- openMapWidget(), the widget persists for the rest of the session and the
--- no-widget branch becomes unreachable.
-describe("Tests getMapEvents before the map widget is opened", function()
-  it("should return nil+message when the map widget was never opened", function()
-    local events, err = getMapEvents()
-    assert.is_nil(events)
-    assert.are.equal("you haven't opened a map yet", err)
+-- pre-widget state becomes unreachable.
+describe("Tests map events and menus before the map widget is opened", function()
+  it("should return an empty table when nothing is registered yet", function()
+    assert.are.same({}, getMapEvents())
+    assert.are.same({}, getMapMenus())
+  end)
+
+  it("should register and remove a map event before the widget is opened", function()
+    assert.is_true(addMapEvent("preWidgetEvent", "myEvent", "", "Pre-widget Event"))
+
+    local events = getMapEvents()
+    assert.is_not_nil(events.preWidgetEvent)
+    assert.are.equal("myEvent", events.preWidgetEvent["event name"])
+    assert.are.equal("Pre-widget Event", events.preWidgetEvent["display name"])
+
+    assert.is_true(removeMapEvent("preWidgetEvent"))
+    assert.is_nil(getMapEvents().preWidgetEvent)
+  end)
+
+  it("should register and remove a map menu before the widget is opened", function()
+    assert.is_true(addMapMenu("PreWidgetMenu"))
+    assert.are.equal("top-level", getMapMenus()["PreWidgetMenu"])
+
+    assert.is_true(removeMapMenu("PreWidgetMenu"))
+    assert.is_nil(getMapMenus()["PreWidgetMenu"])
+  end)
+
+  it("should retain a registration for when the widget opens later", function()
+    assert.is_true(addMapEvent("preWidgetKeptEvent", "myEvent", "", "Kept Event"))
   end)
 end)
 
@@ -20,6 +43,16 @@ describe("Tests custom map event and menu functions", function()
     removeMapEvent("testEvent2")
     removeMapMenu("TestMenu")
     removeMapMenu("TestSubMenu")
+  end)
+
+  describe("Tests that pre-widget registrations survive opening the widget", function()
+    it("should still list an event registered before the widget was opened", function()
+      local events = getMapEvents()
+      assert.is_not_nil(events.preWidgetKeptEvent)
+      assert.are.equal("myEvent", events.preWidgetKeptEvent["event name"])
+      assert.are.equal("Kept Event", events.preWidgetKeptEvent["display name"])
+      removeMapEvent("preWidgetKeptEvent")
+    end)
   end)
 
   describe("Tests addMapEvent and getMapEvents", function()

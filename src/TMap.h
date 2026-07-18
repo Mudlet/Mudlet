@@ -261,6 +261,13 @@ public:
     QPointer<dlgMapper> mpMapper;
     QMap<int, int> roomidToIndex;
 
+    // User-registered mapper context menu entries (addMapEvent()/addMapMenu());
+    // session-only state, never saved with the map.
+    // string list: 0 is event name, 1 is menu it is under if it is
+    QMap<QString, QStringList> mUserActions;
+    // unique name, List:parent name ("" if null), display name
+    QMap<QString, QStringList> mUserMenus;
+
     typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
     typedef boost::property_map<mygraph_t, boost::edge_weight_t>::type WeightMap;
     typedef mygraph_t::vertex_descriptor vertex;
