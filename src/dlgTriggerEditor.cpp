@@ -6743,14 +6743,21 @@ void dlgTriggerEditor::saveVar()
     //check variable recasting
     const int varRecast = canRecast(pItem, uiNameType, uiValueType);
     if ((uiNameType == -1) || (variable && uiNameType != variable->getKeyType())) {
-        if (QString(newName).toInt()) {
+        bool nameNumberOk = false;
+        newName.toDouble(&nameNumberOk);
+        // the key type combobox cannot express a boolean key, so keep an unchanged one boolean
+        if (variable->getKeyType() == LUA_TBOOLEAN && (newName.toLower() == QLatin1String("true") || newName.toLower() == QLatin1String("false"))) {
+            uiNameType = LUA_TBOOLEAN;
+        } else if (nameNumberOk) {
             uiNameType = LUA_TNUMBER;
         } else {
             uiNameType = LUA_TSTRING;
         }
     }
     if ((uiValueType != LUA_TTABLE) && (uiValueType == -1)) {
-        if (newValue.toInt()) {
+        bool valueNumberOk = false;
+        newValue.toDouble(&valueNumberOk);
+        if (valueNumberOk) {
             uiValueType = LUA_TNUMBER;
         } else if (newValue.toLower() == "true" || newValue.toLower() == "false") {
             uiValueType = LUA_TBOOLEAN;
@@ -6790,7 +6797,11 @@ void dlgTriggerEditor::saveVar()
                 int change = 0;
                 if (newName != variable->getName() || uiNameType != variable->getKeyType()) {
                     //let's make sure the nametype works
-                    if (variable->getKeyType() == LUA_TNUMBER && newName.toInt()) {
+                    bool nameNumberOk = false;
+                    newName.toDouble(&nameNumberOk);
+                    if (variable->getKeyType() == LUA_TBOOLEAN && (newName.toLower() == QLatin1String("true") || newName.toLower() == QLatin1String("false"))) {
+                        uiNameType = LUA_TBOOLEAN;
+                    } else if (variable->getKeyType() == LUA_TNUMBER && nameNumberOk) {
                         uiNameType = LUA_TNUMBER;
                     } else {
                         uiNameType = LUA_TSTRING;
@@ -6800,10 +6811,12 @@ void dlgTriggerEditor::saveVar()
                 variable->setNewName(newName, uiNameType);
                 if (variable->getValueType() != LUA_TTABLE && (newValue != variable->getValue() || uiValueType != variable->getValueType())) {
                     //let's check again
+                    bool valueNumberOk = false;
+                    newValue.toDouble(&valueNumberOk);
                     if (variable->getValueType() == LUA_TTABLE) {
                         //HEIKO: obvious logic error used to be valueType == LUA_TABLE
                         uiValueType = LUA_TTABLE;
-                    } else if (uiValueType == LUA_TNUMBER && newValue.toInt()) {
+                    } else if (uiValueType == LUA_TNUMBER && valueNumberOk) {
                         uiValueType = LUA_TNUMBER;
                     } else if (uiValueType == LUA_TBOOLEAN && (newValue.toLower() == "true" || newValue.toLower() == "false")) {
                         uiValueType = LUA_TBOOLEAN;
@@ -6844,9 +6857,13 @@ void dlgTriggerEditor::saveVar()
             int change = 0;
             if (newName != var->getName() || uiNameType != var->getKeyType()) {
                 //let's make sure the nametype works
+                bool nameNumberOk = false;
+                newName.toDouble(&nameNumberOk);
                 if (uiNameType == LUA_TSTRING) {
                     //do nothing, we can always make key to string
-                } else if (var->getKeyType() == LUA_TNUMBER && newName.toInt()) {
+                } else if (var->getKeyType() == LUA_TBOOLEAN && (newName.toLower() == QLatin1String("true") || newName.toLower() == QLatin1String("false"))) {
+                    uiNameType = LUA_TBOOLEAN;
+                } else if (var->getKeyType() == LUA_TNUMBER && nameNumberOk) {
                     uiNameType = LUA_TNUMBER;
                 } else {
                     uiNameType = LUA_TSTRING;
@@ -6854,11 +6871,14 @@ void dlgTriggerEditor::saveVar()
                 var->setNewName(newName, uiNameType);
                 change = change | 0x1;
             }
-            if (newValue != var->getValue() || uiValueType != var->getValueType()) {
+            // a table's contents are not shown in the value editor, so a table staying a table is never a value change
+            if ((newValue != var->getValue() || uiValueType != var->getValueType()) && !(uiValueType == LUA_TTABLE && var->getValueType() == LUA_TTABLE)) {
                 //let's check again
+                bool valueNumberOk = false;
+                newValue.toDouble(&valueNumberOk);
                 if (uiValueType == LUA_TTABLE) {
                     newValue = "{}";
-                } else if (uiValueType == LUA_TNUMBER && newValue.toInt()) {
+                } else if (uiValueType == LUA_TNUMBER && valueNumberOk) {
                     uiValueType = LUA_TNUMBER;
                 } else if (uiValueType == LUA_TBOOLEAN && (newValue.toLower() == QLatin1String("true") || newValue.toLower() == QLatin1String("false"))) {
                     uiValueType = LUA_TBOOLEAN;
