@@ -192,6 +192,16 @@ The project uses the `.clang-format` configuration in the repo root. This ensure
 
 For complete setup instructions on how to run static analysis during a build see, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Static_Analysis
 
+### Running ASan builds
+
+Local Linux builds enable AddressSanitizer by default (`src/cmake/EnableSanitizers.cmake`). When running Mudlet or its tests directly, always use the leak-suppressions list at the repo root so known third-party leaks (fontconfig, pango, GTK3, Qt platform integration) don't drown out real findings:
+
+```bash
+LSAN_OPTIONS=suppressions=/path/to/repo/asan-suppressions.txt:exitcode=0 ./src/mudlet
+```
+
+This mirrors what CI does in `.github/workflows/build-mudlet*.yml`. The ctest functional tests already set `ASAN_OPTIONS=detect_leaks=0` themselves.
+
 ### Debugging options
 
 `src/CMakeLists.txt` contains commented debugging defines for development (search "Debugging code inclusions"):
