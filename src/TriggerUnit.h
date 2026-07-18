@@ -111,6 +111,10 @@ private:
     // Counter for nested processing; cleanup deferred until 0
     int mProcessingDepth = 0;
     const QString* mpCurrentExecutingTriggerName = nullptr;
+    // Root triggers registered while processDataStream() is running, so each
+    // pass can match the ones created during it against the line being
+    // processed - see processDataStream(). Cleared once the outermost pass ends.
+    QList<TTrigger*> mRootNodesAddedWhileProcessing;
 };
 
 #endif // MUDLET_TRIGGERUNIT_H

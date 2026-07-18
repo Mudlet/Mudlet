@@ -10,6 +10,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TUserWindowTest.cpp
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
+    TriggerSameLineMatchTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     TDiscordModeTest.cpp
     MainConsoleSelectionTest.cpp
