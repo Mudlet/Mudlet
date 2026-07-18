@@ -356,24 +356,6 @@ function Geyser.MiniConsole:hinsertLink(...)
   hinsertLink(self.name, ...)
 end
 
---- inserts color name formatted clickable text into the miniconsole at the end of the current line.
--- see: https://wiki.mudlet.org/w/Manual:UI_Functions#cechoLink
-function Geyser.MiniConsole:cechoLink(...)
-  cechoLink(self.name, ...)
-end
-
---- inserts decimal color formatted clickable text into the miniconsole at the end of the current line.
--- see: https://wiki.mudlet.org/w/Manual:UI_Functions#dechoLink
-function Geyser.MiniConsole:dechoLink(...)
-  dechoLink(self.name, ...)
-end
-
---- inserts hexadecimal color formatted clickable text into the miniconsole at the end of the current line.
--- see: https://wiki.mudlet.org/w/Manual:UI_Functions#hechoLink
-function Geyser.MiniConsole:hechoLink(...)
-  hechoLink(self.name, ...)
-end
-
 --- inserts color name formatted clickable text with right-click menu into the miniconsole at the end of the current line.
 -- see: https://wiki.mudlet.org/w/Manual:UI_Functions#cechoPopup
 function Geyser.MiniConsole:cechoPopup(...)
