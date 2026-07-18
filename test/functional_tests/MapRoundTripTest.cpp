@@ -113,10 +113,6 @@ private:
     AreaBounds mBoundsB;
     QImage mLabelImage;
     QSizeF mLabelSize;
-    // Once the source map has been saved at a format below 19 its mUserData
-    // carries stray system.fallback_mapSymbolFont* keys forever - see the
-    // QEXPECT_FAIL in verifyMap():
-    bool mSourcePollutedByPre19Save = false;
 
     static QMap<QString, QString> expectedMapUserData() { return {{qsl("map.author 日本語"), qsl("величина <>&\"' ]]>")}, {qsl("plain"), qsl("value")}}; }
 
@@ -344,14 +340,9 @@ private:
         QCOMPARE(pR1->customLinesColor, (QMap<QString, QColor>{{qsl("n"), scmCustomLineColor}}));
         QCOMPARE(pR1->customLinesStyle, (QMap<QString, Qt::PenStyle>{{qsl("n"), Qt::DashLine}}));
         QCOMPARE(pR1->customLinesArrow, (QMap<QString, bool>{{qsl("n"), true}}));
-        if (savedVersion == 19) {
-            // Finding: TMap::serialize() stores the symbol fallback for
-            // mSaveVersion <= 19 but TRoom::restore() only removes it again
-            // for version < 19, so a map saved at exactly format 19 leaves a
-            // stray "system.fallback_symbol" entry in the room's userData
-            // after loading:
-            QEXPECT_FAIL("", "system.fallback_symbol is written at save version 19 (TMap::serialize) but only stripped for versions below 19 (TRoom::restore)", Continue);
-        }
+        // The format 19 leg runs after the format 17/18 ones, so this also
+        // guards against a < 19 save leaving a stray system.fallback_symbol
+        // entry behind in the live source room's user data:
         QCOMPARE(pR1->userData, expectedRoom1UserData());
 
         TRoom* pR2 = pDB->getRoom(scmRoom2);
@@ -394,17 +385,10 @@ private:
         QCOMPARE(pR4->getOut(), scmRoom2);
         QCOMPARE(pR4->getNorthwest(), scmRoom3);
 
-        if (savedVersion >= 19 && mSourcePollutedByPre19Save) {
-            // Finding: TMap::serialize() inserts system.fallback_mapSymbolFont,
-            // system.fallback_mapSymbolFontFudgeFactor and
-            // system.fallback_onlyUseMapSymbolFont into the live map's
-            // mUserData when saving at format < 19 and never removes them
-            // afterwards, so every subsequent save at format >= 19 embeds
-            // those stale keys and TMap::restore() only strips them again for
-            // format < 19 loads:
-            QEXPECT_FAIL(
-                    "", "saving at format < 19 permanently pollutes TMap::mUserData with system.fallback_mapSymbolFont* keys (TMap::serialize) which leak into later format >= 19 saves", Continue);
-        }
+        // The format 19 leg runs after the format 17/18 ones, so this also
+        // guards against a < 19 save leaving stray
+        // system.fallback_mapSymbolFont* entries behind in the live source
+        // map's user data:
         QCOMPARE(pMap->mUserData, expectedMapUserData());
         QCOMPARE(pMap->mEnvColors, (QMap<int, int>{{5, 2}, {12, 7}}));
         QCOMPARE(pMap->mCustomEnvColors.value(300), QColor(12, 34, 56));
@@ -428,9 +412,6 @@ private:
     {
         const QString fileName = qsl("%1/map_v%2.dat").arg(mSaveDir.path()).arg(saveVersion);
         QVERIFY2(saveMapToFile(mpSource->mpMap.data(), fileName, saveVersion), qPrintable(qsl("failed to save map at format version %1").arg(saveVersion)));
-        if (saveVersion < 19) {
-            mSourcePollutedByPre19Save = true;
-        }
 
         TMap* pTargetMap = mpTarget->mpMap.data();
         pTargetMap->mapClear();

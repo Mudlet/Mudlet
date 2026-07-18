@@ -1152,13 +1152,15 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     ofs << mCustomEnvColors;
     ofs << mpRoomDB->hashToRoomID;
     if (mSaveVersion < 19) {
-        // Save the data in the map user data for older versions
-        mUserData.insert(qsl("system.fallback_mapSymbolFont"), mMapSymbolFont.toString());
-        mUserData.insert(qsl("system.fallback_mapSymbolFontFudgeFactor"), QString::number(mMapSymbolFontFudgeFactor));
-        mUserData.insert(qsl("system.fallback_onlyUseMapSymbolFont"), mIsOnlyMapSymbolFontToBeUsed ? qsl("true") : qsl("false"));
-    }
-    ofs << mUserData;
-    if (mSaveVersion >= 19) {
+        // Save the data in the map user data for older versions - use a local
+        // copy so that saving does not modify the live map's user data:
+        QMap<QString, QString> userData{mUserData};
+        userData.insert(qsl("system.fallback_mapSymbolFont"), mMapSymbolFont.toString());
+        userData.insert(qsl("system.fallback_mapSymbolFontFudgeFactor"), QString::number(mMapSymbolFontFudgeFactor));
+        userData.insert(qsl("system.fallback_onlyUseMapSymbolFont"), mIsOnlyMapSymbolFontToBeUsed ? qsl("true") : qsl("false"));
+        ofs << userData;
+    } else {
+        ofs << mUserData;
         // Save the data directly in supported format versions (19 and above)
         ofs << mMapSymbolFont;
         ofs << mMapSymbolFontFudgeFactor;
@@ -1310,11 +1312,6 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         }
 
         ofs << pR->getId();
-        if (mSaveVersion <= 19) {
-            if (!pR->mSymbol.isEmpty()) {
-                pR->userData.insert(QLatin1String("system.fallback_symbol"), pR->mSymbol);
-            }
-        }
         if (mSaveVersion < 21) {
             if (pR->hidden) {
                 pR->userData.insert(QLatin1String("system.fallback_hidden"), QLatin1String("true"));
@@ -1392,7 +1389,18 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             pR->userData.remove(ROOM_UI_BORDERTHICKNESS);
         }
 
-        ofs << pR->userData;
+        if (mSaveVersion < 19 && !pR->mSymbol.isEmpty()) {
+            // Formats before 19 carry the symbol as a user data fallback - use
+            // a local copy so that saving does not modify the live room's user
+            // data; TRoom::restore() only strips this key for formats below 19
+            // so it must not appear in formats from 19 onwards (those store
+            // the symbol directly in the stream):
+            QMap<QString, QString> userData{pR->userData};
+            userData.insert(QLatin1String("system.fallback_symbol"), pR->mSymbol);
+            ofs << userData;
+        } else {
+            ofs << pR->userData;
+        }
         if (mSaveVersion >= 20) {
             // Before version 20 stored the style as an Latin1 string, the color
             // as a QList<int> for the RGB components and used UPPER case for
