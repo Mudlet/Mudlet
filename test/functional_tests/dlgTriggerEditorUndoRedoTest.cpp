@@ -23,6 +23,8 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
 #include "TTimer.h"
 #include "TTreeWidget.h"
 #include "TTrigger.h"
@@ -1969,6 +1971,170 @@ private slots:
     QCOMPARE(mpEditor->mpScriptsBaseItem->childCount(), 1);
 
     cleanupAll(mItemTypes[3]);
+  }
+
+  void testMultiTriggerPasteIntoGroup() {
+    mpEditor->slot_showTriggers();
+    cleanupAll(mItemTypes[0]);
+
+    mpEditor->addTrigger(true);
+    QCOMPARE(mpEditor->mpTriggerBaseItem->childCount(), 1);
+
+    QTreeWidgetItem *group = mpEditor->mpTriggerBaseItem->child(0);
+    int groupID = group->data(0, Qt::UserRole).toInt();
+    TTrigger *pGroup = mpHost->getTriggerUnit()->getTrigger(groupID);
+    QVERIFY(pGroup != nullptr);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(group);
+    mpEditor->addTrigger(false);
+    mpEditor->addTrigger(false);
+    QCOMPARE(group->childCount(), 2);
+
+    // copy both triggers, then paste them into the group
+    mpEditor->treeWidget_triggers->clearSelection();
+    mpEditor->treeWidget_triggers->setCurrentItem(group->child(0));
+    group->child(0)->setSelected(true);
+    group->child(1)->setSelected(true);
+    mpEditor->slot_copyXml();
+
+    mpEditor->treeWidget_triggers->clearSelection();
+    mpEditor->treeWidget_triggers->setCurrentItem(group);
+    mpEditor->slot_pasteXml();
+
+    // each pasted trigger must be linked into the group exactly once
+    QCOMPARE(static_cast<int>(pGroup->getChildrenList()->size()), 4);
+
+    // re-render the tree and verify the group shows exactly four children
+    QEnterEvent enterEvent{QPointF(), QPointF(), QPointF()};
+    QApplication::sendEvent(mpEditor, &enterEvent);
+    QCOMPARE(mpEditor->mpTriggerBaseItem->childCount(), 1);
+    QCOMPARE(mpEditor->mpTriggerBaseItem->child(0)->childCount(), 4);
+
+    cleanupAll(mItemTypes[0]);
+  }
+
+  void testMultiTriggerPasteAfterSibling() {
+    mpEditor->slot_showTriggers();
+    cleanupAll(mItemTypes[0]);
+
+    mpEditor->addTrigger(true);
+    QTreeWidgetItem *group = mpEditor->mpTriggerBaseItem->child(0);
+    int groupID = group->data(0, Qt::UserRole).toInt();
+    TTrigger *pGroup = mpHost->getTriggerUnit()->getTrigger(groupID);
+    QVERIFY(pGroup != nullptr);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(group);
+    mpEditor->addTrigger(false);
+    mpEditor->addTrigger(false);
+    QCOMPARE(group->childCount(), 2);
+    const int firstID = group->child(0)->data(0, Qt::UserRole).toInt();
+    const int secondID = group->child(1)->data(0, Qt::UserRole).toInt();
+
+    // copy both triggers, then paste them onto the first (non-folder) trigger
+    mpEditor->treeWidget_triggers->clearSelection();
+    mpEditor->treeWidget_triggers->setCurrentItem(group->child(0));
+    group->child(0)->setSelected(true);
+    group->child(1)->setSelected(true);
+    mpEditor->slot_copyXml();
+
+    mpEditor->treeWidget_triggers->clearSelection();
+    mpEditor->treeWidget_triggers->setCurrentItem(group->child(0));
+    mpEditor->slot_pasteXml();
+
+    // pasted triggers must be inserted right after the selected sibling,
+    // not appended at the end of the group
+    auto *children = pGroup->getChildrenList();
+    QCOMPARE(static_cast<int>(children->size()), 4);
+    QList<int> childIDs;
+    for (auto *child : *children) {
+      childIDs << child->getID();
+    }
+    QCOMPARE(childIDs.at(0), firstID);
+    QVERIFY(childIDs.at(1) != firstID && childIDs.at(1) != secondID);
+    QVERIFY(childIDs.at(2) != firstID && childIDs.at(2) != secondID);
+    QCOMPARE(childIDs.at(3), secondID);
+
+    cleanupAll(mItemTypes[0]);
+  }
+
+  void testMultiAliasPasteIntoGroup() {
+    mpEditor->slot_showAliases();
+    cleanupAll(mItemTypes[2]);
+
+    mpEditor->addAlias(true);
+    QCOMPARE(mpEditor->mpAliasBaseItem->childCount(), 1);
+
+    QTreeWidgetItem *group = mpEditor->mpAliasBaseItem->child(0);
+    int groupID = group->data(0, Qt::UserRole).toInt();
+    TAlias *pGroup = mpHost->getAliasUnit()->getAlias(groupID);
+    QVERIFY(pGroup != nullptr);
+
+    mpEditor->treeWidget_aliases->setCurrentItem(group);
+    mpEditor->addAlias(false);
+    mpEditor->addAlias(false);
+    QCOMPARE(group->childCount(), 2);
+
+    // copy both aliases, then paste them into the group
+    mpEditor->treeWidget_aliases->clearSelection();
+    mpEditor->treeWidget_aliases->setCurrentItem(group->child(0));
+    group->child(0)->setSelected(true);
+    group->child(1)->setSelected(true);
+    mpEditor->slot_copyXml();
+
+    mpEditor->treeWidget_aliases->clearSelection();
+    mpEditor->treeWidget_aliases->setCurrentItem(group);
+    mpEditor->slot_pasteXml();
+
+    // both pasted aliases must land inside the group, each linked exactly once
+    QCOMPARE(static_cast<int>(pGroup->getChildrenList()->size()), 4);
+
+    // re-render the tree: the group shows four children and none at the root
+    QEnterEvent enterEvent{QPointF(), QPointF(), QPointF()};
+    QApplication::sendEvent(mpEditor, &enterEvent);
+    QCOMPARE(mpEditor->mpAliasBaseItem->childCount(), 1);
+    QCOMPARE(mpEditor->mpAliasBaseItem->child(0)->childCount(), 4);
+
+    cleanupAll(mItemTypes[2]);
+  }
+
+  void testMultiKeyPasteIntoGroup() {
+    mpEditor->slot_showKeys();
+    cleanupAll(mItemTypes[4]);
+
+    mpEditor->addKey(true);
+    QCOMPARE(mpEditor->mpKeyBaseItem->childCount(), 1);
+
+    QTreeWidgetItem *group = mpEditor->mpKeyBaseItem->child(0);
+    int groupID = group->data(0, Qt::UserRole).toInt();
+    TKey *pGroup = mpHost->getKeyUnit()->getKey(groupID);
+    QVERIFY(pGroup != nullptr);
+
+    mpEditor->treeWidget_keys->setCurrentItem(group);
+    mpEditor->addKey(false);
+    mpEditor->addKey(false);
+    QCOMPARE(group->childCount(), 2);
+
+    // copy both keys, then paste them into the group
+    mpEditor->treeWidget_keys->clearSelection();
+    mpEditor->treeWidget_keys->setCurrentItem(group->child(0));
+    group->child(0)->setSelected(true);
+    group->child(1)->setSelected(true);
+    mpEditor->slot_copyXml();
+
+    mpEditor->treeWidget_keys->clearSelection();
+    mpEditor->treeWidget_keys->setCurrentItem(group);
+    mpEditor->slot_pasteXml();
+
+    // both pasted keys must land inside the group, each linked exactly once
+    QCOMPARE(static_cast<int>(pGroup->getChildrenList()->size()), 4);
+
+    // re-render the tree: the group shows four children and none at the root
+    QEnterEvent enterEvent{QPointF(), QPointF(), QPointF()};
+    QApplication::sendEvent(mpEditor, &enterEvent);
+    QCOMPARE(mpEditor->mpKeyBaseItem->childCount(), 1);
+    QCOMPARE(mpEditor->mpKeyBaseItem->child(0)->childCount(), 4);
+
+    cleanupAll(mItemTypes[4]);
   }
 
   // ========================================================================
