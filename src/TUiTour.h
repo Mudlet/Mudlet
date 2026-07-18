@@ -41,7 +41,7 @@ class TUiTour : public QWidget
     Q_OBJECT
 
 public:
-    explicit TUiTour(mudlet* pMainWindow);
+    explicit TUiTour(mudlet* pMainWindow, const bool skipIntroStep = false);
 
     static bool shouldShowOnFirstProfile();
     static void rememberShown();
@@ -84,6 +84,7 @@ private:
     void resizeToParent();
 
     mudlet* mpMainWindow = nullptr;
+    bool mSkipIntroStep = false;
     std::vector<TourStep> mSteps;
     int mCurrentStep = 0;
 
