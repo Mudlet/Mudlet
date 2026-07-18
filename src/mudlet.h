@@ -53,6 +53,7 @@
 #else
 #include <qt6keychain/keychain.h>
 #endif
+#include <array>
 #include <optional>
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
@@ -198,6 +199,7 @@ public:
     void init();
     void setupConfig();
     void activateProfile(Host*);
+    void switchToProfileTab(int index);
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
     void addConsoleForNewHost(Host*);
@@ -463,6 +465,8 @@ public slots:
     void slot_showHelpDialogForum();
     void slot_showHelpDialogIrc();
     void slot_showHelpDialogVideo();
+    void slot_nextProfile();
+    void slot_previousProfile();
     void slot_tabChanged(int);
     void slot_timerFires();
     void slot_toggleFullScreenView();
@@ -621,6 +625,9 @@ private:
     QKeySequence mKeySequenceToggleReplay;
     QKeySequence mKeySequenceToggleLogging;
     QKeySequence mKeySequenceToggleEmergencyStop;
+    QKeySequence mKeySequenceNextProfile;
+    QKeySequence mKeySequencePreviousProfile;
+    std::array<QKeySequence, 9> mKeySequencesSwitchToProfile;
     bool mIsGoingDown = false;
     // Whether multi-view is in effect:
     enums::controlsVisibility mMenuBarVisibility = enums::visibleAlways;
@@ -703,6 +710,9 @@ private:
     QPointer<QShortcut> mpShortcutToggleReplay;
     QPointer<QShortcut> mpShortcutToggleLogging;
     QPointer<QShortcut> mpShortcutToggleEmergencyStop;
+    QPointer<QShortcut> mpShortcutNextProfile;
+    QPointer<QShortcut> mpShortcutPreviousProfile;
+    std::array<QPointer<QShortcut>, 9> mpShortcutsSwitchToProfile;
     QPointer<QTimer> mpTimerReplay;
     QPointer<QTimer> mpBlinkTimer;
     QElapsedTimer mBlinkElapsedTimer;

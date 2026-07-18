@@ -667,6 +667,13 @@ void mudlet::init()
     mKeySequenceToggleReplay = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_R);
     mKeySequenceToggleLogging = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_L);
     mKeySequenceToggleEmergencyStop = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_S);
+    // Physical Ctrl+Tab (Qt::META is the Ctrl key on macOS), matching the
+    // system-wide window-tab cycling convention there. Spelt with Key_Tab and
+    // not Key_Backtab because QShortcutMap never generates a Shift+Backtab
+    // candidate for a Shift+Tab press - the Shift is consumed producing the
+    // Backtab keysym, so only "...+Shift+Tab" matches:
+    mKeySequenceNextProfile = QKeySequence(Qt::META | Qt::Key_Tab);
+    mKeySequencePreviousProfile = QKeySequence(Qt::META | Qt::SHIFT | Qt::Key_Tab);
 #else
     mKeySequenceTriggers = QKeySequence(Qt::ALT | Qt::Key_E);
     mKeySequenceShowMap = QKeySequence(Qt::ALT | Qt::Key_M);
@@ -685,7 +692,18 @@ void mudlet::init()
     mKeySequenceToggleReplay = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_R);
     mKeySequenceToggleLogging = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_L);
     mKeySequenceToggleEmergencyStop = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_S);
+    // Spelt with Key_Tab and not Key_Backtab because QShortcutMap never
+    // generates a Shift+Backtab candidate for a Shift+Tab press - the Shift
+    // is consumed producing the Backtab keysym, so only "Ctrl+Shift+Tab"
+    // matches:
+    mKeySequenceNextProfile = QKeySequence(Qt::CTRL | Qt::Key_Tab);
+    mKeySequencePreviousProfile = QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Tab);
 #endif
+    // Qt::CTRL is the Cmd key on macOS, so this gives the Cmd+1..9
+    // (Safari/Chrome/iTerm2) convention there and Ctrl+1..9 elsewhere:
+    for (int i = 0; i < 9; ++i) {
+        mKeySequencesSwitchToProfile[i] = QKeySequence(Qt::CTRL | static_cast<Qt::Key>(Qt::Key_1 + i));
+    }
     connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_updateShortcuts);
     connect(this, &mudlet::signal_hostCreated, this, &mudlet::slot_assignShortcutsFromProfile);
     connect(this, &mudlet::signal_profileActivated, this, &mudlet::slot_assignShortcutsFromProfile);
@@ -708,6 +726,12 @@ void mudlet::init()
     mpShortcutsManager->registerShortcut(qsl("Toggle Replay"), tr("Toggle Replay"), &mKeySequenceToggleReplay);
     mpShortcutsManager->registerShortcut(qsl("Toggle Logging"), tr("Toggle Logging"), &mKeySequenceToggleLogging);
     mpShortcutsManager->registerShortcut(qsl("Toggle Emergency Stop"), tr("Toggle Emergency Stop"), &mKeySequenceToggleEmergencyStop);
+    mpShortcutsManager->registerShortcut(qsl("Next profile"), tr("Next profile"), &mKeySequenceNextProfile);
+    mpShortcutsManager->registerShortcut(qsl("Previous profile"), tr("Previous profile"), &mKeySequencePreviousProfile);
+    for (int i = 0; i < 9; ++i) {
+        //: Name of the keyboard shortcut that switches to the numbered profile tab, %1 is that number (1 to 9)
+        mpShortcutsManager->registerShortcut(qsl("Switch to profile %1").arg(i + 1), tr("Switch to profile %1").arg(i + 1), &mKeySequencesSwitchToProfile[i]);
+    }
     readLateSettings(*mpSettings);
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
@@ -2058,6 +2082,29 @@ void mudlet::reshowRequiredMainConsoles()
                 }
             }
         }
+    }
+}
+
+void mudlet::slot_nextProfile()
+{
+    const int count = mpTabBar->count();
+    if (count > 1) {
+        mpTabBar->setCurrentIndex((mpTabBar->currentIndex() + 1) % count);
+    }
+}
+
+void mudlet::slot_previousProfile()
+{
+    const int count = mpTabBar->count();
+    if (count > 1) {
+        mpTabBar->setCurrentIndex((mpTabBar->currentIndex() + count - 1) % count);
+    }
+}
+
+void mudlet::switchToProfileTab(int index)
+{
+    if (index >= 0 && index < mpTabBar->count()) {
+        mpTabBar->setCurrentIndex(index);
     }
 }
 
@@ -3770,6 +3817,25 @@ void mudlet::slot_updateShortcuts()
 void mudlet::assignKeySequences()
 {
     mMenuVisibleState = !(mMenuBarVisibility == enums::visibleNever || (mMenuBarVisibility == enums::visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()));
+
+    // The profile tab switching shortcuts have no menu-action counterparts so
+    // they are always plain QShortcuts, whatever the menu visibility:
+    delete mpShortcutNextProfile.data();
+    mpShortcutNextProfile = new QShortcut(mKeySequenceNextProfile, this);
+    connect(mpShortcutNextProfile.data(), &QShortcut::activated, this, &mudlet::slot_nextProfile);
+
+    delete mpShortcutPreviousProfile.data();
+    mpShortcutPreviousProfile = new QShortcut(mKeySequencePreviousProfile, this);
+    connect(mpShortcutPreviousProfile.data(), &QShortcut::activated, this, &mudlet::slot_previousProfile);
+
+    for (int i = 0; i < 9; ++i) {
+        delete mpShortcutsSwitchToProfile[i].data();
+        mpShortcutsSwitchToProfile[i] = new QShortcut(mKeySequencesSwitchToProfile[i], this);
+        connect(mpShortcutsSwitchToProfile[i].data(), &QShortcut::activated, this, [this, i]() {
+            switchToProfileTab(i);
+        });
+    }
+
     if (!mMenuVisibleState.value()) {
         // The menu is hidden so wire the QKeySequences directly to the slots:
 

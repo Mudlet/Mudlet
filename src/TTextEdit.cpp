@@ -3706,6 +3706,21 @@ bool TTextEdit::focusNextPrevChild(bool next)
     return QWidget::focusNextPrevChild(next);
 }
 
+bool TTextEdit::event(QEvent* event)
+{
+    if (event->type() == QEvent::ShortcutOverride) {
+        auto* ke = static_cast<QKeyEvent*>(event);
+        // The accessibility caret-mode shortcut must beat the application-wide
+        // next-profile QShortcut, so claim Ctrl+Tab here to make it arrive as
+        // a KeyPress for the caret-toggling code in keyPressEvent():
+        if (mpHost && mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && ke->key() == Qt::Key_Tab && ke->modifiers() == Qt::ControlModifier) {
+            ke->accept();
+            return true;
+        }
+    }
+    return QWidget::event(event);
+}
+
 void TTextEdit::keyPressEvent(QKeyEvent* event)
 {
     if (!mpHost || !mpHost->caretEnabled()) {
