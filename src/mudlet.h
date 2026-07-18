@@ -303,8 +303,8 @@ public:
     bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
     // Brings up the preferences dialog and selects the tab whos objectName is
-    // supplied:
-    void showOptionsDialog(const QString&);
+    // supplied, for the given Host - or the active one if none is given:
+    void showOptionsDialog(const QString&, Host* = nullptr);
     void startAutoLogin(const QStringList&);
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
     void setStorePasswordsSecurely(const bool storeSecurely) { mStorePasswordsSecurely = storeSecurely; }

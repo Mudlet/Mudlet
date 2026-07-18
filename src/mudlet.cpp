@@ -3674,9 +3674,11 @@ void mudlet::slot_showActionDialog()
 }
 
 // tab must be the "objectName" of the tab in the preferences NOT the "titleText"
-void mudlet::showOptionsDialog(const QString& tab)
+void mudlet::showOptionsDialog(const QString& tab, Host* pHost)
 {
-    Host* pHost = getActiveHost();
+    if (!pHost) {
+        pHost = getActiveHost();
+    }
 
     auto pPrefs = pHost ? pHost->mpDlgProfilePreferences : mpDlgProfilePreferences;
 
@@ -3714,9 +3716,8 @@ void mudlet::showOptionsDialog(const QString& tab)
 
     // Force reposition after showing, since preferences dialog may be a singleton
     // that restores its position after being shown
-    Host* activeHost = getActiveHost();
-    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
-    QWidget* referenceWidget = activeConsole ? activeConsole : this;
+    QWidget* hostConsole = pHost ? pHost->mpConsole : nullptr;
+    QWidget* referenceWidget = hostConsole ? hostConsole : this;
     utils::forceRepositionDialogOnParentScreen(pPrefs, referenceWidget);
 }
 
