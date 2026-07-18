@@ -38,6 +38,7 @@
 
 #include <QtTest/QtTest>
 
+#include <QFile>
 #include <QSaveFile>
 #include <QTemporaryDir>
 
@@ -264,6 +265,22 @@ private:
         return file.commit();
     }
 
+    // QDataStream stores QStrings as a length prefix plus UTF-16 big-endian
+    // data, so the raw file can be scanned for a serialized string's bytes:
+    static bool fileContainsSerializedString(const QString& fileName, const QString& needle)
+    {
+        QFile file(fileName);
+        if (!file.open(QIODevice::ReadOnly)) {
+            return false;
+        }
+        const QByteArray raw = file.readAll();
+        QByteArray needleBytes;
+        QDataStream out(&needleBytes, QIODevice::WriteOnly);
+        out << needle;
+        // Skip the quint32 length prefix:
+        return raw.contains(needleBytes.mid(4));
+    }
+
     void verifyArea(TArea* pArea, const AreaBounds& bounds, const QString& areaLabel)
     {
         QVERIFY2(pArea, qPrintable(qsl("%1 is missing").arg(areaLabel)));
@@ -486,6 +503,53 @@ private slots:
     {
         QFETCH(int, saveVersion);
         roundTripAtVersion(saveVersion);
+    }
+
+    void test_taintedMapSelfCleansOnFormat19PlusLoad()
+    {
+        // Simulate a map already tainted in the wild by past versions whose
+        // saving in a format below 19 left the fallback keys behind in the
+        // live user data - which then rode along in every format >= 19 save:
+        TMap* pSourceMap = mpSource->mpMap.data();
+        TRoom* pSourceR1 = pSourceMap->mpRoomDB->getRoom(scmRoom1);
+        QVERIFY(pSourceR1);
+        pSourceMap->mUserData.insert(qsl("system.fallback_mapSymbolFont"), qsl("Stale Font,10,-1,5,400,0,0,0,0,0"));
+        pSourceMap->mUserData.insert(qsl("system.fallback_mapSymbolFontFudgeFactor"), qsl("9.99"));
+        pSourceMap->mUserData.insert(qsl("system.fallback_onlyUseMapSymbolFont"), qsl("false"));
+        // A unique value as "system.fallback_symbol" is a byte prefix of the
+        // legitimately saved "system.fallback_symbol_color" key, so only the
+        // value can prove this key made it into the file:
+        pSourceR1->userData.insert(qsl("system.fallback_symbol"), qsl("stale-room-symbol-junk"));
+
+        const int saveVersion = pSourceMap->mDefaultVersion;
+        QVERIFY(saveVersion >= 19);
+        const QString fileName = qsl("%1/map_tainted_v%2.dat").arg(mSaveDir.path()).arg(saveVersion);
+        QVERIFY(saveMapToFile(pSourceMap, fileName, saveVersion));
+
+        // Undo the tainting of the live source map:
+        pSourceMap->mUserData = expectedMapUserData();
+        pSourceR1->userData = expectedRoom1UserData();
+
+        // The junk keys really did make it into the serialized stream:
+        QVERIFY(fileContainsSerializedString(fileName, qsl("system.fallback_mapSymbolFont")));
+        QVERIFY(fileContainsSerializedString(fileName, qsl("system.fallback_onlyUseMapSymbolFont")));
+        QVERIFY(fileContainsSerializedString(fileName, qsl("stale-room-symbol-junk")));
+
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        pTargetMap->mapClear();
+        QVERIFY(pTargetMap->restore(fileName));
+        pTargetMap->audit();
+
+        // Loading strips the junk keys while the legitimate user data - and
+        // the authoritative values stored directly in the stream - survive:
+        QCOMPARE(pTargetMap->mUserData, expectedMapUserData());
+        QCOMPARE(pTargetMap->mMapSymbolFont.family(), qsl("DejaVu Serif"));
+        QCOMPARE(pTargetMap->mMapSymbolFontFudgeFactor, 1.25);
+        QVERIFY(pTargetMap->mIsOnlyMapSymbolFontToBeUsed);
+        TRoom* pTargetR1 = pTargetMap->mpRoomDB->getRoom(scmRoom1);
+        QVERIFY(pTargetR1);
+        QCOMPARE(pTargetR1->userData, expectedRoom1UserData());
+        QCOMPARE(pTargetR1->mSymbol, qsl("⚔"));
     }
 };
 
