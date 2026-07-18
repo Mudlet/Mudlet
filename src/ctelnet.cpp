@@ -1547,6 +1547,15 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
         packageName.remove(QLatin1Char('/'));
         packageName.remove(QLatin1Char('\\'));
         mpHost->mServerGUI_Package_name = packageName;
+
+        // Let scripts (e.g. the preinstalled starter UI) react to the game
+        // having supplied its own interface:
+        TEvent event{};
+        event.mArgumentList.append(qsl("sysServerGuiInstalled"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(packageName);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(event);
     }
 }
 

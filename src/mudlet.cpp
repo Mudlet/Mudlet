@@ -7195,8 +7195,21 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
     }
 
     // A modest starter UI that adapts to whatever any game provides, only for
-    // players new to Mudlet - veterans will have their own layouts already:
-    if (!mudlet::self()->experiencedMudletPlayer()) {
+    // players new to Mudlet - veterans will have their own layouts already.
+    // Games whose bundled loader above fetches the game's own full interface
+    // are skipped: the starter UI would only fight it for the same screen
+    // space. (Games that push a GUI via Client.GUI at connect time are handled
+    // at runtime instead - the starter UI stands aside when one installs.)
+    static const QStringList gamesWithOwnUi = {
+            qsl("carrionfields.net"), // CF-loader downloads CFGUI
+            qsl("icesus.org"),        // icesus-loader downloads Icesus
+            qsl("mg.mud.de"),         // mg-loader downloads MorgenGrauen
+            qsl("mud.morgengrauen.info"),
+            qsl("mg.morgengrauen.info"),
+            qsl("morgengrauen.info"),
+            qsl("medievia.com"), // MedBootstrap installs MedUI
+    };
+    if (!mudlet::self()->experiencedMudletPlayer() && !gamesWithOwnUi.contains(gameUrl)) {
         mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/base-ui/mudlet-base-ui.xml"));
     }
 

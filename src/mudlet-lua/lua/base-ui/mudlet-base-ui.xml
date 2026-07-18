@@ -248,7 +248,7 @@ function BaseUI.routeChatLine(family)
   -- gmcpChat means the trigger layer is retired: killing a trigger does not
   -- stop it firing on lines from the batch already being processed
   -- several patterns can match the same line - copy it only once
-  if BaseUI.gmcpChat or BaseUI.settings.hidden or getLineNumber() == BaseUI.lastChatLine then
+  if BaseUI.gmcpChat or BaseUI.dormant() or getLineNumber() == BaseUI.lastChatLine then
     return
   end
   BaseUI.lastChatLine = getLineNumber()
@@ -292,7 +292,7 @@ function BaseUI.routeTaggedChatLine()
 end
 
 function BaseUI.createChatTriggers()
-  if BaseUI.settings.hidden or BaseUI.gmcpChat or next(BaseUI.chatTriggerIds) then
+  if BaseUI.dormant() or BaseUI.gmcpChat or next(BaseUI.chatTriggerIds) then
     return
   end
   for _, pattern in ipairs(chatPatterns) do
@@ -484,7 +484,7 @@ function BaseUI.onVitalsLine()
 end
 
 function BaseUI.createVitalsTriggers()
-  if BaseUI.settings.hidden or next(BaseUI.vitalsTriggerIds) then
+  if BaseUI.dormant() or next(BaseUI.vitalsTriggerIds) then
     return
   end
   for _, pattern in ipairs(vitalsLinePatterns) do
@@ -534,6 +534,52 @@ function BaseUI.saveSettings()
   table.save(settingsFile, BaseUI.settings)
 end
 
+-- the UI keeps out of the way either when the user hid it or when the game
+-- installed an interface of its own ("standing aside")
+function BaseUI.dormant()
+  return BaseUI.settings.hidden or BaseUI.settings.standingAside ~= nil
+end
+
+-- a game that supplies its own interface wins: the moment Mudlet installs a
+-- Client.GUI package the starter UI stands aside - capture triggers retired,
+-- dock hidden - and stays aside in later sessions. "baseui show" is the
+-- deliberate way back for players who prefer this UI regardless.
+function BaseUI.standAside(_, packageName)
+  local alreadyAside = BaseUI.settings.standingAside ~= nil
+  BaseUI.settings.standingAside = packageName or "the game's interface"
+  BaseUI.saveSettings()
+  BaseUI.killChatTriggers()
+  BaseUI.killVitalsTriggers()
+  if BaseUI.container then
+    BaseUI.container:hide()
+    BaseUI.container:adjustBorder()
+  end
+  -- only players who actually saw this UI need to hear that it is leaving
+  if not alreadyAside and not BaseUI.settings.hidden and (BaseUI.container or BaseUI.settings.announced) then
+    cecho("\n&lt;cyan&gt;[ Mudlet UI ] This game brings its own interface, so the starter UI is stepping aside - type &lt;yellow&gt;baseui show&lt;cyan&gt; if you would rather keep it.&lt;reset&gt;\n")
+  end
+end
+
+-- if the game's interface is later uninstalled, quietly return to duty. Not
+-- straight away though: a version upgrade uninstalls only to reinstall a
+-- moment later, so look again once the dust has settled
+function BaseUI.serverGuiRemoved(_, packageName)
+  if not BaseUI.settings.standingAside or packageName ~= BaseUI.settings.standingAside then
+    return
+  end
+  tempTimer(10, function()
+    local aside = BaseUI.settings.standingAside
+    if not aside or table.contains(getPackages(), aside) then
+      return
+    end
+    BaseUI.settings.standingAside = nil
+    BaseUI.saveSettings()
+    BaseUI.createChatTriggers()
+    BaseUI.createVitalsTriggers()
+    BaseUI.renderVitals()
+  end)
+end
+
 function BaseUI.sectionHeader(name, text, spot)
   local label = Geyser.Label:new({
     name = name,
@@ -562,7 +608,7 @@ end
 -- room exists (made by a mapping script, a map download or a manual load).
 -- Cheap to poll: getRooms() stays empty right up until the swap happens.
 function BaseUI.checkMapData()
-  if not BaseUI.container or BaseUI.map or BaseUI.settings.hidden then
+  if not BaseUI.container or BaseUI.map or BaseUI.dormant() then
     return
   end
   if not BaseUI.mapHasData() then
@@ -642,7 +688,7 @@ function BaseUI.build()
   -- the container remembers its own hidden/detached state from the previous
   -- session (it saves on exit) - our setting says it should be visible, so
   -- override whatever it restored
-  if not BaseUI.settings.hidden then
+  if not BaseUI.dormant() then
     BaseUI.container:show()
     if not BaseUI.container.attached then
       BaseUI.container:attachToBorder("right")
@@ -752,7 +798,7 @@ end
 -- lock's owner is ignored outright.
 function BaseUI.applyVitals(source, readings, snapshot)
   local rank = sourceRanks[source]
-  if BaseUI.settings.hidden or rank &lt; BaseUI.vitalsLock then
+  if BaseUI.dormant() or rank &lt; BaseUI.vitalsLock then
     return
   end
   if rank &gt; BaseUI.vitalsLock and completeReading(readings.hp) then
@@ -777,7 +823,7 @@ function BaseUI.applyVitals(source, readings, snapshot)
 end
 
 function BaseUI.renderVitals()
-  if BaseUI.settings.hidden then
+  if BaseUI.dormant() then
     return
   end
   local paintable = false
@@ -831,7 +877,7 @@ function BaseUI.updateVitals()
     return
   end
   BaseUI.sawGmcpVitals = true
-  if BaseUI.settings.hidden then
+  if BaseUI.dormant() then
     return
   end
   BaseUI.build()
@@ -892,7 +938,7 @@ function BaseUI.enableMsdpVitals(_, protocol)
     return
   end
   BaseUI.msdpReady = true
-  if not BaseUI.settings.hidden then
+  if not BaseUI.dormant() then
     BaseUI.requestMsdpVitals()
   end
 end
@@ -926,7 +972,7 @@ function BaseUI.addChatMessage()
   -- retire the generic triggers for this session so lines are not captured twice
   BaseUI.gmcpChat = true
   BaseUI.killChatTriggers()
-  if BaseUI.settings.hidden then
+  if BaseUI.dormant() then
     return
   end
   BaseUI.build()
@@ -957,7 +1003,7 @@ end
 
 -- ask the game to send channel text over GMCP (not all games do so unprompted)
 function BaseUI.enableChannelCapture(_, protocol)
-  if protocol ~= "GMCP" or BaseUI.settings.hidden then
+  if protocol ~= "GMCP" or BaseUI.dormant() then
     return
   end
   gmod.enableModule("BaseUI", "Comm.Channel")
@@ -976,7 +1022,9 @@ function BaseUI.maybeAnnounce()
 end
 
 function BaseUI.announce()
-  if BaseUI.settings.announced then
+  -- dormant covers the tour-finished callback arriving after the UI has
+  -- already stepped aside or been hidden - no point introducing it then
+  if BaseUI.settings.announced or BaseUI.dormant() then
     return
   end
   BaseUI.settings.announced = true
@@ -999,6 +1047,7 @@ end
 
 function BaseUI.show()
   BaseUI.settings.hidden = false
+  BaseUI.settings.standingAside = nil
   BaseUI.saveSettings()
   if type(gmcp) == "table" and next(gmcp) then
     gmod.enableModule("BaseUI", "Comm.Channel")
@@ -1033,6 +1082,8 @@ function BaseUI.alias(input)
     local state
     if BaseUI.settings.hidden then
       state = "hidden"
+    elseif BaseUI.settings.standingAside then
+      state = "standing aside for the game's own interface"
     elseif BaseUI.container then
       state = "shown"
     else
@@ -1065,6 +1116,8 @@ registerAnonymousEventHandler("gmcp.Comm.Channel.Text", "BaseUI.addChatMessage")
 registerAnonymousEventHandler("sysProtocolEnabled", "BaseUI.enableChannelCapture")
 registerAnonymousEventHandler("sysProtocolEnabled", "BaseUI.enableMsdpVitals")
 registerAnonymousEventHandler("sysDisconnectionEvent", "BaseUI.handleDisconnect")
+registerAnonymousEventHandler("sysServerGuiInstalled", "BaseUI.standAside")
+registerAnonymousEventHandler("sysUninstallPackage", "BaseUI.serverGuiRemoved")
 for _, stat in ipairs(msdpStats) do
   registerAnonymousEventHandler("msdp." .. stat.current, "BaseUI.updateMsdpVitals")
   registerAnonymousEventHandler("msdp." .. stat.max, "BaseUI.updateMsdpVitals")

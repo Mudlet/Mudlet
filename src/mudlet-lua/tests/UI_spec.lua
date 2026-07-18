@@ -1601,4 +1601,59 @@ describe("Tests UI functions", function()
       assert.is_nil(reading(hits, "mp"))
     end)
   end)
+
+  -- when a game installs its own interface (a Client.GUI package), the
+  -- starter UI stands aside rather than fight it for screen space
+  describe("Test the starter UI standing aside for a game's own interface", function()
+    local baseUiAvailable = type(BaseUI) == "table" and type(BaseUI.standAside) == "function"
+
+    if not baseUiAvailable then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.standAside is unavailable in this profile")
+      end)
+      return
+    end
+
+    local savedSettings
+
+    before_each(function()
+      savedSettings = table.deepcopy(BaseUI.settings)
+    end)
+
+    after_each(function()
+      BaseUI.settings = savedSettings
+      BaseUI.saveSettings()
+      BaseUI.createChatTriggers()
+      BaseUI.createVitalsTriggers()
+    end)
+
+    it("should stand aside when the game installs its own GUI", function()
+      BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+      assert.are.equal("SomeGameUI", BaseUI.settings.standingAside)
+      assert.is_true(BaseUI.dormant())
+    end)
+
+    it("should retire its capture triggers while standing aside", function()
+      BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+      assert.is_nil(next(BaseUI.chatTriggerIds))
+      assert.is_nil(next(BaseUI.vitalsTriggerIds))
+      BaseUI.createChatTriggers()
+      BaseUI.createVitalsTriggers()
+      assert.is_nil(next(BaseUI.chatTriggerIds))
+      assert.is_nil(next(BaseUI.vitalsTriggerIds))
+    end)
+
+    it("should come back when the player asks for it", function()
+      BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+      BaseUI.show()
+      assert.is_nil(BaseUI.settings.standingAside)
+      assert.is_false(BaseUI.dormant())
+    end)
+
+    it("should ignore uninstalls of unrelated packages", function()
+      BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+      BaseUI.serverGuiRemoved("sysUninstallPackage", "SomethingElse")
+      assert.are.equal("SomeGameUI", BaseUI.settings.standingAside)
+    end)
+  end)
 end)
