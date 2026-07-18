@@ -2177,12 +2177,12 @@ void TBuffer::decodeSGR(const QString& sequence)
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
                                                  << "\") ERROR - unsupported italic parameter element (the second part) in a SGR...;3:" << parameterElements.at(1)
                                                  << ";../m sequence treating it as a one!";
-                    mUnderline = true;
+                    mItalics = true;
                     break;
                 default: // Something unexpected
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unexpected italic parameter element (the second part) in a SGR...;3:" << parameterElements.at(1)
                                                  << ";../m sequence treating it as a zero!";
-                    mUnderline = false;
+                    mItalics = false;
                     break;
                 }
             } else {
