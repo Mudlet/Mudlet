@@ -761,7 +761,6 @@ endif (SYSINFO_INCLUDE_DIR)
 
 if(USE_UPDATER)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_UPDATER)
-  target_include_directories(${LIB_MUDLET_TARGET} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 endif(USE_UPDATER)
 
 # Embed the LeakSanitizer suppression list into the binary so that

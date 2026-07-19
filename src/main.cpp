@@ -63,6 +63,7 @@
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
+#include "LsanSuppressions.h"
 #include "SentryWrapper.h"
 #include "utils.h"
 #include <QFileInfo>
@@ -76,8 +77,6 @@
 #endif
 
 using namespace std::chrono_literals;
-
-#include "LsanSuppressions.h"
 
 // These hooks are only consulted when the LeakSanitizer runtime is linked in
 // (USE_SANITIZER builds, i.e. PTBs and testing builds); elsewhere they are two
