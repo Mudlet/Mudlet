@@ -284,9 +284,10 @@ void Updater::setupPlatformUpdater()
 
         auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
         qWarning() << "Checked for updates:" << updates.size() << "update(s) available";
-        if (!updates.isEmpty()) {
-            emit signal_updateAvailable(updates.size());
+        if (updates.isEmpty()) {
+            return;
         }
+        emit signal_updateAvailable(updates.size());
     });
 
     connect(feed.get(), &dblsqd::Feed::downloadError, this, [this](const QString& error) {

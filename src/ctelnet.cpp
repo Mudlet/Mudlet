@@ -72,6 +72,14 @@ constexpr int AUTO_LOGIN_PASSWORD_DELAY_MS = 1000;
 constexpr int AUTO_LOGIN_MAX_DELAY_MS = 60000;
 
 constexpr size_t BUFFER_SIZE = 100000L;
+
+// How many times processSocketData() may re-enter itself to drain data left
+// over after a decompression pass (compressed input that did not fit in one
+// output buffer, or plain data following the compressed stream). Each level
+// puts ~100 KB (out_buffer) on the stack, so this also caps decompressed
+// output at ~MAX_DECOMPRESSION_RECURSION * BUFFER_SIZE per socket read, which
+// bounds a decompression bomb.
+constexpr int MAX_DECOMPRESSION_RECURSION = 8;
 // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (1 of 7) - investigate switching from using `char[]` to `std::array<char>`
 char loadBuffer[BUFFER_SIZE + 1];
 int loadedBytes;
@@ -876,7 +884,8 @@ void cTelnet::slot_socketDisconnected()
 #if !defined(QT_NO_SSL)
     if (sslerr) {
         // Got a secure connection error that should be shown in the preferences
-        mudlet::self()->showOptionsDialog(qsl("tab_connection"));
+        // of the profile that raised it, not whichever profile is active
+        mudlet::self()->showOptionsDialog(qsl("tab_connection"), mpHost);
     }
 #endif
 
@@ -1327,10 +1336,9 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
         // 0xff (assuming that there are no Telnet protocol sequences in here):
         outData = mudlet::replaceString(outData, "\xff", "\xff\xff");
         return socketOutRaw(outData);
-    } else {
-        mpHost->mAllowToSendCommand = true;
-        return false;
     }
+    mpHost->mAllowToSendCommand = true;
+    return false;
 }
 
 // Data is *expected* to be in the required MUD Server encoding on entry,
@@ -2237,7 +2245,8 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
     for (int i = 0; i < payload.size(); ++i) {
         if (!i && payload.at(i) == NEW_ENVIRON_SEND) {
             continue;
-        } else if (!i) {
+        }
+        if (!i) {
             return; // Invalid response;
         }
 
@@ -2387,7 +2396,8 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
     for (int i = 0; i < payload.size(); ++i) {
         if (!i && payload.at(i) == NEW_ENVIRON_SEND) {
             continue;
-        } else if (!i) {
+        }
+        if (!i) {
             return; // Invalid response;
         }
 
@@ -2634,47 +2644,46 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                 enableMSDP = false;
                 break;
-            } else {
-                std::string output;
-
-                enableMSDP = true;
-                sendTelnetOption(TN_DO, OPT_MSDP);
-                //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
-                //NOTE: MSDP does not need quotes for string/vals
-                output += TN_IAC;
-                output += TN_SB;
-                output += OPT_MSDP;
-                output += MSDP_VAR;
-                output += "LIST";
-                output += MSDP_VAL;
-                output += "COMMANDS";
-                output += TN_IAC;
-                output += TN_SE;
-                // This will be unaffected by Mud Server encoding:
-                socketOutRaw(output);
-
-                // send client configurable variables e.g.
-                // IAC SB MSDP MSDP_VAR "CLIENT_NAME" MSDP_VAL "Mudlet" MSDP_VAR "CLIENT_VERSION" MSDP_VAL "4.19" IAC SE
-                output = TN_IAC;
-                output += TN_SB;
-                output += OPT_MSDP;
-                output += MSDP_VAR;
-                output += "CLIENT_NAME";
-                output += MSDP_VAL;
-                output += "Mudlet";
-                output += MSDP_VAR;
-                output += "CLIENT_VERSION";
-                output += MSDP_VAL;
-                output += encodeAndCookBytes(std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData());
-                output += TN_IAC;
-                output += TN_SE;
-                socketOutRaw(output);
-#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
-                qDebug() << "WE send telnet IAC DO MSDP";
-#endif
-                raiseProtocolEvent("sysProtocolEnabled", "MSDP");
-                break;
             }
+            std::string output;
+
+            enableMSDP = true;
+            sendTelnetOption(TN_DO, OPT_MSDP);
+            //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
+            //NOTE: MSDP does not need quotes for string/vals
+            output += TN_IAC;
+            output += TN_SB;
+            output += OPT_MSDP;
+            output += MSDP_VAR;
+            output += "LIST";
+            output += MSDP_VAL;
+            output += "COMMANDS";
+            output += TN_IAC;
+            output += TN_SE;
+            // This will be unaffected by Mud Server encoding:
+            socketOutRaw(output);
+
+            // send client configurable variables e.g.
+            // IAC SB MSDP MSDP_VAR "CLIENT_NAME" MSDP_VAL "Mudlet" MSDP_VAR "CLIENT_VERSION" MSDP_VAL "4.19" IAC SE
+            output = TN_IAC;
+            output += TN_SB;
+            output += OPT_MSDP;
+            output += MSDP_VAR;
+            output += "CLIENT_NAME";
+            output += MSDP_VAL;
+            output += "Mudlet";
+            output += MSDP_VAR;
+            output += "CLIENT_VERSION";
+            output += MSDP_VAL;
+            output += encodeAndCookBytes(std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData());
+            output += TN_IAC;
+            output += TN_SE;
+            socketOutRaw(output);
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
+            qDebug() << "WE send telnet IAC DO MSDP";
+#endif
+            raiseProtocolEvent("sysProtocolEnabled", "MSDP");
+            break;
         }
 
         if (option == OPT_ATCP) {
@@ -4211,10 +4220,9 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
 
     if (!transcodedMsg.endsWith(qsl(")"))) {
         return;
-    } else {
-        // Met the MSP standard so far. Remove this last right parenthesis.
-        transcodedMsg.chop(1);
     }
+    // Met the MSP standard so far. Remove this last right parenthesis.
+    transcodedMsg.chop(1);
 
     TMediaData mediaData{};
 
@@ -4372,11 +4380,10 @@ void cTelnet::setChannel102Variables(const QString& msg)
     if (msg.size() < 2) {
         qDebug() << "ERROR: channel 102 message size != 2 bytes msg<" << msg << ">";
         return;
-    } else {
-        int _m = msg.at(0).toLatin1();
-        int _a = msg.at(1).toLatin1();
-        mpHost->mLuaInterpreter.setChannel102Table(_m, _a);
     }
+    int _m = msg.at(0).toLatin1();
+    int _a = msg.at(1).toLatin1();
+    mpHost->mLuaInterpreter.setChannel102Table(_m, _a);
 }
 
 void cTelnet::setAutoReconnect(bool status)
@@ -4619,9 +4626,8 @@ void cTelnet::gotPrompt(std::string& mud_data)
             if (mMudData[j] == '\n') {
                 mMudData.erase(j, 1);
                 break;
-            } else {
-                break;
             }
+            break;
         NEXT:
             ++j;
         }
@@ -4806,13 +4812,13 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     mZstream.next_out = Z_NULL;
 
     if (zval == Z_NEED_DICT || zval == Z_DATA_ERROR || zval == Z_STREAM_ERROR || zval == Z_MEM_ERROR) {
-        // The compressed stream is broken (e.g. the server sent uncompressed
-        // data where compressed data was announced). Without this check the
-        // failed inflate() used to eat all further data silently, leaving the
-        // connection looking dead. Warn, drop compression and let the caller
-        // treat the unconsumed input as plain text.
+        // The compressed stream is broken (e.g. the server announced
+        // compression but sent uncompressed data). Only Z_STREAM_END used to be
+        // handled, so a failed inflate() silently ate all further input and the
+        // connection looked dead. Warn, drop compression, and let the caller
+        // reprocess the unconsumed input as plain data.
         qWarning() << "cTelnet::decompressBuffer() ERROR - inflate() failed:" << zError(zval) << "- disabling compression";
-        //: %1 is the decompression error description. Shown when the server sends a corrupted MCCP compressed stream.
+        //: %1 is the decompression error description. Shown when the server sends a corrupt MCCP (compressed) data stream.
         postMessage(tr("[ WARN  ]  - MCCP decompression error (%1), compression disabled.\n"
                        "If the display looks garbled, please reconnect to the game.")
                             .arg(QString::fromUtf8(zError(zval))));
@@ -5165,301 +5171,281 @@ void cTelnet::slot_socketReadyToBeRead()
 
 void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopbackTesting)
 {
-    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (3 of 7) - investigate switching from using `char[]` to `std::array<char>`
-    char out_buffer[BUFFER_SIZE + 10];
-
-    if (amount < 1) {
+    // Guard against deep re-entry when draining leftover (de)compressed data -
+    // each level allocates ~100 KB on the stack for out_buffer. Per-connection
+    // (a member, not thread-wide) so one profile's drain - or a re-entrant
+    // feedTelnet() - cannot spend another connection's budget.
+    if (++mDecompressionRecursionDepth > MAX_DECOMPRESSION_RECURSION) {
+        qWarning() << "cTelnet::processSocketData(...) WARNING - recursion depth exceeded, dropping remaining data";
+        //: Shown when too much data expands out of one compressed read (e.g. a decompression bomb) to process safely.
+        postMessage(tr("[ WARN  ]  - Too much data to process at once, some may have been lost."));
+        --mDecompressionRecursionDepth;
         return;
     }
 
-    // Iterate rather than recurse when decompression leaves unconsumed data
-    // (raw telnet after a compressed stream ends, or another zstd frame in the
-    // same read) - recursing would put another ~100KB out_buffer on the stack
-    // per compressed frame, so many tiny frames in one read could overflow it.
-    while (in_buffer && amount > 0) {
-        in_buffer[amount + 1] = '\0';
+    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (3 of 7) - investigate switching from using `char[]` to `std::array<char>`
+    char out_buffer[BUFFER_SIZE + 10];
 
-        std::string cleandata;
-        cleandata.reserve(static_cast<size_t>(BUFFER_SIZE));
-        qint32 datalen = amount;
-        char* buffer = in_buffer;
+    in_buffer[amount + 1] = '\0';
 
-        char* remainingData = nullptr;
-        int remainingAmount = 0;
+    if (amount == -1) {
+        --mDecompressionRecursionDepth;
+        return;
+    }
 
-        if (mNeedDecompression) {
-            if (mMCCP_version_4 && mMCCP4_encoding == MCCP4_ENCODING_ZSTD) {
-                datalen = decompressMCCP4Buffer(in_buffer, amount, out_buffer);
-                buffer = out_buffer;
-                if (amount > 0) {
-                    remainingData = in_buffer;
-                    remainingAmount = amount;
-                }
-            } else if (mMCCP_version_4 && mMCCP4_encoding == MCCP4_ENCODING_DEFLATE) {
-                datalen = decompressBuffer(in_buffer, amount, out_buffer);
-                buffer = out_buffer;
-                // decompressBuffer() drops out of compression mode on
-                // Z_STREAM_END or a broken stream; anything it did not consume
-                // is plain data that must still be processed
-                if (!mNeedDecompression && amount > 0) {
-                    remainingData = in_buffer;
-                    remainingAmount = amount;
-                }
-            } else if (mMCCP_version_4) {
-                qWarning() << "MCCP4: Unknown encoding type, disabling MCCP4";
-                //: Message shown in the main console when MCCP4 decompression encounters an internal error
-                postMessage(tr("[ WARN  ]  - MCCP4 compression error, disabling. The connection may need to be restarted."));
-                sendTelnetOption(TN_DONT, OPT_COMPRESS4);
-                cleanupMCCP4();
-                datalen = 0;
-            } else {
-                datalen = decompressBuffer(in_buffer, amount, out_buffer);
-                buffer = out_buffer;
-                if (!mNeedDecompression && amount > 0) {
-                    remainingData = in_buffer;
-                    remainingAmount = amount;
-                }
-            }
+    if (amount == 0) {
+        --mDecompressionRecursionDepth;
+        return;
+    }
+
+    std::string cleandata;
+    // Pre-allocate for worst case: decompressed data can be much larger than input
+    // BUFFER_SIZE is 100000, so reserve enough for typical usage
+    cleandata.reserve(static_cast<size_t>(BUFFER_SIZE) * 4);
+    qint32 datalen = 0;
+    datalen = amount;
+    char* buffer = in_buffer;
+
+    char* remainingData = nullptr;
+    int remainingAmount = 0;
+
+    if (mNeedDecompression) {
+        if (mMCCP_version_4 && mMCCP4_encoding == MCCP4_ENCODING_ZSTD) {
+            datalen = decompressMCCP4Buffer(in_buffer, amount, out_buffer);
+        } else if (mMCCP_version_4 && mMCCP4_encoding != MCCP4_ENCODING_DEFLATE) {
+            // Unknown MCCP4 encoding - drop compression; the unconsumed input
+            // is queued below and reprocessed as plain data
+            qWarning() << "MCCP4: Unknown encoding type, disabling MCCP4";
+            //: Message shown in the main console when MCCP4 decompression encounters an internal error
+            postMessage(tr("[ WARN  ]  - MCCP4 compression error, disabling. The connection may need to be restarted."));
+            sendTelnetOption(TN_DONT, OPT_COMPRESS4);
+            cleanupMCCP4();
+            datalen = 0;
+        } else {
+            datalen = decompressBuffer(in_buffer, amount, out_buffer);
         }
-        // See https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
-        buffer[static_cast<size_t>(datalen)] = '\0';
+        buffer = out_buffer;
+        // The decompressors only fill one output buffer per call and drop
+        // out of compression on stream/frame end or a broken stream. Anything
+        // not consumed - more compressed data, or plain data past the stream -
+        // must still be processed, so queue it (see the re-entry at the end).
+        // The recursion cap bounds this if a pass ever makes no progress.
+        if (amount > 0) {
+            remainingData = in_buffer;
+            remainingAmount = amount;
+        }
+    }
+    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
+    buffer[static_cast<size_t>(datalen)] = '\0';
 
-        if (!loopbackTesting && mpHost && mpHost->mpConsole && mpHost->mpConsole->mRecordReplay) {
-            ++mRecordingChunkCount;
-            // QElapsedTimer::elapsed() returns a qint64, it replaces a
-            // previous QTime::elapsed() which returns a int (effectively a
-            // qint32):
-            qint32 recordingChunkInterval = static_cast<qint32>(mRecordingChunkTimer.elapsed()) - mRecordLastChunkMSecTimeOffset;
-            mpHost->mpConsole->mReplayStream << recordingChunkInterval; // 4 bytes
-            mpHost->mpConsole->mReplayStream << datalen;                // 4 bytes
-            mpHost->mpConsole->mReplayStream.writeRawData(buffer, datalen);
+    if (!loopbackTesting && mpHost && mpHost->mpConsole && mpHost->mpConsole->mRecordReplay) {
+        ++mRecordingChunkCount;
+        // QElapsedTimer::elapsed() returns a qint64, it replaces a
+        // previous QTime::elapsed() which returns a int (effectively a
+        // qint32):
+        qint32 recordingChunkInterval = static_cast<qint32>(mRecordingChunkTimer.elapsed()) - mRecordLastChunkMSecTimeOffset;
+        mpHost->mpConsole->mReplayStream << recordingChunkInterval; // 4 bytes
+        mpHost->mpConsole->mReplayStream << datalen;                // 4 bytes
+        mpHost->mpConsole->mReplayStream.writeRawData(buffer, datalen);
 #if defined(DEBUG_RECORDING)
-            qDebug().noquote().nospace() << "cTelnet::processSocketData(...) INFO - recording chunk: " << mRecordingChunkCount << " is " << datalen
-                                         << " bytes and has an interval of: " << recordingChunkInterval << " mSecond since the previous chunk.";
+        qDebug().noquote().nospace() << "cTelnet::processSocketData(...) INFO - recording chunk: " << mRecordingChunkCount << " is " << datalen
+                                     << " bytes and has an interval of: " << recordingChunkInterval << " mSecond since the previous chunk.";
 #endif
-        }
+    }
 
-        recvdGA = false;
+    recvdGA = false;
 
-        for (int i = 0; i < datalen; ++i) {
-            char ch = buffer[i];
+    for (int i = 0; i < datalen; ++i) {
+        char ch = buffer[i];
 
-            if (iac || iac2 || insb || (ch == TN_IAC)) {
-                if (!(iac || iac2 || insb) && (ch == TN_IAC)) {
-                    iac = true;
-                    command += ch;
-                } else if (iac && (ch == TN_IAC) && (!insb)) {
-                    //2. seq. of two IACs
-                    iac = false;
-                    cleandata += ch;
-                    command = "";
-                } else if (iac && (!insb) && ((ch == TN_WILL) || (ch == TN_WONT) || (ch == TN_DO) || (ch == TN_DONT))) {
-                    //3. IAC DO/DONT/WILL/WONT
-                    iac = false;
-                    iac2 = true;
-                    command += ch;
-                } else if (iac2) {
-                    //4. IAC DO/DONT/WILL/WONT <command code>
-                    iac2 = false;
-                    command += ch;
-                    processTelnetCommand(command);
-                    command = "";
-                } else if (iac && (!insb) && (ch == TN_SB)) {
-                    //5. IAC SB
-                    iac = false;
-                    insb = true;
-                    command += ch;
-                } else if (iac && (!insb) && (ch == TN_SE)) {
-                    //6. IAC SE without IAC SB - error - ignored
-                    command = "";
-                    iac = false;
-                } else if (insb) {
-                    // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
-                    // IAC SB COMPRESS2 IAC SE for MCCP v2
-                    if ((mMCCP_version_1 || mMCCP_version_2) && (!mNeedDecompression)) {
-                        // TODO this code looks ahead instead of using the state machine.
-                        // This is not a good idea.
-                        char _ch = buffer[i];
-                        if ((_ch == OPT_COMPRESS) || (_ch == OPT_COMPRESS2)) {
-                            bool _compress = false;
+        if (iac || iac2 || insb || (ch == TN_IAC)) {
+            if (!(iac || iac2 || insb) && (ch == TN_IAC)) {
+                iac = true;
+                command += ch;
+            } else if (iac && (ch == TN_IAC) && (!insb)) {
+                //2. seq. of two IACs
+                iac = false;
+                cleandata += ch;
+                command = "";
+            } else if (iac && (!insb) && ((ch == TN_WILL) || (ch == TN_WONT) || (ch == TN_DO) || (ch == TN_DONT))) {
+                //3. IAC DO/DONT/WILL/WONT
+                iac = false;
+                iac2 = true;
+                command += ch;
+            } else if (iac2) {
+                //4. IAC DO/DONT/WILL/WONT <command code>
+                iac2 = false;
+                command += ch;
+                processTelnetCommand(command);
+                command = "";
+            } else if (iac && (!insb) && (ch == TN_SB)) {
+                //5. IAC SB
+                iac = false;
+                insb = true;
+                command += ch;
+            } else if (iac && (!insb) && (ch == TN_SE)) {
+                //6. IAC SE without IAC SB - error - ignored
+                command = "";
+                iac = false;
+            } else if (insb) {
+                // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
+                // IAC SB COMPRESS2 IAC SE for MCCP v2
+                if ((mMCCP_version_1 || mMCCP_version_2) && (!mNeedDecompression)) {
+                    // TODO this code looks ahead instead of using the state machine.
+                    // This is not a good idea.
+                    char _ch = buffer[i];
+                    if ((_ch == OPT_COMPRESS) || (_ch == OPT_COMPRESS2)) {
+                        bool _compress = false;
 
-                            if ((i > 1) && (i + 2 < datalen)) {
-                                if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_WILL) && (buffer[i + 2] == TN_SE)) {
-                                    qDebug() << "MCCP version 1 starting sequence";
-                                    _compress = true;
-                                }
-
-                                if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_IAC) && (buffer[i + 2] == TN_SE)) {
-                                    qDebug() << "MCCP version 2 starting sequence";
-                                    _compress = true;
-                                }
+                        if ((i > 1) && (i + 2 < datalen)) {
+                            if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_WILL) && (buffer[i + 2] == TN_SE)) {
+                                qDebug() << "MCCP version 1 starting sequence";
+                                _compress = true;
                             }
 
-                            if (_compress) {
-                                mNeedDecompression = true;
-                                // from this position in stream onwards, data will be compressed by zlib
-                                gotRest(cleandata);
-                                cleandata = "";
-                                initStreamDecompressor();
-                                buffer += i + 3; //bugfix: BenH
-                                int restLength = datalen - i - 3;
-
-                                if (restLength > 0) {
-                                    datalen = decompressBuffer(buffer, restLength, out_buffer);
-                                    // the same chunk may contain data past the end of the
-                                    // compressed stream (decompressBuffer() advanced
-                                    // 'buffer' to it); queue it for reprocessing
-                                    if (!mNeedDecompression && restLength > 0) {
-                                        remainingData = buffer;
-                                        remainingAmount = restLength;
-                                    }
-                                    buffer = out_buffer;
-                                    i = -1; // start processing buffer from the beginning.
-                                } else {
-                                    datalen = 0;
-                                    i = -1; // end the loop, this will make i and datalen the same.
-                                }
-                                // compressed data starts in clean state
-                                iac = false;
-                                insb = false;
-                                command = "";
-                                goto MAIN_LOOP_END;
+                            if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_IAC) && (buffer[i + 2] == TN_SE)) {
+                                qDebug() << "MCCP version 2 starting sequence";
+                                _compress = true;
                             }
                         }
-                    }
 
-                    //7. inside IAC SB
-                    command += ch;
-
-                    if (iac && (ch == TN_SE)) { //IAC SE - end of subcommand
-                        bool wasDecompressing = mNeedDecompression;
-                        processTelnetCommand(command);
-                        command = "";
-                        iac = false;
-                        insb = false;
-
-                        // Handle mid-stream compression start for MCCP4
-                        // (analogous to MCCP v1/v2 look-ahead above)
-                        if (!wasDecompressing && mNeedDecompression && mMCCP_version_4) {
+                        if (_compress) {
+                            mNeedDecompression = true;
+                            // from this position in stream onwards, data will be compressed by zlib
                             gotRest(cleandata);
                             cleandata = "";
-                            int restLength = datalen - i - 1;
+                            initStreamDecompressor();
+                            buffer += i + 3; //bugfix: BenH
+                            int restLength = datalen - i - 3;
+
                             if (restLength > 0) {
-                                char* restBuffer = buffer + i + 1;
-                                if (mMCCP4_encoding == MCCP4_ENCODING_ZSTD) {
-                                    datalen = decompressMCCP4Buffer(restBuffer, restLength, out_buffer);
-                                    if (restLength > 0) {
-                                        remainingData = restBuffer;
-                                        remainingAmount = restLength;
-                                    }
-                                } else {
-                                    datalen = decompressBuffer(restBuffer, restLength, out_buffer);
-                                    if (!mNeedDecompression && restLength > 0) {
-                                        remainingData = restBuffer;
-                                        remainingAmount = restLength;
-                                    }
+                                datalen = decompressBuffer(buffer, restLength, out_buffer);
+                                // queue input left over past this compressed chunk
+                                // (decompressBuffer() advanced 'buffer' to it) for
+                                // reprocessing at the end of this pass
+                                if (restLength > 0) {
+                                    remainingData = buffer;
+                                    remainingAmount = restLength;
                                 }
                                 buffer = out_buffer;
-                                i = -1;
+                                i = -1; // start processing buffer from the beginning.
                             } else {
                                 datalen = 0;
-                                i = -1;
+                                i = -1; // end the loop, this will make i and datalen the same.
                             }
+                            // compressed data starts in clean state
+                            iac = false;
+                            insb = false;
+                            command = "";
                             goto MAIN_LOOP_END;
                         }
-                    } else if (iac && (ch == TN_IAC)) { // escaped TN_IAC
-                        command.pop_back();
-                        iac = false;
-                    } else if (iac) {
-                        // Telnet options within a subcommand are not supported.
-                        // We assume that the SE went missing, possibly due to a
-                        // server bug, and try to recover.
-                        // Cf. https://github.com/Mudlet/Mudlet/issues/4385
-                        command.pop_back();
-                        command += TN_SE;
-                        processTelnetCommand(command);
-
-                        if (!mIncompleteSB) {
-                            mIncompleteSB = true;
-                            qWarning(R"("TELNET: the server did not properly complete a subnegotiation (code %02x).
-Some data loss is likely - please mention this problem to the game admins.)",
-                                     command[2]);
-                        }
-
-                        // Re-enter the state machine.
-                        command = TN_IAC;
-                        iac = true;
-                        insb = false;
-                        i -= 1;
-                    } else if (ch == TN_IAC) {
-                        iac = true;
                     }
-                } else {
-                    //8. IAC fol. by something else than IAC, SB, SE, DO, DONT, WILL, WONT
-                    iac = false;
-                    command += ch;
+                }
+
+                //7. inside IAC SB
+                command += ch;
+
+                if (iac && (ch == TN_SE)) { //IAC SE - end of subcommand
                     processTelnetCommand(command);
-                    //this could have set receivedGA to true; we'll handle that later
                     command = "";
+                    iac = false;
+                    insb = false;
+                } else if (iac && (ch == TN_IAC)) { // escaped TN_IAC
+                    command.pop_back();
+                    iac = false;
+                } else if (iac) {
+                    // Telnet options within a subcommand are not supported.
+                    // We assume that the SE went missing, possibly due to a
+                    // server bug, and try to recover.
+                    // Cf. https://github.com/Mudlet/Mudlet/issues/4385
+                    command.pop_back();
+                    command += TN_SE;
+                    processTelnetCommand(command);
+
+                    if (!mIncompleteSB) {
+                        mIncompleteSB = true;
+                        qWarning(R"("TELNET: the server did not properly complete a subnegotiation (code %02x).
+Some data loss is likely - please mention this problem to the game admins.)",
+                                 command[2]);
+                    }
+
+                    // Re-enter the state machine.
+                    command = TN_IAC;
+                    iac = true;
+                    insb = false;
+                    i -= 1;
+                } else if (ch == TN_IAC) {
+                    iac = true;
                 }
             } else {
-                if (ch == TN_BELL) {
-                    // Flash taskbar for 3 seconds on the telnet bell, note
-                    // by processing it here rather than in the TTextEdit class
-                    // it is not possible to fake/test it with a Lua
-                    // feedTriggers(...) call - OTOH doing it there would make
-                    // a beep every time the screen was refreshed!
-                    // See https://github.com/Mudlet/Mudlet/issues/5836 - provide option to actually make a (void) QApplication::beep() or a user-selected sound (different for each profile) and/or instead of the visual alert
-                    QApplication::alert(mudlet::self(), 3000);
+                //8. IAC fol. by something else than IAC, SB, SE, DO, DONT, WILL, WONT
+                iac = false;
+                command += ch;
+                processTelnetCommand(command);
+                //this could have set receivedGA to true; we'll handle that later
+                command = "";
+            }
+        } else {
+            if (ch == TN_BELL) {
+                // Flash taskbar for 3 seconds on the telnet bell, note
+                // by processing it here rather than in the TTextEdit class
+                // it is not possible to fake/test it with a Lua
+                // feedTriggers(...) call - OTOH doing it there would make
+                // a beep every time the screen was refreshed!
+                // TODO: https://github.com/Mudlet/Mudlet/issues/5836 - provide option to actually make a (void) QApplication::beep() or a user-selected sound (different for each profile) and/or instead of the visual alert
+                QApplication::alert(mudlet::self(), 3000);
 
-                    if (!mudlet::self()->muteGame()) {
-                        QApplication::beep();
-                    }
-                }
-
-                if (ch != '\r' && ch != '\0') {
-                    cleandata += ch;
+                if (!mudlet::self()->muteGame()) {
+                    QApplication::beep();
                 }
             }
-        MAIN_LOOP_END:;
-            if (recvdGA) {
-                if (!mFORCE_GA_OFF) { //FIXME: isn't initialized correctly
-                    mGA_Driver = true;
 
-                    if (mCommands > 0) {
-                        mCommands--;
-
-                        if (networkLatencyTimer.elapsed() > 2000) {
-                            mCommands = 0;
-                        }
-                    }
-
-                    cleandata.push_back('\xff');
-                    recvdGA = false;
-                    gotPrompt(cleandata);
-                    cleandata = "";
-                } else {
-                    cleandata.push_back('\n');
-                }
+            if (ch != '\r' && ch != '\0') {
+                cleandata += ch;
             }
-        } //for
-
-        if (!cleandata.empty()) {
-            gotRest(cleandata);
         }
+    MAIN_LOOP_END:;
+        if (recvdGA) {
+            if (!mFORCE_GA_OFF) { //FIXME: isn't initialized correctly
+                mGA_Driver = true;
 
-        // Loop again over any data left after a compressed stream ended mid-chunk
-        // (e.g. raw telnet after compression ends, or another zstd frame in
-        // the same TCP read)
-        in_buffer = remainingData;
-        amount = remainingAmount;
-    } //while
+                if (mCommands > 0) {
+                    mCommands--;
+
+                    if (networkLatencyTimer.elapsed() > 2000) {
+                        mCommands = 0;
+                    }
+                }
+
+                cleandata.push_back('\xff');
+                recvdGA = false;
+                gotPrompt(cleandata);
+                cleandata = "";
+            } else {
+                cleandata.push_back('\n');
+            }
+        }
+    } //for
+
+    if (!cleandata.empty()) {
+        gotRest(cleandata);
+    }
+
+    // Reprocess data left over after this decompression pass (more compressed
+    // data than fit in one output buffer, or plain data past the end of the
+    // compressed stream). finalize() runs only at the deepest level.
+    if (remainingData && remainingAmount > 0) {
+        processSocketData(remainingData, remainingAmount, loopbackTesting);
+        --mDecompressionRecursionDepth;
+        return;
+    }
 
     if (mpHost && mpHost->mpConsole) {
         mpHost->mpConsole->finalize();
     }
 
     mRecordLastChunkMSecTimeOffset = mRecordingChunkTimer.elapsed();
+    --mDecompressionRecursionDepth;
 }
 
 void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
