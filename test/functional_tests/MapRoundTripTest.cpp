@@ -277,8 +277,10 @@ private:
         QByteArray needleBytes;
         QDataStream out(&needleBytes, QIODevice::WriteOnly);
         out << needle;
-        // Skip the quint32 length prefix:
-        return raw.contains(needleBytes.mid(4));
+        // Keep the quint32 length prefix so a needle that is a byte prefix of
+        // a longer string in the file (e.g. "system.fallback_mapSymbolFont"
+        // vs. "system.fallback_mapSymbolFontFudgeFactor") cannot match it:
+        return raw.contains(needleBytes);
     }
 
     void verifyArea(TArea* pArea, const AreaBounds& bounds, const QString& areaLabel)
@@ -523,9 +525,8 @@ private slots:
         pSourceMap->mUserData.insert(qsl("system.fallback_mapSymbolFont"), qsl("Stale Font,10,-1,5,400,0,0,0,0,0"));
         pSourceMap->mUserData.insert(qsl("system.fallback_mapSymbolFontFudgeFactor"), qsl("9.99"));
         pSourceMap->mUserData.insert(qsl("system.fallback_onlyUseMapSymbolFont"), qsl("false"));
-        // A unique value as "system.fallback_symbol" is a byte prefix of the
-        // legitimately saved "system.fallback_symbol_color" key, so only the
-        // value can prove this key made it into the file:
+        // The unique value doubles as the proof below that this key really
+        // made it into the file:
         pSourceR1->userData.insert(qsl("system.fallback_symbol"), qsl("stale-room-symbol-junk"));
 
         const int saveVersion = pSourceMap->mDefaultVersion;
