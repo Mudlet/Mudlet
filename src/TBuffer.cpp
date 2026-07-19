@@ -261,6 +261,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mLocalGotESC(other.mLocalGotESC)
 , mLocalGotCSI(other.mLocalGotCSI)
 , mLocalGotOSC(other.mLocalGotOSC)
+, mLocalGotString(other.mLocalGotString)
 , mLocalIncompleteSequenceBytes(other.mLocalIncompleteSequenceBytes)
 , mProcessingLocalFeed(other.mProcessingLocalFeed)
 , lastLoggedFromLine(other.lastLoggedFromLine)
@@ -351,6 +352,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mLocalGotESC = other.mLocalGotESC;
         mLocalGotCSI = other.mLocalGotCSI;
         mLocalGotOSC = other.mLocalGotOSC;
+        mLocalGotString = other.mLocalGotString;
         mLocalIncompleteSequenceBytes = other.mLocalIncompleteSequenceBytes;
         mProcessingLocalFeed = other.mProcessingLocalFeed;
         lastLoggedFromLine = other.lastLoggedFromLine;
@@ -571,13 +573,15 @@ void TBuffer::swapParserSequenceState()
     std::swap(mGotESC, mLocalGotESC);
     std::swap(mGotCSI, mLocalGotCSI);
     std::swap(mGotOSC, mLocalGotOSC);
+    std::swap(mGotString, mLocalGotString);
     std::swap(mIncompleteSequenceBytes, mLocalIncompleteSequenceBytes);
 }
 
 void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServer)
 {
-    // mGotESC/mGotCSI/mGotOSC and mIncompleteSequenceBytes persist between
-    // calls so that a sequence split across Game Server packets still parses.
+    // mGotESC/mGotCSI/mGotOSC/mGotString and mIncompleteSequenceBytes persist
+    // between calls so that a sequence split across Game Server packets still
+    // parses.
     // Locally generated text (feedTriggers(), MMCP chat messages, MXP
     // insertions) runs through the same parser, so swap in a separate set of
     // that state for the duration of such a feed - otherwise local text
@@ -763,17 +767,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 continue;
             }
             // A control character straight after the ESC means the escape
-            // sequence is malformed - abandon it and process the character
-            // normally:
-        }
-
-        if (mGotESC) {
-            // ESC was not followed by '[' or ']', so it does not introduce a
-            // CSI or OSC sequence (e.g. ESC c, ESC 7, or a charset designator
-            // like ESC(B). Clear the latch here - otherwise it stays set and a
-            // later literal '[' or ']' anywhere in the stream is misparsed as a
-            // sequence introducer, swallowing the text that follows it.
-            mGotESC = false;
+            // sequence is malformed - abandon it (the latch was already
+            // cleared above) and process the character normally:
         }
 
         if (mGotCSI) {
