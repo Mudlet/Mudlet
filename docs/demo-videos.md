@@ -60,10 +60,21 @@ SIZE=1920x1080
 rm -rf "$OUT" && mkdir -p "$OUT/shots"
 export DISPLAY=$DPY
 
+# also fires on interruption, so a killed run doesn't leave a stale Xvfb
+# behind to block the next one
+cleanup() {
+    kill "${MUDLET_PID:-}" 2>/dev/null
+    if kill -INT "${FFMPEG_PID:-}" 2>/dev/null; then sleep 3; fi
+    kill "${OPENBOX_PID:-}" "${XVFB_PID:-}" 2>/dev/null
+}
+trap cleanup EXIT
+trap 'exit 1' INT TERM   # route interrupts through the EXIT trap
+
 Xvfb "$DPY" -screen 0 "${SIZE}x24" &
 XVFB_PID=$!
 sleep 2
 openbox &          # window decorations look better and title bars double as evidence
+OPENBOX_PID=$!
 sleep 1
 ffmpeg -y -loglevel error -f x11grab -video_size "$SIZE" -framerate 12 -i "$DPY" \
        -c:v libx264 -preset ultrafast -pix_fmt yuv420p "$OUT/raw.mkv" &
@@ -79,7 +90,7 @@ session() { # $1 = mudlet binary, $2 = tag ("before"/"after"), $3 = extra Mudlet
     # e.g. appearance=2 for dark mode (themes the app chrome, not the console)
     printf '[General]\nuiTourShown=true\n%s\n' "$3" > "$home/.config/mudlet/Mudlet.ini"
     HOME=$home QT_QPA_PLATFORM=xcb "$1" --profile "Mudlet Tutorial" &
-    local mudlet_pid=$!
+    MUDLET_PID=$!    # global so the EXIT trap can reach it
     # --profile opens a small window; normalize the geometry as soon as the
     # window exists so the profile finishes loading at full size on camera
     # (1040 leaves room for the openbox titlebar). head -1 is fine at startup -
@@ -102,7 +113,7 @@ session() { # $1 = mudlet binary, $2 = tag ("before"/"after"), $3 = extra Mudlet
     # sleep 4       # hold each money shot ~4 s: the raw hold caps what the edit can keep
     # mark "$2 print output"; import -window root "$OUT/shots/$2-02-step.png"
 
-    kill $mudlet_pid 2>/dev/null
+    kill $MUDLET_PID 2>/dev/null
     sleep 2
 }
 
@@ -114,9 +125,10 @@ session "$AFTER_BIN" after ''
 
 kill -INT $FFMPEG_PID 2>/dev/null
 sleep 3             # let ffmpeg flush; SIGTERM/SIGKILL truncates the file
-kill $XVFB_PID 2>/dev/null
+FFMPEG_PID=""
 ffmpeg -y -loglevel error -i "$OUT/raw.mkv" -c copy "$OUT/raw.mp4"
 echo "recording: $OUT/raw.mp4  screenshots: $OUT/shots/"
+# the EXIT trap shuts down openbox and Xvfb
 ```
 
 ## Post-production
@@ -229,7 +241,9 @@ Recording plumbing:
 - Xvfb, ffmpeg, and Mudlet must all live inside one script invocation (or a
   `setsid`-detached process group): background processes started from a
   foreground shell die when that shell call returns in most CI and agent
-  sandboxes.
+  sandboxes. The reverse failure exists too - a run killed without cleanup
+  leaves a stale Xvfb that blocks the display for the next run, hence the
+  EXIT trap in the reference script.
 - Stop ffmpeg with SIGINT and give it ~3 seconds to flush - SIGTERM/SIGKILL
   truncates the file. Record to `.mkv` (truncation-safe), then remux to
   `.mp4` with `-c copy`.
