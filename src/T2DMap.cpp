@@ -4605,6 +4605,9 @@ void T2DMap::populateUserContextMenus(QMenu& menu)
 
 void T2DMap::slot_userAction(QString uniqueName)
 {
+    if (!mpMap) {
+        return;
+    }
     TEvent event{};
     const QStringList userEvent = mpMap->mUserActions.value(uniqueName);
     event.mArgumentList.append(userEvent[0]);
