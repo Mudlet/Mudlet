@@ -2,8 +2,9 @@ describe("Tests C++ functions in the Miscallaneous category", function()
     describe("Tests the functionality of sendMSDP", function()
       it("should return nil and an error message when MSDP cannot be sent", function()
         local ok, err = sendMSDP("CLIENT_NAME", "Mudlet")
-        if ok == true then
+        if ok ~= nil then
           -- connected to a server which negotiated MSDP, so the send succeeded
+          assert.is_true(ok)
           return
         end
         assert.is_nil(ok)
