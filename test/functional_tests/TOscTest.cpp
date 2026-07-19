@@ -170,6 +170,16 @@ private:
     return std::nullopt;
   }
 
+  // Joins all buffer lines into one string.
+  QString allBufferText() {
+    TMainConsole *console = mpHost->mpConsole;
+    QString allText;
+    for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
+      allText += console->buffer.line(i);
+    }
+    return allText;
+  }
+
 private slots:
   // Start mudlet and create a profile once for all tests.
   void initTestCase() {
@@ -277,6 +287,52 @@ private slots:
                qPrintable(qsl("Expected buffer to contain '%1' but got '%2'")
                               .arg(expectedText, allText)));
     }
+  }
+
+  // =====================================================================
+  // Split sequence / interleaved local feed tests
+  // =====================================================================
+
+  // A CSI/OSC sequence split across two server packets must still parse when
+  // locally generated text (a feedTriggers() call, an MMCP chat message)
+  // arrives in between: the local feed runs through the same parser and must
+  // not consume or clear the pending ESC latch of the server stream.
+  void test_SplitSequenceSurvivesInterleavedLocalFeed_data() {
+    QTest::addColumn<QString>("secondPacket");
+    QTest::addColumn<QString>("mustNotContain");
+
+    QTest::newRow("split CSI") << qsl("[32mAfter\n") << qsl("[32mAfter");
+    QTest::newRow("split OSC")
+        << qsl("]2;Window Title\x07"
+               "After\n")
+        << qsl("]2;Window Title");
+  }
+
+  void test_SplitSequenceSurvivesInterleavedLocalFeed() {
+    QFETCH(QString, secondPacket);
+    QFETCH(QString, mustNotContain);
+
+    // First server packet ends in a bare ESC...
+    std::string part1{"Before\n\x1b"};
+    mpHost->mpConsole->printOnDisplay(part1, true);
+    // ...then locally generated text arrives in between...
+    std::string localText{"local tick\n"};
+    mpHost->mpConsole->printOnDisplay(localText, false);
+    // ...then the server packet with the rest of the sequence:
+    std::string part2{secondPacket.toStdString()};
+    mpHost->mpConsole->printOnDisplay(part2, true);
+
+    const QString allText = allBufferText();
+    QVERIFY2(!allText.contains(mustNotContain),
+             qPrintable(qsl("Sequence fragment '%1' leaked into display: '%2'")
+                            .arg(mustNotContain, allText)));
+    QVERIFY2(allText.contains(qsl("After")),
+             qPrintable(
+                 qsl("Text after the split sequence went missing from: '%1'")
+                     .arg(allText)));
+    QVERIFY2(allText.contains(qsl("local tick")),
+             qPrintable(qsl("Locally fed text went missing from: '%1'")
+                            .arg(allText)));
   }
 
   // =====================================================================
