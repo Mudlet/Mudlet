@@ -430,6 +430,13 @@ private:
         const QString fileName = qsl("%1/map_v%2.dat").arg(mSaveDir.path()).arg(saveVersion);
         QVERIFY2(saveMapToFile(mpSource->mpMap.data(), fileName, saveVersion), qPrintable(qsl("failed to save map at format version %1").arg(saveVersion)));
 
+        // Saving at any format must not leak system.fallback_* keys into the
+        // live source map's or rooms' user data - room 1 carries a symbol and
+        // a symbol color, room 3 is hidden:
+        QCOMPARE(mpSource->mpMap->mUserData, expectedMapUserData());
+        QCOMPARE(mpSource->mpMap->mpRoomDB->getRoom(scmRoom1)->userData, expectedRoom1UserData());
+        QVERIFY(mpSource->mpMap->mpRoomDB->getRoom(scmRoom3)->userData.isEmpty());
+
         TMap* pTargetMap = mpTarget->mpMap.data();
         pTargetMap->mapClear();
         QVERIFY2(pTargetMap->restore(fileName), qPrintable(qsl("failed to restore map saved at format version %1").arg(saveVersion)));

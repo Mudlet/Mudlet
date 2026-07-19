@@ -892,6 +892,10 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             if (!hiddenString.compare(QLatin1String("true"), Qt::CaseInsensitive)) {
                 hidden = true;
             }
+        } else {
+            // The stream carries the authoritative value so any copy of the
+            // fallback key in the user data is stale:
+            userData.remove(QLatin1String("system.fallback_hidden"));
         }
         if (version >= 19) {
             // Clean up a stale fallback key that past versions could leave
@@ -920,6 +924,10 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         if (userData.contains(symbolColorFallbackKey)) {
             mSymbolColor = QColor(userData.take(symbolColorFallbackKey));
         }
+    } else {
+        // The stream carries the authoritative value so any copy of the
+        // fallback key in the user data is stale:
+        userData.remove(QLatin1String("system.fallback_symbol_color"));
     }
 
     // Border properties are stored in userData (not binary stream) to avoid map bloat
