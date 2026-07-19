@@ -489,6 +489,12 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 
     // if the update is already installed, then the button says 'Restart' - do so
     if (mUpdateInstalled) {
+        // a restart is already underway - don't launch a second instance from
+        // another click on a still-visible dialog or toolbar button
+        if (mRestartInProgress) {
+            return;
+        }
+
         // defer to next event loop iteration so the dialog close happens after the button click handler returns
         QTimer::singleShot(0, this, [=, this]() {
             updateDialog->close();
@@ -567,12 +573,24 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
             return;
         }
 
+        mRestartInProgress = true;
+        // Closing the last window would otherwise pop the update dialog back
+        // up and keep this instance running alongside the restarted one:
+        if (updateDialog) {
+            updateDialog->disableAutoShow();
+        }
         if (mudlet::self()) {
             mudlet::self()->forceClose();
         }
         // Mudlet is not restarted here - the installer is expected to handle launching the updated version
         return;
 #else
+        mRestartInProgress = true;
+        // Closing the last window would otherwise pop the update dialog back
+        // up and keep this instance running alongside the restarted one:
+        if (updateDialog) {
+            updateDialog->disableAutoShow();
+        }
         if (mudlet::self()) {
             mudlet::self()->forceClose();
         }
