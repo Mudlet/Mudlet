@@ -594,7 +594,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
         if (mudlet::self()) {
             mudlet::self()->forceClose();
         }
-        if (!QProcess::startDetached(qApp->arguments()[0], qApp->arguments())) {
+        if (!QProcess::startDetached(qApp->arguments()[0], qApp->arguments().mid(1))) {
             qWarning() << "Failed to restart Mudlet after update";
             //: Error title for dialog shown when Mudlet fails to restart after updating
             QMessageBox::critical(nullptr,
