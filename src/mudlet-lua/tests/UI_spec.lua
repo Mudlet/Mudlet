@@ -1462,6 +1462,7 @@ describe("Tests UI functions", function()
     -- against the same profile otherwise
     local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
     local toolbarName = "bustedTempButtonToolbar" .. suffix
+    local buttonToolbarName = "bustedTempButtonParent" .. suffix
     local buttonName = "bustedTempButton" .. suffix
 
     it("tempButtonToolbar returns the created toolbar's ID", function()
@@ -1472,7 +1473,11 @@ describe("Tests UI functions", function()
     end)
 
     it("tempButton returns the created button's ID", function()
-      local buttonId = tempButton(toolbarName, buttonName, 0)
+      -- own toolbar so this test doesn't depend on the previous one
+      local parentId = tempButtonToolbar(buttonToolbarName, 0, 0)
+      assert.are.equal("number", type(parentId))
+
+      local buttonId = tempButton(buttonToolbarName, buttonName, 0)
       assert.are.equal("number", type(buttonId))
       assert.is_true(buttonId > 0)
       assert.are.equal(1, exists(buttonId, "button"))
