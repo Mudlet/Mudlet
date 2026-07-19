@@ -5221,7 +5221,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                 }
             }
         }
-        // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
+        // See https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
         buffer[static_cast<size_t>(datalen)] = '\0';
 
         if (!loopbackTesting && mpHost && mpHost->mpConsole && mpHost->mpConsole->mRecordReplay) {
@@ -5409,7 +5409,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
                     // it is not possible to fake/test it with a Lua
                     // feedTriggers(...) call - OTOH doing it there would make
                     // a beep every time the screen was refreshed!
-                    // TODO: https://github.com/Mudlet/Mudlet/issues/5836 - provide option to actually make a (void) QApplication::beep() or a user-selected sound (different for each profile) and/or instead of the visual alert
+                    // See https://github.com/Mudlet/Mudlet/issues/5836 - provide option to actually make a (void) QApplication::beep() or a user-selected sound (different for each profile) and/or instead of the visual alert
                     QApplication::alert(mudlet::self(), 3000);
 
                     if (!mudlet::self()->muteGame()) {
