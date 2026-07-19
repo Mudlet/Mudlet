@@ -19,6 +19,7 @@ set(FUNCTIONAL_TEST_SOURCES
 
 set(FUNCTIONAL_TEST_UTILS
     TelnetServerStub.cpp
+    DiscordIpcServerStub.cpp
 )
 
 foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
