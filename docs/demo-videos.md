@@ -1,12 +1,8 @@
----
-name: before-after-videos
-description: >-
-  Record a before & after demo video of a Mudlet bug fix or UI change:
-  headless recording on Linux with Xvfb/xdotool/ffmpeg, then trimming and
-  labelling the result for attaching to a pull request or issue.
-argument-hint: Optional issue/PR number and what to demonstrate
-user-invocable: true
----
+# Recording before & after demo videos
+
+Record a before & after demo video of a Mudlet bug fix or UI change:
+headless recording on Linux with Xvfb/xdotool/ffmpeg, then trimming and
+labelling the result for attaching to a pull request or issue.
 
 ## When to use
 

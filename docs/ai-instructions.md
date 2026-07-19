@@ -169,7 +169,7 @@ if (!file.open(QIODevice::ReadOnly)) {
 
 ## Demo videos
 
-To demonstrate a bug fix or UI change with a screen recording, follow the before & after video workflow in `.github/skills/before-after-videos/SKILL.md` (Linux/Xvfb; records headlessly, then trims and labels the result for attaching to a PR).
+To demonstrate a bug fix or UI change with a screen recording, follow the before & after video workflow in `docs/demo-videos.md` (Linux/Xvfb; records headlessly, then trims and labels the result for attaching to a PR).
 
 ## Build system notes
 
