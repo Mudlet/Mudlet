@@ -43,6 +43,7 @@
 #include "GMCPAuthenticator.h"
 #include "TTextCodec.h"
 #include "TEncodingHelper.h"
+#include "utils.h"
 #include "TTextEdit.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
@@ -74,7 +75,7 @@ constexpr size_t BUFFER_SIZE = 100000L;
 // (GMCP/MSDP/ATCP/...) are far smaller; this only guards against a server that
 // opens an IAC SB and never sends IAC SE, which would otherwise grow the
 // accumulation buffer without bound across reads.
-constexpr size_t MAX_TELNET_SUBNEGOTIATION_LENGTH = 1024 * 1024;
+constexpr size_t MAX_TELNET_SUBNEGOTIATION_LENGTH = 5_MB;
 // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (1 of 7) - investigate switching from using `char[]` to `std::array<char>`
 char loadBuffer[BUFFER_SIZE + 1];
 int loadedBytes;

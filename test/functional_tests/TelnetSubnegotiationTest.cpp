@@ -17,13 +17,17 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QDeadlineTimer>
 #include <QtTest/QtTest>
+
+#include <chrono>
 
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
+#include "utils.h"
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -31,6 +35,8 @@ extern void qInitResources_additional_splash_screens();
 extern void qInitResources_mudlet_fonts_common();
 extern void qInitResources_mudlet_fonts_posix();
 void initializeQRCResourcesForSubnegotiation();
+
+using namespace std::chrono_literals;
 
 // Exercises recovery from a hostile/broken telnet subnegotiation: an IAC SB
 // whose payload runs past the size cap without ever sending IAC SE. The rest of
@@ -68,11 +74,11 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
 
-        // MAX_TELNET_SUBNEGOTIATION_LENGTH in ctelnet.cpp is 1 MiB; send more
+        // MAX_TELNET_SUBNEGOTIATION_LENGTH in ctelnet.cpp is 5MB; send more
         // than that inside the subnegotiation, with no IAC SE, then a marker
         // that (only if recovery is broken) would leak into the display, then
         // the real IAC SE and a line of ordinary text.
-        constexpr int overCapPadding = 1024 * 1024 + 1024;
+        constexpr qsizetype overCapPadding = 5_MB + 1_KB;
         QByteArray data;
         data.append(TN_IAC);
         data.append(TN_SB);
@@ -106,24 +112,24 @@ private slots:
     {
         QTimer::singleShot(0, qApp, [hostname, address, port]() {
             mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
         });
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
+        if (!spy.wait(5s)) {
             QFAIL("Profile took too long to load.");
         }
         auto host = mudlet::self()->getActiveHost();
@@ -132,7 +138,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -150,13 +156,13 @@ private slots:
     }
 
     // Polls the console buffer until the expected substring appears, with a timeout
-    bool waitForBufferToContain(const QString& text, int timeoutMs = 5000)
+    bool waitForBufferToContain(const QString& text, std::chrono::milliseconds timeout = 5s)
     {
         return QTest::qWaitFor(
                 [&]() {
                     return bufferContains(text);
                 },
-                timeoutMs);
+                QDeadlineTimer(timeout));
     }
 
     // Utility function

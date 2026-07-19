@@ -362,13 +362,6 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
     return *this;
 }
 
-// user-defined literal to represent megabytes
-// C++ standard requires unsigned long long parameter for integer literal operators
-auto operator""_MB(unsigned long long const x) -> int64_t // NOLINT(runtime/int)
-{
-    return 1024LL * 1024LL * x;
-}
-
 void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
 {
     if (requestedLinesLimit < 100) {
