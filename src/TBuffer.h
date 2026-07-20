@@ -301,6 +301,7 @@ public:
     void expandLine(int y, int count, TChar&);
     int wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize);
     void log(int, int);
+    QString assembleLog(int fromLine, int toLine);
     inline int skipSpacesAtBeginOfLine(const int row, const int column);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference = QVector<int>());
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0, int spacePadding = 0);
@@ -389,6 +390,8 @@ private:
     void syncPreTriggerPassLine(int y);
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
+    void translateToPlainTextInner(std::string& incoming, bool isFromServer);
+    void swapParserSequenceState();
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
@@ -438,6 +441,10 @@ private:
     // Second stage in decoding OSC sequences - set true when we see the ASCII
     // ESC character followed by the ']' one:
     bool mGotOSC = false;
+    // Set alongside mGotOSC for the other ANSI string sequences (DCS, SOS, PM
+    // and APC, i.e. ESC followed by 'P', 'X', '^' or '_' respectively) whose
+    // payload must be consumed up to the terminator but not decoded:
+    bool mGotString = false;
     bool mIsDefaultColor = true;
 
 
@@ -496,11 +503,30 @@ private:
     // translateToPlainText()}:
     std::string mIncompleteSequenceBytes;
 
+    // The parser sequence state (mGotESC, mGotCSI, mGotOSC and
+    // mIncompleteSequenceBytes) for whichever of the two data channels - Game
+    // Server stream or locally generated text - is not currently being
+    // processed; translateToPlainText() swaps it in around a local feed so
+    // that such text cannot consume or clear a latch belonging to a sequence
+    // split across Game Server packets (and vice versa):
+    bool mLocalGotESC = false;
+    bool mLocalGotCSI = false;
+    bool mLocalGotOSC = false;
+    std::string mLocalIncompleteSequenceBytes;
+    // Set whilst a locally generated feed is being processed, so a nested feed
+    // (e.g. an MXP <HR> inside locally fed text) does not swap the state again:
+    bool mProcessingLocalFeed = false;
+
     // keeps track of the previously logged buffer lines to ensure no log duplication
     // happens when you enter a command
     int lastLoggedFromLine = 0;
     int lastloggedToLine = 0;
     QString lastTextToLog;
+    // indices of lines being committed while their triggers run - a stack,
+    // because a trigger calling feedTriggers() re-enters commitLine();
+    // deleteLines() adjusts the entries so commitLine() can tell whether its
+    // line survived trigger processing
+    QList<int> mCommitLineIndices;
 
     QByteArray mEncoding;
 

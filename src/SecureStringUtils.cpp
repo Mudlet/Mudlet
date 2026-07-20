@@ -119,6 +119,19 @@ void SecureStringUtils::secureByteArrayClear(QByteArray& array)
     }
 }
 
+void SecureStringUtils::secureStdStringClear(std::string& str)
+{
+    // Overwrite through a volatile pointer so the compiler cannot treat the zeroing as a dead store and
+    // elide it (the buffer is not read again before it is cleared/freed).
+    if (!str.empty()) {
+        volatile char* data = str.data();
+        for (std::string::size_type i = 0; i < str.size(); ++i) {
+            data[i] = '\0';
+        }
+        str.clear();
+    }
+}
+
 QByteArray SecureStringUtils::generateKey(const QByteArray& password, const QByteArray& salt, int iterations)
 {
     // Use iterative SHA-256 hashing to implement PBKDF2-like key derivation
