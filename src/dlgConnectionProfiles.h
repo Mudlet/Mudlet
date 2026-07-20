@@ -96,6 +96,7 @@ protected:
 
 private:
     static bool copyFolder(const QString& sourceFolder, const QString& destFolder);
+    void dismissTutorialInvitation();
     QString getDescription(const QString& profile_name) const;
     bool validateConnect();
     bool validateProfile();
@@ -167,6 +168,8 @@ private:
     QTimer mSearchTextTimer;
     QString mSearchText;
     QTimer* mPasswordSaveTimer = nullptr;
+    QPushButton* mpSkipToGamesButton = nullptr;
+    bool mTutorialDismissed = false;
 
     // Async connection and password handling
     QString mPendingPasswordSaveProfile;
@@ -177,6 +180,7 @@ private:
 
 private slots:
     void slot_activeTabChanged(const int index);
+    void slot_skipToGamesList();
     void slot_profileContextMenu(QPoint pos);
     void slot_setCustomIcon();
     void slot_setCustomColor();
