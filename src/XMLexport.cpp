@@ -771,8 +771,16 @@ void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
         }
     }
 
+    // Refresh the variable tree so it reflects the current Lua state. The tree
+    // is otherwise only rebuilt at profile load and when the Variables editor
+    // populates it, so a variable (or saved table member) a script created
+    // afterwards would be missing here and silently dropped from the saved
+    // profile. Skip the refresh only while that editor view is on screen: it
+    // owns the tree and rebuilding it here would invalidate the widget the user
+    // is interacting with (its variables would stop responding until refreshed).
+    const bool variablesEditorOnScreen = pHost->mpEditorDialog && pHost->mpEditorDialog->variablesViewActive();
     TVar* base = vu->getBase();
-    if (!base) {
+    if (!variablesEditorOnScreen || !base) {
         lI->getVars(false);
         base = vu->getBase();
     }
