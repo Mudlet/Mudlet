@@ -84,6 +84,19 @@ void KeyUnit::uninstall(const QString& packageName)
             uninstallList.append(rootKey);
         }
     }
+    // Re-entrant uninstall (#9337): a key's own script (e.g. uninstallPackage())
+    // is removing its package while match()/processDataStream() are still on the
+    // stack for that key. Deleting now would be a use-after-free, so defer to
+    // doCleanup() at depth 0. Deactivating is enough to stop them firing for the
+    // rest of this pass: match() returns early on !isActive(), so the processing
+    // loop skips them without needing a loop-level guard.
+    if (mProcessingDepth > 0) {
+        for (auto key : uninstallList) {
+            key->setIsActive(false);
+            mCleanupSet.remove(key); // keep the two deferred-delete paths disjoint
+        }
+        return;
+    }
     for (auto& key : uninstallList) {
         delete key;
     }
@@ -219,11 +232,10 @@ bool KeyUnit::killKey(QString& name)
             // only temporary Keys can be killed
             if (!pChild->isTemporary()) {
                 return false;
-            } else {
-                pChild->setIsActive(false);
-                markCleanup(pChild);
-                return true;
             }
+            pChild->setIsActive(false);
+            markCleanup(pChild);
+            return true;
         }
     }
     return false;
@@ -332,11 +344,10 @@ bool KeyUnit::registerKey(TKey* pT)
 
     if (pT->getParent()) {
         addKey(pT);
-        return true;
     } else {
         addKeyRootNode(pT);
-        return true;
     }
+    return true;
 }
 
 void KeyUnit::unregisterKey(TKey* pT)
@@ -347,10 +358,8 @@ void KeyUnit::unregisterKey(TKey* pT)
     if (pT->getParent()) {
         removeKey(pT);
         return;
-    } else {
-        removeKeyRootNode(pT);
-        return;
     }
+    removeKeyRootNode(pT);
 }
 
 
@@ -466,6 +475,18 @@ void KeyUnit::doCleanup()
         itKey.remove();
         delete pKey;
     }
+    // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
+    // children-before-parents and each ~Tree unlinks from its parent, so deleting
+    // children first empties the parent's child list (no double free); the seen
+    // set guards a node queued twice by re-entrant uninstalls.
+    QSet<TKey*> deletedKeys;
+    for (auto key : uninstallList) {
+        if (!deletedKeys.contains(key)) {
+            deletedKeys.insert(key);
+            delete key;
+        }
+    }
+    uninstallList.clear();
 }
 
 void KeyUnit::setupKeyNames()

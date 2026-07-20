@@ -123,8 +123,19 @@ if [ "${DEPLOY}" = "deploy" ]; then
             if [[ -n "${BUILD_COMMIT}" ]] \
                 && { [[ "${BUILD_COMMIT}" == "${existing_commit}"* ]] \
                   || [[ "${existing_commit}" == "${BUILD_COMMIT}"* ]]; }; then
-              echo "== PTB already exists for commit ${BUILD_COMMIT} (${existing_tag}), aborting public test build generation =="
-              exit 0
+              # A PTB exists for this commit, but the platforms (and each macOS
+              # arch) build in parallel and share one release - only skip if this
+              # arch's .dmg is already published. Otherwise a sibling build (or a
+              # re-run) created the release first and we still owe it our asset,
+              # so one build racing ahead or failing never blocks the others.
+              if gh release view "${existing_tag}" --repo "${GITHUB_REPOSITORY}" \
+                    --json assets --jq '.assets[].name' 2>/dev/null \
+                    | grep -q -- "-${ARCH}\.dmg$"; then
+                echo "== PTB ${existing_tag} already has the ${ARCH} macOS asset for ${BUILD_COMMIT}, skipping rebuild =="
+                exit 0
+              fi
+              echo "== PTB ${existing_tag} exists for ${BUILD_COMMIT} but has no ${ARCH} macOS asset yet - building to add it =="
+              break
             fi
           done <<< "${existing_ptb_tags}"
         else
