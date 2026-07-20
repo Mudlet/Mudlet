@@ -786,7 +786,7 @@ if(USE_3DMAPPER)
 endif()
 
 if(USE_MCPSERVER)
-  target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE INCLUDE_MCPSERVER)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_MCPSERVER)
 endif()
 
 if(USE_VARIABLE_SPLASH_SCREEN)
