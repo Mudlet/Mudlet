@@ -31,6 +31,7 @@
 #include <QtTest/QtTest>
 #include <cstring>
 
+#include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
