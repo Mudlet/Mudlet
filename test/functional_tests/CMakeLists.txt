@@ -15,6 +15,7 @@ set(FUNCTIONAL_TEST_SOURCES
     MainConsoleSelectionTest.cpp
     EnableDisableByNameTest.cpp
     GMCPCharLoginTest.cpp
+    SgrUnderlineStyleTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
