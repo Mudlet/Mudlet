@@ -642,36 +642,36 @@ QString TLuaInterpreter::dirToString(lua_State* L, int position)
         default:
             return QString();
         }
-
-    } else if (lua_isstring(L, position)) {
+    }
+    if (lua_isstring(L, position)) {
         QString direction{lua_tostring(L, position)};
         if (!direction.compare(QLatin1String("n"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("north"), Qt::CaseInsensitive)) {
             return QLatin1String("n");
-        } else if (!direction.compare(QLatin1String("e"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("east"), Qt::CaseInsensitive)) {
+        } else if (!direction.compare(QLatin1String("e"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("east"), Qt::CaseInsensitive)) { // NOLINT(readability-else-after-return)
             return QLatin1String("e");
-        } else if (!direction.compare(QLatin1String("s"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("south"), Qt::CaseInsensitive)) {
+        } else if (!direction.compare(QLatin1String("s"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("south"), Qt::CaseInsensitive)) { // NOLINT(readability-else-after-return)
             return QLatin1String("s");
-        } else if (!direction.compare(QLatin1String("w"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("west"), Qt::CaseInsensitive)) {
+        } else if (!direction.compare(QLatin1String("w"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("west"), Qt::CaseInsensitive)) { // NOLINT(readability-else-after-return)
             return QLatin1String("w");
-        } else if (!direction.compare(QLatin1String("u"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("up"), Qt::CaseInsensitive)) {
+        } else if (!direction.compare(QLatin1String("u"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("up"), Qt::CaseInsensitive)) { // NOLINT(readability-else-after-return)
             return QLatin1String("up");
-        } else if (!direction.compare(QLatin1String("d"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("down"), Qt::CaseInsensitive)) {
+        } else if (!direction.compare(QLatin1String("d"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("down"), Qt::CaseInsensitive)) { // NOLINT(readability-else-after-return)
             return QLatin1String("down");
-        } else if (!direction.compare(QLatin1String("ne"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("northeast"), Qt::CaseInsensitive)
+        } else if (!direction.compare(QLatin1String("ne"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("northeast"), Qt::CaseInsensitive) // NOLINT(readability-else-after-return)
                    || !direction.compare(QLatin1String("north-east"), Qt::CaseInsensitive)) {
             return QLatin1String("ne");
-        } else if (!direction.compare(QLatin1String("se"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("southeast"), Qt::CaseInsensitive)
+        } else if (!direction.compare(QLatin1String("se"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("southeast"), Qt::CaseInsensitive) // NOLINT(readability-else-after-return)
                    || !direction.compare(QLatin1String("south-east"), Qt::CaseInsensitive)) {
             return QLatin1String("se");
-        } else if (!direction.compare(QLatin1String("sw"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("southwest"), Qt::CaseInsensitive)
+        } else if (!direction.compare(QLatin1String("sw"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("southwest"), Qt::CaseInsensitive) // NOLINT(readability-else-after-return)
                    || !direction.compare(QLatin1String("south-west"), Qt::CaseInsensitive)) {
             return QLatin1String("sw");
-        } else if (!direction.compare(QLatin1String("nw"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("northwest"), Qt::CaseInsensitive)
+        } else if (!direction.compare(QLatin1String("nw"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("northwest"), Qt::CaseInsensitive) // NOLINT(readability-else-after-return)
                    || !direction.compare(QLatin1String("north-west"), Qt::CaseInsensitive)) {
             return QLatin1String("nw");
-        } else if (!direction.compare(QLatin1String("i"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("in"), Qt::CaseInsensitive)) {
+        } else if (!direction.compare(QLatin1String("i"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("in"), Qt::CaseInsensitive)) { // NOLINT(readability-else-after-return)
             return QLatin1String("in");
-        } else if (!direction.compare(QLatin1String("o"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("out"), Qt::CaseInsensitive)) {
+        } else if (!direction.compare(QLatin1String("o"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("out"), Qt::CaseInsensitive)) { // NOLINT(readability-else-after-return)
             return QLatin1String("out");
         }
         return direction;
@@ -797,11 +797,10 @@ int TLuaInterpreter::loadReplay(lua_State* L)
     if (mudlet::self()->loadReplay(&host, replayFileName, &errMsg)) {
         lua_pushboolean(L, true);
         return 1;
-    } else {
-        // Although we only use English text for Lua messages the errMsg could
-        // contain a Windows pathFileName which may use non-ASCII characters:
-        return warnArgumentValue(L, __func__, qsl("unable to start replay, reason: '%1'").arg(errMsg));
     }
+    // Although we only use English text for Lua messages the errMsg could
+    // contain a Windows pathFileName which may use non-ASCII characters:
+    return warnArgumentValue(L, __func__, qsl("unable to start replay, reason: '%1'").arg(errMsg));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#cut
@@ -1291,11 +1290,9 @@ int TLuaInterpreter::getModulePriority(lua_State* L)
         const int priority = host.mModulePriorities[moduleName];
         lua_pushnumber(L, priority);
         return 1;
-    } else {
-        lua_pushstring(L, "getModulePriority: module doesn't exist");
-        return lua_error(L);
     }
-    return 0;
+    lua_pushstring(L, "getModulePriority: module doesn't exist");
+    return lua_error(L);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setModulePriority
@@ -1343,10 +1340,9 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         lua_pushboolean(L, true);
         lua_pushstring(L, (filename.toUtf8().constData()));
         return 2;
-    } else {
-        auto message = QString("Couldn't save '%1' to '%2' because: %3").arg(host.getName(), filename, error);
-        return warnArgumentValue(L, __func__, message);
     }
+    auto message = QString("Couldn't save '%1' to '%2' because: %3").arg(host.getName(), filename, error);
+    return warnArgumentValue(L, __func__, message);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMudletInfo
@@ -2244,18 +2240,17 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
             lua_pushstring(L, "getTimestamp: invalid line number");
         }
         return 1;
-    } else {
-        auto pC = host.mpConsole->mSubConsoleMap.value(name);
-        if (!pC) {
-            return warnArgumentValue(L, __func__, qsl("mini console, user window or buffer '%1' not found").arg(name));
-        }
-        if (luaLine < pC->buffer.timeBuffer.size()) {
-            lua_pushstring(L, pC->buffer.timeBuffer.at(luaLine).toUtf8().constData());
-        } else {
-            lua_pushstring(L, "getTimestamp: invalid line number");
-        }
-        return 1;
     }
+    auto pC = host.mpConsole->mSubConsoleMap.value(name);
+    if (!pC) {
+        return warnArgumentValue(L, __func__, qsl("mini console, user window or buffer '%1' not found").arg(name));
+    }
+    if (luaLine < pC->buffer.timeBuffer.size()) {
+        lua_pushstring(L, pC->buffer.timeBuffer.at(luaLine).toUtf8().constData());
+    } else {
+        lua_pushstring(L, "getTimestamp: invalid line number");
+    }
+    return 1;
 }
 
 
@@ -2519,23 +2514,23 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
         const QString tidiedWhat = getVerifiedString(L, __func__, 1, "style", true).toLower().trimmed();
         if (tidiedWhat.contains("major")) {
             lua_pushinteger(L, major);
-        } else if (tidiedWhat.contains("minor")) {
+        } else if (tidiedWhat.contains("minor")) { // NOLINT(readability-else-after-return)
             lua_pushinteger(L, minor);
-        } else if (tidiedWhat.contains("revision")) {
+        } else if (tidiedWhat.contains("revision")) { // NOLINT(readability-else-after-return)
             lua_pushinteger(L, revision);
-        } else if (tidiedWhat.contains("build")) {
+        } else if (tidiedWhat.contains("build")) { // NOLINT(readability-else-after-return)
             if (build.isEmpty()) {
                 lua_pushnil(L);
             } else {
                 lua_pushstring(L, build);
             }
-        } else if (tidiedWhat.contains("string")) {
+        } else if (tidiedWhat.contains("string")) { // NOLINT(readability-else-after-return)
             if (build.isEmpty()) {
                 lua_pushstring(L, version.constData());
             } else {
                 lua_pushstring(L, version.append(build).constData());
             }
-        } else if (tidiedWhat.contains("table")) {
+        } else if (tidiedWhat.contains("table")) { // NOLINT(readability-else-after-return)
             lua_pushinteger(L, major);
             lua_pushinteger(L, minor);
             lua_pushinteger(L, revision);
@@ -2545,13 +2540,13 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
                 lua_pushstring(L, build);
             }
             return 4;
-        } else {
+        } else { // NOLINT(readability-else-after-return)
             lua_pushstring(L,
                            "getMudletVersion: takes one (optional) argument:\n"
                            "   \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
             return lua_error(L);
         }
-    } else if (n == 0) {
+    } else if (n == 0) { // NOLINT(readability-else-after-return)
         lua_newtable(L);
         lua_pushstring(L, "major");
         lua_pushinteger(L, major);
@@ -2565,7 +2560,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
         lua_pushstring(L, "build");
         lua_pushstring(L, mudlet::self()->mAppBuild.trimmed().toUtf8().constData());
         lua_settable(L, -3);
-    } else {
+    } else { // NOLINT(readability-else-after-return)
         lua_pushstring(L,
                        "getMudletVersion: only takes one (optional) argument:\n"
                        "   \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
@@ -2796,15 +2791,12 @@ int TLuaInterpreter::getModuleSync(lua_State* L)
 {
     const QString module = getVerifiedString(L, __func__, 1, "module name");
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = host.getModuleSync(module); !success) {
+    auto [success, message] = host.getModuleSync(module);
+    if (!success) {
         return warnArgumentValue(L, __func__, message);
-    } else if (message == QLatin1String("1")) {
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushboolean(L, false);
-        return 1;
     }
+    lua_pushboolean(L, message == QLatin1String("1"));
+    return 1;
 }
 
 

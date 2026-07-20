@@ -37,9 +37,7 @@ void TelnetServerStub::start(const QString& host, quint16 port)
     Q_UNUSED(host)
     const QHostAddress addr = QHostAddress::LocalHost;
     if (listen(addr, port)) {
-        qInfo().noquote() << qsl("✅ TelnetServerStub listening on %1:%2")
-                    .arg(addr.toString())
-                    .arg(port);
+        qInfo().noquote() << qsl("✅ TelnetServerStub listening on %1:%2").arg(addr.toString()).arg(serverPort());
     } else {
         qCritical().noquote() << qsl("❌ Failed to start TelnetServerStub: %1").arg(errorString());
     }
