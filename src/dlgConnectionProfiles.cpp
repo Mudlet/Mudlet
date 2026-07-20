@@ -1425,7 +1425,8 @@ void dlgConnectionProfiles::fillout_form()
                     toselectRow = i;
                     break;
                 }
-            } else if (listWidget_profiles->count() == 1 && test_profile_row != 0) {
+            }
+            if (listWidget_profiles->count() == 1 && test_profile_row != 0) {
                 // The "My games" tab can show a single profile that has not been
                 // saved to its XML yet, so select it to fill in its details
                 // instead of leaving the form blank with a game highlighted
