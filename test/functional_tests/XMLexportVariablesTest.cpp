@@ -127,6 +127,10 @@ private slots:
         // the value is the payload of the save - make sure it is written, not
         // just an empty node with the right name
         QVERIFY2(xml.contains(qsl("created after tree build")), "the saved variable's value must be exported, not just its name");
+
+        // mpHost is shared across the tests, so undo the state this one added
+        vu->savedVars.remove(qsl("lateSavedTestVar"));
+        QCOMPARE(luaL_dostring(L, "lateSavedTestVar = nil"), 0);
     }
 
     // The export-time refresh must not start saving variables that are not
