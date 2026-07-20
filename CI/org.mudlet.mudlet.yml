@@ -232,11 +232,22 @@ modules:
       - /lib/*.la
       - /lib/pkgconfig
 
+  - name: qtkeychain
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_WITH_QT6=ON
+      - -DCMAKE_INSTALL_LIBDIR=lib
+      - -DBUILD_TESTING=OFF
+    sources:
+      - type: git
+        url: https://github.com/frankosterfeld/qtkeychain.git
+        commit: 875f77d9f61bd97fd84cca47ce3bc71186dfbd09
+
   - name: mudlet
     buildsystem: cmake-ninja
     config-opts:
       - -DCMAKE_BUILD_TYPE=RelWithDebInfo
-      - -DUSE_OWN_QTKEYCHAIN=ON
       - -DUSE_3DMAPPER=OFF
     sources:
       - type: dir
