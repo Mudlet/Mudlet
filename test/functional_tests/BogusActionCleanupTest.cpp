@@ -28,6 +28,7 @@
 
 #include "ActionUnit.h"
 #include "Host.h"
+#include "MudletInstanceCoordinator.h"
 #include "TAction.h"
 #include "TToolBar.h"
 #include "TTreeWidget.h"
@@ -555,7 +556,7 @@ private slots:
     QCOMPARE(mpEditor->mpActionBaseItem->childCount(), 0);
   }
 
-  // Guard against a future refactor that drops pActionUnit->updateToolbar()
+  // Guard against a future refactor that drops pActionUnit->updateAllToolbars()
   // from the end of the cleanup slot: if the bogus pair ever had an
   // associated TToolBar (mLocation == 4 is the "floating toolbar" marker
   // that regenerateToolBars() materialises), the main window would be left
@@ -566,7 +567,7 @@ private slots:
     TAction *pRoot = firstRootAction();
     QVERIFY(pRoot);
     pRoot->mLocation = 4;
-    mpHost->getActionUnit()->updateToolbar();
+    mpHost->getActionUnit()->updateAllToolbars();
     const auto preSize = mpHost->getActionUnit()->getToolBarList().size();
     QVERIFY2(preSize >= 1,
              "Pre-condition: regenerateToolBars should have created a "
@@ -576,7 +577,7 @@ private slots:
     mpEditor->slot_cleanupBogusActions();
 
     QVERIFY(mpHost->getActionUnit()->getActionRootNodeList().empty());
-    // After the slot's updateToolbar() call runs on an empty root list, no
+    // After the slot's updateAllToolbars() call runs on an empty root list, no
     // live TToolBar should remain pointing at a destroyed TAction.
     const auto &postList = mpHost->getActionUnit()->getToolBarList();
     for (const auto &tb : postList) {

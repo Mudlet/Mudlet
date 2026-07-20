@@ -1820,7 +1820,7 @@ private slots:
     mpEditor->slot_showActions();
     cleanupAll(mItemTypes[5]);
 
-    mpEditor->addAction(false);
+    mpEditor->addNewAction(false);
     QVERIFY(mpEditor->mpActionBaseItem->childCount() > 0);
 
     QTreeWidgetItem *firstActionItem = mpEditor->mpActionBaseItem->child(0);
@@ -1843,7 +1843,7 @@ private slots:
         mpEditor->mpActionsMainArea->checkBox_action_button_isPushDown
             ->isChecked());
 
-    mpEditor->addAction(false);
+    mpEditor->addNewAction(false);
     QCoreApplication::processEvents();
 
     QCOMPARE(mpEditor->mpActionBaseItem->childCount(), 2);
