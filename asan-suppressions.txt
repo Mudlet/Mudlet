@@ -85,3 +85,11 @@ leak:QTranslatorPrivate::do_load
 
 # Qt array data allocation (internal caching)
 leak:QArrayData::allocate2
+
+# ==============================================================================
+# OpenSSL 3 provider initialization leaks
+# One-time allocations made when Qt's OpenSSL TLS backend loads the default
+# provider on first TLS use; seen with Qt 6.12's qtlsbackend_openssl
+# ==============================================================================
+leak:OSSL_PROVIDER_try_load
+leak:OSSL_DECODER_do_all_provided
