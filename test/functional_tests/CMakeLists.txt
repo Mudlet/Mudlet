@@ -4,6 +4,7 @@ endif()
 
 set(FUNCTIONAL_TEST_SOURCES
     TelnetTextDisplayedTest.cpp
+    TelnetSubnegotiationTest.cpp
     TelnetBenchmark.cpp
     ResetProfileTest.cpp
     TOscTest.cpp

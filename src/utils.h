@@ -30,9 +30,22 @@
 #include <QScreen>
 #include <QWidget>
 
+#include <cstdint>
 #include <cstring>
 
 #define qsl(s) QStringLiteral(s)
+
+// user-defined literals to represent kilobytes and megabytes
+// C++ standard requires unsigned long long parameter for integer literal operators
+constexpr auto operator""_KB(unsigned long long const x) -> int64_t // NOLINT(runtime/int)
+{
+    return 1024LL * x;
+}
+
+constexpr auto operator""_MB(unsigned long long const x) -> int64_t // NOLINT(runtime/int)
+{
+    return 1024LL * 1024LL * x;
+}
 
 using TEnterEvent = QEnterEvent;
 
