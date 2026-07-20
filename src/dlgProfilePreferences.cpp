@@ -25,6 +25,8 @@
 
 #include "dlgProfilePreferences.h"
 
+#include "CredentialManager.h"
+#include "GMCPAuthenticator.h"
 #include "Host.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -32,6 +34,7 @@
 #include "TKey.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TKeySequenceEdit.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
@@ -56,8 +59,10 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonParseError>
+#include <QMessageBox>
 #include <QNetworkDiskCache>
 #include <QPainter>
+#include <QPointer>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QStandardItemModel>
@@ -67,7 +72,7 @@
 #include <QTemporaryFile>
 #include <QToolBar>
 #include <QUiLoader>
-#include <QKeySequenceEdit>
+#include <QLineEdit>
 #include <QHBoxLayout>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 
@@ -1270,12 +1275,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 for (const auto& sslError : sslErrors) {
                     errorTexts.append(qsl("<li>%1</li>").arg(sslError.errorString()));
                     if (QSslError::SelfSignedCertificate == sslError.error()) {
-                        checkBox_self_signed->setStyleSheet(qsl("font-weight: bold; background: yellow"));
-                        ssl_issuer_label->setStyleSheet(qsl("font-weight: bold; color: red; background: yellow"));
+                        checkBox_self_signed->setStyleSheet(certificateWarningCheckBoxStyle());
+                        ssl_issuer_label->setStyleSheet(certificateWarningLabelStyle());
                     }
                     if (QSslError::CertificateExpired == sslError.error()) {
-                        checkBox_expired->setStyleSheet(qsl("font-weight: bold; background: yellow"));
-                        ssl_expires_label->setStyleSheet(qsl("font-weight: bold; color: red; background: yellow"));
+                        checkBox_expired->setStyleSheet(certificateWarningCheckBoxStyle());
+                        ssl_expires_label->setStyleSheet(certificateWarningLabelStyle());
                     }
                 }
                 notificationAreaMessageBox->setText(qsl("<ul>%1</ul>").arg(errorTexts.join(QChar::LineFeed)));
@@ -1332,6 +1337,26 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_ignore_all->setChecked(pHost->mSslIgnoreAll);
 
     checkBox_askTlsAvailable->setChecked(pHost->mAskTlsAvailable);
+
+    // The "forget saved sign-in" button is gated on a reconnect token actually existing, not on the
+    // sign-in-choice flag: an oauth-only game never sets that flag yet still mints tokens, and a token
+    // is the only thing the button acts on. The keychain check is asynchronous, so start hidden and
+    // reveal on a hit; the QPointer guards against the dialog closing before the store answers.
+    // credentialExists() collapses a read failure (locked/denied/timed-out keychain) to "no token", so
+    // the button deliberately stays hidden on any read failure - the only cost is not offering to forget
+    // a token that could not be read, and clicking would just yield a graceful "could not remove" warning.
+    pushButton_forgetSavedSignIn->setVisible(false);
+    pushButton_forgetSavedSignIn->setEnabled(mEnableGMCP->isChecked());
+    QPointer<dlgProfilePreferences> safeDialog = this;
+    QPointer<CredentialManager> credentialManager = new CredentialManager();
+    credentialManager->credentialExists(pHost->getName(), qsl("reconnect"), [safeDialog, credentialManager](bool exists) {
+        if (credentialManager) {
+            credentialManager->deleteLater();
+        }
+        if (safeDialog && exists) {
+            safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+        }
+    });
 
     groupBox_proxy->setEnabled(true);
     groupBox_proxy->setChecked(pHost->mUseProxy);
@@ -1424,6 +1449,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_mapGridColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapGridColor);
 
     connect(mEnableGMCP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    // The GMCP Char.Login "forget saved sign-in" control is only meaningful when GMCP is on.
+    connect(mEnableGMCP, &QAction::toggled, pushButton_forgetSavedSignIn, &QWidget::setEnabled);
+    connect(pushButton_forgetSavedSignIn, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_forgetSavedSignIn);
     connect(mEnableMSDP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
@@ -1504,9 +1532,19 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         auto shortcutIt = pHost->profileShortcuts.find(key);
         QKeySequence currentSequence = (shortcutIt != pHost->profileShortcuts.end()) ? QKeySequence(*shortcutIt->second) : QKeySequence();
         currentShortcuts.insert(key, currentSequence);
-        auto sequenceEdit = new QKeySequenceEdit(currentSequence);
+        const QString labelText = mudlet::self()->mpShortcutsManager->getLabel(key);
+        auto sequenceEdit = new TKeySequenceEdit(currentSequence, labelText);
+        auto label = new QLabel(labelText);
+        // Point the buddy at the control that actually receives focus (the
+        // editor's inner line edit, reached via its focus proxy) rather than the
+        // wrapper, so the accessible label attaches to the single announced
+        // node; naming the wrapper as well made screen readers read the label
+        // twice (#9322). The proxy is only null in the degraded fallback, where
+        // the wrapper itself is the focus target:
+        QWidget* const labelTarget = sequenceEdit->focusProxy() ? sequenceEdit->focusProxy() : sequenceEdit;
+        label->setBuddy(labelTarget);
 
-        gridLayout_groupBox_shortcuts->addWidget(new QLabel(mudlet::self()->mpShortcutsManager->getLabel(key)), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
+        gridLayout_groupBox_shortcuts->addWidget(label, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
         shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
@@ -1738,6 +1776,8 @@ void dlgProfilePreferences::clearHostDetails()
     groupBox_ssl_certificate->hide();
     frame_notificationArea->hide();
     checkBox_askTlsAvailable->setChecked(false);
+    pushButton_forgetSavedSignIn->setEnabled(false);
+    pushButton_forgetSavedSignIn->setVisible(false);
     groupBox_proxy->setDisabled(true);
 
     // Remove the reference to the Host/profile in the title:
@@ -2326,6 +2366,61 @@ void dlgProfilePreferences::slot_setMapGridColor()
     Host* pHost = mpHost;
     if (pHost) {
         setButtonAndProfileColor(pushButton_mapGridColor, pHost->mMapGridColor, true);
+    }
+}
+
+void dlgProfilePreferences::slot_forgetSavedSignIn()
+{
+    Host* pHost = mpHost;
+    if (!pHost || !pHost->mpAuth) {
+        return;
+    }
+
+    const auto reply = QMessageBox::question(this,
+                                             //: Title of the dialog asking the user to confirm removing their saved sign-in.
+                                             tr("Forget saved sign-in?"),
+                                             //: Body of the dialog asking the user to confirm removing their saved sign-in; they will need to sign in again next time.
+                                             tr("This will remove the saved sign-in for this profile. You will need to sign in again next time. Continue?"),
+                                             QMessageBox::Yes | QMessageBox::No,
+                                             QMessageBox::No);
+    frame_notificationArea->show();
+    notificationAreaIconLabelInformation->show();
+    notificationAreaMessageBox->show();
+    if (reply == QMessageBox::Yes) {
+        // forgetSavedSignIn() removes the token asynchronously; only report success (and disable the
+        // button) once the removal actually resolves, so a failed keychain removal cannot leave a stale
+        // reconnect token behind while the UI claims it is gone. QPointers guard against the dialog or
+        // host closing before the removal answers.
+        QPointer<dlgProfilePreferences> safeDialog = this;
+        QPointer<Host> safeHost = pHost;
+        pHost->mpAuth->forgetSavedSignIn([safeDialog, safeHost](bool success) {
+            if (success) {
+                if (safeDialog) {
+                    // Nothing is left to forget until a fresh sign-in mints a new token.
+                    safeDialog->pushButton_forgetSavedSignIn->setEnabled(false);
+                    //: Shown after the user's saved sign-in has actually been removed.
+                    safeDialog->notificationAreaMessageBox->setText(dlgProfilePreferences::tr("The saved sign-in has been forgotten."));
+                }
+                if (safeHost) {
+                    //: Shown in the main console after the user's saved sign-in has actually been removed.
+                    safeHost->postMessage(dlgProfilePreferences::tr("[  OK  ]  - The saved sign-in for this profile has been forgotten."));
+                }
+            } else {
+                if (safeDialog) {
+                    //: Shown when removing the saved sign-in failed, so it may still be present.
+                    safeDialog->notificationAreaMessageBox->setText(dlgProfilePreferences::tr("Could not remove the saved sign-in; it may still be present."));
+                }
+                if (safeHost) {
+                    //: Shown in the main console when removing the saved sign-in failed, so it may still be present.
+                    safeHost->postMessage(dlgProfilePreferences::tr("[ WARN ]  - Could not remove the saved sign-in; it may still be present."));
+                }
+            }
+        });
+    } else {
+        //: Shown when the user cancels removing their saved sign-in.
+        notificationAreaMessageBox->setText(tr("No changes were made to the saved sign-in."));
+        //: Shown in the main console when the user cancels removing their saved sign-in.
+        pHost->postMessage(tr("[ INFO ]  - Cancelled: no changes were made to the saved sign-in."));
     }
 }
 
@@ -2922,12 +3017,11 @@ void dlgProfilePreferences::slot_copyMap()
             label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
             QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
             continue; // Try again with next profile
-        } else {
-            label_mapFileActionResult->setText(tr("Map copied successfully to other profile %1.").arg(otherHostName));
-            qApp->processEvents(); // Copied from "Loading map - please wait..." case
-                                   // Just in case is needed to make the above message
-                                   // show up when saving big maps
         }
+        label_mapFileActionResult->setText(tr("Map copied successfully to other profile %1.").arg(otherHostName));
+        qApp->processEvents(); // Copied from "Loading map - please wait..." case
+                               // Just in case is needed to make the above message
+                               // show up when saving big maps
     }
 
     // Finally, signal the other profiles to reload their maps:
@@ -4524,6 +4618,34 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
     pHost->mTelnet.sendInfoNewEnvironValue(qsl("LANGUAGE"));
 }
 
+// same warning palette as the system message area: soft yellow in light mode,
+// muted amber in dark mode
+QString dlgProfilePreferences::certificateWarningCheckBoxStyle() const
+{
+    const bool darkMode = mudlet::self()->inDarkMode();
+    return qsl("font-weight: bold; color: %1; background: %2").arg(darkMode ? qsl("rgb(230, 230, 230)") : qsl("black"), darkMode ? qsl("rgb(64, 60, 40)") : qsl("rgb(255, 254, 215)"));
+}
+
+QString dlgProfilePreferences::certificateWarningLabelStyle() const
+{
+    const bool darkMode = mudlet::self()->inDarkMode();
+    return qsl("font-weight: bold; color: %1; background: %2").arg(darkMode ? qsl("lightsalmon") : qsl("red"), darkMode ? qsl("rgb(64, 60, 40)") : qsl("rgb(255, 254, 215)"));
+}
+
+void dlgProfilePreferences::restyleCertificateWarnings()
+{
+    for (auto* checkBox : {checkBox_self_signed, checkBox_expired}) {
+        if (!checkBox->styleSheet().isEmpty()) {
+            checkBox->setStyleSheet(certificateWarningCheckBoxStyle());
+        }
+    }
+    for (auto* label : {ssl_issuer_label, ssl_expires_label}) {
+        if (!label->styleSheet().isEmpty()) {
+            label->setStyleSheet(certificateWarningLabelStyle());
+        }
+    }
+}
+
 void dlgProfilePreferences::slot_setAppearance(const enums::Appearance state)
 {
     if (comboBox_appearance->currentIndex() != state) {
@@ -4537,6 +4659,8 @@ void dlgProfilePreferences::slot_setAppearance(const enums::Appearance state)
     if (wasDarkMode == isDarkMode) {
         return;
     }
+
+    restyleCertificateWarnings();
 
     Host* pHost = mpHost;
     if (!pHost) {
