@@ -237,11 +237,16 @@ void TRoom::setExitStub(int direction, bool status)
                 exitStubs.append(direction);
             }
         } else {
-            QString error = QString("Set exit stub in given direction in RoomID(%1) - there is already an exit there!").arg(id);
-            mpRoomDB->mpMap->logError(error);
+            mpRoomDB->mpMap->logError(tr("Cannot set exit stub in given direction in RoomID %1. There is already an exit there!")
+                                              .arg(QString::number(id)));
+            // Since there is no change don't proceed to mark map as needing saving
+            return;
         }
     } else {
-        exitStubs.removeAll(direction);
+        if (!exitStubs.removeAll(direction)) {
+            // Since there is no change don't proceed to mark map as needing saving
+            return;
+        }
     }
     mpRoomDB->mpMap->setUnsaved(__func__);
 }
@@ -250,9 +255,8 @@ int TRoom::getExitWeight(const QString& cmd)
 {
     if (exitWeights.contains(cmd)) {
         return exitWeights[cmd];
-    } else {
-        return weight; // NOTE: if no exit weight has been set: exit weight = room weight
     }
+    return weight; // NOTE: if no exit weight has been set: exit weight = room weight
 }
 
 // NOTE: needed so dialogRoomExit code can tell if an exit weight has been set
@@ -310,16 +314,15 @@ bool TRoom::setDoor(const QString& cmd, const int doorStatus)
             doors[cmd] = doorStatus;
             mpRoomDB->mpMap->setUnsaved(__func__);
             return true; // As we have changed things
-        } else {
-            return false; // Valid but ineffective
         }
-    } else if (doors.contains(cmd) && !doorStatus) {
+        return false; // Valid but ineffective
+    }
+    if (doors.contains(cmd) && !doorStatus) {
         doors.remove(cmd);
         mpRoomDB->mpMap->setUnsaved(__func__);
         return true; // As we have changed things
-    } else {
-        return false; // As we have not changed things
     }
+    return false; // As we have not changed things
 }
 
 int TRoom::getDoor(const QString& cmd) const
@@ -343,7 +346,11 @@ void TRoom::setId(const int roomId)
 // alternative means to do them as a fault recovery
 bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
 {
-    static QSet<TArea*> dirtyAreas;
+    // Track dirty areas by ID rather than TArea* across calls: a TArea* held
+    // through a deferred window can dangle if the map is cleared in between
+    // (e.g. clearMapDB(), profile close, bulk map reload). Looking up the
+    // pointer freshly at flush time safely skips areas that no longer exist.
+    static QSet<int> dirtyAreaIds;
     TArea* pA = mpRoomDB->getArea(areaID);
     if (!pA) {
         // There is no TArea instance with that _areaID
@@ -351,8 +358,8 @@ bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
         mpRoomDB->addArea(areaID);
         pA = mpRoomDB->getArea(areaID);
         if (!pA) { // Oh dear, THAT didn't work
-            QString error = qApp->translate("TRoom", "No area created!  Requested area ID=%1. Note: Area IDs must be > 0").arg(areaID);
-            mpRoomDB->mpMap->logError(error);
+            mpRoomDB->mpMap->logError(tr("Requested AreaID %1 did not exist and could not be created. Note: Area numbers must be greater than zero!")
+                                              .arg(QString::number(areaID)));
             return false;
         }
     }
@@ -368,28 +375,33 @@ bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
         // areas are still "out of area exits" UNLESS the room moves to the SAME
         // area that the other exits are in.
         // Add to local store of dirty areas
-        dirtyAreas.insert(pA2);
+        dirtyAreaIds.insert(area);
         // Flag the area itself in case something goes
         // wrong on last room in a series
         pA2->mIsDirty = true;
     } else {
-        QString error = qApp->translate("TRoom", "Warning: When setting the Area for Room (Id: %1) it did not have a current area!").arg(id);
-        mpRoomDB->mpMap->logError(error);
+        //: Although this is reported as an error it is not a problem
+        mpRoomDB->mpMap->logError(tr("When setting the Area for RoomID %1 it did not have a current area, this is unexpected but not a problem!")
+                                          .arg(QString::number(id)));
     }
 
     area = areaID;
     pA->addRoom(id);
 
-    dirtyAreas.insert(pA);
+    dirtyAreaIds.insert(areaID);
     pA->mIsDirty = true;
 
     if (!deferAreaRecalculations) {
-        QSetIterator<TArea*> itpArea = dirtyAreas;
-        while (itpArea.hasNext()) {
-            TArea* pArea = itpArea.next();
-            pArea->clean();
+        // Swap out the set before iterating so that reentrant calls into
+        // setArea() from within clean()/determineAreaExits() (e.g. via Lua
+        // event handlers) don't mutate the container we're walking.
+        QSet<int> toClean;
+        toClean.swap(dirtyAreaIds);
+        for (const int aid : toClean) {
+            if (TArea* pArea = mpRoomDB->getArea(aid)) {
+                pArea->clean();
+            }
         }
-        dirtyAreas.clear();
     }
 
     mpRoomDB->mpMap->setUnsaved(__func__);
@@ -519,34 +531,32 @@ bool TRoom::hasExitOrSpecialExit(const QString& text) const
     // First check the normal ones:
     if (text == QLatin1String("n")) {
         return hasExit(DIR_NORTH);
-    } else if (text == QLatin1String("ne")) {
+    } else if (text == QLatin1String("ne")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_NORTHEAST);
-    } else if (text == QLatin1String("e")) {
+    } else if (text == QLatin1String("e")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_EAST);
-    } else if (text == QLatin1String("se")) {
+    } else if (text == QLatin1String("se")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_SOUTHEAST);
-    } else if (text == QLatin1String("s")) {
+    } else if (text == QLatin1String("s")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_SOUTH);
-    } else if (text == QLatin1String("sw")) {
+    } else if (text == QLatin1String("sw")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_SOUTHWEST);
-    } else if (text == QLatin1String("w")) {
+    } else if (text == QLatin1String("w")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_WEST);
-    } else if (text == QLatin1String("nw")) {
+    } else if (text == QLatin1String("nw")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_NORTHWEST);
-    } else if (text == QLatin1String("up")) {
+    } else if (text == QLatin1String("up")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_UP);
-    } else if (text == QLatin1String("down")) {
+    } else if (text == QLatin1String("down")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_DOWN);
-    } else if (text == QLatin1String("in")) {
+    } else if (text == QLatin1String("in")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_IN);
-    } else if (text == QLatin1String("out")) {
+    } else if (text == QLatin1String("out")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_OUT);
-    } else {
+    } else { // NOLINT(readability-else-after-return)
         // Then check the special exits:
         return mSpecialExits.contains(text);
     }
-
-    return false;
 }
 
 int TRoom::getExit(const int direction) const
@@ -833,10 +843,8 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
     }
     ifs >> name;
     ifs >> isLocked;
-    if (version >= 22) {
-        ifs >> hidden;
-    }
     if (version >= 21) {
+        ifs >> hidden;
         ifs >> mSpecialExits;
     } else if (version >= 6) {
         // Before version 21 the special exits were stored as a QMultiMap<int, QString>
@@ -878,8 +886,14 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
 
     if (version >= 10) {
         ifs >> userData;
+        // Recover and remove fallback values from the user data:
+        if (version < 21) {
+            const QString hiddenString = userData.take(QLatin1String("system.fallback_hidden"));
+            if (!hiddenString.compare(QLatin1String("true"), Qt::CaseInsensitive)) {
+                hidden = true;
+            }
+        }
         if (version < 19) {
-            // Recover and remove backup values from the user data
             const QString symbolString = userData.take(QLatin1String("system.fallback_symbol"));
             if (!symbolString.isEmpty()) {
                 // There is a fallback in the user data
@@ -1563,7 +1577,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             mpRoomDB->mpMap->appendRoomErrorMsg(id, warnMsg, true);
             userData.insert(auditKey, QString::number(exitRoomId));
             if (!exitStubs.contains(dirCode)) {
-                // Add a stub (this is so we can retain doors, though exit weights, custom lines and locks will go)
+                // Add a stub (this is so we can retain doors and locks, though exit weights and custom lines will go)
                 exitStubs.append(dirCode);
                 // Remove a (now valid) stub in this direction from check pool
                 exitStubsPool.remove(dirCode);
@@ -1575,8 +1589,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             // And eliminate the corresponding things from the pools of things
             // that have to be checked:
             // TODO: Add additional warnings if we ARE deleting any data in following
-            exitLocks.removeAll(dirCode);
-            exitLocksPool.remove(dirCode);
+            exitLocksPool.remove(dirCode); // A stub exit can retain a lock so keep any that exists
 
             exitWeights.remove(exitKey);
             exitWeightsPool.remove(exitKey);
@@ -1629,16 +1642,15 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         if (exitStubs.contains(dirCode)) {
             exitStubsPool.remove(dirCode); // Remove the stub in this direction from check pool as we have handled it
         } else {
-            // If NOT we cannot have a door
+            // If NOT we cannot have a door or a lock
             doors.remove(exitKey);
+            exitLocks.removeAll(dirCode);
         }
-        // We have handled whether we can have a door (if there IS a stub) or not (if not)
-        // so remove it from the check pool as we have handled it
         doorsPool.remove(exitKey);
+        exitLocksPool.remove(dirCode);
 
-        // Whether we do or not have a stub exit we cannot have a lock, custom
+        // Whether we do or not have a stub exit we cannot have a custom
         // line or a weight - so remove them if they exist:
-        exitLocks.removeAll(dirCode);
         exitWeights.remove(exitKey);
         customLines.remove(exitKey);
         customLinesColor.remove(exitKey);
@@ -1647,7 +1659,6 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         // Whether we have a stub or not we have handled all the things that we
         // want to check the existence of so take them out of the pools of
         // things left to check after all the exits have been looked at
-        exitLocksPool.remove(dirCode);
         exitWeightsPool.remove(exitKey);
         customLinesPool.remove(exitKey);
         customLinesColorPool.remove(exitKey);
@@ -1674,13 +1685,8 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         }
         exitStubsPool.remove(dirCode); // Remove the stub in this direction from check pool as we have handled it
 
-        if (exitLocks.contains(dirCode)) {
-            const QString auditKeyLocked = qsl("audit.invalid_exit.%1.isLocked").arg(dirCode);
-            userData.insert(auditKeyLocked, qsl("true"));
-            //: %1 is the audit key for the lock status
-            infoMsg.append(qsl("  %1").arg(tr(R"(It was locked, this is recorded as user data with key: "%1".)").arg(auditKeyLocked)));
-            exitLocks.removeAll(dirCode);
-        }
+        // Any lock on this exit is retained as the stub that replaces it can
+        // also carry a lock
 
         if (exitWeights.contains(exitKey)) {
             const QString auditKeyWeight = qsl("audit.invalid_exit.%1.weight").arg(dirCode);
@@ -2304,6 +2310,9 @@ void TRoom::writeJsonExitStubs(QJsonObject& obj) const
         const QJsonValue stubNameValue{stubName};
         exitStubObj.insert(QLatin1String("name"), stubNameValue);
         writeJsonDoor(exitStubObj, stubName);
+        if (exitLocks.contains(stringToDirCode(stubName))) {
+            exitStubObj.insert(QLatin1String("locked"), true);
+        }
         const QJsonValue exitStubValue{exitStubObj};
         exitStubsArray.append(exitStubValue);
     }
@@ -2343,6 +2352,10 @@ void TRoom::readJsonExitStubs(const QJsonObject& obj)
         // Will only get here for normal exit directions:
         if (exitStubObj.contains(QLatin1String("door")) && exitStubObj.value(QLatin1String("door")).isString()) {
             readJsonDoor(exitStubObj, doorKey);
+        }
+
+        if (exitStubObj.contains(QLatin1String("locked")) && exitStubObj.value(QLatin1String("locked")).isBool() && exitStubObj.value(QLatin1String("locked")).toBool()) {
+            exitLocks.append(dir);
         }
     }
 }

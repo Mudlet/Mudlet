@@ -1,16 +1,14 @@
 #include <TLinkStore.h>
 #include <QtTest/QtTest>
 
-class TLinkStoreTest : public QObject {
-Q_OBJECT
+class TLinkStoreTest : public QObject
+{
+    Q_OBJECT
 
 private:
-
 private slots:
 
-    void initTestCase()
-    {
-    }
+    void initTestCase() {}
 
     void testAddAndGet()
     {
@@ -226,9 +224,42 @@ private slots:
         QCOMPARE(store.getHintsConst(id2), hints);
     }
 
-    void cleanupTestCase()
+    void testStylingClearedOnIdReuse()
     {
+        TLinkStore store(3);
+
+        QStringList links;
+        links.append("command");
+        QStringList hints;
+        hints.append("hint");
+
+        int id1 = store.addLinks(links, hints);
+        QCOMPARE(id1, 1);
+
+        Mudlet::HyperlinkStyling styling;
+        styling.hasCustomStyling = true;
+        styling.selection.group = "weapons";
+        styling.selection.value = "sword";
+        styling.selection.hasSelectionSettings = true;
+        store.setStyling(id1, styling);
+
+        QVERIFY(store.hasStyling(id1));
+        QCOMPARE(store.getLinkIdsByGroupValue("weapons", "sword"), QList<int>() << id1);
+
+        // Wrap the id counter around so id 1 is recycled by a link
+        // that provides no styling of its own
+        store.addLinks(links, hints);
+        store.addLinks(links, hints);
+        int recycledId = store.addLinks(links, hints);
+        QCOMPARE(recycledId, id1);
+
+        // The recycled id must not inherit the previous link's styling,
+        // nor remain findable under the old selection group/value
+        QVERIFY(!store.hasStyling(recycledId));
+        QVERIFY(store.getLinkIdsByGroupValue("weapons", "sword").isEmpty());
     }
+
+    void cleanupTestCase() {}
 };
 
 #include "TLinkStoreTest.moc"

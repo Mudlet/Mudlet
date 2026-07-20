@@ -1,5 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2023-2023 by Adam Robinson - seldon1951@hotmail.com     *
+ *   Copyright (C) 2023 by Adam Robinson - seldon1951@hotmail.com          *
+ *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,6 +23,13 @@
 
 #include "Host.h"
 
+/* We need an explicit constructor in this file as the Host class is forward
+ * declared in the header file and it is problematic to define any dereferencing
+ * of it there:*/
+GifTracker::GifTracker(Host* pHost)
+: mpHost(pHost)
+{
+}
 
 bool GifTracker::registerGif(QMovie* pT)
 {

@@ -20,16 +20,28 @@
 #ifndef UPDATER_H
 #define UPDATER_H
 
-// FreeBSD does not support the updater and these missing files upset
-// clang-tidy / Clazy when they are run in an environment without them:
+// QObject must be included before Q_OS_MACOS checks below
+#include <QObject>
+#include <QPointer>
+
+// Guard for builds without the updater (INCLUDE_UPDATER is defined by CMake when USE_UPDATER is ON):
 #if defined(INCLUDE_UPDATER)
-#include "dblsqd/feed.h"
-#include "dblsqd/update_dialog.h"
+namespace dblsqd {
+class Feed;
+class Release;
+class UpdateDialog;
+}
+#if defined(Q_OS_MACOS)
 #include "sparkleupdater.h"
 #endif
+#endif
 
+#include <memory>
 
-#include <QObject>
+class QAbstractButton;
+class QPushButton;
+class QSettings;
+class QTimer;
 
 class Updater : public QObject
 {
@@ -48,13 +60,18 @@ public:
     bool shouldShowChangelog();
 
 private:
-    dblsqd::Feed* feed;
-    dblsqd::UpdateDialog* updateDialog{nullptr};
+    std::unique_ptr<dblsqd::Feed> feed;
+    // Non-owning: Qt parent-child system or explicit deletion in ~Updater handles lifetime.
+    // QPointer<T> is used so that if Qt deletes the dialog (e.g. on last window closed),
+    // the pointer automatically becomes null and ~Updater's delete becomes a no-op.
+    QPointer<dblsqd::UpdateDialog> updateDialog;
+#if !defined(Q_OS_MACOS)
     QPushButton* mpInstallOrRestart;
+#endif
     bool mUpdateInstalled;
     bool mManualCheckInProgress{false};
-    QSettings* settings;
-    std::unique_ptr<QTimer> mDailyCheck;
+    QSettings* mSettings;
+    std::unique_ptr<QTimer> mPeriodicCheck;
 
 #if defined(Q_OS_LINUX)
     void setupOnLinux();
@@ -62,20 +79,23 @@ private:
 #elif defined(Q_OS_WINDOWS)
     void setupOnWindows();
     void prepareSetupOnWindows(const QString& fileName);
-    bool is64BitCompatible() const;
 #elif defined(Q_OS_MACOS)
     void setupOnMacOS();
 #endif
 
+#if !defined(Q_OS_MACOS)
+    void setupPlatformUpdater();
+#endif
     void recordUpdateTime() const;
     void recordUpdatedVersion() const;
     QString getPreviousVersion() const;
+    QString readPreviousVersionFile(const bool removeAfterRead) const;
     bool downloadReleaseIfValid(const dblsqd::Release& release);
     void finishSetup();
     void showDialogManually() const;
 
 #if defined(Q_OS_LINUX)
-    QString unzippedBinaryName;
+    QString mUnzippedBinaryName;
 #elif defined(Q_OS_WINDOWS)
     QString mDownloadedInstallerPath;
 #elif defined(Q_OS_MACOS)
@@ -85,7 +105,6 @@ private:
 
 signals:
     void signal_updateInstalled();
-    // Argument is a count of updates available
     void signal_updateAvailable(const int);
     void signal_automaticUpdatesChanged(const bool);
     void signal_updateCheckFailed(const QString& error);
@@ -93,7 +112,6 @@ signals:
 public slots:
     void slot_installOrRestartClicked(QAbstractButton* button, const QString& filePath);
 #if defined(Q_OS_LINUX)
-    // might want to make these private
     void slot_updateLinuxBinary();
 #endif
 };

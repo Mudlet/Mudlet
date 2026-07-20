@@ -31,7 +31,7 @@ class SparkleUpdater : public QObject
     Q_OBJECT
 
 public:
-    SparkleUpdater();
+    explicit SparkleUpdater(QObject* parent = nullptr);
     ~SparkleUpdater();
 
 

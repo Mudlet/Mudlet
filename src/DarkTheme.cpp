@@ -37,8 +37,8 @@ void DarkTheme::polish(QPalette& palette)
     // modify palette to dark
     palette.setColor(QPalette::Window, QColor(53, 53, 53));
     palette.setColor(QPalette::WindowText, Qt::white);
-    palette.setColor(QPalette::Base, QColor(42, 42, 42));
-    palette.setColor(QPalette::AlternateBase, QColor(66, 66, 66));
+    palette.setColor(QPalette::Base, QColor(25, 25, 25));
+    palette.setColor(QPalette::AlternateBase, QColor(40, 40, 40));
     palette.setColor(QPalette::ToolTipBase, QColor(53, 53, 53));
     palette.setColor(QPalette::ToolTipText, Qt::white);
     palette.setColor(QPalette::Text, Qt::white);
