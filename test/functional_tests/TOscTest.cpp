@@ -54,9 +54,7 @@ private:
   TelnetServerStub *mpServer = nullptr;
   Host *mpHost = nullptr;
   const QString mHostname = "OSC-Test-Host";
-  // Assigned the stub's actual loopback port in initTestCase - binding to an
-  // ephemeral port (0) keeps concurrent test runs from colliding:
-  QString mPort;
+  QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
   const QString mLocalhost = "localhost";
 
   // Injects raw telnet data into the processing pipeline via loopback and
@@ -188,7 +186,7 @@ private slots:
     initializeQRCResourcesForOscTest();
 
     mpServer = new TelnetServerStub(qApp);
-    mpServer->start(mLocalhost, 0);
+    mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
     QVERIFY2(mpServer->isListening(),
              "TelnetServerStub failed to bind a loopback port");
     mPort = QString::number(mpServer->serverPort());
