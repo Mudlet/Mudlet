@@ -256,10 +256,9 @@ bool ActionUnit::registerAction(TAction* pT)
     if (pT->getParent()) {
         addAction(pT);
         return true;
-    } else {
-        addActionRootNode(pT);
-        return true;
     }
+    addActionRootNode(pT);
+    return true;
 }
 
 void ActionUnit::unregisterAction(TAction* pT)
@@ -271,33 +270,29 @@ void ActionUnit::unregisterAction(TAction* pT)
         removeAction(pT);
         updateAllToolbars();
         return;
-    } else {
-        if (pT->mpEasyButtonBar && pT->mPackageName.isEmpty()) {
-            if (pT->mLocation == 0) {
-                mpHost->mpConsole->mpTopToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
-            }
-            if (pT->mLocation == 2) {
-                mpHost->mpConsole->mpLeftToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
-            }
-            if (pT->mLocation == 3) {
-                mpHost->mpConsole->mpRightToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
-            }
-            if (pT->mLocation == 4) {
-                if (pT->mpToolBar) {
-                    pT->mpToolBar->setFloating(false);
-                    mudlet::self()->removeDockWidget(pT->mpToolBar);
-                }
-            }
-        }
-        if (!pT->getParent()) {
-            removeAction(pT);
-            removeActionRootNode(pT);
-        } else {
-            removeAction(pT);
-        }
-        updateAllToolbars();
-        return;
     }
+    if (pT->mpEasyButtonBar && pT->mPackageName.isEmpty()) {
+        if (pT->mLocation == 0) {
+            mpHost->mpConsole->mpTopToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
+        }
+        if (pT->mLocation == 2) {
+            mpHost->mpConsole->mpLeftToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
+        }
+        if (pT->mLocation == 3) {
+            mpHost->mpConsole->mpRightToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
+        }
+        if (pT->mLocation == 4) {
+            if (pT->mpToolBar) {
+                pT->mpToolBar->setFloating(false);
+                mudlet::self()->removeDockWidget(pT->mpToolBar);
+            }
+        }
+    }
+    removeAction(pT);
+    if (!pT->getParent()) {
+        removeActionRootNode(pT);
+    }
+    updateAllToolbars();
 }
 
 

@@ -337,7 +337,7 @@ void TTrigger::processRegexMatch(const char* haystackC,
             }
             ovector[1] = start_offset + 1;
             continue;
-        } else if (rc < 0) {
+        } else if (rc < 0) { // NOLINT(readability-else-after-return)
             goto END;
         }
 
@@ -410,35 +410,34 @@ END: {
     if (mIsMultiline) {
         updateMultistates(patternNumber, captureList, posList, &nameGroups);
         return;
-    } else {
-        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-        pL->setCaptureGroups(captureList, posList);
-        pL->setCaptureNameGroups(nameGroups, namePositions);
-        execute();
-        pL->clearCaptureGroups();
-        if (mFilterTrigger) {
-            if (captureList.size() > 1) {
-                const int total = captureList.size();
-                auto its = captureList.begin();
-                auto iti = posList.begin();
-                for (int filterPosition = 1; iti != posList.end(); ++iti, ++its, filterPosition++) {
-                    int begin = *iti;
-                    std::string& s = *its;
-                    if (total > 1 && numberOfCaptureGroups > 0) {
-                        // skip complete match in Perl /g option type of triggers
-                        // to enable people to highlight capture groups if there are any
-                        // otherwise highlight complete expression match
-                        if (filterPosition % numberOfCaptureGroups != 1) {
-                            filter(s, begin, lineNumber);
-                        }
-                    } else {
+    }
+    TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+    pL->setCaptureGroups(captureList, posList);
+    pL->setCaptureNameGroups(nameGroups, namePositions);
+    execute();
+    pL->clearCaptureGroups();
+    if (mFilterTrigger) {
+        if (captureList.size() > 1) {
+            const int total = captureList.size();
+            auto its = captureList.begin();
+            auto iti = posList.begin();
+            for (int filterPosition = 1; iti != posList.end(); ++iti, ++its, filterPosition++) {
+                int begin = *iti;
+                std::string& s = *its;
+                if (total > 1 && numberOfCaptureGroups > 0) {
+                    // skip complete match in Perl /g option type of triggers
+                    // to enable people to highlight capture groups if there are any
+                    // otherwise highlight complete expression match
+                    if (filterPosition % numberOfCaptureGroups != 1) {
                         filter(s, begin, lineNumber);
                     }
+                } else {
+                    filter(s, begin, lineNumber);
                 }
             }
         }
-        return;
     }
+    return;
 }
 }
 
@@ -489,17 +488,16 @@ void TTrigger::processBeginOfLine(const QString& needle, int patternNumber, int 
     if (mIsMultiline) {
         updateMultistates(patternNumber, captureList, posList);
         return;
-    } else {
-        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-        pL->setCaptureGroups(captureList, posList);
+    }
+    TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+    pL->setCaptureGroups(captureList, posList);
 
-        // call lua trigger function with number of matches and matches itselves as arguments
-        execute();
-        pL->clearCaptureGroups();
-        if (mFilterTrigger) {
-            if (!captureList.empty()) {
-                filter(captureList.front(), posList.front(), lineNumber);
-            }
+    // call lua trigger function with number of matches and matches itselves as arguments
+    execute();
+    pL->clearCaptureGroups();
+    if (mFilterTrigger) {
+        if (!captureList.empty()) {
+            filter(captureList.front(), posList.front(), lineNumber);
         }
     }
 }
@@ -622,17 +620,16 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
     if (mIsMultiline) {
         updateMultistates(regexNumber, captureList, posList);
         return;
-    } else {
-        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-        pL->setCaptureGroups(captureList, posList);
+    }
+    TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+    pL->setCaptureGroups(captureList, posList);
 
-        // call lua trigger function with number of matches and matches itselves as arguments
-        execute();
-        pL->clearCaptureGroups();
-        if (mFilterTrigger) {
-            if (!captureList.empty()) {
-                filter(captureList.front(), posList.front(), lineNumber);
-            }
+    // call lua trigger function with number of matches and matches itselves as arguments
+    execute();
+    pL->clearCaptureGroups();
+    if (mFilterTrigger) {
+        if (!captureList.empty()) {
+            filter(captureList.front(), posList.front(), lineNumber);
         }
     }
 }
@@ -746,19 +743,18 @@ void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& ca
     if (mIsMultiline) {
         updateMultistates(patternNumber, captureList, posList);
         return;
-    } else {
-        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-        pL->setCaptureGroups(captureList, posList);
-        // call lua trigger function with number of matches and matches itselves as arguments
-        execute();
-        pL->clearCaptureGroups();
-        if (mFilterTrigger) {
-            if (!captureList.empty()) {
-                auto it1 = captureList.begin();
-                auto it2 = posList.begin();
-                for (; it1 != captureList.end(); it1++, it2++) {
-                    filter(*it1, *it2, lineNumber);
-                }
+    }
+    TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+    pL->setCaptureGroups(captureList, posList);
+    // call lua trigger function with number of matches and matches itselves as arguments
+    execute();
+    pL->clearCaptureGroups();
+    if (mFilterTrigger) {
+        if (!captureList.empty()) {
+            auto it1 = captureList.begin();
+            auto it2 = posList.begin();
+            for (; it1 != captureList.end(); it1++, it2++) {
+                filter(*it1, *it2, lineNumber);
             }
         }
     }
@@ -890,16 +886,15 @@ void TTrigger::processExactMatch(const QString& needle, int patternNumber, int p
     if (mIsMultiline) {
         updateMultistates(patternNumber, captureList, posList);
         return;
-    } else {
-        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-        pL->setCaptureGroups(captureList, posList);
-        // call lua trigger function with number of matches and matches themselves as arguments
-        execute();
-        pL->clearCaptureGroups();
-        if (mFilterTrigger) {
-            if (!captureList.empty()) {
-                filter(captureList.front(), posList.front(), lineNumber);
-            }
+    }
+    TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+    pL->setCaptureGroups(captureList, posList);
+    // call lua trigger function with number of matches and matches themselves as arguments
+    execute();
+    pL->clearCaptureGroups();
+    if (mFilterTrigger) {
+        if (!captureList.empty()) {
+            filter(captureList.front(), posList.front(), lineNumber);
         }
     }
 }
@@ -1273,11 +1268,10 @@ bool TTrigger::compileScript()
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
-    } else {
-        mOK_code = false;
-        setError(error);
-        return false;
     }
+    mOK_code = false;
+    setError(error);
+    return false;
 }
 
 namespace {

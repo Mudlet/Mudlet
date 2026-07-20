@@ -69,6 +69,14 @@ constexpr int AUTO_LOGIN_PASSWORD_DELAY_MS = 1000;
 constexpr int AUTO_LOGIN_MAX_DELAY_MS = 60000;
 
 constexpr size_t BUFFER_SIZE = 100000L;
+
+// How many times processSocketData() may re-enter itself to drain data left
+// over after a decompression pass (compressed input that did not fit in one
+// output buffer, or plain data following the compressed stream). Each level
+// puts ~100 KB (out_buffer) on the stack, so this also caps decompressed
+// output at ~MAX_DECOMPRESSION_RECURSION * BUFFER_SIZE per socket read, which
+// bounds a decompression bomb.
+constexpr int MAX_DECOMPRESSION_RECURSION = 8;
 // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (1 of 7) - investigate switching from using `char[]` to `std::array<char>`
 char loadBuffer[BUFFER_SIZE + 1];
 int loadedBytes;
@@ -155,6 +163,10 @@ void cTelnet::reset()
     mEchoAnomalyDetected = false;
 
     mNegotiationOrder.clear();
+
+    // A fresh connection: the player has not interacted yet, so an unsolicited Char.Login.URL must
+    // not auto-open the browser until they do (see Host::userSentInputThisConnection()).
+    mpHost->setUserSentInputThisConnection(false);
 }
 
 
@@ -865,7 +877,8 @@ void cTelnet::slot_socketDisconnected()
 #if !defined(QT_NO_SSL)
     if (sslerr) {
         // Got a secure connection error that should be shown in the preferences
-        mudlet::self()->showOptionsDialog(qsl("tab_connection"));
+        // of the profile that raised it, not whichever profile is active
+        mudlet::self()->showOptionsDialog(qsl("tab_connection"), mpHost);
     }
 #endif
 
@@ -1316,10 +1329,9 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
         // 0xff (assuming that there are no Telnet protocol sequences in here):
         outData = mudlet::replaceString(outData, "\xff", "\xff\xff");
         return socketOutRaw(outData);
-    } else {
-        mpHost->mAllowToSendCommand = true;
-        return false;
     }
+    mpHost->mAllowToSendCommand = true;
+    return false;
 }
 
 // Data is *expected* to be in the required MUD Server encoding on entry,
@@ -2226,7 +2238,8 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
     for (int i = 0; i < payload.size(); ++i) {
         if (!i && payload.at(i) == NEW_ENVIRON_SEND) {
             continue;
-        } else if (!i) {
+        }
+        if (!i) {
             return; // Invalid response;
         }
 
@@ -2376,7 +2389,8 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
     for (int i = 0; i < payload.size(); ++i) {
         if (!i && payload.at(i) == NEW_ENVIRON_SEND) {
             continue;
-        } else if (!i) {
+        }
+        if (!i) {
             return; // Invalid response;
         }
 
@@ -2623,47 +2637,46 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                 enableMSDP = false;
                 break;
-            } else {
-                std::string output;
-
-                enableMSDP = true;
-                sendTelnetOption(TN_DO, OPT_MSDP);
-                //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
-                //NOTE: MSDP does not need quotes for string/vals
-                output += TN_IAC;
-                output += TN_SB;
-                output += OPT_MSDP;
-                output += MSDP_VAR;
-                output += "LIST";
-                output += MSDP_VAL;
-                output += "COMMANDS";
-                output += TN_IAC;
-                output += TN_SE;
-                // This will be unaffected by Mud Server encoding:
-                socketOutRaw(output);
-
-                // send client configurable variables e.g.
-                // IAC SB MSDP MSDP_VAR "CLIENT_NAME" MSDP_VAL "Mudlet" MSDP_VAR "CLIENT_VERSION" MSDP_VAL "4.19" IAC SE
-                output = TN_IAC;
-                output += TN_SB;
-                output += OPT_MSDP;
-                output += MSDP_VAR;
-                output += "CLIENT_NAME";
-                output += MSDP_VAL;
-                output += "Mudlet";
-                output += MSDP_VAR;
-                output += "CLIENT_VERSION";
-                output += MSDP_VAL;
-                output += encodeAndCookBytes(std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData());
-                output += TN_IAC;
-                output += TN_SE;
-                socketOutRaw(output);
-#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
-                qDebug() << "WE send telnet IAC DO MSDP";
-#endif
-                raiseProtocolEvent("sysProtocolEnabled", "MSDP");
-                break;
             }
+            std::string output;
+
+            enableMSDP = true;
+            sendTelnetOption(TN_DO, OPT_MSDP);
+            //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
+            //NOTE: MSDP does not need quotes for string/vals
+            output += TN_IAC;
+            output += TN_SB;
+            output += OPT_MSDP;
+            output += MSDP_VAR;
+            output += "LIST";
+            output += MSDP_VAL;
+            output += "COMMANDS";
+            output += TN_IAC;
+            output += TN_SE;
+            // This will be unaffected by Mud Server encoding:
+            socketOutRaw(output);
+
+            // send client configurable variables e.g.
+            // IAC SB MSDP MSDP_VAR "CLIENT_NAME" MSDP_VAL "Mudlet" MSDP_VAR "CLIENT_VERSION" MSDP_VAL "4.19" IAC SE
+            output = TN_IAC;
+            output += TN_SB;
+            output += OPT_MSDP;
+            output += MSDP_VAR;
+            output += "CLIENT_NAME";
+            output += MSDP_VAL;
+            output += "Mudlet";
+            output += MSDP_VAR;
+            output += "CLIENT_VERSION";
+            output += MSDP_VAL;
+            output += encodeAndCookBytes(std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData());
+            output += TN_IAC;
+            output += TN_SE;
+            socketOutRaw(output);
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
+            qDebug() << "WE send telnet IAC DO MSDP";
+#endif
+            raiseProtocolEvent("sysProtocolEnabled", "MSDP");
+            break;
         }
 
         if (option == OPT_ATCP) {
@@ -2732,7 +2745,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && mudlet::self()->mDiscord.libraryLoaded()) {
                     supportsList += R"(, "External.Discord 1")";
                 }
-                supportsList += R"(, "Client.Media 1", "Char.Login 1"])";
+                supportsList += R"(, "Client.Media 1", "Char.Login 2"])";
                 output += supportsList;
             }
             output += TN_IAC;
@@ -4088,10 +4101,9 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
 
     if (!transcodedMsg.endsWith(qsl(")"))) {
         return;
-    } else {
-        // Met the MSP standard so far. Remove this last right parenthesis.
-        transcodedMsg.chop(1);
     }
+    // Met the MSP standard so far. Remove this last right parenthesis.
+    transcodedMsg.chop(1);
 
     TMediaData mediaData{};
 
@@ -4249,11 +4261,10 @@ void cTelnet::setChannel102Variables(const QString& msg)
     if (msg.size() < 2) {
         qDebug() << "ERROR: channel 102 message size != 2 bytes msg<" << msg << ">";
         return;
-    } else {
-        int _m = msg.at(0).toLatin1();
-        int _a = msg.at(1).toLatin1();
-        mpHost->mLuaInterpreter.setChannel102Table(_m, _a);
     }
+    int _m = msg.at(0).toLatin1();
+    int _a = msg.at(1).toLatin1();
+    mpHost->mLuaInterpreter.setChannel102Table(_m, _a);
 }
 
 void cTelnet::setAutoReconnect(bool status)
@@ -4496,9 +4507,8 @@ void cTelnet::gotPrompt(std::string& mud_data)
             if (mMudData[j] == '\n') {
                 mMudData.erase(j, 1);
                 break;
-            } else {
-                break;
             }
+            break;
         NEXT:
             ++j;
         }
@@ -4663,6 +4673,26 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
 
     mZstream.next_in = Z_NULL;
     mZstream.next_out = Z_NULL;
+
+    if (zval == Z_NEED_DICT || zval == Z_DATA_ERROR || zval == Z_STREAM_ERROR || zval == Z_MEM_ERROR) {
+        // The compressed stream is broken (e.g. the server announced
+        // compression but sent uncompressed data). Only Z_STREAM_END used to be
+        // handled, so a failed inflate() silently ate all further input and the
+        // connection looked dead. Warn, drop compression, and let the caller
+        // reprocess the unconsumed input as plain data.
+        qWarning() << "cTelnet::decompressBuffer() ERROR - inflate() failed:" << zError(zval) << "- disabling compression";
+        //: %1 is the decompression error description. Shown when the server sends a corrupt MCCP (compressed) data stream.
+        postMessage(tr("[ WARN  ]  - MCCP decompression error (%1), compression disabled.\n"
+                       "If the display looks garbled, please reconnect to the game.")
+                            .arg(QString::fromUtf8(zError(zval))));
+        sendTelnetOption(TN_DONT, mMCCP_version_1 ? OPT_COMPRESS : OPT_COMPRESS2);
+        inflateEnd(&mZstream);
+        mNeedDecompression = false;
+        hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
+        hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
+        initStreamDecompressor();
+        return outSize;
+    }
 
     if (zval == Z_STREAM_END) {
         inflateEnd(&mZstream);
@@ -4909,16 +4939,30 @@ void cTelnet::slot_socketReadyToBeRead()
 
 void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopbackTesting)
 {
+    // Guard against deep re-entry when draining leftover (de)compressed data -
+    // each level allocates ~100 KB on the stack for out_buffer. Per-connection
+    // (a member, not thread-wide) so one profile's drain - or a re-entrant
+    // feedTelnet() - cannot spend another connection's budget.
+    if (++mDecompressionRecursionDepth > MAX_DECOMPRESSION_RECURSION) {
+        qWarning() << "cTelnet::processSocketData(...) WARNING - recursion depth exceeded, dropping remaining data";
+        //: Shown when too much data expands out of one compressed read (e.g. a decompression bomb) to process safely.
+        postMessage(tr("[ WARN  ]  - Too much data to process at once, some may have been lost."));
+        --mDecompressionRecursionDepth;
+        return;
+    }
+
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (3 of 7) - investigate switching from using `char[]` to `std::array<char>`
     char out_buffer[BUFFER_SIZE + 10];
 
     in_buffer[amount + 1] = '\0';
 
     if (amount == -1) {
+        --mDecompressionRecursionDepth;
         return;
     }
 
     if (amount == 0) {
+        --mDecompressionRecursionDepth;
         return;
     }
 
@@ -4930,9 +4974,21 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     datalen = amount;
     char* buffer = in_buffer;
 
+    char* remainingData = nullptr;
+    int remainingAmount = 0;
+
     if (mNeedDecompression) {
         datalen = decompressBuffer(in_buffer, amount, out_buffer);
         buffer = out_buffer;
+        // decompressBuffer() only fills one output buffer per call and drops
+        // out of compression on stream end or a broken stream. Anything it did
+        // not consume - more compressed data, or plain data past the stream -
+        // must still be processed, so queue it (see the re-entry at the end).
+        // The recursion cap bounds this if a pass ever makes no progress.
+        if (amount > 0) {
+            remainingData = in_buffer;
+            remainingAmount = amount;
+        }
     }
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
     buffer[static_cast<size_t>(datalen)] = '\0';
@@ -5019,6 +5075,13 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
 
                             if (restLength > 0) {
                                 datalen = decompressBuffer(buffer, restLength, out_buffer);
+                                // queue input left over past this compressed chunk
+                                // (decompressBuffer() advanced 'buffer' to it) for
+                                // reprocessing at the end of this pass
+                                if (restLength > 0) {
+                                    remainingData = buffer;
+                                    remainingAmount = restLength;
+                                }
                                 buffer = out_buffer;
                                 i = -1; // start processing buffer from the beginning.
                             } else {
@@ -5123,11 +5186,21 @@ Some data loss is likely - please mention this problem to the game admins.)",
         gotRest(cleandata);
     }
 
+    // Reprocess data left over after this decompression pass (more compressed
+    // data than fit in one output buffer, or plain data past the end of the
+    // compressed stream). finalize() runs only at the deepest level.
+    if (remainingData && remainingAmount > 0) {
+        processSocketData(remainingData, remainingAmount, loopbackTesting);
+        --mDecompressionRecursionDepth;
+        return;
+    }
+
     if (mpHost && mpHost->mpConsole) {
         mpHost->mpConsole->finalize();
     }
 
     mRecordLastChunkMSecTimeOffset = mRecordingChunkTimer.elapsed();
+    --mDecompressionRecursionDepth;
 }
 
 void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
