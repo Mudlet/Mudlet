@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2020, 2022-2025 by Stephen Lyons                   *
+ *   Copyright (C) 2018-2020, 2022-2026 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2023-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
@@ -192,7 +192,8 @@ bool TCommandLine::event(QEvent* event)
                 mpConsole->mUpperPane->slot_copySelectionToClipboard();
                 ke->accept();
                 return true;
-            } else if (hasLowerPaneSelection) {
+            }
+            if (hasLowerPaneSelection) {
                 // Copy from lower pane if it has a selection
                 mpConsole->mLowerPane->slot_copySelectionToClipboard();
                 ke->accept();
@@ -916,7 +917,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     * only) argument given.
     */
 
-    auto separator_aboveStandardMenu = popup->insertSeparator(popup->actions().first());
+    auto separator_aboveStandardMenu = popup->insertSeparator(popup->actions().constFirst());
     if (handle_profile) {
         popup->insertAction(separator_aboveStandardMenu, action_removeWord);
         popup->insertAction(action_removeWord, action_addWord);
@@ -1009,7 +1010,9 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         }
     }
 
-    if (!toPlainText().isEmpty() && !mpHost->isRemoteEchoingActive()) {
+    // Save to history if not empty, unless we're in password mode (remote echo suppression)
+    // Exception: when password masking is disabled, history should work normally
+    if (!toPlainText().isEmpty() && (!mpHost->isRemoteEchoingActive() || mpHost->mDisablePasswordMasking)) {
         if (mpHost->mAutoClearCommandLineAfterSend) {
             mHistoryBuffer = 0;
         } else {
@@ -1173,9 +1176,8 @@ void TCommandLine::handleAutoCompletion()
             }
             moveCursor(QTextCursor::End, QTextCursor::KeepAnchor);
             return;
-        } else {
-            moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
         }
+        moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
     }
     mAutoCompletionCount = -1;
 }
@@ -1882,4 +1884,12 @@ void TCommandLine::resizeEvent(QResizeEvent* event)
     if (mpPasswordToggleButton && mpPasswordToggleButton->isVisible()) {
         positionPasswordToggleButton();
     }
+}
+
+/* We need to have this method defined in this file as the TConsole class is
+ * forward declared in the header file and it is problematic to define any
+ * dereferencing of it there:*/
+TConsole* TCommandLine::console() const
+{
+    return mpConsole;
 }

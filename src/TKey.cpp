@@ -68,6 +68,13 @@ void TKey::setName(const QString& name)
 
 bool TKey::match(const Qt::Key key, const Qt::KeyboardModifiers modifier, const bool isToMatchAll)
 {
+    // Guard against re-entrancy: cleanup may have deleted this key while
+    // match() was still on the call stack
+    if (!mpMyChildrenList) {
+        qWarning() << "TKey::match() called on destroyed key - ID:" << mID << "Name:" << mName;
+        return false;
+    }
+
     bool isAMatch = false;
     if (isActive()) {
         if (!isFolder()) {
@@ -172,10 +179,20 @@ bool TKey::compileScript()
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
+    }
+    mOK_code = false;
+    setError(error);
+    return false;
+}
+
+void TKey::validateKeyBinding()
+{
+    if (!isFolder() && (mKeyCode == Qt::Key_unknown || mKeyCode == Qt::Key(0))) {
+        mOK_init = false;
+        //: Error shown in the editor when a key item has no key binding assigned
+        setError(QObject::tr("No key binding set. Click \"Grab New Key\" to assign one."));
     } else {
-        mOK_code = false;
-        setError(error);
-        return false;
+        mOK_init = true;
     }
 }
 
@@ -209,7 +226,7 @@ QString TKey::packageName(TKey* pKey)
     }
 
     if (!pKey->mPackageName.isEmpty()) {
-        return !mpHost->mModuleInfo.contains(pKey->mPackageName) ? pKey->mPackageName : QString();
+        return !mpHost->mInstalledModules.contains(pKey->mPackageName) ? pKey->mPackageName : QString();
     }
 
     if (pKey->getParent()) {
@@ -226,7 +243,7 @@ QString TKey::moduleName(TKey* pKey)
     }
 
     if (!pKey->mPackageName.isEmpty()) {
-        return mpHost->mModuleInfo.contains(pKey->mPackageName) ? pKey->mPackageName : QString();
+        return mpHost->mInstalledModules.contains(pKey->mPackageName) ? pKey->mPackageName : QString();
     }
 
     if (pKey->getParent()) {

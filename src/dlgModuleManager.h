@@ -54,6 +54,8 @@ protected:
     void closeEvent(QCloseEvent* event) override;
 
 private:
+    void showImportStatus(const QString& message);
+
     Host* mpHost = nullptr;
 };
 

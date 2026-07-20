@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2022 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2016, 2022, 2026 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -226,6 +227,7 @@ void dlgComposer::recheckWholeLine()
 void dlgComposer::slot_contextMenu(const QPoint& pos)
 {
     auto* popup = edit->createStandardContextMenu();
+    popup->setAttribute(Qt::WA_DeleteOnClose);
     if (mpHost && mpHost->mEnableSpellCheck) {
         // Convert from widget coordinates to viewport coordinates
         QPoint viewportPos = edit->viewport()->mapFromParent(pos);
@@ -409,7 +411,7 @@ void dlgComposer::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     * only) argument given.
     */
 
-    auto separator_aboveStandardMenu = popup->insertSeparator(popup->actions().first());
+    auto separator_aboveStandardMenu = popup->insertSeparator(popup->actions().constFirst());
     if (handle_profile) {
         popup->insertAction(separator_aboveStandardMenu, action_removeWord);
         popup->insertAction(action_removeWord, action_addWord);

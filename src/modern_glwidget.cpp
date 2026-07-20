@@ -80,6 +80,7 @@ void ModernGLWidget::cleanup()
     mNormalBuffer.destroy();
     mIndexBuffer.destroy();
     mInstanceBuffer.destroy();
+    mTexCoordBuffer.destroy();
     mVAO.destroy();
     doneCurrent();
 }
@@ -252,7 +253,7 @@ void ModernGLWidget::paintGL()
                 if (mpMap->mpRoomDB->isEmpty()) {
                     message = tr("No rooms in the map - load another one, or start mapping from scratch to begin.");
                 } else {
-                    message = tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size());
+                    message = tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", nullptr, mpMap->mpRoomDB->size());
                 }
             } else {
                 message = tr("You do not have a map yet - load one, or start mapping from scratch to begin.");
@@ -392,6 +393,10 @@ void ModernGLWidget::renderRooms()
         int currentRoomId = itRoom.next();
         TRoom* pR = mpMap->mpRoomDB->getRoom(currentRoomId);
         if (!pR) {
+            continue;
+        }
+
+        if (pR->isHidden()) {
             continue;
         }
 
@@ -632,6 +637,10 @@ void ModernGLWidget::renderConnections()
             continue;
         }
 
+        if (pR->isHidden()) {
+            continue;
+        }
+
         auto rx = static_cast<float>(pR->x());
         auto ry = static_cast<float>(pR->y());
         auto rz = static_cast<float>(pR->z());
@@ -686,6 +695,10 @@ void ModernGLWidget::renderConnections()
 
             TRoom* pExit = mpMap->mpRoomDB->getRoom(k);
             if (!pExit) {
+                continue;
+            }
+
+            if (pExit->isHidden()) {
                 continue;
             }
 
@@ -1592,16 +1605,18 @@ void ModernGLWidget::renderBackgroundLabels()
         float centerZ = label.pos.z();
 
         // Create render command for this label
-        auto command = std::make_unique<RenderLabelCommand>(
-            centerX, centerY, centerZ,
-            labelWidth, labelHeight,
-            textureId,
-            mCameraController.getRightVector(),
-            mCameraController.getUpVector(),
-            label.highlight,
-            mCameraController.getProjectionMatrix(),
-            mCameraController.getViewMatrix(),
-            mCameraController.getModelMatrix());
+        auto command = std::make_unique<RenderLabelCommand>(centerX,
+                                                            centerY,
+                                                            centerZ,
+                                                            labelWidth,
+                                                            labelHeight,
+                                                            textureId,
+                                                            mCameraController.getRightVector(),
+                                                            mCameraController.getUpVector(),
+                                                            label.highlight,
+                                                            mCameraController.getProjectionMatrix(),
+                                                            mCameraController.getViewMatrix(),
+                                                            mCameraController.getModelMatrix());
 
         mRenderCommandQueue.addCommand(std::move(command));
     }
@@ -1670,16 +1685,18 @@ void ModernGLWidget::renderForegroundLabels()
         float centerZ = label.pos.z();
 
         // Create render command for this label
-        auto command = std::make_unique<RenderLabelCommand>(
-            centerX, centerY, centerZ,
-            labelWidth, labelHeight,
-            textureId,
-            mCameraController.getRightVector(),
-            mCameraController.getUpVector(),
-            label.highlight,
-            mCameraController.getProjectionMatrix(),
-            mCameraController.getViewMatrix(),
-            mCameraController.getModelMatrix());
+        auto command = std::make_unique<RenderLabelCommand>(centerX,
+                                                            centerY,
+                                                            centerZ,
+                                                            labelWidth,
+                                                            labelHeight,
+                                                            textureId,
+                                                            mCameraController.getRightVector(),
+                                                            mCameraController.getUpVector(),
+                                                            label.highlight,
+                                                            mCameraController.getProjectionMatrix(),
+                                                            mCameraController.getViewMatrix(),
+                                                            mCameraController.getModelMatrix());
 
         mRenderCommandQueue.addCommand(std::move(command));
     }

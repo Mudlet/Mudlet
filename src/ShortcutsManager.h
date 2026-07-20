@@ -21,6 +21,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <map>
+#include <memory>
+
 #include <QMap>
 #include <QObject>
 #include <QString>
@@ -28,11 +31,13 @@
 
 class ShortcutsManager : public QObject
 {
-
     Q_OBJECT
 
 public:
-    explicit ShortcutsManager(QObject* parent = nullptr) : QObject(parent) {}
+    explicit ShortcutsManager(QObject* parent = nullptr)
+    : QObject(parent)
+    {
+    }
     ShortcutsManager(ShortcutsManager const&) = delete;
     ShortcutsManager& operator=(ShortcutsManager const&) = delete;
     ShortcutsManager(ShortcutsManager&&) = delete;
@@ -48,10 +53,10 @@ public:
 
 private:
     QList<QString> shortcutKeys;
-    QMap<QString, QKeySequence*> shortcuts; //shortcut key : sequence in use pointer
-    QMap<QString, QKeySequence*> defaults; //shortcut key : default sequence
-    QMap<QString, QString> translations; //shortcut key : translation for shortcut label
-
+    // Non-owning: callers retain ownership of the QKeySequence* stored here.
+    QMap<QString, QKeySequence*> shortcuts;                    //shortcut key : sequence in use pointer
+    std::map<QString, std::unique_ptr<QKeySequence>> defaults; //shortcut key : default sequence (owned)
+    QMap<QString, QString> translations;                       //shortcut key : translation for shortcut label
 };
 
 #endif //MUDLET_SHORTCUTSMANAGER_H

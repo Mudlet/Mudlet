@@ -23,6 +23,10 @@
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 
+extern "C" {
+#include <lauxlib.h>
+}
+
 MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH)
 : QObject(parent)
 , mpHost(pH)
@@ -35,8 +39,28 @@ MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH)
     });
 }
 
+MapInfoContributorManager::~MapInfoContributorManager()
+{
+    for (auto it = mLuaCallbackRefs.begin(); it != mLuaCallbackRefs.end(); ++it) {
+        luaL_unref(it->L, LUA_REGISTRYINDEX, it->ref);
+    }
+}
+
 void MapInfoContributorManager::registerContributor(const QString& name, MapInfoCallback callback)
 {
+    releaseLuaCallbackRef(name);
+    if (contributors.contains(name)) {
+        ordering.removeOne(name);
+    }
+    ordering.append(name);
+    contributors.insert(name, callback);
+    emit signal_contributorsUpdated();
+}
+
+void MapInfoContributorManager::registerContributor(const QString& name, MapInfoCallback callback, lua_State* L, int callbackRef)
+{
+    releaseLuaCallbackRef(name);
+    mLuaCallbackRefs.insert(name, {L, callbackRef});
     if (contributors.contains(name)) {
         ordering.removeOne(name);
     }
@@ -47,10 +71,19 @@ void MapInfoContributorManager::registerContributor(const QString& name, MapInfo
 
 bool MapInfoContributorManager::removeContributor(const QString& name)
 {
+    releaseLuaCallbackRef(name);
     mpHost->mMapInfoContributors.remove(name);
     ordering.removeOne(name);
     emit signal_contributorsUpdated();
     return contributors.remove(name) > 0;
+}
+
+void MapInfoContributorManager::releaseLuaCallbackRef(const QString& name)
+{
+    if (auto it = mLuaCallbackRefs.find(name); it != mLuaCallbackRefs.end()) {
+        luaL_unref(it->L, LUA_REGISTRYINDEX, it->ref);
+        mLuaCallbackRefs.erase(it);
+    }
 }
 
 bool MapInfoContributorManager::enableContributor(const QString& name)
@@ -118,14 +151,12 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
         const QString areaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
         if (area) {
             infoText = qsl("%1\n").arg(
-                    /*:
-                %1 is the (text) name of the area, %2 is the area ID number,
-                %3 and %4 are the minimum and maximum x coordinates, %5 and %6 for y, and %7 and %8 for z.
-                This text uses non-breaking spaces (Unicode U+00A0) and non-breaking hyphens
-                which are used to prevent the line being split at some places it might otherwise be.
-                When translating, please consider at which points the text may be divided to fit
-                onto more than one line. 
-                */
+                    /*: %1 is the (text) name of the area, %2 is the area ID number,
+ %3 and %4 are the minimum and maximum x coordinates, %5 and %6 for y, and %7 and %8 for z.
+ This text uses non-breaking spaces (Unicode U+00A0) and non-breaking hyphens
+ which are used to prevent the line being split at some places it might otherwise be.
+ When translating, please consider at which points the text may be divided to fit
+ onto more than one line.*/
                     tr("Area:\u00A0%1 ID:\u00A0%2 x:\u00A0%3\u00A0<‑>\u00A0%4 y:\u00A0%5\u00A0<‑>\u00A0%6 z:\u00A0%7\u00A0<‑>\u00A0%8")
                             .arg(areaName,
                                  QString::number(areaId),
@@ -156,14 +187,12 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
         case 0:
             // The following multi-line comments for translators are deliberately vague to cover all
             // three same strings in these cases with a same comment, so translators only see them once.
-            /*:
-            This text is shown when room(s) are (not) selected in mapper. %1 is the room ID number, 
-            and %2, %3, %4 are the x, y, and z coordinates of the current/selected room, or a room
-            near the middle of the selection. %5 is a description like: Current player room.
-            This text uses non-breaking spaces (Unicode \u00A0) and a non-breaking hyphen (\u2011). 
-            They are used to prevent the line being split at unexpected places. When translating, 
-            please consider at which points the text may be divided to fit onto more than one line.
-            */
+            /*: This text is shown when room(s) are (not) selected in mapper. %1 is the room ID number,
+ and %2, %3, %4 are the x, y, and z coordinates of the current/selected room, or a room
+ near the middle of the selection. %5 is a description like: Current player room.
+ This text uses non-breaking spaces (Unicode \u00A0) and a non-breaking hyphen (\u2011).
+ They are used to prevent the line being split at unexpected places. When translating,
+ please consider at which points the text may be divided to fit onto more than one line.*/
             infoText.append(tr("Room\u00A0ID:\u00A0%1 Position\u00A0on\u00A0Map: (%2,%3,%4) \u2011\u00A0%5")
                                     .arg(QString::number(roomID),
                                          QString::number(room->x()),
@@ -179,14 +208,12 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
             }
             break;
         case 1:
-            /*:
-            This text is shown when room(s) are (not) selected in mapper. %1 is the room ID number, 
-            and %2, %3, %4 are the x, y, and z coordinates of the current/selected room, or a room
-            near the middle of the selection. %5 is a description like: Current player room.
-            This text uses non-breaking spaces (Unicode \u00A0) and a non-breaking hyphen (\u2011). 
-            They are used to prevent the line being split at unexpected places. When translating, 
-            please consider at which points the text may be divided to fit onto more than one line.
-            */
+            /*: This text is shown when room(s) are (not) selected in mapper. %1 is the room ID number,
+ and %2, %3, %4 are the x, y, and z coordinates of the current/selected room, or a room
+ near the middle of the selection. %5 is a description like: Current player room.
+ This text uses non-breaking spaces (Unicode \u00A0) and a non-breaking hyphen (\u2011).
+ They are used to prevent the line being split at unexpected places. When translating,
+ please consider at which points the text may be divided to fit onto more than one line.*/
             infoText.append(tr("Room\u00A0ID:\u00A0%1 Position\u00A0on\u00A0Map: (%2,%3,%4) \u2011\u00A0%5")
                                     .arg(QString::number(roomID),
                                          QString::number(room->x()),
@@ -203,14 +230,12 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
             }
             break;
         default:
-            /*:
-            This text is shown when room(s) are (not) selected in mapper. %1 is the room ID number, 
-            and %2, %3, %4 are the x, y, and z coordinates of the current/selected room, or a room
-            near the middle of the selection. %5 is a description like: Current player room.
-            This text uses non-breaking spaces (Unicode U+00A0) and a non-breaking hyphen (U+2011). 
-            They are used to prevent the line being split at unexpected places. When translating, 
-            please consider at which points the text may be divided to fit onto more than one line.
-            */
+            /*: This text is shown when room(s) are (not) selected in mapper. %1 is the room ID number,
+ and %2, %3, %4 are the x, y, and z coordinates of the current/selected room, or a room
+ near the middle of the selection. %5 is a description like: Current player room.
+ This text uses non-breaking spaces (Unicode U+00A0) and a non-breaking hyphen (U+2011).
+ They are used to prevent the line being split at unexpected places. When translating,
+ please consider at which points the text may be divided to fit onto more than one line.*/
             infoText.append(tr("Room\u00A0ID:\u00A0%1 Position\u00A0on\u00A0Map: (%2,%3,%4) \u2011\u00A0%5")
                                     .arg(QString::number(roomID),
                                          QString::number(room->x()),

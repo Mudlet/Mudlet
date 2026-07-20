@@ -21,6 +21,7 @@
 #define MUDLETINSTANCECOORDINATOR_H
 
 #include "Host.h"
+#include <QHash>
 #include <QLocalServer>
 #include <QMutex>
 #include <QStringList>
@@ -38,6 +39,9 @@ public:
     bool installPackagesRemotely();
     QStringList readPackageQueue();
 
+    void queueTelnetUri(const QString& uri);
+    bool forwardTelnetUriToRunningInstance();
+
 protected:
     void incomingConnection(quintptr socketDescriptor) override;
 
@@ -49,6 +53,8 @@ private:
     QMutex mMutex;
     QString mServerName;
     QStringList mQueuedPackagePaths;
+    QString mQueuedTelnetUri;
+    QHash<QLocalSocket*, QByteArray> mSocketBuffers;
 };
 
 #endif // MUDLETINSTANCECOORDINATOR_H

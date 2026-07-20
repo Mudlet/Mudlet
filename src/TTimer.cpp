@@ -183,11 +183,10 @@ bool TTimer::compileScript()
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
-    } else {
-        mOK_code = false;
-        setError(error);
-        return false;
     }
+    mOK_code = false;
+    setError(error);
+    return false;
 }
 
 bool TTimer::checkRestart()
@@ -197,6 +196,13 @@ bool TTimer::checkRestart()
 
 void TTimer::execute()
 {
+    // Guard against re-entrancy: cleanup may have deleted this timer while
+    // execute() was still on the call stack
+    if (!mpMyChildrenList) {
+        qWarning() << "TTimer::execute() called on destroyed timer - ID:" << mID << "Name:" << mName;
+        return;
+    }
+
     if (!isActive() || isFolder()) {
         mpQTimer->stop();
         return;
@@ -385,7 +391,7 @@ QString TTimer::packageName(TTimer* pTimer)
     }
 
     if (!pTimer->mPackageName.isEmpty()) {
-        return !mpHost->mModuleInfo.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
+        return !mpHost->mInstalledModules.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
     }
 
     if (pTimer->getParent()) {
@@ -402,7 +408,7 @@ QString TTimer::moduleName(TTimer* pTimer)
     }
 
     if (!pTimer->mPackageName.isEmpty()) {
-        return mpHost->mModuleInfo.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
+        return mpHost->mInstalledModules.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
     }
 
     if (pTimer->getParent()) {

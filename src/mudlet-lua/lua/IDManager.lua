@@ -76,7 +76,6 @@ end
 
 -- internal function, not documented
 function IDMgr:deleteAll(typ)
-  print("Deleting all " .. typ .. "...")
   if table.size(self[typ]) > 0 then
     for name,_ in pairs(self[typ]) do
       self:delete(name, typ)

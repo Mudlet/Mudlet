@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
- *   Copyright (C) 2022-2023, 2025 by Stephen Lyons                        *
+ *   Copyright (C) 2022-2023, 2025-2026 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2022-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
@@ -52,7 +52,13 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
-void dlgRoomProperties::init(QHash<QString, int> usedNames, QHash<int, int>& pColors, QHash<QString, int>& pSymbols, QHash<int, int>& pWeights, QHash<bool, int> lockStatus, QSet<TRoom*>& pRooms)
+void dlgRoomProperties::init(QHash<QString, int> usedNames,
+                             QHash<int, int>& pColors,
+                             QHash<QString, int>& pSymbols,
+                             QHash<int, int>& pWeights,
+                             QHash<bool, int> lockStatus,
+                             int hiddenRoomCount,
+                             QSet<TRoom*>& pRooms)
 {
     // Configure name display
     if (usedNames.size() > 1) {
@@ -71,7 +77,7 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames, QHash<int, int>& pCo
     mpRooms = pRooms;
 
     // Store original border values for live preview restoration on cancel
-    for (TRoom* room : mpRooms) {
+    for (TRoom* room : std::as_const(mpRooms)) {
         mOriginalBorderColors[room] = room->mBorderColor;
         mOriginalBorderThicknesses[room] = room->mBorderThickness;
     }
@@ -151,6 +157,18 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames, QHash<int, int>& pCo
     }
     initLockInstructions();
 
+    // Configure hidden display
+    if (hiddenRoomCount && hiddenRoomCount < mpRooms.size()) {
+        // Some rooms are hidden
+        checkBox_hidden->setTristate(true);
+        checkBox_hidden->setCheckState(Qt::PartiallyChecked);
+    } else {
+        // Either none or all of them are hidden
+        checkBox_hidden->setTristate(false);
+        checkBox_hidden->setChecked(hiddenRoomCount == mpRooms.size());
+    }
+    initHiddenInstructions(hiddenRoomCount);
+
     // Configure border display
     selectedBorderColor = pFirstRoom->mBorderColor;
     mBorderThickness = pFirstRoom->mBorderThickness;
@@ -171,11 +189,47 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames, QHash<int, int>& pCo
 
 void dlgRoomProperties::initLockInstructions()
 {
-    const QString instructions = tr("Lock room(s), so it/they will never be used for speedwalking",
-                                    // Intentional comment to separate arguments!
-                                    "This text will be shown at a checkbox, where you can set/unset a number of room's lock.",
+    //: room properties dialog, text will be shown at a checkbox, where you can set/unset a number of room's lock.
+    const QString instructions = tr("Lock %n room(s), so it/they will never be used for speedwalking",
+                                    nullptr,
                                     mpRooms.size());
     checkBox_locked->setText(instructions);
+}
+
+void dlgRoomProperties::initHiddenInstructions(const int hiddenRoomCount)
+{
+    if (hiddenRoomCount && hiddenRoomCount < mpRooms.size()) {
+        checkBox_hidden->setText(
+                /*: room properties dialog, setting text for checkbox, where you can
+ set/unset a number of room's hidden status. More than one room is being
+ considered and some, but not all (%n) of them are hidden and in this case the
+ checkbox also has an partially checked state to be used to leave them all
+ unchanged. A second translatable sentance indicating the number of currently
+ hidden rooms will be inserted as %1.*/
+                tr("Hide all %n room(s).%1",
+                   nullptr,
+                   mpRooms.size())
+                        /*: room properties dialog, additional sentance inserted into setting text for checkbox,
+ when some (%n) but not all of the rooms are hidden. Ensure that, if the locale uses
+ spaces between words, that one is present at the beginning or end so that the
+ text is correctly spaced when it is inserted into the primary text.*/
+                        .arg(tr(" %n room(s) are currently hidden.",
+                             nullptr,
+                             hiddenRoomCount)));
+/*: Tooltip to give additional information for the checkbox to control the
+ state of being hidden when the selection includes multiple rooms and they
+ are not all in the same state.*/
+        checkBox_hidden->setToolTip(utils::richText(tr("Leave as partially checked to not change the state of the selected rooms.")));
+        return;
+    }
+
+    /*: room properties dialog, setting text for checkbox, where you can
+ set/unset the hidden status of one or more rooms where %n is the total number
+ of rooms and all of them are currently hidden or shown.*/
+    checkBox_hidden->setText(tr("Hide (all) %n room(s).",
+                                nullptr,
+                                mpRooms.size()));
+    checkBox_hidden->setToolTip(QString());
 }
 
 
@@ -263,11 +317,9 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
         while (itSymbolUsed.hasNext()) {
             itSymbolUsed.next();
             if (itSymbolUsed.value() == symbolCountsList.at(i)) {
-                /*:
-                Format for showing a room symbol with its usage count. %1 is the symbol itself (e.g., "★" or "!"),
-                %2 is the number of rooms using this symbol. Example output: "★ (count: 5)" or "! (count: 12)".
-                The word "count" and the format can be translated, but ensure the numbers remain clearly associated.
-                */
+                /*: Format for showing a room symbol with its usage count. %1 is the symbol itself (e.g., "★" or "!"),
+%2 is the number of rooms using this symbol. Example output: "★ (count: 5)" or "! (count: 12)".
+The word "count" and the format can be translated, but ensure the numbers remain clearly associated.*/
                 displayStrings.append(tr("%1 (count: %2)").arg(itSymbolUsed.key(), QString::number(itSymbolUsed.value())));
             }
         }
@@ -300,11 +352,9 @@ QStringList dlgRoomProperties::getComboBoxWeightItems()
         while (itWeightUsed.hasNext()) {
             itWeightUsed.next();
             if (itWeightUsed.value() == weightCountsList.at(i)) {
-                /*:
-                Format for showing a room weight with its usage count. %1 is the weight value (e.g., "1" or "50"),
-                %2 is the number of rooms with this weight. Example output: "5 (count: 3)" or "100 (count: 7)".
-                The word "count" and the format can be translated, but ensure the numbers remain clearly associated.
-                */
+                /*: Format for showing a room weight with its usage count. %1 is the weight value (e.g., "1" or "50"),
+ %2 is the number of rooms with this weight. Example output: "5 (count: 3)" or "100 (count: 7)".
+ The word "count" and the format can be translated, but ensure the numbers remain clearly associated.*/
                 displayStrings.append(tr("%1 (count: %2)").arg(QString::number(itWeightUsed.key()), QString::number(itWeightUsed.value())));
             }
         }
@@ -364,6 +414,21 @@ void dlgRoomProperties::accept()
         }
     }
 
+    // Find hidden status to return back
+    Qt::CheckState const newHiddenCheckState = checkBox_hidden->checkState();
+    bool changeHiddenStatus = true;
+    std::optional<bool> newHiddenStatus;
+    if (newHiddenCheckState == Qt::PartiallyChecked) {
+        // We don't want to change then
+        changeHiddenStatus = false;
+    } else {
+        if (newHiddenCheckState == Qt::Checked) {
+            newHiddenStatus = true;
+        } else { // Qt::Unchecked
+            newHiddenStatus = false;
+        }
+    }
+
     // Find border settings to return back
     bool changeBorderColor = mBorderColorWasChanged;
     QColor newBorderColor = selectedBorderColor;
@@ -382,6 +447,8 @@ void dlgRoomProperties::accept()
                             newWeight,
                             changeLockStatus,
                             newLockStatus,
+                            changeHiddenStatus,
+                            newHiddenStatus,
                             changeBorderColor,
                             newBorderColor,
                             changeBorderThickness,
@@ -676,7 +743,7 @@ void dlgRoomProperties::slot_borderThicknessChanged(int value)
 void dlgRoomProperties::emitBorderPreview()
 {
     // Apply current border settings directly to rooms for live preview
-    for (TRoom* room : mpRooms) {
+    for (TRoom* room : std::as_const(mpRooms)) {
         if (mBorderColorWasChanged) {
             room->mBorderColor = selectedBorderColor;
         }
@@ -689,7 +756,7 @@ void dlgRoomProperties::emitBorderPreview()
 
 void dlgRoomProperties::restoreOriginalBorders()
 {
-    for (TRoom* room : mpRooms) {
+    for (TRoom* room : std::as_const(mpRooms)) {
         room->mBorderColor = mOriginalBorderColors.value(room);
         room->mBorderThickness = mOriginalBorderThicknesses.value(room);
     }

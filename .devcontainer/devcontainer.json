@@ -17,7 +17,8 @@
 	"extensions": [
 		"ms-vscode.cpptools",
 		"ms-vscode.cmake-tools",
-		"ms-dotnettools.vscode-dotnet-runtime"
+		"ms-dotnettools.vscode-dotnet-runtime",
+		"sumneko.lua"
 	],
 
 	"forwardPorts": [5900, 5901, 6080],

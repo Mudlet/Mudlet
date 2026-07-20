@@ -33,6 +33,7 @@
 #include "TLabel.h"
 #include "TMap.h"
 #include "TRoomDB.h"
+#include "TTextBox.h"
 #include "TTextEdit.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
@@ -273,7 +274,16 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
             logStream << "   <!-- body { font-family: '" << fontsList.join("', '") << "'; font-size: 100%; line-height: 1.125em; white-space: nowrap; color:rgb(" << mpHost->mFgColor.red() << ","
                       << mpHost->mFgColor.green() << "," << mpHost->mFgColor.blue() << "); background-color:rgb(" << mpHost->mBgColor.red() << "," << mpHost->mBgColor.green() << ","
                       << mpHost->mBgColor.blue() << ");}\n";
-            logStream << "        span { white-space: pre-wrap; } -->\n";
+            logStream << "        span { white-space: pre-wrap; }\n";
+
+            if (mpHost->getEnableBlinkText()) {
+                logStream << "        @keyframes blink-slow { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }\n";
+                logStream << "        @keyframes blink-fast { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }\n";
+                logStream << "        .blink-slow { animation: blink-slow 2s ease-in-out infinite; }\n";
+                logStream << "        .blink-fast { animation: blink-fast 1s ease-in-out infinite; }\n";
+            }
+
+            logStream << "     -->\n";
             logStream << "  </style>\n";
             logStream << "  </head>\n";
             bool isAtBody = false;
@@ -444,11 +454,14 @@ TConsole* TMainConsole::createBuffer(const QString& name)
 
 void TMainConsole::resetMainConsole()
 {
-    //resetProfile should reset also UserWindows
+    // Delete DockWidgets first — their child UserWindow TConsoles will be
+    // cascade-deleted by Qt's parent-child ownership. Remove the corresponding
+    // TConsole entries from mSubConsoleMap to avoid dangling pointers.
     QMutableMapIterator<QString, TDockWidget*> itDockWidget(mDockWidgetMap);
     while (itDockWidget.hasNext()) {
         itDockWidget.next();
-        itDockWidget.value()->close();
+        mSubConsoleMap.remove(itDockWidget.key());
+        itDockWidget.value()->deleteLater();
         itDockWidget.remove();
     }
 
@@ -459,26 +472,36 @@ void TMainConsole::resetMainConsole()
         itCommandLine.remove();
     }
 
+    // Remaining SubConsole/Buffer entries (UserWindow ones were already removed above)
     QMutableMapIterator<QString, TConsole*> itSubConsole(mSubConsoleMap);
     while (itSubConsole.hasNext()) {
         itSubConsole.next();
-        // CHECK: Do we need to handle the float/dockable widgets here:
-        itSubConsole.value()->close();
+        itSubConsole.value()->deleteLater();
         itSubConsole.remove();
     }
 
     QMutableMapIterator<QString, TLabel*> itLabel(mLabelMap);
     while (itLabel.hasNext()) {
         itLabel.next();
-        itLabel.value()->close();
+        if (itLabel.value()->mpMovie) {
+            mpHost->getGifTracker()->unregisterGif(itLabel.value()->mpMovie);
+        }
+        itLabel.value()->deleteLater();
         itLabel.remove();
     }
 
     QMutableMapIterator<QString, TScrollBox*> itScrollBox(mScrollBoxMap);
     while (itScrollBox.hasNext()) {
         itScrollBox.next();
-        itScrollBox.value()->close();
+        itScrollBox.value()->deleteLater();
         itScrollBox.remove();
+    }
+
+    QMutableMapIterator<QString, TTextBox*> itTextBox(mTextBoxMap);
+    while (itTextBox.hasNext()) {
+        itTextBox.next();
+        itTextBox.value()->deleteLater();
+        itTextBox.remove();
     }
 }
 
@@ -615,10 +638,30 @@ std::pair<bool, QString> TMainConsole::deleteMiniConsole(const QString& name)
 
     auto pConsole = mSubConsoleMap.take(name);
     if (pConsole) {
-        // Using deleteLater() rather than delete as it seems a safer option
-        // given that this item is likely to be linked to some events and
-        // suchlike:
-        pConsole->deleteLater();
+        mCachedWindowSizes.remove(name);
+
+        // A UserWindow's TConsole lives *inside* a TDockWidget. Deleting only the
+        // console (as for an ordinary miniconsole) leaves the dock orphaned in
+        // mDockWidgetMap with a now-null widget(), which later crashes - e.g. in
+        // getUserWindowSize() - when a window of the same name is recreated. Tear
+        // the dock down too; it owns the console as its child widget and deletes
+        // it along with itself (mirrors the shutdown path in TConsole::closeEvent).
+        if (pConsole->getType() == TConsole::UserWindow) {
+            if (auto pDock = mDockWidgetMap.take(name)) {
+                // deleteLater() alone is sufficient: the console is the dock's
+                // child widget, so destroying the dock destroys the console with
+                // it. (No WA_DeleteOnClose - we delete programmatically here, not
+                // in response to a close event.)
+                pDock->deleteLater();
+            } else {
+                pConsole->deleteLater();
+            }
+        } else {
+            // Using deleteLater() rather than delete as it seems a safer option
+            // given that this item is likely to be linked to some events and
+            // suchlike:
+            pConsole->deleteLater();
+        }
 
         // It remains to be seen if the miniconsole has "gone" as a result of the
         // above by the time the Lua subsystem processes the following:
@@ -661,6 +704,28 @@ std::pair<bool, QString> TMainConsole::deleteCommandLine(const QString& name)
 
     // Message is of the form needed for a Lua API function call run-time error
     return {false, qsl("command line name '%1' not found").arg(name)};
+}
+
+std::pair<bool, QString> TMainConsole::deleteTextBox(const QString& name)
+{
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a text edit cannot have an empty string as its name")};
+    }
+
+    auto pTextBox = mTextBoxMap.take(name);
+    if (pTextBox) {
+        pTextBox->deleteLater();
+
+        TEvent mudletEvent{};
+        mudletEvent.mArgumentList.append(QLatin1String("sysTextEditDeleted"));
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mudletEvent.mArgumentList.append(name);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(mudletEvent);
+        return {true, QString()};
+    }
+
+    return {false, qsl("text edit name '%1' not found").arg(name)};
 }
 
 std::pair<bool, QString> TMainConsole::deleteScrollBox(const QString& name)
@@ -778,24 +843,29 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
         }
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;
-        qDebug() << "TConsole::createMapper() - restore map case 2.";
-        mpHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(2) report"), true);
-        const QDateTime now(QDateTime::currentDateTime());
 
-        if (mpHost->mpMap->restore(QString())) {
-            mpHost->mpMap->audit();
-            mpMapper->mp2dMap->init();
-            mpMapper->updateAreaComboBox();
-            mpMapper->resetAreaComboBoxToPlayerRoomArea();
-            mpMapper->show();
+        if (mpHost->mpMap->mpRoomDB->isEmpty()) {
+            // Don't load a map if we already have one around!
+            qDebug() << "TConsole::createMapper() - restore map case 2.";
+            mpHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(2) report"), true);
+            const QDateTime now(QDateTime::currentDateTime());
+
+            if (mpHost->mpMap->restore(QString())) {
+                mpHost->mpMap->audit();
+                mpMapper->mp2dMap->init();
+                mpMapper->updateAreaComboBox();
+                mpMapper->resetAreaComboBoxToPlayerRoomArea();
+                mpMapper->show();
+            }
+
+            mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
+
+            TEvent mapOpenEvent{};
+            mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
+            mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mpHost->raiseEvent(mapOpenEvent);
         }
 
-        mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
-
-        TEvent mapOpenEvent{};
-        mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
-        mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(mapOpenEvent);
     }
     mpMapper->resize(width, height);
     mpMapper->move(x, y);
@@ -843,6 +913,33 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
         return {true, QString()};
     }
     return {false, QLatin1String("couldn't create commandLine")};
+}
+
+std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
+{
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a text edit cannot have an empty string as its name")};
+    }
+
+    auto pT = mTextBoxMap.value(name);
+    auto pW = mDockWidgetMap.value(windowname);
+    auto pS = mScrollBoxMap.value(windowname);
+
+    if (!pT) {
+        if (pS) {
+            pT = new TTextBox(mpHost, name, pS->widget());
+        } else if (pW) {
+            pT = new TTextBox(mpHost, name, pW->widget());
+        } else {
+            pT = new TTextBox(mpHost, name, mpMainFrame);
+        }
+        mTextBoxMap[name] = pT;
+        pT->resize(width, height);
+        pT->move(x, y);
+        pT->show();
+        return {true, QString()};
+    }
+    return {false, QLatin1String("couldn't create text edit")};
 }
 
 bool TMainConsole::setBackgroundImage(const QString& name, const QString& path)
@@ -893,6 +990,7 @@ bool TMainConsole::raiseWindow(const QString& name)
     auto pM = mpMapper;
     auto pN = mSubCommandLineMap.value(name);
     auto pS = mScrollBoxMap.value(name);
+    auto pT = mTextBoxMap.value(name);
 
     if (pC) {
         pC->raise();
@@ -914,6 +1012,10 @@ bool TMainConsole::raiseWindow(const QString& name)
         pN->raise();
         return true;
     }
+    if (pT) {
+        pT->raise();
+        return true;
+    }
 
     return false;
 }
@@ -925,6 +1027,7 @@ bool TMainConsole::lowerWindow(const QString& name)
     auto pM = mpMapper;
     auto pN = mSubCommandLineMap.value(name);
     auto pS = mScrollBoxMap.value(name);
+    auto pT = mTextBoxMap.value(name);
 
     if (pC) {
         pC->lower();
@@ -948,6 +1051,11 @@ bool TMainConsole::lowerWindow(const QString& name)
     }
     if (pN) {
         pN->lower();
+        mpMainDisplay->lower();
+        return true;
+    }
+    if (pT) {
+        pT->lower();
         mpMainDisplay->lower();
         return true;
     }
@@ -996,7 +1104,8 @@ bool TMainConsole::printWindow(const QString& name, const QString& text)
     if (pC) {
         pC->print(text);
         return true;
-    } else if (pL) {
+    }
+    if (pL) {
         pL->setText(text);
         return true;
     }
@@ -1007,11 +1116,37 @@ bool TMainConsole::printWindow(const QString& name, const QString& text)
 QSize TMainConsole::getUserWindowSize(const QString& windowname) const
 {
     auto pW = mDockWidgetMap.value(windowname);
-    if (pW) {
+
+    // Guard pW->widget(): a dock can briefly outlive its console (the console is
+    // deleted via deleteLater()), during which widget() is null - dereferencing
+    // it segfaults. Fall back to the main window size until the dock is gone.
+    if (pW && pW->widget()) {
         const QSize windowSize = pW->widget()->size();
-        QSize userWindowSize(windowSize.width(), windowSize.height());
-        return userWindowSize;
+        const int minValidWidth = 50;
+
+        // Reject obviously invalid sizes
+        if (windowSize.width() < minValidWidth) {
+            if (mCachedWindowSizes.contains(windowname)) {
+                return mCachedWindowSizes.value(windowname);
+            }
+            return windowSize;
+        }
+
+        // Reject suspicious shrinkage (more than 50% reduction suggests profile
+        // is transitioning and geometry isn't settled yet)
+        if (mCachedWindowSizes.contains(windowname)) {
+            const QSize cachedSize = mCachedWindowSizes.value(windowname);
+            const double shrinkageRatio = static_cast<double>(windowSize.width()) / cachedSize.width();
+            if (shrinkageRatio < 0.5) {
+                return cachedSize;
+            }
+        }
+
+        // Size looks valid, cache and return it
+        mCachedWindowSizes[windowname] = windowSize;
+        return windowSize;
     }
+
     return getMainWindowSize();
 }
 
@@ -1175,6 +1310,15 @@ void TMainConsole::setProfileName(const QString& newName)
 
     for (const auto pC : std::as_const(mSubConsoleMap)) {
         pC->setProfileName(newName);
+    }
+}
+
+void TMainConsole::refreshSubconsoles()
+{
+    for (const auto pC : std::as_const(mSubConsoleMap)) {
+        if (pC) {
+            pC->refreshView();
+        }
     }
 }
 
@@ -1596,6 +1740,11 @@ void TMainConsole::showStatistics()
     }
 
     const QString itemScript = "setFgColor(190,150,0); setUnderline(true); echo([[\n\n%1\n]]); setBold(false);setUnderline(false);setFgColor(150,120,0)";
+
+    //: Heading for the system's statistics information displayed in the console
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Telnet Options:")));
+    print(pHost->mTelnet.assembleTelnetOptionsReport(), QColor(150, 120, 0), Qt::black);
+
     //: Heading for the system's statistics information displayed in the console
     mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Trigger Report:")));
     QString itemMsg = std::get<0>(mpHost->getTriggerUnit()->assembleReport());

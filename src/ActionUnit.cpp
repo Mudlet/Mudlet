@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2021, 2023-2024 by Stephen Lyons                  *
+ *   Copyright (C) 2017, 2021, 2023-2024, 2026 by Stephen Lyons            *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -31,6 +31,14 @@
 #include "mudlet.h"
 
 #include <functional>
+
+/* We need an explicit constructor in this file as the Host class is forward
+ * declared in the header file and it is problematic to define any dereferencing
+ * of it there:*/
+ActionUnit::ActionUnit(Host* pHost)
+: mpHost(pHost)
+{
+}
 
 ActionUnit::~ActionUnit()
 {
@@ -248,10 +256,9 @@ bool ActionUnit::registerAction(TAction* pT)
     if (pT->getParent()) {
         addAction(pT);
         return true;
-    } else {
-        addActionRootNode(pT);
-        return true;
     }
+    addActionRootNode(pT);
+    return true;
 }
 
 void ActionUnit::unregisterAction(TAction* pT)
@@ -261,35 +268,31 @@ void ActionUnit::unregisterAction(TAction* pT)
     }
     if (pT->getParent() && pT->getParent()->mPackageName.isEmpty()) {
         removeAction(pT);
-        updateToolbar();
-        return;
-    } else {
-        if (pT->mpEasyButtonBar && pT->mPackageName.isEmpty()) {
-            if (pT->mLocation == 0) {
-                mpHost->mpConsole->mpTopToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
-            }
-            if (pT->mLocation == 2) {
-                mpHost->mpConsole->mpLeftToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
-            }
-            if (pT->mLocation == 3) {
-                mpHost->mpConsole->mpRightToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
-            }
-            if (pT->mLocation == 4) {
-                if (pT->mpToolBar) {
-                    pT->mpToolBar->setFloating(false);
-                    mudlet::self()->removeDockWidget(pT->mpToolBar);
-                }
-            }
-        }
-        if (!pT->getParent()) {
-            removeAction(pT);
-            removeActionRootNode(pT);
-        } else {
-            removeAction(pT);
-        }
-        updateToolbar();
+        updateAllToolbars();
         return;
     }
+    if (pT->mpEasyButtonBar && pT->mPackageName.isEmpty()) {
+        if (pT->mLocation == 0) {
+            mpHost->mpConsole->mpTopToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
+        }
+        if (pT->mLocation == 2) {
+            mpHost->mpConsole->mpLeftToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
+        }
+        if (pT->mLocation == 3) {
+            mpHost->mpConsole->mpRightToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
+        }
+        if (pT->mLocation == 4) {
+            if (pT->mpToolBar) {
+                pT->mpToolBar->setFloating(false);
+                mudlet::self()->removeDockWidget(pT->mpToolBar);
+            }
+        }
+    }
+    removeAction(pT);
+    if (!pT->getParent()) {
+        removeActionRootNode(pT);
+    }
+    updateAllToolbars();
 }
 
 
@@ -314,7 +317,6 @@ void ActionUnit::removeAction(TAction* pT)
 
     mActionMap.remove(pT->getID());
 }
-
 
 int ActionUnit::getNewID()
 {
@@ -468,13 +470,10 @@ void ActionUnit::showToolBar(const QString& name)
     for (auto& easyButtonBar : mEasyButtonBarList) {
         if (easyButtonBar->mpTAction->getName() == name) {
             easyButtonBar->mpTAction->setIsActive(true);
-            updateToolbar();
+            updateAllToolbars();
         }
     }
     mudlet::self()->processEventLoopHack();
-    // If a toolbar is clicked on for a profile that is not the "current"
-    // one, this will switch the focus to THAT profile:
-    mudlet::self()->activateProfile(mpHost);
 }
 
 void ActionUnit::hideToolBar(const QString& name)
@@ -482,7 +481,7 @@ void ActionUnit::hideToolBar(const QString& name)
     for (auto& easyButtonBar : mEasyButtonBarList) {
         if (easyButtonBar->mpTAction->getName() == name) {
             easyButtonBar->mpTAction->setIsActive(false);
-            updateToolbar();
+            updateAllToolbars();
         }
     }
     mudlet::self()->processEventLoopHack();
@@ -621,7 +620,7 @@ void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
 }
 
 
-void ActionUnit::updateToolbar()
+void ActionUnit::updateAllToolbars()
 {
     regenerateToolBars();
     regenerateEasyButtonBars();

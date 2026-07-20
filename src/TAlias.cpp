@@ -69,6 +69,13 @@ void TAlias::setName(const QString& name)
 
 bool TAlias::match(const QString& haystack)
 {
+    // Guard against re-entrancy: cleanup may have deleted this alias while
+    // match() was still on the call stack
+    if (!mpMyChildrenList) {
+        qWarning() << "TAlias::match() called on destroyed alias - ID:" << mID << "Name:" << mName;
+        return false;
+    }
+
     bool matchCondition = false;
     if (!isActive()) {
         if (isFolder()) {
@@ -147,9 +154,10 @@ bool TAlias::match(const QString& haystack)
             posList.push_back(-1);
             continue;
         }
+        const int utf16_pos = QString::fromUtf8(haystackC, ovector[2 * i]).length();
         match.append(substring_start, substring_length);
         captureList.push_back(match);
-        posList.push_back(ovector[2 * i]);
+        posList.push_back(utf16_pos);
         if (mudlet::smDebugMode) {
             TDebug(Qt::darkCyan, Qt::black) << "Alias: capture group #" << (i + 1) << " = " >> mpHost;
             TDebug(Qt::darkMagenta, Qt::black) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
@@ -164,13 +172,16 @@ bool TAlias::match(const QString& haystack)
         for (uint32_t j = 0; j < namecount; ++j) {
             const int n = (tabptr[0] << 8) | tabptr[1];
             auto name = QString::fromUtf8(reinterpret_cast<const char*>(&tabptr[2])).trimmed();
+            tabptr += name_entry_size;
+            if (ovector[2 * n] == PCRE2_UNSET) {
+                continue;
+            }
             auto* substring_start = haystackC + ovector[2 * n];
             auto substring_length = ovector[2 * n + 1] - ovector[2 * n];
-            auto utf16_pos = haystack.indexOf(QString::fromUtf8(substring_start, substring_length));
+            auto utf16_pos = QString::fromUtf8(haystackC, ovector[2 * n]).length();
             auto capture = QString::fromUtf8(substring_start, substring_length);
             nameGroups << qMakePair(name, capture);
-            tabptr += name_entry_size;
-            namePositions.insert(name, qMakePair(utf16_pos, static_cast<int>(substring_length)));
+            namePositions.insert(name, qMakePair(utf16_pos, static_cast<int>(capture.length())));
         }
     }
 
@@ -192,7 +203,8 @@ bool TAlias::match(const QString& haystack)
             }
             ovector[1] = start_offset + 1;
             continue;
-        } else if (rc < 0) {
+        }
+        if (rc < 0) {
             goto END;
         }
 
@@ -205,9 +217,10 @@ bool TAlias::match(const QString& haystack)
                 posList.push_back(-1);
                 continue;
             }
+            const int utf16_pos = QString::fromUtf8(haystackC, ovector[2 * i]).length();
             match.append(substring_start, substring_length);
             captureList.push_back(match);
-            posList.push_back(ovector[2 * i]);
+            posList.push_back(utf16_pos);
             if (mudlet::smDebugMode) {
                 TDebug(Qt::darkCyan, Qt::black) << "capture group #" << (i + 1) << " = " >> mpHost;
                 TDebug(Qt::darkMagenta, Qt::black) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
@@ -336,11 +349,10 @@ bool TAlias::compileScript()
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
-    } else {
-        mOK_code = false;
-        setError(error);
-        return false;
     }
+    mOK_code = false;
+    setError(error);
+    return false;
 }
 
 void TAlias::execute()
@@ -373,7 +385,7 @@ QString TAlias::packageName(TAlias* pAlias)
     }
 
     if (!pAlias->mPackageName.isEmpty()) {
-        return !mpHost->mModuleInfo.contains(pAlias->mPackageName) ? pAlias->mPackageName : QString();
+        return !mpHost->mInstalledModules.contains(pAlias->mPackageName) ? pAlias->mPackageName : QString();
     }
 
     if (pAlias->getParent()) {
@@ -390,7 +402,7 @@ QString TAlias::moduleName(TAlias* pAlias)
     }
 
     if (!pAlias->mPackageName.isEmpty()) {
-        return mpHost->mModuleInfo.contains(pAlias->mPackageName) ? pAlias->mPackageName : QString();
+        return mpHost->mInstalledModules.contains(pAlias->mPackageName) ? pAlias->mPackageName : QString();
     }
 
     if (pAlias->getParent()) {

@@ -1,7 +1,7 @@
 #!/bin/bash
 ###########################################################################
-#   Copyright (C) 2024-2024  by John McKisson - john.mckisson@gmail.com   #
-#   Copyright (C) 2023-2025  by Stephen Lyons - slysven@virginmedia.com   #
+#   Copyright (C) 2024-2026  by John McKisson - john.mckisson@gmail.com   #
+#   Copyright (C) 2023-2026  by Stephen Lyons - slysven@virginmedia.com   #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
 #   it under the terms of the GNU General Public License as published by  #
@@ -19,7 +19,8 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 2.2.0    Add CMake package for CMake-based builds
+# Version: 2.3.0    Switch from MINGW64 to CLANG64 
+#          2.2.0    Add CMake package for CMake-based builds
 #          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
 #          1.5.0    No change
@@ -46,35 +47,33 @@
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
-# 2 - Unsupported MSYS2/MINGGW shell type
+# 2 - Unsupported MSYS2 shell type
 # 5 - Invalid command line argument
 # 6 - One or more Luarocks could not be installed
 # 7 - One of more packages failed to install
 
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
+  echo "Please run this script from a CLANG64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
-  export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="x86_64"
+elif [ "${MSYSTEM}" = "CLANG64" ]; then
+  echo "Building with CLANG64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
-  echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
+  echo "CLANG64 is currently supported. Please rerun this in a bash terminal of"
   echo "that type."
   exit 2
 fi
 
 # We use this internally - but it is actually the same as ${MINGW_PREFIX}
+# Win builds use CLANG64 now, but Mac and Linux still use this define
 export MINGW_BASE_DIR=${MSYSTEM_PREFIX}
-# A more compact - but not necessarily understood by other than MSYS/MINGW
-# executables - path:
-export MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
+
 #
 # FIXME: don't add duplicates but rearrange instead to put them in the "right" order:
 #
-export PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
+export PATH="${MINGW_BASE_DIR}/usr/local/bin:${MINGW_BASE_DIR}/bin:/usr/bin:${PATH}"
 echo "MSYSTEM is: ${MSYSTEM}"
 echo "PATH is now: ${PATH}"
 echo ""
@@ -93,46 +92,45 @@ echo "=== Installing needed packages ==="
 pacman_attempts=0
 while true; do
   if /usr/bin/pacman -Su --needed --noconfirm \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-wmf" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-ffmpeg" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-translations" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
-    "mingw-w64-${BUILDCOMPONENT}-angleproject" \
-    "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-base" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-multimedia" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-multimedia-wmf" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-multimedia-ffmpeg" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-svg" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-speech" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-imageformats" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-translations" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-tools" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-5compat" \
+    "${MINGW_PACKAGE_PREFIX}-angleproject" \
+    "${MINGW_PACKAGE_PREFIX}-qtkeychain-qt6" \
     git \
     man \
     rsync \
-    "mingw-w64-${BUILDCOMPONENT}-ccache" \
-    "mingw-w64-${BUILDCOMPONENT}-toolchain" \
-    "mingw-w64-${BUILDCOMPONENT}-pcre2" \
-    "mingw-w64-${BUILDCOMPONENT}-libzip" \
-    "mingw-w64-${BUILDCOMPONENT}-ntldd" \
-    "mingw-w64-${BUILDCOMPONENT}-pugixml" \
-    "mingw-w64-${BUILDCOMPONENT}-lua51" \
-    "mingw-w64-${BUILDCOMPONENT}-lua51-lpeg" \
-    "mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3" \
-    "mingw-w64-${BUILDCOMPONENT}-hunspell" \
-    "mingw-w64-${BUILDCOMPONENT}-zlib" \
-    "mingw-w64-${BUILDCOMPONENT}-boost" \
-    "mingw-w64-${BUILDCOMPONENT}-yajl" \
-    "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
-    "mingw-w64-${BUILDCOMPONENT}-ffmpeg" \
-    "mingw-w64-${BUILDCOMPONENT}-cmake" \
-    "mingw-w64-${BUILDCOMPONENT}-meson" \
-    "mingw-w64-${BUILDCOMPONENT}-ninja" \
-    "mingw-w64-${BUILDCOMPONENT}-assimp" \
-    "mingw-w64-${BUILDCOMPONENT}-curl" \
-    "mingw-w64-${BUILDCOMPONENT}-uasm" \
-    "mingw-w64-${BUILDCOMPONENT}-clang" \
-    "mingw-w64-${BUILDCOMPONENT}-lld" \
-    "mingw-w64-${BUILDCOMPONENT}-cmake" \
-    "mingw-w64-${BUILDCOMPONENT}-jq"; then
+    "${MINGW_PACKAGE_PREFIX}-ccache" \
+    "${MINGW_PACKAGE_PREFIX}-toolchain" \
+    "${MINGW_PACKAGE_PREFIX}-pcre2" \
+    "${MINGW_PACKAGE_PREFIX}-libzip" \
+    "${MINGW_PACKAGE_PREFIX}-ntldd" \
+    "${MINGW_PACKAGE_PREFIX}-pugixml" \
+    "${MINGW_PACKAGE_PREFIX}-lua51" \
+    "${MINGW_PACKAGE_PREFIX}-lua51-lpeg" \
+    "${MINGW_PACKAGE_PREFIX}-lua51-lsqlite3" \
+    "${MINGW_PACKAGE_PREFIX}-hunspell" \
+    "${MINGW_PACKAGE_PREFIX}-zlib" \
+    "${MINGW_PACKAGE_PREFIX}-boost" \
+    "${MINGW_PACKAGE_PREFIX}-yajl" \
+    "${MINGW_PACKAGE_PREFIX}-oniguruma" \
+    "${MINGW_PACKAGE_PREFIX}-lua-luarocks" \
+    "${MINGW_PACKAGE_PREFIX}-ffmpeg" \
+    "${MINGW_PACKAGE_PREFIX}-cmake" \
+    "${MINGW_PACKAGE_PREFIX}-meson" \
+    "${MINGW_PACKAGE_PREFIX}-ninja" \
+    "${MINGW_PACKAGE_PREFIX}-assimp" \
+    "${MINGW_PACKAGE_PREFIX}-curl" \
+    "${MINGW_PACKAGE_PREFIX}-uasm" \
+    "${MINGW_PACKAGE_PREFIX}-cmake" \
+    "${MINGW_PACKAGE_PREFIX}-jq"; then
       break
   fi
 
@@ -181,17 +179,17 @@ if [ "${SENTRY_SEND_DEBUG}" = "1" ]; then
   echo ""
 fi
 
-if [ "$(grep -c "/.luarocks-${MSYSTEM}" ${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua)" -eq 0 ]; then
+if [ "$(grep -c "/.luarocks-${MSYSTEM}" ${MINGW_BASE_DIR}/etc/luarocks/config-5.1.lua)" -eq 0 ]; then
   # The luarocks config file has not been tweaked to put the compiled rocks in
   # a location that is different for each different MSYS2 environment
   echo "  Tweaking location for constructed Luarocks so 32 and 64 bits ones do"
   echo "  not end up in the same place when --tree \"user\" is used..."
   echo ""
 
-  cp "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua.orig"
-  cp "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua.orig"
-  /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua.orig" > "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua"
-  /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua.orig" > "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua"
+  cp "${MINGW_BASE_DIR}/etc/luarocks/config-5.1.lua" "${MINGW_BASE_DIR}/etc/luarocks/config-5.1.lua.orig"
+  cp "${MINGW_BASE_DIR}/etc/luarocks/config-5.4.lua" "${MINGW_BASE_DIR}/etc/luarocks/config-5.4.lua.orig"
+  /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_BASE_DIR}/etc/luarocks/config-5.1.lua.orig" > "${MINGW_BASE_DIR}/etc/luarocks/config-5.1.lua"
+  /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_BASE_DIR}/etc/luarocks/config-5.4.lua.orig" > "${MINGW_BASE_DIR}/etc/luarocks/config-5.4.lua"
   echo "    Completed"
 else
   echo "  Things have already been setup for Luarocks so 32 and 64 bits ones"
@@ -203,7 +201,7 @@ echo "- Adjust LUA_PATH and LUA_CPATH to find per-user modules"
 echo "- See 'luarocks path --help' for details"
 
 
-ROCKCOMMAND="${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.1"
+ROCKCOMMAND="${MINGW_BASE_DIR}/bin/luarocks --lua-version 5.1"
 echo ""
 echo "  Checking, and installing if needed, the luarocks used by Mudlet..."
 echo ""

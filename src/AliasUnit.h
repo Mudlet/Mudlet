@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2022-2023, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -41,9 +42,7 @@ class AliasUnit
     friend class XMLimport;
 
 public:
-    explicit AliasUnit(Host* pHost)
-    : mpHost(pHost)
-    {}
+    explicit AliasUnit(Host*);
     ~AliasUnit();
 
     std::list<TAlias*> getAliasRootNodeList() { return mAliasRootNodeList; }
@@ -93,7 +92,8 @@ private:
     int statsItemsTotal = 0;
     int statsTempItems = 0;
     int statsActiveItems = 0;
-    bool mIsProcessing = false;
+    // Counter for nested processing; cleanup deferred until 0
+    int mProcessingDepth = 0;
 };
 
 #endif // MUDLET_ALIASUNIT_H

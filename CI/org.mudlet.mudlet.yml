@@ -180,6 +180,15 @@ modules:
         url: 'https://luarocks.org/manifests/hisham/luafilesystem-1.9.0-1.src.rock'
         sha256: 3de68d619f6ad95a27f4728814375447d921305194b7050dee6199057c31282f
 
+  - name: lpeg
+    buildsystem: simple
+    build-commands:
+      - luarocks install --tree="/app" lpeg-1.1.0-2.src.rock LUA_INCDIR="/app/include"
+    sources:
+      - type: file
+        url: 'https://luarocks.org/manifests/gvvaughan/lpeg-1.1.0-2.src.rock'
+        sha256: 836d315b920a5cdd62e21786c6c9fad547c4faa131d5583ebca64f0b6595ee76
+
   - name: lua-zip
     buildsystem: simple
     build-commands:
