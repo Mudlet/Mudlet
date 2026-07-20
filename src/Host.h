@@ -672,6 +672,12 @@ public:
     int mWrapAt = 100;
     int mWrapIndentCount = 0;
     int mWrapHangingIndentCount = 0;
+    // Rejoin lines that the game hard-wrapped itself so that triggers see the
+    // whole logical line and Mudlet's own wrapping (mWrapAt) handles display:
+    bool mUndoServerWrap = false;
+    int mUndoServerWrapWidth = 80;
+    // The one-time "this game seems to wrap its own lines" hint was shown:
+    bool mServerWrapHintShown = false;
 
     int mConsoleBufferSize = 100000;
     bool mUseMaxConsoleBufferSize = false;
