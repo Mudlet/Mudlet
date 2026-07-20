@@ -70,7 +70,7 @@ jobs:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         cache: true
-        modules: qt5compat qtmultimedia qtspeech
+        modules: qt5compat qtmultimedia qtspeech qthttpserver
 
     - name: Use CMake 3.30.3
       uses: lukka/get-cmake@v4.4.0
