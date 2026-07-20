@@ -236,6 +236,7 @@ modules:
     buildsystem: cmake-ninja
     config-opts:
       - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      - -DUSE_OWN_QTKEYCHAIN=ON
     sources:
       - type: dir
         path: ../
