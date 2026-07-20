@@ -10272,7 +10272,7 @@ void dlgTriggerEditor::slot_cleanupBogusActions()
         mpCurrentActionItem = nullptr;
         clearActionForm();
     }
-    pActionUnit->updateToolbar();
+    pActionUnit->updateAllToolbars();
 
     if (treeLookupFailures > 0) {
         //: Warning shown after cleanup when the data was removed but some
