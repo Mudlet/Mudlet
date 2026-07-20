@@ -58,6 +58,7 @@
 
 class QDialog;
 class QDockWidget;
+class QKeyEvent;
 class QPushButton;
 class QListWidget;
 
@@ -465,6 +466,7 @@ public:
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;
     void setCaretEnabled(bool enabled);
+    bool caretShortcutMatches(const QKeyEvent*) const;
     void setFocusOnHostActiveCommandLine();
     void recordActiveCommandLine(TCommandLine*);
     void forgetCommandLine(TCommandLine*);
