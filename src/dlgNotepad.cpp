@@ -25,6 +25,7 @@
 
 #include "mudlet.h"
 
+#include <QApplication>
 #include <QCloseEvent>
 #include <QDir>
 #include <QHBoxLayout>
@@ -36,6 +37,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
+#include <QPalette>
 #include <QPlainTextEdit>
 #include <QSaveFile>
 #include <QShortcut>
@@ -54,6 +56,8 @@ dlgNotepad::dlgNotepad(Host* pH)
 : mpHost(pH)
 {
     setupUi(this);
+    mUiSetupComplete = true;
+    updateSendControlsToggleIcon();
 
     setupAddTabButton();
 
@@ -592,6 +596,40 @@ void dlgNotepad::closeEvent(QCloseEvent* event)
 {
     saveSettings();
     QMainWindow::closeEvent(event);
+}
+
+// The grey arrows the .ui file gives the send controls toggle are all but invisible
+// against a dark background, so use the brighter green ones (which the .ui file already
+// uses for the hovered-over state) there instead. The background colour is what matters,
+// so go by the palette rather than by mudlet::inDarkMode() - the latter is only set when
+// Mudlet itself applies its dark theme, yet a dark system theme darkens the notepad as well.
+// The application palette is the one to read: when this runs in response to a style change
+// the widgets have not had the new palette propagated down to them yet
+void dlgNotepad::updateSendControlsToggleIcon()
+{
+    const bool darkBackground = QApplication::palette().color(QPalette::Window).lightness() <= 127;
+
+    QIcon icon;
+    if (darkBackground) {
+        icon.addFile(qsl(":/icons/arrow-right-16x.png"), QSize(), QIcon::Normal, QIcon::Off);
+        icon.addFile(qsl(":/icons/arrow-down-16x.png"), QSize(), QIcon::Normal, QIcon::On);
+    } else {
+        icon.addFile(qsl(":/icons/arrow-right_grey-16x.png"), QSize(), QIcon::Normal, QIcon::Off);
+        icon.addFile(qsl(":/icons/arrow-down_grey-16x.png"), QSize(), QIcon::Normal, QIcon::On);
+        icon.addFile(qsl(":/icons/arrow-right-16x.png"), QSize(), QIcon::Active, QIcon::Off);
+        icon.addFile(qsl(":/icons/arrow-down-16x.png"), QSize(), QIcon::Active, QIcon::On);
+    }
+    action_toggleSendControls->setIcon(icon);
+}
+
+void dlgNotepad::changeEvent(QEvent* event)
+{
+    QMainWindow::changeEvent(event);
+
+    // the appearance can be switched between light and dark while the notepad is open
+    if ((event->type() == QEvent::StyleChange || event->type() == QEvent::PaletteChange) && mUiSetupComplete) {
+        updateSendControlsToggleIcon();
+    }
 }
 
 bool dlgNotepad::eventFilter(QObject* obj, QEvent* event)
