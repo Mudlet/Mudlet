@@ -49,7 +49,7 @@ class MainConsoleSelectionTest : public QObject
 private:
     TelnetServerStub* mpServer = nullptr;
     const QString mpHostname = "Test-Selection";
-    const QString mpPort = "4000";
+    QString mpPort; // assigned the stub's actual ephemeral port in init()
     const QString mpLocalhost = "localhost";
 
     // Send a screenful of text so a click in the middle of the upper pane lands
@@ -87,7 +87,8 @@ private slots:
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
-        mpServer->start(mpLocalhost, mpPort.toUShort());
+        mpServer->start(mpLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+        mpPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));

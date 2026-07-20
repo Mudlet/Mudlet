@@ -50,7 +50,7 @@ private:
   TelnetServerStub *mpServer = nullptr;
   Host *mpHost = nullptr;
   const QString mHostname = "TriggerEditor-Test";
-  const QString mPort = "4004";
+  QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
   const QString mLocalhost = "localhost";
 
   void startProfile(const QString &hostname, const QString &address,
@@ -103,7 +103,8 @@ private slots:
     initializeQRCResourcesForTriggerEditorTest();
 
     mpServer = new TelnetServerStub(qApp);
-    mpServer->start(mLocalhost, mPort.toUShort());
+    mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+    mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
     mudlet::self()->takeOwnershipOfInstanceCoordinator(

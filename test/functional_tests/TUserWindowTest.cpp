@@ -61,7 +61,7 @@ private:
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     const QString mHostname = "UserWindow-Test-Host";
-    const QString mPort = "4004";
+    QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = "localhost";
 
 private slots:
@@ -71,7 +71,8 @@ private slots:
         initializeQRCResourcesForUserWindowTest();
 
         mpServer = new TelnetServerStub(qApp);
-        mpServer->start(mLocalhost, mPort.toUShort());
+        mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+        mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
