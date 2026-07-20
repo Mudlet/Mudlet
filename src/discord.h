@@ -23,6 +23,8 @@
 #include "Host.h"
 
 #include <functional>
+#include <map>
+#include <memory>
 #include <utility>
 #include <QDebug>
 #include <QTimer>
@@ -222,7 +224,7 @@ private:
 
     void timerEvent(QTimerEvent *event) override;
 
-    DiscordEventHandlers* mpHandlers = nullptr;
+    std::unique_ptr<DiscordEventHandlers> mpHandlers;
 
     // These are function pointers to functions located in the Discord RPC library:
     std::function<void(const char*, DiscordEventHandlers*, int, const char*)> Discord_Initialize;
@@ -243,7 +245,7 @@ private:
 
     // Key is a Application Id, Value is a pointer to a local copy of the data
     // currently held for that presence:
-    QMap<QString, localDiscordPresence*> mPresencePtrs;
+    std::map<QString, std::unique_ptr<localDiscordPresence>> mPresencePtrs;
 
     // Used to tie a profile to a particular Discord presence - multiple
     // profiles can have the same presence but defaults to the nullptr one for

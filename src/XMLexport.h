@@ -107,7 +107,7 @@ private:
     void writeScriptPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
     void writeKeyPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
     void writeVariablePackage(Host* pHost, pugi::xml_node& mMudletPackage);
-    static void inline replaceAll(std::string& source, const std::string& from, const std::string& to);
+    static inline void replaceAll(std::string& source, const std::string& from, const std::string& to);
     bool saveXmlFile(QSaveFile& file);
     bool saveXml(const QString&);
     static bool saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc);

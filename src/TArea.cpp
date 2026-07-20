@@ -32,6 +32,7 @@
 
 #include <QBuffer>
 #include <QElapsedTimer>
+#include <QJsonArray>
 
 // Previous direction #defines here did not match the DIR_ defines in TRoom.h,
 // but as they are stored in the map file they ought not to be redefined without
@@ -68,10 +69,9 @@ int TArea::getAreaID()
 {
     if (mpRoomDB) {
         return mpRoomDB->getAreaID(this);
-    } else {
-        qDebug() << "ERROR: TArea::getAreaID() instance has no mpRoomDB, returning -1 as ID";
-        return -1;
     }
+    qDebug() << "ERROR: TArea::getAreaID() instance has no mpRoomDB, returning -1 as ID";
+    return -1;
 }
 
 QMap<int, QMap<int, QMultiMap<int, int>>> TArea::koordinatenSystem()
@@ -361,6 +361,8 @@ void TArea::addRoom(int id)
     if (pR) {
         if (!rooms.contains(id)) {
             rooms.insert(id);
+            mZLevelIndex.addRoom(id, pR->z());
+            mGridIndex.addRoom(id, pR->z(), pR->x(), pR->y());
         } else {
             qDebug() << "TArea::addRoom(" << id << ") No creation! room already exists";
         }
@@ -378,6 +380,13 @@ void TArea::calcSpan()
     ymaxForZ.clear();
     zLevels.clear();
 
+    // Collect the room-to-Z mapping in a single pass so mZLevelIndex can be
+    // rebuilt without a second iteration. Also collect the full z/x/y data
+    // so the grid index can be rebuilt at the same time.
+    QHash<int, int> roomIdToZ;
+    roomIdToZ.reserve(rooms.size());
+    QHash<int, QHash<int, QPair<int, int>>> zToRoomXY;
+
     bool isFirstDone = false;
     QSetIterator<int> itRoom(rooms);
     while (itRoom.hasNext()) {
@@ -386,6 +395,9 @@ void TArea::calcSpan()
         if (!pR) {
             continue;
         }
+
+        roomIdToZ.insert(id, pR->z());
+        zToRoomXY[pR->z()].insert(id, {pR->x(), pR->y()});
 
         if (!isFirstDone) {
             // Only do this initialization for the first valid room
@@ -402,60 +414,59 @@ void TArea::calcSpan()
             ymaxForZ.insert(pR->z(), (-1 * pR->y()));
             isFirstDone = true;
             continue;
-        } else {
-            // Already had one valid room so now must check more things
+        }
+        // Already had one valid room so now must check more things
 
-            if (!zLevels.contains(pR->z())) {
-                zLevels.push_back(pR->z());
-            }
+        if (!zLevels.contains(pR->z())) {
+            zLevels.push_back(pR->z());
+        }
 
-            if (!xminForZ.contains(pR->z())) {
-                xminForZ.insert(pR->z(), pR->x());
-            } else if (pR->x() < xminForZ.value(pR->z())) {
-                xminForZ.insert(pR->z(), pR->x());
-            }
+        if (!xminForZ.contains(pR->z())) {
+            xminForZ.insert(pR->z(), pR->x());
+        } else if (pR->x() < xminForZ.value(pR->z())) {
+            xminForZ.insert(pR->z(), pR->x());
+        }
 
-            if (pR->x() < min_x) {
-                min_x = pR->x();
-            }
+        if (pR->x() < min_x) {
+            min_x = pR->x();
+        }
 
-            if (!xmaxForZ.contains(pR->z())) {
-                xmaxForZ.insert(pR->z(), pR->x());
-            } else if (pR->x() > xmaxForZ.value(pR->z())) {
-                xmaxForZ.insert(pR->z(), pR->x());
-            }
+        if (!xmaxForZ.contains(pR->z())) {
+            xmaxForZ.insert(pR->z(), pR->x());
+        } else if (pR->x() > xmaxForZ.value(pR->z())) {
+            xmaxForZ.insert(pR->z(), pR->x());
+        }
 
-            if (pR->x() > max_x) {
-                max_x = pR->x();
-            }
+        if (pR->x() > max_x) {
+            max_x = pR->x();
+        }
 
-            if (!yminForZ.contains(pR->z())) {
-                yminForZ.insert(pR->z(), (-1 * pR->y()));
-            } else if ((-1 * pR->y()) < yminForZ.value(pR->z())) {
-                yminForZ.insert(pR->z(), (-1 * pR->y()));
-            }
+        if (!yminForZ.contains(pR->z())) {
+            yminForZ.insert(pR->z(), (-1 * pR->y()));
+        } else if ((-1 * pR->y()) < yminForZ.value(pR->z())) {
+            yminForZ.insert(pR->z(), (-1 * pR->y()));
+        }
 
-            if ((-1 * pR->y()) < min_y) {
-                min_y = (-1 * pR->y());
-            }
+        if ((-1 * pR->y()) < min_y) {
+            min_y = (-1 * pR->y());
+        }
 
-            if ((-1 * pR->y()) > max_y) {
-                max_y = (-1 * pR->y());
-            }
+        if ((-1 * pR->y()) > max_y) {
+            max_y = (-1 * pR->y());
+        }
 
-            if (!ymaxForZ.contains(pR->z())) {
-                ymaxForZ.insert(pR->z(), (-1 * pR->y()));
-            } else if ((-1 * pR->y()) > ymaxForZ.value(pR->z())) {
-                ymaxForZ.insert(pR->z(), (-1 * pR->y()));
-            }
+        if (!ymaxForZ.contains(pR->z())) {
+            ymaxForZ.insert(pR->z(), (-1 * pR->y()));
+        } else if ((-1 * pR->y()) > ymaxForZ.value(pR->z())) {
+            ymaxForZ.insert(pR->z(), (-1 * pR->y()));
+        }
 
-            if (pR->z() < min_z) {
-                min_z = pR->z();
-            }
+        if (pR->z() < min_z) {
+            min_z = pR->z();
+        }
 
-            if (pR->z() > max_z) {
-                max_z = pR->z();
-            }
+        if (pR->z() > max_z) {
+            max_z = pR->z();
         }
     }
 
@@ -464,6 +475,10 @@ void TArea::calcSpan()
         // The {x|y}{min|max}ForZ are, by definition!
         std::sort(zLevels.begin(), zLevels.end());
     }
+
+    // Rebuild the Z-level room index from the authoritative room set.
+    mZLevelIndex.rebuild(roomIdToZ);
+    mGridIndex.rebuild(zToRoomXY);
 }
 
 // Added a second argument to cut-out extremes recalculation if not required
@@ -480,11 +495,20 @@ void TArea::removeRoom(int room, bool deferAreaRecalculations)
 
     // Will use to flag whether some things have to be recalculated.
     bool isOnExtreme = false;
-    if (rooms.contains(room) && !deferAreaRecalculations) {
-        // just a check, if the area DOESN'T have the room then it is not wise
-        // to behave as if it did
-        TRoom* pR = mpRoomDB->getRoom(room);
-        if (pR) {
+    TRoom* pR = mpRoomDB->getRoom(room);
+    if (pR) {
+        // Always keep the Z-level index consistent regardless of whether area
+        // recalculations are deferred.  The incremental removal is O(1) and
+        // ensures getRoomsForZ() returns correct results until calcSpan() next
+        // runs (which rebuilds the index authoritatively).
+        if (rooms.contains(room)) {
+            mZLevelIndex.removeRoom(room, pR->z());
+            mGridIndex.removeRoom(room, pR->z(), pR->x(), pR->y());
+        }
+
+        if (rooms.contains(room) && !deferAreaRecalculations) {
+            // just a check, if the area DOESN'T have the room then it is not wise
+            // to behave as if it did
             // Now see if the room is on an extreme - if it the only room on a
             // particular z-coordinate it will be on all four
             if (xminForZ.contains(pR->z()) && xminForZ.value(pR->z()) >= pR->x()) {

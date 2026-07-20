@@ -56,6 +56,44 @@ describe("Tests custom map event and menu functions", function()
       assert.are.equal("top-level", menus["TestMenu"])
       assert.are.equal("TestMenu", menus["TestSubMenu"])
     end)
+
+    it("should key menus by display name by default", function()
+      addMapMenu("TestMenu", nil, "Test Display Name")
+
+      local menus = getMapMenus()
+      assert.are.equal("top-level", menus["Test Display Name"])
+      assert.is_nil(menus["TestMenu"])
+    end)
+
+    it("should treat a nil argument like no argument", function()
+      addMapMenu("TestMenu")
+
+      local menus = getMapMenus(nil)
+      assert.are.equal("top-level", menus["TestMenu"])
+    end)
+
+    it("should key menus by unique name when requested", function()
+      addMapMenu("TestMenu", nil, "Test Display Name")
+      addMapMenu("TestSubMenu", "TestMenu", "Sub Display Name")
+
+      local menus = getMapMenus(true)
+      assert.is_table(menus["TestMenu"])
+      assert.are.equal("Test Display Name", menus["TestMenu"]["display name"])
+      assert.are.equal("top-level", menus["TestMenu"]["parent"])
+      assert.is_table(menus["TestSubMenu"])
+      assert.are.equal("Sub Display Name", menus["TestSubMenu"]["display name"])
+      assert.are.equal("TestMenu", menus["TestSubMenu"]["parent"])
+    end)
+
+    it("should let getMapEvents parents be resolved via getMapMenus(true)", function()
+      addMapMenu("TestMenu", nil, "Test Display Name")
+      addMapEvent("testEvent1", "myEvent", "TestMenu", "Test Event 1")
+
+      local events = getMapEvents()
+      local menus = getMapMenus(true)
+      assert.is_not_nil(menus[events.testEvent1.parent])
+      assert.are.equal("Test Display Name", menus[events.testEvent1.parent]["display name"])
+    end)
   end)
 
   describe("Tests removeMapEvent", function()

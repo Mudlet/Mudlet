@@ -192,7 +192,8 @@ bool TCommandLine::event(QEvent* event)
                 mpConsole->mUpperPane->slot_copySelectionToClipboard();
                 ke->accept();
                 return true;
-            } else if (hasLowerPaneSelection) {
+            }
+            if (hasLowerPaneSelection) {
                 // Copy from lower pane if it has a selection
                 mpConsole->mLowerPane->slot_copySelectionToClipboard();
                 ke->accept();
@@ -1175,9 +1176,8 @@ void TCommandLine::handleAutoCompletion()
             }
             moveCursor(QTextCursor::End, QTextCursor::KeepAnchor);
             return;
-        } else {
-            moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
         }
+        moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
     }
     mAutoCompletionCount = -1;
 }
@@ -1884,4 +1884,12 @@ void TCommandLine::resizeEvent(QResizeEvent* event)
     if (mpPasswordToggleButton && mpPasswordToggleButton->isVisible()) {
         positionPasswordToggleButton();
     }
+}
+
+/* We need to have this method defined in this file as the TConsole class is
+ * forward declared in the header file and it is problematic to define any
+ * dereferencing of it there:*/
+TConsole* TCommandLine::console() const
+{
+    return mpConsole;
 }

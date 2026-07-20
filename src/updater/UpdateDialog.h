@@ -26,6 +26,8 @@
 #include <QDialog>
 #include <QVariant>
 
+#include <memory>
+
 class QAbstractButton;
 class QPixmap;
 class QSettings;
@@ -75,7 +77,7 @@ public slots:
     void showIfUpdatesAvailableOrQuit();
 
 private:
-    Ui::UpdateDialog* mUi;
+    std::unique_ptr<Ui::UpdateDialog> mUi;
     Feed* mFeed;
     Type mType;
 

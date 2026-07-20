@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
- *   Copyright (C) 2019-2020, 2022-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2019-2020, 2022-2023, 2026 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -48,10 +48,8 @@ void TDockWidget::closeEvent(QCloseEvent* event)
         mpHost->hideWindow(mWidgetConsoleName);
         event->ignore();
         return;
-    } else {
-        event->accept();
-        return;
     }
+    event->accept();
 }
 
 void TDockWidget::resizeEvent(QResizeEvent* event)
@@ -92,4 +90,12 @@ void TDockWidget::setVisible(bool visible)
     } else {
         QWidget::setVisible(false);
     }
+}
+
+/* We need to have this method defined in this file as the TConsole class is
+ * forward declared in the header file and it is problematic to define any
+ * dereferencing of it there:*/
+TConsole* TDockWidget::getConsole()
+{
+    return mpConsole;
 }

@@ -771,6 +771,11 @@ public:
     static int timeStampsEnabled(lua_State*);
     static int setActiveProfile(lua_State*);
     static int getKeyCode(lua_State*);
+#ifdef MUDLET_MEMORY_TRACKING
+    static int getProcessMemoryUsage(lua_State*);
+    static int getSubsystemMemoryStats(lua_State*);
+#endif
+
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 

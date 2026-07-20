@@ -27,9 +27,11 @@
 
 #include <QCloseEvent>
 #include <QFileDialog>
+#include <QJsonDocument>
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QProgressDialog>
+#include <QSettings>
 #include <QTimer>
 #include <QVersionNumber>
 

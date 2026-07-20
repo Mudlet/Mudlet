@@ -74,13 +74,13 @@ jobs:
 
       # Checkout early so .git exists before artifact downloads — actions/checkout
       # wipes the workspace when no .git directory is present, even with clean: false
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         if: steps.check.outputs.ready == 'true'
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
-      - uses: leafo/gh-actions-lua@v12
+      - uses: leafo/gh-actions-lua@v13
         if: steps.check.outputs.ready == 'true'
         with:
           luaVersion: "5.1.5"

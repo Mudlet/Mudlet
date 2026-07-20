@@ -30,6 +30,8 @@
 #include <QTextEdit>
 #include <zip.h>
 
+#include <memory>
+
 class Host;
 class QCloseEvent;
 class QGroupBox;
@@ -158,7 +160,7 @@ private:
     void checkToEnableExportButton();
     void populateDependencies();
 
-    Ui::dlgPackageExporter* ui = nullptr;
+    std::unique_ptr<Ui::dlgPackageExporter> ui;
     QPointer<Host> mpHost;
     QTreeWidget* mpExportSelection = nullptr;
     QPointer<QPushButton> mExportButton;
