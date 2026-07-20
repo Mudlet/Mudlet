@@ -1,6 +1,6 @@
 #!/bin/bash
 ###########################################################################
-#   Copyright (C) 2024-2024  by John McKisson - john.mckisson@gmail.com   #
+#   Copyright (C) 2024-2026  by John McKisson - john.mckisson@gmail.com   #
 #   Copyright (C) 2023-2025  by Stephen Lyons - slysven@virginmedia.com   #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
@@ -19,7 +19,8 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 2.1.0    Remove MINGW32 since upstream no longer supports it
+# Version: 2.2.0    Switch from MINGW64 to CLANG64
+#          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
 #          1.5.0    Change BUILD_TYPE to BUILD_CONFIG to avoid clash with
 #                   CI/CB system using same variable
@@ -41,28 +42,27 @@
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
-# 2 - Unsupported MSYS2/MINGGW shell type
+# 2 - Unsupported MSYS2 shell type
 # 3 - Unsupported build type
 # 4 - Directory to be used to assemble the package is NOT empty
 # 6 - No Mudlet.exe file found to work with
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
+  echo "Please run this script from a CLANG64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
-  export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="x86_64"
+elif [ "${MSYSTEM}" = "CLANG64" ]; then
+  echo "Building with CLANG64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
-  echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
+  echo "CLANG64 is currently supported. Please rerun this in a bash terminal of"
   echo "that type."
   exit 2
 fi
 
 BUILD_CONFIG="release"
-MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
-export MINGW_INTERNAL_BASE_DIR
+MINGW_BASE_DIR="${MSYSTEM_PREFIX}"
+export MINGW_BASE_DIR
 GITHUB_WORKSPACE_UNIX_PATH=$(echo "${GITHUB_WORKSPACE}" | sed 's|\\|/|g' | sed 's|D:|/d|g' | sed 's|C:|/c|g')
 PACKAGE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/package-${MSYSTEM}-${BUILD_CONFIG}"
 
@@ -133,11 +133,11 @@ WINDEPLOY_ARGS=( \
   "--no-system-dxc-compiler" \
   "--force-openssl")
 
-echo "Running ${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt-qt6.exe..."
+echo "Running ${MINGW_BASE_DIR}/bin/windeployqt-qt6.exe..."
 echo "  With options: \"" "${WINDEPLOY_ARGS[@]}" "\""
 echo ""
 
-"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "${WINDEPLOY_ARGS[@]}" "./mudlet.exe"
+"${MINGW_BASE_DIR}/bin/windeployqt6" "${WINDEPLOY_ARGS[@]}" "./mudlet.exe"
 
 # Copy in all the other known to be needed .dlls BEFORE we analyse the WHOLE lot
 # for any dependencies - otherwise we'd have to add any of the dependencies for
@@ -156,25 +156,25 @@ cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/discord/rpc/lib/discord-rpc64.d
 echo ""
 echo "Copying lua C libraries in..."
 cp -v -p -t . \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lfs.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lpeg.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lsqlite3.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lua-utf8.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/rex_pcre2.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/yajl.dll"
+    "${MINGW_BASE_DIR}/lib/lua/5.1/lfs.dll" \
+    "${MINGW_BASE_DIR}/lib/lua/5.1/lpeg.dll" \
+    "${MINGW_BASE_DIR}/lib/lua/5.1/lsqlite3.dll" \
+    "${MINGW_BASE_DIR}/lib/lua/5.1/lua-utf8.dll" \
+    "${MINGW_BASE_DIR}/lib/lua/5.1/rex_pcre2.dll" \
+    "${MINGW_BASE_DIR}/lib/lua/5.1/yajl.dll"
 
 mkdir ./luasql
-cp -v -p "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/luasql/sqlite3.dll" ./luasql/sqlite3.dll
+cp -v -p "${MINGW_BASE_DIR}/lib/lua/5.1/luasql/sqlite3.dll" ./luasql/sqlite3.dll
 mkdir ./brimworks
-cp -v -p "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/brimworks/zip.dll" ./brimworks/zip.dll
+cp -v -p "${MINGW_BASE_DIR}/lib/lua/5.1/brimworks/zip.dll" ./brimworks/zip.dll
 echo ""
 
 echo "Copying OpenSSL libraries in..."
 # The openSSL libraries has a different name depending on the bitness - but we
 # only do 64-bits now:
 cp -v -p -t . \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-3-x64.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libssl-3-x64.dll"
+    "${MINGW_BASE_DIR}/bin/libcrypto-3-x64.dll" \
+    "${MINGW_BASE_DIR}/bin/libssl-3-x64.dll"
 
 echo ""
 echo "Examining the Mudlet application and all the libraries and Qt plugins to identify other needed libraries..."
@@ -187,9 +187,6 @@ echo "Examining the Mudlet application and all the libraries and Qt plugins to i
 # The cuts ensures we only get the file and path to the library after the =>
 # in the lines that match:
 case "${MSYSTEM}" in
-  *MINGW64*)
-    NEEDED_LIBS_ARG=mingw64
-    ;;
   *CLANG64*)
     NEEDED_LIBS_ARG=clang64
     ;;
@@ -202,7 +199,7 @@ case "${MSYSTEM}" in
     ;;
 esac
 
-mapfile -t NEEDED_LIBS < <(${MINGW_INTERNAL_BASE_DIR}/bin/ntldd --recursive \
+mapfile -t NEEDED_LIBS < <(${MINGW_BASE_DIR}/bin/ntldd --recursive \
   ./mudlet.exe \
   ./*.dll \
   ./*/*.dll \

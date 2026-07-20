@@ -28,6 +28,8 @@
 #include <QPointer>
 #include <QSet>
 #include <QStyledItemDelegate>
+#include <map>
+#include <memory>
 
 class QAction;
 class QCheckBox;
@@ -179,7 +181,7 @@ private:
                   QCheckBox* noRoute, QCheckBox* stub,
                   QRadioButton* none, QRadioButton* open, QRadioButton* closed, QRadioButton* locked,
                   QSpinBox* weight, const QString &validExitToolTip);
-    TExit* makeExitFromControls(int direction);
+    std::unique_ptr<TExit> makeExitFromControls(int direction);
     void normalExitEdited(const QString& roomExitIdText,
                           QLineEdit* pExit,
                           QCheckBox* pNoRoute,
@@ -210,9 +212,9 @@ private:
     int mAreaID = 0;
     int mEditColumn = -1;
 
-    // key = (normal) exit DIR_***, value = exit class instance
-    QMap<int, TExit*> originalExits;
-    QMap<QString, TExit*> originalSpecialExits;
+    // key = (normal) exit DIR_***, value = owned exit class instance
+    std::map<int, std::unique_ptr<TExit>> originalExits;
+    std::map<QString, std::unique_ptr<TExit>> originalSpecialExits;
 };
 
 #endif // MUDLET_DLGROOMEXITS_H

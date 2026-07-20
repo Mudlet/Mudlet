@@ -97,6 +97,16 @@ public:
 
     inline bool isText() const { return mIsText; }
 
+    inline bool isEndTag() const { return mIsEndTag; }
+
+    // Returns the finalized tag name if boundary has been reached,
+    // or the partially accumulated name characters if still building
+    const std::string& getPartialTagName() const;
+
+    // Returns true when the tag name has been finalized (boundary character
+    // like space or > was reached after the name)
+    bool isTagNameComplete() const { return !mCurrentTagName.empty(); }
+
     const std::string& getRawTagContent() const { return mRawTagContent; }
     void setRawTagContent(const std::string& content) { mRawTagContent = content; }
 };

@@ -1138,30 +1138,32 @@ end
 _Echos = {
   Patterns = {
     Hex = {
-      [[(\x5c?(?:#|\|c)?(?:[0-9a-fA-F]{6}|(?:#,|\|c,)[0-9a-fA-F]{6,8})(?:,[0-9a-fA-F]{6,8})?)|(?:\||#)(\/?[biruso])]],
+      rex.new [[(\x5c?(?:#|\|c)?(?:[0-9a-fA-F]{6}|(?:#,|\|c,)[0-9a-fA-F]{6,8})(?:,[0-9a-fA-F]{6,8})?)|(?:\||#)(\/?[biruso])]],
       rex.new [[(?:#|\|c)(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?)?]],
     },
     Decimal = {
-      [[(<[0-9,:]+>)|<(/?[biruso])>]],
+      rex.new [[(<[0-9,:]+>)|<(/?[biruso])>]],
       rex.new [[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}),?([0-9]{1,3})?)?>]],
     },
     Color = {
-      [[(</?[a-zA-Z0-9_,:]+>)]],
+      rex.new [[(</?[a-zA-Z0-9_,:]+>)]],
       rex.new [[<([a-zA-Z0-9_]+)?(?:[:,](?=>))?(?:[:,]([a-zA-Z0-9_]+))?>]],
     },
     Ansi = {
-      [[(<[0-9,:]+>)]],
+      rex.new [[(<[0-9,:]+>)]],
       rex.new [[<([0-9]{1,2})?(?::([0-9]{1,2}))?>]],
     },
   },
   Process = function(str, style)
     local t = {}
     local tonumber, _Echos, color_table = tonumber, _Echos, color_table
+    local patterns = _Echos.Patterns[style]
+    local capturePattern = patterns[2]
 
     -- s: A subject section (can be an empty string)
     -- c: colour code
     -- r: reset code
-    for s, c, r in rex.split(str, _Echos.Patterns[style][1]) do
+    for s, c, r in rex.split(str, patterns[1]) do
       if c and (c:byte(1) == 92) then
         c = c:sub(2)
         if s then
@@ -1197,7 +1199,17 @@ _Echos = {
       end
       if c then
         if style == 'Hex' or style == 'Decimal' then
-          local fr, fg, fb, br, bg, bb, ba = _Echos.Patterns[style][2]:match(c)
+          -- try the common single-foreground form with a native match first,
+          -- falling back to PCRE for combined/background/alpha forms
+          local fr, fg, fb, br, bg, bb, ba
+          if style == 'Decimal' then
+            fr, fg, fb = c:match("^<(%d%d?%d?),(%d%d?%d?),(%d%d?%d?)>$")
+          else
+            fr, fg, fb = c:match("^#(%x%x)(%x%x)(%x%x)$")
+          end
+          if not fr then
+            fr, fg, fb, br, bg, bb, ba = capturePattern:match(c)
+          end
           local color = {}
           if style == 'Hex' then
             -- hex has alpha value in front
@@ -1252,7 +1264,10 @@ _Echos = {
           elseif c == "</o>" then
             t[#t + 1] = "\27overlineoff"
           else
-            local fcolor, bcolor = _Echos.Patterns[style][2]:match(c)
+            local fcolor, bcolor = c:match("^<([%w_]+)>$")
+            if not fcolor then
+              fcolor, bcolor = capturePattern:match(c)
+            end
             local color = {}
             if fcolor and color_table[fcolor] then
               color.fg = color_table[fcolor]
@@ -2883,4 +2898,50 @@ end
 function hecho2html(str, resetFormat)
   assert(type(str) == "string", "hecho2html: bad argument #1 type (string expected, got " .. type(str) .. ")")
   return echoConverter(str, "Hex", "html", resetFormat)
+end
+
+--- Selects all occurrences of a string on the current line and calls a function
+--- for each match. Optionally operates on a named window.
+---
+--- @usage Select all occurrences on the main window:
+---   <pre>
+---   selectAll("hello", function() setBgColor(255, 0, 0) end)
+---   </pre>
+--- @usage Select all occurrences on a named window:
+---   <pre>
+---   selectAll("myWindow", "hello", function() setBgColor("myWindow", 255, 0, 0) end)
+---   </pre>
+---
+--- @see selectString
+function selectAll(windowName, str, func)
+  if not func then
+    func = str
+    str = windowName
+    windowName = nil
+  end
+
+  local strType = type(str)
+  local funcType = type(func)
+  if strType ~= "string" then
+    local argNum = windowName and "#2" or "#1"
+    printError("selectAll: bad argument " .. argNum .. " type (string expected, got " .. strType .. "!)", true, true)
+    return
+  elseif funcType ~= "function" then
+    local argNum = windowName and "#3" or "#2"
+    printError("selectAll: bad argument " .. argNum .. " type (function expected, got " .. funcType .. "!)", true, true)
+    return
+  end
+
+  local count = 1
+  if windowName then
+    while selectString(windowName, str, count) > -1 do
+      func()
+      count = count + 1
+    end
+  else
+    while selectString(str, count) > -1 do
+      func()
+      count = count + 1
+    end
+  end
 end

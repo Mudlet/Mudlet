@@ -885,7 +885,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                            "All rights reserved.</h3>"));
 
 #if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
-    QString DblsqdHeader(tr("<h2><u>Dblsqd</u></h2>"
+    QString DblsqdHeader(tr("<h2><u>Dblsqd (derived work)</u></h2>"
                             "<h3>Copyright © 2017 Philipp Medien</h3>"));
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     QString SparkleHeader(tr("<h2><u>Sparkle - macOS updater</u></h2>"

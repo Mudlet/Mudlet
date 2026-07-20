@@ -55,6 +55,7 @@ public:
 
     bool containsElement(const QString& name) const;
     TMxpElement getElement(const QString& name) const;
+    bool isOpenElement(const QString& name) const;
 };
 
 #endif //MUDLET_TMXPELEMENTREGISTRY_H

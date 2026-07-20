@@ -23,7 +23,9 @@
 
 #include <QTextBoundaryFinder>
 #include "TAccessibleTextEdit.h"
+#include "TBuffer.h"
 #include "TConsole.h"
+#include "Host.h"
 #include "mudlet.h"
 
 TTextEdit* TAccessibleTextEdit::textEdit() const
@@ -238,6 +240,20 @@ void TAccessibleTextEdit::setCursorPosition(int position)
 // performance note - this is called extremely frequently on the same line, should be cached
 QString TAccessibleTextEdit::text(QAccessible::Text text) const
 {
+    if (text == QAccessible::Description) {
+        TTextEdit* edit = textEdit();
+        if (!edit || !edit->mpHost || !edit->mpBuffer) {
+            return QString();
+        }
+        if (edit->mpHost->caretEnabled()) {
+            int linkIndex = edit->mpBuffer->getLinkIndexAt(edit->mCaretLine, edit->mCaretColumn);
+            if (linkIndex > 0) {
+                return edit->mpBuffer->getLinkTooltip(linkIndex);
+            }
+        }
+        return QAccessibleWidget::text(text);
+    }
+
     if (text != QAccessible::Value) {
         return QAccessibleWidget::text(text);
     }
@@ -367,9 +383,16 @@ QString TAccessibleTextEdit::attributes(int offset, int* startOffset, int* endOf
         return QString();
     }
 
+    TTextEdit* edit = textEdit();
+    if (!edit || !edit->mpHost || !edit->mpBuffer) {
+        *startOffset = offset;
+        *endOffset = offset + 1;
+        return QString();
+    }
+
     QString ret = QString();
 
-    const QFont font = textEdit()->font();
+    const QFont font = edit->font();
 
     QString family = font.family();
     if (!family.isEmpty()) {
@@ -390,7 +413,19 @@ QString TAccessibleTextEdit::attributes(int offset, int* startOffset, int* endOf
     const int line = lineForOffset(offset);
     const int column = columnForOffset(offset);
     const QFont::Style style = font.style();
-    const TChar& charStyle = textEdit()->mpBuffer->buffer.at(line).at(column);
+    const auto& buffer = edit->mpBuffer->buffer;
+    if (line < 0 || line >= static_cast<int>(buffer.size())) {
+        *startOffset = offset;
+        *endOffset = offset + 1;
+        return ret;
+    }
+    const auto& bufferLine = buffer.at(line);
+    if (column < 0 || column >= static_cast<int>(bufferLine.size())) {
+        *startOffset = offset;
+        *endOffset = offset + 1;
+        return ret;
+    }
+    const TChar& charStyle = bufferLine.at(column);
     // IAccessible2's text attributes don't support the overline attribute.
     const TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = (attributes & TChar::Bold) || font.weight() > QFont::Normal;
@@ -398,7 +433,7 @@ QString TAccessibleTextEdit::attributes(int offset, int* startOffset, int* endOf
     const bool isStrikeOut = attributes & TChar::StrikeOut;
     const bool isUnderline = attributes & TChar::Underline;
     const bool isReverse = attributes & TChar::Reverse;
-    const bool caretIsHere = textEdit()->mpHost->caretEnabled() && textEdit()->mCaretLine == line && textEdit()->mCaretColumn == column;
+    const bool caretIsHere = edit->mpHost->caretEnabled() && edit->mCaretLine == line && edit->mCaretColumn == column;
 
     // Different weight values are not handled.
     if (isBold) {
@@ -425,6 +460,93 @@ QString TAccessibleTextEdit::attributes(int offset, int* startOffset, int* endOf
     }
     ret += QString::fromLatin1("color:rgb(%1,%2,%3);").arg(fgColor.red()).arg(fgColor.green()).arg(fgColor.blue());
     ret += QString::fromLatin1("background-color:rgb(%1,%2,%3);").arg(bgColor.red()).arg(bgColor.green()).arg(bgColor.blue());
+
+    const int linkIndex = charStyle.linkIndex();
+    if (linkIndex > 0) {
+        if (!isUnderline) {
+            ret += QLatin1String("text-underline-type:single;");
+        }
+
+        // Hoist the link-related lookups so the block below works against
+        // local copies rather than dereferencing through edit->mpBuffer for
+        // every attribute we emit; the run-expansion below extends the
+        // returned [startOffset, endOffset) span over the whole link run.
+        TBuffer* buf = edit->mpBuffer;
+        const QStringList commands = buf->mLinkStore.getLinksConst(linkIndex);
+        const bool linkVisited = buf->isLinkVisited(linkIndex);
+        const auto linkState = buf->getLinkState(linkIndex);
+        const bool linkSelected = buf->isLinkSelected(linkIndex);
+        const bool hasStyling = buf->mLinkStore.hasStyling(linkIndex);
+
+        if (!commands.isEmpty() && !commands.first().isEmpty()) {
+            QString url = commands.first();
+            // Sanitize: escape semicolons and colons per IAccessible2 spec
+            url = url.replace('\\', QLatin1String("\\\\"));
+            url = url.replace(';', QLatin1String("\\;"));
+            url = url.replace(':', QLatin1String("\\:"));
+            ret += QLatin1String("text-link:") + url + QLatin1Char(';');
+        }
+
+        if (linkVisited) {
+            ret += QLatin1String("text-link-visited:true;");
+        }
+        if (linkState == Mudlet::HyperlinkStyling::StateDisabled) {
+            ret += QLatin1String("text-link-disabled:true;");
+        }
+        if (linkSelected) {
+            ret += QLatin1String("text-link-selected:true;");
+        }
+
+        if (hasStyling) {
+            const auto styling = buf->mLinkStore.getStyling(linkIndex);
+            if (!styling.selection.group.isEmpty()) {
+                QString group = styling.selection.group;
+                group = group.replace('\\', QLatin1String("\\\\"));
+                group = group.replace(';', QLatin1String("\\;"));
+                group = group.replace(':', QLatin1String("\\:"));
+                ret += QLatin1String("text-link-group:") + group + QLatin1Char(';');
+            }
+        }
+    }
+
+    // Compute the contiguous run of characters on this line that share the
+    // same attribute signature so the screen reader doesn't have to re-query
+    // for every single character. Per the IAccessible2 spec, *startOffset and
+    // *endOffset describe the range over which the returned attributes apply.
+    const QColor& sigFg = charStyle.foreground();
+    const QColor& sigBg = charStyle.background();
+    const bool sigSelected = charStyle.isSelected();
+    const int caretCol = edit->mCaretColumn;
+    const bool caretOnThisLine = edit->mpHost->caretEnabled() && edit->mCaretLine == line;
+    const int lineSize = static_cast<int>(bufferLine.size());
+
+    auto sameSignature = [&](int col) {
+        if (col < 0 || col >= lineSize) {
+            return false;
+        }
+        // The caret cell renders inverted; never merge it into a neighbouring run.
+        if (caretOnThisLine && col == caretCol) {
+            return col == column;
+        }
+        if (caretOnThisLine && column == caretCol && col != column) {
+            return false;
+        }
+        const TChar& other = bufferLine.at(col);
+        return other.linkIndex() == linkIndex && other.allDisplayAttributes() == attributes && other.foreground() == sigFg && other.background() == sigBg && other.isSelected() == sigSelected;
+    };
+
+    int runStartCol = column;
+    while (runStartCol > 0 && sameSignature(runStartCol - 1)) {
+        --runStartCol;
+    }
+    int runEndCol = column;
+    while (runEndCol + 1 < lineSize && sameSignature(runEndCol + 1)) {
+        ++runEndCol;
+    }
+
+    const int lineStartOffset = offset - column;
+    *startOffset = lineStartOffset + runStartCol;
+    *endOffset = lineStartOffset + runEndCol + 1;
 
     return ret;
 }

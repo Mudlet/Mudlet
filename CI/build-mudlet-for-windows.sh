@@ -1,6 +1,6 @@
 #!/bin/bash
 ###########################################################################
-#   Copyright (C) 2024-2024  by John McKisson - john.mckisson@gmail.com   #
+#   Copyright (C) 2024-2026  by John McKisson - john.mckisson@gmail.com   #
 #   Copyright (C) 2023-2025  by Stephen Lyons - slysven@virginmedia.com   #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
@@ -19,7 +19,8 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 3.0.0    Switch from qmake to CMake with Release builds
+# Version: 3.1.0    Switch from MINGW64 to CLANG64
+#          3.0.0    Switch from qmake to CMake with Release builds
 #          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
 #          1.5.0    Change BUILD_TYPE to BUILD_CONFIG to avoid clash with
@@ -31,7 +32,7 @@
 #          1.0.0    Original version
 
 # Script to build the Mudlet code currently checked out in
-# ${GITHUB_WORKSPACE} in a MINGW64 shell
+# ${GITHUB_WORKSPACE} in a CLANG64 shell
 
 # To be used AFTER setup-windows-sdk.sh has been run; once this has completed
 # successfully, package-mudlet-for-windows.sh is run by the workflow
@@ -39,19 +40,18 @@
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
-# 2 - Unsupported MSYS2/MINGGW shell type
+# 2 - Unsupported MSYS2 shell type
 # 3 - Unsupported build type
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
+  echo "Please run this script from a CLANG64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
-  export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="x86_64"
+elif [ "${MSYSTEM}" = "CLANG64" ]; then
+  echo "Building with CLANG64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
-  echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
+  echo "CLANG64 is currently supported. Please rerun this in a bash terminal of"
   echo "that type."
   exit 2
 fi
@@ -88,19 +88,22 @@ fi
 export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD,,}"
 export BUILD_COMMIT="${BUILD_COMMIT,,}"
 
-MINGW_BASE_DIR="${GHCUP_MSYS2}\mingw32"
+MINGW_BASE_DIR="${MSYSTEM_PREFIX}"
 export MINGW_BASE_DIR
-MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
-export MINGW_INTERNAL_BASE_DIR
-PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
+PATH="${MINGW_BASE_DIR}/usr/local/bin:${MINGW_BASE_DIR}/bin:/usr/bin:${PATH}"
 export PATH
 RUNNER_WORKSPACE_UNIX_PATH=$(echo "${RUNNER_WORKSPACE}" | sed 's|\\|/|g' | sed 's|D:|/d|g')
 export CCACHE_DIR=${RUNNER_WORKSPACE_UNIX_PATH}/ccache
 
 echo "MSYSTEM is: ${MSYSTEM}"
+echo "MSYSTEM_PREFIX is: ${MSYSTEM_PREFIX}"
 echo "CCACHE_DIR is: ${CCACHE_DIR}"
 echo "PATH is now:"
 echo "${PATH}"
+echo "which clang: $(which clang)"
+echo "which clang++: $(which clang++)"
+clang --version
+clang++ --version
 echo ""
 
 cd "${GITHUB_WORKSPACE}" || exit 1
@@ -140,7 +143,7 @@ fi
 CMAKE_ARGS=(
   -G Ninja
   -DCMAKE_BUILD_TYPE=Release
-  -DCMAKE_PREFIX_PATH="${MINGW_INTERNAL_BASE_DIR}"
+  -DCMAKE_PREFIX_PATH="${MINGW_BASE_DIR}"
   -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${GITHUB_WORKSPACE}/build-${MSYSTEM}/release"
 )
 

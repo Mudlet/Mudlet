@@ -52,6 +52,15 @@ TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
 
 TLabel::~TLabel()
 {
+    if (mpHost) {
+        auto* interpreter = mpHost->getLuaInterpreter();
+        for (const int funcRef : {mClickFunction, mDoubleClickFunction, mReleaseFunction, mMoveFunction, mWheelFunction, mEnterFunction, mLeaveFunction}) {
+            if (funcRef) {
+                interpreter->freeLuaRegistryIndex(funcRef);
+            }
+        }
+    }
+
     if (mpMovie) {
         mpMovie->deleteLater();
         mpMovie = nullptr;

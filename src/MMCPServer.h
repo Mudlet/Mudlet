@@ -83,8 +83,7 @@ public:
 
     quint16 addConnectedClient(MMCPClient*);
 
-    QString getChatName() const { return mChatName; }
-    void setChatName(const QString&);
+    const QString& getChatName() const;
 
     bool isDoNotDisturb() { return mDoNotDisturb; }
     void toggleDoNotDisturb();
@@ -104,7 +103,6 @@ private:
     void postChatMessage(const QString &, const QString&);
 
     Host* mpHost = nullptr;
-    QString mChatName;
     QList<QPointer<MMCPClient>> mPeersList;
     int mSnoopCount = 0;
     bool mDoNotDisturb = false;

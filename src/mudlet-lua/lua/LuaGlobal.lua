@@ -113,6 +113,7 @@ local packages = {
   "geyser/GeyserUserWindow.lua",
   "geyser/GeyserAdjustableContainer.lua",
   "geyser/GeyserCommandLine.lua",
+  "geyser/GeyserTextEdit.lua",
   "geyser/GeyserButton.lua",
 
   -- TODO probably don't need to load this file
