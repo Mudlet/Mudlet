@@ -417,6 +417,9 @@ private:
     z_stream mZstream = {};
 
     bool mNeedDecompression = false;
+    // Re-entry depth of processSocketData() while draining leftover
+    // (de)compressed data; bounds stack use and decompression-bomb output.
+    int mDecompressionRecursionDepth = 0;
     std::string command;
     bool iac = false;
     bool iac2 = false;

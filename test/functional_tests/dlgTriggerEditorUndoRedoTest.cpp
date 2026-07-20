@@ -66,7 +66,7 @@ private:
   dlgTriggerEditor *mpEditor = nullptr;
   Host *mpHost = nullptr;
   const QString mProfileName = qsl("UndoRedo-Test-Profile");
-  const QString mPort = qsl("23456");
+  QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
   const QString mLocalhost = qsl("localhost");
 
   struct ItemTypeInfo {
@@ -160,10 +160,11 @@ private slots:
     initializeQRCResources();
 
     mpServer = new TelnetServerStub(qApp);
-    mpServer->start(mLocalhost, mPort.toUShort());
+    mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
     QVERIFY2(mpServer->isListening(),
              qPrintable(qsl("TelnetServerStub failed to start: %1")
                             .arg(mpServer->errorString())));
+    mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
