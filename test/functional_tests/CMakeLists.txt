@@ -12,6 +12,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TFeedTriggersRecursionTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     TDiscordModeTest.cpp
+    MainConsoleSelectionTest.cpp
     EnableDisableByNameTest.cpp
     GMCPCharLoginTest.cpp
 )
