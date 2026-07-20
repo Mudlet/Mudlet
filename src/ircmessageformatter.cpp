@@ -138,7 +138,8 @@ QString IrcMessageFormatter::formatAwayMessage(IrcAwayMessage* message, bool isF
 
     if (message->flags() & IrcMessage::Own) {
         return QObject::tr("! %1").arg(content);
-    } else if (!message->content().isEmpty()) {
+    }
+    if (!message->content().isEmpty()) {
         return QObject::tr("! %1 is away (%2)").arg(message->nick(), content);
     }
     return QObject::tr("! %1 is back").arg(message->nick());
@@ -223,10 +224,14 @@ QString IrcMessageFormatter::formatNoticeMessage(IrcNoticeMessage* message, bool
         if (cmd.toUpper() == "PING") {
             const QString secs = formatSeconds(params.value(1).toInt());
             return QObject::tr("! %1 replied in %2").arg(message->nick(), secs);
-        } else if (cmd.toUpper() == "TIME") {
+        }
+
+        if (cmd.toUpper() == "TIME") {
             const QString rest = QStringList(params.mid(1)).join(" ");
             return QObject::tr("! %1 time is %2").arg(message->nick(), rest);
-        } else if (cmd.toUpper() == "VERSION") {
+        }
+
+        if (cmd.toUpper() == "VERSION") {
             const QString rest = QStringList(params.mid(1)).join(" ");
             return QObject::tr("! %1 version is %2").arg(message->nick(), rest);
         }
@@ -250,10 +255,9 @@ QString IrcMessageFormatter::formatNoticeMessage(IrcNoticeMessage* message, bool
     if (isForLua) {
         // lua only needs the message text.
         return IrcTextFormat().toPlainText(message->content());
-    } else {
-        const QString content = IrcTextFormat().toHtml(message->content());
-        return QObject::tr("&lt;%1%2&gt; [%3] %4").arg(message->nick(), pfx, message->target(), content);
     }
+    const QString content = IrcTextFormat().toHtml(message->content());
+    return QObject::tr("&lt;%1%2&gt; [%3] %4").arg(message->nick(), pfx, message->target(), content);
 }
 
 QString IrcMessageFormatter::formatNumericMessage(IrcNumericMessage* message, bool isForLua)
@@ -351,14 +355,12 @@ QString IrcMessageFormatter::formatPrivateMessage(IrcPrivateMessage* message, bo
 
     if (message->isAction()) {
         return QObject::tr("* %1 %2").arg(message->nick(), content);
-    } else {
-        if (isForLua) {
-            // lua only needs the message text here.  Nick and target are sent as arguments to postIrcMessage()
-            return content;
-        } else {
-            return QObject::tr("<b>&lt;%1&gt;</b> %2").arg(message->nick(), content);
-        }
     }
+    if (isForLua) {
+        // lua only needs the message text here.  Nick and target are sent as arguments to postIrcMessage()
+        return content;
+    }
+    return QObject::tr("<b>&lt;%1&gt;</b> %2").arg(message->nick(), content);
 }
 
 QString IrcMessageFormatter::formatQuitMessage(IrcQuitMessage* message, bool isForLua)

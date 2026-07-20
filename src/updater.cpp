@@ -284,9 +284,10 @@ void Updater::setupPlatformUpdater()
 
         auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
         qWarning() << "Checked for updates:" << updates.size() << "update(s) available";
-        if (!updates.isEmpty()) {
-            emit signal_updateAvailable(updates.size());
+        if (updates.isEmpty()) {
+            return;
         }
+        emit signal_updateAvailable(updates.size());
     });
 
     connect(feed.get(), &dblsqd::Feed::downloadError, this, [this](const QString& error) {
@@ -621,6 +622,11 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 // Records a timestamp on disk so shouldShowChangelog() can detect automatic updates on next launch
 void Updater::recordUpdateTime() const
 {
+    // The updater outlives the main window; without it there is no config
+    // path to write the changelog marker to:
+    if (!mudlet::self()) {
+        return;
+    }
     QSaveFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
@@ -642,6 +648,11 @@ void Updater::recordUpdateTime() const
 // the changelog on next startup for the latest version only
 void Updater::recordUpdatedVersion() const
 {
+    // The updater outlives the main window; without it there is no config
+    // path to write the changelog marker to:
+    if (!mudlet::self()) {
+        return;
+    }
     QSaveFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
@@ -653,7 +664,9 @@ void Updater::recordUpdatedVersion() const
     if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
         ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
     }
-    ofs << APP_VERSION;
+    // The full version (including any -ptb suffix) so shouldShowChangelog()
+    // can tell whether the running version actually changed:
+    ofs << QCoreApplication::applicationVersion();
     if (!file.commit()) {
         qWarning() << "Updater::recordUpdatedVersion: error saving old mudlet version:" << file.errorString();
     }
@@ -697,16 +710,32 @@ bool Updater::shouldShowChangelog()
 
     file.remove();
 
+    // The markers are also written when an update was downloaded but never
+    // installed (e.g. the user declined the restart). If the "updated from"
+    // version is still the one running, no update actually happened - don't
+    // show a changelog for it:
+    if (readPreviousVersionFile(false) == QCoreApplication::applicationVersion()) {
+        QFile::remove(mudlet::self()->getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
+        return false;
+    }
+
     return minsSinceUpdate >= 5;
 }
 
 QString Updater::getPreviousVersion() const
 {
+    return readPreviousVersionFile(true);
+}
+
+QString Updater::readPreviousVersionFile(const bool removeAfterRead) const
+{
     QFile file(mudlet::self()->getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
     bool opened = file.open(QIODevice::ReadOnly);
     QString previousVersion;
     if (!opened) {
-        file.remove();
+        if (removeAfterRead) {
+            file.remove();
+        }
         return QString();
     }
     QDataStream ifs(&file);
@@ -715,7 +744,9 @@ QString Updater::getPreviousVersion() const
     }
     ifs >> previousVersion;
     file.close();
-    file.remove();
+    if (removeAfterRead) {
+        file.remove();
+    }
 
     if (ifs.status() != QDataStream::Ok) {
         qWarning() << "Failed to read previous version file, treating as missing";
