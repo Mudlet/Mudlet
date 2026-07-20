@@ -232,13 +232,12 @@ bool TriggerUnit::registerTrigger(TTrigger* pT)
     if (pT->getParent()) {
         addTrigger(pT);
         return true;
-    } else {
-        addTriggerRootNode(pT);
-        if (mProcessingDepth > 0) {
-            mRootNodesAddedWhileProcessing.append(pT);
-        }
-        return true;
     }
+    addTriggerRootNode(pT);
+    if (mProcessingDepth > 0) {
+        mRootNodesAddedWhileProcessing.append(pT);
+    }
+    return true;
 }
 
 void TriggerUnit::unregisterTrigger(TTrigger* pT)
@@ -249,10 +248,8 @@ void TriggerUnit::unregisterTrigger(TTrigger* pT)
     if (pT->getParent()) {
         removeTrigger(pT);
         return;
-    } else {
-        removeTriggerRootNode(pT);
-        return;
     }
+    removeTriggerRootNode(pT);
 }
 
 
