@@ -137,6 +137,7 @@ public slots:
     void slot_guiLanguageChanged(const QString&);
 
 private slots:
+    void slot_forgetSavedSignIn();
     void slot_changeShowSpacesAndTabs(bool);
     void slot_changeShowLineFeedsAndParagraphs(bool);
     void slot_scriptSelected(int index);
@@ -211,6 +212,9 @@ private:
     void addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items);
     void initWithHost(Host*);
+    QString certificateWarningCheckBoxStyle() const;
+    QString certificateWarningLabelStyle() const;
+    void restyleCertificateWarnings();
     void disableHostDetails();
     void enableHostDetails();
     void clearHostDetails();

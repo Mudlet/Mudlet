@@ -1157,11 +1157,13 @@ _Echos = {
   Process = function(str, style)
     local t = {}
     local tonumber, _Echos, color_table = tonumber, _Echos, color_table
+    local patterns = _Echos.Patterns[style]
+    local capturePattern = patterns[2]
 
     -- s: A subject section (can be an empty string)
     -- c: colour code
     -- r: reset code
-    for s, c, r in rex.split(str, _Echos.Patterns[style][1]) do
+    for s, c, r in rex.split(str, patterns[1]) do
       if c and (c:byte(1) == 92) then
         c = c:sub(2)
         if s then
@@ -1197,7 +1199,17 @@ _Echos = {
       end
       if c then
         if style == 'Hex' or style == 'Decimal' then
-          local fr, fg, fb, br, bg, bb, ba = _Echos.Patterns[style][2]:match(c)
+          -- try the common single-foreground form with a native match first,
+          -- falling back to PCRE for combined/background/alpha forms
+          local fr, fg, fb, br, bg, bb, ba
+          if style == 'Decimal' then
+            fr, fg, fb = c:match("^<(%d%d?%d?),(%d%d?%d?),(%d%d?%d?)>$")
+          else
+            fr, fg, fb = c:match("^#(%x%x)(%x%x)(%x%x)$")
+          end
+          if not fr then
+            fr, fg, fb, br, bg, bb, ba = capturePattern:match(c)
+          end
           local color = {}
           if style == 'Hex' then
             -- hex has alpha value in front
@@ -1252,7 +1264,10 @@ _Echos = {
           elseif c == "</o>" then
             t[#t + 1] = "\27overlineoff"
           else
-            local fcolor, bcolor = _Echos.Patterns[style][2]:match(c)
+            local fcolor, bcolor = c:match("^<([%w_]+)>$")
+            if not fcolor then
+              fcolor, bcolor = capturePattern:match(c)
+            end
             local color = {}
             if fcolor and color_table[fcolor] then
               color.fg = color_table[fcolor]

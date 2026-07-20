@@ -126,4 +126,24 @@ describe("Trigger processing", function()
         end)
 
     end)
+
+    describe("tempAnsiColorTrigger callbacks", function()
+
+        it("should fire a function callback when the expiry argument is omitted", function()
+            _G.ansiColorFunctionFired = false
+            -- ANSI 7 = white foreground, ANSI 0 = black background
+            local colorTrigger = tempAnsiColorTrigger(7, 0, function()
+                _G.ansiColorFunctionFired = true
+            end)
+
+            feedTriggers("\n\27[37;40mAnsiColorFunctionCallback\27[0m\n")
+
+            local fired = _G.ansiColorFunctionFired
+            killTrigger(colorTrigger)
+            _G.ansiColorFunctionFired = nil
+
+            assert.is_true(fired, "Function callback without an expiry argument should fire")
+        end)
+
+    end)
 end)
