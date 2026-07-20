@@ -15,6 +15,7 @@ set(FUNCTIONAL_TEST_SOURCES
     MainConsoleSelectionTest.cpp
     EnableDisableByNameTest.cpp
     GMCPCharLoginTest.cpp
+    SetScriptCallbackTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
