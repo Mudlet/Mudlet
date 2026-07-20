@@ -328,6 +328,7 @@ public slots:
     void slot_editLabel();
     void slot_setPlayerLocation();
     void slot_toggleMapViewOnly();
+    void slot_configureAreas();
     void slot_createLabel();
     void slot_customLineColor();
     void slot_shiftZup();

@@ -98,6 +98,7 @@ class TScrollBox;
 class TTabBar;
 class TTimer;
 class TToolBar;
+class TUiTour;
 
 class mudlet : public QMainWindow, public Ui::main_window
 {
@@ -302,8 +303,8 @@ public:
     bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
     // Brings up the preferences dialog and selects the tab whos objectName is
-    // supplied:
-    void showOptionsDialog(const QString&);
+    // supplied, for the given Host - or the active one if none is given:
+    void showOptionsDialog(const QString&, Host* = nullptr);
     void startAutoLogin(const QStringList&);
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
     void setStorePasswordsSecurely(const bool storeSecurely) { mStorePasswordsSecurely = storeSecurely; }
@@ -317,6 +318,7 @@ public:
     bool mediaMuted() const { return mMuteAPI && mMuteGame; }
     bool mediaUnmuted() const { return !mMuteAPI && !mMuteGame; }
     bool profileExists(const QString& profileName);
+    QString getCanonicalProfileName(const QString& profileName);
     bool showSplitscreenTutorial();
     void showedSplitscreenTutorial();
     bool showMuteAllMediaTutorial();
@@ -485,6 +487,8 @@ public slots:
     void slot_showKeyDialog();
     void slot_showPreferencesDialog();
     void slot_showScriptDialog();
+    void slot_showUiTour();
+    void slot_uiTourClosed();
     static void restoreProfileFocus(const QString& profileName);
     static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
     void setupNotepadFocusRestoration(dlgNotepad* pNotepad);
@@ -557,6 +561,7 @@ private slots:
 private:
     void assignKeySequences();
     QString autodetectPreferredLanguage();
+    void showUiTour(const bool skipIntroStep);
     static bool needsCustomDarkTheme();
     void closeHost(const QString&);
     int getDictionaryWordCount(const QString& dictionaryPath);
@@ -574,6 +579,7 @@ private:
     void reshowRequiredMainConsoles();
     void toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText);
     dlgTriggerEditor* createMudletEditor();
+    static void showEditorRestoringWindowState(QWidget* editor);
 
     // Profile detachment helper methods
     void moveProfileFromMainToDetachedWindow(const QString& profileName, int tabIndex, TDetachedWindow* targetWindow);
@@ -704,6 +710,7 @@ private:
     qreal mBlinkTimeMs = 0.0;
     int mBlinkClientCount = 0;
     QPointer<QToolBar> mpToolBarReplay;
+    QPointer<TUiTour> mpUiTour;
     QWidget* mpWidget_profileContainer = nullptr;
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead

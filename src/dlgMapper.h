@@ -4,8 +4,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2021-2022 by Stephen Lyons                        *
+ *   Copyright (C) 2016, 2021-2022, 2026 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2026 by Ethan Hussong - ethan@ethanhussong.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -75,7 +76,6 @@ public slots:
     void updateEmptyStateOverlay();
     void slot_toggleRoundRooms(const bool);
     void slot_toggleShowRoomIDs(int toggle);
-    void slot_toggleShowRoomNames(int toggle);
     void slot_toggleStrongHighlight(int toggle);
     void slot_toggle3DView(const bool);
     void slot_togglePanel();
@@ -89,6 +89,7 @@ public slots:
     void slot_setupMapperMenu();
     void slot_toggleUpperLowerLevels(bool enabled);
     void slot_toggleShowRoomIDsFromMenu(bool enabled);
+    void slot_toggleShowRoomNames(const bool);
     void updateInfoMenu();
     void slot_showSaveWarningMenu();
     void slot_saveErrorChanged(bool hasError);

@@ -189,7 +189,8 @@ int TLuaInterpreter::ttsGetCurrentLine(lua_State* L)
 
     if (speechUnit->state() == QTextToSpeech::State::Ready) {
         return warnArgumentValue(L, __func__, "not speaking any text");
-    } else if (speechUnit->state() == TEXT_TO_SPEECH_ERROR_STATE) {
+    }
+    if (speechUnit->state() == TEXT_TO_SPEECH_ERROR_STATE) {
         return warnArgumentValue(L, __func__, "error with the computer's TTS engine");
     }
 

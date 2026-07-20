@@ -13,7 +13,7 @@ jobs:
     env:
       PLURAL_TRANSLATIONS_FILE: ./translations/translated/mudlet_en_US.ts
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         ref: development
         submodules: recursive
@@ -21,7 +21,7 @@ jobs:
     - name: update plural american english file
       uses: Mudlet/lupdate-action@master
       with:
-        args: -locations absolute -pluralonly ./src ./3rdparty/dblsqd/dblsqd ./3rdparty/edbee-lib/edbee-lib -ts ${{ env.PLURAL_TRANSLATIONS_FILE }}
+        args: -locations absolute -pluralonly ./src ./3rdparty/edbee-lib/edbee-lib -ts ${{ env.PLURAL_TRANSLATIONS_FILE }}
 
     - name: count the number of unfinished translations
       id: count_unfinished

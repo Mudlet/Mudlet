@@ -125,6 +125,9 @@ public:
     // long enough again.
     int mOldCaretColumn = 0;
 
+    friend class TTextEditBlinkTest;
+    static bool shouldRegisterBlinkClient(bool enableBlinkText, bool hasBlinkingContentInRedrawnRegion, bool isBlinkClientRegistered, bool reusedCachedScreenContent);
+
     QColor mFgColor;
     bool mIsCommandPopup = false;
     // If true, this TTextEdit is to display the last lines in

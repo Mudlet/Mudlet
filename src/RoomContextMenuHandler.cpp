@@ -269,6 +269,13 @@ void RoomContextMenuHandler::populateEditModeActions(QMenu* menu, int selectionS
     }
 
     //: 2D Mapper context menu (room) item
+    auto configureAreas = new QAction(T2DMap::tr("Configure areas..."), &mMapWidget);
+    //: 2D Mapper context menu (room) item tooltip
+    configureAreas->setToolTip(utils::richText(T2DMap::tr("Modify and create new areas.")));
+    QObject::connect(configureAreas, &QAction::triggered, &mMapWidget, &T2DMap::slot_configureAreas);
+    menu->addAction(configureAreas);
+
+    //: 2D Mapper context menu (room) item
     auto createLabel = new QAction(T2DMap::tr("Create label..."), &mMapWidget);
     //: 2D Mapper context menu (room) item tooltip
     createLabel->setToolTip(utils::richText(T2DMap::tr("Create label to show text or an image")));

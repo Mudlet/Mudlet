@@ -203,7 +203,8 @@ bool TAlias::match(const QString& haystack)
             }
             ovector[1] = start_offset + 1;
             continue;
-        } else if (rc < 0) {
+        }
+        if (rc < 0) {
             goto END;
         }
 
@@ -348,11 +349,10 @@ bool TAlias::compileScript()
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
-    } else {
-        mOK_code = false;
-        setError(error);
-        return false;
     }
+    mOK_code = false;
+    setError(error);
+    return false;
 }
 
 void TAlias::execute()
