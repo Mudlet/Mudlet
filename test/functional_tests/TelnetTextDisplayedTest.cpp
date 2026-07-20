@@ -41,7 +41,7 @@ class TelnetTextDisplayedTest : public QObject
 private:
     TelnetServerStub* mpServer = nullptr;
     const QString mpHostname = "Test-Telnet";
-    QString mpPort;
+    QString mpPort; // assigned the stub's actual ephemeral port in init()
     const QString mpLocalhost = "localhost";
 
 private slots:
@@ -50,8 +50,7 @@ private slots:
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
-        // Bind an ephemeral port so parallel test runs cannot collide
-        mpServer->start(mpLocalhost, 0);
+        mpServer->start(mpLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
         mpPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
