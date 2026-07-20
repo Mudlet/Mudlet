@@ -237,6 +237,7 @@ modules:
     config-opts:
       - -DCMAKE_BUILD_TYPE=RelWithDebInfo
       - -DUSE_OWN_QTKEYCHAIN=ON
+      - -DUSE_3DMAPPER=OFF
     sources:
       - type: dir
         path: ../

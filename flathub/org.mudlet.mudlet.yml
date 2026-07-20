@@ -230,6 +230,7 @@ modules:
     config-opts:
       - -DCMAKE_BUILD_TYPE=RelWithDebInfo
       - -DUSE_OWN_QTKEYCHAIN=ON
+      - -DUSE_3DMAPPER=OFF
     sources:
       - type: git
         url: https://github.com/Mudlet/Mudlet.git
