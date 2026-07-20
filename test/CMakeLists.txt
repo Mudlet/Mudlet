@@ -35,6 +35,7 @@ set(UNIT_TESTS
     TAreaGridIndexTest
     TKeySequenceEditTest
     TEncodingHelperTest
+    PasswordMigrationTest
 )
 
 foreach(test_name ${UNIT_TESTS})
@@ -49,11 +50,6 @@ endforeach()
 
 # DiscordTest checks the Lua API permission gating contract by scanning the source
 target_compile_definitions(DiscordTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
-
-add_executable(PasswordMigrationTest PasswordMigrationTest.cpp)
-add_dependencies(PasswordMigrationTest ${LIB_MUDLET_TARGET})
-target_link_libraries(PasswordMigrationTest PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
-add_test(NAME PasswordMigrationTest COMMAND $<TARGET_FILE:PasswordMigrationTest>)
 
 # Build-file consistency check. Independent of the Mudlet library: it only reads
 # src/CMakeLists.txt and the src/ directory, so it does not link LIB_MUDLET_TARGET.
