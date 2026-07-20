@@ -15,6 +15,7 @@ set(FUNCTIONAL_TEST_SOURCES
     MainConsoleSelectionTest.cpp
     EnableDisableByNameTest.cpp
     GMCPCharLoginTest.cpp
+    LogRestartDuplicateLineTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
@@ -44,3 +45,6 @@ set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
+
+# LogRestartDuplicateLineTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(LogRestartDuplicateLineTest PROPERTIES TIMEOUT 300)
