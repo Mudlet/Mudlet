@@ -49,6 +49,9 @@
 #include <QUrlQuery>
 
 #include <utility>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 namespace {
 
@@ -1606,7 +1609,7 @@ void TBuffer::processMxpWatchdogCallback()
             const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
             QPointer<Host> hostGuard = mpHost;
             QPointer<TConsole> consoleGuard = mpConsole;
-            QTimer::singleShot(0, mpConsole, [this, style, hostGuard, consoleGuard]() {
+            QTimer::singleShot(0ms, mpConsole, [this, style, hostGuard, consoleGuard]() {
                 if (!hostGuard || !consoleGuard) {
                     return;
                 }

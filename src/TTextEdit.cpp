@@ -61,6 +61,8 @@
 #include <QWidgetAction>
 #include <QVersionNumber>
 
+using namespace std::chrono_literals;
+
 // Renders text on screen
 // Text data stored separately in a TBuffer
 TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLowerPane)
@@ -110,7 +112,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     // Scroll optimizations may use cached screen data, missing blinking content detection
     mpScrollStoppedTimer = new QTimer(this);
     mpScrollStoppedTimer->setSingleShot(true);
-    mpScrollStoppedTimer->setInterval(150);
+    mpScrollStoppedTimer->setInterval(150ms);
     connect(mpScrollStoppedTimer, &QTimer::timeout, this, &TTextEdit::slot_scrollStoppedTimeout);
 
     showNewLines();
@@ -2563,7 +2565,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
     // We have already bailed out before here for the Central Debug Console and
     // the editor Error console so those will avoid the focus being changed to
     // this profile now:
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         if (mpHost) {
             mudlet::self()->activateProfile(mpHost);
         }

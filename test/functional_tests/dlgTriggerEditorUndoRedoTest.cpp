@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QtTest/QtTest>
+#include <chrono>
 
 #include "EditorUndoStack.h"
 #include "Host.h"
@@ -37,6 +38,8 @@
 #include "dlgTriggerPatternEdit.h"
 #include "dlgTriggersMainArea.h"
 #include "mudlet.h"
+
+using namespace std::chrono_literals;
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -109,9 +112,9 @@ private:
 
   void startProfile(const QString &profileName, const QString &address,
                     const QString &port) {
-    QTimer::singleShot(0, qApp, [profileName, address, port]() {
+    QTimer::singleShot(0ms, qApp, [profileName, address, port]() {
       mudlet::self()->startAutoLogin({});
-      QTest::qWait(100);
+      QTest::qWait(100ms);
 
       // Verify connection dialog is available before UI interactions
       Q_ASSERT_X(mudlet::self()->mpConnectionDialog, "startProfile",
@@ -121,21 +124,21 @@ private:
 
       QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
                         Qt::LeftButton);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
 
       Q_ASSERT_X(QApplication::focusWidget(), "startProfile",
                  "No widget has focus after clicking new profile button");
 
       QTest::keyClicks(QApplication::focusWidget(), profileName);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClicks(QApplication::focusWidget(), address);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClicks(QApplication::focusWidget(), port);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
     });
 
@@ -176,7 +179,7 @@ private slots:
 
     // Open the editor dialog (it's created lazily)
     mudlet::self()->slot_showScriptDialog();
-    QTest::qWait(100);
+    QTest::qWait(100ms);
 
     mpEditor = mpHost->mpEditorDialog;
     QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
@@ -366,7 +369,7 @@ private slots:
       if (itemType.viewType == EditorViewType::cmKeysView ||
           itemType.viewType == EditorViewType::cmActionView) {
         QCoreApplication::processEvents();
-        QThread::msleep(10);
+        QThread::sleep(10ms);
       }
 
       QTreeWidgetItem *folder = itemType.baseItem()->child(0);
@@ -421,7 +424,7 @@ private slots:
       if (itemType.viewType == EditorViewType::cmKeysView ||
           itemType.viewType == EditorViewType::cmActionView) {
         QCoreApplication::processEvents();
-        QThread::msleep(10);
+        QThread::sleep(10ms);
       }
 
       QTreeWidgetItem *folder = itemType.baseItem()->child(0);
@@ -467,7 +470,7 @@ private slots:
       if (itemType.viewType == EditorViewType::cmKeysView ||
           itemType.viewType == EditorViewType::cmActionView) {
         QCoreApplication::processEvents();
-        QThread::msleep(10);
+        QThread::sleep(10ms);
       }
 
       QTreeWidgetItem *grandparent = itemType.baseItem()->child(0);
@@ -1377,7 +1380,7 @@ private slots:
       if (itemType.viewType == EditorViewType::cmKeysView ||
           itemType.viewType == EditorViewType::cmActionView) {
         QCoreApplication::processEvents();
-        QThread::msleep(10);
+        QThread::sleep(10ms);
       }
 
       QTreeWidgetItem *grandparent = itemType.baseItem()->child(0);

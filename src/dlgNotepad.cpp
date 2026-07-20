@@ -43,6 +43,7 @@
 #include <QTextDocument>
 #include <QTimer>
 #include <QToolButton>
+#include <chrono>
 
 using namespace std::chrono;
 
@@ -504,7 +505,7 @@ void dlgNotepad::startSendingLines(const QStringList& lines)
     }
 
     action_stop->setEnabled(true);
-    mSendTimer->start(300);
+    mSendTimer->start(300ms);
 }
 
 void dlgNotepad::slot_sendNextLine()

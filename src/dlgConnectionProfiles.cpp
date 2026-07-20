@@ -1122,7 +1122,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         timer->setSingleShot(true);
         timer->setProperty("profileName", profile_name);
         connect(timer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_loadPasswordAsync);
-        timer->start(0);
+        timer->start(0ms);
     }
 
     val = readProfileData(profile_name, qsl("login"));
@@ -2552,7 +2552,7 @@ void dlgConnectionProfiles::slot_passwordTextChanged()
     } else {
         mPasswordSaveTimer = new QTimer(this);
         mPasswordSaveTimer->setSingleShot(true);
-        mPasswordSaveTimer->setInterval(500); // 500ms debounce
+        mPasswordSaveTimer->setInterval(500ms); // 500ms debounce
         connect(mPasswordSaveTimer, &QTimer::timeout, this, [this]() {
             if (!mPendingPasswordSaveProfile.isEmpty()) {
                 // Check if this profile is STILL selected - if not, don't save

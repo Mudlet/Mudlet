@@ -1077,12 +1077,12 @@ int main(int argc, char* argv[])
 
     mudlet::self()->show();
     if (parser.isSet(startFullscreen)) {
-        QTimer::singleShot(0, [=]() {
+        QTimer::singleShot(0ms, [=]() {
             mudlet::self()->showFullScreen();
         });
     }
 
-    QTimer::singleShot(0, qApp, [cliProfiles, telnetUri]() {
+    QTimer::singleShot(0ms, qApp, [cliProfiles, telnetUri]() {
         // Migrate portable password files to secure storage before any
         // profile dialog or auto-login code runs.  The migration is
         // synchronous (uses static CredentialManager helpers) so it is

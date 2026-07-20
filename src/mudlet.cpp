@@ -91,6 +91,7 @@
 
 #include <QRandomGenerator>
 
+#include <chrono>
 #include <cmath>
 #include <memory>
 #include <zip.h>
@@ -778,14 +779,14 @@ void mudlet::init()
     setupTrayIcon();
 
     // emit the signal for adjusting accessible names
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         emit signal_adjustAccessibleNames();
     });
 
     // 200ms interval for WCAG 2.3.1 compliance (max 3 Hz)
     // 4-state counter per ISO/IEC 8613-6: slow blink < 150 cycles/min, fast > 150
     mpBlinkTimer = new QTimer(this);
-    mpBlinkTimer->setInterval(33);
+    mpBlinkTimer->setInterval(33ms);
     connect(mpBlinkTimer, &QTimer::timeout, this, [this]() {
         // Use actual elapsed time so the animation phase stays accurate even
         // when the main thread is busy (map loads, incoming MUD data floods, etc.)
@@ -1664,7 +1665,7 @@ void mudlet::slot_closeProfileRequested(int tab)
         return;
     }
 
-    QTimer::singleShot(0, this, [this, name] {
+    QTimer::singleShot(0ms, this, [this, name] {
         closeHost(name);
         // Update main window title based on remaining profiles
         updateMainWindowTitle();
@@ -1687,7 +1688,7 @@ void mudlet::slot_closeProfileByName(const QString& profileName)
         return;
     }
 
-    QTimer::singleShot(0, this, [this, profileName] {
+    QTimer::singleShot(0ms, this, [this, profileName] {
         closeHost(profileName);
         // Update main window toolbar state in case this was the active profile
         updateMainWindowToolbarState();
@@ -2216,7 +2217,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
     // Set up a timer to refresh tab indicators after a few seconds
     // This catches connection status changes that typically happen shortly after profile creation
-    QTimer::singleShot(3000, this, &mudlet::slot_refreshTabIndicatorsDelayed);
+    QTimer::singleShot(3s, this, &mudlet::slot_refreshTabIndicatorsDelayed);
 }
 
 
@@ -2688,7 +2689,7 @@ void mudlet::showEvent(QShowEvent* event)
         startupValidationDone = true;
 
         // Use a timer to defer this check until after full initialization
-        QTimer::singleShot(1000, this, [this]() {
+        QTimer::singleShot(1s, this, [this]() {
             QStringList orphanedProfiles = getOrphanedProfiles();
 
             if (!orphanedProfiles.isEmpty()) {
@@ -3201,7 +3202,7 @@ void mudlet::slot_showConnectionDialog()
 
     // Use a timer to ensure the main window is ready before showing the dialog
     // This is especially important at startup when the main window might not be fully initialized
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         // Ensure the main window is visible and ready
         if (!isVisible()) {
             show();
@@ -3246,7 +3247,7 @@ void mudlet::slot_showEditorDialog()
 
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
-        QTimer::singleShot(50, this, [this]() {
+        QTimer::singleShot(50ms, this, [this]() {
             // Activate the main window
             this->show();
             this->raise();
@@ -3289,7 +3290,7 @@ void mudlet::slot_showTriggerDialog()
 
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
-        QTimer::singleShot(50, this, [this]() {
+        QTimer::singleShot(50ms, this, [this]() {
             // Activate the main window
             this->show();
             this->raise();
@@ -3328,7 +3329,7 @@ void mudlet::slot_showAliasDialog()
 
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
-        QTimer::singleShot(50, this, [this]() {
+        QTimer::singleShot(50ms, this, [this]() {
             // Activate the main window
             this->show();
             this->raise();
@@ -3364,7 +3365,7 @@ void mudlet::slot_showTimerDialog()
 
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
-        QTimer::singleShot(50, this, [this]() {
+        QTimer::singleShot(50ms, this, [this]() {
             // Activate the main window
             this->show();
             this->raise();
@@ -3392,7 +3393,7 @@ void mudlet::slot_showTimerDialog()
 void mudlet::restoreProfileFocus(const QString& profileName)
 {
     // Small delay to ensure the dialog window is fully processed
-    QTimer::singleShot(50, [profileName]() {
+    QTimer::singleShot(50ms, [profileName]() {
         auto mudletInstance = mudlet::self();
         if (!mudletInstance) {
             return;
@@ -3446,7 +3447,7 @@ void mudlet::setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QStrin
         // If a specific target window is provided (detached window), focus that
         if (targetWindow) {
             // Small delay to ensure the editor window is fully processed
-            QTimer::singleShot(50, [profileName, targetWindow]() {
+            QTimer::singleShot(50ms, [profileName, targetWindow]() {
                 targetWindow->show();
                 targetWindow->raise();
                 targetWindow->activateWindow();
@@ -3577,7 +3578,7 @@ void mudlet::slot_showKeyDialog()
 
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
-        QTimer::singleShot(50, this, [this]() {
+        QTimer::singleShot(50ms, this, [this]() {
             // Activate the main window
             this->show();
             this->raise();
@@ -3613,7 +3614,7 @@ void mudlet::slot_showVariableDialog()
 
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
-        QTimer::singleShot(50, this, [this]() {
+        QTimer::singleShot(50ms, this, [this]() {
             // Activate the main window
             this->show();
             this->raise();
@@ -3649,7 +3650,7 @@ void mudlet::slot_showActionDialog()
 
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
-        QTimer::singleShot(50, this, [this]() {
+        QTimer::singleShot(50ms, this, [this]() {
             // Activate the main window
             this->show();
             this->raise();
@@ -4324,7 +4325,7 @@ void mudlet::slot_reconnect()
 
     // Set up a timer to refresh tab indicators after a few seconds
     // This catches connection status changes that typically happen shortly after reconnection
-    QTimer::singleShot(3000, this, &mudlet::slot_refreshTabIndicatorsDelayed);
+    QTimer::singleShot(3s, this, &mudlet::slot_refreshTabIndicatorsDelayed);
 }
 
 void mudlet::slot_disconnect()
@@ -4879,7 +4880,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         const bool skipIntroStep = profile == qsl("Mudlet Tutorial");
         // give the freshly opened profile a moment to finish laying out before
         // the tour starts highlighting parts of it
-        QTimer::singleShot(1000, this, [this, skipIntroStep]() { showUiTour(skipIntroStep); });
+        QTimer::singleShot(1s, this, [this, skipIntroStep]() { showUiTour(skipIntroStep); });
     }
 }
 
@@ -5288,7 +5289,7 @@ bool mudlet::replayStart()
     mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
 
     mpTimerReplay = new QTimer(this);
-    mpTimerReplay->setInterval(1000);
+    mpTimerReplay->setInterval(1s);
     mpTimerReplay->setSingleShot(false);
     connect(mpTimerReplay.data(), &QTimer::timeout, this, &mudlet::slot_replayTimeChanged);
 
@@ -6120,7 +6121,7 @@ bool mudlet::migratePasswordsToSecureStorage()
     }
 
     // Always emit the signal (either immediately or after migrations complete)
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         emit signal_passwordsMigratedToSecure();
     });
 
@@ -6174,7 +6175,7 @@ bool mudlet::migratePasswordsToProfileStorage()
 
     // If no old-format entries need to be checked, emit signal immediately
     if (mProfilePasswordsToMigrate.isEmpty()) {
-        QTimer::singleShot(0, this, [this]() {
+        QTimer::singleShot(0ms, this, [this]() {
             emit signal_passwordsMigratedToProfiles();
         });
     }
@@ -6981,7 +6982,7 @@ void mudlet::activateProfile(Host* pHost)
         mpCurrentActiveHost->mpConsole->refresh();
         // Defer subconsole refresh to allow Qt to fully process the show event
         // and update widget geometry before we try to recalculate screen dimensions
-        QTimer::singleShot(0, mpCurrentActiveHost->mpConsole, &TMainConsole::refreshSubconsoles);
+        QTimer::singleShot(0ms, mpCurrentActiveHost->mpConsole, &TMainConsole::refreshSubconsoles);
         mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
 
         // If NOT in multiview mode, hide all other consoles in the main window
@@ -7024,7 +7025,7 @@ void mudlet::activateProfile(Host* pHost)
     // When switching profiles, Qt widget geometry isn't updated until the event loop processes
     // show/hide events. Calling adjustHeight() immediately would use incorrect document width,
     // causing the input bar to have the wrong height.
-    QTimer::singleShot(0, mpCurrentActiveHost->mpConsole->mpCommandLine, &TCommandLine::adjustHeight);
+    QTimer::singleShot(0ms, mpCurrentActiveHost->mpConsole->mpCommandLine, &TCommandLine::adjustHeight);
 
     // Update the main application window title based on active profiles in main window
     updateMainWindowTitle();
@@ -7039,7 +7040,7 @@ void mudlet::activateProfile(Host* pHost)
     // otherwise mScreenWidth hits its qMax(40, ...) floor and the server
     // pre-wraps output too narrowly. Receiver-form singleShot is safe if the
     // Host is destroyed first - do not change to a lambda.
-    QTimer::singleShot(0, mpCurrentActiveHost.data(), &Host::updateDisplayDimensions);
+    QTimer::singleShot(0ms, mpCurrentActiveHost.data(), &Host::updateDisplayDimensions);
 
     // Currently used to update the Discord Rich Presence
     emit signal_tabChanged(mpCurrentActiveHost->getName());
@@ -7297,7 +7298,7 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
 // to be done on the next Qt event loop iteration:
 void mudlet::armForceClose()
 {
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         forceClose();
     });
 }
@@ -7473,7 +7474,7 @@ void mudlet::slot_detachedWindowClosed(const QString& profileName)
         Host* pHost = mHostManager.getHost(profileName);
         if (pHost) {
             if (pHost->requestClose()) {
-                QTimer::singleShot(0, this, [this, profileName] {
+                QTimer::singleShot(0ms, this, [this, profileName] {
                     closeHost(profileName);
                     // Check to see if there are any profiles left...
                     if (!mHostManager.getHostCount() && !mIsGoingDown) {
