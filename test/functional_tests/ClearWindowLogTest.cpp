@@ -81,7 +81,8 @@ private slots:
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("clearWindow()"));
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTelnet('You emerge unscathed.\\n')"));
 
-        const QString log = stopLoggingAndReadLog(host);
+        QString log;
+        stopLoggingAndReadLog(host, log);
         QVERIFY2(log.contains(qsl("You are dead.")), "clearWindow() dropped the line that was pending for logging");
         QVERIFY2(log.contains(qsl("You emerge unscathed.")), "Line received after clearWindow() is missing from the log");
     }
@@ -97,7 +98,8 @@ private slots:
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTelnet('You perish\\n')"));
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTelnet('A new dawn\\n')"));
 
-        const QString log = stopLoggingAndReadLog(host);
+        QString log;
+        stopLoggingAndReadLog(host, log);
         QVERIFY2(log.contains(qsl("You perish")), "A line whose own trigger cleared the window was dropped from the log");
         QVERIFY2(log.contains(qsl("A new dawn")), "Line received after clearWindow() is missing from the log");
     }
@@ -113,7 +115,8 @@ private slots:
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTelnet('Top secret plans\\n')"));
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTelnet('After the gag.\\n')"));
 
-        const QString log = stopLoggingAndReadLog(host);
+        QString log;
+        stopLoggingAndReadLog(host, log);
         QVERIFY2(log.contains(qsl("Before the gag.")), "Line before the gagged one is missing from the log");
         QVERIFY2(!log.contains(qsl("Top secret plans")), "Gagged line leaked into the log");
         QVERIFY2(log.contains(qsl("After the gag.")), "Line after the gagged one is missing from the log");
@@ -153,16 +156,18 @@ private:
         return host;
     }
 
-    QString stopLoggingAndReadLog(Host* host)
+    // Returns the log contents through logContents. A genuine open failure is
+    // surfaced as its own assertion (with the OS error) rather than silently
+    // returning an empty string, which would otherwise masquerade as a
+    // dropped/missing log line in the callers' QVERIFY2 checks.
+    void stopLoggingAndReadLog(Host* host, QString& logContents)
     {
         const QString logFileName = host->mpConsole->mLogFileName;
         host->mpConsole->toggleLogging(false);
 
         QFile logFile(logFileName);
-        if (!logFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            return QString();
-        }
-        return QString::fromUtf8(logFile.readAll());
+        QVERIFY2(logFile.open(QIODevice::ReadOnly | QIODevice::Text), qPrintable(qsl("Could not open log file '%1' for reading: %2").arg(logFileName, logFile.errorString())));
+        logContents = QString::fromUtf8(logFile.readAll());
     }
 
     // Starts a profile the way a user would via the GUI (mirrors the helper in
