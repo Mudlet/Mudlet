@@ -120,7 +120,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
     setContentsMargins(0, 0, 0, 0);
     setAttribute(Qt::WA_DeleteOnClose);
-    setAttribute(Qt::WA_OpaquePaintEvent, (mType == MainConsole));
+    setAttribute(Qt::WA_OpaquePaintEvent, (mType == MainConsole || mType == CentralDebugConsole));
 
     const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     const QSizePolicy sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -130,7 +130,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
 
-    if (mType == MainConsole) {
+    // the central debug console is a top-level window with no main console
+    // behind it, so it must paint its own background like the main console does
+    if (mType == MainConsole || mType == CentralDebugConsole) {
         QPalette framePalette;
         framePalette.setColor(QPalette::Text, QColor(Qt::black));
         framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
@@ -694,6 +696,10 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layoutLayer2->activate();
     }
 
+    // Move before resizing: resizing first could leave the display overrunning
+    // its parent frame, clipping it and making TTextEdit::updateScreenView()
+    // undercount the visible rows:
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
     if (mType & (MainConsole | SubConsole | UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
@@ -706,7 +712,6 @@ void TConsole::resizeEvent(QResizeEvent* event)
         mpMainFrame->resize(x, y);
         mpMainDisplay->resize(x, y);
     }
-    mpMainDisplay->move(mBorders.left(), mBorders.top());
 
     if (mType & (CentralDebugConsole | ErrorConsole)) {
         layerCommandLine->hide();
@@ -824,13 +829,14 @@ void TConsole::refresh()
         y -= mpTopToolBar->height();
     }
 
+    // Move before resizing, see comment in resizeEvent():
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
     mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
 
     if (!mpCommandLine.isNull()) {
         mpCommandLine->adjustHeight();
     }
 
-    mpMainDisplay->move(mBorders.left(), mBorders.top());
     x = width();
     y = height();
     const QSize s = QSize(x, y);
@@ -1241,41 +1247,39 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
             mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
         }
         return;
+    }
+    if ((buffer.buffer.empty()) || mUserCursor == buffer.getEndPos()) {
+        if (customFormat) {
+            buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent, luaReference);
+        } else {
+            buffer.addLink(mTriggerEngineMode, text, func, hint, standardLinkFormat, luaReference);
+        }
+
+        mUpperPane->showNewLines();
+        mLowerPane->showNewLines();
 
     } else {
-        if ((buffer.buffer.empty()) || mUserCursor == buffer.getEndPos()) {
-            if (customFormat) {
-                buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent, luaReference);
-            } else {
-                buffer.addLink(mTriggerEngineMode, text, func, hint, standardLinkFormat, luaReference);
-            }
-
-            mUpperPane->showNewLines();
-            mLowerPane->showNewLines();
-
+        if (customFormat) {
+            buffer.insertInLine(mUserCursor, text, mFormatCurrent);
         } else {
-            if (customFormat) {
-                buffer.insertInLine(mUserCursor, text, mFormatCurrent);
-            } else {
-                buffer.insertInLine(mUserCursor, text, standardLinkFormat);
-            }
+            buffer.insertInLine(mUserCursor, text, standardLinkFormat);
+        }
 
-            buffer.applyLink(P, P2, func, hint, luaReference);
-            if (text.indexOf("\n") != -1) {
-                const int y_tmp = mUserCursor.y();
-                const int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
-                mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
-                const int y_neu = y_tmp + down;
-                const int x_adjust = text.lastIndexOf("\n");
-                int x_neu = 0;
-                if (x_adjust != -1) {
-                    x_neu = text.size() - x_adjust - 1 > 0 ? text.size() - x_adjust - 1 : 0;
-                }
-                moveCursor(x_neu, y_neu);
-            } else {
-                mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
-                moveCursor(mUserCursor.x() + text.size(), mUserCursor.y());
+        buffer.applyLink(P, P2, func, hint, luaReference);
+        if (text.indexOf("\n") != -1) {
+            const int y_tmp = mUserCursor.y();
+            const int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+            mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
+            const int y_neu = y_tmp + down;
+            const int x_adjust = text.lastIndexOf("\n");
+            int x_neu = 0;
+            if (x_adjust != -1) {
+                x_neu = text.size() - x_adjust - 1 > 0 ? text.size() - x_adjust - 1 : 0;
             }
+            moveCursor(x_neu, y_neu);
+        } else {
+            mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
+            moveCursor(mUserCursor.x() + text.size(), mUserCursor.y());
         }
     }
 }

@@ -3454,6 +3454,17 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, s, "wrapAt");
     auto console = CONSOLE(L, windowName);
     console->setWrapAt(luaFrom);
+    // only mirror values the preferences dialog itself accepts into the
+    // profile, otherwise an invalid width would reach NAWS and get saved
+    if (luaFrom >= 1 && console->getType() == TConsole::MainConsole) {
+        Host& host = getHostFromLua(L);
+        const int priorWrapAt = host.mWrapAt;
+        host.mWrapAt = luaFrom;
+        if (priorWrapAt != luaFrom) {
+            host.mTelnet.sendInfoNewEnvironValue(qsl("WORD_WRAP"));
+        }
+        host.updateDisplayDimensions();
+    }
     return 0;
 }
 
@@ -3464,6 +3475,10 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, windowName);
     console->setIndentCount(luaFrom);
+    if (luaFrom >= 0 && console->getType() == TConsole::MainConsole) {
+        Host& host = getHostFromLua(L);
+        host.mWrapIndentCount = luaFrom;
+    }
     return 0;
 }
 
@@ -3474,6 +3489,10 @@ int TLuaInterpreter::setWindowWrapHangingIndent(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, windowName);
     console->setHangingIndentCount(luaFrom);
+    if (luaFrom >= 0 && console->getType() == TConsole::MainConsole) {
+        Host& host = getHostFromLua(L);
+        host.mWrapHangingIndentCount = luaFrom;
+    }
     return 0;
 }
 
