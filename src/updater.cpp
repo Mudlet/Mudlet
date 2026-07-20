@@ -596,7 +596,14 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
         if (mudlet::self()) {
             mudlet::self()->forceClose();
         }
-        if (!QProcess::startDetached(qApp->arguments()[0], qApp->arguments().mid(1))) {
+        // Relaunch the outer AppImage (via $APPIMAGE) when running as one: both
+        // argv[0] and applicationFilePath() point inside the temporary squashfs
+        // mount, which is torn down once this instance exits. Fall back to the
+        // canonical executable path for non-AppImage installs - matches the path
+        // the update was installed to in slot_updateLinuxBinary().
+        const auto systemEnvironment = QProcessEnvironment::systemEnvironment();
+        const QString restartBinary = systemEnvironment.contains(qsl("APPIMAGE")) ? systemEnvironment.value(qsl("APPIMAGE"), QString()) : QCoreApplication::applicationFilePath();
+        if (!QProcess::startDetached(restartBinary, qApp->arguments().mid(1))) {
             qWarning() << "Failed to restart Mudlet after update";
             //: Error title for dialog shown when Mudlet fails to restart after updating
             QMessageBox::critical(nullptr,
