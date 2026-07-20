@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
+ *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -114,12 +115,13 @@ QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri
         const int suffixLength = sendSuffix.length();
         QString command = baseUri.mid(prefixLength, baseUri.length() - prefixLength - suffixLength);
         QString cleanCommand = addSelectedParameter(command, isSelected);
-        QString result = qsl("send([[%1]])").arg(cleanCommand);
+        QString result = qsl("send([[%1]], false)").arg(cleanCommand);
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "Modified to:" << result;
 #endif
         return result;
-    } else if (baseUri.startsWith(sendCmdLinePrefix) && baseUri.endsWith(sendCmdLineSuffix)) {
+    }
+    if (baseUri.startsWith(sendCmdLinePrefix) && baseUri.endsWith(sendCmdLineSuffix)) {
         const int prefixLength = sendCmdLinePrefix.length();
         const int suffixLength = sendCmdLineSuffix.length();
         QString command = baseUri.mid(prefixLength, baseUri.length() - prefixLength - suffixLength);
@@ -156,7 +158,7 @@ void THyperlinkSelectionManager::setGroupExclusive(const QString& group, bool ex
         members.sort();
 
         bool foundFirst = false;
-        for (const QString& member : members) {
+        for (const QString& member : std::as_const(members)) {
             if (isSelected(group, member)) {
                 if (!foundFirst) {
                     foundFirst = true;

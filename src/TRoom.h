@@ -87,7 +87,7 @@ public:
     }
     int getWeight() const { return weight; }
     bool isHidden() const { return hidden; }
-    void setHidden(bool isHidden);
+    void setHidden(const bool);
     int getNorth() const { return north; }
     void setNorth(int id) { north = id; }
     int getNorthwest() const { return northwest; }

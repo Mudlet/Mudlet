@@ -153,7 +153,7 @@ void GeometryManager::generateCubeTemplate()
     // Colors will be set per instance, so we don't populate them in the template
 }
 
-GeometryData GeometryManager::transformCubeTemplate(QMatrix4x4 transform, float r, float g, float b, float a)
+GeometryData GeometryManager::transformCubeTemplate(const QMatrix4x4& transform, float r, float g, float b, float a)
 {
     GeometryData result;
 
@@ -262,11 +262,8 @@ void GeometryManager::clearPlayerIconTemplate()
     mPlayerIconTemplate.reset();
 }
 
-GeometryData GeometryManager::generateBillboardGeometry(float centerX, float centerY, float centerZ,
-                                                        float width, float height,
-                                                        const QVector3D& cameraRight,
-                                                        const QVector3D& cameraUp,
-                                                        GLuint textureId)
+GeometryData
+GeometryManager::generateBillboardGeometry(float centerX, float centerY, float centerZ, float width, float height, const QVector3D& cameraRight, const QVector3D& cameraUp, GLuint textureId)
 {
     GeometryData result;
 
@@ -306,14 +303,14 @@ GeometryData GeometryManager::generateBillboardGeometry(float centerX, float cen
     // Add texture coordinates (UV)
     // Mirror horizontally (1-u) so text reads correctly
     // Triangle 1: bottomLeft, topLeft, topRight
-    result.textureCoords << 1.0f << 0.0f;  // bottomLeft (mirrored: was 0,0)
-    result.textureCoords << 1.0f << 1.0f;  // topLeft (mirrored: was 0,1)
-    result.textureCoords << 0.0f << 1.0f;  // topRight (mirrored: was 1,1)
+    result.textureCoords << 1.0f << 0.0f; // bottomLeft (mirrored: was 0,0)
+    result.textureCoords << 1.0f << 1.0f; // topLeft (mirrored: was 0,1)
+    result.textureCoords << 0.0f << 1.0f; // topRight (mirrored: was 1,1)
 
     // Triangle 2: bottomLeft, topRight, bottomRight
-    result.textureCoords << 1.0f << 0.0f;  // bottomLeft (mirrored: was 0,0)
-    result.textureCoords << 0.0f << 1.0f;  // topRight (mirrored: was 1,1)
-    result.textureCoords << 0.0f << 0.0f;  // bottomRight (mirrored: was 1,0)
+    result.textureCoords << 1.0f << 0.0f; // bottomLeft (mirrored: was 0,0)
+    result.textureCoords << 0.0f << 1.0f; // topRight (mirrored: was 1,1)
+    result.textureCoords << 0.0f << 0.0f; // bottomRight (mirrored: was 1,0)
 
     // Add white color for all vertices (texture will provide actual color)
     for (int i = 0; i < 6; ++i) {

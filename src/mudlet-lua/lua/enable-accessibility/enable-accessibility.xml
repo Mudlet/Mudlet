@@ -21,6 +21,9 @@ echo("Disabling visual auto complete in the code editor ✓\n")
 setConfig("caretShortcut", "ctrltab")
 echo("Shortcut to switch between input line and main window set to Ctrl+Tab. You can also change it to either Tab or F6 in settings.\n")
 
+setConfig("enableBlinkText", false)
+echo("Blinking text disabled ✓\n")
+
 if not getConfig("f3SearchEnabled") then
 	setConfig("f3SearchEnabled", true)
 end

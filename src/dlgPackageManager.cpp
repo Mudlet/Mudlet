@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2011 by Heiko Koehn - KoehnHeiko@googlemail.com         *
  *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2022, 2026 by Stephen Lyons - slysven@virginmedia.com   *
  *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -27,9 +27,11 @@
 
 #include <QCloseEvent>
 #include <QFileDialog>
+#include <QJsonDocument>
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QProgressDialog>
+#include <QSettings>
 #include <QTimer>
 #include <QVersionNumber>
 
@@ -205,7 +207,7 @@ void dlgPackageManager::populatePackagesWithUpdates()
 {
     mPackagesWithUpdates.clear();
 
-    for (const QString& packageName : mpHost->mInstalledPackages) {
+    for (const QString& packageName : std::as_const(mpHost->mInstalledPackages)) {
         if (!packageLookup.contains(packageName)) {
             continue;
         }
@@ -248,7 +250,7 @@ bool dlgPackageManager::readPackageRepositoryFile()
 
     repositoryPackages = obj[qsl("packages")].toArray();
     packageLookup.clear();
-    for (const QJsonValue& val : repositoryPackages) {
+    for (const QJsonValue& val : std::as_const(repositoryPackages)) {
         QJsonObject pkg = val.toObject();
         packageLookup.insert(pkg["mpackage"].toString(), pkg);
     }
@@ -619,7 +621,7 @@ void dlgPackageManager::slot_removePackages()
         removePackages << item->text();
     }
 
-    for (const QString& package : removePackages) {
+    for (const QString& package : std::as_const(removePackages)) {
         mpHost->uninstallPackage(package, enums::PackageModuleType::Package);
     }
 
@@ -632,7 +634,7 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
     packageList->clear();
 
     if (mCurrentView == NavigationView::Installed) {
-        for (const auto& value : mpHost->mPackageInfo) {
+        for (const auto& value : std::as_const(mpHost->mPackageInfo)) {
             const QString name = value.value(qsl("mpackage"));
             const QString title = value.value(qsl("title"));
             const QString description = value.value(qsl("description"));
@@ -657,7 +659,7 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
             }
         }
     } else if (mCurrentView == NavigationView::Explore) {
-        for (const QJsonValue& value : repositoryPackages) {
+        for (const QJsonValue& value : std::as_const(repositoryPackages)) {
             const QJsonObject pkg = value.toObject();
             const QString name = pkg[qsl("mpackage")].toString();
             const QString title = pkg[qsl("title")].toString();
@@ -678,7 +680,7 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
             }
         }
     } else if (mCurrentView == NavigationView::Updates) {
-        for (const QString& packageName : mPackagesWithUpdates) {
+        for (const QString& packageName : std::as_const(mPackagesWithUpdates)) {
             const auto packageInfo = mpHost->mPackageInfo.value(packageName);
             const QString title = packageInfo.value(qsl("title"));
             const QString description = packageInfo.value(qsl("description"));
@@ -711,7 +713,7 @@ void dlgPackageManager::slot_setPackageList()
         return;
     }
 
-    if (lineEdit_searchBar->text().length() > 0) {
+    if (!lineEdit_searchBar->text().isEmpty()) {
         slot_searchTextChanged(lineEdit_searchBar->text());
         return;
     }
@@ -743,7 +745,7 @@ void dlgPackageManager::slot_setPackageList()
         if (!readPackageRepositoryFile()) {
             return;
         }
-        for (const QJsonValue& packageVal : repositoryPackages) {
+        for (const QJsonValue& packageVal : std::as_const(repositoryPackages)) {
             auto item = new QListWidgetItem();
             const QJsonObject packageObj = packageVal.toObject();
             const QString packageName = packageObj.value("mpackage").toString();
@@ -762,7 +764,7 @@ void dlgPackageManager::slot_setPackageList()
             packageDescription->setPlainText(tr("All packages are up to date."));
         }
 
-        for (const QString& packageName : mPackagesWithUpdates) {
+        for (const QString& packageName : std::as_const(mPackagesWithUpdates)) {
             auto item = new QListWidgetItem();
             item->setText(packageName);
             const auto packageInfo{mpHost->mPackageInfo.value(packageName)};
@@ -794,28 +796,28 @@ void dlgPackageManager::slot_toggleInstallRepoButton()
         pushButton_installRepo->setEnabled(selectionCount);
 
         if (mCurrentView == NavigationView::Updates) {
-            if (selectionCount > 1) {
-                //: Message on button in package manager to update multiple (%n is the count of) selected packages.
+            if (selectionCount) {
+                //: Message on button in package manager to update one or multiple (%n is the count) selected packages.
                 pushButton_installRepo->setText(tr("Update (%n)", nullptr, selectionCount));
             } else {
-                //: Message on button in package manager for updates view when zero or one package is selected
+                //: Message on button in package manager when there are no selected packages - button will also be disabled.
                 pushButton_installRepo->setText(tr("Update"));
             }
             //: Tooltip for button in package manager when in Updates view
             pushButton_installRepo->setToolTip(tr("Update selected packages"));
         } else {
-            if (selectionCount > 1) {
-                //: Message on button in package manager to install multiple (%n is the count of) selected packages.
+            if (selectionCount) {
+                //: Message on button in package manager to install one or multiple (%n is the count) selected packages.
                 pushButton_installRepo->setText(tr("Install (%n)", nullptr, selectionCount));
             } else {
-                //: Message on button in package manager initially and when zero or one package is selected
+                //: Message on button in package manager when there are no selected packages - button will also be disabled.
                 pushButton_installRepo->setText(tr("Install"));
             }
             //: Tooltip for button in package manager when in Explore view
             pushButton_installRepo->setToolTip(tr("Install package from repository"));
         }
     } else {
-        //: Message on button in package manager initially and when there is no packages to install
+        //: Message on button in package manager initially and when the view is the "Installed" one
         pushButton_installRepo->setText(tr("Install"));
         pushButton_installRepo->setEnabled(false);
         //: Tooltip for button in package manager when in Explore view
@@ -829,15 +831,15 @@ void dlgPackageManager::slot_toggleRemoveButton()
         const QList selection = packageList->selectedItems();
         const int selectionCount = selection.size();
         pushButton_remove->setEnabled(selectionCount);
-        if (selectionCount > 1) {
-            //: Message on button in package manager to remove multiple (%n is the count of) selected packages.
+        if (selectionCount) {
+            //: Message on button in package manager to remove one or multiple (%n is the count) selected packages.
             pushButton_remove->setText(tr("Remove (%n)", nullptr, selectionCount));
         } else {
-            //: Message on button in package manager initially and when zero or one package is selected
+            //: Message on button in package manager when there are no selected packages - button will also be disabled.
             pushButton_remove->setText(tr("Remove"));
         }
     } else {
-        //: Message on button in package manager initially and when there is no packages to remove
+        //: Message on button in package manager initially and when the view is NOT the "Installed" one
         pushButton_remove->setText(tr("Remove"));
         pushButton_remove->setEnabled(false);
     }
@@ -854,11 +856,11 @@ void dlgPackageManager::showImportStatus(const QString& message)
 void dlgPackageManager::updateUpdatesBadge()
 {
     const int count = mPackagesWithUpdates.size();
-    if (count > 0) {
-        //: Package manager - navigation button showing number of available updates
+    if (count) {
+        //: Package manager - navigation button showing one or more available updates
         pushButton_updates->setText(tr("Updates (%1)").arg(count));
     } else {
-        //: Package manager - navigation button for updates view
+        //: Package manager - navigation button for when there are no updates
         pushButton_updates->setText(tr("Updates"));
     }
 }

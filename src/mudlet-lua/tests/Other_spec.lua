@@ -468,6 +468,31 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
+
+  describe("Tests timeframe", function()
+    teardown(function()
+      TIMEFRAME_TEST_VARIABLE = nil
+    end)
+
+    it("Should immediately set variable to true", function()
+      timeframe("TIMEFRAME_TEST_VARIABLE", 0)
+
+      assert.is_true(TIMEFRAME_TEST_VARIABLE)
+    end)
+
+    it("Should accept nil for nil_time param", function()
+      timeframe("TIMEFRAME_TEST_VARIABLE", 0, nil)
+
+      assert.is_true(TIMEFRAME_TEST_VARIABLE)
+    end)
+
+    it("Should immediately set variable to nil", function()
+      timeframe("TIMEFRAME_TEST_VARIABLE", 0, 0)
+
+      assert.is_nil(TIMEFRAME_TEST_VARIABLE)
+    end)
+  end)
+
     --[[ 
     TODO:
       remember()

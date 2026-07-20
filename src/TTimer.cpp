@@ -183,11 +183,10 @@ bool TTimer::compileScript()
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
-    } else {
-        mOK_code = false;
-        setError(error);
-        return false;
     }
+    mOK_code = false;
+    setError(error);
+    return false;
 }
 
 bool TTimer::checkRestart()
@@ -392,7 +391,7 @@ QString TTimer::packageName(TTimer* pTimer)
     }
 
     if (!pTimer->mPackageName.isEmpty()) {
-        return !mpHost->mModuleInfo.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
+        return !mpHost->mInstalledModules.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
     }
 
     if (pTimer->getParent()) {
@@ -409,7 +408,7 @@ QString TTimer::moduleName(TTimer* pTimer)
     }
 
     if (!pTimer->mPackageName.isEmpty()) {
-        return mpHost->mModuleInfo.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
+        return mpHost->mInstalledModules.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
     }
 
     if (pTimer->getParent()) {

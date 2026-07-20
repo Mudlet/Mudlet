@@ -6,9 +6,9 @@ We provide security updates for versions released within the last two years.
 
 | Version | Supported          |
 | ------- | ------------------ |
+| 4.20.x  | :white_check_mark: |
 | 4.19.x  | :white_check_mark: |
-| 4.17.x  | :white_check_mark: |
-| < 4.17  | :x:                |
+| < 4.19  | :x:                |
 
 ## Reporting a Vulnerability
 

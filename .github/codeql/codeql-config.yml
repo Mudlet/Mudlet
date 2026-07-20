@@ -1,2 +1,6 @@
 paths-ignore:
   - 3rdparty
+
+query-filters:
+  - exclude:
+      id: cpp/poorly-documented-function

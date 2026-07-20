@@ -6,14 +6,14 @@ Have Mudlet and [Busted](https://lunarmodules.github.io/busted/) installed:
 
 ```sh
   sudo apt-get install luarocks
-  sudo luarocks install busted
+  sudo luarocks --lua-version 5.1 install busted
 ```
 
 ## macOS
 
 ```sh
   brew install luarocks
-  luarocks install busted
+  luarocks --lua-version 5.1 install busted
 ```
 
 ## Windows
@@ -32,7 +32,7 @@ Have Mudlet and [Busted](https://lunarmodules.github.io/busted/) installed:
 
 ### Install Busted
 
-- Open a command prompt and enter `luarocks install busted`
+- Open a command prompt and enter `luarocks --lua-version 5.1 install busted`
 - If you get a `'luarocks' is not recognized...` message:
   - You may need to add the LuaRocks directory to your `Path` system environment variable and restart
   - Alternatively, navigate the command prompt to the LuaRocks directory to run LuaRocks commands

@@ -2,7 +2,8 @@
 #define MUDLET_GIFUNIT_H
 
 /***************************************************************************
- *   Copyright (C) 2023-2023 by Adam Robinson - seldon1951@hotmail.com     *
+ *   Copyright (C) 2023 by Adam Robinson - seldon1951@hotmail.com          *
+ *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -36,9 +37,7 @@ class GifTracker
 
 public:
     GifTracker() = default;
-    explicit GifTracker(Host* pHost)
-    : mpHost(pHost)
-    {}
+    explicit GifTracker(Host* pHost);
 
     bool registerGif(QMovie* pT);
     void unregisterGif(QMovie* pT);
@@ -46,7 +45,6 @@ public:
 
 
 private:
-    //GifTracker() = default;
     QPointer<Host> mpHost;
     std::list<QMovie*> mMovieList;
 };

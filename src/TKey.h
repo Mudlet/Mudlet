@@ -43,7 +43,7 @@ public:
     TKey(QString name, Host* pHost);
     void compileAll();
     QString getName() const { return mName; }
-    void setName(const QString & name);
+    void setName(const QString& name);
     Qt::Key getKeyCode() const { return mKeyCode; }
     void setKeyCode(const Qt::Key code) { mKeyCode = code; }
     void setKeyCode(const int codeNumber) { setKeyCode(static_cast<Qt::Key>(codeNumber)); }
@@ -65,6 +65,7 @@ public:
 
     bool match(const Qt::Key, const Qt::KeyboardModifiers, const bool);
     bool registerKey();
+    void validateKeyBinding();
 
     bool exportItem = true;
     bool mModuleMasterFolder = false;
@@ -86,9 +87,7 @@ private:
      * Qt::KeypadModifier  0x20000000 A keypad button is pressed.
      */
 
-    // Have to use brace default initiliaser here as there is not a null enum
-    // value declared:
-    Qt::Key mKeyCode = {};
+    Qt::Key mKeyCode = Qt::Key_unknown;
     Qt::KeyboardModifiers mKeyModifier = Qt::NoModifier;
 
     QString mScript;

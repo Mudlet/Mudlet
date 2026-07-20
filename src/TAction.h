@@ -98,7 +98,7 @@ public:
 
     QPointer<TToolBar> mpToolBar;
     QPointer<TEasyButtonBar> mpEasyButtonBar;
-    QPointer<EAction> mpEButton;
+    QPointer<EAction> mpEAction;
     QPointer<TFlipButton> mpFButton;
     // The following was an int but there was confusion over:
     // EITHER: "1" = released/unclicked/up & "2" = pressed/clicked/down

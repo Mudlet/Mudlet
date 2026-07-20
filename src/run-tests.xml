@@ -501,20 +501,19 @@ describe("should always pass", function()
   local quitMudlet = os.getenv("QUIT_MUDLET_AFTER_TESTS")
   if quitMudlet then
     ioprint("All tests complete, shutting down Mudlet")
-    -- closeMudlet on its own inside an event handler causes a crash
-    tempTimer(0, closeMudlet)
+    -- It's safe to close mudlet outside of a timer.
+    -- As the internal logic is wrapped in an internal timer already.
+    closeMudlet()
   end
-end</script>
-			<eventHandlerList>
-				<string>testsComplete</string>
-			</eventHandlerList>
+end
+			</script>
 		</Script>
 		<Script isActive="yes" isFolder="no">
 			<name>autoRunTestsEvent</name>
 			<packageName></packageName>
 			<script>function autoRunTestsEvent()
   tempTimer(
-    1,
+    0,
     function()
       autoRunTests()
     end
@@ -532,13 +531,14 @@ function autoRunTests()
 
   if not bustedState.isBustedAvailable() then
     ioprint("Busted not available - double-check that it's installed properly.")
-    raiseEvent("testsComplete")
+    quitMudletAfterTests()
     return
   end
 
   local testLocation = os.getenv("TESTS_DIRECTORY")
   if not testLocation then
     ioprint("No location for the tests provided, don't know what to run.")
+    quitMudletAfterTests()
     return
   end
 
@@ -560,7 +560,7 @@ function autoRunTests()
 
   bustedState.setup({testLocation})
   bustedState.runTests()
-  raiseEvent("testsComplete")
+  quitMudletAfterTests()
 end
 
 local errorLogged = false
