@@ -868,6 +868,36 @@ void dlgPackageExporter::slot_exportPackage()
         mPackagePathFileName = qsl("%1/%2.mpackage").arg(getActualPath(), mPackageName);
     }
 
+    // Confirm any overwrite BEFORE we create or truncate anything. Previously
+    // the destination file was clobbered by the zip step regardless of the
+    // user's answer, so declining still destroyed the existing file. Asking
+    // here means cancelling leaves the existing package file (and any installed
+    // module of the same name) completely untouched.
+    const bool moduleAlreadyInstalled = mIsModuleCreationMode && mpHost->mInstalledModules.contains(mPackageName);
+    if (QFileInfo::exists(mPackagePathFileName) || moduleAlreadyInstalled) {
+        QMessageBox msgBox(this);
+        msgBox.setIcon(QMessageBox::Question);
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::No);
+        if (mIsModuleCreationMode) {
+            //: Title of the dialog asking whether to replace a module that already exists when creating a module
+            msgBox.setWindowTitle(tr("Overwrite module?"));
+            //: %1 is the name of the module that already exists
+            msgBox.setText(tr("A module named \"%1\" already exists.").arg(mPackageName.toHtmlEscaped()));
+        } else {
+            //: Title of the dialog asking whether to replace a package file that already exists when exporting
+            msgBox.setWindowTitle(tr("Overwrite package?"));
+            //: %1 is the file name of the package file that would be overwritten
+            msgBox.setText(tr("A file named \"%1\" already exists.").arg(QFileInfo(mPackagePathFileName).fileName().toHtmlEscaped()));
+        }
+        //: Shown under the 'a file/module already exists' text when exporting a package or creating a module
+        msgBox.setInformativeText(tr("Do you want to overwrite it?"));
+        if (msgBox.exec() != QMessageBox::Yes) {
+            // Leave the existing file/module intact and abort the export.
+            return;
+        }
+    }
+
     // QT Docs say that QStandardPaths::writableLocation(QStandardPaths::TempLocation)
     // "Returns a directory where temporary files can be stored. The returned
     // value might be application-specific, shared among other applications for
@@ -964,6 +994,15 @@ void dlgPackageExporter::slot_exportPackage()
                 } else {
                     // If in module creation mode, automatically install the module
                     if (mIsModuleCreationMode) {
+                        // If a module of this name is already installed, the user
+                        // confirmed overwriting it before the export began (see the
+                        // overwrite prompt in slot_exportPackage), so remove the old
+                        // copy to make way for the freshly-exported one. Testing the
+                        // installed-modules list is language-independent, unlike
+                        // matching the English text of the install error message.
+                        if (mpHost->mInstalledModules.contains(mPackageName)) {
+                            mpHost->uninstallPackage(mPackageName, enums::PackageModuleType::ModuleFromUI);
+                        }
                         auto [installSuccess, installMessage] = mpHost->installPackage(mPackagePathFileName, enums::PackageModuleType::ModuleFromUI);
                         if (installSuccess) {
                             const QString savedDir = QFileInfo(mPackagePathFileName).absolutePath();
@@ -977,45 +1016,7 @@ void dlgPackageExporter::slot_exportPackage()
                             ui->lineEdit_packageName->clear();
                             ui->lineEdit_packageName->setFocus();
                         } else {
-                            // Check if it's a duplicate module error
-                            if (installMessage.contains("already installed")) {
-                                QMessageBox msgBox(this);
-                                msgBox.setWindowTitle(tr("Module Already Exists"));
-                                msgBox.setText(tr("A module named \"%1\" is already installed.").arg(mPackageName.toHtmlEscaped()));
-                                msgBox.setInformativeText(tr("Do you want to overwrite the existing module?"));
-                                msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-                                msgBox.setDefaultButton(QMessageBox::No);
-                                msgBox.setIcon(QMessageBox::Question);
-
-                                if (msgBox.exec() == QMessageBox::Yes) {
-                                    // User chose to overwrite - uninstall first, then reinstall
-                                    if (mpHost->uninstallPackage(mPackageName, enums::PackageModuleType::ModuleFromUI)) {
-                                        auto [retrySuccess, retryMessage] = mpHost->installPackage(mPackagePathFileName, enums::PackageModuleType::ModuleFromUI);
-                                        if (retrySuccess) {
-                                            // Show success dialog for overwrite
-                                            QMessageBox successBox(this);
-                                            successBox.setWindowTitle(tr("Module Overwritten"));
-                                            successBox.setText(tr("Module \"%1\" overwritten successfully!").arg(mPackageName.toHtmlEscaped()));
-                                            successBox.setInformativeText(tr("The existing module has been replaced."));
-                                            successBox.setIcon(QMessageBox::Information);
-                                            successBox.setStandardButtons(QMessageBox::Ok);
-                                            successBox.exec();
-
-                                            // Close the dialog after successful module overwrite to prevent duplicates
-                                            this->accept();
-                                        } else {
-                                            displayResultMessage(tr("Module \"%1\" exported but installation failed: %2").arg(mPackageName.toHtmlEscaped(), retryMessage.toHtmlEscaped()), false);
-                                        }
-                                    } else {
-                                        displayResultMessage(tr("Module \"%1\" exported but failed to uninstall existing version").arg(mPackageName.toHtmlEscaped()), false);
-                                    }
-                                } else {
-                                    // User chose not to overwrite
-                                    displayResultMessage(tr("Module \"%1\" exported successfully but not installed (already exists)").arg(mPackageName.toHtmlEscaped()), true);
-                                }
-                            } else {
-                                displayResultMessage(tr("Module \"%1\" exported but installation failed: %2").arg(mPackageName.toHtmlEscaped(), installMessage.toHtmlEscaped()), false);
-                            }
+                            displayResultMessage(tr("Module \"%1\" exported but installation failed: %2").arg(mPackageName.toHtmlEscaped(), installMessage.toHtmlEscaped()), false);
                         }
                     } else {
                         displayResultMessage(tr("Package \"%1\" exported to: %2").arg(mPackageName.toHtmlEscaped(), qsl("<a href=\"file:///%1\">%1</a>").arg(getActualPath().toHtmlEscaped())), true);
@@ -1093,7 +1094,12 @@ void dlgPackageExporter::cleanupUnusedImages(const QString& tempPath, const QStr
     QRegularExpressionMatchIterator i = imagesInUsePattern.globalMatch(plainDescription);
     while (i.hasNext()) {
         auto match = i.next();
-        imagesInUse << match.captured(1).remove(QChar('\"'));
+        // The description stores the image path percent-encoded (e.g. a space
+        // becomes %20), but the copied file on disk keeps its decoded name, so
+        // decode before comparing. Otherwise an in-use image whose filename
+        // contains a space or other special character is treated as unused and
+        // deleted, shipping a package with a missing image.
+        imagesInUse << QUrl::fromPercentEncoding(match.captured(1).remove(QChar('\"')).toUtf8());
     }
 
     // iterate through all images in folder, if our list doesn't contain it - remove
@@ -1576,12 +1582,15 @@ void dlgPackageExporter::slot_openPackageLocation()
     QSettings& settings = *mudlet::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
-    mPackagePath = QFileDialog::getExistingDirectory(nullptr, tr("Where do you want to save the package?"), lastDir, QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly);
+    const QString chosenPath = QFileDialog::getExistingDirectory(nullptr, tr("Where do you want to save the package?"), lastDir, QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly);
 
-    if (mPackagePath.isEmpty()) {
+    if (chosenPath.isEmpty()) {
+        // The user cancelled the picker - keep any previously chosen location
+        // rather than silently reverting the export path to the profile folder.
         return;
     }
 
+    mPackagePath = chosenPath;
     settings.setValue("lastFileDialogLocation", mPackagePath);
     emit signal_exportLocationChanged(mPackagePath);
 }
