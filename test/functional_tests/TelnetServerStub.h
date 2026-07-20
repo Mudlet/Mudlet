@@ -34,7 +34,10 @@ class TelnetServerStub : public QTcpServer
 public:
     explicit TelnetServerStub(QObject* parent = nullptr);
 
-    void start(const QString& host, quint16 port);
+    // Bind to a caller-chosen port, or to an ephemeral OS-assigned port when port is 0 (the default).
+    // Binding 0 lets concurrent test runs avoid colliding on a shared fixed port; the caller reads the
+    // actual bound port back via serverPort() (inherited from QTcpServer) once start() has succeeded.
+    void start(const QString& host, quint16 port = 0);
     void setWelcomeMessage(const QString& message) { mpWelcomeMessage = message; }
 
 private slots:

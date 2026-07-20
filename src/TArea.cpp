@@ -69,10 +69,9 @@ int TArea::getAreaID()
 {
     if (mpRoomDB) {
         return mpRoomDB->getAreaID(this);
-    } else {
-        qDebug() << "ERROR: TArea::getAreaID() instance has no mpRoomDB, returning -1 as ID";
-        return -1;
     }
+    qDebug() << "ERROR: TArea::getAreaID() instance has no mpRoomDB, returning -1 as ID";
+    return -1;
 }
 
 QMap<int, QMap<int, QMultiMap<int, int>>> TArea::koordinatenSystem()
@@ -415,60 +414,59 @@ void TArea::calcSpan()
             ymaxForZ.insert(pR->z(), (-1 * pR->y()));
             isFirstDone = true;
             continue;
-        } else {
-            // Already had one valid room so now must check more things
+        }
+        // Already had one valid room so now must check more things
 
-            if (!zLevels.contains(pR->z())) {
-                zLevels.push_back(pR->z());
-            }
+        if (!zLevels.contains(pR->z())) {
+            zLevels.push_back(pR->z());
+        }
 
-            if (!xminForZ.contains(pR->z())) {
-                xminForZ.insert(pR->z(), pR->x());
-            } else if (pR->x() < xminForZ.value(pR->z())) {
-                xminForZ.insert(pR->z(), pR->x());
-            }
+        if (!xminForZ.contains(pR->z())) {
+            xminForZ.insert(pR->z(), pR->x());
+        } else if (pR->x() < xminForZ.value(pR->z())) {
+            xminForZ.insert(pR->z(), pR->x());
+        }
 
-            if (pR->x() < min_x) {
-                min_x = pR->x();
-            }
+        if (pR->x() < min_x) {
+            min_x = pR->x();
+        }
 
-            if (!xmaxForZ.contains(pR->z())) {
-                xmaxForZ.insert(pR->z(), pR->x());
-            } else if (pR->x() > xmaxForZ.value(pR->z())) {
-                xmaxForZ.insert(pR->z(), pR->x());
-            }
+        if (!xmaxForZ.contains(pR->z())) {
+            xmaxForZ.insert(pR->z(), pR->x());
+        } else if (pR->x() > xmaxForZ.value(pR->z())) {
+            xmaxForZ.insert(pR->z(), pR->x());
+        }
 
-            if (pR->x() > max_x) {
-                max_x = pR->x();
-            }
+        if (pR->x() > max_x) {
+            max_x = pR->x();
+        }
 
-            if (!yminForZ.contains(pR->z())) {
-                yminForZ.insert(pR->z(), (-1 * pR->y()));
-            } else if ((-1 * pR->y()) < yminForZ.value(pR->z())) {
-                yminForZ.insert(pR->z(), (-1 * pR->y()));
-            }
+        if (!yminForZ.contains(pR->z())) {
+            yminForZ.insert(pR->z(), (-1 * pR->y()));
+        } else if ((-1 * pR->y()) < yminForZ.value(pR->z())) {
+            yminForZ.insert(pR->z(), (-1 * pR->y()));
+        }
 
-            if ((-1 * pR->y()) < min_y) {
-                min_y = (-1 * pR->y());
-            }
+        if ((-1 * pR->y()) < min_y) {
+            min_y = (-1 * pR->y());
+        }
 
-            if ((-1 * pR->y()) > max_y) {
-                max_y = (-1 * pR->y());
-            }
+        if ((-1 * pR->y()) > max_y) {
+            max_y = (-1 * pR->y());
+        }
 
-            if (!ymaxForZ.contains(pR->z())) {
-                ymaxForZ.insert(pR->z(), (-1 * pR->y()));
-            } else if ((-1 * pR->y()) > ymaxForZ.value(pR->z())) {
-                ymaxForZ.insert(pR->z(), (-1 * pR->y()));
-            }
+        if (!ymaxForZ.contains(pR->z())) {
+            ymaxForZ.insert(pR->z(), (-1 * pR->y()));
+        } else if ((-1 * pR->y()) > ymaxForZ.value(pR->z())) {
+            ymaxForZ.insert(pR->z(), (-1 * pR->y()));
+        }
 
-            if (pR->z() < min_z) {
-                min_z = pR->z();
-            }
+        if (pR->z() < min_z) {
+            min_z = pR->z();
+        }
 
-            if (pR->z() > max_z) {
-                max_z = pR->z();
-            }
+        if (pR->z() > max_z) {
+            max_z = pR->z();
         }
     }
 

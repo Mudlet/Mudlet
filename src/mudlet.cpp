@@ -2199,10 +2199,9 @@ void mudlet::addConsoleForNewHost(Host* pH)
         if (detachedWindow) {
             detachedWindow->addProfile(profileName, pConsole);
             return;
-        } else {
-            qWarning() << "addConsoleForNewHost: Profile" << profileName << "has null detached window, removing from map";
-            mDetachedWindows.remove(profileName);
         }
+        qWarning() << "addConsoleForNewHost: Profile" << profileName << "has null detached window, removing from map";
+        mDetachedWindows.remove(profileName);
     }
 
     // Add to main window (original behavior)
@@ -3759,9 +3758,11 @@ void mudlet::slot_showActionDialog()
 }
 
 // tab must be the "objectName" of the tab in the preferences NOT the "titleText"
-void mudlet::showOptionsDialog(const QString& tab)
+void mudlet::showOptionsDialog(const QString& tab, Host* pHost)
 {
-    Host* pHost = getActiveHost();
+    if (!pHost) {
+        pHost = getActiveHost();
+    }
 
     auto pPrefs = pHost ? pHost->mpDlgProfilePreferences : mpDlgProfilePreferences;
 
@@ -3799,9 +3800,8 @@ void mudlet::showOptionsDialog(const QString& tab)
 
     // Force reposition after showing, since preferences dialog may be a singleton
     // that restores its position after being shown
-    Host* activeHost = getActiveHost();
-    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
-    QWidget* referenceWidget = activeConsole ? activeConsole : this;
+    QWidget* hostConsole = pHost ? pHost->mpConsole : nullptr;
+    QWidget* referenceWidget = hostConsole ? hostConsole : this;
     utils::forceRepositionDialogOnParentScreen(pPrefs, referenceWidget);
 }
 
@@ -4036,12 +4036,17 @@ void mudlet::slot_showHelpDialog()
 
 void mudlet::slot_showUiTour()
 {
+    showUiTour(false);
+}
+
+void mudlet::showUiTour(const bool skipIntroStep)
+{
     if (mpUiTour) {
         mpUiTour->raise();
         mpUiTour->setFocus();
         return;
     }
-    mpUiTour = new TUiTour(this);
+    mpUiTour = new TUiTour(this, skipIntroStep);
     connect(mpUiTour, &TUiTour::signal_tourFinished, this, &mudlet::slot_uiTourClosed);
     TUiTour::rememberShown();
     mpUiTour->start();
@@ -4906,8 +4911,8 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     // Decided before packages install so their scripts can see the flag and
     // hold off on their own introductions until the tour is done - the
     // tutorial package does this
-    const bool showUiTour = TUiTour::shouldShowOnFirstProfile();
-    if (showUiTour) {
+    const bool wantUiTour = TUiTour::shouldShowOnFirstProfile();
+    if (wantUiTour) {
         pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("mudlet = mudlet or {} mudlet.uiTourPending = true"));
     }
 
@@ -4972,10 +4977,13 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     pHost->mIsProfileLoadingSequence = false;
     emit signal_profileLoaded();
 
-    if (showUiTour) {
+    if (wantUiTour) {
+        // The tutorial profile greets new players itself, so skip the tour's
+        // own welcome step there:
+        const bool skipIntroStep = profile == qsl("Mudlet Tutorial");
         // give the freshly opened profile a moment to finish laying out before
         // the tour starts highlighting parts of it
-        QTimer::singleShot(1000, this, &mudlet::slot_showUiTour);
+        QTimer::singleShot(1000, this, [this, skipIntroStep]() { showUiTour(skipIntroStep); });
     }
 }
 
@@ -5731,10 +5739,9 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
         if (extra1.compare(qsl("Mudlet.tmTheme"), Qt::CaseSensitive)) {
             // No match
             return qsl("%1/edbee/Colorsublime-Themes-master/themes/%2").arg(confPath, extra1);
-        } else {
-            // Match - return path to copy held in resource file
-            return qsl(":/edbee_defaults/Mudlet.tmTheme");
         }
+        // Match - return path to copy held in resource file
+        return qsl(":/edbee_defaults/Mudlet.tmTheme");
     case enums::editorWidgetThemeJsonFile:
         // Returns the pathFileName to the external JSON file needed to process
         // an edbee editor widget theme:
@@ -5754,22 +5761,24 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
         if (QFile::exists(qsl("/usr/local/share/hunspell/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/local/share/hunspell/");
-        } else if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
+        }
+        if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/share/hunspell/");
-        } else if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        }
+        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        }
+        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        } else {
-            // From build within ./src
-            mudlet::self()->mUsingMudletDictionaries = true;
-            return qsl("%1/").arg(QCoreApplication::applicationDirPath());
         }
+        // From build within ./src
+        mudlet::self()->mUsingMudletDictionaries = true;
+        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #elif defined(Q_OS_OPENBSD)
         // OpenBSD uses dictionary files from Mozilla rather than direct from,
         // Hunspell, but it does not ship a en_us one so we cannot use that on
@@ -5779,65 +5788,69 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
         if (QFile::exists(qsl("/usr/local/share/mozilla-dicts/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/local/share/mozilla-dicts/");
-        } else if (QFile::exists(qsl("/usr/share/mozilla-dicts/%1.aff").arg(extra1))) {
+        }
+        if (QFile::exists(qsl("/usr/share/mozilla-dicts/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/share/mozilla-dicts/");
-        } else if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        }
+        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        }
+        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        } else {
-            // From build within ./src
-            mudlet::self()->mUsingMudletDictionaries = true;
-            return qsl("%1/").arg(QCoreApplication::applicationDirPath());
         }
+        // From build within ./src
+        mudlet::self()->mUsingMudletDictionaries = true;
+        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #elif defined(Q_OS_LINUX)
         if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/share/hunspell/");
-        } else if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        }
+        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory
             // alongside the ./src one. {Typically QMake builds from Qtcreator
             // with CONFIG containing both 'debug_and_release' and
             // 'debug_and_release_target' (this is normal also on Windows):
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        }
+        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one. {Typically
             // QMake builds from Qtcreator with CONFIG NOT containing both
             // 'debug_and_release' and 'debug_and_release_target':
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(qsl("%1/../../mudlet/src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        }
+        if (QFile::exists(qsl("%1/../../mudlet/src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory above the ./src one. {Typically
             // CMake builds from Qtcreator which are outside of the unpacked
             // source code from a git repo or tarball - which has to have been
             // unpacked/placed in a directory called 'mudlet'}:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../../mudlet/src/").arg(QCoreApplication::applicationDirPath());
-        } else {
-            // From build within ./src AND installer builds that bundle
-            // dictionaries in the same directory as the executable:
-            mudlet::self()->mUsingMudletDictionaries = true;
-            return qsl("%1/").arg(QCoreApplication::applicationDirPath());
         }
+        // From build within ./src AND installer builds that bundle
+        // dictionaries in the same directory as the executable:
+        mudlet::self()->mUsingMudletDictionaries = true;
+        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #else
         // Probably Windows!
         mudlet::self()->mUsingMudletDictionaries = true;
         if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
             return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        }
+        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one:
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        } else {
-            // From build within ./src
-            return qsl("%1/").arg(QCoreApplication::applicationDirPath());
         }
+        // From build within ./src
+        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #endif
     }
     Q_UNREACHABLE();
@@ -6160,7 +6173,8 @@ bool mudlet::isVersionAtLeast(const QString& minVersion)
 
         if (currentPart > minPart) {
             return true;
-        } else if (currentPart < minPart) {
+        }
+        if (currentPart < minPart) {
             return false;
         }
         // If equal, continue to next part
