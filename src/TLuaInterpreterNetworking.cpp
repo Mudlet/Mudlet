@@ -212,10 +212,10 @@ int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
 
     if (cHostName.isEmpty()) {
         return warnArgumentValue(L, __func__, error, true);
-    } else {
-        lua_pushboolean(L, true);
-        lua_pushstring(L, cHostName.toUtf8().constData());
     }
+    lua_pushboolean(L, true);
+    lua_pushstring(L, cHostName.toUtf8().constData());
+
     return 1;
 }
 
