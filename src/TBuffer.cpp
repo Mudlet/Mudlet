@@ -48,6 +48,8 @@
 #include <QTimer>
 #include <QUrlQuery>
 
+#include <utility>
+
 namespace {
 
 // Maximum length for an OSC sequence before aborting (defense against malformed sequences)
@@ -256,6 +258,11 @@ TBuffer::TBuffer(const TBuffer& other)
 , mMudLine(other.mMudLine)
 , mMudBuffer(other.mMudBuffer)
 , mIncompleteSequenceBytes(other.mIncompleteSequenceBytes)
+, mLocalGotESC(other.mLocalGotESC)
+, mLocalGotCSI(other.mLocalGotCSI)
+, mLocalGotOSC(other.mLocalGotOSC)
+, mLocalIncompleteSequenceBytes(other.mLocalIncompleteSequenceBytes)
+, mProcessingLocalFeed(other.mProcessingLocalFeed)
 , lastLoggedFromLine(other.lastLoggedFromLine)
 , lastloggedToLine(other.lastloggedToLine)
 , lastTextToLog(other.lastTextToLog)
@@ -341,6 +348,11 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mMudLine = other.mMudLine;
         mMudBuffer = other.mMudBuffer;
         mIncompleteSequenceBytes = other.mIncompleteSequenceBytes;
+        mLocalGotESC = other.mLocalGotESC;
+        mLocalGotCSI = other.mLocalGotCSI;
+        mLocalGotOSC = other.mLocalGotOSC;
+        mLocalIncompleteSequenceBytes = other.mLocalIncompleteSequenceBytes;
+        mProcessingLocalFeed = other.mProcessingLocalFeed;
         lastLoggedFromLine = other.lastLoggedFromLine;
         lastloggedToLine = other.lastloggedToLine;
         lastTextToLog = other.lastTextToLog;
@@ -554,7 +566,38 @@ void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, 
       elements at the end can be omitted.
  */
 
+void TBuffer::swapParserSequenceState()
+{
+    std::swap(mGotESC, mLocalGotESC);
+    std::swap(mGotCSI, mLocalGotCSI);
+    std::swap(mGotOSC, mLocalGotOSC);
+    std::swap(mIncompleteSequenceBytes, mLocalIncompleteSequenceBytes);
+}
+
 void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServer)
+{
+    // mGotESC/mGotCSI/mGotOSC and mIncompleteSequenceBytes persist between
+    // calls so that a sequence split across Game Server packets still parses.
+    // Locally generated text (feedTriggers(), MMCP chat messages, MXP
+    // insertions) runs through the same parser, so swap in a separate set of
+    // that state for the duration of such a feed - otherwise local text
+    // arriving between two packets would consume or clear a latch that the
+    // server stream is still relying on (and vice versa). The flag keeps a
+    // nested local feed (e.g. an MXP <HR> inside locally fed text) from
+    // swapping the server state back in part way through:
+    if (isFromServer || mProcessingLocalFeed) {
+        translateToPlainTextInner(incoming, isFromServer);
+        return;
+    }
+
+    mProcessingLocalFeed = true;
+    swapParserSequenceState();
+    translateToPlainTextInner(incoming, false);
+    swapParserSequenceState();
+    mProcessingLocalFeed = false;
+}
+
+void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFromServer)
 {
     // What can appear in a CSI Parameter String (Ps) byte or at least for it
     // to be something we can handle:
@@ -596,6 +639,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 #endif
             mIncompleteSequenceBytes.clear();
         }
+        // The other channel's held-over bytes are equally stale:
+        mLocalIncompleteSequenceBytes.clear();
     }
 
     if (isFromServer && !mIncompleteSequenceBytes.empty()) {
@@ -720,6 +765,15 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             // A control character straight after the ESC means the escape
             // sequence is malformed - abandon it and process the character
             // normally:
+        }
+
+        if (mGotESC) {
+            // ESC was not followed by '[' or ']', so it does not introduce a
+            // CSI or OSC sequence (e.g. ESC c, ESC 7, or a charset designator
+            // like ESC(B). Clear the latch here - otherwise it stays set and a
+            // later literal '[' or ']' anywhere in the stream is misparsed as a
+            // sequence introducer, swallowing the text that follows it.
+            mGotESC = false;
         }
 
         if (mGotCSI) {
