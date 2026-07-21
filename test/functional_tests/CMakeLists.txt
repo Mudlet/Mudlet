@@ -4,6 +4,7 @@ endif()
 
 set(FUNCTIONAL_TEST_SOURCES
     TelnetTextDisplayedTest.cpp
+    TelnetSubnegotiationTest.cpp
     TelnetBenchmark.cpp
     ResetProfileTest.cpp
     TOscTest.cpp
@@ -17,11 +18,19 @@ set(FUNCTIONAL_TEST_SOURCES
     GMCPCharLoginTest.cpp
     ProfileRoundTripTest.cpp
     MapRoundTripTest.cpp
+    UndoServerWrapTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
     TelnetServerStub.cpp
 )
+
+# Manual replay tool for verifying mUndoServerWrap against captured game
+# output - built but deliberately not registered with ctest:
+add_executable(UndoServerWrapReplay UndoServerWrapReplay.cpp ${FUNCTIONAL_TEST_UTILS})
+add_dependencies(UndoServerWrapReplay ${LIB_MUDLET_TARGET})
+target_link_libraries(UndoServerWrapReplay PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
+set_target_properties(UndoServerWrapReplay PROPERTIES ENABLE_EXPORTS ON)
 
 foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     get_filename_component(test_name ${test_file} NAME_WE)
