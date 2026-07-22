@@ -167,6 +167,10 @@ if (!file.open(QIODevice::ReadOnly)) {
 - Follow Qt's Model-View pattern
 - Use Qt's signal/slot mechanism for communication
 
+## Demo videos
+
+To demonstrate a bug fix or UI change with a screen recording, follow the before & after video workflow in `docs/demo-videos.md` (Linux/Xvfb; records headlessly, then trims and labels the result for attaching to a PR).
+
 ## Build system notes
 
 - **Build system**: CMake (handles platform-specific configurations). See https://wiki.mudlet.org/w/Compiling_Mudlet for instructions.
