@@ -335,7 +335,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl("<a href='https://federation2.com'>Website</a><br>"
                  "<a href='https://discord.gg/FB2xzAc5CT'>Discord</a>"),
              qsl(":/icons/fed2-logo.png"),
-             qsl("Federation 2, the space trading game, is a massively multi-player game set within an exciting world of interstellar commerce and intrigue, in which you interact and collaborate with lots of other players in real-time, and compete against them to climb the ranks. The aim of the game is to amass a larger fortune (in Imperial Groats) than any other player, and to climb the ranks by forging alliances and making friends with the right people. Cooperation is the name of the game in Federation.\n\n")},
+             qsl("Federation 2, the space trading game, is a massively multi-player game set within an exciting world of interstellar commerce and intrigue, in which you interact and collaborate with lots of other players in real-time, and compete against them to climb the ranks. The aim of the game is to amass a larger fortune (in Imperial Groats) than any other player, and to climb the ranks by forging alliances and making friends with the right people. Cooperation is the name of the game in Federation.\n")},
 
             {qsl("Imperian"),
              qsl("imperian.com"),
