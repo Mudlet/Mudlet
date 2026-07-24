@@ -909,6 +909,15 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
 
 void TMedia::downloadFile(TMediaData& mediaData)
 {
+    // Central guard for every download/write path (Client.Media.Play preloads
+    // via playMedia(), Client.Media.Load via parseJSONForMediaLoad()): never
+    // write a server-supplied file name that escapes the profile media
+    // directory through ".." segments.
+    if (mediaFilePathEscapesMediaDir(mediaData)) {
+        qWarning() << qsl("TMedia::downloadFile() WARNING - refused a media file name that escapes the profile media directory: %1.").arg(mediaData.mediaFileName());
+        return;
+    }
+
     const QString mediaPath = mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName());
     const QDir mediaDir(mediaPath);
 
