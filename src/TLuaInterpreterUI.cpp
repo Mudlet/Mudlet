@@ -2229,13 +2229,25 @@ int TLuaInterpreter::resetCmdLineAction(lua_State* L)
 int TLuaInterpreter::resetBackgroundImage(lua_State* L)
 {
     QString windowName = qsl("main");
+    bool fullWindow = false;
     const int n = lua_gettop(L);
-    if (n > 0) {
+    int counter = 1;
+    if (n > 0 && lua_type(L, 1) == LUA_TSTRING) {
         windowName = getVerifiedString(L, __func__, 1, "console name");
+        counter++;
+    }
+
+    if (counter <= n) {
+        fullWindow = getVerifiedBool(L, __func__, counter, "fullWindow");
+        counter++;
+    }
+
+    if (fullWindow && !(windowName.isEmpty() || windowName.compare(qsl("main"), Qt::CaseSensitive) == 0)) {
+        return warnArgumentValue(L, __func__, qsl("the full window background can only be reset on the main console"));
     }
 
     Host* host = &getHostFromLua(L);
-    if (!host->resetBackgroundImage(windowName)) {
+    if (!host->resetBackgroundImage(windowName, fullWindow)) {
         return warnArgumentValue(L, __func__, qsl("console '%1' not found").arg(windowName));
     }
     lua_pushboolean(L, true);
@@ -2520,6 +2532,7 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     QString windowName = qsl("main");
     QString imgPath;
     int mode = 1;
+    bool fullWindow = false;
     int counter = 1;
     const int n = lua_gettop(L);
     if (n > 1 && lua_type(L, 2) == LUA_TSTRING) {
@@ -2530,51 +2543,31 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     imgPath = getVerifiedString(L, __func__, counter, "image path");
     counter++;
 
-    if (n > 2 || (counter == 2 && n > 1)) {
+    if (counter <= n) {
         mode = getVerifiedInt(L, __func__, counter, "mode");
+        counter++;
     }
 
-    if (mode < 1 || mode > 4) {
-        return warnArgumentValue(L, __func__, qsl("%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style'").arg(mode));
-    }
-
-    Host* host = &getHostFromLua(L);
-    if (!host->setBackgroundImage(windowName, imgPath, mode)) {
-        return warnArgumentValue(L, __func__, qsl("console or label '%1' not found").arg(windowName));
-    }
-
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowBackgroundImage
-int TLuaInterpreter::setWindowBackgroundImage(lua_State* L)
-{
-    QString imgPath = getVerifiedString(L, __func__, 1, "image path");
-    int mode = 1;
-    if (lua_gettop(L) > 1) {
-        mode = getVerifiedInt(L, __func__, 2, "mode");
+    if (counter <= n) {
+        fullWindow = getVerifiedBool(L, __func__, counter, "fullWindow");
+        counter++;
     }
 
     if (mode < 1 || mode > 5) {
         return warnArgumentValue(L, __func__, qsl("%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style', 5 'cover'").arg(mode));
     }
 
-    Host* host = &getHostFromLua(L);
-    if (!host->setWindowBackgroundImage(imgPath, mode)) {
-        return warnArgumentValue(L, __func__, qsl("could not set window background using '%1'").arg(imgPath));
+    if (mode == 5 && !fullWindow) {
+        return warnArgumentValue(L, __func__, qsl("mode 'cover' is not supported for the main display - pass true as the 4th argument to apply it to the full window background instead"));
     }
 
-    lua_pushboolean(L, true);
-    return 1;
-}
+    if (fullWindow && !(windowName.isEmpty() || windowName.compare(qsl("main"), Qt::CaseSensitive) == 0)) {
+        return warnArgumentValue(L, __func__, qsl("the full window background can only be used with the main console"));
+    }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetWindowBackgroundImage
-int TLuaInterpreter::resetWindowBackgroundImage(lua_State* L)
-{
     Host* host = &getHostFromLua(L);
-    if (!host->resetWindowBackgroundImage()) {
-        return warnArgumentValue(L, __func__, qsl("console 'main' not found"));
+    if (!host->setBackgroundImage(windowName, imgPath, mode, fullWindow)) {
+        return warnArgumentValue(L, __func__, qsl("console or label '%1' not found").arg(windowName));
     }
 
     lua_pushboolean(L, true);

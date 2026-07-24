@@ -443,10 +443,8 @@ public:
     bool setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha);
     std::optional<QColor> getBackgroundColor(const QString& name) const;
-    bool setBackgroundImage(const QString& name, QString& path, int mode);
-    bool resetBackgroundImage(const QString& name);
-    bool setWindowBackgroundImage(QString& path, int mode);
-    bool resetWindowBackgroundImage();
+    bool setBackgroundImage(const QString& name, QString& path, int mode, bool fullWindow = false);
+    bool resetBackgroundImage(const QString& name, bool fullWindow = false);
     void showHideOrCreateMapper(const bool loadDefaultMap);
     bool setProfileStyleSheet(const QString& styleSheet);
     void check_for_mappingscript();

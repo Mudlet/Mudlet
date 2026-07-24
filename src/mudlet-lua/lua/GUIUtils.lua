@@ -2526,22 +2526,17 @@ mudlet.BgImageMode ={
 
 local setConsoleBackgroundImageLayer = setBackgroundImage
 function setBackgroundImage(...)
-  local mode = arg[arg.n]
+  -- fullWindow, if given, is always the last argument - mode is whatever precedes it
+  local modePos = arg.n
+  if type(arg[arg.n]) == "boolean" then
+    modePos = arg.n - 1
+  end
+  local mode = arg[modePos]
   if type(mode) == "string" then
     mode = mudlet.BgImageMode[mode] or mode
   end
-  arg[arg.n] = mode
+  arg[modePos] = mode
   return setConsoleBackgroundImageLayer(unpack(arg))
-end
-
-local setWindowBackgroundImageLayer = setWindowBackgroundImage
-function setWindowBackgroundImage(...)
-  local mode = arg[arg.n]
-  if arg.n > 1 and type(mode) == "string" then
-    mode = mudlet.BgImageMode[mode] or mode
-  end
-  arg[arg.n] = mode
-  return setWindowBackgroundImageLayer(unpack(arg))
 end
 
 
