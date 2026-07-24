@@ -161,6 +161,7 @@ private:
     QUrl parseUrl(TMediaData& mediaData);
     static bool isValidUrl(QUrl& url);
     static bool isFileRelative(TMediaData& mediaData);
+    bool mediaFilePathEscapesMediaDir(TMediaData& mediaData) const;
     QStringList parseFileNameList(TMediaData& mediaData, QDir& dir);
     QStringList getFileNameList(TMediaData& mediaData);
     QUrl getFileUrl(TMediaData& mediaData);

@@ -77,6 +77,14 @@ void TMedia::playMedia(TMediaData& mediaData)
             return; // MSP and GMCP files should not have absolute paths.
         }
 
+        // A relative path can still escape the profile's media directory via ".."
+        // segments; reject those so a hostile server cannot read or overwrite
+        // files elsewhere on disk (relative sub-directories remain permitted).
+        if ((mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP) && mediaFilePathEscapesMediaDir(mediaData)) {
+            qWarning() << qsl("TMedia::playMedia() WARNING - rejected a media file name that escapes the profile media directory: %1.").arg(mediaData.mediaFileName());
+            return;
+        }
+
         if (!mediaData.mediaFileName().contains(QLatin1Char('*')) && !mediaData.mediaFileName().contains(QLatin1Char('?'))) { // File path wildcards are * and ?
             // Append appropriate file extension for MSP files
             if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && !mediaData.mediaFileName().contains(QLatin1Char('.'))) {
@@ -655,6 +663,13 @@ bool TMedia::isFileRelative(TMediaData& mediaData)
     }
 
     return isFileRelative;
+}
+
+bool TMedia::mediaFilePathEscapesMediaDir(TMediaData& mediaData) const
+{
+    const QString mediaDir = QDir::cleanPath(mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName()));
+    const QString resolved = QDir::cleanPath(qsl("%1/%2").arg(mediaDir, mediaData.mediaFileName()));
+    return resolved != mediaDir && !resolved.startsWith(mediaDir + QLatin1Char('/'));
 }
 
 QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir& dir)
