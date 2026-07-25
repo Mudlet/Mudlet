@@ -71,6 +71,11 @@ void TMedia::playMedia(TMediaData& mediaData)
     if (mediaData.mediaInput() == TMediaData::MediaInputStream) {
         TMedia::setupMediaAbsolutePathFileName(mediaData);
     } else if (mediaData.mediaInput() == TMediaData::MediaInputFile) {
+        if (TMedia::mediaFileNameEscapesMediaDir(mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName())) {
+            qWarning() << qsl("TMedia::playMedia() WARNING - refused a media file name that would escape the profile media directory: %1").arg(mediaData.mediaFileName());
+            return;
+        }
+
         const bool fileRelative = TMedia::isFileRelative(mediaData);
 
         if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
@@ -657,6 +662,22 @@ bool TMedia::isFileRelative(TMediaData& mediaData)
     return isFileRelative;
 }
 
+// A relative file name is not enough to keep server- or script-supplied media inside the
+// profile's media directory: "../" segments are relative yet still escape it. Resolve the
+// name against the media directory and confirm it stays within, so legitimate sub-directories
+// and wildcards keep working while traversal is refused.
+bool TMedia::mediaFileNameEscapesMediaDir(const QString& mediaRoot, const QString& mediaFileName)
+{
+    if (mediaFileName.isEmpty()) {
+        return false;
+    }
+
+    const QString root = QDir::cleanPath(mediaRoot);
+    const QString resolved = QDir::cleanPath(qsl("%1/%2").arg(root, mediaFileName));
+
+    return resolved != root && !resolved.startsWith(root + QLatin1Char('/'));
+}
+
 QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir& dir)
 {
     QStringList fileNameList;
@@ -926,6 +947,15 @@ void TMedia::downloadFile(TMediaData& mediaData)
     if (!TMedia::isValidUrl(fileUrl)) {
         return;
     }
+
+    // Media is fetched from the network only. Refuse other schemes (e.g. file://) so a
+    // server-supplied media URL cannot turn this download into a local file read.
+    const QString scheme = fileUrl.scheme();
+    if (scheme != qsl("http") && scheme != qsl("https")) {
+        qWarning() << qsl("TMedia::downloadFile() WARNING - refused to download media from a non-HTTP(S) URL: %1").arg(fileUrl.toString());
+        return;
+    }
+
     QNetworkRequest request = QNetworkRequest(fileUrl);
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
@@ -2002,6 +2032,11 @@ void TMedia::parseJSONForMediaLoad(QJsonObject& json)
     mediaData.setMediaFileName(mediaData.mediaFileName().replace(QLatin1Char('\\'), QLatin1Char('/')));
 
     if (!TMedia::isFileRelative(mediaData)) {
+        return;
+    }
+
+    if (TMedia::mediaFileNameEscapesMediaDir(mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName())) {
+        qWarning() << qsl("TMedia::parseJSONForMediaLoad() WARNING - refused a media file name that would escape the profile media directory: %1").arg(mediaData.mediaFileName());
         return;
     }
 

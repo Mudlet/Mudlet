@@ -147,6 +147,12 @@ public:
     void printClosedCaption(const TMediaData& mediaData, const QString& action) const;
     void stopAllMediaPlayers();
 
+    // Returns true if mediaFileName would resolve to a location outside mediaRoot (e.g.
+    // via "../" traversal). Legitimate relative sub-directories and wildcards stay within
+    // mediaRoot and are permitted; only escaping paths are rejected. Static and pure so it
+    // can be unit-tested without a Host.
+    static bool mediaFileNameEscapesMediaDir(const QString& mediaRoot, const QString& mediaFileName);
+
 private slots:
     void slot_writeFile(QNetworkReply* reply);
 

@@ -1,0 +1,96 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Mike Conley - mike.conley@stickmud.com          *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+#include "TMedia.h"
+
+#include <QtTest/QtTest>
+
+/*
+ * Regression guard for the media path-traversal fix.
+ *
+ * A remote game server (or a script) supplies the media file name used by MSP,
+ * MXP, GMCP Client.Media.Load/Play and the Lua media API. Before the fix the
+ * only containment check was "is the path relative?", which accepts "../"
+ * because a traversal string is still relative. That let a server escape the
+ * profile media directory and have downloaded, attacker-controlled content
+ * written anywhere the process could write (arbitrary file write), and read
+ * arbitrary local files back for playback.
+ *
+ * TMedia::mediaFileNameEscapesMediaDir() is the pure containment check every
+ * download/write and read/playback path now funnels through. It resolves the
+ * file name against the media directory and returns true only when the result
+ * escapes it - so legitimate sub-directories and wildcards keep working while
+ * traversal is refused. The check is lexical (QDir::cleanPath), so no files
+ * need to exist and the test is platform-independent. Backslash normalisation
+ * happens in the caller, so this contract operates on forward-slash paths.
+ */
+class TMediaPathTraversalTest : public QObject
+{
+    Q_OBJECT
+
+    // A representative, absolute profile media directory. Its existence is
+    // irrelevant - the containment check is purely lexical.
+    static QString mediaRoot() { return QStringLiteral("/home/user/.config/mudlet/profiles/Default/media"); }
+
+    static bool escapes(const QString& fileName) { return TMedia::mediaFileNameEscapesMediaDir(mediaRoot(), fileName); }
+
+private slots:
+
+    // -------------------------------------------------------------------------
+    // Legitimate names must be permitted (no false positives).
+    // -------------------------------------------------------------------------
+
+    void benign_topLevelFile_allowed() { QVERIFY(!escapes(QStringLiteral("beep.wav"))); }
+
+    void benign_subDirFile_allowed() { QVERIFY(!escapes(QStringLiteral("sounds/beep.wav"))); }
+
+    void benign_nestedSubDirFile_allowed() { QVERIFY(!escapes(QStringLiteral("a/b/c/beep.wav"))); }
+
+    void benign_wildcard_allowed() { QVERIFY(!escapes(QStringLiteral("*.wav"))); }
+
+    void benign_wildcardInSubDir_allowed() { QVERIFY(!escapes(QStringLiteral("sounds/*.wav"))); }
+
+    void benign_dotSlash_allowed() { QVERIFY(!escapes(QStringLiteral("./beep.wav"))); }
+
+    // "../" that stays inside the media directory is harmless and must not be blocked.
+    void benign_internalDotDot_allowed() { QVERIFY(!escapes(QStringLiteral("sounds/../beep.wav"))); }
+
+    void empty_allowed() { QVERIFY(!escapes(QString())); }
+
+    // -------------------------------------------------------------------------
+    // Traversal must be refused (the vulnerability).
+    // -------------------------------------------------------------------------
+
+    void traversal_singleLevel_refused() { QVERIFY(escapes(QStringLiteral("../evil.wav"))); }
+
+    void traversal_deep_refused() { QVERIFY(escapes(QStringLiteral("../../../../../../etc/passwd"))); }
+
+    // The classic payload: a media-looking name that lands in the user's home.
+    void traversal_intoHome_refused() { QVERIFY(escapes(QStringLiteral("../../../../.config/mudlet/evil.wav"))); }
+
+    // Escapes to a sibling of the media directory (note: same prefix, different dir).
+    void traversal_siblingDir_refused() { QVERIFY(escapes(QStringLiteral("../media_other/evil.wav"))); }
+
+    // Dives into a sub-directory, then climbs out past the media root.
+    void traversal_subDirThenOut_refused() { QVERIFY(escapes(QStringLiteral("sounds/../../evil.wav"))); }
+};
+
+QTEST_GUILESS_MAIN(TMediaPathTraversalTest)
+
+#include "TMediaPathTraversalTest.moc"
