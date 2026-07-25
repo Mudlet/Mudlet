@@ -42,6 +42,7 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QProgressDialog>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QTextBoundaryFinder>
@@ -865,7 +866,6 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
             mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             mpHost->raiseEvent(mapOpenEvent);
         }
-
     }
     mpMapper->resize(width, height);
     mpMapper->move(x, y);
@@ -1684,6 +1684,35 @@ void TMainConsole::resizeEvent(QResizeEvent* event)
 
     // Update the record of the text area size for NAWS purposes:
     pHost->updateDisplayDimensions();
+}
+
+void TMainConsole::showPackageDownloadProgress(const QString& title, const QString& cancelText)
+{
+    auto pHost = getHost();
+    if (!pHost) {
+        return;
+    }
+    // The 4000000 upper bound mirrors the original range; it is reset to the
+    // real total once the first download-progress update arrives.
+    mpPackageDownloadProgressDialog = new QProgressDialog(title, cancelText, 0, 4000000, this);
+    connect(mpPackageDownloadProgressDialog, &QProgressDialog::canceled, &pHost->mTelnet, &cTelnet::slot_cancelPackageDownload);
+    mpPackageDownloadProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
+    mpPackageDownloadProgressDialog->show();
+}
+
+void TMainConsole::updatePackageDownloadProgress(qint64 got, qint64 total)
+{
+    if (mpPackageDownloadProgressDialog) {
+        mpPackageDownloadProgressDialog->setRange(0, static_cast<int>(total));
+        mpPackageDownloadProgressDialog->setValue(static_cast<int>(got));
+    }
+}
+
+void TMainConsole::closePackageDownloadProgress()
+{
+    if (mpPackageDownloadProgressDialog) {
+        mpPackageDownloadProgressDialog->close();
+    }
 }
 
 void TMainConsole::showStatistics()

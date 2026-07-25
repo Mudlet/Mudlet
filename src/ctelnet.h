@@ -70,7 +70,6 @@
 
 class QNetworkAccessManager;
 class QNetworkReply;
-class QProgressDialog;
 class QTimer;
 
 class Host;
@@ -268,14 +267,19 @@ public:
     bool mFORCE_GA_OFF = false;
     QPointer<dlgComposer> mpComposer;
     QNetworkAccessManager* mpDownloader = nullptr;
-    QPointer<QProgressDialog> mpProgressDialog;
     QString mServerPackage;
     QString mProfileName;
 
 
 public slots:
     void slot_setDownloadProgress(qint64, qint64);
+    void slot_cancelPackageDownload();
     void slot_replyFinished(QNetworkReply*);
+#if !defined(QT_NO_SSL)
+    // Called back by the frontend with the user's answer to the modal question
+    // raised via signal_promptTlsAvailable().
+    void slot_tlsUpgradeResponse(const bool accepted);
+#endif
     void slot_processReplayChunk();
     void slot_socketHostFound(QHostInfo);
     void slot_socketConnected();
@@ -297,6 +301,24 @@ signals:
     // Signal when GA (Go Ahead) or EOR (End of Record) telnet codes are received
     // Used by hyperlink visibility manager to trigger expire actions
     void signal_promptReceived();
+
+    // Telnet BELL received - the frontend flashes the taskbar and (unless the
+    // game is muted) beeps.
+    void signal_bell();
+
+    // Server GUI package download lifecycle - the frontend owns the progress
+    // dialog widget. The started signal carries the (translated) dialog title
+    // and Cancel button text.
+    void signal_packageDownloadStarted(const QString& title, const QString& cancelText);
+    void signal_packageDownloadProgress(qint64 got, qint64 total);
+    void signal_packageDownloadFinished();
+
+#if !defined(QT_NO_SSL)
+    // Ask the frontend to show a modal Yes/No question offering to reconnect on
+    // the secure port advertised via MSSP. The frontend must call back
+    // slot_tlsUpgradeResponse() with the user's answer.
+    void signal_promptTlsAvailable(const QString& text, const QString& informativeText);
+#endif
 
 
 private:

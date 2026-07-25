@@ -37,6 +37,7 @@
 #include <list>
 
 class TTextBox;
+class QProgressDialog;
 
 class TMainConsole : public TConsole
 {
@@ -90,6 +91,11 @@ public:
     void setSystemSpellDictionary(const QString&);
     void setProfileSpellDictionary();
     void showStatistics();
+    // Owns the modal progress dialog for a server GUI package download; driven
+    // by cTelnet's signal_packageDownload* signals.
+    void showPackageDownloadProgress(const QString& title, const QString& cancelText);
+    void updatePackageDownloadProgress(qint64 got, qint64 total);
+    void closePackageDownloadProgress();
     const QString& getSystemSpellDictionary() const { return mSpellDic; }
     const QByteArray& getHunspellCodecName_system() const { return mHunspellCodecName_system; }
     Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
@@ -123,6 +129,7 @@ public:
     QString mLogFileName;
     QTextStream mLogStream;
     bool mLogToLogFile = false;
+    QPointer<QProgressDialog> mpPackageDownloadProgressDialog;
 
 
 public slots:

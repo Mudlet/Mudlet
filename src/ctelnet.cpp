@@ -53,11 +53,10 @@
 #endif
 #include "MMCPServer.h"
 
+#include <QCoreApplication>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QMessageBox>
 #include <QNetworkProxy>
-#include <QProgressDialog>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QSslError>
@@ -473,8 +472,8 @@ void cTelnet::sendGMCPSupportsRemove(const QString& package)
 void cTelnet::connectIt(const QString& address, int port)
 {
     // Set early - before the recursion-on-busy-socket block below - so the
-    // qApp->processEvents() call there cannot leave the indicator briefly
-    // showing Disconnected during a reconnect.
+    // QCoreApplication::processEvents() call there cannot leave the indicator
+    // briefly showing Disconnected during a reconnect.
     mLookingUpHost = true;
 
     if (mpHost) {
@@ -518,7 +517,7 @@ void cTelnet::connectIt(const QString& address, int port)
         }
         // Since at least one of them was not ready lets give them a chance to
         // sort themselves out:
-        qApp->processEvents();
+        QCoreApplication::processEvents();
 
         // This looks less than ideal - recursively calling ourselves?
         connectIt(address, port);
@@ -1497,7 +1496,7 @@ void cTelnet::sendTelnetOption(char type, unsigned char option)
 
 void cTelnet::slot_replyFinished(QNetworkReply* reply)
 {
-    mpProgressDialog->close();
+    emit signal_packageDownloadFinished();
 
     if (reply != mpPackageDownloadReply) {
         qWarning().nospace().noquote() << "cTelnet::slot_replyFinished(QNetworkReply*) ERROR - download finished, but it wasn't the one we are expecting";
@@ -1573,8 +1572,14 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
 
 void cTelnet::slot_setDownloadProgress(qint64 got, qint64 tot)
 {
-    mpProgressDialog->setRange(0, static_cast<int>(tot));
-    mpProgressDialog->setValue(static_cast<int>(got));
+    emit signal_packageDownloadProgress(got, tot);
+}
+
+void cTelnet::slot_cancelPackageDownload()
+{
+    if (mpPackageDownloadReply) {
+        mpPackageDownloadReply->abort();
+    }
 }
 
 // Helper to format short telnet commands for debugging
@@ -3919,11 +3924,12 @@ void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QSt
     mudlet::self()->setNetworkRequestDefaults(url, request);
     mpPackageDownloadReply = mpDownloader->get(request);
 
-    mpProgressDialog = new QProgressDialog(tr("Downloading game GUI from server..."), tr("Cancel"), 0, 4000000, mpHost && mpHost->mpConsole ? mpHost->mpConsole : nullptr);
     connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
-    connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
-    mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
-    mpProgressDialog->show();
+    // The progress dialog is a widget owned by the frontend (see
+    // TMainConsole::showPackageDownloadProgress); it wires its Cancel button
+    // back to slot_cancelPackageDownload(). Keeping the strings here preserves
+    // their existing translation context.
+    emit signal_packageDownloadStarted(tr("Downloading game GUI from server..."), tr("Cancel"));
 }
 
 // Main logic for handling GUI package installation and upgrades
@@ -4226,39 +4232,38 @@ void cTelnet::promptTlsConnectionAvailable()
         && (mpHost->mMSSPHostName.isEmpty() || mpHost->mMSSPHostName.compare(mHostUrl, Qt::CaseInsensitive) == 0)) {
         postMessage(tr("[ INFO ]  - A more secure connection on port %1 is available.").arg(QString::number(mpHost->mMSSPTlsPort)));
 
-        // This QMessageBox is application modal and because we use ::exec() it
-        // spins up it's own event loop - this is not recommended by the Qt
-        // documentation and can cause some dangerous bugs!
-        auto pMsgBox = new QMessageBox();
-        pMsgBox->setIcon(QMessageBox::Question);
-        pMsgBox->setText(tr("For data transfer protection and privacy, this connection advertises a secure port."));
-        pMsgBox->setInformativeText(tr("Update to port %1 and connect with encryption?").arg(QString::number(mpHost->mMSSPTlsPort)));
-        pMsgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-        pMsgBox->setDefaultButton(QMessageBox::Yes);
-        // Make using Escape mean no change:
-        pMsgBox->setEscapeButton(QMessageBox::No);
+        // The modal Yes/No question is a widget and is shown by the frontend
+        // (see mudlet::addConsoleForNewHost); it calls back
+        // slot_tlsUpgradeResponse() with the user's answer. Keeping the strings
+        // here preserves their existing translation context.
+        emit signal_promptTlsAvailable(tr("For data transfer protection and privacy, this connection advertises a secure port."),
+                                       tr("Update to port %1 and connect with encryption?").arg(QString::number(mpHost->mMSSPTlsPort)));
+    }
+}
 
-        int ret = pMsgBox->exec();
-        delete pMsgBox;
+void cTelnet::slot_tlsUpgradeResponse(const bool accepted)
+{
+    // Invoked asynchronously by the frontend after the user answers the modal
+    // question raised via signal_promptTlsAvailable(). mpHost is a QPointer and
+    // the connection could in principle have changed while the dialog was open,
+    // so guard before acting - the original synchronous code could not reach
+    // here with a null host.
+    if (!mpHost || !mpSocket) {
+        return;
+    }
 
-        switch (ret) {
-        case QMessageBox::Yes:
-            disconnectIt();
-            mHostPort = mpHost->mMSSPTlsPort;
-            mpHost->setPort(mHostPort);
-            mpHost->mSslTsl = true;
-            mpHost->writeProfileData(QLatin1String("port"), QString::number(mHostPort));
-            mpHost->writeProfileData(QLatin1String("ssl_tsl"), QString::number(Qt::Checked));
-            connectIt(mpHost->getUrl(), mHostPort);
-            break;
-        case QMessageBox::No:
-            disconnectIt();
-            mpHost->mAskTlsAvailable = false; // Don't ask next time
-            reconnect();                      // A no-op (;) is desired, but read buffer does not flush
-            break;
-        default:
-            Q_UNREACHABLE(); // should never be reached
-        }
+    if (accepted) {
+        disconnectIt();
+        mHostPort = mpHost->mMSSPTlsPort;
+        mpHost->setPort(mHostPort);
+        mpHost->mSslTsl = true;
+        mpHost->writeProfileData(QLatin1String("port"), QString::number(mHostPort));
+        mpHost->writeProfileData(QLatin1String("ssl_tsl"), QString::number(Qt::Checked));
+        connectIt(mpHost->getUrl(), mHostPort);
+    } else {
+        disconnectIt();
+        mpHost->mAskTlsAvailable = false; // Don't ask next time
+        reconnect();                      // A no-op (;) is desired, but read buffer does not flush
     }
 }
 #endif
@@ -5188,17 +5193,13 @@ Some data loss is likely - please mention this problem to the game admins.)",
             }
         } else {
             if (ch == TN_BELL) {
-                // Flash taskbar for 3 seconds on the telnet bell, note
-                // by processing it here rather than in the TTextEdit class
-                // it is not possible to fake/test it with a Lua
-                // feedTriggers(...) call - OTOH doing it there would make
-                // a beep every time the screen was refreshed!
-                // TODO: https://github.com/Mudlet/Mudlet/issues/5836 - provide option to actually make a (void) QApplication::beep() or a user-selected sound (different for each profile) and/or instead of the visual alert
-                QApplication::alert(mudlet::self(), 3000);
-
-                if (!mudlet::self()->muteGame()) {
-                    QApplication::beep();
-                }
+                // Detect the telnet bell here rather than in the TTextEdit
+                // class so it fires once per received bell (doing it there
+                // would re-alert every time the screen was refreshed) and so a
+                // test can observe signal_bell() directly. The actual taskbar
+                // flash/beep is a frontend (widget) concern, done in
+                // mudlet::addConsoleForNewHost.
+                emit signal_bell();
             }
 
             if (ch != '\r' && ch != '\0') {

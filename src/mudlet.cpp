@@ -2184,6 +2184,51 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(&pH->mTelnet, &cTelnet::signal_connected, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_disconnected, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
 
+    // Widget work for the telnet layer lives here: cTelnet emits, the frontend
+    // shows/updates the widgets (see the seam pattern in libmudlet/PLAN.md).
+    connect(
+            &pH->mTelnet,
+            &cTelnet::signal_bell,
+            this,
+            [this]() {
+                // Flash the taskbar for 3 seconds and, unless the game is muted, beep.
+                // TODO: https://github.com/Mudlet/Mudlet/issues/5836 - provide an option to make a user-selected sound (per profile) and/or a visual alert instead.
+                QApplication::alert(this, 3000);
+                if (!muteGame()) {
+                    QApplication::beep();
+                }
+            },
+            Qt::UniqueConnection);
+
+    connect(&pH->mTelnet, &cTelnet::signal_packageDownloadStarted, pConsole, &TMainConsole::showPackageDownloadProgress, Qt::UniqueConnection);
+    connect(&pH->mTelnet, &cTelnet::signal_packageDownloadProgress, pConsole, &TMainConsole::updatePackageDownloadProgress, Qt::UniqueConnection);
+    connect(&pH->mTelnet, &cTelnet::signal_packageDownloadFinished, pConsole, &TMainConsole::closePackageDownloadProgress, Qt::UniqueConnection);
+
+#if !defined(QT_NO_SSL)
+    connect(
+            &pH->mTelnet,
+            &cTelnet::signal_promptTlsAvailable,
+            this,
+            [pH](const QString& text, const QString& informativeText) {
+                // Application-modal Yes/No question. Because ::exec() spins its own event
+                // loop this is not recommended by the Qt documentation and can cause
+                // dangerous re-entrancy bugs - the behaviour is preserved from the
+                // original in-cTelnet implementation.
+                auto pMsgBox = new QMessageBox();
+                pMsgBox->setIcon(QMessageBox::Question);
+                pMsgBox->setText(text);
+                pMsgBox->setInformativeText(informativeText);
+                pMsgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+                pMsgBox->setDefaultButton(QMessageBox::Yes);
+                // Make using Escape mean no change:
+                pMsgBox->setEscapeButton(QMessageBox::No);
+                const int ret = pMsgBox->exec();
+                delete pMsgBox;
+                pH->mTelnet.slot_tlsUpgradeResponse(ret == QMessageBox::Yes);
+            },
+            Qt::UniqueConnection);
+#endif
+
     // Apply Host's console buffer size settings to the newly created console
     int bufferSize = pH->getConsoleBufferSize();
     if (pH->getUseMaxConsoleBufferSize()) {
@@ -4984,7 +5029,9 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         const bool skipIntroStep = profile == qsl("Mudlet Tutorial");
         // give the freshly opened profile a moment to finish laying out before
         // the tour starts highlighting parts of it
-        QTimer::singleShot(1s, this, [this, skipIntroStep]() { showUiTour(skipIntroStep); });
+        QTimer::singleShot(1s, this, [this, skipIntroStep]() {
+            showUiTour(skipIntroStep);
+        });
     }
 }
 
