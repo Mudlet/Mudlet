@@ -1600,6 +1600,212 @@ describe("Tests UI functions", function()
       assert.are.equal(523, hp.current)
       assert.is_nil(reading(hits, "mp"))
     end)
+
+    it("should keep aligned-table padding from leaking one stat's numbers to the next", function()
+      local hits = BaseUI.parseVitalsLine("Health:   3600/3600     Mana:     3400/3400")
+      local mp = reading(hits, "mp", "curmax")
+      assert.is_not_nil(mp)
+      assert.are.equal(3400, mp.current)
+      assert.are.equal(3400, mp.max)
+    end)
+
+    -- the score-screen corpus: shapes from the major codebase families. A
+    -- score may only ever be shown once, so every expected reading must come
+    -- from an ungated (trusted-on-first-sight) shape - a gated reading would
+    -- never fire on a screen the recurrence gate has not seen three times
+    describe("score screens across codebase families", function()
+      local function firstSightReading(hits, stat, kind)
+        for _, hit in ipairs(hits) do
+          if hit.stat == stat and hit.kind == kind and not hit.gated then
+            return hit
+          end
+        end
+      end
+
+      local screens = {
+        -- ROM 2.4 act_info.c do_score, verbatim format
+        { name = "a ROM 2.4 score sentence",
+          line = "You have 100/100 hit, 100/100 mana, 100/100 movement.",
+          expect = { hp = { 100, 100 }, mp = { 100, 100 }, mv = { 100, 100 } } },
+        -- Merc 2.1 appends practices to the same sentence
+        { name = "a Merc 2.1 score sentence",
+          line = "You have 100/100 hit, 90/90 mana, 80/100 movement, 12 practices.",
+          expect = { hp = { 100, 100 }, mp = { 90, 90 }, mv = { 80, 100 } } },
+        -- DikuMUD/CircleMUD/tbaMUD write current(max)
+        { name = "a Diku/Circle/tbaMUD score sentence",
+          line = "You have 20(20) hit, 100(100) mana and 82(82) movement points.",
+          expect = { hp = { 20, 20 }, mp = { 100, 100 }, mv = { 82, 82 } } },
+        -- SMAUG 1.4a dashboard rows: "current of max" behind unrelated cells
+        { name = "a SMAUG hitpoints row",
+          line = "PRACT: 005         Hitpoints: 90    of    90   Pager: ( )  24    AutoExit(X)",
+          expect = { hp = { 90, 90 } } },
+        { name = "a SMAUG mana row",
+          line = "XP   : 123456        Mana: 75    of    90   MKills:  00012    AutoLoot (X)",
+          expect = { mp = { 75, 90 } } },
+        { name = "a SMAUG move row (comma-grouped gold in front)",
+          line = "GOLD : 1,234,567    Move: 80    of    90   Mdeaths: 00000    AutoSac ( )",
+          expect = { mv = { 80, 90 } } },
+        -- SWRFUSS puts three "of" pairs on one line
+        { name = "a SWR-style of-separated line",
+          line = "Hit Points: 100 of 100     Move: 90 of 100     Force: 100 of 100",
+          expect = { hp = { 100, 100 }, mv = { 90, 100 } } },
+        -- Achaea's bordered vitals block (mana above max is real overheal)
+        { name = "an Achaea health row",
+          line = "| Health  : 2594/2594   Willpower: 13730/13730 Strength : 12 Intelligence: 13 |",
+          expect = { hp = { 2594, 2594 } } },
+        { name = "an Achaea mana/endurance row",
+          line = "| Mana    : 3671/2966   Endurance: 11600/11870 Dexterity: 12 Constitution: 11 |",
+          expect = { mp = { 3671, 2966 }, mv = { 11600, 11870 } } },
+        -- Aetolia's cells sit behind interior pipes after a non-vital cell
+        { name = "an Aetolia bordered row",
+          line = "| Race:   Undead Atavian    | Health:  4252/4252  | Endurance: 19950/19950   |",
+          expect = { hp = { 4252, 4252 }, mv = { 19950, 19950 } } },
+        -- Aardwolf brackets its values inside a full grid
+        { name = "an Aardwolf hit row",
+          line = "| Hit    : [  168/168  ] | Hitroll  : [   27 ] | Weight :    40 of 135    |",
+          expect = { hp = { 168, 168 } } },
+        { name = "an Aardwolf mana row",
+          line = "| Mana   : [  160/160  ] | Damroll  : [   14 ] | Items  :    23 of 105    |",
+          expect = { mp = { 160, 160 } } },
+        { name = "an Aardwolf moves row",
+          line = "| Moves  : [  564/564  ] | Wimpy    : [   18 ] | Pos    : Standing        |",
+          expect = { mv = { 564, 564 } } },
+        -- Discworld brief: current(max), no space before the paren
+        { name = "a Discworld brief score line",
+          line = "Hp: 2331(2331)  Gp: 433(459)  Xp: 1143225  Burden: 21%",
+          expect = { hp = { 2331, 2331 } } },
+        -- Discworld verbose: current (max) with a space
+        { name = "a Discworld verbose score sentence",
+          line = "You have 1110 (1110) hit points, 167 (167) guild points, 2 (684) quest points, "
+            .. "7 (1063) achievement points and 81 (81) social points.",
+          expect = { hp = { 1110, 1110 } } },
+        -- LPMud 2.4.5 writes current, label, then the max
+        { name = "an LPMud 2.4.5 score sentence",
+          line = "You have 123 experience points, 45 gold coins, 50 hit points(50).",
+          expect = { hp = { 50, 50 } } },
+        -- AFKMud's first row opens with a "Label: number" cell
+        { name = "an AFKMud hitpoints row",
+          line = "Level: 5              HitPoints:  100/  100      Pager    ( )",
+          expect = { hp = { 100, 100 } } },
+        { name = "an IRE-style aligned score table",
+          line = "Health:   3600/3600     Mana:     3400/3400",
+          expect = { hp = { 3600, 3600 }, mp = { 3400, 3400 } } },
+        { name = "a bordered row whose first cell is not a vital",
+          line = "| Level: 201  Hit Points: 500/500  Moves: 1000/1000 |",
+          expect = { hp = { 500, 500 }, mv = { 1000, 1000 } } },
+        { name = "thousands separators",
+          line = "Hit Points: 12,345/23,456",
+          expect = { hp = { 12345, 23456 } } },
+        { name = "a spell points row",
+          line = "Spell Points: 90/95",
+          expect = { mp = { 90, 95 } } },
+        { name = "a magic row",
+          line = "Magic: 90/95",
+          expect = { mp = { 90, 95 } } },
+        { name = "a movement row",
+          line = "Movement: 80/100",
+          expect = { mv = { 80, 100 } } },
+        { name = "a stamina row",
+          line = "Stamina: 80/100",
+          expect = { mv = { 80, 100 } } },
+        { name = "an experience row",
+          line = "Experience: 1000/5000",
+          expect = { xp = { 1000, 5000 } } },
+      }
+
+      for _, screen in ipairs(screens) do
+        it("should read " .. screen.name .. " on first sight", function()
+          local hits = BaseUI.parseVitalsLine(screen.line)
+          for stat, pair in pairs(screen.expect) do
+            local hit = firstSightReading(hits, stat, "curmax")
+            assert.is_not_nil(hit, screen.name .. ": no ungated " .. stat .. " reading")
+            assert.are.equal(pair[1], hit.current)
+            assert.are.equal(pair[2], hit.max)
+          end
+        end)
+      end
+
+      it("should not read guild points or bare xp from an LPMud row", function()
+        local hits = BaseUI.parseVitalsLine("Hp: 143 (167) Gp: 240 (240) Xp: 267000")
+        assert.is_nil(reading(hits, "mp"))
+        assert.is_nil(reading(hits, "xp"))
+      end)
+
+      -- rows with no structural anchor at all (AFKMud's "Race : Human
+      -- Mana : 1000/1000") only parse as windowed readings, which
+      -- BaseUI.onVitalsLine trusts solely inside the short window after a
+      -- "score" command actually went to the game
+      it("should mark anchorless labelled pairs as windowed, not trusted", function()
+        local hits = BaseUI.parseVitalsLine("Race : Human           Mana     :  1000/ 1000      Autoexit (X)")
+        local found
+        for _, hit in ipairs(hits) do
+          if hit.stat == "mp" and hit.kind == "curmax" then
+            found = found or hit
+          end
+        end
+        assert.is_not_nil(found)
+        assert.is_true(found.windowed == true)
+        assert.are.equal(1000, found.current)
+        assert.are.equal(1000, found.max)
+      end)
+
+      it("should open the score window when a score command goes out", function()
+        local saved = BaseUI.scoreWindowUntil
+        BaseUI.scoreWindowUntil = nil
+        assert.is_false(BaseUI.scoreWindowOpen())
+        BaseUI.noteCommandSent("sysDataSendRequest", "look")
+        assert.is_false(BaseUI.scoreWindowOpen())
+        BaseUI.noteCommandSent("sysDataSendRequest", "score")
+        assert.is_true(BaseUI.scoreWindowOpen())
+        BaseUI.scoreWindowUntil = getEpoch() - 1
+        assert.is_false(BaseUI.scoreWindowOpen())
+        BaseUI.scoreWindowUntil = saved
+      end)
+    end)
+
+    -- the score shapes run always-on against everything the game prints, so
+    -- ordinary output must never produce a first-sight-trusted reading.
+    -- gated readings are fine (they need the recurrence gate first) and so
+    -- are windowed ones (inert outside the short post-"score" window, which
+    -- is their entire safety mechanism - the shapes themselves are
+    -- deliberately anchorless)
+    describe("ungated false-positive safety", function()
+      local prose = {
+        "You have collected 5/6 mana crystals for the ritual.",
+        "You have 5/6 mana potions in your bag.",
+        "You have 3(4) quest tokens.",
+        "You have 100 gold and 5/6 keys.",
+        "You have 3/4 of the map explored.",
+        "Health potions line the shelves, 3/4 full.",
+        "Mana is the lifeblood of spellcasters, see HELP MANA.",
+        "| [newbie] Zork: my hp is 100/120 lol |",
+        "| 12 | a healing potion | 100/120 gold |",
+        "| Players: 15/20 |",
+        "| Score: 4500/9000 |",
+        "| HP regen: 5/tick class bonus |",
+        "The scoreboard shows 12/15 wins for your team.",
+        "Uptime: 12/24 hours since last reboot.",
+        "Quests completed: 37/50",
+        "You get 2,500 gold coins from the corpse.",
+      }
+
+      for _, line in ipairs(prose) do
+        it("should not trust on first sight: " .. line, function()
+          for _, hit in ipairs(BaseUI.parseVitalsLine(line)) do
+            assert.is_true(hit.gated == true or hit.windowed == true,
+              string.format("first-sight %s (%s) reading from prose", hit.stat, hit.kind))
+          end
+        end)
+      end
+    end)
+
+    it("should reject nonsense readings instead of painting broken gauges", function()
+      assert.are.same({}, BaseUI.parseVitalsLine("Health: 0/0"))
+      -- a wildly overhealed current is a misread, not overheal
+      assert.is_nil(reading(BaseUI.parseVitalsLine("Health: 90000/2"), "hp"))
+      -- absurd magnitudes are ids or timestamps, never vitals
+      assert.are.same({}, BaseUI.parseVitalsLine("Health: 1234567890123/9999999999999"))
+    end)
   end)
 
   -- when a game installs its own interface (a Client.GUI package), the
