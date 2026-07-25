@@ -7216,7 +7216,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
     // connect time are handled at runtime instead - the starter UI stands
     // aside when one installs.
     if (!mudlet::self()->experiencedMudletPlayer() && !TGameDetails::gameProvidesOwnUi(gameUrl)) {
-        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/base-ui/mudlet-base-ui.xml"));
+        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/base-ui/mudlet-base-ui.mpackage"));
     }
 
     // Don't play tutorial for every connection to localhost. There are legit other reasons to connect there.
