@@ -18,11 +18,14 @@
  ***************************************************************************/
 
 #include <QtTest/QtTest>
+#include <chrono>
 
 #include "EditorUndoStack.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
 #include "TTimer.h"
 #include "TTreeWidget.h"
 #include "TTrigger.h"
@@ -35,6 +38,8 @@
 #include "dlgTriggerPatternEdit.h"
 #include "dlgTriggersMainArea.h"
 #include "mudlet.h"
+
+using namespace std::chrono_literals;
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -64,7 +69,7 @@ private:
   dlgTriggerEditor *mpEditor = nullptr;
   Host *mpHost = nullptr;
   const QString mProfileName = qsl("UndoRedo-Test-Profile");
-  const QString mPort = qsl("23456");
+  QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
   const QString mLocalhost = qsl("localhost");
 
   struct ItemTypeInfo {
@@ -107,9 +112,9 @@ private:
 
   void startProfile(const QString &profileName, const QString &address,
                     const QString &port) {
-    QTimer::singleShot(0, qApp, [profileName, address, port]() {
+    QTimer::singleShot(0ms, qApp, [profileName, address, port]() {
       mudlet::self()->startAutoLogin({});
-      QTest::qWait(100);
+      QTest::qWait(100ms);
 
       // Verify connection dialog is available before UI interactions
       Q_ASSERT_X(mudlet::self()->mpConnectionDialog, "startProfile",
@@ -119,21 +124,21 @@ private:
 
       QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
                         Qt::LeftButton);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
 
       Q_ASSERT_X(QApplication::focusWidget(), "startProfile",
                  "No widget has focus after clicking new profile button");
 
       QTest::keyClicks(QApplication::focusWidget(), profileName);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClicks(QApplication::focusWidget(), address);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClicks(QApplication::focusWidget(), port);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
     });
 
@@ -158,10 +163,11 @@ private slots:
     initializeQRCResources();
 
     mpServer = new TelnetServerStub(qApp);
-    mpServer->start(mLocalhost, mPort.toUShort());
+    mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
     QVERIFY2(mpServer->isListening(),
              qPrintable(qsl("TelnetServerStub failed to start: %1")
                             .arg(mpServer->errorString())));
+    mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
@@ -174,7 +180,7 @@ private slots:
 
     // Open the editor dialog (it's created lazily)
     mudlet::self()->slot_showScriptDialog();
-    QTest::qWait(100);
+    QTest::qWait(100ms);
 
     mpEditor = mpHost->mpEditorDialog;
     QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
@@ -364,7 +370,7 @@ private slots:
       if (itemType.viewType == EditorViewType::cmKeysView ||
           itemType.viewType == EditorViewType::cmActionView) {
         QCoreApplication::processEvents();
-        QThread::msleep(10);
+        QThread::sleep(10ms);
       }
 
       QTreeWidgetItem *folder = itemType.baseItem()->child(0);
@@ -419,7 +425,7 @@ private slots:
       if (itemType.viewType == EditorViewType::cmKeysView ||
           itemType.viewType == EditorViewType::cmActionView) {
         QCoreApplication::processEvents();
-        QThread::msleep(10);
+        QThread::sleep(10ms);
       }
 
       QTreeWidgetItem *folder = itemType.baseItem()->child(0);
@@ -465,7 +471,7 @@ private slots:
       if (itemType.viewType == EditorViewType::cmKeysView ||
           itemType.viewType == EditorViewType::cmActionView) {
         QCoreApplication::processEvents();
-        QThread::msleep(10);
+        QThread::sleep(10ms);
       }
 
       QTreeWidgetItem *grandparent = itemType.baseItem()->child(0);
@@ -1375,7 +1381,7 @@ private slots:
       if (itemType.viewType == EditorViewType::cmKeysView ||
           itemType.viewType == EditorViewType::cmActionView) {
         QCoreApplication::processEvents();
-        QThread::msleep(10);
+        QThread::sleep(10ms);
       }
 
       QTreeWidgetItem *grandparent = itemType.baseItem()->child(0);
@@ -1674,6 +1680,56 @@ private slots:
     cleanupAll(mItemTypes[0]);
   }
 
+  void testAddTriggerDoesNotClearSelectedMultilineState() {
+    mpEditor->slot_showTriggers();
+    cleanupAll(mItemTypes[0]);
+
+    mpEditor->addTrigger(false);
+    QVERIFY(mpEditor->mpTriggerBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *firstTriggerItem = mpEditor->mpTriggerBaseItem->child(0);
+    QVERIFY(firstTriggerItem != nullptr);
+
+    const int firstTriggerID = firstTriggerItem->data(0, Qt::UserRole).toInt();
+    TTrigger *firstTrigger =
+        mpHost->getTriggerUnit()->getTrigger(firstTriggerID);
+    QVERIFY(firstTrigger != nullptr);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(firstTriggerItem);
+    mpEditor->slot_triggerSelected(firstTriggerItem);
+    mpEditor->mpUndoStack->clear();
+
+    mpEditor->showPatternItems(2);
+    QVERIFY(mpEditor->mTriggerPatternEdit.size() >= 2);
+    mpEditor->mTriggerPatternEdit[0]->singleLineTextEdit_pattern->setPlainText(
+        qsl("first line"));
+    mpEditor->mTriggerPatternEdit[1]->singleLineTextEdit_pattern->setPlainText(
+        qsl("second line"));
+    mpEditor->mpTriggersMainArea->spinBox_lineMargin->setValue(2);
+    QCoreApplication::processEvents();
+    mpEditor->saveTrigger();
+
+    QVERIFY(firstTrigger->isMultiline());
+    QCOMPARE(firstTrigger->getConditionLineDelta(), 2);
+    QCOMPARE(firstTrigger->getPatternsList().size(), 2);
+
+    mpEditor->addTrigger(false);
+    QCoreApplication::processEvents();
+
+    QCOMPARE(mpEditor->mpTriggerBaseItem->childCount(), 2);
+    QVERIFY2(firstTrigger->isMultiline(),
+             "Adding a sibling trigger should not clear the previously "
+             "selected trigger's multi-line state");
+    QCOMPARE(firstTrigger->getConditionLineDelta(), 2);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(firstTriggerItem);
+    mpEditor->slot_triggerSelected(firstTriggerItem);
+
+    QCOMPARE(mpEditor->mpTriggersMainArea->spinBox_lineMargin->value(), 2);
+
+    cleanupAll(mItemTypes[0]);
+  }
+
   void testTriggerHighlightingColor() {
     mpEditor->slot_showTriggers();
     cleanupAll(mItemTypes[0]);
@@ -1759,6 +1815,51 @@ private slots:
     QCOMPARE(mpEditor->mpActionsMainArea->comboBox_action_button_rotation
                  ->currentIndex(),
              newRotationIndex);
+
+    cleanupAll(mItemTypes[5]);
+  }
+
+  void testAddActionDoesNotClearSelectedPushDownButton() {
+    mpEditor->slot_showActions();
+    cleanupAll(mItemTypes[5]);
+
+    mpEditor->addAction(false);
+    QVERIFY(mpEditor->mpActionBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *firstActionItem = mpEditor->mpActionBaseItem->child(0);
+    QVERIFY(firstActionItem != nullptr);
+
+    const int firstActionID = firstActionItem->data(0, Qt::UserRole).toInt();
+    TAction *firstAction = mpHost->getActionUnit()->getAction(firstActionID);
+    QVERIFY(firstAction != nullptr);
+
+    mpEditor->treeWidget_actions->setCurrentItem(firstActionItem);
+    mpEditor->slot_actionSelected(firstActionItem);
+    mpEditor->mpUndoStack->clear();
+
+    mpEditor->mpActionsMainArea->checkBox_action_button_isPushDown->setChecked(
+        true);
+    QCoreApplication::processEvents();
+
+    QVERIFY(firstAction->isPushDownButton());
+    QVERIFY(
+        mpEditor->mpActionsMainArea->checkBox_action_button_isPushDown
+            ->isChecked());
+
+    mpEditor->addAction(false);
+    QCoreApplication::processEvents();
+
+    QCOMPARE(mpEditor->mpActionBaseItem->childCount(), 2);
+    QVERIFY2(firstAction->isPushDownButton(),
+             "Adding a sibling action should not clear the previously "
+             "selected action's push-down state");
+
+    mpEditor->treeWidget_actions->setCurrentItem(firstActionItem);
+    mpEditor->slot_actionSelected(firstActionItem);
+
+    QVERIFY(
+        mpEditor->mpActionsMainArea->checkBox_action_button_isPushDown
+            ->isChecked());
 
     cleanupAll(mItemTypes[5]);
   }
@@ -1874,6 +1975,170 @@ private slots:
     QCOMPARE(mpEditor->mpScriptsBaseItem->childCount(), 1);
 
     cleanupAll(mItemTypes[3]);
+  }
+
+  void testMultiTriggerPasteIntoGroup() {
+    mpEditor->slot_showTriggers();
+    cleanupAll(mItemTypes[0]);
+
+    mpEditor->addTrigger(true);
+    QCOMPARE(mpEditor->mpTriggerBaseItem->childCount(), 1);
+
+    QTreeWidgetItem *group = mpEditor->mpTriggerBaseItem->child(0);
+    int groupID = group->data(0, Qt::UserRole).toInt();
+    TTrigger *pGroup = mpHost->getTriggerUnit()->getTrigger(groupID);
+    QVERIFY(pGroup != nullptr);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(group);
+    mpEditor->addTrigger(false);
+    mpEditor->addTrigger(false);
+    QCOMPARE(group->childCount(), 2);
+
+    // copy both triggers, then paste them into the group
+    mpEditor->treeWidget_triggers->clearSelection();
+    mpEditor->treeWidget_triggers->setCurrentItem(group->child(0));
+    group->child(0)->setSelected(true);
+    group->child(1)->setSelected(true);
+    mpEditor->slot_copyXml();
+
+    mpEditor->treeWidget_triggers->clearSelection();
+    mpEditor->treeWidget_triggers->setCurrentItem(group);
+    mpEditor->slot_pasteXml();
+
+    // each pasted trigger must be linked into the group exactly once
+    QCOMPARE(static_cast<int>(pGroup->getChildrenList()->size()), 4);
+
+    // re-render the tree and verify the group shows exactly four children
+    QEnterEvent enterEvent{QPointF(), QPointF(), QPointF()};
+    QApplication::sendEvent(mpEditor, &enterEvent);
+    QCOMPARE(mpEditor->mpTriggerBaseItem->childCount(), 1);
+    QCOMPARE(mpEditor->mpTriggerBaseItem->child(0)->childCount(), 4);
+
+    cleanupAll(mItemTypes[0]);
+  }
+
+  void testMultiTriggerPasteAfterSibling() {
+    mpEditor->slot_showTriggers();
+    cleanupAll(mItemTypes[0]);
+
+    mpEditor->addTrigger(true);
+    QTreeWidgetItem *group = mpEditor->mpTriggerBaseItem->child(0);
+    int groupID = group->data(0, Qt::UserRole).toInt();
+    TTrigger *pGroup = mpHost->getTriggerUnit()->getTrigger(groupID);
+    QVERIFY(pGroup != nullptr);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(group);
+    mpEditor->addTrigger(false);
+    mpEditor->addTrigger(false);
+    QCOMPARE(group->childCount(), 2);
+    const int firstID = group->child(0)->data(0, Qt::UserRole).toInt();
+    const int secondID = group->child(1)->data(0, Qt::UserRole).toInt();
+
+    // copy both triggers, then paste them onto the first (non-folder) trigger
+    mpEditor->treeWidget_triggers->clearSelection();
+    mpEditor->treeWidget_triggers->setCurrentItem(group->child(0));
+    group->child(0)->setSelected(true);
+    group->child(1)->setSelected(true);
+    mpEditor->slot_copyXml();
+
+    mpEditor->treeWidget_triggers->clearSelection();
+    mpEditor->treeWidget_triggers->setCurrentItem(group->child(0));
+    mpEditor->slot_pasteXml();
+
+    // pasted triggers must be inserted right after the selected sibling,
+    // not appended at the end of the group
+    auto *children = pGroup->getChildrenList();
+    QCOMPARE(static_cast<int>(children->size()), 4);
+    QList<int> childIDs;
+    for (auto *child : *children) {
+      childIDs << child->getID();
+    }
+    QCOMPARE(childIDs.at(0), firstID);
+    QVERIFY(childIDs.at(1) != firstID && childIDs.at(1) != secondID);
+    QVERIFY(childIDs.at(2) != firstID && childIDs.at(2) != secondID);
+    QCOMPARE(childIDs.at(3), secondID);
+
+    cleanupAll(mItemTypes[0]);
+  }
+
+  void testMultiAliasPasteIntoGroup() {
+    mpEditor->slot_showAliases();
+    cleanupAll(mItemTypes[2]);
+
+    mpEditor->addAlias(true);
+    QCOMPARE(mpEditor->mpAliasBaseItem->childCount(), 1);
+
+    QTreeWidgetItem *group = mpEditor->mpAliasBaseItem->child(0);
+    int groupID = group->data(0, Qt::UserRole).toInt();
+    TAlias *pGroup = mpHost->getAliasUnit()->getAlias(groupID);
+    QVERIFY(pGroup != nullptr);
+
+    mpEditor->treeWidget_aliases->setCurrentItem(group);
+    mpEditor->addAlias(false);
+    mpEditor->addAlias(false);
+    QCOMPARE(group->childCount(), 2);
+
+    // copy both aliases, then paste them into the group
+    mpEditor->treeWidget_aliases->clearSelection();
+    mpEditor->treeWidget_aliases->setCurrentItem(group->child(0));
+    group->child(0)->setSelected(true);
+    group->child(1)->setSelected(true);
+    mpEditor->slot_copyXml();
+
+    mpEditor->treeWidget_aliases->clearSelection();
+    mpEditor->treeWidget_aliases->setCurrentItem(group);
+    mpEditor->slot_pasteXml();
+
+    // both pasted aliases must land inside the group, each linked exactly once
+    QCOMPARE(static_cast<int>(pGroup->getChildrenList()->size()), 4);
+
+    // re-render the tree: the group shows four children and none at the root
+    QEnterEvent enterEvent{QPointF(), QPointF(), QPointF()};
+    QApplication::sendEvent(mpEditor, &enterEvent);
+    QCOMPARE(mpEditor->mpAliasBaseItem->childCount(), 1);
+    QCOMPARE(mpEditor->mpAliasBaseItem->child(0)->childCount(), 4);
+
+    cleanupAll(mItemTypes[2]);
+  }
+
+  void testMultiKeyPasteIntoGroup() {
+    mpEditor->slot_showKeys();
+    cleanupAll(mItemTypes[4]);
+
+    mpEditor->addKey(true);
+    QCOMPARE(mpEditor->mpKeyBaseItem->childCount(), 1);
+
+    QTreeWidgetItem *group = mpEditor->mpKeyBaseItem->child(0);
+    int groupID = group->data(0, Qt::UserRole).toInt();
+    TKey *pGroup = mpHost->getKeyUnit()->getKey(groupID);
+    QVERIFY(pGroup != nullptr);
+
+    mpEditor->treeWidget_keys->setCurrentItem(group);
+    mpEditor->addKey(false);
+    mpEditor->addKey(false);
+    QCOMPARE(group->childCount(), 2);
+
+    // copy both keys, then paste them into the group
+    mpEditor->treeWidget_keys->clearSelection();
+    mpEditor->treeWidget_keys->setCurrentItem(group->child(0));
+    group->child(0)->setSelected(true);
+    group->child(1)->setSelected(true);
+    mpEditor->slot_copyXml();
+
+    mpEditor->treeWidget_keys->clearSelection();
+    mpEditor->treeWidget_keys->setCurrentItem(group);
+    mpEditor->slot_pasteXml();
+
+    // both pasted keys must land inside the group, each linked exactly once
+    QCOMPARE(static_cast<int>(pGroup->getChildrenList()->size()), 4);
+
+    // re-render the tree: the group shows four children and none at the root
+    QEnterEvent enterEvent{QPointF(), QPointF(), QPointF()};
+    QApplication::sendEvent(mpEditor, &enterEvent);
+    QCOMPARE(mpEditor->mpKeyBaseItem->childCount(), 1);
+    QCOMPARE(mpEditor->mpKeyBaseItem->child(0)->childCount(), 4);
+
+    cleanupAll(mItemTypes[4]);
   }
 
   // ========================================================================

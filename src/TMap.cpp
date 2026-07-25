@@ -46,7 +46,9 @@
 #include <QPixmap>
 #include <QProgressDialog>
 #include <QSizeF>
+#include <chrono>
 
+using namespace std::chrono_literals;
 
 namespace {
 // Restores font information from userData that was stored during binary serialization.
@@ -1969,21 +1971,20 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             }
             file.close();
             return true;
-        } else {
-            // Is a development version so check against mMaxVersion
-            if (otherProfileVersion > mMaxVersion) {
-                // Oh dear, can't handle THIS
-                if (fileVersion) {
-                    *fileVersion = otherProfileVersion;
-                }
-                file.close();
-                return true;
-            } else {
-                if (fileVersion) {
-                    *fileVersion = otherProfileVersion;
-                }
-            }
         }
+        // Is a development version so check against mMaxVersion
+        if (otherProfileVersion > mMaxVersion) {
+            // Oh dear, can't handle THIS
+            if (fileVersion) {
+                *fileVersion = otherProfileVersion;
+            }
+            file.close();
+            return true;
+        }
+        if (fileVersion) {
+            *fileVersion = otherProfileVersion;
+        }
+
     } else {
         if (fileVersion) {
             *fileVersion = otherProfileVersion;
@@ -3495,7 +3496,7 @@ void TMap::updateArea(int areaId)
     static bool debounce;
     if (!debounce) {
         debounce = true;
-        QTimer::singleShot(0, this, [this, areaId]() {
+        QTimer::singleShot(0ms, this, [this, areaId]() {
             debounce = false;
 
 #if defined(INCLUDE_3DMAPPER)

@@ -29,6 +29,7 @@
 
 #include <QKeyEvent>
 #include <QtTest/QtTest>
+#include <chrono>
 
 #include "MudletInstanceCoordinator.h"
 #include "TAccessibleTextEdit.h"
@@ -39,6 +40,8 @@
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
+
+using namespace std::chrono_literals;
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -54,7 +57,7 @@ private:
   TelnetServerStub *mpServer = nullptr;
   Host *mpHost = nullptr;
   const QString mHostname = "OSC-Test-Host";
-  const QString mPort = "4002";
+  QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
   const QString mLocalhost = "localhost";
 
   // Injects raw telnet data into the processing pipeline via loopback and
@@ -62,7 +65,7 @@ private:
   void injectData(const QString &message) {
     QByteArray data = (message + qsl("\r\n")).toUtf8();
     mpHost->mTelnet.loopbackTest(data);
-    QTest::qWait(50);
+    QTest::qWait(50ms);
   }
 
   // Scans backward through the buffer to find the first hyperlink and returns
@@ -170,13 +173,24 @@ private:
     return std::nullopt;
   }
 
+  // Joins all buffer lines into one string.
+  QString allBufferText() {
+    TMainConsole *console = mpHost->mpConsole;
+    QString allText;
+    for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
+      allText += console->buffer.line(i);
+    }
+    return allText;
+  }
+
 private slots:
   // Start mudlet and create a profile once for all tests.
   void initTestCase() {
     initializeQRCResourcesForOscTest();
 
     mpServer = new TelnetServerStub(qApp);
-    mpServer->start(mLocalhost, mPort.toUShort());
+    mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+    mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
@@ -189,22 +203,22 @@ private slots:
         mudlet::getMudletPath(enums::profileHomePath, mHostname);
     QDir(path).removeRecursively();
 
-    QTimer::singleShot(0, qApp, [this]() {
+    QTimer::singleShot(0ms, qApp, [this]() {
       mudlet::self()->startAutoLogin({});
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
                         Qt::LeftButton);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClicks(QApplication::focusWidget(), mHostname);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClicks(QApplication::focusWidget(), mPort);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
     });
 
@@ -277,6 +291,52 @@ private slots:
                qPrintable(qsl("Expected buffer to contain '%1' but got '%2'")
                               .arg(expectedText, allText)));
     }
+  }
+
+  // =====================================================================
+  // Split sequence / interleaved local feed tests
+  // =====================================================================
+
+  // A CSI/OSC sequence split across two server packets must still parse when
+  // locally generated text (a feedTriggers() call, an MMCP chat message)
+  // arrives in between: the local feed runs through the same parser and must
+  // not consume or clear the pending ESC latch of the server stream.
+  void test_SplitSequenceSurvivesInterleavedLocalFeed_data() {
+    QTest::addColumn<QString>("secondPacket");
+    QTest::addColumn<QString>("mustNotContain");
+
+    QTest::newRow("split CSI") << qsl("[32mAfter\n") << qsl("[32mAfter");
+    QTest::newRow("split OSC")
+        << qsl("]2;Window Title\x07"
+               "After\n")
+        << qsl("]2;Window Title");
+  }
+
+  void test_SplitSequenceSurvivesInterleavedLocalFeed() {
+    QFETCH(QString, secondPacket);
+    QFETCH(QString, mustNotContain);
+
+    // First server packet ends in a bare ESC...
+    std::string part1{"Before\n\x1b"};
+    mpHost->mpConsole->printOnDisplay(part1, true);
+    // ...then locally generated text arrives in between...
+    std::string localText{"local tick\n"};
+    mpHost->mpConsole->printOnDisplay(localText, false);
+    // ...then the server packet with the rest of the sequence:
+    std::string part2{secondPacket.toStdString()};
+    mpHost->mpConsole->printOnDisplay(part2, true);
+
+    const QString allText = allBufferText();
+    QVERIFY2(!allText.contains(mustNotContain),
+             qPrintable(qsl("Sequence fragment '%1' leaked into display: '%2'")
+                            .arg(mustNotContain, allText)));
+    QVERIFY2(allText.contains(qsl("After")),
+             qPrintable(
+                 qsl("Text after the split sequence went missing from: '%1'")
+                     .arg(allText)));
+    QVERIFY2(allText.contains(qsl("local tick")),
+             qPrintable(qsl("Locally fed text went missing from: '%1'")
+                            .arg(allText)));
   }
 
   // =====================================================================

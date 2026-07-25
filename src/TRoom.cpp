@@ -255,9 +255,8 @@ int TRoom::getExitWeight(const QString& cmd)
 {
     if (exitWeights.contains(cmd)) {
         return exitWeights[cmd];
-    } else {
-        return weight; // NOTE: if no exit weight has been set: exit weight = room weight
     }
+    return weight; // NOTE: if no exit weight has been set: exit weight = room weight
 }
 
 // NOTE: needed so dialogRoomExit code can tell if an exit weight has been set
@@ -315,16 +314,15 @@ bool TRoom::setDoor(const QString& cmd, const int doorStatus)
             doors[cmd] = doorStatus;
             mpRoomDB->mpMap->setUnsaved(__func__);
             return true; // As we have changed things
-        } else {
-            return false; // Valid but ineffective
         }
-    } else if (doors.contains(cmd) && !doorStatus) {
+        return false; // Valid but ineffective
+    }
+    if (doors.contains(cmd) && !doorStatus) {
         doors.remove(cmd);
         mpRoomDB->mpMap->setUnsaved(__func__);
         return true; // As we have changed things
-    } else {
-        return false; // As we have not changed things
     }
+    return false; // As we have not changed things
 }
 
 int TRoom::getDoor(const QString& cmd) const
@@ -533,34 +531,32 @@ bool TRoom::hasExitOrSpecialExit(const QString& text) const
     // First check the normal ones:
     if (text == QLatin1String("n")) {
         return hasExit(DIR_NORTH);
-    } else if (text == QLatin1String("ne")) {
+    } else if (text == QLatin1String("ne")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_NORTHEAST);
-    } else if (text == QLatin1String("e")) {
+    } else if (text == QLatin1String("e")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_EAST);
-    } else if (text == QLatin1String("se")) {
+    } else if (text == QLatin1String("se")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_SOUTHEAST);
-    } else if (text == QLatin1String("s")) {
+    } else if (text == QLatin1String("s")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_SOUTH);
-    } else if (text == QLatin1String("sw")) {
+    } else if (text == QLatin1String("sw")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_SOUTHWEST);
-    } else if (text == QLatin1String("w")) {
+    } else if (text == QLatin1String("w")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_WEST);
-    } else if (text == QLatin1String("nw")) {
+    } else if (text == QLatin1String("nw")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_NORTHWEST);
-    } else if (text == QLatin1String("up")) {
+    } else if (text == QLatin1String("up")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_UP);
-    } else if (text == QLatin1String("down")) {
+    } else if (text == QLatin1String("down")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_DOWN);
-    } else if (text == QLatin1String("in")) {
+    } else if (text == QLatin1String("in")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_IN);
-    } else if (text == QLatin1String("out")) {
+    } else if (text == QLatin1String("out")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_OUT);
-    } else {
+    } else { // NOLINT(readability-else-after-return)
         // Then check the special exits:
         return mSpecialExits.contains(text);
     }
-
-    return false;
 }
 
 int TRoom::getExit(const int direction) const

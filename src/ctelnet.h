@@ -238,7 +238,17 @@ public:
     std::tuple<QString, int, bool> getConnectionInfo() const;
     void setPostingTimeout(const int);
     int getPostingTimeout() const { return mTimeOut; }
-    void loopbackTest(QByteArray& data) { processSocketData(data.data(), data.size(), true); }
+    void loopbackTest(QByteArray& data)
+    {
+        ++mLoopbackProcessingDepth;
+        processSocketData(data.data(), data.size(), true);
+        --mLoopbackProcessingDepth;
+    }
+    int loopbackProcessingDepth() const { return mLoopbackProcessingDepth; }
+    // Each nested processSocketData() puts ~100KB of buffers on the stack, so a
+    // self-feeding feedTelnet() loop overflows a 1MB (Windows) stack in only ~8
+    // levels - hence a much lower cap than TriggerUnit::scmMaxProcessingDepth.
+    inline static const int scmMaxLoopbackProcessingDepth = 5;
     void cancelLoginTimers();
     void terminateConnection();
     bool currentlySecure() const
@@ -405,15 +415,22 @@ private:
     // True between connectIt() and slot_socketHostFound, so
     // getConnectionState() reports HostLookupState during DNS lookup.
     bool mLookingUpHost = false;
+    int mLoopbackProcessingDepth = 0;
     std::queue<int> mCommandQueue;
 
     z_stream mZstream = {};
 
     bool mNeedDecompression = false;
+    // Re-entry depth of processSocketData() while draining leftover
+    // (de)compressed data; bounds stack use and decompression-bomb output.
+    int mDecompressionRecursionDepth = 0;
     std::string command;
     bool iac = false;
     bool iac2 = false;
     bool insb = false;
+    // Set once a subnegotiation passes the size cap: drop the rest of it until
+    // IAC SE instead of buffering or leaking the unterminated payload.
+    bool mDiscardingOversizedSubnegotiation = false;
     // Set if we have negotiated the use of the option by us:
     std::bitset<256> myOptionState;
     // Set if he has negotiated the use of the option by him:

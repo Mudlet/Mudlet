@@ -32,9 +32,11 @@
  */
 
 #include <QtTest/QtTest>
+#include <chrono>
 #include <QMouseEvent>
 
 #include "Host.h"
+#include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
 #include "TEvent.h"
 #include "TKey.h"
@@ -46,7 +48,10 @@
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
+#include "TVar.h"
 #include "TelnetServerStub.h"
+#include "VarUnit.h"
+#include "XMLexport.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -63,6 +68,8 @@ extern "C" {
 #endif
 }
 
+using namespace std::chrono_literals;
+
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
 extern void qInitResources_additional_splash_screens();
@@ -77,7 +84,7 @@ private:
   TelnetServerStub *mpServer = nullptr;
   Host *mpHost = nullptr;
   const QString mHostname = "ResetProfile-Test";
-  const QString mPort = "4003";
+  QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
   const QString mLocalhost = "localhost";
 
   void performReset() {
@@ -110,7 +117,8 @@ private slots:
     initializeQRCResourcesForResetProfileTest();
 
     mpServer = new TelnetServerStub(qApp);
-    mpServer->start(mLocalhost, mPort.toUShort());
+    mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+    mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
@@ -747,27 +755,128 @@ private slots:
   }
 
   // -----------------------------------------------------------------------
+  // Group 17: VarUnit saved/hidden variable bookkeeping (#9430 follow-up)
+  // -----------------------------------------------------------------------
+
+  // The VarUnit's savedVars/hiddenByUser sets are name-keyed and independent
+  // of the lua_State (VarUnit::clear() deliberately preserves them), and
+  // nothing repopulates them after a reset - only XMLimport at profile open
+  // does. If replacing the LuaInterface in resetProfile_phase2() loses them,
+  // the first profile save after a reset silently drops every user-saved
+  // variable and hidden-variable preference from the profile XML.
+  void test_savedAndHiddenVarSetsSurviveReset() {
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    luaL_dostring(L, "resetSavedTestVar = 'important'");
+
+    LuaInterface *lI = mpHost->getLuaInterface();
+    VarUnit *vu = lI->getVarUnit();
+    lI->getVars(false);
+    TVar *var = findGlobalVar(vu, qsl("resetSavedTestVar"));
+    QVERIFY2(var, "test variable not found in the variable tree");
+    // as the Variables view does when the user ticks the save checkbox:
+    vu->addSavedVar(var);
+    // and as it does when the user hides a variable:
+    vu->addHidden(qsl("resetHiddenTestVar"));
+    QVERIFY(vu->savedVars.contains(qsl("resetSavedTestVar")));
+    QVERIFY(vu->hiddenByUser.contains(qsl("resetHiddenTestVar")));
+
+    performReset();
+
+    VarUnit *newVu = mpHost->getLuaInterface()->getVarUnit();
+    QVERIFY2(newVu->savedVars.contains(qsl("resetSavedTestVar")),
+             "user's saved-variable marking should survive resetProfile()");
+    QVERIFY2(newVu->hiddenByUser.contains(qsl("resetHiddenTestVar")),
+             "user's hidden-variable preference should survive resetProfile()");
+  }
+
+  // End-to-end version of the above: the saved variable must still be
+  // written out to profile XML after a reset.
+  void test_savedVariableExportedToXmlAfterReset() {
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    luaL_dostring(L, "xmlSavedTestVar = 'survives'");
+
+    LuaInterface *lI = mpHost->getLuaInterface();
+    VarUnit *vu = lI->getVarUnit();
+    lI->getVars(false);
+    TVar *var = findGlobalVar(vu, qsl("xmlSavedTestVar"));
+    QVERIFY2(var, "test variable not found in the variable tree");
+    vu->addSavedVar(var);
+
+    performReset();
+
+    // the reset wiped the Lua value; user scripts recreate it on
+    // sysLoadEvent, and opening the Variables view rebuilds the tree
+    lua_State *newL = mpHost->mLuaInterpreter.getLuaGlobalState();
+    luaL_dostring(newL, "xmlSavedTestVar = 'survives'");
+    mpHost->getLuaInterface()->getVars(false);
+
+    const QString xmlPath =
+        mudlet::getMudletPath(enums::profileHomePath, mHostname) +
+        qsl("/reset-var-test.xml");
+    auto writer = std::make_shared<XMLexport>(mpHost);
+    QVERIFY(writer->exportPackage(xmlPath, true, false));
+    QFile file(xmlPath);
+    QVERIFY(file.open(QIODevice::ReadOnly | QIODevice::Text));
+    const QString xml = QString::fromUtf8(file.readAll());
+    file.close();
+    QFile::remove(xmlPath);
+    QVERIFY2(xml.contains(qsl("xmlSavedTestVar")),
+             "saved variable should still be exported to profile XML after "
+             "a reset");
+  }
+
+  // A fresh profile load runs hideMudletsVariables() right after
+  // loadGlobal() so the Variables view only shows the user's variables;
+  // a reset must do the same or the view fills up with Mudlet's entire
+  // internal Lua API.
+  void test_mudletInternalVariablesHiddenAfterReset() {
+    mpHost->hideMudletsVariables();
+    VarUnit *vu = mpHost->getLuaInterface()->getVarUnit();
+    QVERIFY(vu->hidden.contains(qsl("color_table")));
+    QVERIFY(vu->hidden.contains(qsl("Geyser")));
+
+    performReset();
+
+    VarUnit *newVu = mpHost->getLuaInterface()->getVarUnit();
+    QVERIFY2(newVu->hidden.contains(qsl("color_table")),
+             "Mudlet's internal variables should be re-hidden after reset, "
+             "as on profile load");
+    QVERIFY2(newVu->hidden.contains(qsl("Geyser")),
+             "Mudlet's internal variables should be re-hidden after reset, "
+             "as on profile load");
+  }
+
+  // -----------------------------------------------------------------------
   // Helpers (reused from TOscTerminatorTest pattern)
   // -----------------------------------------------------------------------
 
+  TVar *findGlobalVar(VarUnit *vu, const QString &name) {
+    for (auto *child : vu->getBase()->getChildren(false)) {
+      if (child->getName() == name) {
+        return child;
+      }
+    }
+    return nullptr;
+  }
+
   void startProfile(const QString &hostname, const QString &address,
                     const QString &port) {
-    QTimer::singleShot(0, qApp, [hostname, address, port]() {
+    QTimer::singleShot(0ms, qApp, [hostname, address, port]() {
       mudlet::self()->startAutoLogin({});
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
                         Qt::LeftButton);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClicks(QApplication::focusWidget(), hostname);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClicks(QApplication::focusWidget(), address);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClicks(QApplication::focusWidget(), port);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
     });
 

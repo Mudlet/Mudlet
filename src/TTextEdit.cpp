@@ -61,6 +61,8 @@
 #include <QWidgetAction>
 #include <QVersionNumber>
 
+using namespace std::chrono_literals;
+
 // Renders text on screen
 // Text data stored separately in a TBuffer
 TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLowerPane)
@@ -110,7 +112,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     // Scroll optimizations may use cached screen data, missing blinking content detection
     mpScrollStoppedTimer = new QTimer(this);
     mpScrollStoppedTimer->setSingleShot(true);
-    mpScrollStoppedTimer->setInterval(150);
+    mpScrollStoppedTimer->setInterval(150ms);
     connect(mpScrollStoppedTimer, &QTimer::timeout, this, &TTextEdit::slot_scrollStoppedTimeout);
 
     showNewLines();
@@ -457,7 +459,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
     int currentSize = lineText.size();
     if (mpConsole->showTimeStamps()) {
-        TChar timeStampStyle(QColor(200, 150, 0), QColor(22, 22, 22));
+        TChar timeStampStyle(QColor(200, 150, 0), mpConsole->getConsoleBgColor());
         QString timestamp(mpBuffer->timeBuffer.at(lineNumber));
         QVector<QColor> fgColors;
         QVector<QRect> textRects;
@@ -871,7 +873,18 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter,
     if (caretIsHere) {
         bgColor = mCaretColor;
     }
-    if (!textRect.isNull() && (mpConsole->getType() == TConsole::MainConsole) || bgColor != mpConsole->getConsoleBgColor()) {
+    // Fill the cell background when:
+    //  - the text bg differs from the console bg (e.g. coloured text), or
+    //  - the main console has a background image to paint the text bg over (#8885), or
+    //  - the main console bg is partially transparent and would otherwise let
+    //    the underlying surface bleed through.
+    // Skipping the fill when the bg matches an opaque console bg lets glyph
+    // descenders that extend slightly past mFontHeight (e.g. underscores at
+    // certain font sizes) survive the next line's drawing (#9070).
+    const bool fillNeeded = bgColor != mpConsole->getConsoleBgColor()
+                            || (mpConsole->getType() == TConsole::MainConsole
+                                && (mpConsole->mBgImageMode > 0 || bgColor.alpha() < 255));
+    if (!textRect.isNull() && fillNeeded) {
         painter.fillRect(textRect, bgColor);
     }
     return charWidth;
@@ -1501,6 +1514,20 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     }
 
     QPoint cursorLocation(tCharIndex, lineIndex);
+
+    // A plain left-drag must not register a selection until the pointer has
+    // actually moved to a different character cell than where the button went
+    // down. Without this, the sub-pixel jitter of an ordinary focus-gaining
+    // click produces a one-character selection that then hijacks Ctrl+C away
+    // from the command line (see #3922). Only the very first move off the press
+    // cell is suppressed (mDragSelectionEnd still equals mDragStart): once a
+    // drag has genuinely started we keep processing even when the pointer comes
+    // back to the origin cell, so the selection collapses down again instead of
+    // freezing at its last extent. Multi-click (word/line) and Ctrl selections
+    // establish their selection in mousePressEvent and so are left untouched here.
+    if (!mCtrlSelecting && mMouseTrackLevel < 2 && cursorLocation == mDragStart && mDragSelectionEnd == mDragStart) {
+        return;
+    }
 
     if ((mDragSelectionEnd.y() < cursorLocation.y() || (mDragSelectionEnd.y() == cursorLocation.y() && mDragSelectionEnd.x() < cursorLocation.x()))) {
         mPA = mDragSelectionEnd;
@@ -2538,7 +2565,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
     // We have already bailed out before here for the Central Debug Console and
     // the editor Error console so those will avoid the focus being changed to
     // this profile now:
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         if (mpHost) {
             mudlet::self()->activateProfile(mpHost);
         }
@@ -2647,13 +2674,13 @@ int TTextEdit::bufferScrollDown(int lines)
         }
         return lines;
 
-    } else if (mpBuffer->mCursorY >= static_cast<int>(mpBuffer->size() - 1)) {
+    } else if (mpBuffer->mCursorY >= static_cast<int>(mpBuffer->size() - 1)) { // NOLINT(readability-else-after-return)
         mIsTailMode = true;
         mpBuffer->mCursorY = mpBuffer->lineBuffer.size();
         forceUpdate();
         return 0;
 
-    } else {
+    } else { // NOLINT(readability-else-after-return)
         lines = static_cast<int>(mpBuffer->size() - 1) - mpBuffer->mCursorY;
         if (mpBuffer->mCursorY + lines < mScreenHeight + lines) {
             mpBuffer->mCursorY = mScreenHeight + lines;
@@ -2896,10 +2923,10 @@ QString TTextEdit::byteToLuaCodeOrChar(const char* byte)
 {
     if (!byte) {
         return QString();
-    } else if (static_cast<quint8>(*byte) < 0x20 || static_cast<quint8>(*byte) >= 0x7f) {
+    } else if (static_cast<quint8>(*byte) < 0x20 || static_cast<quint8>(*byte) >= 0x7f) { // NOLINT(readability-else-after-return)
         // Control character or not ASCII
         return qsl("\\%1").arg(static_cast<quint8>(*byte), 3, 10, QLatin1Char('0'));
-    } else if (static_cast<quint8>(*byte) == 0x3C) {
+    } else if (static_cast<quint8>(*byte) == 0x3C) { // NOLINT(readability-else-after-return)
         // '<' - which is noticed by the Qt library code and taken as an
         // HTML/Rich-text formatting opening tag and has to be converted to
         // "&lt;":
@@ -3681,6 +3708,23 @@ bool TTextEdit::focusNextPrevChild(bool next)
     return QWidget::focusNextPrevChild(next);
 }
 
+bool TTextEdit::event(QEvent* event)
+{
+    if (event->type() == QEvent::ShortcutOverride) {
+        auto* ke = static_cast<QKeyEvent*>(event);
+        // While caret mode is active its shortcut (Tab, Ctrl+Tab or F6) must
+        // beat any application-wide QShortcut - the profile-switching ones
+        // use Ctrl+Tab by default and all of them can be remapped onto these
+        // keys - so claim it here to make it arrive as a KeyPress for the
+        // caret-toggling code in keyPressEvent():
+        if (mpHost && mpHost->caretEnabled() && mpHost->caretShortcutMatches(ke)) {
+            ke->accept();
+            return true;
+        }
+    }
+    return QWidget::event(event);
+}
+
 void TTextEdit::keyPressEvent(QKeyEvent* event)
 {
     if (!mpHost || !mpHost->caretEnabled()) {
@@ -3978,8 +4022,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         }
         break;
     case Qt::Key_Tab: {
-        if ((mpHost->mCaretShortcut == Host::CaretShortcut::Tab && !(event->modifiers() & Qt::ControlModifier))
-            || (mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && (event->modifiers() & Qt::ControlModifier))) {
+        if (mpHost->caretShortcutMatches(event)) {
             mpHost->setCaretEnabled(false);
             break;
         }
@@ -4013,7 +4056,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     }
 
     case Qt::Key_F6: {
-        if (mpHost->mCaretShortcut == Host::CaretShortcut::F6) {
+        if (mpHost->caretShortcutMatches(event)) {
             mpHost->setCaretEnabled(false);
         }
         break;

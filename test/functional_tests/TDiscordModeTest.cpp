@@ -29,12 +29,15 @@
  */
 
 #include <QtTest/QtTest>
+#include <chrono>
 
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
 #include "discord.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
+
+using namespace std::chrono_literals;
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -56,7 +59,7 @@ private:
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     const QString mHostname = "Discord-Mode-Test";
-    const QString mPort = "4003";
+    QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = "localhost";
 
 private slots:
@@ -65,7 +68,8 @@ private slots:
         initializeQRCResourcesForDiscordModeTest();
 
         mpServer = new TelnetServerStub(qApp);
-        mpServer->start(mLocalhost, mPort.toUShort());
+        mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+        mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(
@@ -76,21 +80,21 @@ private slots:
         const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
         QDir(path).removeRecursively();
 
-        QTimer::singleShot(0, qApp, [this]() {
+        QTimer::singleShot(0ms, qApp, [this]() {
             mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), mHostname);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), mPort);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
         });
 

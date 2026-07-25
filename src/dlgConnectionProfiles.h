@@ -95,6 +95,7 @@ protected:
 
 private:
     static bool copyFolder(const QString& sourceFolder, const QString& destFolder);
+    void dismissTutorialInvitation();
     QString getDescription(const QString& profile_name) const;
     bool validateConnect();
     bool validateProfile();
@@ -132,6 +133,7 @@ private:
     void addLetterToProfileSearch(const int);
     void clearNotificationArea();
     void loadPasswordAsync(const QString& profileName);
+    void revealConnectionDetails();
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
@@ -155,11 +157,18 @@ private:
     QAction* mpAction_revealPassword;
     // true for the duration of the 'Copy profile' action
     bool mCopyingProfile = false;
+    // true while a profile is selected or refreshed programmatically, so that
+    // it is not mistaken for the user picking a game from the list
+    bool mProgrammaticProfileSelection = false;
+    // dialog height before it was shrunk to fit the welcome message
+    int mDialogHeightBeforeShrink = 0;
     QString mDateTimeFormat;
     QVector<QColor> mCustomIconColors;
     QTimer mSearchTextTimer;
     QString mSearchText;
     QTimer* mPasswordSaveTimer = nullptr;
+    QPushButton* mpSkipToGamesButton = nullptr;
+    bool mTutorialDismissed = false;
 
     // Async connection and password handling
     QString mPendingPasswordSaveProfile;
@@ -169,6 +178,7 @@ private:
 
 
 private slots:
+    void slot_skipToGamesList();
     void slot_profileContextMenu(QPoint pos);
     void slot_setCustomIcon();
     void slot_setCustomColor();

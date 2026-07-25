@@ -89,6 +89,7 @@ private:
     void recordUpdateTime() const;
     void recordUpdatedVersion() const;
     QString getPreviousVersion() const;
+    QString readPreviousVersionFile(const bool removeAfterRead) const;
     bool downloadReleaseIfValid(const dblsqd::Release& release);
     void finishSetup();
     void showDialogManually() const;

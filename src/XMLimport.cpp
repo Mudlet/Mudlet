@@ -276,20 +276,20 @@ void XMLimport::readVariable(TVar* pParent)
             if (name() == qsl("name")) {
                 keyName = readElementText();
                 continue;
-            } else if (name() == qsl("value")) {
+            } else if (name() == qsl("value")) { // NOLINT(readability-else-after-return)
                 value = readElementText();
                 continue;
-            } else if (name() == qsl("keyType")) {
+            } else if (name() == qsl("keyType")) { // NOLINT(readability-else-after-return)
                 keyType = readElementText().toInt();
                 continue;
-            } else if (name() == qsl("valueType")) {
+            } else if (name() == qsl("valueType")) { // NOLINT(readability-else-after-return)
                 valueType = readElementText().toInt();
                 var->setName(keyName, keyType);
                 var->setValue(value, valueType);
                 vu->addSavedVar(var);
                 lI->setValue(var);
                 continue;
-            } else if (name() == qsl("VariableGroup") || name() == qsl("Variable")) {
+            } else if (name() == qsl("VariableGroup") || name() == qsl("Variable")) { // NOLINT(readability-else-after-return)
                 readVariable(var);
             } else {
                 readUnknownElement(what);
@@ -415,7 +415,8 @@ void XMLimport::readAreas()
 
         if (name() == qsl("areas")) {
             break;
-        } else if (name() == qsl("area")) {
+        }
+        if (name() == qsl("area")) {
             readArea();
         }
     }
@@ -458,7 +459,8 @@ void XMLimport::readRoomFeatures(TRoom* pR)
         if (Q_LIKELY(isStartElement())) {
             if (name() == qsl("features")) {
                 continue;
-            } else if (Q_LIKELY(name() == qsl("feature"))) {
+            }
+            if (Q_LIKELY(name() == qsl("feature"))) {
                 readRoomFeature(pR);
             }
         } else if (isEndElement() && name() == qsl("features")) {
@@ -492,7 +494,8 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
             continue; // Skip further tests on exits as we'd have to throw away
                       // this invalid room and it would mess up the
                       // entranceMultiHash
-        } else if (Q_LIKELY(name() == qsl("exit"))) {
+        }
+        if (Q_LIKELY(name() == qsl("exit"))) {
             QString dir = attributes().value(qsl("direction")).toString();
             const int e = attributes().value(qsl("target")).toString().toInt();
             // If there is a "hidden" exit mark it as a locked door, otherwise
@@ -590,7 +593,8 @@ void XMLimport::readUnknownMapElement()
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             readUnknownMapElement();
         }
     }
@@ -606,7 +610,8 @@ std::pair<EditorViewType, int> XMLimport::readPackage()
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("HostPackage")) {
                 readHostPackage();
             } else if (name() == qsl("TriggerPackage")) {
@@ -647,7 +652,8 @@ void XMLimport::readHelpPackage()
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("helpURL")) {
                 const QString contents = readElementText();
                 mpHost->moduleHelp[mPackageName].insert("helpURL", contents);
@@ -693,7 +699,8 @@ void XMLimport::readHostPackage()
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("Host")) {
                 readHost(mpHost);
             } else {
@@ -733,6 +740,8 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttributeWithDefault(qsl("mEnableMNES"), pHost->mEnableMNES, false);
     setBoolAttributeWithDefault(qsl("mEnableMXP"), pHost->mEnableMXP, getBoolValueFromLegacyAttributeOrDefault(qsl("mFORCE_MXP_NEGOTIATION_OFF"), true, true));
     setBoolAttributeWithDefault(qsl("mEnableNAWS"), pHost->mEnableNAWS, true);
+    setBoolAttributeWithDefault(qsl("mUndoServerWrap"), pHost->mUndoServerWrap, false);
+    setBoolAttributeWithDefault(qsl("mServerWrapHintShown"), pHost->mServerWrapHintShown, false);
     setBoolAttributeWithDefault(qsl("mEnableCHARSET"), pHost->mEnableCHARSET, getBoolValueFromLegacyAttributeOrDefault(qsl("mFORCE_CHARSET_NEGOTIATION_OFF"), true, true));
     setBoolAttributeWithDefault(qsl("mEnableNEWENVIRON"), pHost->mEnableNEWENVIRON, getBoolValueFromLegacyAttributeOrDefault(qsl("forceNewEnvironNegotiationOff"), true, true));
 
@@ -1132,6 +1141,8 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mWrapIndentCount = readElementText().toInt();
             } else if (name() == qsl("wrapHangingIndentCount")) {
                 pHost->mWrapHangingIndentCount = readElementText().toInt();
+            } else if (name() == qsl("undoServerWrapWidth")) {
+                pHost->mUndoServerWrapWidth = qBound(20, readElementText().toInt(), 500);
             } else if (name() == qsl("consoleBufferSize")) {
                 pHost->mConsoleBufferSize = readElementText().toInt();
             } else if (name() == qsl("useMaxConsoleBufferSize")) {
@@ -1352,7 +1363,8 @@ int XMLimport::readTrigger(TTrigger* pParent)
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("name")) {
                 pT->setName(readElementText());
             } else if (name() == qsl("script")) {
@@ -1435,7 +1447,8 @@ int XMLimport::readTimerPackage()
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("TimerGroup") || name() == qsl("Timer")) {
                 gotTimer = true;
                 lastImportedTimerID = readTimer(mPackageName.isEmpty() ? nullptr : mpTimer);
@@ -1472,7 +1485,8 @@ int XMLimport::readTimer(TTimer* pParent)
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("name")) {
                 pT->setName(readElementText());
             } else if (name() == qsl("packageName")) {
@@ -1510,7 +1524,8 @@ int XMLimport::readAliasPackage()
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("AliasGroup") || name() == qsl("Alias")) {
                 gotAlias = true;
                 lastImportedAliasID = readAlias(mPackageName.isEmpty() ? nullptr : mpAlias);
@@ -1540,7 +1555,8 @@ int XMLimport::readAlias(TAlias* pParent)
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("name")) {
                 pT->setName(readElementText());
             } else if (name() == qsl("packageName")) {
@@ -1573,7 +1589,8 @@ int XMLimport::readActionPackage()
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("ActionGroup") || name() == qsl("Action")) {
                 gotAction = true;
                 lastImportedActionID = readAction(mPackageName.isEmpty() ? nullptr : mpAction);
@@ -1606,7 +1623,8 @@ int XMLimport::readAction(TAction* pParent)
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("name")) {
                 pT->mName = readElementText();
             } else if (name() == qsl("packageName")) {
@@ -1666,7 +1684,8 @@ int XMLimport::readScriptPackage()
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("ScriptGroup") || name() == qsl("Script")) {
                 gotScript = true;
                 lastImportedScriptID = readScript(mPackageName.isEmpty() ? nullptr : mpScript);
@@ -1696,7 +1715,8 @@ int XMLimport::readScript(TScript* pParent)
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("name")) {
                 script->mName = readElementText();
             } else if (name() == qsl("packageName")) {
@@ -1728,7 +1748,8 @@ int XMLimport::readKeyPackage()
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("KeyGroup") || name() == qsl("Key")) {
                 gotKey = true;
                 lastImportedKeyID = readKey(mPackageName.isEmpty() ? nullptr : mpKey);
@@ -1758,7 +1779,8 @@ int XMLimport::readKey(TKey* pParent)
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("name")) {
                 pT->setName(readElementText());
             } else if (name() == qsl("packageName")) {
@@ -1795,7 +1817,8 @@ void XMLimport::readModulesDetailsMap(QMap<QString, QStringList>& map)
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("key")) {
                 key = readElementText();
             } else if (name() == qsl("filepath")) {
@@ -1828,7 +1851,8 @@ void XMLimport::readStringList(QStringList& list, const QString& whatIsParent)
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("string")) {
                 list << readElementText();
             } else {
@@ -1845,7 +1869,8 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName, con
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("integer")) {
                 const QString numberText = readElementText();
                 bool ok = false;
@@ -2048,7 +2073,8 @@ void XMLimport::readStopWatchMap()
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("stopwatch")) {
                 const int watchId = attributes().value(qsl("id")).toInt();
                 auto pStopWatch = std::make_unique<stopWatch>();

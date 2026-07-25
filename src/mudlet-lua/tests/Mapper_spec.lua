@@ -56,6 +56,44 @@ describe("Tests custom map event and menu functions", function()
       assert.are.equal("top-level", menus["TestMenu"])
       assert.are.equal("TestMenu", menus["TestSubMenu"])
     end)
+
+    it("should key menus by display name by default", function()
+      addMapMenu("TestMenu", nil, "Test Display Name")
+
+      local menus = getMapMenus()
+      assert.are.equal("top-level", menus["Test Display Name"])
+      assert.is_nil(menus["TestMenu"])
+    end)
+
+    it("should treat a nil argument like no argument", function()
+      addMapMenu("TestMenu")
+
+      local menus = getMapMenus(nil)
+      assert.are.equal("top-level", menus["TestMenu"])
+    end)
+
+    it("should key menus by unique name when requested", function()
+      addMapMenu("TestMenu", nil, "Test Display Name")
+      addMapMenu("TestSubMenu", "TestMenu", "Sub Display Name")
+
+      local menus = getMapMenus(true)
+      assert.is_table(menus["TestMenu"])
+      assert.are.equal("Test Display Name", menus["TestMenu"]["display name"])
+      assert.are.equal("top-level", menus["TestMenu"]["parent"])
+      assert.is_table(menus["TestSubMenu"])
+      assert.are.equal("Sub Display Name", menus["TestSubMenu"]["display name"])
+      assert.are.equal("TestMenu", menus["TestSubMenu"]["parent"])
+    end)
+
+    it("should let getMapEvents parents be resolved via getMapMenus(true)", function()
+      addMapMenu("TestMenu", nil, "Test Display Name")
+      addMapEvent("testEvent1", "myEvent", "TestMenu", "Test Event 1")
+
+      local events = getMapEvents()
+      local menus = getMapMenus(true)
+      assert.is_not_nil(menus[events.testEvent1.parent])
+      assert.are.equal("Test Display Name", menus[events.testEvent1.parent]["display name"])
+    end)
   end)
 
   describe("Tests removeMapEvent", function()
@@ -233,6 +271,58 @@ describe("Tests map info functions", function()
       assert.is_nil(result)
       assert.is_string(err)
     end)
+  end)
+
+end)
+
+describe("Tests searchRoom", function()
+
+  local testRoomId
+  local missingRoomId = 999999999
+
+  setup(function()
+    local areaId = addAreaName("TestSearchRoomArea")
+    testRoomId = createRoomID()
+    addRoom(testRoomId)
+    setRoomArea(testRoomId, areaId)
+    setRoomName(testRoomId, "SearchRoomSpecRoom")
+  end)
+
+  teardown(function()
+    deleteRoom(testRoomId)
+    deleteArea("TestSearchRoomArea")
+  end)
+
+  it("should return the room name for an existing room ID", function()
+    local result = searchRoom(testRoomId)
+    assert.are.equal("SearchRoomSpecRoom", result)
+  end)
+
+  it("should return nil and a message for a non-existent room ID", function()
+    assert.is_false(roomExists(missingRoomId))
+    local result, err = searchRoom(missingRoomId)
+    assert.is_nil(result)
+    assert.is_string(err)
+    assert.is_truthy(err:find("not a valid roomID", 1, true))
+  end)
+
+  it("should return a table of matches for a name search", function()
+    local result = searchRoom("SearchRoomSpecRoom")
+    assert.is_table(result)
+    assert.are.equal("SearchRoomSpecRoom", result[testRoomId])
+  end)
+
+  it("should return an empty table for a name search with no matches", function()
+    local result = searchRoom("NoSuchRoomNameAnywhere")
+    assert.is_table(result)
+    assert.is_nil(next(result))
+  end)
+
+  it("should treat a numeric string as a room ID and return nil and a message when it does not exist", function()
+    local result, err = searchRoom(tostring(missingRoomId))
+    assert.is_nil(result)
+    assert.is_string(err)
+    assert.is_truthy(err:find("not a valid roomID", 1, true))
   end)
 
 end)

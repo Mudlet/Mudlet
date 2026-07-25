@@ -77,6 +77,14 @@ void TMedia::playMedia(TMediaData& mediaData)
             return; // MSP and GMCP files should not have absolute paths.
         }
 
+        // A relative path can still escape the profile's media directory via ".."
+        // segments; reject those so a hostile server cannot read or overwrite
+        // files elsewhere on disk (relative sub-directories remain permitted).
+        if ((mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP) && mediaFilePathEscapesMediaDir(mediaData)) {
+            qWarning() << qsl("TMedia::playMedia() WARNING - rejected a media file name that escapes the profile media directory: %1.").arg(mediaData.mediaFileName());
+            return;
+        }
+
         if (!mediaData.mediaFileName().contains(QLatin1Char('*')) && !mediaData.mediaFileName().contains(QLatin1Char('?'))) { // File path wildcards are * and ?
             // Append appropriate file extension for MSP files
             if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && !mediaData.mediaFileName().contains(QLatin1Char('.'))) {
@@ -657,6 +665,68 @@ bool TMedia::isFileRelative(TMediaData& mediaData)
     return isFileRelative;
 }
 
+bool TMedia::mediaFilePathEscapesMediaDir(TMediaData& mediaData) const
+{
+    return mediaFilePathEscapesMediaDir(mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName());
+}
+
+// Returns true if mediaFileName would resolve to a location outside mediaRoot. Two layers:
+//  1. A lexical check (QDir::cleanPath) rejects "../" traversal without touching the disk.
+//  2. A canonical check resolves symlinks in the existing path components, so a symlink that
+//     already lives under the media directory but points elsewhere cannot be used to escape.
+//     The target file itself normally does not exist yet (it is about to be downloaded), so we
+//     canonicalise the deepest ancestor that does exist and re-check containment against the
+//     canonicalised media root. Legitimate relative sub-directories and wildcards stay inside
+//     mediaRoot and are permitted.
+bool TMedia::mediaFilePathEscapesMediaDir(const QString& mediaRoot, const QString& mediaFileName)
+{
+    if (mediaFileName.isEmpty()) {
+        return false;
+    }
+
+    const QString root = QDir::cleanPath(mediaRoot);
+    const QString resolved = QDir::cleanPath(qsl("%1/%2").arg(root, mediaFileName));
+
+    // Layer 1 - lexical containment.
+    if (resolved != root && !resolved.startsWith(root + QLatin1Char('/'))) {
+        return true;
+    }
+
+    // Layer 2 - canonical containment (symlink-aware).
+    const QString canonicalRoot = QFileInfo(root).canonicalFilePath();
+
+    if (canonicalRoot.isEmpty()) {
+        // The media root does not exist yet, so there are no symlink components to follow; the
+        // lexical check above is authoritative.
+        return false;
+    }
+
+    QString ancestor = resolved;
+    QString canonicalAncestor;
+
+    while (!ancestor.isEmpty()) {
+        canonicalAncestor = QFileInfo(ancestor).canonicalFilePath();
+
+        if (!canonicalAncestor.isEmpty()) {
+            break; // deepest existing ancestor found
+        }
+
+        const int lastSlash = ancestor.lastIndexOf(QLatin1Char('/'));
+
+        if (lastSlash <= 0) {
+            break;
+        }
+
+        ancestor = ancestor.left(lastSlash);
+    }
+
+    if (canonicalAncestor.isEmpty()) {
+        return false;
+    }
+
+    return canonicalAncestor != canonicalRoot && !canonicalAncestor.startsWith(canonicalRoot + QLatin1Char('/'));
+}
+
 QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir& dir)
 {
     QStringList fileNameList;
@@ -894,6 +964,15 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
 
 void TMedia::downloadFile(TMediaData& mediaData)
 {
+    // Central guard for every download/write path (Client.Media.Play preloads
+    // via playMedia(), Client.Media.Load via parseJSONForMediaLoad()): never
+    // write a server-supplied file name that escapes the profile media
+    // directory through ".." segments.
+    if (mediaFilePathEscapesMediaDir(mediaData)) {
+        qWarning() << qsl("TMedia::downloadFile() WARNING - refused a media file name that escapes the profile media directory: %1.").arg(mediaData.mediaFileName());
+        return;
+    }
+
     const QString mediaPath = mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName());
     const QDir mediaDir(mediaPath);
 
@@ -925,24 +1004,32 @@ void TMedia::downloadFile(TMediaData& mediaData)
 
     if (!TMedia::isValidUrl(fileUrl)) {
         return;
-    } else {
-        QNetworkRequest request = QNetworkRequest(fileUrl);
-        request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
-        request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-#if !defined(QT_NO_SSL)
-        if (fileUrl.scheme() == qsl("https")) {
-            const QSslConfiguration config(QSslConfiguration::defaultConfiguration());
-            request.setSslConfiguration(config);
-        }
-#endif
-        mpHost->updateProxySettings(mpNetworkAccessManager);
-        QNetworkReply* getReply = mpNetworkAccessManager->get(request);
-        mMediaDownloads.insert(getReply, mediaData);
-        connect(getReply, &QNetworkReply::errorOccurred, this, [=](QNetworkReply::NetworkError) {
-            qWarning() << "TMedia::downloadFile() WARNING - couldn't download sound from " << fileUrl.url();
-            getReply->deleteLater();
-        });
     }
+
+    // Media is fetched from the network only. Refuse other schemes (e.g. file://) so a
+    // server-supplied media URL cannot turn this download into a local file read.
+    const QString scheme = fileUrl.scheme();
+    if (scheme != qsl("http") && scheme != qsl("https")) {
+        qWarning() << qsl("TMedia::downloadFile() WARNING - refused to download media from a non-HTTP(S) URL: %1").arg(fileUrl.toString());
+        return;
+    }
+
+    QNetworkRequest request = QNetworkRequest(fileUrl);
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+#if !defined(QT_NO_SSL)
+    if (fileUrl.scheme() == qsl("https")) {
+        const QSslConfiguration config(QSslConfiguration::defaultConfiguration());
+        request.setSslConfiguration(config);
+    }
+#endif
+    mpHost->updateProxySettings(mpNetworkAccessManager);
+    QNetworkReply* getReply = mpNetworkAccessManager->get(request);
+    mMediaDownloads.insert(getReply, mediaData);
+    connect(getReply, &QNetworkReply::errorOccurred, this, [=](QNetworkReply::NetworkError) {
+        qWarning() << "TMedia::downloadFile() WARNING - couldn't download sound from " << fileUrl.url();
+        getReply->deleteLater();
+    });
 }
 
 QString TMedia::setupMediaAbsolutePathFileName(TMediaData& mediaData)
@@ -1299,7 +1386,7 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
         //: This word is part of a sentence like "Music stops" when the music is about to stop.
         printClosedCaption(player->mediaData(), tr("stops"));
         return;
-    } else if (playbackState == QMediaPlayer::PlayingState && player->mediaData().mediaVolume() != TMediaData::MediaVolumePreload) {
+    } else if (playbackState == QMediaPlayer::PlayingState && player->mediaData().mediaVolume() != TMediaData::MediaVolumePreload) { // NOLINT(readability-else-after-return)
         TEvent mediaStarted{};
         mediaStarted.mArgumentList.append(qsl("sysMediaStarted"));
 
@@ -1323,7 +1410,7 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
         //: This word is part of a sentence like "Music plays" when the music is starting to play.
         printClosedCaption(player->mediaData(), tr("plays"));
         return;
-    } else if (playbackState == QMediaPlayer::PausedState) {
+    } else if (playbackState == QMediaPlayer::PausedState) { // NOLINT(readability-else-after-return)
         TEvent mediaPaused{};
         mediaPaused.mArgumentList.append(qsl("sysMediaPaused"));
 
