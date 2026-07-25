@@ -11,6 +11,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TUserWindowTest.cpp
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
+    TTriggerMatchTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     TDiscordModeTest.cpp
     MainConsoleSelectionTest.cpp
