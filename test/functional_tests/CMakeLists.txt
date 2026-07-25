@@ -46,6 +46,14 @@ set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
 
+# TDiscordModeTest drives the real discord-rpc library end-to-end. The library's
+# reconnect backoff is a process-global (60s ceiling) that the suite's
+# init/shutdown churn can inflate, so a fresh handshake can take a while (see
+# establishDiscordLogin in TDiscordModeTest.cpp). 300s covers up to three such
+# waits - the warm-up plus a per-test fallback in each end-to-end test, ~195s
+# worst case - well beyond the default 60s.
+set_tests_properties(TDiscordModeTest PROPERTIES TIMEOUT 300)
+
 # Let TDiscordModeTest find the bundled discord-rpc library so the Lua API
 # permission gating tests can run (they skip when it is unavailable)
 if(WIN32)

@@ -120,6 +120,46 @@ private:
         return {};
     }
 
+    // Brings up a genuine discord-rpc connection to the IPC stub, or reuses one
+    // that is already active and whose most recent READY came from the stub,
+    // and waits for the READY handshake to populate Discord::smUserName.
+    // Reusing an established login lets the end-to-end tests share a single
+    // connection.
+    //
+    // The reuse check (mRpcActive && logged in as the stub) does not prove the
+    // current socket completed a handshake - smUserName is never cleared on
+    // disconnect - only that RPC is up and the last READY was the stub's, which
+    // is all a test that just needs to be logged in requires.
+    //
+    // When a fresh handshake is unavoidable the timeout is larger than one full
+    // backoff period (discord-rpc's reconnect backoff has a 60s ceiling). A
+    // fresh handshake needs two backoff-gated Open() attempts (handshake write,
+    // then READY read), so a pathologically inflated backoff can exceed even
+    // this - the ctest TIMEOUT gives further headroom. That process-global
+    // backoff, inflated by the suite's init/shutdown churn, together with a
+    // fixed short (10s) timeout, is what used to make these tests flake on slow
+    // runners.
+    bool establishDiscordLogin()
+    {
+        auto& discord = mudlet::self()->mDiscord;
+        if (discord.mRpcActive && Discord::getLoggedInUserName() == mDiscordStubUserName) {
+            return true;
+        }
+        // Fresh handshake: drop any half-open connection and reconnect. Snapshot
+        // the stub's handshake tally so this proves a real op-0 handshake (not a
+        // cached READY) drove the login.
+        const int handshakesBefore = mpDiscordIpcStub->handshakeCount();
+        discord.shutdownRpc();
+        Discord::smUserName.clear();
+        discord.UpdatePresence();
+        const bool loggedIn = QTest::qWaitFor(
+                [this]() {
+                    return Discord::getLoggedInUserName() == mDiscordStubUserName;
+                },
+                65000);
+        return loggedIn && mpDiscordIpcStub->handshakeCount() > handshakesBefore;
+    }
+
 private slots:
     void initTestCase()
     {
@@ -177,18 +217,35 @@ private slots:
         if (!spy2.wait(500)) {
             QFAIL("Could not connect with the host.");
         }
+
+        // Warm up the real discord-rpc connection once, up front. A completed
+        // handshake resets the library's internal reconnect backoff (capped at
+        // 60s), which the per-test init/shutdown churn below can otherwise
+        // inflate. The end-to-end tests reuse this connection where they can.
+        auto& discord = mudlet::self()->mDiscord;
+        if (discord.libraryLoaded() && mpDiscordIpcStub->listening()) {
+            mpHost->mDiscordMode = Host::DiscordShowGameDetails;
+            mpHost->mRequiredDiscordUserName.clear();
+            QVERIFY2(establishDiscordLogin(), "Discord warm-up handshake did not complete in time");
+        }
     }
 
     void init()
     {
         QVERIFY(mpHost);
         auto& discord = mudlet::self()->mDiscord;
-        // Reset Discord state between tests
-        discord.resetData(mpHost);
+        // Restore the default gating state BEFORE resetData(): resetData() calls
+        // UpdatePresence() internally, and a Disabled mode or username mismatch
+        // left over from the previous test would make that call tear the shared
+        // RPC connection down.
         mpHost->mDiscordMode = Host::DiscordShowGameDetails;
         mpHost->mDiscordAccessFlags = Host::DiscordSetSubMask;
         mpHost->mRequiredDiscordUserName.clear();
-        Discord::smUserName.clear();
+        discord.resetData(mpHost);
+        // Deliberately do NOT clear Discord::smUserName here: a completed
+        // handshake populated it and the reuse check in establishDiscordLogin()
+        // depends on it. Tests that need a specific logged-in identity set
+        // Discord::smUserName themselves.
     }
 
     // -- Mode gating tests --
@@ -454,14 +511,13 @@ private slots:
 
         discord.setSmallImage(mpHost, qsl("shield"));
 
-        // Force a fresh connection so this test observes the handshake. The
-        // ready callback runs via Discord_RunCallbacks, pumped every 50ms by
-        // Discord's timer while QTRY_ spins the event loop:
-        discord.shutdownRpc();
-        Discord::smUserName.clear();
-        discord.UpdatePresence();
-        QTRY_COMPARE_WITH_TIMEOUT(Discord::getLoggedInUserName(), mDiscordStubUserName, 10000);
-        QVERIFY2(mpDiscordIpcStub->handshakeCount() > 0, "the library should have sent an op-0 handshake to the stub");
+        // In a full-suite run the preceding read-only tests leave a non-stub
+        // logged-in name, so this deterministically drives a genuine op-0
+        // handshake - establishDiscordLogin() only returns true once the stub's
+        // handshake tally has advanced. The ready callback arrives via
+        // Discord_RunCallbacks, pumped every 50ms by Discord's timer while the
+        // event loop spins:
+        QVERIFY2(establishDiscordLogin(), "the discord-rpc handshake did not complete in time");
 
         // The profile demands a different account, so the API turns read-only:
         mpHost->mRequiredDiscordUserName = qsl("profile_owner");
@@ -473,6 +529,9 @@ private slots:
         auto [setResult, setError] = evalLua(qsl("setDiscordDetail(\"changed\")"));
         QVERIFY2(!setResult.isValid(), "setter should be denied while the API is read-only");
         QVERIFY2(setError.contains(qsl("read-only")), "denial should say the API is read-only");
+        // No need to restore mRequiredDiscordUserName here: the next init()
+        // resets the gating state before resetData()'s UpdatePresence() runs, so
+        // the shared connection is not torn down on the way into the next test.
     }
 
     void testSetActivityReachesDiscordEndToEnd()
@@ -485,10 +544,11 @@ private slots:
             QSKIP("Discord IPC stub is not listening - cannot test presence delivery");
         }
 
-        discord.shutdownRpc();
-        Discord::smUserName.clear();
-        discord.UpdatePresence();
-        QTRY_COMPARE_WITH_TIMEOUT(Discord::getLoggedInUserName(), mDiscordStubUserName, 10000);
+        // Reuse the genuine discord-rpc connection the preceding end-to-end test
+        // established (seeded by the initTestCase warm-up) and kept alive across
+        // init(); only fall back to a fresh (backoff-tolerant) handshake if it
+        // was torn down. This is a real connection, not a faked login:
+        QVERIFY2(establishDiscordLogin(), "the discord-rpc handshake did not complete in time");
 
         mpDiscordIpcStub->clearRecordedFrames();
 
