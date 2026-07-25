@@ -667,9 +667,64 @@ bool TMedia::isFileRelative(TMediaData& mediaData)
 
 bool TMedia::mediaFilePathEscapesMediaDir(TMediaData& mediaData) const
 {
-    const QString mediaDir = QDir::cleanPath(mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName()));
-    const QString resolved = QDir::cleanPath(qsl("%1/%2").arg(mediaDir, mediaData.mediaFileName()));
-    return resolved != mediaDir && !resolved.startsWith(mediaDir + QLatin1Char('/'));
+    return mediaFilePathEscapesMediaDir(mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName());
+}
+
+// Returns true if mediaFileName would resolve to a location outside mediaRoot. Two layers:
+//  1. A lexical check (QDir::cleanPath) rejects "../" traversal without touching the disk.
+//  2. A canonical check resolves symlinks in the existing path components, so a symlink that
+//     already lives under the media directory but points elsewhere cannot be used to escape.
+//     The target file itself normally does not exist yet (it is about to be downloaded), so we
+//     canonicalise the deepest ancestor that does exist and re-check containment against the
+//     canonicalised media root. Legitimate relative sub-directories and wildcards stay inside
+//     mediaRoot and are permitted.
+bool TMedia::mediaFilePathEscapesMediaDir(const QString& mediaRoot, const QString& mediaFileName)
+{
+    if (mediaFileName.isEmpty()) {
+        return false;
+    }
+
+    const QString root = QDir::cleanPath(mediaRoot);
+    const QString resolved = QDir::cleanPath(qsl("%1/%2").arg(root, mediaFileName));
+
+    // Layer 1 - lexical containment.
+    if (resolved != root && !resolved.startsWith(root + QLatin1Char('/'))) {
+        return true;
+    }
+
+    // Layer 2 - canonical containment (symlink-aware).
+    const QString canonicalRoot = QFileInfo(root).canonicalFilePath();
+
+    if (canonicalRoot.isEmpty()) {
+        // The media root does not exist yet, so there are no symlink components to follow; the
+        // lexical check above is authoritative.
+        return false;
+    }
+
+    QString ancestor = resolved;
+    QString canonicalAncestor;
+
+    while (!ancestor.isEmpty()) {
+        canonicalAncestor = QFileInfo(ancestor).canonicalFilePath();
+
+        if (!canonicalAncestor.isEmpty()) {
+            break; // deepest existing ancestor found
+        }
+
+        const int lastSlash = ancestor.lastIndexOf(QLatin1Char('/'));
+
+        if (lastSlash <= 0) {
+            break;
+        }
+
+        ancestor = ancestor.left(lastSlash);
+    }
+
+    if (canonicalAncestor.isEmpty()) {
+        return false;
+    }
+
+    return canonicalAncestor != canonicalRoot && !canonicalAncestor.startsWith(canonicalRoot + QLatin1Char('/'));
 }
 
 QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir& dir)
@@ -950,6 +1005,15 @@ void TMedia::downloadFile(TMediaData& mediaData)
     if (!TMedia::isValidUrl(fileUrl)) {
         return;
     }
+
+    // Media is fetched from the network only. Refuse other schemes (e.g. file://) so a
+    // server-supplied media URL cannot turn this download into a local file read.
+    const QString scheme = fileUrl.scheme();
+    if (scheme != qsl("http") && scheme != qsl("https")) {
+        qWarning() << qsl("TMedia::downloadFile() WARNING - refused to download media from a non-HTTP(S) URL: %1").arg(fileUrl.toString());
+        return;
+    }
+
     QNetworkRequest request = QNetworkRequest(fileUrl);
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);

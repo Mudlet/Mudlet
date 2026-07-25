@@ -147,6 +147,11 @@ public:
     void printClosedCaption(const TMediaData& mediaData, const QString& action) const;
     void stopAllMediaPlayers();
 
+    // Returns true if mediaFileName would resolve to a location outside mediaRoot, either
+    // lexically (e.g. via "../" traversal) or through a symlink component that already exists
+    // under mediaRoot but points elsewhere. Static so it can be unit-tested without a Host.
+    static bool mediaFilePathEscapesMediaDir(const QString& mediaRoot, const QString& mediaFileName);
+
 private slots:
     void slot_writeFile(QNetworkReply* reply);
 
