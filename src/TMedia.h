@@ -147,9 +147,10 @@ public:
     void printClosedCaption(const TMediaData& mediaData, const QString& action) const;
     void stopAllMediaPlayers();
 
-    // Returns true if mediaFileName would resolve to a location outside mediaRoot (e.g.
-    // via "../" traversal). Legitimate relative sub-directories and wildcards stay within
-    // mediaRoot and are permitted; only escaping paths are rejected. Static and pure so it
+    // Returns true if mediaFileName would resolve to a location outside mediaRoot, either
+    // lexically (e.g. via "../" traversal) or through a symlink component that already exists
+    // under mediaRoot but points elsewhere. Legitimate relative sub-directories and wildcards
+    // stay within mediaRoot and are permitted; only escaping paths are rejected. Static so it
     // can be unit-tested without a Host.
     static bool mediaFileNameEscapesMediaDir(const QString& mediaRoot, const QString& mediaFileName);
 

@@ -20,6 +20,9 @@
 #include "TMedia.h"
 
 #include <QtTest/QtTest>
+#include <QDir>
+#include <QFile>
+#include <QTemporaryDir>
 
 /*
  * Regression guard for the media path-traversal fix.
@@ -89,6 +92,45 @@ private slots:
 
     // Dives into a sub-directory, then climbs out past the media root.
     void traversal_subDirThenOut_refused() { QVERIFY(escapes(QStringLiteral("sounds/../../evil.wav"))); }
+
+    // -------------------------------------------------------------------------
+    // Symlink containment - a lexical check alone is bypassable by a symlink that
+    // lives inside the media directory but points outside it. The canonical layer
+    // must catch it, while a genuine sub-directory of the media root stays allowed.
+    // -------------------------------------------------------------------------
+
+    void symlink_escapingMediaDir_refused()
+    {
+        QTemporaryDir base;
+        QVERIFY(base.isValid());
+
+        const QString root = base.filePath(QStringLiteral("media"));
+        const QString outside = base.filePath(QStringLiteral("outside"));
+        QVERIFY(QDir().mkpath(root));
+        QVERIFY(QDir().mkpath(outside));
+
+        // A symlink inside the media directory pointing outside it.
+        const QString link = root + QStringLiteral("/escape");
+        if (!QFile::link(outside, link)) {
+            QSKIP("Filesystem does not support symlinks");
+        }
+
+        // A path beneath the escaping symlink passes the lexical prefix test but must be
+        // refused by the canonical layer.
+        QVERIFY(TMedia::mediaFileNameEscapesMediaDir(root, QStringLiteral("escape/evil.wav")));
+    }
+
+    void symlink_realSubDir_allowed()
+    {
+        QTemporaryDir base;
+        QVERIFY(base.isValid());
+
+        const QString root = base.filePath(QStringLiteral("media"));
+        QVERIFY(QDir().mkpath(root + QStringLiteral("/sounds")));
+
+        // A genuine sub-directory of the media root must remain permitted.
+        QVERIFY(!TMedia::mediaFileNameEscapesMediaDir(root, QStringLiteral("sounds/ok.wav")));
+    }
 };
 
 QTEST_GUILESS_MAIN(TMediaPathTraversalTest)

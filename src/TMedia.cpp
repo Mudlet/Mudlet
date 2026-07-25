@@ -666,6 +666,14 @@ bool TMedia::isFileRelative(TMediaData& mediaData)
 // profile's media directory: "../" segments are relative yet still escape it. Resolve the
 // name against the media directory and confirm it stays within, so legitimate sub-directories
 // and wildcards keep working while traversal is refused.
+//
+// Two layers:
+//  1. A lexical check (QDir::cleanPath) rejects "../" traversal without touching the disk.
+//  2. A canonical check resolves symlinks in the existing path components, so a symlink that
+//     already lives under the media directory but points elsewhere cannot be used to escape.
+//     The target file itself normally does not exist yet (it is about to be downloaded), so we
+//     canonicalise the deepest ancestor that does exist and re-check containment against the
+//     canonicalised media root.
 bool TMedia::mediaFileNameEscapesMediaDir(const QString& mediaRoot, const QString& mediaFileName)
 {
     if (mediaFileName.isEmpty()) {
@@ -675,7 +683,44 @@ bool TMedia::mediaFileNameEscapesMediaDir(const QString& mediaRoot, const QStrin
     const QString root = QDir::cleanPath(mediaRoot);
     const QString resolved = QDir::cleanPath(qsl("%1/%2").arg(root, mediaFileName));
 
-    return resolved != root && !resolved.startsWith(root + QLatin1Char('/'));
+    // Layer 1 - lexical containment.
+    if (resolved != root && !resolved.startsWith(root + QLatin1Char('/'))) {
+        return true;
+    }
+
+    // Layer 2 - canonical containment (symlink-aware).
+    const QString canonicalRoot = QFileInfo(root).canonicalFilePath();
+
+    if (canonicalRoot.isEmpty()) {
+        // The media root does not exist yet, so there are no symlink components to follow; the
+        // lexical check above is authoritative.
+        return false;
+    }
+
+    QString ancestor = resolved;
+    QString canonicalAncestor;
+
+    while (!ancestor.isEmpty()) {
+        canonicalAncestor = QFileInfo(ancestor).canonicalFilePath();
+
+        if (!canonicalAncestor.isEmpty()) {
+            break; // deepest existing ancestor found
+        }
+
+        const int lastSlash = ancestor.lastIndexOf(QLatin1Char('/'));
+
+        if (lastSlash <= 0) {
+            break;
+        }
+
+        ancestor = ancestor.left(lastSlash);
+    }
+
+    if (canonicalAncestor.isEmpty()) {
+        return false;
+    }
+
+    return canonicalAncestor != canonicalRoot && !canonicalAncestor.startsWith(canonicalRoot + QLatin1Char('/'));
 }
 
 QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir& dir)
