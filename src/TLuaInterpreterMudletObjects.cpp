@@ -917,11 +917,10 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
         const QString fileName = QFileDialog::getExistingDirectory(nullptr, title, location);
         lua_pushstring(L, fileName.toUtf8().constData());
         return 1;
-    } else {
-        const QString fileName = QFileDialog::getOpenFileName(nullptr, title, location);
-        lua_pushstring(L, fileName.toUtf8().constData());
-        return 1;
     }
+    const QString fileName = QFileDialog::getOpenFileName(nullptr, title, location);
+    lua_pushstring(L, fileName.toUtf8().constData());
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isActive
@@ -1048,14 +1047,13 @@ int TLuaInterpreter::isPrompt(lua_State* L)
     if (userCursorY < host.mpConsole->buffer.promptBuffer.size() && userCursorY >= 0) {
         lua_pushboolean(L, host.mpConsole->buffer.promptBuffer.at(userCursorY));
         return 1;
-    } else {
-        if (host.mpConsole->mTriggerEngineMode && host.mpConsole->mIsPromptLine) {
-            lua_pushboolean(L, true);
-        } else {
-            lua_pushboolean(L, false);
-        }
-        return 1;
     }
+    if (host.mpConsole->mTriggerEngineMode && host.mpConsole->mIsPromptLine) {
+        lua_pushboolean(L, true);
+    } else {
+        lua_pushboolean(L, false);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#killAlias
@@ -1924,29 +1922,31 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
                                      __func__,
                                      qsl("invalid ANSI color number %1, only %2 (ignore background color), %3 (default background color) or 0 to 255 recognised")
                                              .arg(QString::number(value), QString::number(TTrigger::scmIgnored), QString::number(TTrigger::scmDefault)));
-        } else if (value == TTrigger::scmIgnored && ansiFgColor == TTrigger::scmIgnored) {
-            return warnArgumentValue(L, __func__, qsl("invalid ANSI color number %1, you cannot ignore both foreground and background color").arg(value));
-        } else {
-            ansiBgColor = value;
         }
+        if (value == TTrigger::scmIgnored && ansiFgColor == TTrigger::scmIgnored) {
+            return warnArgumentValue(L, __func__, qsl("invalid ANSI color number %1, you cannot ignore both foreground and background color").arg(value));
+        }
+        ansiBgColor = value;
     }
 
-    if (lua_isstring(L, ++s)) {
-        code = QString::fromUtf8(lua_tostring(L, s));
-    } else if (lua_isfunction(L, s)) {
+    const int codeIndex = ++s;
+    if (lua_isstring(L, codeIndex)) {
+        code = QString::fromUtf8(lua_tostring(L, codeIndex));
+    } else if (lua_isfunction(L, codeIndex)) {
         // leave code as a null QString(), see below
     } else {
-        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d type (code to run as a string or a function expected, got %s!)", s, luaL_typename(L, s));
+        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d type (code to run as a string or a function expected, got %s!)", codeIndex, luaL_typename(L, codeIndex));
         return lua_error(L);
     }
 
     int expiryCount = -1;
-    if (lua_isnumber(L, ++s)) {
+    ++s;
+    if (lua_isnumber(L, s)) {
         expiryCount = static_cast<int>(lua_tonumber(L, s));
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, qsl("trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
-    } else if (!lua_isnoneornil(L, ++s)) {
+    } else if (!lua_isnoneornil(L, s)) {
         lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d value (trigger expiration count must be a number, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
@@ -1963,7 +1963,7 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
-        lua_pushvalue(L, s - 1);
+        lua_pushvalue(L, codeIndex);
         lua_settable(L, LUA_REGISTRYINDEX);
     }
 

@@ -212,6 +212,9 @@ private:
     void addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items);
     void initWithHost(Host*);
+    QString certificateWarningCheckBoxStyle() const;
+    QString certificateWarningLabelStyle() const;
+    void restyleCertificateWarnings();
     void disableHostDetails();
     void enableHostDetails();
     void clearHostDetails();
