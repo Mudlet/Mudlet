@@ -1278,7 +1278,7 @@ int TLuaInterpreter::getModulePath(lua_State* L)
         lua_pushstring(L, modPath.toUtf8().constData());
         return 1;
     }
-    return 0;
+    return warnArgumentValue(L, __func__, "module doesn't exist");
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getModulePriority
@@ -1291,8 +1291,7 @@ int TLuaInterpreter::getModulePriority(lua_State* L)
         lua_pushnumber(L, priority);
         return 1;
     }
-    lua_pushstring(L, "getModulePriority: module doesn't exist");
-    return lua_error(L);
+    return warnArgumentValue(L, __func__, "module doesn't exist");
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setModulePriority
@@ -2236,10 +2235,9 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
     if (name.isEmpty()) {
         if (luaLine < host.mpConsole->buffer.timeBuffer.size()) {
             lua_pushstring(L, host.mpConsole->buffer.timeBuffer.at(luaLine).toUtf8().constData());
-        } else {
-            lua_pushstring(L, "getTimestamp: invalid line number");
+            return 1;
         }
-        return 1;
+        return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it is beyond the last line of the buffer").arg(luaLine));
     }
     auto pC = host.mpConsole->mSubConsoleMap.value(name);
     if (!pC) {
@@ -2247,10 +2245,9 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
     }
     if (luaLine < pC->buffer.timeBuffer.size()) {
         lua_pushstring(L, pC->buffer.timeBuffer.at(luaLine).toUtf8().constData());
-    } else {
-        lua_pushstring(L, "getTimestamp: invalid line number");
+        return 1;
     }
-    return 1;
+    return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it is beyond the last line of the buffer").arg(luaLine));
 }
 
 
