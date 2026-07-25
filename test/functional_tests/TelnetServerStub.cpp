@@ -26,6 +26,10 @@
 #include "TelnetServerStub.h"
 #include "utils.h"
 
+#include <chrono>
+
+using namespace std::chrono_literals;
+
 TelnetServerStub::TelnetServerStub(QObject* parent)
     : QTcpServer(parent)
 {
@@ -66,7 +70,7 @@ void TelnetServerStub::onNewConnection()
 
     QPointer<QTcpSocket> safeClient = client;
 
-    QTimer::singleShot(100, [safeClient, welcomeMessage = mpWelcomeMessage]()
+    QTimer::singleShot(100ms, [safeClient, welcomeMessage = mpWelcomeMessage]()
     {
         if (!safeClient) {
             return;

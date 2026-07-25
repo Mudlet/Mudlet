@@ -40,6 +40,9 @@
 #include <QSaveFile>
 #include <QToolButton>
 #include <QIcon>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
@@ -502,7 +505,7 @@ bool TCommandLine::event(QEvent* event)
         case Qt::Key_PageUp:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
                 mpConsole->scrollUp(0);
-                QTimer::singleShot(0, this, [this]() {
+                QTimer::singleShot(0ms, this, [this]() {
                     mpConsole->scrollUp(mpConsole->mUpperPane->getScreenHeight());
                 });
                 ke->accept();
