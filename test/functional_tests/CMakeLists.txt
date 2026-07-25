@@ -19,6 +19,7 @@ set(FUNCTIONAL_TEST_SOURCES
     ProfileRoundTripTest.cpp
     MapRoundTripTest.cpp
     UndoServerWrapTest.cpp
+    PipelineBenchmark.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
@@ -59,3 +60,7 @@ set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
 # The round-trip tests boot a full mudlet instance and save/reload profile and
 # map data, so they need a longer timeout
 set_tests_properties(ProfileRoundTripTest MapRoundTripTest PROPERTIES TIMEOUT 300)
+
+# PipelineBenchmark feeds a large fixed corpus repeatedly through the pipeline;
+# generous timeout so slow/CI machines never trip it (it is report-only anyway)
+set_tests_properties(PipelineBenchmark PROPERTIES TIMEOUT 600)
