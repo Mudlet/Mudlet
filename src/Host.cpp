@@ -881,9 +881,21 @@ void Host::resetProfile_phase2()
     mLuaInterpreter.abortAllDownloads();
     mLuaInterpreter.initLuaGlobals();
     // initLuaGlobals() closed the old lua_State, so the LuaInterface (and its
-    // VarUnit tree of registry references) must be rebuilt against the new one:
+    // VarUnit tree of registry references) must be rebuilt against the new one.
+    // The VarUnit's name-keyed saved/hidden bookkeeping does not depend on the
+    // lua_State though and is only repopulated by XMLimport at profile open, so
+    // carry it over - otherwise the first save after a reset silently drops all
+    // of the user's saved variables from the profile:
+    const QSet<QString> savedVars = mLuaInterface->getVarUnit()->savedVars;
+    const QSet<QString> hiddenByUserVars = mLuaInterface->getVarUnit()->hiddenByUser;
     mLuaInterface.reset(new LuaInterface(mLuaInterpreter.getLuaGlobalState()));
+    mLuaInterface->getVarUnit()->savedVars = savedVars;
+    mLuaInterface->getVarUnit()->hiddenByUser = hiddenByUserVars;
     mLuaInterpreter.loadGlobal();
+    // Profile load hides Mudlet's own Lua API right after loadGlobal() (see
+    // mudlet::slot_connectionDialogueFinished()); do the same here so the
+    // Variables view keeps showing only the user's variables after a reset:
+    hideMudletsVariables();
 
     // Have to recopy the values into the Lua "color_table"
     mLuaInterpreter.updateAnsi16ColorsInTable();
