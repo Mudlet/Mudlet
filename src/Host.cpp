@@ -62,6 +62,7 @@
 #include <QtConcurrentRun>
 #include <QCoreApplication>
 #include <QDialog>
+#include <QKeyEvent>
 #include <QtUiTools>
 #include <QNetworkProxy>
 #include <QSettings>
@@ -371,7 +372,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
 
     if (mudlet::self()->smFirstLaunch) {
-        QTimer::singleShot(0, this, [this]() {
+        QTimer::singleShot(0ms, this, [this]() {
             if (mpConsole) {
                 mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game"));
             }
@@ -848,7 +849,7 @@ bool Host::resetProfile_phase1()
     mKeyUnit.stopAllTriggers();
     mResetProfile = true;
 
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         resetProfile_phase2();
     });
     return true;
@@ -880,9 +881,21 @@ void Host::resetProfile_phase2()
     mLuaInterpreter.abortAllDownloads();
     mLuaInterpreter.initLuaGlobals();
     // initLuaGlobals() closed the old lua_State, so the LuaInterface (and its
-    // VarUnit tree of registry references) must be rebuilt against the new one:
+    // VarUnit tree of registry references) must be rebuilt against the new one.
+    // The VarUnit's name-keyed saved/hidden bookkeeping does not depend on the
+    // lua_State though and is only repopulated by XMLimport at profile open, so
+    // carry it over - otherwise the first save after a reset silently drops all
+    // of the user's saved variables from the profile:
+    const QSet<QString> savedVars = mLuaInterface->getVarUnit()->savedVars;
+    const QSet<QString> hiddenByUserVars = mLuaInterface->getVarUnit()->hiddenByUser;
     mLuaInterface.reset(new LuaInterface(mLuaInterpreter.getLuaGlobalState()));
+    mLuaInterface->getVarUnit()->savedVars = savedVars;
+    mLuaInterface->getVarUnit()->hiddenByUser = hiddenByUserVars;
     mLuaInterpreter.loadGlobal();
+    // Profile load hides Mudlet's own Lua API right after loadGlobal() (see
+    // mudlet::slot_connectionDialogueFinished()); do the same here so the
+    // Variables view keeps showing only the user's variables after a reset:
+    hideMudletsVariables();
 
     // Have to recopy the values into the Lua "color_table"
     mLuaInterpreter.updateAnsi16ColorsInTable();
@@ -2168,7 +2181,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // Defer raising install events until the next event loop iteration
     // This ensures all package installation is complete (including variable loading)
     // before event handlers execute, preventing Lua state corruption
-    QTimer::singleShot(0, this, [this, thing, packageName, fileName]() {
+    QTimer::singleShot(0ms, this, [this, thing, packageName, fileName]() {
         // Don't raise events if Host is shutting down to avoid handlers executing during teardown
         if (isClosingDown()) {
             return;
@@ -2222,7 +2235,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // Save profile to ensure modules persist and appear in module manager
     if (thing != enums::PackageModuleType::Package) {
         // Use a timer to save profile after module installation completes
-        QTimer::singleShot(100, this, [this]() {
+        QTimer::singleShot(100ms, this, [this]() {
             saveProfile();
         });
     }
@@ -2392,7 +2405,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         mSaveTimer = true;
         // save the profile on the next Qt main loop cycle in order for the asyncronous save mechanism
         // not to try to write to disk a package/module that just got uninstalled and removed from memory
-        QTimer::singleShot(0, this, [this]() {
+        QTimer::singleShot(0ms, this, [this]() {
             mSaveTimer = false;
             if (auto [ok, filename, error] = saveProfile(); !ok) {
                 qDebug() << qsl("Host::uninstallPackage: Couldn't save '%1' to '%2' because: %3").arg(getName(), filename, error);
@@ -4860,6 +4873,26 @@ void Host::setCaretEnabled(bool enabled)
     mpConsole->setCaretMode(enabled);
 }
 
+// Whether this key press is the one selected in the accessibility preferences
+// to toggle caret mode - such a press must reach the caret-toggling key
+// handlers instead of being swallowed by an application-wide QShortcut,
+// which the user could have remapped onto any of these keys:
+bool Host::caretShortcutMatches(const QKeyEvent* ke) const
+{
+    constexpr Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
+    switch (mCaretShortcut) {
+    case CaretShortcut::None:
+        return false;
+    case CaretShortcut::Tab:
+        return ke->key() == Qt::Key_Tab && !(ke->modifiers() & Qt::ControlModifier);
+    case CaretShortcut::CtrlTab:
+        return ke->key() == Qt::Key_Tab && (ke->modifiers() & Qt::ControlModifier);
+    case CaretShortcut::F6:
+        return ke->key() == Qt::Key_F6 && (ke->modifiers() & allModifiers) == Qt::NoModifier;
+    }
+    return false;
+}
+
 void Host::setFocusOnHostActiveCommandLine()
 {
     if (mFocusTimerRunning) {
@@ -4892,13 +4925,13 @@ void Host::setFocusOnHostActiveCommandLine()
 
             // For Steam Deck and other environments where focus might be unreliable,
             // add additional focus attempts with slight delays
-            QTimer::singleShot(10, this, [targetCommandLine]() {
+            QTimer::singleShot(10ms, this, [targetCommandLine]() {
                 if (targetCommandLine && !targetCommandLine->hasFocus()) {
                     targetCommandLine->setFocus(Qt::OtherFocusReason);
                 }
             });
 
-            QTimer::singleShot(50, this, [targetCommandLine]() {
+            QTimer::singleShot(50ms, this, [targetCommandLine]() {
                 if (targetCommandLine && !targetCommandLine->hasFocus()) {
                     targetCommandLine->setFocus(Qt::OtherFocusReason);
                 }
@@ -4908,7 +4941,7 @@ void Host::setFocusOnHostActiveCommandLine()
         mFocusTimerRunning = false;
     };
 
-    QTimer::singleShot(0, this, setCommandLineFocus);
+    QTimer::singleShot(0ms, this, setCommandLineFocus);
 }
 
 void Host::recordActiveCommandLine(TCommandLine* pCommandLine)

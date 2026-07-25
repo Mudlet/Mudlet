@@ -1862,4 +1862,32 @@ describe("Tests UI functions", function()
       assert.are.equal("SomeGameUI", BaseUI.settings.standingAside)
     end)
   end)
+
+  describe("tempButtonToolbar and tempButton return values", function()
+    -- unique names as the items cannot be deleted, and would collide on re-runs
+    -- against the same profile otherwise
+    local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+    local toolbarName = "bustedTempButtonToolbar" .. suffix
+    local buttonToolbarName = "bustedTempButtonParent" .. suffix
+    local buttonName = "bustedTempButton" .. suffix
+
+    it("tempButtonToolbar returns the created toolbar's ID", function()
+      local toolbarId = tempButtonToolbar(toolbarName, 0, 0)
+      assert.are.equal("number", type(toolbarId))
+      assert.is_true(toolbarId > 0)
+      assert.are.equal(1, exists(toolbarId, "button"))
+    end)
+
+    it("tempButton returns the created button's ID", function()
+      -- own toolbar so this test doesn't depend on the previous one
+      local parentId = tempButtonToolbar(buttonToolbarName, 0, 0)
+      assert.are.equal("number", type(parentId))
+
+      local buttonId = tempButton(buttonToolbarName, buttonName, 0)
+      assert.are.equal("number", type(buttonId))
+      assert.is_true(buttonId > 0)
+      assert.are.equal(1, exists(buttonId, "button"))
+      assert.are.equal(1, isActive(buttonId, "button"))
+    end)
+  end)
 end)

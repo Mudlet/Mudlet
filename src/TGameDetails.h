@@ -344,6 +344,15 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "Let your spirit take shape in one of fifteen races, cast your will into one of nine guilds and begin your journey towards destiny. Forge friendships. Gain power. Vanquish enemies. Work with your allies toward goals greater than yourself. Become part of the rich history of adventurers who have made their home in a world that is immediately fun and will continue to challenge and stimulate for years to come. Step through the portal, and immerse yourself in the mythical world, Astaria.\n\n"
                  "Astaria is a free-to-play MUD with an RP-optional atmosphere, set in a medieval fantasy world with a touch of cosmic horror. Active since 1994, it's a realm where dragons still roam, adventures await around every corner, and new heroes are always welcome.")},
 
+            {qsl("Federation 2 Community Edition"),
+             qsl("play.federation2.com"),
+             30003,
+             false,
+             qsl("<a href='https://federation2.com'>Website</a><br>"
+                 "<a href='https://discord.gg/FB2xzAc5CT'>Discord</a>"),
+             qsl(":/icons/fed2-logo.png"),
+             qsl("Federation 2, the space trading game, is a massively multi-player game set within an exciting world of interstellar commerce and intrigue, in which you interact and collaborate with lots of other players in real-time, and compete against them to climb the ranks. The aim of the game is to amass a larger fortune (in Imperial Groats) than any other player, and to climb the ranks by forging alliances and making friends with the right people. Cooperation is the name of the game in Federation.\n")},
+
             {qsl("Imperian"),
              qsl("imperian.com"),
              4000,

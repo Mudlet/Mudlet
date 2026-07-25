@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2025 by Nicolas Keita - nicolaskeita2@@gmail.com        *
+ *   Copyright (C) 2026 by Mudlet Developers                               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,68 +17,92 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QDeadlineTimer>
 #include <QtTest/QtTest>
-#include <chrono>
 
-#include <cstdlib>
+#include <chrono>
 
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
-
-using namespace std::chrono_literals;
+#include "utils.h"
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
 extern void qInitResources_additional_splash_screens();
 extern void qInitResources_mudlet_fonts_common();
 extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResources();
+void initializeQRCResourcesForSubnegotiation();
 
-class TelnetTextDisplayedTest : public QObject
+using namespace std::chrono_literals;
+
+// Exercises recovery from a hostile/broken telnet subnegotiation: an IAC SB
+// whose payload runs past the size cap without ever sending IAC SE. The rest of
+// that subnegotiation must be dropped (not buffered without bound, and not
+// leaked into the displayed stream) until the closing IAC SE, after which
+// normal processing resumes.
+class TelnetSubnegotiationTest : public QObject
 {
     Q_OBJECT
 
 private:
     TelnetServerStub* mpServer = nullptr;
-    const QString mpHostname = "Test-Telnet";
-    QString mpPort; // assigned the stub's actual ephemeral port in init()
-    const QString mpLocalhost = "localhost";
+    const QString mHostname = "Test-Telnet-Subnegotiation";
+    const QString mPort = "4002";
+    const QString mLocalhost = "localhost";
 
 private slots:
-    void initTestCase() { initializeQRCResources(); }
+    void initTestCase() { initializeQRCResourcesForSubnegotiation(); }
 
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
-        mpServer->start(mpLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
-        mpPort = QString::number(mpServer->serverPort());
+        mpServer->start(mLocalhost, mPort.toUShort());
         mudlet::start();
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        deleteProfileDirectory(mpHostname);
+        deleteProfileDirectory(mHostname);
     }
 
-    void test_TelnetTextDisplayed()
+    void test_oversizedSubnegotiationIsDroppedUntilSE()
     {
-        QString messageFromTheMud("\x1B[1z<B>Greetings < hunters & sorcerers</B>\x1B[7z");
-        QString messageToExpect("Greetings < hunters & sorcerers");
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
 
-        mpServer->setWelcomeMessage(messageFromTheMud);
-        startProfile(mpHostname, mpLocalhost, mpPort);
+        // MAX_TELNET_SUBNEGOTIATION_LENGTH in ctelnet.cpp is 5MB; send more
+        // than that inside the subnegotiation, with no IAC SE, then a marker
+        // that (only if recovery is broken) would leak into the display, then
+        // the real IAC SE and a line of ordinary text.
+        constexpr qsizetype overCapPadding = 5_MB + 1_KB;
+        QByteArray data;
+        data.append(TN_IAC);
+        data.append(TN_SB);
+        data.append(static_cast<char>(0x2d)); // an unused option; its value is irrelevant here
+        data.append(QByteArray(overCapPadding, 'A'));
+        data.append("SUBNEG_LEAK_MARKER");
+        data.append(TN_IAC);
+        data.append(TN_SE);
+        data.append("SUBNEG_RECOVERED\r\n");
+        // processSocketData() writes a NUL at in_buffer[size + 1], so give the
+        // backing buffer a little slack before handing it its data pointer.
+        data.reserve(data.size() + 16);
 
-        QVERIFY2(waitForTextInBuffer(messageToExpect), qPrintable(qsl("Expected text '%1' not found in console buffer").arg(messageToExpect)));
+        host->mTelnet.loopbackTest(data);
+
+        QVERIFY2(waitForBufferToContain("SUBNEG_RECOVERED"), "Ordinary text after an oversized subnegotiation was not displayed - recovery failed.");
+        QVERIFY2(!bufferContains("SUBNEG_LEAK_MARKER"), "Subnegotiation payload past the size cap leaked into the display instead of being dropped until IAC SE.");
     }
 
     void cleanup()
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mpHostname);
+        deleteProfileDirectory(mHostname);
         delete mudlet::self();
     }
 
@@ -86,7 +110,7 @@ private slots:
     // GUI
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0ms, qApp, [hostname, address, port]() {
+        QTimer::singleShot(0, qApp, [hostname, address, port]() {
             mudlet::self()->startAutoLogin({});
             QTest::qWait(100ms);
             QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
@@ -105,7 +129,7 @@ private slots:
         });
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
+        if (!spy.wait(5s)) {
             QFAIL("Profile took too long to load.");
         }
         auto host = mudlet::self()->getActiveHost();
@@ -114,26 +138,31 @@ private slots:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
 
-    // Polls the console buffer until the expected text appears on any line, with
-    // a timeout
-    bool waitForTextInBuffer(const QString& text, int timeoutMs = 5000)
+    // True if any line in the main console buffer contains the given substring
+    bool bufferContains(const QString& text)
     {
         auto console = mudlet::self()->getActiveHost()->mpConsole;
+        for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
+            if (console->buffer.line(i).contains(text)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Polls the console buffer until the expected substring appears, with a timeout
+    bool waitForBufferToContain(const QString& text, std::chrono::milliseconds timeout = 5s)
+    {
         return QTest::qWaitFor(
                 [&]() {
-                    for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
-                        if (console->buffer.line(i) == text) {
-                            return true;
-                        }
-                    }
-                    return false;
+                    return bufferContains(text);
                 },
-                timeoutMs);
+                QDeadlineTimer(timeout));
     }
 
     // Utility function
@@ -150,7 +179,7 @@ private slots:
     }
 };
 
-void initializeQRCResources()
+void initializeQRCResourcesForSubnegotiation()
 {
 #ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
     qInitResources_additional_splash_screens();
@@ -165,5 +194,5 @@ void initializeQRCResources()
     qInitResources_qm();
 }
 
-#include "TelnetTextDisplayedTest.moc"
-QTEST_MAIN(TelnetTextDisplayedTest)
+#include "TelnetSubnegotiationTest.moc"
+QTEST_MAIN(TelnetSubnegotiationTest)

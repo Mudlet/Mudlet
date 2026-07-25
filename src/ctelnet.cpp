@@ -43,6 +43,7 @@
 #include "GMCPAuthenticator.h"
 #include "TTextCodec.h"
 #include "TEncodingHelper.h"
+#include "utils.h"
 #include "TTextEdit.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
@@ -69,6 +70,12 @@ constexpr int AUTO_LOGIN_PASSWORD_DELAY_MS = 1000;
 constexpr int AUTO_LOGIN_MAX_DELAY_MS = 60000;
 
 constexpr size_t BUFFER_SIZE = 100000L;
+
+// Upper bound on a single telnet subnegotiation (IAC SB ... IAC SE). Real ones
+// (GMCP/MSDP/ATCP/...) are far smaller; this only guards against a server that
+// opens an IAC SB and never sends IAC SE, which would otherwise grow the
+// accumulation buffer without bound across reads.
+constexpr size_t MAX_TELNET_SUBNEGOTIATION_LENGTH = 5_MB;
 
 // How many times processSocketData() may re-enter itself to drain data left
 // over after a decompression pass (compressed input that did not fit in one
@@ -148,6 +155,7 @@ void cTelnet::reset()
     iac = false;
     iac2 = false;
     insb = false;
+    mDiscardingOversizedSubnegotiation = false;
     // Stop any pending password mode timeout
     if (mTimerPasswordModeTimeout) {
         mTimerPasswordModeTimeout->stop();
@@ -732,6 +740,11 @@ void cTelnet::slot_socketDisconnected()
     }
 
     postData();
+    if (mpHost->mpConsole) {
+        // A line held back for server-wrap undoing is complete now that the
+        // connection is gone - commit it before the disconnect messages:
+        mpHost->mpConsole->buffer.flushPendingServerWrapJoin();
+    }
 
     emit signal_disconnected(mpHost);
 
@@ -5052,6 +5065,25 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                 command = "";
                 iac = false;
             } else if (insb) {
+                if (mDiscardingOversizedSubnegotiation) {
+                    // Past the size cap for this subnegotiation: drop the rest
+                    // of it (do not buffer, interpret or display it) until the
+                    // closing IAC SE arrives, then resume normal processing.
+                    if (iac) {
+                        if (ch == TN_SE) {
+                            mDiscardingOversizedSubnegotiation = false;
+                            insb = false;
+                        }
+                        // IAC SE ends it; an escaped IAC IAC (or any other IAC
+                        // pair) is just more discarded payload - either way stop
+                        // tracking this IAC.
+                        iac = false;
+                    } else if (ch == TN_IAC) {
+                        iac = true;
+                    }
+                    continue;
+                }
+
                 // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
                 // IAC SB COMPRESS2 IAC SE for MCCP v2
                 if ((mMCCP_version_1 || mMCCP_version_2) && (!mNeedDecompression)) {
@@ -5108,6 +5140,20 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
 
                 //7. inside IAC SB
                 command += ch;
+
+                if (command.size() > MAX_TELNET_SUBNEGOTIATION_LENGTH) {
+                    // The server opened an IAC SB but is flooding its payload
+                    // with no IAC SE: stop buffering (to bound memory) and drop
+                    // the rest of the subnegotiation until IAC SE, rather than
+                    // resuming normal processing and leaking the unterminated
+                    // payload into the display/command stream.
+                    qWarning().nospace() << "cTelnet::processSocketData(...) WARNING - telnet subnegotiation exceeded " << MAX_TELNET_SUBNEGOTIATION_LENGTH
+                                         << " bytes without an IAC SE terminator, dropping the rest until IAC SE.";
+                    command = "";
+                    mDiscardingOversizedSubnegotiation = true;
+                    iac = false;
+                    continue;
+                }
 
                 if (iac && (ch == TN_SE)) { //IAC SE - end of subcommand
                     processTelnetCommand(command);

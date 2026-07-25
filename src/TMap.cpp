@@ -46,7 +46,9 @@
 #include <QPixmap>
 #include <QProgressDialog>
 #include <QSizeF>
+#include <chrono>
 
+using namespace std::chrono_literals;
 
 namespace {
 // Restores font information from userData that was stored during binary serialization.
@@ -3494,7 +3496,7 @@ void TMap::updateArea(int areaId)
     static bool debounce;
     if (!debounce) {
         debounce = true;
-        QTimer::singleShot(0, this, [this, areaId]() {
+        QTimer::singleShot(0ms, this, [this, areaId]() {
             debounce = false;
 
 #if defined(INCLUDE_3DMAPPER)

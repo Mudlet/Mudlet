@@ -274,3 +274,55 @@ describe("Tests map info functions", function()
   end)
 
 end)
+
+describe("Tests searchRoom", function()
+
+  local testRoomId
+  local missingRoomId = 999999999
+
+  setup(function()
+    local areaId = addAreaName("TestSearchRoomArea")
+    testRoomId = createRoomID()
+    addRoom(testRoomId)
+    setRoomArea(testRoomId, areaId)
+    setRoomName(testRoomId, "SearchRoomSpecRoom")
+  end)
+
+  teardown(function()
+    deleteRoom(testRoomId)
+    deleteArea("TestSearchRoomArea")
+  end)
+
+  it("should return the room name for an existing room ID", function()
+    local result = searchRoom(testRoomId)
+    assert.are.equal("SearchRoomSpecRoom", result)
+  end)
+
+  it("should return nil and a message for a non-existent room ID", function()
+    assert.is_false(roomExists(missingRoomId))
+    local result, err = searchRoom(missingRoomId)
+    assert.is_nil(result)
+    assert.is_string(err)
+    assert.is_truthy(err:find("not a valid roomID", 1, true))
+  end)
+
+  it("should return a table of matches for a name search", function()
+    local result = searchRoom("SearchRoomSpecRoom")
+    assert.is_table(result)
+    assert.are.equal("SearchRoomSpecRoom", result[testRoomId])
+  end)
+
+  it("should return an empty table for a name search with no matches", function()
+    local result = searchRoom("NoSuchRoomNameAnywhere")
+    assert.is_table(result)
+    assert.is_nil(next(result))
+  end)
+
+  it("should treat a numeric string as a room ID and return nil and a message when it does not exist", function()
+    local result, err = searchRoom(tostring(missingRoomId))
+    assert.is_nil(result)
+    assert.is_string(err)
+    assert.is_truthy(err:find("not a valid roomID", 1, true))
+  end)
+
+end)
