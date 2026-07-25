@@ -115,6 +115,16 @@ private slots:
             QSKIP("Filesystem does not support symlinks");
         }
 
+        // Only meaningful where the platform created a *followed* symlink: on Windows
+        // QFile::link() writes a .lnk shortcut that the filesystem does not traverse, so
+        // there is no escape to catch there. Confirm the link actually redirects to the
+        // outside directory at the canonical level before asserting.
+        const QString linkCanonical = QFileInfo(link).canonicalFilePath();
+        const QString outsideCanonical = QFileInfo(outside).canonicalFilePath();
+        if (linkCanonical.isEmpty() || linkCanonical != outsideCanonical) {
+            QSKIP("Filesystem did not create a followed symlink (e.g. Windows .lnk shortcut)");
+        }
+
         // A path beneath the escaping symlink passes the lexical prefix test but must be
         // refused by the canonical layer.
         QVERIFY(TMedia::mediaFilePathEscapesMediaDir(root, QStringLiteral("escape/evil.wav")));
