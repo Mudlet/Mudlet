@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2026 by Mudlet Developers                               *
+ *   Copyright (C) 2026 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -33,10 +33,11 @@
  *   c. peak resident set size for the whole process (Linux VmHWM)
  *
  * Results are printed one metric per line as `METRIC <name> <value>` so future
- * runs can be diffed mechanically. The test PASSES unconditionally aside from a
- * sanity check that the pipeline actually processed data - it deliberately makes
- * NO timing assertions, because absolute speed varies wildly between machines
- * and CI runners. Compare two runs of this binary on the SAME machine instead.
+ * runs can be diffed mechanically. The test PASSES unconditionally aside from
+ * sanity checks that the pipeline actually filled the console buffer and the
+ * trigger engine actually saw the data - it deliberately makes NO timing
+ * assertions, because absolute speed varies wildly between machines and CI
+ * runners. Compare two runs of this binary on the SAME machine instead.
  *
  * Run with: ctest -R PipelineBenchmark -V
  * or directly: QT_QPA_PLATFORM=offscreen ./PipelineBenchmark
@@ -51,6 +52,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTrigger.h"
 #include "TelnetServerStub.h"
@@ -80,12 +82,12 @@ private:
     QByteArray mCorpus;
     int mCorpusLines = 0;
     qint64 mCorpusBytes = 0;
+    double mTextBestPassSeconds = 0.0;
 
-    // Base corpus size and how many times each phase feeds it. We report the
-    // FASTEST single pass, not the total: the least-disturbed pass isolates the
-    // code's intrinsic speed from transient CPU contention (this test often runs
-    // on a shared/CI box next to other builds), which is exactly what a before/vs
-    // /after perf gate wants to compare. More passes = a better chance one lands
+    // We report the FASTEST single pass, not the total: the least-disturbed pass
+    // isolates the code's intrinsic speed from transient CPU contention (this test
+    // often runs on a shared/CI box next to other builds), which is exactly what a
+    // before/after perf gate wants to compare. More passes = a better chance one lands
     // in a clean window. Each 25 000-line pass is a multi-second window on its own,
     // long enough to average out sub-second scheduler jitter; the 10 000-line
     // scrollback cap (TConsole mLinesLimit) keeps memory bounded regardless.
@@ -118,7 +120,6 @@ private:
                 out += "You are standing in a dark forest. The trees tower above you.";
                 break;
             case 1:
-                // bright red combat line
                 out += "\x1b[1;31mThe ";
                 out += foes[pick(5)];
                 out += " hits you for ";
@@ -126,13 +127,11 @@ private:
                 out += " damage!\x1b[0m";
                 break;
             case 2:
-                // green room name
                 out += "\x1b[32mThe ";
                 out += rooms[pick(5)];
                 out += "\x1b[0m";
                 break;
             case 3:
-                // cyan tell with a quoted capture body
                 out += "\x1b[36m";
                 out += actors[pick(5)];
                 out += " tells you 'meet me at the tower'\x1b[0m";
@@ -148,7 +147,6 @@ private:
                        "e. \xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e \xe2\x98\xba";
                 break;
             case 6:
-                // yellow prompt-like status line
                 out += "\x1b[33mHP: ";
                 out += QByteArray::number(pick(100) + 1);
                 out += "/100 MP: ";
@@ -165,7 +163,6 @@ private:
                 out += " gold coins.";
                 break;
             case 8:
-                // 256-colour (SGR 38;5;n) descriptive line
                 out += "\x1b[38;5;208mA glowing ember drifts past the ";
                 out += rooms[pick(5)];
                 out += ".\x1b[0m";
@@ -182,13 +179,16 @@ private:
         return out;
     }
 
-    // Build a realistic mix of ~three dozen always-active triggers covering every
-    // matcher kind the engine implements: plain substring, Perl regex with capture
-    // groups, begin-of-line substring, ANSI colour patterns and multiline. Each
-    // carries an empty action, so a match runs the full regex + capture-extraction
-    // path (the cost we want to measure) but TTrigger::execute() returns before any
-    // Lua runs - keeping the run free of buffer pollution and Lua-execution noise.
-    int installTriggerSet(Host* host)
+    // Build a realistic mix of ~three dozen always-active triggers covering the
+    // substring, Perl-regex (with capture groups), begin-of-line, ANSI-colour and
+    // multiline matchers; some patterns intentionally never match so the miss
+    // path is costed too. Lua-code matchers are deliberately excluded to keep Lua
+    // execution out of the timed path, and prompt triggers need a GA signal a
+    // loopback feed cannot produce. Each trigger carries an empty action, so a
+    // match runs the full regex + capture-extraction path (the cost we want to
+    // measure) but TTrigger::execute() returns before any Lua runs - keeping the
+    // run free of buffer pollution and Lua-execution noise.
+    int installTriggerSet(Host* host, bool& allOk)
     {
         int n = 0;
 
@@ -203,8 +203,9 @@ private:
             pT->setTemporary(false);
             pT->setConditionLineDelta(5);
             pT->setIsActive(true);
-            pT->registerTrigger();
-            pT->setScript(QString()); // empty: match but do nothing
+            allOk = pT->registerTrigger() && allOk;
+            allOk = pT->setScript(QString()) && allOk;
+            allOk = pT->state() && allOk;
             ++n;
         };
 
@@ -212,21 +213,20 @@ private:
             auto* pT = new TTrigger(nullptr, host);
             pT->setIsFolder(false);
             pT->setTemporary(false);
-            pT->setupTmpColorTrigger(ansiFg, ansiBg);
+            allOk = pT->setupTmpColorTrigger(ansiFg, ansiBg) && allOk;
             pT->setIsActive(true);
-            pT->registerTrigger();
-            pT->setScript(QString());
+            allOk = pT->registerTrigger() && allOk;
+            allOk = pT->setScript(QString()) && allOk;
+            allOk = pT->state() && allOk;
             pT->setName(qsl("bench_%1").arg(n));
             ++n;
         };
 
-        // Plain substring - some common (hit often), some that never match.
         for (const QString& s :
              {qsl("forest"), qsl("orc"), qsl("gold"), qsl("experience"), qsl("sword"), qsl("tower"), qsl("damage"), qsl("coins"), qsl("café"), qsl("Square"), qsl("dragon"), qsl("teleport")}) {
             addKind({s}, REGEX_SUBSTRING, false);
         }
 
-        // Perl regex, several with capture groups.
         for (const QString& r : {qsl("^(\\w+) tells you '(.+)'$"),
                                  qsl("You gain (\\d+) experience"),
                                  qsl("hits you for (\\d+) damage"),
@@ -242,28 +242,23 @@ private:
             addKind({r}, REGEX_PERL, false);
         }
 
-        // Begin-of-line substring.
         for (const QString& s : {qsl("You are"), qsl("The"), qsl("HP:"), qsl("You gain")}) {
             addKind({s}, REGEX_BEGIN_OF_LINE_SUBSTRING, false);
         }
 
-        // ANSI colour patterns (proper ANSI indices; -1 == ignore that channel).
-        addColor(1, TTrigger::scmIgnored); // red foreground
-        addColor(2, TTrigger::scmIgnored); // green foreground
-        addColor(3, TTrigger::scmIgnored); // yellow foreground
-        addColor(6, TTrigger::scmIgnored); // cyan foreground
+        addColor(1, TTrigger::scmIgnored);
+        addColor(2, TTrigger::scmIgnored);
+        addColor(3, TTrigger::scmIgnored);
+        addColor(6, TTrigger::scmIgnored);
 
-        // Multiline: both patterns must match within the condition-line window.
         addKind({qsl("The (\\w+) hits you"), qsl("damage")}, REGEX_PERL, true);
         addKind({qsl("(\\w+) tells you"), qsl("tower")}, REGEX_PERL, true);
 
         return n;
     }
 
-    // Feed the whole corpus through the production telnet path 'passes' times,
-    // timing each pass separately, and return the fastest pass in seconds.
-    // loopbackTest() writes one byte past the data end, so the corpus is
-    // over-reserved in initTestCase().
+    // Returns the fastest pass in seconds. loopbackTest() writes NUL bytes up to
+    // two past the data end, so the corpus is over-reserved in initTestCase().
     double feedCorpusBestPass(Host* host, int passes)
     {
         double best = std::numeric_limits<double>::max();
@@ -289,9 +284,9 @@ private:
     }
 
     // Peak resident set size of the whole process, in kB, from /proc/self/status
-    // (VmHWM is the high-water mark and never decreases). Returns -1 off Linux.
-    // /proc pseudo-files report a size of 0, which makes QFile::atEnd() true
-    // immediately and readLine() loops never start - so read it all in one go.
+    // (VmHWM is the high-water mark and never decreases). /proc pseudo-files
+    // report a size of 0, which makes QFile::atEnd() true immediately and
+    // readLine() loops never start - so read it all in one go.
     static long long readPeakRssKb()
     {
 #if defined(Q_OS_LINUX)
@@ -320,8 +315,8 @@ private slots:
         initializeQRCResources();
         mCorpus = generateCorpus(kCorpusLines, mCorpusLines);
         mCorpusBytes = mCorpus.size();
-        // loopbackTest()/processSocketData() write a '\0' one byte past the data,
-        // so guarantee slack capacity beyond the logical size.
+        // loopbackTest()/processSocketData() write NUL bytes up to two past the
+        // data end, so guarantee slack capacity beyond the logical size.
         mCorpus.reserve(mCorpus.size() + 16);
         qInfo().nospace() << "Corpus: " << mCorpusLines << " lines, " << mCorpusBytes << " bytes";
     }
@@ -349,14 +344,19 @@ private slots:
         delete mudlet::self();
     }
 
-    // (a) Text pipeline: no triggers active. Measures ctelnet -> TBuffer -> console.
+    // (a) Text pipeline: no triggers active.
     void benchTextPipeline()
     {
         Host* host = startProfile();
         QVERIFY(host);
 
         const double seconds = feedCorpusBestPass(host, kFeedPasses);
-        QVERIFY2(seconds > 0.0 && mCorpusLines > 0, "text pipeline processed no data");
+        mTextBestPassSeconds = seconds;
+        // A silently-disconnected pipeline would report absurdly good numbers, so
+        // prove data flowed: after 150k fed lines the console must sit near its
+        // 10 000-line scrollback cap.
+        const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
+        QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
 
         emitMetric("text_corpus_lines", static_cast<long long>(mCorpusLines));
         emitMetric("text_corpus_bytes", mCorpusBytes);
@@ -371,16 +371,40 @@ private slots:
         Host* host = startProfile();
         QVERIFY(host);
 
-        const int triggerCount = installTriggerSet(host);
+        bool triggersOk = true;
+        const int triggerCount = installTriggerSet(host, triggersOk);
         QVERIFY2(triggerCount > 0, "no triggers were installed");
+        QVERIFY2(triggersOk, "a trigger failed to compile, register or take its script");
 
         const double seconds = feedCorpusBestPass(host, kFeedPasses);
-        QVERIFY2(seconds > 0.0 && mCorpusLines > 0, "trigger pipeline processed no data");
+        const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
+        QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
+
+        // Untimed sentinel: prove TriggerUnit actually consumes what this path
+        // feeds - a disconnected trigger engine would otherwise just make the
+        // timed numbers look better.
+        auto* sentinel = new TTrigger(qsl("bench_sentinel"), {qsl("__bench_sentinel__")}, {REGEX_SUBSTRING}, false, host);
+        sentinel->setIsFolder(false);
+        sentinel->setTemporary(false);
+        sentinel->setIsActive(true);
+        QVERIFY(sentinel->registerTrigger());
+        QVERIFY(sentinel->setScript(qsl("benchSentinelFired = true")));
+        QVERIFY(sentinel->state());
+        QByteArray probe{"__bench_sentinel__\r\n"};
+        probe.reserve(probe.size() + 16);
+        host->mTelnet.loopbackTest(probe);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(benchSentinelFired)")), "sentinel trigger did not fire - the trigger engine is not seeing pipeline data");
 
         emitMetric("trigger_count", static_cast<long long>(triggerCount));
         emitMetric("trigger_lines_per_sec", mCorpusLines / seconds);
         emitMetric("trigger_mb_per_sec", (mCorpusBytes / 1.0e6) / seconds);
         emitMetric("trigger_best_pass_ms", seconds * 1000.0);
+        if (mTextBestPassSeconds > 0.0) {
+            // Trigger throughput includes the text-pipeline cost, which dilutes a
+            // matcher-only regression ~4x; the subtraction isolates it (both
+            // phases feed identical bytes, which is what makes it valid).
+            emitMetric("trigger_overhead_ms", (seconds - mTextBestPassSeconds) * 1000.0);
+        }
     }
 
     // (c) Peak memory: VmHWM is process-wide and monotonic, so reading it after the
@@ -389,14 +413,14 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
-        // Touch the pipeline once so this slot is never the sole allocator of note.
+        // Feed one pass so the peak still reflects pipeline work when this slot
+        // is run on its own.
         feedCorpusBestPass(host, 1);
         emitMetric("peak_rss_kb", readPeakRssKb());
     }
 
 private:
-    // Drive the GUI to create and connect a profile pointed at the stub, mirroring
-    // the helper other functional tests use, and return the connected Host.
+    // Mirrors the profile-creation helper the other functional tests use.
     Host* startProfile()
     {
         const QString port = QString::number(mPort);

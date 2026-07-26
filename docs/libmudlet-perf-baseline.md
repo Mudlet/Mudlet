@@ -15,15 +15,22 @@ session runs - and measures:
 
 - **text pipeline throughput** - no triggers active (`text_*` metrics)
 - **trigger engine throughput** - the same corpus with a realistic ~34-trigger
-  set active covering every matcher kind: plain substring, Perl regex with
-  capture groups, begin-of-line substring, ANSI colour and multiline
-  (`trigger_*` metrics)
+  set active covering the plain substring, Perl regex with capture groups,
+  begin-of-line substring, ANSI colour and multiline matcher kinds
+  (`trigger_*` metrics). Lua-code matchers are deliberately excluded to keep
+  Lua execution out of the timed path, and prompt triggers need a GA signal a
+  loopback feed cannot produce.
 - **peak resident set size** for the whole process, from `/proc/self/status`
   `VmHWM` on Linux (`peak_rss_kb`)
 
 It is **report-only**: it makes no timing assertions (absolute speed varies
 wildly between machines and CI runners) and always passes as long as the
-pipeline actually processed data. Each phase feeds the corpus several times and
+pipeline actually processed data - which is genuinely asserted: each phase
+verifies the console buffer filled to its scrollback cap, the trigger phase
+verifies every trigger compiled and registered, and an untimed sentinel trigger
+proves the trigger engine consumes what the loopback path feeds. A
+silently-disconnected pipeline fails the run instead of reporting
+impressive-looking garbage. Each phase feeds the corpus several times and
 reports the **fastest single pass** - the least-disturbed pass isolates the
 code's intrinsic speed from transient CPU contention, which is exactly what a
 before/after comparison needs. That makes the numbers stable (~2% run-to-run)
@@ -63,6 +70,10 @@ METRIC peak_rss_kb 1323136
 2. Capture an "after" run of the refactored build on the **same machine**.
 3. For each throughput metric: `after / before` must be `>= 0.90` (no more than
    10% loss). `peak_rss_kb` should not grow materially either.
+4. Also apply the gate to `trigger_overhead_ms` (trigger minus text best pass -
+   valid because both phases feed identical bytes). Trigger throughput includes
+   the text-pipeline cost, which dilutes a matcher-only regression roughly 4x;
+   the overhead metric isolates the matching engine itself.
 
 Always compare same-machine, same-config. The absolute numbers below are only
 meaningful as a relative reference on identical hardware and build flags.
@@ -79,14 +90,16 @@ Captured 2026-07-25, best pass of 6 per phase, mean of 3 back-to-back runs.
 | `trigger_lines_per_sec` | ~4,600 |
 | `trigger_mb_per_sec` | ~0.26 |
 | `trigger_best_pass_ms` | ~5,430 |
+| `trigger_overhead_ms` | ~1,550 |
 | `trigger_count` | 34 |
 | `peak_rss_kb` | ~1,322,000 |
 | `text_corpus_lines` | 25,000 |
 | `text_corpus_bytes` | 1,436,934 |
 
 The realistic trigger set costs ~29% of text-pipeline throughput
-(6,440 -> 4,600 lines/sec), so the trigger metric is sensitive enough to catch a
-regression in the matching engine.
+(6,440 -> 4,600 lines/sec). For a matcher-only regression gate use
+`trigger_overhead_ms` (see step 4 above); the throughput metric alone dilutes
+matching-engine changes with text-pipeline cost.
 
 Run-to-run spread across the 3 runs (max-min over mean): `text_lines_per_sec`
 2.3%, `trigger_lines_per_sec` 2.1%, `peak_rss_kb` 0.2% - all far inside the 10%
@@ -115,5 +128,10 @@ gate's noise budget.
   throughput.
 - The whole corpus is fed as one `loopbackTest()` packet per pass rather than in
   network-sized chunks; this measures processing cost, not socket delivery.
+- Always compare full-binary runs: `peak_rss_kb` (VmHWM) is process-wide and
+  monotonic, so filtering to individual test slots changes what it means.
+- All benchmark triggers sit at the root of the trigger tree; real profiles nest
+  most triggers under parent folders, so root iteration is slightly overweighted
+  relative to real workloads - irrelevant for a relative gate.
 - If you re-baseline on different hardware or build flags, replace the whole
   table above - never compare across configurations.
