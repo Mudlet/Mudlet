@@ -77,7 +77,8 @@ private:
 
     // Evaluates a Lua expression in the profile's global state. Returns the
     // first result (invalid QVariant for nil or a compile/runtime error) plus
-    // the second result as a string (the error message on denial).
+    // the second result as a string: the error message on denial, or the Lua
+    // error text when the expression fails to compile or run.
     std::pair<QVariant, QString> evalLua(const QString& expression)
     {
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
@@ -97,6 +98,10 @@ private:
             if (lua_gettop(L) > base + 1 && lua_isstring(L, base + 2)) {
                 second = QString::fromUtf8(lua_tostring(L, base + 2));
             }
+        } else if (lua_gettop(L) > base && lua_isstring(L, base + 1)) {
+            // A compile or runtime error leaves the message on the stack;
+            // surface it so a failing test reports the real Lua error.
+            second = QString::fromUtf8(lua_tostring(L, base + 1));
         }
         lua_settop(L, base);
         return {first, second};
