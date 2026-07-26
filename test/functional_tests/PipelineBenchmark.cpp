@@ -22,9 +22,11 @@
  *
  * Established for the libmudlet refactor (issue #9011): extracting Qt Widgets
  * from mudlet_core carries a "no more than 10% throughput loss" gate, which is
- * unenforceable without a committed baseline. This benchmark drives a real
- * Mudlet profile with a fixed, deterministically-generated corpus (mixed plain
- * text, ANSI SGR colour and UTF-8) through the production
+ * enforced by comparing an older and a newer build of this binary on the SAME
+ * machine (no absolute numbers are committed - they are meaningless across
+ * machines). This benchmark drives a real Mudlet profile with a fixed,
+ * deterministically-generated corpus (mixed plain text, ANSI SGR colour, UTF-8
+ * and long wrapping-heavy prose) through the production
  * cTelnet::processSocketData -> TBuffer::translateToPlainText -> console ->
  * TriggerUnit path via cTelnet::loopbackTest(), the same code an online session
  * runs, and measures:
@@ -41,6 +43,11 @@
  *
  * Run with: ctest -R PipelineBenchmark -V
  * or directly: QT_QPA_PLATFORM=offscreen ./PipelineBenchmark
+ *
+ * Diff two runs with test/compare-perf-baseline.py (prints per-metric deltas and
+ * a PASS/FAIL against the 10% gate). This harness deliberately stops at the core
+ * pipeline; for live-GUI display/echo throughput its companion is the
+ * Stressinator display package - see docs/libmudlet-perf-baseline.md.
  */
 
 #include <QtTest/QtTest>
@@ -94,9 +101,11 @@ private:
     static constexpr int kCorpusLines = 25000;
     static constexpr int kFeedPasses = 6;
 
-    // Deterministic corpus: mixed plain text, ANSI SGR colour and UTF-8, one line
-    // per '\n' so the processed-line count is exact. Seeded with a constant so the
-    // bytes are byte-for-byte identical on every run and every machine.
+    // Deterministic corpus: mixed plain text, ANSI SGR colour, UTF-8 and the odd
+    // long descriptive paragraph (the wrapping-heavy line pattern the Stressinator
+    // display package feeds from Monte Cristo prose), one line per '\n' so the
+    // processed-line count is exact. Seeded with a constant so the bytes are
+    // byte-for-byte identical on every run and every machine.
     static QByteArray generateCorpus(int lines, int& outLineCount)
     {
         std::mt19937 rng(0xC0FFEEu);
@@ -115,7 +124,7 @@ private:
         out.reserve(static_cast<qsizetype>(lines) * 96);
         int count = 0;
         for (int i = 0; i < lines; ++i) {
-            switch (pick(10)) {
+            switch (pick(11)) {
             case 0:
                 out += "You are standing in a dark forest. The trees tower above you.";
                 break;
@@ -166,6 +175,16 @@ private:
                 out += "\x1b[38;5;208mA glowing ember drifts past the ";
                 out += rooms[pick(5)];
                 out += ".\x1b[0m";
+                break;
+            case 9:
+                // A long descriptive paragraph on a single line, forcing several
+                // word-wrap passes the short templates never exercise (the natural
+                // prose the Stressinator display package streams from a novel).
+                out += "The ancient library stretches away in every direction, its towering shelves crammed with "
+                       "mouldering tomes, cracked scrolls and curiosities gathered across a hundred forgotten ages; "
+                       "dust drifts through the amber shafts of light that spill from the high stained-glass windows, "
+                       "and somewhere far above, unseen, the slow tick of a great clock marks out the patient centuries "
+                       "as you catch your breath and let your gaze wander over the winding aisles ahead.";
                 break;
             default:
                 out += "A gentle breeze carries the scent of pine and distant woodsmoke across the clearing "
