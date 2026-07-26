@@ -1,33 +1,21 @@
 #!/usr/bin/env python3
 """Compare two PipelineBenchmark runs and gate on throughput regressions.
 
-The libmudlet refactor (issue #9011) carries a "no more than 10% throughput
-loss" gate. Absolute benchmark numbers are meaningless across machines, so this
-tool does the only comparison that is meaningful: an OLDER Mudlet vs a NEWER
-Mudlet built and run on the SAME machine.
+Absolute benchmark numbers are meaningless across machines, so the only valid
+comparison is an OLDER vs a NEWER Mudlet built and run on the SAME machine (the
+libmudlet refactor's 10% throughput-loss gate, issue #9011). This reads the
+`METRIC <name> <value>` lines PipelineBenchmark prints, computes per-metric
+deltas, and exits non-zero if any gated metric regressed past the threshold.
 
-It reads the `METRIC <name> <value>` lines that
-test/functional_tests/PipelineBenchmark.cpp prints, computes the per-metric
-delta between a "before" and an "after" run, and exits non-zero if any gated
-metric regressed by more than the threshold (default 10%).
-
-Two ways to use it:
-
-  # 1. Run two already-built binaries from two build trees:
-  test/compare-perf-baseline.py --run \\
-      before-build/test/functional_tests/PipelineBenchmark \\
-      after-build/test/functional_tests/PipelineBenchmark
-
-  # 2. Compare two captured METRIC outputs (`... PipelineBenchmark > before.txt`):
+Usage:
+  # run two already-built binaries:
+  test/compare-perf-baseline.py --run before-build/.../PipelineBenchmark \\
+      after-build/.../PipelineBenchmark
+  # or compare two captured METRIC dumps:
   test/compare-perf-baseline.py before.txt after.txt
 
-Options:
-  --threshold 0.10   max tolerated fractional regression on a gated metric
-  --gate a,b,c       override which metrics fail the run (default:
-                     text_lines_per_sec,trigger_lines_per_sec,trigger_overhead_ms)
-
-Exit codes: 0 = all gated metrics within threshold, 1 = a gated metric
-regressed, 2 = usage error or the two runs are not comparable.
+Exit codes: 0 = within threshold, 1 = a gated metric regressed, 2 = usage error
+or the two runs are not comparable.
 """
 
 import argparse
@@ -36,13 +24,11 @@ import re
 import subprocess
 import sys
 
-# Metrics whose absolute value is a fixed property of the corpus/trigger set.
-# If they differ between the two runs the runs used different harnesses and the
-# comparison is invalid, so we abort rather than report a bogus delta.
+# Fixed properties of the corpus/trigger set; if they differ, the two runs used
+# different harnesses and the comparison is invalid - so we abort.
 INVARIANTS = ("text_corpus_lines", "text_corpus_bytes", "trigger_count")
 
-# Which metrics fail the run by default. The task's focus: throughput
-# (lines/sec) and the isolated matcher cost (trigger_overhead_ms).
+# Gated by default: throughput (lines/sec) and the isolated matcher cost.
 DEFAULT_GATE = ("text_lines_per_sec", "trigger_lines_per_sec", "trigger_overhead_ms")
 
 METRIC_RE = re.compile(r"^METRIC\s+(\S+)\s+(-?[\d.]+)\s*$")

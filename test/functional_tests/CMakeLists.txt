@@ -33,13 +33,12 @@ add_dependencies(UndoServerWrapReplay ${LIB_MUDLET_TARGET})
 target_link_libraries(UndoServerWrapReplay PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
 set_target_properties(UndoServerWrapReplay PROPERTIES ENABLE_EXPORTS ON)
 
-# PipelineBenchmark is a report-only perf harness for manual before/after
-# comparisons; test/compare-perf-baseline.py runs the built binary directly. It
-# is built here so that script (and a direct run) always have a binary, but is
-# deliberately kept OUT of the default ctest suite: it feeds a huge fixed corpus
-# many times and makes no timing assertions, so running it on every CI pipeline
-# only burns minutes. Configure with -DREGISTER_PERF_BENCHMARK=ON to also
-# register it with ctest (e.g. for `ctest -R PipelineBenchmark`).
+# Report-only perf harness for manual before/after comparisons
+# (test/compare-perf-baseline.py runs the built binary directly). Built with the
+# functional tests so a binary always exists, but kept OUT of the default ctest
+# suite: it feeds a huge fixed corpus many times and makes no timing assertions,
+# so running it every CI pipeline only burns minutes. -DREGISTER_PERF_BENCHMARK=ON
+# also registers it with ctest.
 option(REGISTER_PERF_BENCHMARK "Register the report-only PipelineBenchmark with ctest (it is built either way)" OFF)
 add_executable(PipelineBenchmark PipelineBenchmark.cpp ${FUNCTIONAL_TEST_UTILS})
 add_dependencies(PipelineBenchmark ${LIB_MUDLET_TARGET})
@@ -47,7 +46,7 @@ target_link_libraries(PipelineBenchmark PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
 set_target_properties(PipelineBenchmark PROPERTIES ENABLE_EXPORTS ON)
 if(REGISTER_PERF_BENCHMARK)
     add_test(NAME PipelineBenchmark COMMAND $<TARGET_FILE:PipelineBenchmark>)
-    # feeds a large fixed corpus repeatedly, so give it a generous timeout
+    # large corpus fed repeatedly, so allow a generous timeout
     set_tests_properties(PipelineBenchmark PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0"
         LABELS "functional"

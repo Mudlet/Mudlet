@@ -18,38 +18,23 @@
  ***************************************************************************/
 
 /*
- * Report-only performance baseline for the text and trigger pipelines.
+ * Report-only performance baseline for the text and trigger pipelines, for the
+ * libmudlet refactor's "no more than 10% throughput loss" gate (issue #9011).
  *
- * Established for the libmudlet refactor (issue #9011): extracting Qt Widgets
- * from mudlet_core carries a "no more than 10% throughput loss" gate, which is
- * enforced by comparing an older and a newer build of this binary on the SAME
- * machine (no absolute numbers are committed - they are meaningless across
- * machines). This benchmark drives a real Mudlet profile with a fixed,
- * deterministically-generated corpus (mixed plain text, ANSI SGR colour, UTF-8
- * and long wrapping-heavy prose) through the production
- * cTelnet::processSocketData -> TBuffer::translateToPlainText -> console ->
- * TriggerUnit path via cTelnet::loopbackTest(), the same code an online session
- * runs, and measures:
- *   a. text pipeline throughput (no triggers active)   -> lines/sec, MB/s
- *   b. trigger engine throughput (a realistic trigger set active) -> lines/sec, MB/s
- *   c. peak resident set size for the whole process (Linux VmHWM)
+ * Absolute numbers are meaningless across machines, so nothing is asserted on
+ * timing and no baseline is committed: the gate is enforced by comparing an
+ * older and a newer build of this binary on the SAME machine with
+ * test/compare-perf-baseline.py. The benchmark feeds a fixed, deterministic
+ * corpus through the production cTelnet::loopbackTest() path and prints one
+ * `METRIC <name> <value>` line per measurement.
  *
- * Results are printed one metric per line as `METRIC <name> <value>` so future
- * runs can be diffed mechanically. The test PASSES unconditionally aside from
- * sanity checks that the pipeline actually filled the console buffer and the
- * trigger engine actually saw the data - it deliberately makes NO timing
- * assertions, because absolute speed varies wildly between machines and CI
- * runners. Compare two runs of this binary on the SAME machine instead.
+ * Built with the functional tests but deliberately NOT registered with ctest by
+ * default (report-only and slow); run it directly, or configure with
+ * -DREGISTER_PERF_BENCHMARK=ON to also get it under ctest:
+ *   QT_QPA_PLATFORM=offscreen ./PipelineBenchmark
  *
- * This target is built with the functional tests but is deliberately NOT
- * registered with ctest by default (it is report-only and slow); run it
- * directly: QT_QPA_PLATFORM=offscreen ./PipelineBenchmark
- * (configure with -DREGISTER_PERF_BENCHMARK=ON to also get it under ctest).
- *
- * Diff two runs with test/compare-perf-baseline.py (prints per-metric deltas and
- * a PASS/FAIL against the 10% gate). This harness deliberately stops at the core
- * pipeline; for live-GUI display/echo throughput its companion is the
- * Stressinator display package - see docs/libmudlet-perf-baseline.md.
+ * Companion for the live-GUI display/echo path is the Stressinator display
+ * package; see docs/libmudlet-perf-baseline.md.
  */
 
 #include <QtTest/QtTest>
@@ -84,30 +69,25 @@ private:
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = qsl("Perf-Baseline-Host");
     const QString mLocalhost = qsl("localhost");
-    quint16 mPort = 0; // assigned the stub's actual loopback port in init()
+    quint16 mPort = 0;
 
-    // The shared corpus, generated once. Both phases feed the identical bytes so
-    // the text and trigger numbers are directly comparable.
+    // Both phases feed these identical bytes, so text and trigger numbers are
+    // directly comparable.
     QByteArray mCorpus;
     int mCorpusLines = 0;
     qint64 mCorpusBytes = 0;
     double mTextBestPassSeconds = 0.0;
 
-    // We report the FASTEST single pass, not the total: the least-disturbed pass
-    // isolates the code's intrinsic speed from transient CPU contention (this test
-    // often runs on a shared/CI box next to other builds), which is exactly what a
-    // before/after perf gate wants to compare. More passes = a better chance one lands
-    // in a clean window. Each 25 000-line pass is a multi-second window on its own,
-    // long enough to average out sub-second scheduler jitter; the 10 000-line
-    // scrollback cap (TConsole mLinesLimit) keeps memory bounded regardless.
+    // Report the FASTEST pass, not the average: the least-disturbed pass isolates
+    // intrinsic speed from transient CPU contention (this often runs on a shared/CI
+    // box), which is what a before/after gate wants. More passes raise the chance
+    // one lands in a clean window; TConsole's 10 000-line scrollback cap bounds
+    // memory regardless of corpus size.
     static constexpr int kCorpusLines = 25000;
     static constexpr int kFeedPasses = 6;
 
-    // Deterministic corpus: mixed plain text, ANSI SGR colour, UTF-8 and the odd
-    // long descriptive paragraph (the wrapping-heavy line pattern the Stressinator
-    // display package feeds from Monte Cristo prose), one line per '\n' so the
-    // processed-line count is exact. Seeded with a constant so the bytes are
-    // byte-for-byte identical on every run and every machine.
+    // Seeded with a constant so the corpus bytes are identical on every run and
+    // every machine; one line per '\n' keeps the processed-line count exact.
     static QByteArray generateCorpus(int lines, int& outLineCount)
     {
         std::mt19937 rng(0xC0FFEEu);
@@ -115,8 +95,8 @@ private:
             return static_cast<int>(rng() % static_cast<unsigned>(n));
         };
 
-        // Building blocks reused across templates so substring/regex triggers have
-        // realistic, varied text to match (and mostly miss) against.
+        // Varied building blocks so substring/regex triggers have realistic text
+        // to match (and mostly miss) against.
         static const char* const rooms[] = {"Village Square", "Dark Forest", "Ancient Tower", "Misty Harbour", "Goblin Warren"};
         static const char* const actors[] = {"Gandalf", "Aragorn", "Legolas", "Gimli", "Frodo"};
         static const char* const foes[] = {"orc", "goblin", "troll", "wraith", "spider"};
@@ -153,7 +133,6 @@ private:
                 out += " experience points.";
                 break;
             case 5:
-                // UTF-8 flavour: accented Latin, CJK and a symbol
                 out += "The caf\xc3\xa9 serves cr\xc3\xa8me br\xc3\xbbl\xc3\xa9"
                        "e. \xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e \xe2\x98\xba";
                 break;
@@ -179,9 +158,8 @@ private:
                 out += ".\x1b[0m";
                 break;
             case 9:
-                // A long descriptive paragraph on a single line, forcing several
-                // word-wrap passes the short templates never exercise (the natural
-                // prose the Stressinator display package streams from a novel).
+                // One long single-line paragraph, to force word-wrap passes the
+                // short templates never exercise.
                 out += "The ancient library stretches away in every direction, its towering shelves crammed with "
                        "mouldering tomes, cracked scrolls and curiosities gathered across a hundred forgotten ages; "
                        "dust drifts through the amber shafts of light that spill from the high stained-glass windows, "
@@ -200,15 +178,12 @@ private:
         return out;
     }
 
-    // Build a realistic mix of ~three dozen always-active triggers covering the
-    // substring, Perl-regex (with capture groups), begin-of-line, ANSI-colour and
-    // multiline matchers; some patterns intentionally never match so the miss
-    // path is costed too. Lua-code matchers are deliberately excluded to keep Lua
-    // execution out of the timed path, and prompt triggers need a GA signal a
-    // loopback feed cannot produce. Each trigger carries an empty action, so a
-    // match runs the full regex + capture-extraction path (the cost we want to
-    // measure) but TTrigger::execute() returns before any Lua runs - keeping the
-    // run free of buffer pollution and Lua-execution noise.
+    // A realistic ~three-dozen always-active trigger mix. Some patterns never
+    // match, so the miss path is costed too. Lua-code matchers are excluded and
+    // every trigger carries an empty script, so a match runs the full regex +
+    // capture path (the cost we want) but TTrigger::execute() returns before any
+    // Lua runs - keeping Lua execution and buffer pollution out of the timed path.
+    // Prompt triggers are omitted: they need a GA signal a loopback feed cannot send.
     int installTriggerSet(Host* host, bool& allOk)
     {
         int n = 0;
@@ -278,8 +253,8 @@ private:
         return n;
     }
 
-    // Returns the fastest pass in seconds. loopbackTest() writes NUL bytes up to
-    // two past the data end, so the corpus is over-reserved in initTestCase().
+    // loopbackTest() writes NUL bytes up to two past the data end, so the corpus
+    // is over-reserved in initTestCase().
     double feedCorpusBestPass(Host* host, int passes)
     {
         double best = std::numeric_limits<double>::max();
@@ -304,10 +279,9 @@ private:
         std::fflush(stdout);
     }
 
-    // Peak resident set size of the whole process, in kB, from /proc/self/status
-    // (VmHWM is the high-water mark and never decreases). /proc pseudo-files
-    // report a size of 0, which makes QFile::atEnd() true immediately and
-    // readLine() loops never start - so read it all in one go.
+    // Process-wide peak RSS in kB (VmHWM never decreases). /proc pseudo-files
+    // report a size of 0, so QFile::atEnd() is immediately true and readLine()
+    // loops never start - read it all in one go.
     static qint64 readPeakRssKb()
     {
 #if defined(Q_OS_LINUX)
@@ -336,8 +310,8 @@ private slots:
         initializeQRCResources();
         mCorpus = generateCorpus(kCorpusLines, mCorpusLines);
         mCorpusBytes = mCorpus.size();
-        // loopbackTest()/processSocketData() write NUL bytes up to two past the
-        // data end, so guarantee slack capacity beyond the logical size.
+        // loopbackTest() writes NUL bytes past the data end; reserve slack so that
+        // stays within the allocation.
         mCorpus.reserve(mCorpus.size() + 16);
         qInfo().nospace() << "Corpus: " << mCorpusLines << " lines, " << mCorpusBytes << " bytes";
     }
@@ -345,8 +319,8 @@ private slots:
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
-        // Bind an ephemeral port (0) so parallel worktree runs never collide, then
-        // read the actual port back from the QTcpServer the stub derives from.
+        // Ephemeral port (0) so parallel worktree runs never collide; read the
+        // actual port back afterwards.
         mpServer->start(mLocalhost, 0);
         mPort = mpServer->serverPort();
         mudlet::start();
@@ -365,7 +339,6 @@ private slots:
         delete mudlet::self();
     }
 
-    // (a) Text pipeline: no triggers active.
     void benchTextPipeline()
     {
         Host* host = startProfile();
@@ -374,8 +347,7 @@ private slots:
         const double seconds = feedCorpusBestPass(host, kFeedPasses);
         mTextBestPassSeconds = seconds;
         // A silently-disconnected pipeline would report absurdly good numbers, so
-        // prove data flowed: after 150k fed lines the console must sit near its
-        // 10 000-line scrollback cap.
+        // prove data flowed: the console must sit near its 10 000-line scrollback cap.
         const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
         QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
 
@@ -386,7 +358,6 @@ private slots:
         emitMetric("text_best_pass_ms", seconds * 1000.0);
     }
 
-    // (b) Trigger engine: same corpus with a realistic trigger set active.
     void benchTriggerEngine()
     {
         Host* host = startProfile();
@@ -401,9 +372,8 @@ private slots:
         const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
         QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
 
-        // Untimed sentinel: prove TriggerUnit actually consumes what this path
-        // feeds - a disconnected trigger engine would otherwise just make the
-        // timed numbers look better.
+        // Untimed sentinel proving TriggerUnit consumes what the loopback path
+        // feeds - a disconnected trigger engine would just flatter the timed numbers.
         auto* sentinel = new TTrigger(qsl("bench_sentinel"), {qsl("__bench_sentinel__")}, {REGEX_SUBSTRING}, false, host);
         sentinel->setIsFolder(false);
         sentinel->setTemporary(false);
@@ -422,20 +392,20 @@ private slots:
         emitMetric("trigger_best_pass_ms", seconds * 1000.0);
         if (mTextBestPassSeconds > 0.0) {
             // Trigger throughput includes the text-pipeline cost, which dilutes a
-            // matcher-only regression ~4x; the subtraction isolates it (both
-            // phases feed identical bytes, which is what makes it valid).
+            // matcher-only regression ~4x; subtracting isolates it (valid because
+            // both phases feed identical bytes).
             emitMetric("trigger_overhead_ms", (seconds - mTextBestPassSeconds) * 1000.0);
         }
     }
 
-    // (c) Peak memory: VmHWM is process-wide and monotonic, so reading it after the
-    // two feed phases captures the true peak for the whole run.
+    // VmHWM is process-wide and monotonic, so reading it after the feed phases
+    // captures the true peak for the whole run.
     void benchPeakMemory()
     {
         Host* host = startProfile();
         QVERIFY(host);
         // Feed one pass so the peak still reflects pipeline work when this slot
-        // is run on its own.
+        // runs on its own.
         feedCorpusBestPass(host, 1);
         emitMetric("peak_rss_kb", readPeakRssKb());
     }
