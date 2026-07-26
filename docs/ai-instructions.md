@@ -4,22 +4,6 @@
 
 Mudlet is a cross-platform MUD client built with Qt6 and C++20, providing scripting capabilities in Lua 5.1. The project emphasizes "powerful simplicity" - clean interface with deep customization options.
 
-## Core technologies
-
-- **C++20** with Qt6 (minimum 6.8.2)
-- **CMake** build system (minimum 3.25.1)
-- **Lua 5.1** scripting engine
-- **Cross-platform**: Windows, macOS, Linux
-
-## Project structure
-
-- `src/` - main application source code
-- `test/` - Unit tests for C++ core, written in Qt Test
-- `src/mudlet-lua/tests/` - Unit tests covering the Lua API, written in Busted
-- `3rdparty/` - External dependencies and libraries
-- `translations/` - Internationalization files
-- `.github/workflows/` - Github Actions workflows
-
 ## Coding standards
 All files should end with a newline character at the end of the file.
 
@@ -102,22 +86,6 @@ Minimize `#include` directives to reduce build times:
 - When adding new code, verify you need each include you add
 - Don't copy includes from similar files without checking if they're needed
 
-**Forward declaration examples:**
-```cpp
-// In header: use forward declaration when only pointer/reference is needed
-class Host;  // Forward declare instead of #include "Host.h"
-class QCloseEvent;
-
-class MyClass {
-    Host* mpHost;  // Pointer - forward declaration sufficient
-    void closeEvent(QCloseEvent* event);  // Pointer param - forward declaration sufficient
-};
-
-// In cpp: include the full header where the type is actually used
-#include "Host.h"
-#include <QCloseEvent>
-```
-
 ## Key architecture points
 Mudlet is single-threaded - all profiles, triggers, and the Lua engine run on the main thread. The only exception is networking, which is automatically handled in the background by Qt.
 
@@ -151,16 +119,6 @@ int TLuaInterpreter::functionName(lua_State* L)
 
 Don't add comments for obvious code as that increases cognitive load on the reader. Only add comments in unintuitive situations to explain why something was done.
 
-### Error handling
-
-```cpp
-// Qt-style error handling
-if (!file.open(QIODevice::ReadOnly)) {
-    qWarning() << "Failed to open file:" << file.errorString();
-    return false;
-}
-```
-
 ### UI components
 
 - Dialog classes use `dlg*.h/cpp` naming
@@ -176,6 +134,7 @@ To demonstrate a bug fix or UI change with a screen recording, follow the before
 - **Build system**: CMake (handles platform-specific configurations). See https://wiki.mudlet.org/w/Compiling_Mudlet for instructions.
 - Check code quality with clang-tidy using `.clang-tidy` configuration file
 - Allow up to 10mins for a build - it can take a while
+- Building on macOS or Windows, and compile-time debugging defines: see `docs/platform-builds.md`
 
 ### Code formatting
 
@@ -194,19 +153,7 @@ The project uses the `.clang-format` configuration in the repo root. This ensure
 
 ### Static analysis
 
-For complete setup instructions on how to run static analysis during a build see, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Static_Analysis
-
-### Debugging options
-
-`src/CMakeLists.txt` contains commented debugging defines for development (search "Debugging code inclusions"):
-
-- `DEBUG_TELNET` - Telnet protocol debugging
-- `DEBUG_UTF8_PROCESSING` - UTF-8 decoding messages
-- `DEBUG_SGR_PROCESSING` - ANSI color sequence debugging
-- `DEBUG_WINDOW_HANDLING` - UI window operations
-- And others for encoding, MXP, map autosave, etc.
-
-**Usage**: Uncomment relevant `target_compile_definitions(mudlet PRIVATE DEBUG_XXX)` lines when debugging specific areas. **Important**: Do not commit uncommented debug lines to git.
+For complete setup instructions on how to run static analysis during a build, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Static_Analysis
 
 ### Git
 
@@ -222,23 +169,6 @@ When you (an AI assistant) help produce a commit, the commit message MUST includ
 Before the human signs off, they must have built and manually tested the change to confirm it works. Mudlet developers should not be the first to test AI-generated code. Ask the human to confirm they've tested the PR, and to provide the name and email to use for sign-off; only then add the `Signed-off-by` trailer.
 
 Both trailers go at the end of the commit message. Apply this to every AI-assisted commit, not just the first. See the "AI Coding Assistants" section in `docs/CONTRIBUTING.md` for the full policy.
-
-### Building on macOS
-
-For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_macOS
-
-**Essential build commands:**
-
-```bash
-# Build
-cd /path/to/Mudlet/build
-# wait up to 10mins for a build
-cmake ../../Mudlet -DCMAKE_PREFIX_PATH=`brew --prefix qt6`
-make -j `sysctl -n hw.ncpu`
-
-# Run Mudlet - use absolute path to avoid directory confusion
-/path/to/Mudlet/build/src/mudlet.app/Contents/MacOS/mudlet
-```
 
 ### Building on Linux
 
@@ -258,8 +188,3 @@ cmake --build .
 cd /path/to/Mudlet/build
 ./src/mudlet
 ```
-
-### Building on Windows
-
-For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_Windows
-
