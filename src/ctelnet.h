@@ -526,7 +526,6 @@ private:
     // never releases it. See cTelnet::checkCharacterModePattern().
     bool mCharacterModeDetected = false;
     QTimer* mTimerCharacterModeDetect = nullptr;
-    static constexpr int CHARACTER_MODE_DETECT_MS = 3000;
 
     // KaVir protocol negotiation tracking
     QVector<unsigned char> mNegotiationOrder;

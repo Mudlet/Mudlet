@@ -69,6 +69,11 @@ constexpr int AUTO_LOGIN_USERNAME_DELAY_MS = 2000;
 constexpr int AUTO_LOGIN_PASSWORD_DELAY_MS = 1000;
 constexpr int AUTO_LOGIN_MAX_DELAY_MS = 60000;
 
+// How long ECHO+SGA must survive a submitted input line before it counts as
+// character-at-a-time rather than a password mask - see
+// cTelnet::checkCharacterModePattern():
+constexpr auto CHARACTER_MODE_DETECT = 3s;
+
 constexpr size_t BUFFER_SIZE = 100000L;
 
 // Upper bound on a single telnet subnegotiation (IAC SB ... IAC SE). Real ones
@@ -1369,7 +1374,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
                     checkCharacterModePattern();
                 });
             }
-            mTimerCharacterModeDetect->start(CHARACTER_MODE_DETECT_MS);
+            mTimerCharacterModeDetect->start(CHARACTER_MODE_DETECT);
         }
 
         return sent;
