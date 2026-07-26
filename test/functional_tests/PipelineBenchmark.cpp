@@ -40,9 +40,27 @@
 #include <QtTest/QtTest>
 
 #include <algorithm>
+#include <clocale>
 #include <cstdio>
 #include <limits>
 #include <random>
+
+// Whether this binary is AddressSanitizer-instrumented. Emitted as an invariant
+// so the compare script refuses an ASan-vs-release comparison (their absolute
+// numbers are incomparable). Clang reports it through __has_feature; GCC through
+// __SANITIZE_ADDRESS__ (and any Qt __has_feature shim harmlessly returns 0, so
+// the GCC path still catches it).
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define BENCH_BUILD_ASAN 1
+#endif
+#endif
+#if !defined(BENCH_BUILD_ASAN) && defined(__SANITIZE_ADDRESS__)
+#define BENCH_BUILD_ASAN 1
+#endif
+#ifndef BENCH_BUILD_ASAN
+#define BENCH_BUILD_ASAN 0
+#endif
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -307,12 +325,20 @@ private:
 private slots:
     void initTestCase()
     {
+        // QApplication's construction adopts the environment locale, which on some
+        // machines makes printf("%f") emit comma decimals the compare script cannot
+        // parse. Force C numeric formatting for every METRIC line, independent of
+        // whatever the environment or Lua startup leaves LC_NUMERIC at.
+        std::setlocale(LC_NUMERIC, "C");
         initializeQRCResources();
         mCorpus = generateCorpus(kCorpusLines, mCorpusLines);
         mCorpusBytes = mCorpus.size();
         // loopbackTest() writes NUL bytes past the data end; reserve slack so that
         // stays within the allocation.
         mCorpus.reserve(mCorpus.size() + 16);
+        // An invariant, emitted here so it is present regardless of which bench
+        // slots run: the compare script rejects an ASan-vs-release comparison.
+        emitMetric("build_asan", static_cast<qint64>(BENCH_BUILD_ASAN));
         qInfo().nospace() << "Corpus: " << mCorpusLines << " lines, " << mCorpusBytes << " bytes";
     }
 
@@ -407,7 +433,13 @@ private slots:
         // Feed one pass so the peak still reflects pipeline work when this slot
         // runs on its own.
         feedCorpusBestPass(host, 1);
-        emitMetric("peak_rss_kb", readPeakRssKb());
+        // Skip the metric entirely when the read fails (non-Linux, or /proc
+        // unavailable) rather than emitting a bogus -1 the compare script would
+        // read as a real value.
+        const qint64 peakRssKb = readPeakRssKb();
+        if (peakRssKb >= 0) {
+            emitMetric("peak_rss_kb", peakRssKb);
+        }
     }
 
 private:

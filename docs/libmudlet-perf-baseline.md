@@ -72,6 +72,7 @@ Results are printed one per line as `METRIC <name> <value>`, so runs can be
 diffed mechanically (the values below are illustrative, not a target):
 
 ```
+METRIC build_asan 1
 METRIC text_lines_per_sec 4281.46
 METRIC text_mb_per_sec 0.41
 METRIC trigger_lines_per_sec 3323.25
@@ -114,19 +115,38 @@ on different hardware, or from an ASan build against a release build - only ever
    test/compare-perf-baseline.py before.txt after.txt
    ```
 
-`compare-perf-baseline.py` gates on `text_lines_per_sec`,
-`trigger_lines_per_sec` and `trigger_overhead_ms` by default (throughput and the
-isolated matcher cost); every other metric is reported for context. It exits
-non-zero if any gated metric regressed by more than the threshold, so it drops
-straight into a script or CI step. Tune it with `--threshold 0.10` and
-`--gate metric,metric,...`; it refuses to compare two runs whose corpus or
-trigger counts differ (that would mean the two harnesses are not identical).
+`compare-perf-baseline.py` gates on `text_lines_per_sec` and
+`trigger_lines_per_sec` by default (the two throughput numbers); every other
+metric is reported for context. It exits non-zero if any gated metric regressed
+by more than the threshold, so it drops straight into a script or CI step. Tune
+it with `--threshold 0.10` and `--gate metric,metric,...`. A `--threshold` of 1
+or more is read as a percentage (e.g. `--threshold 10` means 10%), with a note
+on stderr; `--threshold 0` or a negative value is rejected.
 
-**Why `trigger_overhead_ms`?** Trigger throughput includes the text-pipeline
-cost, which dilutes a matcher-only regression roughly 4x. `trigger_overhead_ms`
-(trigger best pass minus text best pass - valid because both phases feed
-identical bytes) isolates the matching engine itself, so gate on it when the
-change touches trigger matching.
+Because it is the arbiter of the gate, the script refuses (exit code 2) rather
+than silently passing whenever it cannot trust the comparison:
+
+- an invariant (`text_corpus_lines`, `text_corpus_bytes`, `trigger_count`,
+  `build_asan`) is missing from either run, or differs between them - the two
+  runs used different corpora, trigger sets or build flavours. `build_asan`
+  specifically stops an ASan build being compared against a release build.
+- a **gated** metric is missing from either run, or its "before" value is not
+  positive (a valid throughput/time baseline must be greater than zero).
+- a `--gate` name matches no metric in either run (usually a typo).
+- any `METRIC` line fails to parse fully - a non-numeric, NaN/Inf or
+  comma-decimal value, or a duplicate metric name. Such a line is never dropped
+  silently, because a vanished gated metric would otherwise let the gate pass.
+
+**Gating on `trigger_overhead_ms` (opt-in).** Trigger throughput includes the
+text-pipeline cost, which dilutes a matcher-only regression roughly 4x.
+`trigger_overhead_ms` (trigger best pass minus text best pass - valid because
+both phases feed identical bytes) isolates the matching engine itself. It is
+**not gated by default**, though, because it is the difference of two
+independently-noisy best passes: their noise adds, so its worst-case run-to-run
+spread (~16%) is wider than the 10% gate and it would fire on noise alone. When a
+change specifically targets trigger matching, gate on it explicitly and confirm
+the movement is real - `--gate text_lines_per_sec,trigger_lines_per_sec,trigger_overhead_ms`,
+ideally over a couple of runs or with a slightly relaxed threshold.
 
 ## Companion: Stressinator (live GUI display path)
 
@@ -192,3 +212,7 @@ is another reason to read these only as relative, same-config references.
 - All benchmark triggers sit at the root of the trigger tree; real profiles nest
   most triggers under parent folders, so root iteration is slightly overweighted
   relative to real workloads - irrelevant for a relative gate.
+- Run order can bias results thermally: whichever binary runs second may execute
+  on a warmer, throttled CPU, nudging its numbers down. When a comparison lands
+  close to the threshold, re-run with the order swapped (or let the machine cool)
+  before trusting a borderline verdict.
