@@ -2198,11 +2198,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadProgress, pConsole, &TMainConsole::updatePackageDownloadProgress, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadFinished, pConsole, &TMainConsole::closePackageDownloadProgress, Qt::UniqueConnection);
 
-    // TMedia (Qt Widgets-free core) hands video-widget ownership to the frontend. The setup
-    // signal returns its result through a bool& out-parameter, which is only valid under a
-    // synchronous direct connection, so that connection type is pinned explicitly rather than
-    // left to AutoConnection resolving to Direct because both objects live on the main thread.
     if (pH->mpMedia) {
+        // Pin DirectConnection so the bool& out-parameter is filled synchronously, never queued.
         connect(pH->mpMedia.data(), &TMedia::signal_setupVideoOutput, pConsole, &TMainConsole::setupVideoOutput, static_cast<Qt::ConnectionType>(Qt::DirectConnection | Qt::UniqueConnection));
         connect(pH->mpMedia.data(), &TMedia::signal_hideVideoOutput, pConsole, &TMainConsole::hideVideoOutput, Qt::UniqueConnection);
     }

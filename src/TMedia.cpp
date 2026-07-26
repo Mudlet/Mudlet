@@ -1372,7 +1372,6 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
         player->mediaPlayer()->setSource(QUrl());
 
         if (player->mediaData().mediaWidget() == TMediaData::MediaWidgetLabel && player->mediaData().mediaClose() == TMediaData::MediaCloseEnabled && player->mediaPlayer()->videoOutput() != nullptr) {
-            // The video output is a QVideoWidget the frontend owns; it decides how to hide it.
             emit signal_hideVideoOutput(player.get());
         }
 
@@ -1521,10 +1520,6 @@ bool TMedia::setupVideo(const std::shared_ptr<TMediaPlayer>& player)
         return false;
     }
 
-    // A video output is a QVideoWidget parented to one of the frontend's TLabel/TConsole
-    // widgets; libmudlet keeps this core free of Qt Widgets, so the frontend builds and
-    // owns it. The connection is same-thread and direct, so the frontend fills in
-    // setupSucceeded synchronously and play() can gate on it just as before.
     bool setupSucceeded = false;
     emit signal_setupVideoOutput(player.get(), setupSucceeded);
     return setupSucceeded;

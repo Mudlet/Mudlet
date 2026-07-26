@@ -1725,9 +1725,6 @@ void TMainConsole::closePackageDownloadProgress()
     }
 }
 
-// TMedia (Qt Widgets-free core) asks the frontend to attach a QVideoWidget to the
-// TLabel/TConsole named by the media's key. setupSucceeded is filled in synchronously
-// (same-thread direct connection) so TMedia::play() can gate playback on it as before.
 void TMainConsole::setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded)
 {
     setupSucceeded = false;
