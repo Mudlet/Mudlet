@@ -1496,12 +1496,16 @@ void cTelnet::sendTelnetOption(char type, unsigned char option)
 
 void cTelnet::slot_replyFinished(QNetworkReply* reply)
 {
-    emit signal_packageDownloadFinished();
-
     if (reply != mpPackageDownloadReply) {
+        // A stale reply (e.g. a previous, superseded download) finished; do not
+        // emit signal_packageDownloadFinished() here or it would close the
+        // progress dialog belonging to the download that is still running,
+        // leaving it headless and uncancellable.
         qWarning().nospace().noquote() << "cTelnet::slot_replyFinished(QNetworkReply*) ERROR - download finished, but it wasn't the one we are expecting";
         reply->deleteLater();
     } else {
+        emit signal_packageDownloadFinished();
+
         // don't process if download was aborted
         if (reply->error() != QNetworkReply::NoError) {
             // Display error message to user when package download fails
@@ -4243,12 +4247,16 @@ void cTelnet::promptTlsConnectionAvailable()
 
 void cTelnet::slot_tlsUpgradeResponse(const bool accepted)
 {
-    // Invoked asynchronously by the frontend after the user answers the modal
-    // question raised via signal_promptTlsAvailable(). mpHost is a QPointer and
-    // the connection could in principle have changed while the dialog was open,
-    // so guard before acting - the original synchronous code could not reach
-    // here with a null host.
-    if (!mpHost || !mpSocket) {
+    // Reached synchronously, on the same thread, from inside the emit of
+    // signal_promptTlsAvailable() while the frontend's modal dialog spins a
+    // nested event loop. That loop can process a disconnect, so mpHost may have
+    // been cleared and mpSocket nulled by the time the user answers. Neither
+    // branch below dereferences mpSocket (disconnectIt/connectIt/reconnect
+    // either null-check mpSocket or use the member sockets directly), so guard
+    // on mpHost only: also guarding on mpSocket would silently discard the
+    // user's explicit Yes/No answer whenever a disconnect landed mid-dialog.
+    if (!mpHost) {
+        qWarning() << "cTelnet::slot_tlsUpgradeResponse() WARNING - the profile went away while the TLS upgrade prompt was open; discarding the user's answer.";
         return;
     }
 

@@ -2186,47 +2186,47 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
     // Widget work for the telnet layer lives here: cTelnet emits, the frontend
     // shows/updates the widgets (see the seam pattern in libmudlet/PLAN.md).
-    connect(
-            &pH->mTelnet,
-            &cTelnet::signal_bell,
-            this,
-            [this]() {
-                // Flash the taskbar for 3 seconds and, unless the game is muted, beep.
-                // TODO: https://github.com/Mudlet/Mudlet/issues/5836 - provide an option to make a user-selected sound (per profile) and/or a visual alert instead.
-                QApplication::alert(this, 3000);
-                if (!muteGame()) {
-                    QApplication::beep();
-                }
-            },
-            Qt::UniqueConnection);
+    // The lambda/functor connections below deliberately omit Qt::UniqueConnection
+    // because Qt cannot dedupe functor connections with it (it is a no-op and
+    // prints a warning); duplicate wiring is instead prevented by the
+    // `if (pH->mpConsole) return;` early-return at the top of this function.
+    connect(&pH->mTelnet, &cTelnet::signal_bell, this, [this]() {
+        // Flash the taskbar for 3 seconds and, unless the game is muted, beep.
+        // TODO: https://github.com/Mudlet/Mudlet/issues/5836 - provide an option to make a user-selected sound (per profile) and/or a visual alert instead.
+        QApplication::alert(this, 3000);
+        if (!muteGame()) {
+            QApplication::beep();
+        }
+    });
 
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadStarted, pConsole, &TMainConsole::showPackageDownloadProgress, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadProgress, pConsole, &TMainConsole::updatePackageDownloadProgress, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadFinished, pConsole, &TMainConsole::closePackageDownloadProgress, Qt::UniqueConnection);
 
 #if !defined(QT_NO_SSL)
-    connect(
-            &pH->mTelnet,
-            &cTelnet::signal_promptTlsAvailable,
-            this,
-            [pH](const QString& text, const QString& informativeText) {
-                // Application-modal Yes/No question. Because ::exec() spins its own event
-                // loop this is not recommended by the Qt documentation and can cause
-                // dangerous re-entrancy bugs - the behaviour is preserved from the
-                // original in-cTelnet implementation.
-                auto pMsgBox = new QMessageBox();
-                pMsgBox->setIcon(QMessageBox::Question);
-                pMsgBox->setText(text);
-                pMsgBox->setInformativeText(informativeText);
-                pMsgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-                pMsgBox->setDefaultButton(QMessageBox::Yes);
-                // Make using Escape mean no change:
-                pMsgBox->setEscapeButton(QMessageBox::No);
-                const int ret = pMsgBox->exec();
-                delete pMsgBox;
-                pH->mTelnet.slot_tlsUpgradeResponse(ret == QMessageBox::Yes);
-            },
-            Qt::UniqueConnection);
+    connect(&pH->mTelnet, &cTelnet::signal_promptTlsAvailable, this, [pH = QPointer<Host>(pH)](const QString& text, const QString& informativeText) {
+        // Application-modal Yes/No question. Because ::exec() spins its own event
+        // loop this is not recommended by the Qt documentation and can cause
+        // dangerous re-entrancy bugs - the behaviour is preserved from the
+        // original in-cTelnet implementation.
+        auto pMsgBox = new QMessageBox();
+        pMsgBox->setIcon(QMessageBox::Question);
+        pMsgBox->setText(text);
+        pMsgBox->setInformativeText(informativeText);
+        pMsgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        pMsgBox->setDefaultButton(QMessageBox::Yes);
+        // Make using Escape mean no change:
+        pMsgBox->setEscapeButton(QMessageBox::No);
+        const int ret = pMsgBox->exec();
+        delete pMsgBox;
+        // ::exec() spun a nested event loop, during which the profile could
+        // have been destroyed; the QPointer capture lets us detect that.
+        if (!pH) {
+            qWarning() << "mudlet: the profile vanished while the TLS upgrade prompt was open; discarding the user's answer.";
+            return;
+        }
+        pH->mTelnet.slot_tlsUpgradeResponse(ret == QMessageBox::Yes);
+    });
 #endif
 
     // Apply Host's console buffer size settings to the newly created console

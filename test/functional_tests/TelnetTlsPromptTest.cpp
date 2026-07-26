@@ -22,11 +22,14 @@
 #include <chrono>
 
 #include "MudletInstanceCoordinator.h"
+#include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 #include "utils.h"
+
+#include <QProgressDialog>
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -82,9 +85,11 @@ private slots:
 
         // Detach the frontend's modal handler: mudlet::addConsoleForNewHost
         // connects a lambda that would call QMessageBox::exec() and block the
-        // test (there is no user to click it). We just want to observe the
-        // signal and its payload.
-        disconnect(&host->mTelnet, &cTelnet::signal_promptTlsAvailable, mudlet::self(), nullptr);
+        // test (there is no user to click it). Disconnect by signal alone
+        // (nullptr receiver/slot) rather than by receiver: if the frontend
+        // wiring ever moves off mudlet::self() this still detaches every
+        // handler, so the test cannot hang forever inside exec().
+        disconnect(&host->mTelnet, &cTelnet::signal_promptTlsAvailable, nullptr, nullptr);
 
         QSignalSpy spy(&host->mTelnet, &cTelnet::signal_promptTlsAvailable);
         QVERIFY(spy.isValid());
@@ -108,7 +113,12 @@ private slots:
 
         host->mTelnet.loopbackTest(data);
 
-        QVERIFY2(spy.wait(2s) || spy.count() == 1, "cTelnet did not emit signal_promptTlsAvailable when MSSP advertised a TLS port.");
+        // The signal is emitted synchronously inside loopbackTest(), so it has
+        // almost certainly already arrived; only wait if it somehow has not,
+        // otherwise an unconditional spy.wait() would burn its full timeout.
+        if (spy.isEmpty()) {
+            QVERIFY2(spy.wait(2s), "cTelnet did not emit signal_promptTlsAvailable when MSSP advertised a TLS port.");
+        }
         QCOMPARE(spy.count(), 1);
 
         // The informative text carries the advertised port, keeping the string
@@ -121,6 +131,151 @@ private slots:
         // cTelnet recorded the advertised port as well.
         QCOMPARE(host->mMSSPTlsPort, tlsPort.toInt());
 #endif
+    }
+
+    // No path: declining the TLS upgrade must leave the port and ssl_tsl
+    // untouched, stop the client asking again this session, and still bring the
+    // connection back (slot_tlsUpgradeResponse() does disconnectIt() +
+    // reconnect() against the stub, which accepts repeat connections).
+    void test_tlsUpgradeDeclinedKeepsPortAndStopsAsking()
+    {
+#if defined(QT_NO_SSL)
+        QSKIP("Built without SSL support - the TLS upgrade prompt does not exist.");
+#else
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        // Detach the frontend modal handler so no dialog blocks the test.
+        disconnect(&host->mTelnet, &cTelnet::signal_promptTlsAvailable, nullptr, nullptr);
+
+        const int originalPort = host->getPort();
+        const bool originalSsl = host->mSslTsl;
+
+        // Advertise a secure port so mMSSPTlsPort is populated (the handler is
+        // detached, so nothing pops up).
+        QByteArray advertise = msspTlsPayload("48000");
+        advertise.reserve(advertise.size() + 16);
+        host->mTelnet.loopbackTest(advertise);
+
+        // The user answers No; the reconnect that follows must complete.
+        QSignalSpy connectedSpy(&host->mTelnet, &cTelnet::signal_connected);
+        host->mTelnet.slot_tlsUpgradeResponse(false);
+        QVERIFY2(connectedSpy.wait(5s), "Declining the TLS upgrade did not reconnect to the server.");
+
+        QVERIFY2(!host->mAskTlsAvailable, "Declining the TLS upgrade did not stop the client asking again.");
+        QCOMPARE(host->getPort(), originalPort);
+        QCOMPARE(host->mSslTsl, originalSsl);
+
+        // Re-advertising the same secure port must NOT prompt again now that
+        // the user has declined (don't-ask-again is sticky for the session).
+        QSignalSpy promptSpy(&host->mTelnet, &cTelnet::signal_promptTlsAvailable);
+        QByteArray advertiseAgain = msspTlsPayload("48000");
+        advertiseAgain.reserve(advertiseAgain.size() + 16);
+        host->mTelnet.loopbackTest(advertiseAgain);
+        QCOMPARE(promptSpy.count(), 0);
+#endif
+    }
+
+    // Yes path: accepting switches the profile to the advertised secure port
+    // and starts a fresh (encrypted) connection to it. A second plain-TCP stub
+    // stands in for the secure server: connectToHostEncrypted() completes the
+    // TCP accept before the (doomed) TLS handshake, and SSL errors are reported
+    // via postMessage rather than a modal dialog, so nothing blocks.
+    void test_tlsUpgradeAcceptedSwitchesPortAndConnects()
+    {
+#if defined(QT_NO_SSL)
+        QSKIP("Built without SSL support - the TLS upgrade prompt does not exist.");
+#else
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        disconnect(&host->mTelnet, &cTelnet::signal_promptTlsAvailable, nullptr, nullptr);
+
+        TelnetServerStub secureStub;
+        secureStub.start(mLocalhost, 0);
+        const quint16 securePort = secureStub.serverPort();
+
+        // Advertise the second stub's port as the secure port.
+        QByteArray advertise = msspTlsPayload(QByteArray::number(securePort));
+        advertise.reserve(advertise.size() + 16);
+        host->mTelnet.loopbackTest(advertise);
+        QCOMPARE(host->mMSSPTlsPort, static_cast<int>(securePort));
+
+        QSignalSpy acceptSpy(&secureStub, &QTcpServer::newConnection);
+        host->mTelnet.slot_tlsUpgradeResponse(true);
+
+        // The port switch and ssl_tsl flag are set synchronously.
+        QCOMPARE(host->getPort(), static_cast<int>(securePort));
+        QVERIFY2(host->mSslTsl, "Accepting the TLS upgrade did not enable ssl_tsl on the profile.");
+        // The encrypted connect reaches the secure stub's TCP accept.
+        QVERIFY2(acceptSpy.wait(5s), "Accepting the TLS upgrade did not open a TCP connection to the secure port.");
+
+        // Stop talking to the local stub before it is destroyed at scope exit.
+        host->mTelnet.disconnectIt();
+#endif
+    }
+
+    // A received telnet BELL (0x07) must emit signal_bell() exactly once per
+    // bell byte so the frontend can flash/beep without re-alerting on redraws.
+    void test_bellEmitsSignalPerBell()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        QSignalSpy bellSpy(&host->mTelnet, &cTelnet::signal_bell);
+
+        QByteArray oneBell("\a");
+        oneBell.reserve(oneBell.size() + 16);
+        host->mTelnet.loopbackTest(oneBell);
+        QCOMPARE(bellSpy.count(), 1);
+
+        QByteArray twoBells("\a\a");
+        twoBells.reserve(twoBells.size() + 16);
+        host->mTelnet.loopbackTest(twoBells);
+        QCOMPARE(bellSpy.count(), 3);
+    }
+
+    // I2: a second package-download prompt must replace (not stack on top of)
+    // the first dialog, and cancelling with no active download is a no-op.
+    void test_packageDownloadProgressDialogReplaced()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        auto console = host->mpConsole;
+        console->showPackageDownloadProgress("Downloading package 1", "Cancel");
+        console->showPackageDownloadProgress("Downloading package 2", "Cancel");
+
+        // The first dialog closes with WA_DeleteOnClose, so let its queued
+        // deleteLater() run before counting the live dialogs.
+        QTest::qWait(50ms);
+        QCOMPARE(console->findChildren<QProgressDialog*>().count(), 1);
+
+        // Cancelling when no download is in flight must be a harmless no-op.
+        host->mTelnet.slot_cancelPackageDownload();
+        QCOMPARE(console->findChildren<QProgressDialog*>().count(), 1);
+    }
+
+    // Builds an MSSP subnegotiation advertising a secure TLS port:
+    //   IAC SB MSSP  MSSP_VAR "TLS" MSSP_VAL <port>  IAC SE
+    QByteArray msspTlsPayload(const QByteArray& port)
+    {
+        QByteArray data;
+        data.append(TN_IAC);
+        data.append(TN_SB);
+        data.append(OPT_MSSP);
+        data.append(MSSP_VAR);
+        data.append("TLS");
+        data.append(MSSP_VAL);
+        data.append(port);
+        data.append(TN_IAC);
+        data.append(TN_SE);
+        return data;
     }
 
     void cleanup()
