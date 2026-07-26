@@ -58,6 +58,7 @@
 
 class QDialog;
 class QDockWidget;
+class QJsonObject;
 class QKeyEvent;
 class QPushButton;
 class QListWidget;

@@ -37,14 +37,18 @@
 #include "mudlet.h"
 
 #include <QBuffer>
+#include <QDataStream>
 #include <QElapsedTimer>
 #include <QFileDialog>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QJsonObject>
 #include <QJsonParseError>
+#include <QJsonValue>
 #include <QPainter>
 #include <QPixmap>
 #include <QProgressDialog>
+#include <QSaveFile>
 #include <QSizeF>
 #include <chrono>
 

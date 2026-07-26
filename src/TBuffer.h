@@ -46,6 +46,9 @@
 #include <string>
 
 class Host;
+class QJsonArray;
+class QJsonObject;
+class QRegularExpression;
 class QTimer;
 class TConsole;
 

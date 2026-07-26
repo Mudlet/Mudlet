@@ -54,9 +54,13 @@
 #include "MMCPServer.h"
 
 #include <QCoreApplication>
+#include <QDataStream>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonValue>
 #include <QNetworkProxy>
+#include <QRegularExpression>
+#include <QSaveFile>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QSslError>

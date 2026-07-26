@@ -31,6 +31,10 @@
 #include <QDebug>
 #include <QDesktopServices>
 #include <QHash>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
 #include <QPointer>
 #include <QTimer>
 #include <QUrl>
