@@ -5,6 +5,7 @@ endif()
 set(FUNCTIONAL_TEST_SOURCES
     TelnetTextDisplayedTest.cpp
     TelnetSubnegotiationTest.cpp
+    TelnetSgrDefaultColorTest.cpp
     TelnetTlsPromptTest.cpp
     TelnetBenchmark.cpp
     ResetProfileTest.cpp

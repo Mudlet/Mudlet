@@ -2743,7 +2743,9 @@ void TBuffer::decodeSGR(const QString& sequence)
                     }
                 } break;
                 case 39: //default foreground color
+                    mIsDefaultColor = true;
                     mForeGroundColor = pHost->mFgColor;
+                    mForeGroundColorLight = pHost->mFgColor;
                     break;
                 case 40:
                     mBackGroundColor = mBlack;
