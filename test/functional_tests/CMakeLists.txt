@@ -59,3 +59,15 @@ set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
 # The round-trip tests boot a full mudlet instance and save/reload profile and
 # map data, so they need a longer timeout
 set_tests_properties(ProfileRoundTripTest MapRoundTripTest PROPERTIES TIMEOUT 300)
+
+# Let TDiscordModeTest find the bundled discord-rpc library so the Lua API
+# permission gating tests can run (they skip when it is unavailable)
+if(WIN32)
+    set(DISCORD_RPC_PATH_VARIABLE "PATH")
+elseif(APPLE)
+    set(DISCORD_RPC_PATH_VARIABLE "DYLD_LIBRARY_PATH")
+else()
+    set(DISCORD_RPC_PATH_VARIABLE "LD_LIBRARY_PATH")
+endif()
+set_property(TEST TDiscordModeTest APPEND PROPERTY
+    ENVIRONMENT_MODIFICATION "${DISCORD_RPC_PATH_VARIABLE}=path_list_prepend:${CMAKE_SOURCE_DIR}/3rdparty/discord/rpc/lib")
