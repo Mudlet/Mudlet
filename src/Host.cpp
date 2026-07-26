@@ -1926,8 +1926,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         return {true, QString()};
     }
 
-    // Tracks whether we asked the frontend to show its unpacking progress
-    // dialog, so we know to ask it to close again once unzipping finishes.
     bool showedUnpackingDialog = false;
 
     QString actualFileName = fileName;
@@ -4619,15 +4617,13 @@ void Host::toggleMapperVisibility()
 
 void Host::createMapper(const bool loadDefaultMap)
 {
-    // The frontend console owns the dockable map widget, so without it there is
-    // nowhere to put the mapper - the profile has no main console yet or is
+    // The console owns the map dock; bail if the profile has no console yet or is
     // already being torn down.
     if (!mpConsole) {
         return;
     }
     auto pMap = mpMap.data();
     auto hostName(getName());
-    // The dock widget is a frontend object owned by the profile's main console.
     mpConsole->createMapperDock(tr("Map - %1").arg(hostName), qsl("dockMap_%1").arg(hostName));
     // Arrange for TMap member values to be copied from the Host masters so they
     // are in place when the 2D mapper is created:

@@ -172,6 +172,36 @@ private slots:
         QVERIFY2(!console->mpUnpackingDialog, "closeUnpackingProgress must dispose of the dialog.");
     }
 
+    // Regression guard: showUnpackingProgress() spins the event loop via
+    // processEvents(). A deferred install completion can deliver a re-entrant
+    // close (or a second show) during that spin, disposing of the dialog and
+    // clearing mpUnpackingDialog. The frame must not then dereference the member.
+    // Before the fix it did (mpUnpackingDialog->raise() on a nulled member) and
+    // crashed; now it drives a local pointer, so reaching this test's end without
+    // a crash is the assertion.
+    void test_reentrantUnpackingProgressDoesNotCrash()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        auto console = host->mpConsole;
+
+        // Queue a re-entrant close to fire while showUnpackingProgress() is inside
+        // its first processEvents(), mimicking a deferred install completion.
+        QMetaObject::invokeMethod(
+                qApp,
+                [console]() {
+                    console->closeUnpackingProgress();
+                },
+                Qt::QueuedConnection);
+
+        console->showUnpackingProgress(qsl("Unpacking package:\n\"reentrant\"\nplease wait..."), qsl("Unpacking"));
+
+        QTest::qWait(50ms);
+        QVERIFY2(!console->mpUnpackingDialog, "The re-entrant close should have left no unpacking dialog behind.");
+    }
+
     void cleanup()
     {
         delete mpServer;

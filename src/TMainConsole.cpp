@@ -83,13 +83,12 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
 TMainConsole::~TMainConsole()
 {
-    // The dockable map widget is reparented onto the main window by
-    // addDockWidget(), so it does not die with this console automatically.
+    // Neither is a child of this console: the map dock is reparented onto the main
+    // window by addDockWidget(), and the unpacking dialog is parentless. So neither
+    // dies with the console automatically.
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
-    // The unpacking progress dialog is loaded parentless, so it too must be
-    // disposed of explicitly if the console dies while it is still open.
     if (mpUnpackingDialog) {
         mpUnpackingDialog->deleteLater();
     }
@@ -1744,8 +1743,6 @@ void TMainConsole::createMapperDock(const QString& title, const QString& objectN
 
 void TMainConsole::showMapperScriptReminder()
 {
-    // the mapper script reminder is only shown once; the caller (Host) tracks
-    // that, so here we just show the dialog
     QUiLoader loader;
     QFile file(qsl(":/ui/lacking_mapper_script.ui"));
     if (!file.open(QFile::ReadOnly)) {
@@ -1756,7 +1753,6 @@ void TMainConsole::showMapperScriptReminder()
     auto dialog = qobject_cast<QDialog*>(loader.load(&file, mudlet::self()));
     file.close();
     if (!dialog) {
-        // could not load / not a QDialog
         qWarning() << "TMainConsole::showMapperScriptReminder() WARNING - could not load the mapping-script reminder dialog.";
         return;
     }
@@ -1770,37 +1766,45 @@ void TMainConsole::showMapperScriptReminder()
 
 void TMainConsole::showUnpackingProgress(const QString& message, const QString& title)
 {
-    // a second install can begin before the first finishes; dispose of the stale
-    // dialog so its progress does not linger. deleteLater() (not close()) because
-    // the dialog is loaded parentless and without WA_DeleteOnClose, so closing it
-    // would leak it as we are about to overwrite the only pointer to it.
+    // deleteLater() not close(): the dialog is parentless with no WA_DeleteOnClose,
+    // so closing it would leak it once we overwrite the pointer below.
     if (mpUnpackingDialog) {
         mpUnpackingDialog->deleteLater();
     }
 
-    QUiLoader loader(this);
+    QUiLoader loader;
     QFile uiFile(qsl(":/ui/package_manager_unpack.ui"));
     if (!uiFile.open(QFile::ReadOnly)) {
         qWarning() << "TMainConsole::showUnpackingProgress() WARNING - failed to open package_manager_unpack.ui for reading:" << uiFile.errorString();
         return;
     }
-    mpUnpackingDialog = qobject_cast<QDialog*>(loader.load(&uiFile, nullptr));
+    auto* pDialog = qobject_cast<QDialog*>(loader.load(&uiFile, nullptr));
     uiFile.close();
-    if (!mpUnpackingDialog) {
+    if (!pDialog) {
         qWarning() << "TMainConsole::showUnpackingProgress() WARNING - could not load the unpacking progress dialog.";
         return;
     }
+    mpUnpackingDialog = pDialog;
 
-    if (auto* pLabel = mpUnpackingDialog->findChild<QLabel*>(qsl("label"))) {
+    // Trap: processEvents() below can deliver a re-entrant install (or its
+    // matching hide) that replaces or clears mpUnpackingDialog and disposes of
+    // this frame's dialog. Drive a local pointer, never the member, and bail if
+    // our dialog is taken out from under us.
+    QPointer<QDialog> dialog = pDialog;
+
+    if (auto* pLabel = dialog->findChild<QLabel*>(qsl("label"))) {
         pLabel->setText(message);
     }
-    mpUnpackingDialog->hide(); // Must hide to change WindowModality
-    mpUnpackingDialog->setWindowTitle(title);
-    mpUnpackingDialog->setWindowModality(Qt::ApplicationModal);
-    mpUnpackingDialog->show();
+    dialog->hide(); // Must hide to change WindowModality
+    dialog->setWindowTitle(title);
+    dialog->setWindowModality(Qt::ApplicationModal);
+    dialog->show();
     QCoreApplication::processEvents();
-    mpUnpackingDialog->raise();
-    mpUnpackingDialog->repaint();      // Force a redraw
+    if (!dialog) {
+        return;
+    }
+    dialog->raise();
+    dialog->repaint();                 // Force a redraw
     QCoreApplication::processEvents(); // Try to ensure we are on top of any other dialogs and freshly drawn
 }
 
