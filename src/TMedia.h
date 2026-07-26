@@ -154,6 +154,13 @@ public:
     // under mediaRoot but points elsewhere. Static so it can be unit-tested without a Host.
     static bool mediaFilePathEscapesMediaDir(const QString& mediaRoot, const QString& mediaFileName);
 
+signals:
+    // The video output is a QVideoWidget, a Qt Widgets class the frontend owns; these
+    // keep TMedia free of Qt Widgets. Both are wired as same-thread direct connections,
+    // so setupSucceeded is filled in synchronously before play() decides to start.
+    void signal_setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
+    void signal_hideVideoOutput(TMediaPlayer* player);
+
 private slots:
     void slot_writeFile(QNetworkReply* reply);
 
