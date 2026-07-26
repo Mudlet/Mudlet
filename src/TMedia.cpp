@@ -29,6 +29,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <QMetaMethod>
 #include <QNetworkDiskCache>
 #include <QRandomGenerator>
 #include <QSaveFile>
@@ -1518,6 +1519,10 @@ bool TMedia::setupVideo(const std::shared_ptr<TMediaPlayer>& player)
 {
     if (!player) {
         return false;
+    }
+
+    if (!isSignalConnected(QMetaMethod::fromSignal(&TMedia::signal_setupVideoOutput))) {
+        qWarning() << "TMedia::setupVideo() WARNING - no receiver connected to signal_setupVideoOutput, video cannot be displayed";
     }
 
     bool setupSucceeded = false;
