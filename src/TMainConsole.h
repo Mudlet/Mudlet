@@ -70,9 +70,9 @@ public:
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
     bool setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags);
     TLabel* createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
-    std::pair<bool, QString> createMapper(const QString &windowname, int, int, int, int);
-    std::pair<bool, QString> createCommandLine(const QString &windowname, const QString &name, int, int, int, int);
-    std::pair<bool, QString> createTextBox(const QString &windowname, const QString &name, int, int, int, int);
+    std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int);
+    std::pair<bool, QString> createCommandLine(const QString& windowname, const QString& name, int, int, int, int);
+    std::pair<bool, QString> createTextBox(const QString& windowname, const QString& name, int, int, int, int);
     QSize getUserWindowSize(const QString& windowname) const;
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
     std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet);
@@ -91,8 +91,6 @@ public:
     void setSystemSpellDictionary(const QString&);
     void setProfileSpellDictionary();
     void showStatistics();
-    // Owns the modal progress dialog for a server GUI package download; driven
-    // by cTelnet's signal_packageDownload* signals.
     void showPackageDownloadProgress(const QString& title, const QString& cancelText);
     void updatePackageDownloadProgress(qint64 got, qint64 total);
     void closePackageDownloadProgress();

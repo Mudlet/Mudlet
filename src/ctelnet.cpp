@@ -1497,10 +1497,8 @@ void cTelnet::sendTelnetOption(char type, unsigned char option)
 void cTelnet::slot_replyFinished(QNetworkReply* reply)
 {
     if (reply != mpPackageDownloadReply) {
-        // A stale reply (e.g. a previous, superseded download) finished; do not
-        // emit signal_packageDownloadFinished() here or it would close the
-        // progress dialog belonging to the download that is still running,
-        // leaving it headless and uncancellable.
+        // emitting signal_packageDownloadFinished() for a stale reply would close
+        // the active download's dialog, leaving it headless and uncancellable
         qWarning().nospace().noquote() << "cTelnet::slot_replyFinished(QNetworkReply*) ERROR - download finished, but it wasn't the one we are expecting";
         reply->deleteLater();
     } else {
@@ -4247,14 +4245,10 @@ void cTelnet::promptTlsConnectionAvailable()
 
 void cTelnet::slot_tlsUpgradeResponse(const bool accepted)
 {
-    // Reached synchronously, on the same thread, from inside the emit of
-    // signal_promptTlsAvailable() while the frontend's modal dialog spins a
-    // nested event loop. That loop can process a disconnect, so mpHost may have
-    // been cleared and mpSocket nulled by the time the user answers. Neither
-    // branch below dereferences mpSocket (disconnectIt/connectIt/reconnect
-    // either null-check mpSocket or use the member sockets directly), so guard
-    // on mpHost only: also guarding on mpSocket would silently discard the
-    // user's explicit Yes/No answer whenever a disconnect landed mid-dialog.
+    // The frontend's modal dialog spins a nested event loop which can process a
+    // disconnect before the user answers. Neither branch below needs mpSocket, so
+    // guard on mpHost only - also guarding on mpSocket would silently discard the
+    // user's explicit answer whenever a disconnect landed mid-dialog.
     if (!mpHost) {
         qWarning() << "cTelnet::slot_tlsUpgradeResponse() WARNING - the profile went away while the TLS upgrade prompt was open; discarding the user's answer.";
         return;
@@ -5201,12 +5195,8 @@ Some data loss is likely - please mention this problem to the game admins.)",
             }
         } else {
             if (ch == TN_BELL) {
-                // Detect the telnet bell here rather than in the TTextEdit
-                // class so it fires once per received bell (doing it there
-                // would re-alert every time the screen was refreshed) and so a
-                // test can observe signal_bell() directly. The actual taskbar
-                // flash/beep is a frontend (widget) concern, done in
-                // mudlet::addConsoleForNewHost.
+                // detected here rather than in TTextEdit so it fires once per
+                // received bell, not on every screen refresh
                 emit signal_bell();
             }
 

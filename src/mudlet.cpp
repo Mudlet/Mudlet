@@ -2184,15 +2184,10 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(&pH->mTelnet, &cTelnet::signal_connected, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_disconnected, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
 
-    // Widget work for the telnet layer lives here: cTelnet emits, the frontend
-    // shows/updates the widgets (see the seam pattern in libmudlet/PLAN.md).
-    // The lambda/functor connections below deliberately omit Qt::UniqueConnection
-    // because Qt cannot dedupe functor connections with it (it is a no-op and
-    // prints a warning); duplicate wiring is instead prevented by the
-    // `if (pH->mpConsole) return;` early-return at the top of this function.
+    // Qt::UniqueConnection cannot dedupe the functor connections below (a documented
+    // no-op that also prints a warning); duplicate wiring is instead prevented by
+    // the `if (pH->mpConsole) return;` early-return at the top of this function.
     connect(&pH->mTelnet, &cTelnet::signal_bell, this, [this]() {
-        // Flash the taskbar for 3 seconds and, unless the game is muted, beep.
-        // TODO: https://github.com/Mudlet/Mudlet/issues/5836 - provide an option to make a user-selected sound (per profile) and/or a visual alert instead.
         QApplication::alert(this, 3000);
         if (!muteGame()) {
             QApplication::beep();
@@ -2205,10 +2200,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
 #if !defined(QT_NO_SSL)
     connect(&pH->mTelnet, &cTelnet::signal_promptTlsAvailable, this, [pH = QPointer<Host>(pH)](const QString& text, const QString& informativeText) {
-        // Application-modal Yes/No question. Because ::exec() spins its own event
-        // loop this is not recommended by the Qt documentation and can cause
-        // dangerous re-entrancy bugs - the behaviour is preserved from the
-        // original in-cTelnet implementation.
+        // ::exec() spins a nested event loop - a re-entrancy hazard preserved
+        // from the original in-cTelnet implementation
         auto pMsgBox = new QMessageBox();
         pMsgBox->setIcon(QMessageBox::Question);
         pMsgBox->setText(text);
@@ -2219,8 +2212,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
         pMsgBox->setEscapeButton(QMessageBox::No);
         const int ret = pMsgBox->exec();
         delete pMsgBox;
-        // ::exec() spun a nested event loop, during which the profile could
-        // have been destroyed; the QPointer capture lets us detect that.
         if (!pH) {
             qWarning() << "mudlet: the profile vanished while the TLS upgrade prompt was open; discarding the user's answer.";
             return;

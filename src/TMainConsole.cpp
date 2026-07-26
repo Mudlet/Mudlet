@@ -1693,14 +1693,12 @@ void TMainConsole::showPackageDownloadProgress(const QString& title, const QStri
         qWarning() << "TMainConsole::showPackageDownloadProgress() WARNING - called with no host; ignoring the download-progress request.";
         return;
     }
-    // A previous download's dialog may still be on screen (e.g. the server
-    // triggers a second Client.GUI mid-download); close it first so we don't
-    // leak a frozen dialog whose Cancel would then abort the wrong download.
+    // a second server-triggered download can arrive mid-download; without the
+    // close, the first dialog leaks frozen and its Cancel aborts the wrong download
     if (mpPackageDownloadProgressDialog) {
         mpPackageDownloadProgressDialog->close();
     }
-    // The 4000000 upper bound mirrors the original range; it is reset to the
-    // real total once the first download-progress update arrives.
+    // placeholder range; reset by the first download-progress update
     mpPackageDownloadProgressDialog = new QProgressDialog(title, cancelText, 0, 4000000, this);
     connect(mpPackageDownloadProgressDialog, &QProgressDialog::canceled, &pHost->mTelnet, &cTelnet::slot_cancelPackageDownload);
     mpPackageDownloadProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -1710,9 +1708,8 @@ void TMainConsole::showPackageDownloadProgress(const QString& title, const QStri
 void TMainConsole::updatePackageDownloadProgress(qint64 got, qint64 total)
 {
     if (mpPackageDownloadProgressDialog) {
-        // total is -1 for chunked HTTP responses of unknown length; a (0, -1)
-        // range would be nonsensical, so map any non-positive total to the
-        // (0, 0) range that turns the dialog into a busy indicator instead.
+        // total is -1 for chunked HTTP responses of unknown length; a (0, 0)
+        // range turns the dialog into a busy indicator
         mpPackageDownloadProgressDialog->setRange(0, total > 0 ? static_cast<int>(total) : 0);
         mpPackageDownloadProgressDialog->setValue(static_cast<int>(got));
     }
