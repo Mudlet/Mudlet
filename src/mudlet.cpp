@@ -2184,6 +2184,42 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(&pH->mTelnet, &cTelnet::signal_connected, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_disconnected, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
 
+    // Qt::UniqueConnection cannot dedupe the functor connections below (a documented
+    // no-op that also prints a warning); duplicate wiring is instead prevented by
+    // the `if (pH->mpConsole) return;` early-return at the top of this function.
+    connect(&pH->mTelnet, &cTelnet::signal_bell, this, [this]() {
+        QApplication::alert(this, 3000);
+        if (!muteGame()) {
+            QApplication::beep();
+        }
+    });
+
+    connect(&pH->mTelnet, &cTelnet::signal_packageDownloadStarted, pConsole, &TMainConsole::showPackageDownloadProgress, Qt::UniqueConnection);
+    connect(&pH->mTelnet, &cTelnet::signal_packageDownloadProgress, pConsole, &TMainConsole::updatePackageDownloadProgress, Qt::UniqueConnection);
+    connect(&pH->mTelnet, &cTelnet::signal_packageDownloadFinished, pConsole, &TMainConsole::closePackageDownloadProgress, Qt::UniqueConnection);
+
+#if !defined(QT_NO_SSL)
+    connect(&pH->mTelnet, &cTelnet::signal_promptTlsAvailable, this, [pH = QPointer<Host>(pH)](const QString& text, const QString& informativeText) {
+        // ::exec() spins a nested event loop - a re-entrancy hazard preserved
+        // from the original in-cTelnet implementation
+        auto pMsgBox = new QMessageBox();
+        pMsgBox->setIcon(QMessageBox::Question);
+        pMsgBox->setText(text);
+        pMsgBox->setInformativeText(informativeText);
+        pMsgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        pMsgBox->setDefaultButton(QMessageBox::Yes);
+        // Make using Escape mean no change:
+        pMsgBox->setEscapeButton(QMessageBox::No);
+        const int ret = pMsgBox->exec();
+        delete pMsgBox;
+        if (!pH) {
+            qWarning() << "mudlet: the profile vanished while the TLS upgrade prompt was open; discarding the user's answer.";
+            return;
+        }
+        pH->mTelnet.slot_tlsUpgradeResponse(ret == QMessageBox::Yes);
+    });
+#endif
+
     // Apply Host's console buffer size settings to the newly created console
     int bufferSize = pH->getConsoleBufferSize();
     if (pH->getUseMaxConsoleBufferSize()) {
@@ -4984,7 +5020,9 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         const bool skipIntroStep = profile == qsl("Mudlet Tutorial");
         // give the freshly opened profile a moment to finish laying out before
         // the tour starts highlighting parts of it
-        QTimer::singleShot(1s, this, [this, skipIntroStep]() { showUiTour(skipIntroStep); });
+        QTimer::singleShot(1s, this, [this, skipIntroStep]() {
+            showUiTour(skipIntroStep);
+        });
     }
 }
 
@@ -7311,6 +7349,17 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
 
     if (!mudlet::self()->mPackagesToInstallList.contains(qsl(":/mudlet-mapper.xml"))) {
         mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.mpackage"));
+    }
+
+    // A modest starter UI that adapts to whatever any game provides, only for
+    // players new to Mudlet - veterans will have their own layouts already.
+    // Games whose bundled loader above fetches the game's own full interface
+    // (flagged in TGameDetails) are skipped: the starter UI would only fight
+    // it for the same screen space. Games that push a GUI via Client.GUI at
+    // connect time are handled at runtime instead - the starter UI stands
+    // aside when one installs.
+    if (!mudlet::self()->experiencedMudletPlayer() && !TGameDetails::gameProvidesOwnUi(gameUrl)) {
+        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/base-ui/mudlet-base-ui.mpackage"));
     }
 
     // Don't play tutorial for every connection to localhost. There are legit other reasons to connect there.
