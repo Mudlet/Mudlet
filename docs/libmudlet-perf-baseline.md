@@ -43,14 +43,25 @@ even on a shared/CI box running other builds alongside it.
 
 ## How to run
 
+`PipelineBenchmark` is **built as part of the functional tests but deliberately
+not registered with ctest by default** - it is report-only and feeds a huge
+corpus many times, so it would only burn minutes on every CI run. Run it
+directly instead (which is exactly what the compare script does):
+
 ```bash
 cd <build-dir>
 # single run, human-readable + METRIC lines:
 QT_QPA_PLATFORM=offscreen ASAN_OPTIONS=detect_leaks=0 \
   ./test/functional_tests/PipelineBenchmark
+```
 
-# or via ctest (uses the same offscreen/ASAN env from CMake):
-ctest -R PipelineBenchmark -V
+If you want to drive it through ctest (e.g. `ctest -R PipelineBenchmark -V`,
+which reuses the offscreen/ASAN env from CMake), configure the build with the
+opt-in first:
+
+```bash
+cmake -S . -B <build-dir> -DREGISTER_PERF_BENCHMARK=ON
+ctest --test-dir <build-dir> -R PipelineBenchmark -V
 ```
 
 On a machine with other functional-test runs (e.g. parallel worktrees) wrap the

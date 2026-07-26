@@ -41,8 +41,10 @@
  * assertions, because absolute speed varies wildly between machines and CI
  * runners. Compare two runs of this binary on the SAME machine instead.
  *
- * Run with: ctest -R PipelineBenchmark -V
- * or directly: QT_QPA_PLATFORM=offscreen ./PipelineBenchmark
+ * This target is built with the functional tests but is deliberately NOT
+ * registered with ctest by default (it is report-only and slow); run it
+ * directly: QT_QPA_PLATFORM=offscreen ./PipelineBenchmark
+ * (configure with -DREGISTER_PERF_BENCHMARK=ON to also get it under ctest).
  *
  * Diff two runs with test/compare-perf-baseline.py (prints per-metric deltas and
  * a PASS/FAIL against the 10% gate). This harness deliberately stops at the core
@@ -296,7 +298,7 @@ private:
         std::fflush(stdout);
     }
 
-    static void emitMetric(const char* name, long long value)
+    static void emitMetric(const char* name, qint64 value)
     {
         std::printf("METRIC %s %lld\n", name, value);
         std::fflush(stdout);
@@ -306,7 +308,7 @@ private:
     // (VmHWM is the high-water mark and never decreases). /proc pseudo-files
     // report a size of 0, which makes QFile::atEnd() true immediately and
     // readLine() loops never start - so read it all in one go.
-    static long long readPeakRssKb()
+    static qint64 readPeakRssKb()
     {
 #if defined(Q_OS_LINUX)
         QFile status(qsl("/proc/self/status"));
@@ -377,7 +379,7 @@ private slots:
         const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
         QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
 
-        emitMetric("text_corpus_lines", static_cast<long long>(mCorpusLines));
+        emitMetric("text_corpus_lines", static_cast<qint64>(mCorpusLines));
         emitMetric("text_corpus_bytes", mCorpusBytes);
         emitMetric("text_lines_per_sec", mCorpusLines / seconds);
         emitMetric("text_mb_per_sec", (mCorpusBytes / 1.0e6) / seconds);
@@ -414,7 +416,7 @@ private slots:
         host->mTelnet.loopbackTest(probe);
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(benchSentinelFired)")), "sentinel trigger did not fire - the trigger engine is not seeing pipeline data");
 
-        emitMetric("trigger_count", static_cast<long long>(triggerCount));
+        emitMetric("trigger_count", static_cast<qint64>(triggerCount));
         emitMetric("trigger_lines_per_sec", mCorpusLines / seconds);
         emitMetric("trigger_mb_per_sec", (mCorpusBytes / 1.0e6) / seconds);
         emitMetric("trigger_best_pass_ms", seconds * 1000.0);

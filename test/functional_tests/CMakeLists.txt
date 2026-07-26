@@ -20,7 +20,6 @@ set(FUNCTIONAL_TEST_SOURCES
     ProfileRoundTripTest.cpp
     MapRoundTripTest.cpp
     UndoServerWrapTest.cpp
-    PipelineBenchmark.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
@@ -33,6 +32,27 @@ add_executable(UndoServerWrapReplay UndoServerWrapReplay.cpp ${FUNCTIONAL_TEST_U
 add_dependencies(UndoServerWrapReplay ${LIB_MUDLET_TARGET})
 target_link_libraries(UndoServerWrapReplay PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
 set_target_properties(UndoServerWrapReplay PROPERTIES ENABLE_EXPORTS ON)
+
+# PipelineBenchmark is a report-only perf harness for manual before/after
+# comparisons; test/compare-perf-baseline.py runs the built binary directly. It
+# is built here so that script (and a direct run) always have a binary, but is
+# deliberately kept OUT of the default ctest suite: it feeds a huge fixed corpus
+# many times and makes no timing assertions, so running it on every CI pipeline
+# only burns minutes. Configure with -DREGISTER_PERF_BENCHMARK=ON to also
+# register it with ctest (e.g. for `ctest -R PipelineBenchmark`).
+option(REGISTER_PERF_BENCHMARK "Register the report-only PipelineBenchmark with ctest (it is built either way)" OFF)
+add_executable(PipelineBenchmark PipelineBenchmark.cpp ${FUNCTIONAL_TEST_UTILS})
+add_dependencies(PipelineBenchmark ${LIB_MUDLET_TARGET})
+target_link_libraries(PipelineBenchmark PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
+set_target_properties(PipelineBenchmark PROPERTIES ENABLE_EXPORTS ON)
+if(REGISTER_PERF_BENCHMARK)
+    add_test(NAME PipelineBenchmark COMMAND $<TARGET_FILE:PipelineBenchmark>)
+    # feeds a large fixed corpus repeatedly, so give it a generous timeout
+    set_tests_properties(PipelineBenchmark PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0"
+        LABELS "functional"
+        TIMEOUT 600)
+endif()
 
 foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     get_filename_component(test_name ${test_file} NAME_WE)
@@ -61,10 +81,6 @@ set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
 # The round-trip tests boot a full mudlet instance and save/reload profile and
 # map data, so they need a longer timeout
 set_tests_properties(ProfileRoundTripTest MapRoundTripTest PROPERTIES TIMEOUT 300)
-
-# PipelineBenchmark feeds a large fixed corpus repeatedly through the pipeline;
-# generous timeout so slow/CI machines never trip it (it is report-only anyway)
-set_tests_properties(PipelineBenchmark PROPERTIES TIMEOUT 600)
 
 # Let TDiscordModeTest find the bundled discord-rpc library so the Lua API
 # permission gating tests can run (they skip when it is unavailable)
