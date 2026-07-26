@@ -5,7 +5,7 @@
 
 Measures how many source files in the `mudlet_core` static-library target
 (`src/CMakeLists.txt`) still depend on Qt Widgets. Part of the libmudlet
-refactor (phase 0.1): the goal is to drive this count to **0** so `mudlet_core`
+refactor (#8681, #9011): the goal is to drive this count to **0** so `mudlet_core`
 can build with Qt Widgets absent, after which this audit becomes an enforcing CI
 guard (`--enforce`).
 
@@ -272,9 +272,9 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `mapInfoContributorManager.h`
 - `MiddleMousePanHandler.cpp`
 - `MiddleMousePanHandler.h`
+- `MMCP.h`
 - `MMCPClient.cpp`
 - `MMCPClient.h`
-- `MMCP.h`
 - `MMCPServer.cpp`
 - `MMCPServer.h`
 - `MudletInstanceCoordinator.cpp`
@@ -311,9 +311,9 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `TAlias.cpp`
 - `TAlias.h`
 - `TArea.cpp`
+- `TArea.h`
 - `TAreaGridIndex.cpp`
 - `TAreaGridIndex.h`
-- `TArea.h`
 - `TAreaZLevelIndex.cpp`
 - `TAreaZLevelIndex.h`
 - `TAstar.h`
@@ -352,8 +352,8 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `TMapLabel.cpp`
 - `TMapLabel.h`
 - `TMatchState.h`
-- `TMediaData.h`
 - `TMedia.h`
+- `TMediaData.h`
 - `TMediaPlaylist.cpp`
 - `TMediaPlaylist.h`
 - `TMxpBRTagHandler.cpp`
@@ -420,9 +420,9 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `TriggerUnit.cpp`
 - `TriggerUnit.h`
 - `TRoom.cpp`
+- `TRoom.h`
 - `TRoomDB.cpp`
 - `TRoomDB.h`
-- `TRoom.h`
 - `TScript.cpp`
 - `TScript.h`
 - `TStringUtils.cpp`

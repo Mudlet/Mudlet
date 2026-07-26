@@ -1,7 +1,7 @@
 #!/bin/sh
 # audit-core-widgets.sh - Qt Widgets dependency audit for the `mudlet_core` target.
 #
-# Part of the libmudlet refactor (see .claude/libmudlet/PLAN.md, phase 0.1). The
+# Part of the libmudlet refactor (issues #8681 and #9011). The
 # long-term goal is that the `mudlet_core` static library (src/CMakeLists.txt)
 # builds with Qt Widgets absent. This script is the measurement for that goal:
 # "how many source files in mudlet_core still depend on Qt Widgets?".
@@ -40,6 +40,10 @@
 
 set -u
 
+# Pin collation so the generated report is byte-identical across machines.
+LC_ALL=C
+export LC_ALL
+
 PROG=$(basename "$0")
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(dirname -- "$SCRIPT_DIR")
@@ -77,11 +81,7 @@ if [ ! -f "$CMAKE_FILE" ]; then
   exit 2
 fi
 
-# ---------------------------------------------------------------------------
-# Locate the Qt headers directory that holds QtWidgets/.
-# ---------------------------------------------------------------------------
 qt_query() {
-  # $1 = tool name; echoes QT_INSTALL_HEADERS if the tool resolves it
   command -v "$1" >/dev/null 2>&1 || return 1
   case "$1" in
     qtpaths*) "$1" --query QT_INSTALL_HEADERS 2>/dev/null ;;
@@ -97,7 +97,7 @@ detect_qt_include() {
     [ -n "$dir" ] && [ -d "$dir/QtWidgets" ] && { printf '%s\n' "$dir"; return 0; }
   done
   for dir in \
-    /home/vadi/Programs/Qt/6.12.0/gcc_64/include \
+    "$HOME"/Qt/*/gcc_64/include \
     /usr/include/qt6 \
     /usr/include/x86_64-linux-gnu/qt6 \
     /usr/local/include/qt6 \
@@ -118,13 +118,9 @@ if [ ! -d "$QW" ]; then
   exit 2
 fi
 
-# ---------------------------------------------------------------------------
-# Derive the QtWidgets header-name set (W) and class-name set (C).
-# A header belongs to QtWidgets only if its filename is not also present in
-# QtGui/ or QtCore/ (that filters Qt6 compatibility forwarders such as
-# qaction.h/qshortcut.h that now live in QtGui). Class names are the CamelCase
-# forwarding headers (QWidget, QDialog, ...).
-# ---------------------------------------------------------------------------
+# A header counts as QtWidgets only if its filename is absent from QtGui/ and
+# QtCore/ - that filters Qt6 compatibility forwarders such as qaction.h and
+# qshortcut.h whose classes moved to QtGui.
 TMPDIR_AUDIT=$(mktemp -d "${TMPDIR:-/tmp}/core-widgets.XXXXXX") || { err "mktemp failed"; exit 2; }
 trap 'rm -rf "$TMPDIR_AUDIT"' EXIT INT TERM
 SET_HEADERS="$TMPDIR_AUDIT/headers.txt"
@@ -135,9 +131,8 @@ lower_module_names="$TMPDIR_AUDIT/lower.txt"
 widgets_sorted="$TMPDIR_AUDIT/widgets_all.txt"
 { ls "$QTINC/QtGui" 2>/dev/null; ls "$QTINC/QtCore" 2>/dev/null; } | sort -u > "$lower_module_names"
 ls "$QW" | sort > "$widgets_sorted"
-# QtWidgets entries minus lower-module names, minus the versioned subdir.
 comm -23 "$widgets_sorted" "$lower_module_names" \
-  | grep -vE '^[0-9]+\.[0-9]+\.[0-9]+$' > "$SET_HEADERS"
+  | grep -vE '^[0-9]+\.[0-9]+\.[0-9]+$' > "$SET_HEADERS" # drop the versioned private-headers subdir
 grep -E '^Q[A-Z]' "$SET_HEADERS" > "$SET_CLASSES"
 
 if [ ! -s "$SET_HEADERS" ]; then
@@ -145,11 +140,9 @@ if [ ! -s "$SET_HEADERS" ]; then
   exit 2
 fi
 
-# ---------------------------------------------------------------------------
-# Enumerate the source files of the mudlet_core target by parsing the
-# mudlet_SRCS / mudlet_HDRS lists (both the set(...) blocks and the
-# list(APPEND ...) additions) out of src/CMakeLists.txt.
-# ---------------------------------------------------------------------------
+# mudlet_core's file list lives in the mudlet_SRCS / mudlet_HDRS variables of
+# src/CMakeLists.txt; both the set(...) blocks and later list(APPEND ...) lines
+# contribute, so the awk below must catch both forms.
 awk '
   { if ($0 ~ /^[ \t]*set\(mudlet_(SRCS|HDRS)/) inblk=1
     line=$0; gsub(/[()]/," ",line)
@@ -162,7 +155,6 @@ awk '
   }
 ' "$CMAKE_FILE" | sort -uf > "$FILE_LIST"
 
-# Keep only files that exist (paths are relative to src/).
 EXISTING="$TMPDIR_AUDIT/existing.txt"
 : > "$EXISTING"
 missing=0
@@ -180,12 +172,9 @@ if [ ! -s "$EXISTING" ]; then
   exit 2
 fi
 
-# ---------------------------------------------------------------------------
-# Scan every file once. Emits, tab-separated, per file:
-#   includes <TAB> symbols <TAB> path <TAB> distinct widget refs
-# Comments (// and /* */) and double-quoted strings are stripped before
-# matching to keep noise out.
-# ---------------------------------------------------------------------------
+# Per-file output, tab-separated: includes, symbols, path, distinct widget
+# refs. Comments and double-quoted strings are stripped first so mentions of
+# widget classes in prose or log text don't count as dependencies.
 RESULTS="$TMPDIR_AUDIT/results.txt"
 ( cd "$SRC_DIR" && awk -v setfile="$SET_HEADERS" -v classfile="$SET_CLASSES" '
   BEGIN{
@@ -226,9 +215,6 @@ TOTAL=$(wc -l < "$RESULTS" | tr -d ' ')
 OFFENDING=$(awk -F'\t' '$1+$2>0' "$RESULTS" | wc -l | tr -d ' ')
 CLEAN=$((TOTAL - OFFENDING))
 
-# ---------------------------------------------------------------------------
-# Output.
-# ---------------------------------------------------------------------------
 read_baseline() {
   [ -f "$BASELINE_FILE" ] || { err "baseline file not found: $BASELINE_FILE"; return 1; }
   base=$(tr -cd '0-9' < "$BASELINE_FILE")
@@ -267,7 +253,7 @@ case "$MODE" in
 
 Measures how many source files in the \`mudlet_core\` static-library target
 (\`src/CMakeLists.txt\`) still depend on Qt Widgets. Part of the libmudlet
-refactor (phase 0.1): the goal is to drive this count to **0** so \`mudlet_core\`
+refactor (#8681, #9011): the goal is to drive this count to **0** so \`mudlet_core\`
 can build with Qt Widgets absent, after which this audit becomes an enforcing CI
 guard (\`--enforce\`).
 
@@ -309,7 +295,7 @@ QtWidgets header includes; \`Sym\` = QtWidgets class-symbol references.
 | File | Inc | Sym | Widget references |
 | --- | ---: | ---: | --- |
 EOF
-    # Offending rows: refs desc, then path asc (case-insensitive), deterministic.
+    # Secondary case-insensitive path sort keeps regeneration deterministic.
     awk -F'\t' '$1+$2>0 { printf "%d\t%d\t%d\t%s\t%s\n", $1+$2, $1, $2, $3, $4 }' "$RESULTS" \
       | sort -t "$(printf '\t')" -k1,1nr -k4,4f \
       | awk -F'\t' '{ printf "| `%s` | %d | %d | %s |\n", $4, $2, $3, ($5==""?"-":$5) }'
