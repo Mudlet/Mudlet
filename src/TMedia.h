@@ -35,6 +35,8 @@
 #include <QAudioOutput>
 #include <QMediaPlayer>
 
+class QJsonObject;
+
 using QMediaPlayerPlaybackState = QMediaPlayer::PlaybackState;
 class TMediaPlayer
 {

@@ -68,6 +68,8 @@
 
 #endif
 
+class QJsonDocument;
+class QJsonObject;
 class QNetworkAccessManager;
 class QNetworkReply;
 class QProgressDialog;

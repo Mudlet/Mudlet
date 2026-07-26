@@ -69,10 +69,13 @@
 #include <QStandardPaths>
 #endif
 #include <QJsonDocument>
+#include <QJsonObject>
 #include <QJsonParseError>
+#include <QSaveFile>
 #include <QTableWidget>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
+#include <QTextStream>
 #include <QToolTip>
 #include <QFileInfo>
 #include <QVector>
