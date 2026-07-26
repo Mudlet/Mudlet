@@ -70,7 +70,6 @@
 
 class QNetworkAccessManager;
 class QNetworkReply;
-class QProgressDialog;
 class QTimer;
 
 class Host;
@@ -268,14 +267,17 @@ public:
     bool mFORCE_GA_OFF = false;
     QPointer<dlgComposer> mpComposer;
     QNetworkAccessManager* mpDownloader = nullptr;
-    QPointer<QProgressDialog> mpProgressDialog;
     QString mServerPackage;
     QString mProfileName;
 
 
 public slots:
     void slot_setDownloadProgress(qint64, qint64);
+    void slot_cancelPackageDownload();
     void slot_replyFinished(QNetworkReply*);
+#if !defined(QT_NO_SSL)
+    void slot_tlsUpgradeResponse(const bool accepted);
+#endif
     void slot_processReplayChunk();
     void slot_socketHostFound(QHostInfo);
     void slot_socketConnected();
@@ -297,6 +299,17 @@ signals:
     // Signal when GA (Go Ahead) or EOR (End of Record) telnet codes are received
     // Used by hyperlink visibility manager to trigger expire actions
     void signal_promptReceived();
+
+    void signal_bell();
+
+    void signal_packageDownloadStarted(const QString& title, const QString& cancelText);
+    void signal_packageDownloadProgress(qint64 got, qint64 total);
+    void signal_packageDownloadFinished();
+
+#if !defined(QT_NO_SSL)
+    // The frontend must answer this modal question by calling back slot_tlsUpgradeResponse()
+    void signal_promptTlsAvailable(const QString& text, const QString& informativeText);
+#endif
 
 
 private:

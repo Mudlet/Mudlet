@@ -5,6 +5,7 @@ endif()
 set(FUNCTIONAL_TEST_SOURCES
     TelnetTextDisplayedTest.cpp
     TelnetSubnegotiationTest.cpp
+    TelnetTlsPromptTest.cpp
     TelnetBenchmark.cpp
     ResetProfileTest.cpp
     TOscTest.cpp
@@ -64,3 +65,15 @@ set_tests_properties(ProfileRoundTripTest MapRoundTripTest PROPERTIES TIMEOUT 30
 # PipelineBenchmark feeds a large fixed corpus repeatedly through the pipeline;
 # generous timeout so slow/CI machines never trip it (it is report-only anyway)
 set_tests_properties(PipelineBenchmark PROPERTIES TIMEOUT 600)
+
+# Let TDiscordModeTest find the bundled discord-rpc library so the Lua API
+# permission gating tests can run (they skip when it is unavailable)
+if(WIN32)
+    set(DISCORD_RPC_PATH_VARIABLE "PATH")
+elseif(APPLE)
+    set(DISCORD_RPC_PATH_VARIABLE "DYLD_LIBRARY_PATH")
+else()
+    set(DISCORD_RPC_PATH_VARIABLE "LD_LIBRARY_PATH")
+endif()
+set_property(TEST TDiscordModeTest APPEND PROPERTY
+    ENVIRONMENT_MODIFICATION "${DISCORD_RPC_PATH_VARIABLE}=path_list_prepend:${CMAKE_SOURCE_DIR}/3rdparty/discord/rpc/lib")
