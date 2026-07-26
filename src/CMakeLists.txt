@@ -106,6 +106,7 @@ set(mudlet_SRCS
     mudlet.cpp
     MudletInstanceCoordinator.cpp
     MxpTag.cpp
+    OAuthClientFlow.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
@@ -143,6 +144,7 @@ set(mudlet_SRCS
     THyperlinkVisibilityManager.cpp
     TimerUnit.cpp
     TKey.cpp
+    TKeySequenceEdit.cpp
     TLabel.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
@@ -332,6 +334,7 @@ set(mudlet_HDRS
     mudlet.h
     MudletInstanceCoordinator.h
     MxpTag.h
+    OAuthClientFlow.h
     PackageItemDelegate.h
     PanInteractionHandler.h
     RoomContextMenuHandler.h
@@ -374,6 +377,7 @@ set(mudlet_HDRS
     THyperlinkVisibilityManager.h
     TimerUnit.h
     TKey.h
+    TKeySequenceEdit.h
     TLabel.h
     TLinkStore.h
     TLuaInterpreter.h
@@ -654,6 +658,9 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 # * Produce qDebug() messages about undo/redo operations in the trigger editor,
 #   including command execution, stack operations, and edbee text undo integration:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE DEBUG_UNDO_REDO)
+#
+# * Produce qDebug() messages about the GMCP Char.Login authentication flow:
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_GMCP_AUTHENTICATION)
 
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
@@ -754,8 +761,19 @@ endif (SYSINFO_INCLUDE_DIR)
 
 if(USE_UPDATER)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_UPDATER)
-  target_include_directories(${LIB_MUDLET_TARGET} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 endif(USE_UPDATER)
+
+# Embed the LeakSanitizer suppression list into the binary so that
+# sanitizer-enabled builds (PTBs, testing AppImages) filter third-party noise
+# out of leak reports without needing LSAN_OPTIONS set at runtime; picked up
+# by __lsan_default_suppressions() in main.cpp
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${mudlet_SOURCE_DIR}/asan-suppressions.txt")
+file(READ "${mudlet_SOURCE_DIR}/asan-suppressions.txt" MUDLET_LSAN_SUPPRESSIONS_CONTENT)
+string(REPLACE "\\" "\\\\" MUDLET_LSAN_SUPPRESSIONS_CONTENT "${MUDLET_LSAN_SUPPRESSIONS_CONTENT}")
+string(REPLACE "\"" "\\\"" MUDLET_LSAN_SUPPRESSIONS_CONTENT "${MUDLET_LSAN_SUPPRESSIONS_CONTENT}")
+string(REPLACE "\n" "\\n" MUDLET_LSAN_SUPPRESSIONS_CONTENT "${MUDLET_LSAN_SUPPRESSIONS_CONTENT}")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/LsanSuppressions.h.in" "${CMAKE_CURRENT_BINARY_DIR}/LsanSuppressions.h" @ONLY)
+target_include_directories(${LIB_MUDLET_TARGET} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 if(USE_3DMAPPER)
   target_link_libraries(${LIB_MUDLET_TARGET} OpenGL::GLU)

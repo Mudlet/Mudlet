@@ -284,9 +284,10 @@ void Updater::setupPlatformUpdater()
 
         auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
         qWarning() << "Checked for updates:" << updates.size() << "update(s) available";
-        if (!updates.isEmpty()) {
-            emit signal_updateAvailable(updates.size());
+        if (updates.isEmpty()) {
+            return;
         }
+        emit signal_updateAvailable(updates.size());
     });
 
     connect(feed.get(), &dblsqd::Feed::downloadError, this, [this](const QString& error) {
@@ -489,7 +490,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
     // if the update is already installed, then the button says 'Restart' - do so
     if (mUpdateInstalled) {
         // defer to next event loop iteration so the dialog close happens after the button click handler returns
-        QTimer::singleShot(0, this, [=, this]() {
+        QTimer::singleShot(0ms, this, [=, this]() {
             updateDialog->close();
             updateDialog->done(0);
         });

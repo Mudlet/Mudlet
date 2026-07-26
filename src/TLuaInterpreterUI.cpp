@@ -3113,20 +3113,6 @@ int TLuaInterpreter::setMapWindowTitle(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMiniConsoleFontSize
-int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
-{
-    const QString windowName = getVerifiedString(L, __func__, 1, "miniconsole name");
-    const int size = getVerifiedInt(L, __func__, 2, "font size");
-    auto console = CONSOLE(L, windowName);
-    if (size < 1) {
-        return warnArgumentValue(L, __func__, qsl("setting font size of '%1' failed").arg(windowName));
-    }
-    console->setFontSize(size);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovie
 int TLuaInterpreter::setMovie(lua_State* L)
 {
@@ -3454,6 +3440,17 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, s, "wrapAt");
     auto console = CONSOLE(L, windowName);
     console->setWrapAt(luaFrom);
+    // only mirror values the preferences dialog itself accepts into the
+    // profile, otherwise an invalid width would reach NAWS and get saved
+    if (luaFrom >= 1 && console->getType() == TConsole::MainConsole) {
+        Host& host = getHostFromLua(L);
+        const int priorWrapAt = host.mWrapAt;
+        host.mWrapAt = luaFrom;
+        if (priorWrapAt != luaFrom) {
+            host.mTelnet.sendInfoNewEnvironValue(qsl("WORD_WRAP"));
+        }
+        host.updateDisplayDimensions();
+    }
     return 0;
 }
 
@@ -3464,6 +3461,10 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, windowName);
     console->setIndentCount(luaFrom);
+    if (luaFrom >= 0 && console->getType() == TConsole::MainConsole) {
+        Host& host = getHostFromLua(L);
+        host.mWrapIndentCount = luaFrom;
+    }
     return 0;
 }
 
@@ -3474,6 +3475,10 @@ int TLuaInterpreter::setWindowWrapHangingIndent(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, windowName);
     console->setHangingIndentCount(luaFrom);
+    if (luaFrom >= 0 && console->getType() == TConsole::MainConsole) {
+        Host& host = getHostFromLua(L);
+        host.mWrapHangingIndentCount = luaFrom;
+    }
     return 0;
 }
 

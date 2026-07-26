@@ -22,6 +22,8 @@
 #include <QDebug>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonValue>
 
 THyperlinkCompactManager::THyperlinkCompactManager()
 : QObject(nullptr)

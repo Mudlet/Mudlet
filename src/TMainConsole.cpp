@@ -42,6 +42,7 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QProgressDialog>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QTextBoundaryFinder>
@@ -865,7 +866,6 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
             mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             mpHost->raiseEvent(mapOpenEvent);
         }
-
     }
     mpMapper->resize(width, height);
     mpMapper->move(x, y);
@@ -1104,7 +1104,8 @@ bool TMainConsole::printWindow(const QString& name, const QString& text)
     if (pC) {
         pC->print(text);
         return true;
-    } else if (pL) {
+    }
+    if (pL) {
         pL->setText(text);
         return true;
     }
@@ -1683,6 +1684,42 @@ void TMainConsole::resizeEvent(QResizeEvent* event)
 
     // Update the record of the text area size for NAWS purposes:
     pHost->updateDisplayDimensions();
+}
+
+void TMainConsole::showPackageDownloadProgress(const QString& title, const QString& cancelText)
+{
+    auto pHost = getHost();
+    if (!pHost) {
+        qWarning() << "TMainConsole::showPackageDownloadProgress() WARNING - called with no host; ignoring the download-progress request.";
+        return;
+    }
+    // a second server-triggered download can arrive mid-download; without the
+    // close, the first dialog leaks frozen and its Cancel aborts the wrong download
+    if (mpPackageDownloadProgressDialog) {
+        mpPackageDownloadProgressDialog->close();
+    }
+    // placeholder range; reset by the first download-progress update
+    mpPackageDownloadProgressDialog = new QProgressDialog(title, cancelText, 0, 4000000, this);
+    connect(mpPackageDownloadProgressDialog, &QProgressDialog::canceled, &pHost->mTelnet, &cTelnet::slot_cancelPackageDownload);
+    mpPackageDownloadProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
+    mpPackageDownloadProgressDialog->show();
+}
+
+void TMainConsole::updatePackageDownloadProgress(qint64 got, qint64 total)
+{
+    if (mpPackageDownloadProgressDialog) {
+        // total is -1 for chunked HTTP responses of unknown length; a (0, 0)
+        // range turns the dialog into a busy indicator
+        mpPackageDownloadProgressDialog->setRange(0, total > 0 ? static_cast<int>(total) : 0);
+        mpPackageDownloadProgressDialog->setValue(static_cast<int>(got));
+    }
+}
+
+void TMainConsole::closePackageDownloadProgress()
+{
+    if (mpPackageDownloadProgressDialog) {
+        mpPackageDownloadProgressDialog->close();
+    }
 }
 
 void TMainConsole::showStatistics()

@@ -61,10 +61,18 @@
 #include <chrono>
 #include <QtConcurrentRun>
 #include <QCoreApplication>
+#include <QDataStream>
 #include <QDialog>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonValue>
+#include <QKeyEvent>
 #include <QtUiTools>
 #include <QNetworkProxy>
+#include <QRegularExpression>
+#include <QSaveFile>
 #include <QSettings>
+#include <QTextStream>
 #include <zip.h>
 #include <memory>
 
@@ -371,7 +379,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
 
     if (mudlet::self()->smFirstLaunch) {
-        QTimer::singleShot(0, this, [this]() {
+        QTimer::singleShot(0ms, this, [this]() {
             if (mpConsole) {
                 mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game"));
             }
@@ -848,7 +856,7 @@ bool Host::resetProfile_phase1()
     mKeyUnit.stopAllTriggers();
     mResetProfile = true;
 
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         resetProfile_phase2();
     });
     return true;
@@ -879,7 +887,22 @@ void Host::resetProfile_phase2()
     mEventMap.clear();
     mLuaInterpreter.abortAllDownloads();
     mLuaInterpreter.initLuaGlobals();
+    // initLuaGlobals() closed the old lua_State, so the LuaInterface (and its
+    // VarUnit tree of registry references) must be rebuilt against the new one.
+    // The VarUnit's name-keyed saved/hidden bookkeeping does not depend on the
+    // lua_State though and is only repopulated by XMLimport at profile open, so
+    // carry it over - otherwise the first save after a reset silently drops all
+    // of the user's saved variables from the profile:
+    const QSet<QString> savedVars = mLuaInterface->getVarUnit()->savedVars;
+    const QSet<QString> hiddenByUserVars = mLuaInterface->getVarUnit()->hiddenByUser;
+    mLuaInterface.reset(new LuaInterface(mLuaInterpreter.getLuaGlobalState()));
+    mLuaInterface->getVarUnit()->savedVars = savedVars;
+    mLuaInterface->getVarUnit()->hiddenByUser = hiddenByUserVars;
     mLuaInterpreter.loadGlobal();
+    // Profile load hides Mudlet's own Lua API right after loadGlobal() (see
+    // mudlet::slot_connectionDialogueFinished()); do the same here so the
+    // Variables view keeps showing only the user's variables after a reset:
+    hideMudletsVariables();
 
     // Have to recopy the values into the Lua "color_table"
     mLuaInterpreter.updateAnsi16ColorsInTable();
@@ -1377,6 +1400,10 @@ QPair<QString, QString> Host::getSearchEngine()
 // cTelnet::sendData(...) call:
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
+    // Record that the player (or a script acting for them) has interacted this connection; a later
+    // unsolicited GMCP Char.Login.URL may then auto-open the browser (see GMCPAuthenticator).
+    mUserSentInputThisConnection = true;
+
     // Determine if we should print the command based on the echo mode
     bool shouldPrint = false;
     switch (mCommandEchoMode) {
@@ -1675,10 +1702,9 @@ QPair<bool, QString> Host::setStopWatchName(const int id, const QString& newName
             if (it->second->name() == newName) {
                 if (it->first != id) {
                     return qMakePair(false, qsl("the name '%1' is already in use for another stopwatch (id:%2)").arg(newName, QString::number(it->first)));
-                } else {
-                    // Trivial case - the stopwatch is already called by the NEW name:
-                    return qMakePair(true, QString());
                 }
+                // Trivial case - the stopwatch is already called by the NEW name:
+                return qMakePair(true, QString());
             }
         }
     }
@@ -2162,7 +2188,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // Defer raising install events until the next event loop iteration
     // This ensures all package installation is complete (including variable loading)
     // before event handlers execute, preventing Lua state corruption
-    QTimer::singleShot(0, this, [this, thing, packageName, fileName]() {
+    QTimer::singleShot(0ms, this, [this, thing, packageName, fileName]() {
         // Don't raise events if Host is shutting down to avoid handlers executing during teardown
         if (isClosingDown()) {
             return;
@@ -2216,7 +2242,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // Save profile to ensure modules persist and appear in module manager
     if (thing != enums::PackageModuleType::Package) {
         // Use a timer to save profile after module installation completes
-        QTimer::singleShot(100, this, [this]() {
+        QTimer::singleShot(100ms, this, [this]() {
             saveProfile();
         });
     }
@@ -2386,7 +2412,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         mSaveTimer = true;
         // save the profile on the next Qt main loop cycle in order for the asyncronous save mechanism
         // not to try to write to disk a package/module that just got uninstalled and removed from memory
-        QTimer::singleShot(0, this, [this]() {
+        QTimer::singleShot(0ms, this, [this]() {
             mSaveTimer = false;
             if (auto [ok, filename, error] = saveProfile(); !ok) {
                 qDebug() << qsl("Host::uninstallPackage: Couldn't save '%1' to '%2' because: %3").arg(getName(), filename, error);
@@ -3603,26 +3629,28 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
             dockwidget->setFloating(true);
         }
         return {true, QString()};
-    } else {
-        if (area == QLatin1String("r") || area == QLatin1String("right")) {
-            dockwidget->setFloating(false);
-            mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
-            return {true, QString()};
-        } else if (area == QLatin1String("l") || area == QLatin1String("left")) {
-            dockwidget->setFloating(false);
-            mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, dockwidget);
-            return {true, QString()};
-        } else if (area == QLatin1String("t") || area == QLatin1String("top")) {
-            dockwidget->setFloating(false);
-            mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, dockwidget);
-            return {true, QString()};
-        } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
-            dockwidget->setFloating(false);
-            mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, dockwidget);
-            return {true, QString()};
-        }
-        return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
     }
+    if (area == QLatin1String("r") || area == QLatin1String("right")) {
+        dockwidget->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
+        return {true, QString()};
+    }
+    if (area == QLatin1String("l") || area == QLatin1String("left")) {
+        dockwidget->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, dockwidget);
+        return {true, QString()};
+    }
+    if (area == QLatin1String("t") || area == QLatin1String("top")) {
+        dockwidget->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, dockwidget);
+        return {true, QString()};
+    }
+    if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+        dockwidget->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, dockwidget);
+        return {true, QString()};
+    }
+    return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
 }
 
 std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
@@ -3834,7 +3862,9 @@ bool Host::showWindow(const QString& name)
     if (pL) {
         pL->show();
         return true;
-    } else if (pC) {
+    }
+
+    if (pC) {
         auto pD = mpConsole->mDockWidgetMap.value(name);
         if (pD) {
             pD->update();
@@ -3879,7 +3909,9 @@ bool Host::hideWindow(const QString& name)
     if (pL) {
         pL->hide();
         return true;
-    } else if (pC) {
+    }
+
+    if (pC) {
         auto pD = mpConsole->mDockWidgetMap.value(name);
         if (pD) {
             pD->hide();
@@ -4064,7 +4096,9 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
             pL->show();
         }
         return {true, QString()};
-    } else if (pC) {
+    }
+
+    if (pC) {
         pC->setParent(pW);
         pC->move(x1, y1);
         pC->mOldX = x1;
@@ -4073,28 +4107,36 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
             pC->show();
         }
         return {true, QString()};
-    } else if (pS) {
+    }
+
+    if (pS) {
         pS->setParent(pW);
         pS->move(x1, y1);
         if (show) {
             pS->show();
         }
         return {true, QString()};
-    } else if (pN) {
+    }
+
+    if (pN) {
         pN->setParent(pW);
         pN->move(x1, y1);
         if (show) {
             pN->show();
         }
         return {true, QString()};
-    } else if (pT) {
+    }
+
+    if (pT) {
         pT->setParent(pW);
         pT->move(x1, y1);
         if (show) {
             pT->show();
         }
         return {true, QString()};
-    } else if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
+    }
+
+    if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->setParent(pW);
         pM->move(x1, y1);
         if (show) {
@@ -4139,26 +4181,33 @@ std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, 
             pM->resize(width, height);
         }
         return {true, QString()};
-    } else {
-        if (area == QLatin1String("r") || area == QLatin1String("right")) {
-            pM->setFloating(false);
-            mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, pM);
-            return {true, QString()};
-        } else if (area == QLatin1String("l") || area == QLatin1String("left")) {
-            pM->setFloating(false);
-            mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, pM);
-            return {true, QString()};
-        } else if (area == QLatin1String("t") || area == QLatin1String("top")) {
-            pM->setFloating(false);
-            mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, pM);
-            return {true, QString()};
-        } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
-            pM->setFloating(false);
-            mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, pM);
-            return {true, QString()};
-        }
-        return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
     }
+
+    if (area == QLatin1String("r") || area == QLatin1String("right")) {
+        pM->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, pM);
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("l") || area == QLatin1String("left")) {
+        pM->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, pM);
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("t") || area == QLatin1String("top")) {
+        pM->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, pM);
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+        pM->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, pM);
+        return {true, QString()};
+    }
+
+    return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
 }
 
 std::pair<bool, QString> Host::closeMapWidget()
@@ -4207,7 +4256,9 @@ bool Host::echoWindow(const QString& name, const QString& text)
     if (pC) {
         pC->print(text);
         return true;
-    } else if (pL) {
+    }
+
+    if (pL) {
         pL->setText(text);
         return true;
     }
@@ -4449,7 +4500,9 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
     if (pC) {
         pC->setConsoleBgColor(r, g, b, alpha);
         return true;
-    } else if (pL) {
+    }
+
+    if (pL) {
         QString styleSheet = pL->styleSheet();
         QString newColor = QString("background-color: rgba(%1, %2, %3, %4);").arg(r).arg(g).arg(b).arg(alpha);
         if (styleSheet.contains(qsl("background-color"))) {
@@ -4827,6 +4880,26 @@ void Host::setCaretEnabled(bool enabled)
     mpConsole->setCaretMode(enabled);
 }
 
+// Whether this key press is the one selected in the accessibility preferences
+// to toggle caret mode - such a press must reach the caret-toggling key
+// handlers instead of being swallowed by an application-wide QShortcut,
+// which the user could have remapped onto any of these keys:
+bool Host::caretShortcutMatches(const QKeyEvent* ke) const
+{
+    constexpr Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
+    switch (mCaretShortcut) {
+    case CaretShortcut::None:
+        return false;
+    case CaretShortcut::Tab:
+        return ke->key() == Qt::Key_Tab && !(ke->modifiers() & Qt::ControlModifier);
+    case CaretShortcut::CtrlTab:
+        return ke->key() == Qt::Key_Tab && (ke->modifiers() & Qt::ControlModifier);
+    case CaretShortcut::F6:
+        return ke->key() == Qt::Key_F6 && (ke->modifiers() & allModifiers) == Qt::NoModifier;
+    }
+    return false;
+}
+
 void Host::setFocusOnHostActiveCommandLine()
 {
     if (mFocusTimerRunning) {
@@ -4859,13 +4932,13 @@ void Host::setFocusOnHostActiveCommandLine()
 
             // For Steam Deck and other environments where focus might be unreliable,
             // add additional focus attempts with slight delays
-            QTimer::singleShot(10, this, [targetCommandLine]() {
+            QTimer::singleShot(10ms, this, [targetCommandLine]() {
                 if (targetCommandLine && !targetCommandLine->hasFocus()) {
                     targetCommandLine->setFocus(Qt::OtherFocusReason);
                 }
             });
 
-            QTimer::singleShot(50, this, [targetCommandLine]() {
+            QTimer::singleShot(50ms, this, [targetCommandLine]() {
                 if (targetCommandLine && !targetCommandLine->hasFocus()) {
                     targetCommandLine->setFocus(Qt::OtherFocusReason);
                 }
@@ -4875,7 +4948,7 @@ void Host::setFocusOnHostActiveCommandLine()
         mFocusTimerRunning = false;
     };
 
-    QTimer::singleShot(0, this, setCommandLineFocus);
+    QTimer::singleShot(0ms, this, setCommandLineFocus);
 }
 
 void Host::recordActiveCommandLine(TCommandLine* pCommandLine)
