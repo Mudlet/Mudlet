@@ -79,12 +79,9 @@ signals:
     void signal_mmpMapLocationChanged();
 
     // Map-progress seam for the libmudlet split (#8681, #9011): the map engine
-    // has no Qt Widgets, so when it needs a standalone progress dialog (mapper
-    // not visible) it emits these pre-translated payloads and the frontend
-    // (TMainConsole) owns the actual QProgressDialog. The two *Start signals
-    // differ only in the widget styling the frontend applies; the download/XML
-    // path is modal and indeterminate, the JSON path is non-modal with a known
-    // room count. Cancellation returns through slot_mapProgressDialogCancelled().
+    // must stay free of Qt Widgets, so it emits these pre-translated payloads for
+    // the frontend (TMainConsole) to render as a QProgressDialog. Cancellation
+    // returns through slot_mapProgressDialogCancelled().
     void signal_mapTransferProgressStart(const QString& title, const QString& label, const QString& cancelButtonText);
     void signal_mapJsonProgressStart(const QString& title, const QString& label, const QString& cancelButtonText, int maximum);
     void signal_mapProgressSetLabel(const QString& text);
@@ -203,10 +200,6 @@ public:
     std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false, const bool allowUserCancellation = true);
     qsizetype getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
-    // Warns loudly when no frontend is wired to show the standalone map-progress
-    // dialog - e.g. a map operation reaching the engine before a console exists -
-    // so the missing UI is diagnosable rather than silent. The operation itself
-    // still proceeds.
     void warnIfMapProgressUnwired(const char* context);
     QString getDefaultAreaName() const { return mDefaultAreaName; }
     QString getUnnamedAreaName() const { return mUnnamedAreaName; }
@@ -417,14 +410,9 @@ private:
     int mExpectedFileSize = 0;
     bool mImportRunning = false;
 
-    // State mirroring the frontend-owned standalone map-progress dialog, since
-    // the map engine can no longer read the widget back. mStandaloneMapProgress
-    // is true while such a dialog is up (it also doubles as the "an import or
-    // export is already running" guard); mMapProgressIsTransfer routes a cancel
-    // to slot_downloadCancel() for the download/XML path but not the JSON path;
-    // mMapProgressCancelRequested is set by the frontend's cancel and polled by
-    // the JSON loops; mStandaloneMapProgressMaximum caches the last range max we
-    // requested (replaces the old QProgressDialog::maximum() read-back).
+    // Engine-side mirror of the frontend-owned dialog, which the engine can't
+    // read back. mStandaloneMapProgress also serves as the "import/export already
+    // running" guard (see writeJsonMapFile()/readJsonMapFile()).
     bool mStandaloneMapProgress = false;
     bool mMapProgressIsTransfer = false;
     bool mMapProgressCancelRequested = false;

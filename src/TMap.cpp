@@ -2904,10 +2904,9 @@ void TMap::clearTransferProgress()
 
 void TMap::slot_mapProgressDialogCancelled()
 {
+    // The JSON path polls mMapProgressCancelRequested in its increment loop; the
+    // transfer path needs its network reply aborted here.
     mMapProgressCancelRequested = true;
-    // The download/XML path aborts the network reply and clears its own
-    // progress; the JSON path instead polls mMapProgressCancelRequested in its
-    // increment loop, so nothing more to do here for it.
     if (mMapProgressIsTransfer) {
         slot_downloadCancel();
     }
@@ -2915,9 +2914,6 @@ void TMap::slot_mapProgressDialogCancelled()
 
 void TMap::warnIfMapProgressUnwired(const char* context)
 {
-    // The frontend wires all the map-progress signals together (see
-    // mudlet::addConsoleForNewHost), so either start signal being connected
-    // means a frontend is present to receive the whole set.
     static const QMetaMethod transferStart = QMetaMethod::fromSignal(&TMap::signal_mapTransferProgressStart);
     static const QMetaMethod jsonStart = QMetaMethod::fromSignal(&TMap::signal_mapJsonProgressStart);
     if (isSignalConnected(transferStart) || isSignalConnected(jsonStart)) {
