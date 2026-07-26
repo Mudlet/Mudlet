@@ -39,6 +39,7 @@
 #include "mudlet.h"
 #include "GifTracker.h"
 
+#include <QIcon>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
@@ -1719,6 +1720,91 @@ void TMainConsole::closePackageDownloadProgress()
 {
     if (mpPackageDownloadProgressDialog) {
         mpPackageDownloadProgressDialog->close();
+    }
+}
+
+void TMainConsole::createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum)
+{
+    // a prior map operation's dialog can still be up if a new one starts; drop
+    // it so its Cancel cannot reach the wrong operation (mirrors the
+    // download-progress guard above). Not WA_DeleteOnClose, matching the widget
+    // the engine used to own: it must survive being dismissed mid-operation
+    // (the JSON reader keeps updating it in a processEvents loop), so we delete
+    // it explicitly instead.
+    if (mpMapProgressDialog) {
+        mpMapProgressDialog->hide();
+        mpMapProgressDialog->deleteLater();
+    }
+    mpMapProgressDialog = new QProgressDialog(label, cancelButtonText, minimum, maximum, this);
+    mpMapProgressDialog->setWindowTitle(title);
+    mpMapProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
+    mpMapProgressDialog->setAutoClose(false);
+    mpMapProgressDialog->setAutoReset(false);
+    auto pHost = getHost();
+    // Only wire cancellation when the operation offers it (empty button text
+    // means non-cancelable): QProgressDialog still emits canceled() on Escape or
+    // window-close even without a cancel button, and routing that to the engine
+    // would abort a non-cancelable import and post a spurious cancel message.
+    if (pHost && !pHost->mpMap.isNull() && !cancelButtonText.isEmpty()) {
+        connect(mpMapProgressDialog, &QProgressDialog::canceled, pHost->mpMap.data(), &TMap::slot_mapProgressDialogCancelled);
+    }
+}
+
+void TMainConsole::showMapTransferProgress(const QString& title, const QString& label, const QString& cancelButtonText)
+{
+    // The download/XML-import dialog: modeless, an indeterminate 0..0 range
+    // until the first progress update sets it, and shown right away.
+    createMapProgressDialog(title, label, cancelButtonText, 0, 0);
+    mpMapProgressDialog->setMinimumWidth(300);
+    mpMapProgressDialog->setMinimumDuration(0);
+    mpMapProgressDialog->show();
+}
+
+void TMainConsole::showMapJsonProgress(const QString& title, const QString& label, const QString& cancelButtonText, int maximum)
+{
+    // The JSON export/import dialog: non-modal with a known room count; it shows
+    // itself once its value is first set, after the brief minimum duration.
+    createMapProgressDialog(title, label, cancelButtonText, 0, maximum);
+    mpMapProgressDialog->setWindowModality(Qt::NonModal);
+    mpMapProgressDialog->setMinimumWidth(500);
+    mpMapProgressDialog->setMinimumDuration(1);
+}
+
+void TMainConsole::setMapProgressDialogLabel(const QString& text)
+{
+    if (mpMapProgressDialog) {
+        mpMapProgressDialog->setLabelText(text);
+    }
+}
+
+void TMainConsole::setMapProgressDialogRange(int minimum, int maximum)
+{
+    if (mpMapProgressDialog) {
+        mpMapProgressDialog->setRange(minimum, maximum);
+    }
+}
+
+void TMainConsole::setMapProgressDialogValue(int value)
+{
+    if (mpMapProgressDialog) {
+        mpMapProgressDialog->setValue(value);
+    }
+}
+
+void TMainConsole::disableMapProgressDialogCancel()
+{
+    if (mpMapProgressDialog) {
+        mpMapProgressDialog->setCancelButton(nullptr);
+    }
+}
+
+void TMainConsole::closeMapProgressDialog()
+{
+    if (mpMapProgressDialog) {
+        // hide() rather than close() so we don't re-enter QProgressDialog's
+        // closeEvent -> cancel() while a cancel is already being handled.
+        mpMapProgressDialog->hide();
+        mpMapProgressDialog->deleteLater();
     }
 }
 

@@ -94,6 +94,16 @@ public:
     void showPackageDownloadProgress(const QString& title, const QString& cancelText);
     void updatePackageDownloadProgress(qint64 got, qint64 total);
     void closePackageDownloadProgress();
+    // Owns the standalone map-progress dialog on TMap's behalf (see the seam in
+    // TMap.h). The two show* variants differ only in the QProgressDialog styling
+    // each map operation used before the split.
+    void showMapTransferProgress(const QString& title, const QString& label, const QString& cancelButtonText);
+    void showMapJsonProgress(const QString& title, const QString& label, const QString& cancelButtonText, int maximum);
+    void setMapProgressDialogLabel(const QString& text);
+    void setMapProgressDialogRange(int minimum, int maximum);
+    void setMapProgressDialogValue(int value);
+    void disableMapProgressDialogCancel();
+    void closeMapProgressDialog();
     const QString& getSystemSpellDictionary() const { return mSpellDic; }
     const QByteArray& getHunspellCodecName_system() const { return mHunspellCodecName_system; }
     Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
@@ -128,6 +138,7 @@ public:
     QTextStream mLogStream;
     bool mLogToLogFile = false;
     QPointer<QProgressDialog> mpPackageDownloadProgressDialog;
+    QPointer<QProgressDialog> mpMapProgressDialog;
 
 
 public slots:
@@ -145,6 +156,10 @@ signals:
 
 
 private:
+    // Shared creation/styling for the standalone map-progress dialog used by
+    // both showMapTransferProgress() and showMapJsonProgress().
+    void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
+
     // Was public in Host class but made private there and cloned to here
     // (for main TConsole) to prevent it being changed without going through the
     // process to load in the changed dictionary:
