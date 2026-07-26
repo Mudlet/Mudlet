@@ -29,6 +29,7 @@
  */
 
 #include <QtTest/QtTest>
+#include <chrono>
 
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -52,6 +53,8 @@ extern "C" {
 #include <lua.h>
 #endif
 }
+
+using namespace std::chrono_literals;
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -81,7 +84,8 @@ private:
 
     // Evaluates a Lua expression in the profile's global state. Returns the
     // first result (invalid QVariant for nil or a compile/runtime error) plus
-    // the second result as a string (the error message on denial).
+    // the second result as a string: the error message on denial, or the Lua
+    // error text when the expression fails to compile or run.
     std::pair<QVariant, QString> evalLua(const QString& expression)
     {
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
@@ -101,6 +105,10 @@ private:
             if (lua_gettop(L) > base + 1 && lua_isstring(L, base + 2)) {
                 second = QString::fromUtf8(lua_tostring(L, base + 2));
             }
+        } else if (lua_gettop(L) > base && lua_isstring(L, base + 1)) {
+            // A compile or runtime error leaves the message on the stack;
+            // surface it so a failing test reports the real Lua error.
+            second = QString::fromUtf8(lua_tostring(L, base + 1));
         }
         lua_settop(L, base);
         return {first, second};
@@ -186,21 +194,21 @@ private slots:
         const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
         QDir(path).removeRecursively();
 
-        QTimer::singleShot(0, qApp, [this]() {
+        QTimer::singleShot(0ms, qApp, [this]() {
             mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), mHostname);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), mPort);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
         });
 

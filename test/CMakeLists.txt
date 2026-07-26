@@ -36,6 +36,7 @@ set(UNIT_TESTS
     TKeySequenceEditTest
     TEncodingHelperTest
     PasswordMigrationTest
+    TMediaPathTraversalTest
 )
 
 foreach(test_name ${UNIT_TESTS})
