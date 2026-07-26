@@ -62,16 +62,18 @@
 #include <QtConcurrentRun>
 #include <QCoreApplication>
 #include <QDataStream>
-#include <QDialog>
+#include <QDirIterator>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QKeyEvent>
-#include <QtUiTools>
+#include <QMovie>
 #include <QNetworkProxy>
+#include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QSettings>
+#include <QTemporaryFile>
 #include <QTextStream>
 #include <zip.h>
 #include <memory>
@@ -242,7 +244,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpMap(new TMap(this, hostname))
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))
-, mpDockableMapWidget()
 , mTimerDebugOutputSuppressionInterval(QTime())
 , mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
 , mBufferSearchOptions(TConsole::SearchOption::SearchOptionNone)
@@ -452,11 +453,6 @@ Host::~Host()
     mpLastCommandLineUsed.clear();
 
     mStopWatchMap.clear();
-
-    if (mpDockableMapWidget) {
-        mpDockableMapWidget->deleteLater();
-    }
-
 
     mErrorLogStream.flush();
     mErrorLogFile.close();
@@ -1316,26 +1312,7 @@ bool Host::checkForMappingScript()
 void Host::check_for_mappingscript()
 {
     if (!checkForMappingScript()) {
-        QUiLoader loader;
-
-        QFile file(":/ui/lacking_mapper_script.ui");
-        if (!file.open(QFile::ReadOnly)) {
-            qWarning() << "Host: failed to open lacking_mapper_script.ui for reading:" << file.errorString();
-            return;
-        }
-
-        auto dialog = dynamic_cast<QDialog*>(loader.load(&file, mudlet::self()));
-        file.close();
-        if (!dialog) {
-            // could not load / not a QDialog
-            return;
-        }
-
-        connect(dialog, &QDialog::accepted, mudlet::self(), &mudlet::slot_openMappingScriptsPage);
-
-        dialog->show();
-        dialog->raise();
-        dialog->activateWindow();
+        emit signal_showMapperScriptReminder();
     }
 }
 
@@ -1949,10 +1926,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         return {true, QString()};
     }
 
-    // As the pointer to dialog is only used now WITHIN this method and this
-    // method can be re-entered, it is best to use a local rather than a class
-    // pointer just in case we accidentally re-enter this method in the future.
-    QDialog* pUnzipDialog = nullptr;
+    // Tracks whether we asked the frontend to show its unpacking progress
+    // dialog, so we know to ask it to close again once unzipping finishes.
+    bool showedUnpackingDialog = false;
 
     QString actualFileName = fileName;
     std::unique_ptr<QTemporaryFile> tempFile;
@@ -2045,41 +2021,16 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // window-manager focus from the user's other applications - see
         // issue #9170.
         if (thing != enums::PackageModuleType::ModuleFromUI && !quiet) {
-            QUiLoader loader(this);
-            QFile uiFile(qsl(":/ui/package_manager_unpack.ui"));
-            if (!uiFile.open(QFile::ReadOnly)) {
-                qWarning() << "Host: failed to open package_manager_unpack.ui for reading:" << uiFile.errorString();
-                return {false, qsl("could not open unpacking progress dialog UI file")};
-            }
-            pUnzipDialog = dynamic_cast<QDialog*>(loader.load(&uiFile, nullptr));
-            uiFile.close();
-            if (!pUnzipDialog) {
-                return {false, qsl("could not load unpacking progress dialog")};
-            }
-
-            auto* pLabel = pUnzipDialog->findChild<QLabel*>(qsl("label"));
-            if (pLabel) {
-                if (thing != enums::PackageModuleType::Package) {
-                    pLabel->setText(tr("Unpacking module:\n\"%1\"\nplease wait...").arg(packageName));
-                } else {
-                    pLabel->setText(tr("Unpacking package:\n\"%1\"\nplease wait...").arg(packageName));
-                }
-            }
-            pUnzipDialog->hide(); // Must hide to change WindowModality
-            pUnzipDialog->setWindowTitle(tr("Unpacking"));
-            pUnzipDialog->setWindowModality(Qt::ApplicationModal);
-            pUnzipDialog->show();
-            qApp->processEvents();
-            pUnzipDialog->raise();
-            pUnzipDialog->repaint(); // Force a redraw
-            qApp->processEvents();   // Try to ensure we are on top of any other dialogs and freshly drawn
+            const QString message =
+                    (thing != enums::PackageModuleType::Package) ? tr("Unpacking module:\n\"%1\"\nplease wait...").arg(packageName) : tr("Unpacking package:\n\"%1\"\nplease wait...").arg(packageName);
+            emit signal_showUnpackingProgress(message, tr("Unpacking"));
+            showedUnpackingDialog = true;
         }
 
         auto unzipSuccessful = mudlet::unzip(actualFileName, _dest, _tmpDir);
 
-        if (pUnzipDialog) {
-            pUnzipDialog->deleteLater();
-            pUnzipDialog = nullptr;
+        if (showedUnpackingDialog) {
+            emit signal_hideUnpackingProgress();
         }
         if (!unzipSuccessful) {
             return {false, qsl("could not unzip package")};
@@ -3432,14 +3383,14 @@ void Host::setBufferSearchOptions(const TConsole::SearchOptions optionsState)
 
 std::pair<bool, QString> Host::setMapperTitle(const QString& title)
 {
-    if (!mpDockableMapWidget) {
+    if (!mpConsole || !mpConsole->mpDockableMapWidget) {
         return {false, "no floating/dockable type map window found"};
     }
 
     if (title.isEmpty()) {
-        mpDockableMapWidget->setWindowTitle(tr("Map - %1").arg(mHostName));
+        mpConsole->mpDockableMapWidget->setWindowTitle(tr("Map - %1").arg(mHostName));
     } else {
-        mpDockableMapWidget->setWindowTitle(title);
+        mpConsole->mpDockableMapWidget->setWindowTitle(title);
     }
 
     return {true, QString()};
@@ -3587,7 +3538,6 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         dockwidget = new TDockWidget(this, name);
         dockwidget->setObjectName(qsl("dockWindow_%1_%2").arg(hostName, name));
         dockwidget->setContentsMargins(0, 0, 0, 0);
-        dockwidget->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
         dockwidget->setWindowTitle(name);
         mpConsole->mDockWidgetMap.insert(name, dockwidget);
         // It wasn't obvious but the parent passed to the TConsole constructor
@@ -3597,7 +3547,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         console->setContentsMargins(0, 0, 0, 0);
         dockwidget->setTConsole(console);
         console->layerCommandLine->hide();
-        console->mpScrollBar->hide();
+        console->setScrollBarVisible(false);
         mpConsole->mSubConsoleMap.insert(name, console);
         dockwidget->setStyleSheet(mProfileStyleSheet);
         mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
@@ -4054,7 +4004,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     if (pDCheck) {
         return {false, qsl("element '%1' is the base of a floating/dockable user window and may not be moved").arg(name)};
     }
-    if (mpDockableMapWidget) {
+    if (mpConsole->mpDockableMapWidget) {
         if (!name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
             return {false, qsl("element '%1' is the map in a floating/dockable window and may not be moved").arg(name)};
         }
@@ -4154,11 +4104,11 @@ std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, 
         return {false, QString()};
     }
 
-    auto pM = mpDockableMapWidget;
+    auto pM = mpConsole->mpDockableMapWidget;
     auto pMapper = mpMap.data()->mpMapper;
     if (!pM && !pMapper) {
         showHideOrCreateMapper(true);
-        pM = mpDockableMapWidget;
+        pM = mpConsole->mpDockableMapWidget;
     }
     if (!pM) {
         return {false, qsl("cannot create map widget. Do you already use an embedded mapper?")};
@@ -4216,7 +4166,7 @@ std::pair<bool, QString> Host::closeMapWidget()
         return {false, QString()};
     }
 
-    auto pM = mpDockableMapWidget;
+    auto pM = mpConsole->mpDockableMapWidget;
     if (!pM) {
         return {false, qsl("no map widget found to close")};
     }
@@ -4475,8 +4425,8 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
         mpNotePad->setStyleSheet(styleSheet);
         mpNotePad->setTabsStyleSheet(styleSheet);
     }
-    if (mpDockableMapWidget) {
-        mpDockableMapWidget->setStyleSheet(styleSheet);
+    if (mpConsole->mpDockableMapWidget) {
+        mpConsole->mpDockableMapWidget->setStyleSheet(styleSheet);
     }
 
     for (auto& dockWidget : mpConsole->mDockWidgetMap) {
@@ -4648,7 +4598,7 @@ void Host::toggleMapperVisibility()
     if (pMap->mpMapper->isFloatAndDockable()) {
         // If we are using a floating/dockable widget we must show/hide that
         // only and not the mapper widget (otherwise it messes up {shrinks
-        // to a minimal size} the mapper inside the container QDockWidget). This
+        // to a minimal size} the mapper inside the container dock widget). This
         // is the same as the case for a TConsole inside a TDockWidget in
         // (void) TDockWidget::setVisible(bool).
         // When in a dock widget, check the parent's visibility, not the child's,
@@ -4669,17 +4619,23 @@ void Host::toggleMapperVisibility()
 
 void Host::createMapper(const bool loadDefaultMap)
 {
+    // The frontend console owns the dockable map widget, so without it there is
+    // nowhere to put the mapper - the profile has no main console yet or is
+    // already being torn down.
+    if (!mpConsole) {
+        return;
+    }
     auto pMap = mpMap.data();
     auto hostName(getName());
-    mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
-    mpDockableMapWidget->setObjectName(qsl("dockMap_%1").arg(hostName));
+    // The dock widget is a frontend object owned by the profile's main console.
+    mpConsole->createMapperDock(tr("Map - %1").arg(hostName), qsl("dockMap_%1").arg(hostName));
     // Arrange for TMap member values to be copied from the Host masters so they
     // are in place when the 2D mapper is created:
     getPlayerRoomStyleDetails(pMap->mPlayerRoomStyle, pMap->mPlayerRoomOuterDiameterPercentage, pMap->mPlayerRoomInnerDiameterPercentage, pMap->mPlayerRoomOuterColor, pMap->mPlayerRoomInnerColor);
 
-    pMap->mpMapper = new dlgMapper(mpDockableMapWidget, this, pMap); //FIXME: mpHost definieren
+    pMap->mpMapper = new dlgMapper(mpConsole->mpDockableMapWidget, this, pMap); //FIXME: mpHost definieren
     pMap->mpMapper->setStyleSheet(mProfileStyleSheet);
-    mpDockableMapWidget->setWidget(pMap->mpMapper);
+    mpConsole->mpDockableMapWidget->setWidget(pMap->mpMapper);
 
     if (loadDefaultMap && pMap->mpRoomDB->isEmpty()) {
         qDebug() << "Host::create_mapper() - restore map case 3.";
@@ -4704,7 +4660,7 @@ void Host::createMapper(const bool loadDefaultMap)
             pMap->mpMapper->show();
         }
     }
-    mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, mpDockableMapWidget);
+    mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, mpConsole->mpDockableMapWidget);
 
     // XXX: should this be called multiple times?
     mudlet::self()->loadWindowLayout();
@@ -4713,7 +4669,7 @@ void Host::createMapper(const bool loadDefaultMap)
     // restored a previous hidden state, but when first creating the mapper, we
     // always want it to be visible.
     pMap->mpMapper->show();
-    mpDockableMapWidget->show();
+    mpConsole->mpDockableMapWidget->show();
     pMap->mpMapper->updateEmptyStateOverlay();
 
     check_for_mappingscript();
@@ -5018,7 +4974,7 @@ void Host::setBorders(QMargins borders)
     auto y = mpConsole->height();
     const QSize s = QSize(x, y);
     QResizeEvent event(s, s);
-    QApplication::sendEvent(mpConsole, &event);
+    QCoreApplication::sendEvent(mpConsole, &event);
     mpConsole->raiseMudletSysWindowResizeEvent(x, y);
 }
 

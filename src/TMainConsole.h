@@ -37,6 +37,8 @@
 #include <list>
 
 class TTextBox;
+class QDialog;
+class QDockWidget;
 class QProgressDialog;
 
 class TMainConsole : public TConsole
@@ -94,6 +96,10 @@ public:
     void showPackageDownloadProgress(const QString& title, const QString& cancelText);
     void updatePackageDownloadProgress(qint64 got, qint64 total);
     void closePackageDownloadProgress();
+    void createMapperDock(const QString& title, const QString& objectName);
+    void showMapperScriptReminder();
+    void showUnpackingProgress(const QString& message, const QString& title);
+    void closeUnpackingProgress();
     const QString& getSystemSpellDictionary() const { return mSpellDic; }
     const QByteArray& getHunspellCodecName_system() const { return mHunspellCodecName_system; }
     Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
@@ -128,6 +134,8 @@ public:
     QTextStream mLogStream;
     bool mLogToLogFile = false;
     QPointer<QProgressDialog> mpPackageDownloadProgressDialog;
+    QPointer<QDockWidget> mpDockableMapWidget;
+    QPointer<QDialog> mpUnpackingDialog;
 
 
 public slots:

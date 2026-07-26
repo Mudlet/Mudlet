@@ -39,10 +39,14 @@
 #include "mudlet.h"
 #include "GifTracker.h"
 
+#include <QDialog>
+#include <QDockWidget>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
 #include <QProgressDialog>
+#include <QUiLoader>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QTextBoundaryFinder>
@@ -79,6 +83,16 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
 TMainConsole::~TMainConsole()
 {
+    // The dockable map widget is reparented onto the main window by
+    // addDockWidget(), so it does not die with this console automatically.
+    if (mpDockableMapWidget) {
+        mpDockableMapWidget->deleteLater();
+    }
+    // The unpacking progress dialog is loaded parentless, so it too must be
+    // disposed of explicitly if the console dies while it is still open.
+    if (mpUnpackingDialog) {
+        mpUnpackingDialog->deleteLater();
+    }
     if (mpHunspell_system) {
         Hunspell_destroy(mpHunspell_system);
         mpHunspell_system = nullptr;
@@ -825,7 +839,7 @@ std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name,
 std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
 {
     auto pW = mDockWidgetMap.value(windowname);
-    auto pM = mpHost->mpDockableMapWidget;
+    auto pM = mpDockableMapWidget;
     if (pM) {
         return {false, qsl("cannot create mapper. Do you already use a map window?")};
     }
@@ -1719,6 +1733,82 @@ void TMainConsole::closePackageDownloadProgress()
 {
     if (mpPackageDownloadProgressDialog) {
         mpPackageDownloadProgressDialog->close();
+    }
+}
+
+void TMainConsole::createMapperDock(const QString& title, const QString& objectName)
+{
+    mpDockableMapWidget = new QDockWidget(title);
+    mpDockableMapWidget->setObjectName(objectName);
+}
+
+void TMainConsole::showMapperScriptReminder()
+{
+    // the mapper script reminder is only shown once; the caller (Host) tracks
+    // that, so here we just show the dialog
+    QUiLoader loader;
+    QFile file(qsl(":/ui/lacking_mapper_script.ui"));
+    if (!file.open(QFile::ReadOnly)) {
+        qWarning() << "TMainConsole::showMapperScriptReminder() WARNING - failed to open lacking_mapper_script.ui for reading:" << file.errorString();
+        return;
+    }
+
+    auto dialog = qobject_cast<QDialog*>(loader.load(&file, mudlet::self()));
+    file.close();
+    if (!dialog) {
+        // could not load / not a QDialog
+        qWarning() << "TMainConsole::showMapperScriptReminder() WARNING - could not load the mapping-script reminder dialog.";
+        return;
+    }
+
+    connect(dialog, &QDialog::accepted, mudlet::self(), &mudlet::slot_openMappingScriptsPage);
+
+    dialog->show();
+    dialog->raise();
+    dialog->activateWindow();
+}
+
+void TMainConsole::showUnpackingProgress(const QString& message, const QString& title)
+{
+    // a second install can begin before the first finishes; dispose of the stale
+    // dialog so its progress does not linger. deleteLater() (not close()) because
+    // the dialog is loaded parentless and without WA_DeleteOnClose, so closing it
+    // would leak it as we are about to overwrite the only pointer to it.
+    if (mpUnpackingDialog) {
+        mpUnpackingDialog->deleteLater();
+    }
+
+    QUiLoader loader(this);
+    QFile uiFile(qsl(":/ui/package_manager_unpack.ui"));
+    if (!uiFile.open(QFile::ReadOnly)) {
+        qWarning() << "TMainConsole::showUnpackingProgress() WARNING - failed to open package_manager_unpack.ui for reading:" << uiFile.errorString();
+        return;
+    }
+    mpUnpackingDialog = qobject_cast<QDialog*>(loader.load(&uiFile, nullptr));
+    uiFile.close();
+    if (!mpUnpackingDialog) {
+        qWarning() << "TMainConsole::showUnpackingProgress() WARNING - could not load the unpacking progress dialog.";
+        return;
+    }
+
+    if (auto* pLabel = mpUnpackingDialog->findChild<QLabel*>(qsl("label"))) {
+        pLabel->setText(message);
+    }
+    mpUnpackingDialog->hide(); // Must hide to change WindowModality
+    mpUnpackingDialog->setWindowTitle(title);
+    mpUnpackingDialog->setWindowModality(Qt::ApplicationModal);
+    mpUnpackingDialog->show();
+    QCoreApplication::processEvents();
+    mpUnpackingDialog->raise();
+    mpUnpackingDialog->repaint();      // Force a redraw
+    QCoreApplication::processEvents(); // Try to ensure we are on top of any other dialogs and freshly drawn
+}
+
+void TMainConsole::closeUnpackingProgress()
+{
+    if (mpUnpackingDialog) {
+        mpUnpackingDialog->deleteLater();
+        mpUnpackingDialog = nullptr;
     }
 }
 

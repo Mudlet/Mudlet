@@ -20,6 +20,7 @@ set(FUNCTIONAL_TEST_SOURCES
     ProfileRoundTripTest.cpp
     MapRoundTripTest.cpp
     UndoServerWrapTest.cpp
+    HostWidgetDecouplingTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
@@ -60,6 +61,9 @@ set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
 # The round-trip tests boot a full mudlet instance and save/reload profile and
 # map data, so they need a longer timeout
 set_tests_properties(ProfileRoundTripTest MapRoundTripTest PROPERTIES TIMEOUT 300)
+
+# HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
 
 # Let TDiscordModeTest find the bundled discord-rpc library so the Lua API
 # permission gating tests can run (they skip when it is unavailable)
