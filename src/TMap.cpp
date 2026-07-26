@@ -2499,6 +2499,14 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
         postMessage(warnMsg);
         return;
     }
+
+    if (mStandaloneMapProgress) {
+        const QString warnMsg = tr("[ WARN ]  - Attempt made to download an XML map while a map import or\n"
+                                   "export is already in progress - wait for that operation to complete\n"
+                                   "before retrying!");
+        postMessage(warnMsg);
+        return;
+    }
     mImportRunning = true;
     // MUST clear this flag when done under ALL circumstances
 
@@ -2831,7 +2839,7 @@ void TMap::createTransferProgress(const QString& title, const QString& label, bo
     mMapProgressIsTransfer = true;
     mMapProgressCancelRequested = false;
     mStandaloneMapProgressMaximum = 0;
-    warnIfMapProgressUnwired(__func__);
+    warnIfMapProgressUnwired(__func__, true);
     emit signal_mapTransferProgressStart(title, label, cancelable ? tr("Abort") : QString());
 }
 
@@ -2890,7 +2898,9 @@ void TMap::disableTransferProgressCancel()
 
 void TMap::clearTransferProgress()
 {
-    if (mStandaloneMapProgress) {
+    // Only close a transfer-owned standalone dialog: a concurrent JSON
+    // import/export owns the standalone progress state and must keep it.
+    if (mStandaloneMapProgress && mMapProgressIsTransfer) {
         mStandaloneMapProgress = false;
         mMapProgressIsTransfer = false;
         emit signal_mapProgressClose();
@@ -2912,11 +2922,12 @@ void TMap::slot_mapProgressDialogCancelled()
     }
 }
 
-void TMap::warnIfMapProgressUnwired(const char* context)
+void TMap::warnIfMapProgressUnwired(const char* context, const bool transferPath)
 {
     static const QMetaMethod transferStart = QMetaMethod::fromSignal(&TMap::signal_mapTransferProgressStart);
     static const QMetaMethod jsonStart = QMetaMethod::fromSignal(&TMap::signal_mapJsonProgressStart);
-    if (isSignalConnected(transferStart) || isSignalConnected(jsonStart)) {
+    static const QMetaMethod progressClose = QMetaMethod::fromSignal(&TMap::signal_mapProgressClose);
+    if (isSignalConnected(transferPath ? transferStart : jsonStart) && isSignalConnected(progressClose)) {
         return;
     }
     qWarning().nospace() << "TMap::" << context
@@ -3023,7 +3034,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     mMapProgressIsTransfer = false;
     mMapProgressCancelRequested = false;
     mStandaloneMapProgressMaximum = static_cast<int>(mProgressDialogRoomsTotal);
-    warnIfMapProgressUnwired(__func__);
+    warnIfMapProgressUnwired(__func__, false);
     //: This is a title of a progress window.
     emit signal_mapJsonProgressStart(tr("Map JSON export"),
                                      tr("Exporting JSON map data from %1\n"
@@ -3242,7 +3253,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     mMapProgressIsTransfer = false;
     mMapProgressCancelRequested = false;
     mStandaloneMapProgressMaximum = static_cast<int>(mProgressDialogRoomsTotal);
-    warnIfMapProgressUnwired(__func__);
+    warnIfMapProgressUnwired(__func__, false);
     //: This is a title of a progress window.
     emit signal_mapJsonProgressStart(tr("Map JSON import"),
                                      tr("Importing JSON map data to %1\n"

@@ -1729,19 +1729,22 @@ void TMainConsole::createMapProgressDialog(const QString& title, const QString& 
         mpMapProgressDialog->hide();
         mpMapProgressDialog->deleteLater();
     }
+    auto pHost = getHost();
+    // If canceled() cannot be wired to the map, omit the cancel button rather
+    // than show one that does nothing.
+    const bool cancelWirable = pHost && !pHost->mpMap.isNull();
     // Deliberately not WA_DeleteOnClose: the JSON import keeps updating this
     // dialog from a processEvents loop, so it must outlive a mid-operation
     // dismissal; we delete it explicitly instead.
-    mpMapProgressDialog = new QProgressDialog(label, cancelButtonText, minimum, maximum, this);
+    mpMapProgressDialog = new QProgressDialog(label, cancelWirable ? cancelButtonText : QString(), minimum, maximum, this);
     mpMapProgressDialog->setWindowTitle(title);
     mpMapProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
     mpMapProgressDialog->setAutoClose(false);
     mpMapProgressDialog->setAutoReset(false);
-    auto pHost = getHost();
     // QProgressDialog still emits canceled() on Escape or window-close even with
     // no cancel button, so only connect it when the operation is cancelable;
     // otherwise a non-cancelable import could be aborted by a spurious cancel.
-    if (pHost && !pHost->mpMap.isNull() && !cancelButtonText.isEmpty()) {
+    if (cancelWirable && !cancelButtonText.isEmpty()) {
         connect(mpMapProgressDialog, &QProgressDialog::canceled, pHost->mpMap.data(), &TMap::slot_mapProgressDialogCancelled);
     }
 }

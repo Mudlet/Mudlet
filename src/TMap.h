@@ -200,7 +200,7 @@ public:
     std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false, const bool allowUserCancellation = true);
     qsizetype getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
-    void warnIfMapProgressUnwired(const char* context);
+    void warnIfMapProgressUnwired(const char* context, bool transferPath);
     QString getDefaultAreaName() const { return mDefaultAreaName; }
     QString getUnnamedAreaName() const { return mUnnamedAreaName; }
 
