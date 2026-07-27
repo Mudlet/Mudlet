@@ -1872,6 +1872,10 @@ void Host::raiseEvent(const TEvent& pE)
         }
     }
 
+    // Let any test-mode waitForEvent() call blocked on this event capture its
+    // arguments and unblock. Cheap (an empty-list check) when nothing is waiting.
+    mLuaInterpreter.captureEventForWaits(pE);
+
     // After the event has been raised but before 'event' goes out of scope,
     // we need to safely dereference the members of 'event' that point to
     // values in the Lua registry

@@ -63,6 +63,7 @@ extern "C" {
 #include <optional>
 
 class Host;
+class QEventLoop;
 class TAction;
 class TEvent;
 class TLuaThread;
@@ -396,6 +397,7 @@ public:
     static int selectCaptureGroup(lua_State*);
     static int tempLineTrigger(lua_State*);
     static int raiseEvent(lua_State*);
+    static int waitForEvent(lua_State*);
     static int deleteLine(lua_State*);
     static int copy(lua_State*);
     static int cut(lua_State*);
@@ -781,6 +783,11 @@ public:
     void freeLuaRegistryIndex(int index);
     void freeAllInLuaRegistry(TEvent);
 
+    // Test-only support for the waitForEvent() Lua helper (MUDLET_TEST_MODE):
+    // called from Host::raiseEvent() so an event that fires while a busted spec
+    // is blocked inside a nested event loop can be captured and unblock it.
+    void captureEventForWaits(const TEvent&);
+
     inline static const QMap<Qt::MouseButton, QString> csmMouseButtons = {
             {Qt::NoButton, qsl("NoButton")},           {Qt::LeftButton, qsl("LeftButton")},       {Qt::RightButton, qsl("RightButton")},     {Qt::MiddleButton, qsl("MidButton")},
             {Qt::BackButton, qsl("BackButton")},       {Qt::ForwardButton, qsl("ForwardButton")}, {Qt::TaskButton, qsl("TaskButton")},       {Qt::ExtraButton4, qsl("ExtraButton4")},
@@ -893,6 +900,19 @@ private:
     QMap<QString, QPair<int, int>> mCapturedNameGroupsPosList;
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
     QMap<QNetworkReply*, QString> downloadMap;
+
+    // A waitForEvent() call in progress: the nested event loop to quit when the
+    // named event arrives, plus a Lua registry reference to the captured args.
+    struct TEventWait
+    {
+        QString mName;
+        QEventLoop* mpLoop = nullptr;
+        int mArgsRef = LUA_NOREF;
+        bool mCaptured = false;
+    };
+    QList<TEventWait*> mPendingEventWaits;
+    int createEventArgsTableRef(const TEvent&);
+
     lua_State* pGlobalLua = nullptr;
     std::unique_ptr<lua_State, lua_state_deleter> pIndenterState;
     QPointer<Host> mpHost;

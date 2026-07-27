@@ -60,6 +60,7 @@
 #include "glwidget_integration.h"
 #endif
 
+#include <algorithm>
 #include <limits>
 #include <math.h>
 
@@ -83,8 +84,10 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
+#include <QEventLoop>
 #include <QFileDialog>
 #include <QTableWidget>
+#include <QTimer>
 #include <QToolTip>
 #include <QFileInfo>
 #include <QMovie>
@@ -1440,6 +1443,78 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
 
     lua_pushboolean(L, true);
     return 1;
+}
+
+// No documentation available in wiki - internal, test-only function
+// Blocks the calling Lua code inside a nested Qt event loop until the named
+// event is raised (returning the event name followed by its arguments, exactly
+// as an event handler would receive them) or the timeout elapses (returning
+// nil and an error message). Timers, networking and other events keep being
+// processed while blocked, which is what lets busted specs observe asynchronous
+// behaviour without sleeps. Gated behind MUDLET_TEST_MODE so it is inert for
+// normal users.
+int TLuaInterpreter::waitForEvent(lua_State* L)
+{
+    if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
+        lua_pushnil(L);
+        lua_pushstring(L, "waitForEvent: only available in test mode (set the MUDLET_TEST_MODE environment variable)");
+        return 2;
+    }
+
+    const QString eventName = getVerifiedString(L, __func__, 1, "event name");
+    if (eventName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "event name cannot be empty");
+    }
+
+    // Keep well below busted's per-spec CI timeout of one minute so a runaway
+    // wait fails as a normal timeout rather than killing the whole suite.
+    constexpr int defaultTimeoutMs = 3000;
+    constexpr int maximumTimeoutMs = 30000;
+    int timeoutMs = defaultTimeoutMs;
+    if (!lua_isnoneornil(L, 2)) {
+        timeoutMs = getVerifiedInt(L, __func__, 2, "timeout in milliseconds", true);
+    }
+    timeoutMs = std::clamp(timeoutMs, 0, maximumTimeoutMs);
+
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+
+    QEventLoop loop;
+    TEventWait wait;
+    wait.mName = eventName;
+    wait.mpLoop = &loop;
+    pLuaInterpreter->mPendingEventWaits.append(&wait);
+
+    QTimer timeoutTimer;
+    timeoutTimer.setSingleShot(true);
+    QObject::connect(&timeoutTimer, &QTimer::timeout, &loop, &QEventLoop::quit);
+    timeoutTimer.start(timeoutMs);
+
+    loop.exec();
+
+    timeoutTimer.stop();
+    pLuaInterpreter->mPendingEventWaits.removeAll(&wait);
+
+    if (!wait.mCaptured) {
+        lua_pushnil(L);
+        lua_pushstring(L, qsl("waitForEvent: timed out after %1ms waiting for event '%2'").arg(QString::number(timeoutMs), eventName).toUtf8().constData());
+        return 2;
+    }
+
+    lua_rawgeti(L, LUA_REGISTRYINDEX, wait.mArgsRef);
+    lua_getfield(L, -1, "n");
+    const int argCount = static_cast<int>(lua_tointeger(L, -1));
+    lua_pop(L, 1);
+    const int argsTableIndex = lua_gettop(L);
+    // A lua_CFunction is only guaranteed LUA_MINSTACK slots; an event can carry
+    // up to LUA_FUNCTION_MAX_ARGS arguments, so grow the stack before pushing.
+    luaL_checkstack(L, argCount + 1, "waitForEvent: too many event arguments to return");
+    for (int i = 1; i <= argCount; ++i) {
+        lua_rawgeti(L, argsTableIndex, i);
+    }
+    lua_remove(L, argsTableIndex);
+    luaL_unref(L, LUA_REGISTRYINDEX, wait.mArgsRef);
+    return argCount;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#raiseGlobalEvent
