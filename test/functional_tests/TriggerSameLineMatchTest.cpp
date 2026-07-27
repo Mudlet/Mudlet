@@ -76,9 +76,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
-        if (!host) {
-            QFAIL("No active host available for the test.");
-        }
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("captured = {}\n"
@@ -101,9 +99,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
-        if (!host) {
-            QFAIL("No active host available for the test.");
-        }
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("order = {}\n"
@@ -125,9 +121,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
-        if (!host) {
-            QFAIL("No active host available for the test.");
-        }
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("chain = {}\n"
@@ -151,9 +145,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
-        if (!host) {
-            QFAIL("No active host available for the test.");
-        }
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("expiryLine = ''\n"
@@ -174,9 +166,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
-        if (!host) {
-            QFAIL("No active host available for the test.");
-        }
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("lineGrabs = {}\n"
@@ -199,9 +189,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
-        if (!host) {
-            QFAIL("No active host available for the test.");
-        }
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("nested = {}\n"
