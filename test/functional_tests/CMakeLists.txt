@@ -19,6 +19,7 @@ set(FUNCTIONAL_TEST_SOURCES
     EnableDisableByNameTest.cpp
     ColorTriggerFilterChildTest.cpp
     GMCPCharLoginTest.cpp
+    LogRestartDuplicateLineTest.cpp
     ProfileRoundTripTest.cpp
     MapRoundTripTest.cpp
     UndoServerWrapTest.cpp
@@ -59,6 +60,9 @@ set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
+
+# LogRestartDuplicateLineTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(LogRestartDuplicateLineTest PROPERTIES TIMEOUT 300)
 
 # The round-trip tests boot a full mudlet instance and save/reload profile and
 # map data, so they need a longer timeout

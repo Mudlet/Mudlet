@@ -5045,6 +5045,12 @@ void TBuffer::logRemainingOutput()
 {
     mpHost->mpConsole->mLogStream << lastTextToLog;
     mpHost->mpConsole->mLogStream.flush();
+
+    // Reset the deferred logging state so restarting logging cannot replay this
+    // pending line into the new session via log()'s deferred-flush path
+    lastTextToLog.clear();
+    lastLoggedFromLine = -1;
+    lastloggedToLine = -1;
 }
 
 // logs a string directly to the log file
