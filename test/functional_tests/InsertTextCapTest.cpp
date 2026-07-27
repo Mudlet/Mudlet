@@ -42,8 +42,8 @@ class InsertTextCapTest : public QObject
 {
     Q_OBJECT
 
-    // Mirror of TBuffer::MAX_CHARACTERS_PER_ECHO (private). Keep in sync.
-    static constexpr int kMaxCharactersPerEcho = 1000000;
+    // Reference the production constant directly to avoid drift.
+    static constexpr int kMaxCharactersPerEcho = TBuffer::MAX_CHARACTERS_PER_ECHO;
 
 private:
     TelnetServerStub* mpServer = nullptr;
