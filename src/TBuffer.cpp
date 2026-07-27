@@ -1081,10 +1081,15 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 
                         // We replace the already processed text with the entity value into the buffer and restart
                         // processing it for charset encoding but with limited MXP handling.
-                        // Encode with the session's encoding (not toLatin1(), which would flatten any
-                        // non-Latin1 characters to '?') so the value survives the re-decode below; the
+                        // A CUST value is decoded text, so encode it with the session's encoding
+                        // (not toLatin1(), which would flatten non-Latin1 characters to '?') for the
+                        // re-decode below. A LIT value is the raw, undecoded entity bytes held as one
+                        // Latin1 code unit per byte (see TEntityHandler::handle()), so toLatin1() is
+                        // an exact byte passthrough - re-encoding it would double-encode those bytes
+                        // and orphan any continuation bytes still ahead in the buffer. Either way the
                         // byte length, not the QString length, is what the offset bookkeeping needs.
-                        const QByteArray entityValueBytes = TEncodingHelper::encode(mpHost->mMxpProcessor.getEntityValue(), mEncoding);
+                        const QByteArray entityValueBytes =
+                                result == HANDLER_INSERT_ENTITY_CUST ? TEncodingHelper::encode(mpHost->mMxpProcessor.getEntityValue(), mEncoding) : mpHost->mMxpProcessor.getEntityValue().toLatin1();
                         size_t valueLength = entityValueBytes.size();
                         localBuffer.replace(0, localBufferPosition + 1, entityValueBytes.constData(), entityValueBytes.size());
 
@@ -5043,6 +5048,12 @@ void TBuffer::logRemainingOutput()
 {
     mpHost->mpConsole->mLogStream << lastTextToLog;
     mpHost->mpConsole->mLogStream.flush();
+
+    // Reset the deferred logging state so restarting logging cannot replay this
+    // pending line into the new session via log()'s deferred-flush path
+    lastTextToLog.clear();
+    lastLoggedFromLine = -1;
+    lastloggedToLine = -1;
 }
 
 // logs a string directly to the log file
