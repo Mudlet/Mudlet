@@ -1001,7 +1001,19 @@ void dlgPackageExporter::slot_exportPackage()
                         // installed-modules list is language-independent, unlike
                         // matching the English text of the install error message.
                         if (mpHost->mInstalledModules.contains(mPackageName)) {
-                            mpHost->uninstallPackage(mPackageName, enums::PackageModuleType::ModuleFromUI);
+                            if (!mpHost->uninstallPackage(mPackageName, enums::PackageModuleType::ModuleFromUI)) {
+                                // Uninstall can refuse (e.g. a profile save is in
+                                // progress). The freshly-exported file is safe on
+                                // disk, but the old module is still registered, so
+                                // installing the new copy would fail as "already
+                                // installed". Report that honestly instead of
+                                // proceeding to a misleading success message.
+                                displayResultMessage(tr("Module \"%1\" exported but failed to uninstall existing version").arg(mPackageName.toHtmlEscaped()), false);
+                                mCancelButton->setVisible(false);
+                                mCloseButton->setVisible(true);
+                                QApplication::restoreOverrideCursor();
+                                return;
+                            }
                         }
                         auto [installSuccess, installMessage] = mpHost->installPackage(mPackagePathFileName, enums::PackageModuleType::ModuleFromUI);
                         if (installSuccess) {
