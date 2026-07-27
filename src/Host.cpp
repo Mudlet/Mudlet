@@ -4541,16 +4541,24 @@ std::optional<QColor> Host::getBackgroundColor(const QString& name) const
     return {};
 }
 
-bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode)
+bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode, bool fullWindow)
 {
     if (!mpConsole) {
         return false;
     }
 
-    if (QDir::homePath().contains('\\')) {
-        imgPath.replace('/', R"(\)");
-    } else {
-        imgPath.replace('\\', "/");
+    // Mode 4 ('style') is a raw QSS fragment (e.g. a gradient), not a literal file
+    // path - normalising separators would corrupt any url()/gradient syntax in it:
+    if (mode != 4) {
+        if (QDir::homePath().contains('\\')) {
+            imgPath.replace('/', R"(\)");
+        } else {
+            imgPath.replace('\\', "/");
+        }
+    }
+
+    if (fullWindow) {
+        return mpConsole->setWindowBackgroundImage(imgPath, mode);
     }
 
     if (name.isEmpty() || name.compare(qsl("main"), Qt::CaseSensitive) == 0) {
@@ -4573,10 +4581,14 @@ bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode)
     return false;
 }
 
-bool Host::resetBackgroundImage(const QString& name)
+bool Host::resetBackgroundImage(const QString& name, bool fullWindow)
 {
     if (!mpConsole) {
         return false;
+    }
+
+    if (fullWindow) {
+        return mpConsole->resetWindowBackgroundImage();
     }
 
     if (name.isEmpty() || name.compare(qsl("main"), Qt::CaseSensitive) == 0) {
