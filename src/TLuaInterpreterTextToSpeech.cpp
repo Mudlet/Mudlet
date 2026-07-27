@@ -92,7 +92,15 @@ void TLuaInterpreter::ttsBuild()
         return;
     }
 
-    speechUnit = new QTextToSpeech();
+    // Under automated tests select Qt's deterministic "mock" engine when it is
+    // installed, so specs do not depend on a real speech-dispatcher daemon
+    // (which is absent on headless CI). Outside test mode the default engine is
+    // built exactly as before.
+    if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE") && QTextToSpeech::availableEngines().contains(qsl("mock"))) {
+        speechUnit = new QTextToSpeech(qsl("mock"));
+    } else {
+        speechUnit = new QTextToSpeech();
+    }
     bSpeechBuilt = true;
     bSpeechQueueing = false;
 

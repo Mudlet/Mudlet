@@ -440,6 +440,31 @@ jobs:
         cd ~/Desktop
         sudo codesign --remove-signature ~/Desktop/Mudlet.app
 
+    - name: (Linux/macOS) Start fixture HTTP server for Lua tests
+      if: matrix.run_tests == 'true'
+      shell: bash
+      run: |
+        port_file="${{runner.temp}}/mudlet-http-fixture-port"
+        rm -f "${port_file}"
+        MUDLET_TEST_HTTP_PORT_FILE="${port_file}" nohup python3 "${{github.workspace}}/CI/http-fixture-server.py" > "${{runner.temp}}/http-fixture-server.log" 2>&1 &
+        for _ in $(seq 1 50); do
+          [ -s "${port_file}" ] && break
+          sleep 0.1
+        done
+        if [ ! -s "${port_file}" ]; then
+          echo "fixture HTTP server failed to start" >&2
+          cat "${{runner.temp}}/http-fixture-server.log" 2>/dev/null || true
+          exit 1
+        fi
+        port="$(cat "${port_file}")"
+        if ! curl -fsS "http://127.0.0.1:${port}/fixture.txt" > /dev/null; then
+          echo "fixture HTTP server is not serving fixtures" >&2
+          cat "${{runner.temp}}/http-fixture-server.log" 2>/dev/null || true
+          exit 1
+        fi
+        echo "MUDLET_TEST_HTTP_PORT=${port}" >> "${GITHUB_ENV}"
+        echo "fixture HTTP server ready on 127.0.0.1:${port}"
+
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       timeout-minutes: 1
@@ -447,6 +472,7 @@ jobs:
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
+        MUDLET_TEST_REQUIRE_TTS_MOCK: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
