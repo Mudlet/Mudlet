@@ -80,6 +80,7 @@
 #include <QRegularExpression>
 #include <QToolButton>
 #include <QToolBar>
+#include <chrono>
 #include <sstream>
 #include <pugixml.hpp>
 #include <QVBoxLayout>
@@ -1959,7 +1960,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
                     const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    QTimer::singleShot(0, this, [this, line, column]() {
+                    QTimer::singleShot(0ms, this, [this, line, column]() {
                         if (mpSourceEditorEdbee) {
                             mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
                         }
@@ -2016,7 +2017,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
                     const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    QTimer::singleShot(0, this, [this, line, column]() {
+                    QTimer::singleShot(0ms, this, [this, line, column]() {
                         if (mpSourceEditorEdbee) {
                             auto controller = mpSourceEditorEdbee->controller();
                             controller->moveCaretTo(line, column, false);
@@ -2069,7 +2070,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
                     const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    QTimer::singleShot(0, this, [this, line, column]() {
+                    QTimer::singleShot(0ms, this, [this, line, column]() {
                         if (mpSourceEditorEdbee) {
                             mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
                         }
@@ -2127,7 +2128,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
                     const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    QTimer::singleShot(0, this, [this, line, column]() {
+                    QTimer::singleShot(0ms, this, [this, line, column]() {
                         if (mpSourceEditorEdbee) {
                             mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
                         }
@@ -2195,7 +2196,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
                     const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    QTimer::singleShot(0, this, [this, line, column]() {
+                    QTimer::singleShot(0ms, this, [this, line, column]() {
                         if (mpSourceEditorEdbee) {
                             mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
                         }
@@ -2242,7 +2243,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
                     const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    QTimer::singleShot(0, this, [this, line, column]() {
+                    QTimer::singleShot(0ms, this, [this, line, column]() {
                         if (mpSourceEditorEdbee) {
                             mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
                         }
@@ -2306,7 +2307,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
                     const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    QTimer::singleShot(0, this, [this, line, column]() {
+                    QTimer::singleShot(0ms, this, [this, line, column]() {
                         if (mpSourceEditorEdbee) {
                             mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
                         }
@@ -9843,7 +9844,7 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     // (selection handlers will also re-enable via restoreEditorState, but this
     // is a fallback in case no item is selected in the new view)
     if (mpSourceEditorEdbee && !mpSourceEditorEdbee->updatesEnabled()) {
-        QTimer::singleShot(0, this, [this]() {
+        QTimer::singleShot(0ms, this, [this]() {
             if (mpSourceEditorEdbee) {
                 mpSourceEditorEdbee->setUpdatesEnabled(true);
             }
@@ -12268,7 +12269,7 @@ void dlgTriggerEditor::doCleanReset()
 
     mCleanResetQueued = true;
 
-    QTimer::singleShot(0, this, [=, this]() {
+    QTimer::singleShot(0ms, this, [=, this]() {
         mCleanResetQueued = false;
 
         runScheduledCleanReset();
@@ -12906,7 +12907,7 @@ void dlgTriggerEditor::restoreEditorState(EditorViewType viewType, int itemId)
     const bool hasState = mEditorStates.contains(viewType) && mEditorStates[viewType].contains(itemId);
     const EditorState state = hasState ? mEditorStates[viewType][itemId] : EditorState{};
 
-    QTimer::singleShot(0, this, [this, state, hasState]() {
+    QTimer::singleShot(0ms, this, [this, state, hasState]() {
         if (!mpSourceEditorEdbee) {
             return;
         }

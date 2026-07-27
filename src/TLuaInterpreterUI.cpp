@@ -3113,20 +3113,6 @@ int TLuaInterpreter::setMapWindowTitle(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMiniConsoleFontSize
-int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
-{
-    const QString windowName = getVerifiedString(L, __func__, 1, "miniconsole name");
-    const int size = getVerifiedInt(L, __func__, 2, "font size");
-    auto console = CONSOLE(L, windowName);
-    if (size < 1) {
-        return warnArgumentValue(L, __func__, qsl("setting font size of '%1' failed").arg(windowName));
-    }
-    console->setFontSize(size);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovie
 int TLuaInterpreter::setMovie(lua_State* L)
 {
