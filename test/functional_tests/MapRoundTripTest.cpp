@@ -158,12 +158,16 @@ private:
         QVERIFY(mAreaB > 0);
 
         TArea* pAreaA = pDB->getArea(mAreaA);
-        QVERIFY(pAreaA);
+        if (!pAreaA) {
+            QFAIL("area A is missing");
+        }
         pAreaA->gridMode = true;
         pAreaA->mUserData = expectedAreaAUserData();
 
         TArea* pAreaB = pDB->getArea(mAreaB);
-        QVERIFY(pAreaB);
+        if (!pAreaB) {
+            QFAIL("area B is missing");
+        }
         pAreaB->isZone = true;
         pAreaB->zoneAreaRef = mAreaA;
 
@@ -185,7 +189,9 @@ private:
         QVERIFY(pMap->setExit(scmRoom4, scmRoom3, DIR_NORTHWEST));
 
         TRoom* pR1 = pDB->getRoom(scmRoom1);
-        QVERIFY(pR1);
+        if (!pR1) {
+            QFAIL("room 1 is missing");
+        }
         pR1->name = scmRoom1Name;
         pR1->environment = 300;
         pR1->setWeight(3);
@@ -201,7 +207,9 @@ private:
         pR1->customLinesArrow.insert(qsl("n"), true);
 
         TRoom* pR2 = pDB->getRoom(scmRoom2);
-        QVERIFY(pR2);
+        if (!pR2) {
+            QFAIL("room 2 is missing");
+        }
         pR2->environment = 12;
         pR2->setWeight(2);
         pR2->isLocked = true;
@@ -216,14 +224,18 @@ private:
         pR2->userData = expectedRoom2UserData();
 
         TRoom* pR3 = pDB->getRoom(scmRoom3);
-        QVERIFY(pR3);
+        if (!pR3) {
+            QFAIL("room 3 is missing");
+        }
         pR3->name = scmRoom3Name;
         pR3->environment = 5;
         pR3->setWeight(10);
         pR3->setHidden(true);
 
         TRoom* pR4 = pDB->getRoom(scmRoom4);
-        QVERIFY(pR4);
+        if (!pR4) {
+            QFAIL("room 4 is missing");
+        }
         pR4->setWeight(1);
 
         mLabelId = pMap->createMapLabel(mAreaA, scmLabelText, 1.5f, -2.5f, 0.0f, scmLabelFg, scmLabelBg, true, false, false, 30.0, 12, qsl("DejaVu Sans"), scmLabelOutline);
@@ -290,6 +302,9 @@ private:
         QCOMPARE(pDB->getAreaNamesMap().value(mAreaB), scmAreaBName);
 
         TArea* pAreaA = pDB->getArea(mAreaA);
+        if (!pAreaA) {
+            QFAIL("area A is missing");
+        }
         verifyArea(pAreaA, mBoundsA, qsl("area A"));
         if (QTest::currentTestFailed()) {
             return;
@@ -298,6 +313,9 @@ private:
         QCOMPARE(pAreaA->mUserData, expectedAreaAUserData());
 
         TArea* pAreaB = pDB->getArea(mAreaB);
+        if (!pAreaB) {
+            QFAIL("area B is missing");
+        }
         verifyArea(pAreaB, mBoundsB, qsl("area B"));
         if (QTest::currentTestFailed()) {
             return;
@@ -323,7 +341,9 @@ private:
         QCOMPARE(label.pix.toImage().convertToFormat(QImage::Format_ARGB32), mLabelImage);
 
         TRoom* pR1 = pDB->getRoom(scmRoom1);
-        QVERIFY(pR1);
+        if (!pR1) {
+            QFAIL("room 1 is missing");
+        }
         QCOMPARE(pR1->getArea(), mAreaA);
         QCOMPARE(pR1->x(), 0);
         QCOMPARE(pR1->y(), 0);
@@ -355,7 +375,9 @@ private:
         QCOMPARE(pR1->userData, expectedRoom1UserData());
 
         TRoom* pR2 = pDB->getRoom(scmRoom2);
-        QVERIFY(pR2);
+        if (!pR2) {
+            QFAIL("room 2 is missing");
+        }
         QCOMPARE(pR2->getArea(), mAreaA);
         QCOMPARE(pR2->x(), -3);
         QCOMPARE(pR2->y(), 7);
@@ -375,7 +397,9 @@ private:
         QCOMPARE(pR2->userData, expectedRoom2UserData());
 
         TRoom* pR3 = pDB->getRoom(scmRoom3);
-        QVERIFY(pR3);
+        if (!pR3) {
+            QFAIL("room 3 is missing");
+        }
         QCOMPARE(pR3->getArea(), mAreaA);
         QCOMPARE(pR3->x(), 2);
         QCOMPARE(pR3->y(), -5);
@@ -387,7 +411,9 @@ private:
         QCOMPARE(pR3->getWest(), scmRoom1);
 
         TRoom* pR4 = pDB->getRoom(scmRoom4);
-        QVERIFY(pR4);
+        if (!pR4) {
+            QFAIL("room 4 is missing");
+        }
         QCOMPARE(pR4->getArea(), mAreaB);
         QCOMPARE(pR4->z(), 5);
         QCOMPARE(pR4->getIn(), scmRoom1);
@@ -467,7 +493,9 @@ private slots:
         auto& hostManager = mudlet::self()->getHostManager();
         QVERIFY2(hostManager.addHost(mSourceName, qsl("23"), QString(), QString()), "failed to create the source Host");
         mpSource = hostManager.getHost(mSourceName);
-        QVERIFY(mpSource);
+        if (!mpSource) {
+            QFAIL("the source Host is missing");
+        }
         QVERIFY2(hostManager.addHost(mTargetName, qsl("23"), QString(), QString()), "failed to create the target Host");
         mpTarget = hostManager.getHost(mTargetName);
         QVERIFY(mpTarget);

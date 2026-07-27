@@ -240,7 +240,9 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
-        QVERIFY(host);
+        if (!host) {
+            QFAIL("No active host available for the test.");
+        }
         QVERIFY(!host->mServerWrapHintShown);
         QVERIFY(QTest::qWaitFor(
                 [&]() {
@@ -276,7 +278,9 @@ private:
     void enableUndoServerWrap()
     {
         auto host = mudlet::self()->getActiveHost();
-        QVERIFY(host);
+        if (!host) {
+            QFAIL("No active host available for the test.");
+        }
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
         // Keep Mudlet's own display wrap out of the way so that logical

@@ -102,7 +102,9 @@ private slots:
 
         startProfile(mProfileName, mpLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
-        QVERIFY(host);
+        if (!host) {
+            QFAIL("No active host available for the test.");
+        }
         if (qEnvironmentVariable("REPLAY_UNWRAP") == qsl("1")) {
             host->mUndoServerWrap = true;
             host->mUndoServerWrapWidth = qEnvironmentVariable("REPLAY_WIDTH", qsl("80")).toInt();
