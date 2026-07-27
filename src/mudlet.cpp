@@ -6011,17 +6011,13 @@ void mudlet::slot_updateInstalled()
     // disable existing functionality to show the updates window
     disconnect(dactionUpdate, &QAction::triggered, this, nullptr);
 
-    // rejig to restart Mudlet instead
-    connect(dactionUpdate, &QAction::triggered, this, [=, this]() {
-#if defined(Q_OS_WINDOWS)
-        // On Windows the new binary is not in place yet - the downloaded
-        // installer still has to run, which slot_installOrRestartClicked
-        // arranges via a batch file that waits for Mudlet to exit:
+    // rejig to restart Mudlet instead. The updater owns the restart flow on
+    // all platforms: on Windows the downloaded installer still has to run,
+    // and everywhere the update dialog must be told not to reappear when the
+    // last window closes, which would keep the old instance alive alongside
+    // the restarted one:
+    connect(dactionUpdate, &QAction::triggered, this, [this]() {
         pUpdater->slot_installOrRestartClicked(nullptr, QString());
-#else
-        forceClose();
-        QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
-#endif
     });
     dactionUpdate->setText(tr("Update installed - restart to apply"));
 #endif // !Q_OS_MACOS
