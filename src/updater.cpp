@@ -490,7 +490,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
     // if the update is already installed, then the button says 'Restart' - do so
     if (mUpdateInstalled) {
         // defer to next event loop iteration so the dialog close happens after the button click handler returns
-        QTimer::singleShot(0, this, [=, this]() {
+        QTimer::singleShot(0ms, this, [=, this]() {
             updateDialog->close();
             updateDialog->done(0);
         });
