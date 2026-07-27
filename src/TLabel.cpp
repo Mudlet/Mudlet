@@ -33,7 +33,9 @@
 #include <QTimer>
 #include <QUrl>
 #include <QtEvents>
+#include <chrono>
 
+using namespace std::chrono_literals;
 
 TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
 : QLabel(pW)
@@ -413,7 +415,7 @@ void TLabel::slot_linkActivated(const QString& link)
                 commandLine->setTextCursor(cursor);
                 // Defer the focus operation to avoid issues with QPointer manipulation
                 // during the signal handler execution
-                QTimer::singleShot(0, commandLine.data(), [commandLine]() {
+                QTimer::singleShot(0ms, commandLine.data(), [commandLine]() {
                     if (commandLine) {
                         commandLine->setFocus();
                     }

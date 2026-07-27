@@ -1260,7 +1260,7 @@ end
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- make sure versions.lua has the latest version in it
-local version = "2.1.8"
+local version = "2.1.9"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -4998,12 +4998,14 @@ end
 
 function map.echoPath(from, to)
   assert(tonumber(from) and tonumber(to), "map.echoPath: both from and to have to be room IDs")
+  local from_name = searchRoom(from) or "room " .. from
+  local to_name = searchRoom(to) or "room " .. to
   if getPath(from, to) then
     map.echo(
       "&lt;white&gt;Directions from &lt;yellow&gt;" ..
-      string.upper(searchRoom(from)) ..
+      string.upper(from_name) ..
       " &lt;white&gt;to &lt;yellow&gt;" ..
-      string.upper(searchRoom(to)) ..
+      string.upper(to_name) ..
       "&lt;white&gt;:"
     )
     map.echo(table.concat(speedWalkDir, ", "))
@@ -5011,9 +5013,9 @@ function map.echoPath(from, to)
   else
     map.echo(
       "&lt;white&gt;I can't find a way from &lt;yellow&gt;" ..
-      string.upper(searchRoom(from)) ..
+      string.upper(from_name) ..
       " &lt;white&gt;to &lt;yellow&gt;" ..
-      string.upper(searchRoom(to)) ..
+      string.upper(to_name) ..
       "&lt;white&gt;"
     )
   end

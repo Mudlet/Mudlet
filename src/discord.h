@@ -164,6 +164,9 @@ class Discord : public QObject
 {
     Q_OBJECT
 
+    // Allows the functional test to simulate the logged-in Discord user:
+    friend class TDiscordModeTest;
+
 public:
     explicit Discord(QObject *parent = nullptr);
     ~Discord() override;

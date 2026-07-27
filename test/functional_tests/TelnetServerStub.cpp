@@ -26,6 +26,10 @@
 #include "TelnetServerStub.h"
 #include "utils.h"
 
+#include <chrono>
+
+using namespace std::chrono_literals;
+
 TelnetServerStub::TelnetServerStub(QObject* parent)
     : QTcpServer(parent)
 {
@@ -43,6 +47,16 @@ void TelnetServerStub::start(const QString& host, quint16 port)
     }
 }
 
+void TelnetServerStub::sendRaw(const QByteArray& data)
+{
+    if (!mpClient) {
+        qWarning() << "⚠️ sendRaw called without a connected client.";
+        return;
+    }
+    mpClient->write(data);
+    mpClient->flush();
+}
+
 void TelnetServerStub::onNewConnection()
 {
     QTcpSocket* client = nextPendingConnection();
@@ -51,11 +65,12 @@ void TelnetServerStub::onNewConnection()
         qWarning() << "⚠️ onNewConnection called but no pending connection.";
         return;
     }
+    mpClient = client;
     qInfo().noquote() << qsl("🔌 Client connected: %1").arg(client->peerAddress().toString());
 
     QPointer<QTcpSocket> safeClient = client;
 
-    QTimer::singleShot(100, [safeClient, welcomeMessage = mpWelcomeMessage]()
+    QTimer::singleShot(100ms, [safeClient, welcomeMessage = mpWelcomeMessage]()
     {
         if (!safeClient) {
             return;

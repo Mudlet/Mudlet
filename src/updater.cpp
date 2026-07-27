@@ -496,7 +496,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
         }
 
         // defer to next event loop iteration so the dialog close happens after the button click handler returns
-        QTimer::singleShot(0, this, [=, this]() {
+        QTimer::singleShot(0ms, this, [=, this]() {
             if (updateDialog) {
                 updateDialog->close();
                 updateDialog->done(0);
