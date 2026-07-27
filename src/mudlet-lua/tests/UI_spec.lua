@@ -1891,3 +1891,237 @@ describe("Tests UI functions", function()
     end)
   end)
 end)
+
+-- Window state getters: getWindowGeometry, windowVisible, getLabelText.
+-- Self-contained top-level block kept at the tail of the file; do not
+-- interleave it with the "Tests UI functions" block above.
+describe("Window state getters", function()
+  -- Unique-ish names so repeat runs against the same profile do not collide:
+  -- user windows cannot be deleted from Lua, only hidden.
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local labelName = "wsgLabel" .. suffix
+  local consoleName = "wsgConsole" .. suffix
+  local scrollBoxName = "wsgScrollBox" .. suffix
+  local cmdLineName = "wsgCmdLine" .. suffix
+  local textEditName = "wsgTextEdit" .. suffix
+  local userWindowName = "wsgUserWindow" .. suffix
+  -- a label parented inside the user window, to probe ancestor-aware visibility
+  local childLabelName = "wsgChildLabel" .. suffix
+
+  setup(function()
+    createLabel(labelName, 10, 20, 100, 50, 1)
+    createMiniConsole(consoleName, 30, 40, 300, 150)
+    createScrollBox(scrollBoxName, 60, 70, 120, 90)
+    createCommandLine(cmdLineName, 15, 25, 140, 35)
+    createTextEdit(textEditName, 45, 55, 160, 110)
+    openUserWindow(userWindowName)
+    createLabel(userWindowName, childLabelName, 5, 5, 40, 20, 1)
+  end)
+
+  before_each(function()
+    -- restore baseline geometry and visibility so one failing spec cannot
+    -- cascade into later specs (busted runs specs in definition order)
+    moveWindow(labelName, 10, 20)
+    resizeWindow(labelName, 100, 50)
+    moveWindow(consoleName, 30, 40)
+    resizeWindow(consoleName, 300, 150)
+    for _, name in ipairs({labelName, consoleName, scrollBoxName, cmdLineName, textEditName, userWindowName}) do
+      showWindow(name)
+    end
+  end)
+
+  teardown(function()
+    deleteLabel(childLabelName)
+    deleteLabel(labelName)
+    deleteMiniConsole(consoleName)
+    deleteScrollBox(scrollBoxName)
+    deleteCommandLine(cmdLineName)
+    deleteTextEdit(textEditName)
+    -- user windows cannot be deleted from Lua, so just hide it again
+    hideWindow(userWindowName)
+  end)
+
+  describe("getWindowGeometry", function()
+    it("returns a label's position and size as x, y, width, height", function()
+      local x, y, w, h = getWindowGeometry(labelName)
+      assert.are.equal(10, x)
+      assert.are.equal(20, y)
+      assert.are.equal(100, w)
+      assert.are.equal(50, h)
+    end)
+
+    it("returns a miniconsole's position and size", function()
+      local x, y, w, h = getWindowGeometry(consoleName)
+      assert.are.equal(30, x)
+      assert.are.equal(40, y)
+      assert.are.equal(300, w)
+      assert.are.equal(150, h)
+    end)
+
+    it("returns a scroll box's position and size", function()
+      local x, y, w, h = getWindowGeometry(scrollBoxName)
+      assert.are.equal(60, x)
+      assert.are.equal(70, y)
+      assert.are.equal(120, w)
+      assert.are.equal(90, h)
+    end)
+
+    it("returns a command line's position and size", function()
+      local x, y, w, h = getWindowGeometry(cmdLineName)
+      assert.are.equal(15, x)
+      assert.are.equal(25, y)
+      assert.are.equal(140, w)
+      assert.are.equal(35, h)
+    end)
+
+    it("returns a text edit's position and size", function()
+      local x, y, w, h = getWindowGeometry(textEditName)
+      assert.are.equal(45, x)
+      assert.are.equal(55, y)
+      assert.are.equal(160, w)
+      assert.are.equal(110, h)
+    end)
+
+    it("reflects moveWindow on a label", function()
+      moveWindow(labelName, 55, 66)
+      local x, y = getWindowGeometry(labelName)
+      assert.are.equal(55, x)
+      assert.are.equal(66, y)
+    end)
+
+    it("reflects resizeWindow on a miniconsole", function()
+      resizeWindow(consoleName, 321, 123)
+      local _, _, w, h = getWindowGeometry(consoleName)
+      assert.are.equal(321, w)
+      assert.are.equal(123, h)
+    end)
+
+    it("reflects resizeWindow on a user window", function()
+      -- read back through the dock widget; size() is the exact inverse of
+      -- resize() and does not depend on the window manager honouring a move
+      resizeWindow(userWindowName, 400, 200)
+      local _, _, w, h = getWindowGeometry(userWindowName)
+      assert.are.equal(400, w)
+      assert.are.equal(200, h)
+    end)
+
+    it("returns nil and a message naming an unknown window", function()
+      local result, err = getWindowGeometry("wsgNoSuchWindow")
+      assert.is_nil(result)
+      assert.are.equal("string", type(err))
+      assert.is_truthy(err:find("wsgNoSuchWindow", 1, true))
+    end)
+
+    it("returns nil and a message for the main window", function()
+      -- mirrors moveWindow/resizeWindow, which likewise do not act on "main"
+      local result, err = getWindowGeometry("main")
+      assert.is_nil(result)
+      assert.are.equal("string", type(err))
+    end)
+
+    it("errors when called without a window name", function()
+      assert.has_error(function() getWindowGeometry() end)
+    end)
+  end)
+
+  describe("windowVisible", function()
+    it("reflects hideWindow then showWindow on a label", function()
+      assert.is_true(windowVisible(labelName))
+      hideWindow(labelName)
+      assert.is_false(windowVisible(labelName))
+      showWindow(labelName)
+      assert.is_true(windowVisible(labelName))
+    end)
+
+    it("reflects hideWindow then showWindow on a miniconsole", function()
+      assert.is_true(windowVisible(consoleName))
+      hideWindow(consoleName)
+      assert.is_false(windowVisible(consoleName))
+      showWindow(consoleName)
+      assert.is_true(windowVisible(consoleName))
+    end)
+
+    it("reflects hideWindow then showWindow on a scroll box", function()
+      assert.is_true(windowVisible(scrollBoxName))
+      hideWindow(scrollBoxName)
+      assert.is_false(windowVisible(scrollBoxName))
+      showWindow(scrollBoxName)
+      assert.is_true(windowVisible(scrollBoxName))
+    end)
+
+    it("reflects hideWindow then showWindow on a command line", function()
+      assert.is_true(windowVisible(cmdLineName))
+      hideWindow(cmdLineName)
+      assert.is_false(windowVisible(cmdLineName))
+      showWindow(cmdLineName)
+      assert.is_true(windowVisible(cmdLineName))
+    end)
+
+    it("reflects hideWindow then showWindow on a user window", function()
+      assert.is_true(windowVisible(userWindowName))
+      hideWindow(userWindowName)
+      assert.is_false(windowVisible(userWindowName))
+      showWindow(userWindowName)
+      assert.is_true(windowVisible(userWindowName))
+    end)
+
+    it("reports a child hidden by its user window as not visible", function()
+      -- windowVisible reflects effective (ancestor-aware) visibility: hiding
+      -- the parent user window hides the child even though the child itself
+      -- was never hidden
+      assert.is_true(windowVisible(childLabelName))
+      hideWindow(userWindowName)
+      assert.is_false(windowVisible(childLabelName))
+      showWindow(userWindowName)
+      assert.is_true(windowVisible(childLabelName))
+    end)
+
+    it("returns nil and a message naming an unknown window", function()
+      local result, err = windowVisible("wsgNoSuchWindow")
+      assert.is_nil(result)
+      assert.are.equal("string", type(err))
+      assert.is_truthy(err:find("wsgNoSuchWindow", 1, true))
+    end)
+
+    it("returns nil and a message for the main window", function()
+      local result, err = windowVisible("main")
+      assert.is_nil(result)
+      assert.are.equal("string", type(err))
+    end)
+
+    it("errors when called without a window name", function()
+      assert.has_error(function() windowVisible() end)
+    end)
+  end)
+
+  describe("getLabelText", function()
+    it("returns text set on a label via echo", function()
+      echo(labelName, "hello label")
+      assert.are.equal("hello label", getLabelText(labelName))
+    end)
+
+    it("round-trips updated label text", function()
+      echo(labelName, "first")
+      assert.are.equal("first", getLabelText(labelName))
+      echo(labelName, "second")
+      assert.are.equal("second", getLabelText(labelName))
+    end)
+
+    it("returns nil and a message naming an unknown label", function()
+      local result, err = getLabelText("wsgNoSuchLabel")
+      assert.is_nil(result)
+      assert.are.equal("string", type(err))
+      assert.is_truthy(err:find("wsgNoSuchLabel", 1, true))
+    end)
+
+    it("returns nil and a message for a non-label window", function()
+      local result, err = getLabelText(consoleName)
+      assert.is_nil(result)
+      assert.are.equal("string", type(err))
+    end)
+
+    it("errors when called without a label name", function()
+      assert.has_error(function() getLabelText() end)
+    end)
+  end)
+end)

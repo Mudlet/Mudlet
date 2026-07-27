@@ -494,6 +494,9 @@ public:
     static int setLabelOnLeave(lua_State*);
     static int getMainWindowSize(lua_State*);
     static int getUserWindowSize(lua_State*);
+    static int getWindowGeometry(lua_State*);
+    static int windowVisible(lua_State*);
+    static int getLabelText(lua_State*);
     static int getMousePosition(lua_State*);
     static int setProfileIcon(lua_State*);
     static int resetProfileIcon(lua_State*);
