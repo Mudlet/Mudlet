@@ -59,6 +59,9 @@
 #include <QDockWidget>
 #include <QDesktopServices>
 #include <QUrl>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* console, QWidget* parent, bool toolbarVisible)
 : QMainWindow(parent)
@@ -648,7 +651,7 @@ void TDetachedWindow::moveEvent(QMoveEvent* event)
     QMainWindow::moveEvent(event);
 
     // Check if we should offer to merge with another detached window
-    QTimer::singleShot(100, this, &TDetachedWindow::checkForWindowMergeOpportunity);
+    QTimer::singleShot(100ms, this, &TDetachedWindow::checkForWindowMergeOpportunity);
 }
 
 void TDetachedWindow::resizeEvent(QResizeEvent* event)
@@ -679,7 +682,7 @@ void TDetachedWindow::hideEvent(QHideEvent* event)
         qDebug() << "TDetachedWindow::hideEvent: Preventing window hide - has" << mpTabBar->count() << "profiles";
 #endif
         // Force the window to stay visible - but only if not minimized
-        QTimer::singleShot(0, this, [this]() {
+        QTimer::singleShot(0ms, this, [this]() {
             if (mpTabBar && mpTabBar->count() > 0 && !mIsBeingMinimized) {
                 setVisible(true);
                 show();
@@ -713,7 +716,7 @@ void TDetachedWindow::onReattachAction()
         emit reattachRequested(mCurrentProfileName);
 
         // Reset the flag after a short delay to allow for the operation to complete
-        QTimer::singleShot(500, this, [this]() {
+        QTimer::singleShot(500ms, this, [this]() {
             mReattachInProgress = false;
         });
     }
@@ -1612,7 +1615,7 @@ void TDetachedWindow::slot_toggleAlwaysOnTop()
     show(); // Required after changing window flags
 
     // Reset flag after a short delay to allow the window operations to complete
-    QTimer::singleShot(100, this, [this]() {
+    QTimer::singleShot(100ms, this, [this]() {
         mIsChangingWindowFlags = false;
     });
 }
@@ -2008,7 +2011,7 @@ bool TDetachedWindow::addProfile(const QString& profileName, TMainConsole* conso
     repaint();
 
     // Schedule a delayed update to handle any Qt layout timing issues
-    QTimer::singleShot(10, this, [this, profileName]() {
+    QTimer::singleShot(10ms, this, [this, profileName]() {
         auto console = mProfileConsoleMap.value(profileName);
 
         if (console) {
@@ -2187,7 +2190,7 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
 
         // Also schedule a delayed visibility restoration in case the drag operation
         // affects window state after this method returns
-        QTimer::singleShot(100, this, [this, profileName]() {
+        QTimer::singleShot(100ms, this, [this, profileName]() {
             if (mpTabBar->count() > 0) {
                 setVisible(true);
                 show();
@@ -2298,7 +2301,7 @@ void TDetachedWindow::switchToProfile(const QString& profileName)
     repaint();
 
     // Schedule a delayed update to handle any Qt layout timing issues
-    QTimer::singleShot(10, this, [this, profileName]() {
+    QTimer::singleShot(10ms, this, [this, profileName]() {
         auto console = mProfileConsoleMap.value(profileName);
 
         if (console) {
@@ -2413,7 +2416,7 @@ void TDetachedWindow::closeProfileByIndex(int index)
         // so we need to notify the main window about the window closure here
         emit windowClosed(profileName);
 
-        QTimer::singleShot(0, this, [this] {
+        QTimer::singleShot(0ms, this, [this] {
             close();
         });
     }
@@ -2504,7 +2507,7 @@ void TDetachedWindow::performWindowMerge(TDetachedWindow* otherWindow)
     }
 
     // Automatically merge without prompting - defer the operation to avoid timing issues
-    QTimer::singleShot(0, this, [this, otherWindow, ourProfiles, mergePair]() {
+    QTimer::singleShot(0ms, this, [this, otherWindow, ourProfiles, mergePair]() {
         // Check if the other window is still valid
         if (!otherWindow) {
             return;
@@ -2523,7 +2526,7 @@ void TDetachedWindow::performWindowMerge(TDetachedWindow* otherWindow)
     });
 
     // Clean up the active merge tracking after a delay
-    QTimer::singleShot(100, [mergePair]() {
+    QTimer::singleShot(100ms, [mergePair]() {
         activeMergeOperations.remove(mergePair);
     });
 }

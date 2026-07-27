@@ -59,6 +59,9 @@
 #include <QSplitter>
 #include <QTextBoundaryFinder>
 #include <QVideoWidget>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 const QString TConsole::cmLuaLineVariable("line");
 
@@ -627,7 +630,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     // Need to delay doing this because it uses elements that may not have
     // been constructed yet:
     if (mType == MainConsole) {
-        QTimer::singleShot(0, this, [this]() {
+        QTimer::singleShot(0ms, this, [this]() {
             setProxyForFocus(mpCommandLine);
         });
     }
@@ -734,7 +737,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
             const int cols = qMax(40, paneWidthPx / fontWidth);
             if (cols > 0 && cols != host->mScreenWidth) {
                 host->setScreenDimensions(cols, host->mScreenHeight);
-                QTimer::singleShot(0, host, &Host::updateDisplayDimensions);
+                QTimer::singleShot(0ms, host, &Host::updateDisplayDimensions);
             }
         };
 
@@ -1168,7 +1171,7 @@ void TConsole::scrollUp(int lines)
     mLowerPane->forceUpdate();
 
     if (lowerAppears) {
-        QTimer::singleShot(0, this, [this, lines]() {
+        QTimer::singleShot(0ms, this, [this, lines]() {
             mUpperPane->scrollUp(mLowerPane->getRowCount() + lines);
         });
         if (mudlet::self()->showSplitscreenTutorial()) {
@@ -2621,7 +2624,7 @@ void TConsole::setCaretMode(bool enabled)
     } else {
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
         // NVDA breaks focus reset, so do it on a timer
-        QTimer::singleShot(0, this, [this]() {
+        QTimer::singleShot(0ms, this, [this]() {
             mUpperPane->releaseKeyboard();
         });
 #endif
