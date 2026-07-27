@@ -398,6 +398,12 @@ private:
     EditorViewType resolveCurrentView();
     void saveTrigger();
     void saveAlias();
+    void computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDescription) const;
+    void setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT);
+    void showAliasError(QTreeWidgetItem* pItem, const QString& name, const QString& error);
+    void showAliasLoopWarning(QTreeWidgetItem* pItem, const QString& name);
+    void applyAliasState(QTreeWidgetItem* pItem, TAlias* pT);
+    bool aliasSubstitutionLoops(const QString& regex, const QString& substitution) const;
     void saveTimer();
     void saveKey();
     void saveScript();
