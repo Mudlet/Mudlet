@@ -10225,8 +10225,9 @@ void dlgTriggerEditor::slot_cleanupBogusActions()
     confirm.setWindowTitle(tr("Remove leftover toolbar entries"));
     //: Confirmation prompt. %n is the number of leftover toolbar+menu pairs,
     //: shown alongside a bulleted list of their names; translators provide
-    //: the plural forms.
-    confirm.setText(tr("Remove the following %n entry(s) from this profile's Buttons tree?", "", bogus.size()));
+    //: the plural forms. The trailing sentence warns that, unlike a normal
+    //: delete in the editor, this removal is not undoable.
+    confirm.setText(tr("Remove the following %n entry(s) from this profile's Buttons tree? This cannot be undone.", "", bogus.size()));
     confirm.setInformativeText(entryDescriptions.join(QChar::LineFeed));
     confirm.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     confirm.setDefaultButton(QMessageBox::Yes);
