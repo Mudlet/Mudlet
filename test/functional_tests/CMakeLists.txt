@@ -4,24 +4,38 @@ endif()
 
 set(FUNCTIONAL_TEST_SOURCES
     TelnetTextDisplayedTest.cpp
+    TelnetSubnegotiationTest.cpp
+    TelnetTlsPromptTest.cpp
     TelnetBenchmark.cpp
     ResetProfileTest.cpp
     TOscTest.cpp
     TUserWindowTest.cpp
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
+    TriggerSameLineMatchTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     TDiscordModeTest.cpp
     MainConsoleSelectionTest.cpp
     EnableDisableByNameTest.cpp
+    ColorTriggerFilterChildTest.cpp
     GMCPCharLoginTest.cpp
+    LogRestartDuplicateLineTest.cpp
     ProfileRoundTripTest.cpp
     MapRoundTripTest.cpp
+    UndoServerWrapTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
     TelnetServerStub.cpp
+    DiscordIpcServerStub.cpp
 )
+
+# Manual replay tool for verifying mUndoServerWrap against captured game
+# output - built but deliberately not registered with ctest:
+add_executable(UndoServerWrapReplay UndoServerWrapReplay.cpp ${FUNCTIONAL_TEST_UTILS})
+add_dependencies(UndoServerWrapReplay ${LIB_MUDLET_TARGET})
+target_link_libraries(UndoServerWrapReplay PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
+set_target_properties(UndoServerWrapReplay PROPERTIES ENABLE_EXPORTS ON)
 
 foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     get_filename_component(test_name ${test_file} NAME_WE)
@@ -47,6 +61,29 @@ set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
 
+# LogRestartDuplicateLineTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(LogRestartDuplicateLineTest PROPERTIES TIMEOUT 300)
+
 # The round-trip tests boot a full mudlet instance and save/reload profile and
 # map data, so they need a longer timeout
 set_tests_properties(ProfileRoundTripTest MapRoundTripTest PROPERTIES TIMEOUT 300)
+
+# TDiscordModeTest drives the real discord-rpc library end-to-end. The library's
+# reconnect backoff is a process-global (60s ceiling) that the suite's
+# init/shutdown churn can inflate, so a fresh handshake can take a while (see
+# establishDiscordLogin in TDiscordModeTest.cpp). 300s covers up to three such
+# waits - the warm-up plus a per-test fallback in each end-to-end test, ~195s
+# worst case - well beyond the default 60s.
+set_tests_properties(TDiscordModeTest PROPERTIES TIMEOUT 300)
+
+# Let TDiscordModeTest find the bundled discord-rpc library so the Lua API
+# permission gating tests can run (they skip when it is unavailable)
+if(WIN32)
+    set(DISCORD_RPC_PATH_VARIABLE "PATH")
+elseif(APPLE)
+    set(DISCORD_RPC_PATH_VARIABLE "DYLD_LIBRARY_PATH")
+else()
+    set(DISCORD_RPC_PATH_VARIABLE "LD_LIBRARY_PATH")
+endif()
+set_property(TEST TDiscordModeTest APPEND PROPERTY
+    ENVIRONMENT_MODIFICATION "${DISCORD_RPC_PATH_VARIABLE}=path_list_prepend:${CMAKE_SOURCE_DIR}/3rdparty/discord/rpc/lib")

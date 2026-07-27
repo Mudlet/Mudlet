@@ -474,9 +474,22 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
     output += TN_IAC;
     output += TN_SE;
 
+    // Check connection status first (most common issue)
+    if (host.mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
+        return warnArgumentValue(L, __func__, qsl("not connected to game server - connect first before sending MSDP"));
+    }
+
+    if (!host.mTelnet.isMSDPEnabled()) {
+        return warnArgumentValue(L, __func__, qsl("MSDP is not currently enabled"));
+    }
+
     // output is in Mud Server Encoding form here:
-    host.mTelnet.socketOutRaw(output);
-    return 0;
+    if (!host.mTelnet.socketOutRaw(output)) {
+        return warnArgumentValue(L, __func__, qsl("failed to send MSDP message - connection may have been lost or a socket write error occurred"));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendTelnetChannel102

@@ -35,7 +35,9 @@
 #include <QDebug>
 #include <QPainter>
 #include <QKeyEvent>
+#include <chrono>
 
+using namespace std::chrono_literals;
 
 ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
 : QOpenGLWidget(parent)
@@ -57,7 +59,7 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
 
     // Initialize smooth camera animation
     mCameraAnimationTimer = new QTimer(this);
-    mCameraAnimationTimer->setInterval(17); // ~60fps updates for smoother animation
+    mCameraAnimationTimer->setInterval(17ms); // ~60fps updates for smoother animation
     connect(mCameraAnimationTimer, &QTimer::timeout, this, &ModernGLWidget::onCameraAnimationTick);
     mEasingCurve.setType(QEasingCurve::OutQuart); // Natural deceleration
 }
