@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QtTest/QtTest>
+#include <chrono>
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -27,6 +28,8 @@
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
+
+using namespace std::chrono_literals;
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -103,7 +106,7 @@ private slots:
         QVERIFY2(waitForTextInBuffer(QString(100, QLatin1Char('X'))), "Filler text never reached the buffer");
 
         mudlet::self()->resize(1200, 800);
-        QTest::qWait(100);
+        QTest::qWait(100ms);
 
         TTextEdit* pane = upperPane();
         QVERIFY2(pane, "No upper pane available");
@@ -133,7 +136,7 @@ private slots:
         QVERIFY2(waitForTextInBuffer(QString(100, QLatin1Char('X'))), "Filler text never reached the buffer");
 
         mudlet::self()->resize(1200, 800);
-        QTest::qWait(100);
+        QTest::qWait(100ms);
 
         TTextEdit* pane = upperPane();
         QVERIFY2(pane, "No upper pane available");
@@ -160,7 +163,7 @@ private slots:
         QVERIFY2(waitForTextInBuffer(QString(100, QLatin1Char('X'))), "Filler text never reached the buffer");
 
         mudlet::self()->resize(1200, 800);
-        QTest::qWait(100);
+        QTest::qWait(100ms);
 
         TTextEdit* pane = upperPane();
         QVERIFY2(pane, "No upper pane available");
@@ -201,21 +204,21 @@ private slots:
 private:
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
+        QTimer::singleShot(0ms, qApp, [hostname, address, port]() {
             mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
         });
 

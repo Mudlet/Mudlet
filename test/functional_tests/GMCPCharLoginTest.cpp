@@ -24,6 +24,7 @@
 // authentication.
 
 #include <QtTest/QtTest>
+#include <chrono>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
 #include <QDesktopServices>
@@ -37,6 +38,8 @@
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
+
+using namespace std::chrono_literals;
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -523,7 +526,7 @@ private slots:
         mpServer->clearReceived();
         mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
         QVERIFY2(waitForConsoleContains(host, qsl("saved sign-in has expired")), "the second rejection should be reported, not retried");
-        QTest::qWait(300);
+        QTest::qWait(300ms);
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
     }
 
@@ -601,7 +604,7 @@ private slots:
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not autofill stored credentials");
         QCOMPARE(sent.value(qsl("account")).toString(), qsl("player"));
         QCOMPARE(sent.value(qsl("password")).toString(), qsl("secret"));
-        QTest::qWait(300);
+        QTest::qWait(300ms);
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
     }
 
@@ -689,21 +692,21 @@ private:
     Host* connectAndNegotiate()
     {
         const QString port = QString::number(mPort);
-        QTimer::singleShot(0, qApp, [this, port]() {
+        QTimer::singleShot(0ms, qApp, [this, port]() {
             mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), mHostname);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), qsl("localhost"));
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
         });
 
