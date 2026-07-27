@@ -2199,25 +2199,36 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadFinished, pConsole, &TMainConsole::closePackageDownloadProgress, Qt::UniqueConnection);
 
 #if !defined(QT_NO_SSL)
-    connect(&pH->mTelnet, &cTelnet::signal_promptTlsAvailable, this, [pH = QPointer<Host>(pH)](const QString& text, const QString& informativeText) {
-        // ::exec() spins a nested event loop - a re-entrancy hazard preserved
-        // from the original in-cTelnet implementation
-        auto pMsgBox = new QMessageBox();
-        pMsgBox->setIcon(QMessageBox::Question);
-        pMsgBox->setText(text);
-        pMsgBox->setInformativeText(informativeText);
-        pMsgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-        pMsgBox->setDefaultButton(QMessageBox::Yes);
-        // Make using Escape mean no change:
-        pMsgBox->setEscapeButton(QMessageBox::No);
-        const int ret = pMsgBox->exec();
-        delete pMsgBox;
-        if (!pH) {
-            qWarning() << "mudlet: the profile vanished while the TLS upgrade prompt was open; discarding the user's answer.";
-            return;
-        }
-        pH->mTelnet.slot_tlsUpgradeResponse(ret == QMessageBox::Yes);
-    });
+    // A queued connection is essential here. signal_promptTlsAvailable() is
+    // emitted deep inside cTelnet's socket-parsing call stack, and the modal
+    // QMessageBox::exec() below spins a nested event loop. Delivering it queued
+    // lets that parse pass unwind first, so the dialog runs with no cTelnet frames
+    // beneath it: a profile teardown while the dialog is open (e.g. a Lua
+    // closeProfile()) then cannot free the cTelnet whose stack we would otherwise
+    // return into, and the answer cannot mutate the socket mid-parse. The QPointer
+    // capture then fully protects the (now top-level) lambda body.
+    connect(
+            &pH->mTelnet,
+            &cTelnet::signal_promptTlsAvailable,
+            this,
+            [pH = QPointer<Host>(pH)](const QString& text, const QString& informativeText) {
+                auto pMsgBox = new QMessageBox();
+                pMsgBox->setIcon(QMessageBox::Question);
+                pMsgBox->setText(text);
+                pMsgBox->setInformativeText(informativeText);
+                pMsgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+                pMsgBox->setDefaultButton(QMessageBox::Yes);
+                // Make using Escape mean no change:
+                pMsgBox->setEscapeButton(QMessageBox::No);
+                const int ret = pMsgBox->exec();
+                delete pMsgBox;
+                if (!pH) {
+                    qWarning() << "mudlet: the profile vanished while the TLS upgrade prompt was open; discarding the user's answer.";
+                    return;
+                }
+                pH->mTelnet.slot_tlsUpgradeResponse(ret == QMessageBox::Yes);
+            },
+            Qt::QueuedConnection);
 #endif
 
     // Apply Host's console buffer size settings to the newly created console
