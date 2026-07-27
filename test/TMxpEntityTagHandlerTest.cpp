@@ -203,6 +203,38 @@ private slots:
     QCOMPARE(processor.getEntityResolver().getResolution("&entity;"), "");
   }
 
+  // <!ENTITY> values must be decoded with the session encoding rather than
+  // hardcoded UTF-8 - covers quoted and unquoted values in a WINDOWS-1251
+  // session ("Гроза" = bytes C3 F0 EE E7 E0)
+  void testNonUtf8SessionEntityValue() {
+    TMxpStubClient stub;
+    stub.mEncoding = QByteArrayLiteral("WINDOWS-1251");
+    TMxpProcessor processor(&stub);
+    processor.setMode(6);
+
+    processInput(processor, "<!ENTITY storm \"\xC3\xF0\xEE\xE7\xE0\">");
+    processInput(processor, "<!ENTITY storm2 \xC3\xF0\xEE\xE7\xE0>");
+
+    TEntityResolver &resolver =
+        processor.getMxpTagProcessor().getEntityResolver();
+    QCOMPARE(resolver.getResolution("&storm;"), QString("Гроза"));
+    QCOMPARE(resolver.getResolution("&storm2;"), QString("Гроза"));
+  }
+
+  // UTF-8 sessions must keep resolving non-Latin1 entity values unchanged
+  void testUtf8SessionEntityValue() {
+    TMxpStubClient stub;
+    TMxpProcessor processor(&stub);
+    processor.setMode(6);
+
+    processInput(processor, "<!ENTITY storm \"Гроза\">");
+
+    QCOMPARE(
+        processor.getMxpTagProcessor().getEntityResolver().getResolution(
+            "&storm;"),
+        QString("Гроза"));
+  }
+
   void testEmptyEntityInterpolation() {
     TMxpStubClient stub;
     TMxpProcessor mxpProcessor(&stub);

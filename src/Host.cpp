@@ -1424,7 +1424,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
     // allow sending blank commands
     if (commandList.empty()) {
         QString payload(QChar::LineFeed);
-        mTelnet.sendData(payload);
+        mTelnet.sendData(payload, true, true);
         return;
     }
 
@@ -1434,12 +1434,12 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         }
         command.remove(QChar::LineFeed);
         if (dontExpandAliases) {
-            mTelnet.sendData(command);
+            mTelnet.sendData(command, true, true);
             continue;
         }
 
         if (!mAliasUnit.processDataStream(command)) {
-            mTelnet.sendData(command);
+            mTelnet.sendData(command, true, true);
         }
     }
 }

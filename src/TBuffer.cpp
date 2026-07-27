@@ -273,6 +273,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mLocalGotESC(other.mLocalGotESC)
 , mLocalGotCSI(other.mLocalGotCSI)
 , mLocalGotOSC(other.mLocalGotOSC)
+, mLocalGotString(other.mLocalGotString)
 , mLocalIncompleteSequenceBytes(other.mLocalIncompleteSequenceBytes)
 , mProcessingLocalFeed(other.mProcessingLocalFeed)
 , lastLoggedFromLine(other.lastLoggedFromLine)
@@ -367,6 +368,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mLocalGotESC = other.mLocalGotESC;
         mLocalGotCSI = other.mLocalGotCSI;
         mLocalGotOSC = other.mLocalGotOSC;
+        mLocalGotString = other.mLocalGotString;
         mLocalIncompleteSequenceBytes = other.mLocalIncompleteSequenceBytes;
         mProcessingLocalFeed = other.mProcessingLocalFeed;
         lastLoggedFromLine = other.lastLoggedFromLine;
@@ -580,13 +582,15 @@ void TBuffer::swapParserSequenceState()
     std::swap(mGotESC, mLocalGotESC);
     std::swap(mGotCSI, mLocalGotCSI);
     std::swap(mGotOSC, mLocalGotOSC);
+    std::swap(mGotString, mLocalGotString);
     std::swap(mIncompleteSequenceBytes, mLocalIncompleteSequenceBytes);
 }
 
 void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServer)
 {
-    // mGotESC/mGotCSI/mGotOSC and mIncompleteSequenceBytes persist between
-    // calls so that a sequence split across Game Server packets still parses.
+    // mGotESC/mGotCSI/mGotOSC/mGotString and mIncompleteSequenceBytes persist
+    // between calls so that a sequence split across Game Server packets still
+    // parses.
     // Locally generated text (feedTriggers(), MMCP chat messages, MXP
     // insertions) runs through the same parser, so swap in a separate set of
     // that state for the duration of such a feed - otherwise local text
@@ -775,17 +779,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 continue;
             }
             // A control character straight after the ESC means the escape
-            // sequence is malformed - abandon it and process the character
-            // normally:
-        }
-
-        if (mGotESC) {
-            // ESC was not followed by '[' or ']', so it does not introduce a
-            // CSI or OSC sequence (e.g. ESC c, ESC 7, or a charset designator
-            // like ESC(B). Clear the latch here - otherwise it stays set and a
-            // later literal '[' or ']' anywhere in the stream is misparsed as a
-            // sequence introducer, swallowing the text that follows it.
-            mGotESC = false;
+            // sequence is malformed - abandon it (the latch was already
+            // cleared above) and process the character normally:
         }
 
         if (mGotCSI) {
@@ -1086,10 +1081,15 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 
                         // We replace the already processed text with the entity value into the buffer and restart
                         // processing it for charset encoding but with limited MXP handling.
-                        // Encode with the session's encoding (not toLatin1(), which would flatten any
-                        // non-Latin1 characters to '?') so the value survives the re-decode below; the
+                        // A CUST value is decoded text, so encode it with the session's encoding
+                        // (not toLatin1(), which would flatten non-Latin1 characters to '?') for the
+                        // re-decode below. A LIT value is the raw, undecoded entity bytes held as one
+                        // Latin1 code unit per byte (see TEntityHandler::handle()), so toLatin1() is
+                        // an exact byte passthrough - re-encoding it would double-encode those bytes
+                        // and orphan any continuation bytes still ahead in the buffer. Either way the
                         // byte length, not the QString length, is what the offset bookkeeping needs.
-                        const QByteArray entityValueBytes = TEncodingHelper::encode(mpHost->mMxpProcessor.getEntityValue(), mEncoding);
+                        const QByteArray entityValueBytes =
+                                result == HANDLER_INSERT_ENTITY_CUST ? TEncodingHelper::encode(mpHost->mMxpProcessor.getEntityValue(), mEncoding) : mpHost->mMxpProcessor.getEntityValue().toLatin1();
                         size_t valueLength = entityValueBytes.size();
                         localBuffer.replace(0, localBufferPosition + 1, entityValueBytes.constData(), entityValueBytes.size());
 
@@ -5045,6 +5045,12 @@ void TBuffer::logRemainingOutput()
 {
     mpHost->mpConsole->mLogStream << lastTextToLog;
     mpHost->mpConsole->mLogStream.flush();
+
+    // Reset the deferred logging state so restarting logging cannot replay this
+    // pending line into the new session via log()'s deferred-flush path
+    lastTextToLog.clear();
+    lastLoggedFromLine = -1;
+    lastloggedToLine = -1;
 }
 
 // logs a string directly to the log file
