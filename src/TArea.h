@@ -35,6 +35,9 @@
 #include <QPair>
 #include <QVector3D>
 
+class QJsonArray;
+class QJsonObject;
+
 class TRoomDB;
 
 class TArea
