@@ -523,7 +523,7 @@ private:
     // translateToPlainText()}:
     std::string mIncompleteSequenceBytes;
 
-    // The parser sequence state (mGotESC, mGotCSI, mGotOSC and
+    // The parser sequence state (mGotESC, mGotCSI, mGotOSC, mGotString and
     // mIncompleteSequenceBytes) for whichever of the two data channels - Game
     // Server stream or locally generated text - is not currently being
     // processed; translateToPlainText() swaps it in around a local feed so
@@ -532,6 +532,7 @@ private:
     bool mLocalGotESC = false;
     bool mLocalGotCSI = false;
     bool mLocalGotOSC = false;
+    bool mLocalGotString = false;
     std::string mLocalIncompleteSequenceBytes;
     // Set whilst a locally generated feed is being processed, so a nested feed
     // (e.g. an MXP <HR> inside locally fed text) does not swap the state again:
