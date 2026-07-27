@@ -17,6 +17,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TDiscordModeTest.cpp
     MainConsoleSelectionTest.cpp
     EnableDisableByNameTest.cpp
+    ColorTriggerFilterChildTest.cpp
     GMCPCharLoginTest.cpp
     ProfileRoundTripTest.cpp
     MapRoundTripTest.cpp
