@@ -80,6 +80,7 @@
 #include <QRegularExpression>
 #include <QToolButton>
 #include <QToolBar>
+#include <chrono>
 #include <sstream>
 #include <pugixml.hpp>
 #include <QVBoxLayout>
@@ -1959,7 +1960,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
                     const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    QTimer::singleShot(0, this, [this, line, column]() {
+                    QTimer::singleShot(0ms, this, [this, line, column]() {
                         if (mpSourceEditorEdbee) {
                             mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
                         }
@@ -2016,7 +2017,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
                     const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    QTimer::singleShot(0, this, [this, line, column]() {
+                    QTimer::singleShot(0ms, this, [this, line, column]() {
                         if (mpSourceEditorEdbee) {
                             auto controller = mpSourceEditorEdbee->controller();
                             controller->moveCaretTo(line, column, false);
@@ -2069,7 +2070,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
                     const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    QTimer::singleShot(0, this, [this, line, column]() {
+                    QTimer::singleShot(0ms, this, [this, line, column]() {
                         if (mpSourceEditorEdbee) {
                             mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
                         }
@@ -2127,7 +2128,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
                     const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    QTimer::singleShot(0, this, [this, line, column]() {
+                    QTimer::singleShot(0ms, this, [this, line, column]() {
                         if (mpSourceEditorEdbee) {
                             mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
                         }
@@ -2195,7 +2196,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
                     const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    QTimer::singleShot(0, this, [this, line, column]() {
+                    QTimer::singleShot(0ms, this, [this, line, column]() {
                         if (mpSourceEditorEdbee) {
                             mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
                         }
@@ -2242,7 +2243,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
                     const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    QTimer::singleShot(0, this, [this, line, column]() {
+                    QTimer::singleShot(0ms, this, [this, line, column]() {
                         if (mpSourceEditorEdbee) {
                             mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
                         }
@@ -2306,7 +2307,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     const auto line = static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt());
                     const auto column = static_cast<size_t>(pItem->data(0, PositionRole).toInt());
                     mpSourceEditorEdbee->setFocus();
-                    QTimer::singleShot(0, this, [this, line, column]() {
+                    QTimer::singleShot(0ms, this, [this, line, column]() {
                         if (mpSourceEditorEdbee) {
                             mpSourceEditorEdbee->controller()->moveCaretTo(line, column, false);
                         }
@@ -6151,18 +6152,9 @@ void dlgTriggerEditor::saveAlias()
     }
     const QString substitution = mpAliasMainArea->lineEdit_alias_command->text();
     //check if sub will trigger regex, ignore if there's nothing in regex - could be an alias group
-    const QRegularExpression rx(regex);
-    const QRegularExpressionMatch match = rx.match(substitution);
-
-    QString itemDescription;
-    if (!regex.isEmpty() && match.capturedStart() != -1) {
+    if (aliasSubstitutionLoops(regex, substitution)) {
         //we have a loop
-        QIcon iconError;
-        iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-        itemDescription = descError;
-        pItem->setIcon(0, iconError);
-        pItem->setText(0, name);
-        showError(tr("Alias <em>%1</em> has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn't good as it'll call itself forever.").arg(name.toHtmlEscaped()));
+        showAliasLoopWarning(pItem, name);
         return;
     }
 
@@ -6182,54 +6174,7 @@ void dlgTriggerEditor::saveAlias()
 
         QIcon icon;
         QString itemDescription;
-        if (pT->isFolder()) {
-            if (!pT->mPackageName.isEmpty()) {
-                if (pT->isActive()) {
-                    itemDescription = descActiveFolder;
-                    if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                    } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = descInactiveParent.arg(itemDescription);
-                    }
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveFolder;
-                }
-            } else if (pT->isActive()) {
-                itemDescription = descActiveFolder;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveParent.arg(itemDescription);
-                }
-            } else {
-                itemDescription = descInactiveFolder;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
-                }
-            }
-        } else {
-            if (pT->isActive()) {
-                itemDescription = descActive;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveParent.arg(itemDescription);
-                }
-            } else {
-                itemDescription = descInactive;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
-                }
-            }
-        }
+        computeAliasIcon(pT, icon, itemDescription);
 
         if (pT->state()) {
             clearEditorNotification();
@@ -6296,6 +6241,122 @@ void dlgTriggerEditor::saveAlias()
                 mpTextUndoStack->clear();
             }
         }
+    }
+}
+
+// Returns true when the substitution would match its own pattern, which makes
+// the alias call itself forever. An invalid pattern can't loop - the faulty-regex
+// check surfaces that instead.
+bool dlgTriggerEditor::aliasSubstitutionLoops(const QString& regex, const QString& substitution) const
+{
+    if (regex.isEmpty()) {
+        return false;
+    }
+    const QRegularExpression rx(regex);
+    if (!rx.isValid()) {
+        return false;
+    }
+    return rx.match(substitution).capturedStart() != -1;
+}
+
+// Computes the tree-item icon and accessible description for a non-error alias,
+// shared by the explicit save and the per-property autosave paths.
+void dlgTriggerEditor::computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDescription) const
+{
+    if (pT->isFolder()) {
+        if (!pT->mPackageName.isEmpty()) {
+            if (pT->isActive()) {
+                itemDescription = descActiveFolder;
+                if (pT->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                    itemDescription = descInactiveParent.arg(itemDescription);
+                }
+            } else {
+                icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                itemDescription = descInactiveFolder;
+            }
+        } else if (pT->isActive()) {
+            itemDescription = descActiveFolder;
+            if (pT->ancestorsActive()) {
+                icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
+            } else {
+                icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                itemDescription = descInactiveParent.arg(itemDescription);
+            }
+        } else {
+            itemDescription = descInactiveFolder;
+            if (pT->ancestorsActive()) {
+                icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
+            } else {
+                icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+            }
+        }
+    } else {
+        if (pT->isActive()) {
+            itemDescription = descActive;
+            if (pT->ancestorsActive()) {
+                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+            } else {
+                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                itemDescription = descInactiveParent.arg(itemDescription);
+            }
+        } else {
+            itemDescription = descInactive;
+            if (pT->ancestorsActive()) {
+                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+            } else {
+                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+            }
+        }
+    }
+}
+
+// Restores an alias tree item to its non-error appearance and clears the editor notice.
+void dlgTriggerEditor::setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT)
+{
+    clearEditorNotification();
+    if (pT->checkIfNew()) {
+        // A freshly added alias keeps its "unsaved" cue until an explicit Save
+        // activates it - don't recompute it to an active/inactive icon here.
+        pItem->setIcon(0, QIcon(QPixmap(pT->isFolder() ? qsl(":/icons/folder-red.png") : qsl(":/icons/document-save-as.png"))));
+        pItem->setData(0, Qt::AccessibleDescriptionRole, pT->isFolder() ? descNewFolder : descNewItem);
+        return;
+    }
+    QIcon icon;
+    QString itemDescription;
+    computeAliasIcon(pT, icon, itemDescription);
+    pItem->setIcon(0, icon);
+    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+}
+
+// Flags an alias tree item as broken and shows the given error message.
+void dlgTriggerEditor::showAliasError(QTreeWidgetItem* pItem, const QString& name, const QString& error)
+{
+    QIcon iconError;
+    iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+    pItem->setIcon(0, iconError);
+    pItem->setText(0, name);
+    pItem->setData(0, Qt::AccessibleDescriptionRole, descError);
+    showError(error);
+}
+
+void dlgTriggerEditor::showAliasLoopWarning(QTreeWidgetItem* pItem, const QString& name)
+{
+    showAliasError(pItem,
+                   name,
+                   tr("Alias <em>%1</em> has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn't good as it'll call itself forever.").arg(name.toHtmlEscaped()));
+}
+
+// Reflects the alias's compile state on its tree item: normal icon when the
+// pattern compiles, faulty-regex error otherwise.
+void dlgTriggerEditor::applyAliasState(QTreeWidgetItem* pItem, TAlias* pT)
+{
+    if (pT->state()) {
+        setAliasNormalIcon(pItem, pT);
+    } else {
+        showAliasError(pItem, pT->getName(), pT->getError());
     }
 }
 
@@ -9843,7 +9904,7 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     // (selection handlers will also re-enable via restoreEditorState, but this
     // is a fallback in case no item is selected in the new view)
     if (mpSourceEditorEdbee && !mpSourceEditorEdbee->updatesEnabled()) {
-        QTimer::singleShot(0, this, [this]() {
+        QTimer::singleShot(0ms, this, [this]() {
             if (mpSourceEditorEdbee) {
                 mpSourceEditorEdbee->setUpdatesEnabled(true);
             }
@@ -12268,7 +12329,7 @@ void dlgTriggerEditor::doCleanReset()
 
     mCleanResetQueued = true;
 
-    QTimer::singleShot(0, this, [=, this]() {
+    QTimer::singleShot(0ms, this, [=, this]() {
         mCleanResetQueued = false;
 
         runScheduledCleanReset();
@@ -12906,7 +12967,7 @@ void dlgTriggerEditor::restoreEditorState(EditorViewType viewType, int itemId)
     const bool hasState = mEditorStates.contains(viewType) && mEditorStates[viewType].contains(itemId);
     const EditorState state = hasState ? mEditorStates[viewType][itemId] : EditorState{};
 
-    QTimer::singleShot(0, this, [this, state, hasState]() {
+    QTimer::singleShot(0ms, this, [this, state, hasState]() {
         if (!mpSourceEditorEdbee) {
             return;
         }
@@ -14745,11 +14806,21 @@ void dlgTriggerEditor::slot_saveProperty_AliasPattern()
         return;
     }
 
+    // Mirror the explicit-save guard: refuse a pattern that would make the alias loop.
+    const QString substitution = mpAliasMainArea->lineEdit_alias_command->text();
+    if (aliasSubstitutionLoops(newPattern, substitution)) {
+        showAliasLoopWarning(mpCurrentAliasItem, pT->getName());
+        return;
+    }
+
     QString oldStateXML = exportAliasToXML(pT);
     pT->setRegexCode(newPattern);
     QString newStateXML = exportAliasToXML(pT);
 
     pushAliasPropertyCommand(mpUndoStack, mpHost, aliasID, pT->getName(), qsl("pattern"), oldStateXML, newStateXML);
+
+    // Surface a faulty regex the same way the explicit Save button does.
+    applyAliasState(mpCurrentAliasItem, pT);
 }
 
 void dlgTriggerEditor::slot_saveProperty_AliasCommand()
@@ -14770,11 +14841,22 @@ void dlgTriggerEditor::slot_saveProperty_AliasCommand()
         return;
     }
 
+    // Mirror the explicit-save guard: a substitution must not match its own pattern.
+    QString regex = mpAliasMainArea->lineEdit_alias_pattern->text();
+    unmarkQString(&regex);
+    if (aliasSubstitutionLoops(regex, newCommand)) {
+        showAliasLoopWarning(mpCurrentAliasItem, pT->getName());
+        return;
+    }
+
     QString oldStateXML = exportAliasToXML(pT);
     pT->setCommand(newCommand);
     QString newStateXML = exportAliasToXML(pT);
 
     pushAliasPropertyCommand(mpUndoStack, mpHost, aliasID, pT->getName(), qsl("command"), oldStateXML, newStateXML);
+
+    // Refresh the item so a fixed alias loses any stale error flag.
+    applyAliasState(mpCurrentAliasItem, pT);
 }
 
 // =============================================================================
