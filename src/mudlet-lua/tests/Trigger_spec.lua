@@ -145,5 +145,49 @@ describe("Trigger processing", function()
             assert.is_true(fired, "Function callback without an expiry argument should fire")
         end)
 
+        it("should match on background colour alone when the foreground is ignored", function()
+            _G.ansiBackgroundOnlyFired = false
+            -- -1 ignores the foreground colour, ANSI 4 is a blue background:
+            -- match any foreground as long as the background is blue.
+            local colorTrigger, err = tempAnsiColorTrigger(-1, 4, function()
+                _G.ansiBackgroundOnlyFired = true
+            end)
+
+            assert.is_number(colorTrigger, "Ignoring the foreground with a background colour set should create a trigger, got: " .. tostring(err))
+
+            -- Green foreground (32) on a non-matching black background (40): it
+            -- must NOT fire, proving the background is genuinely discriminated
+            -- rather than the trigger having ignored both colours.
+            feedTriggers("\n\27[32;40mAnsiBackgroundNonMatch\27[0m\n")
+            assert.is_false(_G.ansiBackgroundOnlyFired, "A background-only trigger must not fire on a non-matching background")
+
+            -- Red foreground (31) on the matching blue background (44): the
+            -- foreground differs from any fixed value yet the trigger should
+            -- still match on the background alone.
+            feedTriggers("\n\27[31;44mAnsiBackgroundOnlyMatch\27[0m\n")
+
+            local fired = _G.ansiBackgroundOnlyFired
+            if type(colorTrigger) == "number" then
+                killTrigger(colorTrigger)
+            end
+            _G.ansiBackgroundOnlyFired = nil
+
+            assert.is_true(fired, "A background-only ANSI colour trigger (ignored foreground) should fire on a matching background")
+        end)
+
+        it("should still reject ignoring the foreground when the background is omitted", function()
+            -- (-1, code) omits the background, so both colours would be ignored:
+            -- this must remain an error, not create a match-everything trigger.
+            local colorTrigger, err = tempAnsiColorTrigger(-1, function() end)
+
+            if type(colorTrigger) == "number" then
+                killTrigger(colorTrigger)
+            end
+
+            assert.is_nil(colorTrigger, "Ignoring the foreground with the background omitted should be rejected")
+            assert.is_string(err, "A rejection should return an error message")
+            assert.is_truthy(err:find("ignore both foreground and background", 1, true), "The error should explain both colours cannot be ignored, got: " .. tostring(err))
+        end)
+
     end)
 end)

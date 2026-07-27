@@ -171,6 +171,7 @@ public slots:
 
 protected:
     bool focusNextPrevChild(bool next) override;
+    bool event(QEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
 
