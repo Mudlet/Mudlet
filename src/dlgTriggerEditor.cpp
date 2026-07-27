@@ -13338,8 +13338,10 @@ void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
             }
 
         } else {
-            // And the extra controls are NOT visible
-            if (mTriggerMainAreaMinimumHeightToShowAll > 0 && mpTriggersMainArea->widget_left->height() > mTriggerMainAreaMinimumHeightToShowAll) {
+            // And the extra controls are NOT visible. Only auto-restore them if
+            // the user's preference is to show them - if they explicitly hid the
+            // controls a later splitter expand must not bring them back:
+            if (mShowAllTriggerControls && mTriggerMainAreaMinimumHeightToShowAll > 0 && mpTriggersMainArea->widget_left->height() > mTriggerMainAreaMinimumHeightToShowAll) {
                 slot_showAllTriggerControls(true);
             }
         }
