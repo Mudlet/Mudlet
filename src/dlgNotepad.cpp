@@ -33,6 +33,8 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonParseError>
+#include <QJsonValue>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
@@ -43,6 +45,7 @@
 #include <QShortcut>
 #include <QStringConverter>
 #include <QTextDocument>
+#include <QTextStream>
 #include <QTimer>
 #include <QToolButton>
 #include <chrono>

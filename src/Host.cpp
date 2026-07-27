@@ -61,11 +61,18 @@
 #include <chrono>
 #include <QtConcurrentRun>
 #include <QCoreApplication>
+#include <QDataStream>
 #include <QDialog>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonValue>
 #include <QKeyEvent>
 #include <QtUiTools>
 #include <QNetworkProxy>
+#include <QRegularExpression>
+#include <QSaveFile>
 #include <QSettings>
+#include <QTextStream>
 #include <zip.h>
 #include <memory>
 

@@ -58,6 +58,7 @@
 
 class QDialog;
 class QDockWidget;
+class QJsonObject;
 class QKeyEvent;
 class QPushButton;
 class QListWidget;
@@ -152,6 +153,8 @@ class Host : public QObject
     friend class XMLexport;
     friend class XMLimport;
     friend class dlgProfilePreferences;
+    // Allows the functional test to set the Discord username restriction:
+    friend class TDiscordModeTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
