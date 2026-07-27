@@ -69,6 +69,15 @@ leak:libgobject-2.0.so
 leak:libexpat.so
 
 # ==============================================================================
+# speech-dispatcher client library leak
+# One-time allocation in the speech-dispatcher client (libspeechd) when its
+# connection is first opened, reached via QtTextToSpeech's speechd engine.
+# Only surfaces when a speech-dispatcher daemon is reachable and something
+# touches the tts* API; no Mudlet frames are involved.
+# ==============================================================================
+leak:libspeechd.so
+
+# ==============================================================================
 # Qt internal leaks (Qt's integration with system libraries)
 # These are typically initialization leaks in Qt's platform integration
 # ==============================================================================
