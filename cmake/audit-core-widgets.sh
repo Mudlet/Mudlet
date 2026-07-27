@@ -131,6 +131,17 @@ lower_module_names="$TMPDIR_AUDIT/lower.txt"
 widgets_sorted="$TMPDIR_AUDIT/widgets_all.txt"
 { ls "$QTINC/QtGui" 2>/dev/null; ls "$QTINC/QtCore" 2>/dev/null; } | sort -u > "$lower_module_names"
 ls "$QW" | sort > "$widgets_sorted"
+
+# A partial/broken Qt (QtWidgets present, QtGui/QtCore missing) would leave the
+# filter set empty, so every QtWidgets forwarder header (qaction.h, qshortcut.h,
+# ... whose classes actually live in QtGui) would be miscounted as a Widgets
+# dependency. Refuse to run rather than emit a silently inflated count.
+if [ ! -s "$lower_module_names" ]; then
+  err "no QtGui/QtCore headers found under $QTINC (partial or broken Qt install)."
+  err "cannot separate QtWidgets headers from forwarders relocated to QtGui; aborting."
+  exit 2
+fi
+
 comm -23 "$widgets_sorted" "$lower_module_names" \
   | grep -vE '^[0-9]+\.[0-9]+\.[0-9]+$' > "$SET_HEADERS" # drop the versioned private-headers subdir
 grep -E '^Q[A-Z]' "$SET_HEADERS" > "$SET_CLASSES"
@@ -142,16 +153,23 @@ fi
 
 # mudlet_core's file list lives in the mudlet_SRCS / mudlet_HDRS variables of
 # src/CMakeLists.txt; both the set(...) blocks and later list(APPEND ...) lines
-# contribute, so the awk below must catch both forms.
+# contribute, so the awk below must catch both forms. Comments are stripped and
+# CRLF tolerated first so a ")" or a filename inside a "#" comment - or a
+# Windows-style checkout - cannot silently truncate or pad the parsed list. A
+# list(APPEND ...) may also span several lines, so its block is tracked like a
+# set() block rather than assumed to be single-line.
 awk '
-  { if ($0 ~ /^[ \t]*set\(mudlet_(SRCS|HDRS)/) inblk=1
-    line=$0; gsub(/[()]/," ",line)
-    isappend = ($0 ~ /list\(APPEND[ \t]+mudlet_(SRCS|HDRS)/)
-    if (inblk || isappend) {
+  {
+    sub(/\r$/, "")               # tolerate CRLF checkouts
+    sub(/#.*/, "")               # a comment cannot contribute or terminate a block
+    if ($0 ~ /^[ \t]*set\(mudlet_(SRCS|HDRS)([ \t]|$)/) inblk=1
+    if ($0 ~ /list\(APPEND[ \t]+mudlet_(SRCS|HDRS)([ \t]|\)|$)/) inapp=1
+    if (inblk || inapp) {
+      line=$0; gsub(/[()]/," ",line)
       n=split(line,a,/[ \t]+/)
       for (i=1;i<=n;i++) if (a[i] ~ /\.(cpp|mm|h)$/) print a[i]
     }
-    if (inblk && $0 ~ /\)/) inblk=0
+    if ($0 ~ /\)/) { inblk=0; inapp=0 }
   }
 ' "$CMAKE_FILE" | sort -uf > "$FILE_LIST"
 
@@ -167,6 +185,14 @@ while IFS= read -r f; do
   fi
 done < "$FILE_LIST"
 
+# Under --enforce the audit is a CI gate: a file listed in CMakeLists.txt but
+# absent from disk means the list is stale or the parser drifted, so counting
+# the survivors would under-report. Fail loudly instead of silently skipping.
+if [ "$MODE" = enforce ] && [ "$missing" -gt 0 ]; then
+  err "$missing file(s) listed in $CMAKE_FILE are missing from disk; failing under --enforce."
+  exit 2
+fi
+
 if [ ! -s "$EXISTING" ]; then
   err "no source files parsed from $CMAKE_FILE"
   exit 2
@@ -180,12 +206,25 @@ RESULTS="$TMPDIR_AUDIT/results.txt"
   BEGIN{
     while ((getline l < setfile) > 0)  W[l]=1
     while ((getline c < classfile) > 0) C[c]=1
+    # Match a complete /* ... */ comment whose body may itself contain "*"
+    # (e.g. a one-line "/** ... */"). The old /\*[^*]*\*\// stopped at the
+    # first inner "*", failed to strip such comments, then mistook them for an
+    # unterminated block and silently swallowed the rest of the file.
+    blockcmt = "/\\*([^*]|\\*+[^*/])*\\*+/"
   }
-  FNR==1 { order[++nf]=FILENAME; incmt=0 }
+  FNR==1 {
+    if (nf && incmt) badcmt=order[nf]
+    order[++nf]=FILENAME; incmt=0
+  }
   {
     line=$0
-    if (incmt) { if (line ~ /\*\//) { sub(/^.*\*\//,"",line); incmt=0 } else next }
-    gsub(/\/\*[^*]*\*\//,"",line)
+    sub(/\r$/,"",line)
+    if (incmt) {
+      p=index(line, "*/")
+      if (p==0) next
+      line=substr(line, p+2); incmt=0
+    }
+    gsub(blockcmt,"",line)
     if (line ~ /\/\*/) { sub(/\/\*.*$/,"",line); incmt=1 }
     sub(/\/\/.*$/,"",line)
     if (line ~ /^[ \t]*#[ \t]*include[ \t]*[<"]/) {
@@ -204,12 +243,22 @@ RESULTS="$TMPDIR_AUDIT/results.txt"
     if (!(key in seen)) { seen[key]=1; refs[f] = refs[f] (refs[f]==""?"":", ") tok }
   }
   END {
+    if (incmt) badcmt=order[nf]
+    if (badcmt != "") {
+      printf "audit-core-widgets: unterminated block comment in %s - scan aborted\n", badcmt > "/dev/stderr"
+      exit 3
+    }
     for (k=1;k<=nf;k++) {
       f=order[k]
       printf "%d\t%d\t%s\t%s\n", inc[f]+0, sym[f]+0, f, refs[f]
     }
   }
 ' $(cat "$EXISTING") ) > "$RESULTS"
+awk_status=$?
+if [ "$awk_status" -ne 0 ]; then
+  err "source scan failed (awk exit $awk_status) - see message above; not emitting a count"
+  exit 2
+fi
 
 TOTAL=$(wc -l < "$RESULTS" | tr -d ' ')
 OFFENDING=$(awk -F'\t' '$1+$2>0' "$RESULTS" | wc -l | tr -d ' ')
@@ -217,8 +266,15 @@ CLEAN=$((TOTAL - OFFENDING))
 
 read_baseline() {
   [ -f "$BASELINE_FILE" ] || { err "baseline file not found: $BASELINE_FILE"; return 1; }
-  base=$(tr -cd '0-9' < "$BASELINE_FILE")
-  [ -n "$base" ] || { err "baseline file has no integer: $BASELINE_FILE"; return 1; }
+  # Strict parse of the first line only. The old "tr -cd 0-9" pooled every digit
+  # in the file - a "# updated 2026-07-20" comment turned into a bogus baseline
+  # like 20260720158 that would out-rank any real count and pass forever.
+  base=$(sed -n '1p' "$BASELINE_FILE" | tr -d '\r')
+  case "$base" in
+    ''|*[!0-9]*)
+      err "baseline file must have a bare integer on its first line: $BASELINE_FILE"
+      return 1 ;;
+  esac
   printf '%s\n' "$base"
 }
 
@@ -243,8 +299,8 @@ case "$MODE" in
     ;;
 
   report)
-    BASE=""
-    if [ -f "$BASELINE_FILE" ]; then BASE=$(tr -cd '0-9' < "$BASELINE_FILE"); fi
+    BASE="n/a"
+    if [ -f "$BASELINE_FILE" ]; then BASE=$(read_baseline) || exit 2; fi
     cat <<EOF
 <!-- GENERATED FILE - do not edit by hand. -->
 <!-- Regenerate: bash cmake/audit-core-widgets.sh > docs/libmudlet-widgets-report.md -->

@@ -1,3 +1,37 @@
+-- This block must stay first in the file: once a later spec calls
+-- openMapWidget(), the widget persists for the rest of the session and the
+-- pre-widget state becomes unreachable.
+describe("Tests map events and menus before the map widget is opened", function()
+  it("should return an empty table when nothing is registered yet", function()
+    assert.are.same({}, getMapEvents())
+    assert.are.same({}, getMapMenus())
+  end)
+
+  it("should register and remove a map event before the widget is opened", function()
+    assert.is_true(addMapEvent("preWidgetEvent", "myEvent", "", "Pre-widget Event"))
+
+    local events = getMapEvents()
+    assert.is_not_nil(events.preWidgetEvent)
+    assert.are.equal("myEvent", events.preWidgetEvent["event name"])
+    assert.are.equal("Pre-widget Event", events.preWidgetEvent["display name"])
+
+    assert.is_true(removeMapEvent("preWidgetEvent"))
+    assert.is_nil(getMapEvents().preWidgetEvent)
+  end)
+
+  it("should register and remove a map menu before the widget is opened", function()
+    assert.is_true(addMapMenu("PreWidgetMenu"))
+    assert.are.equal("top-level", getMapMenus()["PreWidgetMenu"])
+
+    assert.is_true(removeMapMenu("PreWidgetMenu"))
+    assert.is_nil(getMapMenus()["PreWidgetMenu"])
+  end)
+
+  it("should retain a registration for when the widget opens later", function()
+    assert.is_true(addMapEvent("preWidgetKeptEvent", "myEvent", "", "Kept Event"))
+  end)
+end)
+
 describe("Tests custom map event and menu functions", function()
 
   setup(function()
@@ -9,6 +43,16 @@ describe("Tests custom map event and menu functions", function()
     removeMapEvent("testEvent2")
     removeMapMenu("TestMenu")
     removeMapMenu("TestSubMenu")
+  end)
+
+  describe("Tests that pre-widget registrations survive opening the widget", function()
+    it("should still list an event registered before the widget was opened", function()
+      local events = getMapEvents()
+      assert.is_not_nil(events.preWidgetKeptEvent)
+      assert.are.equal("myEvent", events.preWidgetKeptEvent["event name"])
+      assert.are.equal("Kept Event", events.preWidgetKeptEvent["display name"])
+      removeMapEvent("preWidgetKeptEvent")
+    end)
   end)
 
   describe("Tests addMapEvent and getMapEvents", function()
@@ -231,6 +275,27 @@ describe("Tests per-room border functions", function()
       assert.is_true(result)
       assert.is_nil(getRoomBorderThickness(testRoomId))
     end)
+  end)
+
+end)
+
+describe("Tests addRoom", function()
+
+  it("should return true when the room is created", function()
+    local roomID = createRoomID()
+    assert.is_true(addRoom(roomID))
+    deleteRoom(roomID)
+  end)
+
+  it("should report the requested areaID when it does not exist", function()
+    local roomID = createRoomID()
+    local ok, err = addRoom(roomID, 987654)
+    assert.is_nil(ok)
+    assert.is_string(err)
+    assert.is_not_nil(err:find("areaID 987654", 1, true), err)
+    -- the room is still created, parked in the default area (-1)
+    assert.are.equal(-1, getRoomArea(roomID))
+    deleteRoom(roomID)
   end)
 
 end)

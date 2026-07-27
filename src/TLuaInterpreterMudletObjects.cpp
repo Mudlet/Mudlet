@@ -1897,7 +1897,12 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
                                      qsl("invalid ANSI color number %1, only %2 (ignore foreground color), %3 (default foregroud color) or 0 to 255 recognised")
                                              .arg(QString::number(value), QString::number(TTrigger::scmIgnored), QString::number(TTrigger::scmDefault)));
         }
-        if (value == TTrigger::scmIgnored && lua_gettop(L) < 4) {
+        // The background colour is optional, so it is only actually omitted
+        // when there are too few arguments AND the second argument is not a
+        // number (the same test used to parse it below). Only in that case is
+        // ignoring the foreground colour invalid; a supplied background colour
+        // with an ignored foreground is the legitimate "background only" form.
+        if (value == TTrigger::scmIgnored && lua_gettop(L) < 4 && !lua_isnumber(L, 2)) {
             return warnArgumentValue(L, __func__, qsl("invalid ANSI color number %1, you cannot ignore both foreground and background color (omitted)").arg(value));
         }
         ansiFgColor = value;
