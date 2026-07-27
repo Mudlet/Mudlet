@@ -23,7 +23,9 @@
  * written to the profile XML when they are marked as saved. The tree is
  * only (re)built at profile load and when the Variables view is populated,
  * so without a refresh at export time such variables silently vanish from
- * profile saves.
+ * profile saves. Also covers members a script adds to a saved table at
+ * runtime: they have no savedVars entry of their own but must be saved with
+ * the table (issue #9517), while hidden and unsaveable members must not be.
  *
  * Run with: ctest -R XMLexportVariablesTest -V
  */
@@ -146,6 +148,229 @@ private slots:
         const QString xml = exportProfileXml();
         QVERIFY(!xml.isEmpty());
         QVERIFY2(!xml.contains(qsl("lateUnsavedTestVar")), "a variable not marked as saved must not be exported");
+    }
+
+    // A member a script adds to a saved table at runtime has no savedVars
+    // entry of its own, but must still be saved with the table (issue #9517).
+    void test_runtimeAddedMemberOfSavedTableIsExported()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "memberTestTable = {existing = 'existing member value'}"), 0);
+        // ticking a table in the Variables view registers the table and the
+        // members that exist at that moment
+        vu->savedVars.insert(qsl("memberTestTable"));
+        vu->savedVars.insert(qsl("memberTestTable.existing"));
+        lI->getVars(false);
+
+        // a script adds another member after that
+        QCOMPARE(luaL_dostring(L, "memberTestTable.newcomer = 'runtime member value'"), 0);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("existing member value")), "member registered when the table was ticked must still be exported");
+        QVERIFY2(xml.contains(qsl("runtime member value")), "member added to a saved table at runtime must be saved with the table");
+
+        vu->savedVars.remove(qsl("memberTestTable"));
+        vu->savedVars.remove(qsl("memberTestTable.existing"));
+        QCOMPARE(luaL_dostring(L, "memberTestTable = nil"), 0);
+    }
+
+    // A nested table assigned into a saved table at runtime must be exported
+    // recursively, right down to its innermost members.
+    void test_nestedTableAddedToSavedTableIsExported()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "nestedTestTable = {}"), 0);
+        vu->savedVars.insert(qsl("nestedTestTable"));
+        lI->getVars(false);
+
+        QCOMPARE(luaL_dostring(L, "nestedTestTable.inner = {deepest = 'nested member value'}"), 0);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("nested member value")), "members of a nested table added to a saved table at runtime must be exported");
+
+        vu->savedVars.remove(qsl("nestedTestTable"));
+        QCOMPARE(luaL_dostring(L, "nestedTestTable = nil"), 0);
+    }
+
+    // The most common shape of issue #9517: a list-style table grown with
+    // table.insert at runtime. The numeric key must keep its key type so
+    // import restores t[1] and not t["1"].
+    void test_numericKeyMemberAddedAtRuntimeIsExported()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "numericListTable = {}"), 0);
+        vu->savedVars.insert(qsl("numericListTable"));
+        lI->getVars(false);
+
+        QCOMPARE(luaL_dostring(L, "table.insert(numericListTable, 'numeric member value')"), 0);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("numeric member value")), "a numeric-keyed member added at runtime must be saved with its table");
+        // LUA_TNUMBER == 3: the key type decides whether import restores t[1] or t["1"]
+        QVERIFY2(xml.contains(qsl("<keyType>3</keyType>")), "the numeric member's key type must be numeric so import restores t[1], not t['1']");
+
+        vu->savedVars.remove(qsl("numericListTable"));
+        QCOMPARE(luaL_dostring(L, "numericListTable = nil"), 0);
+    }
+
+    // Design pin: un-ticking a single member in the Variables view only
+    // removes its name from savedVars, which cannot be told apart from a
+    // member added after the table was ticked. A saved table therefore
+    // exports its members as they exist at save time; to keep a member out
+    // of the profile, hide it, remove it, or stop saving the table.
+    void test_untickedMemberOfSavedTableStillExports()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "untickedMemberTable = {kept = 'kept member value', unticked = 'unticked member value'}"), 0);
+        // ticking the table registers it and both members...
+        vu->savedVars.insert(qsl("untickedMemberTable"));
+        vu->savedVars.insert(qsl("untickedMemberTable.kept"));
+        vu->savedVars.insert(qsl("untickedMemberTable.unticked"));
+        // ...and un-ticking one member only removes its name again
+        vu->savedVars.remove(qsl("untickedMemberTable.unticked"));
+        lI->getVars(false);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("kept member value")), "a ticked member of a saved table must be exported");
+        QVERIFY2(xml.contains(qsl("unticked member value")), "a saved table exports members as they exist at save time, so an un-ticked member rides along");
+
+        vu->savedVars.remove(qsl("untickedMemberTable"));
+        vu->savedVars.remove(qsl("untickedMemberTable.kept"));
+        QCOMPARE(luaL_dostring(L, "untickedMemberTable = nil"), 0);
+    }
+
+    // A member table beyond the 10,000-item save limit must not ride along -
+    // it would bloat every profile save.
+    void test_oversizedMemberTableIsNotExported()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L,
+                               "oversizedHolderTable = {smallMember = 'small member value', bigMember = {}} "
+                               "for i = 1, 10001 do oversizedHolderTable.bigMember[i] = 'oversized member value' end"),
+                 0);
+        vu->savedVars.insert(qsl("oversizedHolderTable"));
+        lI->getVars(false);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("small member value")), "a plain member of a saved table must be exported");
+        QVERIFY2(!xml.contains(qsl("oversized member value")), "a member table over the 10,000-item limit must not ride along with its saved table");
+
+        vu->savedVars.remove(qsl("oversizedHolderTable"));
+        QCOMPARE(luaL_dostring(L, "oversizedHolderTable = nil"), 0);
+    }
+
+    // A member whose key is a reference (e.g. a table used as a key) cannot
+    // be restored from XML and must not ride along.
+    void test_referenceKeyMemberIsNotExported()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "referenceKeyTable = {plainMember = 'plain member value'} referenceKeyTable[{}] = 'reference member value'"), 0);
+        vu->savedVars.insert(qsl("referenceKeyTable"));
+        lI->getVars(false);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("plain member value")), "a plain member of a saved table must be exported");
+        QVERIFY2(!xml.contains(qsl("reference member value")), "a reference-keyed member must not ride along with its saved table");
+
+        vu->savedVars.remove(qsl("referenceKeyTable"));
+        QCOMPARE(luaL_dostring(L, "referenceKeyTable = nil"), 0);
+    }
+
+    // Members only ride along with tables that are marked saved.
+    void test_memberOfUnsavedTableIsNotExported()
+    {
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "unsavedTestTable = {member = 'unsaved member value'}"), 0);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(!xml.contains(qsl("unsavedTestTable")), "a table not marked as saved must not be exported");
+        QVERIFY2(!xml.contains(qsl("unsaved member value")), "members of a table not marked as saved must not be exported");
+
+        QCOMPARE(luaL_dostring(L, "unsavedTestTable = nil"), 0);
+    }
+
+    // Hidden variables (Mudlet's internals, or ones the user hid) inside a
+    // saved table keep needing their own explicit save mark, so internals
+    // cannot leak into the profile XML through a saved parent.
+    void test_hiddenMemberOfSavedTableIsNotExported()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "hiddenMemberTable = {visibleMember = 'visible member value', secretMember = 'secret member value'}"), 0);
+        vu->savedVars.insert(qsl("hiddenMemberTable"));
+        vu->addHidden(qsl("hiddenMemberTable.secretMember"));
+        lI->getVars(false);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("visible member value")), "a plain member of a saved table must be exported");
+        QVERIFY2(!xml.contains(qsl("secret member value")), "a hidden member must not ride along with its saved table");
+
+        vu->savedVars.remove(qsl("hiddenMemberTable"));
+        vu->removeHidden(qsl("hiddenMemberTable.secretMember"));
+        QCOMPARE(luaL_dostring(L, "hiddenMemberTable = nil"), 0);
+    }
+
+    // A hidden member the user explicitly ticked stays exported - hiding only
+    // blocks the ride-along, not an explicit save mark.
+    void test_explicitlySavedHiddenMemberIsExported()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "explicitHiddenTable = {pinnedMember = 'pinned member value'}"), 0);
+        vu->savedVars.insert(qsl("explicitHiddenTable"));
+        vu->savedVars.insert(qsl("explicitHiddenTable.pinnedMember"));
+        vu->addHidden(qsl("explicitHiddenTable.pinnedMember"));
+        lI->getVars(false);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("pinned member value")), "a hidden member explicitly marked as saved must still be exported");
+
+        vu->savedVars.remove(qsl("explicitHiddenTable"));
+        vu->savedVars.remove(qsl("explicitHiddenTable.pinnedMember"));
+        vu->removeHidden(qsl("explicitHiddenTable.pinnedMember"));
+        QCOMPARE(luaL_dostring(L, "explicitHiddenTable = nil"), 0);
+    }
+
+    // Function members cannot be saved, so they must not ride along either.
+    void test_functionMemberOfSavedTableIsNotExported()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "callableHolderTable = {dataMember = 'data member value', callableMember = function() end}"), 0);
+        vu->savedVars.insert(qsl("callableHolderTable"));
+        lI->getVars(false);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("data member value")), "a plain member of a saved table must be exported");
+        QVERIFY2(!xml.contains(qsl("callableMember")), "a function member must not ride along with its saved table");
+
+        vu->savedVars.remove(qsl("callableHolderTable"));
+        QCOMPARE(luaL_dostring(L, "callableHolderTable = nil"), 0);
     }
 
     // The export-time refresh must keep writing the user's hidden-variable
