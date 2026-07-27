@@ -46,6 +46,9 @@
 #include <QStandardPaths>
 #include <QTimer>
 #include <QUrl>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 // We are now using code that won't work with really old versions of libzip;
 // some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
@@ -1948,7 +1951,7 @@ void dlgPackageExporter::slot_recountItems(QTreeWidgetItem* item)
     static bool debounce;
     if (!debounce) {
         debounce = true;
-        QTimer::singleShot(0, this, [this]() {
+        QTimer::singleShot(0ms, this, [this]() {
             debounce = false;
 
             const int itemsToExport = countCheckedItems();
