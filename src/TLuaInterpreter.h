@@ -787,6 +787,10 @@ public:
     // called from Host::raiseEvent() so an event that fires while a busted spec
     // is blocked inside a nested event loop can be captured and unblock it.
     void captureEventForWaits(const TEvent&);
+    // True while a waitForEvent() call is blocked in its nested event loop. Lets
+    // Host refuse a profile reset that would lua_close() the state out from
+    // under it. Always false (a no-op) outside MUDLET_TEST_MODE.
+    bool hasPendingEventWaits() const { return !mPendingEventWaits.isEmpty(); }
 
     inline static const QMap<Qt::MouseButton, QString> csmMouseButtons = {
             {Qt::NoButton, qsl("NoButton")},           {Qt::LeftButton, qsl("LeftButton")},       {Qt::RightButton, qsl("RightButton")},     {Qt::MiddleButton, qsl("MidButton")},

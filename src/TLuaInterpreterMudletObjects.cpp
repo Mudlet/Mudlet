@@ -1479,6 +1479,17 @@ int TLuaInterpreter::waitForEvent(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
+    // A profile reset recreates this profile's lua_State (initLuaGlobals() calls
+    // lua_close()), and shutdown destroys the interpreter outright. Either would
+    // free the state L is executing on while we block, so refuse rather than risk
+    // a use-after-free when the nested loop unwinds. resetProfile_phase1() guards
+    // the mirror case where a reset is requested while we are already blocked.
+    if (host.profileResetInProgress() || host.isClosingDown()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "waitForEvent: cannot wait while the profile is being reset or Mudlet is closing");
+        return 2;
+    }
+
     QEventLoop loop;
     TEventWait wait;
     wait.mName = eventName;
