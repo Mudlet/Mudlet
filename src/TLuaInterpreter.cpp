@@ -4766,7 +4766,7 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
     mudlet::self()->setNetworkRequestDefaults(url, request);
 
     if (!lua_istable(L, pos + 3) && !lua_isnoneornil(L, pos + 3)) {
-        lua_pushfstring(L, "%s: bad argument #%d type (headers as a table expected, got %s!)", functionName, pos + 3, luaL_typename(L, 3));
+        lua_pushfstring(L, "%s: bad argument #%d type (headers as a table expected, got %s!)", functionName, pos + 3, luaL_typename(L, pos + 3));
         return lua_error(L);
     }
     if (lua_istable(L, pos + 3)) {
@@ -4792,7 +4792,7 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
     QByteArray fileToUpload;
     QString fileLocation;
     if (!lua_isstring(L, pos + 4) && !lua_isnoneornil(L, pos + 4)) {
-        lua_pushfstring(L, "%s: bad argument #%d type (file to send as string location expected, got %s!)", functionName, pos + 4, luaL_typename(L, 4));
+        lua_pushfstring(L, "%s: bad argument #%d type (file to send as string location expected, got %s!)", functionName, pos + 4, luaL_typename(L, pos + 4));
         return lua_error(L);
     }
     if (lua_isstring(L, pos + 4)) {
