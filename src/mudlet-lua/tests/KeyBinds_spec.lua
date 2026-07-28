@@ -100,4 +100,140 @@ describe("Tests keybind-related functions", function()
 
   end)
 
+  describe("tempKey creation and cleanup", function()
+
+    it("creates a key from a modifier, key code and string body", function()
+      local id = tempKey(mudlet.keymodifier.Alt, mudlet.key.F5, [[echo("hi")]])
+      assert.is_number(id)
+      assert.are.equal(1, exists(id, "keybind"), "the temp key should exist after creation")
+      local keyCode, modifiers = getKeyCode(id)
+      assert.are.equal(mudlet.key.F5, keyCode)
+      assert.are.equal(mudlet.keymodifier.Alt, modifiers)
+      killKey(id)
+    end)
+
+    it("creates a key from the two-argument (key code, body) form", function()
+      local id = tempKey(mudlet.key.F6, [[echo("hi")]])
+      assert.is_number(id)
+      local keyCode, modifiers = getKeyCode(id)
+      assert.are.equal(mudlet.key.F6, keyCode)
+      assert.are.equal(mudlet.keymodifier.None, modifiers, "the two-arg form should have no modifier")
+      killKey(id)
+    end)
+
+    it("creates a key from a function body", function()
+      -- a key cannot be pressed headlessly, so this only asserts creation
+      local id = tempKey(mudlet.key.F7, function() end)
+      assert.is_number(id)
+      assert.are.equal(1, exists(id, "keybind"))
+      killKey(id)
+    end)
+
+    it("rejects a non-string, non-function body", function()
+      -- a table is not string-coercible (a number would be accepted as code)
+      assert.has_error(function() tempKey(mudlet.key.F8, {}) end)
+    end)
+
+  end)
+
+  describe("permKey creation and validation", function()
+
+    -- permanent keys cannot be removed with killKey, so use unique names and
+    -- disable them after each test so they do not leak into other specs
+    after_each(function()
+      disableKey("SpecPermKeyOne")
+      disableKey("SpecPermKeyTwo")
+    end)
+
+    it("creates a permanent key without a modifier (four-argument form)", function()
+      local id = permKey("SpecPermKeyOne", "", mudlet.key.F9, [[echo("perm")]])
+      assert.is_number(id)
+      assert.is_true(id > 0)
+      local keyCode, modifiers = getKeyCode(id)
+      assert.are.equal(mudlet.key.F9, keyCode)
+      assert.are.equal(mudlet.keymodifier.None, modifiers)
+    end)
+
+    it("creates a permanent key with a modifier (five-argument form)", function()
+      local id = permKey("SpecPermKeyTwo", "", mudlet.keymodifier.Control, mudlet.key.F10, [[echo("perm")]])
+      assert.is_number(id)
+      assert.is_true(id > 0)
+      local keyCode, modifiers = getKeyCode(id)
+      assert.are.equal(mudlet.key.F10, keyCode)
+      assert.are.equal(mudlet.keymodifier.Control, modifiers)
+    end)
+
+    it("errors when the lua code argument is not a string", function()
+      assert.has_error(function()
+        permKey("SpecPermKeyOne", "", mudlet.key.F9, 42)
+      end)
+    end)
+
+  end)
+
+  describe("enable, disable, kill, isActive and exists for keys", function()
+
+    after_each(function()
+      disableKey("SpecPermKeyKill")
+      disableKey("SpecPermKeyToggle")
+      disableKey("SpecDupKeys")
+    end)
+
+    it("killKey returns true for a temp key and false for a missing name", function()
+      local id = tempKey(mudlet.key.F11, [[echo("x")]])
+      assert.are.equal(1, exists(id, "keybind"))
+      assert.is_true(killKey(id), "killing an existing temp key should return true")
+      assert.is_false(killKey("no_such_key_name"), "killing a missing key should return false")
+    end)
+
+    it("killKey returns false for a permanent key (they cannot be killed)", function()
+      local id = permKey("SpecPermKeyKill", "", mudlet.key.F12, [[echo("x")]])
+      assert.is_true(id > 0)
+      assert.is_false(killKey("SpecPermKeyKill"), "permanent keys cannot be removed with killKey")
+    end)
+
+    it("enableKey and disableKey report whether a matching key was found", function()
+      local id = permKey("SpecPermKeyToggle", "", mudlet.key.F12, [[echo("x")]])
+      assert.is_true(id > 0)
+      assert.is_true(disableKey("SpecPermKeyToggle"), "disableKey should report it found the key")
+      assert.is_true(enableKey("SpecPermKeyToggle"), "enableKey should report it found the key")
+      assert.is_false(disableKey("no_such_key_name"), "disableKey should return false when nothing matched")
+      assert.is_false(enableKey("no_such_key_name"), "enableKey should return false when nothing matched")
+    end)
+
+    it("isActive reflects a key's enabled state", function()
+      local id = tempKey(mudlet.key.F11, [[echo("x")]])
+      assert.are.equal(1, isActive(id, "keybind"), "a fresh key should be active")
+      disableKey(id)
+      assert.are.equal(0, isActive(id, "keybind"), "a disabled key should not be active")
+      enableKey(id)
+      assert.are.equal(1, isActive(id, "keybind"), "a re-enabled key should be active")
+      killKey(id)
+    end)
+
+    it("exists reports keys by ID and reports zero for an unknown name", function()
+      local id = tempKey(mudlet.key.F11, [[echo("x")]])
+      assert.are.equal(1, exists(id, "keybind"))
+      assert.are.equal(0, exists("no_such_key_name", "keybind"))
+      killKey(id)
+    end)
+
+    -- KeyUnit carries its own copy of the equal_range duplicate-name fix
+    -- (PR #9366), so enable/disable by name must toggle every same-named key.
+    -- Key firing cannot be synthesised headlessly, so isActive's count is the proxy.
+    it("enableKey/disableKey by name toggle every duplicate-named key", function()
+      local id1 = permKey("SpecDupKeys", "", mudlet.key.F11, [[echo("x")]])
+      local id2 = permKey("SpecDupKeys", "", mudlet.key.F12, [[echo("x")]])
+      assert.is_true(id1 > 0 and id2 > 0)
+      -- invariants rather than exact counts: permanent keys from earlier local
+      -- runs accumulate under this name in the saved profile
+      assert.is_true(exists("SpecDupKeys", "keybind") >= 2, "at least the two duplicate-named keys exist")
+      disableKey("SpecDupKeys")
+      assert.are.equal(0, isActive("SpecDupKeys", "keybind"), "disabling by name must leave zero of the duplicates active")
+      enableKey("SpecDupKeys")
+      assert.are.equal(exists("SpecDupKeys", "keybind"), isActive("SpecDupKeys", "keybind"), "enabling by name must reactivate every duplicate")
+    end)
+
+  end)
+
 end)
