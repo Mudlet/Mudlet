@@ -901,6 +901,7 @@ describe("Tests TableUtils.lua functions", function()
     -- echo (pass-through) to assert the framing lines without mocking it.
     it("should echo a header, a line per key/value pair and a footer", function()
       local echo = spy.on(_G, "echo")
+      finally(function() echo:revert() end)
       printTable({ alpha = "one", beta = "two" })
       -- header + 2 pairs + footer; header and footer are the same dashed string,
       -- so the count is what pins that both framing lines are present
@@ -908,19 +909,18 @@ describe("Tests TableUtils.lua functions", function()
       assert.spy(echo).was.called_with("-------------------------------------------------------\n")
       assert.spy(echo).was.called_with("key=alpha value=one\n")
       assert.spy(echo).was.called_with("key=beta value=two\n")
-      echo:revert()
     end)
   end)
 
   describe("Tests the contract of listPrint", function()
     it("should echo a numbered line for each list entry framed by dashed lines", function()
       local echo = spy.on(_G, "echo")
+      finally(function() echo:revert() end)
       listPrint({ "first", "second" })
       -- header + 2 entries + footer
       assert.spy(echo).was.called(4)
       assert.spy(echo).was.called_with("1. ) first\n")
       assert.spy(echo).was.called_with("2. ) second\n")
-      echo:revert()
     end)
   end)
 end)
