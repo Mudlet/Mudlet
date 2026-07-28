@@ -70,6 +70,7 @@ private:
 #endif
     bool mUpdateInstalled;
     bool mManualCheckInProgress{false};
+    bool mRestartInProgress{false};
     QSettings* mSettings;
     std::unique_ptr<QTimer> mPeriodicCheck;
 
