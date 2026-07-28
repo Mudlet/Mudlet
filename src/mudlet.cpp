@@ -2198,26 +2198,43 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadProgress, pConsole, &TMainConsole::updatePackageDownloadProgress, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadFinished, pConsole, &TMainConsole::closePackageDownloadProgress, Qt::UniqueConnection);
 
+    if (pH->mpMedia) {
+        // Pin DirectConnection so the bool& out-parameter is filled synchronously, never queued.
+        connect(pH->mpMedia.data(), &TMedia::signal_setupVideoOutput, pConsole, &TMainConsole::setupVideoOutput, static_cast<Qt::ConnectionType>(Qt::DirectConnection | Qt::UniqueConnection));
+        connect(pH->mpMedia.data(), &TMedia::signal_hideVideoOutput, pConsole, &TMainConsole::hideVideoOutput, static_cast<Qt::ConnectionType>(Qt::DirectConnection | Qt::UniqueConnection));
+    }
+
 #if !defined(QT_NO_SSL)
-    connect(&pH->mTelnet, &cTelnet::signal_promptTlsAvailable, this, [pH = QPointer<Host>(pH)](const QString& text, const QString& informativeText) {
-        // ::exec() spins a nested event loop - a re-entrancy hazard preserved
-        // from the original in-cTelnet implementation
-        auto pMsgBox = new QMessageBox();
-        pMsgBox->setIcon(QMessageBox::Question);
-        pMsgBox->setText(text);
-        pMsgBox->setInformativeText(informativeText);
-        pMsgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-        pMsgBox->setDefaultButton(QMessageBox::Yes);
-        // Make using Escape mean no change:
-        pMsgBox->setEscapeButton(QMessageBox::No);
-        const int ret = pMsgBox->exec();
-        delete pMsgBox;
-        if (!pH) {
-            qWarning() << "mudlet: the profile vanished while the TLS upgrade prompt was open; discarding the user's answer.";
-            return;
-        }
-        pH->mTelnet.slot_tlsUpgradeResponse(ret == QMessageBox::Yes);
-    });
+    // A queued connection is essential here. signal_promptTlsAvailable() is
+    // emitted deep inside cTelnet's socket-parsing call stack, and the modal
+    // QMessageBox::exec() below spins a nested event loop. Delivering it queued
+    // lets that parse pass unwind first, so the dialog runs with no cTelnet frames
+    // beneath it: a profile teardown while the dialog is open (e.g. a Lua
+    // closeProfile()) then cannot free the cTelnet whose stack we would otherwise
+    // return into, and the answer cannot mutate the socket mid-parse. The QPointer
+    // capture then fully protects the (now top-level) lambda body.
+    connect(
+            &pH->mTelnet,
+            &cTelnet::signal_promptTlsAvailable,
+            this,
+            [pH = QPointer<Host>(pH)](const QString& text, const QString& informativeText) {
+                auto pMsgBox = new QMessageBox();
+                pMsgBox->setIcon(QMessageBox::Question);
+                pMsgBox->setText(text);
+                pMsgBox->setInformativeText(informativeText);
+                pMsgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+                pMsgBox->setDefaultButton(QMessageBox::Yes);
+                // Make using Escape mean no change:
+                pMsgBox->setEscapeButton(QMessageBox::No);
+                const int ret = pMsgBox->exec();
+                delete pMsgBox;
+                if (!pH) {
+                    qWarning() << "mudlet: the profile vanished while the TLS upgrade prompt was open; discarding the user's answer.";
+                    return;
+                }
+                pH->mTelnet.slot_tlsUpgradeResponse(ret == QMessageBox::Yes);
+            },
+            Qt::QueuedConnection);
 #endif
 
     // Apply Host's console buffer size settings to the newly created console
@@ -6000,17 +6017,13 @@ void mudlet::slot_updateInstalled()
     // disable existing functionality to show the updates window
     disconnect(dactionUpdate, &QAction::triggered, this, nullptr);
 
-    // rejig to restart Mudlet instead
-    connect(dactionUpdate, &QAction::triggered, this, [=, this]() {
-#if defined(Q_OS_WINDOWS)
-        // On Windows the new binary is not in place yet - the downloaded
-        // installer still has to run, which slot_installOrRestartClicked
-        // arranges via a batch file that waits for Mudlet to exit:
+    // rejig to restart Mudlet instead. The updater owns the restart flow on
+    // all platforms: on Windows the downloaded installer still has to run,
+    // and everywhere the update dialog must be told not to reappear when the
+    // last window closes, which would keep the old instance alive alongside
+    // the restarted one:
+    connect(dactionUpdate, &QAction::triggered, this, [this]() {
         pUpdater->slot_installOrRestartClicked(nullptr, QString());
-#else
-        forceClose();
-        QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
-#endif
     });
     dactionUpdate->setText(tr("Update installed - restart to apply"));
 #endif // !Q_OS_MACOS

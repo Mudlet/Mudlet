@@ -30,6 +30,7 @@
 #include "utils.h"
 
 #include <QProgressDialog>
+#include <QRegularExpression>
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -214,6 +215,87 @@ private slots:
 
         // Stop talking to the local stub before it is destroyed at scope exit.
         host->mTelnet.disconnectIt();
+#endif
+    }
+
+    // F3 (modal stacking): while a TLS-upgrade prompt is pending, a server
+    // re-advertising its secure MSSP port must NOT emit a second prompt. The
+    // in-flight latch collapses repeats to a single emission until the user
+    // answers (which clears it), so a hostile server cannot stack modals.
+    void test_secondTlsAdvertisementWhilePendingDoesNotReprompt()
+    {
+#if defined(QT_NO_SSL)
+        QSKIP("Built without SSL support - the TLS upgrade prompt does not exist.");
+#else
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        // Detach the frontend modal handler so nothing pops up; the latch is set
+        // by the emit itself, independent of who is listening.
+        disconnect(&host->mTelnet, &cTelnet::signal_promptTlsAvailable, nullptr, nullptr);
+
+        QSignalSpy spy(&host->mTelnet, &cTelnet::signal_promptTlsAvailable);
+        QVERIFY(spy.isValid());
+
+        QByteArray advertise = msspTlsPayload("48000");
+        advertise.reserve(advertise.size() + 16);
+        host->mTelnet.loopbackTest(advertise);
+        if (spy.isEmpty()) {
+            QVERIFY2(spy.wait(2s), "cTelnet did not emit signal_promptTlsAvailable for the first advertisement.");
+        }
+        QCOMPARE(spy.count(), 1);
+
+        // Nobody has answered, so the prompt is still in flight: a repeated
+        // advertisement (as a hostile server could spam) must be swallowed.
+        QByteArray advertiseAgain = msspTlsPayload("48000");
+        advertiseAgain.reserve(advertiseAgain.size() + 16);
+        host->mTelnet.loopbackTest(advertiseAgain);
+        QCOMPARE(spy.count(), 1);
+#endif
+    }
+
+    // With the dialog delivered via a queued connection the answer can arrive
+    // after the connection has dropped. slot_tlsUpgradeResponse() must discard
+    // such a stale answer with a warning rather than act on a gone socket or
+    // crash.
+    void test_tlsUpgradeAnswerAfterDisconnectIsDiscarded()
+    {
+#if defined(QT_NO_SSL)
+        QSKIP("Built without SSL support - the TLS upgrade prompt does not exist.");
+#else
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        disconnect(&host->mTelnet, &cTelnet::signal_promptTlsAvailable, nullptr, nullptr);
+
+        // Advertise so the port is recorded and the latch is set, mirroring a
+        // real pending prompt.
+        QByteArray advertise = msspTlsPayload("48000");
+        advertise.reserve(advertise.size() + 16);
+        host->mTelnet.loopbackTest(advertise);
+
+        const int originalPort = host->getPort();
+        const bool originalSsl = host->mSslTsl;
+
+        // Drop the connection out from under the pending prompt; mpSocket is
+        // reset to null once the disconnect completes. disconnectFromHost() can
+        // emit disconnected() synchronously (empty write buffer), so check for an
+        // already-recorded emission before waiting or wait() would miss it.
+        QSignalSpy disconnectedSpy(&host->mTelnet, &cTelnet::signal_disconnected);
+        host->mTelnet.disconnectIt();
+        if (disconnectedSpy.isEmpty()) {
+            QVERIFY2(disconnectedSpy.wait(5s), "The connection did not drop.");
+        }
+
+        // The late answer must be discarded with a warning and leave the profile
+        // untouched (no port switch, no ssl_tsl flip, no crash).
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression("slot_tlsUpgradeResponse.*discarding the user's answer"));
+        host->mTelnet.slot_tlsUpgradeResponse(true);
+
+        QCOMPARE(host->getPort(), originalPort);
+        QCOMPARE(host->mSslTsl, originalSsl);
 #endif
     }
 
