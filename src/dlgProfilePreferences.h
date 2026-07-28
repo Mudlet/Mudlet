@@ -142,6 +142,7 @@ private slots:
     void slot_changeShowLineFeedsAndParagraphs(bool);
     void slot_scriptSelected(int index);
     void slot_tabChanged(int tabIndex);
+    void slot_showNewFeatureCallouts();
     void slot_themeSelected(int index);
     void slot_setMapSymbolFont(const QFont&);
     void slot_setMapSymbolFontStrategy(bool);
@@ -227,6 +228,7 @@ private:
     void fillOutMapHistory();
     bool updateDisplayFont();
     void cancelShortcutCaptures();
+    void updateShortcutConflictWarning();
     void switchEditorTheme(const QString& themeName);
     static QString findThemeCounterpart(const QString& themeName, const QComboBox* themeComboBox, bool toDark);
 

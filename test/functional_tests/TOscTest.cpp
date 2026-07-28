@@ -29,6 +29,7 @@
 
 #include <QKeyEvent>
 #include <QtTest/QtTest>
+#include <chrono>
 
 #include "MudletInstanceCoordinator.h"
 #include "TAccessibleTextEdit.h"
@@ -39,6 +40,8 @@
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
+
+using namespace std::chrono_literals;
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -62,7 +65,7 @@ private:
   void injectData(const QString &message) {
     QByteArray data = (message + qsl("\r\n")).toUtf8();
     mpHost->mTelnet.loopbackTest(data);
-    QTest::qWait(50);
+    QTest::qWait(50ms);
   }
 
   // Scans backward through the buffer to find the first hyperlink and returns
@@ -187,6 +190,8 @@ private slots:
 
     mpServer = new TelnetServerStub(qApp);
     mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+    QVERIFY2(mpServer->isListening(),
+             "TelnetServerStub failed to bind a loopback port");
     mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
@@ -200,22 +205,22 @@ private slots:
         mudlet::getMudletPath(enums::profileHomePath, mHostname);
     QDir(path).removeRecursively();
 
-    QTimer::singleShot(0, qApp, [this]() {
+    QTimer::singleShot(0ms, qApp, [this]() {
       mudlet::self()->startAutoLogin({});
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
                         Qt::LeftButton);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClicks(QApplication::focusWidget(), mHostname);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClicks(QApplication::focusWidget(), mPort);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
     });
 
@@ -263,6 +268,10 @@ private slots:
         << QString("\x1b]P0FF0000\x07Hello") << qsl("Hello") << true;
     QTest::newRow("empty OSC sequence")
         << QString("\x1b]\x07Normal text") << qsl("Normal text") << true;
+    QTest::newRow("stray ESC c then literal bracket text")
+        << QString("\x1b"
+                   "c[literal] text")
+        << qsl("[literal] text") << true;
     QTest::newRow("OSC exceeds length limit")
         << QString("\x1b]2;") + QString(5000, 'A') + QString("\x07Normal text")
         << qsl("Normal text") << true;
@@ -334,6 +343,65 @@ private slots:
     QVERIFY2(allText.contains(qsl("local tick")),
              qPrintable(qsl("Locally fed text went missing from: '%1'")
                             .arg(allText)));
+  }
+
+  // The don't-decode-this-payload flag set by a DCS/SOS/PM/APC introducer
+  // (mGotString) is carry-over parser state just like mGotOSC and must swap
+  // with the rest of it around a local feed. If it leaks: a complete OSC in
+  // the local feed is consumed but silently not decoded, and the server's DCS
+  // payload is wrongly decoded as an OSC when its terminator arrives.
+  void test_SplitDcsStringStateDoesNotLeakAcrossChannels() {
+    const bool savedMayRedefine = mpHost->getMayRedefineColors();
+    mpHost->setMayRedefineColors(true);
+    const QColor savedRed = mpHost->mRed;
+    const QColor savedGreen = mpHost->mGreen;
+
+    // First server packet ends inside a DCS (ESC P) with no terminator; its
+    // payload is shaped like an OSC colour redefinition for ANSI colour 2 so
+    // that wrongly feeding it to the OSC decoder is observable:
+    std::string part1{"Before\n\x1bPP2665544"};
+    mpHost->mpConsole->printOnDisplay(part1, true);
+
+    // Interleaved local feed carrying a complete OSC colour redefinition for
+    // ANSI colour 1 that must be decoded:
+    std::string localText{"\x1b]P1223344\x07local tick\n"};
+    mpHost->mpConsole->printOnDisplay(localText, false);
+
+    // The server DCS terminator arrives; the payload must be consumed
+    // without being decoded:
+    std::string part2{"\x07"
+                      "After\n"};
+    mpHost->mpConsole->printOnDisplay(part2, true);
+
+    const QColor redAfter = mpHost->mRed;
+    const QColor greenAfter = mpHost->mGreen;
+    const QString allText = allBufferText();
+
+    // Restore profile colour state before asserting so a failure does not
+    // poison later tests:
+    mpHost->mRed = savedRed;
+    mpHost->mGreen = savedGreen;
+    mpHost->setMayRedefineColors(savedMayRedefine);
+
+    QVERIFY2(allText.contains(qsl("After")),
+             qPrintable(
+                 qsl("Text after the split sequence went missing from: '%1'")
+                     .arg(allText)));
+    QVERIFY2(allText.contains(qsl("local tick")),
+             qPrintable(qsl("Locally fed text went missing from: '%1'")
+                            .arg(allText)));
+    QVERIFY2(!allText.contains(qsl("P2665544")),
+             qPrintable(qsl("DCS payload leaked into display: '%1'")
+                            .arg(allText)));
+    QVERIFY2(redAfter == QColor(0x22, 0x33, 0x44),
+             qPrintable(qsl("Complete OSC inside the local feed was not "
+                            "decoded: expected colour 1 to become #223344 "
+                            "but it is %1")
+                            .arg(redAfter.name())));
+    QVERIFY2(greenAfter == savedGreen,
+             qPrintable(qsl("Server DCS payload was wrongly fed to the OSC "
+                            "decoder: colour 2 changed to %1")
+                            .arg(greenAfter.name())));
   }
 
   // =====================================================================

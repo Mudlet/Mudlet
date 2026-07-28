@@ -40,7 +40,6 @@
 #include <QQueue>
 #include <QThread>
 #include <QTimer>
-#include <edbee/texteditorwidget.h>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
@@ -496,7 +495,6 @@ public:
     static int getMainWindowSize(lua_State*);
     static int getUserWindowSize(lua_State*);
     static int getMousePosition(lua_State*);
-    static int setMiniConsoleFontSize(lua_State*);
     static int setProfileIcon(lua_State*);
     static int resetProfileIcon(lua_State*);
     static int getCurrentLine(lua_State*);
@@ -864,6 +862,7 @@ private:
     void logEventError(const QString& event, const QString& error);
     std::pair<bool, QString> validLuaCode(const QString& code);
     std::pair<bool, QString> validateLuaCodeParam(int index);
+    bool reportInvalidLuaCodeParam(lua_State* L, const char* functionName, const int index);
     QByteArray encodeBytes(const char*);
     void setMatches(lua_State*);
     void setupLanguageData();

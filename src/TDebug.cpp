@@ -28,6 +28,10 @@
 #include "TTabBar.h"
 #include "mudlet.h"
 
+#include <chrono>
+
+using namespace std::chrono_literals;
+
 TDebug::TDebug(const QColor& c, const QColor& d)
 : fgColor(c)
 , bgColor(d)
@@ -239,7 +243,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
         // here as the profile's tab has not been added to the tabbar yet.
         // Instead arrange for all the tabs to be refreshed when we are next
         // idle:
-        QTimer::singleShot(0, mudlet::self(), []() {
+        QTimer::singleShot(0ms, mudlet::self(), []() {
             mudlet::self()->refreshTabBar();
         });
     }
