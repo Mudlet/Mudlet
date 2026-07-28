@@ -850,10 +850,6 @@ describe("Tests TableUtils.lua functions", function()
   end)
 
   describe("Tests the functionality of listRemove", function()
-    -- listRemove removes during an ipairs loop, so consecutive duplicates are a
-    -- known skip bug (removing index i shifts i+1 into i, which the loop then
-    -- skips). That buggy behaviour is deliberately NOT pinned here; only the
-    -- single-match and no-match paths, which the quirk cannot affect, are tested.
     it("should remove a matching item from the list", function()
       local list = { "one", "two", "three" }
       listRemove(list, "two")
@@ -864,6 +860,39 @@ describe("Tests TableUtils.lua functions", function()
       local list = { "one", "two" }
       listRemove(list, "missing")
       assert.same({ "one", "two" }, list)
+    end)
+
+    it("should leave an empty list empty", function()
+      local list = {}
+      listRemove(list, "x")
+      assert.same({}, list)
+    end)
+
+    it("should remove the sole element when it matches", function()
+      local list = { "x" }
+      listRemove(list, "x")
+      assert.same({}, list)
+    end)
+
+    -- #9546: removal used to happen during an ipairs loop, so deleting index i
+    -- shifted i+1 down into i, which the loop then skipped, leaving one of each
+    -- run of consecutive duplicates behind.
+    it("should remove a pair of consecutive duplicate matches", function()
+      local list = { "a", "x", "x", "b" }
+      listRemove(list, "x")
+      assert.same({ "a", "b" }, list)
+    end)
+
+    it("should remove a run of three or more consecutive duplicates", function()
+      local list = { "x", "x", "x" }
+      listRemove(list, "x")
+      assert.same({}, list)
+    end)
+
+    it("should remove every match whether the duplicates are adjacent or apart", function()
+      local list = { "x", "a", "x", "x", "b", "x" }
+      listRemove(list, "x")
+      assert.same({ "a", "b" }, list)
     end)
   end)
 
