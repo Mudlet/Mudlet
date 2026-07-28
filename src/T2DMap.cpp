@@ -4182,6 +4182,7 @@ void T2DMap::slot_customLineProperties()
                 qWarning("T2DMap::slot_customLineProperties() ERROR: failed to create the dialog!");
                 return;
             }
+            utils::setAccessibleDescriptionsFromToolTips(dialog);
             dialog->setAttribute(Qt::WA_DeleteOnClose);
             dialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_custom_exit_properties.png")));
             auto* le_toId = dialog->findChild<QLineEdit*>(qsl("toId"));
@@ -5718,6 +5719,7 @@ void T2DMap::slot_setCustomLine()
     if (!dialog) {
         return;
     }
+    utils::setAccessibleDescriptionsFromToolTips(dialog);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_custom_exit.png")));
     mCustomLinesRoomFrom = mMultiSelectionHighlightRoomId;

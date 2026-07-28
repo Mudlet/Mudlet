@@ -24,6 +24,7 @@
 #include "dlgModuleManager.h"
 
 #include "mudlet.h"
+#include "utils.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -102,6 +103,7 @@ void dlgModuleManager::layoutModules()
             masterModule->setText(QString());
             //: Tooltip for master module checkbox
             masterModule->setToolTip(utils::richText(tr("Master module: saved and resynchronized across all sessions on Save Profile or session end.")));
+            masterModule->setData(Qt::AccessibleDescriptionRole, utils::stripHtmlTags(masterModule->toolTip()));
 
             // Although there is now no text used here this may help to make the
             // checkbox more central in the column
@@ -112,6 +114,7 @@ void dlgModuleManager::layoutModules()
             itemEntry->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
             itemLocation->setText(moduleInfo[0]);
             itemLocation->setToolTip(utils::richText(moduleInfo[0]));         // show the full path in a tooltip, in case it doesn't fit in the table
+            itemLocation->setData(Qt::AccessibleDescriptionRole, utils::stripHtmlTags(itemLocation->toolTip()));
             itemLocation->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled); // disallow editing of module path, because that is not saved
             itemPriority->setData(Qt::EditRole, mpHost->mModulePriorities[moduleName]);
             moduleTable->setItem(row, 0, itemEntry);

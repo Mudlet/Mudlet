@@ -3,6 +3,7 @@ if(NOT WIN32)
 endif()
 
 set(FUNCTIONAL_TEST_SOURCES
+    AccessibleTooltipsTest.cpp
     TelnetTextDisplayedTest.cpp
     TelnetSubnegotiationTest.cpp
     TelnetSgrDefaultColorTest.cpp

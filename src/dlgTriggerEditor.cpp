@@ -492,6 +492,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             mpUndoAction->setToolTip(utils::richText(undoText));
             mpUndoAction->setStatusTip(undoText);
         }
+        updateUndoRedoAccessibleTexts();
     });
     connect(mpUndoStack, &QUndoStack::redoTextChanged, this, [this](const QString& text) {
         QString shortcut = mpRedoAction->shortcut().toString(QKeySequence::NativeText);
@@ -506,6 +507,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             mpRedoAction->setToolTip(utils::richText(redoText));
             mpRedoAction->setStatusTip(redoText);
         }
+        updateUndoRedoAccessibleTexts();
     });
 
     // Store guarded pointer to text editor's undo stack for safe signal connections
@@ -1067,6 +1069,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar);
     QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
 
+    updateToolbarButtonAccessibleTexts();
+
     // (Top) "Actions" toolbar:
     //: This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.
     mpAction_restoreEditorActionsToolbar = new QAction(tr("Restore Actions toolbar"), this);
@@ -1273,6 +1277,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpAction_searchOptions->setMenu(pMenu_searchOptions);
 
     pLineEdit_searchTerm->addAction(mpAction_searchOptions, QLineEdit::LeadingPosition);
+
+    utils::setAccessibleDescriptionsFromToolTips(this);
 
     connect(mpScriptsMainArea->toolButton_script_add_event_handler, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_scriptMainAreaAddHandler);
     connect(mpScriptsMainArea->toolButton_script_remove_event_handler, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_scriptMainAreaDeleteHandler);
@@ -1587,6 +1593,72 @@ void dlgTriggerEditor::slot_updateUndoRedoButtonStates()
         mpUndoAction->setStatusTip(undoText);
         mpRedoAction->setToolTip(utils::richText(redoText));
         mpRedoAction->setStatusTip(redoText);
+    }
+    updateUndoRedoAccessibleTexts();
+}
+
+// The undo/redo tooltips change at runtime so their accessible text has to be
+// refreshed alongside them:
+void dlgTriggerEditor::updateUndoRedoAccessibleTexts()
+{
+    if (!toolBar) {
+        return;
+    }
+    updateToolButtonAccessibleText(qobject_cast<QToolButton*>(toolBar->widgetForAction(mpUndoAction)));
+    updateToolButtonAccessibleText(qobject_cast<QToolButton*>(toolBar->widgetForAction(mpRedoAction)));
+}
+
+void dlgTriggerEditor::updateToolbarButtonAccessibleTexts()
+{
+    for (auto* pToolBar : {toolBar, toolBar2}) {
+        if (!pToolBar) {
+            continue;
+        }
+        const auto toolButtons = pToolBar->findChildren<QToolButton*>();
+        for (auto* pToolButton : toolButtons) {
+            updateToolButtonAccessibleText(pToolButton);
+        }
+    }
+}
+
+void dlgTriggerEditor::updateToolButtonAccessibleText(QToolButton* pToolButton)
+{
+    if (!pToolButton) {
+        return;
+    }
+
+    const auto* pAction = pToolButton->defaultAction();
+    if (!pAction) {
+        utils::setAccessibleDescriptionFromToolTip(pToolButton);
+        return;
+    }
+
+    QString accessibleName = pAction->text();
+    if (accessibleName.isEmpty()) {
+        accessibleName = pAction->iconText();
+    }
+
+    QString shortcut = pAction->shortcut().toString(QKeySequence::NativeText);
+    if (shortcut.isEmpty()) {
+        if (auto it = mButtonShortcuts.find(accessibleName); it != mButtonShortcuts.end()) {
+            shortcut = QKeySequence(it->second).toString(QKeySequence::NativeText);
+        }
+    }
+
+    if (!accessibleName.isEmpty() && !shortcut.isEmpty()) {
+        //: Accessible name for an editor toolbar button. %1 is the button label, %2 is a keyboard shortcut.
+        accessibleName = tr("%1 (%2)").arg(accessibleName, shortcut);
+    } else if (accessibleName.isEmpty()) {
+        accessibleName = utils::stripHtmlTags(pToolButton->toolTip());
+        const auto firstSentenceEnd = accessibleName.indexOf(QRegularExpression(qsl(R"([.!?]\s)")));
+        if (firstSentenceEnd > 0) {
+            accessibleName = accessibleName.left(firstSentenceEnd + 1).trimmed();
+        }
+    }
+
+    if (!accessibleName.isEmpty()) {
+        pToolButton->setAccessibleName(accessibleName);
+        pToolButton->setAccessibleDescription(QString());
     }
 }
 
@@ -6990,6 +7062,9 @@ void dlgTriggerEditor::saveVar()
     } else if (varUnit->isSaved(variable)) {
         pItem->setCheckState(0, Qt::Checked);
     }
+    // Item views fall back to the tooltip - with its raw HTML - for an item's
+    // accessible description unless this is set:
+    pItem->setData(0, Qt::AccessibleDescriptionRole, utils::stripHtmlTags(pItem->toolTip(0)));
     pItem->setData(0, Qt::UserRole, variable->getValueType());
     QIcon icon;
     switch (variable->getValueType()) {
@@ -7215,6 +7290,7 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
             pItem->label_prompt->setToolTip(utils::richText(tr("A Go-Ahead (GA) signal from the game is required to make this feature work")));
             pItem->label_prompt->setEnabled(false);
         }
+        utils::setAccessibleDescriptionFromToolTip(pItem->label_prompt);
         pItem->label_prompt->show();
         pItem->spinBox_lineSpacer->hide();
         break;
@@ -8194,6 +8270,7 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
     } else if (vu->isSaved(var)) {
         pItem->setCheckState(0, Qt::Checked);
     }
+    pItem->setData(0, Qt::AccessibleDescriptionRole, utils::stripHtmlTags(pItem->toolTip(0)));
     pItem->setData(0, Qt::UserRole, var->getValueType());
     pItem->setIcon(0, icon);
     mChangingVar = false;
@@ -9906,6 +9983,8 @@ void dlgTriggerEditor::changeView(EditorViewType view)
         qDebug() << "ERROR: dlgTriggerEditor::changeView() undefined view";
     }
 
+    updateToolbarButtonAccessibleTexts();
+
     // Update undo/redo button states when changing views
     slot_updateUndoRedoButtonStates();
 
@@ -10109,6 +10188,7 @@ void dlgTriggerEditor::showError(const QString& text)
     mpSystemMessageArea->notificationAreaIconLabelError->show();
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
     mpSystemMessageArea->notificationAreaMessageBox->setText(text);
+    const QString plainText = utils::setPlainAccessibleText(mpSystemMessageArea->notificationAreaMessageBox, text);
     mpSystemMessageArea->show();
     mCurrentBannerKey.clear();
 
@@ -10117,7 +10197,7 @@ void dlgTriggerEditor::showError(const QString& text)
     connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
 
     if (!mpHost->mIsProfileLoadingSequence) {
-        mudlet::self()->announce(text);
+        mudlet::self()->announce(plainText);
     }
 }
 
@@ -10127,6 +10207,7 @@ void dlgTriggerEditor::showWarning(const QString& text, bool announce)
     mpSystemMessageArea->notificationAreaIconLabelError->hide();
     mpSystemMessageArea->notificationAreaIconLabelWarning->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(text);
+    const QString plainText = utils::setPlainAccessibleText(mpSystemMessageArea->notificationAreaMessageBox, text);
     mpSystemMessageArea->show();
     mCurrentBannerKey.clear();
 
@@ -10135,7 +10216,7 @@ void dlgTriggerEditor::showWarning(const QString& text, bool announce)
     connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
 
     if (!mpHost->mIsProfileLoadingSequence && announce) {
-        mudlet::self()->announce(text);
+        mudlet::self()->announce(plainText);
     }
 }
 
@@ -10145,10 +10226,11 @@ void dlgTriggerEditor::showInfo(const QString& text)
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
     mpSystemMessageArea->notificationAreaIconLabelInformation->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(text);
+    const QString plainText = utils::setPlainAccessibleText(mpSystemMessageArea->notificationAreaMessageBox, text);
     mpSystemMessageArea->show();
     mCurrentBannerKey.clear();
     if (!mpHost->mIsProfileLoadingSequence) {
-        mudlet::self()->announce(text);
+        mudlet::self()->announce(plainText);
     }
 }
 
@@ -12539,6 +12621,7 @@ void dlgTriggerEditor::setShortcuts(const bool active)
 {
     setShortcuts(toolBar->actions(), active);
     setShortcuts(toolBar2->actions(), active);
+    updateToolbarButtonAccessibleTexts();
 }
 
 void dlgTriggerEditor::setShortcuts(QList<QAction*> actionList, const bool active)
@@ -13348,6 +13431,7 @@ void dlgTriggerEditor::slot_clearSoundFile()
     mpTriggersMainArea->lineEdit_soundFile->clear();
     mpTriggersMainArea->toolButton_clearSoundFile->setEnabled(false);
     mpTriggersMainArea->lineEdit_soundFile->setToolTip(utils::richText(tr("Sound file to play when the trigger fires.")));
+    utils::setAccessibleDescriptionFromToolTip(mpTriggersMainArea->lineEdit_soundFile);
 }
 
 void dlgTriggerEditor::slot_showAllTriggerControls(const bool isShown)
@@ -14337,6 +14421,7 @@ void dlgTriggerEditor::showBannerUndoToast()
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
     mpSystemMessageArea->notificationAreaIconLabelInformation->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(toastMessage);
+    utils::setPlainAccessibleText(mpSystemMessageArea->notificationAreaMessageBox, toastMessage);
     mpSystemMessageArea->show();
 
     connect(mpBannerUndoTimer, &QTimer::timeout, this, &dlgTriggerEditor::hideSystemMessageArea);

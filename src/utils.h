@@ -28,6 +28,7 @@
 #include <QRegularExpression>
 #include <QString>
 #include <QScreen>
+#include <QTextDocument>
 #include <QWidget>
 
 #include <cstdint>
@@ -78,6 +79,73 @@ public:
     // defining a static function/method here we can save using the same
     // qsl all over the place:
     static QString richText(const QString& text) { return qsl("<p>%1</p>").arg(text); }
+
+    inline static const auto scmWhitespaceRun = QRegularExpression(qsl(R"(\s+)"));
+    // Reduces text that may contain HTML markup (e.g. tooltips styled with
+    // richText()) to plain text suitable for the accessibility APIs - screen
+    // readers would otherwise read the markup aloud, see:
+    // https://github.com/Mudlet/Mudlet/issues/8547
+    static QString stripHtmlTags(QTextDocument& document, const QString& text)
+    {
+        if (text.isEmpty()) {
+            return text;
+        }
+        document.setHtml(text);
+        QString plainText = document.toPlainText();
+        // Block elements come out as separate lines but a single space between
+        // them reads better as a screen reader announcement:
+        plainText.replace(scmWhitespaceRun, qsl(" "));
+        return plainText.trimmed();
+    }
+
+    static QString stripHtmlTags(const QString& text)
+    {
+        QTextDocument document;
+        return stripHtmlTags(document, text);
+    }
+
+    // Mirrors a widget's tooltip into its accessible description with the HTML
+    // stripped, for use where the tooltip is the only documentation a widget
+    // has - without this screen readers fall back to reading the tooltip with
+    // its raw markup:
+    static void setAccessibleDescriptionFromToolTip(QWidget* pWidget)
+    {
+        if (!pWidget) {
+            return;
+        }
+        pWidget->setAccessibleDescription(stripHtmlTags(pWidget->toolTip()));
+    }
+
+    static void setAccessibleDescriptionsFromToolTips(QWidget* pWidget)
+    {
+        if (!pWidget) {
+            return;
+        }
+
+        QTextDocument document;
+        const auto setAccessibleDescription = [&document](QWidget* pChildWidget) {
+            if (!pChildWidget || pChildWidget->toolTip().isEmpty()) {
+                return;
+            }
+            pChildWidget->setAccessibleDescription(stripHtmlTags(document, pChildWidget->toolTip()));
+        };
+
+        setAccessibleDescription(pWidget);
+        const auto childWidgets = pWidget->findChildren<QWidget*>();
+        for (auto* pChildWidget : childWidgets) {
+            setAccessibleDescription(pChildWidget);
+        }
+    }
+
+    static QString setPlainAccessibleText(QWidget* pWidget, const QString& text)
+    {
+        const QString plainText = stripHtmlTags(text);
+        if (pWidget) {
+            pWidget->setAccessibleName(plainText);
+            pWidget->setAccessibleDescription(plainText);
+        }
+        return plainText;
+    }
 
     // Qt 6.9 deprecated QDateTime::setOffsetFromUtc(int) and made it hard to
     // replicate the exact strings that we had before:

@@ -216,6 +216,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     } else {
         character_password_entry->setToolTip(utils::richText(tr("Characters password. Note that the password is not encrypted in storage")));
     }
+    // Screen readers fall back to reading the tooltip - including its raw HTML
+    // markup - for a widget without an accessible description:
+    utils::setAccessibleDescriptionFromToolTip(character_password_entry);
 
     connect(mpAction_revealPassword, &QAction::triggered, this, &dlgConnectionProfiles::slot_togglePasswordVisibility);
     connect(offline_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_load);
@@ -1236,6 +1239,10 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     if (mudlet::self()->getHostManager().getHost(profile_name)) {
         remove_profile_button->setEnabled(false);
         remove_profile_button->setToolTip(utils::richText(tr("A profile that is in use cannot be removed")));
+        // Screen readers fall back to reading the tooltip - including its raw
+        // HTML markup - for a widget without an accessible description, and the
+        // tooltip here changes as the selection changes so refresh it each time:
+        utils::setAccessibleDescriptionFromToolTip(remove_profile_button);
         connect_button->setEnabled(false);
         offline_button->setEnabled(false);
 
@@ -1275,6 +1282,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         }
         remove_profile_button->setEnabled(true);
         remove_profile_button->setToolTip(QString());
+        utils::setAccessibleDescriptionFromToolTip(remove_profile_button);
     }
 }
 
@@ -1342,6 +1350,9 @@ void dlgConnectionProfiles::fillout_form()
             description = getDescription(qsl("mudlet.org"));
             if (!description.isEmpty()) {
                 pItem->setToolTip(utils::richText(description));
+                // Item views fall back to the tooltip - with its raw HTML - for
+                // an item's accessible description unless this is set:
+                pItem->setData(Qt::AccessibleDescriptionRole, utils::stripHtmlTags(pItem->toolTip()));
             }
         }
 #endif
@@ -1464,6 +1475,9 @@ void dlgConnectionProfiles::loadCustomProfile(const QString& profileName) const
     auto description = getDescription(profileName);
     if (!description.isEmpty()) {
         pItem->setToolTip(utils::richText(description));
+        // Item views fall back to the tooltip - with its raw HTML - for an
+        // item's accessible description unless this is set:
+        pItem->setData(Qt::AccessibleDescriptionRole, utils::stripHtmlTags(pItem->toolTip()));
     }
     listWidget_profiles->addItem(pItem);
 }
@@ -2078,6 +2092,9 @@ bool dlgConnectionProfiles::validateProfile()
 #if defined(QT_NO_SSL)
         port_ssl_tsl->setEnabled(false);
         port_ssl_tsl->setToolTip(utils::richText(tr("Mudlet is not configured for secure connections.")));
+        // Screen readers fall back to reading the tooltip - including its raw
+        // HTML markup - for a widget without an accessible description:
+        utils::setAccessibleDescriptionFromToolTip(port_ssl_tsl);
         if (port_ssl_tsl->isChecked()) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(qsl("%1\n%2\n\n").arg(notificationAreaMessageBox->text(), tr("Mudlet is not configured for secure connections.")));
@@ -2096,6 +2113,7 @@ bool dlgConnectionProfiles::validateProfile()
         } else {
             port_ssl_tsl->setEnabled(true);
             port_ssl_tsl->setToolTip(QString());
+            utils::setAccessibleDescriptionFromToolTip(port_ssl_tsl);
         }
 #endif
 
@@ -2286,6 +2304,9 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
     }
     if (!serverDescription.isEmpty()) {
         pItem->setToolTip(utils::richText(serverDescription));
+        // Item views fall back to the tooltip - with its raw HTML - for an
+        // item's accessible description unless this is set:
+        pItem->setData(Qt::AccessibleDescriptionRole, utils::stripHtmlTags(pItem->toolTip()));
     }
 }
 

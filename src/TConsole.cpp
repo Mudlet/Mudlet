@@ -531,6 +531,13 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     mpBufferSearchDown->setIcon(QIcon(qsl(":/icons/import.png")));
     connect(mpBufferSearchDown, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferDown);
 
+    // Screen readers fall back to reading the tooltip - including its raw HTML
+    // markup - for widgets without an accessible description:
+    const QList<QWidget*> toolTippedWidgets = {mpBufferSearchBox, mpBufferSearchUp, mpBufferSearchDown, timeStampButton, replayButton, logButton, emergencyStop, mpLineEdit_networkLatency};
+    for (auto* pToolTippedWidget : toolTippedWidgets) {
+        utils::setAccessibleDescriptionFromToolTip(pToolTippedWidget);
+    }
+
     if (mType == MainConsole) {
         setF3SearchEnabled(mpHost->getF3SearchEnabled());
     }
@@ -1009,6 +1016,7 @@ void TConsole::slot_toggleReplayRecording()
         printSystemMessage(tr("Replay recording has started. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
         //: Button tooltip for the replay recording toggle button
         replayButton->setToolTip(utils::richText(tr("Stop recording of replay")));
+        utils::setAccessibleDescriptionFromToolTip(replayButton);
     } else {
         if (!mReplayFile.commit()) {
             qDebug() << "TConsole::slot_toggleReplayRecording: error saving replay: " << mReplayFile.errorString();
@@ -1020,6 +1028,7 @@ void TConsole::slot_toggleReplayRecording()
         }
         //: Button tooltip for the replay recording toggle button
         replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
+        utils::setAccessibleDescriptionFromToolTip(replayButton);
     }
 }
 
