@@ -84,8 +84,6 @@
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QFileDialog>
-#include <QTableWidget>
-#include <QToolTip>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>

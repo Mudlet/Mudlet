@@ -40,7 +40,6 @@
 #include <QQueue>
 #include <QThread>
 #include <QTimer>
-#include <edbee/texteditorwidget.h>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB

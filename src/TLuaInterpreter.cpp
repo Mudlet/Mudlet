@@ -59,10 +59,10 @@
 #include <math.h>
 
 #include <QtConcurrentRun>
+#include <QApplication>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QFileDialog>
 #include <QSettings>
 #if defined(Q_OS_MACOS)
 // Only used for this OS:
@@ -72,11 +72,9 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QSaveFile>
-#include <QTableWidget>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <QTextStream>
-#include <QToolTip>
 #include <QFileInfo>
 #include <QVector>
 #include <limits>
@@ -3198,7 +3196,7 @@ int TLuaInterpreter::getOS(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProcessID
 int TLuaInterpreter::getProcessID(lua_State* L)
 {
-    int pid = QApplication::applicationPid();
+    int pid = QCoreApplication::applicationPid();
     lua_pushinteger(L, pid);
     return 1;
 }
