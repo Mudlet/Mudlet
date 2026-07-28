@@ -1,8 +1,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2016, 2019-2020, 2022 by Stephen Lyons             *
+ *   Copyright (C) 2015-2016, 2019-2020, 2022, 2026 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2026 by Ethan Hussong - ethan@ethanhussong.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -45,6 +46,7 @@
 #include <QProgressDialog>
 #include <QPushButton>
 #include <QSettings>
+#include <QTimer>
 #include <QVBoxLayout>
 
 using namespace std::chrono_literals;
@@ -496,12 +498,6 @@ void dlgMapper::slot_toggleShowRoomIDs(int toggle)
     mp2dMap->update();
 }
 
-void dlgMapper::slot_toggleShowRoomNames(int toggle)
-{
-    mpMap->setRoomNamesShown(toggle == Qt::Checked);
-    mp2dMap->update();
-}
-
 void dlgMapper::slot_toggleStrongHighlight(int toggle)
 {
     mpHost->mMapStrongHighlight = (toggle == Qt::Checked);
@@ -883,6 +879,14 @@ void dlgMapper::slot_setupMapperMenu()
     connect(showRoomIdsAction, &QAction::toggled, this, &dlgMapper::slot_toggleShowRoomIDsFromMenu);
     menu->addAction(showRoomIdsAction);
 
+    auto* showRoomNamesAction = new QAction(tr("Show room names"), this);
+    showRoomNamesAction->setCheckable(true);
+    showRoomNamesAction->setChecked(mpMap->getRoomNamesShown());
+    showRoomNamesAction->setToolTip(tr("When enabled, room names will be displayed on the map."));
+
+    connect(showRoomNamesAction, &QAction::toggled, this, &dlgMapper::slot_toggleShowRoomNames);
+    menu->addAction(showRoomNamesAction);
+
     auto* showMapGrid = new QAction(tr("Show map grid"), this);
     showMapGrid->setCheckable(true);
     showMapGrid->setChecked(mpHost->mMapperShowGrid);
@@ -926,6 +930,12 @@ void dlgMapper::slot_toggleShowRoomIDsFromMenu(bool enabled)
 {
     mp2dMap->mShowRoomID = enabled;
     mp2dMap->mpHost->mShowRoomID = enabled;
+    mp2dMap->update();
+}
+
+void dlgMapper::slot_toggleShowRoomNames(const bool enabled)
+{
+    mpMap->setRoomNamesShown(enabled);
     mp2dMap->update();
 }
 

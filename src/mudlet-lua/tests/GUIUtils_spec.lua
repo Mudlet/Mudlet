@@ -471,6 +471,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         _Echos.Process('#oOverline#/o', 'Hex'),
         { "", "\27overline", "Overline", "\27overlineoff", "" }
       )
+
+      assert.are.same(
+        _Echos.Process('\\#ff0000Escaped', 'Hex'),
+        { "#ff0000", "Escaped" }
+      )
     end)
 
     it("Should parse decimal patterns correctly", function()
@@ -508,6 +513,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         _Echos.Process('<o>Overline</o>', 'Decimal'),
         { "", "\27overline", "Overline", "\27overlineoff", "" }
       )
+
+      assert.are.same(
+        _Echos.Process('<:0,0,255>OnBlue', 'Decimal'),
+        { "", { bg = { "0", "0", "255", 255 } }, "OnBlue" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<1234,0,0>NotAColour', 'Decimal'),
+        { "", "<1234,0,0>", "NotAColour" }
+      )
     end)
 
     it("Should parse color patterns correctly", function()
@@ -544,6 +559,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.are.same(
         _Echos.Process('<o>Overline</o>', 'Color'),
         { "", "\27overline", "Overline", "\27overlineoff", "" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<red:blue>RedOnBlue', 'Color'),
+        { "", { fg = { 255, 0, 0 }, bg = { 0, 0, 255 } }, "RedOnBlue" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<:blue>OnBlue', 'Color'),
+        { "", { bg = { 0, 0, 255 } }, "OnBlue" }
       )
     end)
   end)
@@ -644,6 +669,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       createBuffer("mybuffer")
       -- clear the buffer in case it already exists
       clearWindow("mybuffer")
+      -- clearWindow does not reset the user cursor, so tests that move it
+      -- would otherwise leak position into the next test
+      moveCursor("mybuffer", 0, 0)
     end)
 
     it("should append text to the buffer", function()
@@ -653,11 +681,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   
     -- https://github.com/Mudlet/Mudlet/issues/6575
-    pending("should append multiple lines of text to the buffer", function()
-      echo("mybuffer", "Line 1\n")
-      echo("mybuffer", "Line 2\n")
-      echo("mybuffer", "Line 3\n")
-      moveCursorEnd()
+    it("selects the last line after moveCursorEnd in a buffer", function()
+      echo("mybuffer", "Line 1\nLine 2\nLine 3")
+      moveCursorEnd("mybuffer")
       selectCurrentLine("mybuffer")
       assert.are.equal("Line 3", getSelection("mybuffer"))
     end)
@@ -979,6 +1005,52 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         local actual = hecho2html(hechoString)
         assert.equal(expected, actual)
       end)
+    end)
+  end)
+
+  describe("Tests the functionality of selectAll", function()
+
+    before_each(function()
+      clearWindow()
+    end)
+
+    it("Should error when first argument is not a string", function()
+      assert.has_error(function()
+        selectAll(123, function() end)
+      end)
+    end)
+
+    it("Should error when second argument is not a function", function()
+      assert.has_error(function()
+        selectAll("test", "not a function")
+      end)
+    end)
+
+    it("Should not call the function if there are no matches", function()
+      echo("no match for this")
+      moveCursorEnd()
+      selectCurrentLine()
+      local callCount = 0
+      selectAll("zzzzz", function() callCount = callCount + 1 end)
+      assert.equals(0, callCount)
+    end)
+
+    it("Should call the function once for a single match on the current line", function()
+      echo("hello world")
+      moveCursorEnd()
+      selectCurrentLine()
+      local funcCalls = 0
+      selectAll("hello", function() funcCalls = funcCalls + 1 end)
+      assert.equals(1, funcCalls)
+    end)
+
+    it("Should call the function for each match on the current line", function()
+      echo("cat dog cat dog cat")
+      moveCursorEnd()
+      selectCurrentLine()
+      local funcCalls = 0
+      selectAll("cat", function() funcCalls = funcCalls + 1 end)
+      assert.equals(3, funcCalls)
     end)
   end)
 

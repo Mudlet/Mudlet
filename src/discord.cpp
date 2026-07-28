@@ -25,6 +25,9 @@
 
 #include <QtDebug>
 #include <QHash>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 // Uncomment this to provide some additional qDebug() output:
 // #define DEBUG_DISCORD 1
@@ -109,12 +112,12 @@ Discord::Discord(QObject* parent)
     // call initializeRpc() on demand when there's an active host.
 
     // mudlet instance is not available in this constructor as it's still being initialised, so postpone the connection
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         Q_ASSERT(mudlet::self());
         connect(mudlet::self(), &mudlet::signal_tabChanged, this, &Discord::UpdatePresence);
 
         // process Discord callbacks every 50ms once we are all set up:
-        startTimer(50);
+        startTimer(50ms);
     });
 }
 
@@ -520,8 +523,9 @@ QString Discord::deduceGameName(const QString& address)
             // WoTMUD type case - so take remaining term in the middle of original
             otherName = otherName.split(QChar('.')).last();
             break;
-        } else if (otherName.startsWith(QLatin1String("www."))) {
-            // Error(?) in entering details so that a web-server name was give:
+        }
+        if (otherName.startsWith(QLatin1String("www."))) {
+            // Error(?) in entering details so that a web-server name was given:
             otherName = otherName.split(QChar('.')).last();
             break;
         }

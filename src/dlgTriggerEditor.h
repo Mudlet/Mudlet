@@ -185,6 +185,7 @@ public:
     bool event(QEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void changeEvent(QEvent* e) override;
+    void updateExtraControlsToggleIcon();
     void fillout_form();
     void showError(const QString&);
     void showWarning(const QString&, bool announce = true);
@@ -333,6 +334,7 @@ private slots:
     void slot_clickedMessageBox(const QString&);
     void slot_addPattern();
     void slot_bannerDismissClicked();
+    void slot_refreshBannerLinkColors();
     void slot_itemsChanged(EditorViewTypes::EditorViewType viewType, QList<int> affectedItemIDs);
 
     // Per-property immediate save slots for triggers (create individual undo entries)
@@ -393,6 +395,12 @@ private:
     EditorViewType resolveCurrentView();
     void saveTrigger();
     void saveAlias();
+    void computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDescription) const;
+    void setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT);
+    void showAliasError(QTreeWidgetItem* pItem, const QString& name, const QString& error);
+    void showAliasLoopWarning(QTreeWidgetItem* pItem, const QString& name);
+    void applyAliasState(QTreeWidgetItem* pItem, TAlias* pT);
+    bool aliasSubstitutionLoops(const QString& regex, const QString& substitution) const;
     void saveTimer();
     void saveKey();
     void saveScript();
@@ -452,6 +460,8 @@ private:
     void exportMultipleActionsToClipboard(const QList<TAction*>& actions);
     void exportMultipleScriptsToClipboard(const QList<TScript*>& scripts);
     void exportMultipleKeysToClipboard(const QList<TKey*>& keys);
+
+    void placePastedItems(EditorViewType itemType, const QList<int>& itemIDs);
 
     void clearDocument(edbee::TextEditorWidget* pEditorWidget, const QString& initialText = QString());
 
@@ -717,6 +727,11 @@ private:
     // so as to be able to fit the right side with the extra controls,
     // determined the first time the area is shrunk down by the user:
     int mTriggerMainAreaMinimumHeightToShowAll = 0;
+
+    // Persisted preference for showing the extra trigger controls; only
+    // changed by explicit clicks on the toggle button, not by the transient
+    // space-driven auto-collapse:
+    bool mShowAllTriggerControls = false;
 
     // tracks location of the splitter in the trigger editor for each tab
     QByteArray mTriggerEditorSplitterState;

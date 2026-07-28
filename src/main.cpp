@@ -63,6 +63,7 @@
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
+#include "LsanSuppressions.h"
 #include "SentryWrapper.h"
 #include "utils.h"
 #include <QFileInfo>
@@ -76,6 +77,27 @@
 #endif
 
 using namespace std::chrono_literals;
+
+// These hooks are only consulted when the LeakSanitizer runtime is linked in
+// (USE_SANITIZER builds, i.e. PTBs and testing builds); elsewhere they are two
+// inert functions. They cannot be guarded with an "is ASAN on" macro check:
+// Mudlet only applies -fsanitize=address at link time, so no compiler macro is
+// set, and Qt's qcompilerdetection.h shims __has_feature to 0 on GCC anyway.
+
+// Embeds the suppression list into the binary so leak reports shown to users
+// by testing/PTB builds exclude third-party noise (GPU drivers, font stack)
+// with no LSAN_OPTIONS needed at runtime:
+extern "C" const char* __lsan_default_suppressions()
+{
+    return mudletLsanSuppressions;
+}
+
+// Without this, LeakSanitizer appends a "Suppressions used" summary to every
+// clean exit, which reads like an error to users:
+extern "C" const char* __lsan_default_options()
+{
+    return "print_suppressions=0";
+}
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -1077,12 +1099,12 @@ int main(int argc, char* argv[])
 
     mudlet::self()->show();
     if (parser.isSet(startFullscreen)) {
-        QTimer::singleShot(0, [=]() {
+        QTimer::singleShot(0ms, [=]() {
             mudlet::self()->showFullScreen();
         });
     }
 
-    QTimer::singleShot(0, qApp, [cliProfiles, telnetUri]() {
+    QTimer::singleShot(0ms, qApp, [cliProfiles, telnetUri]() {
         // Migrate portable password files to secure storage before any
         // profile dialog or auto-login code runs.  The migration is
         // synchronous (uses static CredentialManager helpers) so it is
@@ -1253,7 +1275,9 @@ bool runUpdate()
         qWarning() << "Launching installer:" << seenUpdatedInstaller.absoluteFilePath();
         QProcess::startDetached(seenUpdatedInstaller.absoluteFilePath(), QStringList());
         return true;
-    } else if (seenUpdatedInstaller.exists()) {
+    }
+
+    if (seenUpdatedInstaller.exists()) {
         // no new updater and only the old one? Then we're restarting from an update: delete the old installer
         if (!updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
             qWarning() << "Couldn't delete old installer:" << seenUpdatedInstaller;

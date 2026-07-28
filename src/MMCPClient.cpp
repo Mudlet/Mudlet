@@ -28,6 +28,9 @@
 #include <QTcpSocket>
 #include <QRegularExpression>
 #include <QtGlobal>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 QString convertToIPv4(QHostAddress addr)
 {
@@ -170,7 +173,7 @@ void MMCPClient::slot_pendingTimeout()
                                             convertToIPv4(mTcpSocket.peerAddress()),
                                             QString::number(mTcpSocket.peerPort()));
         mpHost->postMessage(infoMsg);
-        
+
         mState = Disconnected;
         writeData(qsl("NO:%1\n").arg(mpMMCPServer->getChatName()));
         disconnect();
@@ -283,7 +286,7 @@ void MMCPClient::slot_readData()
                     // Start 60 second timeout for pending connection
                     // We don't know what client the peer is using, their client may timeout the socket, or may not
                     // Regardless, we'll time it out after 60 seconds
-                    mPendingTimer.start(60000);
+                    mPendingTimer.start(1min);
                 }
             }
         }
@@ -337,13 +340,13 @@ void MMCPClient::slot_readData()
             mpHost->postMessage(infoMsg);
             mpMMCPServer->addConnectedClient(this);
             sendVersion();
-            
+
             if (cmdData.length() > 0) {
                 qDebug().noquote().nospace() << "MMCPClient::slot_readData() INFO - additional cmd at connect: \"" << cmdData << "\".";
                 //A command was tacked on the end of the accept string
                 handleConnectedState(cmdData);
             }
-        } 
+        }
 
         break;
     }
@@ -393,7 +396,7 @@ void MMCPClient::acceptCall() {
 
 /**
  * Denies an incoming chat connection
- * 
+ *
  */
 void MMCPClient::denyCall() {
     mPendingTimer.stop();  // Stop timeout
@@ -446,8 +449,11 @@ void MMCPClient::slot_displayError(QAbstractSocket::SocketError socketError)
  */
 void MMCPClient::sendMessage(const QString& msg)
 {
-    writeData(qsl("%1%2%3")
-                      .arg(static_cast<char>(Message), msg, static_cast<char>(End)));
+    QByteArray out;
+    out.append(static_cast<char>(Message));
+    out.append(msg.toLatin1());
+    out.append(static_cast<char>(End));
+    writeData(out);
 }
 
 
@@ -500,8 +506,11 @@ void MMCPClient::sendRequestConnections()
  */
 void MMCPClient::sendVersion()
 {
-    writeData(qsl("%1%2%4")
-                      .arg(static_cast<char>(Version), mudlet::self()->scmVersion, static_cast<char>(End)));
+    QByteArray versionData;
+    versionData.append(static_cast<char>(Version));
+    versionData.append(mudlet::self()->scmVersion.toLatin1());
+    versionData.append(static_cast<char>(End));
+    writeData(versionData);
 }
 
 /**
@@ -845,8 +854,7 @@ void MMCPClient::handleIncomingPeekList(const QString& list)
                                "==== ==================== =============== =====\n"
                                "%1\n"
                                "%2==== ==================== =============== =====%3\n")
-                                    .arg(messageList.join(QChar::LineFeed))
-                                    .arg(FBLDRED).arg(RST);
+                                .arg(messageList.join(QChar::LineFeed), FBLDRED, RST);
     mpMMCPServer->clientMessage(this, listOut);
 }
 
@@ -855,8 +863,11 @@ void MMCPClient::handleIncomingPeekList(const QString& list)
  */
 void MMCPClient::handleIncomingPingRequest(const QString& msg)
 {
-    writeData(qsl("%1%2%3")
-                      .arg(static_cast<char>(PingResponse), msg, static_cast<char>(End)));
+    QByteArray out;
+    out.append(static_cast<char>(PingResponse));
+    out.append(msg.toLatin1());
+    out.append(static_cast<char>(End));
+    writeData(out);
 }
 
 /**
@@ -880,7 +891,7 @@ void MMCPClient::handleIncomingPingResponse(const QString& data)
 /**
  * This client sent a request to snoop you (the user).
  * Apparently the client is responsible for telling the connecting user.
- * 
+ *
  * We're sending a message back to the client to let them know if they
  * can or cannot snoop us. We don't know what language the remote client is using...
  * Send it in English for now and hope for the best? Maybe noone is using this snoop feature?
@@ -963,18 +974,18 @@ void MMCPClient::updateSgrState(const std::string &ansiSeq)
 
 /**
  * Handle remote client incoming snoop data.
- * 
+ *
  * Client    | needsSkip | needsTrack | snoop Mudlet     | Mudlet can snoop
  * Mudlet    | no          yes          yes                yes
  * MudMaster | yes	       yes          yes                yes
  * TinTin    | ?           yes          no?                yes
  * MUSH      | yes         yes          yes (color issue)  yes
- * Zmud      | ?           ?            ?                  ?	
- * Cmud      | ?           ?            ?                  ?		
- * 
+ * Zmud      | ?           ?            ?                  ?
+ * Cmud      | ?           ?            ?                  ?
+ *
  * mNeedsColorSkip and mNeedsColorTracking are defined when we receive
  * client version in handleIncomingClientVersion
- * 
+ *
  */
 void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
 {
@@ -1065,7 +1076,7 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
     outputMessage += remaining;
 
     if (!outputMessage.empty()) {
-        
+
         postSnoopDataEvent(QString::fromStdString(outputMessage));
 
         if (mpHost->getMMCPShowSnoopInMainConsole()) {
@@ -1095,7 +1106,7 @@ void MMCPClient::postSideChannelMessage(const QString& from, const QString& chan
  * Handle incoming side channel data from this client.
  * Posts a sysMMCPSideChannelMessage event with arguments:
  *     chatname, channel, message
- */ 
+ */
 void MMCPClient::handleIncomingSideChannelData(const QString& stringData)
 {
     QRegularExpression chatChannel("^(\\w+),(.*)$");

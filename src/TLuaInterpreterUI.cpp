@@ -2229,13 +2229,25 @@ int TLuaInterpreter::resetCmdLineAction(lua_State* L)
 int TLuaInterpreter::resetBackgroundImage(lua_State* L)
 {
     QString windowName = qsl("main");
+    bool fullWindow = false;
     const int n = lua_gettop(L);
-    if (n > 0) {
+    int counter = 1;
+    if (n > 0 && lua_type(L, 1) == LUA_TSTRING) {
         windowName = getVerifiedString(L, __func__, 1, "console name");
+        counter++;
+    }
+
+    if (counter <= n) {
+        fullWindow = getVerifiedBool(L, __func__, counter, "fullWindow");
+        counter++;
+    }
+
+    if (fullWindow && !(windowName.isEmpty() || windowName.compare(qsl("main"), Qt::CaseSensitive) == 0)) {
+        return warnArgumentValue(L, __func__, qsl("the full window background can only be reset on the main console"));
     }
 
     Host* host = &getHostFromLua(L);
-    if (!host->resetBackgroundImage(windowName)) {
+    if (!host->resetBackgroundImage(windowName, fullWindow)) {
         return warnArgumentValue(L, __func__, qsl("console '%1' not found").arg(windowName));
     }
     lua_pushboolean(L, true);
@@ -2406,17 +2418,18 @@ int TLuaInterpreter::selectString(lua_State* L)
 int TLuaInterpreter::setActiveProfile(lua_State* L)
 {
     auto& hostManager = mudlet::self()->getHostManager();
-    const QString profileName = getVerifiedString(L, __func__, 1, "profile name");
+    const QString requestedName = getVerifiedString(L, __func__, 1, "profile name");
 
-    if (profileName.isEmpty()) {
+    if (requestedName.isEmpty()) {
         lua_pushboolean(L, false);
         lua_pushstring(L, "setActiveProfile: profile name cannot be empty");
         return 2;
     }
 
-    if (!mudlet::self()->profileExists(profileName)) {
+    const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+    if (profileName.isEmpty()) {
         lua_pushboolean(L, false);
-        lua_pushfstring(L, "setActiveProfile: profile '%s' does not exist", profileName.toUtf8().constData());
+        lua_pushfstring(L, "setActiveProfile: profile '%s' does not exist", requestedName.toUtf8().constData());
         return 2;
     }
 
@@ -2519,6 +2532,7 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     QString windowName = qsl("main");
     QString imgPath;
     int mode = 1;
+    bool fullWindow = false;
     int counter = 1;
     const int n = lua_gettop(L);
     if (n > 1 && lua_type(L, 2) == LUA_TSTRING) {
@@ -2529,16 +2543,30 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     imgPath = getVerifiedString(L, __func__, counter, "image path");
     counter++;
 
-    if (n > 2 || (counter == 2 && n > 1)) {
+    if (counter <= n) {
         mode = getVerifiedInt(L, __func__, counter, "mode");
+        counter++;
     }
 
-    if (mode < 1 || mode > 4) {
-        return warnArgumentValue(L, __func__, qsl("%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style'").arg(mode));
+    if (counter <= n) {
+        fullWindow = getVerifiedBool(L, __func__, counter, "fullWindow");
+        counter++;
+    }
+
+    if (mode < 1 || mode > 5) {
+        return warnArgumentValue(L, __func__, qsl("%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style', 5 'cover'").arg(mode));
+    }
+
+    if (mode == 5 && !fullWindow) {
+        return warnArgumentValue(L, __func__, qsl("mode 'cover' is not supported for the main display - pass true as the 4th argument to apply it to the full window background instead"));
+    }
+
+    if (fullWindow && !(windowName.isEmpty() || windowName.compare(qsl("main"), Qt::CaseSensitive) == 0)) {
+        return warnArgumentValue(L, __func__, qsl("the full window background can only be used with the main console"));
     }
 
     Host* host = &getHostFromLua(L);
-    if (!host->setBackgroundImage(windowName, imgPath, mode)) {
+    if (!host->setBackgroundImage(windowName, imgPath, mode, fullWindow)) {
         return warnArgumentValue(L, __func__, qsl("console or label '%1' not found").arg(windowName));
     }
 
@@ -2761,7 +2789,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
         }
         action->css = css;
     }
-    host.getActionUnit()->updateToolbar();
+    host.getActionUnit()->updateAllToolbars();
     lua_pushboolean(L, 1);
     return 1;
 }
@@ -3112,20 +3140,6 @@ int TLuaInterpreter::setMapWindowTitle(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMiniConsoleFontSize
-int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
-{
-    const QString windowName = getVerifiedString(L, __func__, 1, "miniconsole name");
-    const int size = getVerifiedInt(L, __func__, 2, "font size");
-    auto console = CONSOLE(L, windowName);
-    if (size < 1) {
-        return warnArgumentValue(L, __func__, qsl("setting font size of '%1' failed").arg(windowName));
-    }
-    console->setFontSize(size);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovie
 int TLuaInterpreter::setMovie(lua_State* L)
 {
@@ -3453,6 +3467,17 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, s, "wrapAt");
     auto console = CONSOLE(L, windowName);
     console->setWrapAt(luaFrom);
+    // only mirror values the preferences dialog itself accepts into the
+    // profile, otherwise an invalid width would reach NAWS and get saved
+    if (luaFrom >= 1 && console->getType() == TConsole::MainConsole) {
+        Host& host = getHostFromLua(L);
+        const int priorWrapAt = host.mWrapAt;
+        host.mWrapAt = luaFrom;
+        if (priorWrapAt != luaFrom) {
+            host.mTelnet.sendInfoNewEnvironValue(qsl("WORD_WRAP"));
+        }
+        host.updateDisplayDimensions();
+    }
     return 0;
 }
 
@@ -3463,6 +3488,10 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, windowName);
     console->setIndentCount(luaFrom);
+    if (luaFrom >= 0 && console->getType() == TConsole::MainConsole) {
+        Host& host = getHostFromLua(L);
+        host.mWrapIndentCount = luaFrom;
+    }
     return 0;
 }
 
@@ -3473,6 +3502,10 @@ int TLuaInterpreter::setWindowWrapHangingIndent(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, windowName);
     console->setHangingIndentCount(luaFrom);
+    if (luaFrom >= 0 && console->getType() == TConsole::MainConsole) {
+        Host& host = getHostFromLua(L);
+        host.mWrapHangingIndentCount = luaFrom;
+    }
     return 0;
 }
 
