@@ -72,6 +72,7 @@ class GMCPAuthenticator;
 class TRoom;
 class TConsole;
 class TMainConsole;
+struct TConsoleModel;
 class dlgNotepad;
 class TMap;
 class MMCPServer;
@@ -269,6 +270,12 @@ public:
     LuaInterface* getLuaInterface() { return mLuaInterface.data(); }
 
     void incomingStreamProcessor(const QString& paragraph, int line);
+    // libmudlet Wave 3 step 2 (spike): the main console's data model lives in
+    // core, co-owned by Host so the per-line trigger pipeline (runTriggers) can
+    // drive it without a view. The view reaches the same instance via model().
+    TConsoleModel& mainConsoleModel();
+    std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
+    void runTriggers(int line);
     void postIrcMessage(const QString&, const QString&, const QString&);
     void enableTimer(const QString&);
     void disableTimer(const QString&);
@@ -525,6 +532,8 @@ public:
     // have to maintain a separate one here in this class which does not, as
     // something derived from a QObject, have one:
     QPointer<TMainConsole> mpConsole;
+    // Co-owned with the main-console view (TConsole); see mainConsoleModel().
+    std::shared_ptr<TConsoleModel> mpMainConsoleModel;
     cTelnet mTelnet;
     QPointer<dlgPackageManager> mpPackageManager;
     QPointer<dlgModuleManager> mpModuleManager;

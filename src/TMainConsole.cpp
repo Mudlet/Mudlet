@@ -1429,27 +1429,6 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
     emit signal_newDataAlert(mProfileName);
 }
 
-void TMainConsole::runTriggers(int line)
-{
-    mUserCursor.setY(line);
-    mIsPromptLine = buffer.promptBuffer.at(line);
-    mEngineCursor = line;
-    mUserCursor.setX(0);
-    mCurrentLine = buffer.line(line);
-    mpHost->getLuaInterpreter()->set_lua_string(cmLuaLineVariable, mCurrentLine);
-    mCurrentLine.append('\n');
-
-    if (mudlet::smDebugMode) {
-        TDebug(Qt::darkGreen, Qt::black) << "new line arrived:" >> mpHost;
-        TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << mCurrentLine << "\n" >> mpHost;
-    }
-    mpHost->incomingStreamProcessor(mCurrentLine, line);
-    mIsPromptLine = false;
-
-    //FIXME: rewrite: if lines above the current line get deleted -> redraw clean slice
-    //       otherwise just delete
-}
-
 void TMainConsole::finalize()
 {
     if (mUpperPane) {

@@ -67,11 +67,31 @@ const QString TConsole::cmLuaLineVariable("line");
 
 // A high-performance text widget with split screen ability for scrolling back
 // Contains two TTextEdits, and is backed by a TBuffer
+namespace {
+// libmudlet Wave 3 step 2 (spike): the main console co-owns Host's model so the
+// trigger pipeline outlives the view; every other console owns its own model.
+std::shared_ptr<TConsoleModel> resolveConsoleModel(Host* pHost, const TConsole::ConsoleType type, TConsole* view)
+{
+    if (type == TConsole::MainConsole && pHost) {
+        return pHost->sharedMainConsoleModel();
+    }
+    return std::make_shared<TConsoleModel>(pHost, view);
+}
+} // namespace
+
 TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidget* parent)
 : QWidget(parent)
 , mpHost(pH)
 , mDisplayFontDetails(pH->fontsAntiAlias())
-, buffer(pH, this)
+, mpOwnedModel(resolveConsoleModel(pH, type, this))
+, mpModel(mpOwnedModel.get())
+, buffer(mpModel->buffer)
+, mBgColor(mpModel->mBgColor)
+, mFgColor(mpModel->mFgColor)
+, mCurrentLine(mpModel->mCurrentLine)
+, mEngineCursor(mpModel->mEngineCursor)
+, mUserCursor(mpModel->mUserCursor)
+, mIsPromptLine(mpModel->mIsPromptLine)
 , emergencyStop(new QToolButton)
 , mConsoleName(name)
 , mpBaseVFrame(new QWidget(this))
@@ -90,6 +110,13 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mControlCharacter(pH->getControlCharacterMode())
 , mType(type)
 {
+    // The main console co-owns Host's model, whose buffer was created before
+    // this view existed, so point it at this view now (sub-consoles already did
+    // so through their model's constructor).
+    if (mType == MainConsole) {
+        buffer.setConsole(this);
+    }
+
     mpHyperlinkCompactManager = std::make_unique<THyperlinkCompactManager>();
     mpHyperlinkSelectionManager = std::make_unique<THyperlinkSelectionManager>(*this);
     mpHyperlinkVisibilityManager = std::make_unique<THyperlinkVisibilityManager>(this);

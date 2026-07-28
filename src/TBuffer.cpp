@@ -1599,7 +1599,7 @@ void TBuffer::commitLineData(QString line, std::deque<TChar> chars, const char c
     const int lineIndex = lineBuffer.size() - 1;
     mCommitLineIndices.append(lineIndex);
     if (!mSkipTriggerProcessing) {
-        mpHost->mpConsole->runTriggers(lineIndex);
+        mpHost->runTriggers(lineIndex);
     }
 
     // Only use of TBuffer::wrap(), breaks up new text

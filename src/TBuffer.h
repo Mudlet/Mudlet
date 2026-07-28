@@ -300,6 +300,9 @@ public:
     ~TBuffer();
     TBuffer(const TBuffer& other);
     TBuffer& operator=(const TBuffer& other);
+    // libmudlet Wave 3 step 2: the main console's model outlives any single view,
+    // so its buffer's back-pointer is (re)bound when a view attaches.
+    void setConsole(TConsole* pConsole) { mpConsole = pConsole; }
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);

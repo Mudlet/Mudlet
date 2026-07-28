@@ -358,6 +358,7 @@ set(mudlet_HDRS
     TBuffer.h
     TCommandLine.h
     TConsole.h
+    TConsoleModel.h
     TDebug.h
     TDetachedWindow.h
     TDockWidget.h

@@ -39,6 +39,7 @@
 #include "mudlet.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
@@ -1778,6 +1779,44 @@ QList<int> Host::getStopWatchIds() const
         ids.append(it->first);
     }
     return ids;
+}
+
+std::shared_ptr<TConsoleModel> Host::sharedMainConsoleModel()
+{
+    if (!mpMainConsoleModel) {
+        // Created without a view; the view (re)binds the buffer's back-pointer
+        // when it attaches (TConsole::TConsole).
+        mpMainConsoleModel = std::make_shared<TConsoleModel>(this, nullptr);
+    }
+    return mpMainConsoleModel;
+}
+
+TConsoleModel& Host::mainConsoleModel()
+{
+    return *sharedMainConsoleModel();
+}
+
+// libmudlet Wave 3 step 2 (spike): the per-line trigger orchestration used to
+// live on the main-console widget (TMainConsole::runTriggers). It drives model
+// state only, so it now runs on Host against the core model - proving the
+// pipeline needs no view.
+void Host::runTriggers(int line)
+{
+    TConsoleModel& consoleModel = mainConsoleModel();
+    consoleModel.mUserCursor.setY(line);
+    consoleModel.mIsPromptLine = consoleModel.buffer.promptBuffer.at(line);
+    consoleModel.mEngineCursor = line;
+    consoleModel.mUserCursor.setX(0);
+    consoleModel.mCurrentLine = consoleModel.buffer.line(line);
+    getLuaInterpreter()->set_lua_string(TConsole::cmLuaLineVariable, consoleModel.mCurrentLine);
+    consoleModel.mCurrentLine.append('\n');
+
+    if (mudlet::smDebugMode) {
+        TDebug(Qt::darkGreen, Qt::black) << "new line arrived:" >> this;
+        TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << consoleModel.mCurrentLine << "\n" >> this;
+    }
+    incomingStreamProcessor(consoleModel.mCurrentLine, line);
+    consoleModel.mIsPromptLine = false;
 }
 
 void Host::incomingStreamProcessor(const QString& data, int line)
