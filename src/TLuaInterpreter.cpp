@@ -59,10 +59,10 @@
 #include <math.h>
 
 #include <QtConcurrentRun>
+#include <QApplication>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QFileDialog>
 #include <QSettings>
 #if defined(Q_OS_MACOS)
 // Only used for this OS:
@@ -72,11 +72,9 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QSaveFile>
-#include <QTableWidget>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <QTextStream>
-#include <QToolTip>
 #include <QFileInfo>
 #include <QVector>
 #include <limits>
@@ -3198,7 +3196,7 @@ int TLuaInterpreter::getOS(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProcessID
 int TLuaInterpreter::getProcessID(lua_State* L)
 {
-    int pid = QApplication::applicationPid();
+    int pid = QCoreApplication::applicationPid();
     lua_pushinteger(L, pid);
     return 1;
 }
@@ -3322,6 +3320,24 @@ std::pair<bool, QString> TLuaInterpreter::validateLuaCodeParam(int index)
     }
     const QString script{lua_tostring(L, index)};
     return validLuaCode(script);
+}
+
+// No documentation available in wiki - internal function
+// Validates the Lua code argument at `index`; on success returns false. On
+// failure it formats "<functionName>: bad argument #<index> (<reason>)" onto
+// the Lua stack and returns true, expecting the caller to raise it with
+// `return lua_error(L)` on the next line. Raising here would longjmp past this
+// function's QString destructor and leak its buffer, so the message is copied
+// into the Lua-owned stack string while the QString is alive and the QString is
+// then released by this function's normal return, before the caller raises.
+bool TLuaInterpreter::reportInvalidLuaCodeParam(lua_State* L, const char* functionName, const int index)
+{
+    auto [isValid, errorMessage] = validateLuaCodeParam(index);
+    if (isValid) {
+        return false;
+    }
+    lua_pushfstring(L, "%s: bad argument #%d (%s)", functionName, index, errorMessage.toUtf8().constData());
+    return true;
 }
 
 // No documentation available in wiki - internal function
