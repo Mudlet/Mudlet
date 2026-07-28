@@ -1258,14 +1258,18 @@ describe("Tests mapper functions against a shared fixture", function()
     it("setCustomEnvColor for IDs 257-272 also updates the profile ANSI colour (documented sync)", function()
       -- Since Mudlet 4.20 setting 257-272 deliberately mutates the profile's
       -- mapper colours; getCustomEnvColorTable reflects the stored value. This
-      -- is profile state that outlives even deleteMap, so it is restored.
+      -- is profile state that outlives even deleteMap, so restore it from a
+      -- finally() hook: a failed assertion below must not leave the persistent
+      -- self-test profile stuck on the test colour for later runs.
       local before = getCustomEnvColorTable()[257]
+      finally(function()
+        setCustomEnvColor(257, before[1], before[2], before[3], before[4])
+      end)
       assert.is_true(setCustomEnvColor(257, 1, 2, 3, 255))
       local colors = getCustomEnvColorTable()
       assert.are.equal(1, colors[257][1])
       assert.are.equal(2, colors[257][2])
       assert.are.equal(3, colors[257][3])
-      assert.is_true(setCustomEnvColor(257, before[1], before[2], before[3], before[4]))
     end)
 
     it("setCustomEnvColor returns nil and a message for an out-of-range component", function()
