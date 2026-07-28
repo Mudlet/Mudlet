@@ -569,7 +569,7 @@ function logTestError()
 
   -- MUDLET_TEST_FAILURE_MARKER lets parallel runs each use their own failure
   -- marker; without it the shared /tmp path leaks failures between runs. Treat an
-  -- empty value as unset to match the C++ MUDLET_CONFIG_DIR handling.
+  -- empty value as unset, matching how the C++ side treats empty env vars.
   local markerPath = os.getenv("MUDLET_TEST_FAILURE_MARKER")
   if not markerPath or markerPath == "" then
     local os_name = getOS()

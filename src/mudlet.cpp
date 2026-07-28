@@ -924,17 +924,7 @@ void mudlet::setupConfig()
     QString execDir = findExecutableDir();
     QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
     QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
-    // MUDLET_CONFIG_DIR relocates the entire config root (profiles, sqlite
-    // databases, settings) so isolated/parallel test runs cannot clobber each
-    // other or a developer's real profiles. QDir::homePath() ignores
-    // XDG_CONFIG_HOME, so this dedicated variable is the only supported override.
-    const QString overrideConfDir = qEnvironmentVariable("MUDLET_CONFIG_DIR");
-    if (!overrideConfDir.isEmpty()) {
-        confPath = QDir::cleanPath(overrideConfDir);
-        if (!QDir().mkpath(confPath)) {
-            qWarning() << "mudlet::setupConfig() WARNING: could not create MUDLET_CONFIG_DIR:" << confPath;
-        }
-    } else if (QFileInfo(markerExecDir).isFile()) {
+    if (QFileInfo(markerExecDir).isFile()) {
         QString portPath = readMarkerFile(markerExecDir);
         if (portPath.isEmpty()) {
             portPath = qsl("./portable"); // fallback value for empty portable.txt
@@ -952,7 +942,15 @@ void mudlet::setupConfig()
         }
         confPath = portPath;
     } else {
-        confPath = confDirDefault;
+        // Honor XDG_CONFIG_HOME (with a migration guard), falling back to the
+        // legacy ~/.config/mudlet when it is unset. Isolated/parallel test runs
+        // opt in by pre-creating $XDG_CONFIG_HOME/mudlet before launch.
+        const auto resolution = utils::xdgConfigDir(confDirDefault);
+        confPath = resolution.path;
+        if (resolution.migrationPending) {
+            qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet is not a Mudlet config directory yet, so the existing " << confPath
+                              << " is still in use. Move it to $XDG_CONFIG_HOME/mudlet to migrate.";
+        }
     }
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
 

@@ -115,6 +115,48 @@ public:
         return QDir::cleanPath(base + "/" + path);
     }
 
+    struct ConfigDirResolution
+    {
+        QString path;
+        // True only in the migration-guard case: XDG_CONFIG_HOME is set but
+        // $XDG_CONFIG_HOME/mudlet is not (yet) Mudlet's, so an existing legacy
+        // dir is used instead. The caller can then hint the user how to migrate.
+        bool migrationPending = false;
+    };
+
+    // Resolve Mudlet's config root honoring XDG_CONFIG_HOME, with a migration
+    // guard. The caller handles portable.txt first (it still wins); this covers
+    // the rest:
+    //  - XDG_CONFIG_HOME unset/empty/relative   -> legacyDefault (~/.config/mudlet)
+    //  - $XDG_CONFIG_HOME/mudlet is Mudlet's      -> it (already migrated / opt-in)
+    //  - not Mudlet's but legacyDefault exists    -> legacyDefault, so exporting
+    //    XDG_CONFIG_HOME never strands existing profiles
+    //  - neither is usable                        -> $XDG_CONFIG_HOME/mudlet (fresh)
+    // "Mudlet's" means the dir holds a Mudlet.ini or profiles/, or is an empty
+    // opt-in dir a test harness pre-created. This deliberately ignores the stale
+    // $XDG_CONFIG_HOME/mudlet/Mudlet.conf that pre-4.19 Mudlet wrote there (its
+    // NativeFormat settings) while profiles stayed in ~/.config/mudlet - treating
+    // that leftover as the config root would hide such a user's profiles.
+    static ConfigDirResolution xdgConfigDir(const QString& legacyDefault)
+    {
+        const QString xdgConfigHome = qEnvironmentVariable("XDG_CONFIG_HOME");
+        // The XDG base-dir spec requires an absolute path; a relative (or empty)
+        // value must be ignored, which also avoids a surprising CWD-relative root.
+        if (xdgConfigHome.isEmpty() || !QDir::isAbsolutePath(xdgConfigHome)) {
+            return {legacyDefault, false};
+        }
+        const QString xdgTarget = QDir::cleanPath(qsl("%1/mudlet").arg(xdgConfigHome));
+        const QDir xdgDir(xdgTarget);
+        const bool xdgIsMudlets = xdgDir.exists() && (QFileInfo::exists(qsl("%1/Mudlet.ini").arg(xdgTarget)) || QDir(qsl("%1/profiles").arg(xdgTarget)).exists() || xdgDir.isEmpty());
+        if (xdgIsMudlets) {
+            return {xdgTarget, false};
+        }
+        if (QDir(legacyDefault).exists()) {
+            return {legacyDefault, true};
+        }
+        return {xdgTarget, false};
+    }
+
     inline static const auto scmfileSystemUnsafeChars = QRegularExpression(qsl(R"REGEX([/\\:*?"<>|])REGEX"));
     // Sanitize a string for safe use as filename/path component
     // Replaces filesystem-unsafe characters with underscores and limits length

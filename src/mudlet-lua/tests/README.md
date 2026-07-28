@@ -72,26 +72,25 @@ caller can detect it.
 By default Mudlet reads and writes `~/.config/mudlet`, so two runs started at the
 same time (for example from different checkouts) share one `Mudlet self-test`
 profile and collide on its sqlite databases, and leftover state from a previous
-run is not cleaned up. To give a run its own pristine, isolated config root set:
+run is not cleaned up. To give a run its own pristine, isolated config root:
 
-- `MUDLET_CONFIG_DIR` - absolute path used instead of `~/.config/mudlet` for
-  profiles, sqlite databases and settings. Created if missing, and it takes
-  precedence over portable-mode `portable.txt` markers.
+- `XDG_CONFIG_HOME` - Mudlet uses `$XDG_CONFIG_HOME/mudlet` as its config root
+  (profiles, sqlite databases, settings, and password storage). Because an
+  existing `~/.config/mudlet` otherwise wins (so a system-wide `XDG_CONFIG_HOME`
+  export never strands real profiles), a test harness must **pre-create**
+  `$XDG_CONFIG_HOME/mudlet` to opt in.
 - `MUDLET_TEST_FAILURE_MARKER` - absolute path for the failure marker, so it is
   not shared either.
-- `XDG_CONFIG_HOME` - optional. Password/keychain-fallback storage resolves via
-  `QStandardPaths` rather than `MUDLET_CONFIG_DIR`; set this too if a run stores
-  credentials. The busted suite does not, so it is not required for it.
 
 ```sh
 CONFIG_DIR=$(mktemp -d)
+mkdir -p "$CONFIG_DIR/mudlet"   # pre-create to opt into the isolated config root
 AUTORUN_BUSTED_TESTS=true \
 MUDLET_TEST_MODE=1 \
 QUIT_MUDLET_AFTER_TESTS=true \
 TESTS_DIRECTORY=<full path>/src/mudlet-lua/tests \
-MUDLET_CONFIG_DIR="$CONFIG_DIR" \
+XDG_CONFIG_HOME="$CONFIG_DIR" \
 MUDLET_TEST_FAILURE_MARKER="$CONFIG_DIR/busted-tests-failed" \
-XDG_CONFIG_HOME="$CONFIG_DIR/xdg" \
 xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror
 ```
 
