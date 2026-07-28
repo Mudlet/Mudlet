@@ -35,6 +35,8 @@
 #include <QAudioOutput>
 #include <QMediaPlayer>
 
+class QJsonObject;
+
 using QMediaPlayerPlaybackState = QMediaPlayer::PlaybackState;
 class TMediaPlayer
 {
@@ -147,6 +149,15 @@ public:
     void printClosedCaption(const TMediaData& mediaData, const QString& action) const;
     void stopAllMediaPlayers();
 
+    // Returns true if mediaFileName would resolve to a location outside mediaRoot, either
+    // lexically (e.g. via "../" traversal) or through a symlink component that already exists
+    // under mediaRoot but points elsewhere. Static so it can be unit-tested without a Host.
+    static bool mediaFilePathEscapesMediaDir(const QString& mediaRoot, const QString& mediaFileName);
+
+signals:
+    void signal_setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
+    void signal_hideVideoOutput(TMediaPlayer* player);
+
 private slots:
     void slot_writeFile(QNetworkReply* reply);
 
@@ -161,6 +172,7 @@ private:
     QUrl parseUrl(TMediaData& mediaData);
     static bool isValidUrl(QUrl& url);
     static bool isFileRelative(TMediaData& mediaData);
+    bool mediaFilePathEscapesMediaDir(TMediaData& mediaData) const;
     QStringList parseFileNameList(TMediaData& mediaData, QDir& dir);
     QStringList getFileNameList(TMediaData& mediaData);
     QUrl getFileUrl(TMediaData& mediaData);

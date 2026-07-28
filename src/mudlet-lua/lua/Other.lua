@@ -1284,6 +1284,7 @@ function getConfig(...)
       "enableMSSP",
       "enableMTTS",
       "enableMXP",
+      "enableNAWS",
       "f3SearchEnabled",
       "fixUnnecessaryLinebreaks",
       "forceNewEnvironNegotiationOff",
@@ -1311,6 +1312,8 @@ function getConfig(...)
       "specialForceGAOff",
       "specialForceMxpNegotiationOff",
       "specialForceMXPProcessorOn",      -- read-only in getConfig
+      "undoServerWrap",
+      "undoServerWrapWidth",
       "versionInTTYPE",
     }
     for _,v in ipairs(list) do

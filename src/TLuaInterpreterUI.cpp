@@ -30,6 +30,7 @@
 #include "TLuaInterpreter.h"
 
 #include <QClipboard>
+#include <QGuiApplication>
 
 #include "EAction.h"
 #include "Host.h"
@@ -64,9 +65,6 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QFileDialog>
-#include <QTableWidget>
-#include <QToolTip>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -1543,7 +1541,7 @@ int TLuaInterpreter::getBorderColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getClipboardText
 int TLuaInterpreter::getClipboardText(lua_State* L)
 {
-    QClipboard* clipboard = QApplication::clipboard();
+    QClipboard* clipboard = QGuiApplication::clipboard();
     lua_pushstring(L, clipboard->text().toUtf8().constData());
     return 1;
 }
@@ -2738,13 +2736,25 @@ int TLuaInterpreter::resetCmdLineAction(lua_State* L)
 int TLuaInterpreter::resetBackgroundImage(lua_State* L)
 {
     QString windowName = qsl("main");
+    bool fullWindow = false;
     const int n = lua_gettop(L);
-    if (n > 0) {
+    int counter = 1;
+    if (n > 0 && lua_type(L, 1) == LUA_TSTRING) {
         windowName = getVerifiedString(L, __func__, 1, "console name");
+        counter++;
+    }
+
+    if (counter <= n) {
+        fullWindow = getVerifiedBool(L, __func__, counter, "fullWindow");
+        counter++;
+    }
+
+    if (fullWindow && !(windowName.isEmpty() || windowName.compare(qsl("main"), Qt::CaseSensitive) == 0)) {
+        return warnArgumentValue(L, __func__, qsl("the full window background can only be reset on the main console"));
     }
 
     Host* host = &getHostFromLua(L);
-    if (!host->resetBackgroundImage(windowName)) {
+    if (!host->resetBackgroundImage(windowName, fullWindow)) {
         return warnArgumentValue(L, __func__, qsl("console '%1' not found").arg(windowName));
     }
     lua_pushboolean(L, true);
@@ -3081,6 +3091,7 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     QString windowName = qsl("main");
     QString imgPath;
     int mode = 1;
+    bool fullWindow = false;
     int counter = 1;
     const int n = lua_gettop(L);
     if (n > 1 && lua_type(L, 2) == LUA_TSTRING) {
@@ -3091,16 +3102,30 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     imgPath = getVerifiedString(L, __func__, counter, "image path");
     counter++;
 
-    if (n > 2 || (counter == 2 && n > 1)) {
+    if (counter <= n) {
         mode = getVerifiedInt(L, __func__, counter, "mode");
+        counter++;
     }
 
-    if (mode < 1 || mode > 4) {
-        return warnArgumentValue(L, __func__, qsl("%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style'").arg(mode));
+    if (counter <= n) {
+        fullWindow = getVerifiedBool(L, __func__, counter, "fullWindow");
+        counter++;
+    }
+
+    if (mode < 1 || mode > 5) {
+        return warnArgumentValue(L, __func__, qsl("%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style', 5 'cover'").arg(mode));
+    }
+
+    if (mode == 5 && !fullWindow) {
+        return warnArgumentValue(L, __func__, qsl("mode 'cover' is not supported for the main display - pass true as the 4th argument to apply it to the full window background instead"));
+    }
+
+    if (fullWindow && !(windowName.isEmpty() || windowName.compare(qsl("main"), Qt::CaseSensitive) == 0)) {
+        return warnArgumentValue(L, __func__, qsl("the full window background can only be used with the main console"));
     }
 
     Host* host = &getHostFromLua(L);
-    if (!host->setBackgroundImage(windowName, imgPath, mode)) {
+    if (!host->setBackgroundImage(windowName, imgPath, mode, fullWindow)) {
         return warnArgumentValue(L, __func__, qsl("console or label '%1' not found").arg(windowName));
     }
 
@@ -3383,7 +3408,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setClipboardText
 int TLuaInterpreter::setClipboardText(lua_State* L)
 {
-    QClipboard* clipboard = QApplication::clipboard();
+    QClipboard* clipboard = QGuiApplication::clipboard();
     clipboard->setText(getVerifiedString(L, __func__, 1, "text"));
     lua_pushboolean(L, true);
     return 1;
@@ -3722,20 +3747,6 @@ int TLuaInterpreter::setMapWindowTitle(lua_State* L)
         return warnArgumentValue(L, __func__, message);
     }
 
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMiniConsoleFontSize
-int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
-{
-    const QString windowName = getVerifiedString(L, __func__, 1, "miniconsole name");
-    const int size = getVerifiedInt(L, __func__, 2, "font size");
-    auto console = CONSOLE(L, windowName);
-    if (size < 1) {
-        return warnArgumentValue(L, __func__, qsl("setting font size of '%1' failed").arg(windowName));
-    }
-    console->setFontSize(size);
     lua_pushboolean(L, true);
     return 1;
 }

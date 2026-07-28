@@ -58,21 +58,22 @@
 #include <math.h>
 
 #include <QtConcurrentRun>
+#include <QApplication>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QFileDialog>
 #include <QSettings>
 #if defined(Q_OS_MACOS)
 // Only used for this OS:
 #include <QStandardPaths>
 #endif
 #include <QJsonDocument>
+#include <QJsonObject>
 #include <QJsonParseError>
-#include <QTableWidget>
+#include <QSaveFile>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
-#include <QToolTip>
+#include <QTextStream>
 #include <QFileInfo>
 #include <QVector>
 #include <limits>
@@ -1277,7 +1278,7 @@ int TLuaInterpreter::getModulePath(lua_State* L)
         lua_pushstring(L, modPath.toUtf8().constData());
         return 1;
     }
-    return 0;
+    return warnArgumentValue(L, __func__, "module doesn't exist");
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getModulePriority
@@ -1290,8 +1291,7 @@ int TLuaInterpreter::getModulePriority(lua_State* L)
         lua_pushnumber(L, priority);
         return 1;
     }
-    lua_pushstring(L, "getModulePriority: module doesn't exist");
-    return lua_error(L);
+    return warnArgumentValue(L, __func__, "module doesn't exist");
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setModulePriority
@@ -2235,10 +2235,9 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
     if (name.isEmpty()) {
         if (luaLine < host.mpConsole->buffer.timeBuffer.size()) {
             lua_pushstring(L, host.mpConsole->buffer.timeBuffer.at(luaLine).toUtf8().constData());
-        } else {
-            lua_pushstring(L, "getTimestamp: invalid line number");
+            return 1;
         }
-        return 1;
+        return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it is beyond the last line of the buffer").arg(luaLine));
     }
     auto pC = host.mpConsole->mSubConsoleMap.value(name);
     if (!pC) {
@@ -2246,10 +2245,9 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
     }
     if (luaLine < pC->buffer.timeBuffer.size()) {
         lua_pushstring(L, pC->buffer.timeBuffer.at(luaLine).toUtf8().constData());
-    } else {
-        lua_pushstring(L, "getTimestamp: invalid line number");
+        return 1;
     }
-    return 1;
+    return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it is beyond the last line of the buffer").arg(luaLine));
 }
 
 
@@ -3205,7 +3203,7 @@ int TLuaInterpreter::getOS(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProcessID
 int TLuaInterpreter::getProcessID(lua_State* L)
 {
-    int pid = QApplication::applicationPid();
+    int pid = QCoreApplication::applicationPid();
     lua_pushinteger(L, pid);
     return 1;
 }
@@ -3329,6 +3327,24 @@ std::pair<bool, QString> TLuaInterpreter::validateLuaCodeParam(int index)
     }
     const QString script{lua_tostring(L, index)};
     return validLuaCode(script);
+}
+
+// No documentation available in wiki - internal function
+// Validates the Lua code argument at `index`; on success returns false. On
+// failure it formats "<functionName>: bad argument #<index> (<reason>)" onto
+// the Lua stack and returns true, expecting the caller to raise it with
+// `return lua_error(L)` on the next line. Raising here would longjmp past this
+// function's QString destructor and leak its buffer, so the message is copied
+// into the Lua-owned stack string while the QString is alive and the QString is
+// then released by this function's normal return, before the caller raises.
+bool TLuaInterpreter::reportInvalidLuaCodeParam(lua_State* L, const char* functionName, const int index)
+{
+    auto [isValid, errorMessage] = validateLuaCodeParam(index);
+    if (isValid) {
+        return false;
+    }
+    lua_pushfstring(L, "%s: bad argument #%d (%s)", functionName, index, errorMessage.toUtf8().constData());
+    return true;
 }
 
 // No documentation available in wiki - internal function
@@ -7620,12 +7636,28 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.mEnableNAWS = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("undoServerWrap")) {
+        host.mUndoServerWrap = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("undoServerWrapWidth")) {
+        const int width = getVerifiedInt(L, __func__, 2, "value");
+        if (width < 20 || width > 500) {
+            return warnArgumentValue(L, __func__, qsl("width %1 is outside of the supported range of 20 to 500").arg(width));
+        }
+        host.mUndoServerWrapWidth = width;
+        return success();
+    }
     if (key == qsl("askTlsAvailable")) {
         host.mAskTlsAvailable = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("promptForMXPProcessorOn")) {
         host.mPromptedForMXPProcessorOn = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("specialForceMXPProcessorOn")) {
+        host.setForceMXPProcessorOn(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
     if (key == qsl("promptForVersionInTTYPE")) {
@@ -8025,6 +8057,14 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("enableNAWS"),
              [&]() {
                  lua_pushboolean(L, host.mEnableNAWS);
+             }},
+            {qsl("undoServerWrap"),
+             [&]() {
+                 lua_pushboolean(L, host.mUndoServerWrap);
+             }},
+            {qsl("undoServerWrapWidth"),
+             [&]() {
+                 lua_pushnumber(L, host.mUndoServerWrapWidth);
              }},
             {qsl("logDirectory"),
              [&]() {
