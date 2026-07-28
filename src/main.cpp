@@ -232,7 +232,11 @@ static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
     const QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
     const QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
 
-    if (QFileInfo(markerExecDir).isFile()) {
+    // Keep the config root in sync with setupConfig()'s MUDLET_CONFIG_DIR override.
+    const QString overrideConfDir = qEnvironmentVariable("MUDLET_CONFIG_DIR");
+    if (!overrideConfDir.isEmpty()) {
+        confPath = QDir::cleanPath(overrideConfDir);
+    } else if (QFileInfo(markerExecDir).isFile()) {
         QFile file(markerExecDir);
         QString portPath;
         if (file.open(QIODevice::ReadOnly)) {

@@ -924,7 +924,17 @@ void mudlet::setupConfig()
     QString execDir = findExecutableDir();
     QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
     QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
-    if (QFileInfo(markerExecDir).isFile()) {
+    // MUDLET_CONFIG_DIR relocates the entire config root (profiles, sqlite
+    // databases, settings) so isolated/parallel test runs cannot clobber each
+    // other or a developer's real profiles. QDir::homePath() ignores
+    // XDG_CONFIG_HOME, so this dedicated variable is the only supported override.
+    const QString overrideConfDir = qEnvironmentVariable("MUDLET_CONFIG_DIR");
+    if (!overrideConfDir.isEmpty()) {
+        confPath = QDir::cleanPath(overrideConfDir);
+        if (!QDir().mkpath(confPath)) {
+            qWarning() << "mudlet::setupConfig() WARNING: could not create MUDLET_CONFIG_DIR:" << confPath;
+        }
+    } else if (QFileInfo(markerExecDir).isFile()) {
         QString portPath = readMarkerFile(markerExecDir);
         if (portPath.isEmpty()) {
             portPath = qsl("./portable"); // fallback value for empty portable.txt

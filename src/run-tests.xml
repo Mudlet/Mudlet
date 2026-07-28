@@ -567,19 +567,32 @@ local errorLogged = false
 function logTestError()
   if errorLogged then return end
 
-  local os_name = getOS()
-  if os_name == "linux" or os_name == "mac" then
-    file = io.open("/tmp/busted-tests-failed", "w")
-    file:write("Lua busted tests failed")
-    file:close()
-  elseif os_name == "windows" then
-    temp_directory = os.getenv("TEMP")
-    file = io.open(temp_directory.."\\busted-tests-failed", "w")
-    file:write("Lua busted tests failed")
-    file:close()
-  else
-    ioprint("Tests failed, but did not know how to log the error for "..os_name)
+  -- MUDLET_TEST_FAILURE_MARKER lets parallel runs each use their own failure
+  -- marker; without it the shared /tmp path leaks failures between runs. Treat an
+  -- empty value as unset to match the C++ MUDLET_CONFIG_DIR handling.
+  local markerPath = os.getenv("MUDLET_TEST_FAILURE_MARKER")
+  if not markerPath or markerPath == "" then
+    local os_name = getOS()
+    if os_name == "linux" or os_name == "mac" then
+      markerPath = "/tmp/busted-tests-failed"
+    elseif os_name == "windows" then
+      markerPath = os.getenv("TEMP").."\\busted-tests-failed"
+    else
+      ioprint("Tests failed, but did not know how to log the error for "..os_name)
+      errorLogged = true
+      return
+    end
   end
+
+  -- If the marker cannot be written the run must not look like it passed, so
+  -- shout about it rather than crashing the failure handler on a nil file.
+  local file = io.open(markerPath, "w")
+  if not file then
+    ioprint("Tests failed, but could not write the failure marker to "..markerPath)
+    return
+  end
+  file:write("Lua busted tests failed")
+  file:close()
   errorLogged = true
 end</script>
 			<eventHandlerList>
