@@ -4261,7 +4261,7 @@ bool Host::closeWindow(const QString& name)
 bool Host::echoWindow(const QString& name, const QString& text)
 {
     if (!mpConsole) {
-        return -1;
+        return false;
     }
 
     auto pL = mpConsole->mLabelMap.value(name);
@@ -4281,7 +4281,7 @@ bool Host::echoWindow(const QString& name, const QString& text)
 bool Host::pasteWindow(const QString& name)
 {
     if (!mpConsole) {
-        return -1;
+        return false;
     }
 
     auto pC = mpConsole->mSubConsoleMap.value(name);
