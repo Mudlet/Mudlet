@@ -3323,6 +3323,24 @@ std::pair<bool, QString> TLuaInterpreter::validateLuaCodeParam(int index)
 }
 
 // No documentation available in wiki - internal function
+// Validates the Lua code argument at `index`; on success returns false. On
+// failure it formats "<functionName>: bad argument #<index> (<reason>)" onto
+// the Lua stack and returns true, expecting the caller to raise it with
+// `return lua_error(L)` on the next line. Raising here would longjmp past this
+// function's QString destructor and leak its buffer, so the message is copied
+// into the Lua-owned stack string while the QString is alive and the QString is
+// then released by this function's normal return, before the caller raises.
+bool TLuaInterpreter::reportInvalidLuaCodeParam(lua_State* L, const char* functionName, const int index)
+{
+    auto [isValid, errorMessage] = validateLuaCodeParam(index);
+    if (isValid) {
+        return false;
+    }
+    lua_pushfstring(L, "%s: bad argument #%d (%s)", functionName, index, errorMessage.toUtf8().constData());
+    return true;
+}
+
+// No documentation available in wiki - internal function
 // returns pair where first is bool stating true the given Lua code is valid, false otherwise
 // second is empty if code is valid, error message if not valid
 std::pair<bool, QString> TLuaInterpreter::validLuaCode(const QString& code)

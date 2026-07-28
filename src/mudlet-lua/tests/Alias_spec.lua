@@ -231,9 +231,12 @@ describe("Alias processing", function()
     describe("permAlias argument validation", function()
 
         it("errors when the lua code (argument 4) is not a string", function()
-            assert.has_error(function()
+            local ok, err = pcall(function()
                 permAlias("SpecPermAliasBad", "", "^whatever$", 999)
             end)
+            assert.is_false(ok, "invalid lua code should error")
+            assert.is_truthy(tostring(err):find("permAlias", 1, true),
+                "the error should name permAlias, got: " .. tostring(err))
         end)
 
         it("errors when the regex pattern (argument 3) is missing", function()
