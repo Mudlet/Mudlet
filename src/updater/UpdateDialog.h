@@ -26,6 +26,8 @@
 #include <QDialog>
 #include <QVariant>
 
+#include <memory>
+
 class QAbstractButton;
 class QPixmap;
 class QSettings;
@@ -62,6 +64,8 @@ public:
     void setOpenExternalLinks(bool open);
     bool openExternalLinks() const;
 
+    void disableAutoShow();
+
 signals:
     void ready();
     void installButtonClicked(QAbstractButton* button, const QString& filePath);
@@ -75,7 +79,7 @@ public slots:
     void showIfUpdatesAvailableOrQuit();
 
 private:
-    Ui::UpdateDialog* mUi;
+    std::unique_ptr<Ui::UpdateDialog> mUi;
     Feed* mFeed;
     Type mType;
 

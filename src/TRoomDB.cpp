@@ -34,6 +34,7 @@ const QString ROOM_UI_SHOWNAME = qsl("room.ui_showName");
 const QString ROOM_UI_NAMEPOS = qsl("room.ui_nameOffset");
 const QString ROOM_UI_NAMEFONT = qsl("room.ui_nameFont");
 const QString ROOM_UI_NAMESIZE = qsl("room.ui_nameSize");
+const QString ROOM_UI_NAMECOLOR = qsl("room.ui_nameColor");
 const QString ROOM_UI_BORDERCOLOR = qsl("room.ui_borderColor");
 const QString ROOM_UI_BORDERTHICKNESS = qsl("room.ui_borderThickness");
 
@@ -93,8 +94,8 @@ bool TRoomDB::addRoom(int id)
         return true;
     }
     if (id <= 0) {
-        QString error = qsl("addRoom: illegal room id=%1. roomID must be > 0").arg(id);
-        mpMap->logError(error);
+        mpMap->logError(tr("Room not created. RoomID %1 is not allowed as room numbers must be greater than zero!")
+                                .arg(QString::number(id)));
     }
     return false;
 }
@@ -291,16 +292,19 @@ bool TRoomDB::__removeRoom(int id)
             }
             ++i;
         }
+        const int areaID = pR->getArea();
+        TArea* pA = getArea(areaID);
+        if (pA) {
+            // removeRoom needs the TRoom to be present in the DB so it can look
+            // up coordinates for index maintenance; call it before removing the
+            // room from the rooms hash.
+            pA->removeRoom(id);
+        }
         rooms.remove(id);
         if (roomIDToHash.contains(id)) {
             const QString hash = roomIDToHash[id];
             roomIDToHash.remove(id);
             hashToRoomID.remove(hash);
-        }
-        const int areaID = pR->getArea();
-        TArea* pA = getArea(areaID);
-        if (pA) {
-            pA->removeRoom(id);
         }
         if ((!mpTempRoomDeletionSet) || mpTempRoomDeletionSet->size() == 1) { // if NOT deleting multiple rooms
             entranceMap.remove(id);                                           // Only removes matching keys
@@ -392,7 +396,8 @@ bool TRoomDB::removeArea(int id)
 
         mpMap->mMapGraphNeedsUpdate = true;
         return true;
-    } else if (areaNamesMap.contains(id)) {
+    }
+    if (areaNamesMap.contains(id)) {
         // Handle corner case where the area name was created but not used
         areaNamesMap.remove(id);
         return true;
@@ -488,12 +493,11 @@ TArea* TRoomDB::getRawArea(int id, bool* isValid = nullptr)
             *isValid = true;
         }
         return areas.value(id);
-    } else {
-        if (isValid) {
-            *isValid = false;
-        }
-        return nullptr;
     }
+    if (isValid) {
+        *isValid = false;
+    }
+    return nullptr;
 }
 
 bool TRoomDB::setAreaName(int areaID, QString name)
@@ -505,15 +509,15 @@ bool TRoomDB::setAreaName(int areaID, QString name)
     if (name.isEmpty()) {
         qWarning() << "TRoomDB::setAreaName((int)areaID, (QString)name): WARNING: Empty name supplied.";
         return false;
-    } else if (areaNamesMap.values().count(name) > 0) {
+    }
+    if (areaNamesMap.values().count(name) > 0) {
         // That name is already IN the areaNamesMap
         if (areaNamesMap.value(areaID) == name) {
             // The trivial case, the given areaID already IS that name
             return true;
-        } else {
-            qWarning() << "TRoomDB::setAreaName((int)areaID, (QString)name): WARNING: Duplicate name supplied" << name << "- that is not permitted any longer!";
-            return false;
         }
+        qWarning() << "TRoomDB::setAreaName((int)areaID, (QString)name): WARNING: Duplicate name supplied" << name << "- that is not permitted any longer!";
+        return false;
     }
     areaNamesMap[areaID] = name;
     // This creates a NEW area name with given areaID if the ID was not
@@ -540,11 +544,10 @@ bool TRoomDB::addArea(int id)
             areaNamesMap.insert(id, newAreaName);
         }
         return true;
-    } else {
-        QString error = tr("Area with ID %1 already exists!").arg(id);
-        mpMap->logError(error);
-        return false;
     }
+    mpMap->logError(tr("Area not added. An area with AreaID %1 already exists!")
+                            .arg(QString::number(id)));
+    return false;
 }
 
 int TRoomDB::createNewAreaID()
@@ -560,12 +563,11 @@ int TRoomDB::addArea(QString name)
 {
     // reject it if area name already exists or is empty
     if (name.isEmpty()) {
-        QString error = tr("An Unnamed Area is (no longer) permitted!");
-        mpMap->logError(error);
+        mpMap->logError(tr("Area not added. An unnamed area (empty area name) is (no longer) permitted!"));
         return 0;
-    } else if (areaNamesMap.values().contains(name)) {
-        QString error = tr("An area called %1 already exists!").arg(name);
-        mpMap->logError(error);
+    }
+    if (areaNamesMap.values().contains(name)) {
+        mpMap->logError(tr("Area not added. An area called \"%1\" already exists!").arg(name));
         return 0;
     }
 
@@ -575,9 +577,8 @@ int TRoomDB::addArea(QString name)
         // This will overwrite the "Unnamed Area_###" that addArea( areaID )
         // will generate - but that is fine.
         return areaID;
-    } else {
-        return 0; //fail
     }
+    return 0; //fail
 }
 
 // this func is called by the xml map importer
@@ -588,7 +589,8 @@ bool TRoomDB::addArea(int id, QString name)
 {
     if (((!name.isEmpty()) && areaNamesMap.values().contains(name)) || areaNamesMap.keys().contains(id)) {
         return false;
-    } else if (addArea(id)) {
+    }
+    if (addArea(id)) {
         // This will generate an "Unnamed Area_###" area name which we should
         // overwrite only if we have a name!
         if (!name.isEmpty()) {
@@ -606,6 +608,7 @@ bool TRoomDB::addArea(TArea* pA, const int id, const QString& name)
         return false;
     }
 
+    deleteDisplacedArea(id, pA);
     areas.insert(id, pA);
     areaNamesMap.insert(id, name);
     // Need to force recalculation of limits:
@@ -1307,7 +1310,23 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
 
 void TRoomDB::restoreSingleArea(int areaID, TArea* pA)
 {
+    deleteDisplacedArea(areaID, pA);
     areas[areaID] = pA;
+}
+
+// The default (-1) area created by our constructor gets overwritten when a
+// map that contains it is loaded - delete the displaced TArea so it does not
+// leak:
+void TRoomDB::deleteDisplacedArea(int areaID, TArea* pA)
+{
+    TArea* pExisting = areas.value(areaID);
+    if (!pExisting || pExisting == pA) {
+        return;
+    }
+    // Prevent TArea::~TArea() from re-entrantly calling removeArea(this),
+    // mirroring the pattern in TRoomDB::removeArea(int)
+    pExisting->mpRoomDB = nullptr;
+    delete pExisting;
 }
 
 bool TRoomDB::restoreSingleRoom(int i, TRoom* pT)

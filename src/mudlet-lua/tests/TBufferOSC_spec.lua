@@ -86,11 +86,69 @@ describe("Tests TBuffer OSC sequence handling", function()
           clearWindow("oscTestBuffer3")
           echo("oscTestBuffer3", edgeCase)
         end)
-        
+
         assert.is_true(testSuccess, "Edge case " .. i .. " should not crash")
       end
     end)
-    
+
   end)
-  
+
+  describe("Tests ANSI string sequence handling (DCS, SOS, PM, APC)", function()
+
+    -- feedTriggers writes to the main console; fish the line carrying our
+    -- unique marker back out of the buffer to see what actually rendered
+    local function findRecentLine(needle)
+      local lastLine = getLastLineNumber("main")
+      local lines = getLines("main", math.max(0, lastLine - 15), lastLine + 1)
+      for i = #lines, 1, -1 do
+        if lines[i]:find(needle, 1, true) then
+          return lines[i]
+        end
+      end
+      return nil
+    end
+
+    it("should swallow an APC sequence terminated by ST", function()
+      assert.is_true(feedTriggers("APCST1(\027_secret apc payload\027\\)APCST1\n"))
+      assert.equals("APCST1()APCST1", findRecentLine("APCST1"))
+    end)
+
+    it("should swallow a DCS sequence terminated by ST", function()
+      assert.is_true(feedTriggers("DCSST1(\027P+q544e\027\\)DCSST1\n"))
+      assert.equals("DCSST1()DCSST1", findRecentLine("DCSST1"))
+    end)
+
+    it("should swallow PM and SOS sequences terminated by ST", function()
+      assert.is_true(feedTriggers("PMSOS1(\027^privacy message\027\\|\027Xstart of string\027\\)PMSOS1\n"))
+      assert.equals("PMSOS1(|)PMSOS1", findRecentLine("PMSOS1"))
+    end)
+
+    it("should swallow an APC sequence terminated by BEL", function()
+      assert.is_true(feedTriggers("APCBEL1(\027_bel terminated\7)APCBEL1\n"))
+      assert.equals("APCBEL1()APCBEL1", findRecentLine("APCBEL1"))
+    end)
+
+    it("should swallow an APC sequence split across two packets", function()
+      assert.is_true(feedTriggers("APCSPLIT1(\027_first half "))
+      assert.is_true(feedTriggers("second half\027\\)APCSPLIT1\n"))
+      assert.equals("APCSPLIT1()APCSPLIT1", findRecentLine("APCSPLIT1"))
+    end)
+
+    it("should still render OSC 8 hyperlink text", function()
+      assert.is_true(feedTriggers("OSCLINK1(\027]8;;https://example.com\027\\click me\027]8;;\027\\)OSCLINK1\n"))
+      assert.equals("OSCLINK1(click me)OSCLINK1", findRecentLine("OSCLINK1"))
+    end)
+
+    it("should still consume OSC color sequences", function()
+      assert.is_true(feedTriggers("OSCCOLOR1(\027]P1ff0000\027\\)OSCCOLOR1\n"))
+      assert.equals("OSCCOLOR1()OSCCOLOR1", findRecentLine("OSCCOLOR1"))
+    end)
+
+    it("should not treat text after an unhandled two-byte escape as a sequence", function()
+      assert.is_true(feedTriggers("STICKY1(\027" .. "7[not-a-csi)STICKY1\n"))
+      assert.equals("STICKY1([not-a-csi)STICKY1", findRecentLine("STICKY1"))
+    end)
+
+  end)
+
 end)

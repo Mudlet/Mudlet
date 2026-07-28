@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2018, 2020-2023, 2025 by Stephen Lyons       *
+ *   Copyright (C) 2014, 2016-2018, 2020-2023, 2025-2026 by Stephen Lyons  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
@@ -25,13 +25,17 @@
 
 #include "dlgProfilePreferences.h"
 
+#include "CredentialManager.h"
+#include "GMCPAuthenticator.h"
 #include "Host.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
+#include "TFeatureCallout.h"
 #include "TKey.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TKeySequenceEdit.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
@@ -42,24 +46,34 @@
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "edbee/views/texteditorscrollarea.h"
-#include "edbee/models/textdocumentscopes.h"
 #include "MMCP.h"
 
 #include <chrono>
-#include <QtConcurrent>
+#include <QtConcurrentRun>
+#include <QAccessible>
 #include <QCloseEvent>
 #include <QColorDialog>
 #include <QDir>
 #include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QFontDialog>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonParseError>
+#include <QMessageBox>
 #include <QNetworkDiskCache>
 #include <QPainter>
+#include <QPointer>
+#include <QSettings>
+#include <QStandardPaths>
+#include <QStandardItemModel>
 #include <QString>
 #include <QTableWidget>
+#include <QTemporaryDir>
+#include <QTemporaryFile>
 #include <QToolBar>
 #include <QUiLoader>
-#include <QKeySequenceEdit>
+#include <QLineEdit>
 #include <QHBoxLayout>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 
@@ -149,6 +163,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         comboBox_toolBarVisibility->setCurrentIndex(2);
     }
 
+    // Sync "Never" item deactivation so the dialog opens with consistent state
+    // if either visibility was already "Never" on previous save (issue #7079).
+    slot_syncMenuToolBarNeverItem();
+
     checkBox_showTabConnectionIndicators->setChecked(pMudlet->mShowTabConnectionIndicators);
     connect(checkBox_showTabConnectionIndicators, &QCheckBox::toggled, this, [=](bool checked) {
         mudlet::self()->setShowTabConnectionIndicators(checked);
@@ -177,12 +195,19 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     */
     pushButton_copyMap->setText(tr("copy to %n destination(s)", nullptr, 0));
 
+    // Must be explicitly hidden before initWithHost(...) can show it again for
+    // duplicates that were saved in a previous session:
+    label_shortcutsConflictWarning->hide();
+
     if (pHost) {
         initWithHost(pHost);
     } else {
         disableHostDetails();
         clearHostDetails();
     }
+
+    connect(tabWidget, &QTabWidget::currentChanged, this, &dlgProfilePreferences::slot_showNewFeatureCallouts);
+    slot_showNewFeatureCallouts();
 
 #if defined(INCLUDE_UPDATER)
     if (mudlet::self()->developmentVersion && !qEnvironmentVariableIsSet("DEV_UPDATER")) {
@@ -211,60 +236,28 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
 
     // Set the tooltip on the containing widget so both the label and the
     // control have the same tool-tip:
-    widget_timerDebugOutputMinimumInterval->setToolTip(tr("<p>A timer with a short interval will quickly fill up the <i>Central Debug Console</i> "
-                                                          "windows with messages that it ran correctly on <i>each</i> occasion it is called.  This (per profile) "
-                                                          "control adjusts a threshold that will hide those messages in just that window for those timers which "
-                                                          "run <b>correctly</b> when the timer's interval is less than this setting.</p>"
-                                                          "<p><u>Any timer script that has errors will still have its error messages reported whatever the setting.</u></p>"));
+    //: Tooltip for timer debug output minimum interval
+    widget_timerDebugOutputMinimumInterval->setToolTip(tr("<p>Hide success messages in Central Debug Console for timers with intervals below this threshold. "
+                                                          "Error messages always display.</p>"));
 
-    pushButton_showGlyphUsage->setToolTip(utils::richText(tr("This will bring up a display showing all the symbols used in the current "
-                                                             "map and whether they can be drawn using just the specified font, any other "
-                                                             "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
-                                                             "that make up that symbol, so that they can be identified even if they "
-                                                             "cannot be displayed; also, up to the first thirty two rooms that are using "
-                                                             "that symbol are listed, which may help to identify any unexpected or odd cases.")));
+    //: Tooltip for show glyph usage button
+    pushButton_showGlyphUsage->setToolTip(utils::richText(tr("Show all map symbols, their Unicode code-points, font availability, and which rooms use them.")));
     fontComboBox_mapSymbols->setToolTip(utils::richText(tr("Select the only or the primary font used (depending on <i>Only use symbols "
                                                            "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.")));
-    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(utils::richText(tr("Using a single font is likely to produce a more consistent style but may "
-                                                                        "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
-                                                                        "does not have a needed glyph (a font's individual character/symbol) to represent "
-                                                                        "the grapheme (what is to be represented).  Clearing this checkbox will allow "
-                                                                        "the best alternative glyph from another font to be used to draw that grapheme.")));
-    checkBox_runAllKeyBindings->setToolTip(tr("<p>If <b>not</b> checked Mudlet will only react to the first matching keybinding "
-                                              "(combination of key and modifiers) even if more than one of them is set to be "
-                                              "active. This means that a temporary keybinding (not visible in the Editor) "
-                                              "created by a script or package may be used in preference to a permanent one "
-                                              "that is shown and is set to be active. If checked then all matching keybindings "
-                                              "will be run.</p>"
-                                              "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
-                                              "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>"));
-    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(tr("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
-                                                            "of <i>Ambiguous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
-                                                            "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
-                                                            "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
-                                                            "chose the right width automatically but you can override the setting for each profile.</p>"
-                                                            "<p>This control has three settings:"
-                                                            "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
-                                                            "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
-                                                            "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
-                                                            "encodings of <b>Big5</b>/<b>Big5-HKSCS</b>, <b>GBK</b>, <b>GBK18030</b> or <b>EUC-KR</b> and 'narrow' for all others.</li></ul></p>"
-                                                            "<p><i>This is a temporary arrangement and will probably change when Mudlet gains "
-                                                            "full support for languages other than English.</i></p>"));
-    checkBox_enableTextAnalyzer->setToolTip(tr("<p>Enable a context (right click) menu action on any console/user window that, "
-                                               "when the mouse cursor is hovered over it, will display the UTF-16 and UTF-8 items "
-                                               "that make up each Unicode codepoint on the <b>first</b> line of any selection.</p>"
-                                               "<p>This utility feature is intended to help the user identify any grapheme "
-                                               "(visual equivalent to a <i>character</i>) that a Game server may send even "
-                                               "if it is composed of multiple bytes as any non-ASCII character will be in the "
-                                               "Lua sub-system which uses the UTF-8 encoding system.<p>"));
-    checkBox_showIconsOnMenus->setToolTip(tr("<p>Some Desktop Environments tell Qt applications like Mudlet whether they should "
-                                             "shown icons on menus, others, however do not. This control allows the user to override "
-                                             "the setting, if needed, as follows:"
-                                             "<ul><li><b>Unchecked</b> '<i>off</i>' = Prevent menus from being drawn with icons.</li>"
-                                             "<li><b>Checked</b> '<i>on</i>' = Allow menus to be drawn with icons.</li>"
-                                             "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
-                                             "<p><i>This setting is only processed when individual menus are created and changes may not "
-                                             "propagate everywhere until Mudlet is restarted.</i></p>"));
+    //: Tooltip for map symbol font usage option
+    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(utils::richText(tr("Use only the selected font (may show \uFFFD for missing symbols) or allow fallback fonts for better coverage.")));
+    //: Tooltip for run all keybindings option
+    checkBox_runAllKeyBindings->setToolTip(tr("<p>Run all matching keybindings instead of just the first one. "
+                                              "Disable for compatibility with pre-3.9.0 scripts.</p>"));
+    //: Tooltip for East Asian ambiguous width character option
+    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(tr("<p>Controls display width for ambiguous East Asian characters. "
+                                                            "Auto-detects correct width for most encodings (default), or choose narrow/wide.</p>"));
+    //: Tooltip for text analyzer option
+    checkBox_enableTextAnalyzer->setToolTip(tr("<p>Enable context menu to analyze UTF-16/UTF-8 encoding of selected text. "
+                                               "Useful for identifying multi-byte characters.</p>"));
+    //: Tooltip for show icons on menus option
+    checkBox_showIconsOnMenus->setToolTip(tr("<p>Control menu icon display: on, off, or auto (system default). "
+                                             "May require restart.</p>"));
     lineEdit_mmcpPort->setPlaceholderText(QString::number(csDefaultMMCPHostPort));
     lineEdit_mmcpChatName->setPlaceholderText(csDefaultMMCPChatName);
     connect(lineEdit_mmcpChatName, &QLineEdit::editingFinished, this, &dlgProfilePreferences::slot_mmcpChatNameChanged);
@@ -307,6 +300,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     });
     connect(toolButton_resetMainWindowShortcuts, &QPushButton::released, this, [=, this]() {
         emit signal_resetMainWindowShortcutsToDefaults();
+        // Recompute once after every editor has been reset, rather than per
+        // editor, so transient clashes part-way through do not raise warnings:
+        updateShortcutConflictWarning();
     });
 
     generateDiscordTooltips();
@@ -381,9 +377,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     connect(comboBox_crashReportPolicy, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_crashReportPolicyChanged);
 
     setupPasswordsMigration();
-
-    connect(label_darkEditorPrompt, &QLabel::linkActivated, this, &dlgProfilePreferences::slot_enableDarkEditor);
-    label_darkEditorPrompt->hide();
 }
 
 void dlgProfilePreferences::setupPasswordsMigration()
@@ -497,28 +490,27 @@ void dlgProfilePreferences::disableHostDetails()
     pushButton_deleteMap->setEnabled(false);
     label_copyMap->setEnabled(false);
     label_mapFileSaveFormatVersion->setEnabled(false);
+    label_loadHistoricMap->setEnabled(false);
+    comboBox_mapHistory->setEnabled(false);
+    comboBox_mapHistory->clear();
+    pushButton_loadHistoricMap->setEnabled(false);
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     comboBox_mapFileSaveFormatVersion->clear();
     label_mapFileActionResult->hide();
 
-    groupBox_downloadMapOptions->setEnabled(false);
+    // This is hidden until we have a valid map download location:
+    groupBox_downloadMapOptions->setVisible(false);
 
-    groupBox_mapViewOptions->setEnabled(false);
     // ----- groupBox_mapViewOptions -----
-    label_mapSymbolsFont->setEnabled(false);
-    fontComboBox_mapSymbols->setEnabled(false);
-    checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(false);
-    pushButton_showGlyphUsage->setEnabled(false);
+    groupBox_mapViewOptions->setEnabled(false);
 
-
-    // The above is actually normally hidden:
-    groupBox_downloadMapOptions->hide();
-
-    // This is actually normally hidden until a map is loaded:
+    // This is normally hidden until a map is loaded:
     checkBox_showDefaultArea->hide();
 
     // ===== tab_mapperColors =====
     groupBox_mapperColors->setEnabled(false);
+
+    groupBox_playerRoomStyle->setEnabled(false);
 
     // ===== tab security =====
     groupBox_ssl->setEnabled(false);
@@ -620,14 +612,16 @@ void dlgProfilePreferences::enableHostDetails()
     pushButton_deleteMap->setEnabled(true);
     label_copyMap->setEnabled(true);
     label_mapFileSaveFormatVersion->setEnabled(true);
-
-
-    groupBox_downloadMapOptions->setEnabled(true);
+    label_loadHistoricMap->setEnabled(true);
+    comboBox_mapHistory->setEnabled(true);
+    pushButton_loadHistoricMap->setEnabled(true);
 
     groupBox_mapViewOptions->setEnabled(true);
 
     // ===== tab_mapperColors =====
     groupBox_mapperColors->setEnabled(true);
+    groupBox_playerRoomStyle->setEnabled(true);
+
 
     // ===== tab security =====
 #if defined(QT_NO_SSL)
@@ -671,7 +665,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     loadEditorTab();
 
     fontComboBox_displayFont->setCurrentFont(pHost->getDisplayFont());
-    // Accomodate an initial font size being larger than expected - and ensure
+    // Accommodate an initial font size being larger than expected - and ensure
     // it is a positive value:
     spinBox_displayFontSize->setMaximum(std::max(pHost->getDisplayFont().pointSize(), 40));
     spinBox_displayFontSize->setValue(std::max(1, pHost->getDisplayFont().pointSize()));
@@ -798,10 +792,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         groupBox_downloadMapOptions->setVisible(false);
     }
 
-    setColors();
-    setColors2();
-
-
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     checkBox_debugShowAllCodepointProblems->setChecked(pHost->debugShowAllProblemCodepoints());
 #else
@@ -832,6 +822,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     wrap_at_spinBox->setValue(pHost->mWrapAt);
     indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
     hanging_indent_wrapped_spinBox->setValue(pHost->mWrapHangingIndentCount);
+    checkBox_undoServerWrap->setChecked(pHost->mUndoServerWrap);
+    undo_server_wrap_width_spinBox->setValue(pHost->mUndoServerWrapWidth);
+    undo_server_wrap_width_spinBox->setEnabled(pHost->mUndoServerWrap);
+    connect(checkBox_undoServerWrap, &QCheckBox::toggled, undo_server_wrap_width_spinBox, &QWidget::setEnabled);
 
     console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
     checkBox_useMaxBufferSize->setChecked(pHost->getUseMaxConsoleBufferSize());
@@ -906,15 +900,18 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_discordServerAccessToPartyInfo->setChecked(!(discordFlags & Host::DiscordSetPartyInfo));
         checkBox_discordServerAccessToTimerInfo->setChecked(!(discordFlags & Host::DiscordSetTimeInfo));
         lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
+        lineEdit_discordUserName->setToolTip(utils::richText(tr("Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted lowercase ASCII character set and not any \"Nickname\" that you may have set for a particular Server.")));
+        lineEdit_discordUserName->setAccessibleDescription(tr("Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted lowercase ASCII character set and not any \"Nickname\" that you may have set for a particular Server."));
+
         const QString currentDiscordUser = Discord::getLoggedInUserName();
         if (!currentDiscordUser.isEmpty()) {
-            //: Shows which Discord account is logged in, e.g. "Discord user: morquin"
-            label_discordCurrentUser->setText(tr("Discord user: %1").arg(currentDiscordUser));
-            label_discordCurrentUser->setToolTip(QString());
+            //: Shows which Discord account is logged in:
+            label_data_discordCurrentUser->setText(currentDiscordUser);
+            label_data_discordCurrentUser->setToolTip(utils::richText(tr("This is the unique username using a restricted character set for the Discord account, and not necessarily the nickname that you might have set for a particular Server.")));
         } else {
-            label_discordCurrentUser->setText(tr("(Discord not connected)"));
+            label_data_discordCurrentUser->setText(tr("(Not connected)"));
             //: Tooltip shown when Discord Rich Presence cannot detect a logged-in user
-            label_discordCurrentUser->setToolTip(tr("The Discord desktop app must be running for Rich Presence to work. Browser and mobile clients are not supported."));
+            label_data_discordCurrentUser->setToolTip(utils::richText(tr("The Discord desktop app must be running for Rich Presence to work. Browser and mobile clients are not supported.")));
         }
     }
 
@@ -1159,7 +1156,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(fontComboBox_mapSymbols, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setMapSymbolFont, Qt::UniqueConnection);
         connect(checkBox_isOnlyMapSymbolFontToBeUsed, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapSymbolFontStrategy, Qt::UniqueConnection);
 
-        widget_playerRoomStyle->show();
+        groupBox_playerRoomStyle->setEnabled(true);
         comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mPlayerRoomStyle);
         // Custom colours only available in style '3' (of '0' to '3'):
         pushButton_playerRoomPrimaryColor->setEnabled(pHost->mpMap->mPlayerRoomStyle == 3);
@@ -1225,7 +1222,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         pushButton_showGlyphUsage->setEnabled(false);
 
         checkBox_showDefaultArea->hide();
-        widget_playerRoomStyle->hide();
+        groupBox_playerRoomStyle->setEnabled(false);
     }
 
     comboBox_encoding->addItem(mudlet::self()->getEncodingNamesMap().value(QByteArray("ASCII")), QByteArray("ASCII"));
@@ -1283,7 +1280,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             ssl_expires_label->setStyleSheet(QString());
 
             const QList<QSslError> sslErrors = pHost->mTelnet.getSslErrors();
-            if (sslErrors.count()) {
+            if (!sslErrors.isEmpty()) {
                 // handle ssl errors
                 notificationAreaIconLabelWarning->show();
                 frame_notificationArea->show();
@@ -1293,12 +1290,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 for (const auto& sslError : sslErrors) {
                     errorTexts.append(qsl("<li>%1</li>").arg(sslError.errorString()));
                     if (QSslError::SelfSignedCertificate == sslError.error()) {
-                        checkBox_self_signed->setStyleSheet(qsl("font-weight: bold; background: yellow"));
-                        ssl_issuer_label->setStyleSheet(qsl("font-weight: bold; color: red; background: yellow"));
+                        checkBox_self_signed->setStyleSheet(certificateWarningCheckBoxStyle());
+                        ssl_issuer_label->setStyleSheet(certificateWarningLabelStyle());
                     }
                     if (QSslError::CertificateExpired == sslError.error()) {
-                        checkBox_expired->setStyleSheet(qsl("font-weight: bold; background: yellow"));
-                        ssl_expires_label->setStyleSheet(qsl("font-weight: bold; color: red; background: yellow"));
+                        checkBox_expired->setStyleSheet(certificateWarningCheckBoxStyle());
+                        ssl_expires_label->setStyleSheet(certificateWarningLabelStyle());
                     }
                 }
                 notificationAreaMessageBox->setText(qsl("<ul>%1</ul>").arg(errorTexts.join(QChar::LineFeed)));
@@ -1356,6 +1353,26 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_askTlsAvailable->setChecked(pHost->mAskTlsAvailable);
 
+    // The "forget saved sign-in" button is gated on a reconnect token actually existing, not on the
+    // sign-in-choice flag: an oauth-only game never sets that flag yet still mints tokens, and a token
+    // is the only thing the button acts on. The keychain check is asynchronous, so start hidden and
+    // reveal on a hit; the QPointer guards against the dialog closing before the store answers.
+    // credentialExists() collapses a read failure (locked/denied/timed-out keychain) to "no token", so
+    // the button deliberately stays hidden on any read failure - the only cost is not offering to forget
+    // a token that could not be read, and clicking would just yield a graceful "could not remove" warning.
+    pushButton_forgetSavedSignIn->setVisible(false);
+    pushButton_forgetSavedSignIn->setEnabled(mEnableGMCP->isChecked());
+    QPointer<dlgProfilePreferences> safeDialog = this;
+    QPointer<CredentialManager> credentialManager = new CredentialManager();
+    credentialManager->credentialExists(pHost->getName(), qsl("reconnect"), [safeDialog, credentialManager](bool exists) {
+        if (credentialManager) {
+            credentialManager->deleteLater();
+        }
+        if (safeDialog && exists) {
+            safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+        }
+    });
+
     groupBox_proxy->setEnabled(true);
     groupBox_proxy->setChecked(pHost->mUseProxy);
     lineEdit_proxyAddress->setText(pHost->mProxyAddress);
@@ -1368,7 +1385,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
     doubleSpinBox_networkPacketTimeout->setValue(pHost->mTelnet.getPostingTimeout() / 1000.0);
-    comboBox_caretModeKey->setCurrentIndex(static_cast<int>(pHost->mCaretShortcut));
+    {
+        const QSignalBlocker blocker(comboBox_caretModeKey);
+        comboBox_caretModeKey->setCurrentIndex(static_cast<int>(pHost->mCaretShortcut));
+    }
     checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
     checkBox_invertMapZoom->setChecked(mudlet::self()->invertMapZoom());
     comboBox_blankLinesBehaviour->setCurrentIndex(static_cast<int>(pHost->mBlankLineBehaviour));
@@ -1377,6 +1397,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // on tab_general:
     // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
     enableHostDetails();
+
+    /* These require the color controls to be correctly enabled/disabled before
+     * they are called:*/
+    setColors();
+    setColors2();
+    setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor, true);
+    setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
 
     // Identify which Profile we are showing the settings for:
     setWindowTitle(tr("Profile preferences - %1").arg(pHost->getName()));
@@ -1437,6 +1464,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_mapGridColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapGridColor);
 
     connect(mEnableGMCP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    // The GMCP Char.Login "forget saved sign-in" control is only meaningful when GMCP is on.
+    connect(mEnableGMCP, &QAction::toggled, pushButton_forgetSavedSignIn, &QWidget::setEnabled);
+    connect(pushButton_forgetSavedSignIn, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_forgetSavedSignIn);
     connect(mEnableMSDP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
@@ -1468,6 +1498,36 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_saveMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_saveMap);
     connect(comboBox_encoding, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_setEncoding);
 
+    // Progressive disclosure for screen-reader users: surface the hyperlink
+    // navigation/activation/menu shortcuts at the moment the user picks a
+    // pane-switching key, so they don't have to consult the wiki to discover
+    // them. Picking Tab additionally warns about the shared binding.
+    connect(comboBox_caretModeKey, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int index) {
+        if (index < 0) {
+            return;
+        }
+        if (!QAccessible::isActive()) {
+            return;
+        }
+        auto* app = mudlet::self();
+        if (!app) {
+            return;
+        }
+        QString announcement;
+        const auto choice = static_cast<Host::CaretShortcut>(index);
+        if (choice == Host::CaretShortcut::Tab) {
+            //: Screen-reader hint when the user picks Tab as the caret-mode pane-switching key, warning Tab is shared with hyperlink navigation and explaining how to activate links, open their menu, and jump to latest content. Do not translate the key names "Tab", "Ctrl+]", "Ctrl+[", "Enter", "Space", "Menu", "Shift+F10", "Ctrl+End" or "Ctrl+Home".
+            announcement = tr("Tab will switch between the input line and main window, and also step through hyperlinks while in caret mode. Ctrl+] and Ctrl+[ navigate links without conflicting with "
+                              "pane-switching. Press Enter or Space to activate the focused link, and the Menu key or Shift+F10 to open its context menu. Press Ctrl+End to jump to the latest "
+                              "content or Ctrl+Home to jump to the start of the buffer.");
+        } else {
+            //: Screen-reader hint when the user picks any caret-mode pane-switching key other than Tab, explaining how to navigate, activate and open menus on hyperlinks, and jump to latest content. Do not translate the key names "Ctrl+]", "Ctrl+[", "Enter", "Space", "Menu", "Shift+F10", "Ctrl+End" or "Ctrl+Home".
+            announcement = tr("In caret mode, use Ctrl+] for the next hyperlink and Ctrl+[ for the previous hyperlink. Press Enter or Space to activate the focused link, and the Menu key or "
+                              "Shift+F10 to open its context menu. Press Ctrl+End to jump to the latest content or Ctrl+Home to jump to the start of the buffer.");
+        }
+        app->announce(announcement, QString(), true);
+    });
+
     connect(pushButton_whereToLog, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setLogDir);
     connect(pushButton_resetLogDir, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetLogDir);
     connect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_logFileNameFormatChange);
@@ -1484,10 +1544,22 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     int shortcutsRow = 0;
     while (shortcutKeys.hasNext()) {
         auto key = shortcutKeys.next();
-        currentShortcuts.insert(key, QKeySequence(*pHost->profileShortcuts.value(key)));
-        auto sequenceEdit = new QKeySequenceEdit(currentShortcuts.value(key));
+        auto shortcutIt = pHost->profileShortcuts.find(key);
+        QKeySequence currentSequence = (shortcutIt != pHost->profileShortcuts.end()) ? QKeySequence(*shortcutIt->second) : QKeySequence();
+        currentShortcuts.insert(key, currentSequence);
+        const QString labelText = mudlet::self()->mpShortcutsManager->getLabel(key);
+        auto sequenceEdit = new TKeySequenceEdit(currentSequence, labelText);
+        auto label = new QLabel(labelText);
+        // Point the buddy at the control that actually receives focus (the
+        // editor's inner line edit, reached via its focus proxy) rather than the
+        // wrapper, so the accessible label attaches to the single announced
+        // node; naming the wrapper as well made screen readers read the label
+        // twice (#9322). The proxy is only null in the degraded fallback, where
+        // the wrapper itself is the focus target:
+        QWidget* const labelTarget = sequenceEdit->focusProxy() ? sequenceEdit->focusProxy() : sequenceEdit;
+        label->setBuddy(labelTarget);
 
-        gridLayout_groupBox_shortcuts->addWidget(new QLabel(mudlet::self()->mpShortcutsManager->getLabel(key)), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
+        gridLayout_groupBox_shortcuts->addWidget(label, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
         shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
@@ -1497,12 +1569,87 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             }
             sequenceEdit->setKeySequence(newSequence);
             currentShortcuts[key] = newSequence;
+            updateShortcutConflictWarning();
         });
         connect(this, &dlgProfilePreferences::signal_resetMainWindowShortcutsToDefaults, sequenceEdit, [=]() {
             const auto defaultSequence = *mudlet::self()->mpShortcutsManager->getDefault(key);
             sequenceEdit->setKeySequence(defaultSequence);
             currentShortcuts[key] = defaultSequence;
         });
+    }
+    updateShortcutConflictWarning();
+}
+
+// Recomputes the duplicate state of the whole shortcut map, not just the last
+// edited entry, so the warning always names every clash and disappears once
+// none remain. Duplicates are deliberately still accepted - taking away the
+// ability to set one would make rearranging shortcuts awkward - but Qt
+// disables ambiguous shortcuts, so the user has to be told about the clash.
+void dlgProfilePreferences::updateShortcutConflictWarning()
+{
+    ShortcutsManager* manager = mudlet::self()->mpShortcutsManager;
+    QStringList keys;
+    auto keysIterator = manager->iterator();
+    while (keysIterator.hasNext()) {
+        keys.append(keysIterator.next());
+    }
+
+    QStringList warnings;
+    QList<int> reported;
+    for (int i = 0; i < keys.size(); ++i) {
+        if (reported.contains(i)) {
+            continue;
+        }
+        const QKeySequence sequence = currentShortcuts.value(keys.at(i));
+        if (sequence.isEmpty()) {
+            continue;
+        }
+        QStringList labels{manager->getLabel(keys.at(i))};
+        for (int j = i + 1; j < keys.size(); ++j) {
+            const QKeySequence other = currentShortcuts.value(keys.at(j));
+            if (!other.isEmpty() && sequence.matches(other) == QKeySequence::ExactMatch) {
+                labels.append(manager->getLabel(keys.at(j)));
+                reported.append(j);
+            }
+        }
+        if (labels.size() < 2) {
+            continue;
+        }
+        const QString sequenceText = sequence.toString(QKeySequence::NativeText);
+        if (labels.size() == 2) {
+            //: Inline warning on the shortcuts preferences page when exactly two actions have been given the same shortcut. %1 and %2 are the action names, %3 is the shortcut itself.
+            warnings.append(tr("Warning: '%1' and '%2' now share the shortcut %3 - neither will work until one of them is changed.").arg(labels.at(0), labels.at(1), sequenceText));
+        } else {
+            QStringList quotedLabels;
+            for (const auto& label : labels) {
+                quotedLabels.append(qsl("'%1'").arg(label));
+            }
+            //: Inline warning on the shortcuts preferences page when three or more actions have been given the same shortcut. %1 is the list of action names (each already quoted), %2 is the shortcut itself.
+            warnings.append(tr("Warning: %1 now share the shortcut %2 - none of them will work until they are changed.").arg(quotedLabels.join(qsl(", ")), sequenceText));
+        }
+    }
+
+    const QString warningText = warnings.join(QChar::LineFeed);
+    if (warningText.isEmpty()) {
+        if (!label_shortcutsConflictWarning->isHidden()) {
+            label_shortcutsConflictWarning->hide();
+            label_shortcutsConflictWarning->clear();
+            if (QAccessible::isActive()) {
+                //: Screen-reader announcement when editing the shortcuts removed the last duplicated assignment.
+                mudlet::self()->announce(tr("Shortcut conflict resolved."), QString(), true);
+            }
+        }
+        return;
+    }
+
+    label_shortcutsConflictWarning->setStyleSheet(qsl("color: %1; font-weight: bold;").arg(mudlet::self()->inDarkMode() ? qsl("#ff8080") : qsl("#aa0000")));
+    if (!label_shortcutsConflictWarning->isHidden() && warningText == label_shortcutsConflictWarning->text()) {
+        return;
+    }
+    label_shortcutsConflictWarning->setText(warningText);
+    label_shortcutsConflictWarning->show();
+    if (QAccessible::isActive()) {
+        mudlet::self()->announce(warningText, QString(), true);
     }
 }
 
@@ -1595,7 +1742,6 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
     disconnect(mIsToLogInHtml, &QAbstractButton::clicked, nullptr, nullptr);
 
-    widget_playerRoomStyle->hide();
     disconnect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
     disconnect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1624,6 +1770,13 @@ void dlgProfilePreferences::clearHostDetails()
     script_preview_combobox->clear();
     edbeePreviewWidget->textDocument()->setText(QString());
 
+    label_shortcutsConflictWarning->hide();
+    label_shortcutsConflictWarning->clear();
+    // Drop the stale shortcut data as well, otherwise a later call to
+    // updateShortcutConflictWarning() (e.g. from slot_setAppearance()) would
+    // re-show the warning for the no longer active profile:
+    currentShortcuts.clear();
+
     checkBox_mVersionInTTYPE->setChecked(false);
     checkBox_mForceMXPProcessorOn->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
@@ -1643,11 +1796,10 @@ void dlgProfilePreferences::clearHostDetails()
 
     need_reconnect_for_specialoption->hide();
 
-    setColors();
-    setColors2();
-
     wrap_at_spinBox->clear();
     indent_wrapped_spinBox->clear();
+    checkBox_undoServerWrap->setChecked(false);
+    undo_server_wrap_width_spinBox->clear();
 
     show_sent_text_combobox->setCurrentIndex(static_cast<int>(Host::CommandEchoMode::ScriptControl));
     auto_clear_input_line_checkbox->setChecked(false);
@@ -1704,7 +1856,7 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_discordServerAccessToPartyInfo->setChecked(false);
     checkBox_discordServerAccessToTimerInfo->setChecked(false);
     lineEdit_discordUserName->clear();
-    label_discordCurrentUser->clear();
+    label_data_discordCurrentUser->clear();
 
     lineEdit_mmcpChatName->clear();
     lineEdit_mmcpPort->clear();
@@ -1723,6 +1875,8 @@ void dlgProfilePreferences::clearHostDetails()
     groupBox_ssl_certificate->hide();
     frame_notificationArea->hide();
     checkBox_askTlsAvailable->setChecked(false);
+    pushButton_forgetSavedSignIn->setEnabled(false);
+    pushButton_forgetSavedSignIn->setVisible(false);
     groupBox_proxy->setDisabled(true);
 
     // Remove the reference to the Host/profile in the title:
@@ -1744,7 +1898,7 @@ void dlgProfilePreferences::loadEditorTab()
     config->setUseTabChar(false); // when you press Enter for a newline, pad with spaces and not tabs
     config->setCaretBlinkRate(200);
     config->setIndentSize(2);
-    config->setThemeName(pHost->mEditorTheme);
+    config->setThemeName(pHost->getEditorTheme());
     config->setCaretWidth(1);
     config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces) ? edbee::TextEditorConfig::ShowWhitespaces : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
@@ -1758,12 +1912,12 @@ void dlgProfilePreferences::loadEditorTab()
     edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
 
     populateThemesList();
-    mudlet::loadEdbeeTheme(pHost->mEditorTheme, pHost->mEditorThemeFile);
+    mudlet::loadEdbeeTheme(pHost->getEditorTheme(), pHost->getEditorThemeFile());
     populateScriptsList();
 
     // pre-select the current theme
     code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(qsl("Select theme"));
-    auto themeIndex = code_editor_theme_selection_combobox->findText(pHost->mEditorTheme);
+    auto themeIndex = code_editor_theme_selection_combobox->findText(pHost->getEditorTheme());
     code_editor_theme_selection_combobox->setCurrentIndex(themeIndex);
     slot_themeSelected(themeIndex);
 
@@ -2314,6 +2468,61 @@ void dlgProfilePreferences::slot_setMapGridColor()
     }
 }
 
+void dlgProfilePreferences::slot_forgetSavedSignIn()
+{
+    Host* pHost = mpHost;
+    if (!pHost || !pHost->mpAuth) {
+        return;
+    }
+
+    const auto reply = QMessageBox::question(this,
+                                             //: Title of the dialog asking the user to confirm removing their saved sign-in.
+                                             tr("Forget saved sign-in?"),
+                                             //: Body of the dialog asking the user to confirm removing their saved sign-in; they will need to sign in again next time.
+                                             tr("This will remove the saved sign-in for this profile. You will need to sign in again next time. Continue?"),
+                                             QMessageBox::Yes | QMessageBox::No,
+                                             QMessageBox::No);
+    frame_notificationArea->show();
+    notificationAreaIconLabelInformation->show();
+    notificationAreaMessageBox->show();
+    if (reply == QMessageBox::Yes) {
+        // forgetSavedSignIn() removes the token asynchronously; only report success (and disable the
+        // button) once the removal actually resolves, so a failed keychain removal cannot leave a stale
+        // reconnect token behind while the UI claims it is gone. QPointers guard against the dialog or
+        // host closing before the removal answers.
+        QPointer<dlgProfilePreferences> safeDialog = this;
+        QPointer<Host> safeHost = pHost;
+        pHost->mpAuth->forgetSavedSignIn([safeDialog, safeHost](bool success) {
+            if (success) {
+                if (safeDialog) {
+                    // Nothing is left to forget until a fresh sign-in mints a new token.
+                    safeDialog->pushButton_forgetSavedSignIn->setEnabled(false);
+                    //: Shown after the user's saved sign-in has actually been removed.
+                    safeDialog->notificationAreaMessageBox->setText(dlgProfilePreferences::tr("The saved sign-in has been forgotten."));
+                }
+                if (safeHost) {
+                    //: Shown in the main console after the user's saved sign-in has actually been removed.
+                    safeHost->postMessage(dlgProfilePreferences::tr("[  OK  ]  - The saved sign-in for this profile has been forgotten."));
+                }
+            } else {
+                if (safeDialog) {
+                    //: Shown when removing the saved sign-in failed, so it may still be present.
+                    safeDialog->notificationAreaMessageBox->setText(dlgProfilePreferences::tr("Could not remove the saved sign-in; it may still be present."));
+                }
+                if (safeHost) {
+                    //: Shown in the main console when removing the saved sign-in failed, so it may still be present.
+                    safeHost->postMessage(dlgProfilePreferences::tr("[ WARN ]  - Could not remove the saved sign-in; it may still be present."));
+                }
+            }
+        });
+    } else {
+        //: Shown when the user cancels removing their saved sign-in.
+        notificationAreaMessageBox->setText(tr("No changes were made to the saved sign-in."));
+        //: Shown in the main console when the user cancels removing their saved sign-in.
+        pHost->postMessage(tr("[ INFO ]  - Cancelled: no changes were made to the saved sign-in."));
+    }
+}
+
 void dlgProfilePreferences::slot_setMapInfoBgColor()
 {
     Host* pHost = mpHost;
@@ -2679,7 +2888,7 @@ void dlgProfilePreferences::slot_saveMap()
             return;
         }
 
-        auto fileName = dialog->selectedFiles().first();
+        auto fileName = dialog->selectedFiles().constFirst();
 
         QSettings& settings = *mudlet::getQSettings();
         QString lastDir = QFileInfo(fileName).absolutePath();
@@ -2907,12 +3116,11 @@ void dlgProfilePreferences::slot_copyMap()
             label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
             QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
             continue; // Try again with next profile
-        } else {
-            label_mapFileActionResult->setText(tr("Map copied successfully to other profile %1.").arg(otherHostName));
-            qApp->processEvents(); // Copied from "Loading map - please wait..." case
-                                   // Just in case is needed to make the above message
-                                   // show up when saving big maps
         }
+        label_mapFileActionResult->setText(tr("Map copied successfully to other profile %1.").arg(otherHostName));
+        qApp->processEvents(); // Copied from "Loading map - please wait..." case
+                               // Just in case is needed to make the above message
+                               // show up when saving big maps
     }
 
     // Finally, signal the other profiles to reload their maps:
@@ -3049,6 +3257,8 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->updateDisplayDimensions();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
         pHost->mWrapHangingIndentCount = hanging_indent_wrapped_spinBox->value();
+        pHost->mUndoServerWrap = checkBox_undoServerWrap->isChecked();
+        pHost->mUndoServerWrapWidth = undo_server_wrap_width_spinBox->value();
 
         // Save console buffer settings and apply them
         const bool useMaxBuffer = checkBox_useMaxBufferSize->isChecked();
@@ -3180,13 +3390,19 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
         pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
         pHost->setEnableBlinkText(checkBox_enableBlinkText->isChecked());
-        pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
-        pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
+        if (mudlet::self()->inDarkMode()) {
+            pHost->mEditorThemeDark = code_editor_theme_selection_combobox->currentText();
+            pHost->mEditorThemeFileDark = code_editor_theme_selection_combobox->currentData().toString();
+        } else {
+            pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
+            pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
+        }
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
         pHost->setEditorShowBidi(checkBox_showBidi->isChecked());
         pHost->setShowIdsInEditor(checkBox_showIdNumbers->isChecked());
+        const auto activeEditorTheme = code_editor_theme_selection_combobox->currentText();
         if (pHost->mpEditorDialog) {
-            pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
+            pHost->mpEditorDialog->setThemeAndOtherSettings(activeEditorTheme);
         }
 
         auto data = script_preview_combobox->currentData().value<QPair<QString, int>>();
@@ -3274,7 +3490,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
         pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
         pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
-        if (widget_playerRoomStyle->isVisible()) {
+        if (groupBox_playerRoomStyle->isEnabled()) {
             // Although the controls have been interactively modifying the
             // TMap cached values for these, they were not being committed to
             // the master values in the Host instance - but now we should write
@@ -3295,7 +3511,10 @@ void dlgProfilePreferences::slot_saveAndClose()
         while (iterator.hasNext()) {
             auto key = iterator.next();
             QKeySequence sequence = currentShortcuts.value(key);
-            pHost->profileShortcuts.value(key)->swap(sequence);
+            auto it = pHost->profileShortcuts.find(key);
+            if (it != pHost->profileShortcuts.end()) {
+                it->second->swap(sequence);
+            }
         }
     }
 
@@ -3631,7 +3850,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
 
                         const QByteArray downloadedArchive = reply->readAll();
 
-                        tempThemesArchive = new QTemporaryFile();
+                        tempThemesArchive = new QTemporaryFile(this);
                         if (!tempThemesArchive->open()) {
                             return;
                         }
@@ -3645,7 +3864,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
 
                         // perform unzipping in a worker thread so as not to freeze the UI
                         auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(enums::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
-                        auto watcher = new QFutureWatcher<bool>;
+                        auto watcher = new QFutureWatcher<bool>(this);
                         connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
                             if (future.result()) {
                                 populateThemesList();
@@ -3711,6 +3930,54 @@ void dlgProfilePreferences::populateThemesList()
     code_editor_theme_selection_combobox->setCurrentIndex(code_editor_theme_selection_combobox->findText(currentSelection));
     code_editor_theme_selection_combobox->setUpdatesEnabled(true);
     code_editor_theme_selection_combobox->blockSignals(false);
+}
+
+// Given a theme name, try to find its dark or light counterpart in the combobox.
+// Handles naming patterns like "Solarized light" <-> "Solarized dark",
+// "Kimbie (light)" <-> "Kimbie (dark)", "Kary Foundation - Light" <-> "Kary Foundation - Dark".
+// Returns the counterpart theme name if found, or empty string if not.
+QString dlgProfilePreferences::findThemeCounterpart(const QString& themeName, const QComboBox* themeComboBox, bool toDark)
+{
+    const QString from = toDark ? qsl("light") : qsl("dark");
+    const QString to = toDark ? qsl("dark") : qsl("light");
+
+    // Try case-insensitive replacement of "light" with "dark" (or vice versa)
+    const QRegularExpression re(QRegularExpression::escape(from), QRegularExpression::CaseInsensitiveOption);
+    auto match = re.match(themeName);
+    if (match.hasMatch()) {
+        QString candidate = themeName;
+        // Preserve the case style of the original: if the matched text starts uppercase, capitalize the replacement
+        const QString matched = match.captured(0);
+        const QString replacement = matched[0].isUpper() ? (to[0].toUpper() + to.mid(1)) : to;
+        candidate.replace(match.capturedStart(), match.capturedLength(), replacement);
+
+        if (themeComboBox->findText(candidate) != -1) {
+            return candidate;
+        }
+    }
+
+    return {};
+}
+
+// Switches the editor theme combobox to the given theme name, triggering the
+// preview update. If themes haven't loaded yet, defers until they're available.
+void dlgProfilePreferences::switchEditorTheme(const QString& themeName)
+{
+    auto index = code_editor_theme_selection_combobox->findText(themeName);
+    if (index != -1) {
+        code_editor_theme_selection_combobox->setCurrentIndex(index);
+        return;
+    }
+
+    // theme may not be in the list yet (still downloading), so switch once the download completes
+    KDToolBox::connectSingleShot(this, &dlgProfilePreferences::signal_themeUpdateCompleted, this, [=, this]() {
+        auto deferredIndex = code_editor_theme_selection_combobox->findText(themeName);
+        if (deferredIndex != -1) {
+            code_editor_theme_selection_combobox->setCurrentIndex(deferredIndex);
+        } else {
+            qWarning() << "dlgProfilePreferences::switchEditorTheme() - theme" << themeName << "not found after theme update completed";
+        }
+    });
 }
 
 // user has picked a different theme to preview, so apply it
@@ -3844,6 +4111,13 @@ void dlgProfilePreferences::slot_handleHostDeletion(Host* pHost)
         clearHostDetails();
         // and we can then use the following to disable the Host specific controls:
         disableHostDetails();
+
+        // And redraw the color controls in their cleared state
+        setColors();
+        setColors2();
+
+        setButtonColor(pushButton_playerRoomPrimaryColor, QColor(), true);
+        setButtonColor(pushButton_playerRoomSecondaryColor, QColor(), true);
     }
 }
 
@@ -4175,6 +4449,10 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont& font)
 // of access to the setting/controls completely - once there is a profile loaded
 // access to the settings/controls can be overridden by a context menu action on
 // any TConsole instance:
+//
+// Additionally the "Never" entry in the other toolbar-visibility comboBox is
+// greyed out (deactivated) while this control is set to "Never", so the user
+// cannot even temporarily select "Never" for both - see issue #7079.
 void dlgProfilePreferences::slot_changeShowMenuBar(int newIndex)
 {
     if (!newIndex && !comboBox_toolBarVisibility->currentIndex()) {
@@ -4182,6 +4460,7 @@ void dlgProfilePreferences::slot_changeShowMenuBar(int newIndex)
         // control - so force it back to the "Only if no profile one
         comboBox_menuBarVisibility->setCurrentIndex(1);
     }
+    slot_syncMenuToolBarNeverItem();
 }
 
 void dlgProfilePreferences::slot_changeShowToolBar(int newIndex)
@@ -4190,6 +4469,30 @@ void dlgProfilePreferences::slot_changeShowToolBar(int newIndex)
         // This control has been set to the "Never" setting but so is the other
         // control - so force it back to the "Only if no profile one
         comboBox_toolBarVisibility->setCurrentIndex(1);
+    }
+    slot_syncMenuToolBarNeverItem();
+}
+
+// Deactivate (grey out) the "Never" item of comboBox_toolBarVisibility when
+// the menu bar is set to "Never", and vice versa. This makes the existing
+// mutual-exclusion visible to the user instead of silently snapping the
+// selected value back (issue #7079).
+void dlgProfilePreferences::slot_syncMenuToolBarNeverItem()
+{
+    const int menuIndex = comboBox_menuBarVisibility->currentIndex();
+    const int toolIndex = comboBox_toolBarVisibility->currentIndex();
+    const bool menuIsNever = (menuIndex == 0);
+    const bool toolIsNever = (toolIndex == 0);
+
+    if (auto* toolModel = qobject_cast<QStandardItemModel*>(comboBox_toolBarVisibility->model())) {
+        if (QStandardItem* item = toolModel->item(0)) {
+            item->setEnabled(!menuIsNever);
+        }
+    }
+    if (auto* menuModel = qobject_cast<QStandardItemModel*>(comboBox_menuBarVisibility->model())) {
+        if (QStandardItem* item = menuModel->item(0)) {
+            item->setEnabled(!toolIsNever);
+        }
     }
 }
 
@@ -4223,7 +4526,7 @@ void dlgProfilePreferences::slot_setMMCPChatName(const QString& name)
 
 /**
  * Notify connected clients that our chatname has been changed (via GUI)
- * 
+ *
  */
 void dlgProfilePreferences::slot_mmcpChatNameChanged()
 {
@@ -4416,15 +4719,78 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
     pHost->mTelnet.sendInfoNewEnvironValue(qsl("LANGUAGE"));
 }
 
+// same warning palette as the system message area: soft yellow in light mode,
+// muted amber in dark mode
+QString dlgProfilePreferences::certificateWarningCheckBoxStyle() const
+{
+    const bool darkMode = mudlet::self()->inDarkMode();
+    return qsl("font-weight: bold; color: %1; background: %2").arg(darkMode ? qsl("rgb(230, 230, 230)") : qsl("black"), darkMode ? qsl("rgb(64, 60, 40)") : qsl("rgb(255, 254, 215)"));
+}
+
+QString dlgProfilePreferences::certificateWarningLabelStyle() const
+{
+    const bool darkMode = mudlet::self()->inDarkMode();
+    return qsl("font-weight: bold; color: %1; background: %2").arg(darkMode ? qsl("lightsalmon") : qsl("red"), darkMode ? qsl("rgb(64, 60, 40)") : qsl("rgb(255, 254, 215)"));
+}
+
+void dlgProfilePreferences::restyleCertificateWarnings()
+{
+    for (auto* checkBox : {checkBox_self_signed, checkBox_expired}) {
+        if (!checkBox->styleSheet().isEmpty()) {
+            checkBox->setStyleSheet(certificateWarningCheckBoxStyle());
+        }
+    }
+    for (auto* label : {ssl_issuer_label, ssl_expires_label}) {
+        if (!label->styleSheet().isEmpty()) {
+            label->setStyleSheet(certificateWarningLabelStyle());
+        }
+    }
+}
+
 void dlgProfilePreferences::slot_setAppearance(const enums::Appearance state)
 {
     if (comboBox_appearance->currentIndex() != state) {
         comboBox_appearance->setCurrentIndex(state);
     }
 
+    const bool wasDarkMode = mudlet::self()->inDarkMode();
     mudlet::self()->setAppearance(state);
+    const bool isDarkMode = mudlet::self()->inDarkMode();
 
-    label_darkEditorPrompt->setVisible(mudlet::self()->inDarkMode());
+    if (wasDarkMode == isDarkMode) {
+        return;
+    }
+
+    restyleCertificateWarnings();
+
+    // Restyle the shortcut clash warning (if it is showing) for the new
+    // palette:
+    updateShortcutConflictWarning();
+
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    const auto currentTheme = code_editor_theme_selection_combobox->currentText();
+
+    if (isDarkMode) {
+        const auto counterpart = findThemeCounterpart(currentTheme, code_editor_theme_selection_combobox, true);
+        if (!counterpart.isEmpty()) {
+            // save current as the light theme before switching
+            pHost->mEditorTheme = currentTheme;
+            pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
+            switchEditorTheme(counterpart);
+        }
+    } else {
+        const auto counterpart = findThemeCounterpart(currentTheme, code_editor_theme_selection_combobox, false);
+        if (!counterpart.isEmpty()) {
+            // save current as the dark theme before switching
+            pHost->mEditorThemeDark = currentTheme;
+            pHost->mEditorThemeFileDark = code_editor_theme_selection_combobox->currentData().toString();
+            switchEditorTheme(counterpart);
+        }
+    }
 }
 
 // This slot is called when the mudlet singleton tells everything that the
@@ -4630,35 +4996,6 @@ void dlgProfilePreferences::slot_changeControlCharacterHandling()
     pHost->setControlCharacterMode(comboBox_controlCharacterHandling->currentData().value<ControlCharacterMode>());
 }
 
-void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)
-{
-    if (link == qsl("dark-code-editor")) {
-        const auto darkTheme = qsl("Monokai");
-
-        label_darkEditorPrompt->hide();
-
-        // switch to code editor tab
-        tabWidget->setCurrentIndex(3);
-
-        auto monokaiIndex = code_editor_theme_selection_combobox->findText(darkTheme);
-        if (monokaiIndex != -1) {
-            code_editor_theme_selection_combobox->setCurrentIndex(monokaiIndex);
-            return;
-        }
-
-        // in case no theme index is available yet, so it as soon as one is available
-        KDToolBox::connectSingleShot(this, &dlgProfilePreferences::signal_themeUpdateCompleted, this, [=, this]() {
-            auto index = code_editor_theme_selection_combobox->findText(darkTheme);
-            if (index != -1) {
-                code_editor_theme_selection_combobox->setCurrentIndex(index);
-            }
-        });
-
-        return;
-    }
-
-    qWarning() << "unknown link clicked in profile preferences:" << link;
-}
 
 void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
 {
@@ -4682,6 +5019,20 @@ void dlgProfilePreferences::slot_toggleEnableClosedCaption(const bool state)
     }
 }
 
+
+void dlgProfilePreferences::slot_showNewFeatureCallouts()
+{
+    // The balloon only makes sense while its anchor can be seen:
+    if (tabWidget->currentWidget() != tab_display) {
+        return;
+    }
+    TFeatureCallout::maybeShow(qsl("undo-server-wrap"),
+                               checkBox_undoServerWrap,
+                               //: Title of a balloon pointing out a newly added feature
+                               tr("New: undo the game's own wrapping"),
+                               //: Body of the balloon, anchored to the option that rejoins lines the game server wrapped itself so that triggers match whole lines
+                               tr("Games that wrap their own lines make triggers fiddly. Mudlet can now undo that wrapping, so triggers always see whole lines."));
+}
 
 void dlgProfilePreferences::slot_changeWrapAt()
 {

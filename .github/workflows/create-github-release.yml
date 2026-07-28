@@ -22,53 +22,65 @@ jobs:
       github.event.workflow_run.conclusion == 'success'
 
     steps:
-      - name: Check if all platform builds completed
+      - name: Check if platform builds completed
         id: check
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const triggeringRun = context.payload.workflow_run;
-            // Skip PR builds - they use a different head_sha and have no release artifacts
             if (triggeringRun.event === 'pull_request') {
               core.info(`Skipping: triggered by a pull_request build`);
               core.setOutput('ready', 'false');
               return;
             }
             const sha = triggeringRun.head_sha;
-            const required = {
+            const platforms = {
               'linux_macos': 'build-mudlet.yml',
               'windows': 'build-mudlet-win.yml'
             };
             const runIds = {};
-            for (const [key, filename] of Object.entries(required)) {
+            for (const [key, filename] of Object.entries(platforms)) {
               const {data} = await github.rest.actions.listWorkflowRuns({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 workflow_id: filename,
                 head_sha: sha,
                 status: 'success',
+                event: triggeringRun.event,
                 per_page: 1
               });
               if (data.total_count === 0) {
                 core.info(`Workflow "${filename}" has not completed successfully yet for ${sha}`);
-                core.setOutput('ready', 'false');
-                return;
+              } else {
+                runIds[key] = data.workflow_runs[0].id;
               }
-              runIds[key] = data.workflow_runs[0].id;
+            }
+            const totalPlatforms = Object.keys(platforms).length;
+            const completedCount = Object.keys(runIds).length;
+            if (completedCount === 0) {
+              core.info('No platform builds have succeeded yet');
+              core.setOutput('ready', 'false');
+              return;
+            }
+            // Release builds must wait for all platforms; PTBs can proceed with partial
+            if (completedCount < totalPlatforms && triggeringRun.head_branch !== 'development') {
+              core.info(`Only ${completedCount}/${totalPlatforms} platforms completed - waiting for all platforms (release build)`);
+              core.setOutput('ready', 'false');
+              return;
             }
             core.setOutput('ready', 'true');
-            core.setOutput('linux_macos_run_id', runIds['linux_macos']);
-            core.setOutput('windows_run_id', runIds['windows']);
+            core.setOutput('linux_macos_run_id', runIds['linux_macos'] || '');
+            core.setOutput('windows_run_id', runIds['windows'] || '');
 
       # Checkout early so .git exists before artifact downloads — actions/checkout
       # wipes the workspace when no .git directory is present, even with clean: false
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         if: steps.check.outputs.ready == 'true'
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
-      - uses: leafo/gh-actions-lua@v12
+      - uses: leafo/gh-actions-lua@v13
         if: steps.check.outputs.ready == 'true'
         with:
           luaVersion: "5.1.5"
@@ -83,10 +95,10 @@ jobs:
           luarocks install lunajson
 
       # Download build metadata to determine if this is a release or PTB build (not present for snapshot/PR builds)
-      - name: Download metadata to determine release type
-        if: steps.check.outputs.ready == 'true'
-        id: download-metadata
-        uses: actions/download-artifact@v4
+      - name: Download metadata from Linux/macOS build
+        if: steps.check.outputs.ready == 'true' && steps.check.outputs.linux_macos_run_id != ''
+        id: download-metadata-lm
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           pattern: release-metadata-*
@@ -94,12 +106,23 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: metadata/
 
+      - name: Download metadata from Windows build
+        if: steps.check.outputs.ready == 'true' && steps.download-metadata-lm.outcome != 'success' && steps.check.outputs.windows_run_id != ''
+        id: download-metadata-win
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          pattern: release-metadata-*
+          run-id: ${{ steps.check.outputs.windows_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: metadata/
+
       - name: Report skipped release
-        if: steps.check.outputs.ready == 'true' && steps.download-metadata.outcome == 'failure'
+        if: steps.check.outputs.ready == 'true' && steps.download-metadata-lm.outcome != 'success' && steps.download-metadata-win.outcome != 'success'
         run: echo "::warning::Release metadata download failed - cannot determine release type"
 
       - name: Determine release type
-        if: steps.check.outputs.ready == 'true' && steps.download-metadata.outcome == 'success'
+        if: steps.check.outputs.ready == 'true' && (steps.download-metadata-lm.outcome == 'success' || steps.download-metadata-win.outcome == 'success')
         id: release-type
         run: |
           META_FILE=$(find metadata/ -name 'release-metadata.json' -type f | head -1)
@@ -147,10 +170,10 @@ jobs:
 
       # Download all release assets from both workflow runs
       - name: Download Linux/macOS release assets
-        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        if: (steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb') && steps.check.outputs.linux_macos_run_id != ''
         id: download-linux-macos
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: release-asset-*
           run-id: ${{ steps.check.outputs.linux_macos_run_id }}
@@ -158,10 +181,10 @@ jobs:
           path: assets/
 
       - name: Download Windows release assets
-        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        if: (steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb') && steps.check.outputs.windows_run_id != ''
         id: download-windows
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: release-asset-*
           run-id: ${{ steps.check.outputs.windows_run_id }}
@@ -207,9 +230,7 @@ jobs:
       - name: Assemble SHA256SUMS.txt
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
         run: |
-          shopt -s nullglob
-          SHA_FILES=(assets/*/*.sha256)
-          shopt -u nullglob
+          mapfile -t SHA_FILES < <(find assets/ -name '*.sha256' -type f)
 
           if [[ ${#SHA_FILES[@]} -eq 0 ]]; then
             echo "::error::No .sha256 checksum files found in assets/"
@@ -297,43 +318,32 @@ jobs:
             fi
           fi
 
-          # Prepend a note for PTB changelogs so readers know the scope
-          if [[ "${RELEASE_TYPE}" == "ptb" && -n "${STABLE_TAG}" ]]; then
-            RELEASE_VERSION="${STABLE_TAG#Mudlet-}"
-            { echo "Changes since ${RELEASE_VERSION}:"; echo; cat changelog.md; } > changelog.tmp
-            mv changelog.tmp changelog.md
-          fi
-
           echo "Changelog preview:"
           head -20 changelog.md
 
-      # Create the GitHub Release
-      # For PTB: clean up old PTB releases, keeping only the latest 1 (+ the new one = 2 total)
-      # For stable: delete release only if re-running (keep the human-created git tag)
-      - name: Clean up old releases
-        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+      # Clean up old PTB releases, keeping only the latest 1 (+ the new one = 2 total)
+      - name: Clean up old PTB releases
+        if: steps.release-type.outputs.type == 'ptb'
         env:
-          RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
           RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [[ "${RELEASE_TYPE}" == "ptb" ]]; then
-            # Delete the target tag first in case a duplicate workflow run already created it
-            gh release delete "${RELEASE_TAG}" --yes --cleanup-tag 2>/dev/null || true
+          # Filter by -ptb in tag name to avoid deleting non-PTB prereleases (e.g. release candidates).
+          # Exclude the current tag so we never delete what we are about to publish.
+          gh release list --limit 100 --json tagName,isPrerelease,createdAt \
+              --jq '[.[] | select(.isPrerelease and (.tagName | contains("-ptb")))] | sort_by(.createdAt) | reverse | .[1:] | .[].tagName' | \
+              while IFS= read -r old_tag; do
+                  if [[ "${old_tag}" == "${RELEASE_TAG}" ]]; then
+                    continue
+                  fi
+                  echo "Cleaning up old PTB release: ${old_tag}"
+                  gh release delete "${old_tag}" --yes --cleanup-tag 2>/dev/null || true
+              done
 
-            # Clean up old PTB releases, keeping only the latest 1 (+ the new one = 2 total).
-            # Filter by -ptb in tag name to avoid deleting non-PTB prereleases (e.g. release candidates).
-            gh release list --limit 100 --json tagName,isPrerelease,createdAt \
-                --jq '[.[] | select(.isPrerelease and (.tagName | contains("-ptb")))] | sort_by(.createdAt) | reverse | .[1:] | .[].tagName' | \
-                while IFS= read -r old_tag; do
-                    echo "Cleaning up old PTB release: ${old_tag}"
-                    gh release delete "${old_tag}" --yes --cleanup-tag 2>/dev/null || true
-                done
-          else
-            gh release delete "${RELEASE_TAG}" --yes 2>/dev/null || true
-          fi
-
-      - name: Create GitHub Release
+      # Create the release if it doesn't exist yet, or upload any missing assets.
+      # Both build workflows trigger this job so it runs twice per commit - this
+      # avoids the old delete+recreate cycle that spammed notifications.
+      - name: Create or update GitHub Release
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
         env:
           RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
@@ -354,17 +364,23 @@ jobs:
           echo "Files to upload:"
           printf '%s\n' "${FILES[@]}"
 
-          ARGS=(
-            "${RELEASE_TAG}"
-            --title "${RELEASE_TITLE}"
-            --notes-file changelog.md
-          )
+          if gh release view "${RELEASE_TAG}" &>/dev/null; then
+            echo "Release ${RELEASE_TAG} already exists - uploading any missing assets"
+            gh release upload "${RELEASE_TAG}" "${FILES[@]}" --clobber
+          else
+            ARGS=(
+              "${RELEASE_TAG}"
+              --title "${RELEASE_TITLE}"
+              --notes-file changelog.md
+            )
 
-          if [[ "${RELEASE_TYPE}" == "ptb" ]]; then
-            ARGS+=(--prerelease --target "${TARGET_SHA}")
+            if [[ "${RELEASE_TYPE}" == "ptb" ]]; then
+              ARGS+=(--prerelease --target "${TARGET_SHA}")
+            fi
+
+            gh release create "${ARGS[@]}" "${FILES[@]}" \
+              || gh release upload "${RELEASE_TAG}" "${FILES[@]}" --clobber
           fi
-
-          gh release create "${ARGS[@]}" "${FILES[@]}"
 
       # Generate and upload Sparkle appcast XML for macOS updates
       - name: Add SSH agent for appcast upload

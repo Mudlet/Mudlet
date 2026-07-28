@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2021 by Vadim Peretokin - vperetokin@hey.com            *
- *   Copyright (C) 2021, 2023, 2025 by Stephen Lyons                       *
+ *   Copyright (C) 2021, 2023, 2025-2026 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -30,11 +30,26 @@
 #include <QScreen>
 #include <QWidget>
 
+#include <cstdint>
 #include <cstring>
 
 #define qsl(s) QStringLiteral(s)
 
+// user-defined literals to represent kilobytes and megabytes
+// C++ standard requires unsigned long long parameter for integer literal operators
+constexpr auto operator""_KB(unsigned long long const x) -> int64_t // NOLINT(runtime/int)
+{
+    return 1024LL * x;
+}
+
+constexpr auto operator""_MB(unsigned long long const x) -> int64_t // NOLINT(runtime/int)
+{
+    return 1024LL * 1024LL * x;
+}
+
 using TEnterEvent = QEnterEvent;
+
+using NameGroupMatches = QVector<QPair<QString, QString>>;
 
 // Common enum for specifying insertion mode for tree items
 // Used across all editor item types (triggers, aliases, timers, scripts, actions, keys)
@@ -100,13 +115,14 @@ public:
         return QDir::cleanPath(base + "/" + path);
     }
 
+    inline static const auto scmfileSystemUnsafeChars = QRegularExpression(qsl(R"REGEX([/\\:*?"<>|])REGEX"));
     // Sanitize a string for safe use as filename/path component
     // Replaces filesystem-unsafe characters with underscores and limits length
     static QString sanitizeForPath(const QString& input)
     {
         QString sanitized = input;
         // Replace filesystem-unsafe characters with underscores
-        sanitized.replace(QRegularExpression(R"([/\\:*?"<>|])"), "_");
+        sanitized.replace(scmfileSystemUnsafeChars, qsl("_"));
         // Limit length to prevent filesystem issues
         if (sanitized.length() > 50) {
             sanitized = sanitized.left(50);

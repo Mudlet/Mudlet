@@ -8,12 +8,46 @@ Have a look at the [UI design philosophy](UI-design-philosophy.md) when improvin
 
 # Coding guidelines
 
-If you're a first-timer, don't worry about conforming to all of these! We'll show you the ropes.
-
 ## Code style
-## Naming things? Check against antipatterns
+## Naming variables/functions/classes? Check against antipatterns
 
 Check https://www.linguistic-antipatterns.com when naming anything to help ensure it can be understood intuitively.
+
+## AI Coding Assistants
+
+### Licensing and Legal Requirements
+
+All code must be compatible with Mudlet's license.
+
+### Signed-off-by and Developer Certificate of Origin
+
+AI agents MUST NOT add Signed-off-by tags. The human submitter is responsible for:
+
+* Reviewing all AI-generated code and testing it (Mudlet developers should not be the first ones testing the PR code)
+* Ensuring compliance with licensing requirements
+* Adding their own Signed-off-by tag
+* Taking full responsibility for the contribution
+
+### Attribution
+
+When AI tools contribute to Mudlet development, proper attribution
+helps track the evolving role of AI in the development process.
+Contributions should include an Assisted-by tag in the following format:
+
+```
+Assisted-by: AGENT_NAME:MODEL_VERSION
+```
+
+Where:
+
+* `AGENT_NAME` is the name of the AI tool or framework
+* `MODEL_VERSION` is the specific model version used
+
+Example:
+
+```
+Assisted-by: Claude:claude-4.6-opus
+```
 
 ### C++
 
@@ -31,7 +65,7 @@ signals:
     void profileChanged(const QString& name);
 ```    
 * in general: write modern C++20 code, but avoid C++ exceptions, templates, and concepts as those have performance/complexity considerations, avoiding which has made Mudlet the success it is today.
-* use clang-format for formatting your code with [src/.clang-format](https://github.com/Mudlet/Mudlet/blob/development/src/.clang-format) settings. To get started, check out Clang Format in the [Setting up IDE's](https://wiki.mudlet.org/w/Compiling_Mudlet) section.
+* use clang-format for formatting your code with [.clang-format](https://github.com/Mudlet/Mudlet/blob/development/.clang-format) settings. To get started, check out Clang Format in the [Setting up IDE's](https://wiki.mudlet.org/w/Compiling_Mudlet) section.
 * use clang-tidy linting with [.clang-tidy](https://github.com/Mudlet/Mudlet/blob/development/.clang-tidy) settings. To get started, check out Clang Tidy in the [Setting up IDE's](https://wiki.mudlet.org/w/Compiling_Mudlet) section
 * additionally, use [clazy]([url](https://github.com/KDE/clazy)) for linting as well
 * use braces {} around all statements (ie, `if`'s and so on), even if they are one line

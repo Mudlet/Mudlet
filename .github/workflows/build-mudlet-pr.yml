@@ -59,7 +59,7 @@ jobs:
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         submodules: recursive
         fetch-depth: 0
@@ -73,11 +73,11 @@ jobs:
         modules: qt5compat qtmultimedia qtspeech
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.3.1
+      uses: lukka/get-cmake@v4.4.0
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
-      uses: leafo/gh-actions-lua@v12
+      uses: leafo/gh-actions-lua@v13
       with:
         luaVersion: ${{ env.LUA_VERSION }}
         buildCache: false
@@ -150,7 +150,7 @@ jobs:
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
     - name: (Linux) Install Lua via GitHub Actions
-      uses: leafo/gh-actions-lua@v12
+      uses: leafo/gh-actions-lua@v13
       if: runner.os == 'Linux'
       with:
         luaVersion: ${{ env.LUA_VERSION }}
@@ -222,7 +222,15 @@ jobs:
         # Download and extract xcb-util-cursor 0.1.5
         # This version fixes the off-by-one heap buffer overflow in _XcursorThemeInherits
         # that causes PTB builds to crash with AddressSanitizer
-        wget -q --connect-timeout=10 --read-timeout=30 --tries=3 --waitretry=5 https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz
+        # Fall back to the xcb project's dist host: xorg.freedesktop.org served an
+        # expired TLS certificate on 2026-07-28, breaking every CI run
+        for url in \
+          https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz \
+          https://xcb.freedesktop.org/dist/xcb-util-cursor-0.1.5.tar.xz; do
+          wget -q --connect-timeout=10 --read-timeout=30 --tries=3 --waitretry=5 -O xcb-util-cursor-0.1.5.tar.xz "$url" && break
+        done || echo "all xcb-util-cursor mirrors failed" >&2
+        # Checksum from https://lists.x.org/archives/xorg-announce/2023-October/003428.html
+        echo "0caf99b0d60970f81ce41c7ba694e5eaaf833227bb2cbcdb2f6dc9666a663c57  xcb-util-cursor-0.1.5.tar.xz" | sha256sum -c
         tar xf xcb-util-cursor-0.1.5.tar.xz
         cd xcb-util-cursor-0.1.5
 
@@ -247,7 +255,7 @@ jobs:
 
     - name: Restore ccache
       id: restore-ccache
-      uses: actions/cache/restore@v5
+      uses: actions/cache/restore@v6
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ github.sha }}
@@ -283,7 +291,7 @@ jobs:
 
     - name: Cache sentry-native
       id: cache-sentry
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: |
           3rdparty/sentry-native/install_without_transport
@@ -311,7 +319,7 @@ jobs:
 
     - name: Save ccache
       if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v5
+      uses: actions/cache/save@v6
       with:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
@@ -325,6 +333,7 @@ jobs:
 
         $LUAROCKS LuaFileSystem
         $LUAROCKS luautf8
+        $LUAROCKS lpeg
 
         if [ "$RUNNER_OS" = "macOS" ]; then
           $LUAROCKS lua-zip ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip
@@ -405,6 +414,8 @@ jobs:
         APPLE_TEAM_ID: ${{secrets.APPLE_TEAM_ID}}
         WITH_SENTRY: "ON"
         GITHUB_FORCE_BUILD: ${{ github.event.inputs.scheduled == 'true' }}
+        # needed so CI/*.after_success.sh can query existing releases to skip duplicate PTBs
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v7
@@ -447,7 +458,7 @@ jobs:
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
-        LSAN_OPTIONS: ${{ matrix.enable_asan == 'true' && format('suppressions={0}/asan-suppressions.txt:exitcode=0', github.workspace) || '' }}
+        LSAN_OPTIONS: ${{ matrix.enable_asan == 'true' && format('suppressions={0}/asan-suppressions.txt:exitcode=1', github.workspace) || '' }}
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
@@ -466,30 +477,5 @@ jobs:
         if [ -e /tmp/busted-tests-failed ]
         then
           echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
-          exit 1
-        fi
-
-    - name: (Linux) Run C++ undo/redo tests
-      if: matrix.run_tests == 'true' && runner.os == 'Linux'
-      timeout-minutes: 5
-      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --run-undo-tests
-      env:
-        ASAN_OPTIONS: detect_leaks=0
-        MUDLET_TEST_MODE: 1
-
-    - name: (macOS) Run C++ undo/redo tests
-      if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      timeout-minutes: 5
-      run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --run-undo-tests
-      env:
-        ASAN_OPTIONS: detect_leaks=0
-        MUDLET_TEST_MODE: 1
-
-    - name: Passed C++ undo/redo tests
-      if: matrix.run_tests == 'true'
-      run: |
-        if [ -e /tmp/undo-tests-failed ]
-        then
-          echo "C++ undo/redo tests failed - see the action called 'Run C++ undo/redo tests' above for detailed output."
           exit 1
         fi

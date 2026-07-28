@@ -1,3 +1,37 @@
+-- This block must stay first in the file: once a later spec calls
+-- openMapWidget(), the widget persists for the rest of the session and the
+-- pre-widget state becomes unreachable.
+describe("Tests map events and menus before the map widget is opened", function()
+  it("should return an empty table when nothing is registered yet", function()
+    assert.are.same({}, getMapEvents())
+    assert.are.same({}, getMapMenus())
+  end)
+
+  it("should register and remove a map event before the widget is opened", function()
+    assert.is_true(addMapEvent("preWidgetEvent", "myEvent", "", "Pre-widget Event"))
+
+    local events = getMapEvents()
+    assert.is_not_nil(events.preWidgetEvent)
+    assert.are.equal("myEvent", events.preWidgetEvent["event name"])
+    assert.are.equal("Pre-widget Event", events.preWidgetEvent["display name"])
+
+    assert.is_true(removeMapEvent("preWidgetEvent"))
+    assert.is_nil(getMapEvents().preWidgetEvent)
+  end)
+
+  it("should register and remove a map menu before the widget is opened", function()
+    assert.is_true(addMapMenu("PreWidgetMenu"))
+    assert.are.equal("top-level", getMapMenus()["PreWidgetMenu"])
+
+    assert.is_true(removeMapMenu("PreWidgetMenu"))
+    assert.is_nil(getMapMenus()["PreWidgetMenu"])
+  end)
+
+  it("should retain a registration for when the widget opens later", function()
+    assert.is_true(addMapEvent("preWidgetKeptEvent", "myEvent", "", "Kept Event"))
+  end)
+end)
+
 describe("Tests custom map event and menu functions", function()
 
   setup(function()
@@ -9,6 +43,16 @@ describe("Tests custom map event and menu functions", function()
     removeMapEvent("testEvent2")
     removeMapMenu("TestMenu")
     removeMapMenu("TestSubMenu")
+  end)
+
+  describe("Tests that pre-widget registrations survive opening the widget", function()
+    it("should still list an event registered before the widget was opened", function()
+      local events = getMapEvents()
+      assert.is_not_nil(events.preWidgetKeptEvent)
+      assert.are.equal("myEvent", events.preWidgetKeptEvent["event name"])
+      assert.are.equal("Kept Event", events.preWidgetKeptEvent["display name"])
+      removeMapEvent("preWidgetKeptEvent")
+    end)
   end)
 
   describe("Tests addMapEvent and getMapEvents", function()
@@ -55,6 +99,44 @@ describe("Tests custom map event and menu functions", function()
       local menus = getMapMenus()
       assert.are.equal("top-level", menus["TestMenu"])
       assert.are.equal("TestMenu", menus["TestSubMenu"])
+    end)
+
+    it("should key menus by display name by default", function()
+      addMapMenu("TestMenu", nil, "Test Display Name")
+
+      local menus = getMapMenus()
+      assert.are.equal("top-level", menus["Test Display Name"])
+      assert.is_nil(menus["TestMenu"])
+    end)
+
+    it("should treat a nil argument like no argument", function()
+      addMapMenu("TestMenu")
+
+      local menus = getMapMenus(nil)
+      assert.are.equal("top-level", menus["TestMenu"])
+    end)
+
+    it("should key menus by unique name when requested", function()
+      addMapMenu("TestMenu", nil, "Test Display Name")
+      addMapMenu("TestSubMenu", "TestMenu", "Sub Display Name")
+
+      local menus = getMapMenus(true)
+      assert.is_table(menus["TestMenu"])
+      assert.are.equal("Test Display Name", menus["TestMenu"]["display name"])
+      assert.are.equal("top-level", menus["TestMenu"]["parent"])
+      assert.is_table(menus["TestSubMenu"])
+      assert.are.equal("Sub Display Name", menus["TestSubMenu"]["display name"])
+      assert.are.equal("TestMenu", menus["TestSubMenu"]["parent"])
+    end)
+
+    it("should let getMapEvents parents be resolved via getMapMenus(true)", function()
+      addMapMenu("TestMenu", nil, "Test Display Name")
+      addMapEvent("testEvent1", "myEvent", "TestMenu", "Test Event 1")
+
+      local events = getMapEvents()
+      local menus = getMapMenus(true)
+      assert.is_not_nil(menus[events.testEvent1.parent])
+      assert.are.equal("Test Display Name", menus[events.testEvent1.parent]["display name"])
     end)
   end)
 
@@ -197,6 +279,27 @@ describe("Tests per-room border functions", function()
 
 end)
 
+describe("Tests addRoom", function()
+
+  it("should return true when the room is created", function()
+    local roomID = createRoomID()
+    assert.is_true(addRoom(roomID))
+    deleteRoom(roomID)
+  end)
+
+  it("should report the requested areaID when it does not exist", function()
+    local roomID = createRoomID()
+    local ok, err = addRoom(roomID, 987654)
+    assert.is_nil(ok)
+    assert.is_string(err)
+    assert.is_not_nil(err:find("areaID 987654", 1, true), err)
+    -- the room is still created, parked in the default area (-1)
+    assert.are.equal(-1, getRoomArea(roomID))
+    deleteRoom(roomID)
+  end)
+
+end)
+
 describe("Tests map info functions", function()
 
   describe("Tests getMapInfo", function()
@@ -233,6 +336,58 @@ describe("Tests map info functions", function()
       assert.is_nil(result)
       assert.is_string(err)
     end)
+  end)
+
+end)
+
+describe("Tests searchRoom", function()
+
+  local testRoomId
+  local missingRoomId = 999999999
+
+  setup(function()
+    local areaId = addAreaName("TestSearchRoomArea")
+    testRoomId = createRoomID()
+    addRoom(testRoomId)
+    setRoomArea(testRoomId, areaId)
+    setRoomName(testRoomId, "SearchRoomSpecRoom")
+  end)
+
+  teardown(function()
+    deleteRoom(testRoomId)
+    deleteArea("TestSearchRoomArea")
+  end)
+
+  it("should return the room name for an existing room ID", function()
+    local result = searchRoom(testRoomId)
+    assert.are.equal("SearchRoomSpecRoom", result)
+  end)
+
+  it("should return nil and a message for a non-existent room ID", function()
+    assert.is_false(roomExists(missingRoomId))
+    local result, err = searchRoom(missingRoomId)
+    assert.is_nil(result)
+    assert.is_string(err)
+    assert.is_truthy(err:find("not a valid roomID", 1, true))
+  end)
+
+  it("should return a table of matches for a name search", function()
+    local result = searchRoom("SearchRoomSpecRoom")
+    assert.is_table(result)
+    assert.are.equal("SearchRoomSpecRoom", result[testRoomId])
+  end)
+
+  it("should return an empty table for a name search with no matches", function()
+    local result = searchRoom("NoSuchRoomNameAnywhere")
+    assert.is_table(result)
+    assert.is_nil(next(result))
+  end)
+
+  it("should treat a numeric string as a room ID and return nil and a message when it does not exist", function()
+    local result, err = searchRoom(tostring(missingRoomId))
+    assert.is_nil(result)
+    assert.is_string(err)
+    assert.is_truthy(err:find("not a valid roomID", 1, true))
   end)
 
 end)

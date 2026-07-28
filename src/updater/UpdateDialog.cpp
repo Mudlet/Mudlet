@@ -33,6 +33,7 @@
 #include <QGuiApplication>
 #include <QMessageBox>
 #include <QPixmap>
+#include <QRegularExpression>
 #include <QSettings>
 #include <QTextBrowser>
 #include <QToolButton>
@@ -91,7 +92,7 @@ namespace dblsqd {
  */
 UpdateDialog::UpdateDialog(Feed* feed, Type type, QSettings* settings, QWidget* parent)
 : QDialog(parent)
-, mUi(new Ui::UpdateDialog)
+, mUi(std::make_unique<Ui::UpdateDialog>())
 , mFeed(feed)
 , mType(type)
 , mSettings(settings)
@@ -133,10 +134,7 @@ UpdateDialog::UpdateDialog(Feed* feed, Type type, QSettings* settings, QWidget* 
     }
 }
 
-UpdateDialog::~UpdateDialog()
-{
-    delete mUi;
-}
+UpdateDialog::~UpdateDialog() = default;
 
 /*!
  * \brief Sets the icon displayed in the update window.
@@ -294,17 +292,41 @@ void UpdateDialog::showIfUpdatesAvailable()
 void UpdateDialog::showIfUpdatesAvailableOrQuit()
 {
     if (mType == OnLastWindowClosed) {
-        auto* app = qobject_cast<QGuiApplication*>(QApplication::instance());
-        app->setQuitOnLastWindowClosed(true);
-        disconnect(app, &QGuiApplication::lastWindowClosed, this, &UpdateDialog::showIfUpdatesAvailableOrQuit);
+        disconnect(qApp, &QGuiApplication::lastWindowClosed, this, &UpdateDialog::showIfUpdatesAvailableOrQuit);
     }
     QString latestVersion = mLatestRelease.getVersion();
     bool skipRelease = (settingsValue(qsl("skipRelease"), "", mSettings).toString() == latestVersion);
     if (!latestVersion.isEmpty() && !skipRelease) {
+        // The main window is already gone, so this dialog is the only thing
+        // keeping Mudlet alive - quit once the user dismisses it. We keep
+        // quitOnLastWindowClosed disabled: re-enabling it makes Qt quit the
+        // instant this dialog is shown (the lastWindowClosed re-check runs
+        // before the user can act on it), which is the whole bug being fixed.
+        KDToolBox::connectSingleShot(this, &QDialog::finished, qApp, []() {
+            QCoreApplication::quit();
+        });
         show();
     } else {
         QCoreApplication::quit();
     }
+}
+
+/*!
+ * \brief Stops the dialog from showing itself when the last window closes.
+ *
+ * Used when the application is deliberately closing to restart into an
+ * already-installed update: offering the update again would leave this dialog
+ * as the only window of an instance the user expects to be gone, keeping it
+ * alive alongside the restarted one. As quitOnLastWindowClosed is disabled in
+ * OnLastWindowClosed mode, quit explicitly once the last window closes.
+ */
+void UpdateDialog::disableAutoShow()
+{
+    if (mType != OnLastWindowClosed) {
+        return;
+    }
+    disconnect(qApp, &QGuiApplication::lastWindowClosed, this, &UpdateDialog::showIfUpdatesAvailableOrQuit);
+    connect(qApp, &QGuiApplication::lastWindowClosed, qApp, &QCoreApplication::quit);
 }
 
 // "DBLSQD/" prefix retained for backward compatibility with user settings from the previous update system
@@ -542,9 +564,18 @@ QString UpdateDialog::generateChangelogDocument()
             }
         }
     }
+    static const QRegularExpression summaryTag(qsl("<details>\\s*<summary>(.*?)</summary>"));
     for (const auto& release : changelogReleases) {
-        changelog.append(qsl("## ") + release.getVersion() + qsl("\n\n"));
-        changelog.append(release.getChangelog() + qsl("\n\n"));
+        if (!changelog.isEmpty()) {
+            changelog.append(qsl("---\n\n"));
+        }
+        QString body = release.getChangelog();
+        // Convert <details>/<summary> to plain markdown - Qt's markdown
+        // renderer can't handle these HTML5 tags, causing garbled output
+        body.replace(summaryTag, qsl("#### \\1"));
+        body.remove(qsl("</details>"));
+
+        changelog.append(body + qsl("\n\n"));
     }
     return changelog;
 }
@@ -610,7 +641,7 @@ void UpdateDialog::handleFeedReady()
     QString latestVersion = mLatestRelease.getVersion();
     bool skipRelease = (settingsValue(qsl("skipRelease"), "", mSettings).toString() == latestVersion);
     bool autoDownload = autoDownloadEnabled(mSettings) && (!skipRelease);
-    if (autoDownload && !mIsDownloadFinished) {
+    if (autoDownload && !mIsDownloadFinished && !mFeed->isDownloading()) {
         startDownload();
     }
 

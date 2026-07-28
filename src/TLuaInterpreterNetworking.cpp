@@ -58,13 +58,9 @@
 #include <limits>
 #include <math.h>
 
-#include <QtConcurrent>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QFileDialog>
-#include <QTableWidget>
-#include <QToolTip>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -213,10 +209,10 @@ int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
 
     if (cHostName.isEmpty()) {
         return warnArgumentValue(L, __func__, error, true);
-    } else {
-        lua_pushboolean(L, true);
-        lua_pushstring(L, cHostName.toUtf8().constData());
     }
+    lua_pushboolean(L, true);
+    lua_pushstring(L, cHostName.toUtf8().constData());
+
     return 1;
 }
 
@@ -475,9 +471,22 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
     output += TN_IAC;
     output += TN_SE;
 
+    // Check connection status first (most common issue)
+    if (host.mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
+        return warnArgumentValue(L, __func__, qsl("not connected to game server - connect first before sending MSDP"));
+    }
+
+    if (!host.mTelnet.isMSDPEnabled()) {
+        return warnArgumentValue(L, __func__, qsl("MSDP is not currently enabled"));
+    }
+
     // output is in Mud Server Encoding form here:
-    host.mTelnet.socketOutRaw(output);
-    return 0;
+    if (!host.mTelnet.socketOutRaw(output)) {
+        return warnArgumentValue(L, __func__, qsl("failed to send MSDP message - connection may have been lost or a socket write error occurred"));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendTelnetChannel102

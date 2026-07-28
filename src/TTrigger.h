@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2018, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,6 +25,7 @@
 
 
 #include "Tree.h"
+#include "utils.h" // For NameGroupMatches
 
 #include <QColor>
 #include <QDebug>
@@ -35,7 +37,9 @@
 #include <pcre2.h>
 
 #include <map>
+#include <memory>
 #include <string>
+#include <vector>
 
 class Host;
 class TLuaInterpreter;
@@ -50,8 +54,6 @@ class TMatchState;
 #define REGEX_LINE_SPACER 5
 #define REGEX_COLOR_PATTERN 6
 #define REGEX_PROMPT 7
-
-using NameGroupMatches = QVector<QPair<QString, QString>>;
 
 struct TColorTable
 {
@@ -120,13 +122,13 @@ public:
     void enableTrigger(const QString&);
     void disableTrigger(const QString&);
     TTrigger* killTrigger(const QString&);
-    bool match_substring(const QString&, const QString&, int, int posOffset = 0);
-    bool match_perl(char*, const QString&, int, int posOffset = 0);
-    bool match_exact_match(const QString&, const QString&, int, int posOffset = 0);
-    bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset = 0);
+    bool match_substring(const QString&, const QString&, int, int posOffset, int lineNumber);
+    bool match_perl(char*, const QString&, int, int posOffset, int lineNumber);
+    bool match_exact_match(const QString&, const QString&, int, int posOffset, int lineNumber);
+    bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber);
     bool match_lua_code(int);
     bool match_line_spacer(int patternNumber);
-    bool match_color_pattern(int, int);
+    bool match_color_pattern(int line, int patternNumber, int posOffset, int length);
     bool match_prompt(int patternNumber);
     void setConditionLineDelta(int delta) { mConditionLineDelta = delta; }
     int getConditionLineDelta() const { return mConditionLineDelta; }
@@ -134,7 +136,7 @@ public:
     void setSound(const QString& file) { mSoundFile = file; }
     bool setupColorTrigger(int, int);
     bool setupTmpColorTrigger(int ansiFg, int ansiBg);
-    TColorTable* createColorPattern(int, int);
+    std::unique_ptr<TColorTable> createColorPattern(int, int);
     static QString createColorPatternText(const int fgColorCode, const int bgColorCode);
     static void decodeColorPatternText(const QString& patternText, int& fgColorCode, int& bgColorCode);
     QString packageName(TTrigger* pTrigger);
@@ -148,7 +150,7 @@ public:
     QString mSoundFile;
     int mStayOpen = 0;
     bool mColorTrigger = false;
-    QList<TColorTable*> mColorPatternList;
+    std::vector<std::unique_ptr<TColorTable>> mColorPatternList;
     // The next four members refer to the details of the currently selected
     // color trigger pattern item - it is not obvious that they need to be
     // stored in the profile even though they are:
@@ -174,14 +176,21 @@ public:
 private:
     TTrigger() = default;
 
-    void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
-    void filter(std::string&, int&);
-    void processExactMatch(const QString& line, int patternNumber, int posOffset);
-    void processRegexMatch(const char* haystackC, const QString& haystack, int patternNumber, int posOffset,
-                           const QSharedPointer<pcre2_code>& re, int haystackCLength, pcre2_match_data* match_data, int rc);
-    void processBeginOfLine(const QString& needle, int patternNumber, int posOffset);
-    void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where);
-    void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList);
+    inline void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
+    inline void filter(std::string&, int&, int lineNumber);
+    void processExactMatch(const QString& needle, int patternNumber, int posOffset, int lineNumber);
+    void processRegexMatch(const char* haystackC,
+                           const QString& haystack,
+                           int patternNumber,
+                           int posOffset,
+                           const QSharedPointer<pcre2_code>& re,
+                           int haystackCLength,
+                           pcre2_match_data* match_data,
+                           int rc,
+                           int lineNumber);
+    void processBeginOfLine(const QString& needle, int patternNumber, int posOffset, int lineNumber);
+    void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where, int lineNumber);
+    void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList, int lineNumber);
     void processPromptMatch(int patternNumber);
 
 
@@ -200,7 +209,10 @@ private:
     bool mIsMultiline = false;
     int mConditionLineDelta = 0;
     QString mCommand;
-    std::map<TMatchState*, TMatchState*> mConditionMap;
+    // Key is the raw address of the owned TMatchState — stable once inserted and
+    // used for O(1) lookup during the deferred-removal pass in match(). The map
+    // is the sole owner; the raw pointer is never passed out as an observer.
+    std::map<TMatchState*, std::unique_ptr<TMatchState>> mConditionMap;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;
     TLuaInterpreter* mpLua;

@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2024 by John McKisson - john.mckisson@gmail.com         *
- *   Copyright (C) 2024 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2024, 2026 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -28,6 +28,9 @@
 #include <QTcpSocket>
 #include <QRegularExpression>
 #include <QtGlobal>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 QString convertToIPv4(QHostAddress addr)
 {
@@ -111,7 +114,10 @@ void MMCPClient::slot_connected()
     mPeerAddress = convertToIPv4(mTcpSocket.peerAddress());
     mPeerPort = mTcpSocket.peerPort();
 
-    QString str = qsl("CHAT:%1\n%2%3").arg(mpMMCPServer->getChatName()).arg(mPeerAddress).arg(mPeerPort, -5);
+    QString str = qsl("CHAT:%1\n%2%3")
+                          .arg(mpMMCPServer->getChatName(),
+                               mPeerAddress)
+                          .arg(mPeerPort, -5);
 
     mTcpSocket.write(str.toLatin1());
 
@@ -167,7 +173,7 @@ void MMCPClient::slot_pendingTimeout()
                                             convertToIPv4(mTcpSocket.peerAddress()),
                                             QString::number(mTcpSocket.peerPort()));
         mpHost->postMessage(infoMsg);
-        
+
         mState = Disconnected;
         writeData(qsl("NO:%1\n").arg(mpMMCPServer->getChatName()));
         disconnect();
@@ -280,7 +286,7 @@ void MMCPClient::slot_readData()
                     // Start 60 second timeout for pending connection
                     // We don't know what client the peer is using, their client may timeout the socket, or may not
                     // Regardless, we'll time it out after 60 seconds
-                    mPendingTimer.start(60000);
+                    mPendingTimer.start(1min);
                 }
             }
         }
@@ -334,13 +340,13 @@ void MMCPClient::slot_readData()
             mpHost->postMessage(infoMsg);
             mpMMCPServer->addConnectedClient(this);
             sendVersion();
-            
+
             if (cmdData.length() > 0) {
                 qDebug().noquote().nospace() << "MMCPClient::slot_readData() INFO - additional cmd at connect: \"" << cmdData << "\".";
                 //A command was tacked on the end of the accept string
                 handleConnectedState(cmdData);
             }
-        } 
+        }
 
         break;
     }
@@ -390,7 +396,7 @@ void MMCPClient::acceptCall() {
 
 /**
  * Denies an incoming chat connection
- * 
+ *
  */
 void MMCPClient::denyCall() {
     mPendingTimer.stop();  // Stop timeout
@@ -443,10 +449,11 @@ void MMCPClient::slot_displayError(QAbstractSocket::SocketError socketError)
  */
 void MMCPClient::sendMessage(const QString& msg)
 {
-    writeData(qsl("%1%2%3")
-                      .arg(static_cast<char>(Message))
-                      .arg(msg)
-                      .arg(static_cast<char>(End)));
+    QByteArray out;
+    out.append(static_cast<char>(Message));
+    out.append(msg.toLatin1());
+    out.append(static_cast<char>(End));
+    writeData(out);
 }
 
 
@@ -499,10 +506,11 @@ void MMCPClient::sendRequestConnections()
  */
 void MMCPClient::sendVersion()
 {
-    writeData(qsl("%1%2%4")
-                      .arg(static_cast<char>(Version))
-                      .arg(mudlet::self()->scmVersion)
-                      .arg(static_cast<char>(End)));
+    QByteArray versionData;
+    versionData.append(static_cast<char>(Version));
+    versionData.append(mudlet::self()->scmVersion.toLatin1());
+    versionData.append(static_cast<char>(End));
+    writeData(versionData);
 }
 
 /**
@@ -763,14 +771,14 @@ void MMCPClient::handleIncomingChatGroup(const QString& msg)
 
     using namespace AnsiColors;
 
-    //: Incoming group message
+    //: Incoming group message, %1, %2 and %4 are ANSI Escape codes
     const QString groupMsg = tr("%1%2%3%4(%5)%1%2%6%1")
-                                     .arg(RST)
-                                     .arg(FBLDRED)
-                                     .arg(mpHost->getMMCPChatPrefix())
-                                     .arg(FBLDCYN)
-                                     .arg(groupStr)
-                                     .arg(trimmedMsg);
+                                     .arg(RST,
+                                          FBLDRED,
+                                          mpHost->getMMCPChatPrefix(),
+                                          FBLDCYN,
+                                          groupStr,
+                                          trimmedMsg);
 
     mpMMCPServer->clientMessage(this, groupMsg);
 }
@@ -780,7 +788,7 @@ void MMCPClient::handleIncomingChatGroup(const QString& msg)
  */
 void MMCPClient::handleIncomingNameChange(const QString& newName)
 {
-    const QString infoMsg = tr("[ CHAT ]  - %1 is now known as %2.").arg(mPeerName).arg(newName);
+    const QString infoMsg = tr("[ CHAT ]  - %1 is now known as %2.").arg(mPeerName, newName);
     mpHost->postMessage(infoMsg);
     mPeerName = newName;
 }
@@ -846,8 +854,7 @@ void MMCPClient::handleIncomingPeekList(const QString& list)
                                "==== ==================== =============== =====\n"
                                "%1\n"
                                "%2==== ==================== =============== =====%3\n")
-                                    .arg(messageList.join(QChar::LineFeed))
-                                    .arg(FBLDRED).arg(RST);
+                                .arg(messageList.join(QChar::LineFeed), FBLDRED, RST);
     mpMMCPServer->clientMessage(this, listOut);
 }
 
@@ -856,10 +863,11 @@ void MMCPClient::handleIncomingPeekList(const QString& list)
  */
 void MMCPClient::handleIncomingPingRequest(const QString& msg)
 {
-    writeData(qsl("%1%2%3")
-                      .arg(static_cast<char>(PingResponse))
-                      .arg(msg)
-                      .arg(static_cast<char>(End)));
+    QByteArray out;
+    out.append(static_cast<char>(PingResponse));
+    out.append(msg.toLatin1());
+    out.append(static_cast<char>(End));
+    writeData(out);
 }
 
 /**
@@ -874,7 +882,7 @@ void MMCPClient::handleIncomingPingResponse(const QString& data)
         const QString infoMsg = tr("[ CHAT ]  - Ping returned from %1: %2 ms").arg(mPeerName).arg(QDateTime::currentMSecsSinceEpoch() - returnTime);
         mpHost->postMessage(infoMsg);
     } else {
-        const QString infoMsg = tr("[ CHAT ]  - Bad Ping response from %1: %2").arg(mPeerName).arg(data);
+        const QString infoMsg = tr("[ CHAT ]  - Bad Ping response from %1: %2").arg(mPeerName, data);
         mpHost->postMessage(infoMsg);
     }
 }
@@ -883,7 +891,7 @@ void MMCPClient::handleIncomingPingResponse(const QString& data)
 /**
  * This client sent a request to snoop you (the user).
  * Apparently the client is responsible for telling the connecting user.
- * 
+ *
  * We're sending a message back to the client to let them know if they
  * can or cannot snoop us. We don't know what language the remote client is using...
  * Send it in English for now and hope for the best? Maybe noone is using this snoop feature?
@@ -966,18 +974,18 @@ void MMCPClient::updateSgrState(const std::string &ansiSeq)
 
 /**
  * Handle remote client incoming snoop data.
- * 
+ *
  * Client    | needsSkip | needsTrack | snoop Mudlet     | Mudlet can snoop
  * Mudlet    | no          yes          yes                yes
  * MudMaster | yes	       yes          yes                yes
  * TinTin    | ?           yes          no?                yes
  * MUSH      | yes         yes          yes (color issue)  yes
- * Zmud      | ?           ?            ?                  ?	
- * Cmud      | ?           ?            ?                  ?		
- * 
+ * Zmud      | ?           ?            ?                  ?
+ * Cmud      | ?           ?            ?                  ?
+ *
  * mNeedsColorSkip and mNeedsColorTracking are defined when we receive
  * client version in handleIncomingClientVersion
- * 
+ *
  */
 void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
 {
@@ -1068,7 +1076,7 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
     outputMessage += remaining;
 
     if (!outputMessage.empty()) {
-        
+
         postSnoopDataEvent(QString::fromStdString(outputMessage));
 
         if (mpHost->getMMCPShowSnoopInMainConsole()) {
@@ -1098,7 +1106,7 @@ void MMCPClient::postSideChannelMessage(const QString& from, const QString& chan
  * Handle incoming side channel data from this client.
  * Posts a sysMMCPSideChannelMessage event with arguments:
  *     chatname, channel, message
- */ 
+ */
 void MMCPClient::handleIncomingSideChannelData(const QString& stringData)
 {
     QRegularExpression chatChannel("^(\\w+),(.*)$");

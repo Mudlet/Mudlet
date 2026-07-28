@@ -33,6 +33,7 @@
 #include <QElapsedTimer>
 #include <QFont>
 #include <QIcon>
+#include <QPixmap>
 #include <QPointer>
 #include <QSaveFile>
 #include <QWidget>
@@ -115,8 +116,8 @@ struct TFontAttributes
     QFont::StyleHint mStyleHint = QFont::AnyStyle;
     // We use either: (QFont::NoAntialias | QFont::PreferQuality) for all
     // TConsoles but the main one can be set to (QFont::PreferAntialias |
-    // QFont::PreferQuality) instead - see constuctor:
-    QFont::StyleStrategy mStyleStrategy;
+    // QFont::PreferQuality) instead - see constructor:
+    QFont::StyleStrategy mStyleStrategy = static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality);
     // qreal mLetterSpacing = 0.0;
     // QFont::SpacingType mSpacingType = QFont::AbsoluteSpacing;
     // We use but don't set "Line Spacing" - so don't worry about it.
@@ -290,6 +291,10 @@ public:
     void setFontName(const QString& fontName);
     bool setConsoleBackgroundImage(const QString&, int);
     bool resetConsoleBackgroundImage();
+    bool setWindowBackgroundImage(const QString&, int);
+    bool resetWindowBackgroundImage();
+    void updateMainFrameTransparency();
+    void updateWindowBackgroundCoverPixmap();
     void setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference = QVector<int>());
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
@@ -325,12 +330,11 @@ public:
     void clearSplit();
     bool showTimeStamps() const { return mShowTimeStamps; }
     void raiseMudletResizeEvent();
-    // This *should* be overridding the (void) QWidget::setFont(const QFont&)
-    // method but doesn't seem to be...!
-    // The forceChange option is required when using this method within
-    // setFontName(...) or setFontSize(...) so that the changes made
-    // on the TFontDetails class are forced into play, as otherwise
-    // it looks that they haven't inside this method:
+    // This hides QWidget::setFont(const QFont&) rather than overriding it
+    // (QWidget::setFont is non-virtual). The forceChange parameter is needed
+    // when calling from setFontName(...) or setFontSize(...) because those
+    // modify mDisplayFontDetails before calling this, and the TFontAttributes
+    // comparison would otherwise see no change:
     void setFont(const QFont&, const bool forceChange = false);
 
 
@@ -383,6 +387,7 @@ public:
     QWidget* mpMainFrame = nullptr;
     QWidget* mpRightToolBar = nullptr;
     QWidget* mpMainDisplay = nullptr;
+    QWidget* mpWindowBackground = nullptr;
 
     QPointer<dlgMapper> mpMapper;
 
@@ -422,6 +427,9 @@ public:
     QWidget* mpButtonMainLayer = nullptr;
     int mBgImageMode = 0;
     QString mBgImagePath;
+    int mWindowBgImageMode = 0;
+    QString mWindowBgImagePath;
+    QPixmap mWindowBgSourcePixmap;
     bool mHScrollBarEnabled = false;
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
     QVideoWidget* mpVideoWidget = nullptr;
@@ -498,13 +506,27 @@ inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
     const QDebugStateSaver saver(debug);
     // clang-format off
     switch (type) {
-    case TConsole::UnknownType:           text = qsl("Unknown"); break;
-    case TConsole::CentralDebugConsole:   text = qsl("Central Debug Console"); break;
-    case TConsole::ErrorConsole:          text = qsl("Profile Error Console"); break;
-    case TConsole::MainConsole:           text = qsl("Profile Main Console"); break;
-    case TConsole::SubConsole:            text = qsl("Mini Console"); break;
-    case TConsole::UserWindow:            text = qsl("User Window"); break;
-    case TConsole::Buffer:                text = qsl("Buffer"); break;
+    case TConsole::UnknownType:
+        text = qsl("Unknown");
+        break;
+    case TConsole::CentralDebugConsole:
+        text = qsl("Central Debug Console");
+        break;
+    case TConsole::ErrorConsole:
+        text = qsl("Profile Error Console");
+        break;
+    case TConsole::MainConsole:
+        text = qsl("Profile Main Console");
+        break;
+    case TConsole::SubConsole:
+        text = qsl("Mini Console");
+        break;
+    case TConsole::UserWindow:
+        text = qsl("User Window");
+        break;
+    case TConsole::Buffer:
+        text = qsl("Buffer");
+        break;
     default:
         text = qsl("Non-coded Type");
     }

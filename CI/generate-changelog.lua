@@ -72,7 +72,6 @@ local mdBuilder = {
     local t = {}
     text = text.."\n"
     for s in string.gmatch(text, "(.-)\n") do
-      s = escape_for_html(s)
       s = s:gsub("%(#(.-)%)", "[#%1](https://github.com/Mudlet/Mudlet/pull/%1)")
       s = link_functions_md(s)
       t[#t+1] = string.format("\\%s\n", s)
@@ -244,7 +243,7 @@ function print_sorted_changelog(changelog)
     elseif line:match(autoPattern) then --"(autocommit)" to catch bot PRs which may not start with "infra"
       trimmedLine = prefix .. line:match(autoPattern)
       infra[#infra+1] = trimmedLine
-    else
+    elseif line:trim() ~= "" then
       other[#other+1] = prefix .. line
     end
   end

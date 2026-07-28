@@ -52,6 +52,7 @@ public:
     QList<Release> getReleases() const;
     QString getDownloadFilePath() const;
     bool isReady() const;
+    bool isDownloading() const;
 
 signals:
     void ready();

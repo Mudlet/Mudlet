@@ -23,6 +23,7 @@
 
 #include <QString>
 #include <QList>
+#include <QStringList>
 
 struct GameDetail
 {
@@ -33,6 +34,11 @@ struct GameDetail
     QString websiteInfo;
     QString icon;
     QString description;
+    // the game's bundled loader installs the game's own full interface, so
+    // the generic starter UI is not preinstalled for it:
+    bool providesOwnUi = false;
+    // other hostnames the game is reachable under:
+    QStringList alternateHostUrls;
 };
 
 class TGameDetails
@@ -57,6 +63,16 @@ public:
             result << (*i).name;
         }
         return result;
+    }
+
+    inline static bool gameProvidesOwnUi(const QString& hostUrl)
+    {
+        for (const auto& game : scmDefaultGames) {
+            if (game.providesOwnUi && (!game.hostUrl.compare(hostUrl, Qt::CaseInsensitive) || game.alternateHostUrls.contains(hostUrl, Qt::CaseInsensitive))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // clang-format off
@@ -328,6 +344,15 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "Let your spirit take shape in one of fifteen races, cast your will into one of nine guilds and begin your journey towards destiny. Forge friendships. Gain power. Vanquish enemies. Work with your allies toward goals greater than yourself. Become part of the rich history of adventurers who have made their home in a world that is immediately fun and will continue to challenge and stimulate for years to come. Step through the portal, and immerse yourself in the mythical world, Astaria.\n\n"
                  "Astaria is a free-to-play MUD with an RP-optional atmosphere, set in a medieval fantasy world with a touch of cosmic horror. Active since 1994, it's a realm where dragons still roam, adventures await around every corner, and new heroes are always welcome.")},
 
+            {qsl("Federation 2 Community Edition"),
+             qsl("play.federation2.com"),
+             30003,
+             false,
+             qsl("<a href='https://federation2.com'>Website</a><br>"
+                 "<a href='https://discord.gg/FB2xzAc5CT'>Discord</a>"),
+             qsl(":/icons/fed2-logo.png"),
+             qsl("Federation 2, the space trading game, is a massively multi-player game set within an exciting world of interstellar commerce and intrigue, in which you interact and collaborate with lots of other players in real-time, and compete against them to climb the ranks. The aim of the game is to amass a larger fortune (in Imperial Groats) than any other player, and to climb the ranks by forging alliances and making friends with the right people. Cooperation is the name of the game in Federation.\n")},
+
             {qsl("Imperian"),
              qsl("imperian.com"),
              4000,
@@ -593,7 +618,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "is supportive of new players - unforgiving though our world may be. Join us for a "
                  "real challenge and real rewards: adrenalin-pumping battles, memorable quests run "
                  "by our volunteer immortal staff, and stories that will stick with you for a "
-                 "lifetime.")},
+                 "lifetime."),
+             true}, // CF-loader installs CFGUI
 
             {qsl("Cleft of Dimensions"),
              qsl("cleftofdimensions.net"),
@@ -691,7 +717,9 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "\n\n"
                  "Unsere freundliche Spielerschaft hilft Dir gerne bei Deinen ersten Schritten."
                  "\n\n"
-                 "Spiel jetzt oder nie!")},
+                 "Spiel jetzt oder nie!"),
+             true, // mg-loader installs MorgenGrauen's own interface
+             {qsl("mg.mud.de"), qsl("mg.morgengrauen.info"), qsl("morgengrauen.info")}},
 
             {qsl("Infinity"),
              qsl("infinitymud.com"),
@@ -734,7 +762,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "    Weather, storms, wind, fire, floods, disease, even asteroids. This may be text "
                  "but it is the most dynamic game ever attempted. The wind affects the ships, where "
                  "fire spreads, and even how some critters smell you if you are upwind from them.\n\n"
-                 "Do you dare enter?")},
+                 "Do you dare enter?"),
+             true}, // MedBootstrap installs MedUI
 
             {qsl("Dragonfire MUD"),
              qsl("dragonfiremud.com"),
@@ -766,6 +795,41 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "combat in a modern text-only experience. Build a character with up to three "
                  "classes, pursue epic quests and rebirth bonuses, and enjoy quality-of-life "
                  "features like a custom Mudlet UI and real-time maps.")},
+
+            {qsl("Pku XKX MUD"),
+             qsl("pkuxkx.net"),
+             8081,
+             false,
+             qsl("<a href='https://www.pkuxkx.net/'>https://www.pkuxkx.net/</a>"),
+             qsl(":/icons/pkuxkx.png"),
+             qsl("Peking University Heroes (pkuxkx) was first launched on Peking University in 1996. "
+                 "To date, it has over 80 map areas, 10000+ rooms and more than 20 martial arts sects. "
+                 "It boasts over 200 daily active users and is the oldest and most popular "
+                 "Chinese MUD in the Chinese community.\n"
+                 "Website: https://pkuxkx.net/"
+                 "\n\n"
+                 "北大侠客行(pkuxkx)于1996年开始架于北大. 迄今为止，它已经拥有了超过80个地图区域，10000多个房间，20多个武林门派。"
+                 "每日活跃用户有200多人。是华人社区中历史最悠久玩家最多的中文MUD。\n"
+                 "官网: https://pkuxkx.net/；论坛：https://pkuxkx.net/forum/forum.php；WIKI：https://pkuxkx.net/wiki/\n"
+                 "国内(GBK编码) mud.pkuxkx.net:8080； 国内(UTF编码) mud.pkuxkx.net 8081；\n"
+                 "海外转发：https://pkuxkx.net/proxy_status.php 查找推荐线路")},
+
+            {qsl("Icesus"),
+             qsl("icesus.org"),
+             4443,
+             true,
+             qsl("<a href='https://www.icesus.org/'>Website</a><br>"
+                 "<a href='https://discord.gg/j9cSPyAzQb'>Discord</a>"),
+             qsl(":/icons/icesus_480x120.png"),
+             qsl("Icesus is a free fantasy text RPG running since 1995. Actively developed, "
+                 "community-run, and full of deep systems."
+                 "\n\n"
+                 "Build a character from 27 races and 16 guilds. Fight in tactical party "
+                 "combat, explore the frozen Valley of Aegic, and earn your place in "
+                 "player-driven provinces."
+                 "\n\n"
+                 "Old-school depth. Modern access. New players welcome."),
+             true}, // icesus-loader installs Icesus' own interface
             };
     // clang-format on
 };

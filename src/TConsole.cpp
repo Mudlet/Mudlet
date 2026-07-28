@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2024, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2021 by Vadim Peretokin - vperetokin@gmail.com          *
@@ -38,7 +39,6 @@
 #include "TLabel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
-#include "TRoomDB.h"
 #include "TSplitter.h"
 #include "TTextEdit.h"
 #include "dlgMapper.h"
@@ -54,10 +54,14 @@
 #include <QMimeData>
 #include <QPainter>
 #include <QScrollBar>
+#include <QSettings>
 #include <QShortcut>
 #include <QSplitter>
 #include <QTextBoundaryFinder>
 #include <QVideoWidget>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 const QString TConsole::cmLuaLineVariable("line");
 
@@ -119,7 +123,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
     setContentsMargins(0, 0, 0, 0);
     setAttribute(Qt::WA_DeleteOnClose);
-    setAttribute(Qt::WA_OpaquePaintEvent, (mType == MainConsole));
+    setAttribute(Qt::WA_OpaquePaintEvent, (mType == MainConsole || mType == CentralDebugConsole));
 
     const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     const QSizePolicy sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -129,7 +133,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
 
-    if (mType == MainConsole) {
+    // the central debug console is a top-level window with no main console
+    // behind it, so it must paint its own background like the main console does
+    if (mType == MainConsole || mType == CentralDebugConsole) {
         QPalette framePalette;
         framePalette.setColor(QPalette::Text, QColor(Qt::black));
         framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
@@ -216,6 +222,19 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     mpMainDisplay->setLayout(layout);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
+
+    if (mType == MainConsole) {
+        // Sits behind mpMainDisplay within mpMainFrame, which always spans the
+        // console's full pane regardless of mBorders - so this stays independent
+        // of setBorderSizes() without needing its own resize/border logic.
+        mpWindowBackground = new QWidget(mpMainFrame);
+        mpWindowBackground->setObjectName(qsl("WindowBackground"));
+        mpWindowBackground->setContentsMargins(0, 0, 0, 0);
+        mpWindowBackground->move(0, 0);
+        mpWindowBackground->resize(mpMainFrame->size());
+        mpWindowBackground->lower();
+        mpWindowBackground->show();
+    }
 
     mpBaseVFrame->setSizePolicy(sizePolicy);
     mpBaseHFrame->setSizePolicy(sizePolicy);
@@ -404,8 +423,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         mpLineEdit_networkLatency->setReadOnly(true);
         mpLineEdit_networkLatency->setSizePolicy(sizePolicy4);
         mpLineEdit_networkLatency->setFocusPolicy(Qt::NoFocus);
-        mpLineEdit_networkLatency->setToolTip(utils::richText(tr("<i>N:</i> is the latency of the game server and network (aka ping, in seconds),<br>"
-                                                                 "<i>S:</i> is the system processing time - how long your triggers took to process the last line(s).")));
+        //: Tooltip for N and S network latency indicators
+        mpLineEdit_networkLatency->setToolTip(utils::richText(tr("<i>N:</i> network latency in seconds (ping),<br>"
+                                                                 "<i>S:</i> system processing time (triggers).")));
         mpLineEdit_networkLatency->setMaximumSize(120, 30);
         mpLineEdit_networkLatency->setMinimumSize(120, 30);
         mpLineEdit_networkLatency->setAutoFillBackground(true);
@@ -623,7 +643,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     // Need to delay doing this because it uses elements that may not have
     // been constructed yet:
     if (mType == MainConsole) {
-        QTimer::singleShot(0, this, [this]() {
+        QTimer::singleShot(0ms, this, [this]() {
             setProxyForFocus(mpCommandLine);
         });
     }
@@ -692,6 +712,10 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layoutLayer2->activate();
     }
 
+    // Move before resizing: resizing first could leave the display overrunning
+    // its parent frame, clipping it and making TTextEdit::updateScreenView()
+    // undercount the visible rows:
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
     if (mType & (MainConsole | SubConsole | UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
@@ -704,13 +728,64 @@ void TConsole::resizeEvent(QResizeEvent* event)
         mpMainFrame->resize(x, y);
         mpMainDisplay->resize(x, y);
     }
-    mpMainDisplay->move(mBorders.left(), mBorders.top());
+
+    if (mpWindowBackground) {
+        mpWindowBackground->resize(mpMainFrame->size());
+        if (mWindowBgImageMode == 5) {
+            updateWindowBackgroundCoverPixmap();
+        }
+    }
 
     if (mType & (CentralDebugConsole | ErrorConsole)) {
         layerCommandLine->hide();
     } else if (mType & ~(SubConsole | UserWindow)) {
         // does nothing for SubConsole or UserWindows
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
+    }
+
+    // Sync Host dimensions on resize so wraps and NAWS reflect the current pane width.
+    if ((mType & MainConsole) && !mpHost.isNull() && mUpperPane && !mUpperPane->visibleRegion().isEmpty()) {
+        const int paneWidthPx = mUpperPane->visibleRegion().boundingRect().width();
+        auto syncHost = [paneWidthPx](Host* host, const QWidget* paneForFont) {
+            if (!host || !paneForFont) {
+                return;
+            }
+            const int fontWidth = QFontMetrics(paneForFont->font()).averageCharWidth();
+            if (fontWidth <= 0) {
+                return;
+            }
+            const int cols = qMax(40, paneWidthPx / fontWidth);
+            if (cols > 0 && cols != host->mScreenWidth) {
+                host->setScreenDimensions(cols, host->mScreenHeight);
+                QTimer::singleShot(0ms, host, &Host::updateDisplayDimensions);
+            }
+        };
+
+        syncHost(mpHost.data(), mUpperPane);
+
+        // Detached profiles have their own pixel width; only propagate from a main-window console.
+        mudlet* const app = mudlet::self();
+        const bool inMainWindow = app && !app->getDetachedWindows().contains(mpHost->getName());
+        if (inMainWindow) {
+            for (const auto& otherHostPtr : app->getHostManager()) {
+                Host* otherHost = otherHostPtr.data();
+                if (!otherHost || otherHost == mpHost.data()) {
+                    continue;
+                }
+                // Skip detached profiles: different container, different width.
+                if (app->getDetachedWindows().contains(otherHost->getName())) {
+                    continue;
+                }
+                if (!otherHost->mpConsole || !otherHost->mpConsole->mUpperPane) {
+                    continue;
+                }
+                // Visible siblings (multi-view) handle their own resizeEvent.
+                if (!otherHost->mpConsole->mUpperPane->visibleRegion().isEmpty()) {
+                    continue;
+                }
+                syncHost(otherHost, otherHost->mpConsole->mUpperPane);
+            }
+        }
     }
 
     emit resized(event);
@@ -777,13 +852,14 @@ void TConsole::refresh()
         y -= mpTopToolBar->height();
     }
 
+    // Move before resizing, see comment in resizeEvent():
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
     mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
 
     if (!mpCommandLine.isNull()) {
         mpCommandLine->adjustHeight();
     }
 
-    mpMainDisplay->move(mBorders.left(), mBorders.top());
     x = width();
     y = height();
     const QSize s = QSize(x, y);
@@ -952,10 +1028,28 @@ QString getColorCode(QColor color)
     return qsl("%1,%2,%3,%4").arg(color.red()).arg(color.green()).arg(color.blue()).arg(color.alpha());
 }
 
+// Builds the QSS fragment shared by setConsoleBackgroundImage()/setWindowBackgroundImage()
+// for modes 1-4 ('border'/'center'/'tile'/'style'). Mode 5 ('cover') is not stylesheet-based
+// (Qt's border-image/background-image have no scale-to-fill option) and is handled separately.
+static QString buildBackgroundImageStyleSheet(const QString& objectName, const QColor& bgColor, int mode, const QString& imgPath)
+{
+    if (mode == 1) {
+        return qsl("QWidget#%1{background-color: rgba(%2); border-image: url(%3);}").arg(objectName, getColorCode(bgColor), imgPath);
+    } else if (mode == 2) {
+        return qsl("QWidget#%1{background-color: rgba(%2); background-image: url(%3); background-repeat: no-repeat; background-position: center; background-origin: margin;}")
+                .arg(objectName, getColorCode(bgColor), imgPath);
+    } else if (mode == 3) {
+        return qsl("QWidget#%1{background-color: rgba(%2); background-image: url(%3);}").arg(objectName, getColorCode(bgColor), imgPath);
+    } else if (mode == 4) {
+        return qsl("QWidget#%1{background-color: rgba(%2); %3}").arg(objectName, getColorCode(bgColor), imgPath);
+    }
+    return QString();
+}
+
 void TConsole::changeColors()
 {
     if (mType == CentralDebugConsole) {
-        // No-op now?
+        // Font is managed via QWidget::font() inheritance, no font operations needed here
     } else if (mType & (ErrorConsole | SubConsole | UserWindow | Buffer)) {
         if (!mBgImageMode) {
             auto styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1);}").arg(getColorCode(mBgColor));
@@ -1000,6 +1094,7 @@ void TConsole::changeColors()
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
         mFormatCurrent.setColors(mpHost->mFgColor, mpHost->mBgColor);
+        updateMainFrameTransparency();
     } else {
         Q_ASSERT_X(false, "TConsole::changeColors()", "invalid TConsole type detected");
     }
@@ -1115,7 +1210,7 @@ void TConsole::scrollUp(int lines)
     mLowerPane->forceUpdate();
 
     if (lowerAppears) {
-        QTimer::singleShot(0, this, [this, lines]() {
+        QTimer::singleShot(0ms, this, [this, lines]() {
             mUpperPane->scrollUp(mLowerPane->getRowCount() + lines);
         });
         if (mudlet::self()->showSplitscreenTutorial()) {
@@ -1194,41 +1289,39 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
             mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
         }
         return;
+    }
+    if ((buffer.buffer.empty()) || mUserCursor == buffer.getEndPos()) {
+        if (customFormat) {
+            buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent, luaReference);
+        } else {
+            buffer.addLink(mTriggerEngineMode, text, func, hint, standardLinkFormat, luaReference);
+        }
+
+        mUpperPane->showNewLines();
+        mLowerPane->showNewLines();
 
     } else {
-        if ((buffer.buffer.empty()) || mUserCursor == buffer.getEndPos()) {
-            if (customFormat) {
-                buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent, luaReference);
-            } else {
-                buffer.addLink(mTriggerEngineMode, text, func, hint, standardLinkFormat, luaReference);
-            }
-
-            mUpperPane->showNewLines();
-            mLowerPane->showNewLines();
-
+        if (customFormat) {
+            buffer.insertInLine(mUserCursor, text, mFormatCurrent);
         } else {
-            if (customFormat) {
-                buffer.insertInLine(mUserCursor, text, mFormatCurrent);
-            } else {
-                buffer.insertInLine(mUserCursor, text, standardLinkFormat);
-            }
+            buffer.insertInLine(mUserCursor, text, standardLinkFormat);
+        }
 
-            buffer.applyLink(P, P2, func, hint, luaReference);
-            if (text.indexOf("\n") != -1) {
-                const int y_tmp = mUserCursor.y();
-                const int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
-                mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
-                const int y_neu = y_tmp + down;
-                const int x_adjust = text.lastIndexOf("\n");
-                int x_neu = 0;
-                if (x_adjust != -1) {
-                    x_neu = text.size() - x_adjust - 1 > 0 ? text.size() - x_adjust - 1 : 0;
-                }
-                moveCursor(x_neu, y_neu);
-            } else {
-                mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
-                moveCursor(mUserCursor.x() + text.size(), mUserCursor.y());
+        buffer.applyLink(P, P2, func, hint, luaReference);
+        if (text.indexOf("\n") != -1) {
+            const int y_tmp = mUserCursor.y();
+            const int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+            mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
+            const int y_neu = y_tmp + down;
+            const int x_adjust = text.lastIndexOf("\n");
+            int x_neu = 0;
+            if (x_adjust != -1) {
+                x_neu = text.size() - x_adjust - 1 > 0 ? text.size() - x_adjust - 1 : 0;
             }
+            moveCursor(x_neu, y_neu);
+        } else {
+            mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
+            moveCursor(mUserCursor.x() + text.size(), mUserCursor.y());
         }
     }
 }
@@ -1463,26 +1556,10 @@ void TConsole::setFontSize(int size)
 
 bool TConsole::setConsoleBackgroundImage(const QString& imgPath, int mode)
 {
-    QColor bgColor;
-    QString styleSheet;
+    const QColor bgColor = (mType == MainConsole) ? mpHost->mBgColor : mBgColor;
 
-    if (mType == MainConsole) {
-        bgColor = mpHost->mBgColor;
-    } else {
-        bgColor = mBgColor;
-    }
-
-    if (mode == 1) {
-        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); border-image: url(%2);}").arg(getColorCode(bgColor)).arg(imgPath);
-    } else if (mode == 2) {
-        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); background-image: url(%2); background-repeat: no-repeat; background-position: center; background-origin: margin;}")
-                             .arg(getColorCode(bgColor))
-                             .arg(imgPath);
-    } else if (mode == 3) {
-        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); background-image: url(%2);}").arg(getColorCode(bgColor)).arg(imgPath);
-    } else if (mode == 4) {
-        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); %2}").arg(getColorCode(bgColor)).arg(imgPath);
-    } else {
+    const QString styleSheet = buildBackgroundImageStyleSheet(qsl("MainDisplay"), bgColor, mode, imgPath);
+    if (styleSheet.isEmpty()) {
         return false;
     }
     mpMainDisplay->setStyleSheet(styleSheet);
@@ -1496,6 +1573,89 @@ bool TConsole::resetConsoleBackgroundImage()
     mBgImageMode = 0;
     changeColors();
     return true;
+}
+
+bool TConsole::setWindowBackgroundImage(const QString& imgPath, int mode)
+{
+    if (!mpWindowBackground) {
+        return false;
+    }
+
+    if (mode == 5) {
+        QPixmap pixmap(imgPath);
+        if (pixmap.isNull()) {
+            return false;
+        }
+        mWindowBgSourcePixmap = pixmap;
+        mpWindowBackground->setStyleSheet(QString());
+        updateWindowBackgroundCoverPixmap();
+    } else {
+        const QColor bgColor = mpHost ? mpHost->mBgColor : QColorConstants::Black;
+        const QString styleSheet = buildBackgroundImageStyleSheet(qsl("WindowBackground"), bgColor, mode, imgPath);
+        if (styleSheet.isEmpty()) {
+            return false;
+        }
+        mWindowBgSourcePixmap = QPixmap();
+        mpWindowBackground->setAutoFillBackground(false);
+        mpWindowBackground->setPalette(QPalette());
+        mpWindowBackground->setStyleSheet(styleSheet);
+    }
+
+    mWindowBgImageMode = mode;
+    mWindowBgImagePath = imgPath;
+    updateMainFrameTransparency();
+    return true;
+}
+
+bool TConsole::resetWindowBackgroundImage()
+{
+    if (!mpWindowBackground) {
+        return false;
+    }
+
+    mWindowBgImageMode = 0;
+    mWindowBgImagePath.clear();
+    mWindowBgSourcePixmap = QPixmap();
+    mpWindowBackground->setStyleSheet(QString());
+    mpWindowBackground->setAutoFillBackground(false);
+    mpWindowBackground->setPalette(QPalette());
+    updateMainFrameTransparency();
+    return true;
+}
+
+void TConsole::updateMainFrameTransparency()
+{
+    if (mType != MainConsole || !mpMainFrame) {
+        return;
+    }
+
+    QPalette framePalette;
+    framePalette.setColor(QPalette::Text, QColor(Qt::black));
+    framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
+    framePalette.setColor(QPalette::Window, mWindowBgImageMode ? QColor(0, 0, 0, 0) : QColor(0, 0, 0, 255));
+    mpMainFrame->setPalette(framePalette);
+    mpMainFrame->setAutoFillBackground(true);
+}
+
+// Simulates CSS "cover" since QT stylesheets do not support it
+void TConsole::updateWindowBackgroundCoverPixmap()
+{
+    if (!mpWindowBackground || mWindowBgSourcePixmap.isNull()) {
+        return;
+    }
+
+    const QSize targetSize = mpWindowBackground->size();
+    if (targetSize.isEmpty()) {
+        return;
+    }
+
+    const QPixmap scaled = mWindowBgSourcePixmap.scaled(targetSize, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+    const QRect cropRect(qMax(0, (scaled.width() - targetSize.width()) / 2), qMax(0, (scaled.height() - targetSize.height()) / 2), targetSize.width(), targetSize.height());
+
+    QPalette palette;
+    palette.setBrush(QPalette::Window, QBrush(scaled.copy(cropRect)));
+    mpWindowBackground->setPalette(palette);
+    mpWindowBackground->setAutoFillBackground(true);
 }
 
 void TConsole::setCmdVisible(bool isVisible)
@@ -1581,7 +1741,7 @@ void TConsole::setFont(const QFont& newFont, const bool forceChange)
         QWidget::setFont(newFont);
         // Update associated TCommandLine's:
         if (mType & (MainConsole | SubConsole | UserWindow)) {
-            if (mpHost->mpConsole) {
+            if (mpHost && mpHost->mpConsole) {
                 for (auto& commandLine : mpHost->mpConsole->mSubCommandLineMap) {
                     auto pConsole = commandLine->console();
                     if (pConsole && (pConsole == this)) {
@@ -1604,7 +1764,6 @@ void TConsole::setFontName(const QString& fontName)
 {
     mDisplayFontDetails.mName = fontName;
     setFont(mDisplayFontDetails.makeFont(), true);
-    refreshView();
 }
 
 QString TConsole::getCurrentLine()
@@ -1912,6 +2071,10 @@ void TConsole::printSystemMessage(const QString& msg)
 
 void TConsole::echo(const QString& msg)
 {
+    // Strip \r so that \r\n becomes \n and standalone \r disappears; without
+    // this, \r is stored literally in the buffer and rendered as a glyph.
+    QString normalizedMsg = msg;
+    normalizedMsg.remove(QChar::CarriageReturn);
     if (mTriggerEngineMode) {
         // Use insertInLine instead of appendLine so that newline characters
         // are embedded in the trigger line rather than creating new buffer
@@ -1922,12 +2085,12 @@ void TConsole::echo(const QString& msg)
         if (y >= 0) {
             const int x = buffer.lineBuffer.at(y).size();
             QPoint insertPoint(x, y);
-            buffer.insertInLine(insertPoint, msg, mFormatCurrent);
+            buffer.insertInLine(insertPoint, normalizedMsg, mFormatCurrent);
         } else {
-            buffer.appendLine(msg, 0, msg.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+            buffer.appendLine(normalizedMsg, 0, normalizedMsg.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
         }
     } else {
-        print(msg);
+        print(normalizedMsg);
     }
 }
 
@@ -2568,7 +2731,7 @@ void TConsole::setCaretMode(bool enabled)
     } else {
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
         // NVDA breaks focus reset, so do it on a timer
-        QTimer::singleShot(0, this, [this]() {
+        QTimer::singleShot(0ms, this, [this]() {
             mUpperPane->releaseKeyboard();
         });
 #endif
