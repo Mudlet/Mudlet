@@ -29,7 +29,11 @@
 #include "mudlet.h"
 #include "utils.h"
 
+#include <QHostAddress>
+#include <QNetworkReply>
+#include <QPointer>
 #include <QProgressDialog>
+#include <QTcpServer>
 #include <QRegularExpression>
 
 extern void qInitResources_mudlet();
@@ -341,6 +345,51 @@ private slots:
         // Cancelling when no download is in flight must be a harmless no-op.
         host->mTelnet.slot_cancelPackageDownload();
         QCOMPARE(console->findChildren<QProgressDialog*>().count(), 1);
+    }
+
+    // When a second server-initiated GUI download supersedes one still in
+    // flight (a reconnect re-sends Client.GUI), swapping the progress dialog
+    // must not cancel the freshly started download. The superseded dialog's
+    // close() emits canceled(), which used to abort the just-assigned new reply.
+    // The test above missed this because it swapped dialogs with no reply live.
+    void test_replacingDownloadDialogKeepsNewDownloadAlive()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        auto console = host->mpConsole;
+
+        // A TCP server that accepts connections but never answers keeps the
+        // package-download reply in flight (Running, NoError) for the whole
+        // test, so an unwanted abort() is the only thing that can finish it.
+        QTcpServer hangingServer;
+        QVERIFY2(hangingServer.listen(QHostAddress::LocalHost, 0), "Could not start the stand-in download server.");
+        const QString url = qsl("http://localhost:%1/game-ui.mpackage").arg(hangingServer.serverPort());
+
+        // First server-initiated download: starts reply #1 and progress dialog #1.
+        host->mTelnet.downloadAndInstallGUIPackage(qsl("game-ui"), qsl("game-ui.mpackage"), url);
+        QVERIFY2(host->mTelnet.mpPackageDownloadReply, "The first GUI download did not start a network reply.");
+        QCOMPARE(console->findChildren<QProgressDialog*>().count(), 1);
+
+        // Second download supersedes the first; reply #2 must take over and stay
+        // live rather than being cancelled the instant its dialog replaces #1.
+        host->mTelnet.downloadAndInstallGUIPackage(qsl("game-ui"), qsl("game-ui.mpackage"), url);
+
+        QPointer<QNetworkReply> newReply = host->mTelnet.mpPackageDownloadReply;
+        QVERIFY2(newReply, "The superseding GUI download left no active network reply.");
+        QVERIFY2(!newReply->isFinished(), "The superseding GUI download was cancelled at birth by the dialog swap.");
+        QCOMPARE(newReply->error(), QNetworkReply::NoError);
+
+        // Let dialog #1's WA_DeleteOnClose deleteLater() run: exactly one dialog
+        // survives the swap, and the new download is still alive.
+        QTest::qWait(50ms);
+        QCOMPARE(console->findChildren<QProgressDialog*>().count(), 1);
+        QVERIFY2(newReply && newReply->error() == QNetworkReply::NoError, "The superseding GUI download did not survive the dialog swap.");
+
+        // The user's Cancel must still abort the live download.
+        host->mTelnet.slot_cancelPackageDownload();
+        QTest::qWait(50ms);
     }
 
     // Builds an MSSP subnegotiation advertising a secure TLS port:
