@@ -564,22 +564,60 @@ function autoRunTests()
 end
 
 local errorLogged = false
+
+-- Returns nil on an OS we don't know how to signal on (e.g. Windows with no
+-- TEMP set).
+local function defaultFailureMarkerPath()
+  local os_name = getOS()
+  if os_name == "linux" or os_name == "mac" then
+    return "/tmp/busted-tests-failed"
+  elseif os_name == "windows" then
+    local temp_directory = os.getenv("TEMP")
+    if temp_directory and temp_directory ~= "" then
+      return temp_directory.."\\busted-tests-failed"
+    end
+    return nil
+  end
+  ioprint("Tests failed, but did not know where to write the failure marker for "..tostring(os_name))
+  return nil
+end
+
+local function tryWriteFailureMarker(markerPath)
+  if not markerPath or markerPath == "" then
+    return false
+  end
+  local file = io.open(markerPath, "w")
+  if not file then
+    return false
+  end
+  file:write("Lua busted tests failed")
+  file:close()
+  return true
+end
+
 function logTestError()
   if errorLogged then return end
 
-  local os_name = getOS()
-  if os_name == "linux" or os_name == "mac" then
-    file = io.open("/tmp/busted-tests-failed", "w")
-    file:write("Lua busted tests failed")
-    file:close()
-  elseif os_name == "windows" then
-    temp_directory = os.getenv("TEMP")
-    file = io.open(temp_directory.."\\busted-tests-failed", "w")
-    file:write("Lua busted tests failed")
-    file:close()
-  else
-    ioprint("Tests failed, but did not know how to log the error for "..os_name)
+  -- MUDLET_TEST_FAILURE_MARKER lets parallel runs each use their own failure
+  -- marker; without it the shared platform default is used. Treat an empty value
+  -- as unset, matching how the C++ side treats empty env vars.
+  local configuredMarker = os.getenv("MUDLET_TEST_FAILURE_MARKER")
+  if configuredMarker == "" then
+    configuredMarker = nil
   end
+  local defaultMarker = defaultFailureMarkerPath()
+
+  -- A failed run must never look like it passed. Try the configured marker
+  -- first, then always fall back to the platform default, so an unwritable
+  -- MUDLET_TEST_FAILURE_MARKER (bad path, missing parent, read-only fs) still
+  -- leaves the well-known signal automation checks. Only if nothing can be
+  -- written do we shout to the log rather than crash on a nil file.
+  if tryWriteFailureMarker(configuredMarker) or (defaultMarker ~= configuredMarker and tryWriteFailureMarker(defaultMarker)) then
+    errorLogged = true
+    return
+  end
+
+  ioprint("Tests failed, but could not write any failure marker (tried "..tostring(configuredMarker).." then "..tostring(defaultMarker)..")")
   errorLogged = true
 end</script>
 			<eventHandlerList>
