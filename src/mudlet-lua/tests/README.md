@@ -54,6 +54,46 @@ runTests <full path>/src/mudlet-lua/tests
 runTests <full path>/src/mudlet-lua/tests/StringUtils_spec.lua
 ```
 
+## Running tests headlessly (and in parallel)
+
+The suite can also be run without touching the GUI, which is how CI runs it:
+
+```sh
+AUTORUN_BUSTED_TESTS=true \
+MUDLET_TEST_MODE=1 \
+QUIT_MUDLET_AFTER_TESTS=true \
+TESTS_DIRECTORY=<full path>/src/mudlet-lua/tests \
+xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror
+```
+
+A failure writes a marker file (`/tmp/busted-tests-failed` on Linux/macOS) so the
+caller can detect it.
+
+By default Mudlet reads and writes `~/.config/mudlet`, so two runs started at the
+same time (for example from different checkouts) share one `Mudlet self-test`
+profile and collide on its sqlite databases, and leftover state from a previous
+run is not cleaned up. To give a run its own pristine, isolated config root:
+
+- `XDG_CONFIG_HOME` - Mudlet uses `$XDG_CONFIG_HOME/mudlet` as its config root
+  (profiles, sqlite databases, settings, and password storage). Because an
+  existing `~/.config/mudlet` otherwise wins (so a system-wide `XDG_CONFIG_HOME`
+  export never strands real profiles), a test harness must **pre-create**
+  `$XDG_CONFIG_HOME/mudlet` to opt in.
+- `MUDLET_TEST_FAILURE_MARKER` - absolute path for the failure marker, so it is
+  not shared either.
+
+```sh
+CONFIG_DIR=$(mktemp -d)
+mkdir -p "$CONFIG_DIR/mudlet"   # pre-create to opt into the isolated config root
+AUTORUN_BUSTED_TESTS=true \
+MUDLET_TEST_MODE=1 \
+QUIT_MUDLET_AFTER_TESTS=true \
+TESTS_DIRECTORY=<full path>/src/mudlet-lua/tests \
+XDG_CONFIG_HOME="$CONFIG_DIR" \
+MUDLET_TEST_FAILURE_MARKER="$CONFIG_DIR/busted-tests-failed" \
+xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror
+```
+
 ## Creating tests
 
 See [Busted manual](https://lunarmodules.github.io/busted/) and currently existing tests for examples on how to write tests.
