@@ -192,7 +192,9 @@ function IDMgr:getTimers()
 end
 
 function IDMgr:getTriggers()
-  local triggerNames = table.update(table.keys(self.triggers), table.keys(self.regexTriggers))
+  -- substring and regex names live in separate 1..n arrays, so merge them by
+  -- value (table.n_union), not by index, or entries at the same index collide
+  local triggerNames = table.n_union(table.keys(self.triggers), table.keys(self.regexTriggers))
   table.sort(triggerNames)
   return triggerNames
 end
