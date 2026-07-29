@@ -311,6 +311,24 @@ void UpdateDialog::showIfUpdatesAvailableOrQuit()
     }
 }
 
+/*!
+ * \brief Stops the dialog from showing itself when the last window closes.
+ *
+ * Used when the application is deliberately closing to restart into an
+ * already-installed update: offering the update again would leave this dialog
+ * as the only window of an instance the user expects to be gone, keeping it
+ * alive alongside the restarted one. As quitOnLastWindowClosed is disabled in
+ * OnLastWindowClosed mode, quit explicitly once the last window closes.
+ */
+void UpdateDialog::disableAutoShow()
+{
+    if (mType != OnLastWindowClosed) {
+        return;
+    }
+    disconnect(qApp, &QGuiApplication::lastWindowClosed, this, &UpdateDialog::showIfUpdatesAvailableOrQuit);
+    connect(qApp, &QGuiApplication::lastWindowClosed, qApp, &QCoreApplication::quit);
+}
+
 // "DBLSQD/" prefix retained for backward compatibility with user settings from the previous update system
 QVariant UpdateDialog::settingsValue(const QString& key, const QVariant& defaultValue, QSettings* settings)
 {

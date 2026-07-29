@@ -29,6 +29,7 @@
 #include <QButtonGroup>
 #include <QDialog>
 #include <QJsonArray>
+#include <QJsonObject>
 #include <QListWidget>
 #include <QTextBrowser>
 

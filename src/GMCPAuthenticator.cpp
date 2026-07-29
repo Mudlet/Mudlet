@@ -31,9 +31,16 @@
 #include <QDebug>
 #include <QDesktopServices>
 #include <QHash>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
 #include <QPointer>
 #include <QTimer>
 #include <QUrl>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 namespace {
 // Human-readable labels for the provider ids that arrive as lowercase strings on the wire, so the
@@ -687,7 +694,7 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
         mReconnectRejected = true;
         //: Shown when a saved password-less sign-in is no longer accepted; Mudlet reconnects so the user can sign in again.
         mpHost->postMessage(tr("[ INFO ]  - Your saved sign-in has expired; reconnecting so you can sign in again."));
-        QTimer::singleShot(0, mpHost, [safeHost]() {
+        QTimer::singleShot(0ms, mpHost, [safeHost]() {
             if (safeHost) {
                 safeHost->mTelnet.reconnect();
             }

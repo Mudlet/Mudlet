@@ -608,6 +608,7 @@ bool TRoomDB::addArea(TArea* pA, const int id, const QString& name)
         return false;
     }
 
+    deleteDisplacedArea(id, pA);
     areas.insert(id, pA);
     areaNamesMap.insert(id, name);
     // Need to force recalculation of limits:
@@ -1309,7 +1310,23 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
 
 void TRoomDB::restoreSingleArea(int areaID, TArea* pA)
 {
+    deleteDisplacedArea(areaID, pA);
     areas[areaID] = pA;
+}
+
+// The default (-1) area created by our constructor gets overwritten when a
+// map that contains it is loaded - delete the displaced TArea so it does not
+// leak:
+void TRoomDB::deleteDisplacedArea(int areaID, TArea* pA)
+{
+    TArea* pExisting = areas.value(areaID);
+    if (!pExisting || pExisting == pA) {
+        return;
+    }
+    // Prevent TArea::~TArea() from re-entrantly calling removeArea(this),
+    // mirroring the pattern in TRoomDB::removeArea(int)
+    pExisting->mpRoomDB = nullptr;
+    delete pExisting;
 }
 
 bool TRoomDB::restoreSingleRoom(int i, TRoom* pT)
