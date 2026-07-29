@@ -489,10 +489,18 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 
     // if the update is already installed, then the button says 'Restart' - do so
     if (mUpdateInstalled) {
+        // a restart is already underway - don't launch a second instance from
+        // another click on a still-visible dialog or toolbar button
+        if (mRestartInProgress) {
+            return;
+        }
+
         // defer to next event loop iteration so the dialog close happens after the button click handler returns
         QTimer::singleShot(0ms, this, [=, this]() {
-            updateDialog->close();
-            updateDialog->done(0);
+            if (updateDialog) {
+                updateDialog->close();
+                updateDialog->done(0);
+            }
         });
 
 #if defined(Q_OS_WINDOWS)
@@ -567,16 +575,35 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
             return;
         }
 
+        mRestartInProgress = true;
+        // Closing the last window would otherwise pop the update dialog back
+        // up and keep this instance running alongside the restarted one:
+        if (updateDialog) {
+            updateDialog->disableAutoShow();
+        }
         if (mudlet::self()) {
             mudlet::self()->forceClose();
         }
         // Mudlet is not restarted here - the installer is expected to handle launching the updated version
         return;
 #else
+        mRestartInProgress = true;
+        // Closing the last window would otherwise pop the update dialog back
+        // up and keep this instance running alongside the restarted one:
+        if (updateDialog) {
+            updateDialog->disableAutoShow();
+        }
         if (mudlet::self()) {
             mudlet::self()->forceClose();
         }
-        if (!QProcess::startDetached(qApp->arguments()[0], qApp->arguments())) {
+        // Relaunch the outer AppImage (via $APPIMAGE) when running as one: both
+        // argv[0] and applicationFilePath() point inside the temporary squashfs
+        // mount, which is torn down once this instance exits. Fall back to the
+        // canonical executable path for non-AppImage installs - matches the path
+        // the update was installed to in slot_updateLinuxBinary().
+        const auto systemEnvironment = QProcessEnvironment::systemEnvironment();
+        const QString restartBinary = systemEnvironment.contains(qsl("APPIMAGE")) ? systemEnvironment.value(qsl("APPIMAGE"), QString()) : QCoreApplication::applicationFilePath();
+        if (!QProcess::startDetached(restartBinary, qApp->arguments().mid(1))) {
             qWarning() << "Failed to restart Mudlet after update";
             //: Error title for dialog shown when Mudlet fails to restart after updating
             QMessageBox::critical(nullptr,

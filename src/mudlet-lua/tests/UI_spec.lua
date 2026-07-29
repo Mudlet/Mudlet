@@ -1945,4 +1945,582 @@ describe("Tests UI functions", function()
       assert.are.equal(1, isActive(buttonId, "button"))
     end)
   end)
+
+  -- The getTextFormat suites earlier in this file are largely diagnostic: they
+  -- print DEBUG and deliberately avoid failing ("Don't fail the test, just note
+  -- the issue"). The blocks below assert the real readback contract instead -
+  -- echo a known colour/attribute, select the character it landed on, and check
+  -- getTextFormat reports back exactly what was written.
+  --
+  -- The load-bearing detail for every readback here: echo/insertText that ends
+  -- in a newline leaves the cursor on the following (empty) line, so each test
+  -- moves the cursor back onto the target line before selecting - otherwise the
+  -- selection lands on an empty line and getTextFormat returns nil.
+  describe("echo family colour readback via getTextFormat", function()
+    local win = "uiReadbackColour"
+
+    setup(function()
+      createMiniConsole(win, 0, 0, 800, 200)
+      setMiniConsoleFontSize(win, 10)
+      setBackgroundColor(win, 0, 0, 0)
+      setWindowWrap(win, 100)
+    end)
+
+    before_each(function()
+      clearWindow(win)
+      moveCursor(win, 0, 0)
+      deselect(win)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(win)
+    end)
+
+    it("decho reports the exact foreground and background it was given", function()
+      decho(win, "<255,20,30:40,50,60>X\n")
+      moveCursor(win, 0, 0)
+      selectSection(win, 0, 1)
+      local format = getTextFormat(win)
+      assert.is_table(format)
+      assert.are.same({255, 20, 30}, format.foreground)
+      assert.are.same({40, 50, 60}, format.background)
+    end)
+
+    it("decho reports distinct colours for adjacent runs", function()
+      decho(win, "<255,0,0:0,0,0>R<0,255,0:0,0,0>G<0,0,255:0,0,0>B\n")
+      moveCursor(win, 0, 0)
+      selectSection(win, 0, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(win).foreground)
+      selectSection(win, 1, 1)
+      assert.are.same({0, 255, 0}, getTextFormat(win).foreground)
+      selectSection(win, 2, 1)
+      assert.are.same({0, 0, 255}, getTextFormat(win).foreground)
+    end)
+
+    it("cecho <red> resolves to pure red", function()
+      cecho(win, "<red>R\n")
+      moveCursor(win, 0, 0)
+      selectSection(win, 0, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(win).foreground)
+    end)
+
+    it("hecho #ff0000 resolves to pure red", function()
+      hecho(win, "#ff0000H\n")
+      moveCursor(win, 0, 0)
+      selectSection(win, 0, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(win).foreground)
+    end)
+
+    it("getFgColor and getBgColor agree with getTextFormat", function()
+      decho(win, "<12,34,56:65,43,21>Z\n")
+      moveCursor(win, 0, 0)
+      selectSection(win, 0, 1)
+      local format = getTextFormat(win)
+      local fr, fg, fb = getFgColor(win)
+      local br, bg, bb = getBgColor(win)
+      assert.are.same({fr, fg, fb}, format.foreground)
+      assert.are.same({br, bg, bb}, format.background)
+    end)
+  end)
+
+  describe("text attribute setters reflected in getTextFormat", function()
+    local win = "uiReadbackAttr"
+
+    setup(function()
+      createMiniConsole(win, 0, 0, 800, 200)
+      setMiniConsoleFontSize(win, 10)
+      setBackgroundColor(win, 0, 0, 0)
+      setWindowWrap(win, 100)
+    end)
+
+    before_each(function()
+      clearWindow(win)
+      moveCursor(win, 0, 0)
+      deselect(win)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(win)
+    end)
+
+    -- each attribute maps a setter to the getTextFormat key it should toggle
+    local attributes = {
+      {key = "bold", setter = setBold},
+      {key = "italic", setter = setItalics},
+      {key = "underline", setter = setUnderline},
+      {key = "overline", setter = setOverline},
+      {key = "reverse", setter = setReverse},
+      {key = "strikeout", setter = setStrikeOut},
+    }
+
+    for _, attribute in ipairs(attributes) do
+      it("toggles the " .. attribute.key .. " flag on echoed text", function()
+        attribute.setter(win, true)
+        echo(win, "ON\n")
+        attribute.setter(win, false)
+        echo(win, "OFF\n")
+        moveCursor(win, 0, 0)
+        selectCurrentLine(win)
+        assert.is_true(getTextFormat(win)[attribute.key])
+        moveCursor(win, 0, 1)
+        selectCurrentLine(win)
+        assert.is_false(getTextFormat(win)[attribute.key])
+      end)
+    end
+
+    it("resetFormat clears attributes for subsequent output", function()
+      setBold(win, true)
+      setUnderline(win, true)
+      assert.is_true(resetFormat(win))
+      insertText(win, "plain")
+      moveCursor(win, 0, 0)
+      selectSection(win, 0, 5)
+      local format = getTextFormat(win)
+      assert.is_false(format.bold)
+      assert.is_false(format.underline)
+    end)
+  end)
+
+  describe("echoLink, insertLink, setLink and popups", function()
+    local win = "uiReadbackLink"
+
+    setup(function()
+      createMiniConsole(win, 0, 0, 800, 200)
+      setMiniConsoleFontSize(win, 10)
+      setBackgroundColor(win, 0, 0, 0)
+    end)
+
+    before_each(function()
+      clearWindow(win)
+      moveCursor(win, 0, 0)
+      deselect(win)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(win)
+    end)
+
+    it("echoLink writes its visible text to the line and returns true", function()
+      assert.is_true(echoLink(win, "clickme", [[echo("hi")]], "hint"))
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      assert.are.equal("clickme", getCurrentLine(win))
+    end)
+
+    it("insertLink inserts its visible text and returns true", function()
+      moveCursor(win, 0, 0)
+      assert.is_true(insertLink(win, "linktext", [[echo("hi")]], "hint"))
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      assert.are.equal("linktext", getCurrentLine(win))
+    end)
+
+    -- there is no Lua getter for link data, so a valid setLink is only
+    -- observable as a true return; the unknown-window path is contract-tested
+    -- in the "unknown-window contracts" block below
+    it("setLink returns true for a valid window", function()
+      echo(win, "linkme\n")
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      assert.is_true(setLink(win, [[echo("hi")]], "tip"))
+    end)
+
+    it("echoPopup writes its visible text and returns true", function()
+      assert.is_true(echoPopup(win, "popupmenu", {[[echo("1")]]}, {"one"}))
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      assert.are.equal("popupmenu", getCurrentLine(win))
+    end)
+
+    it("insertPopup inserts its visible text and returns true", function()
+      moveCursor(win, 0, 0)
+      assert.is_true(insertPopup(win, "inspopup", {[[echo("1")]]}, {"one"}))
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      assert.are.equal("inspopup", getCurrentLine(win))
+    end)
+
+    it("echoPopup rejects mismatched command and hint tables", function()
+      local ok, err = echoPopup(win, "menu", {[[echo("1")]], [[echo("2")]]}, {"one"})
+      assert.is_nil(ok)
+      assert.is_string(err)
+      assert.is_truthy(err:find("do not match up", 1, true))
+    end)
+
+    it("insertPopup rejects mismatched command and hint tables", function()
+      local ok, err = insertPopup(win, "menu", {[[echo("1")]], [[echo("2")]]}, {"one"})
+      assert.is_nil(ok)
+      assert.is_string(err)
+      assert.is_truthy(err:find("do not match up", 1, true))
+    end)
+
+    it("echoLink hard-errors when required arguments are missing", function()
+      assert.is_false(pcall(echoLink))
+    end)
+  end)
+
+  describe("insertText, replace and deleteLine effects", function()
+    local win = "uiReadbackEdit"
+
+    setup(function()
+      createMiniConsole(win, 0, 0, 800, 200)
+      setMiniConsoleFontSize(win, 10)
+      setBackgroundColor(win, 0, 0, 0)
+      setWindowWrap(win, 100)
+    end)
+
+    before_each(function()
+      clearWindow(win)
+      moveCursor(win, 0, 0)
+      deselect(win)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(win)
+    end)
+
+    it("insertText inserts inline at the cursor", function()
+      echo(win, "HelloWorld\n")
+      moveCursor(win, 5, 0)
+      insertText(win, "-INS-")
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      assert.are.equal("Hello-INS-World", getCurrentLine(win))
+    end)
+
+    it("replace swaps the current selection", function()
+      echo(win, "replaceme\n")
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      replace(win, "REPLACED")
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      assert.are.equal("REPLACED", getCurrentLine(win))
+    end)
+
+    it("deleteLine removes the cursor's line", function()
+      echo(win, "a\nb\nc\n")
+      local before = getLineCount(win)
+      moveCursor(win, 0, 0)
+      deleteLine(win)
+      assert.are.equal(before - 1, getLineCount(win))
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      assert.are.equal("b", getCurrentLine(win))
+    end)
+  end)
+
+  -- replaceAll wraps the window-less getCurrentLine/selectSection/replace, so
+  -- it only ever operates on the main console's current cursor line
+  describe("replaceAll on the main console", function()
+    it("replaces every occurrence on the cursor's line", function()
+      -- lead with a newline so the sentinel lands on a fresh line regardless of
+      -- any partial line other output left on the shared main console
+      echo("main", "\nuiReadbackReplaceAll aaa aaa aaa end\n")
+      local lineCount = getLineCount()
+      local target
+      for i = lineCount - 1, math.max(0, lineCount - 8), -1 do
+        moveCursor(0, i)
+        selectCurrentLine()
+        if getCurrentLine():find("uiReadbackReplaceAll aaa aaa aaa end", 1, true) then
+          target = i
+          break
+        end
+      end
+      deselect()
+      assert.is_not_nil(target, "sentinel line not found in the main console")
+
+      moveCursor(0, target)
+      replaceAll("aaa", "bbb")
+      moveCursor(0, target)
+      selectCurrentLine()
+      local result = getCurrentLine()
+      deselect()
+      moveCursorEnd()
+
+      -- every "aaa" turned into "bbb", with none left behind
+      assert.is_truthy(result:find("uiReadbackReplaceAll bbb bbb bbb end", 1, true))
+      assert.is_nil(result:find("aaa", 1, true))
+    end)
+
+    it("hard-errors on non-string arguments", function()
+      assert.is_false(pcall(replaceAll, 5, "x"))
+      assert.is_false(pcall(replaceAll, "x", 5))
+    end)
+  end)
+
+  describe("cursor position round-trips", function()
+    local win = "uiReadbackCursor"
+
+    setup(function()
+      createMiniConsole(win, 0, 0, 800, 200)
+      setMiniConsoleFontSize(win, 10)
+      setBackgroundColor(win, 0, 0, 0)
+    end)
+
+    before_each(function()
+      clearWindow(win)
+      moveCursor(win, 0, 0)
+      deselect(win)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(win)
+    end)
+
+    it("moveCursor sets the reported column and line", function()
+      echo(win, "line0\nline1\nline2\n")
+      assert.is_true(moveCursor(win, 2, 1))
+      assert.are.equal(2, getColumnNumber(win))
+      assert.are.equal(1, getLineNumber(win))
+    end)
+
+    it("moveCursor returns false for an out of range line", function()
+      echo(win, "only\n")
+      assert.is_false(moveCursor(win, 0, 999))
+    end)
+
+    it("moveCursorEnd moves the cursor to the buffer end", function()
+      echo(win, "a\nb\nc\n")
+      moveCursor(win, 0, 0)
+      moveCursorEnd(win)
+      assert.are.equal(getLineCount(win), getLineNumber(win))
+    end)
+
+    it("getLineCount reflects the number of echoed lines", function()
+      assert.are.equal(0, getLineCount(win))
+      echo(win, "one\ntwo\nthree\n")
+      assert.are.equal(3, getLineCount(win))
+    end)
+  end)
+
+  describe("wrapping readback", function()
+    local win = "uiReadbackWrap"
+
+    setup(function()
+      createMiniConsole(win, 0, 0, 800, 200)
+      setMiniConsoleFontSize(win, 10)
+      setBackgroundColor(win, 0, 0, 0)
+    end)
+
+    before_each(function()
+      clearWindow(win)
+      moveCursor(win, 0, 0)
+      deselect(win)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(win)
+    end)
+
+    it("setWindowWrap round-trips through getWindowWrap", function()
+      setWindowWrap(win, 42)
+      assert.are.equal(42, getWindowWrap(win))
+    end)
+
+    it("wrapLine re-wraps a long line without losing characters", function()
+      local original = "aaaa bbbb cccc dddd eeee ffff"
+      setWindowWrap(win, 200)
+      echo(win, original .. "\n")
+      assert.are.equal(1, getLineCount(win))
+      setWindowWrap(win, 8)
+      wrapLine(win, 0)
+      -- the line must split, and rejoining the segments (whitespace normalised,
+      -- since wrapping trims/pads at the break points) must give back the text
+      assert.is_true(getLineCount(win) > 1)
+      local lines = getLines(win, 0, getLineCount(win))
+      local rejoined = table.concat(lines):gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+      assert.are.equal(original, rejoined)
+    end)
+
+    -- setWindowWrapIndent sets the first-segment indent; continuation lines use
+    -- the separate setWindowWrapHangingIndent, so only lines[1] is indented here
+    it("setWindowWrapIndent indents the first segment of a wrapped line", function()
+      setWindowWrap(win, 200)
+      echo(win, "aaaa bbbb cccc dddd eeee ffff\n")
+      setWindowWrap(win, 8)
+      setWindowWrapIndent(win, 3)
+      wrapLine(win, 0)
+      local lines = getLines(win, 0, getLineCount(win))
+      assert.is_table(lines)
+      assert.are.equal("   ", lines[1]:sub(1, 3))
+    end)
+  end)
+
+  describe("window primitive contracts", function()
+    -- track created windows so a failed assertion still gets them cleaned up
+    local created = {}
+    local function track(name)
+      created[#created + 1] = name
+      return name
+    end
+
+    after_each(function()
+      for _, name in ipairs(created) do
+        local kind = windowType(name)
+        if kind == "label" then
+          deleteLabel(name)
+        elseif kind then
+          deleteMiniConsole(name)
+        end
+      end
+      created = {}
+    end)
+
+    it("createMiniConsole hard-errors without a name", function()
+      assert.is_false(pcall(createMiniConsole))
+    end)
+
+    it("createMiniConsole then windowType reports miniconsole, delete clears it", function()
+      local name = track("uiReadbackPrimMC")
+      assert.is_true(createMiniConsole(name, 0, 0, 100, 100))
+      assert.are.equal("miniconsole", windowType(name))
+      assert.is_true(deleteMiniConsole(name))
+      assert.is_nil(windowType(name))
+    end)
+
+    it("createLabel hard-errors with only a name", function()
+      assert.is_false(pcall(createLabel, "uiReadbackPrimBadLabel"))
+    end)
+
+    it("createLabel then windowType reports label, delete clears it", function()
+      local name = track("uiReadbackPrimLabel")
+      createLabel(name, 0, 0, 40, 40, 1)
+      assert.are.equal("label", windowType(name))
+      assert.is_true(deleteLabel(name))
+      assert.is_nil(windowType(name))
+    end)
+
+    it("clearWindow empties a console", function()
+      local name = track("uiReadbackPrimClear")
+      createMiniConsole(name, 0, 0, 200, 100)
+      echo(name, "a\nb\nc\n")
+      assert.is_true(getLineCount(name) > 0)
+      clearWindow(name)
+      assert.are.equal(0, getLineCount(name))
+    end)
+
+    it("setBackgroundColor round-trips through getBackgroundColor", function()
+      local name = track("uiReadbackPrimBg")
+      createMiniConsole(name, 0, 0, 100, 100)
+      assert.is_true(setBackgroundColor(name, 10, 20, 30, 255))
+      local r, g, b, a = getBackgroundColor(name)
+      assert.are.same({10, 20, 30, 255}, {r, g, b, a})
+    end)
+
+    it("setBackgroundColor rejects an out of range component", function()
+      local name = track("uiReadbackPrimBg2")
+      createMiniConsole(name, 0, 0, 100, 100)
+      local ok, err = setBackgroundColor(name, 300, 0, 0)
+      assert.is_nil(ok)
+      assert.are.equal("red value 300 needs to be between 0-255", err)
+    end)
+
+    it("setBackgroundColor reports an unknown window", function()
+      local ok, err = setBackgroundColor("uiReadbackNoSuchWindow", 1, 2, 3)
+      assert.is_nil(ok)
+      assert.are.equal("window/label 'uiReadbackNoSuchWindow' not found", err)
+    end)
+
+    it("getBackgroundColor reports an unknown window", function()
+      local ok, err = getBackgroundColor("uiReadbackNoSuchWindow")
+      assert.is_nil(ok)
+      assert.are.equal("window 'uiReadbackNoSuchWindow' does not exist", err)
+    end)
+
+    it("setMiniConsoleFontSize and setFontSize reject sizes of zero or less", function()
+      local name = track("uiReadbackPrimFont")
+      createMiniConsole(name, 0, 0, 100, 100)
+      local ok, err = setMiniConsoleFontSize(name, 0)
+      assert.is_nil(ok)
+      assert.are.equal("size cannot be 0 or negative", err)
+      local ok2, err2 = setFontSize(name, -5)
+      assert.is_nil(ok2)
+      assert.are.equal("size cannot be 0 or negative", err2)
+    end)
+
+    it("getCurrentLine returns the legacy error string for an unknown window", function()
+      -- kept for bug compatibility: a string, not nil, plus a second message
+      local first, second = getCurrentLine("uiReadbackNoSuchWindow")
+      assert.are.equal("ERROR: mini console does not exist", first)
+      assert.is_string(second)
+    end)
+  end)
+
+  -- these all resolve their window through the shared CONSOLE macro, which
+  -- returns nil plus a 'window "..." not found' message for an unknown name.
+  -- Each is called with otherwise-valid arguments so the lookup is what fails.
+  describe("unknown-window contracts", function()
+    local badWindowCalls = {
+      {name = "getLineCount", call = function() return getLineCount("uiReadbackNoWin") end},
+      {name = "getWindowWrap", call = function() return getWindowWrap("uiReadbackNoWin") end},
+      {name = "getColumnNumber", call = function() return getColumnNumber("uiReadbackNoWin") end},
+      {name = "getLineNumber", call = function() return getLineNumber("uiReadbackNoWin") end},
+      {name = "moveCursor", call = function() return moveCursor("uiReadbackNoWin", 0, 0) end},
+      {name = "moveCursorEnd", call = function() return moveCursorEnd("uiReadbackNoWin") end},
+      {name = "insertText", call = function() return insertText("uiReadbackNoWin", "x") end},
+      {name = "deleteLine", call = function() return deleteLine("uiReadbackNoWin") end},
+      {name = "setWindowWrap", call = function() return setWindowWrap("uiReadbackNoWin", 5) end},
+      {name = "setBold", call = function() return setBold("uiReadbackNoWin", true) end},
+      {name = "resetFormat", call = function() return resetFormat("uiReadbackNoWin") end},
+      {name = "setLink", call = function() return setLink("uiReadbackNoWin", [[echo("x")]], "tip") end},
+      {name = "copy", call = function() return copy("uiReadbackNoWin") end},
+      {name = "appendBuffer", call = function() return appendBuffer("uiReadbackNoWin") end},
+    }
+
+    for _, entry in ipairs(badWindowCalls) do
+      it(entry.name .. " returns nil and a not-found message for an unknown window", function()
+        local ok, err = entry.call()
+        assert.is_nil(ok)
+        assert.are.equal('window "uiReadbackNoWin" not found', err)
+      end)
+    end
+  end)
+
+  describe("copy, paste and appendBuffer move text between consoles", function()
+    local src = "uiReadbackClipSrc"
+    local dst = "uiReadbackClipDst"
+
+    setup(function()
+      createMiniConsole(src, 0, 0, 400, 100)
+      createMiniConsole(dst, 0, 110, 400, 100)
+    end)
+
+    before_each(function()
+      clearWindow(src)
+      clearWindow(dst)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(src)
+      deleteMiniConsole(dst)
+    end)
+
+    it("appendBuffer appends the copied selection, keeping text and colour", function()
+      decho(src, "<255,0,0:0,0,0>copytext\n")
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      assert.are.equal(0, getLineCount(dst))
+      appendBuffer(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.is_table(lines)
+      assert.are.equal("copytext", lines[1])
+      -- copy carries formatting, not just text
+      moveCursor(dst, 0, 0)
+      selectSection(dst, 0, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+    end)
+
+    it("paste places the copied selection at the target cursor", function()
+      echo(src, "pastetext\n")
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      paste(dst)
+      moveCursor(dst, 0, 0)
+      selectCurrentLine(dst)
+      assert.are.equal("pastetext", getCurrentLine(dst))
+    end)
+  end)
 end)
