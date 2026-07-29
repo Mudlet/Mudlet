@@ -58,6 +58,8 @@
 
 class QDialog;
 class QDockWidget;
+class QJsonObject;
+class QKeyEvent;
 class QPushButton;
 class QListWidget;
 
@@ -151,6 +153,8 @@ class Host : public QObject
     friend class XMLexport;
     friend class XMLimport;
     friend class dlgProfilePreferences;
+    // Allows the functional test to set the Discord username restriction:
+    friend class TDiscordModeTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
@@ -445,8 +449,8 @@ public:
     bool setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha);
     std::optional<QColor> getBackgroundColor(const QString& name) const;
-    bool setBackgroundImage(const QString& name, QString& path, int mode);
-    bool resetBackgroundImage(const QString& name);
+    bool setBackgroundImage(const QString& name, QString& path, int mode, bool fullWindow = false);
+    bool resetBackgroundImage(const QString& name, bool fullWindow = false);
     void showHideOrCreateMapper(const bool loadDefaultMap);
     bool setProfileStyleSheet(const QString& styleSheet);
     void check_for_mappingscript();
@@ -465,6 +469,7 @@ public:
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;
     void setCaretEnabled(bool enabled);
+    bool caretShortcutMatches(const QKeyEvent*) const;
     void setFocusOnHostActiveCommandLine();
     void recordActiveCommandLine(TCommandLine*);
     void forgetCommandLine(TCommandLine*);
@@ -672,6 +677,12 @@ public:
     int mWrapAt = 100;
     int mWrapIndentCount = 0;
     int mWrapHangingIndentCount = 0;
+    // Rejoin lines that the game hard-wrapped itself so that triggers see the
+    // whole logical line and Mudlet's own wrapping (mWrapAt) handles display:
+    bool mUndoServerWrap = false;
+    int mUndoServerWrapWidth = 80;
+    // The one-time "this game seems to wrap its own lines" hint was shown:
+    bool mServerWrapHintShown = false;
 
     int mConsoleBufferSize = 100000;
     bool mUseMaxConsoleBufferSize = false;
