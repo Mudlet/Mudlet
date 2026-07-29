@@ -76,6 +76,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("loopCount = 0\n"
@@ -107,6 +108,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("normalCount = 0\n"
@@ -126,6 +128,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         // feedTelnet() refuses to work unless the profile is offline
@@ -164,6 +167,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         host->mTelnet.disconnectIt();
