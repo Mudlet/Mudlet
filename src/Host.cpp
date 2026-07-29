@@ -1808,6 +1808,9 @@ void Host::incomingStreamProcessor(const QString& data, int line)
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
+    // ScriptUnit defers deletes too (a package script uninstalling its own package
+    // mid-compile or mid-event-dispatch), so flush it here alongside the others:
+    mScriptUnit.doCleanup();
 }
 
 // When Mudlet is running in online mode, deleted temp* objects are cleaned up in bulk
@@ -1819,6 +1822,7 @@ void Host::slot_purgeTemps()
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
+    mScriptUnit.doCleanup();
 }
 
 void Host::registerEventHandler(const QString& name, TScript* pScript)
@@ -2446,6 +2450,12 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         // not to try to write to disk a package/module that just got uninstalled and removed from memory
         QTimer::singleShot(0ms, this, [this]() {
             mSaveTimer = false;
+            // If a package's own script uninstalled it mid-compile (from a script
+            // reached outside the compileAll()/editor/raiseEvent flush points, e.g. a
+            // permScript() run from an alias or key), the script deletes were deferred
+            // and are still registered. Flush them now, at depth 0, before saving so
+            // the save below does not serialize the just-uninstalled scripts back in:
+            mScriptUnit.doCleanup();
             if (auto [ok, filename, error] = saveProfile(); !ok) {
                 qDebug() << qsl("Host::uninstallPackage: Couldn't save '%1' to '%2' because: %3").arg(getName(), filename, error);
             }

@@ -79,23 +79,26 @@ void ScriptUnit::uninstall(const QString& packageName)
             uninstallList.append(rootScript);
         }
     }
-    // Re-entrant uninstall (#9337): a script's own event handler (e.g. a package
-    // auto-updater calling uninstallPackage()) is removing its package while
-    // Host::raiseEvent() is still dispatching to that script. Deleting now would
-    // be a use-after-free - both of the handler still executing and of the other
-    // TScript pointers in raiseEvent()'s copied handler list - so defer to
-    // doCleanup() at depth 0. Deactivating is enough to stop the handlers firing
-    // for the rest of the dispatch: TScript::callEventHandler() checks isActive().
+    // Re-entrant uninstall (#9337): a package's own script (e.g. a package
+    // auto-updater calling uninstallPackage()) is removing its package while one
+    // of that package's scripts is still on the call stack - either an event
+    // handler Host::raiseEvent() is dispatching to, or a top-level body
+    // TScript::compileScript() is compiling. Deleting now would be a use-after-free
+    // (of the script still executing, and of the other TScript pointers raiseEvent()
+    // or ScriptUnit::compileAll() is still iterating), so defer to doCleanup() at
+    // depth 0. Deactivating is enough to stop the handlers firing for the rest of
+    // the dispatch: TScript::callEventHandler() checks isActive().
     if (mProcessingDepth > 0) {
         for (auto script : uninstallList) {
             script->setIsActive(false);
         }
         return;
     }
-    for (auto& script : uninstallList) {
-        delete script;
-    }
-    uninstallList.clear();
+    // At depth 0 delete straight away, but go through doCleanup() rather than a bare
+    // loop: uninstallList is a member that a prior deferred uninstall may have left
+    // populated, so a second uninstall of the same still-registered package can queue
+    // the same pointers twice - doCleanup()'s seen set stops that double-freeing.
+    doCleanup();
 }
 
 // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
@@ -270,11 +273,22 @@ int ScriptUnit::getNewID()
 
 void ScriptUnit::compileAll(bool saveLoadingError)
 {
-    for (auto script : mScriptRootNodeList) {
+    // Iterate a snapshot of the root list: a script's top-level body, run by
+    // compile() below, can uninstall its own package (a package auto-updater
+    // pattern). uninstall() defers the actual delete whilst compileScript() is on
+    // the stack, so no node is unlinked mid-loop, but taking a copy keeps the
+    // iteration safe even against a body that adds or removes root scripts:
+    const std::vector<TScript*> rootNodes(mScriptRootNodeList.begin(), mScriptRootNodeList.end());
+    for (auto script : rootNodes) {
         if (script->isActive()) {
             script->compileAll(saveLoadingError);
         }
     }
+    // The loop is now done with the (possibly self-uninstalled) scripts, so flush
+    // the deletes uninstall() deferred - before the editor tree is rebuilt below and
+    // before returning to the event loop, where the 0ms save Host::uninstallPackage()
+    // queues would otherwise serialize the still-live "uninstalled" scripts back in:
+    doCleanup();
     if (mpHost->mpEditorDialog) {
         mpHost->mpEditorDialog->doCleanReset();
     }

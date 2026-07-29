@@ -26,14 +26,17 @@
  * their own package from one of the package's own items. Since the
  * *Unit::uninstall() methods started deleting items immediately (instead of
  * just unregistering them), doing that from a timer deleted the very TTimer
- * whose execute() was still on the call stack, and doing it from an event
- * handler deleted TScript objects that Host::raiseEvent() was still iterating
- * over - heap corruption either way. TriggerUnit/AliasUnit/KeyUnit gained a
- * processing-depth deferral in #9383; this covers TimerUnit and ScriptUnit.
+ * whose execute() was still on the call stack; doing it from an event handler
+ * deleted TScript objects that Host::raiseEvent() was still iterating over; and
+ * doing it from a script's top-level body deleted the very TScript that
+ * compileScript() was in the middle of compiling - heap corruption every way.
+ * TriggerUnit/AliasUnit/KeyUnit gained a processing-depth deferral in #9383;
+ * this covers TimerUnit and ScriptUnit (both the event-dispatch and the
+ * compile-time body paths).
  *
  * Under AddressSanitizer the pre-fix code aborts with heap-use-after-free
- * inside TTimer::execute() / Host::raiseEvent(); with the deferral in place
- * both scenarios complete cleanly.
+ * inside TTimer::execute() / Host::raiseEvent() / TScript::compileScript(); with
+ * the deferral in place all scenarios complete cleanly.
  *
  * Run with: ctest -R PackageSelfUninstallTest -V
  */
@@ -142,6 +145,85 @@ private slots:
         QVERIFY2(mpHost->getScriptUnit()->findItems(qsl("selfUninstallBystander")).empty(), "uninstalled script is still registered");
     }
 
+    // A package script's TOP-LEVEL body (not an event handler) uninstalls its own
+    // package while it is being compiled - the path profile boot and reset take
+    // when they run "all the Lua code outside of functions" via ScriptUnit::compileAll().
+    // Pre-fix, ScriptUnit::uninstall() deleted the script immediately: compileScript()
+    // then wrote to the freed TScript (heap-use-after-free WRITE at TScript::compileScript),
+    // and compileAll()'s range-for walked onto the freed std::list node it had unlinked.
+    void test_scriptBodySelfUninstallOnCompile()
+    {
+        const QString packageName = qsl("selfuninstall-script-compile");
+        mpHost->mInstalledPackages << packageName;
+
+        // Defer compilation so the bodies run through compileAll() below rather than
+        // from setScript() here, mirroring how a freshly loaded package's scripts are
+        // compiled at profile boot (mudlet::loadProfile) and reset (Host::resetProfile_phase2):
+        mpHost->mBlockScriptCompile = true;
+
+        auto pUninstaller = new TScript(nullptr, mpHost);
+        mpHost->getScriptUnit()->registerScript(pUninstaller);
+        pUninstaller->mPackageName = packageName;
+        pUninstaller->setName(qsl("selfUninstallOnCompile"));
+        // A bare uninstallPackage() at the top level runs the moment the script is compiled:
+        pUninstaller->setScript(qsl("uninstallPackage(\"%1\")").arg(packageName));
+        pUninstaller->setIsActive(true);
+
+        // A second script in the same package, registered AFTER the uninstaller, is
+        // the node the pre-fix immediate delete unlinks from under compileAll()'s loop:
+        auto pBystander = new TScript(nullptr, mpHost);
+        mpHost->getScriptUnit()->registerScript(pBystander);
+        pBystander->mPackageName = packageName;
+        pBystander->setName(qsl("selfUninstallCompileBystander"));
+        pBystander->setScript(qsl("local noop = true\n"));
+        pBystander->setIsActive(true);
+
+        mpHost->mBlockScriptCompile = false;
+        // Pre-fix this trips heap-use-after-free; post-fix the delete is deferred until
+        // after the loop and then flushed by compileAll():
+        mpHost->getScriptUnit()->compileAll();
+
+        QVERIFY2(!mpHost->mInstalledPackages.contains(packageName), "package was not uninstalled");
+        // The deferred deletes must have been flushed at the end of compileAll():
+        QVERIFY2(mpHost->getScriptUnit()->findItems(qsl("selfUninstallOnCompile")).empty(), "uninstalled script is still registered");
+        QVERIFY2(mpHost->getScriptUnit()->findItems(qsl("selfUninstallCompileBystander")).empty(), "uninstalled bystander script is still registered");
+    }
+
+    // A package script's top-level body uninstalls its own package from a plain
+    // setScript() compile - the path permScript()/setScript() take when invoked from
+    // an alias, key or the command line, none of which sit inside compileAll(), the
+    // editor's saveScript(), or raiseEvent(). Pre-fix this hit the same
+    // heap-use-after-free in compileScript() as the compileAll() case. The compile
+    // guard defers the delete here too; because this entry point has no synchronous
+    // flush of its own, the deferred script lingers (deactivated) until a catch-all
+    // flush - ScriptUnit::doCleanup() via Host::incomingStreamProcessor()/
+    // slot_purgeTemps(), or the doCleanup() Host::uninstallPackage()'s queued save runs
+    // - collects it, which must happen without leaking or double-freeing.
+    void test_scriptBodySelfUninstallFromSetScript()
+    {
+        const QString packageName = qsl("selfuninstall-script-setscript");
+        mpHost->mInstalledPackages << packageName;
+
+        auto pUninstaller = new TScript(nullptr, mpHost);
+        mpHost->getScriptUnit()->registerScript(pUninstaller);
+        pUninstaller->mPackageName = packageName;
+        pUninstaller->setName(qsl("selfUninstallFromSetScript"));
+        // mBlockScriptCompile is false, so setScript() compiles and runs the top-level
+        // body immediately - uninstallPackage() fires from inside compileScript():
+        pUninstaller->setScript(qsl("uninstallPackage(\"%1\")").arg(packageName));
+
+        QVERIFY2(!mpHost->mInstalledPackages.contains(packageName), "package was not uninstalled");
+
+        // No synchronous flush point covers this entry, so the script is still
+        // registered (deferred, deactivated) right after setScript() returns:
+        QVERIFY2(!mpHost->getScriptUnit()->findItems(qsl("selfUninstallFromSetScript")).empty(), "self-uninstalling script should still be deferred, not yet deleted");
+
+        // The catch-all flush (as wired into incomingStreamProcessor()/slot_purgeTemps())
+        // must then collect it cleanly - no leak, no double-free:
+        mpHost->getScriptUnit()->doCleanup();
+        QVERIFY2(mpHost->getScriptUnit()->findItems(qsl("selfUninstallFromSetScript")).empty(), "deferred uninstalled script was not flushed");
+    }
+
     // A package's timer script uninstalls its own package while
     // TTimer::execute() is still on the call stack for that timer. Pre-fix,
     // execute() would resume on a freed `this`.
@@ -153,7 +235,13 @@ private slots:
         auto pTimer = new TTimer(qsl("selfUninstallTimer"), QTime(0, 0, 0, 250), mpHost);
         mpHost->getTimerUnit()->registerTimer(pTimer);
         pTimer->mPackageName = packageName;
-        QVERIFY2(pTimer->setScript(qsl("uninstallPackage(\"%1\")").arg(packageName)), "timer script failed to compile");
+        // The trailing error() is what makes this a genuine regression test: after
+        // uninstallPackage() has (pre-fix) freed this timer, the error aborts the
+        // Lua call so it returns false, and TTimer::execute() then resumes past the
+        // call and reads the freed `this` at `mpQTimer->stop()` - the heap-use-after-free
+        // the deferral prevents. Without the error the call returns cleanly and
+        // execute() never touches `this` again, so the bug would go undetected.
+        QVERIFY2(pTimer->setScript(qsl("uninstallPackage(\"%1\")\nerror(\"boom\")").arg(packageName)), "timer script failed to compile");
         pTimer->setIsActive(true);
         pTimer->enableTimer();
 
