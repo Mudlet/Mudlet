@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QtTest/QtTest>
+#include <chrono>
 
 #include "EditorUndoStack.h"
 #include "Host.h"
@@ -31,12 +32,15 @@
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgActionMainArea.h"
+#include "dlgAliasMainArea.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgTimersMainArea.h"
 #include "dlgTriggerEditor.h"
 #include "dlgTriggerPatternEdit.h"
 #include "dlgTriggersMainArea.h"
 #include "mudlet.h"
+
+using namespace std::chrono_literals;
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -109,9 +113,9 @@ private:
 
   void startProfile(const QString &profileName, const QString &address,
                     const QString &port) {
-    QTimer::singleShot(0, qApp, [profileName, address, port]() {
+    QTimer::singleShot(0ms, qApp, [profileName, address, port]() {
       mudlet::self()->startAutoLogin({});
-      QTest::qWait(100);
+      QTest::qWait(100ms);
 
       // Verify connection dialog is available before UI interactions
       Q_ASSERT_X(mudlet::self()->mpConnectionDialog, "startProfile",
@@ -121,21 +125,21 @@ private:
 
       QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
                         Qt::LeftButton);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
 
       Q_ASSERT_X(QApplication::focusWidget(), "startProfile",
                  "No widget has focus after clicking new profile button");
 
       QTest::keyClicks(QApplication::focusWidget(), profileName);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClicks(QApplication::focusWidget(), address);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClicks(QApplication::focusWidget(), port);
-      QTest::qWait(100);
+      QTest::qWait(100ms);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
     });
 
@@ -177,7 +181,7 @@ private slots:
 
     // Open the editor dialog (it's created lazily)
     mudlet::self()->slot_showScriptDialog();
-    QTest::qWait(100);
+    QTest::qWait(100ms);
 
     mpEditor = mpHost->mpEditorDialog;
     QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
@@ -367,7 +371,7 @@ private slots:
       if (itemType.viewType == EditorViewType::cmKeysView ||
           itemType.viewType == EditorViewType::cmActionView) {
         QCoreApplication::processEvents();
-        QThread::msleep(10);
+        QThread::sleep(10ms);
       }
 
       QTreeWidgetItem *folder = itemType.baseItem()->child(0);
@@ -422,7 +426,7 @@ private slots:
       if (itemType.viewType == EditorViewType::cmKeysView ||
           itemType.viewType == EditorViewType::cmActionView) {
         QCoreApplication::processEvents();
-        QThread::msleep(10);
+        QThread::sleep(10ms);
       }
 
       QTreeWidgetItem *folder = itemType.baseItem()->child(0);
@@ -468,7 +472,7 @@ private slots:
       if (itemType.viewType == EditorViewType::cmKeysView ||
           itemType.viewType == EditorViewType::cmActionView) {
         QCoreApplication::processEvents();
-        QThread::msleep(10);
+        QThread::sleep(10ms);
       }
 
       QTreeWidgetItem *grandparent = itemType.baseItem()->child(0);
@@ -1378,7 +1382,7 @@ private slots:
       if (itemType.viewType == EditorViewType::cmKeysView ||
           itemType.viewType == EditorViewType::cmActionView) {
         QCoreApplication::processEvents();
-        QThread::msleep(10);
+        QThread::sleep(10ms);
       }
 
       QTreeWidgetItem *grandparent = itemType.baseItem()->child(0);
@@ -2250,6 +2254,146 @@ private slots:
              "Patterns should be cleared when affectedItemIDs is empty");
 
     mpEditor->mpUndoStack->clear();
+  }
+
+  // ========================================================================
+  // CATEGORY 15: Alias autosave guards mirror the explicit Save button
+  // ========================================================================
+  void testAliasAutosaveFlagsInvalidRegex() {
+    mpEditor->slot_showAliases();
+    cleanupAll(mItemTypes[2]);
+
+    mpEditor->addAlias(false);
+    QVERIFY(mpEditor->mpAliasBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *item = mpEditor->mpAliasBaseItem->child(0);
+    const int aliasID = item->data(0, Qt::UserRole).toInt();
+    TAlias *pT = mpHost->getAliasUnit()->getAlias(aliasID);
+    QVERIFY(pT != nullptr);
+
+    mpEditor->treeWidget_aliases->setCurrentItem(item);
+    mpEditor->slot_aliasSelected(item);
+
+    // Type an invalid pattern and finish editing (the autosave path).
+    mpEditor->mpAliasMainArea->lineEdit_alias_pattern->setText(qsl("("));
+    mpEditor->slot_saveProperty_AliasPattern();
+
+    // The broken pattern must be flagged, just like clicking Save would.
+    QVERIFY2(!pT->state(),
+             "invalid regex should leave the alias in an error state");
+    QCOMPARE(item->data(0, Qt::AccessibleDescriptionRole).toString(),
+             mpEditor->descError);
+
+    // Fixing the pattern must clear the error flag on autosave. This alias was
+    // never explicitly saved, so it recovers to the "unsaved/new" state.
+    mpEditor->mpAliasMainArea->lineEdit_alias_pattern->setText(qsl("^hello$"));
+    mpEditor->slot_saveProperty_AliasPattern();
+    QVERIFY2(pT->state(), "valid regex should clear the error state");
+    QCOMPARE(item->data(0, Qt::AccessibleDescriptionRole).toString(),
+             mpEditor->descNewItem);
+
+    cleanupAll(mItemTypes[2]);
+  }
+
+  void testAliasAutosaveGuardsInfiniteLoop() {
+    mpEditor->slot_showAliases();
+    cleanupAll(mItemTypes[2]);
+
+    mpEditor->addAlias(false);
+    QVERIFY(mpEditor->mpAliasBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *item = mpEditor->mpAliasBaseItem->child(0);
+    const int aliasID = item->data(0, Qt::UserRole).toInt();
+    TAlias *pT = mpHost->getAliasUnit()->getAlias(aliasID);
+    QVERIFY(pT != nullptr);
+
+    mpEditor->treeWidget_aliases->setCurrentItem(item);
+    mpEditor->slot_aliasSelected(item);
+
+    mpEditor->mpAliasMainArea->lineEdit_alias_pattern->setText(qsl("^say"));
+    mpEditor->slot_saveProperty_AliasPattern();
+    QVERIFY(pT->state());
+
+    // A substitution that matches its own pattern would call the alias forever;
+    // the autosave path must reject it, just like the explicit Save button.
+    mpEditor->mpAliasMainArea->lineEdit_alias_command->setText(qsl("say hello"));
+    mpEditor->slot_saveProperty_AliasCommand();
+
+    QVERIFY2(pT->getCommand() != qsl("say hello"),
+             "a self-matching substitution must not be saved");
+    QCOMPARE(item->data(0, Qt::AccessibleDescriptionRole).toString(),
+             mpEditor->descError);
+
+    cleanupAll(mItemTypes[2]);
+  }
+
+  void testAliasAutosavePatternLoopGuard() {
+    mpEditor->slot_showAliases();
+    cleanupAll(mItemTypes[2]);
+
+    mpEditor->addAlias(false);
+    QVERIFY(mpEditor->mpAliasBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *item = mpEditor->mpAliasBaseItem->child(0);
+    const int aliasID = item->data(0, Qt::UserRole).toInt();
+    TAlias *pT = mpHost->getAliasUnit()->getAlias(aliasID);
+    QVERIFY(pT != nullptr);
+
+    mpEditor->treeWidget_aliases->setCurrentItem(item);
+    mpEditor->slot_aliasSelected(item);
+
+    // Give it a command that does not loop with the (empty) pattern.
+    mpEditor->mpAliasMainArea->lineEdit_alias_command->setText(qsl("wave"));
+    mpEditor->slot_saveProperty_AliasCommand();
+    QCOMPARE(pT->getCommand(), qsl("wave"));
+
+    // Editing the pattern so it matches the command must be rejected too - the
+    // loop guard has to fire from the pattern slot, not just the command slot.
+    mpEditor->mpAliasMainArea->lineEdit_alias_pattern->setText(qsl("^wave"));
+    mpEditor->slot_saveProperty_AliasPattern();
+
+    QVERIFY2(pT->getRegexCode() != qsl("^wave"),
+             "a pattern matching its own substitution must not be saved");
+    QCOMPARE(item->data(0, Qt::AccessibleDescriptionRole).toString(),
+             mpEditor->descError);
+
+    cleanupAll(mItemTypes[2]);
+  }
+
+  void testAliasAutosaveClearsErrorAfterFix() {
+    mpEditor->slot_showAliases();
+    cleanupAll(mItemTypes[2]);
+
+    mpEditor->addAlias(false);
+    QVERIFY(mpEditor->mpAliasBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *item = mpEditor->mpAliasBaseItem->child(0);
+    const int aliasID = item->data(0, Qt::UserRole).toInt();
+    TAlias *pT = mpHost->getAliasUnit()->getAlias(aliasID);
+    QVERIFY(pT != nullptr);
+
+    mpEditor->treeWidget_aliases->setCurrentItem(item);
+    mpEditor->slot_aliasSelected(item);
+
+    mpEditor->mpAliasMainArea->lineEdit_alias_pattern->setText(qsl("^say"));
+    mpEditor->slot_saveProperty_AliasPattern();
+    QVERIFY(pT->state());
+
+    // A looping command is rejected and flags the item.
+    mpEditor->mpAliasMainArea->lineEdit_alias_command->setText(qsl("say hi"));
+    mpEditor->slot_saveProperty_AliasCommand();
+    QCOMPARE(item->data(0, Qt::AccessibleDescriptionRole).toString(),
+             mpEditor->descError);
+
+    // Correcting the command must clear the flag and persist the new value.
+    mpEditor->mpAliasMainArea->lineEdit_alias_command->setText(qsl("wave"));
+    mpEditor->slot_saveProperty_AliasCommand();
+    QCOMPARE(pT->getCommand(), qsl("wave"));
+    QVERIFY2(item->data(0, Qt::AccessibleDescriptionRole).toString() !=
+                 mpEditor->descError,
+             "correcting the command must clear the loop error flag");
+
+    cleanupAll(mItemTypes[2]);
   }
 };
 

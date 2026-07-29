@@ -244,18 +244,28 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     // Listen for password migration completion to refresh the form
     connect(mudlet::self(), &mudlet::signal_passwordsMigratedToSecure, this, [this]() {
-        // Refresh the current profile's password field after migration
+        // Refresh the current profile's password field after migration; this
+        // is not the user picking a game so keep the welcome message up
+        mProgrammaticProfileSelection = true;
         slot_itemClicked(listWidget_profiles->currentItem());
+        mProgrammaticProfileSelection = false;
     });
 
     // Listen for character password migration completion to refresh the form
     connect(mudlet::self(), &mudlet::signal_characterPasswordsMigrated, this, [this]() {
-        // Refresh the current profile's password field after migration
+        // Refresh the current profile's password field after migration; this
+        // is not the user picking a game so keep the welcome message up
+        mProgrammaticProfileSelection = true;
         slot_itemClicked(listWidget_profiles->currentItem());
+        mProgrammaticProfileSelection = false;
     });
 
     connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_updateDescription);
     connect(listWidget_profiles, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_itemClicked);
+    // clicking the item that is already current (a profile gets pre-selected
+    // before the dialog is shown) does not change the current item, so it
+    // still needs to reveal the connection details on a fresh install
+    connect(listWidget_profiles, &QListWidget::itemClicked, this, &dlgConnectionProfiles::revealConnectionDetails);
     connect(listWidget_profiles, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
 
     // website_entry atm is only a label
@@ -813,6 +823,22 @@ void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QS
     }
 }
 
+// On a fresh install with no saved profiles the dialog shows the welcome
+// message in place of the connection details; swap them back in and undo the
+// shrink that was applied to fit the welcome message.
+void dlgConnectionProfiles::revealConnectionDetails()
+{
+    if (mProgrammaticProfileSelection || welcome_message->isHidden()) {
+        return;
+    }
+    welcome_message->hide();
+    tabWidget_connectionInfo->show();
+    informationArea->show();
+    if (mDialogHeightBeforeShrink > height()) {
+        resize(width(), mDialogHeightBeforeShrink);
+    }
+}
+
 void dlgConnectionProfiles::slot_addProfile()
 {
     profile_name_entry->setReadOnly(false);
@@ -824,9 +850,7 @@ void dlgConnectionProfiles::slot_addProfile()
     }
     dismissTutorialInvitation();
     fillout_form();
-    welcome_message->hide();
-    informationArea->show();
-    tabWidget_connectionInfo->show();
+    revealConnectionDetails();
 
     const QString newname = tr("new profile name");
 
@@ -1052,6 +1076,10 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         return;
     }
 
+    // on a fresh install picking a game has to swap the welcome message for
+    // the connection details, just as creating a new profile does
+    revealConnectionDetails();
+
     const QString profile_name = pItem->data(csmNameRole).toString();
 
     // Prevent rapid duplicate clicks on the same profile
@@ -1122,7 +1150,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         timer->setSingleShot(true);
         timer->setProperty("profileName", profile_name);
         connect(timer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_loadPasswordAsync);
-        timer->start(0);
+        timer->start(0ms);
     }
 
     val = readProfileData(profile_name, qsl("login"));
@@ -1265,6 +1293,12 @@ void dlgConnectionProfiles::fillout_form()
     const bool noSavedProfiles = mProfileList.isEmpty();
 
     if (noSavedProfiles) {
+        // remember the height so revealConnectionDetails() can undo the
+        // shrink below, but not when the welcome message is already up as the
+        // dialog is then already shrunken
+        if (!mDialogHeightBeforeShrink || welcome_message->isHidden()) {
+            mDialogHeightBeforeShrink = height();
+        }
         welcome_message->show();
         tabWidget_connectionInfo->hide();
         informationArea->hide();
@@ -1368,7 +1402,11 @@ void dlgConnectionProfiles::fillout_form()
     }
 
     if (toselectRow != -1) {
+        // this automatic selection must not be taken for the user picking a
+        // game, which would dismiss the welcome message shown above
+        mProgrammaticProfileSelection = true;
         listWidget_profiles->setCurrentRow(toselectRow);
+        mProgrammaticProfileSelection = false;
     }
 
     // Dedicated single-game builds go straight to their game's profile instead
@@ -1669,8 +1707,8 @@ dlgConnectionProfiles::CopiedProfileData dlgConnectionProfiles::captureProfileDa
 // on-disk, because such profiles only exist in memory until saved. Create the
 // new profile's folder and persist the captured connection data, so the copy is
 // a faithful, functional profile that survives reopening the connection screen.
-// url/port/SSL go through the same writers used when saving a profile (which
-// also re-enable the connect button); the remaining fields are written directly.
+// url/port/SSL go through the same writers used when saving a profile; the
+// remaining fields are written directly.
 void dlgConnectionProfiles::saveDefaultProfileCopy(const QString& profileName, const CopiedProfileData& data, const QString& oldPassword)
 {
     const QDir dir;
@@ -1686,12 +1724,28 @@ void dlgConnectionProfiles::saveDefaultProfileCopy(const QString& profileName, c
     }
 
     mProfileList << profileName;
-    mCopyingProfile = false;
+    // keep the copying flag up to the end: it stops the re-selection below
+    // from blanking the password field and stops validateProfile() from
+    // flagging the half-filled intermediate states
+    mCopyingProfile = true;
+
+    // the copy now exists on disk, so rebuilding the list shows it like any
+    // other saved profile - on a fresh install this also swaps the welcome
+    // message for the connection details, which would otherwise leave the
+    // copy invisible - then select it and fill in its details
+    fillout_form();
+    const auto pCopiedItems = findData(*listWidget_profiles, profileName, csmNameRole);
+    if (!pCopiedItems.isEmpty()) {
+        listWidget_profiles->setCurrentItem(pCopiedItems.first());
+    }
+
     {
+        const QSignalBlocker nameBlocker(profile_name_entry);
         const QSignalBlocker urlBlocker(host_name_entry);
         const QSignalBlocker portBlocker(port_entry);
         const QSignalBlocker sslBlocker(port_ssl_tsl);
         const QSignalBlocker loginBlocker(login_entry);
+        profile_name_entry->setText(profileName);
         host_name_entry->setText(data.host);
         port_entry->setText(data.port);
         port_ssl_tsl->setChecked(data.sslTsl == Qt::Checked);
@@ -1719,6 +1773,8 @@ void dlgConnectionProfiles::saveDefaultProfileCopy(const QString& profileName, c
     if (mudlet::self()->storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
         writeSecurePassword(profileName, oldPassword);
     }
+    mCopyingProfile = false;
+    validateProfile();
 }
 
 void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
@@ -2552,7 +2608,7 @@ void dlgConnectionProfiles::slot_passwordTextChanged()
     } else {
         mPasswordSaveTimer = new QTimer(this);
         mPasswordSaveTimer->setSingleShot(true);
-        mPasswordSaveTimer->setInterval(500); // 500ms debounce
+        mPasswordSaveTimer->setInterval(500ms); // 500ms debounce
         connect(mPasswordSaveTimer, &QTimer::timeout, this, [this]() {
             if (!mPendingPasswordSaveProfile.isEmpty()) {
                 // Check if this profile is STILL selected - if not, don't save
