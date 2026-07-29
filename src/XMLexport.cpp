@@ -83,7 +83,10 @@ XMLexport::XMLexport(TKey* pT)
 {
 }
 
-void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileName, bool async)
+// Builds the module's XML document into mExportDoc. This reads the live
+// trigger/timer/alias/action/script/key lists, so it must run on the main thread;
+// serialization to disk (saveModuleXml()) can then happen on a background thread.
+void XMLexport::writeModuleXML(const QString& moduleName)
 {
     auto pHost = mpHost;
     auto mudletPackage = writeXmlHeader();
@@ -155,12 +158,15 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
     } else {
         helpPackage.append_child("helpURL").text().set("");
     }
-    if (async) {
-        runAsyncSave(fileName, fileName);
-    } else {
-        saveXml(fileName);
-        mpHost->xmlSaved(fileName);
-    }
+}
+
+// Serializes the document previously built by writeModuleXML() to disk. Kept
+// separate from writeModuleXML() so the document build (main thread only) and the
+// file write (safe on a background thread as the document is not modified once
+// built) can run on different threads.
+bool XMLexport::saveModuleXml(const QString& fileName)
+{
+    return saveXml(fileName);
 }
 
 bool XMLexport::exportHost(const QString& filename_pugi_xml)
