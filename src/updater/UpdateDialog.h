@@ -65,6 +65,8 @@ public:
     void setOpenExternalLinks(bool open);
     bool openExternalLinks() const;
 
+    void disableAutoShow();
+
 signals:
     void ready();
     void installButtonClicked(QAbstractButton* button, const QString& filePath);

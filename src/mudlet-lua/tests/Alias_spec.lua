@@ -193,4 +193,107 @@ describe("Alias processing", function()
         end)
 
     end)
+
+    describe("tempAlias creation and firing", function()
+
+        after_each(function()
+            _G.AliasSpec = nil
+        end)
+
+        it("fires a string-body alias created from a regex pattern", function()
+            _G.AliasSpec = {fired = false}
+            local id = tempAlias("^spec_temp_alias$", [[_G.AliasSpec.fired = true]])
+            assert.is_number(id)
+            assert.are.equal(1, exists(id, "alias"), "the temp alias should exist after creation")
+            expandAlias("spec_temp_alias")
+            local fired = _G.AliasSpec.fired
+            killAlias(id)
+            assert.is_true(fired, "a string-body temp alias should fire on a matching command")
+        end)
+
+        it("fires a function-callback alias", function()
+            _G.AliasSpec = {fired = false}
+            local id = tempAlias("^spec_temp_alias_fn$", function() _G.AliasSpec.fired = true end)
+            assert.is_number(id)
+            expandAlias("spec_temp_alias_fn")
+            local fired = _G.AliasSpec.fired
+            killAlias(id)
+            assert.is_true(fired, "a function-callback temp alias should fire on a matching command")
+        end)
+
+        it("rejects a non-string, non-function body", function()
+            -- a table is not string-coercible (a number would be accepted as code)
+            assert.has_error(function() tempAlias("^bad$", {}) end)
+        end)
+
+    end)
+
+    describe("permAlias argument validation", function()
+
+        it("errors when the lua code (argument 4) is not a string", function()
+            local ok, err = pcall(function()
+                permAlias("SpecPermAliasBad", "", "^whatever$", 999)
+            end)
+            assert.is_false(ok, "invalid lua code should error")
+            assert.is_truthy(tostring(err):find("permAlias", 1, true),
+                "the error should name permAlias, got: " .. tostring(err))
+        end)
+
+        it("errors when the regex pattern (argument 3) is missing", function()
+            assert.has_error(function()
+                permAlias("SpecPermAliasBad", "")
+            end)
+        end)
+
+        it("errors when the alias name (argument 1) is missing", function()
+            assert.has_error(function()
+                permAlias()
+            end)
+        end)
+
+    end)
+
+    describe("killAlias, enable/disable and isActive for aliases", function()
+
+        after_each(function()
+            -- perm aliases can't be killed; disable any created above so they
+            -- don't leak into other specs
+            disableAlias("SpecPermAliasKill")
+            disableAlias("SpecPermAliasToggle")
+            _G.AliasSpec = nil
+        end)
+
+        it("killAlias returns true for a temporary alias and false for a missing one", function()
+            local id = tempAlias("^spec_kill_alias$", [[]])
+            assert.are.equal(1, exists(id, "alias"))
+            assert.is_true(killAlias(id), "killing an existing temp alias should return true")
+            assert.is_false(killAlias("no_such_alias_name"), "killing a missing alias should return false")
+        end)
+
+        it("killAlias returns false for a permanent alias (they cannot be killed)", function()
+            local id = permAlias("SpecPermAliasKill", "", "^spec_perm_kill$", [[]])
+            assert.is_true(id > 0)
+            assert.is_false(killAlias("SpecPermAliasKill"), "permanent aliases cannot be removed with killAlias")
+        end)
+
+        it("enableAlias and disableAlias return whether a matching alias was found", function()
+            local id = permAlias("SpecPermAliasToggle", "", "^spec_toggle_alias$", [[]])
+            assert.is_true(id > 0)
+            assert.is_true(disableAlias("SpecPermAliasToggle"), "disableAlias should report it found the alias")
+            assert.is_true(enableAlias("SpecPermAliasToggle"), "enableAlias should report it found the alias")
+            assert.is_false(disableAlias("no_such_alias_name"), "disableAlias should return false when nothing matched")
+            assert.is_false(enableAlias("no_such_alias_name"), "enableAlias should return false when nothing matched")
+        end)
+
+        it("isActive reflects an alias's enabled state", function()
+            local id = tempAlias("^spec_active_alias$", [[]])
+            assert.are.equal(1, isActive(id, "alias"), "a fresh alias should be active")
+            disableAlias(id)
+            assert.are.equal(0, isActive(id, "alias"), "a disabled alias should not be active")
+            enableAlias(id)
+            assert.are.equal(1, isActive(id, "alias"), "a re-enabled alias should be active")
+            killAlias(id)
+        end)
+
+    end)
 end)

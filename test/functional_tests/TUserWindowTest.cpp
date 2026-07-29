@@ -34,6 +34,7 @@
 
 #include <QSignalSpy>
 #include <QtTest/QtTest>
+#include <chrono>
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -42,6 +43,8 @@
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
+
+using namespace std::chrono_literals;
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -79,21 +82,21 @@ private slots:
         const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
         QDir(path).removeRecursively();
 
-        QTimer::singleShot(0, qApp, [this]() {
+        QTimer::singleShot(0ms, qApp, [this]() {
             mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), mHostname);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), mPort);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
         });
 
@@ -154,7 +157,7 @@ private slots:
 
         // Let the deferred deleteLater() run - this is when the orphaned dock's
         // widget() used to become null.
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         QCoreApplication::processEvents();
 
         // Querying the (now absent) window must not crash - it falls back to the
@@ -173,7 +176,7 @@ private slots:
 
         // Tidy up.
         console->deleteMiniConsole(name);
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         QCoreApplication::processEvents();
     }
 };
