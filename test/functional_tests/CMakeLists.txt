@@ -26,6 +26,7 @@ set(FUNCTIONAL_TEST_SOURCES
     ProfileRoundTripTest.cpp
     MapRoundTripTest.cpp
     UndoServerWrapTest.cpp
+    ActionSelfUninstallTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS

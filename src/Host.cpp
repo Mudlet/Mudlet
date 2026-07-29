@@ -875,6 +875,7 @@ void Host::resetProfile_phase2()
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
+    mActionUnit.doCleanup();
     mpConsole->resetMainConsole();
     // Drain queued DeferredDelete events so old TLabel destructors run their
     // luaL_unref against the still-live Lua state. Without this, those unrefs
@@ -1788,6 +1789,7 @@ void Host::incomingStreamProcessor(const QString& data, int line)
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
+    mActionUnit.doCleanup();
 }
 
 // When Mudlet is running in online mode, deleted temp* objects are cleaned up in bulk
@@ -1799,6 +1801,7 @@ void Host::slot_purgeTemps()
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
+    mActionUnit.doCleanup();
 }
 
 void Host::registerEventHandler(const QString& name, TScript* pScript)
