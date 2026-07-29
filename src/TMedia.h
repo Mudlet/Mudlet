@@ -154,6 +154,10 @@ public:
     // under mediaRoot but points elsewhere. Static so it can be unit-tested without a Host.
     static bool mediaFilePathEscapesMediaDir(const QString& mediaRoot, const QString& mediaFileName);
 
+signals:
+    void signal_setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
+    void signal_hideVideoOutput(TMediaPlayer* player);
+
 private slots:
     void slot_writeFile(QNetworkReply* reply);
 

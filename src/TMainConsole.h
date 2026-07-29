@@ -36,6 +36,7 @@
 
 #include <list>
 
+class TMediaPlayer;
 class TTextBox;
 class QProgressDialog;
 
@@ -94,6 +95,8 @@ public:
     void showPackageDownloadProgress(const QString& title, const QString& cancelText);
     void updatePackageDownloadProgress(qint64 got, qint64 total);
     void closePackageDownloadProgress();
+    void setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
+    void hideVideoOutput(TMediaPlayer* player);
     const QString& getSystemSpellDictionary() const { return mSpellDic; }
     const QByteArray& getHunspellCodecName_system() const { return mHunspellCodecName_system; }
     Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
