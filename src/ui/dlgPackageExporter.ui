@@ -360,6 +360,29 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
             </widget>
            </item>
            <item row="5" column="0">
+            <widget class="QLabel" name="label_helpUrl">
+             <property name="toolTip">
+              <string>Webpage where users can find help for this package. It is shown by the &quot;Module Help&quot; button in the Module Manager.</string>
+             </property>
+             <property name="text">
+              <string>Help URL</string>
+             </property>
+             <property name="buddy">
+              <cstring>lineEdit_helpUrl</cstring>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="1">
+            <widget class="QLineEdit" name="lineEdit_helpUrl">
+             <property name="toolTip">
+              <string>Webpage where users can find help for this package. It is shown by the &quot;Module Help&quot; button in the Module Manager.</string>
+             </property>
+             <property name="placeholderText">
+              <string notr="true">https://...</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0">
             <widget class="QLabel" name="label_requiredPackages">
              <property name="toolTip">
               <string>Does this package make use of other packages? List them here as requirements.</string>
@@ -372,7 +395,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
              </property>
             </widget>
            </item>
-           <item row="5" column="1">
+           <item row="6" column="1">
             <widget class="QWidget" name="widget_requiredPackages" native="true">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">

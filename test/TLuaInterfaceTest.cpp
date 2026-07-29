@@ -22,6 +22,8 @@
 #include <VarUnit.h>
 #include <QtTest/QtTest>
 
+#include <memory>
+
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
 #include <lua5.1/lauxlib.h>
@@ -35,26 +37,30 @@ extern "C" {
 }
 
 
-class TVarTest : public QObject {
-Q_OBJECT
+class TVarTest : public QObject
+{
+    Q_OBJECT
 
 private:
-    lua_State* L = luaL_newstate();
-    LuaInterface* interface = new LuaInterface(L);
+    lua_State* L = nullptr;
+    std::unique_ptr<LuaInterface> interface;
 
 private slots: // NOLINT(readability-redundant-access-specifiers)
 
     void init()
     {
         L = luaL_newstate();
-        interface = new LuaInterface(L);
+        interface = std::make_unique<LuaInterface>(L);
     }
 
-    void cleanup() {
+    void cleanup()
+    {
+        interface.reset();
         lua_close(L);
     }
 
-    void execLua(const QString& string) {
+    void execLua(const QString& string)
+    {
         luaL_loadstring(L, string.toUtf8().constData());
         lua_pcall(L, 0, 0, 0);
     }
@@ -84,7 +90,6 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QCOMPARE(testVar->getValue(), "1");
         QCOMPARE(testVar->getValueType(), LUA_TNUMBER);
     }
-
 };
 
 #include "TLuaInterfaceTest.moc"
