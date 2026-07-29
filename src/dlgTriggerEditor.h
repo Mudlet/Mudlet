@@ -395,6 +395,12 @@ private:
     EditorViewType resolveCurrentView();
     void saveTrigger();
     void saveAlias();
+    void computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDescription) const;
+    void setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT);
+    void showAliasError(QTreeWidgetItem* pItem, const QString& name, const QString& error);
+    void showAliasLoopWarning(QTreeWidgetItem* pItem, const QString& name);
+    void applyAliasState(QTreeWidgetItem* pItem, TAlias* pT);
+    bool aliasSubstitutionLoops(const QString& regex, const QString& substitution) const;
     void saveTimer();
     void saveKey();
     void saveScript();
@@ -721,6 +727,11 @@ private:
     // so as to be able to fit the right side with the extra controls,
     // determined the first time the area is shrunk down by the user:
     int mTriggerMainAreaMinimumHeightToShowAll = 0;
+
+    // Persisted preference for showing the extra trigger controls; only
+    // changed by explicit clicks on the toggle button, not by the transient
+    // space-driven auto-collapse:
+    bool mShowAllTriggerControls = false;
 
     // tracks location of the splitter in the trigger editor for each tab
     QByteArray mTriggerEditorSplitterState;

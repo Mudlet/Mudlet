@@ -27,7 +27,10 @@
 
 #include <QCloseEvent>
 #include <QFileDialog>
+#include <QJsonArray>
 #include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonValue>
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QProgressDialog>

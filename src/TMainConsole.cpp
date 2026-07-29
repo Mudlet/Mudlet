@@ -32,6 +32,7 @@
 #include "THyperlinkVisibilityManager.h"
 #include "TLabel.h"
 #include "TMap.h"
+#include "TMedia.h"
 #include "TRoomDB.h"
 #include "TTextBox.h"
 #include "TTextEdit.h"
@@ -42,12 +43,15 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QProgressDialog>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QSizePolicy>
 #include <QTextBoundaryFinder>
 #include <QTextCodec>
 #include <QTextStream>
 #include <QPainter>
+#include <QVideoWidget>
 
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
@@ -865,7 +869,6 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
             mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             mpHost->raiseEvent(mapOpenEvent);
         }
-
     }
     mpMapper->resize(width, height);
     mpMapper->move(x, y);
@@ -1684,6 +1687,127 @@ void TMainConsole::resizeEvent(QResizeEvent* event)
 
     // Update the record of the text area size for NAWS purposes:
     pHost->updateDisplayDimensions();
+}
+
+void TMainConsole::showPackageDownloadProgress(const QString& title, const QString& cancelText)
+{
+    auto pHost = getHost();
+    if (!pHost) {
+        qWarning() << "TMainConsole::showPackageDownloadProgress() WARNING - called with no host; ignoring the download-progress request.";
+        return;
+    }
+    // a second server-triggered download can arrive mid-download; without the
+    // close, the first dialog leaks frozen and its Cancel aborts the wrong download
+    if (mpPackageDownloadProgressDialog) {
+        mpPackageDownloadProgressDialog->close();
+    }
+    // placeholder range; reset by the first download-progress update
+    mpPackageDownloadProgressDialog = new QProgressDialog(title, cancelText, 0, 4000000, this);
+    connect(mpPackageDownloadProgressDialog, &QProgressDialog::canceled, &pHost->mTelnet, &cTelnet::slot_cancelPackageDownload);
+    mpPackageDownloadProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
+    mpPackageDownloadProgressDialog->show();
+}
+
+void TMainConsole::updatePackageDownloadProgress(qint64 got, qint64 total)
+{
+    if (mpPackageDownloadProgressDialog) {
+        // total is -1 for chunked HTTP responses of unknown length; a (0, 0)
+        // range turns the dialog into a busy indicator
+        mpPackageDownloadProgressDialog->setRange(0, total > 0 ? static_cast<int>(total) : 0);
+        mpPackageDownloadProgressDialog->setValue(static_cast<int>(got));
+    }
+}
+
+void TMainConsole::closePackageDownloadProgress()
+{
+    if (mpPackageDownloadProgressDialog) {
+        mpPackageDownloadProgressDialog->close();
+    }
+}
+
+void TMainConsole::setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded)
+{
+    setupSucceeded = false;
+
+    if (!player || !player->mediaPlayer()) {
+        return;
+    }
+
+    const QString target = player->mediaData().mediaKey();
+
+    if (target.isEmpty()) {
+        qWarning() << qsl("TMainConsole::setupVideoOutput() ERROR - 'key' not specified for video.");
+        return;
+    }
+
+    QString widgetType = TMediaData::MediaWidgetLabel;
+    QWidget* targetWidget = mLabelMap.value(target);
+
+    if (!targetWidget) {
+        targetWidget = mSubConsoleMap.value(target);
+        if (targetWidget) {
+            widgetType = TMediaData::MediaWidgetWindow;
+        }
+    }
+
+    if (!targetWidget) {
+        qWarning() << qsl("TMainConsole::setupVideoOutput() ERROR - No matching widget for 'key' = %1 to present video.").arg(target);
+        return;
+    }
+
+    player->mediaData().setMediaWidget(widgetType);
+
+    QVideoWidget* myVideoWidget = nullptr;
+    if (widgetType == TMediaData::MediaWidgetLabel) {
+        myVideoWidget = qobject_cast<TLabel*>(targetWidget)->mpVideoWidget;
+    } else if (widgetType == TMediaData::MediaWidgetWindow) {
+        myVideoWidget = qobject_cast<TConsole*>(targetWidget)->mpVideoWidget;
+    }
+
+    if (!myVideoWidget) {
+        myVideoWidget = new QVideoWidget();
+        myVideoWidget->setParent(targetWidget);
+        myVideoWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+        if (widgetType == TMediaData::MediaWidgetLabel) {
+            QObject::connect(qobject_cast<TLabel*>(targetWidget), &TLabel::resized, myVideoWidget, [targetWidget, myVideoWidget]() {
+                myVideoWidget->resize(targetWidget->size());
+            });
+        } else if (widgetType == TMediaData::MediaWidgetWindow) {
+            QObject::connect(qobject_cast<TConsole*>(targetWidget), &TConsole::resized, myVideoWidget, [targetWidget, myVideoWidget]() {
+                myVideoWidget->resize(targetWidget->size());
+            });
+        }
+    }
+
+    if (targetWidget->isHidden()) {
+        targetWidget->show();
+    }
+
+    myVideoWidget->resize(targetWidget->size());
+    player->mediaPlayer()->setVideoOutput(myVideoWidget);
+    myVideoWidget->show();
+
+    setupSucceeded = true;
+}
+
+void TMainConsole::hideVideoOutput(TMediaPlayer* player)
+{
+    if (!player || !player->mediaPlayer()) {
+        return;
+    }
+
+    auto* videoOutput = qobject_cast<QVideoWidget*>(player->mediaPlayer()->videoOutput());
+
+    if (!videoOutput) {
+        return;
+    }
+
+    QWidget* parent = videoOutput->parentWidget();
+
+    if (parent && parent->isVisible()) {
+        parent->hide();
+    }
 }
 
 void TMainConsole::showStatistics()
