@@ -942,7 +942,12 @@ void mudlet::setupConfig()
         }
         confPath = portPath;
     } else {
-        confPath = confDirDefault;
+        const auto resolution = utils::xdgConfigDir(confDirDefault);
+        confPath = resolution.path;
+        if (resolution.migrationPending) {
+            qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet is not a Mudlet config directory yet, so the existing " << confPath
+                              << " is still in use. Move it to $XDG_CONFIG_HOME/mudlet to migrate.";
+        }
     }
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
 
