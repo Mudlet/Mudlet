@@ -942,7 +942,12 @@ void mudlet::setupConfig()
         }
         confPath = portPath;
     } else {
-        confPath = confDirDefault;
+        const auto resolution = utils::xdgConfigDir(confDirDefault);
+        confPath = resolution.path;
+        if (resolution.migrationPending) {
+            qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet is not a Mudlet config directory yet, so the existing " << confPath
+                              << " is still in use. Move it to $XDG_CONFIG_HOME/mudlet to migrate.";
+        }
     }
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
 
@@ -2197,6 +2202,12 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadStarted, pConsole, &TMainConsole::showPackageDownloadProgress, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadProgress, pConsole, &TMainConsole::updatePackageDownloadProgress, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadFinished, pConsole, &TMainConsole::closePackageDownloadProgress, Qt::UniqueConnection);
+
+    if (pH->mpMedia) {
+        // Pin DirectConnection so the bool& out-parameter is filled synchronously, never queued.
+        connect(pH->mpMedia.data(), &TMedia::signal_setupVideoOutput, pConsole, &TMainConsole::setupVideoOutput, static_cast<Qt::ConnectionType>(Qt::DirectConnection | Qt::UniqueConnection));
+        connect(pH->mpMedia.data(), &TMedia::signal_hideVideoOutput, pConsole, &TMainConsole::hideVideoOutput, static_cast<Qt::ConnectionType>(Qt::DirectConnection | Qt::UniqueConnection));
+    }
 
 #if !defined(QT_NO_SSL)
     // A queued connection is essential here. signal_promptTlsAvailable() is
@@ -6011,17 +6022,13 @@ void mudlet::slot_updateInstalled()
     // disable existing functionality to show the updates window
     disconnect(dactionUpdate, &QAction::triggered, this, nullptr);
 
-    // rejig to restart Mudlet instead
-    connect(dactionUpdate, &QAction::triggered, this, [=, this]() {
-#if defined(Q_OS_WINDOWS)
-        // On Windows the new binary is not in place yet - the downloaded
-        // installer still has to run, which slot_installOrRestartClicked
-        // arranges via a batch file that waits for Mudlet to exit:
+    // rejig to restart Mudlet instead. The updater owns the restart flow on
+    // all platforms: on Windows the downloaded installer still has to run,
+    // and everywhere the update dialog must be told not to reappear when the
+    // last window closes, which would keep the old instance alive alongside
+    // the restarted one:
+    connect(dactionUpdate, &QAction::triggered, this, [this]() {
         pUpdater->slot_installOrRestartClicked(nullptr, QString());
-#else
-        forceClose();
-        QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
-#endif
     });
     dactionUpdate->setText(tr("Update installed - restart to apply"));
 #endif // !Q_OS_MACOS
