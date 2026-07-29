@@ -1696,9 +1696,13 @@ void TMainConsole::showPackageDownloadProgress(const QString& title, const QStri
         qWarning() << "TMainConsole::showPackageDownloadProgress() WARNING - called with no host; ignoring the download-progress request.";
         return;
     }
-    // a second server-triggered download can arrive mid-download; without the
-    // close, the first dialog leaks frozen and its Cancel aborts the wrong download
+    // A second server-triggered download can arrive mid-download (e.g. a
+    // reconnect re-sends Client.GUI). QProgressDialog::close() emits canceled(),
+    // so closing the superseded dialog while it is still wired to
+    // slot_cancelPackageDownload() would abort the download this new dialog is
+    // about to track; detach it before closing.
     if (mpPackageDownloadProgressDialog) {
+        mpPackageDownloadProgressDialog->disconnect();
         mpPackageDownloadProgressDialog->close();
     }
     // placeholder range; reset by the first download-progress update

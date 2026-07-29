@@ -1599,7 +1599,18 @@ void TBuffer::commitLineData(QString line, std::deque<TChar> chars, const char c
     const int lineIndex = lineBuffer.size() - 1;
     mCommitLineIndices.append(lineIndex);
     if (!mSkipTriggerProcessing) {
+        // Keep the just-committed formats around so that color triggers
+        // can match against the colors as received from the game even
+        // after earlier triggers in this pass have recolored the line;
+        // save/restore gives nested feedTriggers() passes (which re-enter
+        // this function) their own snapshot:
+        std::deque<TChar> savedPassLine = std::move(mPreTriggerPassLine);
+        const int savedPassLineNumber = mPreTriggerPassLineNumber;
+        mPreTriggerPassLine = std::move(chars);
+        mPreTriggerPassLineNumber = lineIndex;
         mpHost->mpConsole->runTriggers(lineIndex);
+        mPreTriggerPassLine = std::move(savedPassLine);
+        mPreTriggerPassLineNumber = savedPassLineNumber;
     }
 
     // Only use of TBuffer::wrap(), breaks up new text
@@ -1811,6 +1822,23 @@ void TBuffer::recordLineLengthForWrapDetection(const qsizetype length)
         hostGuard->mpConsole->echoLink(linkText, func, hint, false);
         hostGuard->mpConsole->print("\n");
     });
+}
+
+const std::deque<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
+{
+    if (lineNumber >= 0 && lineNumber == mPreTriggerPassLineNumber) {
+        return &mPreTriggerPassLine;
+    }
+    return nullptr;
+}
+
+// A structural edit to the trigger-pass line makes the edited text the new
+// baseline for color matching, as it was before the snapshot existed:
+void TBuffer::syncPreTriggerPassLine(int y)
+{
+    if (y >= 0 && y == mPreTriggerPassLineNumber && y < static_cast<int>(buffer.size())) {
+        mPreTriggerPassLine = buffer[y];
+    }
 }
 
 void TBuffer::processMxpWatchdogCallback()
@@ -4749,6 +4777,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
             auto it = buffer[y].begin();
             buffer[y].insert(it + x + i, c);
         }
+        syncPreTriggerPassLine(y);
     } else {
         appendLine(text, 0, text.size(), format.mFgColor, format.mBgColor, format.mFlags);
     }
@@ -5304,6 +5333,7 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
         auto it1 = buffer[y].begin() + x;
         auto it2 = buffer[y].begin() + x_end;
         buffer[y].erase(it1, it2);
+        syncPreTriggerPassLine(y);
     }
 
     // insert replacement
@@ -5459,6 +5489,7 @@ void TBuffer::shrinkBuffer()
     // We need to adjust the search result line as some lines have now gone
     // away:
     mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
+    mPreTriggerPassLineNumber = -1;
 
     // The removed leading lines shift every remaining index down; keep the
     // deferred logging state pointing at the same lines
@@ -5503,6 +5534,9 @@ bool TBuffer::deleteLines(int from, int to)
         }
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
+        if (mPreTriggerPassLineNumber >= from) {
+            mPreTriggerPassLineNumber = -1;
+        }
 
         // Keep the deferred logging state in step with the removed lines so
         // pending text is only dropped when the lines it holds were deleted
