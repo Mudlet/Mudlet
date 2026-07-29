@@ -43,6 +43,7 @@
 #include <QtConcurrentRun>
 #include <QFutureWatcher>
 #include <QFile>
+#include <QGuiApplication>
 #include <QMetaEnum>
 
 #include <sstream>
@@ -978,7 +979,7 @@ void XMLexport::exportToClipboard(TTrigger* pT)
     writeTrigger(mpTrigger, triggerPackage);
     auto xml = saveXml();
 
-    auto clipboard = QApplication::clipboard();
+    auto clipboard = QGuiApplication::clipboard();
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
@@ -1060,7 +1061,7 @@ void XMLexport::exportToClipboard(TAlias* pT)
     writeAlias(mpAlias, aliasPackage);
     auto xml = saveXml();
 
-    auto clipboard = QApplication::clipboard();
+    auto clipboard = QGuiApplication::clipboard();
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
@@ -1113,7 +1114,7 @@ void XMLexport::exportToClipboard(TAction* pT)
     writeAction(mpAction, actionPackage);
     auto xml = saveXml();
 
-    auto clipboard = QApplication::clipboard();
+    auto clipboard = QGuiApplication::clipboard();
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
@@ -1182,7 +1183,7 @@ void XMLexport::exportToClipboard(TTimer* pT)
     writeTimer(mpTimer, timerPackage);
     auto xml = saveXml();
 
-    auto clipboard = QApplication::clipboard();
+    auto clipboard = QGuiApplication::clipboard();
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
@@ -1238,7 +1239,7 @@ void XMLexport::exportToClipboard(TScript* pT)
     writeScript(mpScript, scriptPackage);
     auto xml = saveXml();
 
-    auto clipboard = QApplication::clipboard();
+    auto clipboard = QGuiApplication::clipboard();
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
@@ -1293,7 +1294,7 @@ void XMLexport::exportToClipboard(TKey* pT)
     writeKey(mpKey, keyPackage);
     auto xml = saveXml();
 
-    auto clipboard = QApplication::clipboard();
+    auto clipboard = QGuiApplication::clipboard();
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
