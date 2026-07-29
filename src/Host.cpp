@@ -1050,15 +1050,20 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         writeModuleFiles(moduleJobs);
     });
     connect(watcher, &QFutureWatcher<void>::finished, this, [this, watcher, moduleJobs, syncModules]() {
-        // Finish on the main thread: the module documents are now on disk, so drop
-        // each module writer from `writers` (this emits profileSaveFinished once the
-        // profile writer is gone too) and then reload/queue module syncs.
-        mWritingHostAndModules = false;
-        for (const auto& job : moduleJobs) {
-            xmlSaved(job.xmlFilename);
-        }
+        // Finish on the main thread: the module documents are now on disk. Consume
+        // mModulesToSync via reloadModules() *before* the xmlSaved() loop below empties
+        // `writers` and emits profileSaveFinished(): that signal fires synchronously,
+        // and a deferred handler (e.g. a queued package install) could start another
+        // save that clears/replaces mModulesToSync, making this save skip the module
+        // sync it owes to other profiles.
         if (syncModules) {
             reloadModules();
+        }
+        mWritingHostAndModules = false;
+        // Drop each module writer from `writers`; the last removal emits
+        // profileSaveFinished() once the profile writer is gone too.
+        for (const auto& job : moduleJobs) {
+            xmlSaved(job.xmlFilename);
         }
         watcher->deleteLater();
     });
