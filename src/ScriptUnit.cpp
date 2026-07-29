@@ -79,8 +79,41 @@ void ScriptUnit::uninstall(const QString& packageName)
             uninstallList.append(rootScript);
         }
     }
+    // Re-entrant uninstall (#9337): a script's own event handler (e.g. a package
+    // auto-updater calling uninstallPackage()) is removing its package while
+    // Host::raiseEvent() is still dispatching to that script. Deleting now would
+    // be a use-after-free - both of the handler still executing and of the other
+    // TScript pointers in raiseEvent()'s copied handler list - so defer to
+    // doCleanup() at depth 0. Deactivating is enough to stop the handlers firing
+    // for the rest of the dispatch: TScript::callEventHandler() checks isActive().
+    if (mProcessingDepth > 0) {
+        for (auto script : uninstallList) {
+            script->setIsActive(false);
+        }
+        return;
+    }
     for (auto& script : uninstallList) {
         delete script;
+    }
+    uninstallList.clear();
+}
+
+// Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
+// children-before-parents and each ~Tree unlinks from its parent, so deleting
+// children first empties the parent's child list (no double free); the seen
+// set guards a node queued twice by re-entrant uninstalls.
+void ScriptUnit::doCleanup()
+{
+    if (mProcessingDepth > 0) {
+        return;
+    }
+
+    QSet<TScript*> deletedScripts;
+    for (auto script : uninstallList) {
+        if (!deletedScripts.contains(script)) {
+            deletedScripts.insert(script);
+            delete script;
+        }
     }
     uninstallList.clear();
 }

@@ -897,6 +897,7 @@ private:
     void removePackageInfo(const QString& packageName, const bool);
     static void createModuleBackup(const QString& filename, const QString& saveName);
     void writeModule(const QString& moduleName, const QString& filename);
+    QVector<QFuture<bool>> pendingXmlSaveFutures() const;
     void waitForAsyncXmlSave();
     void saveModules(bool backup = true);
     void updateModuleZips(const QString& zipName, const QString& moduleName);

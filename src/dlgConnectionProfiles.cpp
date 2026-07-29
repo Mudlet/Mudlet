@@ -1191,7 +1191,9 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     QDir dir(mudlet::getMudletPath(enums::profileXmlFilesPath, profile_name));
     dir.setSorting(QDir::Time);
-    const QStringList entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
+    // Only offer real profile saves (*.xml) as history entries; leftover QSaveFile
+    // temporaries from an interrupted save (e.g. "....xml.AbCdEf") must not be loadable
+    const QStringList entries = dir.entryList(QStringList{qsl("*.xml")}, QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
 
     for (const auto& entry : entries) {
         const QRegularExpression rx(qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml"));
@@ -1695,12 +1697,7 @@ void dlgConnectionProfiles::slot_copyProfile()
 
 dlgConnectionProfiles::CopiedProfileData dlgConnectionProfiles::captureProfileData() const
 {
-    return {host_name_entry->text(),
-            port_entry->text(),
-            port_ssl_tsl->isChecked() ? Qt::Checked : Qt::Unchecked,
-            login_entry->text(),
-            website_entry->text(),
-            mud_description_textedit->toPlainText()};
+    return {host_name_entry->text(), port_entry->text(), port_ssl_tsl->isChecked() ? Qt::Checked : Qt::Unchecked, login_entry->text(), website_entry->text(), mud_description_textedit->toPlainText()};
 }
 
 // Copying a default profile (one of the predefined games) has nothing to copy

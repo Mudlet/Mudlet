@@ -71,6 +71,7 @@
 #include <QNetworkProxy>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QScopeGuard>
 #include <QSettings>
 #include <QTextStream>
 #include <zip.h>
@@ -644,15 +645,26 @@ void Host::writeModule(const QString& moduleName, const QString& filename)
     updateModuleZips(filename, moduleName);
 }
 
+// Main thread only: `writers` and each writer's `saveFutures` are mutated on the
+// main thread as profile saves start and finish, so the background module-sync
+// task must not read them - it gets a snapshot taken up front instead (see
+// saveProfile()). NB: saveModules()/writeModule() still touch `writers` from
+// that background task for profiles that use modules - a known remaining race
+// that needs module writing to move back to the main thread to fix properly.
+QVector<QFuture<bool>> Host::pendingXmlSaveFutures() const
+{
+    QVector<QFuture<bool>> futures;
+    for (const auto& writer : writers) {
+        futures += writer->saveFutures;
+    }
+    return futures;
+}
+
 void Host::waitForAsyncXmlSave()
 {
-    // writers and futures are copied to prevent deletion during for loop (which would mean crash)
-    auto myWriters = writers;
-    for (auto& writer : myWriters) {
-        auto myFutures = writer->saveFutures;
-        for (auto& future : myFutures) {
-            future.waitForFinished();
-        }
+    const auto futures = pendingXmlSaveFutures();
+    for (auto future : futures) {
+        future.waitForFinished();
     }
 }
 
@@ -1004,10 +1016,18 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     }
 
     auto watcher = new QFutureWatcher<void>;
-    mModuleFuture = QtConcurrent::run([=, this]() {
+    // Snapshot the pending XML save futures on the main thread: the background task
+    // below must not read `writers`/`saveFutures` itself as the main thread mutates
+    // them whenever a save starts or finishes - concurrently copying those containers
+    // from the pool thread is a data race that can corrupt the heap
+    const QVector<QFuture<bool>> xmlSaveFutures = pendingXmlSaveFutures();
+    const bool backupModules = saveName != qsl("autosave");
+    mModuleFuture = QtConcurrent::run([this, xmlSaveFutures, backupModules]() {
         // wait for the host xml to be ready before starting to sync modules
-        waitForAsyncXmlSave();
-        saveModules(saveName != qsl("autosave"));
+        for (auto future : xmlSaveFutures) {
+            future.waitForFinished();
+        }
+        saveModules(backupModules);
     });
     connect(watcher, &QFutureWatcher<void>::finished, this, [=, this]() {
         // reload, or queue module reload for when xml is ready
@@ -1845,6 +1865,18 @@ void Host::raiseEvent(const TEvent& pE)
     }
 
     static const QString star = qsl("*");
+
+    // A handler can uninstall its own package mid-dispatch (a common package
+    // auto-updater pattern): whilst this frame is on the stack
+    // ScriptUnit::uninstall() defers its deletes so neither the executing
+    // handler nor the other TScript pointers in the lists copied below get
+    // freed under us; the deferred deletes are flushed once the outermost
+    // dispatch finishes:
+    mScriptUnit.beginProcessing();
+    const auto processingGuard = qScopeGuard([this] {
+        mScriptUnit.endProcessing();
+        mScriptUnit.doCleanup();
+    });
 
     if (mEventHandlerMap.contains(pE.mArgumentList.at(0))) {
         QList<TScript*> scriptList = mEventHandlerMap.value(pE.mArgumentList.at(0));
