@@ -1457,6 +1457,61 @@ describe("Tests UI functions", function()
     end)
   end)
 
+  describe("Tests isAnsiFgColor/isAnsiBgColor error handling", function()
+    setup(function()
+      feedTriggers("isAnsiColor test text\n")
+      moveCursorUp()
+      selectCurrentLine()
+    end)
+
+    teardown(function()
+      deselect()
+      moveCursorEnd()
+    end)
+
+    it("isAnsiFgColor returns nil and a message for an out of range color code", function()
+      local ok, err = isAnsiFgColor(17)
+      assert.is_nil(ok)
+      assert.are.equal("ANSI color 17 out of range (0 to 16)", err)
+
+      ok, err = isAnsiFgColor(-1)
+      assert.is_nil(ok)
+      assert.are.equal("ANSI color -1 out of range (0 to 16)", err)
+    end)
+
+    it("isAnsiBgColor returns nil and a message for an out of range color code", function()
+      local ok, err = isAnsiBgColor(17)
+      assert.is_nil(ok)
+      assert.are.equal("ANSI color 17 out of range (0 to 16)", err)
+
+      ok, err = isAnsiBgColor(-1)
+      assert.is_nil(ok)
+      assert.are.equal("ANSI color -1 out of range (0 to 16)", err)
+    end)
+
+    it("isAnsiFgColor returns a boolean for a valid color code", function()
+      assert.is_boolean(isAnsiFgColor(0))
+    end)
+
+    it("isAnsiBgColor returns a boolean for a valid color code", function()
+      assert.is_boolean(isAnsiBgColor(0))
+    end)
+  end)
+
+  describe("Tests enableScrolling/disableScrolling error handling", function()
+    it("enableScrolling returns nil and a message for the main window", function()
+      local ok, err = enableScrolling("main")
+      assert.is_nil(ok)
+      assert.are.equal("scrolling cannot be enabled/disabled for the 'main' window", err)
+    end)
+
+    it("disableScrolling returns nil and a message for the main window", function()
+      local ok, err = disableScrolling("main")
+      assert.is_nil(ok)
+      assert.are.equal("scrolling cannot be enabled/disabled for the 'main' window", err)
+    end)
+  end)
+
   -- BaseUI.parseVitalsLine is the pure parser behind the starter UI's
   -- prompt/score vitals fallback (the base-ui package installs into fresh
   -- profiles, including the self-test one)
