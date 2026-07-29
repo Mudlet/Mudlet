@@ -942,9 +942,6 @@ void mudlet::setupConfig()
         }
         confPath = portPath;
     } else {
-        // Honor XDG_CONFIG_HOME (with a migration guard), falling back to the
-        // legacy ~/.config/mudlet when it is unset. Isolated/parallel test runs
-        // opt in by pre-creating $XDG_CONFIG_HOME/mudlet before launch.
         const auto resolution = utils::xdgConfigDir(confDirDefault);
         confPath = resolution.path;
         if (resolution.migrationPending) {

@@ -101,7 +101,6 @@ private slots:
         QVERIFY(!r.migrationPending);
     }
 
-    // An empty pre-created dir is the test-harness opt-in and wins over legacy.
     void test_emptyXdgDirIsOptInAndWinsOverLegacy()
     {
         QTemporaryDir xdg;
@@ -110,7 +109,7 @@ private slots:
         const QString target = mudletUnder(xdg.path());
         QVERIFY(QDir().mkpath(target)); // empty opt-in dir
         const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
-        QVERIFY(QDir().mkpath(legacy)); // legacy exists too
+        QVERIFY(QDir().mkpath(legacy));
         qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
 
         const auto r = utils::xdgConfigDir(legacy);
@@ -118,7 +117,6 @@ private slots:
         QVERIFY(!r.migrationPending);
     }
 
-    // A populated (already-migrated) XDG dir wins over an existing legacy dir.
     void test_migratedXdgDirWinsOverLegacy()
     {
         QTemporaryDir xdg;
@@ -157,7 +155,6 @@ private slots:
         QVERIFY2(r.migrationPending, "a stale non-Mudlet XDG dir must not shadow real profiles");
     }
 
-    // Guard: XDG target absent while a legacy dir exists -> keep legacy, flag it.
     void test_guardKeepsLegacyWhenXdgTargetMissing()
     {
         QTemporaryDir xdg;
@@ -173,7 +170,6 @@ private slots:
         QVERIFY(r.migrationPending);
     }
 
-    // Fresh install: XDG set, neither dir usable -> honor XDG, no migration.
     void test_freshInstallUsesXdgWhenNeitherExists()
     {
         QTemporaryDir xdg;
@@ -198,7 +194,7 @@ private slots:
         QTemporaryDir cfg; // stands in for $HOME/.config
         QVERIFY(cfg.isValid());
         const QString legacy = mudletUnder(cfg.path());
-        QVERIFY(QDir().mkpath(legacy)); // the one and only (empty) config dir
+        QVERIFY(QDir().mkpath(legacy));
         qputenv("XDG_CONFIG_HOME", cfg.path().toUtf8());
 
         const auto r = utils::xdgConfigDir(legacy);
@@ -208,8 +204,6 @@ private slots:
 
     // --- mudlet::setupConfig() end-to-end wiring ------------------------------
 
-    // The isolation opt-in used by the busted harness: a pre-created
-    // $XDG_CONFIG_HOME/mudlet becomes the config root.
     void test_setupConfigUsesPreCreatedXdgTarget()
     {
         if (portableMarkerPresent()) {

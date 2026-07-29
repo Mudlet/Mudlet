@@ -565,8 +565,8 @@ end
 
 local errorLogged = false
 
--- Platform default failure-marker path, or nil on an OS we don't know how to
--- signal on (e.g. Windows with no TEMP set).
+-- Returns nil on an OS we don't know how to signal on (e.g. Windows with no
+-- TEMP set).
 local function defaultFailureMarkerPath()
   local os_name = getOS()
   if os_name == "linux" or os_name == "mac" then
