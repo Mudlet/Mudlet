@@ -640,6 +640,18 @@ describe("Tests DB.lua functions", function()
       assert.is.same(exp_total, total)
     end)
 
+    it("should apply a db:exp query when aggregating.",
+    function()
+      local total = db:aggregate(mydb.sheet.count, "total", db:exp("count > 5"))
+      local exp_total = 0
+      for _, v in ipairs(test_data) do
+        if v.count > 5 then
+          exp_total = exp_total + v.count
+        end
+      end
+      assert.is.same(exp_total, total)
+    end)
+
     it("should successfully calculate the average of all numbers.",
     function()
       local avg = db:aggregate(mydb.sheet.count, "avg")
@@ -1658,6 +1670,21 @@ describe("Tests DB.lua functions", function()
       assert.are.same({"Cyra", "Drake", "Eve"}, names(db:fetch(mydb.people, db:exp("level > 25"))))
     end)
 
+    it("db:exp still works inside an implicitly-ANDed table query", function()
+      local results = db:fetch(mydb.people, {
+        db:exp("level > 25"),
+        db:eq(mydb.people.city, "Chicago"),
+      })
+      assert.are.same({"Eve"}, names(results))
+    end)
+
+    it("db:exp still combines with db:AND and db:OR", function()
+      local anded = db:fetch(mydb.people, db:AND(db:exp("level > 25"), db:eq(mydb.people.city, "Chicago")))
+      assert.are.same({"Eve"}, names(anded))
+      local ored = db:fetch(mydb.people, db:OR(db:exp("level < 15"), db:exp("level > 45")))
+      assert.are.same({"Ada", "Eve"}, names(ored))
+    end)
+
     it("db:AND requires all sub-expressions to match", function()
       local query = db:AND(db:eq(mydb.people.city, "Boston"), db:gt(mydb.people.level, 15))
       assert.are.same({"Cyra"}, names(db:fetch(mydb.people, query)))
@@ -1721,6 +1748,17 @@ describe("Tests DB.lua functions", function()
 
     it("deletes every row matching an expression", function()
       db:delete(mydb.sheet, db:eq(mydb.sheet.city, "Boston"))
+      local remaining = db:fetch(mydb.sheet)
+      assert.are.equal(2, #remaining)
+      local cities = {}
+      for _, row in ipairs(remaining) do
+        cities[row.city] = true
+      end
+      assert.is_nil(cities["Boston"])
+    end)
+
+    it("deletes every row matching a db:exp expression", function()
+      db:delete(mydb.sheet, db:exp("city = 'Boston'"))
       local remaining = db:fetch(mydb.sheet)
       assert.are.equal(2, #remaining)
       local cities = {}
@@ -1934,6 +1972,67 @@ describe("Tests DB.lua functions", function()
       for _, row in ipairs(rows) do
         assert.are.equal(0, row.kills)
       end
+    end)
+
+    it("db:set evaluates a db:exp value instead of storing it literally", function()
+      db:set(mydb.sheet.kills, db:exp("kills + 1"), db:eq(mydb.sheet.name, "Ada"))
+      assert.are.equal(4, db:fetch(mydb.sheet, db:eq(mydb.sheet.name, "Ada"))[1].kills)
+      assert.are.equal(7, db:fetch(mydb.sheet, db:eq(mydb.sheet.name, "Bram"))[1].kills)
+    end)
+
+    it("db:set accepts a db:exp as the WHERE query", function()
+      db:set(mydb.sheet.city, "Rome", db:exp("kills > 5"))
+      assert.are.equal("Boston", db:fetch(mydb.sheet, db:eq(mydb.sheet.name, "Ada"))[1].city)
+      assert.are.equal("Rome", db:fetch(mydb.sheet, db:eq(mydb.sheet.name, "Bram"))[1].city)
+    end)
+  end)
+
+  describe("Tests db.Database:_drop", function()
+    before_each(function()
+      mydb = db:create("droptestingonly", {
+        people = {
+          name = "",
+          city = "",
+          _index = { "city" },
+          _unique = { "name" },
+        }
+      })
+      db:add(mydb.people,
+        {name = "Ada",  city = "Boston"},
+        {name = "Bram", city = "Chicago"})
+    end)
+
+    after_each(function()
+      pcall(function() db:close() end)
+      os.remove(getMudletHomeDir() .. "/Database_droptestingonly.db")
+      mydb = nil
+    end)
+
+    it("drops the sheet's table and indexes without erroring", function()
+      local ok, err = pcall(function() mydb:_drop("people") end)
+      assert.is_true(ok, err)
+
+      -- the table (and hence its rows and indexes) is really gone from the database
+      local conn = db.__conn[mydb._db_name]
+      local cur = conn:execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'people'")
+      local exists = cur and cur ~= 0 and cur:fetch({}, "a") ~= nil
+      if cur and cur ~= 0 then
+        cur:close()
+      end
+      assert.is_false(exists)
+    end)
+
+    it("drops a sheet whose _unique index is declared as a string", function()
+      local sdb = db:create("dropstrtestingonly", {
+        pets = {
+          name = "",
+          _unique = "name",
+        }
+      })
+      local ok, err = pcall(function() sdb:_drop("pets") end)
+      db:close("dropstrtestingonly")
+      os.remove(getMudletHomeDir() .. "/Database_dropstrtestingonly.db")
+      assert.is_true(ok, err)
     end)
   end)
 
