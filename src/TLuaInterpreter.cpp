@@ -4711,6 +4711,72 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     return !error;
 }
 
+// No documentation available in wiki - internal, test-only helper for waitForEvent()
+// Snapshots a TEvent's arguments into a fresh Lua table {[1]=name, [2]=arg, ...}
+// with a numeric length in the "n" field, and returns a registry reference to
+// it. Table/function arguments are anchored by this new table (it holds a
+// reference to the same object the handlers saw), so they survive
+// Host::raiseEvent() freeing the event's own registry entries, letting
+// waitForEvent() hand the values back after the loop unwinds.
+int TLuaInterpreter::createEventArgsTableRef(const TEvent& pE)
+{
+    lua_State* L = pGlobalLua;
+    const int initialStackSize = lua_gettop(L);
+    const auto argCount = std::min(pE.mArgumentList.size(), pE.mArgumentTypeList.size());
+    lua_newtable(L);
+    for (qsizetype i = 0; i < argCount; ++i) {
+        switch (pE.mArgumentTypeList.at(i)) {
+        case ARGUMENT_TYPE_NUMBER:
+            lua_pushnumber(L, pE.mArgumentList.at(i).toDouble());
+            break;
+        case ARGUMENT_TYPE_STRING:
+            lua_pushstring(L, pE.mArgumentList.at(i).toUtf8().constData());
+            break;
+        case ARGUMENT_TYPE_BOOLEAN:
+            lua_pushboolean(L, pE.mArgumentList.at(i).toInt());
+            break;
+        case ARGUMENT_TYPE_NIL:
+            lua_pushnil(L);
+            break;
+        case ARGUMENT_TYPE_TABLE:
+        case ARGUMENT_TYPE_FUNCTION:
+            lua_rawgeti(L, LUA_REGISTRYINDEX, pE.mArgumentList.at(i).toInt());
+            break;
+        default:
+            lua_pushnil(L);
+        }
+        lua_rawseti(L, -2, static_cast<int>(i) + 1);
+    }
+    lua_pushinteger(L, argCount);
+    lua_setfield(L, -2, "n");
+    const int ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    // luaL_ref popped the table; restore the stack exactly in case this runs
+    // nested inside another operation's stack.
+    lua_settop(L, initialStackSize);
+    return ref;
+}
+
+// No documentation available in wiki - internal, test-only helper for waitForEvent()
+// If a waitForEvent() call is blocked waiting for this event, capture its
+// arguments and quit that call's nested event loop. Called from Host::raiseEvent().
+void TLuaInterpreter::captureEventForWaits(const TEvent& pE)
+{
+    if (mPendingEventWaits.isEmpty() || pE.mArgumentList.isEmpty()) {
+        return;
+    }
+    const QString& eventName = pE.mArgumentList.at(0);
+    for (auto* pWait : mPendingEventWaits) {
+        if (pWait->mCaptured || pWait->mName != eventName) {
+            continue;
+        }
+        pWait->mArgsRef = createEventArgsTableRef(pE);
+        pWait->mCaptured = true;
+        if (pWait->mpLoop) {
+            pWait->mpLoop->quit();
+        }
+    }
+}
+
 // No documentation available in wiki - internal function
 double TLuaInterpreter::condenseMapLoad()
 {
@@ -5137,6 +5203,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "selectCaptureGroup", TLuaInterpreter::selectCaptureGroup);
     lua_register(pGlobalLua, "tempLineTrigger", TLuaInterpreter::tempLineTrigger);
     lua_register(pGlobalLua, "raiseEvent", TLuaInterpreter::raiseEvent);
+    lua_register(pGlobalLua, "waitForEvent", TLuaInterpreter::waitForEvent);
     lua_register(pGlobalLua, "deleteLine", TLuaInterpreter::deleteLine);
     lua_register(pGlobalLua, "copy", TLuaInterpreter::copy);
     lua_register(pGlobalLua, "cut", TLuaInterpreter::cut);
