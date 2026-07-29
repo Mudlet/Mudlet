@@ -23,18 +23,17 @@
 
 
 #include "TMedia.h"
-#include "TLabel.h"
 
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <QMetaMethod>
 #include <QNetworkDiskCache>
 #include <QRandomGenerator>
 #include <QSaveFile>
 #include <QStandardPaths>
-#include <QVideoWidget>
 
 // Public
 TMedia::TMedia(Host* pHost, const QString& profileName)
@@ -1374,15 +1373,7 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
         player->mediaPlayer()->setSource(QUrl());
 
         if (player->mediaData().mediaWidget() == TMediaData::MediaWidgetLabel && player->mediaData().mediaClose() == TMediaData::MediaCloseEnabled && player->mediaPlayer()->videoOutput() != nullptr) {
-            QVideoWidget* videoOutput = qobject_cast<QVideoWidget*>(player->mediaPlayer()->videoOutput());
-
-            if (videoOutput != nullptr) {
-                QWidget* parent = videoOutput->parentWidget();
-
-                if (parent != nullptr && parent->isVisible()) {
-                    parent->hide();
-                }
-            }
+            emit signal_hideVideoOutput(player.get());
         }
 
         //: This word is part of a sentence like "Music stops" when the music is about to stop.
@@ -1530,73 +1521,13 @@ bool TMedia::setupVideo(const std::shared_ptr<TMediaPlayer>& player)
         return false;
     }
 
-    auto mpConsole = mpHost->mpConsole;
-
-    if (!mpConsole) {
-        return false;
+    if (!isSignalConnected(QMetaMethod::fromSignal(&TMedia::signal_setupVideoOutput))) {
+        qWarning() << "TMedia::setupVideo() WARNING - no receiver connected to signal_setupVideoOutput, video cannot be displayed";
     }
 
-    auto target = player->mediaData().mediaKey();
-
-    if (target.isEmpty()) {
-        qWarning() << qsl("TMedia::setupVideo() ERROR - 'key' not specified for video.");
-        return false;
-    }
-
-    QString widgetType = TMediaData::MediaWidgetLabel;
-    QWidget* targetWidget = nullptr;
-
-    // Attempt to retrieve the existing widget, labels first
-    targetWidget = mpConsole->mLabelMap.value(target);
-
-    if (!targetWidget) {
-        targetWidget = mpConsole->mSubConsoleMap.value(target);
-        if (targetWidget) {
-            widgetType = TMediaData::MediaWidgetWindow;
-        }
-    }
-
-    // Ensure we now have a valid target widget
-    if (!targetWidget) {
-        qWarning() << qsl("TMedia::setupVideo() ERROR - No matching widget for 'key' = %1 to present video.").arg(target);
-        return false;
-    }
-
-    player->mediaData().setMediaWidget(widgetType);
-
-    // Assign video widget to the target widget
-    QVideoWidget* myVideoWidget = nullptr;
-    if (widgetType == TMediaData::MediaWidgetLabel) {
-        myVideoWidget = qobject_cast<TLabel*>(targetWidget)->mpVideoWidget;
-    } else if (widgetType == TMediaData::MediaWidgetWindow) {
-        myVideoWidget = qobject_cast<TConsole*>(targetWidget)->mpVideoWidget;
-    }
-
-    if (!myVideoWidget) {
-        myVideoWidget = new QVideoWidget();
-        myVideoWidget->setParent(targetWidget);
-        myVideoWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-
-        if (widgetType == TMediaData::MediaWidgetLabel) {
-            QObject::connect(qobject_cast<TLabel*>(targetWidget), &TLabel::resized, myVideoWidget, [targetWidget, myVideoWidget]() {
-                myVideoWidget->resize(targetWidget->size());
-            });
-        } else if (widgetType == TMediaData::MediaWidgetWindow) {
-            QObject::connect(qobject_cast<TConsole*>(targetWidget), &TConsole::resized, myVideoWidget, [targetWidget, myVideoWidget]() {
-                myVideoWidget->resize(targetWidget->size());
-            });
-        }
-    }
-
-    if (targetWidget->isHidden()) {
-        targetWidget->show();
-    }
-
-    myVideoWidget->resize(targetWidget->size());
-    player->mediaPlayer()->setVideoOutput(myVideoWidget);
-    myVideoWidget->show();
-
-    return true;
+    bool setupSucceeded = false;
+    emit signal_setupVideoOutput(player.get(), setupSucceeded);
+    return setupSucceeded;
 }
 
 void TMedia::play(TMediaData& mediaData)
