@@ -456,14 +456,25 @@ describe("Tests the functionality of IDMgr", function()
       assert.are.same({"regex_trig"}, getNamedTriggers(user))
     end)
 
-    it("Should list registered named triggers", function()
+    it("Should list registered named triggers, mixing substring and regex types", function()
+      -- https://github.com/Mudlet/Mudlet/issues/9542: substring and regex names
+      -- live in separate 1..n arrays, so merging them by index collides entries
+      -- and drops one. Registering one of each type guards that regression.
       registerNamedTrigger(user, "sub_one", "whatever_sub_one", function() end)
-      registerNamedTrigger(user, "sub_two", "whatever_sub_two", function() end)
+      registerNamedRegexTrigger(user, "regex_one", "^whatever_re$", function() end)
       local names = getNamedTriggers(user)
       assert.is_equal(2, #names)
       local present = {}
       for _, n in ipairs(names) do present[n] = true end
-      assert.is_true(present["sub_one"] and present["sub_two"], "both named triggers should be listed")
+      assert.is_true(present["sub_one"] and present["regex_one"], "both substring and regex named triggers should be listed")
+    end)
+
+    it("Should list a name held by both a substring and a regex trigger only once", function()
+      -- the two stores can hold the same name at once; the listing is a set of
+      -- names, so the #9542 union must dedupe rather than report the name twice
+      registerNamedTrigger(user, "shared", "whatever_shared_sub", function() end)
+      registerNamedRegexTrigger(user, "shared", "^whatever_shared_re$", function() end)
+      assert.are.same({"shared"}, getNamedTriggers(user))
     end)
 
     it("Should delete a named trigger", function()
@@ -472,9 +483,9 @@ describe("Tests the functionality of IDMgr", function()
       assert.are.same({}, getNamedTriggers(user))
     end)
 
-    it("Should delete all named triggers", function()
+    it("Should delete all named triggers across both substring and regex stores", function()
       registerNamedTrigger(user, "t1", "named_trig_all_a", function() end)
-      registerNamedTrigger(user, "t2", "named_trig_all_b", function() end)
+      registerNamedRegexTrigger(user, "t2", "^named_trig_all_re$", function() end)
       assert.is_equal(2, #getNamedTriggers(user))
       assert.is_true(deleteAllNamedTriggers(user))
       assert.are.same({}, getNamedTriggers(user))

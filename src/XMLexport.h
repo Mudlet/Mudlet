@@ -65,13 +65,14 @@ public:
     void writeAction(TAction*, pugi::xml_node xmlParent);
     void writeScript(TScript*, pugi::xml_node xmlParent);
     void writeKey(TKey*, pugi::xml_node xmlParent);
-    void writeVariable(TVar*, LuaInterface*, VarUnit*, pugi::xml_node xmlParent);
-    void writeModuleXML(const QString& moduleName, const QString& fileName, bool async = false);
+    void writeVariable(TVar*, LuaInterface*, VarUnit*, pugi::xml_node xmlParent, bool insideSavedTable = false);
+    void writeModuleXML(const QString& moduleName);
+    bool saveModuleXml(const QString& fileName);
 
     bool exportHost(const QString& filename_pugi_xml);
     bool writeGenericPackage(Host* pHost, pugi::xml_node& mMudletPackage, bool ignoreModuleMember = true, bool ignoreVariables = false);
     bool exportProfile(const QString& exportFileName);
-    bool exportPackage(const QString &exportFileName, bool ignoreModuleMember = true, bool ignoreVariables = false);
+    bool exportPackage(const QString& exportFileName, bool ignoreModuleMember = true, bool ignoreVariables = false);
     bool exportTrigger(const QString& fileName);
     bool exportTimer(const QString& fileName);
     bool exportAlias(const QString& fileName);

@@ -104,6 +104,9 @@ void TriggerUnit::uninstall(const QString& packageName)
         return;
     }
     for (auto& trigger : uninstallList) {
+        // in case the trigger was also queued for the markCleanup()/doCleanup()
+        // path - deleting it here would otherwise leave a dangling pointer there:
+        mCleanupSet.remove(trigger);
         delete trigger;
     }
     uninstallList.clear();
@@ -514,17 +517,20 @@ void TriggerUnit::doCleanup()
         return;
     }
 
+    QSet<TTrigger*> deletedTriggers;
     QMutableSetIterator<TTrigger*> itTrigger(mCleanupSet);
     while (itTrigger.hasNext()) {
         auto pTrigger = itTrigger.next();
         itTrigger.remove();
+        deletedTriggers.insert(pTrigger);
         delete pTrigger;
     }
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
     // children first empties the parent's child list (no double free); the seen
-    // set guards a node queued twice by re-entrant uninstalls.
-    QSet<TTrigger*> deletedTriggers;
+    // set guards a node queued twice by re-entrant uninstalls and is shared with
+    // the mCleanupSet loop above so an object that somehow ended up in both
+    // containers cannot be freed twice.
     for (auto trigger : uninstallList) {
         if (!deletedTriggers.contains(trigger)) {
             deletedTriggers.insert(trigger);

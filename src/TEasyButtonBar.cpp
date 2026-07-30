@@ -28,6 +28,7 @@
 #include "TFlipButton.h"
 
 #include <QGridLayout>
+#include <QScopeGuard>
 
 
 TEasyButtonBar::TEasyButtonBar(TAction* pA, QString name, QWidget* pW)
@@ -155,6 +156,19 @@ void TEasyButtonBar::slot_pressed(const bool isChecked)
     }
 
     TAction* pA = pB->mpTAction;
+
+    // Hold off ActionUnit deletes for this whole slot: showMenu() below blocks in
+    // a modal event loop in which a menu item's script (or inbound game data) can
+    // uninstall pA's own package. beginProcessing() keeps that delete deferred -
+    // even against a Host catch-all doCleanup() firing at depth 0 mid-loop - so pA
+    // survives every dereference here; the scope guard then flushes once, after pA
+    // is no longer touched (see ActionUnit::uninstall()):
+    ActionUnit* pActionUnit = pA->mpHost->getActionUnit();
+    pActionUnit->beginProcessing();
+    const auto processingGuard = qScopeGuard([pActionUnit] {
+        pActionUnit->endProcessing();
+        pActionUnit->doCleanup();
+    });
 
     // NOTE: This function blocks until an item is selected from the menu, and,
     // as the action to "pop-up" the menu is the same as "buttons" use to

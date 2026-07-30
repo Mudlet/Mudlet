@@ -6722,6 +6722,13 @@ void dlgTriggerEditor::saveScript()
             mpTextUndoStack->clear();
         }
     }
+
+    // If pT's own body uninstalled its package during the compile above, the delete
+    // was deferred (see TScript::compileScript / ScriptUnit::uninstall). We are now
+    // done with pT, so flush it before returning to the event loop - otherwise the
+    // 0ms save uninstallPackage() queued would serialize the "uninstalled" script
+    // back into the profile:
+    mpHost->getScriptUnit()->doCleanup();
 }
 
 void dlgTriggerEditor::clearEditorNotification()
@@ -9611,6 +9618,11 @@ EditorViewType dlgTriggerEditor::determineViewFromVisibleTree()
         return EditorViewType::cmVarsView;
     }
     return EditorViewType::cmUnknownView;
+}
+
+bool dlgTriggerEditor::variablesViewActive() const
+{
+    return isVisible() && mCurrentView == EditorViewType::cmVarsView;
 }
 
 EditorViewType dlgTriggerEditor::resolveCurrentView()

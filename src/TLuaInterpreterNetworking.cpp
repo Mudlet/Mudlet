@@ -629,29 +629,28 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     return 2;
 }
 
-// Validates the optional custom-headers argument (a table of string keys and
-// string values, or nil/absent) shared by the HTTP functions. It deliberately
-// builds nothing heap-backed: raising a Lua error longjmps past C++ destructors
-// (Lua 5.1 error handling uses setjmp/longjmp), so any QUrl or QNetworkRequest
-// alive at that point would leak. Call it before constructing those objects and
-// apply the headers with applyHttpHeaders() once the request exists.
-/*static*/ void TLuaInterpreter::validateHttpHeaders(lua_State* L, const char* functionName, const int headerIndex)
+// Validates the optional headers table at Lua stack index `index`: it must be
+// absent/nil, or a table whose keys and values are all strings, otherwise a Lua
+// error is raised. This has to run before any QUrl or QNetworkRequest is
+// constructed, because lua_error() longjmps past C++ destructors and would
+// otherwise leak those heap-owning Qt objects.
+/*static*/ void TLuaInterpreter::validateHttpHeaders(lua_State* L, const int index, const char* functionName)
 {
-    if (!lua_istable(L, headerIndex) && !lua_isnoneornil(L, headerIndex)) {
-        lua_pushfstring(L, "%s: bad argument #%d type (headers as a table expected, got %s!)", functionName, headerIndex, luaL_typename(L, headerIndex));
-        lua_error(L);
-    }
-    if (!lua_istable(L, headerIndex)) {
+    if (!lua_istable(L, index)) {
+        if (!lua_isnoneornil(L, index)) {
+            lua_pushfstring(L, "%s: bad argument #%d type (headers as a table expected, got %s!)", functionName, index, luaL_typename(L, index));
+            lua_error(L);
+        }
         return;
     }
     lua_pushnil(L);
-    while (lua_next(L, headerIndex) != 0) {
+    while (lua_next(L, index) != 0) {
         // key at index -2 and value at index -1
         if (lua_type(L, -1) != LUA_TSTRING || lua_type(L, -2) != LUA_TSTRING) {
             lua_pushfstring(L,
                             "%s: bad argument #%d type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
                             functionName,
-                            headerIndex,
+                            index,
                             luaL_typename(L, -2),
                             luaL_typename(L, -1));
             lua_error(L);
@@ -661,19 +660,17 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     }
 }
 
-// Applies the already-validated string headers (see validateHttpHeaders()) to the
-// request. It runs only after validation has confirmed every entry is a string, so
-// it has no error path - and therefore cannot leak the request via a longjmp.
-/*static*/ void TLuaInterpreter::applyHttpHeaders(lua_State* L, const int headerIndex, QNetworkRequest& request)
+// Applies the already-validated headers table at `index` to `request`. Call
+// validateHttpHeaders() first: this assumes every key/value is a string and
+// never raises a Lua error, so it is safe to run with a live QNetworkRequest.
+/*static*/ void TLuaInterpreter::applyHttpHeaders(lua_State* L, const int index, QNetworkRequest& request)
 {
-    if (!lua_istable(L, headerIndex)) {
+    if (!lua_istable(L, index)) {
         return;
     }
     lua_pushnil(L);
-    while (lua_next(L, headerIndex) != 0) {
-        // key at index -2 and value at index -1
+    while (lua_next(L, index) != 0) {
         request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
-        // removes value, but keeps key for next iteration
         lua_pop(L, 1);
     }
 }
@@ -682,10 +679,9 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
 int TLuaInterpreter::getHTTP(lua_State* L)
 {
     auto& host = getHostFromLua(L);
-    // Validate arguments before building the QUrl/QNetworkRequest so a bad-argument
-    // Lua error cannot longjmp past their destructors and leak them.
-    validateHttpHeaders(L, __func__, 2);
     const QString urlString = getVerifiedString(L, __func__, 1, "remote url");
+    validateHttpHeaders(L, 2, __func__);
+
     const QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1").arg(url.errorString()));
@@ -723,10 +719,9 @@ int TLuaInterpreter::putHTTP(lua_State* L)
 int TLuaInterpreter::deleteHTTP(lua_State* L)
 {
     auto& host = getHostFromLua(L);
-    // Validate arguments before building the QUrl/QNetworkRequest so a bad-argument
-    // Lua error cannot longjmp past their destructors and leak them.
-    validateHttpHeaders(L, __func__, 2);
     const QString urlString = getVerifiedString(L, __func__, 1, "remote url");
+    validateHttpHeaders(L, 2, __func__);
+
     const QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1").arg(url.errorString()));

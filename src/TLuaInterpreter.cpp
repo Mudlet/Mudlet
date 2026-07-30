@@ -4711,6 +4711,72 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     return !error;
 }
 
+// No documentation available in wiki - internal, test-only helper for waitForEvent()
+// Snapshots a TEvent's arguments into a fresh Lua table {[1]=name, [2]=arg, ...}
+// with a numeric length in the "n" field, and returns a registry reference to
+// it. Table/function arguments are anchored by this new table (it holds a
+// reference to the same object the handlers saw), so they survive
+// Host::raiseEvent() freeing the event's own registry entries, letting
+// waitForEvent() hand the values back after the loop unwinds.
+int TLuaInterpreter::createEventArgsTableRef(const TEvent& pE)
+{
+    lua_State* L = pGlobalLua;
+    const int initialStackSize = lua_gettop(L);
+    const auto argCount = std::min(pE.mArgumentList.size(), pE.mArgumentTypeList.size());
+    lua_newtable(L);
+    for (qsizetype i = 0; i < argCount; ++i) {
+        switch (pE.mArgumentTypeList.at(i)) {
+        case ARGUMENT_TYPE_NUMBER:
+            lua_pushnumber(L, pE.mArgumentList.at(i).toDouble());
+            break;
+        case ARGUMENT_TYPE_STRING:
+            lua_pushstring(L, pE.mArgumentList.at(i).toUtf8().constData());
+            break;
+        case ARGUMENT_TYPE_BOOLEAN:
+            lua_pushboolean(L, pE.mArgumentList.at(i).toInt());
+            break;
+        case ARGUMENT_TYPE_NIL:
+            lua_pushnil(L);
+            break;
+        case ARGUMENT_TYPE_TABLE:
+        case ARGUMENT_TYPE_FUNCTION:
+            lua_rawgeti(L, LUA_REGISTRYINDEX, pE.mArgumentList.at(i).toInt());
+            break;
+        default:
+            lua_pushnil(L);
+        }
+        lua_rawseti(L, -2, static_cast<int>(i) + 1);
+    }
+    lua_pushinteger(L, argCount);
+    lua_setfield(L, -2, "n");
+    const int ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    // luaL_ref popped the table; restore the stack exactly in case this runs
+    // nested inside another operation's stack.
+    lua_settop(L, initialStackSize);
+    return ref;
+}
+
+// No documentation available in wiki - internal, test-only helper for waitForEvent()
+// If a waitForEvent() call is blocked waiting for this event, capture its
+// arguments and quit that call's nested event loop. Called from Host::raiseEvent().
+void TLuaInterpreter::captureEventForWaits(const TEvent& pE)
+{
+    if (mPendingEventWaits.isEmpty() || pE.mArgumentList.isEmpty()) {
+        return;
+    }
+    const QString& eventName = pE.mArgumentList.at(0);
+    for (auto* pWait : mPendingEventWaits) {
+        if (pWait->mCaptured || pWait->mName != eventName) {
+            continue;
+        }
+        pWait->mArgsRef = createEventArgsTableRef(pE);
+        pWait->mCaptured = true;
+        if (pWait->mpLoop) {
+            pWait->mpLoop->quit();
+        }
+    }
+}
+
 // No documentation available in wiki - internal function
 double TLuaInterpreter::condenseMapLoad()
 {
@@ -4762,29 +4828,34 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
 {
     auto& host = getHostFromLua(L);
 
-    // Validate every argument's type (and the header contents) before building any
-    // heap-backed Qt object below: raising a Lua error longjmps past C++ destructors
-    // (Lua 5.1 error handling uses setjmp/longjmp), so a QUrl or QNetworkRequest that
-    // was already alive would leak.
+    QString dataToPost;
     if (!lua_isstring(L, pos + 1) && !lua_isstring(L, pos + 4)) {
         lua_pushfstring(L, "%s: bad argument #%d type (data to send as string expected, got %s!)", functionName, pos + 1, luaL_typename(L, pos + 1));
         return lua_error(L);
     }
-    validateHttpHeaders(L, functionName, pos + 3);
+    if (lua_isstring(L, pos + 1)) {
+        dataToPost = lua_tostring(L, pos + 1);
+    }
+
+    const QString urlString = getVerifiedString(L, functionName, pos + 2, "remote url");
+
+    // Validate the optional headers and file arguments before creating the QUrl
+    // / QNetworkRequest below: lua_error() longjmps past C++ destructors, so
+    // nothing heap-owning may be alive when a validation failure fires.
+    validateHttpHeaders(L, pos + 3, functionName);
+
+    QString fileLocation;
     if (!lua_isstring(L, pos + 4) && !lua_isnoneornil(L, pos + 4)) {
         lua_pushfstring(L, "%s: bad argument #%d type (file to send as string location expected, got %s!)", functionName, pos + 4, luaL_typename(L, pos + 4));
         return lua_error(L);
     }
+    if (lua_isstring(L, pos + 4)) {
+        fileLocation = lua_tostring(L, pos + 4);
+    }
 
-    const QString urlString = getVerifiedString(L, functionName, pos + 2, "remote url");
     const QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1.").arg(url.errorString()));
-    }
-
-    QString dataToPost;
-    if (lua_isstring(L, pos + 1)) {
-        dataToPost = lua_tostring(L, pos + 1);
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -4792,11 +4863,6 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
     applyHttpHeaders(L, pos + 3, request);
 
     QByteArray fileToUpload;
-    QString fileLocation;
-    if (lua_isstring(L, pos + 4)) {
-        fileLocation = lua_tostring(L, pos + 4);
-    }
-
     if (!fileLocation.isEmpty()) {
         QFile file(fileLocation);
         if (!file.open(QFile::ReadOnly)) {
@@ -5119,6 +5185,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "selectCaptureGroup", TLuaInterpreter::selectCaptureGroup);
     lua_register(pGlobalLua, "tempLineTrigger", TLuaInterpreter::tempLineTrigger);
     lua_register(pGlobalLua, "raiseEvent", TLuaInterpreter::raiseEvent);
+    lua_register(pGlobalLua, "waitForEvent", TLuaInterpreter::waitForEvent);
     lua_register(pGlobalLua, "deleteLine", TLuaInterpreter::deleteLine);
     lua_register(pGlobalLua, "copy", TLuaInterpreter::copy);
     lua_register(pGlobalLua, "cut", TLuaInterpreter::cut);
@@ -5204,6 +5271,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setTextFormat", TLuaInterpreter::setTextFormat);
     lua_register(pGlobalLua, "getMainWindowSize", TLuaInterpreter::getMainWindowSize);
     lua_register(pGlobalLua, "getUserWindowSize", TLuaInterpreter::getUserWindowSize);
+    lua_register(pGlobalLua, "getWindowGeometry", TLuaInterpreter::getWindowGeometry);
+    lua_register(pGlobalLua, "windowVisible", TLuaInterpreter::windowVisible);
+    lua_register(pGlobalLua, "getLabelText", TLuaInterpreter::getLabelText);
     lua_register(pGlobalLua, "getMousePosition", TLuaInterpreter::getMousePosition);
     lua_register(pGlobalLua, "setProfileIcon", TLuaInterpreter::setProfileIcon);
     lua_register(pGlobalLua, "resetProfileIcon", TLuaInterpreter::resetProfileIcon);
