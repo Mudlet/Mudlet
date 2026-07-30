@@ -4949,6 +4949,72 @@ std::optional<QString> Host::windowType(const QString& name) const
     return {};
 }
 
+// Returns the position and size of a named window element, matching what
+// moveWindow()/resizeWindow() set. pos()/size() (rather than geometry()) are
+// used deliberately: they are the exact inverse of the move()/resize() calls
+// those setters make, including for a floating user-window dock where move()
+// targets the frame origin while geometry() would report the client area.
+// Mirrors the widget dispatch of moveWindow()/resizeWindow(); user windows are
+// moved/resized through their dock widget, so read the dock, not the console.
+std::optional<QRect> Host::windowGeometry(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+
+    if (auto pL = mpConsole->mLabelMap.value(name)) {
+        return {QRect(pL->pos(), pL->size())};
+    }
+    if (auto pC = mpConsole->mSubConsoleMap.value(name)) {
+        if (auto pD = mpConsole->mDockWidgetMap.value(name)) {
+            return {QRect(pD->pos(), pD->size())};
+        }
+        return {QRect(pC->pos(), pC->size())};
+    }
+    if (auto pS = mpConsole->mScrollBoxMap.value(name)) {
+        return {QRect(pS->pos(), pS->size())};
+    }
+    if (auto pN = mpConsole->mSubCommandLineMap.value(name)) {
+        return {QRect(pN->pos(), pN->size())};
+    }
+    if (auto pT = mpConsole->mTextBoxMap.value(name)) {
+        return {QRect(pT->pos(), pT->size())};
+    }
+
+    return {};
+}
+
+// Returns whether a named window element is currently visible. Mirrors the
+// widget dispatch of hideWindow()/showWindow(); user windows report the
+// visibility of their dock widget, which is what those functions toggle.
+std::optional<bool> Host::windowVisible(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+
+    if (auto pL = mpConsole->mLabelMap.value(name)) {
+        return {pL->isVisible()};
+    }
+    if (auto pC = mpConsole->mSubConsoleMap.value(name)) {
+        if (auto pD = mpConsole->mDockWidgetMap.value(name)) {
+            return {pD->isVisible()};
+        }
+        return {pC->isVisible()};
+    }
+    if (auto pS = mpConsole->mScrollBoxMap.value(name)) {
+        return {pS->isVisible()};
+    }
+    if (auto pN = mpConsole->mSubCommandLineMap.value(name)) {
+        return {pN->isVisible()};
+    }
+    if (auto pT = mpConsole->mTextBoxMap.value(name)) {
+        return {pT->isVisible()};
+    }
+
+    return {};
+}
+
 void Host::setLargeAreaExitArrows(const bool state)
 {
     if (mLargeAreaExitArrows != state) {

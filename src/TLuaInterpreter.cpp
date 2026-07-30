@@ -5289,6 +5289,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setTextFormat", TLuaInterpreter::setTextFormat);
     lua_register(pGlobalLua, "getMainWindowSize", TLuaInterpreter::getMainWindowSize);
     lua_register(pGlobalLua, "getUserWindowSize", TLuaInterpreter::getUserWindowSize);
+    lua_register(pGlobalLua, "getWindowGeometry", TLuaInterpreter::getWindowGeometry);
+    lua_register(pGlobalLua, "windowVisible", TLuaInterpreter::windowVisible);
+    lua_register(pGlobalLua, "getLabelText", TLuaInterpreter::getLabelText);
     lua_register(pGlobalLua, "getMousePosition", TLuaInterpreter::getMousePosition);
     lua_register(pGlobalLua, "setProfileIcon", TLuaInterpreter::setProfileIcon);
     lua_register(pGlobalLua, "resetProfileIcon", TLuaInterpreter::resetProfileIcon);

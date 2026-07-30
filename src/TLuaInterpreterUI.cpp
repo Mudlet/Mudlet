@@ -1675,6 +1675,50 @@ int TLuaInterpreter::getUserWindowSize(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getWindowGeometry
+int TLuaInterpreter::getWindowGeometry(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    const QString windowName = getVerifiedString(L, __func__, 1, "window name");
+
+    if (auto geometry = host.windowGeometry(windowName)) {
+        lua_pushnumber(L, geometry->x());
+        lua_pushnumber(L, geometry->y());
+        lua_pushnumber(L, geometry->width());
+        lua_pushnumber(L, geometry->height());
+        return 4;
+    }
+
+    lua_pushnil(L);
+    lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#windowVisible
+int TLuaInterpreter::windowVisible(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    const QString windowName = getVerifiedString(L, __func__, 1, "window name");
+
+    if (auto visible = host.windowVisible(windowName)) {
+        lua_pushboolean(L, *visible);
+        return 1;
+    }
+
+    lua_pushnil(L);
+    lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelText
+int TLuaInterpreter::getLabelText(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    auto label = LABEL(L, labelName);
+    lua_pushstring(L, label->text().toUtf8().constData());
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getWindowWrap
 int TLuaInterpreter::getWindowWrap(lua_State* L)
 {
