@@ -22,6 +22,7 @@ set(FUNCTIONAL_TEST_SOURCES
     ColorTriggerFilterChildTest.cpp
     GMCPCharLoginTest.cpp
     SetScriptCallbackTest.cpp
+    ClearWindowLogTest.cpp
     XMLexportVariablesTest.cpp
     SgrUnderlineStyleTest.cpp
     LogRestartDuplicateLineTest.cpp
