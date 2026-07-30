@@ -36,6 +36,7 @@
 
 #include <list>
 
+class TMediaPlayer;
 class TTextBox;
 class QProgressDialog;
 
@@ -101,6 +102,8 @@ public:
     void setMapProgressDialogValue(int value);
     void disableMapProgressDialogCancel();
     void closeMapProgressDialog();
+    void setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
+    void hideVideoOutput(TMediaPlayer* player);
     const QString& getSystemSpellDictionary() const { return mSpellDic; }
     const QByteArray& getHunspellCodecName_system() const { return mHunspellCodecName_system; }
     Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }

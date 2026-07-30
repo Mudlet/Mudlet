@@ -47,6 +47,7 @@
 #include <QList>
 #include <QMargins>
 #include <QPointer>
+#include <QRect>
 #include <QStack>
 #include <QTextStream>
 
@@ -243,6 +244,7 @@ public:
     QStringList getValidExperiments() const;
 
     void forceClose();
+    bool profileResetInProgress() const { return mResetProfile; }
     bool isClosingDown() const { return mIsClosingDown; }
     bool isClosingForced() const { return mForcedClose; }
     bool requestClose();
@@ -449,8 +451,8 @@ public:
     bool setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha);
     std::optional<QColor> getBackgroundColor(const QString& name) const;
-    bool setBackgroundImage(const QString& name, QString& path, int mode);
-    bool resetBackgroundImage(const QString& name);
+    bool setBackgroundImage(const QString& name, QString& path, int mode, bool fullWindow = false);
+    bool resetBackgroundImage(const QString& name, bool fullWindow = false);
     void showHideOrCreateMapper(const bool loadDefaultMap);
     bool setProfileStyleSheet(const QString& styleSheet);
     void check_for_mappingscript();
@@ -465,6 +467,8 @@ public:
         mScreenHeight = height;
     }
     std::optional<QString> windowType(const QString& name) const;
+    std::optional<QRect> windowGeometry(const QString& name) const;
+    std::optional<bool> windowVisible(const QString& name) const;
     bool getEditorShowBidi() const { return mEditorShowBidi; }
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;
@@ -896,9 +900,32 @@ private:
     void createMapper(const bool);
     void removePackageInfo(const QString& packageName, const bool);
     static void createModuleBackup(const QString& filename, const QString& saveName);
-    void writeModule(const QString& moduleName, const QString& filename);
+    // A single module queued to be written out during a profile save. Its XML
+    // document is built on the main thread (writer->writeModuleXML()); serializing
+    // it to disk is deferred to a background task so that no shared save-bookkeeping
+    // is touched off the main thread. `writer` is a non-owning pointer: the owning
+    // std::shared_ptr lives only in `writers` (removed on the main thread), so the
+    // XMLexport - a QObject with main-thread affinity - is always destroyed there.
+    struct ModuleWriteJob
+    {
+        XMLexport* writer = nullptr;
+        QString moduleName;
+        QString filename;
+        QString xmlFilename;
+        bool backup = false;
+    };
+    // Main thread only: builds every to-be-synced module's XML document and registers
+    // its writer in `writers`, returning the jobs a background task should serialize.
+    QList<ModuleWriteJob> prepareModuleSaves(bool backup);
+    // Background thread: writes the prepared module documents (and updates their zips)
+    // to disk. Touches no shared save-bookkeeping (not `writers`, `modulesToWrite` nor
+    // `mModulesToSync`).
+    void writeModuleFiles(const QList<ModuleWriteJob>& jobs);
+    // Main thread only: snapshot of the still-pending profile-save futures, so a
+    // background task never reads `writers`/`saveFutures` while the main thread mutates
+    // them (that concurrent access is a heap-corrupting data race).
+    QList<QFuture<bool>> pendingXmlSaveFutures() const;
     void waitForAsyncXmlSave();
-    void saveModules(bool backup = true);
     void updateModuleZips(const QString& zipName, const QString& moduleName);
     void reloadModules();
     void startMapAutosave(const int interval);

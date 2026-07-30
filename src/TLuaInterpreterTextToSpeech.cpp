@@ -65,9 +65,6 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QFileDialog>
-#include <QTableWidget>
-#include <QToolTip>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -92,7 +89,18 @@ void TLuaInterpreter::ttsBuild()
         return;
     }
 
-    speechUnit = new QTextToSpeech();
+    // Under automated tests always request Qt's deterministic "mock" engine and
+    // never fall back to a real backend, which would speak aloud and make specs
+    // host-dependent. When the mock plugin is absent Qt leaves the engine in the
+    // Error state with no voices, so the TTS specs skip (or fail where the mock
+    // is mandatory) instead of exercising a developer's real speech engine. This
+    // also makes a non-empty voice list a reliable proof that the mock was
+    // selected. Outside test mode the default engine is built exactly as before.
+    if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
+        speechUnit = new QTextToSpeech(qsl("mock"));
+    } else {
+        speechUnit = new QTextToSpeech();
+    }
     bSpeechBuilt = true;
     bSpeechQueueing = false;
 
@@ -171,7 +179,7 @@ int TLuaInterpreter::ttsClearQueue(lua_State* L)
         int index = getVerifiedInt(L, __func__, 1, "index");
         index--;
         if (index < 0 || index >= speechQueue.size()) {
-            return warnArgumentValue(L, __func__, qsl("index %1 out of bounds for queue size %2").arg(index + 1, speechQueue.size()));
+            return warnArgumentValue(L, __func__, qsl("index %1 out of bounds for queue size %2").arg(index + 1).arg(speechQueue.size()));
         }
 
         speechQueue.remove(index);
@@ -223,7 +231,7 @@ int TLuaInterpreter::ttsGetQueue(lua_State* L)
     if (lua_gettop(L) > 0) {
         int index = getVerifiedInt(L, __func__, 1, "index");
         index--;
-        if (index < 0 || index > speechQueue.size()) {
+        if (index < 0 || index >= speechQueue.size()) {
             lua_pushboolean(L, false);
             return 1;
         }

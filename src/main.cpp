@@ -250,7 +250,9 @@ static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
         }
         confPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
     } else {
-        confPath = confDirDefault;
+        // Mirror setupConfig()'s XDG_CONFIG_HOME resolution so this early
+        // Mudlet.ini read looks in the same config root.
+        confPath = utils::xdgConfigDir(confDirDefault).path;
     }
 
     if (confPath.isEmpty()) {
@@ -314,7 +316,7 @@ int main(int argc, char* argv[])
 #ifdef WITH_SENTRY
     initSentry();
     auto sentryClose = qScopeGuard([] {
-        closeSentry();
+        sentry_close();
     });
 #endif
 

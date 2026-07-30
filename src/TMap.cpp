@@ -1009,7 +1009,7 @@ bool TMap::findPath(int from, int to)
     std::vector<cost> d(vertexCount);
     try {
         astar_search(g, start, distance_heuristic<mygraph_t, cost, std::vector<location>>(locations, goal), predecessor_map(&p[0]).distance_map(&d[0]).visitor(astar_goal_visitor<vertex>(goal)));
-    } catch (found_goal) {
+    } catch (const found_goal&) {
         qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: time elapsed in A*:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
         t.restart();
         if (!roomidToIndex.contains(to)) {

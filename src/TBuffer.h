@@ -312,6 +312,9 @@ public:
     int size() { return static_cast<int>(buffer.size()); }
     bool isEmpty() const { return buffer.size() == 0; }
     QString& line(int lineNumber);
+    // Colors of the current trigger-pass line as committed, before any
+    // trigger ran; nullptr when lineNumber is not the line being processed:
+    const std::deque<TChar>* preTriggerPassLine(int lineNumber) const;
     int find(int line, const QString& what, int pos);
     QStringList split(int line, const QString& splitter);
     QStringList split(int line, const QRegularExpression& splitter);
@@ -391,6 +394,7 @@ public:
 private:
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
+    void syncPreTriggerPassLine(int y);
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
     void translateToPlainTextInner(std::string& incoming, bool isFromServer);
@@ -503,6 +507,8 @@ private:
 
     QString mMudLine;
     std::deque<TChar> mMudBuffer;
+    std::deque<TChar> mPreTriggerPassLine;
+    int mPreTriggerPassLineNumber = -1;
     // A line that ended at the game's own wrap column (Host::mUndoServerWrap)
     // is held here instead of being committed, so its continuation can be
     // joined back on and triggers run once over the whole logical line:
@@ -523,7 +529,7 @@ private:
     // translateToPlainText()}:
     std::string mIncompleteSequenceBytes;
 
-    // The parser sequence state (mGotESC, mGotCSI, mGotOSC and
+    // The parser sequence state (mGotESC, mGotCSI, mGotOSC, mGotString and
     // mIncompleteSequenceBytes) for whichever of the two data channels - Game
     // Server stream or locally generated text - is not currently being
     // processed; translateToPlainText() swaps it in around a local feed so
@@ -532,6 +538,7 @@ private:
     bool mLocalGotESC = false;
     bool mLocalGotCSI = false;
     bool mLocalGotOSC = false;
+    bool mLocalGotString = false;
     std::string mLocalIncompleteSequenceBytes;
     // Set whilst a locally generated feed is being processed, so a nested feed
     // (e.g. an MXP <HR> inside locally fed text) does not swap the state again:

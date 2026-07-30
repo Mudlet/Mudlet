@@ -290,6 +290,7 @@ private:
         QCOMPARE(pDB->getAreaNamesMap().value(mAreaB), scmAreaBName);
 
         TArea* pAreaA = pDB->getArea(mAreaA);
+        QVERIFY(pAreaA);
         verifyArea(pAreaA, mBoundsA, qsl("area A"));
         if (QTest::currentTestFailed()) {
             return;
@@ -298,6 +299,7 @@ private:
         QCOMPARE(pAreaA->mUserData, expectedAreaAUserData());
 
         TArea* pAreaB = pDB->getArea(mAreaB);
+        QVERIFY(pAreaB);
         verifyArea(pAreaB, mBoundsB, qsl("area B"));
         if (QTest::currentTestFailed()) {
             return;
