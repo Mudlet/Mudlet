@@ -2400,6 +2400,14 @@ void mudlet::slot_timerFires()
             pTT->start();
         }
 
+        // Flush any deletes TimerUnit::uninstall() deferred whilst execute() was
+        // on the stack (a timer script uninstalling its own package). Doing it
+        // here - after the last use of pTT - keeps the window in which the
+        // "uninstalled" timers linger down to this event loop iteration, before
+        // the profile save that Host::uninstallPackage() queues with a 0ms
+        // single-shot can serialize them back into the profile:
+        pHost->getTimerUnit()->doCleanup();
+
         // Okay now we've found it we are done:
         return;
     }
@@ -6078,11 +6086,23 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     const QString folder = getMudletPath(enums::profileXmlFilesPath, profile_name);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
-    QStringList entries = dir.entryList(QDir::Files, QDir::Time);
+    // Only consider profile saves (*.xml): a crash during a save can leave behind
+    // an empty QSaveFile temporary (e.g. "2026-01-01#12-00-00.xml.AbCdEf") as the
+    // newest file, and loading that instead of the newest real save presents the
+    // profile with all of its triggers/scripts seemingly wiped out
+    QStringList entries = dir.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Time);
     // pre-install packages when loading this profile for the first time
     bool preInstallPackages = false;
     pHost->hideMudletsVariables();
-    if (entries.isEmpty()) {
+    // NB: an explicitly requested saveFileName is honored even when no *.xml
+    // is present - failing to open it then reports a proper load error rather
+    // than silently starting a fresh profile:
+    if (entries.isEmpty() && saveFileName.isEmpty()) {
+        if (!dir.entryList(QDir::Files | QDir::NoDotAndDotDot).isEmpty()) {
+            qWarning().nospace().noquote() << "mudlet::loadProfile(" << profile_name << ", ...) WARNING - profile directory \"" << folder
+                                           << "\" contains files but no completed (*.xml) save; treating the profile as new. An interrupted save may have left "
+                                              "a recoverable QSaveFile temporary behind.";
+        }
         preInstallPackages = true;
         pHost->mLoadedOk = true;
         pHost->mMapInfoContributors.insert(qsl("Short"));

@@ -22,11 +22,17 @@ set(FUNCTIONAL_TEST_SOURCES
     ColorTriggerFilterChildTest.cpp
     GMCPCharLoginTest.cpp
     InsertTextCapTest.cpp
+    SetScriptCallbackTest.cpp
+    ClearWindowLogTest.cpp
+    XMLexportVariablesTest.cpp
     SgrUnderlineStyleTest.cpp
     LogRestartDuplicateLineTest.cpp
     ProfileRoundTripTest.cpp
+    ProfileLoadTempFileTest.cpp
+    PackageSelfUninstallTest.cpp
     MapRoundTripTest.cpp
     UndoServerWrapTest.cpp
+    ActionSelfUninstallTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS

@@ -127,6 +127,124 @@ describe("Trigger processing", function()
 
     end)
 
+    -- Color triggers must match the colors a line arrived with, even when an
+    -- earlier trigger in the same pass has already recolored it. The display
+    -- must still show the recolored version. Recoloring uses the same
+    -- TConsole::setFgColor path as the colorizer trigger checkbox, so this
+    -- covers both channels.
+    --
+    -- The color trigger callbacks are string code because tempAnsiColorTrigger
+    -- does not run function callbacks when the expiry argument is omitted, and
+    -- assertions check containment because default-palette text also matches
+    -- ANSI white-on-black, so the triggers can fire on unrelated lines too.
+    describe("color trigger original-color matching", function()
+
+        local function contains(list, value)
+            for _, v in ipairs(list) do
+                if v == value then
+                    return true
+                end
+            end
+            return false
+        end
+
+        it("should match original colors after an earlier trigger recolors the line", function()
+            _G.colorSnapshotMatches = {}
+            local highlighted = false
+            local lineNumber = nil
+
+            local highlightTrigger = tempRegexTrigger("^ColorSnapshotTest$", function()
+                lineNumber = getLineNumber()
+                if selectString("ColorSnapshotTest", 1) > -1 then
+                    setFgColor(255, 0, 0)
+                    setBgColor(255, 255, 0)
+                    highlighted = true
+                end
+                resetFormat()
+            end)
+            -- ANSI 7 = white foreground, ANSI 0 = black background
+            local colorTrigger = tempAnsiColorTrigger(7, 0,
+                [[table.insert(_G.colorSnapshotMatches, matches[1])]])
+
+            feedTriggers("\n\27[37;40mColorSnapshotTest\27[0m\n")
+
+            local matched = contains(_G.colorSnapshotMatches, "ColorSnapshotTest")
+            killTrigger(highlightTrigger)
+            killTrigger(colorTrigger)
+            _G.colorSnapshotMatches = nil
+
+            assert.is_true(highlighted, "Highlighting trigger should have run")
+            assert.is_true(matched, "Color trigger should match the original colors despite the recoloring")
+
+            -- The display must keep the recolored version
+            moveCursor(0, lineNumber)
+            selectString("ColorSnapshotTest", 1)
+            local r, g, b = getFgColor()
+            deselect()
+            resetFormat()
+            assert.are.equal(255, r, "Display should show the recolored foreground")
+            assert.are.equal(0, g)
+            assert.are.equal(0, b)
+        end)
+
+        it("should match original colors when the color trigger runs before the recoloring one", function()
+            _G.colorControlMatches = {}
+            local highlighted = false
+
+            local colorTrigger = tempAnsiColorTrigger(7, 0,
+                [[table.insert(_G.colorControlMatches, matches[1])]])
+            local highlightTrigger = tempRegexTrigger("^ColorSnapshotControl$", function()
+                if selectString("ColorSnapshotControl", 1) > -1 then
+                    setFgColor(255, 0, 0)
+                    highlighted = true
+                end
+                resetFormat()
+            end)
+
+            feedTriggers("\n\27[37;40mColorSnapshotControl\27[0m\n")
+
+            local matched = contains(_G.colorControlMatches, "ColorSnapshotControl")
+            killTrigger(colorTrigger)
+            killTrigger(highlightTrigger)
+            _G.colorControlMatches = nil
+
+            assert.is_true(matched, "Color trigger should match when it runs first")
+            assert.is_true(highlighted, "Highlighting trigger should have run")
+        end)
+
+        it("should keep the outer line's original colors across a nested feedTriggers", function()
+            _G.innerSnapshotMatches = {}
+            _G.outerSnapshotMatches = {}
+
+            local outerTrigger = tempRegexTrigger("^OuterSnapshotLine$", function()
+                if selectString("OuterSnapshotLine", 1) > -1 then
+                    setFgColor(0, 0, 255)
+                end
+                resetFormat()
+                -- ANSI 32/41 = green foreground on red background
+                feedTriggers("\n\27[32;41mInnerSnapshotLine\27[0m\n")
+            end)
+            local innerColorTrigger = tempAnsiColorTrigger(2, 1,
+                [[table.insert(_G.innerSnapshotMatches, matches[1])]])
+            local outerColorTrigger = tempAnsiColorTrigger(7, 0,
+                [[table.insert(_G.outerSnapshotMatches, matches[1])]])
+
+            feedTriggers("\n\27[37;40mOuterSnapshotLine\27[0m\n")
+
+            local innerMatched = contains(_G.innerSnapshotMatches, "InnerSnapshotLine")
+            local outerMatched = contains(_G.outerSnapshotMatches, "OuterSnapshotLine")
+            killTrigger(outerTrigger)
+            killTrigger(innerColorTrigger)
+            killTrigger(outerColorTrigger)
+            _G.innerSnapshotMatches = nil
+            _G.outerSnapshotMatches = nil
+
+            assert.is_true(innerMatched, "Inner pass should match the inner line's original colors")
+            assert.is_true(outerMatched, "Outer pass should still match its original colors after the nested pass")
+        end)
+
+    end)
+
     describe("tempAnsiColorTrigger callbacks", function()
 
         it("should fire a function callback when the expiry argument is omitted", function()
@@ -191,12 +309,10 @@ describe("Trigger processing", function()
 
     end)
 
-    -- feedTelnet only performs injection while the telnet socket is unconnected.
-    -- The self-test profile's socket is NOT in the unconnected state (the same
-    -- limitation MXP_spec documents), so feedTelnet refuses here with nil + a
-    -- message; its successful-injection and prompt paths cannot be exercised in
-    -- busted. The type-check happens before the connection check, so the
-    -- argument-type contract is still verifiable.
+    -- feedTelnet only performs injection while the telnet socket is unconnected;
+    -- otherwise it refuses with nil + a message. Its successful-injection and
+    -- prompt paths cannot be exercised in busted. The type-check happens before
+    -- the connection check, so the argument-type contract is still verifiable.
     describe("feedTelnet contract", function()
 
         it("raises an error when the data argument is not a string", function()
@@ -206,9 +322,14 @@ describe("Trigger processing", function()
 
         it("refuses to inject while the socket is not unconnected", function()
             -- safety property: feedTelnet never injects into a live connection.
-            -- In the self-test profile the socket is not unconnected, so it must
-            -- return nil plus a refusal message rather than feeding.
+            -- Establish the precondition here rather than relying on the
+            -- profile's ambient socket state, which other specs may have cleared
+            -- with disconnect(): reconnect() starts a fresh lookup and leaves the
+            -- unconnected state synchronously, without the connection needing to
+            -- succeed. Restore a clean state afterwards with disconnect().
+            reconnect()
             local ok, msg = feedTelnet("some server data")
+            disconnect()
             assert.is_nil(ok, "feedTelnet must not succeed against a non-unconnected socket")
             assert.is_string(msg)
             assert.is_truthy(msg:find("refused", 1, true), "expected a refusal message, got: " .. tostring(msg))
