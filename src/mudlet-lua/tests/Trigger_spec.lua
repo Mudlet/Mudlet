@@ -309,12 +309,10 @@ describe("Trigger processing", function()
 
     end)
 
-    -- feedTelnet only performs injection while the telnet socket is unconnected.
-    -- The self-test profile's socket is NOT in the unconnected state (the same
-    -- limitation MXP_spec documents), so feedTelnet refuses here with nil + a
-    -- message; its successful-injection and prompt paths cannot be exercised in
-    -- busted. The type-check happens before the connection check, so the
-    -- argument-type contract is still verifiable.
+    -- feedTelnet only performs injection while the telnet socket is unconnected;
+    -- otherwise it refuses with nil + a message. Its successful-injection and
+    -- prompt paths cannot be exercised in busted. The type-check happens before
+    -- the connection check, so the argument-type contract is still verifiable.
     describe("feedTelnet contract", function()
 
         it("raises an error when the data argument is not a string", function()
@@ -324,9 +322,14 @@ describe("Trigger processing", function()
 
         it("refuses to inject while the socket is not unconnected", function()
             -- safety property: feedTelnet never injects into a live connection.
-            -- In the self-test profile the socket is not unconnected, so it must
-            -- return nil plus a refusal message rather than feeding.
+            -- Establish the precondition here rather than relying on the
+            -- profile's ambient socket state, which other specs may have cleared
+            -- with disconnect(): reconnect() starts a fresh lookup and leaves the
+            -- unconnected state synchronously, without the connection needing to
+            -- succeed. Restore a clean state afterwards with disconnect().
+            reconnect()
             local ok, msg = feedTelnet("some server data")
+            disconnect()
             assert.is_nil(ok, "feedTelnet must not succeed against a non-unconnected socket")
             assert.is_string(msg)
             assert.is_truthy(msg:find("refused", 1, true), "expected a refusal message, got: " .. tostring(msg))

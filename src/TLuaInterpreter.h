@@ -835,6 +835,8 @@ private:
     static std::pair<bool, QString> discordApiEnabled(lua_State*, bool writeAccess = false);
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
     static int performHttpRequest(lua_State*, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const QString& verb);
+    static void validateHttpHeaders(lua_State*, const int index, const char* functionName);
+    static void applyHttpHeaders(lua_State*, const int index, QNetworkRequest& request);
     // The last argument is only needed if the third one is true:
     static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
     static std::tuple<bool, int> getWatchId(lua_State*, Host&);

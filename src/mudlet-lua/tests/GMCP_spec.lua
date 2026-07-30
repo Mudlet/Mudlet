@@ -151,3 +151,32 @@ describe("tests the functionality of the gmod module", function()
     end)
   end)
 end)
+
+describe("Tests the argument and disconnected contract of sendGMCP", function()
+  -- Contract-only checks: sendGMCP is never mocked here and never reaches a
+  -- live game server. The self-test profile is forced into a disconnected
+  -- state so the connection guard is exercised deterministically; verifying
+  -- the actual bytes on the wire is a separate, stub-based effort.
+  local function contains(haystack, needle)
+    return type(haystack) == "string" and haystack:find(needle, 1, true) ~= nil
+  end
+
+  before_each(function()
+    disconnect()
+  end)
+
+  it("raises a Lua error when the message is not a string", function()
+    assert.has_error(function() sendGMCP({}) end)
+    assert.has_error(function() sendGMCP(true) end)
+  end)
+
+  it("raises a Lua error when the optional second argument is not a string", function()
+    assert.has_error(function() sendGMCP("Core.Ping", {}) end)
+  end)
+
+  it("returns nil and an explanatory message while disconnected", function()
+    local ok, err = sendGMCP("External.Discord.Hello")
+    assert.is_nil(ok)
+    assert.is_true(contains(err, "not connected to game server"))
+  end)
+end)
