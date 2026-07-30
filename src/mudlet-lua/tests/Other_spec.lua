@@ -738,7 +738,12 @@ describe("Tests Other.lua functions", function()
     -- and the numeric/table keys) are handled in dedicated tests below; map keys
     -- (which need an open mapper to set) are exercised only when settable.
     local originalValues = {}
-    local skipInGenericLoop = { showSentText = true }
+    -- show3dMapView is skipped because flipping it to true opens the 3D OpenGL
+    -- map view. Initialising the software GL stack under headless CI leaks
+    -- one-time allocations in a GL driver module that is unloaded before exit,
+    -- so leak detection flags it and it cannot be name-suppressed. The 3D view
+    -- is not what this config round-trip is meant to exercise.
+    local skipInGenericLoop = { showSentText = true, show3dMapView = true }
 
     local function snapshot(key)
       if originalValues[key] == nil then
