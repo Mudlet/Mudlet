@@ -629,10 +629,62 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     return 2;
 }
 
+// Validates the optional custom-headers argument (a table of string keys and
+// string values, or nil/absent) shared by the HTTP functions. It deliberately
+// builds nothing heap-backed: raising a Lua error longjmps past C++ destructors
+// (Lua 5.1 error handling uses setjmp/longjmp), so any QUrl or QNetworkRequest
+// alive at that point would leak. Call it before constructing those objects and
+// apply the headers with applyHttpHeaders() once the request exists.
+/*static*/ void TLuaInterpreter::validateHttpHeaders(lua_State* L, const char* functionName, const int headerIndex)
+{
+    if (!lua_istable(L, headerIndex) && !lua_isnoneornil(L, headerIndex)) {
+        lua_pushfstring(L, "%s: bad argument #%d type (headers as a table expected, got %s!)", functionName, headerIndex, luaL_typename(L, headerIndex));
+        lua_error(L);
+    }
+    if (!lua_istable(L, headerIndex)) {
+        return;
+    }
+    lua_pushnil(L);
+    while (lua_next(L, headerIndex) != 0) {
+        // key at index -2 and value at index -1
+        if (lua_type(L, -1) != LUA_TSTRING || lua_type(L, -2) != LUA_TSTRING) {
+            lua_pushfstring(L,
+                            "%s: bad argument #%d type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
+                            functionName,
+                            headerIndex,
+                            luaL_typename(L, -2),
+                            luaL_typename(L, -1));
+            lua_error(L);
+        }
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+}
+
+// Applies the already-validated string headers (see validateHttpHeaders()) to the
+// request. It runs only after validation has confirmed every entry is a string, so
+// it has no error path - and therefore cannot leak the request via a longjmp.
+/*static*/ void TLuaInterpreter::applyHttpHeaders(lua_State* L, const int headerIndex, QNetworkRequest& request)
+{
+    if (!lua_istable(L, headerIndex)) {
+        return;
+    }
+    lua_pushnil(L);
+    while (lua_next(L, headerIndex) != 0) {
+        // key at index -2 and value at index -1
+        request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getHTTP
 int TLuaInterpreter::getHTTP(lua_State* L)
 {
     auto& host = getHostFromLua(L);
+    // Validate arguments before building the QUrl/QNetworkRequest so a bad-argument
+    // Lua error cannot longjmp past their destructors and leak them.
+    validateHttpHeaders(L, __func__, 2);
     const QString urlString = getVerifiedString(L, __func__, 1, "remote url");
     const QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
@@ -641,28 +693,7 @@ int TLuaInterpreter::getHTTP(lua_State* L)
 
     QNetworkRequest request = QNetworkRequest(url);
     mudlet::self()->setNetworkRequestDefaults(url, request);
-
-    if (!lua_istable(L, 2) && !lua_isnoneornil(L, 2)) {
-        lua_pushfstring(L, "getHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    if (lua_istable(L, 2)) {
-        lua_pushnil(L);
-        while (lua_next(L, 2) != 0) {
-            // key at index -2 and value at index -1
-            if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
-                request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
-            } else {
-                lua_pushfstring(L,
-                                "getHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
-                                luaL_typename(L, -2),
-                                luaL_typename(L, -1));
-                return lua_error(L);
-            }
-            // removes value, but keeps key for next iteration
-            lua_pop(L, 1);
-        }
-    }
+    applyHttpHeaders(L, 2, request);
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
@@ -692,6 +723,9 @@ int TLuaInterpreter::putHTTP(lua_State* L)
 int TLuaInterpreter::deleteHTTP(lua_State* L)
 {
     auto& host = getHostFromLua(L);
+    // Validate arguments before building the QUrl/QNetworkRequest so a bad-argument
+    // Lua error cannot longjmp past their destructors and leak them.
+    validateHttpHeaders(L, __func__, 2);
     const QString urlString = getVerifiedString(L, __func__, 1, "remote url");
     const QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
@@ -700,28 +734,7 @@ int TLuaInterpreter::deleteHTTP(lua_State* L)
 
     QNetworkRequest request = QNetworkRequest(url);
     mudlet::self()->setNetworkRequestDefaults(url, request);
-
-    if (!lua_istable(L, 2) && !lua_isnoneornil(L, 2)) {
-        lua_pushfstring(L, "deleteHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    if (lua_istable(L, 2)) {
-        lua_pushnil(L);
-        while (lua_next(L, 2) != 0) {
-            // key at index -2 and value at index -1
-            if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
-                request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
-            } else {
-                lua_pushfstring(L,
-                                "deleteHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
-                                luaL_typename(L, -2),
-                                luaL_typename(L, -1));
-                return lua_error(L);
-            }
-            // removes value, but keeps key for next iteration
-            lua_pop(L, 1);
-        }
-    }
+    applyHttpHeaders(L, 2, request);
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->deleteResource(request);

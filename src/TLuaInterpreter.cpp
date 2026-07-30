@@ -4762,55 +4762,37 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
 {
     auto& host = getHostFromLua(L);
 
-    QString dataToPost;
+    // Validate every argument's type (and the header contents) before building any
+    // heap-backed Qt object below: raising a Lua error longjmps past C++ destructors
+    // (Lua 5.1 error handling uses setjmp/longjmp), so a QUrl or QNetworkRequest that
+    // was already alive would leak.
     if (!lua_isstring(L, pos + 1) && !lua_isstring(L, pos + 4)) {
         lua_pushfstring(L, "%s: bad argument #%d type (data to send as string expected, got %s!)", functionName, pos + 1, luaL_typename(L, pos + 1));
         return lua_error(L);
     }
-    if (lua_isstring(L, pos + 1)) {
-        dataToPost = lua_tostring(L, pos + 1);
-    }
-
-    const QString urlString = getVerifiedString(L, functionName, pos + 2, "remote url");
-    const QUrl url = QUrl::fromUserInput(urlString);
-
-    if (!url.isValid()) {
-        return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1.").arg(url.errorString()));
-    }
-
-    QNetworkRequest request = QNetworkRequest(url);
-    mudlet::self()->setNetworkRequestDefaults(url, request);
-
-    if (!lua_istable(L, pos + 3) && !lua_isnoneornil(L, pos + 3)) {
-        lua_pushfstring(L, "%s: bad argument #%d type (headers as a table expected, got %s!)", functionName, pos + 3, luaL_typename(L, pos + 3));
-        return lua_error(L);
-    }
-    if (lua_istable(L, pos + 3)) {
-        lua_pushnil(L);
-        while (lua_next(L, pos + 3) != 0) {
-            // key at index -2 and value at index -1
-            if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
-                request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
-            } else {
-                lua_pushfstring(L,
-                                "%s: bad argument #%d type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
-                                functionName,
-                                pos + 3,
-                                luaL_typename(L, -2),
-                                luaL_typename(L, -1));
-                return lua_error(L);
-            }
-            // removes value, but keeps key for next iteration
-            lua_pop(L, 1);
-        }
-    }
-
-    QByteArray fileToUpload;
-    QString fileLocation;
+    validateHttpHeaders(L, functionName, pos + 3);
     if (!lua_isstring(L, pos + 4) && !lua_isnoneornil(L, pos + 4)) {
         lua_pushfstring(L, "%s: bad argument #%d type (file to send as string location expected, got %s!)", functionName, pos + 4, luaL_typename(L, pos + 4));
         return lua_error(L);
     }
+
+    const QString urlString = getVerifiedString(L, functionName, pos + 2, "remote url");
+    const QUrl url = QUrl::fromUserInput(urlString);
+    if (!url.isValid()) {
+        return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1.").arg(url.errorString()));
+    }
+
+    QString dataToPost;
+    if (lua_isstring(L, pos + 1)) {
+        dataToPost = lua_tostring(L, pos + 1);
+    }
+
+    QNetworkRequest request = QNetworkRequest(url);
+    mudlet::self()->setNetworkRequestDefaults(url, request);
+    applyHttpHeaders(L, pos + 3, request);
+
+    QByteArray fileToUpload;
+    QString fileLocation;
     if (lua_isstring(L, pos + 4)) {
         fileLocation = lua_tostring(L, pos + 4);
     }
