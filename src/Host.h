@@ -243,6 +243,7 @@ public:
     QStringList getValidExperiments() const;
 
     void forceClose();
+    bool profileResetInProgress() const { return mResetProfile; }
     bool isClosingDown() const { return mIsClosingDown; }
     bool isClosingForced() const { return mForcedClose; }
     bool requestClose();
@@ -897,6 +898,7 @@ private:
     void removePackageInfo(const QString& packageName, const bool);
     static void createModuleBackup(const QString& filename, const QString& saveName);
     void writeModule(const QString& moduleName, const QString& filename);
+    QVector<QFuture<bool>> pendingXmlSaveFutures() const;
     void waitForAsyncXmlSave();
     void saveModules(bool backup = true);
     void updateModuleZips(const QString& zipName, const QString& moduleName);
