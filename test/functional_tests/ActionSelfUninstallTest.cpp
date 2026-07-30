@@ -156,13 +156,28 @@ private slots:
         QVERIFY2(!actionUnit->getAction(buttonId), "The button should be gone after doCleanup()");
         QVERIFY2(actionUnit->findItems(qsl("selfUninstallButton")).empty(), "No trace of the button should remain after cleanup");
 
-        // Let uninstallPackage()'s scheduled editor reset / profile save drain while
-        // the host is still alive.
-        QCoreApplication::processEvents();
+        // uninstallPackage() defers its profile save to the next event-loop cycle
+        // (QTimer::singleShot, see Host::uninstallPackage()) and that save runs its
+        // XML serialization on a background thread. Fire the deferred timer, then
+        // block until the save has fully finished, so no background save thread is
+        // still running when cleanup() destroys the host: tearing the host down
+        // underneath an in-flight save corrupted the heap and crashed on Windows.
+        QTest::qWait(50);
+        host->waitForProfileSave();
     }
 
     void cleanup()
     {
+        // Defence for the failure path: if an assertion above aborted the test
+        // before its own drain ran, a profile save uninstallPackage() deferred
+        // could still be in flight. Let it finish before deleting the host, so
+        // destruction never races a background save thread (a Windows crash).
+        if (auto* self = mudlet::self()) {
+            if (auto* host = self->getActiveHost()) {
+                QTest::qWait(50);
+                host->waitForProfileSave();
+            }
+        }
         delete mpServer;
         mpServer = nullptr;
         deleteProfileDirectory(mpHostname);
