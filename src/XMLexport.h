@@ -66,7 +66,8 @@ public:
     void writeScript(TScript*, pugi::xml_node xmlParent);
     void writeKey(TKey*, pugi::xml_node xmlParent);
     void writeVariable(TVar*, LuaInterface*, VarUnit*, pugi::xml_node xmlParent, bool insideSavedTable = false);
-    void writeModuleXML(const QString& moduleName, const QString& fileName, bool async = false);
+    void writeModuleXML(const QString& moduleName);
+    bool saveModuleXml(const QString& fileName);
 
     bool exportHost(const QString& filename_pugi_xml);
     bool writeGenericPackage(Host* pHost, pugi::xml_node& mMudletPackage, bool ignoreModuleMember = true, bool ignoreVariables = false);
