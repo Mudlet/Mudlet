@@ -21,6 +21,7 @@ set(FUNCTIONAL_TEST_SOURCES
     EnableDisableByNameTest.cpp
     ColorTriggerFilterChildTest.cpp
     GMCPCharLoginTest.cpp
+    ClearWindowLogTest.cpp
     XMLexportVariablesTest.cpp
     SgrUnderlineStyleTest.cpp
     LogRestartDuplicateLineTest.cpp
