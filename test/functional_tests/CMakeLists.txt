@@ -27,6 +27,8 @@ set(FUNCTIONAL_TEST_SOURCES
     SgrUnderlineStyleTest.cpp
     LogRestartDuplicateLineTest.cpp
     ProfileRoundTripTest.cpp
+    ProfileLoadTempFileTest.cpp
+    PackageSelfUninstallTest.cpp
     MapRoundTripTest.cpp
     UndoServerWrapTest.cpp
 )
