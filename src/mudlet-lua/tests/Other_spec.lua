@@ -104,63 +104,102 @@ describe("Tests Other.lua functions", function()
     -- arguments and then fails at the parent lookup before creating anything.
     local nonexistentParent = "permGroupSpecNonexistentParent"
 
-    -- The default-parent-of-"" branch (permGroup(name, type) with no parent) is
-    -- deliberately not covered: an empty parent makes the underlying perm*
-    -- succeed and create a real, unremovable top-level item, so it cannot be
-    -- exercised without either polluting the profile or mocking a real function.
     describe("dispatches to the correct underlying function with the documented defaults", function()
-      -- Each test also asserts pcall failed, which self-checks the assumption
-      -- that the nonexistent parent prevents any item from actually being created.
+      -- A nonexistent parent lets us drive the real dispatch without polluting the
+      -- profile: each perm* marshals its arguments and then raises at the parent
+      -- lookup before creating anything. The spy is reverted immediately after the
+      -- call (its recorded history survives revert) so cleanup happens even against
+      -- the old raising code. Each test also confirms the failure surfaces as a
+      -- false return rather than a raise.
       it("uses permTimer(name, parent, 0, '') for timers", function()
         local permTimer = spy.on(_G, "permTimer")
-        local ok = pcall(permGroup, "permGroupSpecTimer", "timer", nonexistentParent)
-        assert.is_false(ok)
-        assert.spy(permTimer).was.called_with("permGroupSpecTimer", nonexistentParent, 0, "")
+        local ok, created = pcall(permGroup, "permGroupSpecTimer", "timer", nonexistentParent)
         permTimer:revert()
+        assert.spy(permTimer).was.called_with("permGroupSpecTimer", nonexistentParent, 0, "")
+        assert.is_true(ok)
+        assert.is_false(created)
       end)
 
       it("uses permSubstringTrigger(name, parent, {}, '') for triggers", function()
         local permSubstringTrigger = spy.on(_G, "permSubstringTrigger")
-        local ok = pcall(permGroup, "permGroupSpecTrigger", "trigger", nonexistentParent)
-        assert.is_false(ok)
-        assert.spy(permSubstringTrigger).was.called_with("permGroupSpecTrigger", nonexistentParent, {}, "")
+        local ok, created = pcall(permGroup, "permGroupSpecTrigger", "trigger", nonexistentParent)
         permSubstringTrigger:revert()
+        assert.spy(permSubstringTrigger).was.called_with("permGroupSpecTrigger", nonexistentParent, {}, "")
+        assert.is_true(ok)
+        assert.is_false(created)
       end)
 
       it("uses permAlias(name, parent, '', '') for aliases", function()
         local permAlias = spy.on(_G, "permAlias")
-        local ok = pcall(permGroup, "permGroupSpecAlias", "alias", nonexistentParent)
-        assert.is_false(ok)
-        assert.spy(permAlias).was.called_with("permGroupSpecAlias", nonexistentParent, "", "")
+        local ok, created = pcall(permGroup, "permGroupSpecAlias", "alias", nonexistentParent)
         permAlias:revert()
+        assert.spy(permAlias).was.called_with("permGroupSpecAlias", nonexistentParent, "", "")
+        assert.is_true(ok)
+        assert.is_false(created)
       end)
 
       it("uses permKey(name, parent, -1, '') for keys", function()
         local permKey = spy.on(_G, "permKey")
-        local ok = pcall(permGroup, "permGroupSpecKey", "key", nonexistentParent)
-        assert.is_false(ok)
-        assert.spy(permKey).was.called_with("permGroupSpecKey", nonexistentParent, -1, "")
+        local ok, created = pcall(permGroup, "permGroupSpecKey", "key", nonexistentParent)
         permKey:revert()
+        assert.spy(permKey).was.called_with("permGroupSpecKey", nonexistentParent, -1, "")
+        assert.is_true(ok)
+        assert.is_false(created)
       end)
 
       it("uses permScript(name, parent, '', '') for scripts", function()
         local permScript = spy.on(_G, "permScript")
-        local ok = pcall(permGroup, "permGroupSpecScript", "script", nonexistentParent)
-        assert.is_false(ok)
-        assert.spy(permScript).was.called_with("permGroupSpecScript", nonexistentParent, "", "")
+        local ok, created = pcall(permGroup, "permGroupSpecScript", "script", nonexistentParent)
         permScript:revert()
+        assert.spy(permScript).was.called_with("permGroupSpecScript", nonexistentParent, "", "")
+        assert.is_true(ok)
+        assert.is_false(created)
+      end)
+
+      it("defaults a missing parent to the top level", function()
+        -- The documented two-argument form permGroup(name, type) turns a missing
+        -- parent into "", which makes the underlying perm* succeed and create a
+        -- real top-level item; stub it so nothing is written to the profile.
+        local permTimer = stub(_G, "permTimer", 42)
+        local created = permGroup("permGroupSpecDefaultParent", "timer")
+        permTimer:revert()
+        assert.stub(permTimer).was.called_with("permGroupSpecDefaultParent", "", 0, "")
+        assert.is_true(created)
       end)
     end)
 
-    describe("propagates the underlying creation error instead of returning false", function()
-      -- group_creation_functions in Other.lua checks `perm*(...) == -1`, but the
-      -- real perm* bindings raise a Lua error on failure rather than returning
-      -- -1, so that check is dead code and a failed permGroup errors instead of
-      -- returning false.
-      it("raises an error when the parent group does not exist", function()
-        assert.has_error(function()
-          permGroup("permGroupSpecOrphan", "timer", nonexistentParent)
-        end)
+    describe("reports failure instead of raising when creation fails", function()
+      -- #9545: group_creation_functions checked `perm*(...) == -1`, but the perm*
+      -- bindings raise a Lua error on failure (for example a missing parent)
+      -- rather than returning -1, so permGroup could never honour its documented
+      -- false-on-failure contract. It now pcalls the creation and returns false
+      -- plus the underlying error message.
+      it("returns false when the parent group does not exist", function()
+        local created = permGroup("permGroupSpecOrphan", "timer", nonexistentParent)
+        assert.is_false(created)
+      end)
+
+      it("returns the underlying error message alongside false", function()
+        local created, err = permGroup("permGroupSpecOrphan", "timer", nonexistentParent)
+        assert.is_false(created)
+        assert.is_string(err)
+        -- pin that the real underlying error (which names the missing parent)
+        -- propagated, rather than coupling to any particular phrasing
+        assert.is_truthy(err:find(nonexistentParent, 1, true))
+      end)
+    end)
+
+    describe("reports success", function()
+      -- Stub the underlying binding so no real permanent item is created (which
+      -- would pollute the profile). A successful perm* returns an item id, and
+      -- permGroup must surface that as a boolean true. Revert before asserting so
+      -- the stub can never leak into later tests.
+      it("returns true when the underlying creation succeeds", function()
+        local permTimer = stub(_G, "permTimer", 42)
+        local created = permGroup("permGroupSpecSuccess", "timer", "irrelevantParent")
+        permTimer:revert()
+        assert.stub(permTimer).was.called_with("permGroupSpecSuccess", "irrelevantParent", 0, "")
+        assert.is_true(created)
       end)
     end)
 
