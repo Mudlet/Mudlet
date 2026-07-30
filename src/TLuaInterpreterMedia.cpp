@@ -45,7 +45,7 @@ int TLuaInterpreter::receiveMSP(lua_State* L)
     }
 
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "receiveMSP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "receiveMSP: bad argument #1 type (message as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
@@ -411,7 +411,7 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L, const char* func
                 mediaData.setMediaLoops(value);
             }
         } else if (key == QLatin1String("continue")) {
-            const bool value = getVerifiedBool(L, func, -1, "value for continue must be boolean");
+            const bool value = getVerifiedBool(L, func, -1, "value for continue");
             mediaData.setMediaContinue(value);
         }
 
@@ -788,13 +788,13 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
                 mediaData.setMediaLoops(value);
             }
         } else if (!key.compare(QLatin1String("continue"), Qt::CaseInsensitive)) {
-            bool value = getVerifiedBool(L, func, -1, "value for continue must be boolean");
+            bool value = getVerifiedBool(L, func, -1, "value for continue");
             mediaData.setMediaContinue(value);
         } else if (!key.compare(QLatin1String("stream"), Qt::CaseInsensitive)) {
-            bool value = getVerifiedBool(L, func, -1, "value for stream must be boolean");
+            bool value = getVerifiedBool(L, func, -1, "value for stream");
             mediaData.setMediaInput(value ? TMediaData::MediaInputStream : TMediaData::MediaInputNotSet);
         } else if (!key.compare(QLatin1String("close"), Qt::CaseInsensitive)) {
-            bool value = getVerifiedBool(L, func, -1, "value for close must be boolean");
+            bool value = getVerifiedBool(L, func, -1, "value for close");
             mediaData.setMediaClose(value ? TMediaData::MediaCloseEnabled : TMediaData::MediaCloseDefault);
         }
 
@@ -1067,7 +1067,7 @@ int TLuaInterpreter::getPlayingSoundsAsTableArgument(lua_State* L, const char* f
                 mediaData.setMediaTag(value);
             }
         } else if (key == QLatin1String("priority")) {
-            int value = getVerifiedInt(L, func, -1, "value for priority must be integer");
+            int value = getVerifiedInt(L, func, -1, "value for priority");
 
             if (value > TMediaData::MediaPriorityMax) {
                 value = TMediaData::MediaPriorityMax;
@@ -1498,7 +1498,7 @@ int TLuaInterpreter::stopMusicAsTableArgument(lua_State* L, const char* func)
                 mediaData.setMediaTag(value);
             }
         } else if (key == QLatin1String("fadeaway")) {
-            const bool value = getVerifiedBool(L, func, -1, "value for fadeaway must be boolean");
+            const bool value = getVerifiedBool(L, func, -1, "value for fadeaway");
             mediaData.setMediaFadeAway(value);
         } else if (key == QLatin1String("fadeout")) {
             int value = getVerifiedInt(L, func, -1, "value for fadeout");
@@ -1647,7 +1647,7 @@ int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L, const char* func)
                 mediaData.setMediaTag(value);
             }
         } else if (key == QLatin1String("priority")) {
-            int value = getVerifiedInt(L, func, -1, "value for priority must be integer");
+            int value = getVerifiedInt(L, func, -1, "value for priority");
 
             if (key == QLatin1String("priority")) {
                 if (value > TMediaData::MediaPriorityMax) {
@@ -1659,7 +1659,7 @@ int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L, const char* func)
                 mediaData.setMediaPriority(value);
             }
         } else if (key == QLatin1String("fadeaway")) {
-            const bool value = getVerifiedBool(L, func, -1, "value for fadeaway must be boolean");
+            const bool value = getVerifiedBool(L, func, -1, "value for fadeaway");
             mediaData.setMediaFadeAway(value);
         } else if (key == QLatin1String("fadeout")) {
             int value = getVerifiedInt(L, func, -1, "value for fadeout");
@@ -1736,7 +1736,7 @@ int TLuaInterpreter::stopVideosAsTableArgument(lua_State* L, const char* func)
                 mediaData.setMediaTag(value);
             }
         } else if (key == QLatin1String("fadeaway")) {
-            const bool value = getVerifiedBool(L, func, -1, "value for fadeaway must be boolean");
+            const bool value = getVerifiedBool(L, func, -1, "value for fadeaway");
             mediaData.setMediaFadeAway(value);
         } else if (key == QLatin1String("fadeout")) {
             int value = getVerifiedInt(L, func, -1, "value for fadeout");
