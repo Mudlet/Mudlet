@@ -71,6 +71,7 @@
 #include <QNetworkProxy>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QScopeGuard>
 #include <QSettings>
 #include <QTextStream>
 #include <zip.h>
@@ -644,15 +645,26 @@ void Host::writeModule(const QString& moduleName, const QString& filename)
     updateModuleZips(filename, moduleName);
 }
 
+// Main thread only: `writers` and each writer's `saveFutures` are mutated on the
+// main thread as profile saves start and finish, so the background module-sync
+// task must not read them - it gets a snapshot taken up front instead (see
+// saveProfile()). NB: saveModules()/writeModule() still touch `writers` from
+// that background task for profiles that use modules - a known remaining race
+// that needs module writing to move back to the main thread to fix properly.
+QVector<QFuture<bool>> Host::pendingXmlSaveFutures() const
+{
+    QVector<QFuture<bool>> futures;
+    for (const auto& writer : writers) {
+        futures += writer->saveFutures;
+    }
+    return futures;
+}
+
 void Host::waitForAsyncXmlSave()
 {
-    // writers and futures are copied to prevent deletion during for loop (which would mean crash)
-    auto myWriters = writers;
-    for (auto& writer : myWriters) {
-        auto myFutures = writer->saveFutures;
-        for (auto& future : myFutures) {
-            future.waitForFinished();
-        }
+    const auto futures = pendingXmlSaveFutures();
+    for (auto future : futures) {
+        future.waitForFinished();
     }
 }
 
@@ -850,6 +862,15 @@ bool Host::resetProfile_phase1()
         return false;
     }
 
+    // A test-mode waitForEvent() is blocked in a nested event loop on this
+    // profile's lua_State; phase2 would lua_close() that state underneath it (a
+    // use-after-free). Refuse until the wait finishes. Always empty (so a no-op)
+    // outside MUDLET_TEST_MODE, where waitForEvent() is inert.
+    if (mLuaInterpreter.hasPendingEventWaits()) {
+        qWarning() << "Host::resetProfile_phase1() called while a waitForEvent() is blocked, ignoring";
+        return false;
+    }
+
     mAliasUnit.stopAllTriggers();
     mTriggerUnit.stopAllTriggers();
     mTimerUnit.stopAllTriggers();
@@ -1005,10 +1026,18 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     }
 
     auto watcher = new QFutureWatcher<void>;
-    mModuleFuture = QtConcurrent::run([=, this]() {
+    // Snapshot the pending XML save futures on the main thread: the background task
+    // below must not read `writers`/`saveFutures` itself as the main thread mutates
+    // them whenever a save starts or finishes - concurrently copying those containers
+    // from the pool thread is a data race that can corrupt the heap
+    const QVector<QFuture<bool>> xmlSaveFutures = pendingXmlSaveFutures();
+    const bool backupModules = saveName != qsl("autosave");
+    mModuleFuture = QtConcurrent::run([this, xmlSaveFutures, backupModules]() {
         // wait for the host xml to be ready before starting to sync modules
-        waitForAsyncXmlSave();
-        saveModules(saveName != qsl("autosave"));
+        for (auto future : xmlSaveFutures) {
+            future.waitForFinished();
+        }
+        saveModules(backupModules);
     });
     connect(watcher, &QFutureWatcher<void>::finished, this, [=, this]() {
         // reload, or queue module reload for when xml is ready
@@ -1790,6 +1819,9 @@ void Host::incomingStreamProcessor(const QString& data, int line)
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
     mActionUnit.doCleanup();
+    // ScriptUnit defers deletes too (a package script uninstalling its own package
+    // mid-compile or mid-event-dispatch), so flush it here alongside the others:
+    mScriptUnit.doCleanup();
 }
 
 // When Mudlet is running in online mode, deleted temp* objects are cleaned up in bulk
@@ -1802,6 +1834,7 @@ void Host::slot_purgeTemps()
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
     mActionUnit.doCleanup();
+    mScriptUnit.doCleanup();
 }
 
 void Host::registerEventHandler(const QString& name, TScript* pScript)
@@ -1849,6 +1882,18 @@ void Host::raiseEvent(const TEvent& pE)
 
     static const QString star = qsl("*");
 
+    // A handler can uninstall its own package mid-dispatch (a common package
+    // auto-updater pattern): whilst this frame is on the stack
+    // ScriptUnit::uninstall() defers its deletes so neither the executing
+    // handler nor the other TScript pointers in the lists copied below get
+    // freed under us; the deferred deletes are flushed once the outermost
+    // dispatch finishes:
+    mScriptUnit.beginProcessing();
+    const auto processingGuard = qScopeGuard([this] {
+        mScriptUnit.endProcessing();
+        mScriptUnit.doCleanup();
+    });
+
     if (mEventHandlerMap.contains(pE.mArgumentList.at(0))) {
         QList<TScript*> scriptList = mEventHandlerMap.value(pE.mArgumentList.at(0));
         for (auto& script : scriptList) {
@@ -1874,6 +1919,10 @@ void Host::raiseEvent(const TEvent& pE)
             mLuaInterpreter.callEventHandler(function, pE);
         }
     }
+
+    // Let any test-mode waitForEvent() call blocked on this event capture its
+    // arguments and unblock. Cheap (an empty-list check) when nothing is waiting.
+    mLuaInterpreter.captureEventForWaits(pE);
 
     // After the event has been raised but before 'event' goes out of scope,
     // we need to safely dereference the members of 'event' that point to
@@ -2417,6 +2466,12 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         // not to try to write to disk a package/module that just got uninstalled and removed from memory
         QTimer::singleShot(0ms, this, [this]() {
             mSaveTimer = false;
+            // If a package's own script uninstalled it mid-compile (from a script
+            // reached outside the compileAll()/editor/raiseEvent flush points, e.g. a
+            // permScript() run from an alias or key), the script deletes were deferred
+            // and are still registered. Flush them now, at depth 0, before saving so
+            // the save below does not serialize the just-uninstalled scripts back in:
+            mScriptUnit.doCleanup();
             if (auto [ok, filename, error] = saveProfile(); !ok) {
                 qDebug() << qsl("Host::uninstallPackage: Couldn't save '%1' to '%2' because: %3").arg(getName(), filename, error);
             }
