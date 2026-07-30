@@ -629,11 +629,59 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     return 2;
 }
 
+// Validates the optional headers table at Lua stack index `index`: it must be
+// absent/nil, or a table whose keys and values are all strings, otherwise a Lua
+// error is raised. This has to run before any QUrl or QNetworkRequest is
+// constructed, because lua_error() longjmps past C++ destructors and would
+// otherwise leak those heap-owning Qt objects.
+/*static*/ void TLuaInterpreter::validateHttpHeaders(lua_State* L, const int index, const char* functionName)
+{
+    if (!lua_istable(L, index)) {
+        if (!lua_isnoneornil(L, index)) {
+            lua_pushfstring(L, "%s: bad argument #%d type (headers as a table expected, got %s!)", functionName, index, luaL_typename(L, index));
+            lua_error(L);
+        }
+        return;
+    }
+    lua_pushnil(L);
+    while (lua_next(L, index) != 0) {
+        // key at index -2 and value at index -1
+        if (lua_type(L, -1) != LUA_TSTRING || lua_type(L, -2) != LUA_TSTRING) {
+            lua_pushfstring(L,
+                            "%s: bad argument #%d type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
+                            functionName,
+                            index,
+                            luaL_typename(L, -2),
+                            luaL_typename(L, -1));
+            lua_error(L);
+        }
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+}
+
+// Applies the already-validated headers table at `index` to `request`. Call
+// validateHttpHeaders() first: this assumes every key/value is a string and
+// never raises a Lua error, so it is safe to run with a live QNetworkRequest.
+/*static*/ void TLuaInterpreter::applyHttpHeaders(lua_State* L, const int index, QNetworkRequest& request)
+{
+    if (!lua_istable(L, index)) {
+        return;
+    }
+    lua_pushnil(L);
+    while (lua_next(L, index) != 0) {
+        request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
+        lua_pop(L, 1);
+    }
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getHTTP
 int TLuaInterpreter::getHTTP(lua_State* L)
 {
     auto& host = getHostFromLua(L);
     const QString urlString = getVerifiedString(L, __func__, 1, "remote url");
+    validateHttpHeaders(L, 2, __func__);
+
     const QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1").arg(url.errorString()));
@@ -641,28 +689,7 @@ int TLuaInterpreter::getHTTP(lua_State* L)
 
     QNetworkRequest request = QNetworkRequest(url);
     mudlet::self()->setNetworkRequestDefaults(url, request);
-
-    if (!lua_istable(L, 2) && !lua_isnoneornil(L, 2)) {
-        lua_pushfstring(L, "getHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    if (lua_istable(L, 2)) {
-        lua_pushnil(L);
-        while (lua_next(L, 2) != 0) {
-            // key at index -2 and value at index -1
-            if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
-                request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
-            } else {
-                lua_pushfstring(L,
-                                "getHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
-                                luaL_typename(L, -2),
-                                luaL_typename(L, -1));
-                return lua_error(L);
-            }
-            // removes value, but keeps key for next iteration
-            lua_pop(L, 1);
-        }
-    }
+    applyHttpHeaders(L, 2, request);
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
@@ -693,6 +720,8 @@ int TLuaInterpreter::deleteHTTP(lua_State* L)
 {
     auto& host = getHostFromLua(L);
     const QString urlString = getVerifiedString(L, __func__, 1, "remote url");
+    validateHttpHeaders(L, 2, __func__);
+
     const QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1").arg(url.errorString()));
@@ -700,28 +729,7 @@ int TLuaInterpreter::deleteHTTP(lua_State* L)
 
     QNetworkRequest request = QNetworkRequest(url);
     mudlet::self()->setNetworkRequestDefaults(url, request);
-
-    if (!lua_istable(L, 2) && !lua_isnoneornil(L, 2)) {
-        lua_pushfstring(L, "deleteHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    if (lua_istable(L, 2)) {
-        lua_pushnil(L);
-        while (lua_next(L, 2) != 0) {
-            // key at index -2 and value at index -1
-            if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
-                request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
-            } else {
-                lua_pushfstring(L,
-                                "deleteHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
-                                luaL_typename(L, -2),
-                                luaL_typename(L, -1));
-                return lua_error(L);
-            }
-            // removes value, but keeps key for next iteration
-            lua_pop(L, 1);
-        }
-    }
+    applyHttpHeaders(L, 2, request);
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->deleteResource(request);
