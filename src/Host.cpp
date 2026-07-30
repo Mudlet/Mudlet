@@ -896,6 +896,7 @@ void Host::resetProfile_phase2()
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
+    mActionUnit.doCleanup();
     mpConsole->resetMainConsole();
     // Drain queued DeferredDelete events so old TLabel destructors run their
     // luaL_unref against the still-live Lua state. Without this, those unrefs
@@ -1817,6 +1818,7 @@ void Host::incomingStreamProcessor(const QString& data, int line)
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
+    mActionUnit.doCleanup();
     // ScriptUnit defers deletes too (a package script uninstalling its own package
     // mid-compile or mid-event-dispatch), so flush it here alongside the others:
     mScriptUnit.doCleanup();
@@ -1831,6 +1833,7 @@ void Host::slot_purgeTemps()
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
+    mActionUnit.doCleanup();
     mScriptUnit.doCleanup();
 }
 

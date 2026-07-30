@@ -31,6 +31,7 @@ set(FUNCTIONAL_TEST_SOURCES
     PackageSelfUninstallTest.cpp
     MapRoundTripTest.cpp
     UndoServerWrapTest.cpp
+    ActionSelfUninstallTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
