@@ -163,6 +163,18 @@ void TTimer::compileAll()
 
 bool TTimer::setScript(const QString& script)
 {
+    // Switching from a registered anonymous Lua function (set up by tempTimer with a
+    // function argument) to a script string: release the old function from the Lua
+    // registry and leave callback mode. Unlike triggers/aliases/keys, TTimer::execute()
+    // keys off mScript rather than the flag, so the new script does run - but without
+    // this the registry entry still leaks, as the destructor would then take its
+    // mScript-based branch and delete the compiled function instead.
+    if (mRegisteredAnonymousLuaFunction) {
+        if (mpHost) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        }
+        mRegisteredAnonymousLuaFunction = false;
+    }
     mScript = script;
     if (script == "") {
         mNeedsToBeCompiled = false;
