@@ -3,8 +3,10 @@ if(NOT WIN32)
 endif()
 
 set(FUNCTIONAL_TEST_SOURCES
+    ConfigDirOverrideTest.cpp
     TelnetTextDisplayedTest.cpp
     TelnetSubnegotiationTest.cpp
+    TelnetSgrDefaultColorTest.cpp
     TelnetTlsPromptTest.cpp
     TelnetBenchmark.cpp
     ResetProfileTest.cpp
@@ -19,11 +21,18 @@ set(FUNCTIONAL_TEST_SOURCES
     EnableDisableByNameTest.cpp
     ColorTriggerFilterChildTest.cpp
     GMCPCharLoginTest.cpp
+    SetScriptCallbackTest.cpp
+    ClearWindowLogTest.cpp
+    XMLexportVariablesTest.cpp
+    SgrUnderlineStyleTest.cpp
     LogRestartDuplicateLineTest.cpp
     ProfileRoundTripTest.cpp
+    ProfileLoadTempFileTest.cpp
+    PackageSelfUninstallTest.cpp
     MapRoundTripTest.cpp
     UndoServerWrapTest.cpp
     HostWidgetDecouplingTest.cpp
+    ActionSelfUninstallTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
@@ -37,6 +46,26 @@ add_executable(UndoServerWrapReplay UndoServerWrapReplay.cpp ${FUNCTIONAL_TEST_U
 add_dependencies(UndoServerWrapReplay ${LIB_MUDLET_TARGET})
 target_link_libraries(UndoServerWrapReplay PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
 set_target_properties(UndoServerWrapReplay PROPERTIES ENABLE_EXPORTS ON)
+
+# Report-only perf harness for manual before/after comparisons
+# (test/compare-perf-baseline.py runs the built binary directly). Built with the
+# functional tests so a binary always exists, but kept OUT of the default ctest
+# suite: it feeds a huge fixed corpus many times and makes no timing assertions,
+# so running it every CI pipeline only burns minutes. -DREGISTER_PERF_BENCHMARK=ON
+# also registers it with ctest.
+option(REGISTER_PERF_BENCHMARK "Register the report-only PipelineBenchmark with ctest (it is built either way)" OFF)
+add_executable(PipelineBenchmark PipelineBenchmark.cpp ${FUNCTIONAL_TEST_UTILS})
+add_dependencies(PipelineBenchmark ${LIB_MUDLET_TARGET})
+target_link_libraries(PipelineBenchmark PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
+set_target_properties(PipelineBenchmark PROPERTIES ENABLE_EXPORTS ON)
+if(REGISTER_PERF_BENCHMARK)
+    add_test(NAME PipelineBenchmark COMMAND $<TARGET_FILE:PipelineBenchmark>)
+    # large corpus fed repeatedly, so allow a generous timeout
+    set_tests_properties(PipelineBenchmark PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0"
+        LABELS "functional"
+        TIMEOUT 600)
+endif()
 
 foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     get_filename_component(test_name ${test_file} NAME_WE)

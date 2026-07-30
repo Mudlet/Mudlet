@@ -36,6 +36,7 @@
 
 #include <list>
 
+class TMediaPlayer;
 class TTextBox;
 class QDialog;
 class QDockWidget;
@@ -100,6 +101,8 @@ public:
     void showMapperScriptReminder();
     void showUnpackingProgress(const QString& message, const QString& title);
     void closeUnpackingProgress();
+    void setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
+    void hideVideoOutput(TMediaPlayer* player);
     const QString& getSystemSpellDictionary() const { return mSpellDic; }
     const QByteArray& getHunspellCodecName_system() const { return mHunspellCodecName_system; }
     Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }

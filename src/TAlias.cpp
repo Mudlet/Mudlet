@@ -332,6 +332,17 @@ void TAlias::compile()
 
 bool TAlias::setScript(const QString& script)
 {
+    // Switching from a registered anonymous Lua function (set up by tempAlias with a
+    // function argument) to a script string: release the old function from the Lua
+    // registry and leave callback mode. Otherwise execute() keeps calling the stale
+    // function so the new script never runs, and the registry entry leaks - the
+    // destructor would take its mScript-based branch and delete the compiled function.
+    if (mRegisteredAnonymousLuaFunction) {
+        if (mpHost) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        }
+        mRegisteredAnonymousLuaFunction = false;
+    }
     mScript = script;
     mNeedsToBeCompiled = true;
     mOK_code = compileScript();

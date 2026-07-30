@@ -321,6 +321,10 @@ signals:
 private:
     cTelnet() = default;
 
+    // Lets the functional test drive the real download entry point and inspect
+    // the in-flight reply, reproducing the dialog-swap cancellation cascade.
+    friend class TelnetTlsPromptTest;
+
 #if defined(QT_NO_SSL)
     void abortLosingSocket(QTcpSocket* losingSocket);
 #else
@@ -421,6 +425,12 @@ private:
     // Stores the peer certificate from slot_socketSslError() so it can be
     // used by getPeerCertificate() when mpSocket is null:
     QSslCertificate mPeerCertificate;
+    // Latched true while a TLS-upgrade question is pending or open in the
+    // frontend. The dialog is delivered via a queued connection and so outlives
+    // the emit; this stops a hostile server stacking further prompts by
+    // re-advertising its secure MSSP port while the modal is up. Cleared when the
+    // user answers (slot_tlsUpgradeResponse()).
+    bool mTlsUpgradePromptInFlight = false;
 #endif
     // Could be a URL ("www.game.com") or an IPv4 address ("192.168.1.1") or an
     // IPv6 address ("2001:db8::1"):

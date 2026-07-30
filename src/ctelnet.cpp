@@ -3974,6 +3974,14 @@ void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QSt
     mServerPackage = mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
     mpHost->updateProxySettings(mpDownloader);
 
+    // Abort any in-flight predecessor while mpPackageDownloadReply still points
+    // at it, so it tears down via its own finished() path. Aborting after the
+    // reassignment below would instead cancel the new reply, and the stale
+    // reply's progress would otherwise keep driving the replacement dialog.
+    if (mpPackageDownloadReply) {
+        mpPackageDownloadReply->abort();
+    }
+
     auto request = QNetworkRequest(QUrl(url));
     mudlet::self()->setNetworkRequestDefaults(url, request);
     mpPackageDownloadReply = mpDownloader->get(request);
@@ -4283,13 +4291,16 @@ void cTelnet::promptTlsConnectionAvailable()
     // on future connections; note that it is unlikely that a literal IP address
     // will be included in a TLS/SSL cert so we can include that in the tests:
     if (mpHost->mMSSPTlsPort && QSslSocket::UnencryptedMode == mpSocket->mode() && mpHost->mAskTlsAvailable && !isIPAddress(mHostUrl)
-        && (mpHost->mMSSPHostName.isEmpty() || mpHost->mMSSPHostName.compare(mHostUrl, Qt::CaseInsensitive) == 0)) {
+        && (mpHost->mMSSPHostName.isEmpty() || mpHost->mMSSPHostName.compare(mHostUrl, Qt::CaseInsensitive) == 0) && !mTlsUpgradePromptInFlight) {
         postMessage(tr("[ INFO ]  - A more secure connection on port %1 is available.").arg(QString::number(mpHost->mMSSPTlsPort)));
 
         // The modal Yes/No question is a widget and is shown by the frontend
-        // (see mudlet::addConsoleForNewHost); it calls back
-        // slot_tlsUpgradeResponse() with the user's answer. Keeping the strings
-        // here preserves their existing translation context.
+        // (see mudlet::addConsoleForNewHost) via a queued connection; it calls
+        // back slot_tlsUpgradeResponse() with the user's answer. Keeping the
+        // strings here preserves their existing translation context. Latch now so
+        // a further advertisement arriving while the prompt is pending or open
+        // cannot emit again and stack another dialog.
+        mTlsUpgradePromptInFlight = true;
         emit signal_promptTlsAvailable(tr("For data transfer protection and privacy, this connection advertises a secure port."),
                                        tr("Update to port %1 and connect with encryption?").arg(QString::number(mpHost->mMSSPTlsPort)));
     }
@@ -4297,12 +4308,22 @@ void cTelnet::promptTlsConnectionAvailable()
 
 void cTelnet::slot_tlsUpgradeResponse(const bool accepted)
 {
-    // The frontend's modal dialog spins a nested event loop which can process a
-    // disconnect before the user answers. Neither branch below needs mpSocket, so
-    // guard on mpHost only - also guarding on mpSocket would silently discard the
-    // user's explicit answer whenever a disconnect landed mid-dialog.
+    // The question is now closed regardless of the answer or the current
+    // connection state, so let a later advertisement prompt again.
+    mTlsUpgradePromptInFlight = false;
+
+    // The frontend delivers the dialog through a queued connection and it spins a
+    // nested event loop, so the answer can arrive well after the advertisement -
+    // by which point the profile may have gone or the connection may have dropped,
+    // reconnected, or already upgraded. Only act while the very unencrypted
+    // connection that raised the prompt is still live; otherwise the answer no
+    // longer describes reality. Warn rather than silently discard.
     if (!mpHost) {
         qWarning() << "cTelnet::slot_tlsUpgradeResponse() WARNING - the profile went away while the TLS upgrade prompt was open; discarding the user's answer.";
+        return;
+    }
+    if (!mpSocket || mpSocket->state() != QAbstractSocket::ConnectedState || QSslSocket::UnencryptedMode != mpSocket->mode()) {
+        qWarning() << "cTelnet::slot_tlsUpgradeResponse() WARNING - the unencrypted connection that advertised a secure port is gone or already upgraded; discarding the user's answer.";
         return;
     }
 
@@ -4570,7 +4591,6 @@ void cTelnet::gotPrompt(std::string& mud_data)
                 while (j < s) {
                     if (mMudData[j] == 'm') {
                         goto NEXT;
-                        break;
                     }
                     ++j;
                 }
@@ -4743,6 +4763,10 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     length = mZstream.avail_in;
     in_buffer = (char*)mZstream.next_in;
 
+    // Drop the borrowed caller-buffer pointers now that inflate() is done with
+    // them: mZstream is a member, so leaving them set would keep it referencing
+    // the caller's stack buffer after we return - a dangling pointer. mZstream
+    // should only reference them for the duration of the inflate() call above.
     mZstream.next_in = Z_NULL;
     mZstream.next_out = Z_NULL;
 

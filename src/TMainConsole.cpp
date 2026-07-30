@@ -32,6 +32,7 @@
 #include "THyperlinkVisibilityManager.h"
 #include "TLabel.h"
 #include "TMap.h"
+#include "TMedia.h"
 #include "TRoomDB.h"
 #include "TTextBox.h"
 #include "TTextEdit.h"
@@ -49,10 +50,12 @@
 #include <QUiLoader>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QSizePolicy>
 #include <QTextBoundaryFinder>
 #include <QTextCodec>
 #include <QTextStream>
 #include <QPainter>
+#include <QVideoWidget>
 
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
@@ -1706,9 +1709,13 @@ void TMainConsole::showPackageDownloadProgress(const QString& title, const QStri
         qWarning() << "TMainConsole::showPackageDownloadProgress() WARNING - called with no host; ignoring the download-progress request.";
         return;
     }
-    // a second server-triggered download can arrive mid-download; without the
-    // close, the first dialog leaks frozen and its Cancel aborts the wrong download
+    // A second server-triggered download can arrive mid-download (e.g. a
+    // reconnect re-sends Client.GUI). QProgressDialog::close() emits canceled(),
+    // so closing the superseded dialog while it is still wired to
+    // slot_cancelPackageDownload() would abort the download this new dialog is
+    // about to track; detach it before closing.
     if (mpPackageDownloadProgressDialog) {
+        mpPackageDownloadProgressDialog->disconnect();
         mpPackageDownloadProgressDialog->close();
     }
     // placeholder range; reset by the first download-progress update
@@ -1813,6 +1820,91 @@ void TMainConsole::closeUnpackingProgress()
     if (mpUnpackingDialog) {
         mpUnpackingDialog->deleteLater();
         mpUnpackingDialog = nullptr;
+    }
+}
+
+void TMainConsole::setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded)
+{
+    setupSucceeded = false;
+
+    if (!player || !player->mediaPlayer()) {
+        return;
+    }
+
+    const QString target = player->mediaData().mediaKey();
+
+    if (target.isEmpty()) {
+        qWarning() << qsl("TMainConsole::setupVideoOutput() ERROR - 'key' not specified for video.");
+        return;
+    }
+
+    QString widgetType = TMediaData::MediaWidgetLabel;
+    QWidget* targetWidget = mLabelMap.value(target);
+
+    if (!targetWidget) {
+        targetWidget = mSubConsoleMap.value(target);
+        if (targetWidget) {
+            widgetType = TMediaData::MediaWidgetWindow;
+        }
+    }
+
+    if (!targetWidget) {
+        qWarning() << qsl("TMainConsole::setupVideoOutput() ERROR - No matching widget for 'key' = %1 to present video.").arg(target);
+        return;
+    }
+
+    player->mediaData().setMediaWidget(widgetType);
+
+    QVideoWidget* myVideoWidget = nullptr;
+    if (widgetType == TMediaData::MediaWidgetLabel) {
+        myVideoWidget = qobject_cast<TLabel*>(targetWidget)->mpVideoWidget;
+    } else if (widgetType == TMediaData::MediaWidgetWindow) {
+        myVideoWidget = qobject_cast<TConsole*>(targetWidget)->mpVideoWidget;
+    }
+
+    if (!myVideoWidget) {
+        myVideoWidget = new QVideoWidget();
+        myVideoWidget->setParent(targetWidget);
+        myVideoWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+        if (widgetType == TMediaData::MediaWidgetLabel) {
+            QObject::connect(qobject_cast<TLabel*>(targetWidget), &TLabel::resized, myVideoWidget, [targetWidget, myVideoWidget]() {
+                myVideoWidget->resize(targetWidget->size());
+            });
+        } else if (widgetType == TMediaData::MediaWidgetWindow) {
+            QObject::connect(qobject_cast<TConsole*>(targetWidget), &TConsole::resized, myVideoWidget, [targetWidget, myVideoWidget]() {
+                myVideoWidget->resize(targetWidget->size());
+            });
+        }
+    }
+
+    if (targetWidget->isHidden()) {
+        targetWidget->show();
+    }
+
+    myVideoWidget->resize(targetWidget->size());
+    player->mediaPlayer()->setVideoOutput(myVideoWidget);
+    myVideoWidget->show();
+
+    setupSucceeded = true;
+}
+
+void TMainConsole::hideVideoOutput(TMediaPlayer* player)
+{
+    if (!player || !player->mediaPlayer()) {
+        return;
+    }
+
+    auto* videoOutput = qobject_cast<QVideoWidget*>(player->mediaPlayer()->videoOutput());
+
+    if (!videoOutput) {
+        return;
+    }
+
+    QWidget* parent = videoOutput->parentWidget();
+
+    if (parent && parent->isVisible()) {
+        parent->hide();
     }
 }
 

@@ -228,7 +228,15 @@ jobs:
         # Download and extract xcb-util-cursor 0.1.5
         # This version fixes the off-by-one heap buffer overflow in _XcursorThemeInherits
         # that causes PTB builds to crash with AddressSanitizer
-        wget -q --connect-timeout=10 --read-timeout=30 --tries=3 --waitretry=5 https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz
+        # Fall back to the xcb project's dist host: xorg.freedesktop.org served an
+        # expired TLS certificate on 2026-07-28, breaking every CI run
+        for url in \
+          https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz \
+          https://xcb.freedesktop.org/dist/xcb-util-cursor-0.1.5.tar.xz; do
+          wget -q --connect-timeout=10 --read-timeout=30 --tries=3 --waitretry=5 -O xcb-util-cursor-0.1.5.tar.xz "$url" && break
+        done || echo "all xcb-util-cursor mirrors failed" >&2
+        # Checksum from https://lists.x.org/archives/xorg-announce/2023-October/003428.html
+        echo "0caf99b0d60970f81ce41c7ba694e5eaaf833227bb2cbcdb2f6dc9666a663c57  xcb-util-cursor-0.1.5.tar.xz" | sha256sum -c
         tar xf xcb-util-cursor-0.1.5.tar.xz
         cd xcb-util-cursor-0.1.5
 
@@ -476,6 +484,31 @@ jobs:
         cd ~/Desktop
         sudo codesign --remove-signature ~/Desktop/Mudlet.app
 
+    - name: (Linux/macOS) Start fixture HTTP server for Lua tests
+      if: matrix.run_tests == 'true'
+      shell: bash
+      run: |
+        port_file="${{runner.temp}}/mudlet-http-fixture-port"
+        rm -f "${port_file}"
+        MUDLET_TEST_HTTP_PORT_FILE="${port_file}" nohup python3 "${{github.workspace}}/CI/http-fixture-server.py" > "${{runner.temp}}/http-fixture-server.log" 2>&1 &
+        for _ in $(seq 1 50); do
+          [ -s "${port_file}" ] && break
+          sleep 0.1
+        done
+        if [ ! -s "${port_file}" ]; then
+          echo "fixture HTTP server failed to start" >&2
+          cat "${{runner.temp}}/http-fixture-server.log" 2>/dev/null || true
+          exit 1
+        fi
+        port="$(cat "${port_file}")"
+        if ! curl -fsS "http://127.0.0.1:${port}/fixture.txt" > /dev/null; then
+          echo "fixture HTTP server is not serving fixtures" >&2
+          cat "${{runner.temp}}/http-fixture-server.log" 2>/dev/null || true
+          exit 1
+        fi
+        echo "MUDLET_TEST_HTTP_PORT=${port}" >> "${GITHUB_ENV}"
+        echo "fixture HTTP server ready on 127.0.0.1:${port}"
+
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       timeout-minutes: 1
@@ -483,6 +516,7 @@ jobs:
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
+        MUDLET_TEST_REQUIRE_TTS_MOCK: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
@@ -495,6 +529,7 @@ jobs:
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
+        MUDLET_TEST_REQUIRE_TTS_MOCK: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: detect_leaks=0
