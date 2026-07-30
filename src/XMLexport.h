@@ -65,7 +65,7 @@ public:
     void writeAction(TAction*, pugi::xml_node xmlParent);
     void writeScript(TScript*, pugi::xml_node xmlParent);
     void writeKey(TKey*, pugi::xml_node xmlParent);
-    void writeVariable(TVar*, LuaInterface*, VarUnit*, pugi::xml_node xmlParent);
+    void writeVariable(TVar*, LuaInterface*, VarUnit*, pugi::xml_node xmlParent, bool insideSavedTable = false);
     void writeModuleXML(const QString& moduleName);
     bool saveModuleXml(const QString& fileName);
 

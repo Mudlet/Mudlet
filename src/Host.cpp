@@ -875,6 +875,15 @@ bool Host::resetProfile_phase1()
         return false;
     }
 
+    // A test-mode waitForEvent() is blocked in a nested event loop on this
+    // profile's lua_State; phase2 would lua_close() that state underneath it (a
+    // use-after-free). Refuse until the wait finishes. Always empty (so a no-op)
+    // outside MUDLET_TEST_MODE, where waitForEvent() is inert.
+    if (mLuaInterpreter.hasPendingEventWaits()) {
+        qWarning() << "Host::resetProfile_phase1() called while a waitForEvent() is blocked, ignoring";
+        return false;
+    }
+
     mAliasUnit.stopAllTriggers();
     mTriggerUnit.stopAllTriggers();
     mTimerUnit.stopAllTriggers();
@@ -1921,6 +1930,10 @@ void Host::raiseEvent(const TEvent& pE)
             mLuaInterpreter.callEventHandler(function, pE);
         }
     }
+
+    // Let any test-mode waitForEvent() call blocked on this event capture its
+    // arguments and unblock. Cheap (an empty-list check) when nothing is waiting.
+    mLuaInterpreter.captureEventForWaits(pE);
 
     // After the event has been raised but before 'event' goes out of scope,
     // we need to safely dereference the members of 'event' that point to
