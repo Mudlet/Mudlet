@@ -71,6 +71,7 @@ public:
 
 private:
     void freeReference(Host* pH, const QVector<int>& luaReference);
+    void clearStyling(int id);
     void removeLinkById(int id, Host* pH);
 
 

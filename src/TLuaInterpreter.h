@@ -40,7 +40,6 @@
 #include <QQueue>
 #include <QThread>
 #include <QTimer>
-#include <edbee/texteditorwidget.h>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
@@ -63,6 +62,7 @@ extern "C" {
 #include <optional>
 
 class Host;
+class QEventLoop;
 class TAction;
 class TEvent;
 class TLuaThread;
@@ -420,6 +420,7 @@ public:
     static int selectCaptureGroup(lua_State*);
     static int tempLineTrigger(lua_State*);
     static int raiseEvent(lua_State*);
+    static int waitForEvent(lua_State*);
     static int deleteLine(lua_State*);
     static int copy(lua_State*);
     static int cut(lua_State*);
@@ -518,8 +519,10 @@ public:
     static int setLabelOnLeave(lua_State*);
     static int getMainWindowSize(lua_State*);
     static int getUserWindowSize(lua_State*);
+    static int getWindowGeometry(lua_State*);
+    static int windowVisible(lua_State*);
+    static int getLabelText(lua_State*);
     static int getMousePosition(lua_State*);
-    static int setMiniConsoleFontSize(lua_State*);
     static int setProfileIcon(lua_State*);
     static int resetProfileIcon(lua_State*);
     static int getCurrentLine(lua_State*);
@@ -806,6 +809,15 @@ public:
     void freeLuaRegistryIndex(int index);
     void freeAllInLuaRegistry(TEvent);
 
+    // Test-only support for the waitForEvent() Lua helper (MUDLET_TEST_MODE):
+    // called from Host::raiseEvent() so an event that fires while a busted spec
+    // is blocked inside a nested event loop can be captured and unblock it.
+    void captureEventForWaits(const TEvent&);
+    // True while a waitForEvent() call is blocked in its nested event loop. Lets
+    // Host refuse a profile reset that would lua_close() the state out from
+    // under it. Always false (a no-op) outside MUDLET_TEST_MODE.
+    bool hasPendingEventWaits() const { return !mPendingEventWaits.isEmpty(); }
+
     inline static const QMap<Qt::MouseButton, QString> csmMouseButtons = {
             {Qt::NoButton, qsl("NoButton")},           {Qt::LeftButton, qsl("LeftButton")},       {Qt::RightButton, qsl("RightButton")},     {Qt::MiddleButton, qsl("MidButton")},
             {Qt::BackButton, qsl("BackButton")},       {Qt::ForwardButton, qsl("ForwardButton")}, {Qt::TaskButton, qsl("TaskButton")},       {Qt::ExtraButton4, qsl("ExtraButton4")},
@@ -847,6 +859,8 @@ private:
     static std::pair<bool, QString> discordApiEnabled(lua_State*, bool writeAccess = false);
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
     static int performHttpRequest(lua_State*, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const QString& verb);
+    static void validateHttpHeaders(lua_State*, const int index, const char* functionName);
+    static void applyHttpHeaders(lua_State*, const int index, QNetworkRequest& request);
     // The last argument is only needed if the third one is true:
     static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
     static std::tuple<bool, int> getWatchId(lua_State*, Host&);
@@ -887,6 +901,7 @@ private:
     void logEventError(const QString& event, const QString& error);
     std::pair<bool, QString> validLuaCode(const QString& code);
     std::pair<bool, QString> validateLuaCodeParam(int index);
+    bool reportInvalidLuaCodeParam(lua_State* L, const char* functionName, const int index);
     QByteArray encodeBytes(const char*);
     void setMatches(lua_State*);
     void setupLanguageData();
@@ -918,6 +933,19 @@ private:
     QMap<QString, QPair<int, int>> mCapturedNameGroupsPosList;
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
     QMap<QNetworkReply*, QString> downloadMap;
+
+    // A waitForEvent() call in progress: the nested event loop to quit when the
+    // named event arrives, plus a Lua registry reference to the captured args.
+    struct TEventWait
+    {
+        QString mName;
+        QEventLoop* mpLoop = nullptr;
+        int mArgsRef = LUA_NOREF;
+        bool mCaptured = false;
+    };
+    QList<TEventWait*> mPendingEventWaits;
+    int createEventArgsTableRef(const TEvent&);
+
     lua_State* pGlobalLua = nullptr;
     std::unique_ptr<lua_State, lua_state_deleter> pIndenterState;
     QPointer<Host> mpHost;

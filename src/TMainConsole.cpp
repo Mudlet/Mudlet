@@ -32,6 +32,7 @@
 #include "THyperlinkVisibilityManager.h"
 #include "TLabel.h"
 #include "TMap.h"
+#include "TMedia.h"
 #include "TRoomDB.h"
 #include "TTextBox.h"
 #include "TTextEdit.h"
@@ -42,12 +43,15 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QProgressDialog>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QSizePolicy>
 #include <QTextBoundaryFinder>
 #include <QTextCodec>
 #include <QTextStream>
 #include <QPainter>
+#include <QVideoWidget>
 
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
@@ -640,10 +644,28 @@ std::pair<bool, QString> TMainConsole::deleteMiniConsole(const QString& name)
     if (pConsole) {
         mCachedWindowSizes.remove(name);
 
-        // Using deleteLater() rather than delete as it seems a safer option
-        // given that this item is likely to be linked to some events and
-        // suchlike:
-        pConsole->deleteLater();
+        // A UserWindow's TConsole lives *inside* a TDockWidget. Deleting only the
+        // console (as for an ordinary miniconsole) leaves the dock orphaned in
+        // mDockWidgetMap with a now-null widget(), which later crashes - e.g. in
+        // getUserWindowSize() - when a window of the same name is recreated. Tear
+        // the dock down too; it owns the console as its child widget and deletes
+        // it along with itself (mirrors the shutdown path in TConsole::closeEvent).
+        if (pConsole->getType() == TConsole::UserWindow) {
+            if (auto pDock = mDockWidgetMap.take(name)) {
+                // deleteLater() alone is sufficient: the console is the dock's
+                // child widget, so destroying the dock destroys the console with
+                // it. (No WA_DeleteOnClose - we delete programmatically here, not
+                // in response to a close event.)
+                pDock->deleteLater();
+            } else {
+                pConsole->deleteLater();
+            }
+        } else {
+            // Using deleteLater() rather than delete as it seems a safer option
+            // given that this item is likely to be linked to some events and
+            // suchlike:
+            pConsole->deleteLater();
+        }
 
         // It remains to be seen if the miniconsole has "gone" as a result of the
         // above by the time the Lua subsystem processes the following:
@@ -825,24 +847,28 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
         }
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;
-        qDebug() << "TConsole::createMapper() - restore map case 2.";
-        mpHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(2) report"), true);
-        const QDateTime now(QDateTime::currentDateTime());
 
-        if (mpHost->mpMap->restore(QString())) {
-            mpHost->mpMap->audit();
-            mpMapper->mp2dMap->init();
-            mpMapper->updateAreaComboBox();
-            mpMapper->resetAreaComboBoxToPlayerRoomArea();
-            mpMapper->show();
+        if (mpHost->mpMap->mpRoomDB->isEmpty()) {
+            // Don't load a map if we already have one around!
+            qDebug() << "TConsole::createMapper() - restore map case 2.";
+            mpHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(2) report"), true);
+            const QDateTime now(QDateTime::currentDateTime());
+
+            if (mpHost->mpMap->restore(QString())) {
+                mpHost->mpMap->audit();
+                mpMapper->mp2dMap->init();
+                mpMapper->updateAreaComboBox();
+                mpMapper->resetAreaComboBoxToPlayerRoomArea();
+                mpMapper->show();
+            }
+
+            mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
+
+            TEvent mapOpenEvent{};
+            mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
+            mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mpHost->raiseEvent(mapOpenEvent);
         }
-
-        mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
-
-        TEvent mapOpenEvent{};
-        mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
-        mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(mapOpenEvent);
     }
     mpMapper->resize(width, height);
     mpMapper->move(x, y);
@@ -1081,7 +1107,8 @@ bool TMainConsole::printWindow(const QString& name, const QString& text)
     if (pC) {
         pC->print(text);
         return true;
-    } else if (pL) {
+    }
+    if (pL) {
         pL->setText(text);
         return true;
     }
@@ -1093,7 +1120,10 @@ QSize TMainConsole::getUserWindowSize(const QString& windowname) const
 {
     auto pW = mDockWidgetMap.value(windowname);
 
-    if (pW) {
+    // Guard pW->widget(): a dock can briefly outlive its console (the console is
+    // deleted via deleteLater()), during which widget() is null - dereferencing
+    // it segfaults. Fall back to the main window size until the dock is gone.
+    if (pW && pW->widget()) {
         const QSize windowSize = pW->widget()->size();
         const int minValidWidth = 50;
 
@@ -1657,6 +1687,131 @@ void TMainConsole::resizeEvent(QResizeEvent* event)
 
     // Update the record of the text area size for NAWS purposes:
     pHost->updateDisplayDimensions();
+}
+
+void TMainConsole::showPackageDownloadProgress(const QString& title, const QString& cancelText)
+{
+    auto pHost = getHost();
+    if (!pHost) {
+        qWarning() << "TMainConsole::showPackageDownloadProgress() WARNING - called with no host; ignoring the download-progress request.";
+        return;
+    }
+    // A second server-triggered download can arrive mid-download (e.g. a
+    // reconnect re-sends Client.GUI). QProgressDialog::close() emits canceled(),
+    // so closing the superseded dialog while it is still wired to
+    // slot_cancelPackageDownload() would abort the download this new dialog is
+    // about to track; detach it before closing.
+    if (mpPackageDownloadProgressDialog) {
+        mpPackageDownloadProgressDialog->disconnect();
+        mpPackageDownloadProgressDialog->close();
+    }
+    // placeholder range; reset by the first download-progress update
+    mpPackageDownloadProgressDialog = new QProgressDialog(title, cancelText, 0, 4000000, this);
+    connect(mpPackageDownloadProgressDialog, &QProgressDialog::canceled, &pHost->mTelnet, &cTelnet::slot_cancelPackageDownload);
+    mpPackageDownloadProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
+    mpPackageDownloadProgressDialog->show();
+}
+
+void TMainConsole::updatePackageDownloadProgress(qint64 got, qint64 total)
+{
+    if (mpPackageDownloadProgressDialog) {
+        // total is -1 for chunked HTTP responses of unknown length; a (0, 0)
+        // range turns the dialog into a busy indicator
+        mpPackageDownloadProgressDialog->setRange(0, total > 0 ? static_cast<int>(total) : 0);
+        mpPackageDownloadProgressDialog->setValue(static_cast<int>(got));
+    }
+}
+
+void TMainConsole::closePackageDownloadProgress()
+{
+    if (mpPackageDownloadProgressDialog) {
+        mpPackageDownloadProgressDialog->close();
+    }
+}
+
+void TMainConsole::setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded)
+{
+    setupSucceeded = false;
+
+    if (!player || !player->mediaPlayer()) {
+        return;
+    }
+
+    const QString target = player->mediaData().mediaKey();
+
+    if (target.isEmpty()) {
+        qWarning() << qsl("TMainConsole::setupVideoOutput() ERROR - 'key' not specified for video.");
+        return;
+    }
+
+    QString widgetType = TMediaData::MediaWidgetLabel;
+    QWidget* targetWidget = mLabelMap.value(target);
+
+    if (!targetWidget) {
+        targetWidget = mSubConsoleMap.value(target);
+        if (targetWidget) {
+            widgetType = TMediaData::MediaWidgetWindow;
+        }
+    }
+
+    if (!targetWidget) {
+        qWarning() << qsl("TMainConsole::setupVideoOutput() ERROR - No matching widget for 'key' = %1 to present video.").arg(target);
+        return;
+    }
+
+    player->mediaData().setMediaWidget(widgetType);
+
+    QVideoWidget* myVideoWidget = nullptr;
+    if (widgetType == TMediaData::MediaWidgetLabel) {
+        myVideoWidget = qobject_cast<TLabel*>(targetWidget)->mpVideoWidget;
+    } else if (widgetType == TMediaData::MediaWidgetWindow) {
+        myVideoWidget = qobject_cast<TConsole*>(targetWidget)->mpVideoWidget;
+    }
+
+    if (!myVideoWidget) {
+        myVideoWidget = new QVideoWidget();
+        myVideoWidget->setParent(targetWidget);
+        myVideoWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+        if (widgetType == TMediaData::MediaWidgetLabel) {
+            QObject::connect(qobject_cast<TLabel*>(targetWidget), &TLabel::resized, myVideoWidget, [targetWidget, myVideoWidget]() {
+                myVideoWidget->resize(targetWidget->size());
+            });
+        } else if (widgetType == TMediaData::MediaWidgetWindow) {
+            QObject::connect(qobject_cast<TConsole*>(targetWidget), &TConsole::resized, myVideoWidget, [targetWidget, myVideoWidget]() {
+                myVideoWidget->resize(targetWidget->size());
+            });
+        }
+    }
+
+    if (targetWidget->isHidden()) {
+        targetWidget->show();
+    }
+
+    myVideoWidget->resize(targetWidget->size());
+    player->mediaPlayer()->setVideoOutput(myVideoWidget);
+    myVideoWidget->show();
+
+    setupSucceeded = true;
+}
+
+void TMainConsole::hideVideoOutput(TMediaPlayer* player)
+{
+    if (!player || !player->mediaPlayer()) {
+        return;
+    }
+
+    auto* videoOutput = qobject_cast<QVideoWidget*>(player->mediaPlayer()->videoOutput());
+
+    if (!videoOutput) {
+        return;
+    }
+
+    QWidget* parent = videoOutput->parentWidget();
+
+    if (parent && parent->isVisible()) {
+        parent->hide();
+    }
 }
 
 void TMainConsole::showStatistics()

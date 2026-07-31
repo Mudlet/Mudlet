@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QtTest/QtTest>
+#include <chrono>
 
 #include <cstdlib>
 
@@ -26,6 +27,8 @@
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
+
+using namespace std::chrono_literals;
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -41,7 +44,7 @@ class TelnetTextDisplayedTest : public QObject
 private:
     TelnetServerStub* mpServer = nullptr;
     const QString mpHostname = "Test-Telnet";
-    const QString mpPort = "4000";
+    QString mpPort; // assigned the stub's actual ephemeral port in init()
     const QString mpLocalhost = "localhost";
 
 private slots:
@@ -50,7 +53,8 @@ private slots:
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
-        mpServer->start(mpLocalhost, mpPort.toUShort());
+        mpServer->start(mpLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+        mpPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
@@ -70,6 +74,33 @@ private slots:
         QVERIFY2(waitForTextInBuffer(messageToExpect), qPrintable(qsl("Expected text '%1' not found in console buffer").arg(messageToExpect)));
     }
 
+    // An unescaped '&' directly followed by (or running into) a non-ASCII character
+    // is not a valid entity; the original raw bytes must be passed through unchanged
+    // so the charset decoder can reassemble the multi-byte characters (follow-up to #9439)
+    void test_MalformedEntityKeepsNonAsciiBytes()
+    {
+        QString messageFromTheMud("\x1B[1zKäse&Brötchen and &Ф too");
+        QString messageToExpect("Käse&Brötchen and &Ф too");
+
+        mpServer->setWelcomeMessage(messageFromTheMud);
+        startProfile(mpHostname, mpLocalhost, mpPort);
+
+        QVERIFY2(waitForTextInBuffer(messageToExpect), qPrintable(qsl("Expected text '%1' not found in console buffer, which contains:\n%2").arg(messageToExpect, bufferContents())));
+    }
+
+    // A custom <!ENTITY> with a non-Latin1 value must resolve to that value intact
+    // in a UTF-8 session (the case #9439 fixed)
+    void test_CustomEntityKeepsNonAsciiValue()
+    {
+        QString messageFromTheMud("\x1B[1z<!ENTITY storm \"Гроза\">The &storm; rages");
+        QString messageToExpect("The Гроза rages");
+
+        mpServer->setWelcomeMessage(messageFromTheMud);
+        startProfile(mpHostname, mpLocalhost, mpPort);
+
+        QVERIFY2(waitForTextInBuffer(messageToExpect), qPrintable(qsl("Expected text '%1' not found in console buffer, which contains:\n%2").arg(messageToExpect, bufferContents())));
+    }
+
     void cleanup()
     {
         delete mpServer;
@@ -82,21 +113,21 @@ private slots:
     // GUI
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
+        QTimer::singleShot(0ms, qApp, [hostname, address, port]() {
             mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
         });
 
@@ -130,6 +161,17 @@ private slots:
                     return false;
                 },
                 timeoutMs);
+    }
+
+    // All buffer lines joined together, for failure diagnostics
+    QString bufferContents()
+    {
+        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QStringList lines;
+        for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
+            lines << console->buffer.line(i);
+        }
+        return lines.join(QChar::LineFeed);
     }
 
     // Utility function

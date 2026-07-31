@@ -1456,4 +1456,1305 @@ describe("Tests UI functions", function()
       assert.is_true(setLabelReleaseCallback(testLabelName, nil))
     end)
   end)
+
+  describe("Tests isAnsiFgColor/isAnsiBgColor error handling", function()
+    setup(function()
+      feedTriggers("isAnsiColor test text\n")
+      moveCursorUp()
+      selectCurrentLine()
+    end)
+
+    teardown(function()
+      deselect()
+      moveCursorEnd()
+    end)
+
+    it("isAnsiFgColor returns nil and a message for an out of range color code", function()
+      local ok, err = isAnsiFgColor(17)
+      assert.is_nil(ok)
+      assert.are.equal("ANSI color 17 out of range (0 to 16)", err)
+
+      ok, err = isAnsiFgColor(-1)
+      assert.is_nil(ok)
+      assert.are.equal("ANSI color -1 out of range (0 to 16)", err)
+    end)
+
+    it("isAnsiBgColor returns nil and a message for an out of range color code", function()
+      local ok, err = isAnsiBgColor(17)
+      assert.is_nil(ok)
+      assert.are.equal("ANSI color 17 out of range (0 to 16)", err)
+
+      ok, err = isAnsiBgColor(-1)
+      assert.is_nil(ok)
+      assert.are.equal("ANSI color -1 out of range (0 to 16)", err)
+    end)
+
+    it("isAnsiFgColor returns a boolean for a valid color code", function()
+      assert.is_boolean(isAnsiFgColor(0))
+    end)
+
+    it("isAnsiBgColor returns a boolean for a valid color code", function()
+      assert.is_boolean(isAnsiBgColor(0))
+    end)
+  end)
+
+  describe("Tests enableScrolling/disableScrolling error handling", function()
+    it("enableScrolling returns nil and a message for the main window", function()
+      local ok, err = enableScrolling("main")
+      assert.is_nil(ok)
+      assert.are.equal("scrolling cannot be enabled/disabled for the 'main' window", err)
+    end)
+
+    it("disableScrolling returns nil and a message for the main window", function()
+      local ok, err = disableScrolling("main")
+      assert.is_nil(ok)
+      assert.are.equal("scrolling cannot be enabled/disabled for the 'main' window", err)
+    end)
+  end)
+
+  -- BaseUI.parseVitalsLine is the pure parser behind the starter UI's
+  -- prompt/score vitals fallback (the base-ui package installs into fresh
+  -- profiles, including the self-test one)
+  describe("Test the functionality of BaseUI.parseVitalsLine", function()
+    local parserAvailable = type(BaseUI) == "table" and type(BaseUI.parseVitalsLine) == "function"
+
+    if not parserAvailable then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.parseVitalsLine is unavailable in this profile")
+      end)
+      return
+    end
+
+    local function reading(hits, stat, kind)
+      for _, hit in ipairs(hits) do
+        if hit.stat == stat and (kind == nil or hit.kind == kind) then
+          return hit
+        end
+      end
+    end
+
+    local function kindCount(hits, kind)
+      local count = 0
+      for _, hit in ipairs(hits) do
+        if hit.kind == kind then
+          count = count + 1
+        end
+      end
+      return count
+    end
+
+    it("should parse a cur/max prompt with the labels after the numbers", function()
+      local hits = BaseUI.parseVitalsLine("<523/600hp 210/250m 80/100mv>")
+      local hp = reading(hits, "hp", "curmax")
+      assert.is_not_nil(hp)
+      assert.are.equal(523, hp.current)
+      assert.are.equal(600, hp.max)
+      local mp = reading(hits, "mp", "curmax")
+      assert.is_not_nil(mp)
+      assert.are.equal(210, mp.current)
+      assert.are.equal(250, mp.max)
+      local mv = reading(hits, "mv", "curmax")
+      assert.is_not_nil(mv)
+      assert.are.equal(80, mv.current)
+      assert.are.equal(100, mv.max)
+      assert.are.equal(0, kindCount(hits, "bare"))
+    end)
+
+    it("should parse a cur/max prompt with the labels first", function()
+      local hits = BaseUI.parseVitalsLine("HP: 523/600 MP: 210/250")
+      local hp = reading(hits, "hp", "curmax")
+      assert.is_not_nil(hp)
+      assert.are.equal(523, hp.current)
+      assert.are.equal(600, hp.max)
+      local mp = reading(hits, "mp", "curmax")
+      assert.is_not_nil(mp)
+      assert.are.equal(210, mp.current)
+      assert.are.equal(250, mp.max)
+    end)
+
+    it("should parse labelled percentages without needing a maximum", function()
+      local hits = BaseUI.parseVitalsLine("<87%hp 80%m>")
+      local hp = reading(hits, "hp", "percent")
+      assert.is_not_nil(hp)
+      assert.are.equal(87, hp.percent)
+      local mp = reading(hits, "mp", "percent")
+      assert.is_not_nil(mp)
+      assert.are.equal(80, mp.percent)
+      assert.are.equal(0, kindCount(hits, "curmax"))
+      assert.are.equal(0, kindCount(hits, "bare"))
+    end)
+
+    it("should parse score screen lines", function()
+      local hp = reading(BaseUI.parseVitalsLine("Health : 523/600"), "hp", "curmax")
+      assert.is_not_nil(hp)
+      assert.are.equal(523, hp.current)
+      assert.are.equal(600, hp.max)
+      local mp = reading(BaseUI.parseVitalsLine("Mana   : 210/250"), "mp", "curmax")
+      assert.is_not_nil(mp)
+      assert.are.equal(210, mp.current)
+      assert.are.equal(250, mp.max)
+      local mv = reading(BaseUI.parseVitalsLine("Moves  : 80/100"), "mv", "curmax")
+      assert.is_not_nil(mv)
+      assert.are.equal(80, mv.current)
+      assert.are.equal(100, mv.max)
+      local sentence = reading(BaseUI.parseVitalsLine("You have 100/120 hit points left."), "hp", "curmax")
+      assert.is_not_nil(sentence)
+      assert.are.equal(100, sentence.current)
+      assert.are.equal(120, sentence.max)
+    end)
+
+    it("should classify current-only prompts as bare, never self-sufficient", function()
+      local hits = BaseUI.parseVitalsLine("<523hp 210m 80mv>")
+      local hp = reading(hits, "hp", "bare")
+      assert.is_not_nil(hp)
+      assert.are.equal(523, hp.current)
+      assert.is_nil(hp.max)
+      assert.is_not_nil(reading(hits, "mp", "bare"))
+      assert.is_not_nil(reading(hits, "mv", "bare"))
+      assert.are.equal(0, kindCount(hits, "curmax"))
+      assert.are.equal(0, kindCount(hits, "percent"))
+    end)
+
+    it("should never mistake a self-sufficient line for a bare one", function()
+      local hits = BaseUI.parseVitalsLine("523/600hp")
+      assert.is_not_nil(reading(hits, "hp", "curmax"))
+      assert.are.equal(0, kindCount(hits, "bare"))
+    end)
+
+    it("should yield nothing for chat lines that merely mention vitals", function()
+      assert.are.same({}, BaseUI.parseVitalsLine("Bob says, 'I am somehow alive at 100/120 hp'"))
+      assert.are.same({}, BaseUI.parseVitalsLine("[chat] Ann: brags about her 100/120 hp"))
+    end)
+
+    it("should still read lines whose bracket tag is not a known channel", function()
+      assert.is_not_nil(reading(BaseUI.parseVitalsLine("[combat] 100/120 hp"), "hp", "curmax"))
+    end)
+
+    it("should yield nothing for unlabelled or unrelated numbers", function()
+      assert.are.same({}, BaseUI.parseVitalsLine("You see 100/120 on the door"))
+      assert.are.same({}, BaseUI.parseVitalsLine("There are 523 hippos in the river"))
+      assert.are.same({}, BaseUI.parseVitalsLine("You are carrying 210 mushrooms"))
+    end)
+
+    it("should reject a zero maximum and percentages above 100", function()
+      assert.are.same({}, BaseUI.parseVitalsLine("0/0 hp"))
+      assert.are.same({}, BaseUI.parseVitalsLine("150%hp"))
+    end)
+
+    it("should allow overheal (current above maximum)", function()
+      local hp = reading(BaseUI.parseVitalsLine("750/600hp"), "hp", "curmax")
+      assert.is_not_nil(hp)
+      assert.are.equal(750, hp.current)
+      assert.are.equal(600, hp.max)
+    end)
+
+    it("should not let one stat's numbers be claimed by the next label", function()
+      local hits = BaseUI.parseVitalsLine("HP: 523/600 MP:")
+      local hp = reading(hits, "hp", "curmax")
+      assert.is_not_nil(hp)
+      assert.are.equal(523, hp.current)
+      assert.is_nil(reading(hits, "mp"))
+    end)
+
+    it("should keep aligned-table padding from leaking one stat's numbers to the next", function()
+      local hits = BaseUI.parseVitalsLine("Health:   3600/3600     Mana:     3400/3400")
+      local mp = reading(hits, "mp", "curmax")
+      assert.is_not_nil(mp)
+      assert.are.equal(3400, mp.current)
+      assert.are.equal(3400, mp.max)
+    end)
+
+    -- the score-screen corpus: shapes from the major codebase families. A
+    -- score may only ever be shown once, so every expected reading must come
+    -- from an ungated (trusted-on-first-sight) shape - a gated reading would
+    -- never fire on a screen the recurrence gate has not seen three times
+    describe("score screens across codebase families", function()
+      local function firstSightReading(hits, stat, kind)
+        for _, hit in ipairs(hits) do
+          if hit.stat == stat and hit.kind == kind and not hit.gated then
+            return hit
+          end
+        end
+      end
+
+      local screens = {
+        -- ROM 2.4 act_info.c do_score, verbatim format
+        { name = "a ROM 2.4 score sentence",
+          line = "You have 100/100 hit, 100/100 mana, 100/100 movement.",
+          expect = { hp = { 100, 100 }, mp = { 100, 100 }, mv = { 100, 100 } } },
+        -- Merc 2.1 appends practices to the same sentence
+        { name = "a Merc 2.1 score sentence",
+          line = "You have 100/100 hit, 90/90 mana, 80/100 movement, 12 practices.",
+          expect = { hp = { 100, 100 }, mp = { 90, 90 }, mv = { 80, 100 } } },
+        -- DikuMUD/CircleMUD/tbaMUD write current(max)
+        { name = "a Diku/Circle/tbaMUD score sentence",
+          line = "You have 20(20) hit, 100(100) mana and 82(82) movement points.",
+          expect = { hp = { 20, 20 }, mp = { 100, 100 }, mv = { 82, 82 } } },
+        -- SMAUG 1.4a dashboard rows: "current of max" behind unrelated cells
+        { name = "a SMAUG hitpoints row",
+          line = "PRACT: 005         Hitpoints: 90    of    90   Pager: ( )  24    AutoExit(X)",
+          expect = { hp = { 90, 90 } } },
+        { name = "a SMAUG mana row",
+          line = "XP   : 123456        Mana: 75    of    90   MKills:  00012    AutoLoot (X)",
+          expect = { mp = { 75, 90 } } },
+        { name = "a SMAUG move row (comma-grouped gold in front)",
+          line = "GOLD : 1,234,567    Move: 80    of    90   Mdeaths: 00000    AutoSac ( )",
+          expect = { mv = { 80, 90 } } },
+        -- SWRFUSS puts three "of" pairs on one line
+        { name = "a SWR-style of-separated line",
+          line = "Hit Points: 100 of 100     Move: 90 of 100     Force: 100 of 100",
+          expect = { hp = { 100, 100 }, mv = { 90, 100 } } },
+        -- Achaea's bordered vitals block (mana above max is real overheal)
+        { name = "an Achaea health row",
+          line = "| Health  : 2594/2594   Willpower: 13730/13730 Strength : 12 Intelligence: 13 |",
+          expect = { hp = { 2594, 2594 } } },
+        { name = "an Achaea mana/endurance row",
+          line = "| Mana    : 3671/2966   Endurance: 11600/11870 Dexterity: 12 Constitution: 11 |",
+          expect = { mp = { 3671, 2966 }, mv = { 11600, 11870 } } },
+        -- Aetolia's cells sit behind interior pipes after a non-vital cell
+        { name = "an Aetolia bordered row",
+          line = "| Race:   Undead Atavian    | Health:  4252/4252  | Endurance: 19950/19950   |",
+          expect = { hp = { 4252, 4252 }, mv = { 19950, 19950 } } },
+        -- Aardwolf brackets its values inside a full grid
+        { name = "an Aardwolf hit row",
+          line = "| Hit    : [  168/168  ] | Hitroll  : [   27 ] | Weight :    40 of 135    |",
+          expect = { hp = { 168, 168 } } },
+        { name = "an Aardwolf mana row",
+          line = "| Mana   : [  160/160  ] | Damroll  : [   14 ] | Items  :    23 of 105    |",
+          expect = { mp = { 160, 160 } } },
+        { name = "an Aardwolf moves row",
+          line = "| Moves  : [  564/564  ] | Wimpy    : [   18 ] | Pos    : Standing        |",
+          expect = { mv = { 564, 564 } } },
+        -- Discworld brief: current(max), no space before the paren
+        { name = "a Discworld brief score line",
+          line = "Hp: 2331(2331)  Gp: 433(459)  Xp: 1143225  Burden: 21%",
+          expect = { hp = { 2331, 2331 } } },
+        -- Discworld verbose: current (max) with a space
+        { name = "a Discworld verbose score sentence",
+          line = "You have 1110 (1110) hit points, 167 (167) guild points, 2 (684) quest points, "
+            .. "7 (1063) achievement points and 81 (81) social points.",
+          expect = { hp = { 1110, 1110 } } },
+        -- LPMud 2.4.5 writes current, label, then the max
+        { name = "an LPMud 2.4.5 score sentence",
+          line = "You have 123 experience points, 45 gold coins, 50 hit points(50).",
+          expect = { hp = { 50, 50 } } },
+        -- AFKMud's first row opens with a "Label: number" cell
+        { name = "an AFKMud hitpoints row",
+          line = "Level: 5              HitPoints:  100/  100      Pager    ( )",
+          expect = { hp = { 100, 100 } } },
+        { name = "an IRE-style aligned score table",
+          line = "Health:   3600/3600     Mana:     3400/3400",
+          expect = { hp = { 3600, 3600 }, mp = { 3400, 3400 } } },
+        { name = "a bordered row whose first cell is not a vital",
+          line = "| Level: 201  Hit Points: 500/500  Moves: 1000/1000 |",
+          expect = { hp = { 500, 500 }, mv = { 1000, 1000 } } },
+        { name = "thousands separators",
+          line = "Hit Points: 12,345/23,456",
+          expect = { hp = { 12345, 23456 } } },
+        { name = "a spell points row",
+          line = "Spell Points: 90/95",
+          expect = { mp = { 90, 95 } } },
+        { name = "a magic row",
+          line = "Magic: 90/95",
+          expect = { mp = { 90, 95 } } },
+        { name = "a movement row",
+          line = "Movement: 80/100",
+          expect = { mv = { 80, 100 } } },
+        { name = "a stamina row",
+          line = "Stamina: 80/100",
+          expect = { mv = { 80, 100 } } },
+        { name = "an experience row",
+          line = "Experience: 1000/5000",
+          expect = { xp = { 1000, 5000 } } },
+      }
+
+      for _, screen in ipairs(screens) do
+        it("should read " .. screen.name .. " on first sight", function()
+          local hits = BaseUI.parseVitalsLine(screen.line)
+          for stat, pair in pairs(screen.expect) do
+            local hit = firstSightReading(hits, stat, "curmax")
+            assert.is_not_nil(hit, screen.name .. ": no ungated " .. stat .. " reading")
+            assert.are.equal(pair[1], hit.current)
+            assert.are.equal(pair[2], hit.max)
+          end
+        end)
+      end
+
+      it("should not read guild points or bare xp from an LPMud row", function()
+        local hits = BaseUI.parseVitalsLine("Hp: 143 (167) Gp: 240 (240) Xp: 267000")
+        assert.is_nil(reading(hits, "mp"))
+        assert.is_nil(reading(hits, "xp"))
+      end)
+
+      -- rows with no structural anchor at all (AFKMud's "Race : Human
+      -- Mana : 1000/1000") only parse as windowed readings, which
+      -- BaseUI.onVitalsLine trusts solely inside the short window after a
+      -- "score" command actually went to the game
+      it("should mark anchorless labelled pairs as windowed, not trusted", function()
+        local hits = BaseUI.parseVitalsLine("Race : Human           Mana     :  1000/ 1000      Autoexit (X)")
+        local found
+        for _, hit in ipairs(hits) do
+          if hit.stat == "mp" and hit.kind == "curmax" then
+            found = found or hit
+          end
+        end
+        assert.is_not_nil(found)
+        assert.is_true(found.windowed == true)
+        assert.are.equal(1000, found.current)
+        assert.are.equal(1000, found.max)
+      end)
+
+      it("should open the score window when a score command goes out", function()
+        local saved = BaseUI.scoreWindowUntil
+        BaseUI.scoreWindowUntil = nil
+        assert.is_false(BaseUI.scoreWindowOpen())
+        BaseUI.noteCommandSent("sysDataSendRequest", "look")
+        assert.is_false(BaseUI.scoreWindowOpen())
+        BaseUI.noteCommandSent("sysDataSendRequest", "score")
+        assert.is_true(BaseUI.scoreWindowOpen())
+        BaseUI.scoreWindowUntil = getEpoch() - 1
+        assert.is_false(BaseUI.scoreWindowOpen())
+        BaseUI.scoreWindowUntil = saved
+      end)
+    end)
+
+    -- the score shapes run always-on against everything the game prints, so
+    -- ordinary output must never produce a first-sight-trusted reading.
+    -- gated readings are fine (they need the recurrence gate first) and so
+    -- are windowed ones (inert outside the short post-"score" window, which
+    -- is their entire safety mechanism - the shapes themselves are
+    -- deliberately anchorless)
+    describe("ungated false-positive safety", function()
+      local prose = {
+        "You have collected 5/6 mana crystals for the ritual.",
+        "You have 5/6 mana potions in your bag.",
+        "You have 3(4) quest tokens.",
+        "You have 100 gold and 5/6 keys.",
+        "You have 3/4 of the map explored.",
+        "Health potions line the shelves, 3/4 full.",
+        "Mana is the lifeblood of spellcasters, see HELP MANA.",
+        "| [newbie] Zork: my hp is 100/120 lol |",
+        "| 12 | a healing potion | 100/120 gold |",
+        "| Players: 15/20 |",
+        "| Score: 4500/9000 |",
+        "| HP regen: 5/tick class bonus |",
+        "The scoreboard shows 12/15 wins for your team.",
+        "Uptime: 12/24 hours since last reboot.",
+        "Quests completed: 37/50",
+        "You get 2,500 gold coins from the corpse.",
+      }
+
+      for _, line in ipairs(prose) do
+        it("should not trust on first sight: " .. line, function()
+          for _, hit in ipairs(BaseUI.parseVitalsLine(line)) do
+            assert.is_true(hit.gated == true or hit.windowed == true,
+              string.format("first-sight %s (%s) reading from prose", hit.stat, hit.kind))
+          end
+        end)
+      end
+    end)
+
+    it("should reject nonsense readings instead of painting broken gauges", function()
+      assert.are.same({}, BaseUI.parseVitalsLine("Health: 0/0"))
+      -- a wildly overhealed current is a misread, not overheal
+      assert.is_nil(reading(BaseUI.parseVitalsLine("Health: 90000/2"), "hp"))
+      -- absurd magnitudes are ids or timestamps, never vitals
+      assert.are.same({}, BaseUI.parseVitalsLine("Health: 1234567890123/9999999999999"))
+    end)
+  end)
+
+  -- when a game installs its own interface (a Client.GUI package), the
+  -- starter UI stands aside rather than fight it for screen space
+  describe("Test the starter UI standing aside for a game's own interface", function()
+    local baseUiAvailable = type(BaseUI) == "table" and type(BaseUI.standAside) == "function"
+
+    if not baseUiAvailable then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.standAside is unavailable in this profile")
+      end)
+      return
+    end
+
+    local savedSettings
+
+    before_each(function()
+      savedSettings = table.deepcopy(BaseUI.settings)
+    end)
+
+    after_each(function()
+      BaseUI.settings = savedSettings
+      BaseUI.saveSettings()
+      BaseUI.createChatTriggers()
+      BaseUI.createVitalsTriggers()
+    end)
+
+    it("should stand aside when the game installs its own GUI", function()
+      BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+      assert.are.equal("SomeGameUI", BaseUI.settings.standingAside)
+      assert.is_true(BaseUI.dormant())
+    end)
+
+    it("should retire its capture triggers while standing aside", function()
+      BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+      assert.is_nil(next(BaseUI.chatTriggerIds))
+      assert.is_nil(next(BaseUI.vitalsTriggerIds))
+      BaseUI.createChatTriggers()
+      BaseUI.createVitalsTriggers()
+      assert.is_nil(next(BaseUI.chatTriggerIds))
+      assert.is_nil(next(BaseUI.vitalsTriggerIds))
+    end)
+
+    it("should come back when the player asks for it", function()
+      BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+      BaseUI.show()
+      assert.is_nil(BaseUI.settings.standingAside)
+      assert.is_false(BaseUI.dormant())
+    end)
+
+    it("should ignore uninstalls of unrelated packages", function()
+      BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+      BaseUI.serverGuiRemoved("sysUninstallPackage", "SomethingElse")
+      assert.are.equal("SomeGameUI", BaseUI.settings.standingAside)
+    end)
+  end)
+
+  describe("tempButtonToolbar and tempButton return values", function()
+    -- unique names as the items cannot be deleted, and would collide on re-runs
+    -- against the same profile otherwise
+    local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+    local toolbarName = "bustedTempButtonToolbar" .. suffix
+    local buttonToolbarName = "bustedTempButtonParent" .. suffix
+    local buttonName = "bustedTempButton" .. suffix
+
+    it("tempButtonToolbar returns the created toolbar's ID", function()
+      local toolbarId = tempButtonToolbar(toolbarName, 0, 0)
+      assert.are.equal("number", type(toolbarId))
+      assert.is_true(toolbarId > 0)
+      assert.are.equal(1, exists(toolbarId, "button"))
+    end)
+
+    it("tempButton returns the created button's ID", function()
+      -- own toolbar so this test doesn't depend on the previous one
+      local parentId = tempButtonToolbar(buttonToolbarName, 0, 0)
+      assert.are.equal("number", type(parentId))
+
+      local buttonId = tempButton(buttonToolbarName, buttonName, 0)
+      assert.are.equal("number", type(buttonId))
+      assert.is_true(buttonId > 0)
+      assert.are.equal(1, exists(buttonId, "button"))
+      assert.are.equal(1, isActive(buttonId, "button"))
+    end)
+  end)
+
+  -- The getTextFormat suites earlier in this file are largely diagnostic: they
+  -- print DEBUG and deliberately avoid failing ("Don't fail the test, just note
+  -- the issue"). The blocks below assert the real readback contract instead -
+  -- echo a known colour/attribute, select the character it landed on, and check
+  -- getTextFormat reports back exactly what was written.
+  --
+  -- The load-bearing detail for every readback here: echo/insertText that ends
+  -- in a newline leaves the cursor on the following (empty) line, so each test
+  -- moves the cursor back onto the target line before selecting - otherwise the
+  -- selection lands on an empty line and getTextFormat returns nil.
+  describe("echo family colour readback via getTextFormat", function()
+    local win = "uiReadbackColour"
+
+    setup(function()
+      createMiniConsole(win, 0, 0, 800, 200)
+      setMiniConsoleFontSize(win, 10)
+      setBackgroundColor(win, 0, 0, 0)
+      setWindowWrap(win, 100)
+    end)
+
+    before_each(function()
+      clearWindow(win)
+      moveCursor(win, 0, 0)
+      deselect(win)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(win)
+    end)
+
+    it("decho reports the exact foreground and background it was given", function()
+      decho(win, "<255,20,30:40,50,60>X\n")
+      moveCursor(win, 0, 0)
+      selectSection(win, 0, 1)
+      local format = getTextFormat(win)
+      assert.is_table(format)
+      assert.are.same({255, 20, 30}, format.foreground)
+      assert.are.same({40, 50, 60}, format.background)
+    end)
+
+    it("decho reports distinct colours for adjacent runs", function()
+      decho(win, "<255,0,0:0,0,0>R<0,255,0:0,0,0>G<0,0,255:0,0,0>B\n")
+      moveCursor(win, 0, 0)
+      selectSection(win, 0, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(win).foreground)
+      selectSection(win, 1, 1)
+      assert.are.same({0, 255, 0}, getTextFormat(win).foreground)
+      selectSection(win, 2, 1)
+      assert.are.same({0, 0, 255}, getTextFormat(win).foreground)
+    end)
+
+    it("cecho <red> resolves to pure red", function()
+      cecho(win, "<red>R\n")
+      moveCursor(win, 0, 0)
+      selectSection(win, 0, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(win).foreground)
+    end)
+
+    it("hecho #ff0000 resolves to pure red", function()
+      hecho(win, "#ff0000H\n")
+      moveCursor(win, 0, 0)
+      selectSection(win, 0, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(win).foreground)
+    end)
+
+    it("getFgColor and getBgColor agree with getTextFormat", function()
+      decho(win, "<12,34,56:65,43,21>Z\n")
+      moveCursor(win, 0, 0)
+      selectSection(win, 0, 1)
+      local format = getTextFormat(win)
+      local fr, fg, fb = getFgColor(win)
+      local br, bg, bb = getBgColor(win)
+      assert.are.same({fr, fg, fb}, format.foreground)
+      assert.are.same({br, bg, bb}, format.background)
+    end)
+  end)
+
+  describe("text attribute setters reflected in getTextFormat", function()
+    local win = "uiReadbackAttr"
+
+    setup(function()
+      createMiniConsole(win, 0, 0, 800, 200)
+      setMiniConsoleFontSize(win, 10)
+      setBackgroundColor(win, 0, 0, 0)
+      setWindowWrap(win, 100)
+    end)
+
+    before_each(function()
+      clearWindow(win)
+      moveCursor(win, 0, 0)
+      deselect(win)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(win)
+    end)
+
+    -- each attribute maps a setter to the getTextFormat key it should toggle
+    local attributes = {
+      {key = "bold", setter = setBold},
+      {key = "italic", setter = setItalics},
+      {key = "underline", setter = setUnderline},
+      {key = "overline", setter = setOverline},
+      {key = "reverse", setter = setReverse},
+      {key = "strikeout", setter = setStrikeOut},
+    }
+
+    for _, attribute in ipairs(attributes) do
+      it("toggles the " .. attribute.key .. " flag on echoed text", function()
+        attribute.setter(win, true)
+        echo(win, "ON\n")
+        attribute.setter(win, false)
+        echo(win, "OFF\n")
+        moveCursor(win, 0, 0)
+        selectCurrentLine(win)
+        assert.is_true(getTextFormat(win)[attribute.key])
+        moveCursor(win, 0, 1)
+        selectCurrentLine(win)
+        assert.is_false(getTextFormat(win)[attribute.key])
+      end)
+    end
+
+    it("resetFormat clears attributes for subsequent output", function()
+      setBold(win, true)
+      setUnderline(win, true)
+      assert.is_true(resetFormat(win))
+      insertText(win, "plain")
+      moveCursor(win, 0, 0)
+      selectSection(win, 0, 5)
+      local format = getTextFormat(win)
+      assert.is_false(format.bold)
+      assert.is_false(format.underline)
+    end)
+  end)
+
+  describe("echoLink, insertLink, setLink and popups", function()
+    local win = "uiReadbackLink"
+
+    setup(function()
+      createMiniConsole(win, 0, 0, 800, 200)
+      setMiniConsoleFontSize(win, 10)
+      setBackgroundColor(win, 0, 0, 0)
+    end)
+
+    before_each(function()
+      clearWindow(win)
+      moveCursor(win, 0, 0)
+      deselect(win)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(win)
+    end)
+
+    it("echoLink writes its visible text to the line and returns true", function()
+      assert.is_true(echoLink(win, "clickme", [[echo("hi")]], "hint"))
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      assert.are.equal("clickme", getCurrentLine(win))
+    end)
+
+    it("insertLink inserts its visible text and returns true", function()
+      moveCursor(win, 0, 0)
+      assert.is_true(insertLink(win, "linktext", [[echo("hi")]], "hint"))
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      assert.are.equal("linktext", getCurrentLine(win))
+    end)
+
+    -- there is no Lua getter for link data, so a valid setLink is only
+    -- observable as a true return; the unknown-window path is contract-tested
+    -- in the "unknown-window contracts" block below
+    it("setLink returns true for a valid window", function()
+      echo(win, "linkme\n")
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      assert.is_true(setLink(win, [[echo("hi")]], "tip"))
+    end)
+
+    it("echoPopup writes its visible text and returns true", function()
+      assert.is_true(echoPopup(win, "popupmenu", {[[echo("1")]]}, {"one"}))
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      assert.are.equal("popupmenu", getCurrentLine(win))
+    end)
+
+    it("insertPopup inserts its visible text and returns true", function()
+      moveCursor(win, 0, 0)
+      assert.is_true(insertPopup(win, "inspopup", {[[echo("1")]]}, {"one"}))
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      assert.are.equal("inspopup", getCurrentLine(win))
+    end)
+
+    it("echoPopup rejects mismatched command and hint tables", function()
+      local ok, err = echoPopup(win, "menu", {[[echo("1")]], [[echo("2")]]}, {"one"})
+      assert.is_nil(ok)
+      assert.is_string(err)
+      assert.is_truthy(err:find("do not match up", 1, true))
+    end)
+
+    it("insertPopup rejects mismatched command and hint tables", function()
+      local ok, err = insertPopup(win, "menu", {[[echo("1")]], [[echo("2")]]}, {"one"})
+      assert.is_nil(ok)
+      assert.is_string(err)
+      assert.is_truthy(err:find("do not match up", 1, true))
+    end)
+
+    it("echoLink hard-errors when required arguments are missing", function()
+      assert.is_false(pcall(echoLink))
+    end)
+  end)
+
+  describe("insertText, replace and deleteLine effects", function()
+    local win = "uiReadbackEdit"
+
+    setup(function()
+      createMiniConsole(win, 0, 0, 800, 200)
+      setMiniConsoleFontSize(win, 10)
+      setBackgroundColor(win, 0, 0, 0)
+      setWindowWrap(win, 100)
+    end)
+
+    before_each(function()
+      clearWindow(win)
+      moveCursor(win, 0, 0)
+      deselect(win)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(win)
+    end)
+
+    it("insertText inserts inline at the cursor", function()
+      echo(win, "HelloWorld\n")
+      moveCursor(win, 5, 0)
+      insertText(win, "-INS-")
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      assert.are.equal("Hello-INS-World", getCurrentLine(win))
+    end)
+
+    it("replace swaps the current selection", function()
+      echo(win, "replaceme\n")
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      replace(win, "REPLACED")
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      assert.are.equal("REPLACED", getCurrentLine(win))
+    end)
+
+    it("deleteLine removes the cursor's line", function()
+      echo(win, "a\nb\nc\n")
+      local before = getLineCount(win)
+      moveCursor(win, 0, 0)
+      deleteLine(win)
+      assert.are.equal(before - 1, getLineCount(win))
+      moveCursor(win, 0, 0)
+      selectCurrentLine(win)
+      assert.are.equal("b", getCurrentLine(win))
+    end)
+  end)
+
+  -- replaceAll wraps the window-less getCurrentLine/selectSection/replace, so
+  -- it only ever operates on the main console's current cursor line
+  describe("replaceAll on the main console", function()
+    it("replaces every occurrence on the cursor's line", function()
+      -- lead with a newline so the sentinel lands on a fresh line regardless of
+      -- any partial line other output left on the shared main console
+      echo("main", "\nuiReadbackReplaceAll aaa aaa aaa end\n")
+      local lineCount = getLineCount()
+      local target
+      for i = lineCount - 1, math.max(0, lineCount - 8), -1 do
+        moveCursor(0, i)
+        selectCurrentLine()
+        if getCurrentLine():find("uiReadbackReplaceAll aaa aaa aaa end", 1, true) then
+          target = i
+          break
+        end
+      end
+      deselect()
+      assert.is_not_nil(target, "sentinel line not found in the main console")
+
+      moveCursor(0, target)
+      replaceAll("aaa", "bbb")
+      moveCursor(0, target)
+      selectCurrentLine()
+      local result = getCurrentLine()
+      deselect()
+      moveCursorEnd()
+
+      -- every "aaa" turned into "bbb", with none left behind
+      assert.is_truthy(result:find("uiReadbackReplaceAll bbb bbb bbb end", 1, true))
+      assert.is_nil(result:find("aaa", 1, true))
+    end)
+
+    it("hard-errors on non-string arguments", function()
+      assert.is_false(pcall(replaceAll, 5, "x"))
+      assert.is_false(pcall(replaceAll, "x", 5))
+    end)
+  end)
+
+  describe("cursor position round-trips", function()
+    local win = "uiReadbackCursor"
+
+    setup(function()
+      createMiniConsole(win, 0, 0, 800, 200)
+      setMiniConsoleFontSize(win, 10)
+      setBackgroundColor(win, 0, 0, 0)
+    end)
+
+    before_each(function()
+      clearWindow(win)
+      moveCursor(win, 0, 0)
+      deselect(win)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(win)
+    end)
+
+    it("moveCursor sets the reported column and line", function()
+      echo(win, "line0\nline1\nline2\n")
+      assert.is_true(moveCursor(win, 2, 1))
+      assert.are.equal(2, getColumnNumber(win))
+      assert.are.equal(1, getLineNumber(win))
+    end)
+
+    it("moveCursor returns false for an out of range line", function()
+      echo(win, "only\n")
+      assert.is_false(moveCursor(win, 0, 999))
+    end)
+
+    it("moveCursorEnd moves the cursor to the buffer end", function()
+      echo(win, "a\nb\nc\n")
+      moveCursor(win, 0, 0)
+      moveCursorEnd(win)
+      assert.are.equal(getLineCount(win), getLineNumber(win))
+    end)
+
+    it("getLineCount reflects the number of echoed lines", function()
+      assert.are.equal(0, getLineCount(win))
+      echo(win, "one\ntwo\nthree\n")
+      assert.are.equal(3, getLineCount(win))
+    end)
+  end)
+
+  describe("wrapping readback", function()
+    local win = "uiReadbackWrap"
+
+    setup(function()
+      createMiniConsole(win, 0, 0, 800, 200)
+      setMiniConsoleFontSize(win, 10)
+      setBackgroundColor(win, 0, 0, 0)
+    end)
+
+    before_each(function()
+      clearWindow(win)
+      moveCursor(win, 0, 0)
+      deselect(win)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(win)
+    end)
+
+    it("setWindowWrap round-trips through getWindowWrap", function()
+      setWindowWrap(win, 42)
+      assert.are.equal(42, getWindowWrap(win))
+    end)
+
+    it("wrapLine re-wraps a long line without losing characters", function()
+      local original = "aaaa bbbb cccc dddd eeee ffff"
+      setWindowWrap(win, 200)
+      echo(win, original .. "\n")
+      assert.are.equal(1, getLineCount(win))
+      setWindowWrap(win, 8)
+      wrapLine(win, 0)
+      -- the line must split, and rejoining the segments (whitespace normalised,
+      -- since wrapping trims/pads at the break points) must give back the text
+      assert.is_true(getLineCount(win) > 1)
+      local lines = getLines(win, 0, getLineCount(win))
+      local rejoined = table.concat(lines):gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+      assert.are.equal(original, rejoined)
+    end)
+
+    -- setWindowWrapIndent sets the first-segment indent; continuation lines use
+    -- the separate setWindowWrapHangingIndent, so only lines[1] is indented here
+    it("setWindowWrapIndent indents the first segment of a wrapped line", function()
+      setWindowWrap(win, 200)
+      echo(win, "aaaa bbbb cccc dddd eeee ffff\n")
+      setWindowWrap(win, 8)
+      setWindowWrapIndent(win, 3)
+      wrapLine(win, 0)
+      local lines = getLines(win, 0, getLineCount(win))
+      assert.is_table(lines)
+      assert.are.equal("   ", lines[1]:sub(1, 3))
+    end)
+  end)
+
+  describe("window primitive contracts", function()
+    -- track created windows so a failed assertion still gets them cleaned up
+    local created = {}
+    local function track(name)
+      created[#created + 1] = name
+      return name
+    end
+
+    after_each(function()
+      for _, name in ipairs(created) do
+        local kind = windowType(name)
+        if kind == "label" then
+          deleteLabel(name)
+        elseif kind then
+          deleteMiniConsole(name)
+        end
+      end
+      created = {}
+    end)
+
+    it("createMiniConsole hard-errors without a name", function()
+      assert.is_false(pcall(createMiniConsole))
+    end)
+
+    it("createMiniConsole then windowType reports miniconsole, delete clears it", function()
+      local name = track("uiReadbackPrimMC")
+      assert.is_true(createMiniConsole(name, 0, 0, 100, 100))
+      assert.are.equal("miniconsole", windowType(name))
+      assert.is_true(deleteMiniConsole(name))
+      assert.is_nil(windowType(name))
+    end)
+
+    it("createLabel hard-errors with only a name", function()
+      assert.is_false(pcall(createLabel, "uiReadbackPrimBadLabel"))
+    end)
+
+    it("createLabel then windowType reports label, delete clears it", function()
+      local name = track("uiReadbackPrimLabel")
+      createLabel(name, 0, 0, 40, 40, 1)
+      assert.are.equal("label", windowType(name))
+      assert.is_true(deleteLabel(name))
+      assert.is_nil(windowType(name))
+    end)
+
+    it("clearWindow empties a console", function()
+      local name = track("uiReadbackPrimClear")
+      createMiniConsole(name, 0, 0, 200, 100)
+      echo(name, "a\nb\nc\n")
+      assert.is_true(getLineCount(name) > 0)
+      clearWindow(name)
+      assert.are.equal(0, getLineCount(name))
+    end)
+
+    it("setBackgroundColor round-trips through getBackgroundColor", function()
+      local name = track("uiReadbackPrimBg")
+      createMiniConsole(name, 0, 0, 100, 100)
+      assert.is_true(setBackgroundColor(name, 10, 20, 30, 255))
+      local r, g, b, a = getBackgroundColor(name)
+      assert.are.same({10, 20, 30, 255}, {r, g, b, a})
+    end)
+
+    it("setBackgroundColor rejects an out of range component", function()
+      local name = track("uiReadbackPrimBg2")
+      createMiniConsole(name, 0, 0, 100, 100)
+      local ok, err = setBackgroundColor(name, 300, 0, 0)
+      assert.is_nil(ok)
+      assert.are.equal("red value 300 needs to be between 0-255", err)
+    end)
+
+    it("setBackgroundColor reports an unknown window", function()
+      local ok, err = setBackgroundColor("uiReadbackNoSuchWindow", 1, 2, 3)
+      assert.is_nil(ok)
+      assert.are.equal("window/label 'uiReadbackNoSuchWindow' not found", err)
+    end)
+
+    it("getBackgroundColor reports an unknown window", function()
+      local ok, err = getBackgroundColor("uiReadbackNoSuchWindow")
+      assert.is_nil(ok)
+      assert.are.equal("window 'uiReadbackNoSuchWindow' does not exist", err)
+    end)
+
+    it("setMiniConsoleFontSize and setFontSize reject sizes of zero or less", function()
+      local name = track("uiReadbackPrimFont")
+      createMiniConsole(name, 0, 0, 100, 100)
+      local ok, err = setMiniConsoleFontSize(name, 0)
+      assert.is_nil(ok)
+      assert.are.equal("size cannot be 0 or negative", err)
+      local ok2, err2 = setFontSize(name, -5)
+      assert.is_nil(ok2)
+      assert.are.equal("size cannot be 0 or negative", err2)
+    end)
+
+    it("getCurrentLine returns the legacy error string for an unknown window", function()
+      -- kept for bug compatibility: a string, not nil, plus a second message
+      local first, second = getCurrentLine("uiReadbackNoSuchWindow")
+      assert.are.equal("ERROR: mini console does not exist", first)
+      assert.is_string(second)
+    end)
+  end)
+
+  -- these all resolve their window through the shared CONSOLE macro, which
+  -- returns nil plus a 'window "..." not found' message for an unknown name.
+  -- Each is called with otherwise-valid arguments so the lookup is what fails.
+  describe("unknown-window contracts", function()
+    local badWindowCalls = {
+      {name = "getLineCount", call = function() return getLineCount("uiReadbackNoWin") end},
+      {name = "getWindowWrap", call = function() return getWindowWrap("uiReadbackNoWin") end},
+      {name = "getColumnNumber", call = function() return getColumnNumber("uiReadbackNoWin") end},
+      {name = "getLineNumber", call = function() return getLineNumber("uiReadbackNoWin") end},
+      {name = "moveCursor", call = function() return moveCursor("uiReadbackNoWin", 0, 0) end},
+      {name = "moveCursorEnd", call = function() return moveCursorEnd("uiReadbackNoWin") end},
+      {name = "insertText", call = function() return insertText("uiReadbackNoWin", "x") end},
+      {name = "deleteLine", call = function() return deleteLine("uiReadbackNoWin") end},
+      {name = "setWindowWrap", call = function() return setWindowWrap("uiReadbackNoWin", 5) end},
+      {name = "setBold", call = function() return setBold("uiReadbackNoWin", true) end},
+      {name = "resetFormat", call = function() return resetFormat("uiReadbackNoWin") end},
+      {name = "setLink", call = function() return setLink("uiReadbackNoWin", [[echo("x")]], "tip") end},
+      {name = "copy", call = function() return copy("uiReadbackNoWin") end},
+      {name = "appendBuffer", call = function() return appendBuffer("uiReadbackNoWin") end},
+    }
+
+    for _, entry in ipairs(badWindowCalls) do
+      it(entry.name .. " returns nil and a not-found message for an unknown window", function()
+        local ok, err = entry.call()
+        assert.is_nil(ok)
+        assert.are.equal('window "uiReadbackNoWin" not found', err)
+      end)
+    end
+  end)
+
+  describe("copy, paste and appendBuffer move text between consoles", function()
+    local src = "uiReadbackClipSrc"
+    local dst = "uiReadbackClipDst"
+
+    setup(function()
+      createMiniConsole(src, 0, 0, 400, 100)
+      createMiniConsole(dst, 0, 110, 400, 100)
+    end)
+
+    before_each(function()
+      clearWindow(src)
+      clearWindow(dst)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(src)
+      deleteMiniConsole(dst)
+    end)
+
+    it("appendBuffer appends the copied selection, keeping text and colour", function()
+      decho(src, "<255,0,0:0,0,0>copytext\n")
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      assert.are.equal(0, getLineCount(dst))
+      appendBuffer(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.is_table(lines)
+      assert.are.equal("copytext", lines[1])
+      -- copy carries formatting, not just text
+      moveCursor(dst, 0, 0)
+      selectSection(dst, 0, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+    end)
+
+    it("paste places the copied selection at the target cursor", function()
+      echo(src, "pastetext\n")
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      paste(dst)
+      moveCursor(dst, 0, 0)
+      selectCurrentLine(dst)
+      assert.are.equal("pastetext", getCurrentLine(dst))
+    end)
+  end)
+end)
+
+-- Window state getters: getWindowGeometry, windowVisible, getLabelText.
+-- Self-contained top-level block kept at the tail of the file; do not
+-- interleave it with the "Tests UI functions" block above.
+describe("Window state getters", function()
+  -- Unique-ish names so repeat runs against the same profile do not collide:
+  -- user windows cannot be deleted from Lua, only hidden.
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local labelName = "wsgLabel" .. suffix
+  local consoleName = "wsgConsole" .. suffix
+  local scrollBoxName = "wsgScrollBox" .. suffix
+  local cmdLineName = "wsgCmdLine" .. suffix
+  local textEditName = "wsgTextEdit" .. suffix
+  local userWindowName = "wsgUserWindow" .. suffix
+  -- a label parented inside the user window, to probe ancestor-aware visibility
+  local childLabelName = "wsgChildLabel" .. suffix
+
+  setup(function()
+    createLabel(labelName, 10, 20, 100, 50, 1)
+    createMiniConsole(consoleName, 30, 40, 300, 150)
+    createScrollBox(scrollBoxName, 60, 70, 120, 90)
+    createCommandLine(cmdLineName, 15, 25, 140, 35)
+    createTextEdit(textEditName, 45, 55, 160, 110)
+    openUserWindow(userWindowName)
+    createLabel(userWindowName, childLabelName, 5, 5, 40, 20, 1)
+  end)
+
+  before_each(function()
+    -- restore baseline geometry and visibility so one failing spec cannot
+    -- cascade into later specs (busted runs specs in definition order)
+    moveWindow(labelName, 10, 20)
+    resizeWindow(labelName, 100, 50)
+    moveWindow(consoleName, 30, 40)
+    resizeWindow(consoleName, 300, 150)
+    for _, name in ipairs({labelName, consoleName, scrollBoxName, cmdLineName, textEditName, userWindowName}) do
+      showWindow(name)
+    end
+  end)
+
+  teardown(function()
+    deleteLabel(childLabelName)
+    deleteLabel(labelName)
+    deleteMiniConsole(consoleName)
+    deleteScrollBox(scrollBoxName)
+    deleteCommandLine(cmdLineName)
+    deleteTextEdit(textEditName)
+    -- user windows cannot be deleted from Lua, so just hide it again
+    hideWindow(userWindowName)
+  end)
+
+  describe("getWindowGeometry", function()
+    it("returns a label's position and size as x, y, width, height", function()
+      local x, y, w, h = getWindowGeometry(labelName)
+      assert.are.equal(10, x)
+      assert.are.equal(20, y)
+      assert.are.equal(100, w)
+      assert.are.equal(50, h)
+    end)
+
+    it("returns a miniconsole's position and size", function()
+      local x, y, w, h = getWindowGeometry(consoleName)
+      assert.are.equal(30, x)
+      assert.are.equal(40, y)
+      assert.are.equal(300, w)
+      assert.are.equal(150, h)
+    end)
+
+    it("returns a scroll box's position and size", function()
+      local x, y, w, h = getWindowGeometry(scrollBoxName)
+      assert.are.equal(60, x)
+      assert.are.equal(70, y)
+      assert.are.equal(120, w)
+      assert.are.equal(90, h)
+    end)
+
+    it("returns a command line's position and size", function()
+      local x, y, w, h = getWindowGeometry(cmdLineName)
+      assert.are.equal(15, x)
+      assert.are.equal(25, y)
+      assert.are.equal(140, w)
+      assert.are.equal(35, h)
+    end)
+
+    it("returns a text edit's position and size", function()
+      local x, y, w, h = getWindowGeometry(textEditName)
+      assert.are.equal(45, x)
+      assert.are.equal(55, y)
+      assert.are.equal(160, w)
+      assert.are.equal(110, h)
+    end)
+
+    it("reflects moveWindow on a label", function()
+      moveWindow(labelName, 55, 66)
+      local x, y = getWindowGeometry(labelName)
+      assert.are.equal(55, x)
+      assert.are.equal(66, y)
+    end)
+
+    it("reflects resizeWindow on a miniconsole", function()
+      resizeWindow(consoleName, 321, 123)
+      local _, _, w, h = getWindowGeometry(consoleName)
+      assert.are.equal(321, w)
+      assert.are.equal(123, h)
+    end)
+
+    it("reflects resizeWindow on a user window", function()
+      -- read back through the dock widget; size() is the exact inverse of
+      -- resize() and does not depend on the window manager honouring a move
+      resizeWindow(userWindowName, 400, 200)
+      local _, _, w, h = getWindowGeometry(userWindowName)
+      assert.are.equal(400, w)
+      assert.are.equal(200, h)
+    end)
+
+    it("returns nil and a message naming an unknown window", function()
+      local result, err = getWindowGeometry("wsgNoSuchWindow")
+      assert.is_nil(result)
+      assert.are.equal("string", type(err))
+      assert.is_truthy(err:find("wsgNoSuchWindow", 1, true))
+    end)
+
+    it("returns nil and a message for the main window", function()
+      -- mirrors moveWindow/resizeWindow, which likewise do not act on "main"
+      local result, err = getWindowGeometry("main")
+      assert.is_nil(result)
+      assert.are.equal("string", type(err))
+    end)
+
+    it("errors when called without a window name", function()
+      assert.has_error(function() getWindowGeometry() end)
+    end)
+  end)
+
+  describe("windowVisible", function()
+    it("reflects hideWindow then showWindow on a label", function()
+      assert.is_true(windowVisible(labelName))
+      hideWindow(labelName)
+      assert.is_false(windowVisible(labelName))
+      showWindow(labelName)
+      assert.is_true(windowVisible(labelName))
+    end)
+
+    it("reflects hideWindow then showWindow on a miniconsole", function()
+      assert.is_true(windowVisible(consoleName))
+      hideWindow(consoleName)
+      assert.is_false(windowVisible(consoleName))
+      showWindow(consoleName)
+      assert.is_true(windowVisible(consoleName))
+    end)
+
+    it("reflects hideWindow then showWindow on a scroll box", function()
+      assert.is_true(windowVisible(scrollBoxName))
+      hideWindow(scrollBoxName)
+      assert.is_false(windowVisible(scrollBoxName))
+      showWindow(scrollBoxName)
+      assert.is_true(windowVisible(scrollBoxName))
+    end)
+
+    it("reflects hideWindow then showWindow on a command line", function()
+      assert.is_true(windowVisible(cmdLineName))
+      hideWindow(cmdLineName)
+      assert.is_false(windowVisible(cmdLineName))
+      showWindow(cmdLineName)
+      assert.is_true(windowVisible(cmdLineName))
+    end)
+
+    it("reflects hideWindow then showWindow on a user window", function()
+      assert.is_true(windowVisible(userWindowName))
+      hideWindow(userWindowName)
+      assert.is_false(windowVisible(userWindowName))
+      showWindow(userWindowName)
+      assert.is_true(windowVisible(userWindowName))
+    end)
+
+    it("reports a child hidden by its user window as not visible", function()
+      -- windowVisible reflects effective (ancestor-aware) visibility: hiding
+      -- the parent user window hides the child even though the child itself
+      -- was never hidden
+      assert.is_true(windowVisible(childLabelName))
+      hideWindow(userWindowName)
+      assert.is_false(windowVisible(childLabelName))
+      showWindow(userWindowName)
+      assert.is_true(windowVisible(childLabelName))
+    end)
+
+    it("returns nil and a message naming an unknown window", function()
+      local result, err = windowVisible("wsgNoSuchWindow")
+      assert.is_nil(result)
+      assert.are.equal("string", type(err))
+      assert.is_truthy(err:find("wsgNoSuchWindow", 1, true))
+    end)
+
+    it("returns nil and a message for the main window", function()
+      local result, err = windowVisible("main")
+      assert.is_nil(result)
+      assert.are.equal("string", type(err))
+    end)
+
+    it("errors when called without a window name", function()
+      assert.has_error(function() windowVisible() end)
+    end)
+  end)
+
+  describe("getLabelText", function()
+    it("returns text set on a label via echo", function()
+      echo(labelName, "hello label")
+      assert.are.equal("hello label", getLabelText(labelName))
+    end)
+
+    it("round-trips updated label text", function()
+      echo(labelName, "first")
+      assert.are.equal("first", getLabelText(labelName))
+      echo(labelName, "second")
+      assert.are.equal("second", getLabelText(labelName))
+    end)
+
+    it("returns nil and a message naming an unknown label", function()
+      local result, err = getLabelText("wsgNoSuchLabel")
+      assert.is_nil(result)
+      assert.are.equal("string", type(err))
+      assert.is_truthy(err:find("wsgNoSuchLabel", 1, true))
+    end)
+
+    it("returns nil and a message for a non-label window", function()
+      local result, err = getLabelText(consoleName)
+      assert.is_nil(result)
+      assert.are.equal("string", type(err))
+    end)
+
+    it("errors when called without a label name", function()
+      assert.has_error(function() getLabelText() end)
+    end)
+  end)
 end)

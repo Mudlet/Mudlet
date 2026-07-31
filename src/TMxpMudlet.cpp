@@ -105,7 +105,7 @@ TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult re
 {
     if (tag->isStartTag()) {
         if (context.getElementRegistry().containsElement(tag->getName())) {
-            enqueueMxpEvent(tag->asStartTag());
+            enqueueMxpEvent(tag->asStartTag(), context.getElementRegistry().getElement(tag->getName()));
         } else if (tag->isNamed("SEND")) {
             // send events are queued on closing tag so the caption is available
             TMxpEvent event;
@@ -123,12 +123,26 @@ TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult re
     return result;
 }
 
-void TMxpMudlet::enqueueMxpEvent(MxpStartTag* tag)
+void TMxpMudlet::enqueueMxpEvent(MxpStartTag* tag, const TMxpElement& element)
 {
     TMxpEvent mxpEvent;
     mxpEvent.name = tag->getName();
     for (const auto& attrName : tag->getAttributesNames()) {
         mxpEvent.attrs[attrName] = tag->getAttributeValue(attrName);
+    }
+    // Also resolve the element's declared (ATT) attribute names - like
+    // TMxpCustomElementTagHandler::parseFlagAttributes() does - so a
+    // positional token like <RMob "Urthguk"> is reachable under a stable,
+    // case-preserving key: mxp.rmob.name = "Urthguk" for ATT="Name"
+    for (int i = 0, total = element.attrs.size(); i < total; ++i) {
+        const QString& attrName = element.attrs.at(i);
+        if (tag->hasAttribute(attrName)) {
+            mxpEvent.attrs[attrName] = tag->getAttributeValue(attrName);
+        } else if (tag->getAttributesCount() > i) {
+            mxpEvent.attrs[attrName] = tag->getAttribute(i).getName();
+        } else if (element.defaultValues.contains(attrName)) {
+            mxpEvent.attrs[attrName] = element.defaultValues.value(attrName);
+        }
     }
     mxpEvent.actions = getLinkStore().getCurrentLinks();
     mxpEvent.caption.clear();

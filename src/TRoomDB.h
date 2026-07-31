@@ -39,6 +39,7 @@ extern const QString ROOM_UI_SHOWNAME;
 extern const QString ROOM_UI_NAMEPOS;
 extern const QString ROOM_UI_NAMEFONT;  // global only
 extern const QString ROOM_UI_NAMESIZE;  // TODO
+extern const QString ROOM_UI_NAMECOLOR;
 extern const QString ROOM_UI_BORDERCOLOR;
 extern const QString ROOM_UI_BORDERTHICKNESS;
 
@@ -104,6 +105,7 @@ private:
     TRoomDB() = default;
 
     int createNewAreaID();
+    void deleteDisplacedArea(int, TArea*);
     bool __removeRoom(int id);
     void setAreaRooms(int, const QSet<int>&); // Used by XMLImport to fix rooms data after import
 

@@ -22,6 +22,8 @@
 #include <VarUnit.h>
 #include <QtTest/QtTest>
 
+#include <memory>
+
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
 #include <lua5.1/lauxlib.h>
@@ -35,12 +37,13 @@ extern "C" {
 }
 
 
-class TVariableEditorTest : public QObject {
+class TVariableEditorTest : public QObject
+{
     Q_OBJECT
 
 private:
     lua_State* L = nullptr;
-    LuaInterface* interface = nullptr;
+    std::unique_ptr<LuaInterface> interface;
 
     void execLua(const QString& code)
     {
@@ -107,12 +110,12 @@ private slots:
     {
         L = luaL_newstate();
         luaL_openlibs(L);
-        interface = new LuaInterface(L);
+        interface = std::make_unique<LuaInterface>(L);
     }
 
     void cleanup()
     {
-        delete interface;
+        interface.reset();
         lua_close(L);
     }
 

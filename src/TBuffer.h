@@ -46,6 +46,10 @@
 #include <string>
 
 class Host;
+class QJsonArray;
+class QJsonObject;
+class QRegularExpression;
+class QTimer;
 class TConsole;
 
 class WrapInfo
@@ -288,10 +292,10 @@ class TBuffer
 
     static inline const int TCHAR_IN_BYTES = sizeof(TChar);
 
+public:
     // limit on how many characters a single echo can accept for performance reasons
     static inline const int MAX_CHARACTERS_PER_ECHO = 1000000;
 
-public:
     explicit TBuffer(Host* pH, TConsole* pConsole = nullptr);
     ~TBuffer();
     TBuffer(const TBuffer& other);
@@ -301,12 +305,16 @@ public:
     void expandLine(int y, int count, TChar&);
     int wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize);
     void log(int, int);
+    QString assembleLog(int fromLine, int toLine);
     inline int skipSpacesAtBeginOfLine(const int row, const int column);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference = QVector<int>());
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0, int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
     bool isEmpty() const { return buffer.size() == 0; }
     QString& line(int lineNumber);
+    // Colors of the current trigger-pass line as committed, before any
+    // trigger ran; nullptr when lineNumber is not the line being processed:
+    const std::deque<TChar>* preTriggerPassLine(int lineNumber) const;
     int find(int line, const QString& what, int pos);
     QStringList split(int line, const QString& splitter);
     QStringList split(int line, const QRegularExpression& splitter);
@@ -327,6 +335,9 @@ public:
     void clearLastLine();
     QPoint getEndPos();
     void translateToPlainText(std::string& incoming, bool isFromServer = false);
+    // Commits a line held back by the server-wrap undoing (Host::mUndoServerWrap)
+    // - public so that the connection teardown can flush it:
+    void flushPendingServerWrapJoin();
     void flushPendingDestinationContent();
     void resetCurrentTextFormat();
     void append(const QString& chunk, int sub_start, int sub_end, const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
@@ -383,8 +394,11 @@ public:
 private:
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
+    void syncPreTriggerPassLine(int y);
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
+    void translateToPlainTextInner(std::string& incoming, bool isFromServer);
+    void swapParserSequenceState();
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
@@ -394,7 +408,13 @@ private:
     void decodeSGR48(const QStringList&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
     void resetColors();
-    bool commitLine(char ch, size_t& localBufferPosition);
+    bool commitLine(char ch, size_t& localBufferPosition, bool isFromServer = false, bool forcedLineBreak = false);
+    void commitLineData(QString line, std::deque<TChar> chars, char ch);
+    bool endsAtServerWrapColumn() const;
+    bool looksLikeWrappedProse(const QString& line) const;
+    void joinPendingServerWrapOntoCurrent();
+    void startServerWrapFlushTimer();
+    void recordLineLengthForWrapDetection(qsizetype length);
     void processMxpWatchdogCallback();
     TChar::AttributeFlags computeCurrentAttributeFlags() const;
 
@@ -434,6 +454,10 @@ private:
     // Second stage in decoding OSC sequences - set true when we see the ASCII
     // ESC character followed by the ']' one:
     bool mGotOSC = false;
+    // Set alongside mGotOSC for the other ANSI string sequences (DCS, SOS, PM
+    // and APC, i.e. ESC followed by 'P', 'X', '^' or '_' respectively) whose
+    // payload must be consumed up to the terminator but not decoded:
+    bool mGotString = false;
     bool mIsDefaultColor = true;
 
 
@@ -483,6 +507,21 @@ private:
 
     QString mMudLine;
     std::deque<TChar> mMudBuffer;
+    std::deque<TChar> mPreTriggerPassLine;
+    int mPreTriggerPassLineNumber = -1;
+    // A line that ended at the game's own wrap column (Host::mUndoServerWrap)
+    // is held here instead of being committed, so its continuation can be
+    // joined back on and triggers run once over the whole logical line:
+    QString mServerWrapPendingLine;
+    std::deque<TChar> mServerWrapPendingBuffer;
+    // Commits a held line if the game goes quiet without completing it - a
+    // full-width line that really was the end of the output:
+    QPointer<QTimer> mpServerWrapFlushTimer;
+    // Line length statistics used to detect that a game wraps its own output
+    // even though Host::mUndoServerWrap is off, to hint the option exists;
+    // keyed by line length, value is how often that length was seen:
+    QMap<qsizetype, int> mWrapDetectCounts;
+    int mWrapDetectSamples = 0;
     // Used to hold the unprocessed bytes that could be left at the end of a
     // packet if we detect that there should be more - will be prepended to the
     // next chunk of data - PROVIDED it is flagged as coming from the MUD Server
@@ -490,11 +529,31 @@ private:
     // translateToPlainText()}:
     std::string mIncompleteSequenceBytes;
 
+    // The parser sequence state (mGotESC, mGotCSI, mGotOSC, mGotString and
+    // mIncompleteSequenceBytes) for whichever of the two data channels - Game
+    // Server stream or locally generated text - is not currently being
+    // processed; translateToPlainText() swaps it in around a local feed so
+    // that such text cannot consume or clear a latch belonging to a sequence
+    // split across Game Server packets (and vice versa):
+    bool mLocalGotESC = false;
+    bool mLocalGotCSI = false;
+    bool mLocalGotOSC = false;
+    bool mLocalGotString = false;
+    std::string mLocalIncompleteSequenceBytes;
+    // Set whilst a locally generated feed is being processed, so a nested feed
+    // (e.g. an MXP <HR> inside locally fed text) does not swap the state again:
+    bool mProcessingLocalFeed = false;
+
     // keeps track of the previously logged buffer lines to ensure no log duplication
     // happens when you enter a command
     int lastLoggedFromLine = 0;
     int lastloggedToLine = 0;
     QString lastTextToLog;
+    // indices of lines being committed while their triggers run - a stack,
+    // because a trigger calling feedTriggers() re-enters commitLine();
+    // deleteLines() adjusts the entries so commitLine() can tell whether its
+    // line survived trigger processing
+    QList<int> mCommitLineIndices;
 
     QByteArray mEncoding;
 
@@ -532,6 +591,19 @@ private:
 
     // Flag to skip trigger processing during documentation injection
     bool mSkipTriggerProcessing = false;
+
+    // Server wrap undoing: a line no shorter than this many characters below
+    // the configured wrap column is considered a wrapped segment (the game
+    // breaks at the last space, so segments fall a partial word short):
+    static constexpr int csmServerWrapSlack = 15;
+    // Stop joining once a logical line has grown this long - a runaway guard:
+    static constexpr qsizetype csmServerWrapMaxJoinedLength = 10000;
+    // How long to hold a full-width line for its continuation before deciding
+    // it really was complete:
+    static constexpr int csmServerWrapFlushDelayMs = 300;
+    // Wrap detection hint: how many lines ending within 8 characters of a
+    // stable ceiling column are needed before suggesting mUndoServerWrap:
+    static constexpr int csmWrapDetectThreshold = 40;
 
     // Timestamp to prevent duplicate OSC 8 documentation injection
     qint64 mLastOSC8DocsInjectionTime = 0;

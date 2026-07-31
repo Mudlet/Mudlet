@@ -140,10 +140,12 @@ public slots:
     void slot_guiLanguageChanged(const QString&);
 
 private slots:
+    void slot_forgetSavedSignIn();
     void slot_changeShowSpacesAndTabs(bool);
     void slot_changeShowLineFeedsAndParagraphs(bool);
     void slot_scriptSelected(int index);
     void slot_tabChanged(int tabIndex);
+    void slot_showNewFeatureCallouts();
     void slot_themeSelected(int index);
     void slot_setMapSymbolFont(const QFont&);
     void slot_setMapSymbolFontStrategy(bool);
@@ -157,6 +159,9 @@ private slots:
     void slot_setTreeWidgetIconSize(const int);
     void slot_changeMenuBarVisibility(const enums::controlsVisibility);
     void slot_changeToolBarVisibility(const enums::controlsVisibility);
+    // Greys out the "Never" entry in the other toolbar-visibility comboBox so
+    // both bars cannot be hidden simultaneously (issue #7079).
+    void slot_syncMenuToolBarNeverItem();
     void slot_changeShowIconsOnMenus(const Qt::CheckState);
     void slot_changeGuiLanguage(int);
     void slot_passwordStorageLocationChanged(int);
@@ -211,6 +216,9 @@ private:
     void addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items);
     void initWithHost(Host*);
+    QString certificateWarningCheckBoxStyle() const;
+    QString certificateWarningLabelStyle() const;
+    void restyleCertificateWarnings();
     void disableHostDetails();
     void enableHostDetails();
     void clearHostDetails();
@@ -223,6 +231,7 @@ private:
     void fillOutMapHistory();
     bool updateDisplayFont();
     void cancelShortcutCaptures();
+    void updateShortcutConflictWarning();
     void switchEditorTheme(const QString& themeName);
     static QString findThemeCounterpart(const QString& themeName, const QComboBox* themeComboBox, bool toDark);
 

@@ -152,30 +152,36 @@ end
 
 
 --- Table of functions used by permGroup to create the appropriate group, based on itemtype.
+--- Each perm* binding raises a Lua error on failure (for example a missing parent)
+--- rather than returning -1, so permGroup pcalls these and turns a raised error
+--- into a false return.
 local group_creation_functions = {
   timer = function(name, parent)
-    return not (permTimer(name, parent, 0, "") == -1)
+    return permTimer(name, parent, 0, "")
   end,
   trigger = function(name, parent)
-    return not (permSubstringTrigger(name, parent, {}, "") == -1)
+    return permSubstringTrigger(name, parent, {}, "")
   end,
   alias = function(name, parent)
-    return not (permAlias(name, parent, "", "") == -1)
+    return permAlias(name, parent, "", "")
   end,
   key = function(name, parent)
-    return not (permKey(name, parent, -1, "") == -1)
+    return permKey(name, parent, -1, "")
   end,
   script = function(name, parent)
-    return not (permScript(name, parent, "", "") == -1)
+    return permScript(name, parent, "", "")
   end
 }
 
 --- Creates a group of a given type that will persist through sessions.
 ---
 --- @param name name of the item
---- @param itemtype type of the item - can be trigger, alias, or timer
+--- @param itemtype type of the item - can be trigger, alias, timer, key, or script
 --- @param parent optional name of existing item which the new item
 ---   will be created as a child of
+---
+--- @return true on success, or false plus an error message if the item could
+---   not be created (for example when the named parent does not exist)
 ---
 --- @usage
 --- <pre>
@@ -193,7 +199,11 @@ function permGroup(name, itemtype, parent)
   assert(type(name) == "string", "permGroup: need a name for the new thing")
   parent = parent or ""
   assert(group_creation_functions[itemtype], "permGroup: " .. tostring(itemtype) .. " isn't a valid type")
-  return group_creation_functions[itemtype](name, parent)
+  local ok, err = pcall(group_creation_functions[itemtype], name, parent)
+  if not ok then
+    return false, err
+  end
+  return true
 end
 
 --- Appends code to an existing script
@@ -1265,6 +1275,7 @@ function getConfig(...)
       "enableMSSP",
       "enableMTTS",
       "enableMXP",
+      "enableNAWS",
       "f3SearchEnabled",
       "fixUnnecessaryLinebreaks",
       "forceNewEnvironNegotiationOff",
@@ -1292,6 +1303,8 @@ function getConfig(...)
       "specialForceGAOff",
       "specialForceMxpNegotiationOff",
       "specialForceMXPProcessorOn",      -- read-only in getConfig
+      "undoServerWrap",
+      "undoServerWrapWidth",
       "versionInTTYPE",
     }
     for _,v in ipairs(list) do

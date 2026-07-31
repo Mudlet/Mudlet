@@ -65,7 +65,7 @@ public:
 
     // Callback types for asynchronous operations
     using CredentialCallback = std::function<void(bool success, const QString& errorMessage)>;
-    using CredentialRetrievalCallback = std::function<void(bool success, const QString& password, const QString& errorMessage)>;
+    using CredentialRetrievalCallback = std::function<void(bool success, QString password, const QString& errorMessage)>;
     using AvailabilityCallback = std::function<void(bool available, const QString& message)>;
 
     // Hybrid password management methods (preferred public API)
@@ -73,6 +73,10 @@ public:
     void storePassword(const QString& profileName, const QString& key, const QString& password, CredentialCallback callback);
     void retrievePassword(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
     void removePassword(const QString& profileName, const QString& key, CredentialCallback callback);
+    // Existence check that never hands the stored secret to the caller. QtKeychain has no metadata-only
+    // lookup, so this reads the credential internally but forwards only whether one exists (scrubbing the
+    // retrieved value), so callers such as UI code need not materialize the secret just to test presence.
+    void credentialExists(const QString& profileName, const QString& key, std::function<void(bool exists)> callback);
 
     // Static fallback methods (for migration and test cleanup - uses encrypted file storage)
     static bool storeCredential(const QString& profileName, const QString& key, const QString& credential);
@@ -85,6 +89,8 @@ private:
     void storeCredential(const QString& service, const QString& account, const QString& password, const QString& profileName, CredentialCallback callback);
     void retrieveCredential(const QString& service, const QString& account, const QString& profileName, CredentialRetrievalCallback callback);
     void removeCredential(const QString& service, const QString& account, const QString& profileName, CredentialCallback callback);
+    // Combines the keychain delete outcome(s) with the file-fallback removal and reports the result
+    void finishRemoveCredential(const QString& account, const QString& profileName, bool keychainSuccess, const QString& keychainError);
 
     // Check if QtKeychain is available and working (asynchronous)
     void isKeychainAvailable(AvailabilityCallback callback);
@@ -122,6 +128,7 @@ private:
     void attemptCollidingMigration(const QString& profileName, const QString& key, const QString& legacyService, const QString& password, CredentialRetrievalCallback callback);
     void attemptLegacyKeychainMigration(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
     void attemptOldFormatMigration(const QString& service, const QString& account, const QString& profileName, CredentialRetrievalCallback callback);
+    void attemptCompatNamingMigration(const QString& service, const QString& account, const QString& profileName, CredentialRetrievalCallback callback);
     void fallbackFileRetrieval(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
 
     // Current operation state
