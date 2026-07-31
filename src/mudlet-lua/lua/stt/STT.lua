@@ -107,8 +107,10 @@ end
 
 --- List available Vosk models.
 -- @return table array of model info tables
+-- Deliberately not gated on STT.isAvailable(): listing models is a filesystem
+-- scan, so downloaded models stay visible even when the Vosk library is missing.
 function STT.listModels()
-  if not STT.isAvailable() then
+  if not (stt and stt.listModels) then
     return {}
   end
   return stt.listModels()
