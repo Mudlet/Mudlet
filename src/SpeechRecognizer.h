@@ -81,7 +81,21 @@ public:
     // Convenience methods
     bool isListening() const { return state() == State::Listening; }
     bool isReady() const { return state() == State::Ready; }
-    bool isInitialized() const { auto s = state(); return s != State::Uninitialized && s != State::Error; }
+    bool isInitialized() const { return state() != State::Uninitialized && state() != State::Error; }
+
+    // Whether the backend currently holds live native resources (e.g. handles
+    // into a dynamically-loaded library) that must be released before that
+    // library can be safely unloaded. Defaults to false for backends with no
+    // such resources.
+    virtual bool hasLiveNativeResources() const { return false; }
+
+    // Release any native resources held by the backend and return to an
+    // uninitialized state. Default is a no-op for backends holding nothing.
+    virtual void releaseResources() {}
+
+    // Path of the model the backend is currently working from. Empty when the
+    // backend has never been given one, or has no concept of a model on disk.
+    virtual QString modelPath() const { return QString(); }
 
     // === Language/Model Support ===
 

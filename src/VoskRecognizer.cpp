@@ -115,19 +115,7 @@ bool VoskRecognizer::loadVoskLibrary()
 
     if (!sVoskLibrary.load()) {
         // Try common installation paths
-        QStringList searchPaths;
-
-#if defined(Q_OS_MACOS)
-        searchPaths << QStringLiteral("/usr/local/lib/libvosk.dylib") << QStringLiteral("/opt/homebrew/lib/libvosk.dylib")
-                    << QCoreApplication::applicationDirPath() + QStringLiteral("/../Frameworks/libvosk.dylib");
-#elif defined(Q_OS_WIN)
-        // Vosk releases include libvosk.dll (with "lib" prefix)
-        searchPaths << QCoreApplication::applicationDirPath() + QStringLiteral("/libvosk.dll");
-#else
-        searchPaths << QStringLiteral("/usr/lib/libvosk.so") << QStringLiteral("/usr/local/lib/libvosk.so") << QStringLiteral("/usr/lib/x86_64-linux-gnu/libvosk.so");
-#endif
-
-        for (const QString& path : searchPaths) {
+        for (const QString& path : librarySearchPaths()) {
             sVoskLibrary.setFileName(path);
             if (sVoskLibrary.load()) {
                 break;
@@ -215,17 +203,25 @@ void VoskRecognizer::resetLibraryLoadState()
     s_vosk_recognizer_set_words = nullptr;
 }
 
+QString VoskRecognizer::userLibraryPath()
+{
+    return mudlet::getMudletPath(enums::mainDataItemPath, qsl("vosk-lib"));
+}
+
 QStringList VoskRecognizer::librarySearchPaths()
 {
     QStringList paths;
 
 #if defined(Q_OS_MACOS)
+    paths << QDir(userLibraryPath()).filePath(qsl("libvosk.dylib"));
     paths << QStringLiteral("/usr/local/lib/libvosk.dylib") << QStringLiteral("/opt/homebrew/lib/libvosk.dylib")
           << QCoreApplication::applicationDirPath() + QStringLiteral("/../Frameworks/libvosk.dylib");
 #elif defined(Q_OS_WIN)
+    paths << QDir(userLibraryPath()).filePath(qsl("libvosk.dll"));
     // Vosk releases include libvosk.dll (with "lib" prefix)
     paths << QCoreApplication::applicationDirPath() + QStringLiteral("/libvosk.dll");
 #else
+    paths << QDir(userLibraryPath()).filePath(qsl("libvosk.so"));
     paths << QStringLiteral("/usr/lib/libvosk.so") << QStringLiteral("/usr/local/lib/libvosk.so") << QStringLiteral("/usr/lib/x86_64-linux-gnu/libvosk.so");
 #endif
 
@@ -855,6 +851,12 @@ void VoskRecognizer::releaseVoskResources()
         s_vosk_model_free(mVoskModel);
         mVoskModel = nullptr;
     }
+}
+
+void VoskRecognizer::releaseResources()
+{
+    releaseVoskResources();
+    setState(State::Uninitialized);
 }
 
 void VoskRecognizer::setState(State newState)

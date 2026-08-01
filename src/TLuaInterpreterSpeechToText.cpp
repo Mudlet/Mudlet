@@ -31,6 +31,26 @@
 
 #include <QDir>
 
+// Lowercase, script-friendly name for a recognizer state. Kept separate from
+// the Q_ENUM name so that Lua sees a stable identifier regardless of how the
+// enumerators are spelled in C++.
+static const char* speechRecognizerStateName(const SpeechRecognizer::State state)
+{
+    switch (state) {
+    case SpeechRecognizer::State::Ready:
+        return "ready";
+    case SpeechRecognizer::State::Listening:
+        return "listening";
+    case SpeechRecognizer::State::Processing:
+        return "processing";
+    case SpeechRecognizer::State::Error:
+        return "error";
+    case SpeechRecognizer::State::Uninitialized:
+        break;
+    }
+    return "uninitialized";
+}
+
 // stt.init([modelPath])
 // Initialize speech recognition with a language model.
 // modelPath is optional - falls back to SpeechRecognizerFactory::defaultModelPath().
@@ -209,7 +229,8 @@ int TLuaInterpreter::sttIsInitialized(lua_State* L)
 
 // stt.getInfo()
 // Get information about the speech recognition backend.
-// Returns a table with: backend, version, available, initialized, listening
+// Returns a table with: backend, version, available, initialized, listening,
+// state, language, modelPath, searchPaths
 int TLuaInterpreter::sttGetInfo(lua_State* L)
 {
     auto* pMudlet = mudlet::self();
@@ -248,6 +269,18 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
             lua_pushstring(L, "language");
             lua_pushstring(L, pRecognizer->currentLanguage().toUtf8().constData());
             lua_settable(L, -3);
+
+            // Engine state, which distinguishes Error from Uninitialized -
+            // both of which report initialized == false
+            lua_pushstring(L, "state");
+            lua_pushstring(L, speechRecognizerStateName(pRecognizer->state()));
+            lua_settable(L, -3);
+
+            // Path of the model actually in use, as opposed to the directory
+            // models are installed into that stt.getModelPath() reports
+            lua_pushstring(L, "modelPath");
+            lua_pushstring(L, pRecognizer->modelPath().toUtf8().constData());
+            lua_settable(L, -3);
         } else {
             lua_pushstring(L, "initialized");
             lua_pushboolean(L, false);
@@ -256,8 +289,26 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
             lua_pushstring(L, "listening");
             lua_pushboolean(L, false);
             lua_settable(L, -3);
+
+            lua_pushstring(L, "state");
+            lua_pushstring(L, speechRecognizerStateName(SpeechRecognizer::State::Uninitialized));
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "modelPath");
+            lua_pushstring(L, "");
+            lua_settable(L, -3);
         }
     }
+
+    lua_pushstring(L, "searchPaths");
+    lua_newtable(L);
+    int pathIndex = 1;
+    for (const QString& path : VoskRecognizer::librarySearchPaths()) {
+        lua_pushinteger(L, pathIndex++);
+        lua_pushstring(L, path.toUtf8().constData());
+        lua_settable(L, -3);
+    }
+    lua_settable(L, -3);
 
     return 1;
 }
@@ -270,6 +321,16 @@ int TLuaInterpreter::sttGetModelPath(lua_State* L)
     // Use the same global vosk-models directory as VoskRecognizer
     const QString modelPath = mudlet::getMudletPath(enums::mainDataItemPath, qsl("vosk-models"));
     lua_pushstring(L, modelPath.toUtf8().constData());
+    return 1;
+}
+
+// stt.getLibraryPath()
+// Get the user-writable directory the speech recognition library is installed into.
+// Returns the path as a string.
+int TLuaInterpreter::sttGetLibraryPath(lua_State* L)
+{
+    // Use the same vosk-lib directory VoskRecognizer searches
+    lua_pushstring(L, VoskRecognizer::userLibraryPath().toUtf8().constData());
     return 1;
 }
 
@@ -322,12 +383,94 @@ int TLuaInterpreter::sttClose(lua_State* L)
     auto* pMudlet = mudlet::self();
     if (pMudlet) {
         auto* pRecognizer = pMudlet->speechRecognizer();
-        if (pRecognizer && pRecognizer->isListening()) {
-            pRecognizer->cancel();
+        if (pRecognizer) {
+            if (pRecognizer->isListening()) {
+                pRecognizer->cancel();
+            }
+            pRecognizer->releaseResources();
         }
         pMudlet->setSpeechRecognitionActive(false);
     }
 
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// stt.getPlatformKey()
+// Identify the platform and architecture for selecting a Vosk library build.
+// Returns a key string, or nil if this platform has no published build.
+int TLuaInterpreter::sttGetPlatformKey(lua_State* L)
+{
+#if defined(Q_OS_MACOS)
+    lua_pushstring(L, "macos");
+#elif defined(Q_OS_WIN)
+#if defined(Q_PROCESSOR_ARM_64)
+    lua_pushnil(L);
+#elif defined(Q_PROCESSOR_X86_64)
+    lua_pushstring(L, "windows-x64");
+#else
+    lua_pushstring(L, "windows-x86");
+#endif
+#elif defined(Q_OS_LINUX)
+#if defined(Q_PROCESSOR_ARM_64)
+    lua_pushstring(L, "linux-aarch64");
+#elif defined(Q_PROCESSOR_X86_64)
+    lua_pushstring(L, "linux-x86_64");
+#else
+    lua_pushnil(L);
+#endif
+#else
+    lua_pushnil(L);
+#endif
+    return 1;
+}
+
+// stt.reloadLibrary()
+// Re-run Vosk library detection, for use after installing the library.
+// Returns whether the library is now available, or false plus a message if
+// the recognizer is in use, or still holds live native resources, and cannot
+// be safely unloaded.
+int TLuaInterpreter::sttReloadLibrary(lua_State* L)
+{
+    auto* pMudlet = mudlet::self();
+    if (pMudlet) {
+        auto* pRecognizer = pMudlet->speechRecognizer();
+        // isInitialized() is false in State::Error, but Error can still be
+        // reached with live native handles (e.g. a failure partway through
+        // startListeningInternal() after the native recognizer was already
+        // allocated), so check hasLiveNativeResources() directly rather than
+        // relying on state alone. A failed initialize() before any handle was
+        // allocated also leaves the recognizer in Error, and that case must
+        // stay reloadable since it's exactly what stt.reloadLibrary() is for.
+        if (pRecognizer && (pRecognizer->isListening() || pRecognizer->isInitialized() || pRecognizer->hasLiveNativeResources())) {
+            return warnArgumentValue(L, __func__, "cannot reload the speech recognition library while it is in use, close speech recognition first", true);
+        }
+    }
+
+    VoskRecognizer::resetLibraryLoadState();
+    lua_pushboolean(L, VoskRecognizer::isLibraryAvailable());
+    return 1;
+}
+
+// stt.unloadLibrary()
+// Unload the Vosk library without probing for it again, so that its file can be
+// deleted. Windows refuses to delete a module that is still mapped, so removing
+// the library has to go through here first.
+// Returns true once unloaded, or false plus a message if the recognizer is in
+// use, or still holds live native resources, and cannot be safely unloaded.
+int TLuaInterpreter::sttUnloadLibrary(lua_State* L)
+{
+    auto* pMudlet = mudlet::self();
+    if (pMudlet) {
+        auto* pRecognizer = pMudlet->speechRecognizer();
+        // Same guard as stt.reloadLibrary(): see the comment there for why
+        // hasLiveNativeResources() is checked rather than state alone.
+        if (pRecognizer && (pRecognizer->isListening() || pRecognizer->isInitialized() || pRecognizer->hasLiveNativeResources())) {
+            return warnArgumentValue(L, __func__, "cannot unload the speech recognition library while it is in use, close speech recognition first", true);
+        }
+    }
+
+    VoskRecognizer::resetLibraryLoadState();
     lua_pushboolean(L, true);
     return 1;
 }

@@ -260,8 +260,12 @@ public:
     static int sttIsInitialized(lua_State*);
     static int sttGetInfo(lua_State*);
     static int sttGetModelPath(lua_State*);
+    static int sttGetLibraryPath(lua_State*);
     static int sttListModels(lua_State*);
     static int sttClose(lua_State*);
+    static int sttGetPlatformKey(lua_State*);
+    static int sttReloadLibrary(lua_State*);
+    static int sttUnloadLibrary(lua_State*);
     // Toolbar/Menu addon functions
     static int addToolbarButton(lua_State*);
     static int removeToolbarButton(lua_State*);
@@ -703,6 +707,7 @@ public:
     static int getColumnCount(lua_State*);
     static int getRowCount(lua_State*);
     static int getOS(lua_State*);
+    static int hashFile(lua_State*);
     static int getProcessID(lua_State*);
     static int getClipboardText(lua_State*);
     static int setClipboardText(lua_State*);

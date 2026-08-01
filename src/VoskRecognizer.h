@@ -119,6 +119,9 @@ public:
     void cancel() override;
 
     State state() const override { return mState; }
+    bool hasLiveNativeResources() const override { return mVoskModel || mVoskRecognizer; }
+    void releaseResources() override;
+    QString modelPath() const override { return mModelPath; }
 
     QStringList availableLanguages() const override;
     QString currentLanguage() const override { return mCurrentLanguage; }
@@ -151,6 +154,9 @@ public:
 
     // Get the list of paths where Vosk library is searched
     static QStringList librarySearchPaths();
+
+    // Get the user-writable directory the Vosk library can be installed into
+    static QString userLibraryPath();
 
     // Get the default model path for the current platform
     static QString defaultModelPath();
