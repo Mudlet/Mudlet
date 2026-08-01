@@ -34,6 +34,7 @@
 #include <QRandomGenerator>
 #include <QSaveFile>
 #include <QStandardPaths>
+#include <QTimer>
 
 // Public
 TMedia::TMedia(Host* pHost, const QString& profileName)
@@ -1370,14 +1371,24 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
             mpHost->raiseEvent(mediaFinished);
         }
 
-        player->mediaPlayer()->setSource(QUrl());
+        // Deferred so the backend can still emit EndOfMedia, which is what restarts a loop:
+        // clearing the source here destroys the playback engine and that signal never arrives.
+        const std::weak_ptr<TMediaPlayer> weakPlayer = player;
+        QTimer::singleShot(0, this, [weakPlayer, this] {
+            if (auto lockedPlayer = weakPlayer.lock()) {
+                if (lockedPlayer->mediaPlayer() && lockedPlayer->mediaPlayer()->playbackState() == QMediaPlayer::StoppedState) {
+                    lockedPlayer->mediaPlayer()->setSource(QUrl());
 
-        if (player->mediaData().mediaWidget() == TMediaData::MediaWidgetLabel && player->mediaData().mediaClose() == TMediaData::MediaCloseEnabled && player->mediaPlayer()->videoOutput() != nullptr) {
-            emit signal_hideVideoOutput(player.get());
-        }
+                    if (lockedPlayer->mediaData().mediaWidget() == TMediaData::MediaWidgetLabel && lockedPlayer->mediaData().mediaClose() == TMediaData::MediaCloseEnabled
+                        && lockedPlayer->mediaPlayer()->videoOutput() != nullptr) {
+                        emit signal_hideVideoOutput(lockedPlayer.get());
+                    }
 
-        //: This word is part of a sentence like "Music stops" when the music is about to stop.
-        printClosedCaption(player->mediaData(), tr("stops"));
+                    //: This word is part of a sentence like "Music stops" when the music is about to stop.
+                    printClosedCaption(lockedPlayer->mediaData(), tr("stops"));
+                }
+            }
+        });
         return;
     } else if (playbackState == QMediaPlayer::PlayingState && player->mediaData().mediaVolume() != TMediaData::MediaVolumePreload) { // NOLINT(readability-else-after-return)
         TEvent mediaStarted{};
