@@ -3281,19 +3281,17 @@ describe("Window and label state", function()
     it("setFont changes the font getFont reports, and can be set back", function()
       local original = getFont(console)
       assert.is_true(#original > 0)
-      -- pick a family the font database really offers; a handful of the names
-      -- it lists are aliases that resolve to something else, so allow a few
-      -- attempts rather than trusting the first one
+      -- pick a family the font database really offers; some of the names it
+      -- lists are generic aliases (Monospace, Serif, ...) that resolve to a
+      -- different family, so keep looking until one actually round-trips
       local families = {}
       for family in pairs(getAvailableFonts()) do
         families[#families + 1] = family
       end
       table.sort(families)
       local applied
-      local attempts = 0
       for _, family in ipairs(families) do
-        if family ~= original and attempts < 10 then
-          attempts = attempts + 1
+        if family ~= original then
           setFont(console, family)
           if getFont(console) == family then
             applied = family
