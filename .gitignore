@@ -54,3 +54,7 @@ CMakeSettings.json
 # flatpak builder
 CI/.flatpak-builder
 CI/build-dir
+
+# python bytecode (CI helper scripts)
+__pycache__/
+*.pyc

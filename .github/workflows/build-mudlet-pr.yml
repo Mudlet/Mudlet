@@ -481,6 +481,12 @@ jobs:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
         MUDLET_TEST_REQUIRE_TTS_MOCK: 1
+        MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
+        # Qt Multimedia runs a player here even without an audio device, so a
+        # media effect spec that cannot play is a regression rather than an
+        # environment quirk. macOS is left without this until CI confirms the
+        # same holds there.
+        MUDLET_TEST_REQUIRE_MEDIA: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
@@ -494,6 +500,7 @@ jobs:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
         MUDLET_TEST_REQUIRE_TTS_MOCK: 1
+        MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: detect_leaks=0
