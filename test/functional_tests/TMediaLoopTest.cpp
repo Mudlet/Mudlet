@@ -20,6 +20,7 @@
 #include <QAudioOutput>
 #include <QDeadlineTimer>
 #include <QMediaPlayer>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
 #include <chrono>
@@ -79,8 +80,23 @@ private:
     // artefact of start-up latency, short enough to loop several times quickly.
     static constexpr int clipMs = 400;
 
+    // Probed once, because the probe has to wait out a whole clip and the suite gives
+    // every functional test a single wall-clock budget for all of its slots.
+    QTemporaryDir mProbeDir;
+    // Set when the backend cannot decode a clip through to EndOfMedia at all.
+    QString mCannotPlayReason;
+    // Set when the backend ends a track with EndOfMedia before StoppedState.
+    QString mWrongOrderReason;
+    // Set when the backend starts playing synchronously, so a player that has just been
+    // re-sourced can never be mistaken for a stopped one.
+    QString mSynchronousStartReason;
+
 private slots:
-    void initTestCase() { initializeQRCResourcesForMediaLoop(); }
+    void initTestCase()
+    {
+        initializeQRCResourcesForMediaLoop();
+        probeBackend();
+    }
 
     void init()
     {
@@ -99,14 +115,17 @@ private slots:
     // was never delivered and the player dropped out of the playing set for good.
     void test_loopingTrackKeepsPlayingPastFirstPass()
     {
+        if (!mCannotPlayReason.isEmpty()) {
+            QSKIP(qPrintable(mCannotPlayReason));
+        }
+        if (!mWrongOrderReason.isEmpty()) {
+            QSKIP(qPrintable(mWrongOrderReason));
+        }
+
         auto* media = startProfileAndGetMedia();
         QVERIFY(media);
 
         const QString fileName = writeClip(qsl("loop.wav"));
-        const QString skipReason = backendSkipReason(fileName);
-        if (!skipReason.isEmpty()) {
-            QSKIP(qPrintable(skipReason));
-        }
 
         TMediaData data = clipData(fileName);
         data.setMediaLoops(TMediaData::MediaLoopsRepeat);
@@ -121,17 +140,19 @@ private slots:
     }
 
     // The deferred cleanup must still fire for a genuinely finished track, otherwise
-    // the resource release that #9237 added would be lost.
+    // the resource release that #9237 added would be lost. Releasing the source is the
+    // only observable of that: playingMedia() drops a player the moment it reports
+    // StoppedState, well before the deferred cleanup runs.
     void test_oneShotTrackIsCleanedUpWhenItFinishes()
     {
+        if (!mCannotPlayReason.isEmpty()) {
+            QSKIP(qPrintable(mCannotPlayReason));
+        }
+
         auto* media = startProfileAndGetMedia();
         QVERIFY(media);
 
         const QString fileName = writeClip(qsl("oneshot.wav"));
-        const QString skipReason = backendSkipReason(fileName);
-        if (!skipReason.isEmpty()) {
-            QSKIP(qPrintable(skipReason));
-        }
 
         TMediaData data = clipData(fileName);
         data.setMediaLoops(TMediaData::MediaLoopsDefault);
@@ -139,13 +160,53 @@ private slots:
 
         QVERIFY2(waitForPlaying(media, fileName), "The one-shot track never started playing.");
 
-        const bool stopped = QTest::qWaitFor(
+        const bool cleanedUp = QTest::qWaitFor(
                 [&]() {
-                    return !playing(media, fileName);
+                    return !playing(media, fileName) && media->playersHoldingSource() == 0;
                 },
                 QDeadlineTimer(10s));
 
-        QVERIFY2(stopped, "A one-shot track never left the playing set - the deferred cleanup did not run.");
+        QVERIFY2(cleanedUp, "A finished one-shot track never released its media source - the deferred cleanup did not run.");
+    }
+
+    // A player that is handed to a different track in the same event-loop turn, as
+    // stopMusic() followed by playMusic{} in one script does, must keep the new source.
+    // The pending cleanup belongs to the track that stopped, and on this backend the
+    // player still reads as stopped while it loads the new one.
+    void test_reusedPlayerKeepsTheTrackThatClaimedIt()
+    {
+        if (!mCannotPlayReason.isEmpty()) {
+            QSKIP(qPrintable(mCannotPlayReason));
+        }
+        if (!mSynchronousStartReason.isEmpty()) {
+            QSKIP(qPrintable(mSynchronousStartReason));
+        }
+
+        auto* media = startProfileAndGetMedia();
+        QVERIFY(media);
+
+        const QString firstFile = writeClip(qsl("first.wav"));
+        const QString secondFile = writeClip(qsl("second.wav"));
+
+        TMediaData first = clipData(firstFile);
+        first.setMediaLoops(TMediaData::MediaLoopsRepeat);
+        media->playMedia(first);
+
+        QVERIFY2(waitForPlaying(media, firstFile), "The first track never started playing.");
+
+        TMediaData stopFirst = clipData(firstFile);
+        media->stopMedia(stopFirst);
+
+        TMediaData second = clipData(secondFile);
+        second.setMediaLoops(TMediaData::MediaLoopsRepeat);
+        media->playMedia(second);
+
+        QVERIFY2(waitForPlaying(media, secondFile), "The replacement track never started playing.");
+
+        // Past the turn the stopped track's cleanup was scheduled for.
+        QTest::qWait(clipMs);
+
+        QVERIFY2(playing(media, secondFile), "The replacement track was cut off - the previous track's deferred cleanup cleared the source out from under it.");
     }
 
     void cleanup()
@@ -173,20 +234,32 @@ private:
         return media;
     }
 
-    // Returns an empty string when this backend can both finish a clip and end it in
-    // the signal order that the bug depends on, otherwise the reason to skip.
+    // Records what this backend is and is not able to demonstrate.
     //
-    // Two ways the assertions below would otherwise be meaningless:
     //   - A backend that stalls in LoadingMedia (macOS darwin under
-    //     QT_QPA_PLATFORM=offscreen) never stops, and TMedia reports a stalled player
-    //     as still playing, so the looping assertion would hold on broken code.
+    //     QT_QPA_PLATFORM=offscreen, which the functional suite sets) never stops, and
+    //     TMedia reports a stalled player as still playing, so nothing below is
+    //     observable at all.
     //   - A backend that emits EndOfMedia *before* StoppedState (macOS darwin under
-    //     cocoa) restarts the loop before any cleanup can run, so the bug cannot occur
-    //     and the looping assertion would again hold on broken code. Only the
-    //     StoppedState-first ordering (Qt's FFmpeg backend) can reproduce it.
-    QString backendSkipReason(const QString& fileName)
+    //     cocoa) restarts a loop before any cleanup can run, so issue #9566 cannot occur
+    //     and the looping assertion would hold on broken code. Only the
+    //     StoppedState-first ordering (Qt's FFmpeg backend) can reproduce it. The other
+    //     two tests turn on an explicit stop, so they hold on any backend that plays.
+    void probeBackend()
     {
-        const QString path = qsl("%1/%2").arg(mudlet::getMudletPath(enums::profileMediaPath, mHostname), fileName);
+        if (!mProbeDir.isValid()) {
+            mCannotPlayReason = qsl("Could not create a temporary directory for the backend probe.");
+            return;
+        }
+
+        const QString path = qsl("%1/probe.wav").arg(mProbeDir.path());
+        QFile file(path);
+        if (!file.open(QIODevice::WriteOnly)) {
+            mCannotPlayReason = qsl("Could not write the backend probe clip.");
+            return;
+        }
+        file.write(wavBytes());
+        file.close();
 
         QMediaPlayer probe;
         auto* output = new QAudioOutput(&probe);
@@ -208,6 +281,9 @@ private:
 
         probe.setSource(QUrl::fromLocalFile(path));
         probe.play();
+        // Whether a player that has just been handed a source still reads as stopped is
+        // the whole reason the deferred cleanup needs to check who owns the player.
+        const bool startsSynchronously = probe.playbackState() == QMediaPlayer::PlayingState;
 
         const bool finished = QTest::qWaitFor(
                 [&]() {
@@ -217,13 +293,17 @@ private:
         probe.stop();
 
         if (!finished) {
-            return qsl("This Qt Multimedia backend cannot decode a clip to completion here (it stalls before EndOfMedia), so media playback behaviour cannot be observed.");
+            mCannotPlayReason = qsl("This Qt Multimedia backend cannot decode a clip to completion here (it stalls before EndOfMedia), so media playback behaviour cannot be observed.");
+            return;
         }
         if (!stoppedCameFirst) {
-            return qsl("This Qt Multimedia backend emits EndOfMedia before StoppedState, so the loop restarts before any cleanup runs and issue #9566 cannot occur here. Needs a StoppedState-first "
-                       "backend such as Qt's FFmpeg one.");
+            mWrongOrderReason = qsl("This Qt Multimedia backend emits EndOfMedia before StoppedState, so the loop restarts before any cleanup runs and issue #9566 cannot occur here. Needs a "
+                                    "StoppedState-first backend such as Qt's FFmpeg one.");
         }
-        return {};
+        if (startsSynchronously) {
+            mSynchronousStartReason = qsl("This Qt Multimedia backend reaches PlayingState synchronously, so a player that has just been claimed by another track never reads as stopped and cannot "
+                                          "have its source cleared out from under it. Needs a backend that loads asynchronously, such as Qt's FFmpeg one.");
+        }
     }
 
     TMediaData clipData(const QString& fileName) const
@@ -258,6 +338,26 @@ private:
     // fine: the test asserts on playback state transitions, not on what is heard.
     QString writeClip(const QString& fileName) const
     {
+        const QString mediaPath = mudlet::getMudletPath(enums::profileMediaPath, mHostname);
+        if (!QDir().mkpath(mediaPath)) {
+            QTest::qFail("Could not create the profile media directory.", __FILE__, __LINE__);
+            return {};
+        }
+
+        QFile file(qsl("%1/%2").arg(mediaPath, fileName));
+        if (!file.open(QIODevice::WriteOnly)) {
+            QTest::qFail("Could not write the test media file.", __FILE__, __LINE__);
+            return {};
+        }
+        file.write(wavBytes());
+        file.close();
+        return fileName;
+    }
+
+    // A silent 16-bit mono PCM WAV. Silence is fine: the tests assert on playback state
+    // transitions, not on what is heard.
+    static QByteArray wavBytes()
+    {
         constexpr int sampleRate = 8000;
         constexpr int bytesPerSample = 2;
         const int dataBytes = sampleRate * bytesPerSample * clipMs / 1000;
@@ -281,20 +381,7 @@ private:
         out << static_cast<quint32>(dataBytes);
         wav.append(QByteArray(dataBytes, '\0'));
 
-        const QString mediaPath = mudlet::getMudletPath(enums::profileMediaPath, mHostname);
-        if (!QDir().mkpath(mediaPath)) {
-            QTest::qFail("Could not create the profile media directory.", __FILE__, __LINE__);
-            return {};
-        }
-
-        QFile file(qsl("%1/%2").arg(mediaPath, fileName));
-        if (!file.open(QIODevice::WriteOnly)) {
-            QTest::qFail("Could not write the test media file.", __FILE__, __LINE__);
-            return {};
-        }
-        file.write(wav);
-        file.close();
-        return fileName;
+        return wav;
     }
 
     // Utility function to manually start a profile like a user would do via the
