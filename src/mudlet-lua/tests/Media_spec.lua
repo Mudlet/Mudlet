@@ -226,6 +226,34 @@ describe("Media playback effects with a generated sound file", function()
     writeMediaFile(longSoundFile, 10000)
   end
 
+  -- purgeMediaCache() empties the whole media directory, not just the fixtures
+  -- these specs wrote, and the self-test profile persists between runs on a
+  -- developer's machine. Anything else already in there is moved aside for the
+  -- duration of the spec and put back afterwards.
+  local function preserveMediaDirectory()
+    local stash = getMudletHomeDir() .. "/busted-media-stash"
+    local preserved = {}
+    for entry in lfs.dir(mediaDirectory) do
+      if entry ~= "." and entry ~= ".." and entry ~= soundFile and entry ~= longSoundFile then
+        preserved[#preserved + 1] = entry
+      end
+    end
+    if #preserved == 0 then
+      return
+    end
+    lfs.mkdir(stash)
+    for _, entry in ipairs(preserved) do
+      os.rename(mediaDirectory .. "/" .. entry, stash .. "/" .. entry)
+    end
+    finally(function()
+      lfs.mkdir(mediaDirectory)
+      for _, entry in ipairs(preserved) do
+        os.rename(stash .. "/" .. entry, mediaDirectory .. "/" .. entry)
+      end
+      lfs.rmdir(stash)
+    end)
+  end
+
   -- Collects every occurrence of a media event for the duration of one spec.
   -- stopSounds() and pauseSounds() change the player's state inside the call
   -- itself, so the matching event is raised before a waitForEvent() could be
@@ -235,6 +263,13 @@ describe("Media playback effects with a generated sound file", function()
       into[#into + 1] = {file = file, path = path, mediaType = mediaType, key = key, tag = tag}
     end)
     finally(function() killAnonymousEventHandler(handler) end)
+  end
+
+  -- The media events carry QUrl::path(), which puts a slash in front of a
+  -- drive-lettered Windows path ("/C:/..."). Take that back off so one
+  -- expected value works on every platform.
+  local function eventPath(path)
+    return (tostring(path):gsub("^/(%a:/)", "%1"))
   end
 
   -- CI sets this so a missing playback turns into a failure there rather than
@@ -282,7 +317,7 @@ describe("Media playback effects with a generated sound file", function()
     local event, file, path, mediaType, key, tag = waitForEvent("sysMediaStarted", 5000)
     assert.equals("sysMediaStarted", event)
     assert.equals(soundFile, file)
-    assert.equals(mediaDirectory .. "/" .. soundFile, path)
+    assert.equals(mediaDirectory .. "/" .. soundFile, eventPath(path))
     assert.equals("sound", mediaType)
     assert.equals("busted-key", key)
     assert.equals("busted-tag", tag)
@@ -457,6 +492,7 @@ describe("Media playback effects with a generated sound file", function()
       return
     end
     writeSoundFiles()
+    preserveMediaDirectory()
     local soundPath = mediaDirectory .. "/" .. soundFile
     assert.is_not_nil(lfs.attributes(soundPath, "mode"))
     assert.is_true(playSoundFile({name = longSoundFile, key = "busted-purged"}))
