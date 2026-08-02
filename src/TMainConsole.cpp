@@ -42,6 +42,7 @@
 
 #include <QDialog>
 #include <QDockWidget>
+#include <QIcon>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
@@ -1739,6 +1740,97 @@ void TMainConsole::closePackageDownloadProgress()
 {
     if (mpPackageDownloadProgressDialog) {
         mpPackageDownloadProgressDialog->close();
+    }
+}
+
+void TMainConsole::createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum)
+{
+    if (mpMapProgressDialog) {
+        mpMapProgressDialog->hide();
+        mpMapProgressDialog->deleteLater();
+    }
+    auto pHost = getHost();
+    // If canceled() cannot be wired to the map, omit the cancel button rather
+    // than show one that does nothing.
+    const bool cancelWirable = pHost && !pHost->mpMap.isNull();
+    // Deliberately not WA_DeleteOnClose: the JSON import keeps updating this
+    // dialog from a processEvents loop, so it must outlive a mid-operation
+    // dismissal; we delete it explicitly instead.
+    mpMapProgressDialog = new QProgressDialog(label, cancelWirable ? cancelButtonText : QString(), minimum, maximum, this);
+    mpMapProgressDialog->setWindowTitle(title);
+    mpMapProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
+    mpMapProgressDialog->setAutoClose(false);
+    mpMapProgressDialog->setAutoReset(false);
+    // QProgressDialog still emits canceled() on Escape or window-close even with
+    // no cancel button, so only connect it when the operation is cancelable;
+    // otherwise a non-cancelable import could be aborted by a spurious cancel.
+    if (cancelWirable && !cancelButtonText.isEmpty()) {
+        connect(mpMapProgressDialog, &QProgressDialog::canceled, pHost->mpMap.data(), &TMap::slot_mapProgressDialogCancelled);
+    }
+}
+
+void TMainConsole::showMapTransferProgress(const QString& title, const QString& label, const QString& cancelButtonText)
+{
+    createMapProgressDialog(title, label, cancelButtonText, 0, 0);
+    mpMapProgressDialog->setMinimumWidth(300);
+    mpMapProgressDialog->setMinimumDuration(0);
+    mpMapProgressDialog->show();
+}
+
+void TMainConsole::showMapJsonProgress(const QString& title, const QString& label, const QString& cancelButtonText, int maximum)
+{
+    createMapProgressDialog(title, label, cancelButtonText, 0, maximum);
+    mpMapProgressDialog->setWindowModality(Qt::NonModal);
+    mpMapProgressDialog->setMinimumWidth(500);
+    mpMapProgressDialog->setMinimumDuration(1);
+}
+
+void TMainConsole::setMapProgressDialogLabel(const QString& text)
+{
+    if (mpMapProgressDialog) {
+        mpMapProgressDialog->setLabelText(text);
+    }
+}
+
+void TMainConsole::setMapProgressDialogRange(int minimum, int maximum)
+{
+    if (mpMapProgressDialog) {
+        mpMapProgressDialog->setRange(minimum, maximum);
+    }
+}
+
+void TMainConsole::setMapProgressDialogValue(int value)
+{
+    if (mpMapProgressDialog) {
+        mpMapProgressDialog->setValue(value);
+    }
+}
+
+void TMainConsole::disableMapProgressDialogCancel()
+{
+    if (mpMapProgressDialog) {
+        // Taking the button away does not stop a window-close from emitting
+        // canceled(), so drop the connection as well - by this point the
+        // operation can no longer be stopped. Only ours goes, leaving
+        // QProgressDialog's own canceled() -> cancel() wiring intact.
+        if (auto pHost = getHost(); pHost && !pHost->mpMap.isNull()) {
+            disconnect(mpMapProgressDialog, &QProgressDialog::canceled, pHost->mpMap.data(), &TMap::slot_mapProgressDialogCancelled);
+        }
+        mpMapProgressDialog->setCancelButton(nullptr);
+    }
+}
+
+void TMainConsole::closeMapProgressDialog()
+{
+    if (mpMapProgressDialog) {
+        // hide() rather than close() so we don't re-enter QProgressDialog's
+        // closeEvent -> cancel() while a cancel is already being handled.
+        mpMapProgressDialog->hide();
+        mpMapProgressDialog->deleteLater();
+        // deleteLater() leaves the QPointer set until the event loop gets to
+        // run, which a synchronous JSON operation will not let it do, so forget
+        // the dialog now and make any late writes to it no-ops.
+        mpMapProgressDialog = nullptr;
     }
 }
 

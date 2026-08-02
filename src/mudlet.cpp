@@ -2207,6 +2207,21 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(pH, &Host::signal_showUnpackingProgress, pConsole, &TMainConsole::showUnpackingProgress, Qt::UniqueConnection);
     connect(pH, &Host::signal_hideUnpackingProgress, pConsole, &TMainConsole::closeUnpackingProgress, Qt::UniqueConnection);
 
+    // Wire the map engine's progress signals to the console that owns the dialog.
+    // Must be connected before the profile's map is loaded (further down in
+    // slot_connectionDialogueFinished()), or early map operations have no
+    // frontend to show progress.
+    if (!pH->mpMap.isNull()) {
+        auto pMap = pH->mpMap.data();
+        connect(pMap, &TMap::signal_mapTransferProgressStart, pConsole, &TMainConsole::showMapTransferProgress, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapJsonProgressStart, pConsole, &TMainConsole::showMapJsonProgress, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapProgressSetLabel, pConsole, &TMainConsole::setMapProgressDialogLabel, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapProgressSetRange, pConsole, &TMainConsole::setMapProgressDialogRange, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapProgressSetValue, pConsole, &TMainConsole::setMapProgressDialogValue, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapProgressDisableCancel, pConsole, &TMainConsole::disableMapProgressDialogCancel, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapProgressClose, pConsole, &TMainConsole::closeMapProgressDialog, Qt::UniqueConnection);
+    }
+
     if (pH->mpMedia) {
         // Pin DirectConnection so the bool& out-parameter is filled synchronously, never queued.
         connect(pH->mpMedia.data(), &TMedia::signal_setupVideoOutput, pConsole, &TMainConsole::setupVideoOutput, static_cast<Qt::ConnectionType>(Qt::DirectConnection | Qt::UniqueConnection));
