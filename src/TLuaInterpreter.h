@@ -446,8 +446,8 @@ public:
     static int createMiniConsole(lua_State*);
     static int createScrollBox(lua_State*);
     static int createLabel(lua_State*);
-    static int createLabelMainWindow(lua_State*, const QString& labelName);
-    static int createLabelUserWindow(lua_State*, const QString& windowName, const QString& labelName);
+    static int createLabelMainWindow(lua_State*, const char* labelName);
+    static int createLabelUserWindow(lua_State*, const char* windowName, const char* labelName);
     static int deleteLabel(lua_State*);
     static int deleteMiniConsole(lua_State*);
     static int deleteCommandLine(lua_State*);
@@ -823,6 +823,9 @@ public slots:
 private:
     static bool getVerifiedBool(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static QString getVerifiedString(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static bool checkStringArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static bool checkIntArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static bool checkBoolArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static int getVerifiedInt(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static float getVerifiedFloat(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static double getVerifiedDouble(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
@@ -834,7 +837,7 @@ private:
     static int movieFunc(lua_State*, const QString& funcName);
     static std::pair<bool, QString> discordApiEnabled(lua_State*, bool writeAccess = false);
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
-    static int performHttpRequest(lua_State*, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const QString& verb);
+    static int performHttpRequest(lua_State*, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const char* verb);
     static void validateHttpHeaders(lua_State*, const int index, const char* functionName);
     static void applyHttpHeaders(lua_State*, const int index, QNetworkRequest& request);
     // The last argument is only needed if the third one is true:

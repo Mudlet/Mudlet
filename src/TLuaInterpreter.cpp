@@ -185,12 +185,22 @@ TLuaInterpreter::~TLuaInterpreter()
 // See also: getVerifiedString, getVerifiedInt, getVerifiedFloat, errorArgumentType
 bool TLuaInterpreter::getVerifiedBool(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
-    if (!lua_isboolean(L, pos)) {
-        errorArgumentType(L, functionName, pos, publicName, "boolean", isOptional);
+    if (!checkBoolArg(L, functionName, pos, publicName, isOptional)) {
         lua_error(L);
         Q_UNREACHABLE();
     }
     return lua_toboolean(L, pos);
+}
+
+// No documentation available in wiki - internal function
+// The non-raising counterpart of getVerifiedBool - see checkStringArg()
+bool TLuaInterpreter::checkBoolArg(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+{
+    if (!lua_isboolean(L, pos)) {
+        errorArgumentType(L, functionName, pos, publicName, "boolean", isOptional);
+        return false;
+    }
+    return true;
 }
 
 // No documentation available in wiki - internal function
@@ -214,11 +224,32 @@ bool TLuaInterpreter::getVerifiedBool(lua_State* L, const char* functionName, co
 }
 
 // No documentation available in wiki - internal function
-// See also: getVerifiedBool
-QString TLuaInterpreter::getVerifiedString(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+// Type-checks the argument at `pos` without building a QString out of it. On
+// success returns true; on failure it formats the usual "bad argument" text
+// onto the Lua stack and returns false, expecting the caller to raise it with
+// `return lua_error(L)`.
+//
+// Use this instead of getVerifiedString() when a function takes more than one
+// string argument: getVerifiedString() raises on the spot, and lua_error()
+// longjmps past C++ destructors, so a QString already built from an earlier
+// argument would have its buffer stranded. Checking every argument up front -
+// in argument order, so the same first failure is reported - means nothing
+// heap-owning is alive when the raise happens.
+// See also: getVerifiedString, reportInvalidLuaCodeParam
+bool TLuaInterpreter::checkStringArg(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isstring(L, pos)) {
         errorArgumentType(L, functionName, pos, publicName, "string", isOptional);
+        return false;
+    }
+    return true;
+}
+
+// No documentation available in wiki - internal function
+// See also: getVerifiedBool
+QString TLuaInterpreter::getVerifiedString(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+{
+    if (!checkStringArg(L, functionName, pos, publicName, isOptional)) {
         lua_error(L);
         Q_UNREACHABLE();
     }
@@ -226,13 +257,12 @@ QString TLuaInterpreter::getVerifiedString(lua_State* L, const char* functionNam
 }
 
 // No documentation available in wiki - internal function
-// See also: getVerifiedBool
-int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+// The non-raising counterpart of getVerifiedInt - see checkStringArg()
+bool TLuaInterpreter::checkIntArg(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isnumber(L, pos)) {
         errorArgumentType(L, functionName, pos, publicName, "number", isOptional);
-        lua_error(L);
-        Q_UNREACHABLE();
+        return false;
     }
     // lua_tointeger(...) returns a ptrdiff_t which on 64-bit platforms is a
     // signed 64 bit value, which is usually larger than an "int" a.k.a. an
@@ -250,10 +280,20 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, cons
                         lua_tostring(L, pos),
                         std::numeric_limits<int>::min(),
                         std::numeric_limits<int>::max());
+        return false;
+    }
+    return true;
+}
+
+// No documentation available in wiki - internal function
+// See also: getVerifiedBool
+int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+{
+    if (!checkIntArg(L, functionName, pos, publicName, isOptional)) {
         lua_error(L);
         Q_UNREACHABLE();
     }
-    return static_cast<int>(result);
+    return static_cast<int>(lua_tointeger(L, pos));
 }
 
 // No documentation available in wiki - internal function
@@ -1387,7 +1427,10 @@ int TLuaInterpreter::getMudletInfo(lua_State* L)
 }
 
 // Internal Function createLabel in an UserWindow
-int TLuaInterpreter::createLabelUserWindow(lua_State* L, const QString& windowName, const QString& labelName)
+// The names stay as the Lua-owned strings rather than QStrings because every
+// check below can raise, and lua_error() longjmps past C++ destructors - see
+// checkStringArg()
+int TLuaInterpreter::createLabelUserWindow(lua_State* L, const char* windowName, const char* labelName)
 {
     const int n = lua_gettop(L);
     const int x = getVerifiedInt(L, "createLabel", 3, "label x-coordinate");
@@ -1420,7 +1463,7 @@ int TLuaInterpreter::createLabelUserWindow(lua_State* L, const QString& windowNa
     }
 
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = host.createLabel(windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
+    if (auto [success, message] = host.createLabel(QString{windowName}, QString{labelName}, x, y, width, height, fillBackground, clickthrough); !success) {
         // We should, perhaps be returning a nil here but the published API
         // says the function returns true or false and we cannot change that now
         return warnArgumentValue(L, "createLabel", message, true);
@@ -1431,9 +1474,9 @@ int TLuaInterpreter::createLabelUserWindow(lua_State* L, const QString& windowNa
 }
 
 // Internal Function create Label in MainWindow
-int TLuaInterpreter::createLabelMainWindow(lua_State* L, const QString& labelName)
+// See createLabelUserWindow() for why the name is not a QString
+int TLuaInterpreter::createLabelMainWindow(lua_State* L, const char* labelName)
 {
-    const QString windowName = QLatin1String("main");
     const int n = lua_gettop(L);
     const int x = getVerifiedInt(L, "createLabel", 2, "label x-coordinate");
     const int y = getVerifiedInt(L, "createLabel", 3, "label y-coordinate");
@@ -1465,7 +1508,7 @@ int TLuaInterpreter::createLabelMainWindow(lua_State* L, const QString& labelNam
     }
 
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = host.createLabel(windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
+    if (auto [success, message] = host.createLabel(qsl("main"), QString{labelName}, x, y, width, height, fillBackground, clickthrough); !success) {
         // We should, perhaps be returning a nil here but the published API
         // says the function returns true or false and we cannot change that now
         return warnArgumentValue(L, "createLabel", message, true);
@@ -4824,38 +4867,42 @@ double TLuaInterpreter::condenseMapLoad()
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const QString& verb)
+// `verb` is a plain const char* rather than a QString so that customHTTP()
+// can hand over the Lua-owned method name without owning a heap buffer while
+// the argument checks below can still raise - see checkStringArg()
+int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const char* verb)
 {
     auto& host = getHostFromLua(L);
 
-    QString dataToPost;
+    // Validate every argument before creating the QStrings, the QUrl and the
+    // QNetworkRequest below: lua_error() longjmps past C++ destructors, so
+    // nothing heap-owning may be alive when a validation failure fires.
     if (!lua_isstring(L, pos + 1) && !lua_isstring(L, pos + 4)) {
         lua_pushfstring(L, "%s: bad argument #%d type (data to send as string expected, got %s!)", functionName, pos + 1, luaL_typename(L, pos + 1));
         return lua_error(L);
     }
-    if (lua_isstring(L, pos + 1)) {
-        dataToPost = lua_tostring(L, pos + 1);
+    if (!checkStringArg(L, functionName, pos + 2, "remote url")) {
+        return lua_error(L);
     }
-
-    const QString urlString = getVerifiedString(L, functionName, pos + 2, "remote url");
-
-    // Validate the optional headers and file arguments before creating the QUrl
-    // / QNetworkRequest below: lua_error() longjmps past C++ destructors, so
-    // nothing heap-owning may be alive when a validation failure fires.
     validateHttpHeaders(L, pos + 3, functionName);
-
-    QString fileLocation;
     if (!lua_isstring(L, pos + 4) && !lua_isnoneornil(L, pos + 4)) {
         lua_pushfstring(L, "%s: bad argument #%d type (file to send as string location expected, got %s!)", functionName, pos + 4, luaL_typename(L, pos + 4));
         return lua_error(L);
     }
+
+    QString dataToPost;
+    if (lua_isstring(L, pos + 1)) {
+        dataToPost = lua_tostring(L, pos + 1);
+    }
+    const QString urlString{lua_tostring(L, pos + 2)};
+    QString fileLocation;
     if (lua_isstring(L, pos + 4)) {
         fileLocation = lua_tostring(L, pos + 4);
     }
 
     const QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
-        return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1.").arg(url.errorString()));
+        return warnArgumentValue(L, functionName, qsl("url is invalid, reason: %1.").arg(url.errorString()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -4884,7 +4931,7 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
         reply = host.mLuaInterpreter.mpFileDownloader->put(request, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
         break;
     default:
-        reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, verb.toUtf8(), fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, QByteArray{verb}, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
     };
 
     if (mudlet::smDebugMode) {
@@ -7514,14 +7561,23 @@ int TLuaInterpreter::setConfig(lua_State* L)
 {
     auto& host = getHostFromLua(L);
     const bool currentHost = (mudlet::self()->mpCurrentActiveHost == &host);
-    QString key = getVerifiedString(L, __func__, 1, "key");
+    if (!checkStringArg(L, __func__, 1, "key")) {
+        return lua_error(L);
+    }
+    // a non-owning view onto the Lua-owned string rather than a QString: nearly
+    // every branch below fetches argument #2 with a getVerified*() call that can
+    // raise, and lua_error() longjmps past C++ destructors - see checkStringArg().
+    // The comparisons are all against ASCII literals, so reading the key as
+    // Latin-1 picks the same branch a UTF-8 QString would; the two places that
+    // need the key as text decode it as UTF-8 there and then
+    const QLatin1StringView key{lua_tostring(L, 1)};
     if (key.isEmpty()) {
         return warnArgumentValue(L, __func__, "you must provide key");
     }
 
     auto success = [&]() {
         if (mudlet::smDebugMode) {
-            TDebug(Qt::white, Qt::blue) << qsl("setConfig: a script has changed %1\n").arg(key) >> &host;
+            TDebug(Qt::white, Qt::blue) << qsl("setConfig: a script has changed %1\n").arg(QString::fromUtf8(lua_tostring(L, 1))) >> &host;
         }
         lua_pushboolean(L, true);
         return 1;
@@ -7912,7 +7968,8 @@ int TLuaInterpreter::setConfig(lua_State* L)
 
     // Handle experiment keys
     if (key.startsWith(qsl("experiment."))) {
-        auto [result, errorMessage] = host.setExperimentEnabled(key, getVerifiedBool(L, __func__, 2, "value"));
+        const bool enabled = getVerifiedBool(L, __func__, 2, "value");
+        auto [result, errorMessage] = host.setExperimentEnabled(QString::fromUtf8(lua_tostring(L, 1)), enabled);
         if (!result) {
             return warnArgumentValue(L, __func__, errorMessage);
         }
@@ -7971,7 +8028,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         }
         return warnArgumentValue(L, __func__, result.second);
     }
-    return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
+    return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(QString::fromUtf8(lua_tostring(L, 1))));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#announce

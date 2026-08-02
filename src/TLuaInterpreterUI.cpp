@@ -234,7 +234,14 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
 
     // font name and size are passed in as arguments
     if (lua_gettop(L) == 2) {
-        auto font = QFont(getVerifiedString(L, __func__, 2, "font name"), getVerifiedInt(L, __func__, 1, "font size"), QFont::Normal);
+        // checked up front because the order in which the two QFont arguments
+        // are evaluated is unspecified: it decided both which failure got
+        // reported and whether the font name QString was stranded by
+        // lua_error() longjmping past its destructor - see checkStringArg()
+        if (!checkIntArg(L, __func__, 1, "font size") || !checkStringArg(L, __func__, 2, "font name")) {
+            return lua_error(L);
+        }
+        auto font = QFont(QString{lua_tostring(L, 2)}, static_cast<int>(lua_tointeger(L, 1)), QFont::Normal);
         auto fontMetrics = QFontMetrics(font);
         size = QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
 
@@ -352,23 +359,23 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createLabel
 int TLuaInterpreter::createLabel(lua_State* L)
 {
-    QString labelName;
-    QString windowName = QLatin1String("main");
-
     if (lua_type(L, 1) != LUA_TSTRING) {
         lua_pushfstring(L, "createLabel: bad argument #1 type (label or parent window name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    if ((lua_type(L, 1) == LUA_TSTRING) && (lua_type(L, 2) == LUA_TSTRING)) {
-        windowName = lua_tostring(L, 1);
-        labelName = lua_tostring(L, 2);
-        createLabelUserWindow(L, windowName, labelName);
-    } else if ((lua_type(L, 1) == LUA_TSTRING) && (lua_type(L, 2) == LUA_TNUMBER)) {
-        labelName = lua_tostring(L, 1);
-        createLabelMainWindow(L, labelName);
-    } else {
+    // argument #2 is checked before either name is handed on: lua_error()
+    // longjmps past C++ destructors, so a QString built here would have its
+    // buffer stranded both by the failure below and by the argument checks the
+    // two helpers make - see checkStringArg()
+    if (lua_type(L, 2) != LUA_TSTRING && lua_type(L, 2) != LUA_TNUMBER) {
         lua_pushfstring(L, "createLabel: bad argument #2 type (label name as string or label x-coordinate as number expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
+    }
+
+    if (lua_type(L, 2) == LUA_TSTRING) {
+        createLabelUserWindow(L, lua_tostring(L, 1), lua_tostring(L, 2));
+    } else {
+        createLabelMainWindow(L, lua_tostring(L, 1));
     }
 
     return 1;
