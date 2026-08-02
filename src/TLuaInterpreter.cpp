@@ -205,8 +205,23 @@ bool TLuaInterpreter::checkBoolArg(lua_State* L, const char* functionName, const
 
 // No documentation available in wiki - internal function
 // See also: getVerifiedBool
+/*static*/ bool TLuaInterpreter::checkStringOrIntegerArg(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+{
+    if (lua_type(L, pos) != LUA_TNUMBER && lua_type(L, pos) != LUA_TSTRING) {
+        errorArgumentType(L, functionName, pos, publicName, "string or integer", isOptional);
+        return false;
+    }
+    return true;
+}
+
+// No documentation available in wiki - internal function
+// See also: getVerifiedBool
 /*static*/ std::pair<bool, QString> TLuaInterpreter::getVerifiedStringOrInteger(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
+    if (!checkStringOrIntegerArg(L, functionName, pos, publicName, isOptional)) {
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
     if (lua_type(L, pos) == LUA_TNUMBER) {
         // use lua_tonumber(...) and round because lua_tointeger(...) can return
         // oversized values (long long int?) on Windows which do not always fit
@@ -214,13 +229,7 @@ bool TLuaInterpreter::checkBoolArg(lua_State* L, const char* functionName, const
         return {true, QString::number(qRound(lua_tonumber(L, pos)))};
     }
 
-    if (lua_type(L, pos) == LUA_TSTRING) {
-        return {false, lua_tostring(L, pos)};
-    }
-
-    errorArgumentType(L, functionName, pos, publicName, "string or integer", isOptional);
-    lua_error(L);
-    Q_UNREACHABLE();
+    return {false, lua_tostring(L, pos)};
 }
 
 // No documentation available in wiki - internal function
@@ -292,11 +301,21 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, cons
 }
 
 // No documentation available in wiki - internal function
-// See also: getVerifiedBool
-float TLuaInterpreter::getVerifiedFloat(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+// The non-raising counterpart of getVerifiedFloat and getVerifiedDouble - see checkStringArg()
+bool TLuaInterpreter::checkNumberArg(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isnumber(L, pos)) {
         errorArgumentType(L, functionName, pos, publicName, "number", isOptional);
+        return false;
+    }
+    return true;
+}
+
+// No documentation available in wiki - internal function
+// See also: getVerifiedBool
+float TLuaInterpreter::getVerifiedFloat(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+{
+    if (!checkNumberArg(L, functionName, pos, publicName, isOptional)) {
         lua_error(L);
         Q_UNREACHABLE();
     }
@@ -307,8 +326,7 @@ float TLuaInterpreter::getVerifiedFloat(lua_State* L, const char* functionName, 
 // See also: getVerifiedBool
 double TLuaInterpreter::getVerifiedDouble(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
-    if (!lua_isnumber(L, pos)) {
-        errorArgumentType(L, functionName, pos, publicName, "number", isOptional);
+    if (!checkNumberArg(L, functionName, pos, publicName, isOptional)) {
         lua_error(L);
         Q_UNREACHABLE();
     }
@@ -1161,11 +1179,11 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         return lua_error(L);
     }
 
-    const QByteArray data{lua_tostring(L, 1)};
     bool dataIsUtf8Encoded = true;
     if (lua_gettop(L) > 1) {
         dataIsUtf8Encoded = getVerifiedBool(L, __func__, 2, "Utf8Encoded", true);
     }
+    const QByteArray data{lua_tostring(L, 1)};
 
     const QByteArray currentEncoding = host.mTelnet.getEncoding();
     if (dataIsUtf8Encoded) {
@@ -1333,8 +1351,11 @@ int TLuaInterpreter::getModulePriority(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setModulePriority
 int TLuaInterpreter::setModulePriority(lua_State* L)
 {
-    const QString moduleName = getVerifiedString(L, __func__, 1, "module name");
+    if (!checkStringArg(L, __func__, 1, "module name")) {
+        return lua_error(L);
+    }
     const int modulePriority = getVerifiedInt(L, __func__, 2, "module priority");
+    const QString moduleName{lua_tostring(L, 1)};
 
     Host& host = getHostFromLua(L);
     if (!host.mInstalledModules.contains(moduleName)) {
@@ -1357,13 +1378,16 @@ int TLuaInterpreter::saveProfile(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
+    if (!lua_isnoneornil(L, 2) && !checkStringArg(L, __func__, 2, "file name", true)) {
+        return lua_error(L);
+    }
     QString saveToDir;
     if (lua_isstring(L, 1)) {
         saveToDir = lua_tostring(L, 1);
     }
     QString saveAsFile;
     if (!lua_isnoneornil(L, 2)) {
-        saveAsFile = getVerifiedString(L, __func__, 2, "file name", true);
+        saveAsFile = lua_tostring(L, 2);
         if (!saveAsFile.endsWith(".xml", Qt::CaseInsensitive)) {
             saveAsFile = saveAsFile + ".xml";
         }
@@ -1582,10 +1606,20 @@ int TLuaInterpreter::appendLog(lua_State* L)
 
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
+// funcName is not a QString because a QByteArray made from one would still be
+// alive inside the raising checks below - see checkStringArg()
+int TLuaInterpreter::setLabelCallback(lua_State* L, const char* funcName)
 {
     Host& host = getHostFromLua(L);
-    const QString labelName = getVerifiedString(L, funcName.toUtf8().constData(), 1, "label name");
+    if (!checkStringArg(L, funcName, 1, "label name")) {
+        return lua_error(L);
+    }
+    if (!lua_isnil(L, 2) && !lua_isfunction(L, 2)) {
+        lua_pushfstring(L, "%s: bad argument #2 type (function or nil expected, got %s!)", funcName, luaL_typename(L, 2));
+        return lua_error(L);
+    }
+    const QLatin1StringView callbackName{funcName};
+    const QString labelName{lua_tostring(L, 1)};
     if (labelName.isEmpty()) {
         return warnArgumentValue(L, __func__, "label name cannot be an empty string");
     }
@@ -1594,27 +1628,24 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     int func = 0;
     if (lua_isnil(L, 1)) {
         lua_pop(L, 1);
-    } else if (lua_isfunction(L, 1)) {
-        func = luaL_ref(L, LUA_REGISTRYINDEX);
     } else {
-        lua_pushfstring(L, "%s: bad argument #2 type (function or nil expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 1));
-        return lua_error(L);
+        func = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     bool lua_result = false;
-    if (funcName == qsl("setLabelClickCallback")) {
+    if (callbackName == qsl("setLabelClickCallback")) {
         lua_result = host.setLabelClickCallback(labelName, func);
-    } else if (funcName == qsl("setLabelDoubleClickCallback")) {
+    } else if (callbackName == qsl("setLabelDoubleClickCallback")) {
         lua_result = host.setLabelDoubleClickCallback(labelName, func);
-    } else if (funcName == qsl("setLabelReleaseCallback")) {
+    } else if (callbackName == qsl("setLabelReleaseCallback")) {
         lua_result = host.setLabelReleaseCallback(labelName, func);
-    } else if (funcName == qsl("setLabelMoveCallback")) {
+    } else if (callbackName == qsl("setLabelMoveCallback")) {
         lua_result = host.setLabelMoveCallback(labelName, func);
-    } else if (funcName == qsl("setLabelWheelCallback")) {
+    } else if (callbackName == qsl("setLabelWheelCallback")) {
         lua_result = host.setLabelWheelCallback(labelName, func);
-    } else if (funcName == qsl("setLabelOnEnter")) {
+    } else if (callbackName == qsl("setLabelOnEnter")) {
         lua_result = host.setLabelOnEnter(labelName, func);
-    } else if (funcName == qsl("setLabelOnLeave")) {
+    } else if (callbackName == qsl("setLabelOnLeave")) {
         lua_result = host.setLabelOnLeave(labelName, func);
     } else {
         luaL_unref(L, LUA_REGISTRYINDEX, func);
@@ -1716,9 +1747,10 @@ int TLuaInterpreter::debug(lua_State* L)
 int TLuaInterpreter::showHandlerError(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    const QString event = getVerifiedString(L, __func__, 1, "event name");
-    const QString error = getVerifiedString(L, __func__, 2, "error message");
-    host.mLuaInterpreter.logEventError(event, error);
+    if (!checkStringArg(L, __func__, 1, "event name") || !checkStringArg(L, __func__, 2, "error message")) {
+        return lua_error(L);
+    }
+    host.mLuaInterpreter.logEventError(QString{lua_tostring(L, 1)}, QString{lua_tostring(L, 2)});
     return 0;
 }
 
@@ -1786,10 +1818,9 @@ std::pair<int, TAction*> TLuaInterpreter::getTActionFromIdOrName(lua_State* L, c
 int TLuaInterpreter::findItems(lua_State* L)
 {
     const int n = lua_gettop(L);
-    const auto name = getVerifiedString(L, __func__, 1, "item name");
-    // Although we only use 6 ASCII strings the user may not enter a purely
-    // ASCII value which we might have to report...
-    const QString type = getVerifiedString(L, __func__, 2, "item type");
+    if (!checkStringArg(L, __func__, 1, "item name") || !checkStringArg(L, __func__, 2, "item type")) {
+        return lua_error(L);
+    }
     bool exactMatch = true;
     bool caseSensitive = true;
     if (n > 2) {
@@ -1798,6 +1829,10 @@ int TLuaInterpreter::findItems(lua_State* L)
     if (n > 3) {
         caseSensitive = getVerifiedBool(L, __func__, 4, "case sensitive", true);
     }
+    const auto name = QString{lua_tostring(L, 1)};
+    // Although we only use 6 ASCII strings the user may not enter a purely
+    // ASCII value which we might have to report...
+    const QString type{lua_tostring(L, 2)};
     Host& host = getHostFromLua(L);
     auto generateList = [](const auto vector, auto l) {
         lua_newtable(l);
@@ -1923,331 +1958,333 @@ int TLuaInterpreter::isAncestorsActive(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ancestors
 int TLuaInterpreter::ancestors(lua_State* L)
 {
-    auto id = getVerifiedInt(L, __func__, 1, "item ID");
-    // Although we only use ASCII strings for the type the user may not enter a
-    // purely ASCII value which we might have to report...
-    QString type = getVerifiedString(L, __func__, 2, "item type");
-    if (id < 0) {
-        // Must be zero or more but doesn't seem to be:
-        return warnArgumentValue(L, __func__, qsl("item ID as %1 does not seem to be parseable as a positive integer").arg(lua_tostring(L, 1)));
-    }
-
-    Host& host = getHostFromLua(L);
-    // Remember, QString::compare(...) returns zero for a match:
-    QString typeCheck{QLatin1String("timer")};
-    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
-        auto pT = host.getTimerUnit()->getTimer(id);
-        if (!pT) {
-            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+    // the type QStrings must be destroyed before the raise, so the internal
+    // error paths report back instead of raising - see checkStringArg()
+    const int results = [&L]() -> int {
+        auto id = getVerifiedInt(L, __func__, 1, "item ID");
+        // Although we only use ASCII strings for the type the user may not enter a
+        // purely ASCII value which we might have to report...
+        QString type = getVerifiedString(L, __func__, 2, "item type");
+        if (id < 0) {
+            // Must be zero or more but doesn't seem to be:
+            return warnArgumentValue(L, __func__, qsl("item ID as %1 does not seem to be parseable as a positive integer").arg(lua_tostring(L, 1)));
         }
-        const auto ancestorsList = pT->getAncestorList();
-        lua_newtable(L);
-        int index = 0;
-        for (const auto pAncestor : ancestorsList) {
-            if (!pAncestor) {
-                // Uh oh! This is not expected, so clear that table off the
-                // stack so we can push an error message there:
-                lua_pop(L, 1);
-                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
-                lua_error(L);
-                Q_UNREACHABLE();
+
+        Host& host = getHostFromLua(L);
+        // Remember, QString::compare(...) returns zero for a match:
+        QString typeCheck{QLatin1String("timer")};
+        if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+            auto pT = host.getTimerUnit()->getTimer(id);
+            if (!pT) {
+                return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
             }
-            lua_pushnumber(L, ++index);
+            const auto ancestorsList = pT->getAncestorList();
             lua_newtable(L);
-            {
-                // We are confining ourselves to a small set of details here
-                // enough to help to build a table of the items perhaps but
-                // something to provide more details about each of the diffent
-                // item types (once the user knows which IDs/names to use to
-                // get them) would probably be a good idea as well:
-                lua_pushstring(L, "id");
-                lua_pushnumber(L, pAncestor->getID());
-                lua_settable(L, -3);
+            int index = 0;
+            for (const auto pAncestor : ancestorsList) {
+                if (!pAncestor) {
+                    // Uh oh! This is not expected, so clear that table off the
+                    // stack so we can push an error message there:
+                    lua_pop(L, 1);
+                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                    return -1;
+                }
+                lua_pushnumber(L, ++index);
+                lua_newtable(L);
+                {
+                    // We are confining ourselves to a small set of details here
+                    // enough to help to build a table of the items perhaps but
+                    // something to provide more details about each of the diffent
+                    // item types (once the user knows which IDs/names to use to
+                    // get them) would probably be a good idea as well:
+                    lua_pushstring(L, "id");
+                    lua_pushnumber(L, pAncestor->getID());
+                    lua_settable(L, -3);
 
-                lua_pushstring(L, "name");
-                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
-                lua_settable(L, -3);
+                    lua_pushstring(L, "name");
+                    lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                    lua_settable(L, -3);
 
-                lua_pushstring(L, "node");
-                if (pAncestor->isFolder()) {
-                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
-                        lua_pushstring(L, "package");
+                    lua_pushstring(L, "node");
+                    if (pAncestor->isFolder()) {
+                        if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                            lua_pushstring(L, "package");
+                        } else {
+                            lua_pushstring(L, "group");
+                        }
                     } else {
-                        lua_pushstring(L, "group");
+                        // offset timers have a parent node that is NOT a group!
+                        lua_pushstring(L, "item");
                     }
-                } else {
-                    // offset timers have a parent node that is NOT a group!
-                    lua_pushstring(L, "item");
+                    lua_settable(L, -3);
+
+                    lua_pushstring(L, "isActive");
+                    // Offset timer have their active state recorded differently
+                    lua_pushboolean(L, pAncestor->isOffsetTimer() ? pAncestor->shouldBeActive() : pAncestor->isActive());
+                    lua_settable(L, -3);
                 }
                 lua_settable(L, -3);
-
-                lua_pushstring(L, "isActive");
-                // Offset timer have their active state recorded differently
-                lua_pushboolean(L, pAncestor->isOffsetTimer() ? pAncestor->shouldBeActive() : pAncestor->isActive());
-                lua_settable(L, -3);
             }
-            lua_settable(L, -3);
+
+            return 1;
         }
 
-        return 1;
-    }
-
-    typeCheck = QLatin1String("trigger");
-    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
-        auto pT = host.getTriggerUnit()->getTrigger(id);
-        if (!pT) {
-            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
-        }
-        const auto ancestorsList = pT->getAncestorList();
-        lua_newtable(L);
-        int index = 0;
-        for (const auto pAncestor : ancestorsList) {
-            if (!pAncestor) {
-                // Uh oh! This is not expected, so clear that table off the
-                // stack so we can push an error message there:
-                lua_pop(L, 1);
-                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
-                lua_error(L);
-                Q_UNREACHABLE();
+        typeCheck = QLatin1String("trigger");
+        if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+            auto pT = host.getTriggerUnit()->getTrigger(id);
+            if (!pT) {
+                return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
             }
-            lua_pushnumber(L, ++index);
+            const auto ancestorsList = pT->getAncestorList();
             lua_newtable(L);
-            {
-                lua_pushstring(L, "id");
-                lua_pushnumber(L, pAncestor->getID());
-                lua_settable(L, -3);
+            int index = 0;
+            for (const auto pAncestor : ancestorsList) {
+                if (!pAncestor) {
+                    // Uh oh! This is not expected, so clear that table off the
+                    // stack so we can push an error message there:
+                    lua_pop(L, 1);
+                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                    return -1;
+                }
+                lua_pushnumber(L, ++index);
+                lua_newtable(L);
+                {
+                    lua_pushstring(L, "id");
+                    lua_pushnumber(L, pAncestor->getID());
+                    lua_settable(L, -3);
 
-                lua_pushstring(L, "name");
-                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
-                lua_settable(L, -3);
+                    lua_pushstring(L, "name");
+                    lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                    lua_settable(L, -3);
 
-                lua_pushstring(L, "node");
-                if (pAncestor->isFolder()) {
-                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
-                        lua_pushstring(L, "package");
+                    lua_pushstring(L, "node");
+                    if (pAncestor->isFolder()) {
+                        if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                            lua_pushstring(L, "package");
+                        } else {
+                            lua_pushstring(L, "group");
+                        }
                     } else {
-                        lua_pushstring(L, "group");
+                        lua_pushstring(L, "item");
                     }
-                } else {
-                    lua_pushstring(L, "item");
+                    lua_settable(L, -3);
+
+                    lua_pushstring(L, "isActive");
+                    lua_pushboolean(L, pAncestor->isActive());
+                    lua_settable(L, -3);
                 }
                 lua_settable(L, -3);
-
-                lua_pushstring(L, "isActive");
-                lua_pushboolean(L, pAncestor->isActive());
-                lua_settable(L, -3);
             }
-            lua_settable(L, -3);
+
+            return 1;
         }
 
-        return 1;
-    }
-
-    typeCheck = QLatin1String("alias");
-    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
-        auto pT = host.getAliasUnit()->getAlias(id);
-        if (!pT) {
-            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
-        }
-        const auto ancestorsList = pT->getAncestorList();
-        lua_newtable(L);
-        int index = 0;
-        for (const auto pAncestor : ancestorsList) {
-            if (!pAncestor) {
-                // Uh oh! This is not expected, so clear that table off the
-                // stack so we can push an error message there:
-                lua_pop(L, 1);
-                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
-                lua_error(L);
-                Q_UNREACHABLE();
+        typeCheck = QLatin1String("alias");
+        if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+            auto pT = host.getAliasUnit()->getAlias(id);
+            if (!pT) {
+                return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
             }
-            lua_pushnumber(L, ++index);
+            const auto ancestorsList = pT->getAncestorList();
             lua_newtable(L);
-            {
-                lua_pushstring(L, "id");
-                lua_pushnumber(L, pAncestor->getID());
-                lua_settable(L, -3);
+            int index = 0;
+            for (const auto pAncestor : ancestorsList) {
+                if (!pAncestor) {
+                    // Uh oh! This is not expected, so clear that table off the
+                    // stack so we can push an error message there:
+                    lua_pop(L, 1);
+                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                    return -1;
+                }
+                lua_pushnumber(L, ++index);
+                lua_newtable(L);
+                {
+                    lua_pushstring(L, "id");
+                    lua_pushnumber(L, pAncestor->getID());
+                    lua_settable(L, -3);
 
-                lua_pushstring(L, "name");
-                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
-                lua_settable(L, -3);
+                    lua_pushstring(L, "name");
+                    lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                    lua_settable(L, -3);
 
-                lua_pushstring(L, "node");
-                if (pAncestor->isFolder()) {
-                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
-                        lua_pushstring(L, "package");
+                    lua_pushstring(L, "node");
+                    if (pAncestor->isFolder()) {
+                        if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                            lua_pushstring(L, "package");
+                        } else {
+                            lua_pushstring(L, "group");
+                        }
                     } else {
-                        lua_pushstring(L, "group");
+                        lua_pushstring(L, "item");
                     }
-                } else {
-                    lua_pushstring(L, "item");
+                    lua_settable(L, -3);
+
+                    lua_pushstring(L, "isActive");
+                    lua_pushboolean(L, pAncestor->isActive());
+                    lua_settable(L, -3);
                 }
                 lua_settable(L, -3);
-
-                lua_pushstring(L, "isActive");
-                lua_pushboolean(L, pAncestor->isActive());
-                lua_settable(L, -3);
             }
-            lua_settable(L, -3);
+
+            return 1;
         }
 
-        return 1;
-    }
-
-    typeCheck = QLatin1String("keybind");
-    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
-        auto pT = host.getKeyUnit()->getKey(id);
-        if (!pT) {
-            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
-        }
-        const auto ancestorsList = pT->getAncestorList();
-        lua_newtable(L);
-        int index = 0;
-        for (const auto pAncestor : ancestorsList) {
-            if (!pAncestor) {
-                // Uh oh! This is not expected, so clear that table off the
-                // stack so we can push an error message there:
-                lua_pop(L, 1);
-                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
-                lua_error(L);
-                Q_UNREACHABLE();
+        typeCheck = QLatin1String("keybind");
+        if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+            auto pT = host.getKeyUnit()->getKey(id);
+            if (!pT) {
+                return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
             }
-            lua_pushnumber(L, ++index);
+            const auto ancestorsList = pT->getAncestorList();
             lua_newtable(L);
-            {
-                lua_pushstring(L, "id");
-                lua_pushnumber(L, pAncestor->getID());
-                lua_settable(L, -3);
+            int index = 0;
+            for (const auto pAncestor : ancestorsList) {
+                if (!pAncestor) {
+                    // Uh oh! This is not expected, so clear that table off the
+                    // stack so we can push an error message there:
+                    lua_pop(L, 1);
+                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                    return -1;
+                }
+                lua_pushnumber(L, ++index);
+                lua_newtable(L);
+                {
+                    lua_pushstring(L, "id");
+                    lua_pushnumber(L, pAncestor->getID());
+                    lua_settable(L, -3);
 
-                lua_pushstring(L, "name");
-                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
-                lua_settable(L, -3);
+                    lua_pushstring(L, "name");
+                    lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                    lua_settable(L, -3);
 
-                lua_pushstring(L, "node");
-                if (pAncestor->isFolder()) {
-                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
-                        lua_pushstring(L, "package");
+                    lua_pushstring(L, "node");
+                    if (pAncestor->isFolder()) {
+                        if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                            lua_pushstring(L, "package");
+                        } else {
+                            lua_pushstring(L, "group");
+                        }
                     } else {
-                        lua_pushstring(L, "group");
+                        lua_pushstring(L, "item");
                     }
-                } else {
-                    lua_pushstring(L, "item");
+                    lua_settable(L, -3);
+
+                    lua_pushstring(L, "isActive");
+                    lua_pushboolean(L, pAncestor->isActive());
+                    lua_settable(L, -3);
                 }
                 lua_settable(L, -3);
-
-                lua_pushstring(L, "isActive");
-                lua_pushboolean(L, pAncestor->isActive());
-                lua_settable(L, -3);
             }
-            lua_settable(L, -3);
+
+            return 1;
         }
 
-        return 1;
-    }
-
-    typeCheck = QLatin1String("button");
-    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
-        auto pT = host.getActionUnit()->getAction(id);
-        if (!pT) {
-            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
-        }
-        const auto ancestorsList = pT->getAncestorList();
-        lua_newtable(L);
-        int index = 0;
-        for (const auto pAncestor : ancestorsList) {
-            if (!pAncestor) {
-                // Uh oh! This is not expected, so clear that table off the
-                // stack so we can push an error message there:
-                lua_pop(L, 1);
-                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
-                lua_error(L);
-                Q_UNREACHABLE();
+        typeCheck = QLatin1String("button");
+        if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+            auto pT = host.getActionUnit()->getAction(id);
+            if (!pT) {
+                return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
             }
-            lua_pushnumber(L, ++index);
+            const auto ancestorsList = pT->getAncestorList();
             lua_newtable(L);
-            {
-                lua_pushstring(L, "id");
-                lua_pushnumber(L, pAncestor->getID());
-                lua_settable(L, -3);
+            int index = 0;
+            for (const auto pAncestor : ancestorsList) {
+                if (!pAncestor) {
+                    // Uh oh! This is not expected, so clear that table off the
+                    // stack so we can push an error message there:
+                    lua_pop(L, 1);
+                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                    return -1;
+                }
+                lua_pushnumber(L, ++index);
+                lua_newtable(L);
+                {
+                    lua_pushstring(L, "id");
+                    lua_pushnumber(L, pAncestor->getID());
+                    lua_settable(L, -3);
 
-                lua_pushstring(L, "name");
-                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
-                lua_settable(L, -3);
+                    lua_pushstring(L, "name");
+                    lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                    lua_settable(L, -3);
 
-                lua_pushstring(L, "node");
-                if (pAncestor->isFolder()) {
-                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
-                        lua_pushstring(L, "package");
+                    lua_pushstring(L, "node");
+                    if (pAncestor->isFolder()) {
+                        if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                            lua_pushstring(L, "package");
+                        } else {
+                            lua_pushstring(L, "group");
+                        }
                     } else {
-                        lua_pushstring(L, "group");
+                        lua_pushstring(L, "item");
                     }
-                } else {
-                    lua_pushstring(L, "item");
+                    lua_settable(L, -3);
+
+                    lua_pushstring(L, "isActive");
+                    lua_pushboolean(L, pAncestor->isActive());
+                    lua_settable(L, -3);
                 }
                 lua_settable(L, -3);
-
-                lua_pushstring(L, "isActive");
-                lua_pushboolean(L, pAncestor->isActive());
-                lua_settable(L, -3);
             }
-            lua_settable(L, -3);
+
+            return 1;
         }
 
-        return 1;
-    }
-
-    typeCheck = QLatin1String("script");
-    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
-        auto pT = host.getScriptUnit()->getScript(id);
-        if (!pT) {
-            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
-        }
-        const auto ancestorsList = pT->getAncestorList();
-        lua_newtable(L);
-        int index = 0;
-        for (const auto pAncestor : ancestorsList) {
-            if (!pAncestor) {
-                // Uh oh! This is not expected, so clear that table off the
-                // stack so we can push an error message there:
-                lua_pop(L, 1);
-                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
-                lua_error(L);
-                Q_UNREACHABLE();
+        typeCheck = QLatin1String("script");
+        if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+            auto pT = host.getScriptUnit()->getScript(id);
+            if (!pT) {
+                return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
             }
-            lua_pushnumber(L, ++index);
+            const auto ancestorsList = pT->getAncestorList();
             lua_newtable(L);
-            {
-                lua_pushstring(L, "id");
-                lua_pushnumber(L, pAncestor->getID());
-                lua_settable(L, -3);
+            int index = 0;
+            for (const auto pAncestor : ancestorsList) {
+                if (!pAncestor) {
+                    // Uh oh! This is not expected, so clear that table off the
+                    // stack so we can push an error message there:
+                    lua_pop(L, 1);
+                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                    return -1;
+                }
+                lua_pushnumber(L, ++index);
+                lua_newtable(L);
+                {
+                    lua_pushstring(L, "id");
+                    lua_pushnumber(L, pAncestor->getID());
+                    lua_settable(L, -3);
 
-                lua_pushstring(L, "name");
-                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
-                lua_settable(L, -3);
+                    lua_pushstring(L, "name");
+                    lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                    lua_settable(L, -3);
 
-                lua_pushstring(L, "node");
-                if (pAncestor->isFolder()) {
-                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
-                        lua_pushstring(L, "package");
+                    lua_pushstring(L, "node");
+                    if (pAncestor->isFolder()) {
+                        if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                            lua_pushstring(L, "package");
+                        } else {
+                            lua_pushstring(L, "group");
+                        }
                     } else {
-                        lua_pushstring(L, "group");
+                        lua_pushstring(L, "item");
                     }
-                } else {
-                    lua_pushstring(L, "item");
+                    lua_settable(L, -3);
+
+                    lua_pushstring(L, "isActive");
+                    lua_pushboolean(L, pAncestor->isActive());
+                    lua_settable(L, -3);
                 }
                 lua_settable(L, -3);
-
-                lua_pushstring(L, "isActive");
-                lua_pushboolean(L, pAncestor->isActive());
-                lua_settable(L, -3);
             }
-            lua_settable(L, -3);
+
+            return 1;
         }
 
-        return 1;
+        return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+    }();
+    if (results < 0) {
+        return lua_error(L);
     }
-
-    return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+    return results;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getTimestamp
@@ -2255,16 +2292,19 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
 {
     const int n = lua_gettop(L);
     int s = 1;
+    if (n > 1 && !checkStringArg(L, __func__, s++, "mini console, user window or buffer name {may be omitted for the \"main\" console}")) {
+        return lua_error(L);
+    }
+
+    const auto luaLine = getVerifiedInt(L, __func__, s, "line number");
     QString name;
     if (n > 1) {
-        name = getVerifiedString(L, __func__, s++, "mini console, user window or buffer name {may be omitted for the \"main\" console}");
+        name = lua_tostring(L, 1);
         if (name == QLatin1String("main")) {
             // clear it so it is treated as the main console below
             name.clear();
         }
     }
-
-    const auto luaLine = getVerifiedInt(L, __func__, s, "line number");
     if (luaLine < 1) {
         return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it should be greater than zero").arg(luaLine));
     }
@@ -2362,10 +2402,20 @@ void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel&
 // "1" or "0" depending on whether the exit is locked or not. This was not
 // The next three functions are internal helpers for use by
 // (echo|insert|set)|(Link|Popup) functions
+// The non-raising counterpart of the type test in parseCommandOrFunction() - see checkStringArg()
+bool TLuaInterpreter::checkCommandOrFunctionArg(lua_State* L, const char* functionName, const int pos)
+{
+    if (!(lua_isstring(L, pos) || lua_isfunction(L, pos))) {
+        lua_pushfstring(L, "%s: bad argument #%d type (command as string or function expected, got %s!)", functionName, pos, luaL_typename(L, pos));
+        return false;
+    }
+    return true;
+}
+
+// No documentation available in wiki - internal function
 void TLuaInterpreter::parseCommandOrFunction(lua_State* lState, const char* functionName, int& index, QString& command, int& luaFunctionNumber)
 {
-    if (!(lua_isstring(lState, index) || lua_isfunction(lState, index))) {
-        lua_pushfstring(lState, "%s: bad argument #%d type (command as string or function expected, got %s!)", functionName, index, luaL_typename(lState, index));
+    if (!checkCommandOrFunctionArg(lState, functionName, index)) {
         lua_error(lState);
         Q_UNREACHABLE();
     }
@@ -2466,15 +2516,17 @@ int TLuaInterpreter::echo(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    QString consoleName;
     const int n = lua_gettop(L);
     int s = 1;
 
-    if (n > 1) {
-        consoleName = getVerifiedString(L, __func__, s++, "console name", true);
+    if (n > 1 && !checkStringArg(L, __func__, s++, "console name", true)) {
+        return lua_error(L);
     }
-
-    const QString displayText = getVerifiedString(L, __func__, s, "text to display");
+    if (!checkStringArg(L, __func__, s, "text to display")) {
+        return lua_error(L);
+    }
+    const QString consoleName = (n > 1) ? QString{lua_tostring(L, 1)} : QString();
+    const QString displayText{lua_tostring(L, s)};
 
     if (isMain(consoleName)) {
         host.mpConsole->buffer.mEchoingText = true;
@@ -2512,96 +2564,107 @@ int TLuaInterpreter::setMergeTables(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMudletVersion
 int TLuaInterpreter::getMudletVersion(lua_State* L)
 {
-    QByteArray version = QByteArray(APP_VERSION).trimmed();
-    const QByteArray build = mudlet::self()->mAppBuild.trimmed().toLocal8Bit();
+    // the QByteArrays below must be destroyed before the raise, so failures
+    // report back instead of raising - see checkStringArg()
+    const int results = [&L]() -> int {
+        QByteArray version = QByteArray(APP_VERSION).trimmed();
+        const QByteArray build = mudlet::self()->mAppBuild.trimmed().toLocal8Bit();
 
-    QList<QByteArray> const versionData = version.split('.');
-    if (versionData.size() != 3) {
-        qWarning() << "TLuaInterpreter::getMudletVersion(): ERROR: Version data not correctly set on compilation,\n"
-                   << "   is the VERSION value in the project file present?";
-        lua_pushstring(L, "getMudletVersion: sorry, version information not available.");
-        return lua_error(L);
-    }
-
-    bool ok = true;
-    int major = 0;
-    int minor = 0;
-    int revision = 0;
-    {
-        major = versionData.at(0).toInt(&ok);
-        if (ok) {
-            minor = versionData.at(1).toInt(&ok);
+        QList<QByteArray> const versionData = version.split('.');
+        if (versionData.size() != 3) {
+            qWarning() << "TLuaInterpreter::getMudletVersion(): ERROR: Version data not correctly set on compilation,\n"
+                       << "   is the VERSION value in the project file present?";
+            lua_pushstring(L, "getMudletVersion: sorry, version information not available.");
+            return -1;
         }
-        if (ok) {
-            revision = versionData.at(2).toInt(&ok);
+
+        bool ok = true;
+        int major = 0;
+        int minor = 0;
+        int revision = 0;
+        {
+            major = versionData.at(0).toInt(&ok);
+            if (ok) {
+                minor = versionData.at(1).toInt(&ok);
+            }
+            if (ok) {
+                revision = versionData.at(2).toInt(&ok);
+            }
         }
-    }
-    if (!ok) {
-        qWarning("TLuaInterpreter::getMudletVersion(): ERROR: Version data not correctly parsed,\n"
-                 "   was the VERSION value in the project file correct at compilation time?");
-        lua_pushstring(L, "getMudletVersion: sorry, version information corrupted.");
-        return lua_error(L);
-    }
+        if (!ok) {
+            qWarning("TLuaInterpreter::getMudletVersion(): ERROR: Version data not correctly parsed,\n"
+                     "   was the VERSION value in the project file correct at compilation time?");
+            lua_pushstring(L, "getMudletVersion: sorry, version information corrupted.");
+            return -1;
+        }
 
-    const int n = lua_gettop(L);
+        const int n = lua_gettop(L);
 
-    if (n == 1) {
-        const QString tidiedWhat = getVerifiedString(L, __func__, 1, "style", true).toLower().trimmed();
-        if (tidiedWhat.contains("major")) {
+        if (n == 1) {
+            if (!checkStringArg(L, __func__, 1, "style", true)) {
+                return -1;
+            }
+            const QString tidiedWhat = QString{lua_tostring(L, 1)}.toLower().trimmed();
+            if (tidiedWhat.contains("major")) {
+                lua_pushinteger(L, major);
+            } else if (tidiedWhat.contains("minor")) { // NOLINT(readability-else-after-return)
+                lua_pushinteger(L, minor);
+            } else if (tidiedWhat.contains("revision")) { // NOLINT(readability-else-after-return)
+                lua_pushinteger(L, revision);
+            } else if (tidiedWhat.contains("build")) { // NOLINT(readability-else-after-return)
+                if (build.isEmpty()) {
+                    lua_pushnil(L);
+                } else {
+                    lua_pushstring(L, build);
+                }
+            } else if (tidiedWhat.contains("string")) { // NOLINT(readability-else-after-return)
+                if (build.isEmpty()) {
+                    lua_pushstring(L, version.constData());
+                } else {
+                    lua_pushstring(L, version.append(build).constData());
+                }
+            } else if (tidiedWhat.contains("table")) { // NOLINT(readability-else-after-return)
+                lua_pushinteger(L, major);
+                lua_pushinteger(L, minor);
+                lua_pushinteger(L, revision);
+                if (build.isEmpty()) {
+                    lua_pushnil(L);
+                } else {
+                    lua_pushstring(L, build);
+                }
+                return 4;
+            } else { // NOLINT(readability-else-after-return)
+                lua_pushstring(L,
+                               "getMudletVersion: takes one (optional) argument:\n"
+                               "   \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
+                return -1;
+            }
+        } else if (n == 0) { // NOLINT(readability-else-after-return)
+            lua_newtable(L);
+            lua_pushstring(L, "major");
             lua_pushinteger(L, major);
-        } else if (tidiedWhat.contains("minor")) { // NOLINT(readability-else-after-return)
+            lua_settable(L, -3);
+            lua_pushstring(L, "minor");
             lua_pushinteger(L, minor);
-        } else if (tidiedWhat.contains("revision")) { // NOLINT(readability-else-after-return)
+            lua_settable(L, -3);
+            lua_pushstring(L, "revision");
             lua_pushinteger(L, revision);
-        } else if (tidiedWhat.contains("build")) { // NOLINT(readability-else-after-return)
-            if (build.isEmpty()) {
-                lua_pushnil(L);
-            } else {
-                lua_pushstring(L, build);
-            }
-        } else if (tidiedWhat.contains("string")) { // NOLINT(readability-else-after-return)
-            if (build.isEmpty()) {
-                lua_pushstring(L, version.constData());
-            } else {
-                lua_pushstring(L, version.append(build).constData());
-            }
-        } else if (tidiedWhat.contains("table")) { // NOLINT(readability-else-after-return)
-            lua_pushinteger(L, major);
-            lua_pushinteger(L, minor);
-            lua_pushinteger(L, revision);
-            if (build.isEmpty()) {
-                lua_pushnil(L);
-            } else {
-                lua_pushstring(L, build);
-            }
-            return 4;
+            lua_settable(L, -3);
+            lua_pushstring(L, "build");
+            lua_pushstring(L, mudlet::self()->mAppBuild.trimmed().toUtf8().constData());
+            lua_settable(L, -3);
         } else { // NOLINT(readability-else-after-return)
             lua_pushstring(L,
-                           "getMudletVersion: takes one (optional) argument:\n"
+                           "getMudletVersion: only takes one (optional) argument:\n"
                            "   \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
-            return lua_error(L);
+            return -1;
         }
-    } else if (n == 0) { // NOLINT(readability-else-after-return)
-        lua_newtable(L);
-        lua_pushstring(L, "major");
-        lua_pushinteger(L, major);
-        lua_settable(L, -3);
-        lua_pushstring(L, "minor");
-        lua_pushinteger(L, minor);
-        lua_settable(L, -3);
-        lua_pushstring(L, "revision");
-        lua_pushinteger(L, revision);
-        lua_settable(L, -3);
-        lua_pushstring(L, "build");
-        lua_pushstring(L, mudlet::self()->mAppBuild.trimmed().toUtf8().constData());
-        lua_settable(L, -3);
-    } else { // NOLINT(readability-else-after-return)
-        lua_pushstring(L,
-                       "getMudletVersion: only takes one (optional) argument:\n"
-                       "   \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
+        return 1;
+    }();
+    if (results < 0) {
         return lua_error(L);
     }
-    return 1;
+    return results;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#openWebPage
@@ -2617,14 +2680,14 @@ int TLuaInterpreter::getTime(lua_State* L)
 {
     const int n = lua_gettop(L);
     bool return_string = false;
-    QString format = qsl("yyyy.MM.dd hh:mm:ss.zzz");
-    QString tm;
     if (n > 0) {
         return_string = getVerifiedBool(L, __func__, 1, "return as string", true);
-        if (n > 1) {
-            format = getVerifiedString(L, __func__, 2, "custom time format");
+        if (n > 1 && !checkStringArg(L, __func__, 2, "custom time format")) {
+            return lua_error(L);
         }
     }
+    QString format = (n > 1) ? QString{lua_tostring(L, 2)} : qsl("yyyy.MM.dd hh:mm:ss.zzz");
+    QString tm;
     const QDateTime time = QDateTime::currentDateTime();
     if (return_string) {
         tm = time.toString(format);
@@ -2670,13 +2733,15 @@ int TLuaInterpreter::getEpoch(lua_State* L)
 int TLuaInterpreter::addCmdLineBlacklist(lua_State* L)
 {
     const int n = lua_gettop(L);
-    QString name = "main";
+    const char* name = "main";
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    const QString text = getVerifiedString(L, __func__, n, "suggestion text");
-    auto pN = COMMANDLINE(L, name);
-    pN->addBlacklist(text);
+    if (!checkStringArg(L, __func__, n, "suggestion text")) {
+        return lua_error(L);
+    }
+    auto pN = COMMANDLINE(L, QString{name});
+    pN->addBlacklist(QString{lua_tostring(L, n)});
     return 0;
 }
 
@@ -2684,13 +2749,15 @@ int TLuaInterpreter::addCmdLineBlacklist(lua_State* L)
 int TLuaInterpreter::removeCmdLineBlacklist(lua_State* L)
 {
     const int n = lua_gettop(L);
-    QString name = "main";
+    const char* name = "main";
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    const QString text = getVerifiedString(L, __func__, n, "suggestion text");
-    auto pN = COMMANDLINE(L, name);
-    pN->removeBlacklist(text);
+    if (!checkStringArg(L, __func__, n, "suggestion text")) {
+        return lua_error(L);
+    }
+    auto pN = COMMANDLINE(L, QString{name});
+    pN->removeBlacklist(QString{lua_tostring(L, n)});
     return 0;
 }
 
@@ -2698,11 +2765,11 @@ int TLuaInterpreter::removeCmdLineBlacklist(lua_State* L)
 int TLuaInterpreter::clearCmdLineBlacklist(lua_State* L)
 {
     const int n = lua_gettop(L);
-    QString name = "main";
+    const char* name = "main";
     if (n == 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    auto pN = COMMANDLINE(L, name);
+    auto pN = COMMANDLINE(L, QString{name});
     pN->clearBlacklist();
     return 0;
 }
@@ -2870,12 +2937,15 @@ int TLuaInterpreter::getModules(lua_State* L)
 int TLuaInterpreter::getModuleInfo(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    auto infoMap = host.mModuleInfo;
     const int n = lua_gettop(L);
-    const QString name = getVerifiedString(L, __func__, 1, "module name");
+    if (!checkStringArg(L, __func__, 1, "module name") || (n > 1 && !checkStringArg(L, __func__, 2, "info", true))) {
+        return lua_error(L);
+    }
+    auto infoMap = host.mModuleInfo;
+    const QString name{lua_tostring(L, 1)};
     QString info;
     if (n > 1) {
-        info = getVerifiedString(L, __func__, 2, "info", true);
+        info = lua_tostring(L, 2);
     }
     if (info.isEmpty()) {
         QMap<QString, QString>::const_iterator iter = infoMap.value(name).constBegin();
@@ -2896,12 +2966,15 @@ int TLuaInterpreter::getModuleInfo(lua_State* L)
 int TLuaInterpreter::getPackageInfo(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    auto infoMap = host.mPackageInfo;
     const int n = lua_gettop(L);
-    const QString name = getVerifiedString(L, __func__, 1, "package name");
+    if (!checkStringArg(L, __func__, 1, "package name") || (n > 1 && !checkStringArg(L, __func__, 2, "info", true))) {
+        return lua_error(L);
+    }
+    auto infoMap = host.mPackageInfo;
+    const QString name{lua_tostring(L, 1)};
     QString info;
     if (n > 1) {
-        info = getVerifiedString(L, __func__, 2, "info", true);
+        info = lua_tostring(L, 2);
     }
     if (info.isEmpty()) {
         QMap<QString, QString>::const_iterator iter = infoMap.value(name).constBegin();
@@ -2922,10 +2995,10 @@ int TLuaInterpreter::getPackageInfo(lua_State* L)
 int TLuaInterpreter::setModuleInfo(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    const QString moduleName = getVerifiedString(L, __func__, 1, "module name");
-    const QString info = getVerifiedString(L, __func__, 2, "info");
-    const QString value = getVerifiedString(L, __func__, 3, "value");
-    host.mModuleInfo[moduleName][info] = value;
+    if (!checkStringArg(L, __func__, 1, "module name") || !checkStringArg(L, __func__, 2, "info") || !checkStringArg(L, __func__, 3, "value")) {
+        return lua_error(L);
+    }
+    host.mModuleInfo[QString{lua_tostring(L, 1)}][QString{lua_tostring(L, 2)}] = QString{lua_tostring(L, 3)};
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2934,10 +3007,10 @@ int TLuaInterpreter::setModuleInfo(lua_State* L)
 int TLuaInterpreter::setPackageInfo(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    const QString packageName = getVerifiedString(L, __func__, 1, "package name");
-    const QString info = getVerifiedString(L, __func__, 2, "info");
-    const QString value = getVerifiedString(L, __func__, 3, "value");
-    host.mPackageInfo[packageName][info] = value;
+    if (!checkStringArg(L, __func__, 1, "package name") || !checkStringArg(L, __func__, 2, "info") || !checkStringArg(L, __func__, 3, "value")) {
+        return lua_error(L);
+    }
+    host.mPackageInfo[QString{lua_tostring(L, 1)}][QString{lua_tostring(L, 2)}] = QString{lua_tostring(L, 3)};
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2980,17 +3053,20 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
 // this function to get called events.
 int TLuaInterpreter::registerAnonymousEventHandler(lua_State* L)
 {
-    const QString event = getVerifiedString(L, __func__, 1, "event name");
-    const QString func = getVerifiedString(L, __func__, 2, "function name");
+    if (!checkStringArg(L, __func__, 1, "event name") || !checkStringArg(L, __func__, 2, "function name")) {
+        return lua_error(L);
+    }
     Host& host = getHostFromLua(L);
-    host.registerAnonymousEventHandler(event, func);
+    host.registerAnonymousEventHandler(QString{lua_tostring(L, 1)}, QString{lua_tostring(L, 2)});
     return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#expandAlias
 int TLuaInterpreter::expandAlias(lua_State* L)
 {
-    const QString payload = getVerifiedString(L, __func__, 1, "text to parse");
+    if (!checkStringArg(L, __func__, 1, "text to parse")) {
+        return lua_error(L);
+    }
     bool wantPrint = true;
     if (lua_gettop(L) > 1) {
         // check if the 2nd argument is a 'false', but don't match if it is 'nil'
@@ -3001,6 +3077,7 @@ int TLuaInterpreter::expandAlias(lua_State* L)
             wantPrint = getVerifiedBool(L, __func__, 2, "echo", true);
         }
     }
+    const QString payload{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
     // Host::send will encode the UTF encoded data here in the wanted Server
     // encoding:
@@ -3025,11 +3102,14 @@ int TLuaInterpreter::sendCmdLine(lua_State* L)
 // encoded in the required Mud Server encoding.
 int TLuaInterpreter::sendRaw(lua_State* L)
 {
-    const QString text = getVerifiedString(L, __func__, 1, "command");
+    if (!checkStringArg(L, __func__, 1, "command")) {
+        return lua_error(L);
+    }
     bool wantPrint = true;
     if (lua_gettop(L) > 1) {
         wantPrint = getVerifiedBool(L, __func__, 2, "showOnScreen", true);
     }
+    const QString text{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
     // Host::send will encode the UTF encoded data here in the wanted Server encoding:
     host.send(text, wantPrint, true);
@@ -4936,8 +5016,11 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
 // Documentation: https://wiki.mudlet.org/w/Manual:Networking_Functions#unzipAsync
 int TLuaInterpreter::unzipAsync(lua_State* L)
 {
-    const QString zipLocation = getVerifiedString(L, __func__, 1, "zip location");
-    QString extractLocation = getVerifiedString(L, __func__, 2, "extract location");
+    if (!checkStringArg(L, __func__, 1, "zip location") || !checkStringArg(L, __func__, 2, "extract location")) {
+        return lua_error(L);
+    }
+    const QString zipLocation{lua_tostring(L, 1)};
+    QString extractLocation{lua_tostring(L, 2)};
 
     const QTemporaryDir temporaryDir;
     if (!temporaryDir.isValid()) {
@@ -6901,7 +6984,9 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     bool hasSharedDictionary = false;
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
 
-    const QString text = getVerifiedString(L, __func__, 1, "word");
+    if (!checkStringArg(L, __func__, 1, "word")) {
+        return lua_error(L);
+    }
 
     bool useUserDictionary = false;
     if (lua_gettop(L) > 1) {
@@ -6910,6 +6995,7 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
             return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
         }
     }
+    const QString text{lua_tostring(L, 1)};
 
     Hunhandle* handle = nullptr;
     QByteArray encodedText;
@@ -6937,7 +7023,9 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     bool hasSharedDictionary = false;
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
 
-    const QString text = getVerifiedString(L, __func__, 1, "word");
+    if (!checkStringArg(L, __func__, 1, "word")) {
+        return lua_error(L);
+    }
 
     bool useUserDictionary = false;
     if (lua_gettop(L) > 1) {
@@ -6946,6 +7034,7 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
             return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
         }
     }
+    const QString text{lua_tostring(L, 1)};
 
     char** wordList;
     size_t wordCount = 0;
@@ -7069,20 +7158,23 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#setProfileInformation
 int TLuaInterpreter::setProfileInformation(lua_State* L)
 {
-    QString profileName = getHostFromLua(L).getName();
-    QString text;
     const int params = lua_gettop(L);
 
-    switch (params) {
-    case 1: {
-        text = getVerifiedString(L, __func__, 1, "text");
-        break;
+    if (params == 1) {
+        if (!checkStringArg(L, __func__, 1, "text")) {
+            return lua_error(L);
+        }
+    } else if (!checkStringArg(L, __func__, 1, "profile name") || !checkStringArg(L, __func__, 2, "text")) {
+        return lua_error(L);
     }
-    default: {
-        profileName = getVerifiedString(L, __func__, 1, "profile name");
-        text = getVerifiedString(L, __func__, 2, "text");
-        break;
-    }
+
+    QString profileName = getHostFromLua(L).getName();
+    QString text;
+    if (params == 1) {
+        text = lua_tostring(L, 1);
+    } else {
+        profileName = lua_tostring(L, 1);
+        text = lua_tostring(L, 2);
     }
 
     QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), text);
@@ -7098,17 +7190,13 @@ int TLuaInterpreter::setProfileInformation(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#clearProfileInformation
 int TLuaInterpreter::clearProfileInformation(lua_State* L)
 {
-    QString profileName = getHostFromLua(L).getName();
-    QString desc = "";
     const int params = lua_gettop(L);
-
-    switch (params) {
-    case 0:
-        break;
-    default:
-        profileName = getVerifiedString(L, __func__, 1, "profile name");
-        break;
+    if (params > 0 && !checkStringArg(L, __func__, 1, "profile name")) {
+        return lua_error(L);
     }
+
+    QString profileName = (params > 0) ? QString{lua_tostring(L, 1)} : getHostFromLua(L).getName();
+    QString desc = "";
 
     // if this is a default game, return to the orginal text
     auto itDetails = TGameDetails::findGame(profileName);
@@ -7497,15 +7585,15 @@ int TLuaInterpreter::setMapRoomExitsColor(lua_State* L)
 int TLuaInterpreter::showNotification(lua_State* L)
 {
     const int n = lua_gettop(L);
-    const QString title = getVerifiedString(L, __func__, 1, "title");
-    QString text = title;
-    if (n >= 2) {
-        text = getVerifiedString(L, __func__, 2, "message");
+    if (!checkStringArg(L, __func__, 1, "title") || (n >= 2 && !checkStringArg(L, __func__, 2, "message")) || (n >= 3 && !checkNumberArg(L, __func__, 3, "expiration time in seconds"))) {
+        return lua_error(L);
     }
     std::optional<int> notificationExpirationTime;
     if (n >= 3) {
-        notificationExpirationTime = qMax(qRound(getVerifiedDouble(L, __func__, 3, "expiration time in seconds") * 1000), 1000);
+        notificationExpirationTime = qMax(qRound(lua_tonumber(L, 3) * 1000), 1000);
     }
+    const QString title{lua_tostring(L, 1)};
+    const QString text = (n >= 2) ? QString{lua_tostring(L, 2)} : title;
 
     mudlet::self()->mTrayIcon.show();
     if (notificationExpirationTime.has_value()) {
@@ -8022,23 +8110,18 @@ int TLuaInterpreter::setConfig(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#announce
 int TLuaInterpreter::announce(lua_State* L)
 {
-    const QString text = getVerifiedString(L, __func__, 1, "text to announce");
     static const QStringList processingKinds{"importantall", "importantmostrecent", "all", "mostrecent", "currentthenmostrecent"};
-    QString processing;
-
     const int n = lua_gettop(L);
-    if (n > 1) {
-        // while this only has effect on Windows, it should fail silently in order not to spam
-        processing = getVerifiedString(L, __func__, 2, "processing style");
-
-        if (!processingKinds.contains(processing)) {
-            lua_pushfstring(
-                    L, "%s: bad argument #%d type (processing should be one of %s, got %s!)", __func__, 2, processingKinds.join(qsl(", ")).toUtf8().constData(), processing.toUtf8().constData());
-            return lua_error(L);
-        }
+    if (!checkStringArg(L, __func__, 1, "text to announce") || (n > 1 && !checkStringArg(L, __func__, 2, "processing style"))) {
+        return lua_error(L);
+    }
+    // while this only has effect on Windows, it should fail silently in order not to spam
+    if (n > 1 && !processingKinds.contains(QLatin1StringView{lua_tostring(L, 2)})) {
+        lua_pushfstring(L, "%s: bad argument #%d type (processing should be one of %s, got %s!)", __func__, 2, processingKinds.join(qsl(", ")).toUtf8().constData(), lua_tostring(L, 2));
+        return lua_error(L);
     }
 
-    mudlet::self()->announce(text, processing, true);
+    mudlet::self()->announce(QString{lua_tostring(L, 1)}, (n > 1) ? QString{lua_tostring(L, 2)} : QString(), true);
     return 0;
 }
 
@@ -8438,11 +8521,11 @@ int TLuaInterpreter::getSaveCommandHistory(lua_State* L)
         lua_pushstring(L, "disabled by profile global preference");
         return 2;
     }
-    QString name = QLatin1String("main");
+    const char* name = "main";
     if (lua_gettop(L)) {
         name = CMDLINE_NAME(L, 1);
     }
-    auto pCommandline = COMMANDLINE(L, name);
+    auto pCommandline = COMMANDLINE(L, QString{name});
     lua_pushboolean(L, pCommandline->mSaveCommands);
     lua_pushstring(L, (pCommandline->mSaveCommands ? qsl("enabled (%1 lines will be saved)").arg(QString::number(numberOfLines)) : qsl("disabled")).toUtf8().constData());
     return 2;
@@ -8460,7 +8543,7 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
         // profile:
         return warnArgumentValue(L, __func__, "disabled by profile global preference");
     }
-    QString name = QLatin1String("main");
+    const char* name = "main";
     bool saveCommands = true;
     // if there is no arguments we will set the "save command history" on the
     // main  command line:
@@ -8484,7 +8567,7 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
         }
     }
 
-    auto pCommandline = COMMANDLINE(L, name);
+    auto pCommandline = COMMANDLINE(L, QString{name});
     pCommandline->mSaveCommands = saveCommands;
     lua_pushboolean(L, true);
     return 1;
