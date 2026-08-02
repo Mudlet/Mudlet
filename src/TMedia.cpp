@@ -1271,7 +1271,6 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
 
         if (existingPlayer->getPlaybackState() != QMediaPlayer::PlayingState && existingPlayer->mediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
             existingPlayer->setMediaData(mediaData);
-            existingPlayer->noteClaimed();
             return existingPlayer; // Reuse existing player
         }
     }
@@ -1659,6 +1658,7 @@ void TMedia::play(TMediaData& mediaData)
         }
 
         const QUrl mediaSource = mediaData.mediaInput() == TMediaData::MediaInputFile ? QUrl::fromLocalFile(absolutePathFileName) : QUrl(absolutePathFileName);
+        pPlayer->noteClaimed();
         pPlayer->mediaPlayer()->setSource(mediaSource);
     } else {
         if (mediaData.mediaLoops() == TMediaData::MediaLoopsRepeat) { // Repeat indefinitely
@@ -1725,6 +1725,7 @@ void TMedia::play(TMediaData& mediaData)
 
         playlist->setCurrentIndex(0);
         pPlayer->setPlaylist(playlist);
+        pPlayer->noteClaimed();
         pPlayer->mediaPlayer()->setSource(playlist->currentMedia());
     }
 

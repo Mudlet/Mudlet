@@ -65,8 +65,8 @@ public:
 
     // A stop is acted on one event-loop turn late, by which time a stopped player is
     // indistinguishable from one asynchronously loading a source set since. These
-    // record what happened in between: a claim is this player being handed to a
-    // different track, a continuation is its own playlist advancing or looping.
+    // record what happened in between: a claim is this player being given a new source
+    // to play, a continuation is its own playlist advancing or looping.
     quint64 claimGeneration() const { return mClaimGeneration; }
     void noteClaimed() { ++mClaimGeneration; }
     quint64 continuationGeneration() const { return mContinuationGeneration; }

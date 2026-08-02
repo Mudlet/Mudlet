@@ -141,8 +141,8 @@ private slots:
 
     // The deferred cleanup must still fire for a genuinely finished track, otherwise
     // the resource release that #9237 added would be lost. Releasing the source is the
-    // only observable of that: playingMedia() drops a player the moment it reports
-    // StoppedState, well before the deferred cleanup runs.
+    // only observable effect of the deferred stop cleanup: playingMedia() drops a player
+    // the moment it reports StoppedState, well before that cleanup runs.
     void test_oneShotTrackIsCleanedUpWhenItFinishes()
     {
         if (!mCannotPlayReason.isEmpty()) {
@@ -207,6 +207,40 @@ private slots:
         QTest::qWait(clipMs);
 
         QVERIFY2(playing(media, secondFile), "The replacement track was cut off - the previous track's deferred cleanup cleared the source out from under it.");
+    }
+
+    // continue=false restarts a track by stopping it and re-sourcing the same player
+    // inside one call. That player is matched, not claimed, so nothing in the reuse path
+    // tells the pending cleanup that the track it belongs to has already been replaced.
+    void test_restartedTrackKeepsItsNewSource()
+    {
+        if (!mCannotPlayReason.isEmpty()) {
+            QSKIP(qPrintable(mCannotPlayReason));
+        }
+        if (!mSynchronousStartReason.isEmpty()) {
+            QSKIP(qPrintable(mSynchronousStartReason));
+        }
+
+        auto* media = startProfileAndGetMedia();
+        QVERIFY(media);
+
+        const QString fileName = writeClip(qsl("restart.wav"));
+
+        TMediaData data = clipData(fileName);
+        data.setMediaLoops(TMediaData::MediaLoopsRepeat);
+        media->playMedia(data);
+
+        QVERIFY2(waitForPlaying(media, fileName), "The track never started playing.");
+
+        TMediaData restart = clipData(fileName);
+        restart.setMediaLoops(TMediaData::MediaLoopsRepeat);
+        restart.setMediaContinue(TMediaData::MediaContinueRestart);
+        media->playMedia(restart);
+
+        // Past the turn the stop inside that restart scheduled its cleanup for.
+        QTest::qWait(clipMs);
+
+        QVERIFY2(playing(media, fileName), "A restarted track was cut off - the cleanup deferred by its own stop cleared the source it had just been given.");
     }
 
     void cleanup()
