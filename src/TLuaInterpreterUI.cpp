@@ -30,6 +30,7 @@
 #include "TLuaInterpreter.h"
 
 #include <QClipboard>
+#include <QGuiApplication>
 
 #include "EAction.h"
 #include "Host.h"
@@ -64,9 +65,6 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QFileDialog>
-#include <QTableWidget>
-#include <QToolTip>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -1198,7 +1196,7 @@ int TLuaInterpreter::getBorderColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getClipboardText
 int TLuaInterpreter::getClipboardText(lua_State* L)
 {
-    QClipboard* clipboard = QApplication::clipboard();
+    QClipboard* clipboard = QGuiApplication::clipboard();
     lua_pushstring(L, clipboard->text().toUtf8().constData());
     return 1;
 }
@@ -1677,6 +1675,50 @@ int TLuaInterpreter::getUserWindowSize(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getWindowGeometry
+int TLuaInterpreter::getWindowGeometry(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    const QString windowName = getVerifiedString(L, __func__, 1, "window name");
+
+    if (auto geometry = host.windowGeometry(windowName)) {
+        lua_pushnumber(L, geometry->x());
+        lua_pushnumber(L, geometry->y());
+        lua_pushnumber(L, geometry->width());
+        lua_pushnumber(L, geometry->height());
+        return 4;
+    }
+
+    lua_pushnil(L);
+    lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#windowVisible
+int TLuaInterpreter::windowVisible(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    const QString windowName = getVerifiedString(L, __func__, 1, "window name");
+
+    if (auto visible = host.windowVisible(windowName)) {
+        lua_pushboolean(L, *visible);
+        return 1;
+    }
+
+    lua_pushnil(L);
+    lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelText
+int TLuaInterpreter::getLabelText(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    auto label = LABEL(L, labelName);
+    lua_pushstring(L, label->text().toUtf8().constData());
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getWindowWrap
 int TLuaInterpreter::getWindowWrap(lua_State* L)
 {
@@ -1856,13 +1898,10 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
     result = host.mpConsole->getBgColor(windowName);
     auto it = result.begin();
     if (result.size() < 3) {
-        return 0;
+        return warnArgumentValue(L, __func__, qsl("current selection invalid in window '%1'").arg(windowName));
     }
-    if (ansiBg < 0) {
-        return 0;
-    }
-    if (ansiBg > 16) {
-        return 0;
+    if (ansiBg < 0 || ansiBg > 16) {
+        return warnArgumentValue(L, __func__, qsl("ANSI color %1 out of range (0 to 16)").arg(ansiBg));
     }
 
 
@@ -1950,13 +1989,10 @@ int TLuaInterpreter::isAnsiFgColor(lua_State* L)
     result = host.mpConsole->getFgColor(windowName);
     auto it = result.begin();
     if (result.size() < 3) {
-        return 0;
+        return warnArgumentValue(L, __func__, qsl("current selection invalid in window '%1'").arg(windowName));
     }
-    if (ansiFg < 0) {
-        return 0;
-    }
-    if (ansiFg > 16) {
-        return 0;
+    if (ansiFg < 0 || ansiFg > 16) {
+        return warnArgumentValue(L, __func__, qsl("ANSI color %1 out of range (0 to 16)").arg(ansiFg));
     }
 
 
@@ -2797,7 +2833,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setClipboardText
 int TLuaInterpreter::setClipboardText(lua_State* L)
 {
-    QClipboard* clipboard = QApplication::clipboard();
+    QClipboard* clipboard = QGuiApplication::clipboard();
     clipboard->setText(getVerifiedString(L, __func__, 1, "text"));
     lua_pushboolean(L, true);
     return 1;
@@ -3753,9 +3789,7 @@ int TLuaInterpreter::enableScrolling(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
     if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, "scrolling cannot be enabled/disabled for the 'main' window");
     }
 
     auto console = CONSOLE(L, windowName);
@@ -3769,9 +3803,7 @@ int TLuaInterpreter::disableScrolling(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
     if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, "scrolling cannot be enabled/disabled for the 'main' window");
     }
 
     auto console = CONSOLE(L, windowName);
@@ -3827,11 +3859,13 @@ int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
         }
         movie->setScaledSize(pN->size());
         if (autoScale) {
-            connect(pN, &TLabel::resized, pN, [=] {
+            connect(pN, &TLabel::resized, movie, [=] {
                 movie->setScaledSize(pN->size());
             });
         } else {
-            pN->disconnect(SIGNAL(resized()));
+            // only drop the movie-scaling connection(s); other consumers of
+            // the label's resized signal must stay connected
+            QObject::disconnect(pN, &TLabel::resized, movie, nullptr);
         }
     } else {
         return warnArgumentValue(L, __func__, qsl("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));

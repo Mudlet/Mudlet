@@ -105,8 +105,9 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  -- methods skipped here: printTable, _printTable, listPrint, listAdd, listRemove
-  -- they are undocumented and unused in our own code.
+  -- __printTable is an internal helper of printTable and is not tested directly;
+  -- printTable, listPrint, listAdd and listRemove are covered near the end of
+  -- this file.
 
   describe("Tests the functionality of table.size", function()
 
@@ -794,6 +795,132 @@ describe("Tests TableUtils.lua functions", function()
       local expected = {enabled = {feature1 = true, feature2 = false}}
       local actual = table.update(tblA, tblB)
       assert.same(expected, actual)
+    end)
+  end)
+
+  describe("Tests the functionality of table.deepcopy nested independence", function()
+    it("should copy nested tables so mutating the copy does not affect the original", function()
+      local original = { a = 1, nested = { b = 2, deep = { c = 3 } } }
+      local copy = table.deepcopy(original)
+      copy.nested.b = 20
+      copy.nested.deep.c = 30
+      assert.equals(2, original.nested.b)
+      assert.equals(3, original.nested.deep.c)
+      -- the nested tables are distinct references
+      assert.are_not.equal(original.nested, copy.nested)
+      assert.are_not.equal(original.nested.deep, copy.nested.deep)
+    end)
+
+    it("should preserve the metatable of the copied table", function()
+      local mt = { __index = function() return "default" end }
+      local original = setmetatable({}, mt)
+      local copy = table.deepcopy(original)
+      assert.equals(mt, getmetatable(copy))
+      assert.equals("default", copy.anything)
+    end)
+
+    it("should return non-table values unchanged", function()
+      assert.equals(5, table.deepcopy(5))
+      assert.equals("text", table.deepcopy("text"))
+    end)
+  end)
+
+  describe("Tests the functionality of spairs on an empty table", function()
+    it("should iterate zero times over an empty table", function()
+      local count = 0
+      for _ in spairs({}) do
+        count = count + 1
+      end
+      assert.equals(0, count)
+    end)
+  end)
+
+  describe("Tests the functionality of listAdd", function()
+    it("should append an item to the end of the list", function()
+      local list = { "one", "two" }
+      listAdd(list, "three")
+      assert.same({ "one", "two", "three" }, list)
+    end)
+
+    it("should append to an empty list", function()
+      local list = {}
+      listAdd(list, "only")
+      assert.same({ "only" }, list)
+    end)
+  end)
+
+  describe("Tests the functionality of listRemove", function()
+    it("should remove a matching item from the list", function()
+      local list = { "one", "two", "three" }
+      listRemove(list, "two")
+      assert.same({ "one", "three" }, list)
+    end)
+
+    it("should leave the list unchanged when the item is not present", function()
+      local list = { "one", "two" }
+      listRemove(list, "missing")
+      assert.same({ "one", "two" }, list)
+    end)
+
+    it("should leave an empty list empty", function()
+      local list = {}
+      listRemove(list, "x")
+      assert.same({}, list)
+    end)
+
+    it("should remove the sole element when it matches", function()
+      local list = { "x" }
+      listRemove(list, "x")
+      assert.same({}, list)
+    end)
+
+    -- #9546: removal used to happen during an ipairs loop, so deleting index i
+    -- shifted i+1 down into i, which the loop then skipped, leaving one of each
+    -- run of consecutive duplicates behind.
+    it("should remove a pair of consecutive duplicate matches", function()
+      local list = { "a", "x", "x", "b" }
+      listRemove(list, "x")
+      assert.same({ "a", "b" }, list)
+    end)
+
+    it("should remove a run of three or more consecutive duplicates", function()
+      local list = { "x", "x", "x" }
+      listRemove(list, "x")
+      assert.same({}, list)
+    end)
+
+    it("should remove every match whether the duplicates are adjacent or apart", function()
+      local list = { "x", "a", "x", "x", "b", "x" }
+      listRemove(list, "x")
+      assert.same({ "a", "b" }, list)
+    end)
+  end)
+
+  describe("Tests the contract of printTable", function()
+    -- printTable/listPrint write to the screen via echo; we spy on the real
+    -- echo (pass-through) to assert the framing lines without mocking it.
+    it("should echo a header, a line per key/value pair and a footer", function()
+      local echo = spy.on(_G, "echo")
+      finally(function() echo:revert() end)
+      printTable({ alpha = "one", beta = "two" })
+      -- header + 2 pairs + footer; header and footer are the same dashed string,
+      -- so the count is what pins that both framing lines are present
+      assert.spy(echo).was.called(4)
+      assert.spy(echo).was.called_with("-------------------------------------------------------\n")
+      assert.spy(echo).was.called_with("key=alpha value=one\n")
+      assert.spy(echo).was.called_with("key=beta value=two\n")
+    end)
+  end)
+
+  describe("Tests the contract of listPrint", function()
+    it("should echo a numbered line for each list entry framed by dashed lines", function()
+      local echo = spy.on(_G, "echo")
+      finally(function() echo:revert() end)
+      listPrint({ "first", "second" })
+      -- header + 2 entries + footer
+      assert.spy(echo).was.called(4)
+      assert.spy(echo).was.called_with("1. ) first\n")
+      assert.spy(echo).was.called_with("2. ) second\n")
     end)
   end)
 end)

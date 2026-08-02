@@ -34,21 +34,23 @@ class ExitsTreeWidget : public QTreeWidget
     friend class dlgRoomExits;
 
     // The indexes that are used to identify the columns in the special exits
-    // treewidget have been converted to constants so that we can
+    // treewidget have been collected into an enumeration so that we can
     // tweak them and change all of them correctly - and by making the
     // dlgRoomExits class a friend that can use the same set as defined here.
     // Note that if any of these numbers are modified/extended the
     // corresponding headings in the ./src/ui/room_exits.ui file will need
     // to be adjusted as well - and visa versa:
-    static const int colIndex_exitRoomId = 0;
-    static const int colIndex_exitStatus = 1;
-    static const int colIndex_lockExit = 2;
-    static const int colIndex_exitWeight = 3;
-    static const int colIndex_doorNone = 4;
-    static const int colIndex_doorOpen = 5;
-    static const int colIndex_doorClosed = 6;
-    static const int colIndex_doorLocked = 7;
-    static const int colIndex_command = 8;
+    enum ExitsTreeColumn : int {
+        colIndex_exitRoomId = 0,
+        colIndex_exitStatus = 1,
+        colIndex_lockExit = 2,
+        colIndex_exitWeight = 3,
+        colIndex_doorNone = 4,
+        colIndex_doorOpen = 5,
+        colIndex_doorClosed = 6,
+        colIndex_doorLocked = 7,
+        colIndex_command = 8,
+    };
 
 public:
     Q_DISABLE_COPY(ExitsTreeWidget)

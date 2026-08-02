@@ -650,6 +650,10 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
     }
     std::deque<TChar>& bufferLine = mpHost->mainConsoleModel().buffer.buffer[line];
     const QString& lineBuffer = mpHost->mainConsoleModel().buffer.lineBuffer[line];
+    // Match against the colors as they arrived from the game, not as already
+    // recolored by other triggers or scripts earlier in this trigger pass;
+    // text inserted mid-pass has no game original so it is read live:
+    const std::deque<TChar>* pPassLine = mpHost->mainConsoleModel().buffer.preTriggerPassLine(line);
     // Filter ("only pass matches") parents hand children just the matched
     // capture, so restrict the scan to that window; for top-level triggers
     // the window covers the whole line:
@@ -671,13 +675,14 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
     }
 
     for (auto it = bufferLine.begin() + start; pos < end; ++it, ++pos) {
+        const TChar& character = (pPassLine && pos < static_cast<int>(pPassLine->size())) ? (*pPassLine)[pos] : *it;
         // This now allows matching against the current default colours (-1) and
         // allows ONE of the foreground or background to NOT be considered (-2)
         // Ideally we should base the matching on only the ANSI code but not
         // all parts of the text come from the Server and can be determined to
         // have come from a decoded ANSI code number:
-        if (((pCT->ansiFg == scmIgnored) || ((pCT->ansiFg == scmDefault) && mpHost->mainConsoleModel().mFgColor == (*it).foreground()) || (pCT->mFgColor == (*it).foreground()))
-            && ((pCT->ansiBg == scmIgnored) || ((pCT->ansiBg == scmDefault) && mpHost->mainConsoleModel().mBgColor == (*it).background()) || (pCT->mBgColor == (*it).background()))) {
+        if (((pCT->ansiFg == scmIgnored) || ((pCT->ansiFg == scmDefault) && mpHost->mainConsoleModel().mFgColor == character.foreground()) || (pCT->mFgColor == character.foreground()))
+            && ((pCT->ansiBg == scmIgnored) || ((pCT->ansiBg == scmDefault) && mpHost->mainConsoleModel().mBgColor == character.background()) || (pCT->mBgColor == character.background()))) {
             if (matchBegin == -1) {
                 matchBegin = pos;
             }
@@ -1248,6 +1253,17 @@ void TTrigger::compile()
 
 bool TTrigger::setScript(const QString& script)
 {
+    // Switching from a registered anonymous Lua function (set up by tempTrigger with a
+    // function argument) to a script string: release the old function from the Lua
+    // registry and leave callback mode. Otherwise execute() keeps calling the stale
+    // function so the new script never runs, and the registry entry leaks - the
+    // destructor would take its mScript-based branch and delete the compiled function.
+    if (mRegisteredAnonymousLuaFunction) {
+        if (mpHost) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        }
+        mRegisteredAnonymousLuaFunction = false;
+    }
     mScript = script;
     if (script.isEmpty()) {
         mNeedsToBeCompiled = false;
