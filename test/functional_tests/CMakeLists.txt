@@ -31,7 +31,9 @@ set(FUNCTIONAL_TEST_SOURCES
     ProfileLoadTempFileTest.cpp
     PackageSelfUninstallTest.cpp
     MapRoundTripTest.cpp
+    MapProgressDialogSeamTest.cpp
     UndoServerWrapTest.cpp
+    HostWidgetDecouplingTest.cpp
     ActionSelfUninstallTest.cpp
     TMediaLoopTest.cpp
 )
@@ -104,7 +106,10 @@ set_tests_properties(TMediaLoopTest PROPERTIES TIMEOUT 300)
 
 # The round-trip tests boot a full mudlet instance and save/reload profile and
 # map data, so they need a longer timeout
-set_tests_properties(ProfileRoundTripTest MapRoundTripTest PROPERTIES TIMEOUT 300)
+set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeamTest PROPERTIES TIMEOUT 300)
+
+# HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
 
 # TDiscordModeTest drives the real discord-rpc library end-to-end. The library's
 # reconnect backoff is a process-global (60s ceiling) that the suite's
