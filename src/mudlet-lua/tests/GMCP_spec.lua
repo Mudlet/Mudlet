@@ -165,13 +165,24 @@ describe("Tests the argument and disconnected contract of sendGMCP", function()
     disconnect()
   end)
 
-  it("raises a Lua error when the message is not a string", function()
-    assert.has_error(function() sendGMCP({}) end)
-    assert.has_error(function() sendGMCP(true) end)
+  it("names the offending value's real type when the message is not a string", function()
+    -- Regression #9543: the type-name placeholder must be expanded, not printed
+    -- as a literal "%1". lua_pushfstring only understands C-style "%s".
+    local ok, err = pcall(function() sendGMCP({}) end)
+    assert.is_false(ok)
+    assert.is_true(contains(err, "sendGMCP: bad argument #1 type (message as string expected, got table!)"), tostring(err))
+    assert.is_false(contains(err, "%1"), tostring(err))
+
+    local okBool, errBool = pcall(function() sendGMCP(true) end)
+    assert.is_false(okBool)
+    assert.is_true(contains(errBool, "sendGMCP: bad argument #1 type (message as string expected, got boolean!)"), tostring(errBool))
   end)
 
-  it("raises a Lua error when the optional second argument is not a string", function()
-    assert.has_error(function() sendGMCP("Core.Ping", {}) end)
+  it("names the real type when the optional second argument is not a string", function()
+    local ok, err = pcall(function() sendGMCP("Core.Ping", {}) end)
+    assert.is_false(ok)
+    assert.is_true(contains(err, "sendGMCP: bad argument #2 type (what as string is optional, got table!)"), tostring(err))
+    assert.is_false(contains(err, "%1"), tostring(err))
   end)
 
   it("returns nil and an explanatory message while disconnected", function()

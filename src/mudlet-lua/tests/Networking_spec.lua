@@ -54,8 +54,20 @@ describe("Networking send functions honour their disconnected/offline contracts"
   end)
 
   describe("sendATCP", function()
-    it("raises a Lua error when the message is not a string", function()
-      assert.has_error(function() sendATCP({}) end)
+    it("names the offending value's real type when the message is not a string", function()
+      -- Regression #9543: the type-name placeholder must be expanded, not printed
+      -- as a literal "%1". lua_pushfstring only understands C-style "%s".
+      local ok, err = pcall(function() sendATCP({}) end)
+      assert.is_false(ok)
+      assert.is_true(contains(err, "sendATCP: bad argument #1 type (message as string expected, got table!)"), tostring(err))
+      assert.is_false(contains(err, "%1"), tostring(err))
+    end)
+
+    it("names the real type when the optional second argument is not a string", function()
+      local ok, err = pcall(function() sendATCP("Char.Login", {}) end)
+      assert.is_false(ok)
+      assert.is_true(contains(err, "sendATCP: bad argument #2 type (what as string is optional, got table!)"), tostring(err))
+      assert.is_false(contains(err, "%1"), tostring(err))
     end)
 
     it("returns nil and a message while disconnected", function()
@@ -227,8 +239,23 @@ describe("HTTP and download functions validate arguments before issuing a reques
       assertArgError(function() customHTTP("REPORT", "payload") end, "customHTTP: bad argument")
     end)
 
-    it("raises a Lua error when headers is not a table", function()
-      assertArgError(function() customHTTP("REPORT", "payload", "http://localhost/", 5) end, "customHTTP: bad argument")
+    it("reports the real type of a non-table headers argument", function()
+      -- Regression #9544: performHttpRequest must read the type of the offending
+      -- slot (pos + 3), not a hardcoded slot 3, so the headers error names the
+      -- number that was actually passed rather than the url's type.
+      local ok, err = pcall(function() customHTTP("REPORT", "payload", "http://localhost/", 5) end)
+      assert.is_false(ok)
+      assert.is_true(contains(err, "customHTTP: bad argument #4 type (headers as a table expected, got number!)"), tostring(err))
+    end)
+
+    it("reports the real type of a non-string file argument", function()
+      -- Regression #9544: the file error must read pos + 4, not a hardcoded slot 4,
+      -- so it names the boolean that was passed and not the headers table's type.
+      -- A boolean is used rather than a number because lua_isstring also accepts
+      -- numbers, so only a genuinely non-string value reaches the type error.
+      local ok, err = pcall(function() customHTTP("REPORT", "payload", "http://localhost/", {}, true) end)
+      assert.is_false(ok)
+      assert.is_true(contains(err, "customHTTP: bad argument #5 type (file to send as string location expected, got boolean!)"), tostring(err))
     end)
   end)
 end)
@@ -408,6 +435,51 @@ describe("Media playback functions validate their parameters", function()
     it("raises a Lua error for a negative fadeout in the table form", function()
       assert.has_error(function() playMusicFile({name = "x.mp3", fadeout = -5}) end)
     end)
+
+    it("raises a clean, non-doubled error when continue is not a boolean", function()
+      -- Regression #9547 (same defect class): the field publicName must not carry
+      -- "must be boolean", which errorArgumentType would then double.
+      local ok, err = pcall(function() playMusicFile({name = "x.mp3", continue = "yes"}) end)
+      assert.is_false(ok)
+      assert.is_true(contains(err, "value for continue as boolean expected, got string!"), tostring(err))
+      assert.is_false(contains(err, "must be boolean"), tostring(err))
+    end)
+  end)
+
+  describe("playVideoFile", function()
+    -- playVideoFileAsTableArgument shared the identical doubled-message defect on
+    -- its continue/stream/close boolean fields (#9547 defect class).
+    it("raises a clean, non-doubled error when continue is not a boolean", function()
+      local ok, err = pcall(function() playVideoFile({name = "x.mp4", continue = "yes"}) end)
+      assert.is_false(ok)
+      assert.is_true(contains(err, "value for continue as boolean expected, got string!"), tostring(err))
+      assert.is_false(contains(err, "must be boolean"), tostring(err))
+    end)
+
+    it("raises a clean, non-doubled error when stream is not a boolean", function()
+      local ok, err = pcall(function() playVideoFile({name = "x.mp4", stream = "yes"}) end)
+      assert.is_false(ok)
+      assert.is_true(contains(err, "value for stream as boolean expected, got string!"), tostring(err))
+      assert.is_false(contains(err, "must be boolean"), tostring(err))
+    end)
+
+    it("raises a clean, non-doubled error when close is not a boolean", function()
+      local ok, err = pcall(function() playVideoFile({name = "x.mp4", close = "yes"}) end)
+      assert.is_false(ok)
+      assert.is_true(contains(err, "value for close as boolean expected, got string!"), tostring(err))
+      assert.is_false(contains(err, "must be boolean"), tostring(err))
+    end)
+  end)
+
+  describe("getPlayingSounds", function()
+    it("raises a clean, non-doubled error when priority is not an integer", function()
+      -- Regression #9547 (same defect class): "value for priority must be integer"
+      -- doubled into "must be integer as number expected".
+      local ok, err = pcall(function() getPlayingSounds({priority = "high"}) end)
+      assert.is_false(ok)
+      assert.is_true(contains(err, "value for priority as number expected, got string!"), tostring(err))
+      assert.is_false(contains(err, "must be integer"), tostring(err))
+    end)
   end)
 
   describe("stopSounds", function()
@@ -419,8 +491,44 @@ describe("Media playback functions validate their parameters", function()
       assert.has_error(function() stopSounds({fadeout = -1}) end)
     end)
 
-    it("raises a Lua error when fadeaway is not a boolean", function()
-      assert.has_error(function() stopSounds({fadeaway = "yes"}) end)
+    it("raises a clean, non-doubled error when priority is not an integer", function()
+      -- Regression #9547 (same defect class, adjacent field in this very parser):
+      -- "value for priority must be integer" doubled the type constraint.
+      local ok, err = pcall(function() stopSounds({priority = "high"}) end)
+      assert.is_false(ok)
+      assert.is_true(contains(err, "value for priority as number expected, got string!"), tostring(err))
+      assert.is_false(contains(err, "must be integer"), tostring(err))
+    end)
+
+    it("raises a clean, non-doubled error when fadeaway is not a boolean", function()
+      -- Regression #9547: the message must not double "boolean" (the field's
+      -- publicName previously carried "must be boolean" while the type validator
+      -- also appended "as boolean expected"). It is reported like the sibling
+      -- table-field validations in this parser (fadeout, name, key).
+      local ok, err = pcall(function() stopSounds({fadeaway = "yes"}) end)
+      assert.is_false(ok)
+      assert.is_true(contains(err, "value for fadeaway as boolean expected, got string!"), tostring(err))
+      assert.is_false(contains(err, "must be boolean"), tostring(err))
+    end)
+  end)
+
+  -- stopMusic and stopVideos parse the same table shape and shared the identical
+  -- doubled-"boolean" fadeaway defect fixed for stopSounds (#9547).
+  describe("stopMusic", function()
+    it("raises a clean, non-doubled error when fadeaway is not a boolean", function()
+      local ok, err = pcall(function() stopMusic({fadeaway = "yes"}) end)
+      assert.is_false(ok)
+      assert.is_true(contains(err, "value for fadeaway as boolean expected, got string!"), tostring(err))
+      assert.is_false(contains(err, "must be boolean"), tostring(err))
+    end)
+  end)
+
+  describe("stopVideos", function()
+    it("raises a clean, non-doubled error when fadeaway is not a boolean", function()
+      local ok, err = pcall(function() stopVideos({fadeaway = "yes"}) end)
+      assert.is_false(ok)
+      assert.is_true(contains(err, "value for fadeaway as boolean expected, got string!"), tostring(err))
+      assert.is_false(contains(err, "must be boolean"), tostring(err))
     end)
   end)
 end)

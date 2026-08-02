@@ -292,10 +292,10 @@ class TBuffer
 
     static inline const int TCHAR_IN_BYTES = sizeof(TChar);
 
+public:
     // limit on how many characters a single echo can accept for performance reasons
     static inline const int MAX_CHARACTERS_PER_ECHO = 1000000;
 
-public:
     explicit TBuffer(Host* pH, TConsole* pConsole = nullptr);
     ~TBuffer();
     TBuffer(const TBuffer& other);

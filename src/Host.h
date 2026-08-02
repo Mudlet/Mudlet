@@ -57,12 +57,8 @@
 #include "TMxpProcessor.h"
 #include "TMxpFrameManager.h"
 
-class QDialog;
-class QDockWidget;
 class QJsonObject;
 class QKeyEvent;
-class QPushButton;
-class QListWidget;
 
 class TEvent;
 class TArea;
@@ -818,7 +814,6 @@ public:
     bool mMapperCenterSmallAreas = false;
     bool mVersionInTTYPE = false;
     QSet<QChar> mDoubleClickIgnore;
-    QPointer<QDockWidget> mpDockableMapWidget;
     bool mEnableTextAnalyzer = false;
     bool mWritingHostAndModules = false;
     // Set from profile preferences, if the timer interval is less
@@ -883,6 +878,11 @@ signals:
     void signal_editorThemeChanged();
     void signal_remoteEchoChanged(bool enabled);
     void signal_forceMXPProcessorOnChanged(bool enabled);
+    // The frontend (TMainConsole) owns the dialogs these drive; the strings are
+    // built here so they stay in Host's translation context.
+    void signal_showMapperScriptReminder();
+    void signal_showUnpackingProgress(const QString& message, const QString& title);
+    void signal_hideUnpackingProgress();
 
 private slots:
     void slot_purgeTemps();

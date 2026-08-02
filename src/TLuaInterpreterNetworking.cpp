@@ -297,7 +297,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "sendATCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "sendATCP: bad argument #1 type (message as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     const std::string msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
@@ -305,7 +305,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     std::string what;
     if (lua_gettop(L) > 1) {
         if (!lua_isstring(L, 2)) {
-            lua_pushfstring(L, "sendATCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L, 2));
+            lua_pushfstring(L, "sendATCP: bad argument #2 type (what as string is optional, got %s!)", luaL_typename(L, 2));
             return lua_error(L);
         }
         what = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 2));
@@ -346,7 +346,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "sendGMCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "sendGMCP: bad argument #1 type (message as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     const std::string msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
@@ -354,7 +354,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
     std::string what;
     if (lua_gettop(L) > 1) {
         if (!lua_isstring(L, 2)) {
-            lua_pushfstring(L, "sendGMCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L, 2));
+            lua_pushfstring(L, "sendGMCP: bad argument #2 type (what as string is optional, got %s!)", luaL_typename(L, 2));
             return lua_error(L);
         }
         what = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 2));

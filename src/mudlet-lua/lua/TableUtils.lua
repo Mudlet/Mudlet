@@ -153,8 +153,10 @@ end
 
 --- <b><u>TODO</u></b> listRemove( list, what )
 function listRemove( list, what )
-  for k, v in ipairs( list ) do
-    if v == what then
+  -- iterate backwards so removing an element does not shift a following match
+  -- down into an index the loop has already passed
+  for k = #list, 1, -1 do
+    if list[k] == what then
       table.remove( list, k )
     end
   end

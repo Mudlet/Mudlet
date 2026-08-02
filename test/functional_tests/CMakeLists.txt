@@ -21,6 +21,7 @@ set(FUNCTIONAL_TEST_SOURCES
     EnableDisableByNameTest.cpp
     ColorTriggerFilterChildTest.cpp
     GMCPCharLoginTest.cpp
+    InsertTextCapTest.cpp
     SetScriptCallbackTest.cpp
     ClearWindowLogTest.cpp
     XMLexportVariablesTest.cpp
@@ -32,6 +33,7 @@ set(FUNCTIONAL_TEST_SOURCES
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
     UndoServerWrapTest.cpp
+    HostWidgetDecouplingTest.cpp
     ActionSelfUninstallTest.cpp
 )
 
@@ -91,12 +93,18 @@ set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
 
+# InsertTextCapTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(InsertTextCapTest PROPERTIES TIMEOUT 300)
+
 # LogRestartDuplicateLineTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(LogRestartDuplicateLineTest PROPERTIES TIMEOUT 300)
 
 # The round-trip tests boot a full mudlet instance and save/reload profile and
 # map data, so they need a longer timeout
 set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeamTest PROPERTIES TIMEOUT 300)
+
+# HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
 
 # TDiscordModeTest drives the real discord-rpc library end-to-end. The library's
 # reconnect backoff is a process-global (60s ceiling) that the suite's
