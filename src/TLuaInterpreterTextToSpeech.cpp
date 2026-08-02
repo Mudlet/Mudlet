@@ -322,13 +322,22 @@ int TLuaInterpreter::ttsPause(lua_State* L)
 int TLuaInterpreter::ttsQueue(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-    if (!checkStringArg(L, __func__, 1, "input") || (lua_gettop(L) > 1 && !checkIntArg(L, __func__, 2, "index"))) {
+    if (!checkStringArg(L, __func__, 1, "input")) {
+        return lua_error(L);
+    }
+    // the empty-input refusal has to stay ahead of the argument #2 check, as it
+    // did before, or ttsQueue("", <bad index>) would raise instead of returning
+    // nil and a message
+    {
+        const QString trimmedText = QString{lua_tostring(L, 1)}.trimmed();
+        if (trimmedText.isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
+            return warnArgumentValue(L, __func__, qsl("skipped empty text to speak (TTS)"));
+        }
+    }
+    if (lua_gettop(L) > 1 && !checkIntArg(L, __func__, 2, "index")) {
         return lua_error(L);
     }
     QString inputText = QString{lua_tostring(L, 1)}.trimmed();
-    if (inputText.isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
-        return warnArgumentValue(L, __func__, qsl("skipped empty text to speak (TTS)"));
-    }
 
     std::vector<QString> const dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
     for (const QString& dropThis : dontSpeak) {

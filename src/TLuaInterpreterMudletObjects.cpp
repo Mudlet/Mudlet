@@ -478,10 +478,14 @@ int TLuaInterpreter::enableTrigger(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exists
 int TLuaInterpreter::exists(lua_State* L)
 {
+    if (!checkStringOrIntegerArg(L, __func__, 1, "itemID or item name") || !checkStringArg(L, __func__, 2, "item type")) {
+        return lua_error(L);
+    }
+
     auto [isId, nameOrId] = getVerifiedStringOrInteger(L, __func__, 1, "itemID or item name");
     // Although we only use 6 ASCII strings the user may not enter a purely
     // ASCII value which we might have to report...
-    QString type = getVerifiedString(L, __func__, 2, "item type").toLower();
+    QString type = QString{lua_tostring(L, 2)}.toLower();
     bool isOk = false;
     const int id = nameOrId.toInt(&isOk);
     if (isId && (!isOk || id < 0)) {
@@ -2255,15 +2259,14 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
 int TLuaInterpreter::tempButton(lua_State* L)
 {
     //args: parent, name, orientation
-    const QString cmdButtonUp = "";
-    const QString cmdButtonDown = "";
-    const QString script = "";
-
     if (!checkStringArg(L, __func__, 1, "toolbar name") || !checkStringArg(L, __func__, 2, "button text")) {
         return lua_error(L);
     }
     const int orientation = getVerifiedInt(L, __func__, 3, "orientation");
 
+    const QString cmdButtonUp = "";
+    const QString cmdButtonDown = "";
+    const QString script = "";
     const QString toolbar{lua_tostring(L, 1)};
     const QString name{lua_tostring(L, 2)};
 
@@ -2313,16 +2316,15 @@ int TLuaInterpreter::tempButton(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempButtonToolbar
 int TLuaInterpreter::tempButtonToolbar(lua_State* L)
 {
-    const QString cmdButtonUp = "";
-    const QString cmdButtonDown = "";
-    const QString script = "";
-
     if (!checkStringArg(L, __func__, 1, "name")) {
         return lua_error(L);
     }
     int location = getVerifiedInt(L, __func__, 2, "location");
     const int orientation = getVerifiedInt(L, __func__, 3, "orientation");
 
+    const QString cmdButtonUp = "";
+    const QString cmdButtonDown = "";
+    const QString script = "";
     const QString name{lua_tostring(L, 1)};
 
     if (location > 0) {
@@ -2339,8 +2341,6 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
 
     pT = new TAction(name, &host);
     pT->setCommandButtonUp(cmdButtonUp);
-    QStringList nl;
-    nl << name;
 
     pT->setName(name);
     pT->setCommandButtonUp(cmdButtonUp);

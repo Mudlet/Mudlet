@@ -829,6 +829,8 @@ private:
     static bool checkNumberArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static bool checkStringOrIntegerArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static bool checkCommandOrFunctionArg(lua_State*, const char* functionName, const int pos);
+    static bool checkCommandsOrFunctionsTable(lua_State*, const char* functionName, const int index);
+    static bool checkHintsTable(lua_State*, const char* functionName, const int index);
     static int getVerifiedInt(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static float getVerifiedFloat(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static double getVerifiedDouble(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);

@@ -2854,12 +2854,15 @@ int TLuaInterpreter::openMapWidget(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerMapInfo
 int TLuaInterpreter::registerMapInfo(lua_State* L)
 {
-    auto name = getVerifiedString(L, __func__, 1, "label");
-
+    if (!checkStringArg(L, __func__, 1, "label")) {
+        return lua_error(L);
+    }
     if (!lua_isfunction(L, 2)) {
         lua_pushfstring(L, "registerMapInfo: bad argument #2 type (callback as function expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
+
+    auto name = QString{lua_tostring(L, 1)};
     const int callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
     auto& host = getHostFromLua(L);

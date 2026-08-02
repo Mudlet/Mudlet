@@ -980,35 +980,32 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     int hintPos = ++s;
     const int formatPos = hasFormatFlag ? ++s : 0;
 
-    // the two tables have to be parsed before the format flag can be reported
-    // as bad, so the parsed lists are scoped and the raise happens after them
-    {
-        QStringList commandList;
-        QStringList hintList;
-        QVector<int> luaReferences;
-        parseCommandsOrFunctionsTable(L, __func__, commandPos, commandList, luaReferences);
-        parseHintsTable(L, __func__, hintPos, hintList);
-
-        if (!hasFormatFlag || checkBoolArg(L, __func__, formatPos, "useCurrentFormat")) {
-            if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
-                lua_pushnil(L);
-                lua_pushfstring(L,
-                                "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup",
-                                commandList.size(),
-                                hintList.size());
-                return 2;
-            }
-
-            const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
-            const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-
-            auto console = CONSOLE(L, windowName);
-            console->echoLink(QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
-            lua_pushboolean(L, true);
-            return 1;
-        }
+    if (!checkCommandsOrFunctionsTable(L, __func__, commandPos) || !checkHintsTable(L, __func__, hintPos) || (hasFormatFlag && !checkBoolArg(L, __func__, formatPos, "useCurrentFormat"))) {
+        return lua_error(L);
     }
-    return lua_error(L);
+
+    QStringList commandList;
+    QStringList hintList;
+    QVector<int> luaReferences;
+    parseCommandsOrFunctionsTable(L, __func__, commandPos, commandList, luaReferences);
+    parseHintsTable(L, __func__, hintPos, hintList);
+
+    if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
+        lua_pushnil(L);
+        lua_pushfstring(L,
+                        "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup",
+                        commandList.size(),
+                        hintList.size());
+        return 2;
+    }
+
+    const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
+    const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
+
+    auto console = CONSOLE(L, windowName);
+    console->echoLink(QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableClickthrough
@@ -1903,35 +1900,32 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     int hintPos = ++s;
     const int formatPos = hasFormatFlag ? ++s : 0;
 
-    // the two tables have to be parsed before the format flag can be reported
-    // as bad, so the parsed lists are scoped and the raise happens after them
-    {
-        QStringList commandList;
-        QStringList hintList;
-        QVector<int> luaReferences;
-        parseCommandsOrFunctionsTable(L, __func__, commandPos, commandList, luaReferences);
-        parseHintsTable(L, __func__, hintPos, hintList);
-
-        if (!hasFormatFlag || checkBoolArg(L, __func__, formatPos, "useCurrentFormat")) {
-            if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
-                lua_pushnil(L);
-                lua_pushfstring(L,
-                                "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup",
-                                commandList.size(),
-                                hintList.size());
-                return 2;
-            }
-
-            const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
-            const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-
-            auto console = CONSOLE(L, windowName);
-            console->insertLink(QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
-            lua_pushboolean(L, true);
-            return 1;
-        }
+    if (!checkCommandsOrFunctionsTable(L, __func__, commandPos) || !checkHintsTable(L, __func__, hintPos) || (hasFormatFlag && !checkBoolArg(L, __func__, formatPos, "useCurrentFormat"))) {
+        return lua_error(L);
     }
-    return lua_error(L);
+
+    QStringList commandList;
+    QStringList hintList;
+    QVector<int> luaReferences;
+    parseCommandsOrFunctionsTable(L, __func__, commandPos, commandList, luaReferences);
+    parseHintsTable(L, __func__, hintPos, hintList);
+
+    if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
+        lua_pushnil(L);
+        lua_pushfstring(L,
+                        "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup",
+                        commandList.size(),
+                        hintList.size());
+        return 2;
+    }
+
+    const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
+    const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
+
+    auto console = CONSOLE(L, windowName);
+    console->insertLink(QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertText
@@ -3363,12 +3357,18 @@ int TLuaInterpreter::setPopup(lua_State* L)
         windowName = WINDOW_NAME(L, ++s);
     }
 
+    int commandPos = ++s;
+    int hintPos = ++s;
+    if (!checkCommandsOrFunctionsTable(L, __func__, commandPos) || !checkHintsTable(L, __func__, hintPos)) {
+        return lua_error(L);
+    }
+
     QStringList commandList;
     QVector<int> luaReferences;
-    parseCommandsOrFunctionsTable(L, __func__, ++s, commandList, luaReferences);
+    parseCommandsOrFunctionsTable(L, __func__, commandPos, commandList, luaReferences);
 
     QStringList hintList;
-    parseHintsTable(L, __func__, ++s, hintList);
+    parseHintsTable(L, __func__, hintPos, hintList);
 
     if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
         lua_pushnil(L);

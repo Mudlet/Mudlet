@@ -1614,15 +1614,18 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const char* funcName)
     if (!checkStringArg(L, funcName, 1, "label name")) {
         return lua_error(L);
     }
+    // the empty-name refusal has to stay ahead of the argument #2 check, as it
+    // did before, or setLabelClickCallback("", <bad callback>) would raise
+    // instead of returning nil and a message
+    if (*lua_tostring(L, 1) == '\0') {
+        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
+    }
     if (!lua_isnil(L, 2) && !lua_isfunction(L, 2)) {
         lua_pushfstring(L, "%s: bad argument #2 type (function or nil expected, got %s!)", funcName, luaL_typename(L, 2));
         return lua_error(L);
     }
     const QLatin1StringView callbackName{funcName};
     const QString labelName{lua_tostring(L, 1)};
-    if (labelName.isEmpty()) {
-        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
-    }
     lua_remove(L, 1);
 
     int func = 0;
@@ -1960,14 +1963,14 @@ int TLuaInterpreter::ancestors(lua_State* L)
 {
     // the type QStrings must be destroyed before the raise, so the internal
     // error paths report back instead of raising - see checkStringArg()
-    const int results = [&L]() -> int {
-        auto id = getVerifiedInt(L, __func__, 1, "item ID");
+    const int results = [&L, functionName = __func__]() -> int {
+        auto id = getVerifiedInt(L, functionName, 1, "item ID");
         // Although we only use ASCII strings for the type the user may not enter a
         // purely ASCII value which we might have to report...
-        QString type = getVerifiedString(L, __func__, 2, "item type");
+        QString type = getVerifiedString(L, functionName, 2, "item type");
         if (id < 0) {
             // Must be zero or more but doesn't seem to be:
-            return warnArgumentValue(L, __func__, qsl("item ID as %1 does not seem to be parseable as a positive integer").arg(lua_tostring(L, 1)));
+            return warnArgumentValue(L, functionName, qsl("item ID as %1 does not seem to be parseable as a positive integer").arg(lua_tostring(L, 1)));
         }
 
         Host& host = getHostFromLua(L);
@@ -1976,7 +1979,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
         if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
             auto pT = host.getTimerUnit()->getTimer(id);
             if (!pT) {
-                return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+                return warnArgumentValue(L, functionName, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
             }
             const auto ancestorsList = pT->getAncestorList();
             lua_newtable(L);
@@ -1986,7 +1989,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
                     // Uh oh! This is not expected, so clear that table off the
                     // stack so we can push an error message there:
                     lua_pop(L, 1);
-                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", functionName, typeCheck.toLatin1().constData(), id);
                     return -1;
                 }
                 lua_pushnumber(L, ++index);
@@ -2033,7 +2036,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
         if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
             auto pT = host.getTriggerUnit()->getTrigger(id);
             if (!pT) {
-                return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+                return warnArgumentValue(L, functionName, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
             }
             const auto ancestorsList = pT->getAncestorList();
             lua_newtable(L);
@@ -2043,7 +2046,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
                     // Uh oh! This is not expected, so clear that table off the
                     // stack so we can push an error message there:
                     lua_pop(L, 1);
-                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", functionName, typeCheck.toLatin1().constData(), id);
                     return -1;
                 }
                 lua_pushnumber(L, ++index);
@@ -2083,7 +2086,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
         if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
             auto pT = host.getAliasUnit()->getAlias(id);
             if (!pT) {
-                return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+                return warnArgumentValue(L, functionName, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
             }
             const auto ancestorsList = pT->getAncestorList();
             lua_newtable(L);
@@ -2093,7 +2096,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
                     // Uh oh! This is not expected, so clear that table off the
                     // stack so we can push an error message there:
                     lua_pop(L, 1);
-                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", functionName, typeCheck.toLatin1().constData(), id);
                     return -1;
                 }
                 lua_pushnumber(L, ++index);
@@ -2133,7 +2136,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
         if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
             auto pT = host.getKeyUnit()->getKey(id);
             if (!pT) {
-                return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+                return warnArgumentValue(L, functionName, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
             }
             const auto ancestorsList = pT->getAncestorList();
             lua_newtable(L);
@@ -2143,7 +2146,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
                     // Uh oh! This is not expected, so clear that table off the
                     // stack so we can push an error message there:
                     lua_pop(L, 1);
-                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", functionName, typeCheck.toLatin1().constData(), id);
                     return -1;
                 }
                 lua_pushnumber(L, ++index);
@@ -2183,7 +2186,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
         if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
             auto pT = host.getActionUnit()->getAction(id);
             if (!pT) {
-                return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+                return warnArgumentValue(L, functionName, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
             }
             const auto ancestorsList = pT->getAncestorList();
             lua_newtable(L);
@@ -2193,7 +2196,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
                     // Uh oh! This is not expected, so clear that table off the
                     // stack so we can push an error message there:
                     lua_pop(L, 1);
-                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", functionName, typeCheck.toLatin1().constData(), id);
                     return -1;
                 }
                 lua_pushnumber(L, ++index);
@@ -2233,7 +2236,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
         if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
             auto pT = host.getScriptUnit()->getScript(id);
             if (!pT) {
-                return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+                return warnArgumentValue(L, functionName, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
             }
             const auto ancestorsList = pT->getAncestorList();
             lua_newtable(L);
@@ -2243,7 +2246,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
                     // Uh oh! This is not expected, so clear that table off the
                     // stack so we can push an error message there:
                     lua_pop(L, 1);
-                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                    lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", functionName, typeCheck.toLatin1().constData(), id);
                     return -1;
                 }
                 lua_pushnumber(L, ++index);
@@ -2279,7 +2282,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
             return 1;
         }
 
-        return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+        return warnArgumentValue(L, functionName, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
     }();
     if (results < 0) {
         return lua_error(L);
@@ -2429,6 +2432,53 @@ void TLuaInterpreter::parseCommandOrFunction(lua_State* lState, const char* func
 }
 
 // No documentation available in wiki - internal function
+// The non-raising counterpart of parseCommandsOrFunctionsTable() - see
+// checkStringArg(). Validating the whole table up front means the caller's
+// QStringList is not yet populated when a bad item is reported, and no registry
+// reference has been taken that a raise would strand
+bool TLuaInterpreter::checkCommandsOrFunctionsTable(lua_State* L, const char* functionName, const int index)
+{
+    if (!lua_istable(L, index)) {
+        lua_pushfstring(L, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, index, "commands/functions", luaL_typename(L, index));
+        return false;
+    }
+
+    lua_pushnil(L);
+    int subIndex = 0;
+    while (lua_next(L, index)) {
+        ++subIndex;
+        if (!(lua_isstring(L, -1) || lua_isfunction(L, -1))) {
+            lua_pushfstring(L, "%s: bad item #%d in table argument #%d in type (command as string or function expected, got %s!)", functionName, subIndex, index, luaL_typename(L, -1));
+            return false;
+        }
+        lua_pop(L, 1);
+    }
+    return true;
+}
+
+// No documentation available in wiki - internal function
+// The non-raising counterpart of parseHintsTable() - see checkStringArg()
+bool TLuaInterpreter::checkHintsTable(lua_State* L, const char* functionName, const int index)
+{
+    if (!lua_istable(L, index)) {
+        lua_pushfstring(L, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, index, "hints", luaL_typename(L, index));
+        return false;
+    }
+
+    lua_pushnil(L);
+    int subIndex = 0;
+    while (lua_next(L, index)) {
+        ++subIndex;
+        if (!lua_isstring(L, -1)) {
+            lua_pushfstring(L, "%s: bad item #%d in table argument #%d in type (hint as string expected, got %s!)", functionName, subIndex, index, luaL_typename(L, -1));
+            return false;
+        }
+        lua_pop(L, 1);
+    }
+    return true;
+}
+
+// No documentation available in wiki - internal function
 void TLuaInterpreter::parseHintsTable(lua_State* lState, const char* functionName, int& index, QStringList& hintList)
 {
     if (!lua_istable(lState, index)) {
@@ -2566,7 +2616,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
 {
     // the QByteArrays below must be destroyed before the raise, so failures
     // report back instead of raising - see checkStringArg()
-    const int results = [&L]() -> int {
+    const int results = [&L, functionName = __func__]() -> int {
         QByteArray version = QByteArray(APP_VERSION).trimmed();
         const QByteArray build = mudlet::self()->mAppBuild.trimmed().toLocal8Bit();
 
@@ -2601,7 +2651,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
         const int n = lua_gettop(L);
 
         if (n == 1) {
-            if (!checkStringArg(L, __func__, 1, "style", true)) {
+            if (!checkStringArg(L, functionName, 1, "style", true)) {
                 return -1;
             }
             const QString tidiedWhat = QString{lua_tostring(L, 1)}.toLower().trimmed();
