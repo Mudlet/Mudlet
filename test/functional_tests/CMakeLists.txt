@@ -35,6 +35,7 @@ set(FUNCTIONAL_TEST_SOURCES
     UndoServerWrapTest.cpp
     HostWidgetDecouplingTest.cpp
     ActionSelfUninstallTest.cpp
+    DefaultGameDeleteTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS

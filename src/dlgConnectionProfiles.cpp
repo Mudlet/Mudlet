@@ -1012,7 +1012,9 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
         });
     }
 
-    // record the deleted default profile so it does not get re-created in the future
+    // record the deletion; the games catalog deliberately ignores this list
+    // now - only the QT_DEBUG self-test entry in fillout_form() still honours
+    // it, and continueProfileSave() clears the entry on profile re-creation
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     if (!deletedDefaultMuds.contains(profile)) {
@@ -1382,25 +1384,27 @@ void dlgConnectionProfiles::fillout_form()
     QString description;
     QListWidgetItem* pItem;
 
-    auto& settings = *mudlet::self()->mpSettings;
-    auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
     const bool showOnlyMyProfiles = showingOnlyMyProfiles();
     if (onlyShownPredefinedProfiles.isEmpty()) {
         const auto defaultGames = TGameDetails::keys();
+        // "My games" only lists games with profile data on disk; "All games"
+        // must keep offering every pre-installed game, even ones whose
+        // profile was deleted (recorded in deletedDefaultMuds)
         for (auto& game : defaultGames) {
-            if (!deletedDefaultMuds.contains(game)) {
-                if (showOnlyMyProfiles && !mProfileList.contains(game, Qt::CaseInsensitive)) {
-                    continue;
-                }
-                pItem = new QListWidgetItem();
-                auto details = TGameDetails::findGame(game);
-                setupMudProfile(pItem, game, (*details).description, (*details).icon);
+            if (showOnlyMyProfiles && !mProfileList.contains(game, Qt::CaseInsensitive)) {
+                continue;
             }
+            pItem = new QListWidgetItem();
+            auto details = TGameDetails::findGame(game);
+            setupMudProfile(pItem, game, (*details).description, (*details).icon);
         }
 
 #if defined(QT_DEBUG)
         const QString mudServer = qsl("Mudlet self-test");
+        // the last remaining reader of deletedDefaultMuds: it keeps this
+        // debug-only entry dismissable
+        const auto deletedDefaultMuds = mudlet::self()->mpSettings->value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
         if (!deletedDefaultMuds.contains(mudServer) && !mProfileList.contains(mudServer)) {
             mProfileList.append(mudServer);
             pItem = new QListWidgetItem();
