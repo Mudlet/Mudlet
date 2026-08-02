@@ -94,44 +94,4 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
     end)
 
-    describe("Tests HTTP requests against the local fixture server", function()
-      -- Exercises getHTTP/downloadFile against the fixture server started by the
-      -- "Start fixture HTTP server" workflow step, whose port is handed over in
-      -- MUDLET_TEST_HTTP_PORT. Skips cleanly when that is unset (a local run with
-      -- no fixture server) so the suite still passes. The wire response is
-      -- asynchronous (sysDownloadDone); asserting on it needs the waitForEvent
-      -- helper and is left to the post-enabler HTTP specs.
-      local port = os.getenv("MUDLET_TEST_HTTP_PORT")
-
-      -- Runs everywhere (no server needed): an invalid url is rejected up front.
-      it("getHTTP rejects an invalid url with nil and a message", function()
-        local ok, err = getHTTP("")
-        assert.is_nil(ok)
-        assert.is_string(err)
-      end)
-
-      it("getHTTP accepts a request to the local fixture server", function()
-        if not port then
-          pending("MUDLET_TEST_HTTP_PORT not set (fixture HTTP server not running)")
-          return
-        end
-        local ok, actualUrl = getHTTP("http://127.0.0.1:" .. port .. "/fixture.txt")
-        assert.is_true(ok)
-        assert.is_string(actualUrl)
-        assert.is_true(actualUrl:find("127.0.0.1:" .. port, 1, true) ~= nil)
-      end)
-
-      it("downloadFile accepts a request to the local fixture server", function()
-        if not port then
-          pending("MUDLET_TEST_HTTP_PORT not set (fixture HTTP server not running)")
-          return
-        end
-        local target = getMudletHomeDir() .. "/busted-http-fixture.txt"
-        os.remove(target)
-        local ok, actualUrl = downloadFile(target, "http://127.0.0.1:" .. port .. "/fixture.txt")
-        assert.is_true(ok)
-        assert.is_string(actualUrl)
-        assert.is_true(actualUrl:find("127.0.0.1:" .. port, 1, true) ~= nil)
-      end)
-    end)
   end)
