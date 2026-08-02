@@ -16,10 +16,12 @@ describe("Tests functionality of Adjustable.Container", function()
     end)
 
     after_each(function()
-      -- Clean up the container after each test
-      if testContainer then
-        testContainer:hide()
+      -- deleting rather than hiding keeps the container, its right click menu
+      -- and the submenu addConnectMenu builds out of every later spec file
+      if testContainer and Geyser.windowList.testAdjustableContainer == testContainer then
+        testContainer:delete()
       end
+      testContainer = nil
     end)
 
     it("should successfully add connect menu on first call", function()
@@ -107,7 +109,7 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.equals(10, ac.padding)
       assert.equals("standard", ac.lockStyle)
 
-      ac:hide()
+      ac:delete()
     end)
   end)
 
@@ -115,13 +117,32 @@ describe("Tests functionality of Adjustable.Container", function()
   -- container builds rather than on its bookkeeping alone.
   describe("Adjustable.Container widget state", function()
     local container
+    local topLevelBefore
 
     local function geometry(name)
       local x, y, width, height = getWindowGeometry(name)
       return {x = x, y = y, width = width, height = height}
     end
 
+    -- Every top level Geyser object registered since this spec's container was
+    -- built. Snapshotting rather than matching on the container's name catches
+    -- leaks whatever they are called, such as the menu's "More..." labels.
+    local function newTopLevelObjects()
+      local new = {}
+      for name in pairs(Geyser.windowList) do
+        if not topLevelBefore[name] then
+          new[#new + 1] = name
+        end
+      end
+      table.sort(new)
+      return new
+    end
+
     before_each(function()
+      topLevelBefore = {}
+      for name in pairs(Geyser.windowList) do
+        topLevelBefore[name] = true
+      end
       container = Adjustable.Container:new({
         name = "gasContainer",
         x = 20,
@@ -134,21 +155,17 @@ describe("Tests functionality of Adjustable.Container", function()
     end)
 
     after_each(function()
+      -- a delete that throws must not skip the sweep below, or it strands the
+      -- container and its menu labels for the rest of the suite
+      local deleted, deleteError = true, nil
       if container and Geyser.windowList.gasContainer == container then
-        container:delete()
+        deleted, deleteError = pcall(function() container:delete() end)
       end
       container = nil
-      -- Deleting an Adjustable.Container does not take its right click menu
-      -- labels with it: they are registered as top level Geyser objects, so
-      -- the cascade never reaches them. Sweep them by name, and unregister
-      -- the container from Adjustable's own bookkeeping, so nothing of this
-      -- spec is left behind for the rest of the suite.
-      local leftovers = {}
-      for name in pairs(Geyser.windowList) do
-        if name:find("^gasContainer") then
-          leftovers[#leftovers + 1] = name
-        end
-      end
+      -- the whole suite shares one Lua state, so anything left registered here
+      -- would follow later spec files around: sweep it, but report it rather
+      -- than quietly repairing a delete that stopped cleaning up after itself
+      local leftovers = newTopLevelObjects()
       for _, name in ipairs(leftovers) do
         local object = Geyser.windowList[name]
         if object then
@@ -160,6 +177,12 @@ describe("Tests functionality of Adjustable.Container", function()
       if index then
         table.remove(Adjustable.Container.all_windows, index)
       end
+      -- the delete throwing is the root cause, so report it ahead of the leak
+      -- it would have caused
+      if not deleted then
+        error(deleteError)
+      end
+      assert.are.same({}, leftovers)
     end)
 
     it("puts its backdrop label over the container's geometry", function()
@@ -240,13 +263,98 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.are.same({x = 20, y = 30, width = 200, height = 200}, geometry("gasContaineradjLabel"))
     end)
 
+    it("titles itself after its name again after resetTitle", function()
+      container:setTitle("My Title", "red", "c")
+      container:resetTitle()
+      assert.are.equal("gasContainer - Adjustable Container", container.titleText)
+      -- back to what the constructor produced, colour and alignment included
+      assert.are.equal("grey", container.titleTxtColor)
+      assert.are.equal("l", container.titleFormat)
+      local text = getLabelText("gasContaineradjLabel")
+      assert.is_truthy(text:find("gasContainer - Adjustable Container", 1, true))
+      assert.is_truthy(text:find("color: " .. Geyser.Color.hex("grey"), 1, true))
+    end)
+
     it("deletes the container and its backdrop label", function()
-      -- the right click menu labels it created are not part of the cascade,
-      -- so they are swept by name in after_each instead
       container:delete()
       assert.is_nil(getWindowGeometry("gasContaineradjLabel"))
       assert.is_nil(getWindowGeometry("gasContainerexitLabel"))
       assert.is_nil(Geyser.windowList.gasContainer)
+    end)
+
+    it("takes its right click menu labels and its registration with it", function()
+      -- menu labels are registered as top level Geyser objects rather than as
+      -- children of the menu, so only the container's own delete reaches them
+      local menuLabelName = container.lockLabel.name
+      local lockStyleLabelName = container.adjLabel:findMenuElement("lockStylesLabel.standard").name
+      assert.is_not_nil(Geyser.windowList[menuLabelName])
+      assert.is_not_nil(Geyser.windowList[lockStyleLabelName])
+      container:delete()
+      -- listed by name: a leaked Geyser object prints as the whole widget tree
+      assert.are.same({}, newTopLevelObjects())
+      assert.is_nil(getWindowGeometry(menuLabelName))
+      assert.is_nil(getWindowGeometry(lockStyleLabelName))
+      assert.is_nil(Adjustable.Container.all.gasContainer)
+      assert.is_nil(table.index_of(Adjustable.Container.all_windows, "gasContainer"))
+    end)
+
+    it("takes the menu labels of a container inside a user window with it", function()
+      -- menu labels of a container in a user window are registered in that
+      -- window's list rather than in Geyser.windowList
+      local userWindow = Geyser.UserWindow:new({name = "gasUserWindow", x = 0, y = 0, width = 300, height = 300})
+      finally(function()
+        -- a user window gets a root container of its own, which is what has to
+        -- go for the window and everything in it to be cleaned up
+        local root = Geyser.windowList.gasUserWindowContainer
+        if root then
+          root:delete()
+        end
+      end)
+      local inWindow = Adjustable.Container:new({
+        name = "gasInUserWindow",
+        x = 0, y = 0, width = 100, height = 100,
+        autoLoad = false,
+        autoSave = false,
+      }, userWindow)
+      local menuLabelName = inWindow.lockLabel.name
+      assert.is_not_nil(getWindowGeometry(menuLabelName))
+      inWindow:delete()
+      assert.is_nil(getWindowGeometry(menuLabelName))
+    end)
+
+    it("takes its autosave handler with it", function()
+      local saving = Adjustable.Container:new({
+        name = "gasSavingContainer",
+        x = 0, y = 0, width = 100, height = 100,
+        autoLoad = false,
+      })
+      assert.is_not_nil(saving.autoSaveHandler)
+      saving:delete()
+      -- left registered, the handler would write a deleted container's geometry
+      -- back out at exit, over whatever took its name in the meantime
+      assert.is_nil(saving.autoSaveHandler)
+      assert.is_false(saving.autoSave)
+    end)
+
+    it("leaves another adjustable container's registration alone", function()
+      local other = Adjustable.Container:new({
+        name = "gasOtherContainer",
+        x = 0, y = 0, width = 100, height = 100,
+        autoLoad = false,
+        autoSave = false,
+      })
+      finally(function()
+        if Geyser.windowList.gasOtherContainer == other then
+          other:delete()
+        end
+      end)
+      local otherMenuLabelName = other.lockLabel.name
+      container:delete()
+      assert.are.equal(other, Adjustable.Container.all.gasOtherContainer)
+      assert.is_not_nil(table.index_of(Adjustable.Container.all_windows, "gasOtherContainer"))
+      assert.are.equal(other.lockLabel, Geyser.windowList[otherMenuLabelName])
+      assert.is_not_nil(getWindowGeometry(otherMenuLabelName))
+      other:delete()
     end)
   end)
 end)
