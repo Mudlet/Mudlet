@@ -141,6 +141,62 @@ describe("Tests functionality of Geyser.Container", function()
       assert.are.same({x = 300, y = 150, width = 200, height = 100}, geometry("gcsBoxChild"))
     end)
 
+    it("treats a negative percentage as the remainder of the container", function()
+      local container = track(Geyser.Container:new({name = "gcsNegBox", x = 0, y = 0, width = 200, height = 100}))
+      track(Geyser.Label:new({name = "gcsNegPercent", x = "-25%", y = 0, width = "-50%", height = "100%"}, container))
+      -- -25% means 75% along, -50% means half the container wide
+      assert.are.same({x = 150, y = 0, width = 100, height = 100}, geometry("gcsNegPercent"))
+    end)
+
+    it("stretches a negative width to the far edge of the container", function()
+      local container = track(Geyser.Container:new({name = "gcsNegWidthBox", x = 0, y = 0, width = 200, height = 100}))
+      track(Geyser.Label:new({name = "gcsNegWidth", x = 10, y = 0, width = "-10px", height = 20}, container))
+      -- from x 10 to ten pixels short of the container's right edge
+      assert.are.same({x = 10, y = 0, width = 180, height = 20}, geometry("gcsNegWidth"))
+    end)
+
+    it("measures a bare negative number from the far edge too", function()
+      local container = track(Geyser.Container:new({name = "gcsBareBox", x = 0, y = 0, width = 200, height = 100}))
+      track(Geyser.Label:new({name = "gcsBareNegative", x = -5, y = 0, width = 20, height = 20}, container))
+      assert.are.equal(195, geometry("gcsBareNegative").x)
+    end)
+
+    it("calls a constraint that is a function", function()
+      local container = track(Geyser.Container:new({name = "gcsFuncBox", x = 0, y = 0, width = 200, height = 100}))
+      track(Geyser.Label:new({
+        name = "gcsFunctionConstraint",
+        x = function() return 25 end,
+        y = 0,
+        width = function() return 50 end,
+        height = 20,
+      }, container))
+      assert.are.same({x = 25, y = 0, width = 50, height = 20}, geometry("gcsFunctionConstraint"))
+    end)
+
+    it("raises an error on a constraint it cannot parse", function()
+      -- the object is registered before its constraints are resolved, so the
+      -- failed attempt has to be swept out of the root window list by hand
+      finally(function()
+        local zombie = Geyser.windowList.gcsBadConstraint
+        if zombie then
+          zombie:delete()
+        end
+      end)
+      local ok, message = pcall(function()
+        return Geyser.Label:new({name = "gcsBadConstraint", x = 0, y = 0, width = true, height = 20})
+      end)
+      assert.is_false(ok)
+      assert.is_truthy(tostring(message):find("GeyserSetConstraints.lua", 1, true))
+      assert.is_nil(getWindowGeometry("gcsBadConstraint"))
+    end)
+
+    it("leaves the widget where it was when a move is given a bad constraint", function()
+      local label = track(Geyser.Label:new({name = "gcsBadMove", x = 10, y = 10, width = 50, height = 50}))
+      local ok = pcall(function() label:move("nonsense", 20) end)
+      assert.is_false(ok)
+      assert.are.same({x = 10, y = 10, width = 50, height = 50}, geometry("gcsBadMove"))
+    end)
+
     it("resolves percentages through two levels of nesting", function()
       local outer = track(Geyser.Container:new({name = "gcsOuter", x = 100, y = 50, width = 400, height = 200}))
       local middle = track(Geyser.Container:new({name = "gcsMiddle", x = "50%", y = 0, width = "50%", height = "100%"}, outer))
@@ -267,10 +323,35 @@ describe("Tests functionality of Geyser.Container", function()
       assert.are.same({"gcsStack1", "gcsStack2"}, container.windows)
     end)
 
-    it("keeps the relative order when raising or lowering the whole container", function()
+    -- raiseAll and lowerAll leave container.windows untouched by design (they
+    -- raise children with changeWindowIndex false), and Mudlet has no z-order
+    -- readback, so the only observable is which windows they hand to
+    -- raiseWindow/lowerWindow and in what order. busted's spy calls the real
+    -- function through, so this still exercises Mudlet itself.
+    it("raises itself and then every child, top down", function()
+      local raised = spy.on(_G, "raiseWindow")
+      finally(function() _G.raiseWindow:revert() end)
       container:raiseAll()
+      assert.spy(raised).was.called(3)
+      local order = {}
+      for index, call in ipairs(raised.calls) do
+        order[index] = call.vals[1]
+      end
+      assert.are.same({"gcsStack", "gcsStack1", "gcsStack2"}, order)
       assert.are.same({"gcsStack1", "gcsStack2"}, container.windows)
+    end)
+
+    it("lowers the deepest child first and itself last", function()
+      local lowered = spy.on(_G, "lowerWindow")
+      finally(function() _G.lowerWindow:revert() end)
       container:lowerAll()
+      assert.spy(lowered).was.called(3)
+      local order = {}
+      for index, call in ipairs(lowered.calls) do
+        order[index] = call.vals[1]
+      end
+      -- reverse order, so the children keep their stacking relative to each other
+      assert.are.same({"gcsStack2", "gcsStack1", "gcsStack"}, order)
       assert.are.same({"gcsStack1", "gcsStack2"}, container.windows)
       -- lowerAll walks the tree through a scratch table it must clean up again
       assert.is_nil(Geyser.Container.windowTable)
@@ -316,7 +397,9 @@ describe("Tests functionality of Geyser.Container", function()
       assert.are.equal(8, container.fontSize)
     end)
 
-    it("re-resolves character sized constraints for its children", function()
+    -- the container's own size is what changes here; a child that carries its
+    -- own character constraint keeps its own fontSize and does not follow
+    it("re-resolves its own character sized constraints, moving its children with it", function()
       local container = track(Geyser.Container:new({name = "gcsFontBox", x = 0, y = 0, width = "20c", height = "4c", fontSize = 8}))
       track(Geyser.Label:new({name = "gcsFontChild", x = 0, y = 0, width = "100%", height = "100%"}, container))
       local smallWidth, smallHeight = calcFontSize(8)
@@ -354,6 +437,20 @@ describe("Tests functionality of Geyser.Container", function()
       }, container))
       track(Geyser.Label:new({name = "gcsDyn3Dynamic"}, container))
       assert.are.same({width = 200, height = 150}, container:calculate_dynamic_window_size())
+    end)
+
+    it("reports no share at all when every window is fixed", function()
+      local container = track(Geyser.Container:new({name = "gcsDyn5", x = 0, y = 0, width = 200, height = 100}))
+      for index = 1, 2 do
+        track(Geyser.Label:new({
+          name = "gcsDyn5Fixed" .. index,
+          width = 100,
+          height = 50,
+          h_policy = Geyser.Fixed,
+          v_policy = Geyser.Fixed,
+        }, container))
+      end
+      assert.are.same({width = 0, height = 0}, container:calculate_dynamic_window_size())
     end)
 
     it("accounts for a stretch factor", function()
@@ -503,6 +600,15 @@ describe("Tests functionality of Geyser.Container", function()
       assert.are.same({x = 0, y = 100, width = 200, height = 100}, geometry("gcsDeferredB"))
     end)
 
+    it("does nothing when Geyser:reposition is called outside a resize event", function()
+      -- Geyser:reposition hands GeyserReposition no event, and GeyserReposition
+      -- only acts on the two resize events, so this is a no-op by construction
+      track(Geyser.Label:new({name = "gcsRepositionNoop", x = 10, y = 10, width = 100, height = 50}))
+      moveWindow("gcsRepositionNoop", 300, 300)
+      Geyser:reposition()
+      assert.are.equal(300, geometry("gcsRepositionNoop").x)
+    end)
+
     it("lays a box out as its children arrive when updates are not deferred", function()
       local box = track(Geyser.VBox:new({name = "gcsUndeferred", x = 0, y = 0, width = 200, height = 200}))
       track(Geyser.Label:new({name = "gcsUndeferredA"}, box))
@@ -575,6 +681,9 @@ describe("Tests functionality of Geyser.Container", function()
   end)
 
   describe("Geyser.hideAll/showAll", function()
+    -- calling either without a type would sweep every Geyser widget in the
+    -- profile, including the ones other spec files own, so only the filtered
+    -- form is exercised here
     it("only touches windows of the type it is given", function()
       -- a private type keeps the sweep away from widgets other specs own
       local mine = track(Geyser.Container:new({name = "gcsSweep", type = "gcsprobe", x = 0, y = 0, width = 50, height = 50}))
@@ -586,7 +695,7 @@ describe("Tests functionality of Geyser.Container", function()
       Geyser.showAll("gcsprobe")
       assert.is_true(windowVisible("gcsSweepChild"))
       assert.is_true(windowVisible("gcsUnswept"))
-      assert.is_not_nil(mine.windowList.gcsSweepChild)
+      assert.is_false(mine.hidden)
     end)
   end)
 

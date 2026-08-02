@@ -42,6 +42,9 @@ describe("Tests functionality of Geyser.HBox", function()
       assert.is_nil(getWindowGeometry("ghbNew"))
     end)
 
+    -- children of a new2 box are not laid out at all: HBox overrides add but
+    -- not add2, so organize() is never reached. Left unspecified rather than
+    -- pinned, since the layout is what a caller of new2 is asking for.
     it("new2 marks the box as using add2", function()
       local box = track(Geyser.HBox:new2({name = "ghbNew2", x = 0, y = 0, width = 100, height = 100}))
       assert.is_true(box.useAdd2)
@@ -126,6 +129,15 @@ describe("Tests functionality of Geyser.HBox", function()
       box:resize(100, 50)
       assert.are.same({x = 10, y = 20, width = 50, height = 50}, geometry("ghbMoveA"))
       assert.are.same({x = 60, y = 20, width = 50, height = 50}, geometry("ghbMoveB"))
+    end)
+
+    it("keeps a fixed child flush against its neighbour after a resize", function()
+      local fixedBox = track(Geyser.HBox:new({name = "ghbFixedMove", x = 0, y = 0, width = 200, height = 60}))
+      track(Geyser.Label:new({name = "ghbFixedMoveA", width = 50, h_policy = Geyser.Fixed}, fixedBox))
+      track(Geyser.Label:new({name = "ghbFixedMoveB"}, fixedBox))
+      fixedBox:resize(250, 60)
+      assert.are.same({x = 0, y = 0, width = 50, height = 60}, geometry("ghbFixedMoveA"))
+      assert.are.same({x = 50, y = 0, width = 200, height = 60}, geometry("ghbFixedMoveB"))
     end)
   end)
 

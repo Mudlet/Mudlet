@@ -174,6 +174,21 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.are.same({x = 60, y = 70, width = 100, height = 120}, geometry("gasContaineradjLabel"))
     end)
 
+    it("puts a child inside the padding and below the title bar", function()
+      Geyser.Label:new({name = "gasChild", x = 0, y = 0, width = "100%", height = "100%"}, container)
+      -- padding on the left and right, twice that at the top to leave room for
+      -- the title bar
+      assert.are.equal(10, container.padding)
+      assert.are.same({x = 30, y = 50, width = 180, height = 170}, geometry("gasChild"))
+    end)
+
+    it("setPadding moves and resizes the children", function()
+      Geyser.Label:new({name = "gasPaddedChild", x = 0, y = 0, width = "100%", height = "100%"}, container)
+      container:setPadding(30)
+      assert.are.equal(30, container.padding)
+      assert.are.same({x = 50, y = 90, width = 140, height = 110}, geometry("gasPaddedChild"))
+    end)
+
     it("hides and shows every widget it owns", function()
       container:hide()
       assert.is_false(windowVisible("gasContaineradjLabel"))

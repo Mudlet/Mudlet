@@ -159,6 +159,37 @@ describe("Tests functionality of Geyser.Gauge", function()
       assert.are.same({x = 5, y = 5, width = 190, height = 30}, geometry("ggsMargin_front"))
     end)
 
+    it("reads a two value margin as vertical then horizontal", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsTwoValue", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("margin: 10px 30px;", "margin: 10px 30px;")
+      assert.are.same({x = 30, y = 10, width = 140, height = 80}, geometry("ggsTwoValue_front"))
+    end)
+
+    it("reads a four value margin as top, right, bottom, left", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsFourValue", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("margin: 1px 2px 3px 4px;", "margin: 1px 2px 3px 4px;")
+      assert.are.same({x = 4, y = 1, width = 194, height = 96}, geometry("ggsFourValue_front"))
+    end)
+
+    it("makes room for a border on the back label", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsBorder", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("border: 2px solid red;", "border: 2px solid red;")
+      assert.are.same({x = 2, y = 2, width = 196, height = 96}, geometry("ggsBorder_front"))
+    end)
+
+    it("makes room for padding on the back label", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsPadding", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("padding: 3px;", "padding: 3px;")
+      assert.are.same({x = 3, y = 3, width = 194, height = 94}, geometry("ggsPadding_front"))
+    end)
+
+    it("adds margin, border and padding together", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsCombined", x = 0, y = 0, width = 200, height = 100}))
+      local css = "margin: 2px; border: 1px solid red; padding: 3px;"
+      gauge:setStyleSheet(css, css)
+      assert.are.same({x = 6, y = 6, width = 188, height = 88}, geometry("ggsCombined_front"))
+    end)
+
     it("strips the margin from the front stylesheet but not the back", function()
       local gauge = track(Geyser.Gauge:new({name = "ggsCss", x = 0, y = 0, width = 200, height = 40}))
       gauge:setStyleSheet("margin: 5px; background-color: red;", "margin: 5px; background-color: blue;")
