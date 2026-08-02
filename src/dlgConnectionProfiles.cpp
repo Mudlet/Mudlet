@@ -1402,8 +1402,10 @@ void dlgConnectionProfiles::fillout_form()
 
 #if defined(QT_DEBUG)
         const QString mudServer = qsl("Mudlet self-test");
-        // the last remaining reader of deletedDefaultMuds: it keeps this
-        // debug-only entry dismissable
+        // the last remaining reader of deletedDefaultMuds: the self-test
+        // entry stays in the "All games" catalog like any other game, but a
+        // deleted one must not be force-re-added to mProfileList (and so the
+        // "My games" tab) by this debug-only convenience
         const auto deletedDefaultMuds = mudlet::self()->mpSettings->value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
         if (!deletedDefaultMuds.contains(mudServer) && !mProfileList.contains(mudServer)) {
             mProfileList.append(mudServer);
