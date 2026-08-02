@@ -47,8 +47,8 @@ leak:_dri.so
 #
 # A second un-suppressible flake lives on the same CI job: LeakSanitizer's
 # stop-the-world tracer - the helper process that ptrace-attaches at exit to
-# scan memory for live pointers - itself segfaults while driver/X teardown is
-# still removing mappings under it. The job log then ends with
+# scan memory for live pointers - itself segfaults during exit-time teardown,
+# apparently racing driver/X cleanup. The job log then ends with
 #   Tracer caught signal 11: addr=0x... pc=0x... sp=0x...
 #   ==NNNNN==LeakSanitizer has encountered a fatal error.
 # right after "mudlet::~mudlet() INFO - uninstalling translation...", with no
