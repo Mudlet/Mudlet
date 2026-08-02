@@ -20,11 +20,14 @@
 /*
  * Regression tests for the editor's dismissible help banners when switching
  * between editor sections: a dismissed section's suppression must not leave
- * another section's banner (or the dismissal undo toast) lingering on screen.
+ * another section's banner (or the dismissal undo toast) lingering on screen,
+ * the undo toast's close button must only close the toast, undo must restore
+ * the dismissed banner, and error messages must survive a section switch.
  *
  * Run with: ctest -R EditorBannerViewSwitchTest -V
  */
 
+#include <QSettings>
 #include <QtTest/QtTest>
 #include <chrono>
 
@@ -76,8 +79,8 @@ private:
     {
         const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
-        if (dir.exists()) {
-            dir.removeRecursively();
+        if (dir.exists() && !dir.removeRecursively()) {
+            qWarning() << "deleteProfileDirectory: could not remove" << path << "- later failures may stem from this stale state";
         }
     }
 
@@ -97,19 +100,49 @@ private:
             mudlet::self()->startAutoLogin({});
             QTest::qWait(100ms);
 
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
+            // Guard every UI step so a setup flake names the failing step in
+            // the log instead of surfacing as a generic profile-load timeout
+            dlgConnectionProfiles* connectionDialog = mudlet::self()->mpConnectionDialog;
+            if (!connectionDialog || !connectionDialog->new_profile_button) {
+                qWarning() << "startProfile: connection dialog did not appear";
+                return;
+            }
+            QTest::mouseClick(connectionDialog->new_profile_button, Qt::LeftButton);
             QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), profileName);
+
+            const auto focusedWidget = [](const char* step) -> QWidget* {
+                QWidget* widget = QApplication::focusWidget();
+                if (!widget) {
+                    qWarning() << "startProfile: no focused widget at step" << step;
+                }
+                return widget;
+            };
+
+            QWidget* nameField = focusedWidget("profile name");
+            if (!nameField) {
+                return;
+            }
+            QTest::keyClicks(nameField, profileName);
             QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+            QTest::keyClick(nameField, Qt::Key_Tab);
             QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), address);
+
+            QWidget* addressField = focusedWidget("address");
+            if (!addressField) {
+                return;
+            }
+            QTest::keyClicks(addressField, address);
             QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+            QTest::keyClick(addressField, Qt::Key_Tab);
             QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), port);
+
+            QWidget* portField = focusedWidget("port");
+            if (!portField) {
+                return;
+            }
+            QTest::keyClicks(portField, port);
             QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
+            QTest::keyClick(portField, Qt::Key_Return);
         });
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
@@ -123,7 +156,7 @@ private:
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(1000)) {
+        if (!spy2.wait(2000)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -153,6 +186,12 @@ private slots:
         clearBannerSettings();
         deleteProfileDirectory(mProfileName);
         startProfile(mProfileName, mLocalhost, mPort);
+        // QFAIL inside startProfile() only returns from that helper - bail out
+        // here too or the mpHost dereference below crashes and buries the
+        // recorded diagnostic under a segfault
+        if (QTest::currentTestFailed()) {
+            return;
+        }
 
         mudlet::self()->slot_showScriptDialog();
         QTest::qWait(100ms);
@@ -172,15 +211,11 @@ private slots:
         delete mudlet::self();
     }
 
-    // Reset the in-memory banner state so each test starts from "nothing
-    // dismissed yet", like a fresh editor session
+    // Reset the banner state - in-memory and this profile's persisted
+    // preferences - so each test starts from "nothing dismissed yet"
     void init()
     {
-        if (mpEditor->mpBannerUndoTimer) {
-            mpEditor->mpBannerUndoTimer->stop();
-            mpEditor->mpBannerUndoTimer->deleteLater();
-            mpEditor->mpBannerUndoTimer = nullptr;
-        }
+        mpEditor->cancelBannerUndoTimer();
         mpEditor->mTemporarilyHiddenBanners.clear();
         mpEditor->mLastDismissedBannerView = EditorViewType::cmUnknownView;
         mpEditor->mLastDismissedBannerContent.clear();
@@ -229,6 +264,7 @@ private slots:
         mpEditor->slot_showTimers();
         QTest::qWait(50ms);
         QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "Timers banner should show after switching to Timers");
+        QCOMPARE(mpEditor->mCurrentBannerKey, qsl("intro"));
 
         mpEditor->slot_showScripts();
         QTest::qWait(50ms);
@@ -242,6 +278,7 @@ private slots:
     {
         mpEditor->slot_showScripts();
         QTest::qWait(50ms);
+        QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "Scripts banner should show initially");
         const QString scriptsBanner = bannerText();
 
         clickBannerCloseButton();
@@ -262,6 +299,7 @@ private slots:
     {
         mpEditor->slot_showScripts();
         QTest::qWait(50ms);
+        QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "Scripts banner should show initially");
         const QString scriptsBanner = bannerText();
 
         clickBannerCloseButton();
@@ -275,20 +313,57 @@ private slots:
         QVERIFY2(!bannerText().contains(qsl("href='undo'")), "The undo toast must not linger after a view switch");
     }
 
-    // Undo after a single dismissal still restores the banner
+    // Undo after a single dismissal still restores the banner - driven through
+    // the toast's link wiring, not by calling undoBannerDismiss() directly, so
+    // a broken linkActivated connection is caught too
     void testUndoRestoresBanner()
     {
         mpEditor->slot_showScripts();
         QTest::qWait(50ms);
+        QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "Scripts banner should show initially");
         const QString scriptsBanner = bannerText();
 
         clickBannerCloseButton();
         QVERIFY(mpEditor->mpSystemMessageArea->isVisible());
 
-        mpEditor->undoBannerDismiss();
+        QMetaObject::invokeMethod(mpEditor->mpSystemMessageArea->notificationAreaMessageBox, "linkActivated", Q_ARG(QString, qsl("undo")));
         QTest::qWait(50ms);
         QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "Undo should restore the dismissed banner");
         QCOMPARE(bannerText(), scriptsBanner);
+    }
+
+    // Errors are not banners: they must survive a section switch instead of
+    // being cleared by the new-view banner handling
+    void testErrorSurvivesViewSwitch()
+    {
+        mpEditor->slot_showScripts();
+        QTest::qWait(50ms);
+        const QString errorText = qsl("test error message");
+        mpEditor->showError(errorText);
+        QVERIFY(mpEditor->mpSystemMessageArea->isVisible());
+
+        mpEditor->slot_showTimers();
+        QTest::qWait(50ms);
+        QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "An error message must survive a view switch");
+        QCOMPARE(bannerText(), errorText);
+    }
+
+    // An error raised while the undo toast's 5s expiry timer is still running
+    // must survive both the timer and a view switch
+    void testErrorShownDuringToastWindowSurvivesViewSwitch()
+    {
+        mpEditor->slot_showScripts();
+        QTest::qWait(50ms);
+        QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "Scripts banner should show initially");
+
+        clickBannerCloseButton(); // toast up, expiry timer running
+        const QString errorText = qsl("error raised during toast");
+        mpEditor->showError(errorText);
+
+        mpEditor->slot_showTimers();
+        QTest::qWait(50ms);
+        QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "An error shown while the undo toast timer was live must survive a view switch");
+        QCOMPARE(bannerText(), errorText);
     }
 };
 

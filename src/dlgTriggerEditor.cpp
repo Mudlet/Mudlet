@@ -9787,20 +9787,19 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     mCurrentView = view;
 
     const bool bannerUndoToastShowing = mpBannerUndoTimer && mpBannerUndoTimer->isActive();
-    if (bannerUndoToastShowing) {
-        mpBannerUndoTimer->stop();
-        mpBannerUndoTimer->deleteLater();
-        mpBannerUndoTimer = nullptr;
-    }
+    cancelBannerUndoTimer();
 
     // A banner (or the dismissal undo toast) belongs to the view it was shown
     // in, so hide it on a view change - otherwise it lingers over the new view
     // when that view's own banner is suppressed. showIntro() will put up the
     // right banner for the new view if one is allowed. Errors and warnings
-    // (which clear mCurrentBannerKey) are left in place.
+    // (which clear mCurrentBannerKey) are not hidden by this block, though the
+    // pre-existing permanently-hidden check below still can hide them. Using
+    // clearEditorNotification() rather than hideSystemMessageArea() as the
+    // latter would also discard the current script's unacknowledged loading
+    // error.
     if (bannerUndoToastShowing || !mCurrentBannerKey.isEmpty()) {
-        hideSystemMessageArea();
-        mCurrentBannerKey.clear();
+        clearEditorNotification();
     }
 
     if (bannerPermanentlyHidden(mCurrentView)) {
@@ -10129,6 +10128,9 @@ void dlgTriggerEditor::slot_showAliases()
 
 void dlgTriggerEditor::showError(const QString& text)
 {
+    // A still-running undo-toast expiry timer would hide this message when it
+    // fires, so cancel it - the toast's content is gone from the screen anyway
+    cancelBannerUndoTimer();
     mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
     mpSystemMessageArea->notificationAreaIconLabelError->show();
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
@@ -10147,6 +10149,9 @@ void dlgTriggerEditor::showError(const QString& text)
 
 void dlgTriggerEditor::showWarning(const QString& text, bool announce)
 {
+    // A still-running undo-toast expiry timer would hide this message when it
+    // fires, so cancel it - the toast's content is gone from the screen anyway
+    cancelBannerUndoTimer();
     mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
     mpSystemMessageArea->notificationAreaIconLabelError->hide();
     mpSystemMessageArea->notificationAreaIconLabelWarning->show();
@@ -14328,11 +14333,7 @@ void dlgTriggerEditor::handleBannerDismiss()
     // another banner dismissal (which would suppress the whole view's banners
     // and stash the toast text as restorable banner content)
     if (mCurrentBannerKey.isEmpty()) {
-        if (mpBannerUndoTimer) {
-            mpBannerUndoTimer->stop();
-            mpBannerUndoTimer->deleteLater();
-            mpBannerUndoTimer = nullptr;
-        }
+        cancelBannerUndoTimer();
         hideSystemMessageArea();
         return;
     }
@@ -14351,12 +14352,18 @@ void dlgTriggerEditor::handleBannerDismiss()
     showBannerUndoToast();
 }
 
-void dlgTriggerEditor::showBannerUndoToast()
+void dlgTriggerEditor::cancelBannerUndoTimer()
 {
     if (mpBannerUndoTimer) {
         mpBannerUndoTimer->stop();
         mpBannerUndoTimer->deleteLater();
+        mpBannerUndoTimer = nullptr;
     }
+}
+
+void dlgTriggerEditor::showBannerUndoToast()
+{
+    cancelBannerUndoTimer();
 
     mCurrentBannerKey.clear();
 
@@ -14418,11 +14425,7 @@ void dlgTriggerEditor::slot_refreshBannerLinkColors()
 
 void dlgTriggerEditor::undoBannerDismiss()
 {
-    if (mpBannerUndoTimer) {
-        mpBannerUndoTimer->stop();
-        mpBannerUndoTimer->deleteLater();
-        mpBannerUndoTimer = nullptr;
-    }
+    cancelBannerUndoTimer();
 
     const QString settingsKey = bannerSettingsKey(mLastDismissedBannerView, mLastDismissedBannerKey);
     if (!settingsKey.isEmpty()) {
