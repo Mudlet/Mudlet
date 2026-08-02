@@ -148,21 +148,24 @@ jobs:
         command -v "${python_bin}" > /dev/null 2>&1 || python_bin=python
         MUDLET_TEST_HTTP_PORT_FILE="${port_file}" "${python_bin}" "$GITHUB_WORKSPACE/CI/http-fixture-server.py" > "${fixture_log}" 2>&1 &
         fixture_pid=$!
-        trap 'kill "${fixture_pid}" > /dev/null 2>&1 || true' EXIT
+        # Disowned so that stopping it is not reported as a job crash, and -9
+        # because a plain SIGTERM does not reach a native Windows process from
+        # msys2. The server's log is one line when all is well, so print it
+        # either way rather than only where trouble is expected.
+        disown "${fixture_pid}" 2>/dev/null || true
+        trap 'kill -9 "${fixture_pid}" > /dev/null 2>&1 || true; cat "${fixture_log}" 2>/dev/null || true' EXIT
         for _ in $(seq 1 100); do
           [ -s "${port_file}" ] && break
           sleep 0.1
         done
         if [ ! -s "${port_file}" ]; then
           echo "fixture HTTP server failed to start" >&2
-          cat "${fixture_log}" 2>/dev/null || true
           exit 1
         fi
         MUDLET_TEST_HTTP_PORT="$(cat "${port_file}")"
         export MUDLET_TEST_HTTP_PORT
-        if ! curl -fsS "http://127.0.0.1:${MUDLET_TEST_HTTP_PORT}/fixture.txt" > /dev/null; then
+        if ! curl -fsS --max-time 10 "http://127.0.0.1:${MUDLET_TEST_HTTP_PORT}/fixture.txt" > /dev/null; then
           echo "fixture HTTP server is not serving fixtures" >&2
-          cat "${fixture_log}" 2>/dev/null || true
           exit 1
         fi
         echo "fixture HTTP server ready on 127.0.0.1:${MUDLET_TEST_HTTP_PORT}"
