@@ -34,7 +34,7 @@ describe("Tests functionality of Geyser.HBox", function()
     created = {}
   end)
 
-  describe("Geyser.HBox:new and Geyser.HBox:new2", function()
+  describe("Geyser.HBox:new/new2", function()
     it("defaults the type to hbox and starts empty", function()
       local box = track(Geyser.HBox:new({name = "ghbNew", x = 0, y = 0, width = 100, height = 100}))
       assert.are.equal("hbox", box.type)
@@ -49,7 +49,7 @@ describe("Tests functionality of Geyser.HBox", function()
     end)
   end)
 
-  describe("Geyser.HBox:add and Geyser.HBox:organize", function()
+  describe("Geyser.HBox:add/organize", function()
     it("gives a single child the whole box", function()
       local box = track(Geyser.HBox:new({name = "ghbOne", x = 10, y = 20, width = 200, height = 100}))
       track(Geyser.Label:new({name = "ghbOneChild"}, box))
@@ -91,9 +91,11 @@ describe("Tests functionality of Geyser.HBox", function()
       assert.are.same({x = 0, y = 0, width = 100, height = 60}, geometry("ghbFixedChild"))
       local dynamic = geometry("ghbDynamic")
       assert.are.equal(200, dynamic.width)
-      -- the dynamic child starts where the fixed one ends, up to the pixel the
-      -- percentage of a third loses to truncation
-      assert.is_true(dynamic.x == 99 or dynamic.x == 100, "unexpected x " .. tostring(dynamic.x))
+      -- the dynamic child should start at 100, where the fixed one ends, but
+      -- organize() hands out positions as percentages: a third of 300px comes
+      -- back as 99.999999999999 and Mudlet truncates it, leaving a one pixel
+      -- gap. Pinned so the day the layout is fixed this spec says so.
+      assert.are.equal(99, dynamic.x)
     end)
 
     it("gives a stretch factor its extra share of the width", function()

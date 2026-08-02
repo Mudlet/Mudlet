@@ -34,7 +34,7 @@ describe("Tests functionality of Geyser.Gauge", function()
     created = {}
   end)
 
-  describe("Geyser.Gauge:new and Geyser.Gauge:new2", function()
+  describe("Geyser.Gauge:new/new2", function()
     it("builds a back, front and text label over the gauge's geometry", function()
       local gauge = track(Geyser.Gauge:new({name = "ggsNew", x = 10, y = 20, width = 200, height = 40}))
       assert.are.equal("gauge", gauge.type)
@@ -220,8 +220,9 @@ describe("Tests functionality of Geyser.Gauge", function()
       assert.is_truthy(text:find("<i>", 1, true))
       assert.is_truthy(text:find("<u>", 1, true))
       assert.is_truthy(text:find("<s>", 1, true))
-      assert.are.equal(gauge.text.format, gauge.format)
+      assert.are.equal("8bius", gauge.format)
       assert.is_true(gauge.formatTable.bold)
+      assert.is_true(gauge.formatTable.strikethrough)
     end)
 
     it("sets the font size of the text label", function()
@@ -278,7 +279,7 @@ describe("Tests functionality of Geyser.Gauge", function()
 
   describe("Geyser.Gauge:type_delete", function()
     it("deletes the back, front and text labels with the gauge", function()
-      local gauge = Geyser.Gauge:new({name = "ggsDelete", x = 0, y = 0, width = 100, height = 20})
+      local gauge = track(Geyser.Gauge:new({name = "ggsDelete", x = 0, y = 0, width = 100, height = 20}))
       gauge:delete()
       for _, name in ipairs({"ggsDelete_back", "ggsDelete_front", "ggsDelete_text"}) do
         assert.is_nil(getWindowGeometry(name))

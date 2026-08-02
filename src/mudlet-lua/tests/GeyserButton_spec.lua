@@ -223,7 +223,9 @@ describe("Tests functionality of Geyser.Button", function()
       assert.is_nil(result)
       assert.are.equal("cannot set a single state button's state to 'down', only 'up'", message)
       -- the refusal happens before anything is drawn, so the button still
-      -- shows its up message
+      -- shows its up message. button.state is deliberately not asserted here:
+      -- setState writes it before the refusal, which is a Geyser bug to fix
+      -- rather than a contract to pin down.
       assert.is_truthy(getLabelText("gbsSingleState"):find("up text", 1, true))
     end)
 
@@ -312,7 +314,7 @@ describe("Tests functionality of Geyser.Button", function()
     end)
 
     it('deletes its widget', function()
-      local button = Geyser.Button:new({name = "gbsDelete", x = 0, y = 0, width = 60, height = 20})
+      local button = track(Geyser.Button:new({name = "gbsDelete", x = 0, y = 0, width = 60, height = 20}))
       button:delete()
       assert.is_nil(getWindowGeometry("gbsDelete"))
       assert.is_nil(Geyser.windowList.gbsDelete)

@@ -2,11 +2,8 @@
 -- differs between machines, so expectations are computed from
 -- getMainWindowSize() at assert time rather than hardcoded. Mudlet truncates
 -- the doubles handed to moveWindow()/resizeWindow() (static_cast<int>), which
--- is why the expectations are floored.
-local function floor(value)
-  return math.floor(value)
-end
-
+-- for the positive geometry used here is math.floor.
+--
 -- Containers themselves have no Mudlet widget, so geometry is read back from a
 -- child label - the widget Geyser actually moves and resizes.
 local function geometry(name)
@@ -45,7 +42,7 @@ describe("Tests functionality of Geyser.Container", function()
     created = {}
   end)
 
-  describe("Geyser.Container:new and Geyser.Container:new2", function()
+  describe("Geyser.Container:new/new2", function()
     it("generates a name and defaults the type to container", function()
       local container = track(Geyser.Container:new())
       assert.are.equal("container", container.type)
@@ -94,7 +91,7 @@ describe("Tests functionality of Geyser.Container", function()
     end)
   end)
 
-  describe("Geyser.calc_constraints and Geyser.set_constraints", function()
+  describe("Geyser.calc_constraints/set_constraints", function()
     it("places a child at the pixel position it was given", function()
       track(Geyser.Label:new({name = "gcsPixels", x = 12, y = 34, width = 120, height = 56}))
       assert.are.same({x = 12, y = 34, width = 120, height = 56}, geometry("gcsPixels"))
@@ -109,10 +106,10 @@ describe("Tests functionality of Geyser.Container", function()
       local mainWidth, mainHeight = getMainWindowSize()
       track(Geyser.Label:new({name = "gcsPercent", x = "10%", y = "20%", width = "50%", height = "25%"}))
       assert.are.same({
-        x = floor(0.1 * mainWidth),
-        y = floor(0.2 * mainHeight),
-        width = floor(0.5 * mainWidth),
-        height = floor(0.25 * mainHeight),
+        x = math.floor(0.1 * mainWidth),
+        y = math.floor(0.2 * mainHeight),
+        width = math.floor(0.5 * mainWidth),
+        height = math.floor(0.25 * mainHeight),
       }, geometry("gcsPercent"))
     end)
 
@@ -120,8 +117,8 @@ describe("Tests functionality of Geyser.Container", function()
       local mainWidth = getMainWindowSize()
       track(Geyser.Label:new({name = "gcsOffset", x = "50%+10", y = 0, width = "10%-5", height = 20}))
       local actual = geometry("gcsOffset")
-      assert.are.equal(floor(0.5 * mainWidth + 10), actual.x)
-      assert.are.equal(floor(0.1 * mainWidth - 5), actual.width)
+      assert.are.equal(math.floor(0.5 * mainWidth + 10), actual.x)
+      assert.are.equal(math.floor(0.1 * mainWidth - 5), actual.width)
     end)
 
     it("measures negative pixel constraints from the far edge", function()
@@ -153,7 +150,7 @@ describe("Tests functionality of Geyser.Container", function()
     end)
   end)
 
-  describe("Geyser.Container:move and Geyser.Container:resize", function()
+  describe("Geyser.Container:move/resize", function()
     local container
 
     before_each(function()
@@ -190,7 +187,7 @@ describe("Tests functionality of Geyser.Container", function()
     end)
   end)
 
-  describe("Geyser.Container:hide, show, hide_impl and show_impl", function()
+  describe("Geyser.Container:hide/show/hide_impl/show_impl", function()
     local container
 
     before_each(function()
@@ -238,7 +235,7 @@ describe("Tests functionality of Geyser.Container", function()
     end)
   end)
 
-  describe("Geyser.Container:raise, lower, raiseAll and lowerAll", function()
+  describe("Geyser.Container:raise/lower/raiseAll/lowerAll", function()
     -- Mudlet exposes no z-order readback, so these assert the ordering Geyser
     -- keeps in container.windows - the order it replays z-order changes from.
     local container
@@ -273,17 +270,19 @@ describe("Tests functionality of Geyser.Container", function()
     it("keeps the relative order when raising or lowering the whole container", function()
       container:raiseAll()
       assert.are.same({"gcsStack1", "gcsStack2"}, container.windows)
-      assert.is_nil(Geyser.Container.windowTable)
       container:lowerAll()
       assert.are.same({"gcsStack1", "gcsStack2"}, container.windows)
+      -- lowerAll walks the tree through a scratch table it must clean up again
       assert.is_nil(Geyser.Container.windowTable)
     end)
   end)
 
   describe("Geyser.Container:delete", function()
+    -- the objects here are tracked as well as deleted by hand, so a failing
+    -- assertion before the delete cannot strand a widget
     it("deletes the widgets of its children", function()
-      local container = Geyser.Container:new({name = "gcsDelete", x = 0, y = 0, width = 100, height = 100})
-      Geyser.Label:new({name = "gcsDeleteChild"}, container)
+      local container = track(Geyser.Container:new({name = "gcsDelete", x = 0, y = 0, width = 100, height = 100}))
+      track(Geyser.Label:new({name = "gcsDeleteChild"}, container))
       assert.is_not_nil(getWindowGeometry("gcsDeleteChild"))
       container:delete()
       assert.is_nil(getWindowGeometry("gcsDeleteChild"))
@@ -292,7 +291,7 @@ describe("Tests functionality of Geyser.Container", function()
     end)
 
     it("unregisters a top level container from the root Geyser lists", function()
-      local container = Geyser.Container:new({name = "gcsDeleteRoot", x = 0, y = 0, width = 10, height = 10})
+      local container = track(Geyser.Container:new({name = "gcsDeleteRoot", x = 0, y = 0, width = 10, height = 10}))
       container:delete()
       assert.is_nil(Geyser.windowList.gcsDeleteRoot)
       assert.is_nil(table.index_of(Geyser.windows, "gcsDeleteRoot"))
@@ -300,7 +299,7 @@ describe("Tests functionality of Geyser.Container", function()
 
     it("unregisters a child from its parent", function()
       local container = track(Geyser.Container:new({name = "gcsDeleteParent", x = 0, y = 0, width = 100, height = 100}))
-      local child = Geyser.Label:new({name = "gcsDeleteMe"}, container)
+      local child = track(Geyser.Label:new({name = "gcsDeleteMe"}, container))
       child:delete()
       assert.is_nil(container.windowList.gcsDeleteMe)
       assert.are.same({}, container.windows)
@@ -369,11 +368,11 @@ describe("Tests functionality of Geyser.Container", function()
   describe("Geyser.Container:flash", function()
     it("puts a flash label over the container's geometry", function()
       local container = track(Geyser.Container:new({name = "gcsFlash", x = 20, y = 30, width = 80, height = 40}))
+      -- the flash label belongs to no Geyser container, so remove it by hand
+      finally(function() deleteLabel("gcsFlash_dimensions_flash") end)
       container:flash(0.1)
       assert.are.same({x = 20, y = 30, width = 80, height = 40}, geometry("gcsFlash_dimensions_flash"))
       assert.is_true(windowVisible("gcsFlash_dimensions_flash"))
-      -- the flash label belongs to no Geyser container, so remove it by hand
-      deleteLabel("gcsFlash_dimensions_flash")
     end)
 
     it("creates nothing when told not to flash", function()
@@ -383,7 +382,7 @@ describe("Tests functionality of Geyser.Container", function()
     end)
   end)
 
-  describe("Geyser:add, Geyser:base_add and Geyser:add2", function()
+  describe("Geyser:base_add/add/add2", function()
     it("tracks an added window once, even when it is added twice", function()
       local container = track(Geyser.Container:new({name = "gcsAdd", x = 0, y = 0, width = 100, height = 100}))
       local label = track(Geyser.Label:new({name = "gcsAdded"}, container))
@@ -418,12 +417,14 @@ describe("Tests functionality of Geyser.Container", function()
     it("drops the window from both of the container's lists", function()
       local container = track(Geyser.Container:new({name = "gcsRemove", x = 0, y = 0, width = 100, height = 100}))
       local label = track(Geyser.Label:new({name = "gcsRemoved"}, container))
+      -- a removed window is no longer anyone's child, so nothing else will
+      -- clean its widget up
+      finally(function() deleteLabel("gcsRemoved") end)
       container:remove(label)
       assert.is_nil(container.windowList.gcsRemoved)
       assert.are.same({}, container.windows)
       -- removing only unhooks the bookkeeping, the widget stays alive
       assert.is_not_nil(getWindowGeometry("gcsRemoved"))
-      deleteLabel("gcsRemoved")
     end)
   end)
 
@@ -472,20 +473,49 @@ describe("Tests functionality of Geyser.Container", function()
       local label = track(Geyser.Label:new({name = "gcsBackToMain", x = "50%", y = 0, width = 10, height = 10}, from))
       label:changeContainer("main")
       assert.are.equal(Geyser, label.container)
-      assert.are.equal(floor(0.5 * getMainWindowSize()), geometry("gcsBackToMain").x)
+      assert.are.equal(math.floor(0.5 * getMainWindowSize()), geometry("gcsBackToMain").x)
     end)
   end)
 
-  describe("Geyser:begin_update, Geyser:end_update and Geyser:reposition", function()
+  describe("Geyser:begin_update/end_update/reposition", function()
     it("toggles the deferred update flag", function()
+      -- leaving the flag set would stop every later spec repositioning
+      finally(function() Geyser.defer_updates = false end)
       Geyser:begin_update()
       assert.is_true(Geyser.defer_updates)
       Geyser:end_update()
       assert.is_false(Geyser.defer_updates)
     end)
+
+    it("holds back the layout of a box while its updates are deferred", function()
+      local box = track(Geyser.VBox:new({name = "gcsDeferred", x = 0, y = 0, width = 200, height = 200}))
+      box:begin_update()
+      finally(function() box.defer_updates = false end)
+      track(Geyser.Label:new({name = "gcsDeferredA"}, box))
+      track(Geyser.Label:new({name = "gcsDeferredB"}, box))
+      -- the children keep their own constraints instead of being stacked
+      assert.are.same({x = 10, y = 10, width = 300, height = 200}, geometry("gcsDeferredA"))
+      assert.are.same({x = 10, y = 10, width = 300, height = 200}, geometry("gcsDeferredB"))
+      box:end_update()
+      assert.is_false(box.defer_updates)
+      box:organize()
+      assert.are.same({x = 0, y = 0, width = 200, height = 100}, geometry("gcsDeferredA"))
+      assert.are.same({x = 0, y = 100, width = 200, height = 100}, geometry("gcsDeferredB"))
+    end)
+
+    it("lays a box out as its children arrive when updates are not deferred", function()
+      local box = track(Geyser.VBox:new({name = "gcsUndeferred", x = 0, y = 0, width = 200, height = 200}))
+      track(Geyser.Label:new({name = "gcsUndeferredA"}, box))
+      track(Geyser.Label:new({name = "gcsUndeferredB"}, box))
+      assert.are.same({x = 0, y = 0, width = 200, height = 100}, geometry("gcsUndeferredA"))
+      assert.are.same({x = 0, y = 100, width = 200, height = 100}, geometry("gcsUndeferredB"))
+    end)
   end)
 
   describe("GeyserReposition", function()
+    -- GeyserReposition works on every top level Geyser object, including any
+    -- another spec file left behind; that is harmless, as it only restores
+    -- each object to the geometry its own constraints ask for.
     it("restores geometry that was changed behind Geyser's back", function()
       local mainWidth, mainHeight = getMainWindowSize()
       track(Geyser.Label:new({name = "gcsReposition", x = 10, y = 10, width = 100, height = 50}))
@@ -544,7 +574,7 @@ describe("Tests functionality of Geyser.Container", function()
     end)
   end)
 
-  describe("Geyser.hideAll and Geyser.showAll", function()
+  describe("Geyser.hideAll/showAll", function()
     it("only touches windows of the type it is given", function()
       -- a private type keeps the sweep away from widgets other specs own
       local mine = track(Geyser.Container:new({name = "gcsSweep", type = "gcsprobe", x = 0, y = 0, width = 50, height = 50}))
