@@ -222,11 +222,47 @@ describe("Tests functionality of Geyser.Button", function()
       local result, message = button:setState("down")
       assert.is_nil(result)
       assert.are.equal("cannot set a single state button's state to 'down', only 'up'", message)
-      -- the refusal happens before anything is drawn, so the button still
-      -- shows its up message. button.state is deliberately not asserted here:
-      -- setState writes it before the refusal, which is a Geyser bug to fix
-      -- rather than a contract to pin down.
+      -- the refusal happens before anything is written, so neither the stored
+      -- state nor the drawn message move
+      assert.are.equal("up", button.state)
       assert.is_truthy(getLabelText("gbsSingleState"):find("up text", 1, true))
+    end)
+
+    it('keeps clicking a refused single state button on its up command', function()
+      local clicks, downs = 0, 0
+      local button = track(Geyser.Button:new({
+        name = "gbsRefusedPress",
+        x = 0, y = 0, width = 60, height = 20,
+        clickFunction = function() clicks = clicks + 1 end,
+        downFunction = function() downs = downs + 1 end,
+      }))
+      button:setState("down")
+      button:press()
+      assert.are.equal(1, clicks)
+      assert.are.equal(0, downs)
+      assert.are.equal("up", button.state)
+    end)
+
+    it('reports success for both states of a two state button', function()
+      local button = track(Geyser.Button:new({
+        name = "gbsStateResult",
+        x = 0, y = 0, width = 60, height = 20,
+        twoState = true,
+      }))
+      -- a legitimate 'down' has to be distinguishable from a refusal
+      assert.is_true(button:setState("down"))
+      assert.is_true(button:setState("up"))
+    end)
+
+    it('will not start a single state button in the down state', function()
+      local button = track(Geyser.Button:new({
+        name = "gbsDownConstraint",
+        x = 0, y = 0, width = 60, height = 20,
+        msg = "up text",
+        state = "down",
+      }))
+      assert.are.equal("up", button.state)
+      assert.is_truthy(getLabelText("gbsDownConstraint"):find("up text", 1, true))
     end)
 
     it('rejects a state that is not a string or not a known state', function()
