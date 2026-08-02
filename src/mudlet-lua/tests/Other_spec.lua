@@ -968,3 +968,722 @@ describe("Tests Other.lua functions", function()
       translateTable()
   ]]
 end)
+
+describe("Tests the timer API", function()
+  -- These drive the real timer engine: every effect assertion is made after the
+  -- timer has actually fired, observed through the waitForEvent test helper which
+  -- pumps the Qt event loop rather than sleeping.
+
+  -- Temporary timers are killed and permanent ones disabled after every spec, so
+  -- no timer created here can still fire during a later spec, even if one of the
+  -- assertions above the clean-up code fails.
+  --
+  -- Permanent timers cannot be deleted, only disabled, and the profile is written
+  -- out when Mudlet closes: running the suite twice against the same profile
+  -- starts the second run with the first run's (disabled) permanent timers still
+  -- in place. Specs below therefore count relative to what already exists rather
+  -- than assuming the timer they just made is the only one of its name.
+  local temporaryTimerIds = {}
+  local permanentTimerNames = {}
+  local settleCounter = 0
+
+  local function trackTemp(id)
+    if type(id) == "number" and id > 0 then
+      table.insert(temporaryTimerIds, id)
+    end
+    return id
+  end
+
+  local function trackPerm(name)
+    table.insert(permanentTimerNames, name)
+    return name
+  end
+
+  -- Waits for one of this block's own events, reporting the timeout message
+  -- instead of a bare nil when the event never arrives.
+  local function waitFor(eventName)
+    local name, message = waitForEvent(eventName, 5000)
+    assert.equals(eventName, name, "waiting for " .. eventName .. ": " .. tostring(message))
+    return name
+  end
+
+  -- Returns once `seconds` of real time have passed, by waiting for an event
+  -- raised from a real timer. Lua runs to completion between event loop turns, so
+  -- the timer cannot have fired before the wait below is in place. Each call gets
+  -- its own event name so that a settling timer which outlived a failing spec can
+  -- never satisfy a later one.
+  local function settle(seconds)
+    settleCounter = settleCounter + 1
+    local eventName = "w2aTimerSpecSettled" .. settleCounter
+    trackTemp(tempTimer(seconds, function() raiseEvent(eventName) end))
+    waitFor(eventName)
+  end
+
+  before_each(function()
+    _G.W2aTimerSpec = {fired = 0, order = {}}
+  end)
+
+  after_each(function()
+    for _, id in ipairs(temporaryTimerIds) do
+      pcall(killTimer, id)
+    end
+    temporaryTimerIds = {}
+    for _, name in ipairs(permanentTimerNames) do
+      pcall(disableTimer, name)
+    end
+    permanentTimerNames = {}
+    _G.W2aTimerSpec = nil
+    _G.W2aPermTimerFires = nil
+  end)
+
+  describe("Tests the functionality of tempTimer", function()
+    it("errors when called without a delay", function()
+      assert.has_error(function() tempTimer() end)
+    end)
+
+    it("errors when the delay is not a number", function()
+      assert.has_error(function() tempTimer({}, [[]]) end)
+    end)
+
+    it("errors when the body is neither a string nor a function", function()
+      assert.has_error(function() tempTimer(0.1, {}) end)
+    end)
+
+    it("returns -1 and a message when the code does not compile", function()
+      local id, message = tempTimer(0.1, "this is ( not lua")
+      assert.equals(-1, id)
+      assert.is_string(message)
+      assert.is_truthy(message:find("compile", 1, true),
+        "the failure should say the code could not be compiled, got: " .. tostring(message))
+    end)
+
+    it("fires a code-string body in the global environment", function()
+      trackTemp(tempTimer(0.05, [[
+        _G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1
+        raiseEvent("w2aTempTimerFired")
+      ]]))
+      waitFor("w2aTempTimerFired")
+      assert.equals(1, _G.W2aTimerSpec.fired)
+    end)
+
+    it("fires a function body", function()
+      trackTemp(tempTimer(0.05, function()
+        _G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1
+        raiseEvent("w2aTempTimerFunctionFired")
+      end))
+      waitFor("w2aTempTimerFunctionFired")
+      assert.equals(1, _G.W2aTimerSpec.fired)
+    end)
+
+    it("fires a zero delay timer", function()
+      trackTemp(tempTimer(0, function() raiseEvent("w2aZeroDelayTimerFired") end))
+      waitFor("w2aZeroDelayTimerFired")
+    end)
+
+    it("does not repeat by default", function()
+      -- a repeating 50ms timer would have fired several times over the 150ms below
+      trackTemp(tempTimer(0.05, function()
+        _G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1
+      end))
+      settle(0.15)
+      assert.equals(1, _G.W2aTimerSpec.fired)
+    end)
+
+    it("errors when the repeating argument is not a boolean", function()
+      assert.has_error(function() tempTimer(0.1, [[]], "w2aNotABoolean") end)
+    end)
+
+    it("repeats until killed when the repeating argument is true", function()
+      local id = trackTemp(tempTimer(0.02, [[
+        _G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1
+        raiseEvent("w2aRepeatingTimerFired")
+      ]], true))
+      assert.is_true(id > 0)
+      -- three separate waits, so each firing has to happen for itself
+      waitFor("w2aRepeatingTimerFired")
+      waitFor("w2aRepeatingTimerFired")
+      waitFor("w2aRepeatingTimerFired")
+      assert.is_true(killTimer(id))
+      assert.is_true(_G.W2aTimerSpec.fired >= 3,
+        "a repeating timer should fire more than once, fired " .. tostring(_G.W2aTimerSpec.fired) .. " times")
+    end)
+
+    it("runs a timer scheduled from inside another timer", function()
+      trackTemp(tempTimer(0, function()
+        table.insert(_G.W2aTimerSpec.order, "outer")
+        trackTemp(tempTimer(0, function()
+          table.insert(_G.W2aTimerSpec.order, "inner")
+          raiseEvent("w2aNestedTimerFired")
+        end))
+      end))
+      waitFor("w2aNestedTimerFired")
+      assert.are.same({"outer", "inner"}, _G.W2aTimerSpec.order)
+    end)
+  end)
+
+  describe("Tests the functionality of killTimer", function()
+    -- killTimer looks its argument up by name; temporary timers are simply named
+    -- after the id it returns, which is why passing that id works.
+    it("errors when called without an argument", function()
+      assert.has_error(function() killTimer() end)
+    end)
+
+    it("returns false when nothing of that name exists", function()
+      assert.is_false(killTimer("w2aNoSuchTimerName"))
+    end)
+
+    it("returns false for a permanent timer, which cannot be killed", function()
+      local before = exists("W2aPermTimerUnkillable", "timer")
+      assert.is_true(permTimer(trackPerm("W2aPermTimerUnkillable"), "", 30, [[]]) > 0)
+      assert.equals(before + 1, exists("W2aPermTimerUnkillable", "timer"))
+      assert.is_false(killTimer("W2aPermTimerUnkillable"))
+      assert.equals(before + 1, exists("W2aPermTimerUnkillable", "timer"),
+        "a permanent timer survives killTimer")
+    end)
+
+    it("stops a pending timer from ever firing and deactivates it", function()
+      local id = trackTemp(tempTimer(0.05, function()
+        _G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1
+      end))
+      assert.equals(1, isActive(id, "timer"))
+      assert.is_true(killTimer(id))
+      -- the killed timer object itself is only freed by the timer unit's deferred
+      -- cleanup, so check the state a user can see straight away instead
+      assert.equals(0, isActive(id, "timer"), "a killed timer is no longer active")
+      assert.is_nil((remainingTime(id)), "a killed timer is no longer counting down")
+      settle(0.15)
+      assert.equals(0, _G.W2aTimerSpec.fired, "a killed timer must never fire")
+    end)
+
+    it("stops a repeating timer", function()
+      local id = trackTemp(tempTimer(0.02, function()
+        _G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1
+        if _G.W2aTimerSpec.fired == 2 then raiseEvent("w2aRepeatingTimerToKill") end
+      end, true))
+      waitFor("w2aRepeatingTimerToKill")
+      assert.is_true(killTimer(id))
+      local firedWhenKilled = _G.W2aTimerSpec.fired
+      settle(0.15)
+      assert.equals(firedWhenKilled, _G.W2aTimerSpec.fired,
+        "a killed repeating timer must not fire again")
+    end)
+
+    it("kills a repeating timer from inside its own callback", function()
+      -- killing a timer while its own body is running is the deferred-delete
+      -- path: the timer unit may only free the object once the callback has
+      -- returned, but the kill still has to stop it firing again
+      local id
+      id = trackTemp(tempTimer(0.02, function()
+        _G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1
+        _G.W2aTimerSpec.killed = killTimer(id)
+        raiseEvent("w2aSelfKillingTimerFired")
+      end, true))
+      waitFor("w2aSelfKillingTimerFired")
+      assert.is_true(_G.W2aTimerSpec.killed,
+        "killTimer should report success from inside the timer's own callback")
+      local firedWhenKilled = _G.W2aTimerSpec.fired
+      settle(0.15)
+      assert.equals(firedWhenKilled, _G.W2aTimerSpec.fired,
+        "a self-killed timer must not fire again")
+    end)
+  end)
+
+  describe("Tests the functionality of remainingTime", function()
+    it("errors when given something that is neither a number nor a string", function()
+      assert.has_error(function() remainingTime({}) end)
+    end)
+
+    it("returns nil and a message for a number that is not a timer id", function()
+      local left, message = remainingTime(999999)
+      assert.is_nil(left)
+      assert.is_string(message)
+      assert.is_truthy(message:find("999999", 1, true))
+    end)
+
+    it("returns nil and a message for a name that is not a timer", function()
+      local left, message = remainingTime("w2aNoSuchTimerName")
+      assert.is_nil(left)
+      assert.is_string(message)
+      assert.is_truthy(message:find("w2aNoSuchTimerName", 1, true))
+    end)
+
+    it("returns nil and a message for an inactive timer", function()
+      -- permanent timers are created inactive, so their QTimer is not running
+      assert.is_true(permTimer(trackPerm("W2aPermTimerIdle"), "", 30, [[]]) > 0)
+      local left, message = remainingTime("W2aPermTimerIdle")
+      assert.is_nil(left)
+      assert.is_string(message)
+      assert.is_truthy(message:find("inactive", 1, true))
+    end)
+
+    it("reports the time left on a pending temporary timer in seconds", function()
+      local id = trackTemp(tempTimer(10, [[]]))
+      local left = remainingTime(id)
+      assert.is_number(left)
+      assert.is_true(left > 9 and left <= 10,
+        "a 10 second timer should have just under 10 seconds left, got " .. tostring(left))
+    end)
+
+    it("resolves a running temporary timer by its name, which is its id", function()
+      local id = trackTemp(tempTimer(10, [[]]))
+      local left = remainingTime(tostring(id))
+      assert.is_number(left)
+      assert.is_true(left > 9 and left <= 10,
+        "a 10 second timer should have just under 10 seconds left, got " .. tostring(left))
+    end)
+
+    it("resolves a running permanent timer by name", function()
+      assert.is_true(permTimer(trackPerm("W2aPermTimerCountdown"), "", 30, [[]]) > 0)
+      assert.is_true(enableTimer("W2aPermTimerCountdown"))
+      local left = remainingTime("W2aPermTimerCountdown")
+      assert.is_number(left)
+      assert.is_true(left > 29 and left <= 30,
+        "a 30 second timer should have just under 30 seconds left, got " .. tostring(left))
+    end)
+  end)
+
+  describe("Tests the functionality of permTimer with enableTimer and disableTimer", function()
+    it("errors when the parent group does not exist", function()
+      assert.has_error(function()
+        permTimer("W2aPermTimerOrphan", "w2aNoSuchTimerGroup", 1, [[]])
+      end)
+    end)
+
+    it("errors when the code does not compile", function()
+      assert.has_error(function()
+        permTimer(trackPerm("W2aPermTimerBadCode"), "", 1, "this is ( not lua")
+      end)
+    end)
+
+    it("errors when the interval is missing", function()
+      assert.has_error(function() permTimer("W2aPermTimerNoInterval", "") end)
+    end)
+
+    it("enableTimer and disableTimer error when called without a name", function()
+      assert.has_error(function() enableTimer() end)
+      assert.has_error(function() disableTimer() end)
+    end)
+
+    it("reports whether a timer of that name was found", function()
+      assert.is_true(permTimer(trackPerm("W2aPermTimerToggle"), "", 30, [[]]) > 0)
+      assert.is_true(enableTimer("W2aPermTimerToggle"))
+      assert.is_true(disableTimer("W2aPermTimerToggle"))
+      assert.is_false(enableTimer("w2aNoSuchTimerName"))
+      assert.is_false(disableTimer("w2aNoSuchTimerName"))
+    end)
+
+    it("does not fire while it is disabled", function()
+      -- permanent timers start out inactive and must be enabled before they run
+      assert.is_true(permTimer(trackPerm("W2aPermTimerDisabled"), "", 0.05,
+        [[_G.W2aPermTimerFires = (_G.W2aPermTimerFires or 0) + 1]]) > 0)
+      assert.equals(0, isActive("W2aPermTimerDisabled", "timer"))
+      settle(0.15)
+      assert.is_nil(_G.W2aPermTimerFires, "a disabled permanent timer must not fire")
+    end)
+
+    it("fires once enabled", function()
+      assert.is_true(permTimer(trackPerm("W2aPermTimerEnabled"), "", 0.05, [[
+        _G.W2aPermTimerFires = (_G.W2aPermTimerFires or 0) + 1
+        raiseEvent("w2aPermTimerFired")
+      ]]) > 0)
+      assert.is_true(enableTimer("W2aPermTimerEnabled"))
+      waitFor("w2aPermTimerFired")
+      disableTimer("W2aPermTimerEnabled")
+      assert.is_true((_G.W2aPermTimerFires or 0) >= 1)
+    end)
+
+    it("stops firing again once disabled", function()
+      assert.is_true(permTimer(trackPerm("W2aPermTimerStopped"), "", 0.05, [[
+        _G.W2aPermTimerFires = (_G.W2aPermTimerFires or 0) + 1
+        raiseEvent("w2aPermTimerStoppedFired")
+      ]]) > 0)
+      assert.is_true(enableTimer("W2aPermTimerStopped"))
+      waitFor("w2aPermTimerStoppedFired")
+      assert.is_true(disableTimer("W2aPermTimerStopped"))
+      local firedWhenDisabled = _G.W2aPermTimerFires
+      settle(0.15)
+      assert.equals(firedWhenDisabled, _G.W2aPermTimerFires,
+        "a disabled permanent timer must not fire again")
+    end)
+  end)
+
+  describe("Tests exists and isActive for timers", function()
+    it("both return nil and a message for an unknown item type", function()
+      -- exists lowercases the type before quoting it back, so use a type that is
+      -- lowercase to begin with and both messages can be checked the same way
+      local existing, existsMessage = exists("W2aWhatever", "w2anotanitemtype")
+      assert.is_nil(existing)
+      assert.is_string(existsMessage)
+      assert.is_truthy(existsMessage:find("w2anotanitemtype", 1, true))
+      local active, isActiveMessage = isActive("W2aWhatever", "w2anotanitemtype")
+      assert.is_nil(active)
+      assert.is_string(isActiveMessage)
+      assert.is_truthy(isActiveMessage:find("w2anotanitemtype", 1, true))
+    end)
+
+    it("both return nil and a message for a negative id", function()
+      local existing, existsMessage = exists(-1, "timer")
+      assert.is_nil(existing)
+      assert.is_string(existsMessage)
+      assert.is_truthy(existsMessage:find("-1", 1, true))
+      local active, isActiveMessage = isActive(-1, "timer")
+      assert.is_nil(active)
+      assert.is_string(isActiveMessage)
+      assert.is_truthy(isActiveMessage:find("-1", 1, true))
+    end)
+
+    it("exists counts a temporary timer by id and by name", function()
+      local id = trackTemp(tempTimer(10, [[]]))
+      -- a temporary timer is named after its own id
+      assert.equals(1, exists(id, "timer"))
+      assert.equals(1, exists(tostring(id), "timer"))
+      assert.equals(0, exists(id + 100000, "timer"))
+      assert.equals(0, exists("w2aNoSuchTimerName", "timer"))
+    end)
+
+    it("exists counts every permanent timer sharing a name", function()
+      local before = exists("W2aPermTimerTwins", "timer")
+      assert.is_true(permTimer(trackPerm("W2aPermTimerTwins"), "", 30, [[]]) > 0)
+      assert.equals(before + 1, exists("W2aPermTimerTwins", "timer"))
+      assert.is_true(permTimer(trackPerm("W2aPermTimerTwins"), "", 30, [[]]) > 0)
+      assert.equals(before + 2, exists("W2aPermTimerTwins", "timer"))
+    end)
+
+    it("isActive follows the enabled state of a permanent timer", function()
+      assert.is_true(permTimer(trackPerm("W2aPermTimerActivity"), "", 30, [[]]) > 0)
+      -- enabling and disabling by name acts on every timer of that name
+      local named = exists("W2aPermTimerActivity", "timer")
+      assert.equals(0, isActive("W2aPermTimerActivity", "timer"),
+        "a newly created permanent timer is inactive")
+      assert.is_true(enableTimer("W2aPermTimerActivity"))
+      assert.equals(named, isActive("W2aPermTimerActivity", "timer"))
+      assert.is_true(disableTimer("W2aPermTimerActivity"))
+      assert.equals(0, isActive("W2aPermTimerActivity", "timer"))
+    end)
+
+    it("isActive only reports a timer inside a disabled group as active when ancestors are not checked", function()
+      -- a permTimer with no interval and no code is a group/folder
+      assert.is_true(permTimer(trackPerm("W2aTimerGroup"), "", 0, "") > 0)
+      assert.is_true(permTimer(trackPerm("W2aTimerInGroup"), "W2aTimerGroup", 30,
+        [[_G.W2aPermTimerFires = (_G.W2aPermTimerFires or 0) + 1]]) > 0)
+      local named = exists("W2aTimerInGroup", "timer")
+      assert.is_true(enableTimer("W2aTimerInGroup"))
+      assert.equals(named, isActive("W2aTimerInGroup", "timer"))
+      assert.equals(0, isActive("W2aTimerInGroup", "timer", true),
+        "the enclosing group is still disabled")
+      -- and the flag is not the whole story: a timer whose group is disabled is
+      -- not counting down, whatever isActive says without checkAncestors
+      assert.is_nil((remainingTime("W2aTimerInGroup")),
+        "a timer in a disabled group should not be running")
+      assert.is_true(enableTimer("W2aTimerGroup"))
+      assert.equals(named, isActive("W2aTimerInGroup", "timer", true))
+      assert.is_number(remainingTime("W2aTimerInGroup"),
+        "enabling the group should start the timers inside it")
+    end)
+  end)
+end)
+
+describe("Tests the script API", function()
+  -- Permanent scripts cannot be removed from Lua, only blanked and disabled, and
+  -- the profile is written out when Mudlet closes: running the suite twice against
+  -- the same profile starts the second run with the first run's (empty, inactive)
+  -- scripts still present. Specs below therefore work out the position of the
+  -- script they just created instead of assuming it is the first of its name, and
+  -- count relative to what was already there. Script bodies create their own table
+  -- rather than assuming one exists, so a body that is recompiled later - when a
+  -- saved profile is loaded again, say - can never raise.
+  local createdScriptNames = {}
+
+  -- Creates a permanent script, returning its id and its position among the
+  -- scripts of that name, which is what getScript and setScript index by. New
+  -- scripts get the highest id, so they come last.
+  local function makeScript(name, parent, code)
+    table.insert(createdScriptNames, name)
+    local position = exists(name, "script") + 1
+    return permScript(name, parent, code), position
+  end
+
+  before_each(function()
+    _G.W2aScriptSpec = {}
+  end)
+
+  teardown(function()
+    for _, name in ipairs(createdScriptNames) do
+      pcall(disableScript, name)
+      -- blank every script of that name, duplicates included, so that nothing
+      -- created here can run again if the profile is saved and reloaded
+      for position = 1, exists(name, "script") do
+        pcall(setScript, name, "", position)
+      end
+    end
+    createdScriptNames = {}
+    _G.W2aScriptSpec = nil
+  end)
+
+  describe("Tests the functionality of permScript", function()
+    it("errors when the name is missing", function()
+      assert.has_error(function() permScript() end)
+    end)
+
+    it("errors when the parent group does not exist", function()
+      assert.has_error(function()
+        permScript("W2aScriptOrphan", "w2aNoSuchScriptGroup", [[]])
+      end)
+    end)
+
+    it("errors when the code does not parse", function()
+      assert.has_error(function()
+        makeScript("W2aScriptBadCode", "", "this is ( not lua")
+      end)
+    end)
+
+    it("creates nothing when the body parses but raises when it is run", function()
+      -- a script's body runs as it is compiled, so a body that raises fails
+      -- creation just like one that does not parse
+      local before = exists("W2aScriptRaises", "script")
+      assert.has_error(function()
+        makeScript("W2aScriptRaises", "", [[error("w2a script boom")]])
+      end)
+      assert.equals(before, exists("W2aScriptRaises", "script"))
+    end)
+
+    it("creates a script whose body runs immediately", function()
+      local before = exists("W2aScriptCreated", "script")
+      local id = makeScript("W2aScriptCreated", "", [[
+        _G.W2aScriptSpec = _G.W2aScriptSpec or {}
+        _G.W2aScriptSpec.created = true
+      ]])
+      assert.is_number(id)
+      assert.is_true(id > 0)
+      assert.is_true(_G.W2aScriptSpec.created, "a script's body runs when it is compiled")
+      assert.equals(before + 1, exists("W2aScriptCreated", "script"))
+    end)
+
+    it("creates a script inside a group", function()
+      -- a permScript with no code is a group/folder
+      assert.is_true(makeScript("W2aScriptGroup", "", "") > 0)
+      assert.is_true(makeScript("W2aScriptInGroup", "W2aScriptGroup", [[
+        _G.W2aScriptSpec = _G.W2aScriptSpec or {}
+        _G.W2aScriptSpec.inGroup = true
+      ]]) > 0)
+      assert.is_true(_G.W2aScriptSpec.inGroup)
+      local named = exists("W2aScriptInGroup", "script")
+      assert.is_true(enableScript("W2aScriptInGroup"))
+      assert.equals(named, isActive("W2aScriptInGroup", "script"))
+      assert.equals(0, isActive("W2aScriptInGroup", "script", true),
+        "the enclosing group is still disabled")
+      assert.is_true(enableScript("W2aScriptGroup"))
+      assert.equals(named, isActive("W2aScriptInGroup", "script", true))
+    end)
+  end)
+
+  describe("Tests the functionality of getScript", function()
+    it("errors when called without a name", function()
+      assert.has_error(function() getScript() end)
+    end)
+
+    it("returns -1 and a message for a script that does not exist", function()
+      local code, message = getScript("w2aNoSuchScriptName")
+      assert.equals(-1, code)
+      assert.is_string(message)
+      assert.is_truthy(message:find("w2aNoSuchScriptName", 1, true))
+    end)
+
+    it("returns -1 and a message for a position that does not exist", function()
+      local _, position = makeScript("W2aScriptOnePosition", "", [[local w2aOnly = 1]])
+      local beyondTheLast = position + 1
+      local code, message = getScript("W2aScriptOnePosition", beyondTheLast)
+      assert.equals(-1, code)
+      assert.is_string(message)
+      assert.is_truthy(message:find("position " .. beyondTheLast, 1, true))
+    end)
+
+    it("returns -1 and a message for position zero, as positions start at one", function()
+      makeScript("W2aScriptPositionZero", "", [[local w2aOnly = 1]])
+      local code, message = getScript("W2aScriptPositionZero", 0)
+      assert.equals(-1, code)
+      assert.is_string(message)
+      assert.is_truthy(message:find("position 0", 1, true))
+    end)
+
+    it("returns the code and the id of the script", function()
+      local body = [[local w2aReadBack = "getScript round trip"]]
+      local id, position = makeScript("W2aScriptReadBack", "", body)
+      local code, readId = getScript("W2aScriptReadBack", position)
+      assert.equals(body, code)
+      assert.equals(id, readId)
+    end)
+
+    it("reads the script at the requested position when several share a name", function()
+      local firstId, firstPosition = makeScript("W2aScriptDuplicate", "", [[local w2aFirst = 1]])
+      local secondId, secondPosition = makeScript("W2aScriptDuplicate", "", [[local w2aSecond = 2]])
+      assert.equals(firstPosition + 1, secondPosition)
+      local firstCode, firstReadId = getScript("W2aScriptDuplicate", firstPosition)
+      local secondCode, secondReadId = getScript("W2aScriptDuplicate", secondPosition)
+      assert.equals([[local w2aFirst = 1]], firstCode)
+      assert.equals(firstId, firstReadId)
+      assert.equals([[local w2aSecond = 2]], secondCode)
+      assert.equals(secondId, secondReadId)
+    end)
+  end)
+
+  describe("Tests the functionality of setScript", function()
+    it("errors for a script name that does not exist", function()
+      assert.has_error(function() setScript("w2aNoSuchScriptName", [[]]) end)
+    end)
+
+    it("errors for an empty name", function()
+      assert.has_error(function() setScript("", [[]]) end)
+    end)
+
+    it("errors for position zero, as positions start at one", function()
+      makeScript("W2aScriptSetPositionZero", "", [[local w2aOnly = 1]])
+      assert.has_error(function()
+        setScript("W2aScriptSetPositionZero", [[local w2aChanged = 1]], 0)
+      end)
+    end)
+
+    it("errors when the code is not a string", function()
+      local _, position = makeScript("W2aScriptBadNewCode", "", [[local w2aOriginal = 1]])
+      assert.has_error(function() setScript("W2aScriptBadNewCode", {}, position) end)
+    end)
+
+    it("replaces the code, returns the id and runs the new body", function()
+      local id, position = makeScript("W2aScriptReplaced", "", [[local w2aOriginal = 1]])
+      local newBody = [[
+        _G.W2aScriptSpec = _G.W2aScriptSpec or {}
+        _G.W2aScriptSpec.replaced = true
+      ]]
+      assert.equals(id, setScript("W2aScriptReplaced", newBody, position))
+      assert.equals(newBody, (getScript("W2aScriptReplaced", position)))
+      assert.is_true(_G.W2aScriptSpec.replaced, "the replacement body should have run")
+    end)
+
+    it("rejects code that does not parse before touching the script", function()
+      -- this one never reaches the script: setScript syntax checks its code
+      -- argument first
+      local body = [[local w2aKept = 1]]
+      local _, position = makeScript("W2aScriptKeptCode", "", body)
+      assert.has_error(function() setScript("W2aScriptKeptCode", "this is ( not lua", position) end)
+      assert.equals(body, (getScript("W2aScriptKeptCode", position)))
+    end)
+
+    it("puts the previous code back when the new body raises as it is run", function()
+      -- code that parses gets past the argument check and is then run as it is
+      -- compiled into the script, so this is the path that has to roll back
+      local body = [[local w2aRolledBack = 1]]
+      local _, position = makeScript("W2aScriptRollback", "", body)
+      assert.has_error(function()
+        setScript("W2aScriptRollback", [[error("w2a setScript boom")]], position)
+      end)
+      assert.equals(body, (getScript("W2aScriptRollback", position)))
+    end)
+
+    it("sets the script at the requested position when several share a name", function()
+      local _, firstPosition = makeScript("W2aScriptSetPosition", "", [[local w2aFirst = 1]])
+      local secondId, secondPosition = makeScript("W2aScriptSetPosition", "", [[local w2aSecond = 2]])
+      assert.equals(secondId, setScript("W2aScriptSetPosition", [[local w2aSecondChanged = 2]], secondPosition))
+      assert.equals([[local w2aFirst = 1]], (getScript("W2aScriptSetPosition", firstPosition)))
+      assert.equals([[local w2aSecondChanged = 2]], (getScript("W2aScriptSetPosition", secondPosition)))
+    end)
+  end)
+
+  describe("Tests the functionality of appendScript", function()
+    it("errors when the name is not a string", function()
+      assert.has_error(function() appendScript(42, [[]]) end,
+        "appendScript: bad argument #1 type (script name as string expected, got number!)")
+    end)
+
+    it("errors when the code is not a string", function()
+      assert.has_error(function() appendScript("W2aScriptAppended", 42) end,
+        "appendScript: bad argument #2 type (lua code as string expected, got number!)")
+    end)
+
+    it("errors instead of creating anything when the script does not exist", function()
+      -- appendScript does not check getScript's -1 sentinel, so what actually
+      -- reports the missing script is the setScript underneath it; either way
+      -- nothing may be created
+      assert.has_error(function() appendScript("w2aNoSuchScriptName", [[local w2aNew = 1]]) end)
+      assert.equals(0, exists("w2aNoSuchScriptName", "script"))
+    end)
+
+    it("adds the new code on a line of its own after the existing code", function()
+      local body = [[local w2aOriginal = 1]]
+      local _, position = makeScript("W2aScriptAppended", "", body)
+      appendScript("W2aScriptAppended", [[local w2aAppended = 2]], position)
+      assert.equals(body .. "\n" .. [[local w2aAppended = 2]],
+        (getScript("W2aScriptAppended", position)))
+    end)
+
+    it("appends to the first script of that name when no position is given", function()
+      makeScript("W2aScriptAppendDefault", "", [[local w2aOriginal = 1]])
+      -- whatever is at position 1 is what the default has to append to
+      local firstBefore = (getScript("W2aScriptAppendDefault", 1))
+      assert.is_string(firstBefore)
+      appendScript("W2aScriptAppendDefault", [[local w2aDefaultAppended = 2]])
+      assert.equals(firstBefore .. "\n" .. [[local w2aDefaultAppended = 2]],
+        (getScript("W2aScriptAppendDefault", 1)))
+    end)
+
+    it("runs the appended code", function()
+      local _, position = makeScript("W2aScriptAppendRuns", "", [[local w2aOriginal = 1]])
+      appendScript("W2aScriptAppendRuns", [[
+        _G.W2aScriptSpec = _G.W2aScriptSpec or {}
+        _G.W2aScriptSpec.appended = true
+      ]], position)
+      assert.is_true(_G.W2aScriptSpec.appended)
+    end)
+  end)
+
+  describe("Tests the functionality of enableScript and disableScript", function()
+    it("error when called without a name", function()
+      assert.has_error(function() enableScript() end)
+      assert.has_error(function() disableScript() end)
+    end)
+
+    it("return nil and a message when no script of that name exists", function()
+      local enabled, enableMessage = enableScript("w2aNoSuchScriptName")
+      assert.is_nil(enabled)
+      assert.is_string(enableMessage)
+      assert.is_truthy(enableMessage:find("w2aNoSuchScriptName", 1, true))
+      local disabled, disableMessage = disableScript("w2aNoSuchScriptName")
+      assert.is_nil(disabled)
+      assert.is_string(disableMessage)
+      assert.is_truthy(disableMessage:find("w2aNoSuchScriptName", 1, true))
+    end)
+
+    it("toggle the active state a script reports through isActive", function()
+      assert.is_true(makeScript("W2aScriptToggled", "", [[local w2aOnly = 1]]) > 0)
+      -- enabling and disabling by name acts on every script of that name
+      local named = exists("W2aScriptToggled", "script")
+      assert.equals(0, isActive("W2aScriptToggled", "script"),
+        "a newly created script is inactive")
+      assert.is_true(enableScript("W2aScriptToggled"))
+      assert.equals(named, isActive("W2aScriptToggled", "script"))
+      assert.is_true(disableScript("W2aScriptToggled"))
+      assert.equals(0, isActive("W2aScriptToggled", "script"))
+    end)
+
+    it("toggle every script sharing a name, not just the first", function()
+      assert.is_true(makeScript("W2aScriptToggledTwice", "", [[local w2aFirst = 1]]) > 0)
+      assert.is_true(makeScript("W2aScriptToggledTwice", "", [[local w2aSecond = 2]]) > 0)
+      local named = exists("W2aScriptToggledTwice", "script")
+      assert.is_true(named >= 2)
+      assert.is_true(enableScript("W2aScriptToggledTwice"))
+      assert.equals(named, isActive("W2aScriptToggledTwice", "script"))
+      assert.is_true(disableScript("W2aScriptToggledTwice"))
+      assert.equals(0, isActive("W2aScriptToggledTwice", "script"))
+    end)
+
+    it("do not disturb a differently named script", function()
+      assert.is_true(makeScript("W2aScriptUntouched", "", [[local w2aOne = 1]]) > 0)
+      assert.is_true(makeScript("W2aScriptSwitched", "", [[local w2aTwo = 2]]) > 0)
+      local untouched = exists("W2aScriptUntouched", "script")
+      assert.is_true(enableScript("W2aScriptUntouched"))
+      assert.is_true(enableScript("W2aScriptSwitched"))
+      assert.is_true(disableScript("W2aScriptSwitched"))
+      assert.equals(untouched, isActive("W2aScriptUntouched", "script"))
+      assert.equals(0, isActive("W2aScriptSwitched", "script"))
+    end)
+  end)
+end)
