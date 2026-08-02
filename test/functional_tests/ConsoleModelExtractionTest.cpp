@@ -32,6 +32,14 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
+extern "C" {
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lua.h>
+#else
+#include <lua.h>
+#endif
+}
+
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
 extern void qInitResources_additional_splash_screens();
@@ -179,20 +187,12 @@ private slots:
         // Co-own the model the way Host does, so the test still holds it even
         // if Host were to let go of its own reference.
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
-        QPointer<TMainConsole> console = host->mpConsole;
 
         // The floor for a buffer limit is 100 lines, so a couple of hundred
         // appends are needed to reach the shrink.
         model->buffer.setBufferSize(100, 10);
 
-        // Forcing the close stops TMainConsole::closeEvent() asking whether the
-        // profile should be saved, which would block on a modal dialog here.
-        host->forceClose();
-        QVERIFY2(host->requestClose(), "Closing the profile was refused.");
-        QTest::qWait(500ms); // the console carries WA_DeleteOnClose
-
-        QVERIFY2(console.isNull(), "The main console view was not destroyed by closing the profile.");
-        QVERIFY2(host->mpConsole.isNull(), "The host still points at a main console.");
+        destroyTheView(host);
         QCOMPARE(&host->mainConsoleModel(), model.get());
 
         QString lastAppended;
@@ -215,6 +215,137 @@ private slots:
         }
         QVERIFY2(!firstAppendedFound, "shrinkBuffer() never ran on the view-less buffer - its earliest lines are still there.");
         QVERIFY2(lastAppendedFound, "The last line appended to the view-less buffer is not in it.");
+    }
+
+    // The whole point of the split: the telnet -> trigger pipeline must run off
+    // the model with no widget anywhere in it. Feed a line into the view-less
+    // buffer, drive Host::runTriggers() over it and the trigger has to fire.
+    void test_triggersRunOffTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        // The trigger's body only writes a Lua global: echoing would need the
+        // very view this test destroys. 'line' is the global Host::runTriggers()
+        // sets for every line, so recording it proves the orchestration ran.
+        runLua(host,
+               qsl("viewlessTriggerHit = 'none'\n"
+                   "tempRegexTrigger('^ViewlessPipeline', [[viewlessTriggerHit = line]], 10)\n"));
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        // Closing the profile emergency-stops the trigger engine
+        // (Host::closeChildren()), which a profile that simply never had a view
+        // would not do:
+        host->reenableAllTriggers();
+
+        const int fedLine = appendModelLine(model->buffer, qsl("ViewlessPipeline gamma"));
+        QCOMPARE(model->buffer.line(fedLine), qsl("ViewlessPipeline gamma"));
+
+        host->runTriggers(fedLine);
+
+        QCOMPARE(luaGlobalString(host, "viewlessTriggerHit"), qsl("ViewlessPipeline gamma"));
+        QCOMPARE(model->mCurrentLine, qsl("ViewlessPipeline gamma\n"));
+        QCOMPARE(model->mEngineCursor, fedLine);
+        QVERIFY2(!model->mIsPromptLine, "runTriggers() must clear the prompt flag once the line is processed.");
+    }
+
+    // sysBufferShrinkEvent tells scripts their stored line indexes just shifted.
+    // With a view attached it has to carry that console's name and the batch
+    // size that went away.
+    void test_bufferShrinkEventWithAView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        registerShrinkHandler(host);
+
+        TConsoleModel& model = host->mainConsoleModel();
+        model.buffer.setBufferSize(100, 10);
+        runLua(host, qsl("for i = 1, 200 do echo('shrink line ' .. i .. '\\n') end\n"));
+
+        QVERIFY2(luaGlobalNumber(host, "shrinkCount") >= 1, "Echoing past the buffer limit raised no sysBufferShrinkEvent.");
+        QCOMPARE(luaGlobalString(host, "shrinkReport"), qsl("main:10"));
+    }
+
+    // The model outlives the view, and scripts keeping their own line-index
+    // bookkeeping still need to hear that the indexes moved. The console name
+    // the event carries lives on the view, but a view-less model can only be
+    // the main console's, which is always named "main".
+    void test_bufferShrinkEventWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        registerShrinkHandler(host);
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        model->buffer.setBufferSize(100, 10);
+
+        destroyTheView(host);
+        // Event handlers are emergency-stopped by the close as well:
+        host->reenableAllTriggers();
+
+        for (int i = 0; i < 200; ++i) {
+            appendModelLine(model->buffer, qsl("view-less shrink line %1").arg(i));
+        }
+
+        QVERIFY2(luaGlobalNumber(host, "shrinkCount") >= 1, "The view-less buffer shrank without raising sysBufferShrinkEvent.");
+        QCOMPARE(luaGlobalString(host, "shrinkReport"), qsl("main:10"));
+    }
+
+    // The OSC 8 documentation examples are injected into the main console's
+    // buffer by the trigger phrase, which is swallowed rather than displayed.
+    // None of that needs a view, and it must not reach for one.
+    void test_osc8DocsInjectionWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        const QString phrase = qsl("!osc8-docs");
+        model->buffer.appendLine(phrase, 0, phrase.size(), QColorConstants::LightGray, QColorConstants::Black, TChar::None, 0);
+
+        const QString bufferText = joinedBuffer(model->buffer);
+        QVERIFY2(!bufferText.contains(phrase), "The OSC 8 trigger phrase was displayed instead of being swallowed.");
+        QVERIFY2(bufferText.contains(qsl("OSC 8 Hyperlink Examples")), "The OSC 8 documentation examples were not injected into the view-less buffer.");
+    }
+
+    // Both logging entry points write to a log file that belongs to the view,
+    // so with none attached they have to do nothing rather than reach for it.
+    // logRemainingOutput() still has to drop the deferred line it would have
+    // written: that state is the buffer's, and leaving it behind would let a
+    // later view replay a line from a finished session.
+    void test_loggingCallsWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        model->buffer.appendLog(qsl("view-less appendLog text\n"));
+
+        model->buffer.lastTextToLog = qsl("still pending when the view went away\n");
+        model->buffer.lastLoggedFromLine = 3;
+        model->buffer.lastloggedToLine = 4;
+        model->buffer.logRemainingOutput();
+
+        QVERIFY2(model->buffer.lastTextToLog.isEmpty(), "logRemainingOutput() left its pending line behind for a later view to replay.");
+        QCOMPARE(model->buffer.lastLoggedFromLine, -1);
+        QCOMPARE(model->buffer.lastloggedToLine, -1);
     }
 
     void cleanup()
@@ -267,14 +398,73 @@ private:
 
     // Utility function joining every physical buffer line and normalising
     // whitespace, so a needle the console word-wraps across lines is still found.
-    QString joinedBuffer()
+    QString joinedBuffer(TBuffer& buffer)
     {
-        TBuffer& buffer = mudlet::self()->getActiveHost()->mainConsoleModel().buffer;
         QString allText;
         for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
             allText.append(buffer.line(i)).append(QChar::Space);
         }
         return allText.simplified();
+    }
+
+    QString joinedBuffer() { return joinedBuffer(mudlet::self()->getActiveHost()->mainConsoleModel().buffer); }
+
+    // Utility function destroying the main console widget while Host - and the
+    // model it co-owns - live on, which is the window every view-less test here
+    // needs.
+    void destroyTheView(Host* host)
+    {
+        QPointer<TMainConsole> console = host->mpConsole;
+        // Forcing the close stops TMainConsole::closeEvent() asking whether the
+        // profile should be saved, which would block on a modal dialog here.
+        host->forceClose();
+        QVERIFY2(host->requestClose(), "Closing the profile was refused.");
+        QTest::qWait(500ms); // the console carries WA_DeleteOnClose
+
+        QVERIFY2(console.isNull(), "The main console view was not destroyed by closing the profile.");
+        QVERIFY2(host->mpConsole.isNull(), "The host still points at a main console.");
+    }
+
+    void runLua(Host* host, const QString& code) { QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(code), qPrintable(qsl("Lua snippet failed to run: %1").arg(code))); }
+
+    // Utility function recording every sysBufferShrinkEvent the profile sees
+    void registerShrinkHandler(Host* host)
+    {
+        runLua(host,
+               qsl("shrinkReport = 'none'\n"
+                   "shrinkCount = 0\n"
+                   "function onModelBufferShrink(_, consoleName, batchSize)\n"
+                   "  shrinkReport = tostring(consoleName) .. ':' .. tostring(batchSize)\n"
+                   "  shrinkCount = shrinkCount + 1\n"
+                   "end\n"
+                   "registerAnonymousEventHandler('sysBufferShrinkEvent', 'onModelBufferShrink')\n"));
+    }
+
+    // Utility function appending one whole line - only a line feed starts a new
+    // buffer line - and handing back the index it landed on.
+    int appendModelLine(TBuffer& buffer, const QString& text)
+    {
+        const QString line = text + QChar::LineFeed;
+        buffer.append(line, 0, line.size(), QColorConstants::LightGray, QColorConstants::Black, TChar::None, 0);
+        return buffer.getLastLineNumber() - 1;
+    }
+
+    QString luaGlobalString(Host* host, const char* name)
+    {
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, name);
+        const QString value = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+        lua_pop(L, 1);
+        return value;
+    }
+
+    int luaGlobalNumber(Host* host, const char* name)
+    {
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, name);
+        const int value = lua_isnumber(L, -1) ? static_cast<int>(lua_tonumber(L, -1)) : -1;
+        lua_pop(L, 1);
+        return value;
     }
 
     // Utility function
