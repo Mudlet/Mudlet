@@ -443,6 +443,13 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     startMapAutosave(interval);
 
     mMapperCenterSmallAreas = settings->value("mapCenterSmallAreas", false).toBool();
+
+    // Built here, at the end of the constructor, rather than on first use: the
+    // model's buffer snapshots this Host's colours, so every one of them has to
+    // be initialised first. The view binds the buffer's back-pointer when it
+    // attaches (TConsole::TConsole) and unbinds it when it goes away, and
+    // TConsole::changeColors() refreshes the snapshot as it does so.
+    mpMainConsoleModel = std::make_shared<TConsoleModel>(this);
 }
 
 Host::~Host()
@@ -1822,17 +1829,15 @@ QList<int> Host::getStopWatchIds() const
 
 std::shared_ptr<TConsoleModel> Host::sharedMainConsoleModel()
 {
-    if (!mpMainConsoleModel) {
-        // Created without a view; the view binds the buffer's back-pointer when
-        // it attaches (TConsole::TConsole) and unbinds it when it goes away.
-        mpMainConsoleModel = std::make_shared<TConsoleModel>(this);
-    }
     return mpMainConsoleModel;
 }
 
+// Hot: the trigger engine reads the model for every character of a colour
+// pattern, so this hands back a reference rather than a shared_ptr copy - the
+// latter costs an atomic increment and decrement per call.
 TConsoleModel& Host::mainConsoleModel()
 {
-    return *sharedMainConsoleModel();
+    return *mpMainConsoleModel;
 }
 
 // The per-line trigger orchestration used to live on the main-console widget

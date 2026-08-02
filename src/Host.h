@@ -525,6 +525,11 @@ private:
     // for things looking to the main console font before it gets instantiated:
     std::optional<TFontAttributes> mTempDisplayFontAttributes;
     std::optional<QFont> mTempDisplayFont;
+    // Co-owned with the main-console view rather than owned outright: mudlet
+    // destroys the Host before the lingering console widget, so a Host-owned
+    // model would leave the view's aliasing references dangling. Reached
+    // through mainConsoleModel()/sharedMainConsoleModel().
+    std::shared_ptr<TConsoleModel> mpMainConsoleModel;
 
 public:
     // Make this the first public member instantiated so we can use ITS font
@@ -532,10 +537,6 @@ public:
     // have to maintain a separate one here in this class which does not, as
     // something derived from a QObject, have one:
     QPointer<TMainConsole> mpConsole;
-    // Co-owned with the main-console view rather than owned outright: mudlet
-    // destroys the Host before the lingering console widget, so a Host-owned
-    // model would leave the view's aliasing references dangling.
-    std::shared_ptr<TConsoleModel> mpMainConsoleModel;
     cTelnet mTelnet;
     QPointer<dlgPackageManager> mpPackageManager;
     QPointer<dlgModuleManager> mpModuleManager;

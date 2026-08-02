@@ -65,35 +65,32 @@ using namespace std::chrono_literals;
 
 const QString TConsole::cmLuaLineVariable("line");
 
-// A high-performance text widget with split screen ability for scrolling back
-// Contains two TTextEdits, and is backed by a TBuffer
 namespace {
 // The main console co-owns Host's model so the trigger pipeline outlives the
 // view; every other console owns its own model.
 std::shared_ptr<TConsoleModel> resolveConsoleModel(Host* pHost, const TConsole::ConsoleType type)
 {
-    if (type == TConsole::MainConsole && pHost) {
+    if (type == TConsole::MainConsole) {
         return pHost->sharedMainConsoleModel();
     }
     return std::make_shared<TConsoleModel>(pHost);
 }
 } // namespace
 
+// A high-performance text widget with split screen ability for scrolling back
+// Contains two TTextEdits, and is backed by a TBuffer
 TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidget* parent)
 : QWidget(parent)
 , mpHost(pH)
 , mDisplayFontDetails(pH->fontsAntiAlias())
 , mpOwnedModel(resolveConsoleModel(pH, type))
-, mpModel(mpOwnedModel.get())
-, buffer(mpModel->buffer)
-, mBgColor(mpModel->mBgColor)
-, mFgColor(mpModel->mFgColor)
-, mCurrentLine(mpModel->mCurrentLine)
-, mEngineCursor(mpModel->mEngineCursor)
-, mUserCursor(mpModel->mUserCursor)
-, mIsPromptLine(mpModel->mIsPromptLine)
+, buffer(mpOwnedModel->buffer)
 , emergencyStop(new QToolButton)
+, mBgColor(mpOwnedModel->mBgColor)
+, mFgColor(mpOwnedModel->mFgColor)
 , mConsoleName(name)
+, mCurrentLine(mpOwnedModel->mCurrentLine)
+, mEngineCursor(mpOwnedModel->mEngineCursor)
 , mpBaseVFrame(new QWidget(this))
 , mpTopToolBar(new QWidget(mpBaseVFrame))
 , mpBaseHFrame(new QWidget(mpBaseVFrame))
@@ -103,7 +100,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mpMainDisplay(new QWidget(mpMainFrame))
 , mpScrollBar(new QScrollBar)
 , mpHScrollBar(new QScrollBar(Qt::Horizontal))
+, mUserCursor(mpOwnedModel->mUserCursor)
 , mProfileName(mpHost ? mpHost->getName() : qsl("debug console"))
+, mIsPromptLine(mpOwnedModel->mIsPromptLine)
 , mpBufferSearchBox(new QLineEdit)
 , mpBufferSearchUp(new QToolButton)
 , mpBufferSearchDown(new QToolButton)
@@ -679,7 +678,7 @@ TConsole::~TConsole()
     // can outlive this view. The buffer's QPointer back-pointer would only null
     // itself once ~QObject() runs, leaving it aimed at a half-destroyed widget
     // for the whole of this teardown, so unbind it up front.
-    mpModel->buffer.detachConsole(this);
+    mpOwnedModel->buffer.detachConsole(this);
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     if (mType & ~CentralDebugConsole) {

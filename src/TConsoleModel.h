@@ -47,6 +47,12 @@ struct TConsoleModel
     {
     }
 
+    // A copy would duplicate the whole scrollback and leave a second model
+    // claiming the view the original is bound to. Deleting the copy operations
+    // suppresses the implicit move ones too.
+    TConsoleModel(const TConsoleModel&) = delete;
+    TConsoleModel& operator=(const TConsoleModel&) = delete;
+
     TBuffer buffer;
     QColor mBgColor = QColorConstants::Black;
     QColor mFgColor = QColorConstants::LightGray;

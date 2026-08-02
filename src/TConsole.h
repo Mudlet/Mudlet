@@ -192,8 +192,8 @@ public:
     void reset();
     void resizeConsole();
     Host* getHost();
-    TConsoleModel& model() { return *mpModel; }
-    const TConsoleModel& model() const { return *mpModel; }
+    TConsoleModel& model() { return *mpOwnedModel; }
+    const TConsoleModel& model() const { return *mpOwnedModel; }
     void replace(const QString&);
     void insertHTML(const QString&);
     void insertText(const QString&);
@@ -356,9 +356,9 @@ public:
     // co-owned with Host (which drives the trigger pipeline through it - see
     // Host::runTriggers); sub-consoles own theirs. The members below are
     // references aliasing the model, so the existing buffer/mFgColor/...
-    // accesses across the codebase are unchanged.
+    // accesses across the codebase are unchanged - which is why the model has
+    // to stay declared ahead of every one of them.
     std::shared_ptr<TConsoleModel> mpOwnedModel;
-    TConsoleModel* mpModel = nullptr;
     TBuffer& buffer;
     static const QString cmLuaLineVariable;
     TTextEdit* mUpperPane = nullptr;

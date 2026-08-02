@@ -4685,11 +4685,14 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
 
     // Use a 1-second debounce to prevent duplicate injection from echo + server response
     if (text.contains("!osc8-docs")) {
-        if (mpHost.isNull() || mpHost->mpConsole.isNull()) {
+        if (mpHost.isNull()) {
             return; // Still don't display the trigger phrase itself
         }
         const qint64 now = QDateTime::currentMSecsSinceEpoch();
-        TBuffer& mainBuffer = mpHost->mpConsole->buffer;
+        // The examples always go to the main console. Ask the model for it
+        // rather than the view: the injection is pure buffer work, so it still
+        // works when the profile has no main console widget.
+        TBuffer& mainBuffer = mpHost->mainConsoleModel().buffer;
 
         if (now - mainBuffer.mLastOSC8DocsInjectionTime > 1000) {
 #if defined(DEBUG_OSC_PROCESSING)
@@ -5042,8 +5045,11 @@ void TBuffer::log(int fromLine, int toLine)
 {
     // The log destination lives on the main console view, which the model this
     // buffer belongs to can outlive (Host co-owns it), so there is nowhere to
-    // log to once the view has gone:
-    if (mpHost.isNull() || mpHost->mpConsole.isNull()) {
+    // log to once the view has gone. Test this buffer's own back-pointer:
+    // TConsole unbinds it as it starts to tear down, whereas Host::mpConsole
+    // only nulls itself in ~QObject(), i.e. once the widget it still points at
+    // is long since half-destroyed:
+    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
         return;
     }
 
@@ -5093,24 +5099,31 @@ QString TBuffer::assembleLog(int fromLine, int toLine)
 // logs the remaining output when logging gets stopped, without duplication checks
 void TBuffer::logRemainingOutput()
 {
-    if (mpHost.isNull() || mpHost->mpConsole.isNull()) {
-        return;
-    }
-
-    mpHost->mpConsole->mLogStream << lastTextToLog;
-    mpHost->mpConsole->mLogStream.flush();
-
-    // Reset the deferred logging state so restarting logging cannot replay this
-    // pending line into the new session via log()'s deferred-flush path
+    // Reset the deferred logging state up front, before any bail-out: it is
+    // buffer state and needs no view, and leaving it behind would let a
+    // successor view replay this pending line and let the stale line indexes
+    // suppress a real flush in log()
+    const QString pendingText = lastTextToLog;
     lastTextToLog.clear();
     lastLoggedFromLine = -1;
     lastloggedToLine = -1;
+
+    // The log file is the view's; see TBuffer::log() on why this buffer's own
+    // back-pointer is the one to test:
+    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
+        return;
+    }
+
+    mpHost->mpConsole->mLogStream << pendingText;
+    mpHost->mpConsole->mLogStream.flush();
 }
 
 // logs a string directly to the log file
 void TBuffer::appendLog(const QString& text)
 {
-    if (mpHost.isNull() || mpHost->mpConsole.isNull()) {
+    // See TBuffer::log() on why this buffer's own back-pointer is the one to
+    // test for the view still being there:
+    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
         return;
     }
 
@@ -5363,7 +5376,7 @@ void TBuffer::clear()
     // Clearing the display is not gagging: flush any deferred log text before
     // the deleteLines() calls below would discard it, so a received line that
     // was still pending for logging is not lost from the log file
-    if (!mpHost.isNull() && mpHost->mpConsole && this == &mpHost->mpConsole->buffer && mpHost->mpConsole->mLogToLogFile) {
+    if (!mpConsole.isNull() && !mpHost.isNull() && mpHost->mpConsole && this == &mpHost->mpConsole->buffer && mpHost->mpConsole->mLogToLogFile) {
         logRemainingOutput();
 
         // A line whose own trigger calls clearWindow() has been committed and
@@ -5528,14 +5541,19 @@ void TBuffer::shrinkBuffer()
     // Clean up unreferenced links after removing old lines
     clearLinkState();
 
-    // The event is keyed on the console's name, which lives on the view until
-    // the name registries move into the model, so a view-less model stays quiet:
-    if (mpConsole && (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer))) {
+    // Scripts keep their own line-index bookkeeping, so they have to be told
+    // the indexes shifted whether or not anyone is watching the text. The
+    // console's name and type still live on the view, but a buffer without one
+    // can only be the main console's model - every other model is owned by the
+    // view built on it - and that console is always named "main":
+    const bool namedConsole = mpConsole ? (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer))
+                                        : (!mpHost.isNull() && this == &mpHost->mainConsoleModel().buffer);
+    if (namedConsole) {
         // Signal to lua subsystem that indexes into the Console will need adjusting
         TEvent bufferShrinkEvent{};
         bufferShrinkEvent.mArgumentList.append(QLatin1String("sysBufferShrinkEvent"));
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        bufferShrinkEvent.mArgumentList.append(mpConsole->mConsoleName);
+        bufferShrinkEvent.mArgumentList.append(mpConsole ? mpConsole->mConsoleName : qsl("main"));
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         bufferShrinkEvent.mArgumentList.append(QString::number(mBatchDeleteSize));
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
