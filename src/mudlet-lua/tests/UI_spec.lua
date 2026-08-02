@@ -133,11 +133,22 @@ describe("Tests UI functions", function()
       assert.are.equal(windowType("fake commandline"), nil)
     end)
 
+    it("Should identify a scroll box", function()
+      createScrollBox("testscrollbox", 0,0,100,100)
+
+      assert.are.equal(windowType("testscrollbox"), "scrollbox")
+    end)
+
+    it("Should not identify a non-existing scroll box", function()
+      assert.are.equal(windowType("fake scrollbox"), nil)
+    end)
+
     teardown(function()
       deleteLabel("testlabel")
       hideWindow("testuserwindow")
       hideWindow("testminiconsole")
       disableCommandLine("testcommandline")
+      deleteScrollBox("testscrollbox")
     end)
   end)
 
@@ -2841,8 +2852,7 @@ describe("Window and label state", function()
       assert.are.equal("miniconsole", windowType(console))
       assert.are.equal("commandline", windowType(cmdLine))
       assert.are.equal("textedit", windowType(textEdit))
-      -- windowType is deliberately not asserted for the scroll box: it has no
-      -- scroll box branch, so it reports a live scroll box as unknown
+      assert.are.equal("scrollbox", windowType(scrollBox))
     end)
 
     it("openUserWindow reports the window as a userwindow and is repeatable", function()
@@ -2856,6 +2866,37 @@ describe("Window and label state", function()
       local ok, err = openUserWindow(label)
       assert.is_nil(ok)
       assert.are.equal(("label with the name '%s' already exists"):format(label), err)
+    end)
+
+    it("createLabel on an existing name returns false and a message", function()
+      local ok, err = createLabel(label, 41, 51, 61, 71, 1)
+      assert.is_false(ok)
+      assert.are.equal(("label '%s' already exists"):format(label), err)
+      -- the parented form reports the same way
+      local childOk, childErr = createLabel(userWindow, childLabel, 4, 5, 30, 20, 1)
+      assert.is_false(childOk)
+      assert.are.equal(("label '%s' already exists"):format(childLabel), childErr)
+      -- unlike createMiniConsole/createScrollBox a refused createLabel must leave
+      -- the existing labels alone rather than moving and resizing them
+      assert.are.same({11, 22, 133, 44}, {getWindowGeometry(label)})
+      assert.are.same({5, 6, 40, 20}, {getWindowGeometry(childLabel)})
+    end)
+
+    it("createLabel on a name taken by a miniconsole returns false and a message", function()
+      local ok, err = createLabel(console, 1, 2, 3, 4, 1)
+      assert.is_false(ok)
+      assert.are.equal(("a miniconsole/userwindow with the name '%s' already exists"):format(console), err)
+    end)
+
+    it("createLabel hard-errors on a non-number coordinate", function()
+      -- a string second argument selects the parented form, so the two forms
+      -- report the same argument number for different coordinates
+      local mainOk, mainErr = pcall(createLabel, name("wlsBadCoordLabel"), 0, "here", 40, 40, 1)
+      assert.is_false(mainOk)
+      assert.is_truthy(mainErr:find("createLabel: bad argument #3 type (label y-coordinate", 1, true))
+      local childOk, childErr = pcall(createLabel, userWindow, name("wlsBadCoordChild"), "here", 0, 40, 40, 1)
+      assert.is_false(childOk)
+      assert.is_truthy(childErr:find("createLabel: bad argument #3 type (label x-coordinate", 1, true))
     end)
 
     it("createMiniConsole on an existing name moves and resizes it instead", function()
@@ -3810,9 +3851,33 @@ describe("Window and label state", function()
       assert.is_true(format.italic)
     end)
 
-    -- setTextFormat's argument-type errors are deliberately not covered: the
-    -- lua_error() they raise longjmps past the destructor of the QVector the
-    -- function builds first, so exercising them leaks and fails the leak check
+    -- these four cover setTextFormat's raising paths, which used to leak the
+    -- objects the function built before validating (issue #9576) - they assert the
+    -- messages, the leak checker asserts the rest
+
+    it("hard-errors on a non-number colour component", function()
+      local ok, err = pcall(setTextFormat, console, "red", 0, 0, 0, 0, 0, false, false, false)
+      assert.is_false(ok)
+      assert.is_truthy(err:find("setTextFormat: bad argument #2 type", 1, true))
+    end)
+
+    it("hard-errors on a non-boolean attribute", function()
+      local ok, err = pcall(setTextFormat, console, 0, 0, 0, 0, 0, 0, "yes", false, false)
+      assert.is_false(ok)
+      assert.is_truthy(err:find("setTextFormat: bad argument #8 type", 1, true))
+    end)
+
+    it("hard-errors on a non-boolean optional attribute", function()
+      local ok, err = pcall(setTextFormat, console, 0, 0, 0, 0, 0, 0, false, false, false, "yes")
+      assert.is_false(ok)
+      assert.is_truthy(err:find("setTextFormat: bad argument #11 type", 1, true))
+    end)
+
+    it("hard-errors on a blink mode that is not a string", function()
+      local ok, err = pcall(setTextFormat, console, 0, 0, 0, 0, 0, 0, false, false, false, false, false, false, {})
+      assert.is_false(ok)
+      assert.is_truthy(err:find("setTextFormat: bad argument #14 type", 1, true))
+    end)
 
     it("returns false and a message for an unknown window", function()
       -- unlike most of the UI API this one reports false rather than nil
