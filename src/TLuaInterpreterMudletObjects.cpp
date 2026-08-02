@@ -2259,14 +2259,15 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
 int TLuaInterpreter::tempButton(lua_State* L)
 {
     //args: parent, name, orientation
+    const QString cmdButtonUp = "";
+    const QString cmdButtonDown = "";
+    const QString script = "";
+
     if (!checkStringArg(L, __func__, 1, "toolbar name") || !checkStringArg(L, __func__, 2, "button text")) {
         return lua_error(L);
     }
     const int orientation = getVerifiedInt(L, __func__, 3, "orientation");
 
-    const QString cmdButtonUp = "";
-    const QString cmdButtonDown = "";
-    const QString script = "";
     const QString toolbar{lua_tostring(L, 1)};
     const QString name{lua_tostring(L, 2)};
 
@@ -2316,15 +2317,16 @@ int TLuaInterpreter::tempButton(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempButtonToolbar
 int TLuaInterpreter::tempButtonToolbar(lua_State* L)
 {
+    const QString cmdButtonUp = "";
+    const QString cmdButtonDown = "";
+    const QString script = "";
+
     if (!checkStringArg(L, __func__, 1, "name")) {
         return lua_error(L);
     }
     int location = getVerifiedInt(L, __func__, 2, "location");
     const int orientation = getVerifiedInt(L, __func__, 3, "orientation");
 
-    const QString cmdButtonUp = "";
-    const QString cmdButtonDown = "";
-    const QString script = "";
     const QString name{lua_tostring(L, 1)};
 
     if (location > 0) {

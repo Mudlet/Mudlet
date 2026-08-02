@@ -1959,6 +1959,10 @@ int TLuaInterpreter::isAncestorsActive(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ancestors
+// returned by the helper lambdas below in place of a Lua return count: the
+// message is already on the stack and the caller is expected to raise it
+static constexpr int csmErrorAlreadyPushed = -1;
+
 int TLuaInterpreter::ancestors(lua_State* L)
 {
     // the type QStrings must be destroyed before the raise, so the internal
@@ -1990,7 +1994,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
                     // stack so we can push an error message there:
                     lua_pop(L, 1);
                     lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", functionName, typeCheck.toLatin1().constData(), id);
-                    return -1;
+                    return csmErrorAlreadyPushed;
                 }
                 lua_pushnumber(L, ++index);
                 lua_newtable(L);
@@ -2047,7 +2051,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
                     // stack so we can push an error message there:
                     lua_pop(L, 1);
                     lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", functionName, typeCheck.toLatin1().constData(), id);
-                    return -1;
+                    return csmErrorAlreadyPushed;
                 }
                 lua_pushnumber(L, ++index);
                 lua_newtable(L);
@@ -2097,7 +2101,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
                     // stack so we can push an error message there:
                     lua_pop(L, 1);
                     lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", functionName, typeCheck.toLatin1().constData(), id);
-                    return -1;
+                    return csmErrorAlreadyPushed;
                 }
                 lua_pushnumber(L, ++index);
                 lua_newtable(L);
@@ -2147,7 +2151,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
                     // stack so we can push an error message there:
                     lua_pop(L, 1);
                     lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", functionName, typeCheck.toLatin1().constData(), id);
-                    return -1;
+                    return csmErrorAlreadyPushed;
                 }
                 lua_pushnumber(L, ++index);
                 lua_newtable(L);
@@ -2197,7 +2201,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
                     // stack so we can push an error message there:
                     lua_pop(L, 1);
                     lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", functionName, typeCheck.toLatin1().constData(), id);
-                    return -1;
+                    return csmErrorAlreadyPushed;
                 }
                 lua_pushnumber(L, ++index);
                 lua_newtable(L);
@@ -2247,7 +2251,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
                     // stack so we can push an error message there:
                     lua_pop(L, 1);
                     lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", functionName, typeCheck.toLatin1().constData(), id);
-                    return -1;
+                    return csmErrorAlreadyPushed;
                 }
                 lua_pushnumber(L, ++index);
                 lua_newtable(L);
@@ -2284,7 +2288,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
 
         return warnArgumentValue(L, functionName, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
     }();
-    if (results < 0) {
+    if (results == csmErrorAlreadyPushed) {
         return lua_error(L);
     }
     return results;
@@ -2403,8 +2407,9 @@ void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel&
 // room, it would only show one of them at random. Each special exit was listed
 // in its own table (against the key of the exit roomID) and it is a key to a
 // "1" or "0" depending on whether the exit is locked or not. This was not
-// The next three functions are internal helpers for use by
+// The next functions are internal helpers for use by
 // (echo|insert|set)|(Link|Popup) functions
+
 // The non-raising counterpart of the type test in parseCommandOrFunction() - see checkStringArg()
 bool TLuaInterpreter::checkCommandOrFunctionArg(lua_State* L, const char* functionName, const int pos)
 {
@@ -2482,6 +2487,8 @@ bool TLuaInterpreter::checkHintsTable(lua_State* L, const char* functionName, co
 void TLuaInterpreter::parseHintsTable(lua_State* lState, const char* functionName, int& index, QStringList& hintList)
 {
     if (!lua_istable(lState, index)) {
+        // dead while every caller gates on checkHintsTable(), which duplicates
+        // this predicate: reaching it would strand the caller's hintList
         lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, index, "hints", luaL_typename(lState, index));
         lua_error(lState);
         Q_UNREACHABLE();
@@ -2494,6 +2501,7 @@ void TLuaInterpreter::parseHintsTable(lua_State* lState, const char* functionNam
         // key at index -2 and value at index -1
         ++subIndex;
         if (!lua_isstring(lState, -1)) {
+            // dead while every caller gates on checkHintsTable() - see above
             lua_pushfstring(lState, "%s: bad item #%d in table argument #%d in type (hint as string expected, got %s!)", functionName, subIndex, index, luaL_typename(lState, -1));
             lua_error(lState);
             Q_UNREACHABLE();
@@ -2511,6 +2519,9 @@ void TLuaInterpreter::parseHintsTable(lua_State* lState, const char* functionNam
 void TLuaInterpreter::parseCommandsOrFunctionsTable(lua_State* lState, const char* functionName, int& index, QStringList& commandsList, QVector<int>& luaFunctionNumbers)
 {
     if (!lua_istable(lState, index)) {
+        // dead while every caller gates on checkCommandsOrFunctionsTable(),
+        // which duplicates this predicate: reaching it would strand the
+        // caller's commandsList and every registry reference taken so far
         lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, index, "commands/functions", luaL_typename(lState, index));
         lua_error(lState);
         Q_UNREACHABLE();
@@ -2523,6 +2534,7 @@ void TLuaInterpreter::parseCommandsOrFunctionsTable(lua_State* lState, const cha
         // key at index -2 and value at index -1
         ++subIndex;
         if (!(lua_isstring(lState, -1) || lua_isfunction(lState, -1))) {
+            // dead while every caller gates on checkCommandsOrFunctionsTable() - see above
             lua_pushfstring(lState, "%s: bad item #%d in table argument #%d in type (command as string or function expected, got %s!)", functionName, subIndex, index, luaL_typename(lState, -1));
             lua_error(lState);
             Q_UNREACHABLE();
@@ -2599,10 +2611,16 @@ int TLuaInterpreter::setMergeTables(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    QStringList modulesList;
     const int n = lua_gettop(L);
-    for (int i = 1; i <= n; i++) {
-        modulesList << getVerifiedString(L, __func__, i, "module");
+    for (int i = 1; i <= n; ++i) {
+        if (!checkStringArg(L, __func__, i, "module")) {
+            return lua_error(L);
+        }
+    }
+
+    QStringList modulesList;
+    for (int i = 1; i <= n; ++i) {
+        modulesList << lua_tostring(L, i);
     }
 
     host.mGMCP_merge_table_keys = host.mGMCP_merge_table_keys + modulesList;
@@ -2625,7 +2643,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
             qWarning() << "TLuaInterpreter::getMudletVersion(): ERROR: Version data not correctly set on compilation,\n"
                        << "   is the VERSION value in the project file present?";
             lua_pushstring(L, "getMudletVersion: sorry, version information not available.");
-            return -1;
+            return csmErrorAlreadyPushed;
         }
 
         bool ok = true;
@@ -2645,14 +2663,14 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
             qWarning("TLuaInterpreter::getMudletVersion(): ERROR: Version data not correctly parsed,\n"
                      "   was the VERSION value in the project file correct at compilation time?");
             lua_pushstring(L, "getMudletVersion: sorry, version information corrupted.");
-            return -1;
+            return csmErrorAlreadyPushed;
         }
 
         const int n = lua_gettop(L);
 
         if (n == 1) {
             if (!checkStringArg(L, functionName, 1, "style", true)) {
-                return -1;
+                return csmErrorAlreadyPushed;
             }
             const QString tidiedWhat = QString{lua_tostring(L, 1)}.toLower().trimmed();
             if (tidiedWhat.contains("major")) {
@@ -2687,7 +2705,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
                 lua_pushstring(L,
                                "getMudletVersion: takes one (optional) argument:\n"
                                "   \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
-                return -1;
+                return csmErrorAlreadyPushed;
             }
         } else if (n == 0) { // NOLINT(readability-else-after-return)
             lua_newtable(L);
@@ -2707,11 +2725,11 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
             lua_pushstring(L,
                            "getMudletVersion: only takes one (optional) argument:\n"
                            "   \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
-            return -1;
+            return csmErrorAlreadyPushed;
         }
         return 1;
     }();
-    if (results < 0) {
+    if (results == csmErrorAlreadyPushed) {
         return lua_error(L);
     }
     return results;
