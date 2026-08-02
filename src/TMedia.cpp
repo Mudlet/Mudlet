@@ -1081,7 +1081,7 @@ QString TMedia::setupMediaAbsolutePathFileName(TMediaData& mediaData)
 
 void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
 {
-    if (!player) {
+    if (!player || !player->mediaPlayer()) {
         qWarning() << qsl("TMedia::connectMediaPlayer() WARNING - Attempted to connect a null TMediaPlayer.");
         return;
     }
@@ -1426,6 +1426,12 @@ void TMedia::releaseMediaSourceAfterEvents(const std::shared_ptr<TMediaPlayer>& 
         if (sameMediaContinues) {
             // No caption either: nothing ended, so "stops" between the passes of a looping
             // track would be wrong.
+            return;
+        }
+
+        // An error and the stop that follows it both schedule a release, and releasing does not
+        // bump a generation, so the second turn still looks entitled to end this playback.
+        if (stillOurs && lockedPlayer->mediaPlayer() && lockedPlayer->mediaPlayer()->source().isEmpty()) {
             return;
         }
 
