@@ -303,4 +303,39 @@ describe("Tests functionality of Geyser.StyleSheet", function()
       assert.equal(expected, actual)
     end)
   end)
+
+  -- The blocks above work on the stylesheet object alone; this one puts an
+  -- assembled sheet onto a real widget and reads it back out of Mudlet.
+  describe("Tests applying a Geyser.StyleSheet to a widget", function()
+    local label
+
+    before_each(function()
+      label = Geyser.Label:new({name = "gssLabel", x = 0, y = 0, width = 100, height = 50})
+    end)
+
+    after_each(function()
+      if label and Geyser.windowList.gssLabel == label then
+        label:delete()
+      end
+      label = nil
+    end)
+
+    it("applies an inherited stylesheet to a label", function()
+      local parent = Geyser.StyleSheet:new("background-color: black;\ncolor: green;")
+      local child = Geyser.StyleSheet:new("color: blue;", parent)
+      label:setStyleSheet(child:getCSS())
+      local applied = getLabelStyleSheet("gssLabel")
+      assert.is_truthy(applied:find("background-color: black;", 1, true))
+      assert.is_truthy(applied:find("color: blue;", 1, true))
+      assert.is_nil(applied:find("color: green;", 1, true))
+    end)
+
+    it("follows a change made to the parent sheet after the fact", function()
+      local parent = Geyser.StyleSheet:new("background-color: black;")
+      local child = Geyser.StyleSheet:new("color: blue;", parent)
+      parent:set("border", "1px solid white")
+      label:setStyleSheet(child:getCSS())
+      assert.is_truthy(getLabelStyleSheet("gssLabel"):find("border: 1px solid white;", 1, true))
+    end)
+  end)
 end)
