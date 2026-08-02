@@ -107,6 +107,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 
     // Allow QTest-based test class to access private members
     friend class dlgTriggerEditorUndoRedoTest;
+    friend class EditorBannerViewSwitchTest;
 
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
