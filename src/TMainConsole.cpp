@@ -1796,6 +1796,10 @@ void TMainConsole::setMapProgressDialogValue(int value)
 void TMainConsole::disableMapProgressDialogCancel()
 {
     if (mpMapProgressDialog) {
+        // Taking the button away does not stop a window-close from emitting
+        // canceled(), so drop the connection as well - by this point the
+        // operation can no longer be stopped.
+        disconnect(mpMapProgressDialog, &QProgressDialog::canceled, nullptr, nullptr);
         mpMapProgressDialog->setCancelButton(nullptr);
     }
 }
@@ -1807,6 +1811,10 @@ void TMainConsole::closeMapProgressDialog()
         // closeEvent -> cancel() while a cancel is already being handled.
         mpMapProgressDialog->hide();
         mpMapProgressDialog->deleteLater();
+        // deleteLater() leaves the QPointer set until the event loop gets to
+        // run, which a synchronous JSON operation will not let it do, so forget
+        // the dialog now and make any late writes to it no-ops.
+        mpMapProgressDialog = nullptr;
     }
 }
 

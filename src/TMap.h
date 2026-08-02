@@ -197,10 +197,9 @@ public:
     void setRoomNamesShown(bool shown);
 
     std::pair<bool, QString> writeJsonMapFile(const QString&);
-    std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false, const bool allowUserCancellation = true);
+    std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false);
     qsizetype getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
-    void warnIfMapProgressUnwired(const char* context, bool transferPath);
     QString getDefaultAreaName() const { return mDefaultAreaName; }
     QString getUnnamedAreaName() const { return mUnnamedAreaName; }
 
@@ -391,6 +390,7 @@ private:
                              const QString& exitKey,
                              const QSet<unsigned int>& unUsableRoomSet);
     const QString createFileHeaderLine(QString, QChar);
+    void warnIfMapProgressUnwired(const char* context, bool transferPath);
     void writeJsonUserData(QJsonObject&) const;
     void readJsonUserData(const QJsonObject&);
     bool validatePotentialMapFile(QFile&, QDataStream&);
@@ -418,12 +418,12 @@ private:
     bool mImportRunning = false;
 
     // Engine-side mirror of the frontend-owned dialog, which the engine can't
-    // read back. mStandaloneMapProgress also serves as the "import/export already
+    // read back. mMapProgressStandalone also serves as the "import/export already
     // running" guard (see writeJsonMapFile()/readJsonMapFile()).
-    bool mStandaloneMapProgress = false;
+    bool mMapProgressStandalone = false;
     bool mMapProgressIsTransfer = false;
     bool mMapProgressCancelRequested = false;
-    int mStandaloneMapProgressMaximum = 0;
+    int mMapProgressStandaloneMaximum = 0;
     // Using during updates of text in progress dialog partially from other
     // classes:
     qsizetype mProgressDialogAreasTotal = 0;

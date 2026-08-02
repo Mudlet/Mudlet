@@ -117,6 +117,9 @@ private slots:
         QVERIFY(mpTarget);
 
         buildSmallMap(mpSource);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
     }
 
     void cleanupTestCase()
@@ -186,7 +189,8 @@ private slots:
         QVERIFY2(wrote, qPrintable(writeMsg));
         QCOMPARE(exportStartSpy.count(), 1);
         QCOMPARE(exportStartSpy.at(0).at(0).toString(), qsl("Map JSON export"));
-        QVERIFY(exportCloseSpy.count() >= 1);
+        // Exactly one close: a second would mean the dialog was torn down twice:
+        QCOMPARE(exportCloseSpy.count(), 1);
         // The engine must not stay "in progress" (that would reject the next op):
         QVERIFY(!pSourceMap->hasActiveTransferProgress());
 
@@ -197,7 +201,7 @@ private slots:
         QVERIFY2(read, qPrintable(readMsg));
         QCOMPARE(importStartSpy.count(), 1);
         QCOMPARE(importStartSpy.at(0).at(0).toString(), qsl("Map JSON import"));
-        QVERIFY(importCloseSpy.count() >= 1);
+        QCOMPARE(importCloseSpy.count(), 1);
         QVERIFY(!pTargetMap->hasActiveTransferProgress());
     }
 
@@ -210,18 +214,66 @@ private slots:
     {
         TMap* pSourceMap = mpSource->mpMap.data();
         const QString file = qsl("%1/cancel.json").arg(mSaveDir.path());
+        // Spying on both ends of a dialog's life also stands in for a wired-up
+        // frontend, so the engine's "nobody is showing this" warning stays quiet:
+        QSignalSpy exportStartSpy(pSourceMap, &TMap::signal_mapJsonProgressStart);
+        QSignalSpy exportCloseSpy(pSourceMap, &TMap::signal_mapProgressClose);
         const auto [wrote, writeMsg] = pSourceMap->writeJsonMapFile(file);
         QVERIFY2(wrote, qPrintable(writeMsg));
+        QCOMPARE(exportStartSpy.count(), 1);
+        QCOMPARE(exportCloseSpy.count(), 1);
 
         TMap* pTargetMap = mpTarget->mpMap.data();
+        QSignalSpy importCloseSpy(pTargetMap, &TMap::signal_mapProgressClose);
         const QMetaObject::Connection cancelOnStart = connect(pTargetMap, &TMap::signal_mapJsonProgressStart, pTargetMap, [pTargetMap]() {
             pTargetMap->slot_mapProgressDialogCancelled();
         });
-        const auto [read, readMsg] = pTargetMap->readJsonMapFile(file, false, true);
+        const auto [read, readMsg] = pTargetMap->readJsonMapFile(file);
         disconnect(cancelOnStart);
 
         QVERIFY(!read);
         QCOMPARE(readMsg, qsl("aborted by user"));
+        // An aborted import must still take its progress dialog down with it:
+        QCOMPARE(importCloseSpy.count(), 1);
+        QVERIFY(!pTargetMap->hasActiveTransferProgress());
+    }
+
+    // An XML map import started while a JSON operation owns the progress dialog
+    // must be refused: readXmlMapFile() would otherwise mistake the JSON
+    // operation's dialog for its own and mapClear() the map mid-import. The
+    // re-entrancy is real - a Lua loadMap() from a timer lands in the
+    // qApp->processEvents() the JSON reader pumps.
+    void test_xmlImportRefusedWhileJsonOperationOwnsProgress()
+    {
+        TMap* pSourceMap = mpSource->mpMap.data();
+        const QString file = qsl("%1/reentrancy.json").arg(mSaveDir.path());
+        QSignalSpy exportStartSpy(pSourceMap, &TMap::signal_mapJsonProgressStart);
+        QSignalSpy exportCloseSpy(pSourceMap, &TMap::signal_mapProgressClose);
+        const auto [wrote, writeMsg] = pSourceMap->writeJsonMapFile(file);
+        QVERIFY2(wrote, qPrintable(writeMsg));
+        QCOMPARE(exportStartSpy.count(), 1);
+        QCOMPARE(exportCloseSpy.count(), 1);
+
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        QSignalSpy importCloseSpy(pTargetMap, &TMap::signal_mapProgressClose);
+        bool importAttempted = false;
+        bool importAccepted = true;
+        QString importError;
+        const QMetaObject::Connection reenter = connect(pTargetMap, &TMap::signal_mapJsonProgressStart, pTargetMap, [&]() {
+            importAttempted = true;
+            QFile xmlMap(qsl("%1/no-such-map.xml").arg(mSaveDir.path()));
+            importAccepted = pTargetMap->importMap(xmlMap, &importError);
+        });
+        const auto [read, readMsg] = pTargetMap->readJsonMapFile(file);
+        disconnect(reenter);
+
+        QVERIFY(importAttempted);
+        QVERIFY2(!importAccepted, "importMap() ran on top of an in-flight JSON import");
+        // Refused by the in-progress guard, not by failing to read the file:
+        QVERIFY2(importError.contains(qsl("already in progress")), qPrintable(importError));
+        // ...and the JSON operation it interrupted still completed:
+        QVERIFY2(read, qPrintable(readMsg));
+        QCOMPARE(importCloseSpy.count(), 1);
         QVERIFY(!pTargetMap->hasActiveTransferProgress());
     }
 };

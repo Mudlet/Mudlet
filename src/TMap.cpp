@@ -2500,7 +2500,8 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
         return;
     }
 
-    if (mStandaloneMapProgress) {
+    if (mMapProgressStandalone) {
+        //: Shown in the main console when a map download is refused
         const QString warnMsg = tr("[ WARN ]  - Attempt made to download an XML map while a map import or\n"
                                    "export is already in progress - wait for that operation to complete\n"
                                    "before retrying!");
@@ -2594,6 +2595,23 @@ bool TMap::importMap(QFile& file, QString* errMsg)
             const QString warnMsg = qsl("[ WARN ]  - Attempt made to import an XML map when one is already being\n"
                                         "downloaded or is being imported from a local file - wait for that\n"
                                         "operation to complete (if it cannot be canceled) before retrying!");
+            postMessage(warnMsg);
+        }
+        return false;
+    }
+
+    if (mMapProgressStandalone) {
+        // readXmlMapFile() would see the JSON operation's progress dialog as its
+        // own, skip creating one, and then mapClear() the map out from under it:
+        if (errMsg) {
+            //: Error returned by the loadMap() Lua function
+            *errMsg = tr("loadMap: unable to perform request, a map import or export is\n"
+                         "already in progress.");
+        } else {
+            //: Shown in the main console when a map import is refused
+            const QString warnMsg = tr("[ WARN ]  - Attempt made to import an XML map while a map import or\n"
+                                       "export is already in progress - wait for that operation to complete\n"
+                                       "before retrying!");
             postMessage(warnMsg);
         }
         return false;
@@ -2835,17 +2853,17 @@ void TMap::createTransferProgress(const QString& title, const QString& label, bo
         return;
     }
 
-    mStandaloneMapProgress = true;
+    mMapProgressStandalone = true;
     mMapProgressIsTransfer = true;
     mMapProgressCancelRequested = false;
-    mStandaloneMapProgressMaximum = 0;
+    mMapProgressStandaloneMaximum = 0;
     warnIfMapProgressUnwired(__func__, true);
     emit signal_mapTransferProgressStart(title, label, cancelable ? tr("Abort") : QString());
 }
 
 void TMap::updateTransferProgressLabel(const QString& text)
 {
-    if (mStandaloneMapProgress) {
+    if (mMapProgressStandalone) {
         emit signal_mapProgressSetLabel(text);
     } else if (mpMapper) {
         mpMapper->setMapProgressLabel(text);
@@ -2854,8 +2872,8 @@ void TMap::updateTransferProgressLabel(const QString& text)
 
 void TMap::updateTransferProgressRange(int minimum, int maximum)
 {
-    if (mStandaloneMapProgress) {
-        mStandaloneMapProgressMaximum = maximum;
+    if (mMapProgressStandalone) {
+        mMapProgressStandaloneMaximum = maximum;
         emit signal_mapProgressSetRange(minimum, maximum);
     } else if (mpMapper) {
         mpMapper->setMapProgressRange(minimum, maximum);
@@ -2864,7 +2882,7 @@ void TMap::updateTransferProgressRange(int minimum, int maximum)
 
 void TMap::updateTransferProgressValue(int value)
 {
-    if (mStandaloneMapProgress) {
+    if (mMapProgressStandalone) {
         emit signal_mapProgressSetValue(value);
     } else if (mpMapper) {
         mpMapper->setMapProgressValue(value);
@@ -2873,8 +2891,8 @@ void TMap::updateTransferProgressValue(int value)
 
 int TMap::transferProgressMaximum() const
 {
-    if (mStandaloneMapProgress) {
-        return mStandaloneMapProgressMaximum;
+    if (mMapProgressStandalone) {
+        return mMapProgressStandaloneMaximum;
     }
     if (mpMapper) {
         return mpMapper->mapProgressMaximum();
@@ -2884,12 +2902,12 @@ int TMap::transferProgressMaximum() const
 
 bool TMap::hasActiveTransferProgress() const
 {
-    return mStandaloneMapProgress || (mpMapper && mpMapper->isMapProgressVisible());
+    return mMapProgressStandalone || (mpMapper && mpMapper->isMapProgressVisible());
 }
 
 void TMap::disableTransferProgressCancel()
 {
-    if (mStandaloneMapProgress) {
+    if (mMapProgressStandalone) {
         emit signal_mapProgressDisableCancel();
     } else if (mpMapper) {
         mpMapper->setMapProgressCancelable(false);
@@ -2900,8 +2918,8 @@ void TMap::clearTransferProgress()
 {
     // Only close a transfer-owned standalone dialog: a concurrent JSON
     // import/export owns the standalone progress state and must keep it.
-    if (mStandaloneMapProgress && mMapProgressIsTransfer) {
-        mStandaloneMapProgress = false;
+    if (mMapProgressStandalone && mMapProgressIsTransfer) {
+        mMapProgressStandalone = false;
         mMapProgressIsTransfer = false;
         emit signal_mapProgressClose();
         return;
@@ -3017,7 +3035,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         destination.append(QLatin1String(".json"));
     }
 
-    if (mStandaloneMapProgress) {
+    if (mMapProgressStandalone) {
         return {false, qsl("import or export already in progress")};
     }
 
@@ -3030,10 +3048,10 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         }
     }
 
-    mStandaloneMapProgress = true;
+    mMapProgressStandalone = true;
     mMapProgressIsTransfer = false;
     mMapProgressCancelRequested = false;
-    mStandaloneMapProgressMaximum = static_cast<int>(mProgressDialogRoomsTotal);
+    mMapProgressStandaloneMaximum = static_cast<int>(mProgressDialogRoomsTotal);
     warnIfMapProgressUnwired(__func__, false);
     //: This is a title of a progress window.
     emit signal_mapJsonProgressStart(tr("Map JSON export"),
@@ -3054,7 +3072,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     if (!file.open(QFile::OpenMode(QFile::Text | QFile::WriteOnly))) {
         qWarning().noquote().nospace() << "TMap::writeJsonMapFile(...) WARNING - Could not open save file \"" << destination << "\".";
         emit signal_mapProgressClose();
-        mStandaloneMapProgress = false;
+        mMapProgressStandalone = false;
         return {false, qsl("could not open save file \"%1\", reason: %2").arg(destination.toHtmlEscaped(), file.errorString())};
     }
 
@@ -3091,7 +3109,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     if (abort) {
         file.cancelWriting();
         emit signal_mapProgressClose();
-        mStandaloneMapProgress = false;
+        mMapProgressStandalone = false;
         return {false, qsl("aborted by user")};
     }
 
@@ -3182,7 +3200,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     }
 
     emit signal_mapProgressClose();
-    mStandaloneMapProgress = false;
+    mMapProgressStandalone = false;
 
     return {file.error() == QFileDevice::NoError, ((file.error() == QFileDevice::NoError) ? QString() : qsl("could not export file, reason: %1").arg(file.errorString()))};
 }
@@ -3190,12 +3208,12 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 // The translatable messages are used within this file and do not need to
 // mention the file concerned whereas the untranslated messages are used by the
 // Lua sub-system and do need to report the file:
-std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool translatableTexts, const bool allowUserCancellation)
+std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool translatableTexts)
 {
     const QString oldDefaultAreaName{mDefaultAreaName};
     const QString oldUnnamedName{mUnnamedAreaName};
 
-    if (mStandaloneMapProgress) {
+    if (mMapProgressStandalone) {
         return {false, (translatableTexts ? tr("import or export already in progress") : qsl("import or export already in progress"))};
     }
 
@@ -3249,10 +3267,10 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     mProgressDialogRoomsCount = 0;
     mProgressDialogLabelsTotal = qRound(mapObj[QLatin1String("labelCount")].toDouble());
     mProgressDialogLabelsCount = 0;
-    mStandaloneMapProgress = true;
+    mMapProgressStandalone = true;
     mMapProgressIsTransfer = false;
     mMapProgressCancelRequested = false;
-    mStandaloneMapProgressMaximum = static_cast<int>(mProgressDialogRoomsTotal);
+    mMapProgressStandaloneMaximum = static_cast<int>(mProgressDialogRoomsTotal);
     warnIfMapProgressUnwired(__func__, false);
     //: This is a title of a progress window.
     emit signal_mapJsonProgressStart(tr("Map JSON import"),
@@ -3265,7 +3283,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
                                                   QString::number(mProgressDialogRoomsTotal),
                                                   QLatin1String("0"),
                                                   QString::number(mProgressDialogLabelsTotal)),
-                                     (allowUserCancellation ? tr("Abort") : QString()),
+                                     tr("Abort"),
                                      static_cast<int>(mProgressDialogRoomsTotal));
     emit signal_mapProgressSetValue(0);
     qApp->processEvents();
@@ -3344,9 +3362,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i);
         ++mProgressDialogAreasCount;
         if (incrementJsonProgressDialog(false, true, 0)) {
-            if (allowUserCancellation) {
-                abort = true;
-            }
+            abort = true;
             break;
         }
         // This will populate the TRoomDB::areas and TRoomDB::areaNameMap:
@@ -3354,7 +3370,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     }
     if (abort) {
         emit signal_mapProgressClose();
-        mStandaloneMapProgress = false;
+        mMapProgressStandalone = false;
         mDefaultAreaName = oldDefaultAreaName;
         mUnnamedAreaName = oldUnnamedName;
         return {false, (translatableTexts ? tr("aborted by user") : qsl("aborted by user"))};
@@ -3387,7 +3403,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         mpMapper->mp2dMap->setPlayerRoomStyle(mPlayerRoomStyle);
     }
     emit signal_mapProgressClose();
-    mStandaloneMapProgress = false;
+    mMapProgressStandalone = false;
     return {true, QString()};
 }
 
