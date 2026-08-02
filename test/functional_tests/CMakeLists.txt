@@ -33,6 +33,7 @@ set(FUNCTIONAL_TEST_SOURCES
     MapRoundTripTest.cpp
     UndoServerWrapTest.cpp
     ActionSelfUninstallTest.cpp
+    DialogTeardownTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS

@@ -1413,6 +1413,15 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     }
 }
 
+dlgTriggerEditor::~dlgTriggerEditor()
+{
+    // ~QWidget closes the editor once this destructor is done, and whichever
+    // of the item fields has the keyboard focus then emits editingFinished()
+    // into one of the slot_saveProperty_...() slots when this object is no
+    // longer a valid receiver (#9574)
+    utils::disconnectChildSignals(this);
+}
+
 void dlgTriggerEditor::slot_searchSplitterMoved(const int pos, const int index)
 {
     Q_UNUSED(pos)
