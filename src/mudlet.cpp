@@ -2203,6 +2203,10 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadProgress, pConsole, &TMainConsole::updatePackageDownloadProgress, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadFinished, pConsole, &TMainConsole::closePackageDownloadProgress, Qt::UniqueConnection);
 
+    connect(pH, &Host::signal_showMapperScriptReminder, pConsole, &TMainConsole::showMapperScriptReminder, Qt::UniqueConnection);
+    connect(pH, &Host::signal_showUnpackingProgress, pConsole, &TMainConsole::showUnpackingProgress, Qt::UniqueConnection);
+    connect(pH, &Host::signal_hideUnpackingProgress, pConsole, &TMainConsole::closeUnpackingProgress, Qt::UniqueConnection);
+
     if (pH->mpMedia) {
         // Pin DirectConnection so the bool& out-parameter is filled synchronously, never queued.
         connect(pH->mpMedia.data(), &TMedia::signal_setupVideoOutput, pConsole, &TMainConsole::setupVideoOutput, static_cast<Qt::ConnectionType>(Qt::DirectConnection | Qt::UniqueConnection));
@@ -4218,8 +4222,8 @@ void mudlet::slot_showMapperDialog()
             mpCurrentMapDockWidget = nullptr;
 
             // Restore the host's default mapper if it exists
-            if (pHost->mpDockableMapWidget) {
-                auto hostMapWidget = pHost->mpDockableMapWidget->widget();
+            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
+                auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
 
                 if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
                     pMap->mpMapper = hostMapper;
@@ -4231,8 +4235,8 @@ void mudlet::slot_showMapperDialog()
     }
 
     // If the host already has its default dock widget, hide it to avoid conflicts
-    if (pHost->mpDockableMapWidget) {
-        pHost->mpDockableMapWidget->setVisible(false);
+    if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
+        pHost->mpConsole->mpDockableMapWidget->setVisible(false);
     }
 
     // Create a new docked mapper widget for this profile in the main window
@@ -4323,8 +4327,8 @@ void mudlet::slot_showMapperDialog()
             }
 
             // Restore the host's default mapper when hiding
-            if (pHost->mpDockableMapWidget) {
-                auto hostMapWidget = pHost->mpDockableMapWidget->widget();
+            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
+                auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
 
                 if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
                     pMap->mpMapper = hostMapper;
@@ -8706,8 +8710,8 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
                 // Restore host's default mapper for the other profile
                 if (auto pHost = mHostManager.getHost(dockProfileName)) {
                     if (auto pMap = pHost->mpMap.data()) {
-                        if (pHost->mpDockableMapWidget) {
-                            auto hostMapWidget = pHost->mpDockableMapWidget->widget();
+                        if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
+                            auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
 
                             if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
                                 pMap->mpMapper = hostMapper;

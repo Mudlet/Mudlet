@@ -38,6 +38,8 @@
 
 class TMediaPlayer;
 class TTextBox;
+class QDialog;
+class QDockWidget;
 class QProgressDialog;
 
 class TMainConsole : public TConsole
@@ -95,6 +97,10 @@ public:
     void showPackageDownloadProgress(const QString& title, const QString& cancelText);
     void updatePackageDownloadProgress(qint64 got, qint64 total);
     void closePackageDownloadProgress();
+    void createMapperDock(const QString& title, const QString& objectName);
+    void showMapperScriptReminder();
+    void showUnpackingProgress(const QString& message, const QString& title);
+    void closeUnpackingProgress();
     void setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
     void hideVideoOutput(TMediaPlayer* player);
     const QString& getSystemSpellDictionary() const { return mSpellDic; }
@@ -131,6 +137,8 @@ public:
     QTextStream mLogStream;
     bool mLogToLogFile = false;
     QPointer<QProgressDialog> mpPackageDownloadProgressDialog;
+    QPointer<QDockWidget> mpDockableMapWidget;
+    QPointer<QDialog> mpUnpackingDialog;
 
 
 public slots:
