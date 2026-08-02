@@ -93,6 +93,16 @@ describe("Tests functionality of Geyser.Window", function()
       assert.are.equal("remembered\n", console.message)
       assert.are.equal("remembered", lastLine("gwsConsole"))
     end)
+
+    it("echo without a message redisplays the stored one instead of wiping it", function()
+      console:echo("kept\n")
+      local lines = getLineCount("gwsConsole")
+      console:echo()
+      assert.are.equal("kept\n", console.message)
+      -- the line count pins that it was written again, not merely left alone
+      assert.are.equal(lines + 1, getLineCount("gwsConsole"))
+      assert.are.equal("kept", lastLine("gwsConsole"))
+    end)
   end)
 
   describe("Geyser.Window:getFgColor/getBgColor/setBgColor/setFgColor", function()
