@@ -110,7 +110,7 @@ end)
 -- Geometry, visibility and text readback for Geyser.Label, asserted against
 -- the widget itself through getWindowGeometry/windowVisible/getLabelText
 -- rather than by spying on the echo call.
-describe("Geyser.Label widget state", function()
+describe("Tests functionality of Geyser.Label widget state", function()
   local created
 
   local function geometry(name)
@@ -143,7 +143,7 @@ describe("Geyser.Label widget state", function()
     created = {}
   end)
 
-  describe("Geyser.Label:new and Geyser.Label:new2", function()
+  describe("Geyser.Label:new/new2", function()
     it("creates a visible label widget at the constrained geometry", function()
       local label = track(Geyser.Label:new({name = "glsNew", x = 15, y = 25, width = 120, height = 40}))
       assert.are.equal("label", label.type)
@@ -189,7 +189,7 @@ describe("Geyser.Label widget state", function()
     end)
   end)
 
-  describe("Geyser.Label:echo, rawEcho and clear", function()
+  describe("Geyser.Label:echo/rawEcho/decho/hecho/cecho and Geyser.Label:clear", function()
     local label
 
     before_each(function()
@@ -243,11 +243,17 @@ describe("Geyser.Label widget state", function()
 
     it("decho, hecho and cecho put their colours into the markup", function()
       label:decho("<0,0,255>blue")
-      assert.is_truthy(getLabelText("glsText"):find("blue", 1, true))
+      local blue = getLabelText("glsText")
+      assert.is_truthy(blue:find("blue", 1, true))
+      assert.is_truthy(blue:find("color: rgb(0, 0, 255)", 1, true))
       label:hecho("|cff0000red")
-      assert.is_truthy(getLabelText("glsText"):find("red", 1, true))
+      local red = getLabelText("glsText")
+      assert.is_truthy(red:find("red", 1, true))
+      assert.is_truthy(red:find("color: rgb(255, 0, 0)", 1, true))
       label:cecho("<green>green")
-      assert.is_truthy(getLabelText("glsText"):find("green", 1, true))
+      local green = getLabelText("glsText")
+      assert.is_truthy(green:find("green", 1, true))
+      assert.is_truthy(green:find("color: rgb(0, 255, 0)", 1, true))
     end)
   end)
 
@@ -344,7 +350,7 @@ describe("Geyser.Label widget state", function()
     end)
   end)
 
-  describe("Geyser.Label:getSizeHint and the auto adjust family", function()
+  describe("Geyser.Label:getSizeHint and Geyser.Label auto-size adjustSize/adjustHeight/adjustWidth/autoAdjustSize/enableAutoAdjustSize/disableAutoAdjustSize", function()
     local label
 
     before_each(function()
@@ -356,7 +362,8 @@ describe("Geyser.Label widget state", function()
       local width, height = label:getSizeHint()
       assert.is_true(width > 0)
       assert.is_true(height > 0)
-      assert.is_true(width < 400)
+      -- the hint comes from the font metrics, so it is only bounded loosely
+      assert.is_true(width < 400, "size hint width was " .. tostring(width))
     end)
 
     it("adjustSize resizes the widget to the hint", function()
@@ -438,7 +445,7 @@ describe("Geyser.Label widget state", function()
 
   describe("Geyser.Label:type_delete", function()
     it("deletes the widget with the object", function()
-      local label = Geyser.Label:new({name = "glsDelete", x = 0, y = 0, width = 40, height = 20})
+      local label = track(Geyser.Label:new({name = "glsDelete", x = 0, y = 0, width = 40, height = 20}))
       assert.is_not_nil(getWindowGeometry("glsDelete"))
       label:delete()
       assert.is_nil(getWindowGeometry("glsDelete"))
@@ -446,7 +453,7 @@ describe("Geyser.Label widget state", function()
     end)
 
     it("clears the nested label bookkeeping", function()
-      local label = Geyser.Label:new({name = "glsNested", x = 0, y = 0, width = 40, height = 20})
+      local label = track(Geyser.Label:new({name = "glsNested", x = 0, y = 0, width = 40, height = 20}))
       label.nestedLabels = {"something"}
       label:delete()
       assert.are.same({}, label.nestedLabels)

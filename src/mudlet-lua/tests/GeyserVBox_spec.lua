@@ -34,7 +34,7 @@ describe("Tests functionality of Geyser.VBox", function()
     created = {}
   end)
 
-  describe("Geyser.VBox:new and Geyser.VBox:new2", function()
+  describe("Geyser.VBox:new/new2", function()
     it("defaults the type to VBox and starts empty", function()
       local box = track(Geyser.VBox:new({name = "gvbNew", x = 0, y = 0, width = 100, height = 100}))
       assert.are.equal("VBox", box.type)
@@ -50,7 +50,7 @@ describe("Tests functionality of Geyser.VBox", function()
     end)
   end)
 
-  describe("Geyser.VBox:add and Geyser.VBox:organize", function()
+  describe("Geyser.VBox:add/organize", function()
     it("gives a single child the whole box", function()
       local box = track(Geyser.VBox:new({name = "gvbOne", x = 10, y = 20, width = 200, height = 100}))
       track(Geyser.Label:new({name = "gvbOneChild"}, box))

@@ -1,11 +1,15 @@
 -- Geyser.Window is the abstract base for the Mudlet primitives that hold text.
 -- Its methods are exercised through a Geyser.MiniConsole, the simplest
 -- subclass that owns a real widget, and read back with the console getters.
--- Selects the most recently echoed line so getCurrentLine/getTextFormat report
--- on it. Mudlet does not count the empty line the trailing newline leaves
--- behind, so the last written line is the last one getLineCount knows about.
+
+-- Selects the line last written by a newline terminated echo so
+-- getCurrentLine/getTextFormat report on it. getLineCount returns the index of
+-- the console's last line rather than a count, and the trailing newline leaves
+-- the cursor on that (still empty) last line, so the text is one line above it.
 local function lastLine(name)
-  moveCursor(name, 0, getLineCount(name) - 1)
+  local index = getLineCount(name) - 1
+  assert.is_true(index >= 0, "nothing has been echoed to " .. name .. " yet")
+  moveCursor(name, 0, index)
   selectCurrentLine(name)
   return getCurrentLine(name)
 end
@@ -58,7 +62,7 @@ describe("Tests functionality of Geyser.Window", function()
     end)
   end)
 
-  describe("Geyser.Window:echo, cecho, decho and hecho", function()
+  describe("Geyser.Window:echo/cecho/decho/hecho", function()
     it("echoes plain text and remembers the message", function()
       console:echo("plain line\n")
       assert.are.equal("plain line\n", console.message)
@@ -91,7 +95,7 @@ describe("Tests functionality of Geyser.Window", function()
     end)
   end)
 
-  describe("Geyser.Window:setFgColor, setBgColor, getFgColor and getBgColor", function()
+  describe("Geyser.Window:getFgColor/getBgColor/setBgColor/setFgColor", function()
     it("round-trips the foreground colour", function()
       console:setFgColor(255, 0, 0)
       console:echo("coloured\n")
@@ -125,7 +129,7 @@ describe("Tests functionality of Geyser.Window", function()
     end)
   end)
 
-  describe("Geyser.Window:setTextFormat, setBold, setUnderline and setItalics", function()
+  describe("Geyser.Window:setTextFormat/setBold/setUnderline/setItalics", function()
     it("starts out with no attributes set", function()
       console:echo("first\n")
       lastLine("gwsConsole")

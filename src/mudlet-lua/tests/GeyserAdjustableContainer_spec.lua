@@ -138,6 +138,28 @@ describe("Tests functionality of Adjustable.Container", function()
         container:delete()
       end
       container = nil
+      -- Deleting an Adjustable.Container does not take its right click menu
+      -- labels with it: they are registered as top level Geyser objects, so
+      -- the cascade never reaches them. Sweep them by name, and unregister
+      -- the container from Adjustable's own bookkeeping, so nothing of this
+      -- spec is left behind for the rest of the suite.
+      local leftovers = {}
+      for name in pairs(Geyser.windowList) do
+        if name:find("^gasContainer") then
+          leftovers[#leftovers + 1] = name
+        end
+      end
+      for _, name in ipairs(leftovers) do
+        local object = Geyser.windowList[name]
+        if object then
+          object:delete()
+        end
+      end
+      Adjustable.Container.all.gasContainer = nil
+      local index = table.index_of(Adjustable.Container.all_windows, "gasContainer")
+      if index then
+        table.remove(Adjustable.Container.all_windows, index)
+      end
     end)
 
     it("puts its backdrop label over the container's geometry", function()
@@ -196,15 +218,19 @@ describe("Tests functionality of Adjustable.Container", function()
       local minimized = geometry("gasContaineradjLabel")
       assert.are.equal(200, minimized.width)
       assert.is_true(minimized.height < 200)
-      assert.are.equal(container.buttonsize + 10, minimized.height)
+      -- buttonsize is stored as a string, hence the conversion
+      assert.are.equal(tonumber(container.buttonsize) + 10, minimized.height)
       container:restore()
       assert.is_false(container.minimized)
       assert.are.same({x = 20, y = 30, width = 200, height = 200}, geometry("gasContaineradjLabel"))
     end)
 
-    it("deletes all of its widgets", function()
+    it("deletes the container and its backdrop label", function()
+      -- the right click menu labels it created are not part of the cascade,
+      -- so they are swept by name in after_each instead
       container:delete()
       assert.is_nil(getWindowGeometry("gasContaineradjLabel"))
+      assert.is_nil(getWindowGeometry("gasContainerexitLabel"))
       assert.is_nil(Geyser.windowList.gasContainer)
     end)
   end)
