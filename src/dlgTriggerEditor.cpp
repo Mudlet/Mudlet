@@ -15291,10 +15291,10 @@ void dlgTriggerEditor::slot_saveProperty_ActionBarFillerOffset()
     }
 
     QString oldStateXML = exportActionToXML(pT);
-    pT->setButtonColumns(newValue);
+    pT->setButtonFillerOffset(newValue);
     QString newStateXML = exportActionToXML(pT);
 
-    pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("barFillerOffset"), oldStateXML, newStateXML);
+    pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("buttonFillerOffset"), oldStateXML, newStateXML);
 }
 
 void dlgTriggerEditor::slot_saveProperty_ActionBarOrientation()
