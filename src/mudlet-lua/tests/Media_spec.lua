@@ -911,9 +911,7 @@ describe("Tests the text-to-speech Lua API", function()
         collect("ttsVoiceChanged", changes)
         finally(function() ttsSetVoiceByName(originalVoice) end)
 
-        -- ttsSetVoiceByName's return value is deliberately not asserted here;
-        -- see the pending spec below for why.
-        ttsSetVoiceByName(voices[2])
+        assert.is_true(ttsSetVoiceByName(voices[2]))
         assert.equals(voices[2], ttsGetCurrentVoice())
         assert.is_true(ttsSetVoiceByIndex(1))
         assert.equals(voices[1], ttsGetCurrentVoice())
@@ -924,26 +922,48 @@ describe("Tests the text-to-speech Lua API", function()
         if noMockEngine() then
           return
         end
-        -- Not asserted, because it does not hold: ttsSpeak() calls say() before
-        -- it stores the text, and the engine changes state inside say(), so the
-        -- event is raised while the previous utterance is still recorded as the
-        -- current one. ttsGetCurrentLine() is correct, and the spec above uses
-        -- it; the event's own argument lags one utterance behind. The queue
-        -- drain path in ttsStateChanged() has the same ordering.
-        pending("ttsSpeechStarted reports the previously spoken text, not the one that just started")
+        -- Regression #9591: the text used to be recorded after say() returned,
+        -- and the engine changes state inside say(), so the event carried the
+        -- previous utterance. The handler has to be armed up front because the
+        -- event is raised before ttsSpeak() returns.
+        local started = {}
+        collect("ttsSpeechStarted", started)
+
+        ttsSpeak("first spoken line")
+        assert.same({"first spoken line"}, started)
+
+        ttsSkip()
+        ttsSpeak("second spoken line")
+        assert.same({"first spoken line", "second spoken line"}, started)
+
+        -- the queue drain in ttsStateChanged had the same ordering
+        ttsQueue("line taken off the queue")
+        ttsSkip()
+        assert.same({"first spoken line", "second spoken line", "line taken off the queue"}, started)
       end)
 
       it("ttsSetVoiceByName reports success for a voice it switched to", function()
         if noMockEngine() then
           return
         end
-        -- Not asserted, because it does not hold: ttsSetVoiceByName pushes its
-        -- boolean result onto the Lua stack before raising ttsVoiceChanged, and
-        -- dispatching that event clears the stack underneath it, so the caller
-        -- is handed whatever is left there (a C function, in practice) instead
-        -- of true. Its sibling ttsSetVoiceByIndex pushes after raising the
-        -- event and does return true, which is what the spec above checks.
-        pending("ttsSetVoiceByName's return value is destroyed by the ttsVoiceChanged event it raises")
+        local voices = ttsGetVoices()
+        if #voices < 2 then
+          pending("the mock engine offers only one voice in this environment")
+          return
+        end
+        -- Regression #9590: the result used to be pushed onto the Lua stack
+        -- before ttsVoiceChanged was raised, and dispatching that event clears
+        -- the stack underneath it, so the caller was handed stack garbage. A
+        -- handler must be listening for the event to reach Lua at all, which is
+        -- what collect() arranges here.
+        local changes = {}
+        collect("ttsVoiceChanged", changes)
+        local originalVoice = ttsGetCurrentVoice()
+        finally(function() ttsSetVoiceByName(originalVoice) end)
+
+        assert.is_true(ttsSetVoiceByName(voices[2]))
+        assert.equals(voices[2], ttsGetCurrentVoice())
+        assert.same({voices[2]}, changes)
       end)
     end)
   end)
