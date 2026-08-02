@@ -128,6 +128,23 @@ describe("Tests functionality of Geyser.Gauge", function()
       assert.is_false(ok)
       assert.is_truthy(tostring(message):find("maxValue as number expected, got string", 1, true))
     end)
+
+    it("refuses a maximum that is not positive instead of going infinite", function()
+      gauge:setValue(25)
+      -- a zero maximum used to leave value at inf, a negative one at a negative
+      -- value, and both stuck until the next good call
+      for _, bad in ipairs({0, -10, 0 / 0}) do
+        local result, message = gauge:setValue(5, bad)
+        assert.is_nil(result)
+        assert.is_not_nil(message)
+        assert.is_truthy(message:find("maxValue must be a positive number", 1, true))
+      end
+      -- refusing is not fatal, and leaves the gauge on the value it already had
+      assert.are.equal(25, gauge.value)
+      assert.are.equal(50, geometry("ggsValue_front").width)
+      -- a good reading has to be distinguishable from those refusals
+      assert.is_true(gauge:setValue(50, 100))
+    end)
   end)
 
   describe("Geyser.Gauge orientations", function()
@@ -163,6 +180,18 @@ describe("Tests functionality of Geyser.Gauge", function()
       local gauge = track(Geyser.Gauge:new({name = "ggsTwoValue", x = 0, y = 0, width = 200, height = 100}))
       gauge:setStyleSheet("margin: 10px 30px;", "margin: 10px 30px;")
       assert.are.same({x = 30, y = 10, width = 140, height = 80}, geometry("ggsTwoValue_front"))
+    end)
+
+    it("reads a three value margin as top, horizontal, bottom", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsThreeValue", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("margin: 10px 20px 30px;", "margin: 10px 20px 30px;")
+      assert.are.same({x = 20, y = 10, width = 160, height = 60}, geometry("ggsThreeValue_front"))
+    end)
+
+    it("reads a three value padding the same way as a margin", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsThreePadding", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("padding: 4px 6px 8px;", "padding: 4px 6px 8px;")
+      assert.are.same({x = 6, y = 4, width = 188, height = 88}, geometry("ggsThreePadding_front"))
     end)
 
     it("reads a four value margin as top, right, bottom, left", function()
