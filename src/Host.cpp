@@ -1823,9 +1823,9 @@ QList<int> Host::getStopWatchIds() const
 std::shared_ptr<TConsoleModel> Host::sharedMainConsoleModel()
 {
     if (!mpMainConsoleModel) {
-        // Created without a view; the view (re)binds the buffer's back-pointer
-        // when it attaches (TConsole::TConsole).
-        mpMainConsoleModel = std::make_shared<TConsoleModel>(this, nullptr);
+        // Created without a view; the view binds the buffer's back-pointer when
+        // it attaches (TConsole::TConsole) and unbinds it when it goes away.
+        mpMainConsoleModel = std::make_shared<TConsoleModel>(this);
     }
     return mpMainConsoleModel;
 }
@@ -1835,10 +1835,9 @@ TConsoleModel& Host::mainConsoleModel()
     return *sharedMainConsoleModel();
 }
 
-// libmudlet Wave 3 step 2 (spike): the per-line trigger orchestration used to
-// live on the main-console widget (TMainConsole::runTriggers). It drives model
-// state only, so it now runs on Host against the core model - proving the
-// pipeline needs no view.
+// The per-line trigger orchestration used to live on the main-console widget
+// (TMainConsole::runTriggers). It drives model state only, so it runs here
+// against the core model and needs no view (#8681).
 void Host::runTriggers(int line)
 {
     TConsoleModel& consoleModel = mainConsoleModel();

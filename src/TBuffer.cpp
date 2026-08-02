@@ -4685,6 +4685,9 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
 
     // Use a 1-second debounce to prevent duplicate injection from echo + server response
     if (text.contains("!osc8-docs")) {
+        if (mpHost.isNull() || mpHost->mpConsole.isNull()) {
+            return; // Still don't display the trigger phrase itself
+        }
         const qint64 now = QDateTime::currentMSecsSinceEpoch();
         TBuffer& mainBuffer = mpHost->mpConsole->buffer;
 
@@ -5037,7 +5040,10 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
 // This only works on the Main Console for a profile
 void TBuffer::log(int fromLine, int toLine)
 {
-    if (mpHost.isNull()) {
+    // The log destination lives on the main console view, which the model this
+    // buffer belongs to can outlive (Host co-owns it), so there is nowhere to
+    // log to once the view has gone:
+    if (mpHost.isNull() || mpHost->mpConsole.isNull()) {
         return;
     }
 
@@ -5087,6 +5093,10 @@ QString TBuffer::assembleLog(int fromLine, int toLine)
 // logs the remaining output when logging gets stopped, without duplication checks
 void TBuffer::logRemainingOutput()
 {
+    if (mpHost.isNull() || mpHost->mpConsole.isNull()) {
+        return;
+    }
+
     mpHost->mpConsole->mLogStream << lastTextToLog;
     mpHost->mpConsole->mLogStream.flush();
 
@@ -5100,6 +5110,10 @@ void TBuffer::logRemainingOutput()
 // logs a string directly to the log file
 void TBuffer::appendLog(const QString& text)
 {
+    if (mpHost.isNull() || mpHost->mpConsole.isNull()) {
+        return;
+    }
+
     TBuffer* pB = &mpHost->mpConsole->buffer;
     if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
         return;
@@ -5490,8 +5504,10 @@ void TBuffer::shrinkBuffer()
         mCursorY--;
     }
     // We need to adjust the search result line as some lines have now gone
-    // away:
-    mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
+    // away - there is nothing to adjust when the model has no view attached:
+    if (mpConsole) {
+        mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
+    }
     mPreTriggerPassLineNumber = -1;
 
     // The removed leading lines shift every remaining index down; keep the
@@ -5512,7 +5528,9 @@ void TBuffer::shrinkBuffer()
     // Clean up unreferenced links after removing old lines
     clearLinkState();
 
-    if (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer)) {
+    // The event is keyed on the console's name, which lives on the view until
+    // the name registries move into the model, so a view-less model stays quiet:
+    if (mpConsole && (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer))) {
         // Signal to lua subsystem that indexes into the Console will need adjusting
         TEvent bufferShrinkEvent{};
         bufferShrinkEvent.mArgumentList.append(QLatin1String("sysBufferShrinkEvent"));

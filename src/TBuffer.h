@@ -300,9 +300,17 @@ public:
     ~TBuffer();
     TBuffer(const TBuffer& other);
     TBuffer& operator=(const TBuffer& other);
-    // libmudlet Wave 3 step 2: the main console's model outlives any single view,
-    // so its buffer's back-pointer is (re)bound when a view attaches.
+    // The main console's model can outlive the view built on it, so this
+    // back-pointer is bound when a view attaches and unbound when it goes away.
     void setConsole(TConsole* pConsole) { mpConsole = pConsole; }
+    // Ignores views other than the bound one, so a departing view cannot orphan
+    // a successor that has already attached.
+    void detachConsole(const TConsole* pConsole)
+    {
+        if (mpConsole.data() == pConsole) {
+            mpConsole = nullptr;
+        }
+    }
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);

@@ -351,12 +351,12 @@ public:
     QPointer<TDockWidget> mpDockWidget;
     QPointer<TCommandLine> mpCommandLine;
 
-    // libmudlet Wave 3, step 2 (spike): the buffer, cursor/prompt state and
-    // fg/bg colours now live in a core TConsoleModel reached through model().
-    // For the main console the model is co-owned with Host (which drives the
-    // trigger pipeline through it - see Host::runTriggers); sub-consoles own
-    // their model. The members below are references that alias the model so the
-    // existing buffer/mFgColor/... accesses across the codebase are unchanged.
+    // The buffer, cursor/prompt state and fg/bg colours live in a core
+    // TConsoleModel reached through model(). For the main console that model is
+    // co-owned with Host (which drives the trigger pipeline through it - see
+    // Host::runTriggers); sub-consoles own theirs. The members below are
+    // references aliasing the model, so the existing buffer/mFgColor/...
+    // accesses across the codebase are unchanged.
     std::shared_ptr<TConsoleModel> mpOwnedModel;
     TConsoleModel* mpModel = nullptr;
     TBuffer& buffer;

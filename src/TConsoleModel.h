@@ -27,16 +27,13 @@
 #include <QString>
 
 class Host;
-class TConsole;
 
-// libmudlet Wave 3, step 2 (de-risk spike): the per-console data model.
-//
-// This is the slice of former TConsole-base state that the telnet -> trigger
-// pipeline drives without needing a widget: the text buffer, the cursor/prompt
-// state runTriggers() updates on every line, and the fg/bg colours that
-// colour-triggers match against. Extracting it is the make-or-break step of the
-// libmudlet console-model split - once this lives outside the widget, Host can
-// run the per-line pipeline (Host::runTriggers) against a model with no view.
+// The per-console data model: the slice of former TConsole state that the
+// telnet -> trigger pipeline drives without needing a widget. That is the text
+// buffer, the cursor/prompt state Host::runTriggers() updates on every line,
+// and the fg/bg colours colour-triggers match against. Splitting it out of the
+// widget is what lets the pipeline run with no view at all, which is the point
+// of the Widgets-free core (#8681).
 //
 // The main console's model is co-owned by Host (see Host::sharedMainConsoleModel)
 // so the pipeline outlives the view; sub-consoles own their own model. Every
@@ -45,8 +42,8 @@ class TConsole;
 // the existing accesses across the codebase are preserved unchanged.
 struct TConsoleModel
 {
-    explicit TConsoleModel(Host* pHost, TConsole* pConsole = nullptr)
-    : buffer(pHost, pConsole)
+    explicit TConsoleModel(Host* pHost)
+    : buffer(pHost)
     {
     }
 

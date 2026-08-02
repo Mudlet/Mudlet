@@ -268,9 +268,9 @@ public:
     LuaInterface* getLuaInterface() { return mLuaInterface.data(); }
 
     void incomingStreamProcessor(const QString& paragraph, int line);
-    // libmudlet Wave 3 step 2 (spike): the main console's data model lives in
-    // core, co-owned by Host so the per-line trigger pipeline (runTriggers) can
-    // drive it without a view. The view reaches the same instance via model().
+    // The main console's data model lives in core, co-owned by Host so the
+    // per-line trigger pipeline (runTriggers) can drive it without a view. The
+    // view reaches the same instance via TConsole::model().
     TConsoleModel& mainConsoleModel();
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
     void runTriggers(int line);
@@ -532,7 +532,9 @@ public:
     // have to maintain a separate one here in this class which does not, as
     // something derived from a QObject, have one:
     QPointer<TMainConsole> mpConsole;
-    // Co-owned with the main-console view (TConsole); see mainConsoleModel().
+    // Co-owned with the main-console view rather than owned outright: mudlet
+    // destroys the Host before the lingering console widget, so a Host-owned
+    // model would leave the view's aliasing references dangling.
     std::shared_ptr<TConsoleModel> mpMainConsoleModel;
     cTelnet mTelnet;
     QPointer<dlgPackageManager> mpPackageManager;
