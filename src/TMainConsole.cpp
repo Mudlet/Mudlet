@@ -1798,8 +1798,11 @@ void TMainConsole::disableMapProgressDialogCancel()
     if (mpMapProgressDialog) {
         // Taking the button away does not stop a window-close from emitting
         // canceled(), so drop the connection as well - by this point the
-        // operation can no longer be stopped.
-        disconnect(mpMapProgressDialog, &QProgressDialog::canceled, nullptr, nullptr);
+        // operation can no longer be stopped. Only ours goes, leaving
+        // QProgressDialog's own canceled() -> cancel() wiring intact.
+        if (auto pHost = getHost(); pHost && !pHost->mpMap.isNull()) {
+            disconnect(mpMapProgressDialog, &QProgressDialog::canceled, pHost->mpMap.data(), &TMap::slot_mapProgressDialogCancelled);
+        }
         mpMapProgressDialog->setCancelButton(nullptr);
     }
 }
