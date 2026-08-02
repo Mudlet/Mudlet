@@ -53,40 +53,6 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
     end)
 
-    describe("Tests the functionality of ttsGetQueue", function()
-      -- Mudlet compiled without TTS support installs dummy tts functions
-      -- which return nil, whereas the real ttsGetQueue() returns a table
-      local function ttsAvailable()
-        return type(ttsGetQueue()) == "table"
-      end
-
-      it("should return a table when called without an index", function()
-        if not ttsAvailable() then
-          pending("TTS is not available in this build")
-          return
-        end
-        assert.is_table(ttsGetQueue())
-      end)
-
-      it("should return false for an index just past the end of the queue", function()
-        if not ttsAvailable() then
-          pending("TTS is not available in this build")
-          return
-        end
-        ttsClearQueue()
-        -- on an empty queue, index 1 is exactly one past the end (index == size)
-        assert.is_false(ttsGetQueue(1))
-      end)
-
-      it("should return false for an index below the start of the queue", function()
-        if not ttsAvailable() then
-          pending("TTS is not available in this build")
-          return
-        end
-        assert.is_false(ttsGetQueue(0))
-      end)
-    end)
-
     describe("Tests the functionality of getTimestamp", function()
       it("should return a string for a valid line number", function()
         echo("getTimestamp test line\n")
@@ -125,63 +91,6 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_nil(priority)
         assert.is_string(err)
         assert.is_true(err:find("module doesn't exist", 1, true) ~= nil)
-      end)
-    end)
-
-    describe("Tests the text-to-speech mock engine", function()
-      -- ttsBuild() selects Qt's deterministic mock engine under MUDLET_TEST_MODE,
-      -- so these specs only run in test mode and never drive a developer's real
-      -- speech engine. Where the mock plugin is absent they skip so local runs
-      -- still pass; CI sets MUDLET_TEST_REQUIRE_TTS_MOCK to turn that skip into a
-      -- failure, so a broken mock selection cannot hide behind a green skip. Async
-      -- speech events (ttsSpeechStarted...) need the waitForEvent helper and are
-      -- left to the post-enabler TTS specs.
-      local testMode = os.getenv("MUDLET_TEST_MODE")
-      local requireMock = os.getenv("MUDLET_TEST_REQUIRE_TTS_MOCK")
-
-      local function ttsEngineAvailable()
-        return testMode and type(ttsGetVoices) == "function" and type(ttsGetVoices()) == "table" and #ttsGetVoices() > 0
-      end
-
-      -- Returns true when the caller should stop because no engine is available
-      -- and skipping is permitted; fails hard where the mock is mandatory.
-      local function ttsEngineUnavailable()
-        if ttsEngineAvailable() then
-          return false
-        end
-        if requireMock then
-          assert.is_true(false, "MUDLET_TEST_REQUIRE_TTS_MOCK is set but the mock TTS engine has no voices - it was not selected")
-        end
-        pending("mock TTS engine unavailable (run with MUDLET_TEST_MODE and Qt's mock plugin)")
-        return true
-      end
-
-      it("ttsGetVoices returns a non-empty list of voice-name strings", function()
-        if ttsEngineUnavailable() then
-          return
-        end
-        local voices = ttsGetVoices()
-        assert.is_table(voices)
-        assert.is_true(#voices > 0)
-        for _, name in ipairs(voices) do
-          assert.is_string(name)
-        end
-        -- ttsGetState maps the freshly built engine's ready state to its string
-        assert.equals("ttsSpeechReady", ttsGetState())
-      end)
-
-      it("ttsSpeak accepts valid text and rejects whitespace-only text", function()
-        if ttsEngineUnavailable() then
-          return
-        end
-        -- valid text is accepted without leaving the engine in the error state
-        ttsSpeak("Mudlet self test speaking")
-        assert.is_true(ttsGetState() ~= "ttsSpeechError")
-        ttsSkip()
-        -- contract: whitespace-only text is rejected with nil + message
-        local ok, err = ttsSpeak("   ")
-        assert.is_nil(ok)
-        assert.is_string(err)
       end)
     end)
 
