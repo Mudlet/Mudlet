@@ -33,6 +33,7 @@
 #include <QDialog>
 #include <QDockWidget>
 #include <QLabel>
+#include <QTemporaryDir>
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -202,6 +203,81 @@ private slots:
         QVERIFY2(!console->mpUnpackingDialog, "The re-entrant close should have left no unpacking dialog behind.");
     }
 
+    // The tests above drive the console's handlers directly, so they would all
+    // still pass if the Host -> console connections made in
+    // mudlet::addConsoleForNewHost() were lost (that function is a merge-conflict
+    // hot spot). This one installs a real package instead, so the show and hide
+    // signals have to travel the production wiring to reach the dialog.
+    void test_unpackingDialogDrivenByInstall()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        auto console = host->mpConsole;
+
+        QTemporaryDir packageDir;
+        QVERIFY2(packageDir.isValid(), "Could not create a temporary directory for the test package.");
+        const QString packagePath = packageDir.filePath(qsl("HostWidgetDecouplingPackage.zip"));
+        QVERIFY2(writeEmptyZipArchive(packagePath), "Could not write the test package archive.");
+
+        // installPackage() postpones the whole install (and so emits nothing) if a
+        // profile save is still in flight from loading the profile.
+        QTRY_VERIFY(!host->currentlySavingProfile());
+
+        QSignalSpy showSpy(host, &Host::signal_showUnpackingProgress);
+        QSignalSpy hideSpy(host, &Host::signal_hideUnpackingProgress);
+
+        // Connected after the console's own handler, so it observes the dialog
+        // that handler has just put up - if the wiring is intact.
+        QObject captureContext;
+        bool dialogUpWhileUnpacking = false;
+        QPointer<QDialog> dialogWhileUnpacking;
+        connect(host, &Host::signal_showUnpackingProgress, &captureContext, [&](const QString&, const QString&) {
+            dialogWhileUnpacking = console->mpUnpackingDialog;
+            dialogUpWhileUnpacking = !dialogWhileUnpacking.isNull();
+        });
+
+        auto [ok, message] = host->installPackage(packagePath, enums::PackageModuleType::Package, false);
+        QVERIFY2(ok, qPrintable(message));
+
+        QCOMPARE(showSpy.count(), 1);
+        QCOMPARE(hideSpy.count(), 1);
+        QVERIFY2(dialogUpWhileUnpacking, "Installing a package must put the unpacking dialog up via the Host signal.");
+        QVERIFY2(!console->mpUnpackingDialog, "Finishing the install must take the unpacking dialog down again.");
+        QTest::qWait(50ms); // let the dialog's queued deleteLater() run
+        QVERIFY2(dialogWhileUnpacking.isNull(), "The unpacking dialog was taken down but never disposed of.");
+    }
+
+    // The map dock moved from Host to TMainConsole, so disposing of it is now the
+    // console destructor's job. addDockWidget() reparents the dock onto the main
+    // window, which outlives the profile, so nothing else would clean it up.
+    void test_mapDockDestroyedOnProfileClose()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        host->showHideOrCreateMapper(true);
+        QPointer<QDockWidget> dock = host->mpConsole->mpDockableMapWidget;
+        QVERIFY2(dock, "The mapper dock was not created.");
+
+        // Forcing the close stops TMainConsole::closeEvent() asking whether the
+        // profile should be saved, which would block on a modal dialog here.
+        // requestClose() is the half of the profile-close path that disposes of
+        // the console; the mudlet::closeHost() that normally follows it only
+        // removes the tab and the Host, and would reopen the connection dialog
+        // as the last profile went away.
+        host->forceClose();
+        QVERIFY2(host->requestClose(), "Closing the profile was refused.");
+
+        // Two chained deferred deletes to get through: the console (it carries
+        // WA_DeleteOnClose) and then, from its destructor, the dock.
+        QTest::qWait(500ms);
+        QVERIFY2(dock.isNull(), "Closing the profile must destroy the map dock the console owns.");
+    }
+
     void cleanup()
     {
         delete mpServer;
@@ -245,6 +321,22 @@ private slots:
         if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
+    }
+
+    // Utility function producing the smallest valid zip archive there is: a lone
+    // end-of-central-directory record holding no entries. installPackage() only
+    // has to find a real archive to unpack for the dialog wiring to be exercised;
+    // what is inside it is beside the point here.
+    bool writeEmptyZipArchive(const QString& path)
+    {
+        static const char endOfCentralDirectoryRecord[22] = {'P', 'K', '\x05', '\x06'};
+        QFile archive(path);
+        if (!archive.open(QIODevice::WriteOnly)) {
+            return false;
+        }
+        const bool written = archive.write(endOfCentralDirectoryRecord, sizeof(endOfCentralDirectoryRecord)) == static_cast<qint64>(sizeof(endOfCentralDirectoryRecord));
+        archive.close();
+        return written;
     }
 
     // Utility function
