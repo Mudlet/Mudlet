@@ -100,6 +100,8 @@ private slots:
     void test_loopingTrackKeepsPlayingPastFirstPass()
     {
         auto* media = startProfileAndGetMedia();
+        QVERIFY(media);
+
         const QString fileName = writeClip(qsl("loop.wav"));
         const QString skipReason = backendSkipReason(fileName);
         if (!skipReason.isEmpty()) {
@@ -123,6 +125,8 @@ private slots:
     void test_oneShotTrackIsCleanedUpWhenItFinishes()
     {
         auto* media = startProfileAndGetMedia();
+        QVERIFY(media);
+
         const QString fileName = writeClip(qsl("oneshot.wav"));
         const QString skipReason = backendSkipReason(fileName);
         if (!skipReason.isEmpty()) {
