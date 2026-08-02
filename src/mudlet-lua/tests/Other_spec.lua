@@ -441,6 +441,13 @@ describe("Tests Other.lua functions", function()
       assert.is_false(_comp(true,false))
     end)
 
+    it("compares tables holding false like tables holding any other value", function()
+      assert.is_true(_comp({ key = false }, { key = false }))
+      assert.is_false(_comp({ key = false }, { key = true }))
+      assert.is_false(_comp({ key = false }, {}))
+      assert.is_true(_comp({ outer = { inner = false } }, { outer = { inner = false } }))
+    end)
+
     it("returns true if table B has the same value for every key which table A contains.", function()
       local tableA = { "One", "Two" }
       local tableB = { "One", "Two" }
