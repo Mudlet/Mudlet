@@ -353,17 +353,26 @@ end
 function table.union(...)
   local sets = { ... }
   local union = {}
+  -- `seen` tracks which keys already hold a value, so a legitimate `false`
+  -- is not mistaken for an absent key. `merged` tracks which keys hold a
+  -- subtable that we created, so a table that came from a caller is never
+  -- appended to -- doing that both flattened the result and modified the
+  -- caller's table in place.
+  local seen = {}
+  local merged = {}
 
   for _, set in ipairs(sets) do
     for key, val in pairs(set) do
-      if union[key] and union[key] ~= val then
-        if type(union[key]) == 'table' then
+      if not seen[key] then
+        seen[key] = true
+        union[key] = val
+      elseif union[key] ~= val then
+        if merged[key] then
           table.insert(union[key], val)
         else
           union[key] = { union[key], val }
+          merged[key] = true
         end
-      else
-        union[key] = val
       end
     end
   end
