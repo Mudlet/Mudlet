@@ -161,8 +161,7 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         return;
     }
 
-    QString textToSay;
-    textToSay = speechQueue.takeFirst();
+    const QString textToSay = speechQueue.takeFirst();
 
     // recorded before say() because the engine can switch to Speaking inside
     // that call, and this function reports speechCurrent with the event

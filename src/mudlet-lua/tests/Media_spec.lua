@@ -558,6 +558,20 @@ describe("Tests the text-to-speech Lua API", function()
         return true
       end
 
+      -- Switching voice needs a second voice to switch to. Gated like
+      -- noMockEngine() so a mock engine that stopped offering two voices cannot
+      -- quietly turn the voice-switching specs green by pending them.
+      local function tooFewVoices()
+        if #ttsGetVoices() >= 2 then
+          return false
+        end
+        if requireMock then
+          assert.is_true(false, "MUDLET_TEST_REQUIRE_TTS_MOCK is set but the mock TTS engine offers fewer than two voices")
+        end
+        pending("the mock engine offers only one voice in this environment")
+        return true
+      end
+
       -- Collects every occurrence of an event for the duration of one spec.
       -- The mock engine changes state inside the ttsSpeak()/ttsSkip() call
       -- itself, so the matching event is raised before a waitForEvent() could
@@ -703,7 +717,9 @@ describe("Tests the text-to-speech Lua API", function()
         ttsSpeak("Mudlet spec one")
         assert.equals("ttsSpeechStarted", ttsGetState())
         assert.equals("Mudlet spec one", ttsGetCurrentLine())
-        assert.equals(1, #started)
+        -- the first utterance of a session used to report an empty text here,
+        -- see the ttsSpeechStarted spec below
+        assert.same({"Mudlet spec one"}, started)
 
         assert.equals("ttsSpeechReady", (waitForEvent("ttsSpeechReady", 5000)))
         assert.equals("ttsSpeechReady", ttsGetState())
@@ -898,14 +914,10 @@ describe("Tests the text-to-speech Lua API", function()
       end)
 
       it("the voice setters switch voice and report it back", function()
-        if noMockEngine() then
+        if noMockEngine() or tooFewVoices() then
           return
         end
         local voices = ttsGetVoices()
-        if #voices < 2 then
-          pending("the mock engine offers only one voice in this environment")
-          return
-        end
         local changes = {}
         local originalVoice = ttsGetCurrentVoice()
         collect("ttsVoiceChanged", changes)
@@ -926,20 +938,55 @@ describe("Tests the text-to-speech Lua API", function()
         -- and the engine changes state inside say(), so the event carried the
         -- previous utterance. The handler has to be armed up front because the
         -- event is raised before ttsSpeak() returns.
+        -- The event only fires on a state transition, so the skip between the
+        -- two utterances is required: speaking over an utterance that is still
+        -- running raises no second event at all.
         local started = {}
         collect("ttsSpeechStarted", started)
 
+        ttsClearQueue()
         ttsSpeak("first spoken line")
         assert.same({"first spoken line"}, started)
 
         ttsSkip()
         ttsSpeak("second spoken line")
         assert.same({"first spoken line", "second spoken line"}, started)
+      end)
 
-        -- the queue drain in ttsStateChanged had the same ordering
+      it("ttsSpeechStarted carries the queued line the drain started speaking", function()
+        if noMockEngine() then
+          return
+        end
+        -- Regression #9591 again: the queue drain in ttsStateChanged() had the
+        -- same say()-before-record ordering as ttsSpeak(), so the event named
+        -- the utterance the skip had just ended rather than the queued one that
+        -- replaced it. ttsGetCurrentLine() reads correctly either way, so only
+        -- the event's own argument can catch this.
+        local started = {}
+        collect("ttsSpeechStarted", started)
+
+        ttsClearQueue()
+        ttsSpeak("the line that gets skipped")
         ttsQueue("line taken off the queue")
         ttsSkip()
-        assert.same({"first spoken line", "second spoken line", "line taken off the queue"}, started)
+        assert.same({"the line that gets skipped", "line taken off the queue"}, started)
+      end)
+
+      it("speaking over a busy engine leaves the direct utterance current", function()
+        if noMockEngine() then
+          return
+        end
+        -- Guards the ordering the two specs above rely on: ttsSpeak() records
+        -- the text before say(), so an engine that drained the queue from
+        -- inside say() would leave the queued line reported as the current one
+        -- instead of the utterance actually asked for. Speaking over a busy
+        -- engine does not pass through Ready, so no drain happens.
+        ttsClearQueue()
+        ttsSpeak("the busy utterance")
+        ttsQueue("still queued")
+        ttsSpeak("the direct utterance")
+        assert.equals(1, #ttsGetQueue())
+        assert.equals("the direct utterance", ttsGetCurrentLine())
       end)
 
       it("ttsSetVoiceByName reports success for a voice it switched to", function()
