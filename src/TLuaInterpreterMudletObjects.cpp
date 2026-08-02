@@ -1607,7 +1607,15 @@ int TLuaInterpreter::waitForEvent(lua_State* L)
     const int argsTableIndex = lua_gettop(L);
     // A lua_CFunction is only guaranteed LUA_MINSTACK slots; an event can carry
     // up to LUA_FUNCTION_MAX_ARGS arguments, so grow the stack before pushing.
-    luaL_checkstack(L, argCount + 1, "waitForEvent: too many event arguments to return");
+    // luaL_checkstack() would raise here, stranding eventName, wait.mName and
+    // the registry reference below, so report it the way a timeout is reported
+    if (!lua_checkstack(L, argCount + 1)) {
+        lua_remove(L, argsTableIndex);
+        luaL_unref(L, LUA_REGISTRYINDEX, wait.mArgsRef);
+        lua_pushnil(L);
+        lua_pushstring(L, "waitForEvent: too many event arguments to return");
+        return 2;
+    }
     for (int i = 1; i <= argCount; ++i) {
         lua_rawgeti(L, argsTableIndex, i);
     }
