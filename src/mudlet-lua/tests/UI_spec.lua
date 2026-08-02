@@ -133,11 +133,22 @@ describe("Tests UI functions", function()
       assert.are.equal(windowType("fake commandline"), nil)
     end)
 
+    it("Should identify a scroll box", function()
+      createScrollBox("testscrollbox", 0,0,100,100)
+
+      assert.are.equal(windowType("testscrollbox"), "scrollbox")
+    end)
+
+    it("Should not identify a non-existing scroll box", function()
+      assert.are.equal(windowType("fake scrollbox"), nil)
+    end)
+
     teardown(function()
       deleteLabel("testlabel")
       hideWindow("testuserwindow")
       hideWindow("testminiconsole")
       disableCommandLine("testcommandline")
+      deleteScrollBox("testscrollbox")
     end)
   end)
 
@@ -2755,6 +2766,1326 @@ describe("Window state getters", function()
 
     it("errors when called without a label name", function()
       assert.has_error(function() getLabelText() end)
+    end)
+  end)
+end)
+
+-- Raw window/label API: creation geometry, movement, visibility, text and
+-- state readback. Uses getWindowGeometry/windowVisible/getLabelText plus the
+-- pre-existing getters; Geyser wrappers are covered in the Geyser* specs.
+describe("Window and label state", function()
+  -- user windows cannot be deleted from Lua, so keep the names unique per run
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local function name(base)
+    return base .. suffix
+  end
+
+  -- one shared user window for the whole block: opening one is expensive and
+  -- Lua cannot delete it again, only hide it
+  local sharedUserWindow = name("wlsUserWindow")
+
+  setup(function()
+    -- loadLayout is off so a saved layout cannot move the window under us
+    openUserWindow(sharedUserWindow, false)
+  end)
+
+  teardown(function()
+    hideWindow(sharedUserWindow)
+  end)
+
+  describe("creation, containment and type of window elements", function()
+    local label = name("wlsLabel")
+    local console = name("wlsConsole")
+    local scrollBox = name("wlsScrollBox")
+    local cmdLine = name("wlsCmdLine")
+    local textEdit = name("wlsTextEdit")
+    local userWindow = sharedUserWindow
+    local childLabel = name("wlsChildLabel")
+    local childConsole = name("wlsChildConsole")
+    local scrollBoxLabel = name("wlsScrollBoxLabel")
+
+    setup(function()
+      createLabel(label, 11, 22, 133, 44, 1)
+      createMiniConsole(console, 12, 23, 300, 150)
+      createScrollBox(scrollBox, 13, 24, 120, 90)
+      createCommandLine(cmdLine, 14, 25, 140, 35)
+      createTextEdit(textEdit, 15, 26, 160, 110)
+      createLabel(userWindow, childLabel, 5, 6, 40, 20, 1)
+      createMiniConsole(userWindow, childConsole, 7, 8, 200, 100)
+      createLabel(scrollBox, scrollBoxLabel, 4, 5, 30, 20, 1)
+    end)
+
+    teardown(function()
+      deleteLabel(childLabel)
+      deleteMiniConsole(childConsole)
+      deleteLabel(scrollBoxLabel)
+      deleteLabel(label)
+      deleteMiniConsole(console)
+      deleteScrollBox(scrollBox)
+      deleteCommandLine(cmdLine)
+      deleteTextEdit(textEdit)
+    end)
+
+    -- geometry straight after creation in the main window is covered by the
+    -- "Window state getters" block above; these cover the other two parents
+
+    it("a label created in a user window is positioned inside that window", function()
+      -- the coordinates are relative to the parent, not to the main window
+      assert.are.same({5, 6, 40, 20}, {getWindowGeometry(childLabel)})
+    end)
+
+    it("a miniconsole created in a user window is positioned inside that window", function()
+      assert.are.same({7, 8, 200, 100}, {getWindowGeometry(childConsole)})
+    end)
+
+    it("a label created in a scroll box is positioned inside that scroll box", function()
+      assert.are.same({4, 5, 30, 20}, {getWindowGeometry(scrollBoxLabel)})
+    end)
+
+    it("every created element is visible and reports its own type", function()
+      assert.is_true(windowVisible(label))
+      assert.is_true(windowVisible(console))
+      assert.is_true(windowVisible(scrollBox))
+      assert.is_true(windowVisible(cmdLine))
+      assert.is_true(windowVisible(textEdit))
+      assert.are.equal("label", windowType(label))
+      assert.are.equal("miniconsole", windowType(console))
+      assert.are.equal("commandline", windowType(cmdLine))
+      assert.are.equal("textedit", windowType(textEdit))
+      assert.are.equal("scrollbox", windowType(scrollBox))
+    end)
+
+    it("openUserWindow reports the window as a userwindow and is repeatable", function()
+      assert.are.equal("userwindow", windowType(userWindow))
+      -- re-opening an already open user window re-shows the same dock rather
+      -- than reporting the name as taken
+      assert.is_true(openUserWindow(userWindow, false))
+    end)
+
+    it("openUserWindow refuses a name already taken by a label", function()
+      local ok, err = openUserWindow(label)
+      assert.is_nil(ok)
+      assert.are.equal(("label with the name '%s' already exists"):format(label), err)
+    end)
+
+    it("createLabel on an existing name returns false and a message", function()
+      local ok, err = createLabel(label, 41, 51, 61, 71, 1)
+      assert.is_false(ok)
+      assert.are.equal(("label '%s' already exists"):format(label), err)
+      -- the parented form reports the same way
+      local childOk, childErr = createLabel(userWindow, childLabel, 4, 5, 30, 20, 1)
+      assert.is_false(childOk)
+      assert.are.equal(("label '%s' already exists"):format(childLabel), childErr)
+      -- unlike createMiniConsole/createScrollBox a refused createLabel must leave
+      -- the existing labels alone rather than moving and resizing them
+      assert.are.same({11, 22, 133, 44}, {getWindowGeometry(label)})
+      assert.are.same({5, 6, 40, 20}, {getWindowGeometry(childLabel)})
+    end)
+
+    it("createLabel on a name taken by a miniconsole returns false and a message", function()
+      local ok, err = createLabel(console, 1, 2, 3, 4, 1)
+      assert.is_false(ok)
+      assert.are.equal(("a miniconsole/userwindow with the name '%s' already exists"):format(console), err)
+    end)
+
+    it("createLabel hard-errors on a non-number coordinate", function()
+      -- a string second argument selects the parented form, so the two forms
+      -- report the same argument number for different coordinates
+      local mainOk, mainErr = pcall(createLabel, name("wlsBadCoordLabel"), 0, "here", 40, 40, 1)
+      assert.is_false(mainOk)
+      assert.is_truthy(mainErr:find("createLabel: bad argument #3 type (label y-coordinate", 1, true))
+      local childOk, childErr = pcall(createLabel, userWindow, name("wlsBadCoordChild"), "here", 0, 40, 40, 1)
+      assert.is_false(childOk)
+      assert.is_truthy(childErr:find("createLabel: bad argument #3 type (label x-coordinate", 1, true))
+    end)
+
+    it("createMiniConsole on an existing name moves and resizes it instead", function()
+      local ok, err = createMiniConsole(console, 40, 50, 260, 130)
+      local geometry = {getWindowGeometry(console)}
+      -- put it back before asserting so a failure here cannot cascade
+      createMiniConsole(console, 12, 23, 300, 150)
+      assert.is_false(ok)
+      assert.are.equal(("miniconsole '%s' already exists, moving/resizing '%s'"):format(console, console), err)
+      assert.are.same({40, 50, 260, 130}, geometry)
+    end)
+
+    it("createScrollBox on an existing name moves and resizes it instead", function()
+      local ok, err = createScrollBox(scrollBox, 41, 51, 261, 131)
+      local geometry = {getWindowGeometry(scrollBox)}
+      createScrollBox(scrollBox, 13, 24, 120, 90)
+      assert.is_false(ok)
+      assert.are.equal(("scrollBox '%s' already exists, moving/resizing '%s'"):format(scrollBox, scrollBox), err)
+      assert.are.same({41, 51, 261, 131}, geometry)
+    end)
+
+    it("createCommandLine hard-errors without a name", function()
+      local ok, err = pcall(createCommandLine)
+      assert.is_false(ok)
+      assert.is_truthy(err:find("createCommandLine: bad argument #1 type", 1, true))
+    end)
+
+    it("createTextEdit hard-errors without a name", function()
+      local ok, err = pcall(createTextEdit)
+      assert.is_false(ok)
+      assert.is_truthy(err:find("createTextEdit: bad argument #1 type", 1, true))
+    end)
+
+    it("createScrollBox hard-errors without a name", function()
+      local ok, err = pcall(createScrollBox)
+      assert.is_false(ok)
+      assert.is_truthy(err:find("createScrollBox: bad argument #1 type", 1, true))
+    end)
+  end)
+
+  describe("moveWindow and resizeWindow", function()
+    local label = name("wlsMoveLabel")
+    local console = name("wlsMoveConsole")
+    local scrollBox = name("wlsMoveScrollBox")
+    local cmdLine = name("wlsMoveCmdLine")
+    local textEdit = name("wlsMoveTextEdit")
+
+    setup(function()
+      createLabel(label, 10, 10, 100, 50, 1)
+      createMiniConsole(console, 130, 10, 200, 50)
+      createScrollBox(scrollBox, 10, 70, 100, 50)
+      createCommandLine(cmdLine, 10, 130, 100, 30)
+      createTextEdit(textEdit, 10, 170, 100, 50)
+    end)
+
+    teardown(function()
+      deleteLabel(label)
+      deleteMiniConsole(console)
+      deleteScrollBox(scrollBox)
+      deleteCommandLine(cmdLine)
+      deleteTextEdit(textEdit)
+    end)
+
+    it("moveWindow relocates a miniconsole", function()
+      moveWindow(console, 21, 31)
+      local x, y = getWindowGeometry(console)
+      assert.are.same({21, 31}, {x, y})
+    end)
+
+    it("moveWindow relocates a scroll box", function()
+      moveWindow(scrollBox, 33, 44)
+      local x, y = getWindowGeometry(scrollBox)
+      assert.are.same({33, 44}, {x, y})
+    end)
+
+    it("moveWindow relocates a text edit", function()
+      moveWindow(textEdit, 77, 88)
+      local x, y = getWindowGeometry(textEdit)
+      assert.are.same({77, 88}, {x, y})
+    end)
+
+    it("resizeWindow resizes a command line", function()
+      resizeWindow(cmdLine, 180, 40)
+      local _, _, w, h = getWindowGeometry(cmdLine)
+      assert.are.same({180, 40}, {w, h})
+    end)
+
+    it("resizeWindow resizes a label", function()
+      resizeWindow(label, 210, 95)
+      local _, _, w, h = getWindowGeometry(label)
+      assert.are.same({210, 95}, {w, h})
+    end)
+
+    it("moveWindow truncates fractional coordinates", function()
+      -- the coordinates are read as doubles and cast to int, so .9 is dropped
+      moveWindow(label, 70.9, 80.9)
+      local x, y = getWindowGeometry(label)
+      assert.are.same({70, 80}, {x, y})
+    end)
+
+    it("moveWindow and resizeWindow return no values for an unknown window", function()
+      -- both silently ignore names they cannot resolve, returning nothing at
+      -- all rather than nil - so count the returns instead of reading one
+      assert.are.equal(0, select("#", moveWindow(name("wlsNoSuchWindow"), 1, 2)))
+      assert.are.equal(0, select("#", resizeWindow(name("wlsNoSuchWindow"), 1, 2)))
+    end)
+
+    it("moveWindow and resizeWindow hard-error without arguments", function()
+      local movedOk, movedErr = pcall(moveWindow)
+      assert.is_false(movedOk)
+      assert.is_truthy(movedErr:find("moveWindow: bad argument #1 type", 1, true))
+      local resizedOk, resizedErr = pcall(resizeWindow)
+      assert.is_false(resizedOk)
+      assert.is_truthy(resizedErr:find("resizeWindow: bad argument #1 type", 1, true))
+    end)
+  end)
+
+  describe("showWindow and hideWindow", function()
+    local label = name("wlsShowLabel")
+    local textEdit = name("wlsShowTextEdit")
+
+    setup(function()
+      createLabel(label, 10, 10, 60, 30, 1)
+      createTextEdit(textEdit, 10, 50, 100, 60)
+    end)
+
+    teardown(function()
+      deleteLabel(label)
+      deleteTextEdit(textEdit)
+    end)
+
+    it("showWindow returns true for an element it knows", function()
+      assert.is_true(showWindow(label))
+    end)
+
+    it("showWindow returns false for an unknown name", function()
+      assert.is_false(showWindow(name("wlsNoSuchWindow")))
+    end)
+
+    it("showWindow returns false for the main window", function()
+      -- the main console is not one of the elements show/hideWindow act on
+      assert.is_false(showWindow("main"))
+    end)
+
+    it("hideWindow returns no value but does hide the element", function()
+      assert.are.equal(0, select("#", hideWindow(label)))
+      assert.is_false(windowVisible(label))
+      showWindow(label)
+      assert.is_true(windowVisible(label))
+    end)
+
+    it("hideWindow returns no value for an unknown name", function()
+      assert.are.equal(0, select("#", hideWindow(name("wlsNoSuchWindow"))))
+    end)
+
+    it("hides and shows a text edit", function()
+      assert.is_true(windowVisible(textEdit))
+      hideWindow(textEdit)
+      assert.is_false(windowVisible(textEdit))
+      showWindow(textEdit)
+      assert.is_true(windowVisible(textEdit))
+    end)
+
+    it("showWindow and hideWindow hard-error without a name", function()
+      local shownOk, shownErr = pcall(showWindow)
+      assert.is_false(shownOk)
+      assert.is_truthy(shownErr:find("showWindow: bad argument #1 type", 1, true))
+      local hiddenOk, hiddenErr = pcall(hideWindow)
+      assert.is_false(hiddenOk)
+      assert.is_truthy(hiddenErr:find("hideWindow: bad argument #1 type", 1, true))
+    end)
+  end)
+
+  describe("label text readback", function()
+    local label = name("wlsTextLabel")
+    local console = name("wlsTextConsole")
+
+    setup(function()
+      createLabel(label, 10, 10, 200, 40, 1)
+      createMiniConsole(console, 10, 60, 300, 100)
+    end)
+
+    before_each(function()
+      echo(label, "")
+      clearWindow(console)
+    end)
+
+    teardown(function()
+      deleteLabel(label)
+      deleteMiniConsole(console)
+    end)
+
+    it("a freshly created label has no text", function()
+      local fresh = name("wlsFreshLabel")
+      createLabel(fresh, 0, 0, 10, 10, 1)
+      assert.are.equal("", getLabelText(fresh))
+      deleteLabel(fresh)
+    end)
+
+    it("echo stores HTML markup on a label verbatim", function()
+      -- labels are QLabels: the markup is kept as given, not stripped
+      echo(label, "<b>bold</b> text")
+      assert.are.equal("<b>bold</b> text", getLabelText(label))
+    end)
+
+    it("echo keeps an anchor tag verbatim", function()
+      echo(label, [[<a href="x">link</a>]])
+      assert.are.equal([[<a href="x">link</a>]], getLabelText(label))
+    end)
+
+    it("cecho renders to HTML that still carries the plain text", function()
+      cecho(label, "<red>redtext")
+      local text = getLabelText(label)
+      assert.are.equal("<span", text:sub(1, 5))
+      assert.is_truthy(text:find("redtext", 1, true))
+      assert.is_truthy(text:find("rgb(255, 0, 0)", 1, true))
+    end)
+
+    it("decho renders to HTML that still carries the plain text", function()
+      decho(label, "<0,255,0>dechotext")
+      local text = getLabelText(label)
+      assert.are.equal("<span", text:sub(1, 5))
+      assert.is_truthy(text:find("dechotext", 1, true))
+      assert.is_truthy(text:find("rgb(0, 255, 0)", 1, true))
+    end)
+
+    it("hecho renders to HTML that still carries the plain text", function()
+      hecho(label, "#0000ffhechotext")
+      local text = getLabelText(label)
+      assert.are.equal("<span", text:sub(1, 5))
+      assert.is_truthy(text:find("hechotext", 1, true))
+      assert.is_truthy(text:find("rgb(0, 0, 255)", 1, true))
+    end)
+
+    it("echoUserWindow sets the text of a label", function()
+      echoUserWindow(label, "from echoUserWindow")
+      assert.are.equal("from echoUserWindow", getLabelText(label))
+    end)
+
+    it("echoUserWindow appends a line to a miniconsole", function()
+      echoUserWindow(console, "console line\n")
+      assert.are.equal(1, getLineCount(console))
+      moveCursor(console, 0, 0)
+      assert.are.equal("console line", getCurrentLine(console))
+    end)
+
+    it("clearUserWindow empties a miniconsole", function()
+      echo(console, "a\nb\n")
+      assert.are.equal(2, getLineCount(console))
+      clearUserWindow(console)
+      assert.are.equal(0, getLineCount(console))
+    end)
+  end)
+
+  describe("label appearance setters", function()
+    local label = name("wlsStyleLabel")
+
+    setup(function()
+      createLabel(label, 10, 10, 120, 40, 1)
+    end)
+
+    teardown(function()
+      deleteLabel(label)
+    end)
+
+    it("setLabelStyleSheet round-trips through getLabelStyleSheet", function()
+      assert.is_true(setLabelStyleSheet(label, "background-color: rgb(1,2,3);"))
+      assert.are.equal("background-color: rgb(1,2,3);", getLabelStyleSheet(label))
+    end)
+
+    it("getLabelStyleSheet reports an unknown label", function()
+      local ok, err = getLabelStyleSheet(name("wlsNoSuchLabel"))
+      assert.is_nil(ok)
+      assert.are.equal(("label '%s' does not exist"):format(name("wlsNoSuchLabel")), err)
+    end)
+
+    it("setLabelStyleSheet reports an unknown label", function()
+      local ok, err = setLabelStyleSheet(name("wlsNoSuchLabel"), "color: red;")
+      assert.is_nil(ok)
+      assert.are.equal(("label name '%s' not found"):format(name("wlsNoSuchLabel")), err)
+    end)
+
+    it("setLabelToolTip accepts a label and reports an unknown one", function()
+      assert.is_true(setLabelToolTip(label, "a tooltip"))
+      local ok, err = setLabelToolTip(name("wlsNoSuchLabel"), "a tooltip")
+      assert.is_nil(ok)
+      assert.are.equal(("label name '%s' not found"):format(name("wlsNoSuchLabel")), err)
+    end)
+
+    it("setLabelCursor accepts a cursor shape and reports an unknown label", function()
+      assert.is_true(setLabelCursor(label, 2))
+      local ok, err = setLabelCursor(name("wlsNoSuchLabel"), 2)
+      assert.is_nil(ok)
+      assert.are.equal(("label name '%s' not found"):format(name("wlsNoSuchLabel")), err)
+    end)
+
+    it("getLabelSizeHint reports a positive size for a label with text", function()
+      echo(label, "some text")
+      local w, h = getLabelSizeHint(label)
+      assert.is_true(w > 0)
+      assert.is_true(h > 0)
+    end)
+
+    it("getLabelSizeHint rejects an empty name and an unknown label", function()
+      local ok, err = getLabelSizeHint("")
+      assert.is_nil(ok)
+      assert.are.equal("label name cannot be an empty string", err)
+      local ok2, err2 = getLabelSizeHint(name("wlsNoSuchLabel"))
+      assert.is_nil(ok2)
+      assert.are.equal(("label '%s' does not exist"):format(name("wlsNoSuchLabel")), err2)
+    end)
+
+    it("setBackgroundColor and getBackgroundColor work on a label", function()
+      assert.is_true(setBackgroundColor(label, 5, 6, 7, 255))
+      assert.are.same({5, 6, 7, 255}, {getBackgroundColor(label)})
+    end)
+
+    local linkStyleCalls = {
+      {name = "setLinkStyle", call = function(target) return setLinkStyle(target, "red", "blue", true) end},
+      {name = "resetLinkStyle", call = function(target) return resetLinkStyle(target) end},
+      {name = "clearVisitedLinks", call = function(target) return clearVisitedLinks(target) end},
+    }
+
+    for _, entry in ipairs(linkStyleCalls) do
+      it(entry.name .. " succeeds on a label and reports an unknown one", function()
+        assert.is_true(entry.call(label))
+        local ok, err = entry.call(name("wlsNoSuchLabel"))
+        assert.is_nil(ok)
+        assert.are.equal(("label '%s' not found"):format(name("wlsNoSuchLabel")), err)
+      end)
+    end
+  end)
+
+  describe("label callback setters", function()
+    local label = name("wlsCallbackLabel")
+
+    setup(function()
+      createLabel(label, 10, 10, 60, 30, 1)
+    end)
+
+    teardown(function()
+      deleteLabel(label)
+    end)
+
+    it("setLabelClickCallback accepts a function", function()
+      assert.is_true(setLabelClickCallback(label, function() end))
+    end)
+
+    it("setLabelClickCallback accepts extra arguments for the callback", function()
+      assert.is_true(setLabelClickCallback(label, function() end, "one", 2))
+    end)
+
+    it("setLabelClickCallback accepts a function name as a string", function()
+      -- the Lua wrapper turns a string into a function calling that name
+      assert.is_true(setLabelClickCallback(label, "wlsNoSuchGlobalFunction"))
+    end)
+
+    it("setLabelClickCallback hard-errors on a value that is neither function, string nor nil", function()
+      local ok, err = pcall(setLabelClickCallback, label, 42)
+      assert.is_false(ok)
+      assert.is_truthy(err:find("setLabelClickCallback: bad argument #2 type (function expected, got number!)", 1, true))
+    end)
+
+    it("setLabelClickCallback rejects an empty label name", function()
+      local ok, err = setLabelClickCallback("", function() end)
+      assert.is_nil(ok)
+      assert.are.equal("label name cannot be an empty string", err)
+    end)
+
+    local callbackSetters = {
+      "setLabelClickCallback",
+      "setLabelDoubleClickCallback",
+      "setLabelReleaseCallback",
+      "setLabelMoveCallback",
+      "setLabelWheelCallback",
+      "setLabelOnEnter",
+      "setLabelOnLeave",
+    }
+
+    for _, setter in ipairs(callbackSetters) do
+      it(setter .. " reports an unknown label", function()
+        local ok, err = _G[setter](name("wlsNoSuchLabel"), function() end)
+        assert.is_nil(ok)
+        assert.are.equal(("label name '%s' not found"):format(name("wlsNoSuchLabel")), err)
+      end)
+    end
+  end)
+
+  describe("font readback", function()
+    local console = name("wlsFontConsole")
+
+    setup(function()
+      createMiniConsole(console, 10, 10, 300, 150)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(console)
+    end)
+
+    it("setFontSize round-trips through getFontSize", function()
+      assert.is_true(setFontSize(console, 14))
+      assert.are.equal(14, getFontSize(console))
+    end)
+
+    it("setMiniConsoleFontSize round-trips through getFontSize", function()
+      assert.is_true(setMiniConsoleFontSize(console, 9))
+      assert.are.equal(9, getFontSize(console))
+    end)
+
+    it("getFontSize, getFont and setFontSize report an unknown window", function()
+      local unknown = name("wlsNoSuchWindow")
+      local ok, err = getFontSize(unknown)
+      assert.is_nil(ok)
+      assert.are.equal(('window "%s" not found'):format(unknown), err)
+      local ok2, err2 = getFont(unknown)
+      assert.is_nil(ok2)
+      assert.are.equal(('window "%s" not found'):format(unknown), err2)
+      local ok3, err3 = setFontSize(unknown, 10)
+      assert.is_nil(ok3)
+      assert.are.equal(('window "%s" not found'):format(unknown), err3)
+    end)
+
+    it("setFont changes the font getFont reports, and can be set back", function()
+      local original = getFont(console)
+      assert.is_true(#original > 0)
+      -- pick a family the font database really offers; some of the names it
+      -- lists are generic aliases (Monospace, Serif, ...) that resolve to a
+      -- different family, so keep looking until one actually round-trips
+      local families = {}
+      for family in pairs(getAvailableFonts()) do
+        families[#families + 1] = family
+      end
+      table.sort(families)
+      local applied
+      for _, family in ipairs(families) do
+        if family ~= original then
+          setFont(console, family)
+          if getFont(console) == family then
+            applied = family
+            break
+          end
+        end
+      end
+      assert.is_string(applied)
+      assert.are.equal(applied, getFont(console))
+      assert.is_true(setFont(console, original))
+      assert.are.equal(original, getFont(console))
+    end)
+
+    it("setFont rejects a font that is not available", function()
+      local ok, err = setFont(console, "wlsNoSuchFontFamily")
+      assert.is_nil(ok)
+      assert.are.equal("font 'wlsNoSuchFontFamily' is not available", err)
+    end)
+
+    it("setFont rejects an empty font name", function()
+      local ok, err = setFont(console, "")
+      assert.is_nil(ok)
+      assert.are.equal("font must not be empty", err)
+    end)
+
+    it("getAvailableFonts returns a table keyed by font name", function()
+      local fonts = getAvailableFonts()
+      assert.is_table(fonts)
+      local count = 0
+      for fontName, present in pairs(fonts) do
+        assert.is_string(fontName)
+        assert.is_true(present)
+        count = count + 1
+      end
+      assert.is_true(count > 0)
+    end)
+
+    it("calcFontSize returns a positive cell size for a font size", function()
+      local w, h = calcFontSize(12)
+      assert.is_true(w > 0)
+      assert.is_true(h > 0)
+    end)
+
+    it("calcFontSize returns a positive cell size for a size and font name", function()
+      -- name a family the console itself resolved to, so this cannot silently
+      -- fall through to the substituted default font
+      local w, h = calcFontSize(12, getFont(console))
+      assert.is_true(w > 0)
+      assert.is_true(h > 0)
+    end)
+
+    it("calcFontSize on a window grows with that window's font size", function()
+      setMiniConsoleFontSize(console, 8)
+      local smallWidth, smallHeight = calcFontSize(console)
+      setMiniConsoleFontSize(console, 20)
+      local largeWidth, largeHeight = calcFontSize(console)
+      assert.is_true(largeWidth > smallWidth)
+      assert.is_true(largeHeight > smallHeight)
+    end)
+
+    it("calcFontSize returns nil for an unknown window", function()
+      assert.is_nil(calcFontSize(name("wlsNoSuchWindow")))
+    end)
+  end)
+
+  describe("console metrics", function()
+    local console = name("wlsMetricConsole")
+
+    setup(function()
+      createMiniConsole(console, 10, 10, 200, 150)
+      setMiniConsoleFontSize(console, 10)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(console)
+    end)
+
+    it("getColumnCount grows when the console is made wider", function()
+      resizeWindow(console, 200, 150)
+      local narrow = getColumnCount(console)
+      resizeWindow(console, 600, 150)
+      local wide = getColumnCount(console)
+      assert.is_true(narrow > 0)
+      assert.is_true(wide > narrow)
+    end)
+
+    it("getRowCount grows when the console is made taller", function()
+      resizeWindow(console, 600, 150)
+      local short = getRowCount(console)
+      resizeWindow(console, 600, 400)
+      local tall = getRowCount(console)
+      assert.is_true(short > 0)
+      assert.is_true(tall > short)
+    end)
+
+    it("getColumnCount and getRowCount report an unknown window", function()
+      local unknown = name("wlsNoSuchWindow")
+      local ok, err = getColumnCount(unknown)
+      assert.is_nil(ok)
+      assert.are.equal(('window "%s" not found'):format(unknown), err)
+      local ok2, err2 = getRowCount(unknown)
+      assert.is_nil(ok2)
+      assert.are.equal(('window "%s" not found'):format(unknown), err2)
+    end)
+
+    it("getMainWindowSize returns a positive width and height", function()
+      local w, h = getMainWindowSize()
+      assert.is_true(w > 0)
+      assert.is_true(h > 0)
+    end)
+
+    it("getMainConsoleWidth returns a positive width", function()
+      assert.is_true(getMainConsoleWidth() > 0)
+    end)
+
+    it("getProfileTabNumber returns the one-based tab position", function()
+      assert.is_true(getProfileTabNumber() >= 1)
+    end)
+
+    it("getUserWindowSize returns the size of a user window", function()
+      -- the height of a dock that has never been laid out by a window manager
+      -- is not meaningful headless, so only the width is pinned
+      local w, h = getUserWindowSize(sharedUserWindow)
+      assert.is_number(w)
+      assert.is_number(h)
+      assert.is_true(w > 0)
+    end)
+  end)
+
+  describe("border sizes and colour", function()
+    local originalSizes
+    local originalColor
+
+    setup(function()
+      originalSizes = getBorderSizes()
+      originalColor = {getBorderColor()}
+    end)
+
+    teardown(function()
+      setBorderSizes(originalSizes.top, originalSizes.right, originalSizes.bottom, originalSizes.left)
+      setBorderColor(originalColor[1], originalColor[2], originalColor[3])
+    end)
+
+    it("the individual border setters round-trip through their getters", function()
+      setBorderTop(7)
+      setBorderRight(10)
+      setBorderBottom(8)
+      setBorderLeft(9)
+      assert.are.equal(7, getBorderTop())
+      assert.are.equal(10, getBorderRight())
+      assert.are.equal(8, getBorderBottom())
+      assert.are.equal(9, getBorderLeft())
+      assert.are.same({top = 7, right = 10, bottom = 8, left = 9}, getBorderSizes())
+    end)
+
+    it("setBorderSizes with one argument sets all four borders", function()
+      setBorderSizes(3)
+      assert.are.same({top = 3, right = 3, bottom = 3, left = 3}, getBorderSizes())
+    end)
+
+    it("setBorderSizes with two arguments takes height then width", function()
+      setBorderSizes(4, 5)
+      assert.are.same({top = 4, right = 5, bottom = 4, left = 5}, getBorderSizes())
+    end)
+
+    it("setBorderSizes with three arguments takes top, width, bottom", function()
+      setBorderSizes(1, 2, 3)
+      assert.are.same({top = 1, right = 2, bottom = 3, left = 2}, getBorderSizes())
+    end)
+
+    it("setBorderSizes with four arguments takes top, right, bottom, left", function()
+      setBorderSizes(1, 2, 3, 4)
+      assert.are.same({top = 1, right = 2, bottom = 3, left = 4}, getBorderSizes())
+    end)
+
+    it("setBorderSizes with no arguments leaves the borders alone", function()
+      setBorderSizes(6, 6, 6, 6)
+      setBorderSizes()
+      assert.are.same({top = 6, right = 6, bottom = 6, left = 6}, getBorderSizes())
+    end)
+
+    it("setBorderTop hard-errors on a non-number", function()
+      local ok, err = pcall(setBorderTop, "wide")
+      assert.is_false(ok)
+      assert.is_truthy(err:find("setBorderTop: bad argument #1 type", 1, true))
+    end)
+
+    it("setBorderColor round-trips through getBorderColor", function()
+      setBorderColor(11, 22, 33)
+      assert.are.same({11, 22, 33}, {getBorderColor()})
+    end)
+  end)
+
+  describe("timestamps", function()
+    local console = name("wlsStampConsole")
+
+    setup(function()
+      createMiniConsole(console, 10, 10, 200, 100)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(console)
+    end)
+
+    it("a new miniconsole has timestamps off, and they can be turned on and off", function()
+      assert.is_false(timeStampsEnabled(console))
+      assert.is_true(enableTimeStamps(console))
+      assert.is_true(timeStampsEnabled(console))
+      assert.is_true(disableTimeStamps(console))
+      assert.is_false(timeStampsEnabled(console))
+    end)
+
+    -- Both refusals share one message, and on the enable path it reads
+    -- "timestamps were not enabled ..." when they in fact already are - so the
+    -- shape is asserted rather than that wrong wording, which should change.
+    it("enableTimeStamps refuses when timestamps are already on", function()
+      enableTimeStamps(console)
+      local ok, err = enableTimeStamps(console)
+      assert.is_nil(ok)
+      assert.is_string(err)
+      disableTimeStamps(console)
+    end)
+
+    it("disableTimeStamps refuses when timestamps are already off", function()
+      disableTimeStamps(console)
+      local ok, err = disableTimeStamps(console)
+      assert.is_nil(ok)
+      assert.is_string(err)
+    end)
+
+    it("timeStampsEnabled reports an unknown window", function()
+      local unknown = name("wlsNoSuchWindow")
+      local ok, err = timeStampsEnabled(unknown)
+      assert.is_nil(ok)
+      assert.are.equal(('window "%s" not found'):format(unknown), err)
+    end)
+  end)
+
+  describe("scrolling state", function()
+    local console = name("wlsScrollConsole")
+
+    setup(function()
+      createMiniConsole(console, 10, 10, 200, 100)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(console)
+    end)
+
+    it("scrollingActive is true for the main window", function()
+      assert.is_true(scrollingActive("main"))
+    end)
+
+    it("disableScrolling and enableScrolling toggle scrollingActive", function()
+      assert.is_true(scrollingActive(console))
+      assert.is_true(disableScrolling(console))
+      assert.is_false(scrollingActive(console))
+      assert.is_true(enableScrolling(console))
+      assert.is_true(scrollingActive(console))
+    end)
+
+    it("getScroll follows the buffer as lines arrive", function()
+      clearWindow(console)
+      assert.are.equal(0, getScroll(console))
+      for i = 1, 30 do
+        echo(console, "line " .. i .. "\n")
+      end
+      -- the view stays at the tail, so the reported position is the last line
+      assert.are.equal(getLastLineNumber(console), getScroll(console))
+      assert.are.equal(30, getScroll(console))
+      clearWindow(console)
+    end)
+
+    local unknownWindowCalls = {
+      {name = "scrollingActive", call = function(target) return scrollingActive(target) end},
+      {name = "getScroll", call = function(target) return getScroll(target) end},
+      {name = "scrollTo", call = function(target) return scrollTo(target, 1) end},
+      {name = "disableScrollBar", call = function(target) return disableScrollBar(target) end},
+      {name = "enableScrollBar", call = function(target) return enableScrollBar(target) end},
+      {name = "disableHorizontalScrollBar", call = function(target) return disableHorizontalScrollBar(target) end},
+      {name = "enableHorizontalScrollBar", call = function(target) return enableHorizontalScrollBar(target) end},
+      {name = "enableScrolling", call = function(target) return enableScrolling(target) end},
+      {name = "disableScrolling", call = function(target) return disableScrolling(target) end},
+    }
+
+    for _, entry in ipairs(unknownWindowCalls) do
+      it(entry.name .. " reports an unknown window", function()
+        local unknown = name("wlsNoSuchWindow")
+        local ok, err = entry.call(unknown)
+        assert.is_nil(ok)
+        assert.are.equal(('window "%s" not found'):format(unknown), err)
+      end)
+    end
+
+    it("the scroll bar toggles return no value for a console they know", function()
+      assert.are.equal(0, select("#", disableScrollBar(console)))
+      assert.are.equal(0, select("#", enableScrollBar(console)))
+      assert.are.equal(0, select("#", disableHorizontalScrollBar(console)))
+      assert.are.equal(0, select("#", enableHorizontalScrollBar(console)))
+    end)
+  end)
+
+  describe("clipboard", function()
+    local originalText
+
+    setup(function()
+      -- this is the real system clipboard, so put back whatever was in it
+      originalText = getClipboardText()
+    end)
+
+    teardown(function()
+      setClipboardText(originalText)
+    end)
+
+    it("setClipboardText round-trips through getClipboardText", function()
+      assert.is_true(setClipboardText("wls clipboard text"))
+      assert.are.equal("wls clipboard text", getClipboardText())
+    end)
+
+    it("setClipboardText hard-errors on a table", function()
+      local ok, err = pcall(setClipboardText, {})
+      assert.is_false(ok)
+      assert.is_truthy(err:find("setClipboardText: bad argument #1 type", 1, true))
+    end)
+  end)
+
+  describe("mouse events", function()
+    local unique = name("wlsMouseEvent")
+    local minimal = name("wlsMouseEventMinimal")
+
+    teardown(function()
+      removeMouseEvent(unique)
+      removeMouseEvent(minimal)
+    end)
+
+    it("addMouseEvent registers an entry that getMouseEvents reports back", function()
+      assert.is_true(addMouseEvent(unique, "wlsEventName", "Display name", "Tooltip text"))
+      local events = getMouseEvents()
+      assert.is_table(events)
+      assert.are.same({
+        ["event name"] = "wlsEventName",
+        ["display name"] = "Display name",
+        ["tooltip text"] = "Tooltip text",
+      }, events[unique])
+    end)
+
+    it("addMouseEvent defaults the display name to the unique name", function()
+      assert.is_true(addMouseEvent(minimal, "wlsMinimalEvent"))
+      assert.are.same({
+        ["event name"] = "wlsMinimalEvent",
+        ["display name"] = minimal,
+        ["tooltip text"] = "",
+      }, getMouseEvents()[minimal])
+    end)
+
+    it("addMouseEvent refuses a name that is already registered", function()
+      addMouseEvent(unique, "wlsEventName")
+      local ok, err = addMouseEvent(unique, "wlsEventName")
+      assert.is_nil(ok)
+      assert.are.equal(("mouse event '%s' already exists"):format(unique), err)
+    end)
+
+    it("removeMouseEvent drops the entry", function()
+      addMouseEvent(unique, "wlsEventName")
+      assert.is_true(removeMouseEvent(unique))
+      assert.is_nil(getMouseEvents()[unique])
+    end)
+
+    it("removeMouseEvent refuses an event that is not registered", function()
+      removeMouseEvent(unique)
+      local ok, err = removeMouseEvent(unique)
+      assert.is_nil(ok)
+      assert.are.equal(("mouse event '%s' does not exist"):format(unique), err)
+    end)
+  end)
+
+  describe("command line menu events and visibility", function()
+    local cmdLine = name("wlsMenuCmdLine")
+    -- the main command line outlives this block, so its menu items are named
+    -- per run and removed again in the teardown
+    local menuLabel = name("wlsMenuLabel")
+    local otherMenuLabel = name("wlsMenuLabel2")
+
+    setup(function()
+      createCommandLine(cmdLine, 10, 10, 150, 30)
+    end)
+
+    teardown(function()
+      removeCommandLineMenuEvent(menuLabel)
+      deleteCommandLine(cmdLine)
+    end)
+
+    it("a menu event added to the main command line can be removed again", function()
+      assert.is_true(addCommandLineMenuEvent(menuLabel, "wlsMenuEvent"))
+      assert.is_true(removeCommandLineMenuEvent(menuLabel))
+    end)
+
+    it("removing a menu event twice reports false and a message", function()
+      addCommandLineMenuEvent(menuLabel, "wlsMenuEvent")
+      removeCommandLineMenuEvent(menuLabel)
+      local ok, err = removeCommandLineMenuEvent(menuLabel)
+      assert.is_false(ok)
+      assert.are.equal(("removeCommandLineMenuEvent: cannot remove '%s', menu item does not exist"):format(menuLabel), err)
+    end)
+
+    it("a menu event can be added to a named command line", function()
+      assert.is_true(addCommandLineMenuEvent(cmdLine, otherMenuLabel, "wlsMenuEvent2"))
+      assert.is_true(removeCommandLineMenuEvent(cmdLine, otherMenuLabel))
+    end)
+
+    it("addCommandLineMenuEvent reports an unknown command line", function()
+      local unknown = name("wlsNoSuchCmdLine")
+      local ok, err = addCommandLineMenuEvent(unknown, "label", "event")
+      assert.is_nil(ok)
+      assert.are.equal(('command line "%s" not found'):format(unknown), err)
+    end)
+
+    it("disableCommandLine hides a command line and enableCommandLine shows it", function()
+      assert.is_true(windowVisible(cmdLine))
+      assert.is_true(disableCommandLine(cmdLine))
+      assert.is_false(windowVisible(cmdLine))
+      assert.is_true(enableCommandLine(cmdLine))
+      assert.is_true(windowVisible(cmdLine))
+    end)
+
+    it("the main command line cannot be enabled or disabled", function()
+      local ok, err = disableCommandLine("main")
+      assert.is_nil(ok)
+      assert.are.equal("this function is not permitted on the main command line", err)
+      local ok2, err2 = enableCommandLine("main")
+      assert.is_nil(ok2)
+      assert.are.equal("this function is not permitted on the main command line", err2)
+    end)
+
+    it("enableCommandLine reports an unknown command line", function()
+      local unknown = name("wlsNoSuchCmdLine")
+      local ok, err = enableCommandLine(unknown)
+      assert.is_nil(ok)
+      assert.are.equal(('command line "%s" not found'):format(unknown), err)
+    end)
+  end)
+
+  describe("setTextFormat", function()
+    local console = name("wlsFormatConsole")
+
+    setup(function()
+      createMiniConsole(console, 10, 10, 400, 100)
+    end)
+
+    before_each(function()
+      clearWindow(console)
+      resetFormat(console)
+      moveCursor(console, 0, 0)
+      deselect(console)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(console)
+    end)
+
+    it("sets the colours and attributes of following output", function()
+      assert.is_true(setTextFormat(console, 1, 2, 3, 250, 251, 252, true, false, true))
+      echo(console, "formatted\n")
+      moveCursor(console, 0, 0)
+      selectSection(console, 0, 3)
+      local format = getTextFormat(console)
+      assert.are.same({250, 251, 252}, format.foreground)
+      assert.are.same({1, 2, 3}, format.background)
+      assert.is_true(format.bold)
+      assert.is_true(format.italic)
+      assert.is_false(format.underline)
+    end)
+
+    it("clamps colour components above 255", function()
+      setTextFormat(console, 0, 0, 0, 999, 0, 0, false, false, false)
+      echo(console, "clamped\n")
+      moveCursor(console, 0, 0)
+      selectSection(console, 0, 3)
+      assert.are.same({255, 0, 0}, getTextFormat(console).foreground)
+    end)
+
+    it("sets the optional strikeout, overline and reverse attributes", function()
+      assert.is_true(setTextFormat(console, 1, 2, 3, 4, 5, 6, false, false, false, true, true, true))
+      echo(console, "optional\n")
+      moveCursor(console, 0, 0)
+      selectSection(console, 0, 3)
+      local format = getTextFormat(console)
+      assert.is_true(format.strikeout)
+      assert.is_true(format.overline)
+      assert.is_true(format.reverse)
+      assert.is_false(format.bold)
+    end)
+
+    it("accepts an optional blink mode and reports it back", function()
+      assert.is_true(setTextFormat(console, 0, 0, 0, 1, 2, 3, false, false, false, false, false, false, "slow"))
+      echo(console, "slow blink\n")
+      moveCursor(console, 0, 0)
+      selectSection(console, 0, 3)
+      assert.are.equal("slow", getTextFormat(console).blinking)
+    end)
+
+    it("rejects an unknown blink mode", function()
+      local ok, err = setTextFormat(console, 0, 0, 0, 1, 2, 3, false, false, false, false, false, false, "sometimes")
+      assert.is_nil(ok)
+      assert.are.equal('blink mode must be "none", "slow", or "fast", got "sometimes"', err)
+    end)
+
+    it("takes numbers as well as booleans for the attribute flags", function()
+      assert.is_true(setTextFormat(console, 0, 0, 0, 1, 2, 3, 1, 0, 1))
+      echo(console, "numeric\n")
+      moveCursor(console, 0, 0)
+      selectSection(console, 0, 3)
+      local format = getTextFormat(console)
+      assert.is_true(format.bold)
+      assert.is_false(format.underline)
+      assert.is_true(format.italic)
+    end)
+
+    -- these four cover setTextFormat's raising paths, which used to leak the
+    -- objects the function built before validating (issue #9576) - they assert the
+    -- messages, the leak checker asserts the rest
+
+    it("hard-errors on a non-number colour component", function()
+      local ok, err = pcall(setTextFormat, console, "red", 0, 0, 0, 0, 0, false, false, false)
+      assert.is_false(ok)
+      assert.is_truthy(err:find("setTextFormat: bad argument #2 type", 1, true))
+    end)
+
+    it("hard-errors on a non-boolean attribute", function()
+      local ok, err = pcall(setTextFormat, console, 0, 0, 0, 0, 0, 0, "yes", false, false)
+      assert.is_false(ok)
+      assert.is_truthy(err:find("setTextFormat: bad argument #8 type", 1, true))
+    end)
+
+    it("hard-errors on a non-boolean optional attribute", function()
+      local ok, err = pcall(setTextFormat, console, 0, 0, 0, 0, 0, 0, false, false, false, "yes")
+      assert.is_false(ok)
+      assert.is_truthy(err:find("setTextFormat: bad argument #11 type", 1, true))
+    end)
+
+    it("hard-errors on a blink mode that is not a string", function()
+      local ok, err = pcall(setTextFormat, console, 0, 0, 0, 0, 0, 0, false, false, false, false, false, false, {})
+      assert.is_false(ok)
+      assert.is_truthy(err:find("setTextFormat: bad argument #14 type", 1, true))
+    end)
+
+    it("returns false and a message for an unknown window", function()
+      -- unlike most of the UI API this one reports false rather than nil
+      local unknown = name("wlsNoSuchWindow")
+      local ok, err = setTextFormat(unknown, 0, 0, 0, 0, 0, 0, false, false, false)
+      assert.is_false(ok)
+      assert.are.equal(("window '%s' does not exist"):format(unknown), err)
+    end)
+  end)
+
+  describe("command line colours", function()
+    local console = name("wlsCommandColorConsole")
+
+    setup(function()
+      createMiniConsole(console, 10, 10, 200, 100)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(console)
+    end)
+
+    it("setCommandForegroundColor and setCommandBackgroundColor accept a console", function()
+      assert.is_true(setCommandForegroundColor(console, 10, 20, 30))
+      assert.is_true(setCommandBackgroundColor(console, 40, 50, 60, 128))
+    end)
+
+    it("both reject a colour component outside 0-255", function()
+      local ok, err = setCommandForegroundColor(console, 300, 0, 0)
+      assert.is_nil(ok)
+      assert.are.equal("red value 300 needs to be between 0-255", err)
+      local ok2, err2 = setCommandBackgroundColor(console, 0, 300, 0)
+      assert.is_nil(ok2)
+      assert.are.equal("green value 300 needs to be between 0-255", err2)
+    end)
+
+    it("both report an unknown window", function()
+      local unknown = name("wlsNoSuchWindow")
+      local ok, err = setCommandForegroundColor(unknown, 1, 2, 3)
+      assert.is_nil(ok)
+      assert.are.equal(("window/label '%s' not found"):format(unknown), err)
+      local ok2, err2 = setCommandBackgroundColor(unknown, 1, 2, 3)
+      assert.is_nil(ok2)
+      assert.are.equal(("window/label '%s' not found"):format(unknown), err2)
+    end)
+  end)
+
+  describe("getImageSize", function()
+    it("returns the size of a bundled image", function()
+      local w, h = getImageSize(":/icons/mudlet.png")
+      assert.is_true(w > 0)
+      assert.is_true(h > 0)
+    end)
+
+    it("rejects an empty location", function()
+      local ok, err = getImageSize("")
+      assert.is_nil(ok)
+      assert.are.equal("image location cannot be an empty string", err)
+    end)
+
+    it("reports a location it cannot read", function()
+      local ok, err = getImageSize("/wls/no/such/image.png")
+      assert.is_nil(ok)
+      assert.are.equal("couldn't retrieve image size, is the location '/wls/no/such/image.png' correct?", err)
+    end)
+  end)
+
+  describe("setWindow reparenting", function()
+    local label = name("wlsReparentLabel")
+    local userWindow = sharedUserWindow
+
+    setup(function()
+      createLabel(label, 11, 22, 100, 50, 1)
+    end)
+
+    before_each(function()
+      setWindow("main", label, 11, 22, true)
+    end)
+
+    teardown(function()
+      deleteLabel(label)
+    end)
+
+    it("moves an element into a user window at the given position", function()
+      assert.is_true(setWindow(userWindow, label, 3, 4, true))
+      local x, y, w, h = getWindowGeometry(label)
+      assert.are.same({3, 4, 100, 50}, {x, y, w, h})
+      assert.is_true(windowVisible(label))
+    end)
+
+    it("moves an element back to the main window", function()
+      setWindow(userWindow, label, 3, 4, true)
+      assert.is_true(setWindow("main", label, 60, 70, true))
+      local x, y = getWindowGeometry(label)
+      assert.are.same({60, 70}, {x, y})
+    end)
+
+    -- Qt hides a widget when it is reparented, and setWindow only calls show()
+    -- again when asked to, so an unshown element stays hidden after the move
+    it("leaves a reparented element hidden when asked not to show it", function()
+      assert.is_true(setWindow(userWindow, label, 3, 4, false))
+      assert.is_false(windowVisible(label))
+    end)
+
+    it("defaults to the origin and to showing the element", function()
+      assert.is_true(setWindow(userWindow, label))
+      local x, y = getWindowGeometry(label)
+      assert.are.same({0, 0}, {x, y})
+      assert.is_true(windowVisible(label))
+    end)
+
+    it("reports an element it cannot find", function()
+      local unknown = name("wlsNoSuchElement")
+      local ok, err = setWindow("main", unknown, 0, 0, true)
+      assert.is_nil(ok)
+      assert.are.equal(("element '%s' not found"):format(unknown), err)
+    end)
+
+    it("reports a parent window it cannot find", function()
+      local unknown = name("wlsNoSuchWindow")
+      local ok, err = setWindow(unknown, label, 0, 0, true)
+      assert.is_nil(ok)
+      assert.are.equal(("window '%s' not found"):format(unknown), err)
+    end)
+  end)
+
+  describe("user window title and stylesheet", function()
+    local userWindow = sharedUserWindow
+
+    teardown(function()
+      -- the window itself cannot be deleted, so undo what these specs set
+      resetUserWindowTitle(userWindow)
+      setUserWindowStyleSheet(userWindow, "")
+    end)
+
+    it("setUserWindowTitle accepts a title and reports an unknown window", function()
+      assert.is_true(setUserWindowTitle(userWindow, "A title"))
+      local unknown = name("wlsNoSuchWindow")
+      local ok, err = setUserWindowTitle(unknown, "A title")
+      assert.is_nil(ok)
+      assert.are.equal(("user window name '%s' not found"):format(unknown), err)
+    end)
+
+    it("setUserWindowStyleSheet accepts a stylesheet and reports an unknown window", function()
+      assert.is_true(setUserWindowStyleSheet(userWindow, "background-color: rgb(1,2,3);"))
+      local unknown = name("wlsNoSuchWindow")
+      local ok, err = setUserWindowStyleSheet(unknown, "background-color: rgb(1,2,3);")
+      assert.is_nil(ok)
+      assert.are.equal(("userwindow name '%s' not found"):format(unknown), err)
+    end)
+  end)
+
+  describe("stacking and buffer transfer", function()
+    local label = name("wlsStackLabel")
+    local source = name("wlsStackSource")
+    local target = name("wlsStackTarget")
+
+    setup(function()
+      createLabel(label, 10, 10, 60, 30, 1)
+      createMiniConsole(source, 10, 50, 300, 100)
+      createMiniConsole(target, 10, 160, 300, 100)
+    end)
+
+    teardown(function()
+      deleteLabel(label)
+      deleteMiniConsole(source)
+      deleteMiniConsole(target)
+    end)
+
+    it("raiseWindow and lowerWindow accept an element they know", function()
+      assert.is_true(raiseWindow(label))
+      assert.is_true(lowerWindow(label))
+    end)
+
+    it("raiseWindow and lowerWindow return false for an unknown element", function()
+      local unknown = name("wlsNoSuchWindow")
+      assert.is_false(raiseWindow(unknown))
+      assert.is_false(lowerWindow(unknown))
+    end)
+
+    it("pasteWindow places the copied selection into another console", function()
+      clearWindow(source)
+      clearWindow(target)
+      echo(source, "pasted line\n")
+      moveCursor(source, 0, 0)
+      selectCurrentLine(source)
+      copy(source)
+      pasteWindow(target)
+      assert.are.equal(1, getLineCount(target))
+      assert.are.same({"pasted line"}, getLines(target, 0, 1))
+    end)
+
+    it("pasteWindow hard-errors on a non-string window name", function()
+      local ok, err = pcall(pasteWindow, {})
+      assert.is_false(ok)
+      assert.is_truthy(err:find("pasteWindow: bad argument #1 type", 1, true))
+    end)
+
+    it("deleteTextEdit reports a text edit it cannot find", function()
+      local unknown = name("wlsNoSuchTextEdit")
+      local ok, err = deleteTextEdit(unknown)
+      assert.is_false(ok)
+      assert.are.equal(("text edit name '%s' not found"):format(unknown), err)
+    end)
+
+    it("deleteLabel refuses to delete something that is not a label", function()
+      local ok, err = deleteLabel(source)
+      assert.is_false(ok)
+      assert.are.equal(("label name '%s' not found"):format(source), err)
     end)
   end)
 end)

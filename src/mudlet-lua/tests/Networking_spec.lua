@@ -1,19 +1,18 @@
--- Contract-only specs for the networking, MMCP, media and Discord APIs.
+-- Specs for the networking, MMCP and Discord APIs. The media contracts that
+-- used to be here now live in Media_spec.lua.
 --
--- These functions all depend on live infrastructure for their real effect
--- (a connected game server, connected MMCP peers, an audio device, a running
--- Discord client). Those effects are covered by separate, stub-backed work.
--- What is verified here is the part that is fully deterministic offline:
--- argument validation, and the nil+message / hard-error shapes each function
--- returns when its precondition (a connection, a peer, an enabled protocol,
--- an available API) is not met. Nothing here mocks a real API function, opens
--- a socket, issues an HTTP request or asserts playback.
+-- Most of these functions depend on live infrastructure for their real effect
+-- (a connected game server, connected MMCP peers, a running Discord client),
+-- and for those what is verified here is the part that is fully deterministic
+-- offline: argument validation, and the nil+message / hard-error shapes each
+-- function returns when its precondition (a connection, a peer, an enabled
+-- protocol, an available API) is not met.
 --
--- This is a new per-domain spec file. The standing convention is to extend an
--- existing domain spec file, but there is no existing home for the networking,
--- MMCP, media or Discord Lua API; this file provides one for their contract
--- layer. Whether to keep it as a single combined file is a convention call for
--- review.
+-- The download and HTTP families are the exception: their infrastructure can be
+-- stood up locally, so their real effects are checked against the fixture
+-- server in CI/http-fixture-server.py, whose ephemeral port arrives in
+-- MUDLET_TEST_HTTP_PORT. They skip cleanly when it is absent so the suite still
+-- passes without a server. Nothing here mocks a real API function.
 
 local function contains(haystack, needle)
   return type(haystack) == "string" and haystack:find(needle, 1, true) ~= nil
@@ -168,7 +167,8 @@ describe("HTTP and download functions validate arguments before issuing a reques
     end)
 
     it("raises a Lua error when headers is not a table", function()
-      assertArgError(function() getHTTP("http://localhost/", 5) end, "getHTTP: bad argument")
+      assertArgError(function() getHTTP("http://localhost/", 5) end,
+        "getHTTP: bad argument #2 type (headers as a table expected, got number!)")
     end)
 
     it("raises a Lua error when a header value is not a string", function()
@@ -188,7 +188,8 @@ describe("HTTP and download functions validate arguments before issuing a reques
     end)
 
     it("raises a Lua error when headers is not a table", function()
-      assertArgError(function() deleteHTTP("http://localhost/", 5) end, "deleteHTTP: bad argument")
+      assertArgError(function() deleteHTTP("http://localhost/", 5) end,
+        "deleteHTTP: bad argument #2 type (headers as a table expected, got number!)")
     end)
 
     it("raises a Lua error when a header value is not a string", function()
@@ -212,7 +213,8 @@ describe("HTTP and download functions validate arguments before issuing a reques
     end)
 
     it("raises a Lua error when headers is not a table", function()
-      assertArgError(function() postHTTP("payload", "http://localhost/", 5) end, "postHTTP: bad argument")
+      assertArgError(function() postHTTP("payload", "http://localhost/", 5) end,
+        "postHTTP: bad argument #3 type (headers as a table expected, got number!)")
     end)
   end)
 
@@ -223,6 +225,26 @@ describe("HTTP and download functions validate arguments before issuing a reques
 
     it("raises a Lua error when the url is missing", function()
       assertArgError(function() putHTTP("payload") end, "putHTTP: bad argument")
+    end)
+
+    it("returns nil for an invalid url without issuing a request", function()
+      local ok, err = putHTTP("payload", "")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "url is invalid"))
+    end)
+
+    it("raises a Lua error when headers is not a table", function()
+      assertArgError(function() putHTTP("payload", "http://localhost/", 5) end,
+        "putHTTP: bad argument #3 type (headers as a table expected, got number!)")
+    end)
+  end)
+
+  describe("the optional file argument", function()
+    it("returns nil and a message when the file cannot be read", function()
+      local ok, err = postHTTP("payload", "http://localhost/", {}, getMudletHomeDir() .. "/busted-no-such-upload.txt")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "couldn't open"), tostring(err))
+      assert.is_true(contains(err, "busted-no-such-upload.txt"), tostring(err))
     end)
   end)
 
@@ -256,6 +278,364 @@ describe("HTTP and download functions validate arguments before issuing a reques
       local ok, err = pcall(function() customHTTP("REPORT", "payload", "http://localhost/", {}, true) end)
       assert.is_false(ok)
       assert.is_true(contains(err, "customHTTP: bad argument #5 type (file to send as string location expected, got boolean!)"), tostring(err))
+    end)
+  end)
+end)
+
+describe("Downloads and HTTP verbs against the local fixture server", function()
+  -- CI starts CI/http-fixture-server.py before the suite and passes its
+  -- ephemeral port in MUDLET_TEST_HTTP_PORT. The server serves
+  -- CI/http-fixtures/ and answers any verb below /echo by reporting the
+  -- method, headers and body it received, which is how these specs prove what
+  -- Mudlet actually put on the wire. Every response carries the
+  -- X-Mudlet-Fixture header so the response table each event delivers can be
+  -- checked too.
+  --
+  -- The requests are asynchronous: nothing is sent until the event loop runs,
+  -- which only happens inside waitForEvent(), so arming the wait after issuing
+  -- the request cannot miss the reply.
+  local httpPort = os.getenv("MUDLET_TEST_HTTP_PORT")
+  -- the contents of CI/http-fixtures/fixture.txt
+  local fixtureBody = "Mudlet self-test HTTP fixture.\n"
+
+  local function fixtureUrl(path)
+    return "http://127.0.0.1:" .. httpPort .. path
+  end
+
+  -- Returns true when the caller must stop because there is no server to talk
+  -- to. A developer's local run without the fixture server still passes; CI
+  -- sets MUDLET_TEST_REQUIRE_HTTP_FIXTURE so that a workflow which stops
+  -- handing the port over fails instead of quietly skipping the whole family.
+  local requireFixture = os.getenv("MUDLET_TEST_REQUIRE_HTTP_FIXTURE")
+
+  local function noFixtureServer()
+    if httpPort then
+      return false
+    end
+    if requireFixture then
+      assert.is_true(false, "MUDLET_TEST_REQUIRE_HTTP_FIXTURE is set but MUDLET_TEST_HTTP_PORT is not - the fixture server did not reach the specs")
+    end
+    pending("MUDLET_TEST_HTTP_PORT is not set (fixture HTTP server not running)")
+    return true
+  end
+
+  local function readFile(path)
+    local handle = io.open(path, "rb")
+    if not handle then
+      return nil
+    end
+    local body = handle:read("*a")
+    handle:close()
+    return body
+  end
+
+  local function writeFile(path, body)
+    local handle = io.open(path, "wb")
+    handle:write(body)
+    handle:close()
+  end
+
+  -- Qt normalises the header names it hands back (they arrive lower-cased from
+  -- Qt 6.7 on, as sent before that), so look the header up without relying on
+  -- its case.
+  local function headerValue(response, name)
+    for key, value in pairs(response.headers) do
+      if key:lower() == name:lower() then
+        return value
+      end
+    end
+    return nil
+  end
+
+  -- Proves the response reached Lua as a table carrying the header and the
+  -- cookie that the fixture server sets on every response, rather than as some
+  -- other truthy value.
+  local function assertFixtureResponse(response)
+    assert.is_table(response)
+    assert.is_table(response.headers)
+    assert.is_table(response.cookies)
+    assert.equals("1", headerValue(response, "X-Mudlet-Fixture"))
+    assert.equals("1", response.cookies["mudlet-fixture"])
+  end
+
+  describe("downloadFile", function()
+    it("writes the fixture to disk and reports it in sysDownloadDone", function()
+      if noFixtureServer() then
+        return
+      end
+      local target = getMudletHomeDir() .. "/busted-download-done.txt"
+      os.remove(target)
+      finally(function() os.remove(target) end)
+      local queued, actualUrl = downloadFile(target, fixtureUrl("/fixture.txt"))
+      assert.is_true(queued)
+      assert.equals(fixtureUrl("/fixture.txt"), actualUrl)
+
+      local event, localFile, bytesWritten, response = waitForEvent("sysDownloadDone", 2000)
+      assert.equals("sysDownloadDone", event)
+      assert.equals(target, localFile)
+      assert.equals(#fixtureBody, bytesWritten)
+      assert.equals(fixtureBody, readFile(target))
+      assertFixtureResponse(response)
+    end)
+
+    it("reports the download's progress while it runs", function()
+      if noFixtureServer() then
+        return
+      end
+      local target = getMudletHomeDir() .. "/busted-download-progress.txt"
+      os.remove(target)
+      -- Collected through a handler rather than a wait of its own: how many
+      -- progress events Qt emits for a 31 byte body is not fixed, but the last
+      -- one must account for the whole body.
+      local progress = {}
+      local handler = registerAnonymousEventHandler("sysDownloadFileProgress", function(_, url, downloaded, total)
+        progress[#progress + 1] = {url = url, downloaded = downloaded, total = total}
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+        os.remove(target)
+      end)
+
+      assert.is_true(downloadFile(target, fixtureUrl("/fixture.txt")))
+      assert.equals("sysDownloadDone", (waitForEvent("sysDownloadDone", 2000)))
+
+      assert.is_true(#progress > 0)
+      local last = progress[#progress]
+      assert.equals(fixtureUrl("/fixture.txt"), last.url)
+      assert.equals(#fixtureBody, last.downloaded)
+      assert.equals(#fixtureBody, last.total)
+    end)
+
+    it("raises sysDownloadError and writes no file when the url 404s", function()
+      if noFixtureServer() then
+        return
+      end
+      local target = getMudletHomeDir() .. "/busted-download-missing.txt"
+      os.remove(target)
+      finally(function() os.remove(target) end)
+      assert.is_true(downloadFile(target, fixtureUrl("/no-such-fixture.txt")))
+
+      local event, message, localFile, url, response = waitForEvent("sysDownloadError", 2000)
+      assert.equals("sysDownloadError", event)
+      assert.is_string(message)
+      assert.equals(target, localFile)
+      assert.equals(fixtureUrl("/no-such-fixture.txt"), url)
+      assertFixtureResponse(response)
+      assert.is_nil(readFile(target))
+    end)
+
+    it("raises sysDownloadError naming the local file when it cannot be written", function()
+      if noFixtureServer() then
+        return
+      end
+      -- the directory does not exist, so QSaveFile cannot open the target: this
+      -- path reports a local reason as its fourth argument where the network
+      -- error path reports the url
+      local target = getMudletHomeDir() .. "/busted-no-such-directory/download.txt"
+      assert.is_true(downloadFile(target, fixtureUrl("/fixture.txt")))
+
+      local event, message, localFile, reason = waitForEvent("sysDownloadError", 2000)
+      assert.equals("sysDownloadError", event)
+      assert.equals("Couldn't save to the destination file", message)
+      assert.equals(target, localFile)
+      assert.equals("Couldn't open the destination file for writing (permission errors?)", reason)
+    end)
+  end)
+
+  describe("getHTTP", function()
+    it("delivers the fixture's body in sysGetHttpDone", function()
+      if noFixtureServer() then
+        return
+      end
+      local queued = getHTTP(fixtureUrl("/fixture.txt"))
+      assert.is_true(queued)
+
+      local event, url, body, response = waitForEvent("sysGetHttpDone", 2000)
+      assert.equals("sysGetHttpDone", event)
+      assert.equals(fixtureUrl("/fixture.txt"), url)
+      assert.equals(fixtureBody, body)
+      assertFixtureResponse(response)
+    end)
+
+    it("sends the custom headers it was given", function()
+      if noFixtureServer() then
+        return
+      end
+      assert.is_true(getHTTP(fixtureUrl("/echo"), {["X-Mudlet-Test"] = "get-header"}))
+
+      local event, _, body = waitForEvent("sysGetHttpDone", 2000)
+      assert.equals("sysGetHttpDone", event)
+      assert.is_true(contains(body, "method=GET"))
+      assert.is_true(contains(body, "header:x-mudlet-test=get-header"), body)
+      -- setNetworkRequestDefaults() puts Mudlet's own user agent on the request
+      assert.is_true(contains(body, "header:user-agent=Mozilla/5.0 (Mudlet/"), body)
+    end)
+
+    it("raises sysGetHttpError for a url that 404s", function()
+      if noFixtureServer() then
+        return
+      end
+      assert.is_true(getHTTP(fixtureUrl("/no-such-fixture.txt")))
+
+      local event, message, url, response = waitForEvent("sysGetHttpError", 2000)
+      assert.equals("sysGetHttpError", event)
+      assert.is_string(message)
+      assert.equals(fixtureUrl("/no-such-fixture.txt"), url)
+      assertFixtureResponse(response)
+    end)
+  end)
+
+  describe("postHTTP", function()
+    it("sends its data and headers, and reports the reply in sysPostHttpDone", function()
+      if noFixtureServer() then
+        return
+      end
+      local queued = postHTTP("posted=payload", fixtureUrl("/echo"), {["X-Mudlet-Test"] = "post-header"})
+      assert.is_true(queued)
+
+      local event, url, body, response = waitForEvent("sysPostHttpDone", 2000)
+      assert.equals("sysPostHttpDone", event)
+      assert.equals(fixtureUrl("/echo"), url)
+      assert.is_true(contains(body, "method=POST"), body)
+      assert.is_true(contains(body, "header:x-mudlet-test=post-header"), body)
+      assert.is_true(contains(body, "body=posted=payload"), body)
+      assertFixtureResponse(response)
+    end)
+
+    it("sends a file's contents in place of the data argument", function()
+      if noFixtureServer() then
+        return
+      end
+      local upload = getMudletHomeDir() .. "/busted-http-upload.txt"
+      writeFile(upload, "contents from the uploaded file")
+      finally(function() os.remove(upload) end)
+
+      assert.is_true(postHTTP("data that must be ignored", fixtureUrl("/echo"), {}, upload))
+
+      local event, _, body = waitForEvent("sysPostHttpDone", 2000)
+      assert.equals("sysPostHttpDone", event)
+      assert.is_true(contains(body, "body=contents from the uploaded file"), body)
+      assert.is_false(contains(body, "data that must be ignored"))
+    end)
+
+    it("accepts a nil data argument when a file is supplied", function()
+      if noFixtureServer() then
+        return
+      end
+      local upload = getMudletHomeDir() .. "/busted-http-upload-only.txt"
+      writeFile(upload, "file body with no data argument")
+      finally(function() os.remove(upload) end)
+
+      assert.is_true(postHTTP(nil, fixtureUrl("/echo"), {}, upload))
+
+      local event, _, body = waitForEvent("sysPostHttpDone", 2000)
+      assert.equals("sysPostHttpDone", event)
+      assert.is_true(contains(body, "body=file body with no data argument"), body)
+    end)
+
+    it("raises sysPostHttpError when the endpoint refuses the verb", function()
+      if noFixtureServer() then
+        return
+      end
+      -- Only /echo accepts a POST; the static fixture path answers 404.
+      assert.is_true(postHTTP("payload", fixtureUrl("/fixture.txt")))
+
+      local event, message, url, response = waitForEvent("sysPostHttpError", 2000)
+      assert.equals("sysPostHttpError", event)
+      assert.is_string(message)
+      assert.equals(fixtureUrl("/fixture.txt"), url)
+      assertFixtureResponse(response)
+    end)
+  end)
+
+  describe("putHTTP", function()
+    it("sends its data with the PUT verb and reports sysPutHttpDone", function()
+      if noFixtureServer() then
+        return
+      end
+      local queued = putHTTP("put=payload", fixtureUrl("/echo"), {["X-Mudlet-Test"] = "put-header"})
+      assert.is_true(queued)
+
+      local event, url, body, response = waitForEvent("sysPutHttpDone", 2000)
+      assert.equals("sysPutHttpDone", event)
+      assert.equals(fixtureUrl("/echo"), url)
+      assert.is_true(contains(body, "method=PUT"), body)
+      assert.is_true(contains(body, "header:x-mudlet-test=put-header"), body)
+      assert.is_true(contains(body, "body=put=payload"), body)
+      assertFixtureResponse(response)
+    end)
+
+    it("raises sysPutHttpError when the endpoint refuses the verb", function()
+      if noFixtureServer() then
+        return
+      end
+      assert.is_true(putHTTP("payload", fixtureUrl("/fixture.txt")))
+
+      local event, message, url = waitForEvent("sysPutHttpError", 2000)
+      assert.equals("sysPutHttpError", event)
+      assert.is_string(message)
+      assert.equals(fixtureUrl("/fixture.txt"), url)
+    end)
+  end)
+
+  describe("deleteHTTP", function()
+    it("sends the DELETE verb and reports sysDeleteHttpDone", function()
+      if noFixtureServer() then
+        return
+      end
+      local queued = deleteHTTP(fixtureUrl("/echo"), {["X-Mudlet-Test"] = "delete-header"})
+      assert.is_true(queued)
+
+      local event, url, body, response = waitForEvent("sysDeleteHttpDone", 2000)
+      assert.equals("sysDeleteHttpDone", event)
+      assert.equals(fixtureUrl("/echo"), url)
+      assert.is_true(contains(body, "method=DELETE"), body)
+      assert.is_true(contains(body, "header:x-mudlet-test=delete-header"), body)
+      assertFixtureResponse(response)
+    end)
+
+    it("raises sysDeleteHttpError when the endpoint refuses the verb", function()
+      if noFixtureServer() then
+        return
+      end
+      assert.is_true(deleteHTTP(fixtureUrl("/fixture.txt")))
+
+      local event, message, url = waitForEvent("sysDeleteHttpError", 2000)
+      assert.equals("sysDeleteHttpError", event)
+      assert.is_string(message)
+      assert.equals(fixtureUrl("/fixture.txt"), url)
+    end)
+  end)
+
+  describe("customHTTP", function()
+    it("sends the verb it was given and echoes it back in sysCustomHttpDone", function()
+      if noFixtureServer() then
+        return
+      end
+      local queued = customHTTP("REPORT", "custom=payload", fixtureUrl("/echo"), {["X-Mudlet-Test"] = "custom-header"})
+      assert.is_true(queued)
+
+      local event, url, body, method, response = waitForEvent("sysCustomHttpDone", 2000)
+      assert.equals("sysCustomHttpDone", event)
+      assert.equals(fixtureUrl("/echo"), url)
+      assert.equals("REPORT", method)
+      assert.is_true(contains(body, "method=REPORT"), body)
+      assert.is_true(contains(body, "header:x-mudlet-test=custom-header"), body)
+      assert.is_true(contains(body, "body=custom=payload"), body)
+      assertFixtureResponse(response)
+    end)
+
+    it("raises sysCustomHttpError naming the verb when the endpoint refuses it", function()
+      if noFixtureServer() then
+        return
+      end
+      assert.is_true(customHTTP("REPORT", "payload", fixtureUrl("/fixture.txt")))
+
+      local event, message, url, method = waitForEvent("sysCustomHttpError", 2000)
+      assert.equals("sysCustomHttpError", event)
+      assert.is_string(message)
+      assert.equals(fixtureUrl("/fixture.txt"), url)
+      assert.equals("REPORT", method)
     end)
   end)
 end)
@@ -397,147 +777,6 @@ describe("MMCP chat commands report the absence of a session", function()
       assert.is_nil(ok)
       assert.is_true(contains(err, "tilde"))
     end)
-  end)
-end)
-
-describe("Media playback functions validate their parameters", function()
-  -- None of these reach playMedia()/stopMedia() on a real file, so no playback
-  -- is started: each returns before the media engine is touched.
-  describe("playSoundFile", function()
-    it("raises a Lua error when called with no arguments", function()
-      assertArgError(function() playSoundFile() end, "playSoundFile: need at least one argument")
-    end)
-
-    it("raises a Lua error when the table form has no name", function()
-      assert.has_error(function() playSoundFile({}) end)
-    end)
-
-    it("raises a Lua error for a negative fadein in the table form", function()
-      assert.has_error(function() playSoundFile({name = "x.wav", fadein = -1}) end)
-    end)
-
-    it("returns nil when the ordered form supplies no filename", function()
-      local ok, err = playSoundFile(nil)
-      assert.is_nil(ok)
-      assert.is_true(contains(err, "missing argument 1"))
-    end)
-  end)
-
-  describe("playMusicFile", function()
-    it("raises a Lua error when called with no arguments", function()
-      assertArgError(function() playMusicFile() end, "playMusicFile: need at least one argument")
-    end)
-
-    it("raises a Lua error when the table form has no name", function()
-      assert.has_error(function() playMusicFile({}) end)
-    end)
-
-    it("raises a Lua error for a negative fadeout in the table form", function()
-      assert.has_error(function() playMusicFile({name = "x.mp3", fadeout = -5}) end)
-    end)
-
-    it("raises a clean, non-doubled error when continue is not a boolean", function()
-      -- Regression #9547 (same defect class): the field publicName must not carry
-      -- "must be boolean", which errorArgumentType would then double.
-      local ok, err = pcall(function() playMusicFile({name = "x.mp3", continue = "yes"}) end)
-      assert.is_false(ok)
-      assert.is_true(contains(err, "value for continue as boolean expected, got string!"), tostring(err))
-      assert.is_false(contains(err, "must be boolean"), tostring(err))
-    end)
-  end)
-
-  describe("playVideoFile", function()
-    -- playVideoFileAsTableArgument shared the identical doubled-message defect on
-    -- its continue/stream/close boolean fields (#9547 defect class).
-    it("raises a clean, non-doubled error when continue is not a boolean", function()
-      local ok, err = pcall(function() playVideoFile({name = "x.mp4", continue = "yes"}) end)
-      assert.is_false(ok)
-      assert.is_true(contains(err, "value for continue as boolean expected, got string!"), tostring(err))
-      assert.is_false(contains(err, "must be boolean"), tostring(err))
-    end)
-
-    it("raises a clean, non-doubled error when stream is not a boolean", function()
-      local ok, err = pcall(function() playVideoFile({name = "x.mp4", stream = "yes"}) end)
-      assert.is_false(ok)
-      assert.is_true(contains(err, "value for stream as boolean expected, got string!"), tostring(err))
-      assert.is_false(contains(err, "must be boolean"), tostring(err))
-    end)
-
-    it("raises a clean, non-doubled error when close is not a boolean", function()
-      local ok, err = pcall(function() playVideoFile({name = "x.mp4", close = "yes"}) end)
-      assert.is_false(ok)
-      assert.is_true(contains(err, "value for close as boolean expected, got string!"), tostring(err))
-      assert.is_false(contains(err, "must be boolean"), tostring(err))
-    end)
-  end)
-
-  describe("getPlayingSounds", function()
-    it("raises a clean, non-doubled error when priority is not an integer", function()
-      -- Regression #9547 (same defect class): "value for priority must be integer"
-      -- doubled into "must be integer as number expected".
-      local ok, err = pcall(function() getPlayingSounds({priority = "high"}) end)
-      assert.is_false(ok)
-      assert.is_true(contains(err, "value for priority as number expected, got string!"), tostring(err))
-      assert.is_false(contains(err, "must be integer"), tostring(err))
-    end)
-  end)
-
-  describe("stopSounds", function()
-    it("returns true when stopping everything with no arguments", function()
-      assert.is_true(stopSounds())
-    end)
-
-    it("raises a Lua error for a negative fadeout in the table form", function()
-      assert.has_error(function() stopSounds({fadeout = -1}) end)
-    end)
-
-    it("raises a clean, non-doubled error when priority is not an integer", function()
-      -- Regression #9547 (same defect class, adjacent field in this very parser):
-      -- "value for priority must be integer" doubled the type constraint.
-      local ok, err = pcall(function() stopSounds({priority = "high"}) end)
-      assert.is_false(ok)
-      assert.is_true(contains(err, "value for priority as number expected, got string!"), tostring(err))
-      assert.is_false(contains(err, "must be integer"), tostring(err))
-    end)
-
-    it("raises a clean, non-doubled error when fadeaway is not a boolean", function()
-      -- Regression #9547: the message must not double "boolean" (the field's
-      -- publicName previously carried "must be boolean" while the type validator
-      -- also appended "as boolean expected"). It is reported like the sibling
-      -- table-field validations in this parser (fadeout, name, key).
-      local ok, err = pcall(function() stopSounds({fadeaway = "yes"}) end)
-      assert.is_false(ok)
-      assert.is_true(contains(err, "value for fadeaway as boolean expected, got string!"), tostring(err))
-      assert.is_false(contains(err, "must be boolean"), tostring(err))
-    end)
-  end)
-
-  -- stopMusic and stopVideos parse the same table shape and shared the identical
-  -- doubled-"boolean" fadeaway defect fixed for stopSounds (#9547).
-  describe("stopMusic", function()
-    it("raises a clean, non-doubled error when fadeaway is not a boolean", function()
-      local ok, err = pcall(function() stopMusic({fadeaway = "yes"}) end)
-      assert.is_false(ok)
-      assert.is_true(contains(err, "value for fadeaway as boolean expected, got string!"), tostring(err))
-      assert.is_false(contains(err, "must be boolean"), tostring(err))
-    end)
-  end)
-
-  describe("stopVideos", function()
-    it("raises a clean, non-doubled error when fadeaway is not a boolean", function()
-      local ok, err = pcall(function() stopVideos({fadeaway = "yes"}) end)
-      assert.is_false(ok)
-      assert.is_true(contains(err, "value for fadeaway as boolean expected, got string!"), tostring(err))
-      assert.is_false(contains(err, "must be boolean"), tostring(err))
-    end)
-  end)
-end)
-
-describe("receiveMSP reports MSP is not enabled while offline", function()
-  it("returns nil and a message when MSP has not been negotiated", function()
-    local ok, err = receiveMSP("!!SOUND(x.wav)")
-    assert.is_nil(ok)
-    assert.is_true(contains(err, "MSP is not currently enabled"))
   end)
 end)
 

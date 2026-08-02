@@ -57,6 +57,7 @@
 #include "utils.h"
 #include "edbee/models/textdocumentscopes.h"
 
+#include <QApplication>
 #include <QCheckBox>
 #include <QAbstractButton>
 #include <QColorDialog>
