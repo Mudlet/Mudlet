@@ -1050,11 +1050,29 @@ describe("Tests the timer API", function()
     end)
 
     it("returns -1 and a message when the code does not compile", function()
-      local id, message = tempTimer(0.1, "this is ( not lua")
+      -- the delay is distinctive, and the compiled chunk is named after the
+      -- timer's numeric id, so nothing but a leak can put it in the message
+      local id, message = tempTimer(0.125, "this is ( not lua")
       assert.equals(-1, id)
-      assert.is_string(message)
+      assert.is_string(message, "the failure should come with a message")
       assert.is_truthy(message:find("compile", 1, true),
         "the failure should say the code could not be compiled, got: " .. tostring(message))
+      -- and the reason has to be what Lua said about the code
+      assert.is_truthy(message:find("near", 1, true),
+        "the reason should be the Lua error, got: " .. tostring(message))
+      assert.is_falsy(message:find("0.125", 1, true),
+        "the delay must not be reported as the Lua error, got: " .. tostring(message))
+    end)
+
+    it("errors for a negative delay", function()
+      -- an unguarded negative delay wraps around the 24 hour clock into a timer
+      -- that fires almost a day later, so it has to be rejected outright
+      assert.has_error(function() tempTimer(-1, [[]]) end)
+      assert.has_error(function() tempTimer(-1, function() end) end)
+    end)
+
+    it("errors for a delay of a day or more, which wraps around to zero", function()
+      assert.has_error(function() tempTimer(86400, [[]]) end)
     end)
 
     it("fires a code-string body in the global environment", function()
@@ -1141,6 +1159,32 @@ describe("Tests the timer API", function()
         "a permanent timer survives killTimer")
     end)
 
+    it("returns false the second time, as the timer is already dead", function()
+      local id = trackTemp(tempTimer(10, [[]]))
+      assert.is_true(killTimer(id))
+      assert.is_false(killTimer(id),
+        "killing an already killed timer achieves nothing and has to say so")
+      -- the object itself is only freed by the timer unit's deferred cleanup,
+      -- so check the state a user can see straight away instead
+      assert.equals(0, isActive(id, "timer"), "a killed timer is no longer active")
+      local left, message = remainingTime(id)
+      assert.is_nil(left, "a killed timer is no longer counting down")
+      -- "inactive" rather than "not a valid timerID" pins that the timer is
+      -- still present and merely stopped, which is what the second kill saw
+      assert.is_truthy(tostring(message):find("inactive", 1, true),
+        "the killed timer should still be present but stopped, got: " .. tostring(message))
+    end)
+
+    it("returns false for a one-shot timer that has already fired", function()
+      -- a fired one-shot temporary timer is queued for the same deferred cleanup
+      -- a killed one is, so it is just as dead - which is what the manual has
+      -- always said killTimer reports
+      local id = trackTemp(tempTimer(0, function() raiseEvent("w2aOneShotFinished") end))
+      waitFor("w2aOneShotFinished")
+      assert.is_false(killTimer(id),
+        "a one-shot timer that has already fired cannot be killed again")
+    end)
+
     it("stops a pending timer from ever firing and deactivates it", function()
       local id = trackTemp(tempTimer(0.05, function()
         _G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1
@@ -1176,11 +1220,14 @@ describe("Tests the timer API", function()
       id = trackTemp(tempTimer(0.02, function()
         _G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1
         _G.W2aTimerSpec.killed = killTimer(id)
+        _G.W2aTimerSpec.killedAgain = killTimer(id)
         raiseEvent("w2aSelfKillingTimerFired")
       end, true))
       waitFor("w2aSelfKillingTimerFired")
       assert.is_true(_G.W2aTimerSpec.killed,
         "killTimer should report success from inside the timer's own callback")
+      assert.is_false(_G.W2aTimerSpec.killedAgain,
+        "killing the same timer twice from inside its own callback must fail the second time")
       local firedWhenKilled = _G.W2aTimerSpec.fired
       settle(0.15)
       assert.equals(firedWhenKilled, _G.W2aTimerSpec.fired,
@@ -1250,13 +1297,27 @@ describe("Tests the timer API", function()
     end)
 
     it("errors when the code does not compile", function()
-      assert.has_error(function()
-        permTimer(trackPerm("W2aPermTimerBadCode"), "", 1, "this is ( not lua")
-      end)
+      local ok, err = pcall(permTimer, trackPerm("W2aPermTimerBadCode"), "", 1, "this is ( not lua")
+      assert.is_false(ok, "code that does not parse must not create a timer")
+      assert.is_truthy(tostring(err):find("near", 1, true),
+        "the reason should be the Lua error, not the timer's name, got: " .. tostring(err))
     end)
 
     it("errors when the interval is missing", function()
       assert.has_error(function() permTimer("W2aPermTimerNoInterval", "") end)
+    end)
+
+    it("errors for a negative interval, creating nothing", function()
+      -- counted rather than compared with zero: permanent timers survive into a
+      -- second run of the suite against the same profile
+      local before = exists("W2aPermTimerNegative", "timer")
+      local ok, err = pcall(permTimer, trackPerm("W2aPermTimerNegative"), "", -1, [[]])
+      assert.is_false(ok,
+        "a negative interval must be rejected rather than wrapped around the 24 hour clock")
+      assert.equals(before, exists("W2aPermTimerNegative", "timer"),
+        "a rejected interval must not leave a timer behind")
+      assert.is_truthy(tostring(err):find("bad argument #3", 1, true),
+        "the interval should be reported as the offending argument, got: " .. tostring(err))
     end)
 
     it("enableTimer and disableTimer error when called without a name", function()
@@ -1441,10 +1502,25 @@ describe("Tests the script API", function()
       -- a script's body runs as it is compiled, so a body that raises fails
       -- creation just like one that does not parse
       local before = exists("W2aScriptRaises", "script")
-      assert.has_error(function()
-        makeScript("W2aScriptRaises", "", [[error("w2a script boom")]])
-      end)
+      -- the failure quotes the code it was given, so the message is built at run
+      -- time: finding it whole proves the Lua error was reported, not the code
+      -- that was handed in and not the script's name
+      local ok, err = pcall(makeScript, "W2aScriptRaises", "", [[error("w2a script" .. " boom")]])
+      assert.is_false(ok, "a body that raises must not create a script")
       assert.equals(before, exists("W2aScriptRaises", "script"))
+      assert.is_truthy(tostring(err):find("w2a script boom", 1, true),
+        "permScript should report the Lua error, got: " .. tostring(err))
+    end)
+
+    it("reports the type when the body raises something other than a string", function()
+      -- the error object is not a string, so there is no message to quote - the
+      -- reason still has to say what came back rather than name the script
+      local before = exists("W2aScriptObjectError", "script")
+      local ok, err = pcall(makeScript, "W2aScriptObjectError", "", [[error({w2a = true})]])
+      assert.is_false(ok, "a body that raises must not create a script")
+      assert.equals(before, exists("W2aScriptObjectError", "script"))
+      assert.is_truthy(tostring(err):find("error object is a table", 1, true),
+        "the reason should describe the error object, got: " .. tostring(err))
     end)
 
     it("creates a script whose body runs immediately", function()
@@ -1573,10 +1649,13 @@ describe("Tests the script API", function()
       -- compiled into the script, so this is the path that has to roll back
       local body = [[local w2aRolledBack = 1]]
       local _, position = makeScript("W2aScriptRollback", "", body)
-      assert.has_error(function()
-        setScript("W2aScriptRollback", [[error("w2a setScript boom")]], position)
-      end)
+      -- as in the permScript spec above, the raised message is assembled at run
+      -- time so that only the real Lua error can contain it
+      local ok, err = pcall(setScript, "W2aScriptRollback", [[error("w2a setScript" .. " boom")]], position)
+      assert.is_false(ok, "a body that raises must not be kept")
       assert.equals(body, (getScript("W2aScriptRollback", position)))
+      assert.is_truthy(tostring(err):find("w2a setScript boom", 1, true),
+        "setScript should report the Lua error, got: " .. tostring(err))
     end)
 
     it("sets the script at the requested position when several share a name", function()

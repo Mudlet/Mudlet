@@ -3283,13 +3283,22 @@ QString TLuaInterpreter::formatLuaCode(const QString& code)
 bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QString& name)
 {
     lua_State* L = pGlobalLua;
+    // This runs on the global lua_State, which is shared with whatever C
+    // function is calling us, so everything already on the stack is that
+    // caller's and has to be left exactly as it was found:
+    const int callerStackTop = lua_gettop(L);
 
     const int error = (luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), name.toUtf8().constData()) || lua_pcall(L, 0, 0, 0));
 
     if (error) {
+        // The error object is on the top of the stack. Absolute slot 1 - which
+        // this used to read - is the calling C function's first argument, which
+        // is how a failure came to be reported as the script's own name.
         std::string e = "Lua syntax error:";
-        if (lua_isstring(L, 1)) {
-            e.append(lua_tostring(L, 1));
+        if (lua_isstring(L, -1)) {
+            e.append(lua_tostring(L, -1));
+        } else {
+            e.append("error object is a ").append(luaL_typename(L, -1)).append(" value");
         }
         errorMsg = "<b><font color='blue'>";
         errorMsg.append(QString::fromStdString(e).toHtmlEscaped().toUtf8());
@@ -3298,13 +3307,11 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
             auto& host = getHostFromLua(L);
             TDebug(Qt::white, Qt::red) << "\n " << e.c_str() << "\n" >> &host;
         }
-    } else {
-        if (mudlet::smDebugMode) {
-            auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA: code compiled without errors. OK\n" >> &host;
-        }
+    } else if (mudlet::smDebugMode) {
+        auto& host = getHostFromLua(L);
+        TDebug(Qt::white, Qt::darkGreen) << "LUA: code compiled without errors. OK\n" >> &host;
     }
-    lua_pop(L, lua_gettop(L));
+    lua_settop(L, callerStackTop);
 
     return !error;
 }

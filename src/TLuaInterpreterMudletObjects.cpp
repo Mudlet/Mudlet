@@ -1308,6 +1308,11 @@ int TLuaInterpreter::permTimer(lua_State* L)
     const QString name = getVerifiedString(L, __func__, 1, "timer name");
     const QString parent = getVerifiedString(L, __func__, 2, "timer parent name");
     const double time = getVerifiedDouble(L, __func__, 3, "time in seconds");
+    // see the note on the same check in tempTimer(...):
+    if (!(time >= 0 && time < 86400)) {
+        lua_pushfstring(L, "permTimer: bad argument #3 value (time in seconds must be at least 0 and less than 86400, got %f)", time);
+        return lua_error(L);
+    }
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (pLuaInterpreter->reportInvalidLuaCodeParam(L, "permTimer", 4)) {
@@ -2722,6 +2727,15 @@ int TLuaInterpreter::tempTimer(lua_State* L)
 {
     bool repeating{};
     const double time = getVerifiedDouble(L, __func__, 1, "time in seconds {maybe decimal}");
+    // The delay becomes the timer's interval through QTime::addMSecs(), which
+    // wraps around the 24 hour clock: -1 second would silently give a timer
+    // firing almost a day later and 86400 seconds one firing immediately - on
+    // every event loop turn, were it repeating. The comparison is negated so
+    // that a NaN delay, which has no interval at all, is rejected as well:
+    if (!(time >= 0 && time < 86400)) {
+        lua_pushfstring(L, "tempTimer: bad argument #1 value (time in seconds must be at least 0 and less than 86400, got %f)", time);
+        return lua_error(L);
+    }
     const int n = lua_gettop(L);
 
     Host& host = getHostFromLua(L);
