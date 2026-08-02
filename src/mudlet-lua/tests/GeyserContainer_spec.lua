@@ -593,20 +593,73 @@ describe("Tests functionality of Geyser.Container", function()
       -- the children keep their own constraints instead of being stacked
       assert.are.same({x = 10, y = 10, width = 300, height = 200}, geometry("gcsDeferredA"))
       assert.are.same({x = 10, y = 10, width = 300, height = 200}, geometry("gcsDeferredB"))
+      -- end_update applies the layout that was held back, without the caller
+      -- having to organize the box itself
       box:end_update()
       assert.is_false(box.defer_updates)
-      box:organize()
       assert.are.same({x = 0, y = 0, width = 200, height = 100}, geometry("gcsDeferredA"))
       assert.are.same({x = 0, y = 100, width = 200, height = 100}, geometry("gcsDeferredB"))
     end)
 
-    it("does nothing when Geyser:reposition is called outside a resize event", function()
-      -- Geyser:reposition hands GeyserReposition no event, and GeyserReposition
-      -- only acts on the two resize events, so this is a no-op by construction
-      track(Geyser.Label:new({name = "gcsRepositionNoop", x = 10, y = 10, width = 100, height = 50}))
-      moveWindow("gcsRepositionNoop", 300, 300)
+    it("holds back the layout of an hbox while its updates are deferred", function()
+      local box = track(Geyser.HBox:new({name = "gcsDeferredH", x = 0, y = 0, width = 200, height = 200}))
+      box:begin_update()
+      finally(function() box.defer_updates = false end)
+      track(Geyser.Label:new({name = "gcsDeferredHA"}, box))
+      track(Geyser.Label:new({name = "gcsDeferredHB"}, box))
+      assert.are.same({x = 10, y = 10, width = 300, height = 200}, geometry("gcsDeferredHA"))
+      box:end_update()
+      assert.are.same({x = 0, y = 0, width = 100, height = 200}, geometry("gcsDeferredHA"))
+      assert.are.same({x = 100, y = 0, width = 100, height = 200}, geometry("gcsDeferredHB"))
+    end)
+
+    it("holds back the layout of a new2 box, which fills through add2", function()
+      local box = track(Geyser.VBox:new2({name = "gcsDeferred2", x = 0, y = 0, width = 200, height = 200}))
+      box:begin_update()
+      finally(function() box.defer_updates = false end)
+      track(Geyser.Label:new2({name = "gcsDeferred2A"}, box))
+      track(Geyser.Label:new2({name = "gcsDeferred2B"}, box))
+      assert.are.same({x = 10, y = 10, width = 300, height = 200}, geometry("gcsDeferred2A"))
+      box:end_update()
+      assert.are.same({x = 0, y = 0, width = 200, height = 100}, geometry("gcsDeferred2A"))
+      assert.are.same({x = 0, y = 100, width = 200, height = 100}, geometry("gcsDeferred2B"))
+    end)
+
+    it("keeps holding the layout back when the box itself is moved", function()
+      -- move() repositions, and reposition is what flushes the deferred layout,
+      -- so it must not undo the deferral it was asked for
+      local box = track(Geyser.VBox:new({name = "gcsDeferredMove", x = 0, y = 0, width = 200, height = 200}))
+      box:begin_update()
+      finally(function() box.defer_updates = false end)
+      track(Geyser.Label:new({name = "gcsDeferredMoveA"}, box))
+      track(Geyser.Label:new({name = "gcsDeferredMoveB"}, box))
+      box:move(0, 0)
+      assert.are.same({x = 10, y = 10, width = 300, height = 200}, geometry("gcsDeferredMoveA"))
+      box:end_update()
+      assert.are.same({x = 0, y = 0, width = 200, height = 100}, geometry("gcsDeferredMoveA"))
+    end)
+
+    it("lays a box out that was filled during a deferral of the root window", function()
+      -- leaving the flag set would stop every later spec repositioning
+      finally(function() Geyser.defer_updates = false end)
+      local box = track(Geyser.VBox:new({name = "gcsRootDeferred", x = 0, y = 0, width = 200, height = 200}))
+      Geyser:begin_update()
+      track(Geyser.Label:new({name = "gcsRootDeferredA"}, box))
+      track(Geyser.Label:new({name = "gcsRootDeferredB"}, box))
+      Geyser:end_update()
+      assert.are.same({x = 0, y = 0, width = 200, height = 100}, geometry("gcsRootDeferredA"))
+      assert.are.same({x = 0, y = 100, width = 200, height = 100}, geometry("gcsRootDeferredB"))
+    end)
+
+    it("repositions every window when Geyser:reposition is called directly", function()
+      -- Geyser:reposition hands GeyserReposition no event, which is how
+      -- end_update flushes what was deferred, so it applies to everything
+      -- a leaked deferral would make this a no-op for a reason of its own
+      assert.is_false(Geyser.defer_updates)
+      track(Geyser.Label:new({name = "gcsRepositionDirect", x = 10, y = 10, width = 100, height = 50}))
+      moveWindow("gcsRepositionDirect", 300, 300)
       Geyser:reposition()
-      assert.are.equal(300, geometry("gcsRepositionNoop").x)
+      assert.are.same({x = 10, y = 10, width = 100, height = 50}, geometry("gcsRepositionDirect"))
     end)
 
     it("lays a box out as its children arrive when updates are not deferred", function()

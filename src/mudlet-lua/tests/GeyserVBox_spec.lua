@@ -43,13 +43,31 @@ describe("Tests functionality of Geyser.VBox", function()
       assert.is_nil(getWindowGeometry("gvbNew"))
     end)
 
-    -- children of a new2 box are not laid out at all: VBox overrides add but
-    -- not add2, so organize() is never reached. Left unspecified rather than
-    -- pinned, since the layout is what a caller of new2 is asking for.
     it("new2 marks the box as using add2", function()
       local box = track(Geyser.VBox:new2({name = "gvbNew2", x = 0, y = 0, width = 100, height = 100}))
       assert.is_true(box.useAdd2)
       assert.are.equal("VBox", box.type)
+    end)
+
+    it("stacks the children of a new2 box the same way new does", function()
+      local box = track(Geyser.VBox:new2({name = "gvbNew2Layout", x = 0, y = 0, width = 200, height = 200}))
+      -- the children arrive through add2 rather than add
+      track(Geyser.Label:new2({name = "gvbNew2A", x = 10, y = 10, width = 300, height = 200}, box))
+      track(Geyser.Label:new2({name = "gvbNew2B", x = 10, y = 10, width = 300, height = 200}, box))
+      assert.are.same({x = 0, y = 0, width = 200, height = 100}, geometry("gvbNew2A"))
+      assert.are.same({x = 0, y = 100, width = 200, height = 100}, geometry("gvbNew2B"))
+    end)
+
+    it("lays out a new2 box nested in another new2 box", function()
+      local outer = track(Geyser.HBox:new2({name = "gvbNestedOuter", x = 0, y = 0, width = 200, height = 200}))
+      local inner = track(Geyser.VBox:new2({name = "gvbNestedInner"}, outer))
+      track(Geyser.Label:new2({name = "gvbNestedSibling"}, outer))
+      track(Geyser.Label:new2({name = "gvbNestedA"}, inner))
+      track(Geyser.Label:new2({name = "gvbNestedB"}, inner))
+      -- the inner box takes half the outer one, and splits it between its own two
+      assert.are.same({x = 0, y = 0, width = 100, height = 100}, geometry("gvbNestedA"))
+      assert.are.same({x = 0, y = 100, width = 100, height = 100}, geometry("gvbNestedB"))
+      assert.are.same({x = 100, y = 0, width = 100, height = 200}, geometry("gvbNestedSibling"))
     end)
   end)
 
