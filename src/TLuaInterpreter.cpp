@@ -3291,9 +3291,7 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
         if (lua_isstring(L, 1)) {
             e.append(lua_tostring(L, 1));
         }
-        errorMsg = "<b><font color='blue'>";
-        errorMsg.append(QString::fromStdString(e).toHtmlEscaped().toUtf8());
-        errorMsg.append("</font></b>");
+        errorMsg = qsl("<b>%1</b>").arg(QString::fromStdString(e).toHtmlEscaped());
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);
             TDebug(Qt::white, Qt::red) << "\n " << e.c_str() << "\n" >> &host;
