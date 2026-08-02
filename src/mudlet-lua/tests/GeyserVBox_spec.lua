@@ -43,6 +43,9 @@ describe("Tests functionality of Geyser.VBox", function()
       assert.is_nil(getWindowGeometry("gvbNew"))
     end)
 
+    -- children of a new2 box are not laid out at all: VBox overrides add but
+    -- not add2, so organize() is never reached. Left unspecified rather than
+    -- pinned, since the layout is what a caller of new2 is asking for.
     it("new2 marks the box as using add2", function()
       local box = track(Geyser.VBox:new2({name = "gvbNew2", x = 0, y = 0, width = 100, height = 100}))
       assert.is_true(box.useAdd2)
