@@ -93,4 +93,5 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(err:find("module doesn't exist", 1, true) ~= nil)
       end)
     end)
+
   end)

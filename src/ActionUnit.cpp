@@ -30,6 +30,8 @@
 #include "TToolBar.h"
 #include "mudlet.h"
 
+#include <QSet>
+
 #include <functional>
 
 /* We need an explicit constructor in this file as the Host class is forward
@@ -75,10 +77,46 @@ void ActionUnit::uninstall(const QString& packageName)
             uninstallList.append(rootAction);
         }
     }
-    for (auto& action : uninstallList) {
-        delete action;
+    // Re-entrant uninstall (#9337): a button's own script (e.g. a package
+    // auto-updater calling uninstallPackage()) is removing its package while
+    // TAction::execute() is still on the call stack for that button. Deleting
+    // now would be a use-after-free, so defer to doCleanup() at depth 0.
+    // Deactivating stops the buttons from firing again in the meantime.
+    if (mProcessingDepth > 0) {
+        for (auto action : uninstallList) {
+            action->setIsActive(false);
+        }
+        return;
+    }
+    // Not inside a button script - delete now. Route through doCleanup() rather
+    // than an inline loop so the same seen-set guards against a double free if a
+    // re-entrant uninstall of the same package queued any action twice.
+    doCleanup();
+}
+
+void ActionUnit::doCleanup()
+{
+    if (mProcessingDepth > 0) {
+        return;
+    }
+    // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
+    // children-before-parents and each ~Tree unlinks from its parent, so deleting
+    // children first empties the parent's child list (no double free); the seen
+    // set guards a node queued twice by re-entrant uninstalls.
+    QSet<TAction*> deletedActions;
+    for (auto action : uninstallList) {
+        if (!deletedActions.contains(action)) {
+            deletedActions.insert(action);
+            delete action;
+        }
     }
     uninstallList.clear();
+}
+
+void ActionUnit::endProcessing()
+{
+    --mProcessingDepth;
+    Q_ASSERT(mProcessingDepth >= 0);
 }
 
 void ActionUnit::compileAll()

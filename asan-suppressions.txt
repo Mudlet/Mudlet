@@ -15,6 +15,13 @@
 # Qt modules) - a suppression matches if ANY frame does, so those can hide
 # genuine Mudlet leaks too.
 #
+# A leak: line can only match a frame that still resolves to a module path or a
+# symbol name. Leaks reported as "<unknown module>" with no symbols cannot be
+# matched by any leak: line: the allocating library was dlclose()d (or the code
+# was JITed) before LeakSanitizer runs at exit, so there is no name left to
+# compare against. Those have to be handled at their source, not here - see the
+# GPU driver note below for the recurring example.
+#
 # See: https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer
 
 # ==============================================================================
@@ -25,6 +32,34 @@
 leak:libcuda.so
 leak:nvidia
 leak:_dri.so
+
+# leak:_dri.so above can only match when the driver is still mapped at process
+# exit, where LeakSanitizer runs its check. Mesa dlopen()s a DRI driver on first
+# GL use and dlclose()s it when the last GL context - e.g. the 3D map view's
+# QOpenGLWidget - is torn down. A driver-init allocation that leaks and is then
+# unloaded before exit is reported as "<unknown module>" (the .so is gone by the
+# time LeakSanitizer runs), so NO leak: line can match it. On the CI leak job
+# (Ubuntu 22.04) this recurs as a small (~240 byte) realloc+calloc leak during
+# mudlet teardown and flakes across unrelated PRs; it does not reproduce on newer
+# Mesa. Do not try to silence it with a leak: line here (there is no name to
+# match) - keep the GL context from being created/destroyed under the sanitizer
+# test-side instead, as PR #9534 did for the show3dMapView test.
+#
+# A second un-suppressible flake lives on the same CI job: LeakSanitizer's
+# stop-the-world tracer - the helper process that ptrace-attaches at exit to
+# scan memory for live pointers - itself segfaults during exit-time teardown,
+# apparently racing driver/X cleanup. The job log then ends with
+#   Tracer caught signal 11: addr=0x... pc=0x... sp=0x...
+#   ==NNNNN==LeakSanitizer has encountered a fatal error.
+# right after "mudlet::~mudlet() INFO - uninstalling translation...", with no
+# leak report at all, and the busted summary line goes missing too (LSan's
+# Die() skips the stdio flush - the Lua tests themselves passed). Since
+# exitcode=1 the job fails. Suppressions filter leak *reports*, and this
+# aborts before reporting begins, so nothing in this file can help; it is
+# also unrelated to the change under test (the same faulting instruction was
+# observed on development-branch runs 26705214438 and 28641460889 and on PR
+# run 30744002320, at a rate of roughly 1 in 250-500 leak-job runs). If a
+# leak job fails with this signature, just re-run it.
 
 # ==============================================================================
 # Fontconfig library leaks
@@ -67,6 +102,15 @@ leak:libgobject-2.0.so
 # Expat XML parser library leaks
 # ==============================================================================
 leak:libexpat.so
+
+# ==============================================================================
+# speech-dispatcher client library leak
+# One-time allocation in the speech-dispatcher client (libspeechd) when its
+# connection is first opened, reached via QtTextToSpeech's speechd engine.
+# Only surfaces when a speech-dispatcher daemon is reachable and something
+# touches the tts* API; no Mudlet frames are involved.
+# ==============================================================================
+leak:libspeechd.so
 
 # ==============================================================================
 # Qt internal leaks (Qt's integration with system libraries)

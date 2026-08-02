@@ -41,7 +41,8 @@ public:
     {
     }
 
-    // Copy constructor:
+    // Copy constructor - deliberately does not carry over the capture
+    // containers, so a copied state starts with empty captures:
     TMatchState(const TMatchState& ms)
     : mNumberOfConditions(ms.mNumberOfConditions)
     , mNextCondition(ms.mNextCondition)
@@ -50,6 +51,13 @@ public:
     , mSpacer(ms.mSpacer)
     {
     }
+
+    // Pair the user-defined copy constructor with an explicit copy assignment
+    // (Rule of Two). Note the two are deliberately asymmetric: unlike the
+    // constructor above, this defaulted assignment copies every member,
+    // capture containers included. That reproduces the previously implicit
+    // assignment exactly, so behaviour is unchanged:
+    TMatchState& operator=(const TMatchState& ms) = default;
 
     int nextCondition() { return mNextCondition; }
     void conditionMatched() { mNextCondition++; }

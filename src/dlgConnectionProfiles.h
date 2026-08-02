@@ -29,6 +29,7 @@
 #include <QKeyEvent>
 
 class QDir;
+class QTabBar;
 
 namespace pugi {
 class xml_document;
@@ -134,6 +135,10 @@ private:
     void clearNotificationArea();
     void loadPasswordAsync(const QString& profileName);
     void revealConnectionDetails();
+    bool showingOnlyMyProfiles() const;
+
+    static constexpr int scmMyGamesTab = 0;
+    static constexpr int scmAllGamesTab = 1;
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
@@ -148,6 +153,8 @@ private:
     QPalette mErrorPalette;
     QPalette mReadOnlyPalette;
     QAction* mpCopyProfile = nullptr;
+    // switches the profiles list between the user's own games and the full catalog
+    QTabBar* mpTabBar = nullptr;
     QPushButton* offline_button = nullptr;
     QPushButton* connect_button = nullptr;
     QLineEdit* delete_profile_lineedit = nullptr;
@@ -178,6 +185,7 @@ private:
 
 
 private slots:
+    void slot_activeTabChanged(const int index);
     void slot_skipToGamesList();
     void slot_profileContextMenu(QPoint pos);
     void slot_setCustomIcon();

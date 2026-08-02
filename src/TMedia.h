@@ -62,6 +62,16 @@ public:
 
     TMediaData mediaData() const { return mMediaData; }
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
+
+    // A stop is acted on one event-loop turn late, by which time a stopped player is
+    // indistinguishable from one asynchronously loading a source set since. These
+    // record what happened in between: a claim is this player being given a new source
+    // to play, a continuation is its own playlist advancing or looping.
+    quint64 claimGeneration() const { return mClaimGeneration; }
+    void noteClaimed() { ++mClaimGeneration; }
+    quint64 continuationGeneration() const { return mContinuationGeneration; }
+    void noteContinued() { ++mContinuationGeneration; }
+
     QMediaPlayer* mediaPlayer() const { return mMediaPlayer.get(); }
     bool isInitialized() const { return initialized; }
     QMediaPlayer::PlaybackState getPlaybackState() const
@@ -117,6 +127,8 @@ private:
     std::unique_ptr<QMediaPlayer> mMediaPlayer;
     std::unique_ptr<TMediaPlaylist> mPlaylist;
     bool initialized = false;
+    quint64 mClaimGeneration = 0;
+    quint64 mContinuationGeneration = 0;
 };
 
 class TMedia : public QObject
@@ -149,10 +161,18 @@ public:
     void printClosedCaption(const TMediaData& mediaData, const QString& action) const;
     void stopAllMediaPlayers();
 
+    // Number of players still holding a media source. Releasing that source is the only
+    // observable effect of the deferred stop cleanup, so tests need a way to see it.
+    int playersHoldingSource() const;
+
     // Returns true if mediaFileName would resolve to a location outside mediaRoot, either
     // lexically (e.g. via "../" traversal) or through a symlink component that already exists
     // under mediaRoot but points elsewhere. Static so it can be unit-tested without a Host.
     static bool mediaFilePathEscapesMediaDir(const QString& mediaRoot, const QString& mediaFileName);
+
+signals:
+    void signal_setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
+    void signal_hideVideoOutput(TMediaPlayer* player);
 
 private slots:
     void slot_writeFile(QNetworkReply* reply);

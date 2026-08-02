@@ -2283,12 +2283,9 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
             textLines[0] = textLines.at(0).mid(startPos, endPos - startPos + 1);
         }
     } else {
-        // replace a number of QChars at the front with a corresponding
-        // number of spaces to push the first line to the right so it lines up
-        // with the following lines:
+        // trim characters off the front of the first line according to startPos:
         if (!textLines.at(0).isEmpty()) {
             textLines[0] = textLines.at(0).mid(startPos);
-            textLines[0] = QString(QChar::Space).repeated(startPos) % textLines.at(0);
         }
         // and chop off the required number of QChars from the end of the last
         // line:
@@ -3804,7 +3801,14 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             mDragStart.setY(mCaretLine);
             mDragStart.setX(mCaretColumn);
             mDragSelectionEnd.setY(newCaretLine);
-            mDragSelectionEnd.setX(mCaretColumn);
+            // Anchor the moving end at the new caret position (mirroring the
+            // continuation branch below). Using the old column here made the
+            // first Shift+Arrow press produce a zero-width selection, so the
+            // selection lagged one character/word behind the caret and an
+            // immediate Ctrl+C copied nothing. Guard against the sentinel
+            // newCaretColumn (-1) that Shift+Left leaves when the caret is
+            // already at the top-left (0, 0), keeping the safe fallback.
+            mDragSelectionEnd.setX(useNewColumn && newCaretColumn >= 0 ? newCaretColumn : mCaretColumn);
             unHighlight();
             normaliseSelection();
             highlightSelection();

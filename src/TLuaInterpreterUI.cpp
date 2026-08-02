@@ -30,6 +30,7 @@
 #include "TLuaInterpreter.h"
 
 #include <QClipboard>
+#include <QGuiApplication>
 
 #include "EAction.h"
 #include "Host.h"
@@ -58,15 +59,13 @@
 #include "glwidget_integration.h"
 #endif
 
+#include <array>
 #include <limits>
 #include <math.h>
 
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QFileDialog>
-#include <QTableWidget>
-#include <QToolTip>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -354,26 +353,19 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createLabel
 int TLuaInterpreter::createLabel(lua_State* L)
 {
-    QString labelName;
-    QString windowName = QLatin1String("main");
-
     if (lua_type(L, 1) != LUA_TSTRING) {
         lua_pushfstring(L, "createLabel: bad argument #1 type (label or parent window name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    if ((lua_type(L, 1) == LUA_TSTRING) && (lua_type(L, 2) == LUA_TSTRING)) {
-        windowName = lua_tostring(L, 1);
-        labelName = lua_tostring(L, 2);
-        createLabelUserWindow(L, windowName, labelName);
-    } else if ((lua_type(L, 1) == LUA_TSTRING) && (lua_type(L, 2) == LUA_TNUMBER)) {
-        labelName = lua_tostring(L, 1);
-        createLabelMainWindow(L, labelName);
-    } else {
-        lua_pushfstring(L, "createLabel: bad argument #2 type (label name as string or label x-coordinate as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
+    if (lua_type(L, 2) == LUA_TSTRING) {
+        return createLabelUserWindow(L, lua_tostring(L, 1), lua_tostring(L, 2));
+    }
+    if (lua_type(L, 2) == LUA_TNUMBER) {
+        return createLabelMainWindow(L, lua_tostring(L, 1));
     }
 
-    return 1;
+    lua_pushfstring(L, "createLabel: bad argument #2 type (label name as string or label x-coordinate as number expected, got %s!)", luaL_typename(L, 2));
+    return lua_error(L);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMiniConsole
@@ -1198,7 +1190,7 @@ int TLuaInterpreter::getBorderColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getClipboardText
 int TLuaInterpreter::getClipboardText(lua_State* L)
 {
-    QClipboard* clipboard = QApplication::clipboard();
+    QClipboard* clipboard = QGuiApplication::clipboard();
     lua_pushstring(L, clipboard->text().toUtf8().constData());
     return 1;
 }
@@ -1677,6 +1669,50 @@ int TLuaInterpreter::getUserWindowSize(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getWindowGeometry
+int TLuaInterpreter::getWindowGeometry(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    const QString windowName = getVerifiedString(L, __func__, 1, "window name");
+
+    if (auto geometry = host.windowGeometry(windowName)) {
+        lua_pushnumber(L, geometry->x());
+        lua_pushnumber(L, geometry->y());
+        lua_pushnumber(L, geometry->width());
+        lua_pushnumber(L, geometry->height());
+        return 4;
+    }
+
+    lua_pushnil(L);
+    lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#windowVisible
+int TLuaInterpreter::windowVisible(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    const QString windowName = getVerifiedString(L, __func__, 1, "window name");
+
+    if (auto visible = host.windowVisible(windowName)) {
+        lua_pushboolean(L, *visible);
+        return 1;
+    }
+
+    lua_pushnil(L);
+    lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelText
+int TLuaInterpreter::getLabelText(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    auto label = LABEL(L, labelName);
+    lua_pushstring(L, label->text().toUtf8().constData());
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getWindowWrap
 int TLuaInterpreter::getWindowWrap(lua_State* L)
 {
@@ -1856,13 +1892,10 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
     result = host.mpConsole->getBgColor(windowName);
     auto it = result.begin();
     if (result.size() < 3) {
-        return 0;
+        return warnArgumentValue(L, __func__, qsl("current selection invalid in window '%1'").arg(windowName));
     }
-    if (ansiBg < 0) {
-        return 0;
-    }
-    if (ansiBg > 16) {
-        return 0;
+    if (ansiBg < 0 || ansiBg > 16) {
+        return warnArgumentValue(L, __func__, qsl("ANSI color %1 out of range (0 to 16)").arg(ansiBg));
     }
 
 
@@ -1950,13 +1983,10 @@ int TLuaInterpreter::isAnsiFgColor(lua_State* L)
     result = host.mpConsole->getFgColor(windowName);
     auto it = result.begin();
     if (result.size() < 3) {
-        return 0;
+        return warnArgumentValue(L, __func__, qsl("current selection invalid in window '%1'").arg(windowName));
     }
-    if (ansiFg < 0) {
-        return 0;
-    }
-    if (ansiFg > 16) {
-        return 0;
+    if (ansiFg < 0 || ansiFg > 16) {
+        return warnArgumentValue(L, __func__, qsl("ANSI color %1 out of range (0 to 16)").arg(ansiFg));
     }
 
 
@@ -2229,13 +2259,25 @@ int TLuaInterpreter::resetCmdLineAction(lua_State* L)
 int TLuaInterpreter::resetBackgroundImage(lua_State* L)
 {
     QString windowName = qsl("main");
+    bool fullWindow = false;
     const int n = lua_gettop(L);
-    if (n > 0) {
+    int counter = 1;
+    if (n > 0 && lua_type(L, 1) == LUA_TSTRING) {
         windowName = getVerifiedString(L, __func__, 1, "console name");
+        counter++;
+    }
+
+    if (counter <= n) {
+        fullWindow = getVerifiedBool(L, __func__, counter, "fullWindow");
+        counter++;
+    }
+
+    if (fullWindow && !(windowName.isEmpty() || windowName.compare(qsl("main"), Qt::CaseSensitive) == 0)) {
+        return warnArgumentValue(L, __func__, qsl("the full window background can only be reset on the main console"));
     }
 
     Host* host = &getHostFromLua(L);
-    if (!host->resetBackgroundImage(windowName)) {
+    if (!host->resetBackgroundImage(windowName, fullWindow)) {
         return warnArgumentValue(L, __func__, qsl("console '%1' not found").arg(windowName));
     }
     lua_pushboolean(L, true);
@@ -2520,6 +2562,7 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     QString windowName = qsl("main");
     QString imgPath;
     int mode = 1;
+    bool fullWindow = false;
     int counter = 1;
     const int n = lua_gettop(L);
     if (n > 1 && lua_type(L, 2) == LUA_TSTRING) {
@@ -2530,16 +2573,30 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     imgPath = getVerifiedString(L, __func__, counter, "image path");
     counter++;
 
-    if (n > 2 || (counter == 2 && n > 1)) {
+    if (counter <= n) {
         mode = getVerifiedInt(L, __func__, counter, "mode");
+        counter++;
     }
 
-    if (mode < 1 || mode > 4) {
-        return warnArgumentValue(L, __func__, qsl("%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style'").arg(mode));
+    if (counter <= n) {
+        fullWindow = getVerifiedBool(L, __func__, counter, "fullWindow");
+        counter++;
+    }
+
+    if (mode < 1 || mode > 5) {
+        return warnArgumentValue(L, __func__, qsl("%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style', 5 'cover'").arg(mode));
+    }
+
+    if (mode == 5 && !fullWindow) {
+        return warnArgumentValue(L, __func__, qsl("mode 'cover' is not supported for the main display - pass true as the 4th argument to apply it to the full window background instead"));
+    }
+
+    if (fullWindow && !(windowName.isEmpty() || windowName.compare(qsl("main"), Qt::CaseSensitive) == 0)) {
+        return warnArgumentValue(L, __func__, qsl("the full window background can only be used with the main console"));
     }
 
     Host* host = &getHostFromLua(L);
-    if (!host->setBackgroundImage(windowName, imgPath, mode)) {
+    if (!host->setBackgroundImage(windowName, imgPath, mode, fullWindow)) {
         return warnArgumentValue(L, __func__, qsl("console or label '%1' not found").arg(windowName));
     }
 
@@ -2770,7 +2827,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setClipboardText
 int TLuaInterpreter::setClipboardText(lua_State* L)
 {
-    QClipboard* clipboard = QApplication::clipboard();
+    QClipboard* clipboard = QGuiApplication::clipboard();
     clipboard->setText(getVerifiedString(L, __func__, 1, "text"));
     lua_pushboolean(L, true);
     return 1;
@@ -3240,9 +3297,16 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 
     const int n = lua_gettop(L);
 
-    const QString windowName{WINDOW_NAME(L, 1)};
+    // Every argument check below can raise a Lua error, and lua_error() longjmps
+    // past C++ destructors - so nothing holding heap memory may be alive while they
+    // run: the window name stays the Lua-owned string anchored at stack index 1 and
+    // the colour components a plain array until the last check has passed. The
+    // blinkMode QString further down is exempt only because it holds a
+    // QStringLiteral until after the last raise; give it a computed default and the
+    // leak comes back
+    const char* windowNameCString = WINDOW_NAME(L, 1);
 
-    QVector<int> colorComponents(6); // 0-2 RGB background, 3-5 RGB foreground
+    std::array<int, 6> colorComponents{}; // 0-2 RGB background, 3-5 RGB foreground
     colorComponents[0] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 2, "red background color component"), 255.0));
     colorComponents[1] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 3, "green background color component"), 255.0));
     colorComponents[2] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 4, "blue background color component"), 255.0));
@@ -3343,8 +3407,8 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
                                         | (reverse ? TChar::Reverse : TChar::None) | (strikeout ? TChar::StrikeOut : TChar::None) | (underline ? TChar::Underline : TChar::None)
                                         | (fastBlink ? TChar::FastBlink : (slowBlink ? TChar::Blink : TChar::None));
 
-    if (!host.mpConsole->setTextFormat(
-                windowName, QColor(colorComponents.at(3), colorComponents.at(4), colorComponents.at(5)), QColor(colorComponents.at(0), colorComponents.at(1), colorComponents.at(2)), flags)) {
+    const QString windowName{windowNameCString};
+    if (!host.mpConsole->setTextFormat(windowName, QColor(colorComponents[3], colorComponents[4], colorComponents[5]), QColor(colorComponents[0], colorComponents[1], colorComponents[2]), flags)) {
         return warnArgumentValue(L, __func__, qsl("window '%1' does not exist").arg(windowName), true);
     }
 
@@ -3689,7 +3753,7 @@ int TLuaInterpreter::windowType(lua_State* L)
     }
 
     lua_pushnil(L);
-    lua_pushfstring(L, "'%s' is not a known label, any type of console, nor command line", windowName.toUtf8().constData());
+    lua_pushfstring(L, "'%s' is not a known label, any type of console, command line, text edit, nor scroll box", windowName.toUtf8().constData());
     return 2;
 }
 
@@ -3726,9 +3790,7 @@ int TLuaInterpreter::enableScrolling(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
     if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, "scrolling cannot be enabled/disabled for the 'main' window");
     }
 
     auto console = CONSOLE(L, windowName);
@@ -3742,9 +3804,7 @@ int TLuaInterpreter::disableScrolling(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
     if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, "scrolling cannot be enabled/disabled for the 'main' window");
     }
 
     auto console = CONSOLE(L, windowName);
@@ -3800,11 +3860,13 @@ int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
         }
         movie->setScaledSize(pN->size());
         if (autoScale) {
-            connect(pN, &TLabel::resized, pN, [=] {
+            connect(pN, &TLabel::resized, movie, [=] {
                 movie->setScaledSize(pN->size());
             });
         } else {
-            pN->disconnect(SIGNAL(resized()));
+            // only drop the movie-scaling connection(s); other consumers of
+            // the label's resized signal must stay connected
+            QObject::disconnect(pN, &TLabel::resized, movie, nullptr);
         }
     } else {
         return warnArgumentValue(L, __func__, qsl("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));

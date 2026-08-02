@@ -28,6 +28,7 @@
 #include "TConsole.h"
 #include "TTrigger.h"
 
+#include <algorithm>
 #include <functional>
 
 /* We need an explicit constructor in this file as the Host class is forward
@@ -103,6 +104,9 @@ void TriggerUnit::uninstall(const QString& packageName)
         return;
     }
     for (auto& trigger : uninstallList) {
+        // in case the trigger was also queued for the markCleanup()/doCleanup()
+        // path - deleting it here would otherwise leave a dangling pointer there:
+        mCleanupSet.remove(trigger);
         delete trigger;
     }
     uninstallList.clear();
@@ -197,6 +201,13 @@ void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
     }
     mTriggerMap.remove(pT->getID());
     mTriggerRootNodeList.remove(pT);
+    // A node can be removed and deleted mid-pass without going through the
+    // deferred-cleanup paths (e.g. XMLimport discarding its placeholder trigger
+    // when installPackage() runs from a trigger script), so it must not linger
+    // in the same-line match list. Null the slot instead of compacting:
+    // processDataStream() may be walking that list by index right now, and
+    // shifting entries under it would skip a trigger's same-line match.
+    std::replace(mRootNodesAddedWhileProcessing.begin(), mRootNodesAddedWhileProcessing.end(), pT, static_cast<TTrigger*>(nullptr));
 }
 
 TTrigger* TriggerUnit::getTrigger(int id)
@@ -226,6 +237,9 @@ bool TriggerUnit::registerTrigger(TTrigger* pT)
         return true;
     }
     addTriggerRootNode(pT);
+    if (mProcessingDepth > 0) {
+        mRootNodesAddedWhileProcessing.append(pT);
+    }
     return true;
 }
 
@@ -317,8 +331,26 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // current node → use-after-free on the next ++). AliasUnit dodges the
     // same hazard for the same reason — see Mudlet issue #4297.
     auto copyOfNodeList = mTriggerRootNodeList;
+    // Triggers registered by a script during this pass (tempTrigger() & Co.)
+    // are missing from the snapshot but must still match the current line:
+    // before the snapshot the loop walked the live std::list, which a push_back
+    // extends in front of end(), so a trigger created mid-pass was reached in
+    // the same iteration - long-standing behaviour capture scripts depend on.
+    // Entries below this index were added by outer (nested-feedTriggers) passes
+    // and are already part of this pass's snapshot.
+    const qsizetype firstNodeAddedThisPass = mRootNodesAddedWhileProcessing.size();
     for (auto trigger : copyOfNodeList) {
         if (!trigger->isActive()) {
+            continue;
+        }
+        trigger->match(subject, data, line);
+    }
+    // Index-based loop: a match here can register yet more triggers, growing
+    // the list; they too get a shot at the current line, just as with the
+    // live-list iteration.
+    for (qsizetype i = firstNodeAddedThisPass; i < mRootNodesAddedWhileProcessing.size(); ++i) {
+        auto trigger = mRootNodesAddedWhileProcessing.at(i);
+        if (!trigger || !trigger->isActive()) {
             continue;
         }
         trigger->match(subject, data, line);
@@ -328,6 +360,9 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     mProcessingDepth--;
     Q_ASSERT(mProcessingDepth >= 0);
     if (mProcessingDepth == 0) {
+        // Deletion is deferred while any pass runs, so these pointers stayed
+        // valid; drop them before doCleanup() frees the underlying triggers.
+        mRootNodesAddedWhileProcessing.clear();
         doCleanup();
     }
 }
@@ -482,17 +517,20 @@ void TriggerUnit::doCleanup()
         return;
     }
 
+    QSet<TTrigger*> deletedTriggers;
     QMutableSetIterator<TTrigger*> itTrigger(mCleanupSet);
     while (itTrigger.hasNext()) {
         auto pTrigger = itTrigger.next();
         itTrigger.remove();
+        deletedTriggers.insert(pTrigger);
         delete pTrigger;
     }
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
     // children first empties the parent's child list (no double free); the seen
-    // set guards a node queued twice by re-entrant uninstalls.
-    QSet<TTrigger*> deletedTriggers;
+    // set guards a node queued twice by re-entrant uninstalls and is shared with
+    // the mCleanupSet loop above so an object that somehow ended up in both
+    // containers cannot be freed twice.
     for (auto trigger : uninstallList) {
         if (!deletedTriggers.contains(trigger)) {
             deletedTriggers.insert(trigger);

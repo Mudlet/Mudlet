@@ -605,10 +605,26 @@ void dlgPackageManager::slot_openBugWebsite()
     mudlet::self()->openWebPage(qsl("https://github.com/Mudlet/mudlet-package-repository/issues/new?template=package-bug-or-issue.md&title=[Package%20Bug]%20") + currentItem->text());
 }
 
+QString dlgPackageManager::packageHelpUrl(const QString& packageName) const
+{
+    // a help URL set by the package's author takes precedence over the generic repository website
+    const QString url = mpHost->mPackageInfo.value(packageName).value(qsl("helpURL"));
+    if (!url.isEmpty()) {
+        return url;
+    }
+    return packageLookup.value(packageName).value(qsl("helpURL")).toString();
+}
+
 void dlgPackageManager::slot_openPackageWebsite()
 {
     const QListWidgetItem* currentItem = packageList->currentItem();
     if (!currentItem) {
+        return;
+    }
+
+    const QString helpUrl = packageHelpUrl(currentItem->text());
+    if (!helpUrl.isEmpty()) {
+        mudlet::self()->openWebPage(helpUrl);
         return;
     }
 

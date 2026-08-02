@@ -273,6 +273,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mLocalGotESC(other.mLocalGotESC)
 , mLocalGotCSI(other.mLocalGotCSI)
 , mLocalGotOSC(other.mLocalGotOSC)
+, mLocalGotString(other.mLocalGotString)
 , mLocalIncompleteSequenceBytes(other.mLocalIncompleteSequenceBytes)
 , mProcessingLocalFeed(other.mProcessingLocalFeed)
 , lastLoggedFromLine(other.lastLoggedFromLine)
@@ -367,6 +368,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mLocalGotESC = other.mLocalGotESC;
         mLocalGotCSI = other.mLocalGotCSI;
         mLocalGotOSC = other.mLocalGotOSC;
+        mLocalGotString = other.mLocalGotString;
         mLocalIncompleteSequenceBytes = other.mLocalIncompleteSequenceBytes;
         mProcessingLocalFeed = other.mProcessingLocalFeed;
         lastLoggedFromLine = other.lastLoggedFromLine;
@@ -580,13 +582,15 @@ void TBuffer::swapParserSequenceState()
     std::swap(mGotESC, mLocalGotESC);
     std::swap(mGotCSI, mLocalGotCSI);
     std::swap(mGotOSC, mLocalGotOSC);
+    std::swap(mGotString, mLocalGotString);
     std::swap(mIncompleteSequenceBytes, mLocalIncompleteSequenceBytes);
 }
 
 void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServer)
 {
-    // mGotESC/mGotCSI/mGotOSC and mIncompleteSequenceBytes persist between
-    // calls so that a sequence split across Game Server packets still parses.
+    // mGotESC/mGotCSI/mGotOSC/mGotString and mIncompleteSequenceBytes persist
+    // between calls so that a sequence split across Game Server packets still
+    // parses.
     // Locally generated text (feedTriggers(), MMCP chat messages, MXP
     // insertions) runs through the same parser, so swap in a separate set of
     // that state for the duration of such a feed - otherwise local text
@@ -775,17 +779,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 continue;
             }
             // A control character straight after the ESC means the escape
-            // sequence is malformed - abandon it and process the character
-            // normally:
-        }
-
-        if (mGotESC) {
-            // ESC was not followed by '[' or ']', so it does not introduce a
-            // CSI or OSC sequence (e.g. ESC c, ESC 7, or a charset designator
-            // like ESC(B). Clear the latch here - otherwise it stays set and a
-            // later literal '[' or ']' anywhere in the stream is misparsed as a
-            // sequence introducer, swallowing the text that follows it.
-            mGotESC = false;
+            // sequence is malformed - abandon it (the latch was already
+            // cleared above) and process the character normally:
         }
 
         if (mGotCSI) {
@@ -1086,10 +1081,15 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 
                         // We replace the already processed text with the entity value into the buffer and restart
                         // processing it for charset encoding but with limited MXP handling.
-                        // Encode with the session's encoding (not toLatin1(), which would flatten any
-                        // non-Latin1 characters to '?') so the value survives the re-decode below; the
+                        // A CUST value is decoded text, so encode it with the session's encoding
+                        // (not toLatin1(), which would flatten non-Latin1 characters to '?') for the
+                        // re-decode below. A LIT value is the raw, undecoded entity bytes held as one
+                        // Latin1 code unit per byte (see TEntityHandler::handle()), so toLatin1() is
+                        // an exact byte passthrough - re-encoding it would double-encode those bytes
+                        // and orphan any continuation bytes still ahead in the buffer. Either way the
                         // byte length, not the QString length, is what the offset bookkeeping needs.
-                        const QByteArray entityValueBytes = TEncodingHelper::encode(mpHost->mMxpProcessor.getEntityValue(), mEncoding);
+                        const QByteArray entityValueBytes =
+                                result == HANDLER_INSERT_ENTITY_CUST ? TEncodingHelper::encode(mpHost->mMxpProcessor.getEntityValue(), mEncoding) : mpHost->mMxpProcessor.getEntityValue().toLatin1();
                         size_t valueLength = entityValueBytes.size();
                         localBuffer.replace(0, localBufferPosition + 1, entityValueBytes.constData(), entityValueBytes.size());
 
@@ -1599,7 +1599,18 @@ void TBuffer::commitLineData(QString line, std::deque<TChar> chars, const char c
     const int lineIndex = lineBuffer.size() - 1;
     mCommitLineIndices.append(lineIndex);
     if (!mSkipTriggerProcessing) {
+        // Keep the just-committed formats around so that color triggers
+        // can match against the colors as received from the game even
+        // after earlier triggers in this pass have recolored the line;
+        // save/restore gives nested feedTriggers() passes (which re-enter
+        // this function) their own snapshot:
+        std::deque<TChar> savedPassLine = std::move(mPreTriggerPassLine);
+        const int savedPassLineNumber = mPreTriggerPassLineNumber;
+        mPreTriggerPassLine = std::move(chars);
+        mPreTriggerPassLineNumber = lineIndex;
         mpHost->mpConsole->runTriggers(lineIndex);
+        mPreTriggerPassLine = std::move(savedPassLine);
+        mPreTriggerPassLineNumber = savedPassLineNumber;
     }
 
     // Only use of TBuffer::wrap(), breaks up new text
@@ -1811,6 +1822,23 @@ void TBuffer::recordLineLengthForWrapDetection(const qsizetype length)
         hostGuard->mpConsole->echoLink(linkText, func, hint, false);
         hostGuard->mpConsole->print("\n");
     });
+}
+
+const std::deque<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
+{
+    if (lineNumber >= 0 && lineNumber == mPreTriggerPassLineNumber) {
+        return &mPreTriggerPassLine;
+    }
+    return nullptr;
+}
+
+// A structural edit to the trigger-pass line makes the edited text the new
+// baseline for color matching, as it was before the snapshot existed:
+void TBuffer::syncPreTriggerPassLine(int y)
+{
+    if (y >= 0 && y == mPreTriggerPassLineNumber && y < static_cast<int>(buffer.size())) {
+        mPreTriggerPassLine = buffer[y];
+    }
 }
 
 void TBuffer::processMxpWatchdogCallback()
@@ -2401,6 +2429,10 @@ void TBuffer::decodeSGR(const QString& sequence)
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
                                                  << "\") ERROR - failed to detect underline parameter element (the second part) in a SGR...;4:?;..m sequence assuming it is a zero!";
                 }
+                // Sub-parameter values follow the widely-adopted kitty/VTE
+                // convention: 0 none, 1 single, 2 double, 3 curly, 4 dotted,
+                // 5 dashed. Mudlet has no distinct double-underline style so
+                // 2 is shown as a plain single underline.
                 switch (value) {
                 case 0: // Underline off
                     mUnderline = false;
@@ -2408,29 +2440,35 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mUnderlineDotted = false;
                     mUnderlineDashed = false;
                     break;
-                case 1: // Underline on (solid)
+                case 1: // Single (straight) underline
                     mUnderline = true;
                     mUnderlineWavy = false;
                     mUnderlineDotted = false;
                     mUnderlineDashed = false;
                     break;
-                case 2: // Dashed underline
+                case 2: // Double underline - unsupported, show as single
                     mUnderline = true;
                     mUnderlineWavy = false;
                     mUnderlineDotted = false;
-                    mUnderlineDashed = true;
+                    mUnderlineDashed = false;
                     break;
-                case 3: // Dotted underline
+                case 3: // Curly (wavy) underline
+                    mUnderline = true;
+                    mUnderlineWavy = true;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
+                    break;
+                case 4: // Dotted underline
                     mUnderline = true;
                     mUnderlineWavy = false;
                     mUnderlineDotted = true;
                     mUnderlineDashed = false;
                     break;
-                case 4: // Wavy underline
+                case 5: // Dashed underline
                     mUnderline = true;
-                    mUnderlineWavy = true;
+                    mUnderlineWavy = false;
                     mUnderlineDotted = false;
-                    mUnderlineDashed = false;
+                    mUnderlineDashed = true;
                     break;
                 default: // Something unexpected
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
@@ -2743,7 +2781,9 @@ void TBuffer::decodeSGR(const QString& sequence)
                     }
                 } break;
                 case 39: //default foreground color
+                    mIsDefaultColor = true;
                     mForeGroundColor = pHost->mFgColor;
+                    mForeGroundColorLight = pHost->mFgColor;
                     break;
                 case 40:
                     mBackGroundColor = mBlack;
@@ -4721,6 +4761,10 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
     if (text.isEmpty()) {
         return false;
     }
+    // Bound a single insert to the same limit the echo/append path uses
+    // (see appendLine()), so an oversized insertText() cannot consume unbounded
+    // memory or processing time.
+    const QString insertedText = (text.size() > MAX_CHARACTERS_PER_ECHO) ? text.left(MAX_CHARACTERS_PER_ECHO) : text;
     const int x = P.x();
     const int y = P.y();
     if ((y >= 0) && (y < static_cast<int>(buffer.size()))) {
@@ -4731,14 +4775,14 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
             TChar c(mpConsole);
             expandLine(y, x - buffer.at(y).size(), c);
         }
-        for (int i = 0, total = text.size(); i < total; ++i) {
-            lineBuffer[y].insert(x + i, text.at(i));
-            const TChar c = format;
-            auto it = buffer[y].begin();
-            buffer[y].insert(it + x + i, c);
-        }
+        // Insert the whole run in one operation. Inserting one character at a
+        // time into the middle of the QString/std::deque is O(n) per character,
+        // which is quadratic for large inserts.
+        lineBuffer[y].insert(x, insertedText);
+        buffer[y].insert(buffer[y].begin() + x, static_cast<std::size_t>(insertedText.size()), format);
+        syncPreTriggerPassLine(y);
     } else {
-        appendLine(text, 0, text.size(), format.mFgColor, format.mBgColor, format.mFlags);
+        appendLine(insertedText, 0, insertedText.size(), format.mFgColor, format.mBgColor, format.mFlags);
     }
     return true;
 }
@@ -5045,6 +5089,12 @@ void TBuffer::logRemainingOutput()
 {
     mpHost->mpConsole->mLogStream << lastTextToLog;
     mpHost->mpConsole->mLogStream.flush();
+
+    // Reset the deferred logging state so restarting logging cannot replay this
+    // pending line into the new session via log()'s deferred-flush path
+    lastTextToLog.clear();
+    lastLoggedFromLine = -1;
+    lastloggedToLine = -1;
 }
 
 // logs a string directly to the log file
@@ -5286,6 +5336,7 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
         auto it1 = buffer[y].begin() + x;
         auto it2 = buffer[y].begin() + x_end;
         buffer[y].erase(it1, it2);
+        syncPreTriggerPassLine(y);
     }
 
     // insert replacement
@@ -5295,6 +5346,29 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
 
 void TBuffer::clear()
 {
+    // Clearing the display is not gagging: flush any deferred log text before
+    // the deleteLines() calls below would discard it, so a received line that
+    // was still pending for logging is not lost from the log file
+    if (!mpHost.isNull() && mpHost->mpConsole && this == &mpHost->mpConsole->buffer && mpHost->mpConsole->mLogToLogFile) {
+        logRemainingOutput();
+
+        // A line whose own trigger calls clearWindow() has been committed and
+        // displayed, but commitLine() defers its log() call until runTriggers()
+        // returns - and the deleteLines() below will reset its commit index to
+        // -1, suppressing that call. Log those still-pending lines now so they
+        // are not lost. mCommitLineIndices holds them in display order.
+        for (const int commitLineIndex : mCommitLineIndices) {
+            if (commitLineIndex >= 0 && commitLineIndex < static_cast<int>(lineBuffer.size())) {
+                mpHost->mpConsole->mLogStream << assembleLog(commitLineIndex, commitLineIndex);
+            }
+        }
+        mpHost->mpConsole->mLogStream.flush();
+
+        lastTextToLog.clear();
+        lastLoggedFromLine = -1;
+        lastloggedToLine = -1;
+    }
+
     mCurrentHyperlinkCommand.clear();
     mCurrentHyperlinkHint.clear();
     mCurrentHyperlinkLinkId = 0;
@@ -5418,6 +5492,7 @@ void TBuffer::shrinkBuffer()
     // We need to adjust the search result line as some lines have now gone
     // away:
     mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
+    mPreTriggerPassLineNumber = -1;
 
     // The removed leading lines shift every remaining index down; keep the
     // deferred logging state pointing at the same lines
@@ -5462,6 +5537,9 @@ bool TBuffer::deleteLines(int from, int to)
         }
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
+        if (mPreTriggerPassLineNumber >= from) {
+            mPreTriggerPassLineNumber = -1;
+        }
 
         // Keep the deferred logging state in step with the removed lines so
         // pending text is only dropped when the lines it holds were deleted

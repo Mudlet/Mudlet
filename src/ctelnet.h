@@ -177,8 +177,12 @@ public:
     void disconnectIt();
     void abortConnection();
     // Second argument needs to be set false when sending password to prevent
-    // it being sniffed by scripts/packages:
-    bool sendData(QString& data, bool permitDataSendRequestEvent = true);
+    // it being sniffed by scripts/packages. Third argument marks game commands
+    // (whether typed at the command line or sent by a script) as opposed to
+    // internal protocol replies that also route through here (e.g. MXP) or the
+    // auto-login credentials, so only game commands can arm character-at-a-time
+    // detection:
+    bool sendData(QString& data, bool permitDataSendRequestEvent = true, bool isGameCommand = false);
     QMap<QString, QPair<bool, QString>> getNewEnvironDataMap();
     bool isMNESVariable(const QString&);
     void sendInfoNewEnvironValue(const QString&);
@@ -317,6 +321,10 @@ signals:
 private:
     cTelnet() = default;
 
+    // Lets the functional test drive the real download entry point and inspect
+    // the in-flight reply, reproducing the dialog-swap cancellation cascade.
+    friend class TelnetTlsPromptTest;
+
 #if defined(QT_NO_SSL)
     void abortLosingSocket(QTcpSocket* losingSocket);
 #else
@@ -417,6 +425,12 @@ private:
     // Stores the peer certificate from slot_socketSslError() so it can be
     // used by getPeerCertificate() when mpSocket is null:
     QSslCertificate mPeerCertificate;
+    // Latched true while a TLS-upgrade question is pending or open in the
+    // frontend. The dialog is delivered via a queued connection and so outlives
+    // the emit; this stops a hostile server stacking further prompts by
+    // re-advertising its secure MSSP port while the modal is up. Cleared when the
+    // user answers (slot_tlsUpgradeResponse()).
+    bool mTlsUpgradePromptInFlight = false;
 #endif
     // Could be a URL ("www.game.com") or an IPv4 address ("192.168.1.1") or an
     // IPv6 address ("2001:db8::1"):
@@ -528,6 +542,15 @@ private:
     bool mEchoAnomalyDetected = false;
     static constexpr int ECHO_ANOMALY_THRESHOLD = 5;
     static constexpr int ECHO_ANOMALY_WINDOW_MS = 5000;
+
+    // Character-at-a-time (ECHO + SGA) detection. A server that only masks a
+    // password produces the exact same negotiation, so we do not conclude
+    // character-at-a-time until ECHO+SGA has outlived a submitted input line:
+    // a password mask releases ECHO (WONT ECHO) right after the masked line and
+    // stops the timer before it fires, whereas a real character-at-a-time server
+    // never releases it. See cTelnet::checkCharacterModePattern().
+    bool mCharacterModeDetected = false;
+    QTimer* mTimerCharacterModeDetect = nullptr;
 
     // KaVir protocol negotiation tracking
     QVector<unsigned char> mNegotiationOrder;

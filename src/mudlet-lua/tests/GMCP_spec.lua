@@ -151,3 +151,43 @@ describe("tests the functionality of the gmod module", function()
     end)
   end)
 end)
+
+describe("Tests the argument and disconnected contract of sendGMCP", function()
+  -- Contract-only checks: sendGMCP is never mocked here and never reaches a
+  -- live game server. The self-test profile is forced into a disconnected
+  -- state so the connection guard is exercised deterministically; verifying
+  -- the actual bytes on the wire is a separate, stub-based effort.
+  local function contains(haystack, needle)
+    return type(haystack) == "string" and haystack:find(needle, 1, true) ~= nil
+  end
+
+  before_each(function()
+    disconnect()
+  end)
+
+  it("names the offending value's real type when the message is not a string", function()
+    -- Regression #9543: the type-name placeholder must be expanded, not printed
+    -- as a literal "%1". lua_pushfstring only understands C-style "%s".
+    local ok, err = pcall(function() sendGMCP({}) end)
+    assert.is_false(ok)
+    assert.is_true(contains(err, "sendGMCP: bad argument #1 type (message as string expected, got table!)"), tostring(err))
+    assert.is_false(contains(err, "%1"), tostring(err))
+
+    local okBool, errBool = pcall(function() sendGMCP(true) end)
+    assert.is_false(okBool)
+    assert.is_true(contains(errBool, "sendGMCP: bad argument #1 type (message as string expected, got boolean!)"), tostring(errBool))
+  end)
+
+  it("names the real type when the optional second argument is not a string", function()
+    local ok, err = pcall(function() sendGMCP("Core.Ping", {}) end)
+    assert.is_false(ok)
+    assert.is_true(contains(err, "sendGMCP: bad argument #2 type (what as string is optional, got table!)"), tostring(err))
+    assert.is_false(contains(err, "%1"), tostring(err))
+  end)
+
+  it("returns nil and an explanatory message while disconnected", function()
+    local ok, err = sendGMCP("External.Discord.Hello")
+    assert.is_nil(ok)
+    assert.is_true(contains(err, "not connected to game server"))
+  end)
+end)

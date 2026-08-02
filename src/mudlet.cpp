@@ -942,7 +942,12 @@ void mudlet::setupConfig()
         }
         confPath = portPath;
     } else {
-        confPath = confDirDefault;
+        const auto resolution = utils::xdgConfigDir(confDirDefault);
+        confPath = resolution.path;
+        if (resolution.migrationPending) {
+            qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet is not a Mudlet config directory yet, so the existing " << confPath
+                              << " is still in use. Move it to $XDG_CONFIG_HOME/mudlet to migrate.";
+        }
     }
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
 
@@ -2198,26 +2203,62 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadProgress, pConsole, &TMainConsole::updatePackageDownloadProgress, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadFinished, pConsole, &TMainConsole::closePackageDownloadProgress, Qt::UniqueConnection);
 
+    connect(pH, &Host::signal_showMapperScriptReminder, pConsole, &TMainConsole::showMapperScriptReminder, Qt::UniqueConnection);
+    connect(pH, &Host::signal_showUnpackingProgress, pConsole, &TMainConsole::showUnpackingProgress, Qt::UniqueConnection);
+    connect(pH, &Host::signal_hideUnpackingProgress, pConsole, &TMainConsole::closeUnpackingProgress, Qt::UniqueConnection);
+
+    // Wire the map engine's progress signals to the console that owns the dialog.
+    // Must be connected before the profile's map is loaded (further down in
+    // slot_connectionDialogueFinished()), or early map operations have no
+    // frontend to show progress.
+    if (!pH->mpMap.isNull()) {
+        auto pMap = pH->mpMap.data();
+        connect(pMap, &TMap::signal_mapTransferProgressStart, pConsole, &TMainConsole::showMapTransferProgress, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapJsonProgressStart, pConsole, &TMainConsole::showMapJsonProgress, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapProgressSetLabel, pConsole, &TMainConsole::setMapProgressDialogLabel, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapProgressSetRange, pConsole, &TMainConsole::setMapProgressDialogRange, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapProgressSetValue, pConsole, &TMainConsole::setMapProgressDialogValue, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapProgressDisableCancel, pConsole, &TMainConsole::disableMapProgressDialogCancel, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapProgressClose, pConsole, &TMainConsole::closeMapProgressDialog, Qt::UniqueConnection);
+    }
+
+    if (pH->mpMedia) {
+        // Pin DirectConnection so the bool& out-parameter is filled synchronously, never queued.
+        connect(pH->mpMedia.data(), &TMedia::signal_setupVideoOutput, pConsole, &TMainConsole::setupVideoOutput, static_cast<Qt::ConnectionType>(Qt::DirectConnection | Qt::UniqueConnection));
+        connect(pH->mpMedia.data(), &TMedia::signal_hideVideoOutput, pConsole, &TMainConsole::hideVideoOutput, static_cast<Qt::ConnectionType>(Qt::DirectConnection | Qt::UniqueConnection));
+    }
+
 #if !defined(QT_NO_SSL)
-    connect(&pH->mTelnet, &cTelnet::signal_promptTlsAvailable, this, [pH = QPointer<Host>(pH)](const QString& text, const QString& informativeText) {
-        // ::exec() spins a nested event loop - a re-entrancy hazard preserved
-        // from the original in-cTelnet implementation
-        auto pMsgBox = new QMessageBox();
-        pMsgBox->setIcon(QMessageBox::Question);
-        pMsgBox->setText(text);
-        pMsgBox->setInformativeText(informativeText);
-        pMsgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-        pMsgBox->setDefaultButton(QMessageBox::Yes);
-        // Make using Escape mean no change:
-        pMsgBox->setEscapeButton(QMessageBox::No);
-        const int ret = pMsgBox->exec();
-        delete pMsgBox;
-        if (!pH) {
-            qWarning() << "mudlet: the profile vanished while the TLS upgrade prompt was open; discarding the user's answer.";
-            return;
-        }
-        pH->mTelnet.slot_tlsUpgradeResponse(ret == QMessageBox::Yes);
-    });
+    // A queued connection is essential here. signal_promptTlsAvailable() is
+    // emitted deep inside cTelnet's socket-parsing call stack, and the modal
+    // QMessageBox::exec() below spins a nested event loop. Delivering it queued
+    // lets that parse pass unwind first, so the dialog runs with no cTelnet frames
+    // beneath it: a profile teardown while the dialog is open (e.g. a Lua
+    // closeProfile()) then cannot free the cTelnet whose stack we would otherwise
+    // return into, and the answer cannot mutate the socket mid-parse. The QPointer
+    // capture then fully protects the (now top-level) lambda body.
+    connect(
+            &pH->mTelnet,
+            &cTelnet::signal_promptTlsAvailable,
+            this,
+            [pH = QPointer<Host>(pH)](const QString& text, const QString& informativeText) {
+                auto pMsgBox = new QMessageBox();
+                pMsgBox->setIcon(QMessageBox::Question);
+                pMsgBox->setText(text);
+                pMsgBox->setInformativeText(informativeText);
+                pMsgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+                pMsgBox->setDefaultButton(QMessageBox::Yes);
+                // Make using Escape mean no change:
+                pMsgBox->setEscapeButton(QMessageBox::No);
+                const int ret = pMsgBox->exec();
+                delete pMsgBox;
+                if (!pH) {
+                    qWarning() << "mudlet: the profile vanished while the TLS upgrade prompt was open; discarding the user's answer.";
+                    return;
+                }
+                pH->mTelnet.slot_tlsUpgradeResponse(ret == QMessageBox::Yes);
+            },
+            Qt::QueuedConnection);
 #endif
 
     // Apply Host's console buffer size settings to the newly created console
@@ -2377,6 +2418,14 @@ void mudlet::slot_timerFires()
         if (pTT && pTT->checkRestart()) {
             pTT->start();
         }
+
+        // Flush any deletes TimerUnit::uninstall() deferred whilst execute() was
+        // on the stack (a timer script uninstalling its own package). Doing it
+        // here - after the last use of pTT - keeps the window in which the
+        // "uninstalled" timers linger down to this event loop iteration, before
+        // the profile save that Host::uninstallPackage() queues with a 0ms
+        // single-shot can serialize them back into the profile:
+        pHost->getTimerUnit()->doCleanup();
 
         // Okay now we've found it we are done:
         return;
@@ -4188,8 +4237,8 @@ void mudlet::slot_showMapperDialog()
             mpCurrentMapDockWidget = nullptr;
 
             // Restore the host's default mapper if it exists
-            if (pHost->mpDockableMapWidget) {
-                auto hostMapWidget = pHost->mpDockableMapWidget->widget();
+            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
+                auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
 
                 if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
                     pMap->mpMapper = hostMapper;
@@ -4201,8 +4250,8 @@ void mudlet::slot_showMapperDialog()
     }
 
     // If the host already has its default dock widget, hide it to avoid conflicts
-    if (pHost->mpDockableMapWidget) {
-        pHost->mpDockableMapWidget->setVisible(false);
+    if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
+        pHost->mpConsole->mpDockableMapWidget->setVisible(false);
     }
 
     // Create a new docked mapper widget for this profile in the main window
@@ -4293,8 +4342,8 @@ void mudlet::slot_showMapperDialog()
             }
 
             // Restore the host's default mapper when hiding
-            if (pHost->mpDockableMapWidget) {
-                auto hostMapWidget = pHost->mpDockableMapWidget->widget();
+            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
+                auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
 
                 if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
                     pMap->mpMapper = hostMapper;
@@ -6000,17 +6049,13 @@ void mudlet::slot_updateInstalled()
     // disable existing functionality to show the updates window
     disconnect(dactionUpdate, &QAction::triggered, this, nullptr);
 
-    // rejig to restart Mudlet instead
-    connect(dactionUpdate, &QAction::triggered, this, [=, this]() {
-#if defined(Q_OS_WINDOWS)
-        // On Windows the new binary is not in place yet - the downloaded
-        // installer still has to run, which slot_installOrRestartClicked
-        // arranges via a batch file that waits for Mudlet to exit:
+    // rejig to restart Mudlet instead. The updater owns the restart flow on
+    // all platforms: on Windows the downloaded installer still has to run,
+    // and everywhere the update dialog must be told not to reappear when the
+    // last window closes, which would keep the old instance alive alongside
+    // the restarted one:
+    connect(dactionUpdate, &QAction::triggered, this, [this]() {
         pUpdater->slot_installOrRestartClicked(nullptr, QString());
-#else
-        forceClose();
-        QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
-#endif
     });
     dactionUpdate->setText(tr("Update installed - restart to apply"));
 #endif // !Q_OS_MACOS
@@ -6060,11 +6105,23 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     const QString folder = getMudletPath(enums::profileXmlFilesPath, profile_name);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
-    QStringList entries = dir.entryList(QDir::Files, QDir::Time);
+    // Only consider profile saves (*.xml): a crash during a save can leave behind
+    // an empty QSaveFile temporary (e.g. "2026-01-01#12-00-00.xml.AbCdEf") as the
+    // newest file, and loading that instead of the newest real save presents the
+    // profile with all of its triggers/scripts seemingly wiped out
+    QStringList entries = dir.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Time);
     // pre-install packages when loading this profile for the first time
     bool preInstallPackages = false;
     pHost->hideMudletsVariables();
-    if (entries.isEmpty()) {
+    // NB: an explicitly requested saveFileName is honored even when no *.xml
+    // is present - failing to open it then reports a proper load error rather
+    // than silently starting a fresh profile:
+    if (entries.isEmpty() && saveFileName.isEmpty()) {
+        if (!dir.entryList(QDir::Files | QDir::NoDotAndDotDot).isEmpty()) {
+            qWarning().nospace().noquote() << "mudlet::loadProfile(" << profile_name << ", ...) WARNING - profile directory \"" << folder
+                                           << "\" contains files but no completed (*.xml) save; treating the profile as new. An interrupted save may have left "
+                                              "a recoverable QSaveFile temporary behind.";
+        }
         preInstallPackages = true;
         pHost->mLoadedOk = true;
         pHost->mMapInfoContributors.insert(qsl("Short"));
@@ -8668,8 +8725,8 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
                 // Restore host's default mapper for the other profile
                 if (auto pHost = mHostManager.getHost(dockProfileName)) {
                     if (auto pMap = pHost->mpMap.data()) {
-                        if (pHost->mpDockableMapWidget) {
-                            auto hostMapWidget = pHost->mpDockableMapWidget->widget();
+                        if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
+                            auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
 
                             if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
                                 pMap->mpMapper = hostMapper;

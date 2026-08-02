@@ -33,6 +33,7 @@
 #include <QElapsedTimer>
 #include <QFont>
 #include <QIcon>
+#include <QPixmap>
 #include <QPointer>
 #include <QSaveFile>
 #include <QWidget>
@@ -76,6 +77,7 @@ struct TFontAttributes
     bool operator==(const TFontAttributes& other) const = default;
     bool operator!=(const TFontAttributes& other) const = default;
 
+    TFontAttributes(const TFontAttributes& other) = default;
     TFontAttributes& operator=(const TFontAttributes& other) = default;
 
     QFont makeFont() const
@@ -290,6 +292,10 @@ public:
     void setFontName(const QString& fontName);
     bool setConsoleBackgroundImage(const QString&, int);
     bool resetConsoleBackgroundImage();
+    bool setWindowBackgroundImage(const QString&, int);
+    bool resetWindowBackgroundImage();
+    void updateMainFrameTransparency();
+    void updateWindowBackgroundCoverPixmap();
     void setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference = QVector<int>());
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
@@ -382,6 +388,7 @@ public:
     QWidget* mpMainFrame = nullptr;
     QWidget* mpRightToolBar = nullptr;
     QWidget* mpMainDisplay = nullptr;
+    QWidget* mpWindowBackground = nullptr;
 
     QPointer<dlgMapper> mpMapper;
 
@@ -421,6 +428,9 @@ public:
     QWidget* mpButtonMainLayer = nullptr;
     int mBgImageMode = 0;
     QString mBgImagePath;
+    int mWindowBgImageMode = 0;
+    QString mWindowBgImagePath;
+    QPixmap mWindowBgSourcePixmap;
     bool mHScrollBarEnabled = false;
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
     QVideoWidget* mpVideoWidget = nullptr;
