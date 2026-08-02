@@ -92,7 +92,6 @@ int TLuaInterpreter::connectToServer(lua_State* L)
         isToSaveToProfile = getVerifiedBool(L, __func__, 3, "save host name and port number", true);
     }
 
-    // built once nothing above can raise - see checkStringArg()
     const QString url{lua_tostring(L, 1)};
 
     if (isToSaveToProfile) {
@@ -129,7 +128,6 @@ int TLuaInterpreter::downloadFile(lua_State* L)
         return lua_error(L);
     }
 
-    // built once nothing above can raise - see checkStringArg()
     const QString localFile{lua_tostring(L, 1)};
     const QString urlString{lua_tostring(L, 2)};
     const QUrl url = QUrl::fromUserInput(urlString);
@@ -316,7 +314,6 @@ int TLuaInterpreter::sendATCP(lua_State* L)
         return lua_error(L);
     }
 
-    // built once nothing above can raise - see checkStringArg()
     const std::string msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
 
     std::string what;
@@ -368,7 +365,6 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
         return lua_error(L);
     }
 
-    // built once nothing above can raise - see checkStringArg()
     const std::string msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
 
     std::string what;
@@ -413,7 +409,6 @@ int TLuaInterpreter::sendIrc(lua_State* L)
         return lua_error(L);
     }
 
-    // built once nothing above can raise - see checkStringArg()
     const QString target{lua_tostring(L, 1)};
     const QString msg{lua_tostring(L, 2)};
 
@@ -609,8 +604,6 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     if (!checkStringArg(L, __func__, 1, "hostname")) {
         return lua_error(L);
     }
-    // kept as the Lua-owned bytes rather than a QString because the argument checks below raise Lua errors, and a
-    // lua_error() longjmp would skip the destructor of a QString held here - see checkStringArg()
     const char* hostName = lua_tostring(L, 1);
     if (*hostName == '\0') {
         return warnArgumentValue(L, __func__, "hostname must not be empty");
@@ -714,7 +707,6 @@ int TLuaInterpreter::getHTTP(lua_State* L)
     }
     validateHttpHeaders(L, 2, __func__);
 
-    // built once nothing above can raise - see checkStringArg()
     const QUrl url = QUrl::fromUserInput(QString{lua_tostring(L, 1)});
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1").arg(url.errorString()));
@@ -757,7 +749,6 @@ int TLuaInterpreter::deleteHTTP(lua_State* L)
     }
     validateHttpHeaders(L, 2, __func__);
 
-    // built once nothing above can raise - see checkStringArg()
     const QUrl url = QUrl::fromUserInput(QString{lua_tostring(L, 1)});
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1").arg(url.errorString()));
@@ -786,8 +777,5 @@ int TLuaInterpreter::customHTTP(lua_State* L)
         return lua_error(L);
     }
 
-    // the method is handed over as the Lua-owned string: performHttpRequest()
-    // still has checks that raise, and lua_error() longjmps past C++
-    // destructors - see checkStringArg()
     return performHttpRequest(L, __func__, 1, QNetworkAccessManager::CustomOperation, lua_tostring(L, 1));
 }

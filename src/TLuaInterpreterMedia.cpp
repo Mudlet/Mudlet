@@ -34,12 +34,9 @@
 #include "TMedia.h"
 #include "mudlet.h"
 
-// The media functions below build QStrings and TMediaData (whose members are
-// QStrings) while they parse their arguments. lua_error() longjmps past C++
-// destructors, so nothing heap-owning may be alive when a failure is raised:
-// every argument is type-checked with a TLuaInterpreter::check...Arg() function
-// that leaves the message on the Lua stack instead of raising, and the raise
-// itself happens once the parsing scope has been left - see checkStringArg()
+// The argument parsers below hold QStrings and TMediaData while they run, so
+// they type-check with TLuaInterpreter::check...Arg() and leave the raise until
+// the parsing scope has been left - see checkStringArg()
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#receiveMSP
 int TLuaInterpreter::receiveMSP(lua_State* L)
@@ -68,8 +65,6 @@ int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L, const char* f
     const Host& host = getHostFromLua(L);
     const int numArgs = lua_gettop(L);
 
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -134,8 +129,6 @@ int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L, const char* func
 {
     const Host& host = getHostFromLua(L);
 
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -148,9 +141,8 @@ int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L, const char* func
                 break;
             }
 
-            // the key is read from a copy: lua_tostring() converts a numeric key
-            // in the slot itself, which lua_next() forbids - it answers the next
-            // iteration with "invalid key to 'next'" instead of continuing
+            // read the key from a copy: lua_tostring() on the slot itself converts a
+            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -253,8 +245,6 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
     const Host& host = getHostFromLua(L);
     const int numArgs = lua_gettop(L);
 
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -440,8 +430,6 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L, const char* func
 {
     const Host& host = getHostFromLua(L);
 
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -454,9 +442,8 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L, const char* func
                 break;
             }
 
-            // the key is read from a copy: lua_tostring() converts a numeric key
-            // in the slot itself, which lua_next() forbids - it answers the next
-            // iteration with "invalid key to 'next'" instead of continuing
+            // read the key from a copy: lua_tostring() on the slot itself converts a
+            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -614,8 +601,6 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L, const char* f
     const Host& host = getHostFromLua(L);
     const int numArgs = lua_gettop(L);
 
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -810,8 +795,6 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L, const char* func
 {
     const Host& host = getHostFromLua(L);
 
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -824,9 +807,8 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L, const char* func
                 break;
             }
 
-            // the key is read from a copy: lua_tostring() converts a numeric key
-            // in the slot itself, which lua_next() forbids - it answers the next
-            // iteration with "invalid key to 'next'" instead of continuing
+            // read the key from a copy: lua_tostring() on the slot itself converts a
+            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -986,8 +968,6 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
 {
     Host& host = getHostFromLua(L);
 
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -1000,9 +980,8 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
                 break;
             }
 
-            // the key is read from a copy: lua_tostring() converts a numeric key
-            // in the slot itself, which lua_next() forbids - it answers the next
-            // iteration with "invalid key to 'next'" instead of continuing
+            // read the key from a copy: lua_tostring() on the slot itself converts a
+            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key{lua_tostring(L, -1)};
             lua_pop(L, 1);
@@ -1199,8 +1178,6 @@ int TLuaInterpreter::getPlayingMusicAsOrderedArguments(lua_State* L, const char*
 {
     const int numArgs = lua_gettop(L);
 
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -1266,8 +1243,6 @@ int TLuaInterpreter::getPlayingMusicAsOrderedArguments(lua_State* L, const char*
 // Private
 int TLuaInterpreter::getPlayingMusicAsTableArgument(lua_State* L, const char* func)
 {
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -1280,9 +1255,8 @@ int TLuaInterpreter::getPlayingMusicAsTableArgument(lua_State* L, const char* fu
                 break;
             }
 
-            // the key is read from a copy: lua_tostring() converts a numeric key
-            // in the slot itself, which lua_next() forbids - it answers the next
-            // iteration with "invalid key to 'next'" instead of continuing
+            // read the key from a copy: lua_tostring() on the slot itself converts a
+            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1340,8 +1314,6 @@ int TLuaInterpreter::getPlayingMusic(lua_State* L)
         return getPlayingMusicAsOrderedArguments(L, __func__);
     }
 
-    // no args - the TMediaData is only built once nothing can raise any more,
-    // as lua_error() longjmps past C++ destructors - see checkStringArg()
     TMediaData mediaData{};
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
     mediaData.setMediaType(TMediaData::MediaTypeMusic);
@@ -1355,8 +1327,6 @@ int TLuaInterpreter::getPlayingSoundsAsOrderedArguments(lua_State* L, const char
 {
     const int numArgs = lua_gettop(L);
 
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -1439,8 +1409,6 @@ int TLuaInterpreter::getPlayingSoundsAsOrderedArguments(lua_State* L, const char
 // Private
 int TLuaInterpreter::getPlayingSoundsAsTableArgument(lua_State* L, const char* func)
 {
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -1453,9 +1421,8 @@ int TLuaInterpreter::getPlayingSoundsAsTableArgument(lua_State* L, const char* f
                 break;
             }
 
-            // the key is read from a copy: lua_tostring() converts a numeric key
-            // in the slot itself, which lua_next() forbids - it answers the next
-            // iteration with "invalid key to 'next'" instead of continuing
+            // read the key from a copy: lua_tostring() on the slot itself converts a
+            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1528,8 +1495,6 @@ int TLuaInterpreter::getPlayingSounds(lua_State* L)
         return getPlayingSoundsAsOrderedArguments(L, __func__);
     }
 
-    // no args - the TMediaData is only built once nothing can raise any more,
-    // as lua_error() longjmps past C++ destructors - see checkStringArg()
     TMediaData mediaData{};
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
     mediaData.setMediaType(TMediaData::MediaTypeSound);
@@ -1541,8 +1506,6 @@ int TLuaInterpreter::getPlayingSounds(lua_State* L)
 // Private
 int TLuaInterpreter::getPlayingVideosAsTableArgument(lua_State* L, const char* func)
 {
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -1555,9 +1518,8 @@ int TLuaInterpreter::getPlayingVideosAsTableArgument(lua_State* L, const char* f
                 break;
             }
 
-            // the key is read from a copy: lua_tostring() converts a numeric key
-            // in the slot itself, which lua_next() forbids - it answers the next
-            // iteration with "invalid key to 'next'" instead of continuing
+            // read the key from a copy: lua_tostring() on the slot itself converts a
+            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1616,8 +1578,6 @@ int TLuaInterpreter::getPlayingVideos(lua_State* L)
         return getPlayingVideosAsTableArgument(L, __func__);
     }
 
-    // no args - the TMediaData is only built once nothing can raise any more,
-    // as lua_error() longjmps past C++ destructors - see checkStringArg()
     TMediaData mediaData{};
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
     mediaData.setMediaType(TMediaData::MediaTypeVideo);
@@ -1679,8 +1639,6 @@ void TLuaInterpreter::processPausedMediaTable(lua_State* L, TMediaData& mediaDat
 // Private
 int TLuaInterpreter::getPausedSoundsAsTableArgument(lua_State* L, const char* func)
 {
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -1693,9 +1651,8 @@ int TLuaInterpreter::getPausedSoundsAsTableArgument(lua_State* L, const char* fu
                 break;
             }
 
-            // the key is read from a copy: lua_tostring() converts a numeric key
-            // in the slot itself, which lua_next() forbids - it answers the next
-            // iteration with "invalid key to 'next'" instead of continuing
+            // read the key from a copy: lua_tostring() on the slot itself converts a
+            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1754,8 +1711,6 @@ int TLuaInterpreter::getPausedSounds(lua_State* L)
         return getPausedSoundsAsTableArgument(L, __func__);
     }
 
-    // no args - the TMediaData is only built once nothing can raise any more,
-    // as lua_error() longjmps past C++ destructors - see checkStringArg()
     TMediaData mediaData{};
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
     mediaData.setMediaType(TMediaData::MediaTypeSound);
@@ -1767,8 +1722,6 @@ int TLuaInterpreter::getPausedSounds(lua_State* L)
 // Private
 int TLuaInterpreter::getPausedMusicAsTableArgument(lua_State* L, const char* func)
 {
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -1781,9 +1734,8 @@ int TLuaInterpreter::getPausedMusicAsTableArgument(lua_State* L, const char* fun
                 break;
             }
 
-            // the key is read from a copy: lua_tostring() converts a numeric key
-            // in the slot itself, which lua_next() forbids - it answers the next
-            // iteration with "invalid key to 'next'" instead of continuing
+            // read the key from a copy: lua_tostring() on the slot itself converts a
+            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1842,8 +1794,6 @@ int TLuaInterpreter::getPausedMusic(lua_State* L)
         return getPausedMusicAsTableArgument(L, __func__);
     }
 
-    // no args - the TMediaData is only built once nothing can raise any more,
-    // as lua_error() longjmps past C++ destructors - see checkStringArg()
     TMediaData mediaData{};
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
     mediaData.setMediaType(TMediaData::MediaTypeMusic);
@@ -1855,8 +1805,6 @@ int TLuaInterpreter::getPausedMusic(lua_State* L)
 // Private
 int TLuaInterpreter::getPausedVideosAsTableArgument(lua_State* L, const char* func)
 {
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -1869,9 +1817,8 @@ int TLuaInterpreter::getPausedVideosAsTableArgument(lua_State* L, const char* fu
                 break;
             }
 
-            // the key is read from a copy: lua_tostring() converts a numeric key
-            // in the slot itself, which lua_next() forbids - it answers the next
-            // iteration with "invalid key to 'next'" instead of continuing
+            // read the key from a copy: lua_tostring() on the slot itself converts a
+            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1930,8 +1877,6 @@ int TLuaInterpreter::getPausedVideos(lua_State* L)
         return getPausedVideosAsTableArgument(L, __func__);
     }
 
-    // no args - the TMediaData is only built once nothing can raise any more,
-    // as lua_error() longjmps past C++ destructors - see checkStringArg()
     TMediaData mediaData{};
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
     mediaData.setMediaType(TMediaData::MediaTypeVideo);
@@ -1946,8 +1891,6 @@ int TLuaInterpreter::stopMusicAsOrderedArguments(lua_State* L, const char* func)
     const Host& host = getHostFromLua(L);
     const int numArgs = lua_gettop(L);
 
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -2041,8 +1984,6 @@ int TLuaInterpreter::stopMusicAsTableArgument(lua_State* L, const char* func)
 {
     const Host& host = getHostFromLua(L);
 
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -2055,9 +1996,8 @@ int TLuaInterpreter::stopMusicAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // the key is read from a copy: lua_tostring() converts a numeric key
-            // in the slot itself, which lua_next() forbids - it answers the next
-            // iteration with "invalid key to 'next'" instead of continuing
+            // read the key from a copy: lua_tostring() on the slot itself converts a
+            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -2140,8 +2080,6 @@ int TLuaInterpreter::stopMusic(lua_State* L)
         return stopMusicAsOrderedArguments(L, __func__);
     }
 
-    // no args - the TMediaData is only built once nothing can raise any more,
-    // as lua_error() longjmps past C++ destructors - see checkStringArg()
     TMediaData mediaData{};
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
     mediaData.setMediaType(TMediaData::MediaTypeMusic);
@@ -2157,8 +2095,6 @@ int TLuaInterpreter::stopSoundsAsOrderedArguments(lua_State* L, const char* func
     const Host& host = getHostFromLua(L);
     const int numArgs = lua_gettop(L);
 
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -2268,8 +2204,6 @@ int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L, const char* func)
 {
     const Host& host = getHostFromLua(L);
 
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -2282,9 +2216,8 @@ int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // the key is read from a copy: lua_tostring() converts a numeric key
-            // in the slot itself, which lua_next() forbids - it answers the next
-            // iteration with "invalid key to 'next'" instead of continuing
+            // read the key from a copy: lua_tostring() on the slot itself converts a
+            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -2382,8 +2315,6 @@ int TLuaInterpreter::stopSounds(lua_State* L)
         return stopSoundsAsOrderedArguments(L, __func__);
     }
 
-    // no args - the TMediaData is only built once nothing can raise any more,
-    // as lua_error() longjmps past C++ destructors - see checkStringArg()
     TMediaData mediaData{};
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
     mediaData.setMediaType(TMediaData::MediaTypeSound);
@@ -2398,8 +2329,6 @@ int TLuaInterpreter::stopVideosAsTableArgument(lua_State* L, const char* func)
 {
     const Host& host = getHostFromLua(L);
 
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -2412,9 +2341,8 @@ int TLuaInterpreter::stopVideosAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // the key is read from a copy: lua_tostring() converts a numeric key
-            // in the slot itself, which lua_next() forbids - it answers the next
-            // iteration with "invalid key to 'next'" instead of continuing
+            // read the key from a copy: lua_tostring() on the slot itself converts a
+            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -2498,8 +2426,6 @@ int TLuaInterpreter::stopVideos(lua_State* L)
         return stopVideosAsTableArgument(L, __func__);
     }
 
-    // no args - the TMediaData is only built once nothing can raise any more,
-    // as lua_error() longjmps past C++ destructors - see checkStringArg()
     TMediaData mediaData{};
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
     mediaData.setMediaType(TMediaData::MediaTypeVideo);
@@ -2514,8 +2440,6 @@ int TLuaInterpreter::pauseSoundsAsTableArgument(lua_State* L, const char* func)
 {
     const Host& host = getHostFromLua(L);
 
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -2528,9 +2452,8 @@ int TLuaInterpreter::pauseSoundsAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // the key is read from a copy: lua_tostring() converts a numeric key
-            // in the slot itself, which lua_next() forbids - it answers the next
-            // iteration with "invalid key to 'next'" instead of continuing
+            // read the key from a copy: lua_tostring() on the slot itself converts a
+            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -2592,8 +2515,6 @@ int TLuaInterpreter::pauseSounds(lua_State* L)
         return pauseSoundsAsTableArgument(L, __func__);
     }
 
-    // no args - the TMediaData is only built once nothing can raise any more,
-    // as lua_error() longjmps past C++ destructors - see checkStringArg()
     TMediaData mediaData{};
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
     mediaData.setMediaType(TMediaData::MediaTypeSound);
@@ -2608,8 +2529,6 @@ int TLuaInterpreter::pauseMusicAsTableArgument(lua_State* L, const char* func)
 {
     const Host& host = getHostFromLua(L);
 
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -2622,9 +2541,8 @@ int TLuaInterpreter::pauseMusicAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // the key is read from a copy: lua_tostring() converts a numeric key
-            // in the slot itself, which lua_next() forbids - it answers the next
-            // iteration with "invalid key to 'next'" instead of continuing
+            // read the key from a copy: lua_tostring() on the slot itself converts a
+            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -2686,8 +2604,6 @@ int TLuaInterpreter::pauseMusic(lua_State* L)
         return pauseMusicAsTableArgument(L, __func__);
     }
 
-    // no args - the TMediaData is only built once nothing can raise any more,
-    // as lua_error() longjmps past C++ destructors - see checkStringArg()
     TMediaData mediaData{};
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
     mediaData.setMediaType(TMediaData::MediaTypeMusic);
@@ -2702,8 +2618,6 @@ int TLuaInterpreter::pauseVideosAsTableArgument(lua_State* L, const char* func)
 {
     const Host& host = getHostFromLua(L);
 
-    // the inner scope is deliberate: it ends the lifetime of everything
-    // heap-owning before the raise below - see checkStringArg()
     bool errorPushed = false;
     {
         TMediaData mediaData{};
@@ -2716,9 +2630,8 @@ int TLuaInterpreter::pauseVideosAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // the key is read from a copy: lua_tostring() converts a numeric key
-            // in the slot itself, which lua_next() forbids - it answers the next
-            // iteration with "invalid key to 'next'" instead of continuing
+            // read the key from a copy: lua_tostring() on the slot itself converts a
+            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -2780,8 +2693,6 @@ int TLuaInterpreter::pauseVideos(lua_State* L)
         return pauseVideosAsTableArgument(L, __func__);
     }
 
-    // no args - the TMediaData is only built once nothing can raise any more,
-    // as lua_error() longjmps past C++ destructors - see checkStringArg()
     TMediaData mediaData{};
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
     mediaData.setMediaType(TMediaData::MediaTypeVideo);

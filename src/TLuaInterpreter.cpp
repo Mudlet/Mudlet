@@ -224,17 +224,12 @@ bool TLuaInterpreter::checkBoolArg(lua_State* L, const char* functionName, const
 }
 
 // No documentation available in wiki - internal function
-// Type-checks the argument at `pos` without building a QString out of it. On
-// success returns true; on failure it formats the usual "bad argument" text
-// onto the Lua stack and returns false, expecting the caller to raise it with
-// `return lua_error(L)`.
-//
-// Use this instead of getVerifiedString() when a function takes more than one
-// string argument: getVerifiedString() raises on the spot, and lua_error()
-// longjmps past C++ destructors, so a QString already built from an earlier
-// argument would have its buffer stranded. Checking every argument up front -
-// in argument order, so the same first failure is reported - means nothing
-// heap-owning is alive when the raise happens.
+// Leaves the "bad argument" message on the Lua stack instead of raising, so the
+// caller can raise it with `return lua_error(L)` at a point of its choosing.
+// lua_error() longjmps past C++ destructors: any QString already built from an
+// earlier argument would have its buffer stranded, so callers taking more than
+// one string check every argument here first - in argument order, so the same
+// failure is still the one reported - and only then build the QStrings.
 // See also: getVerifiedString, reportInvalidLuaCodeParam
 bool TLuaInterpreter::checkStringArg(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
@@ -1427,8 +1422,7 @@ int TLuaInterpreter::getMudletInfo(lua_State* L)
 }
 
 // Internal Function createLabel in an UserWindow
-// The names stay as the Lua-owned strings rather than QStrings because every
-// check below can raise, and lua_error() longjmps past C++ destructors - see
+// The names stay Lua-owned strings because every check below can raise - see
 // checkStringArg()
 int TLuaInterpreter::createLabelUserWindow(lua_State* L, const char* windowName, const char* labelName)
 {
@@ -4867,16 +4861,12 @@ double TLuaInterpreter::condenseMapLoad()
 }
 
 // No documentation available in wiki - internal function
-// `verb` is a plain const char* rather than a QString so that customHTTP()
-// can hand over the Lua-owned method name without owning a heap buffer while
-// the argument checks below can still raise - see checkStringArg()
+// `verb` is a const char* so that customHTTP() need not own a heap buffer
+// across the checks below - see checkStringArg()
 int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const char* verb)
 {
     auto& host = getHostFromLua(L);
 
-    // Validate every argument before creating the QStrings, the QUrl and the
-    // QNetworkRequest below: lua_error() longjmps past C++ destructors, so
-    // nothing heap-owning may be alive when a validation failure fires.
     if (!lua_isstring(L, pos + 1) && !lua_isstring(L, pos + 4)) {
         lua_pushfstring(L, "%s: bad argument #%d type (data to send as string expected, got %s!)", functionName, pos + 1, luaL_typename(L, pos + 1));
         return lua_error(L);
@@ -7564,12 +7554,10 @@ int TLuaInterpreter::setConfig(lua_State* L)
     if (!checkStringArg(L, __func__, 1, "key")) {
         return lua_error(L);
     }
-    // a non-owning view onto the Lua-owned string rather than a QString: nearly
-    // every branch below fetches argument #2 with a getVerified*() call that can
-    // raise, and lua_error() longjmps past C++ destructors - see checkStringArg().
-    // The comparisons are all against ASCII literals, so reading the key as
-    // Latin-1 picks the same branch a UTF-8 QString would; the two places that
-    // need the key as text decode it as UTF-8 there and then
+    // a view rather than a QString because the getVerified*() calls below raise -
+    // see checkStringArg(). Every comparison is against an ASCII literal, so
+    // reading the key as Latin-1 picks the branch a UTF-8 QString would; the two
+    // places that show the key decode it as UTF-8 there and then
     const QLatin1StringView key{lua_tostring(L, 1)};
     if (key.isEmpty()) {
         return warnArgumentValue(L, __func__, "you must provide key");

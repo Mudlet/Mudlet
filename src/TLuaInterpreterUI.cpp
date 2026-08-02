@@ -234,10 +234,8 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
 
     // font name and size are passed in as arguments
     if (lua_gettop(L) == 2) {
-        // checked up front because the order in which the two QFont arguments
-        // are evaluated is unspecified: it decided both which failure got
-        // reported and whether the font name QString was stranded by
-        // lua_error() longjmping past its destructor - see checkStringArg()
+        // hoisted because the order the two QFont arguments were evaluated in is
+        // unspecified, so which failure got reported was up to the compiler
         if (!checkIntArg(L, __func__, 1, "font size") || !checkStringArg(L, __func__, 2, "font name")) {
             return lua_error(L);
         }
@@ -363,10 +361,6 @@ int TLuaInterpreter::createLabel(lua_State* L)
         lua_pushfstring(L, "createLabel: bad argument #1 type (label or parent window name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    // argument #2 is checked before either name is handed on: lua_error()
-    // longjmps past C++ destructors, so a QString built here would have its
-    // buffer stranded both by the failure below and by the argument checks the
-    // two helpers make - see checkStringArg()
     if (lua_type(L, 2) != LUA_TSTRING && lua_type(L, 2) != LUA_TNUMBER) {
         lua_pushfstring(L, "createLabel: bad argument #2 type (label name as string or label x-coordinate as number expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);

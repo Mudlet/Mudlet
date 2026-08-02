@@ -1105,7 +1105,6 @@ int TLuaInterpreter::permAlias(lua_State* L)
         return lua_error(L);
     }
 
-    // scoped so the QStrings are gone before the raise below - see checkStringArg()
     int id = -1;
     {
         const QString name{lua_tostring(L, 1)};
@@ -1137,7 +1136,6 @@ int TLuaInterpreter::permPromptTrigger(lua_State* L)
         return lua_error(L);
     }
 
-    // scoped so the QStrings are gone before the raise below - see checkStringArg()
     int id = -1;
     {
         const QString triggerName{lua_tostring(L, 1)};
@@ -1172,7 +1170,6 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
         return lua_error(L);
     }
 
-    // scoped so the QStrings are gone before the raise below - see checkStringArg()
     int id = -1;
     {
         QStringList regList;
@@ -1217,7 +1214,6 @@ int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
         return lua_error(L);
     }
 
-    // scoped so the QStrings are gone before the raise below - see checkStringArg()
     int id = -1;
     {
         QStringList regList;
@@ -1262,7 +1258,6 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
         return lua_error(L);
     }
 
-    // scoped so the QStrings are gone before the raise below - see checkStringArg()
     int id = -1;
     {
         QStringList regList;
@@ -1307,7 +1302,6 @@ int TLuaInterpreter::permExactMatchTrigger(lua_State* L)
         return lua_error(L);
     }
 
-    // scoped so the QStrings are gone before the raise below - see checkStringArg()
     int id = -1;
     {
         QStringList patternList;
@@ -1348,7 +1342,6 @@ int TLuaInterpreter::permScript(lua_State* L)
         return lua_error(L);
     }
 
-    // scoped so the QStrings are gone before the raise below - see checkStringArg()
     int scriptId = -1;
     {
         const QString name{lua_tostring(L, 1)};
@@ -1380,7 +1373,6 @@ int TLuaInterpreter::permTimer(lua_State* L)
         return lua_error(L);
     }
 
-    // scoped so the QStrings are gone before the raise below - see checkStringArg()
     int timerId = -1;
     {
         const QString name{lua_tostring(L, 1)};
@@ -1420,7 +1412,6 @@ int TLuaInterpreter::permKey(lua_State* L)
         return lua_error(L);
     }
 
-    // scoped so the QStrings are gone before the raise below - see checkStringArg()
     int id = -1;
     {
         QString keyName{lua_tostring(L, 1)};
@@ -1934,8 +1925,6 @@ int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
     if (lua_gettop(L) > 1) {
         windowName = WINDOW_NAME(L, s++);
     }
-    // the name stays a Lua-owned string until the last thing that can raise has
-    // run: lua_error() longjmps past C++ destructors - see checkStringArg()
     const double b = getVerifiedDouble(L, __func__, s, "number of lines");
     Host& host = getHostFromLua(L);
     host.getTriggerUnit()->setTriggerStayOpen(QString{windowName}, static_cast<int>(b));
@@ -2148,7 +2137,6 @@ int TLuaInterpreter::tempAlias(lua_State* L)
         return lua_error(L);
     }
 
-    // built once nothing above can raise - see checkStringArg()
     const QString regex{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
@@ -2209,7 +2197,6 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
         return lua_error(L);
     }
 
-    // built once nothing above can raise - see checkStringArg()
     const QString pattern{lua_tostring(L, 1)};
     if (lua_isstring(L, 2)) {
         triggerID = pLuaInterpreter->startTempBeginOfLineTrigger(pattern, QString(lua_tostring(L, 2)), expiryCount);
@@ -2496,7 +2483,6 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         return lua_error(L);
     }
 
-    // the QStrings are only built once nothing above can raise - see checkStringArg()
     const QString triggerName{lua_tostring(L, 1)};
     const QString pattern{lua_tostring(L, 2)};
 
@@ -2627,7 +2613,6 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
         return lua_error(L);
     }
 
-    // built once nothing above can raise - see checkStringArg()
     const QString exactMatchPattern{lua_tostring(L, 1)};
     if (lua_isstring(L, 2)) {
         triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, QString(lua_tostring(L, 2)), expiryCount);
@@ -2808,7 +2793,6 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
         return lua_error(L);
     }
 
-    // built once nothing above can raise - see checkStringArg()
     const QString regexPattern{lua_tostring(L, 1)};
     if (lua_isstring(L, 2)) {
         triggerID = pLuaInterpreter->startTempRegexTrigger(regexPattern, lua_tostring(L, 2), expiryCount);
@@ -2910,7 +2894,6 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
         return lua_error(L);
     }
 
-    // built once nothing above can raise - see checkStringArg()
     const QString substringPattern{lua_tostring(L, 1)};
     if (lua_isstring(L, 2)) {
         triggerID = pLuaInterpreter->startTempTrigger(substringPattern, QString(lua_tostring(L, 2)), expiryCount);
