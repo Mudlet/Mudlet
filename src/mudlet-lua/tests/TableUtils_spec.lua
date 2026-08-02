@@ -264,7 +264,18 @@ describe("Tests TableUtils.lua functions", function()
       local errfn = function()
         table.n_collect(tbl, func)
       end
-      assert.has_error(errfn, "table.n_collect: bad argument #2 type (function to run against each item in tbl as function expected, got string)") 
+      assert.has_error(errfn, "table.n_collect: bad argument #2 type (function to run against each item in tbl as function expected, got string)")
+    end)
+
+    it("should keep a value that is equal to an index already collected", function()
+      local actual = table.n_collect({ "a", 1 }, function() return true end)
+      table.sort(actual, function(a, b) return tostring(a) < tostring(b) end)
+      assert.are.same({ 1, "a" }, actual)
+    end)
+
+    it("should keep a value that also appears inside a nested table", function()
+      local actual = table.n_collect({ { "z" }, "z" }, function() return true end)
+      assert.are.equal(2, #actual)
     end)
   end)
 
