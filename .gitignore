@@ -31,10 +31,7 @@ CMakeLists.txt.user
 
 #CLion
 .idea
-cmake-build-debug
-cmake-build-minsizerel
-cmake-build-release
-cmake-build-relwithdebinfo
+cmake-build-*/
 
 #VS Code
 .vscode/*.code-workspace
@@ -54,3 +51,7 @@ CMakeSettings.json
 # flatpak builder
 CI/.flatpak-builder
 CI/build-dir
+
+# python bytecode (CI helper scripts)
+__pycache__/
+*.pyc
