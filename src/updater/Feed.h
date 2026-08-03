@@ -48,6 +48,10 @@ public:
     void load();
     void downloadRelease(const Release& release, bool requireChecksums = false);
 
+    // Returns the SHA256 for downloadFilename from sha256sum-style output, or an
+    // empty string when no line covers it
+    static QString findChecksum(const QString& checksumData, const QString& downloadFilename);
+
     QList<Release> getUpdates(const Release& currentRelease) const;
     QList<Release> getReleases() const;
     QString getDownloadFilePath() const;

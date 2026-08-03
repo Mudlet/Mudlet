@@ -191,55 +191,49 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: assets/
 
-      - name: Verify release assets
+      # A download that fails leaves the release short of a platform, so surface it
+      # rather than letting continue-on-error hide it
+      - name: Report asset download failures
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
         env:
-          RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
+          LINUX_MACOS_OUTCOME: ${{ steps.download-linux-macos.outcome }}
+          WINDOWS_OUTCOME: ${{ steps.download-windows.outcome }}
         run: |
-          mkdir -p assets/
-          echo "Downloaded assets:"
-          find assets/ -type f | sort
-
-          MISSING=()
-          if ! find assets/ -name '*.AppImage.tar' -type f | grep -q .; then
-            MISSING+=("Linux (.AppImage.tar)")
+          if [[ "${LINUX_MACOS_OUTCOME}" == "failure" ]]; then
+            echo "::warning::Downloading the Linux/macOS release assets failed - they will be missing from this release"
           fi
-          if ! find assets/ -name '*.dmg' -type f | grep -q .; then
-            MISSING+=("macOS (.dmg)")
-          fi
-          if ! find assets/ -name '*.exe' -type f | grep -q .; then
-            MISSING+=("Windows (.exe)")
+          if [[ "${WINDOWS_OUTCOME}" == "failure" ]]; then
+            echo "::warning::Downloading the Windows release assets failed - it will be missing from this release"
           fi
 
-          if [[ ${#MISSING[@]} -gt 0 ]]; then
-            echo "::warning::Missing release assets for: ${MISSING[*]}"
-          fi
+      - name: Verify release assets
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        run: bash CI/prepare-release-assets.sh assets/ "${{ steps.release-type.outputs.tag }}" "${{ steps.release-type.outputs.type }}"
 
-          # Stable releases must have all platforms; PTB tolerates partial
-          if [[ "${RELEASE_TYPE}" == "release" && ${#MISSING[@]} -gt 0 ]]; then
-            echo "::error::Stable release is missing assets for: ${MISSING[*]}"
-            exit 1
+      # The release may already carry assets from the other build workflow's run of
+      # this job, so its SHA256SUMS.txt has to be merged rather than overwritten
+      - name: Fetch published SHA256SUMS.txt
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        env:
+          RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p published/
+          if ! gh release view "${RELEASE_TAG}" &>/dev/null; then
+            echo "Release ${RELEASE_TAG} does not exist yet - no checksums to merge"
+            exit 0
           fi
-
-          if [[ ${#MISSING[@]} -eq 3 ]]; then
-            echo "::error::No release assets found for any platform"
-            exit 1
+          if gh release download "${RELEASE_TAG}" --pattern SHA256SUMS.txt --dir published/; then
+            echo "Already published on ${RELEASE_TAG}:"
+            cat published/SHA256SUMS.txt
+          else
+            echo "::warning::${RELEASE_TAG} exists but has no SHA256SUMS.txt to merge"
           fi
 
       # Assemble SHA256SUMS.txt from per-platform .sha256 sidecar files
       - name: Assemble SHA256SUMS.txt
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
-        run: |
-          mapfile -t SHA_FILES < <(find assets/ -name '*.sha256' -type f)
-
-          if [[ ${#SHA_FILES[@]} -eq 0 ]]; then
-            echo "::error::No .sha256 checksum files found in assets/"
-            exit 1
-          fi
-
-          cat "${SHA_FILES[@]}" > assets/SHA256SUMS.txt
-          echo "Generated SHA256SUMS.txt (${#SHA_FILES[@]} entries):"
-          cat assets/SHA256SUMS.txt
+        run: bash CI/assemble-release-checksums.sh assets/ published/SHA256SUMS.txt
 
       - name: Generate changelog
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
@@ -364,6 +358,13 @@ jobs:
           echo "Files to upload:"
           printf '%s\n' "${FILES[@]}"
 
+          # Guard against publishing a binary SHA256SUMS.txt does not cover: the
+          # release ends up holding what is already on it plus what we upload now
+          : > final-assets.txt
+          gh release view "${RELEASE_TAG}" --json assets --jq '.assets[].name' >> final-assets.txt 2>/dev/null || true
+          printf '%s\n' "${FILES[@]}" | xargs -n 1 basename >> final-assets.txt
+          bash CI/verify-release-checksums.sh assets/SHA256SUMS.txt final-assets.txt
+
           if gh release view "${RELEASE_TAG}" &>/dev/null; then
             echo "Release ${RELEASE_TAG} already exists - uploading any missing assets"
             gh release upload "${RELEASE_TAG}" "${FILES[@]}" --clobber
@@ -381,6 +382,21 @@ jobs:
             gh release create "${ARGS[@]}" "${FILES[@]}" \
               || gh release upload "${RELEASE_TAG}" "${FILES[@]}" --clobber
           fi
+
+      # Confirm against the live release, not just the files we meant to upload
+      - name: Verify published release checksums
+        if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
+        env:
+          RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          rm -rf published-final/
+          mkdir -p published-final/
+          gh release download "${RELEASE_TAG}" --pattern SHA256SUMS.txt --dir published-final/
+          gh release view "${RELEASE_TAG}" --json assets --jq '.assets[].name' > published-final/assets.txt
+          echo "Published assets:"
+          cat published-final/assets.txt
+          bash CI/verify-release-checksums.sh published-final/SHA256SUMS.txt published-final/assets.txt
 
       # Generate and upload Sparkle appcast XML for macOS updates
       - name: Add SSH agent for appcast upload

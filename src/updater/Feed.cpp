@@ -159,11 +159,41 @@ void Feed::downloadRelease(const Release& release, bool requireChecksums)
     if (checksumsUrl.isValid() && !checksumsUrl.isEmpty()) {
         fetchChecksums(checksumsUrl);
     } else if (requireChecksums) {
-        //: Error shown when a manual update cannot be verified as safe to install
-        emit downloadError(tr("Could not verify the integrity of the download. Please try again later."));
+        qWarning() << "Release" << release.getVersion() << "publishes no checksums - refusing to install an unverifiable download";
+        //: Error shown when the release publishes no checksums at all, so the download cannot be verified as safe to install
+        emit downloadError(tr("This update does not publish the checksums needed to verify it. Please try again later, or download it from https://www.mudlet.org/download/"));
     } else {
         makeDownloadRequest(downloadUrl);
     }
+}
+
+QString Feed::findChecksum(const QString& checksumData, const QString& downloadFilename)
+{
+    if (downloadFilename.isEmpty()) {
+        return QString();
+    }
+
+    // SHA256 hex digest is 64 characters; search for separator after that
+    static const QRegularExpression separatorRx(qsl("[\\s*]+"));
+    static const QRegularExpression hexRx(qsl("^[0-9a-fA-F]{64}$"));
+
+    const QStringList lines = checksumData.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+    for (const auto& line : lines) {
+        // Format: "hash  filename" or "hash *filename"
+        const int separatorPos = line.indexOf(separatorRx, 64);
+        if (separatorPos <= 0) {
+            continue;
+        }
+        const QString hash = line.left(separatorPos).trimmed();
+        if (!hexRx.match(hash).hasMatch()) {
+            continue;
+        }
+        const QString filename = line.mid(separatorPos).trimmed().remove(QLatin1Char('*'));
+        if (filename.contains(downloadFilename, Qt::CaseInsensitive)) {
+            return hash;
+        }
+    }
+    return QString();
 }
 
 void Feed::fetchChecksums(const QUrl& checksumsUrl)
@@ -177,45 +207,26 @@ void Feed::fetchChecksums(const QUrl& checksumsUrl)
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         if (reply->error() != QNetworkReply::NoError) {
             if (mRequireChecksums) {
+                qWarning() << "Failed to fetch checksums:" << reply->errorString() << "- refusing to install an unverifiable download";
                 reply->deleteLater();
-                //: Error shown when a manual update cannot be verified as safe to install
-                emit downloadError(tr("Could not verify the integrity of the download. Please try again later."));
+                //: Error shown when the checksums needed to verify the update could not be downloaded
+                emit downloadError(tr("Could not download the checksums needed to verify this update. Please try again later."));
                 return;
             }
             qWarning() << "Failed to fetch checksums:" << reply->errorString() << "- download will proceed without integrity verification";
         } else {
-            const QString checksumData = QString::fromUtf8(reply->readAll());
-            const QStringList lines = checksumData.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
-            // SHA256 hex digest is 64 characters; search for separator after that
-            static const QRegularExpression separatorRx(qsl("[\\s*]+"));
-            static const QRegularExpression hexRx(qsl("^[0-9a-fA-F]{64}$"));
-            for (const auto& line : lines) {
-                // Format: "hash  filename" or "hash *filename"
-                const int separatorPos = line.indexOf(separatorRx, 64);
-                if (separatorPos <= 0) {
-                    continue;
-                }
-                const QString hash = line.left(separatorPos).trimmed();
-                if (!hexRx.match(hash).hasMatch()) {
-                    continue;
-                }
-                const QString filename = line.mid(separatorPos).trimmed().remove(QLatin1Char('*'));
-
-                // Match against the download URL filename
-                const QString downloadFilename = mCurrentDownload.getDownloadUrl().fileName();
-                if (!downloadFilename.isEmpty() && filename.contains(downloadFilename, Qt::CaseInsensitive)) {
-                    mCurrentDownload.setDownloadSHA256(hash);
-                    break;
-                }
-            }
+            const QString downloadFilename = mCurrentDownload.getDownloadUrl().fileName();
+            mCurrentDownload.setDownloadSHA256(findChecksum(QString::fromUtf8(reply->readAll()), downloadFilename));
             if (mCurrentDownload.getDownloadSHA256().isEmpty()) {
                 if (mRequireChecksums) {
+                    qWarning() << "Checksum file downloaded but it has no entry for" << downloadFilename << "- refusing to install an unverifiable download";
                     reply->deleteLater();
-                    //: Error shown when a manual update cannot be verified as safe to install
-                    emit downloadError(tr("Could not verify the integrity of the download. Please try again later."));
+                    //: Error shown when the release publishes checksums but none of them cover this platform's download
+                    emit downloadError(
+                            tr("This update is missing a checksum for your platform, so it cannot be verified. Please try again later, or download it from https://www.mudlet.org/download/"));
                     return;
                 }
-                qCritical() << "Checksum file downloaded but no matching hash found for" << mCurrentDownload.getDownloadUrl().fileName() << "- download will proceed without integrity verification";
+                qCritical() << "Checksum file downloaded but no matching hash found for" << downloadFilename << "- download will proceed without integrity verification";
             }
         }
         reply->deleteLater();
