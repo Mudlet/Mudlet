@@ -23,16 +23,18 @@
 
 
 #include "TMedia.h"
-#include "TLabel.h"
 
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonValue>
+#include <QMetaMethod>
 #include <QNetworkDiskCache>
 #include <QRandomGenerator>
+#include <QSaveFile>
 #include <QStandardPaths>
-#include <QVideoWidget>
+#include <QTimer>
 
 // Public
 TMedia::TMedia(Host* pHost, const QString& profileName)
@@ -75,6 +77,14 @@ void TMedia::playMedia(TMediaData& mediaData)
 
         if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
             return; // MSP and GMCP files should not have absolute paths.
+        }
+
+        // A relative path can still escape the profile's media directory via ".."
+        // segments; reject those so a hostile server cannot read or overwrite
+        // files elsewhere on disk (relative sub-directories remain permitted).
+        if ((mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP) && mediaFilePathEscapesMediaDir(mediaData)) {
+            qWarning() << qsl("TMedia::playMedia() WARNING - rejected a media file name that escapes the profile media directory: %1.").arg(mediaData.mediaFileName());
+            return;
         }
 
         if (!mediaData.mediaFileName().contains(QLatin1Char('*')) && !mediaData.mediaFileName().contains(QLatin1Char('?'))) { // File path wildcards are * and ?
@@ -562,6 +572,41 @@ void TMedia::stopAllMediaPlayers()
     }
 }
 
+int TMedia::playersHoldingSource() const
+{
+    const auto countHeld = [](const QList<std::shared_ptr<TMediaPlayer>>& list) {
+        int held = 0;
+        for (const auto& player : list) {
+            if (player && player->mediaPlayer() && !player->mediaPlayer()->source().isEmpty()) {
+                ++held;
+            }
+        }
+        return held;
+    };
+
+    return countHeld(mMSPSoundList) + countHeld(mMSPMusicList) + countHeld(mGMCPSoundList) + countHeld(mGMCPMusicList) + countHeld(mGMCPVideoList) + countHeld(mAPISoundList) + countHeld(mAPIMusicList)
+           + countHeld(mAPIVideoList);
+}
+
+// The cleanup that releases a stopped player's source runs one event-loop turn
+// after the stop (see handlePlayerPlaybackStateChanged), so a player reused for
+// a new play request can still hold the file it just finished. Replaying that
+// same file leaves QMediaPlayer with its media already loaded, so play() starts
+// it synchronously, raising sysMediaStarted re-entrantly inside the script call
+// that started it. Finish the deferred cleanup here instead, so every fresh
+// play request loads its media asynchronously, as it did when the cleanup ran
+// at stop time.
+void TMedia::releaseStoppedSource(const std::shared_ptr<TMediaPlayer>& player)
+{
+    if (!player || !player->mediaPlayer()) {
+        return;
+    }
+
+    if (player->getPlaybackState() == QMediaPlayer::StoppedState && !player->mediaPlayer()->source().isEmpty()) {
+        player->mediaPlayer()->setSource(QUrl());
+    }
+}
+
 void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state)
 {
     TMediaData mediaData{};
@@ -655,6 +700,68 @@ bool TMedia::isFileRelative(TMediaData& mediaData)
     }
 
     return isFileRelative;
+}
+
+bool TMedia::mediaFilePathEscapesMediaDir(TMediaData& mediaData) const
+{
+    return mediaFilePathEscapesMediaDir(mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName());
+}
+
+// Returns true if mediaFileName would resolve to a location outside mediaRoot. Two layers:
+//  1. A lexical check (QDir::cleanPath) rejects "../" traversal without touching the disk.
+//  2. A canonical check resolves symlinks in the existing path components, so a symlink that
+//     already lives under the media directory but points elsewhere cannot be used to escape.
+//     The target file itself normally does not exist yet (it is about to be downloaded), so we
+//     canonicalise the deepest ancestor that does exist and re-check containment against the
+//     canonicalised media root. Legitimate relative sub-directories and wildcards stay inside
+//     mediaRoot and are permitted.
+bool TMedia::mediaFilePathEscapesMediaDir(const QString& mediaRoot, const QString& mediaFileName)
+{
+    if (mediaFileName.isEmpty()) {
+        return false;
+    }
+
+    const QString root = QDir::cleanPath(mediaRoot);
+    const QString resolved = QDir::cleanPath(qsl("%1/%2").arg(root, mediaFileName));
+
+    // Layer 1 - lexical containment.
+    if (resolved != root && !resolved.startsWith(root + QLatin1Char('/'))) {
+        return true;
+    }
+
+    // Layer 2 - canonical containment (symlink-aware).
+    const QString canonicalRoot = QFileInfo(root).canonicalFilePath();
+
+    if (canonicalRoot.isEmpty()) {
+        // The media root does not exist yet, so there are no symlink components to follow; the
+        // lexical check above is authoritative.
+        return false;
+    }
+
+    QString ancestor = resolved;
+    QString canonicalAncestor;
+
+    while (!ancestor.isEmpty()) {
+        canonicalAncestor = QFileInfo(ancestor).canonicalFilePath();
+
+        if (!canonicalAncestor.isEmpty()) {
+            break; // deepest existing ancestor found
+        }
+
+        const int lastSlash = ancestor.lastIndexOf(QLatin1Char('/'));
+
+        if (lastSlash <= 0) {
+            break;
+        }
+
+        ancestor = ancestor.left(lastSlash);
+    }
+
+    if (canonicalAncestor.isEmpty()) {
+        return false;
+    }
+
+    return canonicalAncestor != canonicalRoot && !canonicalAncestor.startsWith(canonicalRoot + QLatin1Char('/'));
 }
 
 QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir& dir)
@@ -894,6 +1001,15 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
 
 void TMedia::downloadFile(TMediaData& mediaData)
 {
+    // Central guard for every download/write path (Client.Media.Play preloads
+    // via playMedia(), Client.Media.Load via parseJSONForMediaLoad()): never
+    // write a server-supplied file name that escapes the profile media
+    // directory through ".." segments.
+    if (mediaFilePathEscapesMediaDir(mediaData)) {
+        qWarning() << qsl("TMedia::downloadFile() WARNING - refused a media file name that escapes the profile media directory: %1.").arg(mediaData.mediaFileName());
+        return;
+    }
+
     const QString mediaPath = mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName());
     const QDir mediaDir(mediaPath);
 
@@ -925,24 +1041,32 @@ void TMedia::downloadFile(TMediaData& mediaData)
 
     if (!TMedia::isValidUrl(fileUrl)) {
         return;
-    } else {
-        QNetworkRequest request = QNetworkRequest(fileUrl);
-        request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
-        request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-#if !defined(QT_NO_SSL)
-        if (fileUrl.scheme() == qsl("https")) {
-            const QSslConfiguration config(QSslConfiguration::defaultConfiguration());
-            request.setSslConfiguration(config);
-        }
-#endif
-        mpHost->updateProxySettings(mpNetworkAccessManager);
-        QNetworkReply* getReply = mpNetworkAccessManager->get(request);
-        mMediaDownloads.insert(getReply, mediaData);
-        connect(getReply, &QNetworkReply::errorOccurred, this, [=](QNetworkReply::NetworkError) {
-            qWarning() << "TMedia::downloadFile() WARNING - couldn't download sound from " << fileUrl.url();
-            getReply->deleteLater();
-        });
     }
+
+    // Media is fetched from the network only. Refuse other schemes (e.g. file://) so a
+    // server-supplied media URL cannot turn this download into a local file read.
+    const QString scheme = fileUrl.scheme();
+    if (scheme != qsl("http") && scheme != qsl("https")) {
+        qWarning() << qsl("TMedia::downloadFile() WARNING - refused to download media from a non-HTTP(S) URL: %1").arg(fileUrl.toString());
+        return;
+    }
+
+    QNetworkRequest request = QNetworkRequest(fileUrl);
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+#if !defined(QT_NO_SSL)
+    if (fileUrl.scheme() == qsl("https")) {
+        const QSslConfiguration config(QSslConfiguration::defaultConfiguration());
+        request.setSslConfiguration(config);
+    }
+#endif
+    mpHost->updateProxySettings(mpNetworkAccessManager);
+    QNetworkReply* getReply = mpNetworkAccessManager->get(request);
+    mMediaDownloads.insert(getReply, mediaData);
+    connect(getReply, &QNetworkReply::errorOccurred, this, [=](QNetworkReply::NetworkError) {
+        qWarning() << "TMedia::downloadFile() WARNING - couldn't download sound from " << fileUrl.url();
+        getReply->deleteLater();
+    });
 }
 
 QString TMedia::setupMediaAbsolutePathFileName(TMediaData& mediaData)
@@ -988,9 +1112,11 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
                     QUrl nextMedia = lockedPlayer->playlist()->next();
 
                     if (!nextMedia.isEmpty()) {
+                        lockedPlayer->noteContinued();
                         lockedPlayer->mediaPlayer()->setSource(nextMedia);
                         lockedPlayer->mediaPlayer()->play();
                     } else if (lockedPlayer->playlist()->playbackMode() == TMediaPlaylist::Loop) {
+                        lockedPlayer->noteContinued();
                         lockedPlayer->playlist()->setCurrentIndex(0);
                         lockedPlayer->mediaPlayer()->setSource(lockedPlayer->playlist()->currentMedia());
                         lockedPlayer->mediaPlayer()->play();
@@ -1262,6 +1388,13 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
     }
 
     if (playbackState == QMediaPlayer::StoppedState) {
+        // Captured before the event below, because a sysMediaFinished handler runs
+        // synchronously and may hand this player to the next track.
+        const std::weak_ptr<TMediaPlayer> weakPlayer = player;
+        const TMediaData stoppedData = player->mediaData();
+        const quint64 claimGeneration = player->claimGeneration();
+        const quint64 continuationGeneration = player->continuationGeneration();
+
         TEvent mediaFinished{};
         mediaFinished.mArgumentList.append(qsl("sysMediaFinished"));
 
@@ -1282,24 +1415,35 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
             mpHost->raiseEvent(mediaFinished);
         }
 
-        player->mediaPlayer()->setSource(QUrl());
+        // Deferred so the backend can still emit EndOfMedia, which is what restarts a loop:
+        // clearing the source here destroys the playback engine and that signal never arrives.
+        QTimer::singleShot(0, this, [this, weakPlayer, stoppedData, claimGeneration, continuationGeneration] {
+            const auto lockedPlayer = weakPlayer.lock();
+            const bool stillOurs = lockedPlayer && lockedPlayer->claimGeneration() == claimGeneration;
+            // Backends that emit EndOfMedia before StoppedState have already restarted the
+            // loop by now, so a player still playing its own track has not stopped either.
+            const bool sameMediaContinues =
+                    lockedPlayer && (lockedPlayer->continuationGeneration() != continuationGeneration || (stillOurs && lockedPlayer->getPlaybackState() == QMediaPlayer::PlayingState));
 
-        if (player->mediaData().mediaWidget() == TMediaData::MediaWidgetLabel && player->mediaData().mediaClose() == TMediaData::MediaCloseEnabled && player->mediaPlayer()->videoOutput() != nullptr) {
-            QVideoWidget* videoOutput = qobject_cast<QVideoWidget*>(player->mediaPlayer()->videoOutput());
+            if (sameMediaContinues) {
+                return;
+            }
 
-            if (videoOutput != nullptr) {
-                QWidget* parent = videoOutput->parentWidget();
+            // Only release a player nothing else has taken over: a claimed one is already
+            // loading its new source, which on an asynchronous backend still reads as stopped.
+            if (stillOurs && lockedPlayer->mediaPlayer() && lockedPlayer->getPlaybackState() == QMediaPlayer::StoppedState) {
+                lockedPlayer->mediaPlayer()->setSource(QUrl());
 
-                if (parent != nullptr && parent->isVisible()) {
-                    parent->hide();
+                if (stoppedData.mediaWidget() == TMediaData::MediaWidgetLabel && stoppedData.mediaClose() == TMediaData::MediaCloseEnabled && lockedPlayer->mediaPlayer()->videoOutput() != nullptr) {
+                    emit signal_hideVideoOutput(lockedPlayer.get());
                 }
             }
-        }
 
-        //: This word is part of a sentence like "Music stops" when the music is about to stop.
-        printClosedCaption(player->mediaData(), tr("stops"));
+            //: This word is part of a sentence like "Music stops" when the music is about to stop.
+            printClosedCaption(stoppedData, tr("stops"));
+        });
         return;
-    } else if (playbackState == QMediaPlayer::PlayingState && player->mediaData().mediaVolume() != TMediaData::MediaVolumePreload) {
+    } else if (playbackState == QMediaPlayer::PlayingState && player->mediaData().mediaVolume() != TMediaData::MediaVolumePreload) { // NOLINT(readability-else-after-return)
         TEvent mediaStarted{};
         mediaStarted.mArgumentList.append(qsl("sysMediaStarted"));
 
@@ -1323,7 +1467,7 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
         //: This word is part of a sentence like "Music plays" when the music is starting to play.
         printClosedCaption(player->mediaData(), tr("plays"));
         return;
-    } else if (playbackState == QMediaPlayer::PausedState) {
+    } else if (playbackState == QMediaPlayer::PausedState) { // NOLINT(readability-else-after-return)
         TEvent mediaPaused{};
         mediaPaused.mArgumentList.append(qsl("sysMediaPaused"));
 
@@ -1441,73 +1585,13 @@ bool TMedia::setupVideo(const std::shared_ptr<TMediaPlayer>& player)
         return false;
     }
 
-    auto mpConsole = mpHost->mpConsole;
-
-    if (!mpConsole) {
-        return false;
+    if (!isSignalConnected(QMetaMethod::fromSignal(&TMedia::signal_setupVideoOutput))) {
+        qWarning() << "TMedia::setupVideo() WARNING - no receiver connected to signal_setupVideoOutput, video cannot be displayed";
     }
 
-    auto target = player->mediaData().mediaKey();
-
-    if (target.isEmpty()) {
-        qWarning() << qsl("TMedia::setupVideo() ERROR - 'key' not specified for video.");
-        return false;
-    }
-
-    QString widgetType = TMediaData::MediaWidgetLabel;
-    QWidget* targetWidget = nullptr;
-
-    // Attempt to retrieve the existing widget, labels first
-    targetWidget = mpConsole->mLabelMap.value(target);
-
-    if (!targetWidget) {
-        targetWidget = mpConsole->mSubConsoleMap.value(target);
-        if (targetWidget) {
-            widgetType = TMediaData::MediaWidgetWindow;
-        }
-    }
-
-    // Ensure we now have a valid target widget
-    if (!targetWidget) {
-        qWarning() << qsl("TMedia::setupVideo() ERROR - No matching widget for 'key' = %1 to present video.").arg(target);
-        return false;
-    }
-
-    player->mediaData().setMediaWidget(widgetType);
-
-    // Assign video widget to the target widget
-    QVideoWidget* myVideoWidget = nullptr;
-    if (widgetType == TMediaData::MediaWidgetLabel) {
-        myVideoWidget = qobject_cast<TLabel*>(targetWidget)->mpVideoWidget;
-    } else if (widgetType == TMediaData::MediaWidgetWindow) {
-        myVideoWidget = qobject_cast<TConsole*>(targetWidget)->mpVideoWidget;
-    }
-
-    if (!myVideoWidget) {
-        myVideoWidget = new QVideoWidget();
-        myVideoWidget->setParent(targetWidget);
-        myVideoWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-
-        if (widgetType == TMediaData::MediaWidgetLabel) {
-            QObject::connect(qobject_cast<TLabel*>(targetWidget), &TLabel::resized, myVideoWidget, [targetWidget, myVideoWidget]() {
-                myVideoWidget->resize(targetWidget->size());
-            });
-        } else if (widgetType == TMediaData::MediaWidgetWindow) {
-            QObject::connect(qobject_cast<TConsole*>(targetWidget), &TConsole::resized, myVideoWidget, [targetWidget, myVideoWidget]() {
-                myVideoWidget->resize(targetWidget->size());
-            });
-        }
-    }
-
-    if (targetWidget->isHidden()) {
-        targetWidget->show();
-    }
-
-    myVideoWidget->resize(targetWidget->size());
-    player->mediaPlayer()->setVideoOutput(myVideoWidget);
-    myVideoWidget->show();
-
-    return true;
+    bool setupSucceeded = false;
+    emit signal_setupVideoOutput(player.get(), setupSucceeded);
+    return setupSucceeded;
 }
 
 void TMedia::play(TMediaData& mediaData)
@@ -1593,6 +1677,8 @@ void TMedia::play(TMediaData& mediaData)
         }
 
         const QUrl mediaSource = mediaData.mediaInput() == TMediaData::MediaInputFile ? QUrl::fromLocalFile(absolutePathFileName) : QUrl(absolutePathFileName);
+        releaseStoppedSource(pPlayer);
+        pPlayer->noteClaimed();
         pPlayer->mediaPlayer()->setSource(mediaSource);
     } else {
         if (mediaData.mediaLoops() == TMediaData::MediaLoopsRepeat) { // Repeat indefinitely
@@ -1659,6 +1745,8 @@ void TMedia::play(TMediaData& mediaData)
 
         playlist->setCurrentIndex(0);
         pPlayer->setPlaylist(playlist);
+        releaseStoppedSource(pPlayer);
+        pPlayer->noteClaimed();
         pPlayer->mediaPlayer()->setSource(playlist->currentMedia());
     }
 

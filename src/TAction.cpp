@@ -33,6 +33,8 @@
 #include "TToolBar.h"
 #include "mudlet.h"
 
+#include <QScopeGuard>
+
 TAction::TAction(TAction* parent, Host* pHost)
 : Tree<TAction>(parent)
 , mpHost(pHost)
@@ -122,16 +124,14 @@ bool TAction::compileScript()
 {
     mFuncName = qsl("Action%1").arg(QString::number(mID));
     const QString code = qsl("function %1() %2\nend").arg(mFuncName, mScript);
-    QString error;
-    if (mpHost->mLuaInterpreter.compile(code, error, qsl("Button: %1").arg(getName()))) {
+    if (QString error; mpHost->mLuaInterpreter.compile(code, error, qsl("Button: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
-        return true;
     } else {
         mOK_code = false;
         setError(error);
-        return false;
     }
+    return mOK_code;
 }
 
 void TAction::execute()
@@ -162,6 +162,18 @@ void TAction::execute()
             return;
         }
     }
+
+    // Whilst this frame is on the stack ActionUnit::uninstall() must defer
+    // deleting this profile's actions: the script run below can uninstall its
+    // own package (e.g. a "reload package" button calling uninstallPackage())
+    // and freeing this TAction mid-execute() is a use-after-free - the members
+    // read after the call would be dangling. The guard defers that delete past
+    // the last member access here; see ActionUnit::mProcessingDepth.
+    ActionUnit* pUnit = mpHost->getActionUnit();
+    pUnit->beginProcessing();
+    const auto processingGuard = qScopeGuard([pUnit] {
+        pUnit->endProcessing();
+    });
 
     mpHost->mLuaInterpreter.call(mFuncName, mName);
     // move focus back to the active console / command line:

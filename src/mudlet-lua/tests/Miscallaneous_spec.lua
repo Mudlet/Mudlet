@@ -1,4 +1,18 @@
 describe("Tests C++ functions in the Miscallaneous category", function()
+    describe("Tests the functionality of sendMSDP", function()
+      it("should return nil and an error message when MSDP cannot be sent", function()
+        local ok, err = sendMSDP("CLIENT_NAME", "Mudlet")
+        if ok ~= nil then
+          -- connected to a server which negotiated MSDP, so the send succeeded
+          assert.is_true(ok)
+          return
+        end
+        assert.is_nil(ok)
+        assert.is_string(err)
+        assert.is_true(err:find("MSDP") ~= nil)
+      end)
+    end)
+
     describe("Tests the functionality of getOS", function()
       it("should return the correct number of values for the current OS", function()
         local results = {getOS()}
@@ -38,4 +52,46 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end
       end)
     end)
+
+    describe("Tests the functionality of getTimestamp", function()
+      it("should return a string for a valid line number", function()
+        echo("getTimestamp test line\n")
+        assert.is_string(getTimestamp(1))
+      end)
+
+      it("should return nil+msg for an out-of-range line number", function()
+        local timestamp, err = getTimestamp(getLineCount() + 1000)
+        assert.is_nil(timestamp)
+        assert.is_string(err)
+        assert.is_true(err:find("beyond the last line", 1, true) ~= nil)
+      end)
+
+      it("should return nil+msg for an out-of-range line number in a miniconsole", function()
+        createMiniConsole("getTimestampTestConsole", 0, 0, 100, 100)
+        local timestamp, err = getTimestamp("getTimestampTestConsole", 1000000)
+        assert.is_nil(timestamp)
+        assert.is_string(err)
+        assert.is_true(err:find("beyond the last line", 1, true) ~= nil)
+        deleteMiniConsole("getTimestampTestConsole")
+      end)
+    end)
+
+    describe("Tests the functionality of getModulePath", function()
+      it("should return nil+msg for a module that does not exist", function()
+        local path, err = getModulePath("busted-nonexistent-module")
+        assert.is_nil(path)
+        assert.is_string(err)
+        assert.is_true(err:find("module doesn't exist", 1, true) ~= nil)
+      end)
+    end)
+
+    describe("Tests the functionality of getModulePriority", function()
+      it("should return nil+msg for a module that does not exist", function()
+        local priority, err = getModulePriority("busted-nonexistent-module")
+        assert.is_nil(priority)
+        assert.is_string(err)
+        assert.is_true(err:find("module doesn't exist", 1, true) ~= nil)
+      end)
+    end)
+
   end)

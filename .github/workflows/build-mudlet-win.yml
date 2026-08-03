@@ -37,7 +37,7 @@ jobs:
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         submodules: recursive
         fetch-depth: 0
@@ -60,7 +60,7 @@ jobs:
 
     - name: Restore ccache
       id: restore-ccache
-      uses: actions/cache/restore@v5
+      uses: actions/cache/restore@v6
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.buildname}}-clang-${{ github.ref_name }}
@@ -79,7 +79,7 @@ jobs:
 
     - name: Cache sentry-native
       id: cache-sentry
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: |
           3rdparty/sentry-native/install_without_transport
@@ -119,11 +119,13 @@ jobs:
         QT_FORCE_STDERR_LOGGING: 1
 
     - name: (Windows) Run Lua tests
-      timeout-minutes: 1
+      timeout-minutes: 2
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
+        MUDLET_TEST_REQUIRE_TTS_MOCK: 1
+        MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
       run: |
@@ -131,6 +133,42 @@ jobs:
         export LUA_PATH
         LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
         export LUA_CPATH
+
+        # Linux and macOS start the fixture HTTP server in a step of their own,
+        # but each msys2 step here is its own shell and a process backgrounded
+        # in one is not guaranteed to still be around in the next, so start the
+        # server in the very shell that runs the tests and stop it on the way
+        # out. Paths are handed over in mixed form (C:/...) because bash and
+        # the native Windows python both understand that.
+        temp_dir="$(cygpath -m "${RUNNER_TEMP}")"
+        port_file="${temp_dir}/mudlet-http-fixture-port"
+        fixture_log="${temp_dir}/http-fixture-server.log"
+        rm -f "${port_file}"
+        python_bin=python3
+        command -v "${python_bin}" > /dev/null 2>&1 || python_bin=python
+        MUDLET_TEST_HTTP_PORT_FILE="${port_file}" "${python_bin}" "$GITHUB_WORKSPACE/CI/http-fixture-server.py" > "${fixture_log}" 2>&1 &
+        fixture_pid=$!
+        # Disowned so that stopping it is not reported as a job crash, and -9
+        # because a plain SIGTERM does not reach a native Windows process from
+        # msys2. The server's log is one line when all is well, so print it
+        # either way rather than only where trouble is expected.
+        disown "${fixture_pid}" 2>/dev/null || true
+        trap 'kill -9 "${fixture_pid}" > /dev/null 2>&1 || true; cat "${fixture_log}" 2>/dev/null || true' EXIT
+        for _ in $(seq 1 100); do
+          [ -s "${port_file}" ] && break
+          sleep 0.1
+        done
+        if [ ! -s "${port_file}" ]; then
+          echo "fixture HTTP server failed to start" >&2
+          exit 1
+        fi
+        MUDLET_TEST_HTTP_PORT="$(cat "${port_file}")"
+        export MUDLET_TEST_HTTP_PORT
+        if ! curl -fsS --max-time 10 "http://127.0.0.1:${MUDLET_TEST_HTTP_PORT}/fixture.txt" > /dev/null; then
+          echo "fixture HTTP server is not serving fixtures" >&2
+          exit 1
+        fi
+        echo "fixture HTTP server ready on 127.0.0.1:${MUDLET_TEST_HTTP_PORT}"
 
         $GITHUB_WORKSPACE/build-$MSYSTEM/release/mudlet.exe --profile "Mudlet self-test"
 
@@ -145,7 +183,7 @@ jobs:
 
     - name: Save ccache
       if: always()
-      uses: actions/cache/save@v5
+      uses: actions/cache/save@v6
       with:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
@@ -318,6 +356,41 @@ jobs:
           exit 1
         fi
 
+    - name: (Windows) Re-upload signed installer to mudlet.org
+      # The deploy step scp'd the installer before signing existed for tag
+      # builds, so overwrite it with the signed version. Non-fatal: the GitHub
+      # release (primary distribution) gets the signed installer either way.
+      if: steps.sign-installer.outcome == 'success' && startsWith(github.ref, 'refs/tags/')
+      shell: msys2 {0}
+      env:
+        DEPLOY_SSH_KEY: ${{secrets.UPLOAD_PRIVATEKEY}}
+        DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
+      run: |
+        SIGNED_PATH=$(cygpath -au "${ARTIFACT_WINPATHORFILE}")
+        if [ ! -f "${SIGNED_PATH}" ]; then
+          echo "::warning::signed installer not found at ${SIGNED_PATH} - mudlet.org keeps the unsigned installer"
+          exit 0
+        fi
+
+        echo "${DEPLOY_SSH_KEY}" > temp_key_file_signed
+        powershell.exe -Command "icacls.exe temp_key_file_signed /inheritance:r"
+
+        powershell.exe <<EOF
+        \$installerExePath = "${ARTIFACT_WINPATHORFILE}"
+        \$DEPLOY_PATH = "${DEPLOY_PATH}"
+        scp.exe -i temp_key_file_signed -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$installerExePath mudmachine@make.mudlet.org:\${DEPLOY_PATH}
+        if (\$LASTEXITCODE -ne 0) { exit \$LASTEXITCODE }
+        EOF
+        scp_rc=$?
+
+        shred -u temp_key_file_signed
+
+        if [ "$scp_rc" -ne 0 ]; then
+          echo "::warning::failed to re-upload signed installer to make.mudlet.org (scp exit ${scp_rc}) - mudlet.org keeps the unsigned installer"
+          exit 0
+        fi
+        echo "Signed installer re-uploaded over the unsigned one on make.mudlet.org."
+
     - name: Create intermediate artifact for debugging
       uses: actions/upload-artifact@v7
       if: env.INTERMEDIATE_ARTIFACT_NAME
@@ -330,9 +403,10 @@ jobs:
     - name: Create artifact for later uploading
       # Uploads the zipped contents of ARTIFACT_WINPATHORFILE as an "artifact" with
       # the given name - the Environmental variables are created by the
-      # deploy-mudlet-for-windows.sh script:
+      # deploy-mudlet-for-windows.sh script. PTB-only: on tag builds the installer
+      # reaches mudlet.org via scp in the deploy script instead:
       uses: actions/upload-artifact@v7
-      if: env.ARTIFACT_NAME
+      if: env.ARTIFACT_NAME != '' && !startsWith(github.ref, 'refs/tags/')
       with:
         name: ${{env.ARTIFACT_NAME}}
         path: ${{env.ARTIFACT_WINPATHORFILE}}
@@ -340,7 +414,7 @@ jobs:
 
     - name: Upload artifact to make.mudlet.org
       shell: msys2 {0}
-      if: env.ARTIFACT_NAME
+      if: env.ARTIFACT_NAME != '' && !startsWith(github.ref, 'refs/tags/')
       run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
 
     - name: Upload release asset for GitHub Release

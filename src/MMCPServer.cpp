@@ -339,10 +339,10 @@ QPair<bool, QString> MMCPServer::chatGroup(const QString& group, const QString& 
     using namespace AnsiColors;
 
     QString outMsg = qsl("%1%2\n%3%4 chats to the group, '%5'\n%6")
-                            .arg(static_cast<char>(TextGroup))
+                            .arg(QChar(static_cast<char>(TextGroup)))
                             .arg(group, -15)
                             .arg(getChatName(), FBLDRED, message)
-                            .arg(static_cast<char>(End));
+                            .arg(QChar(static_cast<char>(End)));
 
     bool groupNotEmpty = false;
     QListIterator<QPointer<MMCPClient>> it(mPeersList);

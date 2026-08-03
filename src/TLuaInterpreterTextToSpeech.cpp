@@ -65,9 +65,6 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QFileDialog>
-#include <QTableWidget>
-#include <QToolTip>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -92,7 +89,18 @@ void TLuaInterpreter::ttsBuild()
         return;
     }
 
-    speechUnit = new QTextToSpeech();
+    // Under automated tests always request Qt's deterministic "mock" engine and
+    // never fall back to a real backend, which would speak aloud and make specs
+    // host-dependent. When the mock plugin is absent Qt leaves the engine in the
+    // Error state with no voices, so the TTS specs skip (or fail where the mock
+    // is mandatory) instead of exercising a developer's real speech engine. This
+    // also makes a non-empty voice list a reliable proof that the mock was
+    // selected. Outside test mode the default engine is built exactly as before.
+    if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
+        speechUnit = new QTextToSpeech(qsl("mock"));
+    } else {
+        speechUnit = new QTextToSpeech();
+    }
     bSpeechBuilt = true;
     bSpeechQueueing = false;
 
@@ -153,11 +161,12 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         return;
     }
 
-    QString textToSay;
-    textToSay = speechQueue.takeFirst();
+    const QString textToSay = speechQueue.takeFirst();
 
-    speechUnit->say(textToSay);
+    // recorded before say() because the engine can switch to Speaking inside
+    // that call, and this function reports speechCurrent with the event
     speechCurrent = textToSay;
+    speechUnit->say(textToSay);
 
     return;
 }
@@ -171,7 +180,7 @@ int TLuaInterpreter::ttsClearQueue(lua_State* L)
         int index = getVerifiedInt(L, __func__, 1, "index");
         index--;
         if (index < 0 || index >= speechQueue.size()) {
-            return warnArgumentValue(L, __func__, qsl("index %1 out of bounds for queue size %2").arg(index + 1, speechQueue.size()));
+            return warnArgumentValue(L, __func__, qsl("index %1 out of bounds for queue size %2").arg(index + 1).arg(speechQueue.size()));
         }
 
         speechQueue.remove(index);
@@ -189,7 +198,8 @@ int TLuaInterpreter::ttsGetCurrentLine(lua_State* L)
 
     if (speechUnit->state() == QTextToSpeech::State::Ready) {
         return warnArgumentValue(L, __func__, "not speaking any text");
-    } else if (speechUnit->state() == TEXT_TO_SPEECH_ERROR_STATE) {
+    }
+    if (speechUnit->state() == TEXT_TO_SPEECH_ERROR_STATE) {
         return warnArgumentValue(L, __func__, "error with the computer's TTS engine");
     }
 
@@ -222,7 +232,7 @@ int TLuaInterpreter::ttsGetQueue(lua_State* L)
     if (lua_gettop(L) > 0) {
         int index = getVerifiedInt(L, __func__, 1, "index");
         index--;
-        if (index < 0 || index > speechQueue.size()) {
+        if (index < 0 || index >= speechQueue.size()) {
             lua_pushboolean(L, false);
             return 1;
         }
@@ -394,8 +404,10 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
         }
     }
 
-    speechUnit->say(textToSay);
+    // recorded before say() because the engine can switch to Speaking inside
+    // that call, and ttsStateChanged() reports speechCurrent with the event
     speechCurrent = textToSay;
+    speechUnit->say(textToSay);
     return 0;
 }
 
@@ -513,7 +525,6 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
     for (const auto& voice : speechVoices) {
         if (voice.name() == nextVoice) {
             speechUnit->setVoice(voice);
-            lua_pushboolean(L, true);
 
             TEvent event{};
             event.mArgumentList.append(QLatin1String("ttsVoiceChanged"));
@@ -522,6 +533,9 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
 
+            // pushed only after the event: dispatching it runs Lua event
+            // handlers, which clear this lua_State's stack
+            lua_pushboolean(L, true);
             return 1;
         }
     }

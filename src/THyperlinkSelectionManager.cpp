@@ -120,7 +120,8 @@ QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri
         qDebug() << "Modified to:" << result;
 #endif
         return result;
-    } else if (baseUri.startsWith(sendCmdLinePrefix) && baseUri.endsWith(sendCmdLineSuffix)) {
+    }
+    if (baseUri.startsWith(sendCmdLinePrefix) && baseUri.endsWith(sendCmdLineSuffix)) {
         const int prefixLength = sendCmdLinePrefix.length();
         const int suffixLength = sendCmdLineSuffix.length();
         QString command = baseUri.mid(prefixLength, baseUri.length() - prefixLength - suffixLength);

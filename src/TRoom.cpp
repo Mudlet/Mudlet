@@ -255,9 +255,8 @@ int TRoom::getExitWeight(const QString& cmd)
 {
     if (exitWeights.contains(cmd)) {
         return exitWeights[cmd];
-    } else {
-        return weight; // NOTE: if no exit weight has been set: exit weight = room weight
     }
+    return weight; // NOTE: if no exit weight has been set: exit weight = room weight
 }
 
 // NOTE: needed so dialogRoomExit code can tell if an exit weight has been set
@@ -315,16 +314,15 @@ bool TRoom::setDoor(const QString& cmd, const int doorStatus)
             doors[cmd] = doorStatus;
             mpRoomDB->mpMap->setUnsaved(__func__);
             return true; // As we have changed things
-        } else {
-            return false; // Valid but ineffective
         }
-    } else if (doors.contains(cmd) && !doorStatus) {
+        return false; // Valid but ineffective
+    }
+    if (doors.contains(cmd) && !doorStatus) {
         doors.remove(cmd);
         mpRoomDB->mpMap->setUnsaved(__func__);
         return true; // As we have changed things
-    } else {
-        return false; // As we have not changed things
     }
+    return false; // As we have not changed things
 }
 
 int TRoom::getDoor(const QString& cmd) const
@@ -533,34 +531,32 @@ bool TRoom::hasExitOrSpecialExit(const QString& text) const
     // First check the normal ones:
     if (text == QLatin1String("n")) {
         return hasExit(DIR_NORTH);
-    } else if (text == QLatin1String("ne")) {
+    } else if (text == QLatin1String("ne")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_NORTHEAST);
-    } else if (text == QLatin1String("e")) {
+    } else if (text == QLatin1String("e")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_EAST);
-    } else if (text == QLatin1String("se")) {
+    } else if (text == QLatin1String("se")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_SOUTHEAST);
-    } else if (text == QLatin1String("s")) {
+    } else if (text == QLatin1String("s")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_SOUTH);
-    } else if (text == QLatin1String("sw")) {
+    } else if (text == QLatin1String("sw")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_SOUTHWEST);
-    } else if (text == QLatin1String("w")) {
+    } else if (text == QLatin1String("w")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_WEST);
-    } else if (text == QLatin1String("nw")) {
+    } else if (text == QLatin1String("nw")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_NORTHWEST);
-    } else if (text == QLatin1String("up")) {
+    } else if (text == QLatin1String("up")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_UP);
-    } else if (text == QLatin1String("down")) {
+    } else if (text == QLatin1String("down")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_DOWN);
-    } else if (text == QLatin1String("in")) {
+    } else if (text == QLatin1String("in")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_IN);
-    } else if (text == QLatin1String("out")) {
+    } else if (text == QLatin1String("out")) { // NOLINT(readability-else-after-return)
         return hasExit(DIR_OUT);
-    } else {
+    } else { // NOLINT(readability-else-after-return)
         // Then check the special exits:
         return mSpecialExits.contains(text);
     }
-
-    return false;
 }
 
 int TRoom::getExit(const int direction) const
@@ -1581,7 +1577,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             mpRoomDB->mpMap->appendRoomErrorMsg(id, warnMsg, true);
             userData.insert(auditKey, QString::number(exitRoomId));
             if (!exitStubs.contains(dirCode)) {
-                // Add a stub (this is so we can retain doors, though exit weights, custom lines and locks will go)
+                // Add a stub (this is so we can retain doors and locks, though exit weights and custom lines will go)
                 exitStubs.append(dirCode);
                 // Remove a (now valid) stub in this direction from check pool
                 exitStubsPool.remove(dirCode);
@@ -1593,8 +1589,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             // And eliminate the corresponding things from the pools of things
             // that have to be checked:
             // TODO: Add additional warnings if we ARE deleting any data in following
-            exitLocks.removeAll(dirCode);
-            exitLocksPool.remove(dirCode);
+            exitLocksPool.remove(dirCode); // A stub exit can retain a lock so keep any that exists
 
             exitWeights.remove(exitKey);
             exitWeightsPool.remove(exitKey);
@@ -1647,16 +1642,15 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         if (exitStubs.contains(dirCode)) {
             exitStubsPool.remove(dirCode); // Remove the stub in this direction from check pool as we have handled it
         } else {
-            // If NOT we cannot have a door
+            // If NOT we cannot have a door or a lock
             doors.remove(exitKey);
+            exitLocks.removeAll(dirCode);
         }
-        // We have handled whether we can have a door (if there IS a stub) or not (if not)
-        // so remove it from the check pool as we have handled it
         doorsPool.remove(exitKey);
+        exitLocksPool.remove(dirCode);
 
-        // Whether we do or not have a stub exit we cannot have a lock, custom
+        // Whether we do or not have a stub exit we cannot have a custom
         // line or a weight - so remove them if they exist:
-        exitLocks.removeAll(dirCode);
         exitWeights.remove(exitKey);
         customLines.remove(exitKey);
         customLinesColor.remove(exitKey);
@@ -1665,7 +1659,6 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         // Whether we have a stub or not we have handled all the things that we
         // want to check the existence of so take them out of the pools of
         // things left to check after all the exits have been looked at
-        exitLocksPool.remove(dirCode);
         exitWeightsPool.remove(exitKey);
         customLinesPool.remove(exitKey);
         customLinesColorPool.remove(exitKey);
@@ -1692,13 +1685,8 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         }
         exitStubsPool.remove(dirCode); // Remove the stub in this direction from check pool as we have handled it
 
-        if (exitLocks.contains(dirCode)) {
-            const QString auditKeyLocked = qsl("audit.invalid_exit.%1.isLocked").arg(dirCode);
-            userData.insert(auditKeyLocked, qsl("true"));
-            //: %1 is the audit key for the lock status
-            infoMsg.append(qsl("  %1").arg(tr(R"(It was locked, this is recorded as user data with key: "%1".)").arg(auditKeyLocked)));
-            exitLocks.removeAll(dirCode);
-        }
+        // Any lock on this exit is retained as the stub that replaces it can
+        // also carry a lock
 
         if (exitWeights.contains(exitKey)) {
             const QString auditKeyWeight = qsl("audit.invalid_exit.%1.weight").arg(dirCode);
@@ -2322,6 +2310,9 @@ void TRoom::writeJsonExitStubs(QJsonObject& obj) const
         const QJsonValue stubNameValue{stubName};
         exitStubObj.insert(QLatin1String("name"), stubNameValue);
         writeJsonDoor(exitStubObj, stubName);
+        if (exitLocks.contains(stringToDirCode(stubName))) {
+            exitStubObj.insert(QLatin1String("locked"), true);
+        }
         const QJsonValue exitStubValue{exitStubObj};
         exitStubsArray.append(exitStubValue);
     }
@@ -2361,6 +2352,10 @@ void TRoom::readJsonExitStubs(const QJsonObject& obj)
         // Will only get here for normal exit directions:
         if (exitStubObj.contains(QLatin1String("door")) && exitStubObj.value(QLatin1String("door")).isString()) {
             readJsonDoor(exitStubObj, doorKey);
+        }
+
+        if (exitStubObj.contains(QLatin1String("locked")) && exitStubObj.value(QLatin1String("locked")).isBool() && exitStubObj.value(QLatin1String("locked")).toBool()) {
+            exitLocks.append(dir);
         }
     }
 }

@@ -203,7 +203,8 @@ bool TAlias::match(const QString& haystack)
             }
             ovector[1] = start_offset + 1;
             continue;
-        } else if (rc < 0) {
+        }
+        if (rc < 0) {
             goto END;
         }
 
@@ -331,6 +332,17 @@ void TAlias::compile()
 
 bool TAlias::setScript(const QString& script)
 {
+    // Switching from a registered anonymous Lua function (set up by tempAlias with a
+    // function argument) to a script string: release the old function from the Lua
+    // registry and leave callback mode. Otherwise execute() keeps calling the stale
+    // function so the new script never runs, and the registry entry leaks - the
+    // destructor would take its mScript-based branch and delete the compiled function.
+    if (mRegisteredAnonymousLuaFunction) {
+        if (mpHost) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        }
+        mRegisteredAnonymousLuaFunction = false;
+    }
     mScript = script;
     mNeedsToBeCompiled = true;
     mOK_code = compileScript();
@@ -348,11 +360,10 @@ bool TAlias::compileScript()
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
-    } else {
-        mOK_code = false;
-        setError(error);
-        return false;
     }
+    mOK_code = false;
+    setError(error);
+    return false;
 }
 
 void TAlias::execute()

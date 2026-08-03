@@ -125,6 +125,9 @@ public:
     // long enough again.
     int mOldCaretColumn = 0;
 
+    friend class TTextEditBlinkTest;
+    static bool shouldRegisterBlinkClient(bool enableBlinkText, bool hasBlinkingContentInRedrawnRegion, bool isBlinkClientRegistered, bool reusedCachedScreenContent);
+
     QColor mFgColor;
     bool mIsCommandPopup = false;
     // If true, this TTextEdit is to display the last lines in
@@ -168,6 +171,7 @@ public slots:
 
 protected:
     bool focusNextPrevChild(bool next) override;
+    bool event(QEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
 
