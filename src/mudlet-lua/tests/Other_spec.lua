@@ -1075,6 +1075,21 @@ describe("Tests the timer API", function()
       assert.has_error(function() tempTimer(86400, [[]]) end)
     end)
 
+    it("errors for a delay that only rounds up onto the day", function()
+      -- the delay becomes the interval through qRound(time * 1000), so a delay
+      -- of under 86400 seconds can still reach 86400000ms and wrap around to no
+      -- interval at all: it is the rounded milliseconds that have to be bounded
+      local ok, err = pcall(tempTimer, 86399.9999, [[]])
+      assert.is_false(ok,
+        "a delay rounding up to a whole day wraps to a zero interval and must be rejected")
+      assert.is_truthy(tostring(err):find("bad argument #1", 1, true),
+        "the delay should be reported as the offending argument, got: " .. tostring(err))
+      -- while a delay still under the day once rounded stays acceptable
+      local id = trackTemp(tempTimer(86399.4, [[]]))
+      assert.is_true(id > 0, "a delay under the day once rounded should still be accepted")
+      assert.is_true(killTimer(id))
+    end)
+
     it("fires a code-string body in the global environment", function()
       trackTemp(tempTimer(0.05, [[
         _G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1
@@ -1315,6 +1330,19 @@ describe("Tests the timer API", function()
       assert.is_false(ok,
         "a negative interval must be rejected rather than wrapped around the 24 hour clock")
       assert.equals(before, exists("W2aPermTimerNegative", "timer"),
+        "a rejected interval must not leave a timer behind")
+      assert.is_truthy(tostring(err):find("bad argument #3", 1, true),
+        "the interval should be reported as the offending argument, got: " .. tostring(err))
+    end)
+
+    it("errors for an interval that only rounds up onto the day, creating nothing", function()
+      -- as with tempTimer, it is the rounded milliseconds that wrap: 86399.9999
+      -- seconds is under the day but reaches it once rounded
+      local before = exists("W2aPermTimerRounding", "timer")
+      local ok, err = pcall(permTimer, trackPerm("W2aPermTimerRounding"), "", 86399.9999, [[]])
+      assert.is_false(ok,
+        "an interval rounding up to a whole day wraps to a zero interval and must be rejected")
+      assert.equals(before, exists("W2aPermTimerRounding", "timer"),
         "a rejected interval must not leave a timer behind")
       assert.is_truthy(tostring(err):find("bad argument #3", 1, true),
         "the interval should be reported as the offending argument, got: " .. tostring(err))
