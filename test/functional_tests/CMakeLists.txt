@@ -40,6 +40,12 @@ set(FUNCTIONAL_TEST_SOURCES
     TMediaLoopTest.cpp
 )
 
+# The updater sources are only built with USE_UPDATER, and on macOS the
+# Updater wraps Sparkle instead of creating an UpdateDialog
+if(USE_UPDATER AND NOT APPLE)
+    list(APPEND FUNCTIONAL_TEST_SOURCES UpdaterTeardownTest.cpp)
+endif()
+
 set(FUNCTIONAL_TEST_UTILS
     TelnetServerStub.cpp
     DiscordIpcServerStub.cpp
