@@ -34,6 +34,7 @@
 #include "mudlet.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
+#include "utils.h"
 
 #include <QtConcurrentRun>
 #include <QtUiTools>
@@ -375,6 +376,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
 dlgConnectionProfiles::~dlgConnectionProfiles()
 {
+    // ~QDialog hides the dialog once this destructor is done, and the profile
+    // name field reacts to losing the focus by emitting editingFinished() into
+    // slot_saveName() when this object is no longer a valid receiver (#9574)
+    utils::disconnectChildSignals(this);
+
     if (mPasswordSaveTimer) {
         mPasswordSaveTimer->stop();
     }
