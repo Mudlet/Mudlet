@@ -186,6 +186,24 @@ describe("Tests keybind-related functions", function()
       assert.is_false(killKey("no_such_key_name"), "killing a missing key should return false")
     end)
 
+    it("killKey returns false the second time, as the key is already dead", function()
+      local id = tempKey(mudlet.key.F11, [[echo("x")]])
+      assert.is_true(killKey(id), "killing a live temporary key should report success")
+      -- the key is still present here: only the deferred cleanup frees it, so the
+      -- second kill really is being told about a corpse it can find
+      assert.are.equal(1, exists(id, "keybind"), "the killed key is still present until cleanup runs")
+      assert.are.equal(0, isActive(id, "keybind"), "a killed key is no longer active")
+      assert.is_false(killKey(id),
+        "killing an already killed key achieves nothing and has to say so")
+      -- an incoming line runs every unit's deferred cleanup, which is what finally
+      -- frees the key; the answer has to be the same after it. A key press cannot be
+      -- synthesised headlessly, so there is no in-callback double kill to pin here -
+      -- KeyUnit's depth and cleanup machinery matches AliasUnit's, whose spec has one
+      feedTriggers("\nspec_key_kill_flush\n")
+      assert.are.equal(0, exists(id, "keybind"), "the key should be gone after kill and cleanup")
+      assert.is_false(killKey(id), "a freed key cannot be killed either")
+    end)
+
     it("killKey returns false for a permanent key (they cannot be killed)", function()
       local id = permKey("SpecPermKeyKill", "", mudlet.key.F12, [[echo("x")]])
       assert.is_true(id > 0)
