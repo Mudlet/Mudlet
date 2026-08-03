@@ -1864,6 +1864,10 @@ int TLuaInterpreter::setProfileIcon(lua_State* L)
 int TLuaInterpreter::setScript(lua_State* L)
 {
     const int n = lua_gettop(L);
+    // The name and the code stay the Lua-owned strings anchored at stack indexes
+    // 1 and 2 until every check has passed: lua_error() longjmps past C++
+    // destructors, so a QString built from an earlier argument would be stranded
+    // by a later argument's failure - see checkStringArg()
     if (!checkStringArg(L, __func__, 1, "script name")) {
         return lua_error(L);
     }
@@ -1876,16 +1880,19 @@ int TLuaInterpreter::setScript(lua_State* L)
 
     int pos = 1;
     if (n > 2) {
-        pos = getVerifiedInt(L, __func__, 3, "script position");
+        if (!checkIntArg(L, __func__, 3, "script position")) {
+            return lua_error(L);
+        }
+        pos = static_cast<int>(lua_tointeger(L, 3));
     }
 
     int id = -1;
     {
-        const QString name{lua_tostring(L, 1)};
-        const QString luaCode{lua_tostring(L, 2)};
-        auto [scriptId, message] = pLuaInterpreter->setScriptCode(name, luaCode, --pos);
+        // scoped so that this failure message, and the QStrings handed to
+        // setScriptCode(), are all destroyed before the raise below
+        auto [scriptId, message] = pLuaInterpreter->setScriptCode(QString{lua_tostring(L, 1)}, QString{lua_tostring(L, 2)}, --pos);
         id = scriptId;
-        if (scriptId == -1) {
+        if (id == -1) {
             lua_pushfstring(L, "setScript: cannot set script (%s)", message.toUtf8().constData());
         }
     }

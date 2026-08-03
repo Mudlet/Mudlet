@@ -1446,8 +1446,9 @@ int TLuaInterpreter::getMudletInfo(lua_State* L)
 }
 
 // Internal Function createLabel in an UserWindow
-// The names stay Lua-owned strings because every check below can raise - see
-// checkStringArg()
+// The names arrive as the Lua-owned strings still anchored at stack indexes 1 and
+// 2 rather than as QStrings: every check below can raise, and lua_error() longjmps
+// past C++ destructors, so the QStrings are only built once nothing else can raise
 int TLuaInterpreter::createLabelUserWindow(lua_State* L, const char* windowName, const char* labelName)
 {
     const int n = lua_gettop(L);

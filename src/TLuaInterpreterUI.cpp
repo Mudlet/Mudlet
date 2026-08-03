@@ -59,6 +59,7 @@
 #include "glwidget_integration.h"
 #endif
 
+#include <array>
 #include <limits>
 #include <math.h>
 
@@ -374,18 +375,15 @@ int TLuaInterpreter::createLabel(lua_State* L)
         lua_pushfstring(L, "createLabel: bad argument #1 type (label or parent window name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    if (lua_type(L, 2) != LUA_TSTRING && lua_type(L, 2) != LUA_TNUMBER) {
-        lua_pushfstring(L, "createLabel: bad argument #2 type (label name as string or label x-coordinate as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-
     if (lua_type(L, 2) == LUA_TSTRING) {
-        createLabelUserWindow(L, lua_tostring(L, 1), lua_tostring(L, 2));
-    } else {
-        createLabelMainWindow(L, lua_tostring(L, 1));
+        return createLabelUserWindow(L, lua_tostring(L, 1), lua_tostring(L, 2));
+    }
+    if (lua_type(L, 2) == LUA_TNUMBER) {
+        return createLabelMainWindow(L, lua_tostring(L, 1));
     }
 
-    return 1;
+    lua_pushfstring(L, "createLabel: bad argument #2 type (label name as string or label x-coordinate as number expected, got %s!)", luaL_typename(L, 2));
+    return lua_error(L);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMiniConsole
@@ -3437,14 +3435,22 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 
     const int n = lua_gettop(L);
 
-    const char* windowNameArg = WINDOW_NAME(L, 1);
+    // Every argument check below can raise a Lua error, and lua_error() longjmps
+    // past C++ destructors - so nothing holding heap memory may be alive while they
+    // run: the window name stays the Lua-owned string anchored at stack index 1 and
+    // the colour components a plain array until the last check has passed. The
+    // blinkMode QString further down is exempt only because it holds a
+    // QStringLiteral until after the last raise; give it a computed default and the
+    // leak comes back
+    const char* windowNameCString = WINDOW_NAME(L, 1);
 
-    const int backgroundRed = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 2, "red background color component"), 255.0));
-    const int backgroundGreen = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 3, "green background color component"), 255.0));
-    const int backgroundBlue = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 4, "blue background color component"), 255.0));
-    const int foregroundRed = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 5, "red foreground color component"), 255.0));
-    const int foregroundGreen = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 6, "green foreground color component"), 255.0));
-    const int foregroundBlue = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 7, "blue foreground color component"), 255.0));
+    std::array<int, 6> colorComponents{}; // 0-2 RGB background, 3-5 RGB foreground
+    colorComponents[0] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 2, "red background color component"), 255.0));
+    colorComponents[1] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 3, "green background color component"), 255.0));
+    colorComponents[2] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 4, "blue background color component"), 255.0));
+    colorComponents[3] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 5, "red foreground color component"), 255.0));
+    colorComponents[4] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 6, "green foreground color component"), 255.0));
+    colorComponents[5] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 7, "blue foreground color component"), 255.0));
 
     int s = 7;
     bool bold;
@@ -3539,8 +3545,8 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
                                         | (reverse ? TChar::Reverse : TChar::None) | (strikeout ? TChar::StrikeOut : TChar::None) | (underline ? TChar::Underline : TChar::None)
                                         | (fastBlink ? TChar::FastBlink : (slowBlink ? TChar::Blink : TChar::None));
 
-    const QString windowName{windowNameArg};
-    if (!host.mpConsole->setTextFormat(windowName, QColor(foregroundRed, foregroundGreen, foregroundBlue), QColor(backgroundRed, backgroundGreen, backgroundBlue), flags)) {
+    const QString windowName{windowNameCString};
+    if (!host.mpConsole->setTextFormat(windowName, QColor(colorComponents[3], colorComponents[4], colorComponents[5]), QColor(colorComponents[0], colorComponents[1], colorComponents[2]), flags)) {
         return warnArgumentValue(L, __func__, qsl("window '%1' does not exist").arg(windowName), true);
     }
 
@@ -3903,7 +3909,7 @@ int TLuaInterpreter::windowType(lua_State* L)
     }
 
     lua_pushnil(L);
-    lua_pushfstring(L, "'%s' is not a known label, any type of console, nor command line", windowName.toUtf8().constData());
+    lua_pushfstring(L, "'%s' is not a known label, any type of console, command line, text edit, nor scroll box", windowName.toUtf8().constData());
     return 2;
 }
 
