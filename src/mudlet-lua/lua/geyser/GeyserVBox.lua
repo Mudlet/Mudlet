@@ -8,6 +8,18 @@ Geyser.VBox = Geyser.Container:new({
   name = "VBoxClass"
 })
 
+-- Internal function: lays the box out, or remembers that it still has to be laid
+-- out when updates are being deferred, so that the reposition end_update() runs
+-- picks the work up again
+-- @param box the VBox to organize
+local function organizeOrDefer(box)
+  if box.defer_updates then
+    box.pending_organize = true
+  else
+    box:organize()
+  end
+end
+
 function Geyser.VBox:add (window, cons)
   -- VBox/HBox have their own add function therefore passing off add2 should be possible without
   -- overwriting their add functions
@@ -16,10 +28,15 @@ function Geyser.VBox:add (window, cons)
   else
     Geyser.add(self, window, cons)
   end
-  
-  if not self.defer_updates then
-    self:organize()
-  end
+
+  organizeOrDefer(self)
+end
+
+-- add2 has to be overridden as well, otherwise children created with new2 reach
+-- Geyser.add2 directly and the box never lays them out
+function Geyser.VBox:add2 (window, cons, passAdd2, exclude)
+  Geyser.add2(self, window, cons, passAdd2, exclude)
+  organizeOrDefer(self)
 end
 
 --- Responsible for organizing the elements inside the VBox
@@ -62,8 +79,13 @@ end
 
 function Geyser.VBox:reposition()
   Geyser.Container.reposition(self)
-  if self.contains_fixed then -- prevent gaps when items have fixed size
+  -- contains_fixed prevents gaps when items have fixed size and is deliberately
+  -- not deferred, pending_organize
+  -- flushes a layout that was skipped while updates were deferred. Clearing it
+  -- only after organize() keeps the work queued if organize() throws.
+  if self.contains_fixed or (self.pending_organize and not self.defer_updates) then
     self:organize()
+    self.pending_organize = nil
   end
 end
 
