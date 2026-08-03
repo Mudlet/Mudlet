@@ -1471,7 +1471,9 @@ void TMedia::releaseMediaSourceAfterEvents(const std::shared_ptr<TMediaPlayer>& 
     const bool playbackStateDecides = (endedBy == PlaybackEnd::Stopped);
 
     if (!player->mediaPlayer() || player->mediaPlayer()->source().isEmpty()) {
-        return; // Nothing left to end, so no caption for it either
+        // Nothing left to end, so no caption for it either
+        qDebug() << "TMedia::releaseMediaSourceAfterEvents() - asked to end a playback that is already holding no source; nothing to do.";
+        return;
     }
 
     const std::weak_ptr<TMediaPlayer> weakPlayer = player;
@@ -1517,6 +1519,7 @@ void TMedia::releaseMediaSourceAfterEvents(const std::shared_ptr<TMediaPlayer>& 
         } else if (playbackStateDecides && lockedPlayer->getPlaybackState() != QMediaPlayer::StoppedState) {
             qDebug() << "TMedia::releaseMediaSourceAfterEvents() - player is no longer stopped, keeping its source.";
         } else {
+            qDebug() << "TMedia::releaseMediaSourceAfterEvents() - releasing the media source of the playback that ended.";
             lockedPlayer->releaseSource();
 
             if (endedData.mediaWidget() == TMediaData::MediaWidgetLabel && endedData.mediaClose() == TMediaData::MediaCloseEnabled && lockedPlayer->mediaPlayer()->videoOutput() != nullptr) {

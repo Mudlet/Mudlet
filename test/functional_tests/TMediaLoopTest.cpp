@@ -233,13 +233,24 @@ private slots:
         TMediaData stop = clipData(fileName);
         media->stopMedia(stop);
 
-        const bool cleanedUp = QTest::qWaitFor(
+        // Asserted separately from the release below: "still playing" and "still holding a
+        // source" are different faults with different causes, and a combined wait cannot say
+        // which of them a failure is.
+        const bool stopped = QTest::qWaitFor(
                 [&]() {
-                    return !playing(media, fileName) && media->playersHoldingSource() == 0;
+                    return !playing(media, fileName);
                 },
                 QDeadlineTimer(10s));
 
-        QVERIFY2(cleanedUp, "A stopped track never released its media source - the deferred cleanup did not run.");
+        QVERIFY2(stopped, "A stopped track was still reported as playing - stopMedia() did not take it out of the playing set.");
+
+        const bool released = QTest::qWaitFor(
+                [&]() {
+                    return media->playersHoldingSource() == 0;
+                },
+                QDeadlineTimer(10s));
+
+        QVERIFY2(released, "A stopped track never released its media source - the deferred release did not run.");
     }
 
     // A source that fails to load reports an error and no playback state change, because a
