@@ -120,6 +120,15 @@ expect_failure() {
   fi
 }
 
+# macOS has shasum rather than coreutils' sha256sum
+sha256_of() {
+  if command -v sha256sum > /dev/null 2>&1; then
+    sha256sum "$1" | cut -d ' ' -f 1
+  else
+    shasum -a 256 "$1" | cut -d ' ' -f 1
+  fi
+}
+
 # Creates a case directory with an assets/ subdirectory holding placeholder
 # binaries and their .sha256 sidecars. Arguments are "name:hash" pairs; a hash of
 # "real" is computed from the placeholder's actual bytes.
@@ -133,7 +142,7 @@ make_assets() {
     hash="${pair##*:}"
     echo "placeholder for ${name}" > "${case_dir}/assets/${name}"
     if [[ "${hash}" == "real" ]]; then
-      hash="$(sha256sum "${case_dir}/assets/${name}" | cut -d ' ' -f 1)"
+      hash="$(sha256_of "${case_dir}/assets/${name}")"
     fi
     printf '%s *%s\n' "${hash}" "${name}" > "${case_dir}/assets/${name}.sha256"
   done
