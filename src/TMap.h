@@ -67,7 +67,6 @@ class TRoom;
 class TRoomDB;
 class QFile;
 class QNetworkAccessManager;
-class QProgressDialog;
 class MapInfoContributorManager;
 
 class TMap : public QObject
@@ -78,6 +77,18 @@ signals:
     void signal_saveErrorChanged(bool hasError);
     void signal_areaChanged(int areaId);
     void signal_mmpMapLocationChanged();
+
+    // Map-progress seam for the libmudlet split (#8681, #9011): the map engine
+    // must stay free of Qt Widgets, so it emits these pre-translated payloads for
+    // the frontend (TMainConsole) to render as a QProgressDialog. Cancellation
+    // returns through slot_mapProgressDialogCancelled().
+    void signal_mapTransferProgressStart(const QString& title, const QString& label, const QString& cancelButtonText);
+    void signal_mapJsonProgressStart(const QString& title, const QString& label, const QString& cancelButtonText, int maximum);
+    void signal_mapProgressSetLabel(const QString& text);
+    void signal_mapProgressSetRange(int minimum, int maximum);
+    void signal_mapProgressSetValue(int value);
+    void signal_mapProgressDisableCancel();
+    void signal_mapProgressClose();
 
 private:
     QString mDefaultAreaName;
@@ -160,9 +171,10 @@ public:
     void reportProgressToProgressDialog(int, int);
 
     // Download/import progress helpers. Use the inline progress widget in the
-    // mapper when it is visible, otherwise fall back to a modal QProgressDialog.
-    // Do NOT use these from the JSON export/import paths - those keep their own
-    // dedicated QProgressDialog.
+    // mapper when it is visible, otherwise ask the frontend for a standalone
+    // progress dialog via signal_mapTransferProgressStart(). Do NOT use these
+    // from the JSON export/import paths - those drive their own frontend dialog
+    // through signal_mapJsonProgressStart().
     void createTransferProgress(const QString& title, const QString& label, bool cancelable);
     void updateTransferProgressLabel(const QString& text);
     void updateTransferProgressRange(int minimum, int maximum);
@@ -185,7 +197,7 @@ public:
     void setRoomNamesShown(bool shown);
 
     std::pair<bool, QString> writeJsonMapFile(const QString&);
-    std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false, const bool allowUserCancellation = true);
+    std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false);
     qsizetype getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
     QString getDefaultAreaName() const { return mDefaultAreaName; }
@@ -363,6 +375,9 @@ public slots:
     void slot_downloadCancel();
     void slot_downloadError(QNetworkReply::NetworkError);
     void slot_replyFinished(QNetworkReply*);
+    // Called by the frontend when the user cancels the standalone map-progress
+    // dialog it owns on our behalf.
+    void slot_mapProgressDialogCancelled();
 
 
 private:
@@ -375,6 +390,7 @@ private:
                              const QString& exitKey,
                              const QSet<unsigned int>& unUsableRoomSet);
     const QString createFileHeaderLine(QString, QChar);
+    void warnIfMapProgressUnwired(const char* context, bool transferPath);
     void writeJsonUserData(QJsonObject&) const;
     void readJsonUserData(const QJsonObject&);
     bool validatePotentialMapFile(QFile&, QDataStream&);
@@ -401,7 +417,13 @@ private:
     int mExpectedFileSize = 0;
     bool mImportRunning = false;
 
-    QProgressDialog* mpProgressDialog = nullptr;
+    // Engine-side mirror of the frontend-owned dialog, which the engine can't
+    // read back. mMapProgressStandalone also serves as the "import/export already
+    // running" guard (see writeJsonMapFile()/readJsonMapFile()).
+    bool mMapProgressStandalone = false;
+    bool mMapProgressIsTransfer = false;
+    bool mMapProgressCancelRequested = false;
+    int mMapProgressStandaloneMaximum = 0;
     // Using during updates of text in progress dialog partially from other
     // classes:
     qsizetype mProgressDialogAreasTotal = 0;

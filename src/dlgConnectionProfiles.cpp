@@ -37,6 +37,7 @@
 
 #include <QtConcurrentRun>
 #include <QtUiTools>
+#include <QApplication>
 #include <QColorDialog>
 #include <QDir>
 #include <QPointer>
