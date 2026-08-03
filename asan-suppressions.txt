@@ -44,6 +44,22 @@ leak:_dri.so
 # Mesa. Do not try to silence it with a leak: line here (there is no name to
 # match) - keep the GL context from being created/destroyed under the sanitizer
 # test-side instead, as PR #9534 did for the show3dMapView test.
+#
+# A second un-suppressible flake lives on the same CI job: LeakSanitizer's
+# stop-the-world tracer - the helper process that ptrace-attaches at exit to
+# scan memory for live pointers - itself segfaults during exit-time teardown,
+# apparently racing driver/X cleanup. The job log then ends with
+#   Tracer caught signal 11: addr=0x... pc=0x... sp=0x...
+#   ==NNNNN==LeakSanitizer has encountered a fatal error.
+# right after "mudlet::~mudlet() INFO - uninstalling translation...", with no
+# leak report at all, and the busted summary line goes missing too (LSan's
+# Die() skips the stdio flush - the Lua tests themselves passed). Since
+# exitcode=1 the job fails. Suppressions filter leak *reports*, and this
+# aborts before reporting begins, so nothing in this file can help; it is
+# also unrelated to the change under test (the same faulting instruction was
+# observed on development-branch runs 26705214438 and 28641460889 and on PR
+# run 30744002320, at a rate of roughly 1 in 250-500 leak-job runs). If a
+# leak job fails with this signature, just re-run it.
 
 # ==============================================================================
 # Fontconfig library leaks

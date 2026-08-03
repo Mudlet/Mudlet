@@ -4934,6 +4934,10 @@ std::optional<QString> Host::windowType(const QString& name) const
         }
     }
 
+    if (mpConsole->mScrollBoxMap.contains(name)) {
+        return {qsl("scrollbox")};
+    }
+
     if (mpConsole->mSubCommandLineMap.contains(name)) {
         return {qsl("commandline")};
     }
