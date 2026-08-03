@@ -36,6 +36,7 @@ set(FUNCTIONAL_TEST_SOURCES
     UndoServerWrapTest.cpp
     HostWidgetDecouplingTest.cpp
     ActionSelfUninstallTest.cpp
+    TMediaLoopTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
@@ -99,6 +100,10 @@ set_tests_properties(InsertTextCapTest PROPERTIES TIMEOUT 300)
 
 # LogRestartDuplicateLineTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(LogRestartDuplicateLineTest PROPERTIES TIMEOUT 300)
+
+# TMediaLoopTest probes the audio backend and creates a fresh profile per test method,
+# and each clip has to be waited out in real time, so it needs a longer timeout
+set_tests_properties(TMediaLoopTest PROPERTIES TIMEOUT 300)
 
 # The round-trip tests boot a full mudlet instance and save/reload profile and
 # map data, so they need a longer timeout
