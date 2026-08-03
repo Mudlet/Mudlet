@@ -235,7 +235,12 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
 
     // font name and size are passed in as arguments
     if (lua_gettop(L) == 2) {
-        auto font = QFont(getVerifiedString(L, __func__, 2, "font name"), getVerifiedInt(L, __func__, 1, "font size"), QFont::Normal);
+        // hoisted because the order the two QFont arguments were evaluated in is
+        // unspecified, so which failure got reported was up to the compiler
+        if (!checkIntArg(L, __func__, 1, "font size") || !checkStringArg(L, __func__, 2, "font name")) {
+            return lua_error(L);
+        }
+        auto font = QFont(QString{lua_tostring(L, 2)}, static_cast<int>(lua_tointeger(L, 1)), QFont::Normal);
         auto fontMetrics = QFontMetrics(font);
         size = QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
 
@@ -309,29 +314,23 @@ int TLuaInterpreter::createBuffer(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createCommandLine
 int TLuaInterpreter::createCommandLine(lua_State* L)
 {
-    QString windowName = QLatin1String("main");
     const int n = lua_gettop(L);
     int counter = 1;
+    const bool hasParentWindow = (n > 5);
 
-    if (n > 5) {
+    if (hasParentWindow) {
         if (lua_type(L, 1) != LUA_TSTRING) {
             lua_pushfstring(L, "createCommandLine: bad argument #1 type (parent window name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         }
-        windowName = lua_tostring(L, 1);
         counter++;
-        if (isMain(windowName)) {
-            // createCommandLine only accepts the empty name as the main window
-            windowName.clear();
-        }
     }
 
-    if (lua_type(L, counter) != LUA_TSTRING) {
-        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandLine name as string expected, got %s!)", counter, luaL_typename(L, counter));
+    const int commandLineNamePos = counter++;
+    if (lua_type(L, commandLineNamePos) != LUA_TSTRING) {
+        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandLine name as string expected, got %s!)", commandLineNamePos, luaL_typename(L, commandLineNamePos));
         return lua_error(L);
     }
-    const QString commandLineName{lua_tostring(L, counter)};
-    counter++;
     const int x = getVerifiedInt(L, __func__, counter, "commandline x-coordinate");
     counter++;
     const int y = getVerifiedInt(L, __func__, counter, "commandline y-coordinate");
@@ -340,6 +339,16 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
     counter++;
     const int height = getVerifiedInt(L, __func__, counter, "commandline height");
     counter++;
+
+    QString windowName = qsl("main");
+    if (hasParentWindow) {
+        windowName = lua_tostring(L, 1);
+        if (isMain(windowName)) {
+            // createCommandLine only accepts the empty name as the main window
+            windowName.clear();
+        }
+    }
+    const QString commandLineName{lua_tostring(L, commandLineNamePos)};
 
     const Host& host = getHostFromLua(L);
     if (auto [success, message] = host.mpConsole->createCommandLine(windowName, commandLineName, x, y, width, height); !success) {
@@ -501,29 +510,23 @@ int TLuaInterpreter::deleteCommandLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createTextEdit
 int TLuaInterpreter::createTextEdit(lua_State* L)
 {
-    QString windowName = QLatin1String("main");
     const int n = lua_gettop(L);
     int counter = 1;
+    const bool hasParentWindow = (n > 5);
 
-    if (n > 5) {
+    if (hasParentWindow) {
         if (lua_type(L, 1) != LUA_TSTRING) {
             lua_pushfstring(L, "createTextEdit: bad argument #1 type (parent window name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         }
-        windowName = lua_tostring(L, 1);
         counter++;
-        if (isMain(windowName)) {
-            // createTextEdit only accepts the empty name as the main window
-            windowName.clear();
-        }
     }
 
-    if (lua_type(L, counter) != LUA_TSTRING) {
-        lua_pushfstring(L, "createTextEdit: bad argument #%d type (text edit name as string expected, got %s!)", counter, luaL_typename(L, counter));
+    const int textEditNamePos = counter++;
+    if (lua_type(L, textEditNamePos) != LUA_TSTRING) {
+        lua_pushfstring(L, "createTextEdit: bad argument #%d type (text edit name as string expected, got %s!)", textEditNamePos, luaL_typename(L, textEditNamePos));
         return lua_error(L);
     }
-    const QString textEditName{lua_tostring(L, counter)};
-    counter++;
     const int x = getVerifiedInt(L, __func__, counter, "text edit x-coordinate");
     counter++;
     const int y = getVerifiedInt(L, __func__, counter, "text edit y-coordinate");
@@ -532,6 +535,16 @@ int TLuaInterpreter::createTextEdit(lua_State* L)
     counter++;
     const int height = getVerifiedInt(L, __func__, counter, "text edit height");
     counter++;
+
+    QString windowName = qsl("main");
+    if (hasParentWindow) {
+        windowName = lua_tostring(L, 1);
+        if (isMain(windowName)) {
+            // createTextEdit only accepts the empty name as the main window
+            windowName.clear();
+        }
+    }
+    const QString textEditName{lua_tostring(L, textEditNamePos)};
 
     const Host& host = getHostFromLua(L);
     if (auto [success, message] = host.mpConsole->createTextBox(windowName, textEditName, x, y, width, height); !success) {
