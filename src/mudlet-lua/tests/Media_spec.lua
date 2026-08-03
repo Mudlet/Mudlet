@@ -998,11 +998,10 @@ describe("Tests the text-to-speech Lua API", function()
           pending("the mock engine offers only one voice in this environment")
           return
         end
-        -- Regression #9590: the result used to be pushed onto the Lua stack
-        -- before ttsVoiceChanged was raised, and dispatching that event clears
-        -- the stack underneath it, so the caller was handed stack garbage. A
-        -- handler must be listening for the event to reach Lua at all, which is
-        -- what collect() arranges here.
+        -- Regression #9590: dispatching ttsVoiceChanged used to wipe this
+        -- lua_State's whole stack, taking the already-pushed result with it and
+        -- handing the caller stack garbage. A handler must be listening for the
+        -- event to reach Lua at all, which is what collect() arranges here.
         local changes = {}
         collect("ttsVoiceChanged", changes)
         local originalVoice = ttsGetCurrentVoice()

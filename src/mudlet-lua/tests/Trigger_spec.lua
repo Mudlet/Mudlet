@@ -476,6 +476,25 @@ describe("Trigger processing", function()
             assert.is_equal(2, count, "a trigger set to expire after 2 fires should fire exactly twice")
         end)
 
+        -- Regression: the C++ helpers that run trigger/alias/script code used to
+        -- read the script's return value from an absolute stack slot and then
+        -- wipe the whole shared Lua stack. Running inside feedTriggers() those
+        -- slots hold feedTriggers' own arguments, so the Utf8Encoded boolean
+        -- below was mistaken for "the script returned true" and kept renewing
+        -- the expiry count, and the wipe took the caller's arguments with it.
+        it("expires on schedule when fed by a call that has arguments on the Lua stack", function()
+            _G.TrigSpecExpire = {count = 0}
+            local id = tempTrigger("expire_me_utf8", [[_G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1]], 1)
+            assert.is_number(id)
+            feedTriggers("\nexpire_me_utf8\n", true)
+            feedTriggers("\nexpire_me_utf8\n", true)
+            feedTriggers("\nexpire_me_utf8\n", true)
+            local count = _G.TrigSpecExpire.count
+            _G.TrigSpecExpire = nil
+            if type(id) == "number" and id > 0 then killTrigger(id) end
+            assert.is_equal(1, count, "a trigger set to expire after 1 fire must not be renewed by the caller's stack")
+        end)
+
     end)
 
     describe("tempColorTrigger legacy colour remap", function()
