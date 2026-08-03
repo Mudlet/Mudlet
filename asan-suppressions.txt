@@ -22,6 +22,20 @@
 # compare against. Those have to be handled at their source, not here - see the
 # GPU driver note below for the recurring example.
 #
+# Do not suppress a Qt allocation primitive to quieten a report. By default
+# AddressSanitizer captures allocation stacks with the frame-pointer unwinder,
+# and the Qt binaries CI installs are built without frame pointers, so the walk
+# stops at the first Qt frame. Every leaked QString in the program then reports
+# as the same three-frame stack
+#   malloc / allocateHelper / QArrayData::allocate2
+# with no caller to identify it, and every leaked QByteArray as the allocate1
+# equivalent. Suppressing those symbols hides the whole class - which is what
+# `leak:QArrayData::allocate2` did here until it was removed. To get the real
+# callers of such a report, re-run with the accurate unwinder:
+#   ASAN_OPTIONS=fast_unwind_on_malloc=0:malloc_context_size=30
+# It costs roughly 3x the runtime of the test run, which is why CI does not use
+# it by default, but the stacks it produces name the leaking function.
+#
 # See: https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer
 
 # ==============================================================================
@@ -126,9 +140,6 @@ leak:QFontEngineMultiFontConfig
 
 # Qt translation system (one-time initialization)
 leak:QTranslatorPrivate::do_load
-
-# Qt array data allocation (internal caching)
-leak:QArrayData::allocate2
 
 # ==============================================================================
 # OpenSSL 3 provider initialization leaks

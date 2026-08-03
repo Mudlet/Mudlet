@@ -16,6 +16,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TFeedTriggersRecursionTest.cpp
     TriggerSameLineMatchTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
+    EditorBannerViewSwitchTest.cpp
     TDiscordModeTest.cpp
     MainConsoleSelectionTest.cpp
     EnableDisableByNameTest.cpp
@@ -35,8 +36,15 @@ set(FUNCTIONAL_TEST_SOURCES
     UndoServerWrapTest.cpp
     HostWidgetDecouplingTest.cpp
     ActionSelfUninstallTest.cpp
+    DialogTeardownTest.cpp
     TMediaLoopTest.cpp
 )
+
+# The updater sources are only built with USE_UPDATER, and on macOS the
+# Updater wraps Sparkle instead of creating an UpdateDialog
+if(USE_UPDATER AND NOT APPLE)
+    list(APPEND FUNCTIONAL_TEST_SOURCES UpdaterTeardownTest.cpp)
+endif()
 
 set(FUNCTIONAL_TEST_UTILS
     TelnetServerStub.cpp

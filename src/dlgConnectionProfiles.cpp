@@ -34,6 +34,7 @@
 #include "mudlet.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
+#include "utils.h"
 
 #include <QtConcurrentRun>
 #include <QtUiTools>
@@ -356,6 +357,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
 dlgConnectionProfiles::~dlgConnectionProfiles()
 {
+    // ~QDialog hides the dialog once this destructor is done, and the profile
+    // name field reacts to losing the focus by emitting editingFinished() into
+    // slot_saveName() when this object is no longer a valid receiver (#9574)
+    utils::disconnectChildSignals(this);
+
     if (mPasswordSaveTimer) {
         mPasswordSaveTimer->stop();
     }
@@ -377,6 +383,11 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
 void dlgConnectionProfiles::dismissTutorialInvitation()
 {
     mTutorialDismissed = true;
+    if (!widget_topLeft->isHidden()) {
+        // the invitation is not up, so there is nothing to restore - and the
+        // resize below would make the dialog jump in size for no reason
+        return;
+    }
     widget_topLeft->show();
     welcome_message->hide();
     tabWidget_connectionInfo->show();
@@ -926,15 +937,16 @@ void dlgConnectionProfiles::slot_addProfile()
         return;
     }
     setItemName(pItem, newname);
+    // without an icon the item is an invisible blank in the list
+    pItem->setIcon(customIcon(newname, std::nullopt));
 
-    listWidget_profiles->addItem(pItem);
-
-    // insert newest entry on top of the list as the general sorting
-    // is always newest item first -> fillout->form() filters
-    // this is more practical for the user as they use the same profile most of the time
+    // insert the new entry at the top of the list - appending would bury it
+    // at the bottom, below all the predefined games
+    listWidget_profiles->insertItem(0, pItem);
 
     // As we are using QAbstractItemView::SingleSelection this will
-    // automatically unselect the previous item:
+    // automatically unselect the previous item, and auto-scroll brings the
+    // new item into view:
     listWidget_profiles->setCurrentItem(pItem);
 
     profile_name_entry->setText(newname);
@@ -1368,9 +1380,11 @@ void dlgConnectionProfiles::fillout_form()
         if (!mDialogHeightBeforeShrink || welcome_message->isHidden()) {
             mDialogHeightBeforeShrink = height();
         }
-        welcome_message->show();
+        // hide before show: with both visible for a moment the layout grows
+        // the dialog to fit them together and it never shrinks back
         tabWidget_connectionInfo->hide();
         informationArea->hide();
+        welcome_message->show();
     } else {
         welcome_message->hide();
 
