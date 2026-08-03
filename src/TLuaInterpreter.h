@@ -823,6 +823,14 @@ public slots:
 private:
     static bool getVerifiedBool(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static QString getVerifiedString(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static bool checkStringArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static bool checkIntArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static bool checkBoolArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static bool checkNumberArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static bool checkStringOrIntegerArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static bool checkCommandOrFunctionArg(lua_State*, const char* functionName, const int pos);
+    static bool checkCommandsOrFunctionsTable(lua_State*, const char* functionName, const int index);
+    static bool checkHintsTable(lua_State*, const char* functionName, const int index);
     static int getVerifiedInt(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static float getVerifiedFloat(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static double getVerifiedDouble(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
@@ -830,11 +838,11 @@ private:
     static void errorArgumentType(lua_State*, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional = false);
     static int warnArgumentValue(lua_State*, const char* functionName, const QString& message, const bool useFalseInsteadofNil = false);
     static int warnArgumentValue(lua_State*, const char* functionName, const char* message, const bool useFalseInsteadofNil = false);
-    static int setLabelCallback(lua_State*, const QString& funcName);
-    static int movieFunc(lua_State*, const QString& funcName);
+    static int setLabelCallback(lua_State*, const char* funcName);
+    static int movieFunc(lua_State*, const char* funcName);
     static std::pair<bool, QString> discordApiEnabled(lua_State*, bool writeAccess = false);
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
-    static int performHttpRequest(lua_State*, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const QString& verb);
+    static int performHttpRequest(lua_State*, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const char* verb);
     static void validateHttpHeaders(lua_State*, const int index, const char* functionName);
     static void applyHttpHeaders(lua_State*, const int index, QNetworkRequest& request);
     // The last argument is only needed if the third one is true:

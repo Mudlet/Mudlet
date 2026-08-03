@@ -9,6 +9,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetSgrDefaultColorTest.cpp
     TelnetTlsPromptTest.cpp
     TelnetBenchmark.cpp
+    DefaultGameDeleteTest.cpp
     ResetProfileTest.cpp
     TOscTest.cpp
     TUserWindowTest.cpp
@@ -35,7 +36,7 @@ set(FUNCTIONAL_TEST_SOURCES
     UndoServerWrapTest.cpp
     HostWidgetDecouplingTest.cpp
     ActionSelfUninstallTest.cpp
-    DefaultGameDeleteTest.cpp
+    DialogTeardownTest.cpp
     TMediaLoopTest.cpp
 )
 

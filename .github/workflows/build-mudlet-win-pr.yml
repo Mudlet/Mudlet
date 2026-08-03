@@ -9,12 +9,41 @@ permissions:
   id-token: write
   contents: read
   actions: read
+  pull-requests: read
 
 jobs:
+  changes:
+    name: detect buildable changes
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    outputs:
+      build: ${{steps.filter.outputs.build}}
+    steps:
+    - name: Check whether anything affecting the build changed
+      id: filter
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Only genuinely inert paths are listed - CI, CMake and packaging scripts
+        # all affect the build. Anything unexpected falls through to building.
+        files=$(gh api --paginate \
+          "/repos/${{github.repository}}/pulls/${{github.event.pull_request.number}}/files" \
+          -q '.[].filename')
+        echo "Changed files:"
+        printf '%s\n' "$files"
+
+        if printf '%s\n' "$files" | grep -qvE '(^docs/|^\.github/ISSUE_TEMPLATE/|\.md$)'; then
+          echo "build=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "build=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::Documentation-only change - skipping the build matrix"
+        fi
+
   compile-mudlet:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
-    if: ${{ github.repository_owner == 'Mudlet' }}
+    needs: changes
+    if: ${{ github.repository_owner == 'Mudlet' && needs.changes.outputs.build == 'true' }}
     concurrency:
       group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
