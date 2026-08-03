@@ -212,6 +212,11 @@ private slots:
     // The same obligation as above, reached by an explicit stop rather than by the clip
     // ending. It asks the least of the backend of any test here - only that playback starts -
     // so it is the one that still runs on a runner whose backend cannot decode a clip.
+    //
+    // Deliberately the weaker waitForPlaying(): on an asynchronous backend that lands the stop
+    // while the track is still loading, which is a player Qt already considers stopped and so
+    // one that reports no state change to end its playback. Holding a source for good is
+    // exactly what that used to cost, so this is the case worth keeping.
     void test_stoppedTrackReleasesItsSource()
     {
         if (!mCannotStartReason.isEmpty()) {
@@ -315,7 +320,7 @@ private slots:
         first.setMediaLoops(TMediaData::MediaLoopsRepeat);
         media->playMedia(first);
 
-        QVERIFY2(waitForPlaying(media, firstFile), "The first track never started playing.");
+        QVERIFY2(waitForPlaybackStarted(media, firstFile), "The first track never started playing.");
 
         const int playerCount = media->mediaPlayerCount();
 
@@ -360,7 +365,7 @@ private slots:
         data.setMediaLoops(TMediaData::MediaLoopsRepeat);
         media->playMedia(data);
 
-        QVERIFY2(waitForPlaying(media, fileName), "The track never started playing.");
+        QVERIFY2(waitForPlaybackStarted(media, fileName), "The track never started playing.");
 
         TMediaData restart = clipData(fileName);
         restart.setMediaLoops(TMediaData::MediaLoopsRepeat);
@@ -556,6 +561,18 @@ private:
         return QTest::qWaitFor(
                 [&]() {
                     return playing(media, fileName);
+                },
+                QDeadlineTimer(timeout));
+    }
+
+    // Stronger than waitForPlaying(): a player that is still loading counts as playing to
+    // TMedia, and it is not yet stoppable in the way a started one is - stopping it produces no
+    // playback state change, and getMediaPlayer() will not hand it to another track.
+    bool waitForPlaybackStarted(TMedia* media, const QString& fileName, std::chrono::milliseconds timeout = 10s)
+    {
+        return QTest::qWaitFor(
+                [&]() {
+                    return playing(media, fileName) && media->playersInPlayingState() > 0;
                 },
                 QDeadlineTimer(timeout));
     }

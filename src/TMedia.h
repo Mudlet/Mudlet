@@ -203,6 +203,9 @@ public:
     // observe: playingMedia() has already dropped the player, the closed caption needs captions
     // enabled and signal_hideVideoOutput needs a video widget.
     int playersHoldingSource() const;
+    // Players that have actually started. playingMedia() deliberately counts one that is still
+    // loading as playing, which is not enough for a test that needs playback truly under way.
+    int playersInPlayingState() const;
     // Players registered in the protocol lists, so a reuse test can tell a claimed player from
     // a second one allocated alongside it. A player play() abandons before it finishes is never
     // registered and so is never counted.

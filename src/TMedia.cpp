@@ -350,11 +350,19 @@ void TMedia::stopMedia(TMediaData& mediaData)
         }
 
         // **Stop the player but keep it for reuse**
-        // The state is worth recording: only a player that actually reached PlayingState
-        // reports a change back to StoppedState, and that signal is what schedules the
-        // release of its source. A player still loading has nothing to report.
-        qDebug() << "TMedia::stopMedia() - stopping a player in playback state" << pPlayer->getPlaybackState() << "and media status" << pPlayer->mediaPlayer()->mediaStatus();
+        // Only a player that had started reports a change back to StoppedState, and that
+        // signal is what ends the playback and releases the source. One that is still loading
+        // - where a stop issued soon after a play lands on an asynchronous backend - is
+        // already stopped as far as Qt is concerned, so it reports nothing and its source
+        // would be held for good.
+        const bool willReportItsOwnStop = pPlayer->getPlaybackState() != QMediaPlayer::StoppedState;
+
         pPlayer->mediaPlayer()->stop();
+
+        if (!willReportItsOwnStop) {
+            releaseMediaSourceAfterEvents(pPlayer, pPlayer->mediaData(), PlaybackEnd::Stopped);
+            raiseMediaFinishedEvent(pPlayer);
+        }
     }
 }
 
@@ -621,6 +629,22 @@ int TMedia::playersHoldingSource() const
 
     return countHeld(mMSPSoundList) + countHeld(mMSPMusicList) + countHeld(mGMCPSoundList) + countHeld(mGMCPMusicList) + countHeld(mGMCPVideoList) + countHeld(mAPISoundList) + countHeld(mAPIMusicList)
            + countHeld(mAPIVideoList);
+}
+
+int TMedia::playersInPlayingState() const
+{
+    const auto countPlaying = [](const QList<std::shared_ptr<TMediaPlayer>>& list) {
+        int playing = 0;
+        for (const auto& player : list) {
+            if (player && player->getPlaybackState() == QMediaPlayer::PlayingState) {
+                ++playing;
+            }
+        }
+        return playing;
+    };
+
+    return countPlaying(mMSPSoundList) + countPlaying(mMSPMusicList) + countPlaying(mGMCPSoundList) + countPlaying(mGMCPMusicList) + countPlaying(mGMCPVideoList) + countPlaying(mAPISoundList)
+           + countPlaying(mAPIMusicList) + countPlaying(mAPIVideoList);
 }
 
 int TMedia::mediaPlayerCount() const
