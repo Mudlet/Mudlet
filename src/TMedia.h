@@ -64,22 +64,26 @@ public:
     TMediaData mediaData() const { return mMediaData; }
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
 
-    // TMedia::handlePlayerPlaybackStateChanged() acts on a stop one event-loop turn late, by
-    // which time a stopped player is indistinguishable from one asynchronously loading a
-    // source set since. These two counters record what happened in between: a claim is this
-    // player being given a new track to play, a continuation is its own playlist advancing or
-    // looping. Re-source a player only through these, never through mediaPlayer()->setSource()
-    // directly - a missed bump lets that pending cleanup clear the new source again, which
-    // reproduces only on backends that load asynchronously.
+    // TMedia::releaseMediaSourceAfterEvents() ends a playback one event-loop turn late, by which
+    // time a stopped player is indistinguishable from one asynchronously loading a source set
+    // since. These two counters record what happened in between: a claim is this player being
+    // given a new track to play, a continuation is its own playlist advancing or looping.
+    // Outside this class, install a source only through claimSource() or continuePlaying() -
+    // never through mediaPlayer()->setSource() directly, since a missed bump lets that pending
+    // release clear the new source again. As of Qt 6.9 that reproduces only on backends that
+    // load asynchronously, so it will not show up on a macOS-only test run.
     void claimSource(const QUrl& media)
     {
+        // Bumped before the source is touched because setSource() can raise errorOccurred
+        // synchronously, and that handler snapshots these counters to arm its own release.
         ++mClaimGeneration;
         if (mMediaPlayer) {
-            // A player still holding the track it just finished has that media loaded, so
-            // handing it the same file again starts playback synchronously and raises
-            // sysMediaStarted inside the script call that asked for it (#9611).
+            // A stopped player still holding anything has that media loaded, so handing it a
+            // source now starts playback synchronously and raises sysMediaStarted inside the
+            // script call that asked for it. Unloading first restores the usual asynchronous
+            // start. The reported symptom was replaying the same file (#9611).
             if (mMediaPlayer->playbackState() == QMediaPlayer::StoppedState && !mMediaPlayer->source().isEmpty()) {
-                mMediaPlayer->setSource(QUrl());
+                releaseSource();
             }
             mMediaPlayer->setSource(media);
         }
@@ -92,9 +96,9 @@ public:
             mMediaPlayer->play();
         }
     }
-    // No bump: giving a player nothing to play cannot be mistaken for a track that needs
-    // protecting from a pending release, and whoever set the source being dropped here has
-    // already recorded its own.
+    // No bump: an empty source cannot be mistaken for a track that needs protecting from a
+    // pending release. A release already scheduled therefore still fires, and recognises that
+    // it has nothing left to do by the source being empty - see releaseMediaSourceAfterEvents().
     void releaseSource()
     {
         if (mMediaPlayer) {
@@ -104,6 +108,8 @@ public:
     quint64 claimGeneration() const { return mClaimGeneration; }
     quint64 continuationGeneration() const { return mContinuationGeneration; }
 
+    // Read-only uses and playback control are fine; do not setSource() on it, for the reason
+    // given above claimSource().
     QMediaPlayer* mediaPlayer() const { return mMediaPlayer.get(); }
     bool isInitialized() const { return initialized; }
     QMediaPlayer::PlaybackState getPlaybackState() const
@@ -193,10 +199,13 @@ public:
     void printClosedCaption(const TMediaData& mediaData, const QString& action) const;
     void stopAllMediaPlayers();
 
-    // Read-only diagnostics for the media tests. The deferred stop cleanup's effects are
-    // otherwise hard to observe: playingMedia() has already dropped the player, the closed
-    // caption needs captions enabled and signal_hideVideoOutput needs a video widget.
+    // Read-only diagnostics for the media tests. A deferred release is otherwise hard to
+    // observe: playingMedia() has already dropped the player, the closed caption needs captions
+    // enabled and signal_hideVideoOutput needs a video widget.
     int playersHoldingSource() const;
+    // Players registered in the protocol lists, so a reuse test can tell a claimed player from
+    // a second one allocated alongside it. A player play() abandons before it finishes is never
+    // registered and so is never counted.
     int mediaPlayerCount() const;
 
     // Returns true if mediaFileName would resolve to a location outside mediaRoot, either
@@ -238,7 +247,11 @@ private:
     std::shared_ptr<TMediaPlayer> matchMediaPlayer(TMediaData& mediaData);
     bool doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& absolutePathFileName);
     void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName);
-    void releaseMediaSourceAfterEvents(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& endedData, const bool playbackStateDecides);
+    // Why a playback ended, which decides whether the player's own state is worth consulting
+    // when the deferred release comes around. See releaseMediaSourceAfterEvents().
+    enum class PlaybackEnd { Stopped, Failed };
+    void raiseMediaFinishedEvent(const std::shared_ptr<TMediaPlayer>& player);
+    void releaseMediaSourceAfterEvents(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& endedData, const PlaybackEnd endedBy);
     void handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const std::shared_ptr<TMediaPlayer>& player);
     bool setupVideo(const std::shared_ptr<TMediaPlayer>& player);
     static QString mediaTypeToString(int mediaType);

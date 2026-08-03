@@ -46,19 +46,22 @@ using namespace std::chrono_literals;
 /*
  * Regression guard for "Client.Media loops=-1 plays once" (issue #9566): the deferred media
  * source release in TMedia, and the generation counters documented on TMediaPlayer that decide
- * whether it still applies by the time its turn comes. Four obligations follow:
+ * whether it still applies by the time its turn comes. The obligations that follow:
  *
  *   - a looping track must survive the stop/restart cycle (the #9566 bug itself);
  *   - a finite loops=N track must reach every pass, which goes through the playlist
  *     branch of the same handler;
  *   - a track that genuinely finishes, or is stopped outright, must still release
  *     its source, or the resource release #9237 added is lost;
+ *   - a source the backend cannot decode must release itself off the error signal, since
+ *     the player was already stopped and no playback state change follows;
  *   - a player re-sourced during the deferred turn, by a different track or by a
  *     continue=false restart of the same one, must keep the source it was given.
  *
  * Which of those a backend can demonstrate varies, so probeBackend() measures one up front and
- * each test skips with what it found. CMakeLists.txt pins QT_MEDIA_BACKEND to the backend the
- * shipped application uses on this platform, so a skip reflects what users actually get.
+ * each test skips with what it found. CMakeLists.txt pins QT_MEDIA_BACKEND on the platforms
+ * where main.cpp does, and leaves it to Qt elsewhere, exactly as the shipped application does -
+ * so a skip reflects what users actually get.
  */
 class TMediaLoopTest : public QObject
 {
@@ -75,7 +78,11 @@ private:
     static constexpr int clipMs = 400;
 
     QTemporaryDir mProbeDir;
+    // Set when the backend never reaches PlayingState, so nothing below can even be started.
+    QString mCannotStartReason;
+    // Set when the backend starts a clip but never decodes it through to EndOfMedia.
     QString mCannotPlayReason;
+    // Set when the backend ends a track with EndOfMedia before StoppedState.
     QString mWrongOrderReason;
     // Set when the backend starts playing synchronously, so a player that has just been
     // re-sourced can never be mistaken for a stopped one - which is the whole race the
@@ -138,13 +145,12 @@ private slots:
     // Every pass of a finite loops=N track after the first comes from the playlist branch of
     // the same EndOfMedia handler, which the indefinite-loop test never reaches. Its final
     // pass is also the one place a continuation ends and the deferred cleanup must take over.
+    // Both hold whichever way round the backend emits EndOfMedia and StoppedState, so unlike
+    // the loop test this one needs no mWrongOrderReason gate.
     void test_finiteLoopsReachEveryPass()
     {
         if (!mCannotPlayReason.isEmpty()) {
             QSKIP(qPrintable(mCannotPlayReason));
-        }
-        if (!mWrongOrderReason.isEmpty()) {
-            QSKIP(qPrintable(mWrongOrderReason));
         }
 
         auto* media = startProfileAndGetMedia();
@@ -204,10 +210,14 @@ private slots:
     }
 
     // The same obligation as above, reached by an explicit stop rather than by the clip
-    // ending. This is the one test that needs nothing of the backend beyond starting
-    // playback, so it is the suite's guard on runners with no working audio device.
+    // ending. It asks the least of the backend of any test here - only that playback starts -
+    // so it is the one that still runs on a runner whose backend cannot decode a clip.
     void test_stoppedTrackReleasesItsSource()
     {
+        if (!mCannotStartReason.isEmpty()) {
+            QSKIP(qPrintable(mCannotStartReason));
+        }
+
         auto* media = startProfileAndGetMedia();
         QVERIFY(media);
 
@@ -233,9 +243,10 @@ private slots:
     }
 
     // A source that fails to load reports an error and no playback state change, because a
-    // player that was already stopped - which is where a loop restart or playlist advance
-    // sets its next source from - has nothing to change from. Without the error being acted
-    // on, the track falls silent still holding a source nothing will ever release.
+    // player that was already stopped - as every claimSource() on a new or finished player
+    // leaves it, and as a loop restart or playlist advance finds it - has nothing to change
+    // from. Without the error being acted on, the track falls silent still holding a source
+    // nothing will ever release.
     void test_unplayableTrackReleasesItsSource()
     {
         if (!mCannotPlayReason.isEmpty()) {
@@ -255,6 +266,11 @@ private slots:
         data.setMediaLoops(TMediaData::MediaLoopsRepeat);
         media->playMedia(data);
 
+        // Without this the wait below is satisfied at once by a play() that bailed out early,
+        // and the error path this test exists for is never reached. claimSource() sets the
+        // source inside playMedia() and the release is deferred, so the count is settled here.
+        QCOMPARE(media->playersHoldingSource(), 1);
+
         const bool released = QTest::qWaitFor(
                 [&]() {
                     return media->playersHoldingSource() == 0;
@@ -270,6 +286,9 @@ private slots:
     // backend (see mSynchronousStartReason) the player still reads as stopped while it loads.
     void test_reusedPlayerKeepsTheTrackThatClaimedIt()
     {
+        if (!mCannotStartReason.isEmpty()) {
+            QSKIP(qPrintable(mCannotStartReason));
+        }
         if (!mSynchronousStartReason.isEmpty()) {
             QSKIP(qPrintable(mSynchronousStartReason));
         }
@@ -305,7 +324,7 @@ private slots:
         // Past the turn the stopped track's cleanup was scheduled for.
         QTest::qWait(clipMs);
 
-        QVERIFY2(playing(media, secondFile), "The replacement track was cut off - the previous track's deferred cleanup cleared the source out from under it.");
+        QVERIFY2(waitForPlaying(media, secondFile, 2s), "The replacement track was cut off - the previous track's deferred cleanup cleared the source out from under it.");
     }
 
     // continue=false restarts a track by stopping it and re-sourcing the same player inside
@@ -313,6 +332,9 @@ private slots:
     // register the claim itself or the stop it just performed clears the source it just set.
     void test_restartedTrackKeepsItsNewSource()
     {
+        if (!mCannotStartReason.isEmpty()) {
+            QSKIP(qPrintable(mCannotStartReason));
+        }
         if (!mSynchronousStartReason.isEmpty()) {
             QSKIP(qPrintable(mSynchronousStartReason));
         }
@@ -337,7 +359,7 @@ private slots:
         // Past the turn the stop inside that restart scheduled its cleanup for.
         QTest::qWait(clipMs);
 
-        QVERIFY2(playing(media, fileName), "A restarted track was cut off - the cleanup deferred by its own stop cleared the source it had just been given.");
+        QVERIFY2(waitForPlaying(media, fileName, 2s), "A restarted track was cut off - the cleanup deferred by its own stop cleared the source it had just been given.");
     }
 
     void cleanup()
@@ -391,12 +413,16 @@ private:
 
         bool sawEndOfMedia = false;
         bool stoppedCameFirst = false;
+        bool sawPlaying = false;
         connect(&probe, &QMediaPlayer::mediaStatusChanged, this, [&](QMediaPlayer::MediaStatus status) {
             if (status == QMediaPlayer::EndOfMedia) {
                 sawEndOfMedia = true;
             }
         });
         connect(&probe, &QMediaPlayer::playbackStateChanged, this, [&](QMediaPlayer::PlaybackState state) {
+            if (state == QMediaPlayer::PlayingState) {
+                sawPlaying = true;
+            }
             if (state == QMediaPlayer::StoppedState && !sawEndOfMedia) {
                 stoppedCameFirst = true;
             }
@@ -415,12 +441,21 @@ private:
                 QDeadlineTimer(10s));
         probe.stop();
 
-        // Recorded before the decode verdict below, because the tests that need it do not
-        // need the backend to finish a clip - an early return here would leave them
-        // believing this backend loads asynchronously when it does not.
+        // Both recorded before the decode verdict below, because the tests that need them do
+        // not need the backend to finish a clip - an early return here would leave them
+        // believing this backend starts playback and loads asynchronously when it does neither.
         if (startsSynchronously) {
             mSynchronousStartReason = qsl("This Qt Multimedia backend reaches PlayingState synchronously, so a player that has just been claimed by another track never reads as stopped and cannot "
                                           "have its source cleared out from under it. Needs a backend that loads asynchronously, such as Qt's FFmpeg one.");
+        }
+
+        if (!sawPlaying && !startsSynchronously) {
+            // Without this every test that only stops a track - the ones that need nothing else
+            // of the backend - would fail its opening "never started playing" assertion rather
+            // than skip, which is a red build on any runner without a usable backend.
+            mCannotStartReason = qsl("This Qt Multimedia backend never reached PlayingState within 10s, so no playback can be started to act on. Backend: \"%1\", final media status: %2, error: "
+                                     "\"%3\".")
+                                         .arg(QString::fromLocal8Bit(qgetenv("QT_MEDIA_BACKEND")), QString::number(static_cast<int>(probe.mediaStatus())), probe.errorString());
         }
 
         if (!finished) {
@@ -440,8 +475,8 @@ private:
                                     "StoppedState-first backend such as Qt's FFmpeg one.");
         }
 
-        // Only worth asking of a backend that got this far: one that cannot finish a valid
-        // clip does not reject an invalid one either, it stalls on both.
+        // Only worth asking of a backend that got this far. Assumed, not measured: one that
+        // cannot finish a valid clip is taken not to reject an invalid one either.
         probeLoadFailureReporting();
     }
 
@@ -515,7 +550,7 @@ private:
     }
 
     // Passes the file-name checks in TMedia::play(), so it reaches the backend and fails
-    // there, which is the only way to reach the error path from outside.
+    // there, so the error path is reached the way a real undecodable file would reach it.
     QString writeUnplayableClip(const QString& fileName) const { return writeClip(fileName, QByteArray("not a WAV file, and not decodable as anything else")); }
 
     // Writes a clip into the profile media directory, returning {} if that fails.

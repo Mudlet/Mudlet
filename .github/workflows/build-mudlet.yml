@@ -384,6 +384,9 @@ jobs:
         # libfuse2 could be needed for linuxdeployqt on Ubuntu 22.04:
         if [ "${RUNNER_OS}" = "Linux" ]; then
           sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 xvfb libfuse2 -y
+          # runners have no sound hardware, and Qt Multimedia cannot decode a clip through to
+          # EndOfMedia without an audio sink - which TMediaLoopTest needs. Best effort only.
+          sudo modprobe snd-dummy || echo "snd-dummy unavailable, media playback tests will skip"
         fi
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja

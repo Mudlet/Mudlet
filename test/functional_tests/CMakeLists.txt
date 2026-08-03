@@ -113,12 +113,10 @@ elseif(WIN32)
 else()
     set(mediaLoopTestBackend "")
 endif()
+set_tests_properties(TMediaLoopTest PROPERTIES TIMEOUT 300)
 if(mediaLoopTestBackend)
-    set_tests_properties(TMediaLoopTest PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0;QT_MEDIA_BACKEND=${mediaLoopTestBackend}"
-        TIMEOUT 300)
-else()
-    set_tests_properties(TMediaLoopTest PROPERTIES TIMEOUT 300)
+    # APPEND, so the environment set by the loop above stays in force rather than being replaced
+    set_property(TEST TMediaLoopTest APPEND PROPERTY ENVIRONMENT "QT_MEDIA_BACKEND=${mediaLoopTestBackend}")
 endif()
 
 # The round-trip tests boot a full mudlet instance and save/reload profile and
