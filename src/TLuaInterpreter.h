@@ -446,8 +446,8 @@ public:
     static int createMiniConsole(lua_State*);
     static int createScrollBox(lua_State*);
     static int createLabel(lua_State*);
-    static int createLabelMainWindow(lua_State*, const QString& labelName);
-    static int createLabelUserWindow(lua_State*, const QString& windowName, const QString& labelName);
+    static int createLabelMainWindow(lua_State*, const char* labelName);
+    static int createLabelUserWindow(lua_State*, const char* windowName, const char* labelName);
     static int deleteLabel(lua_State*);
     static int deleteMiniConsole(lua_State*);
     static int deleteCommandLine(lua_State*);

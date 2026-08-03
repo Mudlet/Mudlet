@@ -19,7 +19,9 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 2.3.0    Switch from MINGW64 to CLANG64 
+# Version: 2.4.0    Add Python, needed by the fixture HTTP server the Lua
+#                   tests run against
+#          2.3.0    Switch from MINGW64 to CLANG64
 #          2.2.0    Add CMake package for CMake-based builds
 #          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
@@ -128,6 +130,7 @@ while true; do
     "${MINGW_PACKAGE_PREFIX}-ninja" \
     "${MINGW_PACKAGE_PREFIX}-assimp" \
     "${MINGW_PACKAGE_PREFIX}-curl" \
+    "${MINGW_PACKAGE_PREFIX}-python" \
     "${MINGW_PACKAGE_PREFIX}-uasm" \
     "${MINGW_PACKAGE_PREFIX}-cmake" \
     "${MINGW_PACKAGE_PREFIX}-jq"; then
