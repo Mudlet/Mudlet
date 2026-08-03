@@ -48,6 +48,13 @@ public:
     void load();
     void downloadRelease(const Release& release, bool requireChecksums = false);
 
+    // Returns the SHA256 that sha256sum-style output lists for downloadFilename,
+    // comparing the whole filename case-insensitively, or an empty string when no
+    // line covers it. entriesParsed, when given, receives the number of well-formed
+    // lines seen, which tells "this release forgot my platform" apart from "that was
+    // not a checksum file".
+    static QString findChecksum(const QString& checksumData, const QString& downloadFilename, int* entriesParsed = nullptr);
+
     QList<Release> getUpdates(const Release& currentRelease) const;
     QList<Release> getReleases() const;
     QString getDownloadFilePath() const;

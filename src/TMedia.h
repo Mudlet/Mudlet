@@ -75,6 +75,12 @@ public:
     {
         ++mClaimGeneration;
         if (mMediaPlayer) {
+            // A player still holding the track it just finished has that media loaded, so
+            // handing it the same file again starts playback synchronously and raises
+            // sysMediaStarted inside the script call that asked for it (#9611).
+            if (mMediaPlayer->playbackState() == QMediaPlayer::StoppedState && !mMediaPlayer->source().isEmpty()) {
+                mMediaPlayer->setSource(QUrl());
+            }
             mMediaPlayer->setSource(media);
         }
     }

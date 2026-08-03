@@ -402,6 +402,14 @@ bool TimerUnit::killTimer(const QString& name)
             if (!timer->isTemporary()) {
                 return false;
             }
+            // An already killed timer is only unlinked from this list once
+            // doCleanup() gets to free it, which cannot happen while a timer
+            // script is on the call stack - so until then it is still findable
+            // by name. Killing it a second time achieves nothing and must be
+            // reported as the failure it is:
+            if (mCleanupSet.contains(timer)) {
+                return false;
+            }
             timer->killTimer();
             markCleanup(timer);
             return true;

@@ -887,8 +887,11 @@ if(APPLE)
     endif()
   endif()
 
-  file(GLOB_RECURSE MUDLET_LUA_FILES LIST_DIRECTORIES true "mudlet-lua/*")
-  file(GLOB_RECURSE LUA_TRANSLATIONS LIST_DIRECTORIES true "../translations/lua/*")
+  # LIST_DIRECTORIES must stay false: globbing directories too makes CMake emit a
+  # copy_directory rule that races the per-file bundling rules under Ninja,
+  # failing with "Error copying ...: No such file or directory"
+  file(GLOB_RECURSE MUDLET_LUA_FILES LIST_DIRECTORIES false "mudlet-lua/*")
+  file(GLOB_RECURSE LUA_TRANSLATIONS LIST_DIRECTORIES false "../translations/lua/*")
   file(GLOB DIC_FILES "*.dic")
   file(GLOB AFF_FILES "*.aff")
   target_sources(${EXE_MUDLET_TARGET} PUBLIC ${MUDLET_LUA_FILES} ${LUA_TRANSLATIONS} ${DIC_FILES} ${AFF_FILES} ${ICON_FILE})
