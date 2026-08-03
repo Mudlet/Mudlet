@@ -5541,13 +5541,20 @@ void TBuffer::shrinkBuffer()
     // Clean up unreferenced links after removing old lines
     clearLinkState();
 
+    // Everything below needs the Host, whether or not there is a view: on app
+    // quit the profile is destroyed while its widgets are still only queued for
+    // deletion, so a live view is no promise that mpHost survived with it.
+    if (mpHost.isNull()) {
+        return;
+    }
+
     // Scripts keep their own line-index bookkeeping, so they have to be told
     // the indexes shifted whether or not anyone is watching the text. The
     // console's name and type still live on the view, but a buffer without one
     // can only be the main console's model - every other model is owned by the
     // view built on it - and that console is always named "main":
-    const bool namedConsole = mpConsole ? (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer))
-                                        : (!mpHost.isNull() && this == &mpHost->mainConsoleModel().buffer);
+    const bool namedConsole =
+            mpConsole ? (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer)) : (this == &mpHost->mainConsoleModel().buffer);
     if (namedConsole) {
         // Signal to lua subsystem that indexes into the Console will need adjusting
         TEvent bufferShrinkEvent{};
