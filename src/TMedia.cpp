@@ -317,6 +317,16 @@ void TMedia::stopMedia(TMediaData& mediaData)
             continue;
         }
 
+        // Whichever way this track is being ended below, it is not to start again. A looping
+        // or multi-entry track restarts itself from the EndOfMedia handler in
+        // connectMediaPlayer(), which would undo the stop that was just asked for - on a
+        // StoppedState-first backend that signal can still be on its way when the stop
+        // arrives. An emptied playlist is what that handler checks, and play() builds a fresh
+        // one whenever this player is picked up again.
+        if (pPlayer->playlist()) {
+            pPlayer->playlist()->clear();
+        }
+
         if ((mediaData.mediaFadeAway() == TMediaData::MediaFadeAwayEnabled || mediaData.mediaFadeOut() != TMediaData::MediaFadeNotSet)
             && pPlayer->mediaData().mediaEnd() == TMediaData::MediaEndNotSet) {
             const int finishPosition = pPlayer->mediaData().mediaFinish();
@@ -1481,7 +1491,9 @@ void TMedia::releaseMediaSourceAfterEvents(const std::shared_ptr<TMediaPlayer>& 
 
         if (sameMediaContinues) {
             // No caption either: nothing ended, so "stops" between the passes of a looping
-            // track would be wrong.
+            // track would be wrong. Logged because this is the one outcome that keeps a source
+            // on purpose, which makes it the first thing to rule out when one is held too long.
+            qDebug() << "TMedia::releaseMediaSourceAfterEvents() - the same playback carried on into another pass; keeping its source.";
             return;
         }
 
