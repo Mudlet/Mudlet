@@ -1387,7 +1387,10 @@ int TLuaInterpreter::getMudletInfo(lua_State* L)
 }
 
 // Internal Function createLabel in an UserWindow
-int TLuaInterpreter::createLabelUserWindow(lua_State* L, const QString& windowName, const QString& labelName)
+// The names arrive as the Lua-owned strings still anchored at stack indexes 1 and
+// 2 rather than as QStrings: every check below can raise, and lua_error() longjmps
+// past C++ destructors, so the QStrings are only built once nothing else can raise
+int TLuaInterpreter::createLabelUserWindow(lua_State* L, const char* windowName, const char* labelName)
 {
     const int n = lua_gettop(L);
     const int x = getVerifiedInt(L, "createLabel", 3, "label x-coordinate");
@@ -1420,7 +1423,7 @@ int TLuaInterpreter::createLabelUserWindow(lua_State* L, const QString& windowNa
     }
 
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = host.createLabel(windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
+    if (auto [success, message] = host.createLabel(QString{windowName}, QString{labelName}, x, y, width, height, fillBackground, clickthrough); !success) {
         // We should, perhaps be returning a nil here but the published API
         // says the function returns true or false and we cannot change that now
         return warnArgumentValue(L, "createLabel", message, true);
@@ -1431,9 +1434,9 @@ int TLuaInterpreter::createLabelUserWindow(lua_State* L, const QString& windowNa
 }
 
 // Internal Function create Label in MainWindow
-int TLuaInterpreter::createLabelMainWindow(lua_State* L, const QString& labelName)
+// See createLabelUserWindow() for why the name is not a QString
+int TLuaInterpreter::createLabelMainWindow(lua_State* L, const char* labelName)
 {
-    const QString windowName = QLatin1String("main");
     const int n = lua_gettop(L);
     const int x = getVerifiedInt(L, "createLabel", 2, "label x-coordinate");
     const int y = getVerifiedInt(L, "createLabel", 3, "label y-coordinate");
@@ -1465,7 +1468,7 @@ int TLuaInterpreter::createLabelMainWindow(lua_State* L, const QString& labelNam
     }
 
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = host.createLabel(windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
+    if (auto [success, message] = host.createLabel(qsl("main"), QString{labelName}, x, y, width, height, fillBackground, clickthrough); !success) {
         // We should, perhaps be returning a nil here but the published API
         // says the function returns true or false and we cannot change that now
         return warnArgumentValue(L, "createLabel", message, true);
