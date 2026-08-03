@@ -183,6 +183,7 @@ private:
     bool isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData);
     bool resume(TMediaData mediaData);
     void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state);
+    static void releaseStoppedSource(const std::shared_ptr<TMediaPlayer>& player);
     void transitionNonRelativeFile(TMediaData& mediaData);
     QString getStreamUrl(const TMediaData& mediaData);
     QUrl parseUrl(TMediaData& mediaData);
