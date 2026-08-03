@@ -83,14 +83,14 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 : QWidget(parent)
 , mpHost(pH)
 , mDisplayFontDetails(pH->fontsAntiAlias())
-, mpOwnedModel(resolveConsoleModel(pH, type))
-, buffer(mpOwnedModel->buffer)
+, mpModel(resolveConsoleModel(pH, type))
+, buffer(mpModel->buffer)
 , emergencyStop(new QToolButton)
-, mBgColor(mpOwnedModel->mBgColor)
-, mFgColor(mpOwnedModel->mFgColor)
+, mBgColor(mpModel->mBgColor)
+, mFgColor(mpModel->mFgColor)
 , mConsoleName(name)
-, mCurrentLine(mpOwnedModel->mCurrentLine)
-, mEngineCursor(mpOwnedModel->mEngineCursor)
+, mCurrentLine(mpModel->mCurrentLine)
+, mEngineCursor(mpModel->mEngineCursor)
 , mpBaseVFrame(new QWidget(this))
 , mpTopToolBar(new QWidget(mpBaseVFrame))
 , mpBaseHFrame(new QWidget(mpBaseVFrame))
@@ -100,9 +100,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mpMainDisplay(new QWidget(mpMainFrame))
 , mpScrollBar(new QScrollBar)
 , mpHScrollBar(new QScrollBar(Qt::Horizontal))
-, mUserCursor(mpOwnedModel->mUserCursor)
+, mUserCursor(mpModel->mUserCursor)
 , mProfileName(mpHost ? mpHost->getName() : qsl("debug console"))
-, mIsPromptLine(mpOwnedModel->mIsPromptLine)
+, mIsPromptLine(mpModel->mIsPromptLine)
 , mpBufferSearchBox(new QLineEdit)
 , mpBufferSearchUp(new QToolButton)
 , mpBufferSearchDown(new QToolButton)
@@ -678,7 +678,7 @@ TConsole::~TConsole()
     // can outlive this view. The buffer's QPointer back-pointer would only null
     // itself once ~QObject() runs, leaving it aimed at a half-destroyed widget
     // for the whole of this teardown, so unbind it up front.
-    mpOwnedModel->buffer.detachConsole(this);
+    mpModel->buffer.detachConsole(this);
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     if (mType & ~CentralDebugConsole) {

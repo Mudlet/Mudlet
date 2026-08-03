@@ -192,8 +192,8 @@ public:
     void reset();
     void resizeConsole();
     Host* getHost();
-    TConsoleModel& model() { return *mpOwnedModel; }
-    const TConsoleModel& model() const { return *mpOwnedModel; }
+    TConsoleModel& model() { return *mpModel; }
+    const TConsoleModel& model() const { return *mpModel; }
     void replace(const QString&);
     void insertHTML(const QString&);
     void insertText(const QString&);
@@ -358,7 +358,7 @@ public:
     // references aliasing the model, so the existing buffer/mFgColor/...
     // accesses across the codebase are unchanged - which is why the model has
     // to stay declared ahead of every one of them.
-    std::shared_ptr<TConsoleModel> mpOwnedModel;
+    std::shared_ptr<TConsoleModel> mpModel;
     TBuffer& buffer;
     static const QString cmLuaLineVariable;
     TTextEdit* mUpperPane = nullptr;

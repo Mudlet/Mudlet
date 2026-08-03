@@ -53,7 +53,9 @@ struct TConsoleModel
     TConsoleModel(const TConsoleModel&) = delete;
     TConsoleModel& operator=(const TConsoleModel&) = delete;
 
+    // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.
     TBuffer buffer;
+    // Only a cache today - the view fills these in through TConsole::changeColors(); refreshing them from the Host after the profile loads moves core-side with the colour sub-PR.
     QColor mBgColor = QColorConstants::Black;
     QColor mFgColor = QColorConstants::LightGray;
     QString mCurrentLine;
