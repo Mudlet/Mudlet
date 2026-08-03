@@ -350,6 +350,10 @@ void TMedia::stopMedia(TMediaData& mediaData)
         }
 
         // **Stop the player but keep it for reuse**
+        // The state is worth recording: only a player that actually reached PlayingState
+        // reports a change back to StoppedState, and that signal is what schedules the
+        // release of its source. A player still loading has nothing to report.
+        qDebug() << "TMedia::stopMedia() - stopping a player in playback state" << pPlayer->getPlaybackState() << "and media status" << pPlayer->mediaPlayer()->mediaStatus();
         pPlayer->mediaPlayer()->stop();
     }
 }
@@ -1545,6 +1549,7 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
             // Whoever released the source already ended this playback and raised its event. A
             // second one from here would carry an empty file name and path, because the URL
             // they describe is exactly what was just cleared.
+            qDebug() << "TMedia::handlePlayerPlaybackStateChanged() - stopped a player that is already holding no source; its playback was ended elsewhere.";
             return;
         }
 
