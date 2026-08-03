@@ -163,12 +163,16 @@ void Feed::downloadRelease(const Release& release, bool requireChecksums)
         //: Error shown when the release publishes no checksums at all, so the download cannot be verified as safe to install
         emit downloadError(tr("This update does not publish the checksums needed to verify it. Please try again later, or download it from https://www.mudlet.org/download/"));
     } else {
+        qCritical() << "Release" << release.getVersion() << "publishes no checksums - download will proceed without integrity verification";
         makeDownloadRequest(downloadUrl);
     }
 }
 
-QString Feed::findChecksum(const QString& checksumData, const QString& downloadFilename)
+QString Feed::findChecksum(const QString& checksumData, const QString& downloadFilename, int* entriesParsed)
 {
+    if (entriesParsed) {
+        *entriesParsed = 0;
+    }
     if (downloadFilename.isEmpty()) {
         return QString();
     }
@@ -177,6 +181,7 @@ QString Feed::findChecksum(const QString& checksumData, const QString& downloadF
     static const QRegularExpression separatorRx(qsl("[\\s*]+"));
     static const QRegularExpression hexRx(qsl("^[0-9a-fA-F]{64}$"));
 
+    QString match;
     const QStringList lines = checksumData.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
     for (const auto& line : lines) {
         // Format: "hash  filename" or "hash *filename"
@@ -188,12 +193,19 @@ QString Feed::findChecksum(const QString& checksumData, const QString& downloadF
         if (!hexRx.match(hash).hasMatch()) {
             continue;
         }
+        if (entriesParsed) {
+            ++*entriesParsed;
+        }
+        // Compare the whole name, not a substring of it: SHA256SUMS.txt accumulates
+        // entries across builds, so a longer name that happens to contain this one
+        // would otherwise hand back the wrong hash. The generators write bare
+        // basenames, but tolerate a path in case one ever stops.
         const QString filename = line.mid(separatorPos).trimmed().remove(QLatin1Char('*'));
-        if (filename.contains(downloadFilename, Qt::CaseInsensitive)) {
-            return hash;
+        if (match.isEmpty() && filename.section(QLatin1Char('/'), -1).compare(downloadFilename, Qt::CaseInsensitive) == 0) {
+            match = hash;
         }
     }
-    return QString();
+    return match;
 }
 
 void Feed::fetchChecksums(const QUrl& checksumsUrl)
@@ -216,17 +228,27 @@ void Feed::fetchChecksums(const QUrl& checksumsUrl)
             qWarning() << "Failed to fetch checksums:" << reply->errorString() << "- download will proceed without integrity verification";
         } else {
             const QString downloadFilename = mCurrentDownload.getDownloadUrl().fileName();
-            mCurrentDownload.setDownloadSHA256(findChecksum(QString::fromUtf8(reply->readAll()), downloadFilename));
+            const QByteArray checksumData = reply->readAll();
+            int entriesParsed = 0;
+            mCurrentDownload.setDownloadSHA256(findChecksum(QString::fromUtf8(checksumData), downloadFilename, &entriesParsed));
             if (mCurrentDownload.getDownloadSHA256().isEmpty()) {
+                qWarning() << "Checksum file has no entry for" << downloadFilename << "- parsed" << entriesParsed << "entries from" << checksumData.size() << "bytes";
                 if (mRequireChecksums) {
-                    qWarning() << "Checksum file downloaded but it has no entry for" << downloadFilename << "- refusing to install an unverifiable download";
                     reply->deleteLater();
-                    //: Error shown when the release publishes checksums but none of them cover this platform's download
-                    emit downloadError(
-                            tr("This update is missing a checksum for your platform, so it cannot be verified. Please try again later, or download it from https://www.mudlet.org/download/"));
+                    if (entriesParsed == 0) {
+                        // Nothing parsed means the payload was not a checksum file at
+                        // all - a truncated transfer, or an error page served as 200 -
+                        // rather than a release that forgot one platform
+                        //: Error shown when the checksum file for the update was downloaded but could not be read
+                        emit downloadError(tr("The checksums for this update could not be read, so it cannot be verified. Please try again later."));
+                    } else {
+                        //: Error shown when the release publishes checksums but none of them cover this platform's download
+                        emit downloadError(
+                                tr("This update is missing a checksum for your platform, so it cannot be verified. Please try again later, or download it from https://www.mudlet.org/download/"));
+                    }
                     return;
                 }
-                qCritical() << "Checksum file downloaded but no matching hash found for" << downloadFilename << "- download will proceed without integrity verification";
+                qCritical() << "Proceeding without integrity verification for" << downloadFilename;
             }
         }
         reply->deleteLater();

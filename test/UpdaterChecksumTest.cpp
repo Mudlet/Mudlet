@@ -44,21 +44,21 @@ const auto tag = QStringLiteral("Mudlet-4.22.0-ptb-2026-08-01-dfdcb137");
 const auto windowsAsset = QStringLiteral("Mudlet-4.22.0-ptb-2026-08-01-dfdcb137-windows-64.exe");
 const auto linuxAsset = QStringLiteral("Mudlet-4.22.0-ptb-2026-08-01-dfdcb137-linux-x64.AppImage.tar");
 const auto arm64Asset = QStringLiteral("Mudlet-4.22.0-ptb-2026-08-01-dfdcb137-arm64.dmg");
-const auto x86_64Asset = QStringLiteral("Mudlet-4.22.0-ptb-2026-08-01-dfdcb137-x86_64.dmg");
+const auto intelMacAsset = QStringLiteral("Mudlet-4.22.0-ptb-2026-08-01-dfdcb137-x86_64.dmg");
 // A re-run of the Windows build restamped the date and appended a rebuild counter
 const auto rebuiltWindowsAsset = QStringLiteral("Mudlet-4.22.0-ptb-2026-08-02-dfdcb137rebuild2-windows-64.exe");
 
 const auto windowsHash = QStringLiteral("72dba076741a245a994b553b1cf88dba5d7f5bb07f0d6887ecd58361402764e1");
 const auto linuxHash = QStringLiteral("72a239146b07fc3b94f9e96955d2d6d52a6f0f40c8a5b7ee314b0bf875a55611");
 const auto arm64Hash = QStringLiteral("7a7a75723e15a3443c4e8937fe2a85cee90b9dc8938e1e0580887e5c5e1fabbb");
-const auto x86_64Hash = QStringLiteral("d2426d7f799b619b0bfcb1e51e373f776288f77584bc9f08a79cc288cc58278c");
+const auto intelMacHash = QStringLiteral("d2426d7f799b619b0bfcb1e51e373f776288f77584bc9f08a79cc288cc58278c");
 const auto rebuiltWindowsHash = QStringLiteral("9b3895247937d37f645dd31e7ded739e3126ccad6bfa4188cdd3b78f735c2f6f");
 
 // Exactly what the 2026-08-01 PTB shipped: the .exe on the release is absent and a
 // different build's .exe is listed in its place
 QString publishedChecksums()
 {
-    return QStringLiteral("%1  %2\n%3  %4\n%5 *%6\n%7  %8\n").arg(linuxHash, linuxAsset, x86_64Hash, x86_64Asset, rebuiltWindowsHash, rebuiltWindowsAsset, arm64Hash, arm64Asset);
+    return QStringLiteral("%1  %2\n%3  %4\n%5 *%6\n%7  %8\n").arg(linuxHash, linuxAsset, intelMacHash, intelMacAsset, rebuiltWindowsHash, rebuiltWindowsAsset, arm64Hash, arm64Asset);
 }
 
 // What the release should have shipped, and does once the publishing scripts merge
@@ -68,10 +68,13 @@ QString mergedChecksums()
     return publishedChecksums() + QStringLiteral("%1 *%2\n").arg(windowsHash, windowsAsset);
 }
 
-// The 2026-08-01 PTB's assets, in the order the GitHub releases API returns them
+// The 2026-08-01 PTB's assets, in the order the GitHub releases API returns them -
+// which is what decided the bug: had the API listed the rebuilt .exe first, the
+// updater would have chosen the one that *was* covered. published_at and size are
+// filler, only the tag and the asset names and order are the release's real values.
 QJsonObject releaseJson()
 {
-    const QStringList assetNames{arm64Asset, linuxAsset, windowsAsset, x86_64Asset, rebuiltWindowsAsset, QStringLiteral("SHA256SUMS.txt")};
+    const QStringList assetNames{arm64Asset, linuxAsset, windowsAsset, intelMacAsset, rebuiltWindowsAsset, QStringLiteral("SHA256SUMS.txt")};
 
     QJsonArray assets;
     for (const auto& name : assetNames) {
@@ -103,8 +106,11 @@ private slots:
     void everyOtherPlatformWasAlreadyCovered();
     void binaryAndTextModeLinesBothParse();
     void anotherBuildsEntryDoesNotCoverThisDownload();
+    void aLongerNameContainingThisOneDoesNotCoverIt();
+    void aPathPrefixedEntryStillCoversTheDownload();
     void malformedLinesAreIgnored();
     void emptyInputsYieldNoChecksum();
+    void entriesParsedTellsAnUnreadableFileFromAMissingEntry();
 };
 
 // The updater picks the first asset matching its platform, so this is the file
@@ -139,8 +145,8 @@ void UpdaterChecksumTest::everyOtherPlatformWasAlreadyCovered()
     QCOMPARE(dblsqd::Feed::findChecksum(publishedChecksums(), linuxRelease.getDownloadUrl().fileName()), linuxHash);
 
     const dblsqd::Release intelMacRelease(releaseJson(), QStringLiteral("mac"), QStringLiteral("x86_64"));
-    QCOMPARE(intelMacRelease.getDownloadUrl().fileName(), x86_64Asset);
-    QCOMPARE(dblsqd::Feed::findChecksum(publishedChecksums(), intelMacRelease.getDownloadUrl().fileName()), x86_64Hash);
+    QCOMPARE(intelMacRelease.getDownloadUrl().fileName(), intelMacAsset);
+    QCOMPARE(dblsqd::Feed::findChecksum(publishedChecksums(), intelMacRelease.getDownloadUrl().fileName()), intelMacHash);
 
     const dblsqd::Release appleSiliconRelease(releaseJson(), QStringLiteral("mac"), QStringLiteral("arm64"));
     QCOMPARE(appleSiliconRelease.getDownloadUrl().fileName(), arm64Asset);
@@ -168,6 +174,23 @@ void UpdaterChecksumTest::anotherBuildsEntryDoesNotCoverThisDownload()
     QCOMPARE(dblsqd::Feed::findChecksum(rebuiltOnly, rebuiltWindowsAsset), rebuiltWindowsHash);
 }
 
+// SHA256SUMS.txt accumulates entries across builds, so a name that merely contains
+// the download's name must not hand back its hash - the updater would then reject a
+// perfectly good download as corrupt
+void UpdaterChecksumTest::aLongerNameContainingThisOneDoesNotCoverIt()
+{
+    const QString longerName = QStringLiteral("old-%1").arg(windowsAsset);
+
+    QVERIFY(dblsqd::Feed::findChecksum(QStringLiteral("%1 *%2\n").arg(rebuiltWindowsHash, longerName), windowsAsset).isEmpty());
+    QVERIFY(dblsqd::Feed::findChecksum(QStringLiteral("%1  %2.sha256\n").arg(rebuiltWindowsHash, windowsAsset), windowsAsset).isEmpty());
+    QVERIFY(dblsqd::Feed::findChecksum(QStringLiteral("%1  %2.tar\n").arg(rebuiltWindowsHash, linuxAsset), linuxAsset).isEmpty());
+}
+
+void UpdaterChecksumTest::aPathPrefixedEntryStillCoversTheDownload()
+{
+    QCOMPARE(dblsqd::Feed::findChecksum(QStringLiteral("%1 *upload/%2\n").arg(windowsHash, windowsAsset), windowsAsset), windowsHash);
+}
+
 void UpdaterChecksumTest::malformedLinesAreIgnored()
 {
     // too short, non-hex, and no separator respectively, then the real entry
@@ -184,6 +207,23 @@ void UpdaterChecksumTest::emptyInputsYieldNoChecksum()
 {
     QVERIFY(dblsqd::Feed::findChecksum(QString(), windowsAsset).isEmpty());
     QVERIFY(dblsqd::Feed::findChecksum(mergedChecksums(), QString()).isEmpty());
+}
+
+// A release that forgot one platform and a payload that was never a checksum file
+// both yield no hash, but they need different messages
+void UpdaterChecksumTest::entriesParsedTellsAnUnreadableFileFromAMissingEntry()
+{
+    int entriesParsed = -1;
+    QVERIFY(dblsqd::Feed::findChecksum(publishedChecksums(), windowsAsset, &entriesParsed).isEmpty());
+    QCOMPARE(entriesParsed, 4);
+
+    entriesParsed = -1;
+    QVERIFY(dblsqd::Feed::findChecksum(QStringLiteral("<html><body>503 Service Unavailable</body></html>"), windowsAsset, &entriesParsed).isEmpty());
+    QCOMPARE(entriesParsed, 0);
+
+    entriesParsed = -1;
+    QCOMPARE(dblsqd::Feed::findChecksum(mergedChecksums(), windowsAsset, &entriesParsed), windowsHash);
+    QCOMPARE(entriesParsed, 5);
 }
 
 #include "UpdaterChecksumTest.moc"
