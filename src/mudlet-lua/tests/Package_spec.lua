@@ -756,6 +756,22 @@ describe("Tests installing a package while the profile is being saved", function
   end)
 end)
 
+describe("Tests installing an archive with nothing in it for Mudlet", function()
+  it("refuses an archive that holds neither a config.lua nor a package XML", function()
+    -- BUG: such an archive is unpacked into the profile and answered with true,
+    -- but nothing is registered: it is missing from getPackages(), so
+    -- uninstallPackage() will not take it and the unpacked folder stays in the
+    -- profile for good. Left pending rather than pinning a success that
+    -- installs nothing and cannot be undone.
+    pending("installPackage() answers true for an archive with no package in it, and leaves it unremovable")
+    finally(function() removeFixturePackage("mudlet-spec-emptyarchive") end)
+
+    local err = refusedInstall(installPackage, fixtureDirectory .. "/mudlet-spec-emptyarchive.mpackage")
+    assert.is_string(err)
+    assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-emptyarchive"))
+  end)
+end)
+
 describe("The package specs clean up after themselves", function()
   it("leaves no fixture package, module or folder behind", function()
     for _, name in ipairs(getPackages()) do
