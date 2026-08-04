@@ -42,6 +42,7 @@
 
 #include <QKeySequenceEdit>
 #include <QLineEdit>
+#include <QScopeGuard>
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -51,6 +52,9 @@
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
+#if defined(INCLUDE_UPDATER)
+#include "updater.h"
+#endif
 
 using namespace std::chrono_literals;
 
@@ -244,6 +248,48 @@ private slots:
         delete preferences;
         QVERIFY2(mpHost->mpDlgProfilePreferences.isNull(), "Preferences dialog should have been destroyed");
         QCOMPARE(mpHost->getMMCPChatName(), chatNameBefore);
+    }
+
+    // Opening the preferences at all used to be enough to end the run: the
+    // dialog asks the updater whether it downloads updates by itself, which on
+    // macOS reaches into Sparkle - and Sparkle is only created by
+    // checkUpdatesOnStart(), which no test calls. Development builds skip that
+    // whole branch, so only PTB and release builds ever crashed and CI stayed
+    // green until the nightly PTB. DEV_UPDATER puts this build on the same path.
+    void test_preferencesOpensBeforeTheUpdaterIsSetUp()
+    {
+        qputenv("DEV_UPDATER", "1");
+        auto restoreEnvironment = qScopeGuard([]() {
+            qunsetenv("DEV_UPDATER");
+        });
+
+        mudlet::self()->showOptionsDialog(qsl("tab_specialOptions"), mpHost);
+        QTest::qWait(100ms);
+        auto* preferences = mpHost->mpDlgProfilePreferences.data();
+        QVERIFY2(preferences, "Preferences dialog was not created");
+
+#if defined(INCLUDE_UPDATER)
+        auto* updater = mudlet::self()->pUpdater;
+        QVERIFY2(updater, "An updater-enabled build has no updater");
+        // the dev-build branch disables the checkbox and touches no updater, so
+        // this is what says the test is on the crashing path at all
+        QVERIFY2(preferences->checkbox_noAutomaticUpdates->isEnabled(), "DEV_UPDATER no longer moves a development build onto the release update path - this test covers nothing now");
+        // isHidden() rather than isVisible(): the group box sits on a tab page,
+        // and only an explicit hide() should count here
+        QCOMPARE(preferences->groupBox_updates->isHidden(), !updater->ready());
+
+        if (!updater->ready()) {
+            // the accessors the dialog and the Help menu reach for have to be
+            // safe to call in this state, not merely avoidable
+            QVERIFY2(!updater->updateAutomatically(), "An updater with no platform updater claimed it auto-updates");
+            updater->setAutomaticUpdates(true);
+            updater->manuallyCheckUpdates();
+            QVERIFY2(!updater->updateAutomatically(), "An updater with no platform updater took a setting it cannot store");
+        }
+#endif
+
+        delete preferences;
+        QVERIFY2(mpHost->mpDlgProfilePreferences.isNull(), "Preferences dialog should have been destroyed");
     }
 
     // ...and through the editor, where the item name field is connected to

@@ -217,6 +217,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         checkbox_noAutomaticUpdates->setChecked(true);
         checkbox_noAutomaticUpdates->setDisabled(true);
         checkbox_noAutomaticUpdates->setToolTip(utils::richText(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.")));
+    } else if (!pMudlet->pUpdater->ready()) {
+        // Nothing to show a setting for until the platform updater is set up,
+        // and a checkbox that silently does nothing is worse than no checkbox
+        groupBox_updates->hide();
     } else {
         checkbox_noAutomaticUpdates->setChecked(!pMudlet->pUpdater->updateAutomatically());
         // This is the extra connect(...) relating to settings' changes saved by
