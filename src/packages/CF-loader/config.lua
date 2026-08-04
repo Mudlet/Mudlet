@@ -1,4 +1,4 @@
-mpackage = [[CF-loader]]
+mpackage = [[CF_Loader]]
 author = [[Mudlet Default Package]]
 icon = [[mudlet.png]]
 title = [[Downloads the Carrion Fields interface when you first connect.]]
