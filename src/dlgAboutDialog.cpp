@@ -177,6 +177,11 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                         //: about:Leris
                         tr("Does a ton of work in making Mudlet, the website and the wiki accessible to you "
                            "regardless of the language you speak - and promoting our genre!")});
+    aboutMakers.append({true, qsl("Piotr Wilczynski"), QString(), qsl("Delwing"), qsl("delwing@gmail.com"),
+                        //: about:Delwing
+                        tr("Joined in 2020, reworking much of the 2D mapper and adding many Lua API features. "
+                           "Outside the client they build Mudlet Web, the documentation extract that powers "
+                           "autocompletion in code editors, and the tools that share Mudlet maps online.")});
     aboutMakers.append({false, qsl("Ahmed Charles"), QString(), qsl("ahmedcharles"), qsl("acharles@outlook.com"),
                         //: about:ahmedcharles
                         tr("Contributions to the Travis integration, CMake and Visual C++ build, "
