@@ -658,6 +658,11 @@ describe("Tests TableUtils.lua functions", function()
       local actual = table.union({ key = false }, { key = 7 })
       assert.same({ false, 7 }, actual.key)
     end)
+
+    it("should append a third colliding value to the same subtable", function()
+      local actual = table.union({ key = 1 }, { key = 2 }, { key = 3 })
+      assert.same({ 1, 2, 3 }, actual.key)
+    end)
   end)
 
   describe("Tests the functionality of table.n_union", function()

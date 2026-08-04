@@ -350,21 +350,23 @@ end
 ---      ["test2"] = function() return true end,
 ---   }
 ---   </pre>
+---
+--- When several tables hold different values for the same key, those values are
+--- collected into a new subtable, and any further collision on that key is
+--- appended to it. The tables you pass in are never modified.
 function table.union(...)
   local sets = { ... }
   local union = {}
-  -- `seen` tracks which keys already hold a value, so a legitimate `false`
-  -- is not mistaken for an absent key. `merged` tracks which keys hold a
-  -- subtable that we created, so a table that came from a caller is never
-  -- appended to -- doing that both flattened the result and modified the
-  -- caller's table in place.
-  local seen = {}
+  -- `pairs()` never yields a nil value, so `union[key] == nil` is an exact
+  -- presence test and stays correct for a legitimate `false`. `merged` tracks
+  -- which keys hold a subtable that we created, so a table that came from a
+  -- caller is never appended to -- doing that both flattened the result and
+  -- modified the caller's table in place.
   local merged = {}
 
   for _, set in ipairs(sets) do
     for key, val in pairs(set) do
-      if not seen[key] then
-        seen[key] = true
+      if union[key] == nil then
         union[key] = val
       elseif union[key] ~= val then
         if merged[key] then
