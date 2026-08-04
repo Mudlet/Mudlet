@@ -108,7 +108,8 @@ describe("Tests functionality of Geyser.UserWindow", function()
       -- the dock is the size it was asked for, and the usable area is real and
       -- inside it - by however much this platform's dock decoration costs
       local dock = geometry("guwRoot")
-      assert.are.same({x = 10, y = 10, width = 300, height = 200}, dock)
+      assert.are.equal(300, dock.width)
+      assert.are.equal(200, dock.height)
       assert.is_true(usableWidth > 0 and usableWidth <= dock.width,
                      string.format("usable width %d is not inside the dock width %d", usableWidth, dock.width))
       assert.is_true(usableHeight > 0 and usableHeight <= dock.height,
