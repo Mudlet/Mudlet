@@ -140,6 +140,11 @@ jobs:
         ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure
       env:
         QT_FORCE_STDERR_LOGGING: 1
+        # This runner has Qt's FFmpeg backend and can decode, so TMediaLoopTest must
+        # demonstrate every media behaviour rather than skip any of them. Without a floor
+        # somewhere, a lost codec or a changed default backend would turn the whole file
+        # green-by-skip on every platform and say nothing about it.
+        MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK: 1
 
     - name: (Windows) Run Lua tests
       timeout-minutes: 2

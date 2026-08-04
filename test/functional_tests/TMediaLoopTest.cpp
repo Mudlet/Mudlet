@@ -43,6 +43,25 @@ void initializeQRCResourcesForMediaLoop();
 
 using namespace std::chrono_literals;
 
+// A skip is how these tests stay honest on a backend that cannot stage what they need. It is
+// also how the whole file could go green everywhere and mean nothing, if a CI image lost its
+// codecs or swapped its default backend - macOS already skips most of them by design, so a
+// second platform quietly joining it would look no different. Runners known to carry a backend
+// that can demonstrate everything here set MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK, which turns
+// every capability skip into a failure and makes that loss a red build instead of silence.
+#define SKIP_OR_FAIL_WITHOUT(reason)                                                                                                                                                                   \
+    do {                                                                                                                                                                                               \
+        const QString incapable = (reason);                                                                                                                                                            \
+        if (!incapable.isEmpty()) {                                                                                                                                                                    \
+            if (qEnvironmentVariableIsSet("MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK")) {                                                                                                                    \
+                QFAIL(qPrintable(qsl("MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK is set for this runner, so a backend that cannot do this is a failure and "                                                  \
+                                     "not a skip: %1")                                                                                                                                                 \
+                                         .arg(incapable)));                                                                                                                                            \
+            }                                                                                                                                                                                          \
+            QSKIP(qPrintable(incapable));                                                                                                                                                              \
+        }                                                                                                                                                                                              \
+    } while (false)
+
 /*
  * Regression guard for "Client.Media loops=-1 plays once" (issue #9566): the deferred media
  * source release in TMedia, and the generation counters documented on TMediaPlayer that decide
@@ -56,7 +75,10 @@ using namespace std::chrono_literals;
  *   - a source the backend cannot decode must release itself off the error signal, since
  *     the player was already stopped and no playback state change follows;
  *   - a player re-sourced during the deferred turn, by a different track or by a
- *     continue=false restart of the same one, must keep the source it was given.
+ *     continue=false restart of the same one, must keep the source it was given;
+ *   - each of those endings must raise sysMediaFinished exactly once, since releasing the
+ *     source alone leaves a script chaining its next track off that event waiting forever,
+ *     and announcing twice re-enters any handler that stops the media it was told about.
  *
  * Which of those a backend can demonstrate varies, so probeBackend() measures one up front and
  * each test skips with what it found. CMakeLists.txt pins QT_MEDIA_BACKEND on the platforms
@@ -69,6 +91,7 @@ class TMediaLoopTest : public QObject
 
 private:
     TelnetServerStub* mpServer = nullptr;
+    Host* mpHost = nullptr;
     const QString mHostname = "Test-Media-Loop";
     const QString mPort = "4012";
     const QString mLocalhost = "localhost";
@@ -115,12 +138,8 @@ private slots:
     // was never delivered and the player dropped out of the playing set for good.
     void test_loopingTrackKeepsPlayingPastFirstPass()
     {
-        if (!mCannotPlayReason.isEmpty()) {
-            QSKIP(qPrintable(mCannotPlayReason));
-        }
-        if (!mWrongOrderReason.isEmpty()) {
-            QSKIP(qPrintable(mWrongOrderReason));
-        }
+        SKIP_OR_FAIL_WITHOUT(mCannotPlayReason);
+        SKIP_OR_FAIL_WITHOUT(mWrongOrderReason);
 
         auto* media = startProfileAndGetMedia();
         QVERIFY(media);
@@ -149,9 +168,7 @@ private slots:
     // the loop test this one needs no mWrongOrderReason gate.
     void test_finiteLoopsReachEveryPass()
     {
-        if (!mCannotPlayReason.isEmpty()) {
-            QSKIP(qPrintable(mCannotPlayReason));
-        }
+        SKIP_OR_FAIL_WITHOUT(mCannotPlayReason);
 
         auto* media = startProfileAndGetMedia();
         QVERIFY(media);
@@ -184,12 +201,12 @@ private slots:
     // on because playingMedia() has already dropped the player by the time the cleanup runs.
     void test_oneShotTrackIsCleanedUpWhenItFinishes()
     {
-        if (!mCannotPlayReason.isEmpty()) {
-            QSKIP(qPrintable(mCannotPlayReason));
-        }
+        SKIP_OR_FAIL_WITHOUT(mCannotPlayReason);
 
         auto* media = startProfileAndGetMedia();
         QVERIFY(media);
+
+        watchMediaFinished();
 
         const QString fileName = writeClip(qsl("oneshot.wav"));
         QVERIFY(!fileName.isEmpty());
@@ -207,6 +224,9 @@ private slots:
                 QDeadlineTimer(10s));
 
         QVERIFY2(cleanedUp, "A finished one-shot track never released its media source - the deferred cleanup did not run.");
+
+        QVERIFY2(waitForMediaFinishedCount(1), "A finished one-shot track raised no single sysMediaFinished - a script chaining its next track off that event would wait forever.");
+        QVERIFY2(mediaFinishedHolds(qsl("mediaFinishedNames[1] == 'oneshot.wav'")), "sysMediaFinished named the wrong file for a finished one-shot track.");
     }
 
     // The same obligation as above, reached by an explicit stop rather than by the clip
@@ -219,12 +239,12 @@ private slots:
     // exactly what that used to cost, so this is the case worth keeping.
     void test_stoppedTrackReleasesItsSource()
     {
-        if (!mCannotStartReason.isEmpty()) {
-            QSKIP(qPrintable(mCannotStartReason));
-        }
+        SKIP_OR_FAIL_WITHOUT(mCannotStartReason);
 
         auto* media = startProfileAndGetMedia();
         QVERIFY(media);
+
+        watchMediaFinished();
 
         const QString fileName = writeClip(qsl("stopped.wav"));
         QVERIFY(!fileName.isEmpty());
@@ -256,6 +276,54 @@ private slots:
                 QDeadlineTimer(10s));
 
         QVERIFY2(released, "A stopped track never released its media source - the deferred release did not run.");
+
+        QVERIFY2(waitForMediaFinishedCount(1), "A stopped track raised no single sysMediaFinished - the silent stop this test exists for is only half fixed if the release happens without it.");
+        QVERIFY2(mediaFinishedHolds(qsl("mediaFinishedNames[1] == 'stopped.wav'")), "sysMediaFinished named the wrong file for a stopped track.");
+
+        // Nothing more may be said about it afterwards. The source outlives the event by a
+        // turn, so the stop, the error handler and a StoppedState report can each still find a
+        // playback that looks live and announce the same ending over again.
+        QTest::qWait(clipMs);
+        QVERIFY2(mediaFinishedHolds(qsl("mediaFinishedCount == 1")), "A stopped track raised sysMediaFinished more than once for the same playback.");
+    }
+
+    // Two ways a stop can say something it should not. A bare stopMusic() matches every player
+    // there is, including pooled ones between tracks that have nothing playing to end; and a
+    // stop issued from inside a sysMediaFinished handler - the natural place for a script to
+    // decide it has heard enough - lands on a player still holding the source of the track it
+    // was just told about, which used to look exactly like one more playback to end. That
+    // announced again, re-entered the same handler, and recursed until the stack gave out.
+    void test_stopDoesNotAnnounceWhatIsNotPlaying()
+    {
+        SKIP_OR_FAIL_WITHOUT(mCannotStartReason);
+
+        auto* media = startProfileAndGetMedia();
+        QVERIFY(media);
+
+        watchMediaFinished(qsl("stopMusic()"));
+
+        const QString fileName = writeClip(qsl("recursion.wav"));
+        QVERIFY(!fileName.isEmpty());
+
+        TMediaData data = clipData(fileName);
+        data.setMediaLoops(TMediaData::MediaLoopsRepeat);
+        media->playMedia(data);
+
+        QVERIFY2(waitForPlaying(media, fileName), "The track never started playing.");
+
+        TMediaData stop = clipData(fileName);
+        media->stopMedia(stop);
+
+        QVERIFY2(waitForMediaFinishedCount(1), "A stopped track raised no single sysMediaFinished, so the handler that stops it again never ran and the recursion this test guards was never staged.");
+
+        // Everything is idle by now, so a stop matching every player has nothing left to end.
+        TMediaData stopEverything;
+        stopEverything.setMediaProtocol(TMediaData::MediaProtocolAPI);
+        media->stopMedia(stopEverything);
+
+        QTest::qWait(clipMs);
+        QVERIFY2(mediaFinishedHolds(qsl("mediaFinishedCount == 1")),
+                 "A stop announced a playback that was already over - either the handler's own stopMusic() recursed back through it, or pooled players holding nothing were ended too.");
     }
 
     // A source that fails to load reports an error and no playback state change, because a
@@ -265,15 +333,13 @@ private slots:
     // nothing will ever release.
     void test_unplayableTrackReleasesItsSource()
     {
-        if (!mCannotPlayReason.isEmpty()) {
-            QSKIP(qPrintable(mCannotPlayReason));
-        }
-        if (!mNoLoadErrorReason.isEmpty()) {
-            QSKIP(qPrintable(mNoLoadErrorReason));
-        }
+        SKIP_OR_FAIL_WITHOUT(mCannotPlayReason);
+        SKIP_OR_FAIL_WITHOUT(mNoLoadErrorReason);
 
         auto* media = startProfileAndGetMedia();
         QVERIFY(media);
+
+        watchMediaFinished();
 
         const QString fileName = writeUnplayableClip(qsl("broken.wav"));
         QVERIFY(!fileName.isEmpty());
@@ -294,6 +360,13 @@ private slots:
                 QDeadlineTimer(10s));
 
         QVERIFY2(released, "A track that could not be decoded held on to its media source - the playback error was never acted on.");
+
+        QVERIFY2(waitForMediaFinishedCount(1), "A track that could not be decoded raised no single sysMediaFinished - a script chaining its next track off that event would wait forever.");
+        QVERIFY2(mediaFinishedHolds(qsl("mediaFinishedNames[1] == 'broken.wav'")), "sysMediaFinished named the wrong file for a track that could not be decoded.");
+
+        // The error and the StoppedState that can follow it are two reports of one failure.
+        QTest::qWait(clipMs);
+        QVERIFY2(mediaFinishedHolds(qsl("mediaFinishedCount == 1")), "A track that could not be decoded raised sysMediaFinished more than once for the same failure.");
     }
 
     // A player that is handed to a different track in the same event-loop turn, as
@@ -302,12 +375,8 @@ private slots:
     // backend (see mSynchronousStartReason) the player still reads as stopped while it loads.
     void test_reusedPlayerKeepsTheTrackThatClaimedIt()
     {
-        if (!mCannotStartReason.isEmpty()) {
-            QSKIP(qPrintable(mCannotStartReason));
-        }
-        if (!mSynchronousStartReason.isEmpty()) {
-            QSKIP(qPrintable(mSynchronousStartReason));
-        }
+        SKIP_OR_FAIL_WITHOUT(mCannotStartReason);
+        SKIP_OR_FAIL_WITHOUT(mSynchronousStartReason);
 
         auto* media = startProfileAndGetMedia();
         QVERIFY(media);
@@ -348,12 +417,8 @@ private slots:
     // register the claim itself or the stop it just performed clears the source it just set.
     void test_restartedTrackKeepsItsNewSource()
     {
-        if (!mCannotStartReason.isEmpty()) {
-            QSKIP(qPrintable(mCannotStartReason));
-        }
-        if (!mSynchronousStartReason.isEmpty()) {
-            QSKIP(qPrintable(mSynchronousStartReason));
-        }
+        SKIP_OR_FAIL_WITHOUT(mCannotStartReason);
+        SKIP_OR_FAIL_WITHOUT(mSynchronousStartReason);
 
         auto* media = startProfileAndGetMedia();
         QVERIFY(media);
@@ -382,6 +447,7 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
+        mpHost = nullptr;
         deleteProfileDirectory(mHostname);
         delete mudlet::self();
     }
@@ -400,7 +466,43 @@ private:
             QTest::qFail("Host has no TMedia instance.", __FILE__, __LINE__);
             return nullptr;
         }
+        mpHost = host;
         return media;
+    }
+
+    // sysMediaFinished is half of what the fixes here are for - a track that fails to load and
+    // one stopped while it is still loading each used to end in silence, with a script chaining
+    // its next track off that event waiting forever. Releasing the source, which is all the
+    // tests otherwise assert on, happens either way, so nothing here would notice the event
+    // going missing. Counted rather than merely seen: announcing the same ended playback more
+    // than once is its own bug, and one of them recursed until the stack gave out.
+    void watchMediaFinished(const QString& extraHandlerBody = QString())
+    {
+        if (!mpHost) {
+            return;
+        }
+
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("mediaFinishedCount = 0\n"
+                                                                 "mediaFinishedNames = {}\n"
+                                                                 "registerAnonymousEventHandler('sysMediaFinished', function(_, fileName)\n"
+                                                                 "  mediaFinishedCount = mediaFinishedCount + 1\n"
+                                                                 "  mediaFinishedNames[#mediaFinishedNames + 1] = fileName\n"
+                                                                 "  %1\n"
+                                                                 "end)\n")
+                                                                     .arg(extraHandlerBody));
+    }
+
+    // Runs a Lua assertion against what watchMediaFinished() recorded; compileAndExecuteScript()
+    // reports a raised error as false, so a failed assert() comes back here as one.
+    bool mediaFinishedHolds(const QString& luaCondition) const { return mpHost && mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(%1)").arg(luaCondition)); }
+
+    bool waitForMediaFinishedCount(int count, std::chrono::milliseconds timeout = 10s) const
+    {
+        return QTest::qWaitFor(
+                [&]() {
+                    return mediaFinishedHolds(qsl("mediaFinishedCount == %1").arg(count));
+                },
+                QDeadlineTimer(timeout));
     }
 
     // Records what this backend is and is not able to demonstrate; each reason string set below

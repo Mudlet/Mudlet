@@ -77,6 +77,7 @@ public:
         // Bumped before the source is touched because setSource() can raise errorOccurred
         // synchronously, and that handler snapshots these counters to arm its own release.
         ++mClaimGeneration;
+        mEndAnnounced = false;
         if (mMediaPlayer) {
             // A stopped player still holding anything has that media loaded, so handing it a
             // source now starts playback synchronously and raises sysMediaStarted inside the
@@ -91,6 +92,7 @@ public:
     void continuePlaying(const QUrl& media)
     {
         ++mContinuationGeneration;
+        mEndAnnounced = false;
         if (mMediaPlayer) {
             mMediaPlayer->setSource(media);
             mMediaPlayer->play();
@@ -107,6 +109,15 @@ public:
     }
     quint64 claimGeneration() const { return mClaimGeneration; }
     quint64 continuationGeneration() const { return mContinuationGeneration; }
+
+    // One ended playback can be reported from three places - a stop, a load error and the
+    // StoppedState that follows either - and the source stays set until the deferred release
+    // runs, so each of them still finds a playback that looks live. Only the first may tell
+    // scripts about it: a second sysMediaFinished for the same track is at best a duplicate,
+    // and at worst unbounded recursion when the handler stops the media it was told about.
+    // Cleared by the two ways this player is given something new to play, above.
+    bool endAnnounced() const { return mEndAnnounced; }
+    void noteEndAnnounced() { mEndAnnounced = true; }
 
     // Read-only uses and playback control are fine; do not setSource() on it, for the reason
     // given above claimSource().
@@ -167,6 +178,7 @@ private:
     bool initialized = false;
     quint64 mClaimGeneration = 0;
     quint64 mContinuationGeneration = 0;
+    bool mEndAnnounced = false;
 };
 
 class TMedia : public QObject
@@ -253,7 +265,9 @@ private:
     // Why a playback ended, which decides whether the player's own state is worth consulting
     // when the deferred release comes around. See releaseMediaSourceAfterEvents().
     enum class PlaybackEnd { Stopped, Failed };
-    void raiseMediaFinishedEvent(const std::shared_ptr<TMediaPlayer>& player);
+    // endedUrl and endedData are passed in rather than read off the player, so a caller that has
+    // already released the source can still say what it was that ended.
+    void raiseMediaFinishedEvent(const std::shared_ptr<TMediaPlayer>& player, const QUrl& endedUrl, const TMediaData& endedData);
     void releaseMediaSourceAfterEvents(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& endedData, const PlaybackEnd endedBy);
     void handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const std::shared_ptr<TMediaPlayer>& player);
     bool setupVideo(const std::shared_ptr<TMediaPlayer>& player);
