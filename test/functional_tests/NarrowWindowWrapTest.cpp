@@ -43,8 +43,9 @@ void initializeQRCResources();
 // the glyph is wider than the width, or because the indentation uses the width
 // up - made TBuffer::getWrapInfo() break the line at the character it was
 // already sitting on, so the scan never advanced and Mudlet hung (#9622).
-// Everything here therefore runs under a watchdog: a regression is an endless
-// loop on the main thread, so no assertion after it would ever be reached.
+// Every step that can reach the wrapping therefore runs under a watchdog: a
+// regression is an endless loop on the main thread, so no assertion after it
+// would ever be reached.
 class NarrowWindowWrapTest : public QObject
 {
     Q_OBJECT
@@ -84,15 +85,34 @@ private slots:
     {
         startProfile();
         auto* console = createTestMiniConsole();
+        QVERIFY(console);
         console->setWrapAt(0);
 
         runWithWatchdog("echo at a wrap width of zero", [this]() {
-            runLua(qsl("echo('%1', 'abc def\\n')").arg(mMiniConsole));
+            runLua(qsl("echo('%1', 'abcdef\\n')").arg(mMiniConsole));
         });
 
-        // no width can hold a character, so every character ends up on a line of
-        // its own - but not one of them may be dropped or duplicated
+        // no width can hold a character, so every character ends up on a line
+        // of its own - and not one of them may be dropped or duplicated
+        QCOMPARE(nonEmptyLineCount(console), 6);
         QCOMPARE(joinedText(console), qsl("abcdef"));
+    }
+
+    // Newlines inside the echoed text take their own path through the wrapping
+    // scan, which has to keep its bookkeeping straight alongside the forced
+    // per-glyph breaks.
+    void test_embeddedNewlinesAtZeroWrapWidthDoNotHang()
+    {
+        startProfile();
+        auto* console = createTestMiniConsole();
+        QVERIFY(console);
+        console->setWrapAt(0);
+
+        runWithWatchdog("echo of embedded newlines at a wrap width of zero", [this]() {
+            runLua(qsl("echo('%1', 'ab\\ncd\\n')").arg(mMiniConsole));
+        });
+
+        QCOMPARE(joinedText(console), qsl("abcd"));
     }
 
     // A width of one column with two-column glyphs is the same dead end, and
@@ -101,12 +121,14 @@ private slots:
     {
         startProfile();
         auto* console = createTestMiniConsole();
+        QVERIFY(console);
         runLua(qsl("setWindowWrap('%1', 1)").arg(mMiniConsole));
 
         runWithWatchdog("echo of a wide glyph at a wrap width of one", [this]() {
             runLua(qsl("echo('%1', '%2\\n')").arg(mMiniConsole, mWideText));
         });
 
+        QCOMPARE(nonEmptyLineCount(console), 2);
         QCOMPARE(joinedText(console), mWideText);
     }
 
@@ -116,6 +138,7 @@ private slots:
     {
         startProfile();
         auto* console = createTestMiniConsole();
+        QVERIFY(console);
         runLua(qsl("setWindowWrap('%1', 5)").arg(mMiniConsole));
         // both, so that whichever of the two a line uses leaves a single column
         runLua(qsl("setWindowWrapIndent('%1', 4)").arg(mMiniConsole));
@@ -125,7 +148,58 @@ private slots:
             runLua(qsl("echo('%1', '%2\\n')").arg(mMiniConsole, mWideText));
         });
 
-        QCOMPARE(joinedText(console), mWideText);
+        QCOMPARE(textIgnoringIndentation(console), mWideText);
+    }
+
+    // An indent at or beyond the wrap width is not range-checked anywhere.
+    // wrapLine() drops such an indent instead of leaving no room at all, and
+    // that is what keeps this case out of the trap the one above falls into.
+    void test_indentWiderThanTheWrapWidthDoesNotHang()
+    {
+        startProfile();
+        auto* console = createTestMiniConsole();
+        QVERIFY(console);
+        runLua(qsl("setWindowWrap('%1', 5)").arg(mMiniConsole));
+        runLua(qsl("setWindowWrapIndent('%1', 10)").arg(mMiniConsole));
+        runLua(qsl("setWindowWrapHangingIndent('%1', 10)").arg(mMiniConsole));
+
+        runWithWatchdog("echo with an indent wider than the wrap width", [this]() {
+            runLua(qsl("echo('%1', '%2%2\\n')").arg(mMiniConsole, mWideText));
+        });
+
+        QCOMPARE(textIgnoringIndentation(console), mWideText + mWideText);
+    }
+
+    // insertText() wraps against the screen width and the profile's own indent
+    // rather than the console's, so it reaches the wrapping by a different
+    // route than echo() does.
+    void test_insertTextIntoTheMainConsoleDoesNotHang()
+    {
+        mpServer->setWelcomeMessage(qsl("HELLO\r\n"));
+        startProfile();
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(waitForMainConsoleText(qsl("HELLO")), "Welcome text never reached the buffer");
+
+        // leave a single column free of the screen width the insert wraps at -
+        // both indents, since only the first segment of a line uses the plain
+        // one and every segment after it uses the hanging one
+        const int indent = host->mScreenWidth - 1;
+        QVERIFY2(indent > 1, "the main console reported no usable screen width");
+        runLua(qsl("setWindowWrapIndent('main', %1)").arg(indent));
+        runLua(qsl("setWindowWrapHangingIndent('main', %1)").arg(indent));
+
+        // mid-line, so the insert goes through insertInLine() rather than the
+        // append path the cursor at the end of the buffer would take
+        const int welcomeLine = mainConsoleLineOf(qsl("HELLO"));
+        QVERIFY2(welcomeLine >= 0, "the welcome line went missing from the buffer");
+        QVERIFY2(host->mpConsole->moveCursor(2, welcomeLine), "could not position the user cursor mid-line");
+
+        runWithWatchdog("insertText of a wide glyph with the indent using up the screen width", [this, host]() {
+            // the newline is what makes the insert re-wrap the line it landed in
+            host->mpConsole->insertText(mWideText + QChar::LineFeed + mWideText);
+        });
+
+        QVERIFY2(mainConsoleContains(mWideText), "the inserted text did not survive wrapping");
     }
 
     // Nothing can be shown in a window that is zero columns wide, so the Lua
@@ -134,7 +208,9 @@ private slots:
     {
         startProfile();
         auto* console = createTestMiniConsole();
-        runLua(qsl("setWindowWrap('%1', 40)").arg(mMiniConsole));
+        QVERIFY(console);
+        // wide enough that the reported result is not itself wrapped
+        runLua(qsl("setWindowWrap('%1', 200)").arg(mMiniConsole));
 
         // under the watchdog as well: were the width to be accepted, the echo
         // reporting the result would be the thing that hangs
@@ -142,9 +218,42 @@ private slots:
             runLua(qsl("local ok, err = setWindowWrap('%1', 0) echo('%1', 'RESULT:'..tostring(ok)..':'..tostring(err))").arg(mMiniConsole));
         });
 
-        QCOMPARE(joinedText(console), qsl("RESULT:nil:wrapAtmustbegreaterthanzero,got0"));
+        const QString result = joinedText(console);
+        QVERIFY2(result.startsWith(qsl("RESULT:nil:")), qPrintable(qsl("setWindowWrap() did not refuse a wrap width of zero, it returned: %1").arg(result)));
+        QVERIFY2(result.contains(qsl("greater than zero")), qPrintable(qsl("the refusal did not say why: %1").arg(result)));
         // the rejected call must not have changed the width either
-        QCOMPARE(console->getWrapAt(), 40);
+        QCOMPARE(console->getWrapAt(), 200);
+    }
+
+    // An accepted width answers true, so that the usual `if not ok then` check
+    // does not read every successful call as a failure.
+    void test_setWindowWrapReportsSuccess()
+    {
+        startProfile();
+        auto* console = createTestMiniConsole();
+        QVERIFY(console);
+
+        runLua(qsl("local ok = setWindowWrap('%1', 200) echo('%1', 'RESULT:'..tostring(ok))").arg(mMiniConsole));
+
+        QCOMPARE(joinedText(console), qsl("RESULT:true"));
+        QCOMPARE(console->getWrapAt(), 200);
+    }
+
+    // The main console's width is mirrored into the profile and reported to the
+    // game, so a refused width must not reach either.
+    void test_rejectedMainConsoleWidthLeavesTheProfileUntouched()
+    {
+        startProfile();
+        auto* host = mudlet::self()->getActiveHost();
+        runLua(qsl("setWindowWrap(80)"));
+        QCOMPARE(host->mWrapAt, 80);
+
+        runWithWatchdog("setWindowWrap() with a width of zero on the main console", [this]() {
+            runLua(qsl("setWindowWrap(0)"));
+        });
+
+        QCOMPARE(host->mWrapAt, 80);
+        QCOMPARE(host->mpConsole->getWrapAt(), 80);
     }
 
     void cleanup()
@@ -191,9 +300,7 @@ private:
     TConsole* createTestMiniConsole()
     {
         runLua(qsl("createMiniConsole('%1', 0, 0, 300, 300)").arg(mMiniConsole));
-        auto* console = mudlet::self()->getActiveHost()->mpConsole->mSubConsoleMap.value(mMiniConsole);
-        Q_ASSERT_X(console, "createTestMiniConsole", "the miniconsole the tests write into was not created");
-        return console;
+        return mudlet::self()->getActiveHost()->mpConsole->mSubConsoleMap.value(mMiniConsole);
     }
 
     void startProfile()
@@ -231,15 +338,55 @@ private:
         }
     }
 
-    // everything in the console, with the whitespace that wrapping introduces
-    // at the break points removed, so wrapped and unwrapped text compare equal
+    // the buffer carries empty lines of its own (one is always kept ready for
+    // the next text), so only the lines with something in them are counted
+    static int nonEmptyLineCount(TConsole* console)
+    {
+        int count = 0;
+        for (int i = 0, total = console->buffer.getLastLineNumber(); i <= total; ++i) {
+            if (!console->buffer.line(i).isEmpty()) {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    // every line of the console joined back together - the wrapping only breaks
+    // lines, so this has to come back out exactly as it went in
     static QString joinedText(TConsole* console)
     {
         QString text;
         for (int i = 0, total = console->buffer.getLastLineNumber(); i <= total; ++i) {
             text.append(console->buffer.line(i));
         }
-        return text.remove(QChar::Space).remove(QChar::LineFeed);
+        return text;
+    }
+
+    // as joinedText(), but with every space dropped, for the cases where the
+    // wrapping pads lines out with indentation. Spaces in the text itself are
+    // lost along with it, so these cases echo text that has none.
+    static QString textIgnoringIndentation(TConsole* console) { return joinedText(console).remove(QChar::Space); }
+
+    static int mainConsoleLineOf(const QString& text)
+    {
+        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        for (int i = 0, total = console->buffer.getLastLineNumber(); i <= total; ++i) {
+            if (console->buffer.line(i).contains(text)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    static bool mainConsoleContains(const QString& text) { return mainConsoleLineOf(text) >= 0; }
+
+    bool waitForMainConsoleText(const QString& text, int timeoutMs = 5000)
+    {
+        return QTest::qWaitFor(
+                [this, &text]() {
+                    return mainConsoleContains(text);
+                },
+                timeoutMs);
     }
 
     void deleteProfileDirectory(const QString& profileName) { deleteDirectory(mudlet::getMudletPath(enums::profileHomePath, profileName)); }

@@ -1138,7 +1138,9 @@ void XMLimport::readHost(Host* pHost)
             } else if (name() == qsl("commandLineMinimumHeight")) {
                 pHost->commandLineMinimumHeight = readElementText().toInt();
             } else if (name() == qsl("wrapAt")) {
-                pHost->mWrapAt = readElementText().toInt();
+                // toInt() yields 0 for anything unparseable, and a profile that
+                // wraps at zero columns can show no text at all
+                pHost->mWrapAt = qMax(1, readElementText().toInt());
             } else if (name() == qsl("wrapIndentCount")) {
                 pHost->mWrapIndentCount = readElementText().toInt();
             } else if (name() == qsl("wrapHangingIndentCount")) {

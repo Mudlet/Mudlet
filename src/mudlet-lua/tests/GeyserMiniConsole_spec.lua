@@ -130,6 +130,26 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       assert.are.equal(17, getWindowWrap("gmcNoAutoWrap"))
     end)
 
+    -- a console too narrow for even one character works out as zero columns,
+    -- which Mudlet refuses (and which used to hang it, issue #9622)
+    it("never derives a wrap of less than one column", function()
+      local console = track(Geyser.MiniConsole:new({name = "gmcTinyAutoWrap", x = 0, y = 0, width = 4, height = 100, autoWrap = true}))
+      assert.are.equal(1, console.wrapAt)
+      assert.are.equal(1, getWindowWrap("gmcTinyAutoWrap"))
+    end)
+
+    it("passes on a refused wrap width instead of recording it", function()
+      local console = track(Geyser.MiniConsole:new({name = "gmcZeroWrap", x = 0, y = 0, width = 300, height = 100}))
+      console:setWrap(30)
+      local result, message = console:setWrap(0)
+      assert.is_nil(result)
+      assert.is_truthy(message:find("greater than zero", 1, true))
+      -- the refused width must not be remembered, or every later setWrap()
+      -- would re-send it and be refused as well
+      assert.are.equal(30, console.wrapAt)
+      assert.are.equal(30, getWindowWrap("gmcZeroWrap"))
+    end)
+
     it("reports that resetAutoWrap has nothing to do when auto wrap is off", function()
       local console = track(Geyser.MiniConsole:new({name = "gmcResetWrap", x = 0, y = 0, width = 300, height = 100}))
       local result, message = console:resetAutoWrap()

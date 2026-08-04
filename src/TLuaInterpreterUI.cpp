@@ -3662,7 +3662,8 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
     }
     console->setWrapAt(luaFrom);
     // only the main console's width belongs to the profile - it is what the
-    // preferences dialog shows and what NAWS reports to the game
+    // preferences dialog shows, what NEW-ENVIRON reports as WORD_WRAP and what
+    // caps the width NAWS reports to the game
     if (console->getType() == TConsole::MainConsole) {
         Host& host = getHostFromLua(L);
         const int priorWrapAt = host.mWrapAt;
@@ -3672,7 +3673,8 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
         }
         host.updateDisplayDimensions();
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowWrapIndent
