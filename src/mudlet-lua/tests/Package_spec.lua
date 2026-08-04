@@ -213,12 +213,13 @@ describe("Tests the functionality of installPackage", function()
   end)
 
   it("returns nil+msg for a file that is not a zip archive", function()
+    -- the failed unpacking still creates the destination folder; drop it so the
+    -- profile is left exactly as it was found
+    finally(function() lfs.rmdir(getMudletHomeDir() .. "/mudlet-spec-notazip") end)
+
     local err = refusedInstall(installPackage, fixtureDirectory .. "/mudlet-spec-notazip.mpackage")
     assert.is_true(contains(err, "could not unzip package"), tostring(err))
     assert.is_false(packageInstalled("mudlet-spec-notazip"))
-    -- The failed unpacking still creates the destination folder; drop it so the
-    -- profile is left exactly as it was found.
-    lfs.rmdir(getMudletHomeDir() .. "/mudlet-spec-notazip")
   end)
 
   it("unpacks the package into the profile and runs its contents", function()
@@ -263,9 +264,9 @@ describe("Tests the functionality of installPackage", function()
 
   it("installs a package from a plain XML file", function()
     local path = fixtureDirectory .. "/sources/mudlet-spec-xmlonly/mudlet-spec-xmlonly.xml"
+    finally(function() removeFixturePackage("mudlet-spec-xmlonly") end)
     installConfirmed(installPackage, path, function() return packageInstalled("mudlet-spec-xmlonly") end,
                      "the XML fixture package")
-    finally(function() removeFixturePackage("mudlet-spec-xmlonly") end)
 
     assert.equals(1, exists("mudlet-spec-xmlonly alias", "alias"))
     -- nothing is unpacked for a bare XML: the file stays where it is
