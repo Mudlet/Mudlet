@@ -71,6 +71,20 @@ QChar dlgConnectionProfiles::firstInvalidProfileNameChar(const QString& name)
     return {};
 }
 
+// Characters that make a name unusable no matter where it came from:
+// utils::sanitizeForPath() silently rewrites them out of any path built from
+// the profile name, and CredentialManager::generateFilePath() refuses to
+// produce a path at all - so a profile named this way could never store or
+// retrieve its password. Mirrors the pattern used there:
+const QRegularExpression dlgConnectionProfiles::scmUnusableProfileNameChars{qsl(R"REGEX(\.\.|[/\\<>:"|?*\x00-\x1f])REGEX")};
+
+// Whether an existing profile folder can be taken as-is instead of being put
+// through the stricter rules that apply to names typed into the dialog:
+bool dlgConnectionProfiles::profileNameUsableAsIs(const QString& name)
+{
+    return !name.isEmpty() && !name.contains(scmUnusableProfileNameChars);
+}
+
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 : QDialog(parent)
 {
@@ -2119,9 +2133,11 @@ bool dlgConnectionProfiles::validateProfile()
         // file manager copying a folder) with characters we would not permit
         // for a new name - such a profile must still be loadable. Comparing
         // against the trimmed item name covers folders with leading/trailing
-        // whitespace too, as the entered name always arrives trimmed:
+        // whitespace too, as the entered name always arrives trimmed. Names
+        // the rest of Mudlet cannot work with get no exemption: renaming them
+        // is worse for the user than a profile whose password never saves.
         const QString selectedName = pItem->data(csmNameRole).toString();
-        const bool nameUnchangedAndOnDisk = (name == selectedName.trimmed()) && QDir(mudlet::getMudletPath(enums::profileHomePath, selectedName)).exists();
+        const bool nameUnchangedAndOnDisk = (name == selectedName.trimmed()) && profileNameUsableAsIs(name) && QDir(mudlet::getMudletPath(enums::profileHomePath, selectedName)).exists();
         const QChar invalidChar = nameUnchangedAndOnDisk ? QChar() : firstInvalidProfileNameChar(name);
         if (!invalidChar.isNull()) {
             notificationAreaIconLabelWarning->show();

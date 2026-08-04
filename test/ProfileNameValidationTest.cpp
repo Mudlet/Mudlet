@@ -75,6 +75,43 @@ private slots:
         QFETCH(QChar, badChar);
         QCOMPARE(dlgConnectionProfiles::firstInvalidProfileNameChar(name), badChar);
     }
+
+    // Folders created outside of Mudlet keep their name only if the rest of
+    // Mudlet can work with it - notably CredentialManager, which returns an
+    // empty path rather than a sanitised one for these, leaving the profile
+    // unable to store or retrieve its password.
+    void usableAsIs_data()
+    {
+        QTest::addColumn<QString>("name");
+        QTest::addColumn<bool>("usable");
+
+        QTest::newRow("plain") << qsl("Achaea") << true;
+        QTest::newRow("parenthesised copy suffix") << qsl("test (2)") << true;
+        // not permitted for a new name, but harmless on disk and in a
+        // credential path, so an existing folder keeps it
+        QTest::newRow("non-ascii") << qsl("café") << true;
+        QTest::newRow("exclamation mark") << qsl("test!") << true;
+        QTest::newRow("single dot") << qsl("my.profile") << true;
+
+        QTest::newRow("empty") << QString() << false;
+        QTest::newRow("parent directory") << qsl("test..2") << false;
+        QTest::newRow("path separator") << qsl("test/2") << false;
+        QTest::newRow("windows path separator") << qsl("test\\2") << false;
+        QTest::newRow("colon") << qsl("test:2") << false;
+        QTest::newRow("pipe") << qsl("test|2") << false;
+        QTest::newRow("asterisk") << qsl("test*2") << false;
+        QTest::newRow("question mark") << qsl("test?2") << false;
+        QTest::newRow("angle brackets") << qsl("<test>") << false;
+        QTest::newRow("double quote") << qsl("test\"2") << false;
+        QTest::newRow("control character") << qsl("test\x01 2") << false;
+    }
+
+    void usableAsIs()
+    {
+        QFETCH(QString, name);
+        QFETCH(bool, usable);
+        QCOMPARE(dlgConnectionProfiles::profileNameUsableAsIs(name), usable);
+    }
 };
 
 QTEST_GUILESS_MAIN(ProfileNameValidationTest)
