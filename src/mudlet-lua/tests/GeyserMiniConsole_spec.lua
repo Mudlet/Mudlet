@@ -187,4 +187,293 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       assert.is_nil(Geyser.windowList.gmcDelete)
     end)
   end)
+
+  describe("Geyser.MiniConsole command line", function()
+    local console
+
+    before_each(function()
+      console = track(Geyser.MiniConsole:new({name = "gmcCmd", x = 0, y = 0, width = 300, height = 100}))
+      console:enableCommandLine()
+    end)
+
+    it("enableCommandLine creates a command line the console can read back", function()
+      assert.are.equal("", console:getCmdLine())
+    end)
+
+    it("printCmd replaces the command line contents", function()
+      console:printCmd("first")
+      assert.are.equal("first", console:getCmdLine())
+      console:printCmd("second")
+      assert.are.equal("second", console:getCmdLine())
+    end)
+
+    it("appendCmd adds to what is already there", function()
+      console:printCmd("hello")
+      console:appendCmd(" world")
+      assert.are.equal("hello world", console:getCmdLine())
+    end)
+
+    it("clearCmd empties the command line", function()
+      console:printCmd("something")
+      console:clearCmd()
+      assert.are.equal("", console:getCmdLine())
+    end)
+
+    it("selectCmdLinetext reports success after selecting the typed text", function()
+      -- BUG: the C++ selectCmdLineText declares one return value but pushes
+      -- nothing, so Lua hands back whatever was left on the stack - here the
+      -- window name that was passed in
+      pending("selectCmdLineText returns a stack leftover, not a result - see the Wave 3d report")
+      console:printCmd("select me")
+      assert.is_true(console:selectCmdLinetext())
+    end)
+
+    it("selectCmdLinetext accepts the console's own command line", function()
+      console:printCmd("select me")
+      assert.has_no.errors(function() console:selectCmdLinetext() end)
+      -- selecting must not disturb what is typed
+      assert.are.equal("select me", console:getCmdLine())
+    end)
+
+    it("setCmdLineStyleSheet applies the sheet and remembers it", function()
+      -- the command line has no stylesheet getter, so spy on the global to
+      -- see what actually reached it; spy.on keeps the real function
+      local styleSheet = spy.on(_G, "setCmdLineStyleSheet")
+      finally(function() styleSheet:revert() end)
+      console:setCmdLineStyleSheet("color: red;")
+      assert.spy(styleSheet).was.called_with("gmcCmd", "color: red;")
+      assert.are.equal("color: red;", console.cmdLineStylesheet)
+      -- called with no argument it re-applies the remembered sheet
+      console:setCmdLineStyleSheet()
+      assert.spy(styleSheet).was.called(2)
+      assert.spy(styleSheet).was.called_with("gmcCmd", "color: red;")
+    end)
+
+    it("disableCommandLine hides the command line without discarding what is typed", function()
+      local disable = spy.on(_G, "disableCommandLine")
+      finally(function() disable:revert() end)
+      console:printCmd("still here")
+      console:disableCommandLine()
+      assert.spy(disable).was.called_with("gmcCmd")
+      -- disabling only hides the widget, so the text is still readable and
+      -- comes back when the command line is enabled again
+      assert.are.equal("still here", console:getCmdLine())
+      console:enableCommandLine()
+      assert.are.equal("still here", console:getCmdLine())
+    end)
+  end)
+
+  describe("Geyser.MiniConsole:setBufferSize", function()
+    it("caps how many lines the console keeps", function()
+      local console = track(Geyser.MiniConsole:new({name = "gmcBuffer", x = 0, y = 0, width = 300, height = 100}))
+      console:setBufferSize(100, 20)
+      for i = 1, 600 do
+        console:echo("buffered line " .. i .. "\n")
+      end
+      -- trimming happens in batches once the limit is passed, so the line
+      -- count settles between the limit and limit + batch rather than at 600
+      local kept = getLineCount("gmcBuffer")
+      assert.is_true(kept < 600, "a capped console must not keep every line, kept " .. kept)
+      assert.is_true(kept <= 121, "a capped console should settle near its limit, kept " .. kept)
+    end)
+  end)
+
+  describe("Geyser.MiniConsole replace family", function()
+    local console
+
+    local function firstLine()
+      console:moveCursor(0, 0)
+      console:selectCurrentLine()
+      return console:getCurrentLine()
+    end
+
+    before_each(function()
+      console = track(Geyser.MiniConsole:new({name = "gmcReplace", x = 0, y = 0, width = 400, height = 200}))
+      console:setWrap(60)
+      console:echo("hello world\n")
+      console:moveCursor(0, 0)
+    end)
+
+    it("replace swaps the current selection", function()
+      console:selectString("world", 1)
+      console:replace("earth")
+      assert.are.equal("hello earth", firstLine())
+    end)
+
+    it("replaceLine swaps the whole line", function()
+      console:replaceLine("a new line")
+      assert.are.equal("a new line", firstLine())
+    end)
+
+    it("dreplaceLine and hreplaceLine swap the line with colour", function()
+      console:dreplaceLine("<0,255,0>green line")
+      assert.are.equal("green line", firstLine())
+      console:hreplaceLine("#0000ffblue line")
+      assert.are.equal("blue line", firstLine())
+    end)
+
+    it("fg and bg colour what is echoed next", function()
+      console:clear()
+      console:fg("red")
+      console:bg("blue")
+      console:echo("coloured\n")
+      console:selectString("coloured", 1)
+      assert.are.same(color_table["red"], {getFgColor("gmcReplace")})
+      assert.are.same(color_table["blue"], {getBgColor("gmcReplace")})
+    end)
+
+    it("display renders a table into the console", function()
+      console:clear()
+      console:display({alpha = 1})
+      local text = table.concat(getLines("gmcReplace", 0, getLineCount("gmcReplace")), "\n")
+      assert.is_truthy(text:find("alpha", 1, true))
+    end)
+
+    it("appendBuffer copies the main console selection in", function()
+      clearWindow()
+      echo("copy this line\n")
+      moveCursorEnd()
+      moveCursorUp()
+      selectCurrentLine()
+      copy()
+      console:clear()
+      console:appendBuffer()
+      assert.is_truthy(table.concat(getLines("gmcReplace", 0, getLineCount("gmcReplace") + 1), "\n"):find("copy this line", 1, true))
+    end)
+  end)
+
+  describe("Geyser.MiniConsole cursor movement", function()
+    local console
+
+    before_each(function()
+      console = track(Geyser.MiniConsole:new({name = "gmcCursor", x = 0, y = 0, width = 400, height = 200}))
+      console:echo("one\ntwo\nthree\nfour\n")
+      console:moveCursor(0, 0)
+    end)
+
+    it("moveCursorDown walks down the buffer and stops at the end", function()
+      console:moveCursorDown(2)
+      assert.are.equal(2, getLineNumber("gmcCursor"))
+      console:moveCursorDown(500)
+      assert.are.equal(getLastLineNumber("gmcCursor"), getLineNumber("gmcCursor"))
+    end)
+
+    it("moveCursorUp walks back up and stops at the top", function()
+      console:moveCursorEnd()
+      console:moveCursorUp(1)
+      local afterOne = getLineNumber("gmcCursor")
+      console:moveCursorUp(500)
+      assert.are.equal(0, getLineNumber("gmcCursor"))
+      assert.is_true(afterOne > 0)
+    end)
+  end)
+
+  describe("Geyser.MiniConsole link and popup echoes", function()
+    local console
+
+    local function currentLine()
+      console:selectCurrentLine()
+      return console:getCurrentLine()
+    end
+
+    before_each(function()
+      console = track(Geyser.MiniConsole:new({name = "gmcLinks", x = 0, y = 0, width = 400, height = 200}))
+      console:setWrap(60)
+    end)
+
+    -- there is no getter for a link's command or hint, so the text each
+    -- variant lays down is the observable part
+    it("echoes plain, colour, decimal and hex links", function()
+      console:echoLink("plain link", "send('x')", "hint", true)
+      assert.are.equal("plain link", currentLine())
+
+      console:clear()
+      console:cechoLink("<red>colour link", "send('x')", "hint", true)
+      assert.are.equal("colour link", currentLine())
+
+      console:clear()
+      console:dechoLink("<0,255,0>decimal link", "send('x')", "hint", true)
+      assert.are.equal("decimal link", currentLine())
+
+      console:clear()
+      console:hechoLink("#0000ffhex link", "send('x')", "hint", true)
+      assert.are.equal("hex link", currentLine())
+    end)
+
+    it("inserts colour, decimal and hex links at the cursor", function()
+      console:echo("AB\n")
+      console:moveCursor(1, 0)
+      console:cinsertLink("<red>C", "send('x')", "hint", true)
+      console:moveCursor(0, 0)
+      assert.are.equal("ACB", currentLine())
+
+      console:clear()
+      console:echo("AB\n")
+      console:moveCursor(1, 0)
+      console:dinsertLink("<0,255,0>D", "send('x')", "hint", true)
+      console:moveCursor(0, 0)
+      assert.are.equal("ADB", currentLine())
+
+      console:clear()
+      console:echo("AB\n")
+      console:moveCursor(1, 0)
+      console:hinsertLink("#0000ffE", "send('x')", "hint", true)
+      console:moveCursor(0, 0)
+      assert.are.equal("AEB", currentLine())
+    end)
+
+    it("echoes and inserts popups in every colour syntax", function()
+      local commands = {"send('one')", "send('two')"}
+      local hints = {"first", "second"}
+
+      console:echoPopup("plain popup", commands, hints, true)
+      assert.are.equal("plain popup", currentLine())
+
+      console:clear()
+      console:cechoPopup("<red>colour popup", commands, hints, true)
+      assert.are.equal("colour popup", currentLine())
+
+      console:clear()
+      console:dechoPopup("<0,255,0>decimal popup", commands, hints, true)
+      assert.are.equal("decimal popup", currentLine())
+
+      console:clear()
+      console:hechoPopup("#0000ffhex popup", commands, hints, true)
+      assert.are.equal("hex popup", currentLine())
+
+      console:clear()
+      console:echo("AB\n")
+      console:moveCursor(1, 0)
+      console:cinsertPopup("<red>C", commands, hints, true)
+      console:moveCursor(0, 0)
+      assert.are.equal("ACB", currentLine())
+    end)
+
+    it("setLink turns the current selection into a link", function()
+      -- a link's command and hint have no getter, so the observable part is
+      -- that the call is routed at this console and leaves the text alone
+      local setLinkSpy = spy.on(_G, "setLink")
+      finally(function() setLinkSpy:revert() end)
+      console:echo("clickable\n")
+      console:moveCursor(0, 0)
+      console:selectString("clickable", 1)
+      console:setLink("send('x')", "hint")
+      assert.spy(setLinkSpy).was.called_with("gmcLinks", "send('x')", "hint")
+      console:moveCursor(0, 0)
+      assert.are.equal("clickable", currentLine())
+    end)
+  end)
+
+  describe("Geyser.MiniConsole background image", function()
+    -- a Qt resource that ships with every Mudlet, so no fixture file is needed
+    local imagePath = ":/icons/mudlet.png"
+
+    it("remembers the image it was given and forgets it on reset", function()
+      local console = track(Geyser.MiniConsole:new({name = "gmcBackground", x = 0, y = 0, width = 200, height = 100}))
+      assert.is_true(console:setBackgroundImage(imagePath, 2))
+      assert.are.equal(imagePath, console.imgPath)
+      assert.is_true(console:resetBackgroundImage())
+      assert.is_nil(console.imgPath)
+    end)
+  end)
 end)

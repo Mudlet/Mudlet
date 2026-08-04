@@ -965,4 +965,33 @@ describe("Tests TableUtils.lua functions", function()
       assert.spy(echo).was.called_with("2. ) second\n")
     end)
   end)
+
+  describe("Tests the contract of __printTable", function()
+    -- __printTable is documented as printTable's helper but printTable never
+    -- calls it; it is a standalone one pair formatter reachable from scripts,
+    -- writing into the main console at the cursor
+    it("should insert a newline terminated key and value pair", function()
+      local insertText = spy.on(_G, "insertText")
+      finally(function() insertText:revert() end)
+      __printTable("alpha", "one")
+      assert.spy(insertText).was.called(1)
+      assert.spy(insertText).was.called_with("\nkey = alpha value = one")
+    end)
+
+    it("should tostring both the key and the value", function()
+      local insertText = spy.on(_G, "insertText")
+      finally(function() insertText:revert() end)
+      __printTable(3, true)
+      assert.spy(insertText).was.called_with("\nkey = 3 value = true")
+    end)
+
+    it("should land the pair in the main console buffer", function()
+      clearWindow()
+      echo("a line for the cursor to sit on\n")
+      moveCursorEnd()
+      __printTable("visible", "value")
+      local text = table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\n")
+      assert.is_truthy(text:find("key = visible value = value", 1, true))
+    end)
+  end)
 end)
