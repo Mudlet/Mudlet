@@ -69,6 +69,11 @@ local function defer(cleanup)
   cleanups[#cleanups + 1] = cleanup
 end
 
+-- TEMPORARY: tracing to find out where the macOS CI run wedges
+local function trace(what)
+  print("PKGSPEC| " .. what)
+end
+
 local function contains(haystack, needle)
   return type(haystack) == "string" and haystack:find(needle, 1, true) ~= nil
 end
@@ -158,8 +163,10 @@ local function installUntilConfirmed(install, path, isInstalled, what)
     -- an install that is carried out is carried out there and then, so if it is
     -- not listed by the time the call returns it was postponed
     if isInstalled() then
+      trace("installed " .. what)
       return
     end
+    trace("postponed, attempt " .. attempt .. " for " .. what)
     pumpEventLoop(400 * attempt)
   end
   assert.is_true(false, "could not install " .. what)
@@ -195,6 +202,7 @@ end
 -- postponed earlier can be carried out while the wait runs the event loop, and
 -- would otherwise reinstall the package behind the spec's back.
 local function removeFixturePackage(name)
+  trace("uninstall package " .. name)
   for _ = 1, 3 do
     if not packageInstalled(name) then
       return
@@ -208,9 +216,11 @@ local function removeFixturePackage(name)
     pumpEventLoop(200)
   end
   assert.is_false(packageInstalled(name), "the fixture package " .. name .. " reinstalled itself")
+  trace("uninstalled package " .. name)
 end
 
 local function installFixturePackage(name)
+  trace("install package " .. name)
   installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
                         function() return packageInstalled(name) end, "the fixture package " .. name)
 end
@@ -221,6 +231,7 @@ local function withFixturePackage(name)
 end
 
 local function removeFixtureModule(name)
+  trace("uninstall module " .. name)
   for _ = 1, 3 do
     if not moduleInstalled(name) then
       break
@@ -232,12 +243,14 @@ local function removeFixtureModule(name)
   assert.is_false(moduleInstalled(name), "the fixture module " .. name .. " reinstalled itself")
   os.remove(scratchDirectory .. "/" .. name .. ".mpackage")
   lfs.rmdir(scratchDirectory)
+  trace("uninstalled module " .. name)
 end
 
 -- A module is installed from a copy inside the profile, never from the
 -- repository: with sync enabled a profile save rewrites the module's own
 -- .mpackage in place, which would corrupt the committed fixture.
 local function installFixtureModule(name)
+  trace("install module " .. name)
   lfs.mkdir(scratchDirectory)
   local path = scratchDirectory .. "/" .. name .. ".mpackage"
   copyFile(fixtureDirectory .. "/" .. name .. ".mpackage", path)
