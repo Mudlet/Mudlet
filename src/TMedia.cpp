@@ -588,6 +588,25 @@ int TMedia::playersHoldingSource() const
            + countHeld(mAPIVideoList);
 }
 
+// The cleanup that releases a stopped player's source runs one event-loop turn
+// after the stop (see handlePlayerPlaybackStateChanged), so a player reused for
+// a new play request can still hold the file it just finished. Replaying that
+// same file leaves QMediaPlayer with its media already loaded, so play() starts
+// it synchronously, raising sysMediaStarted re-entrantly inside the script call
+// that started it. Finish the deferred cleanup here instead, so every fresh
+// play request loads its media asynchronously, as it did when the cleanup ran
+// at stop time.
+void TMedia::releaseStoppedSource(const std::shared_ptr<TMediaPlayer>& player)
+{
+    if (!player || !player->mediaPlayer()) {
+        return;
+    }
+
+    if (player->getPlaybackState() == QMediaPlayer::StoppedState && !player->mediaPlayer()->source().isEmpty()) {
+        player->mediaPlayer()->setSource(QUrl());
+    }
+}
+
 void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state)
 {
     TMediaData mediaData{};
@@ -1658,6 +1677,7 @@ void TMedia::play(TMediaData& mediaData)
         }
 
         const QUrl mediaSource = mediaData.mediaInput() == TMediaData::MediaInputFile ? QUrl::fromLocalFile(absolutePathFileName) : QUrl(absolutePathFileName);
+        releaseStoppedSource(pPlayer);
         pPlayer->noteClaimed();
         pPlayer->mediaPlayer()->setSource(mediaSource);
     } else {
@@ -1725,6 +1745,7 @@ void TMedia::play(TMediaData& mediaData)
 
         playlist->setCurrentIndex(0);
         pPlayer->setPlaylist(playlist);
+        releaseStoppedSource(pPlayer);
         pPlayer->noteClaimed();
         pPlayer->mediaPlayer()->setSource(playlist->currentMedia());
     }
