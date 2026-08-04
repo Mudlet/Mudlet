@@ -118,7 +118,10 @@ int TLuaInterpreter::getDiscordDetail(lua_State* L)
         return warnArgumentValue(L, __func__, result.second);
     }
 
-    lua_pushfstring(L, pMudlet->mDiscord.getDetailText(&host).toUtf8().constData());
+    // Pushed as data, never as a format string: presence text can come from the
+    // game server, and a '%' in it would otherwise be taken as a printf
+    // specifier. The same holds for the five other Discord text getters below.
+    lua_pushstring(L, pMudlet->mDiscord.getDetailText(&host).toUtf8().constData());
     return 1;
 }
 
@@ -133,7 +136,7 @@ int TLuaInterpreter::getDiscordLargeIcon(lua_State* L)
         return warnArgumentValue(L, __func__, result.second);
     }
 
-    lua_pushfstring(L, pMudlet->mDiscord.getLargeImage(&host).toUtf8().constData());
+    lua_pushstring(L, pMudlet->mDiscord.getLargeImage(&host).toUtf8().constData());
     return 1;
 }
 
@@ -148,7 +151,7 @@ int TLuaInterpreter::getDiscordLargeIconText(lua_State* L)
         return warnArgumentValue(L, __func__, result.second);
     }
 
-    lua_pushfstring(L, pMudlet->mDiscord.getLargeImageText(&host).toUtf8().constData());
+    lua_pushstring(L, pMudlet->mDiscord.getLargeImageText(&host).toUtf8().constData());
     return 1;
 }
 
@@ -180,7 +183,7 @@ int TLuaInterpreter::getDiscordSmallIcon(lua_State* L)
         return warnArgumentValue(L, __func__, result.second);
     }
 
-    lua_pushfstring(L, pMudlet->mDiscord.getSmallImage(&host).toUtf8().constData());
+    lua_pushstring(L, pMudlet->mDiscord.getSmallImage(&host).toUtf8().constData());
     return 1;
 }
 
@@ -195,7 +198,7 @@ int TLuaInterpreter::getDiscordSmallIconText(lua_State* L)
         return warnArgumentValue(L, __func__, result.second);
     }
 
-    lua_pushfstring(L, pMudlet->mDiscord.getSmallImageText(&host).toUtf8().constData());
+    lua_pushstring(L, pMudlet->mDiscord.getSmallImageText(&host).toUtf8().constData());
     return 1;
 }
 
@@ -210,7 +213,7 @@ int TLuaInterpreter::getDiscordState(lua_State* L)
         return warnArgumentValue(L, __func__, result.second);
     }
 
-    lua_pushfstring(L, pMudlet->mDiscord.getStateText(&host).toUtf8().constData());
+    lua_pushstring(L, pMudlet->mDiscord.getStateText(&host).toUtf8().constData());
     return 1;
 }
 
