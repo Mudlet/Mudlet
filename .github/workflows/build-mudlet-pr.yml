@@ -520,9 +520,40 @@ jobs:
         echo "MUDLET_TEST_HTTP_PORT=${port}" >> "${GITHUB_ENV}"
         echo "fixture HTTP server ready on 127.0.0.1:${port}"
 
+    - name: (Linux) Start fake Discord IPC server for Lua tests
+      if: matrix.run_tests == 'true' && runner.os == 'Linux'
+      shell: bash
+      run: |
+        # A short runtime directory of its own: the whole discord-ipc-0 socket
+        # path has to fit into sockaddr_un's 108 character sun_path, and
+        # runner.temp does not leave room for it.
+        runtime_dir="$(mktemp -d /tmp/mdxdg-XXXX)"
+        ready_file="${{runner.temp}}/mudlet-discord-fixture-ready"
+        rm -f "${ready_file}"
+        nohup python3 "${{github.workspace}}/CI/discord-ipc-fixture.py" \
+          --runtime-dir "${runtime_dir}" \
+          --capture-file "${{runner.temp}}/mudlet-discord-frames.jsonl" \
+          --ready-file "${ready_file}" > "${{runner.temp}}/discord-ipc-fixture.log" 2>&1 &
+        for _ in $(seq 1 50); do
+          [ -s "${ready_file}" ] && break
+          sleep 0.1
+        done
+        if [ ! -s "${ready_file}" ] || [ ! -S "${runtime_dir}/discord-ipc-0" ]; then
+          echo "fake Discord IPC server failed to start" >&2
+          cat "${{runner.temp}}/discord-ipc-fixture.log" 2>/dev/null || true
+          exit 1
+        fi
+        cat "${ready_file}" >> "${GITHUB_ENV}"
+        # Prepended rather than replacing: the Qt install action puts Qt's own
+        # libraries on this path.
+        echo "MUDLET_TEST_DISCORD_LIB_PATH=${{github.workspace}}/3rdparty/discord/rpc/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" >> "${GITHUB_ENV}"
+        echo "fake Discord IPC server ready in ${runtime_dir}"
+
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
-      timeout-minutes: 1
+      # Longer than the other platforms': this leg also drives the real
+      # discord-rpc library, whose reconnects happen in wall-clock time.
+      timeout-minutes: 3
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
@@ -534,6 +565,12 @@ jobs:
         # environment quirk. macOS runners start no player at all, so the gate
         # stays off there.
         MUDLET_TEST_REQUIRE_MEDIA: 1
+        # The fake Discord IPC server's socket lives in this runtime directory,
+        # and the bundled discord-rpc library is only reachable through this
+        # library path - without both the Discord specs have nothing to talk to.
+        MUDLET_TEST_REQUIRE_DISCORD: 1
+        XDG_RUNTIME_DIR: ${{env.MUDLET_TEST_DISCORD_RUNTIME_DIR}}
+        LD_LIBRARY_PATH: ${{env.MUDLET_TEST_DISCORD_LIB_PATH}}
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
@@ -553,6 +590,15 @@ jobs:
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: detect_leaks=0
+
+    - name: (Linux) Show the captured Discord frames on failure
+      if: failure() && matrix.run_tests == 'true' && runner.os == 'Linux'
+      shell: bash
+      run: |
+        echo "--- fake Discord IPC server log ---"
+        cat "${{runner.temp}}/discord-ipc-fixture.log" 2>/dev/null || true
+        echo "--- frames it captured ---"
+        cat "${{runner.temp}}/mudlet-discord-frames.jsonl" 2>/dev/null || true
 
     - name: Passed Lua tests
       if: matrix.run_tests == 'true'
