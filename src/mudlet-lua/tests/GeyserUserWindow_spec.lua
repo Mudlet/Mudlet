@@ -1,14 +1,19 @@
 -- A Geyser.UserWindow is a Geyser.MiniConsole living in a dock widget of its
 -- own. getWindowGeometry reports that dock, which is what move()/resize() drive,
--- while getUserWindowSize reports the usable area inside it. That area is
--- always shorter than the dock, which spends pixels on its title bar, but it
--- need not be narrower: how wide a floating dock's frame is comes from the
--- style, and can be nothing at all. Neither difference is hardcoded here.
+-- while getUserWindowSize reports the usable area inside it. How much of the
+-- dock that area leaves out is a platform matter: Qt draws a floating dock's
+-- title bar and frame itself on X11 and Wayland, so there they are taken out of
+-- the usable area, while Windows and macOS let the window manager decorate the
+-- dock and so draw them outside it, leaving the whole dock usable. The usable
+-- area is therefore never bigger than the dock, but only strictly shorter than
+-- it where Qt draws the title bar. No size difference is hardcoded here.
 --
 -- Geyser gives every user window an extra root container named
 -- "<name>Container" whose size tracks the real user window; the user window is
 -- that container's only child, which is why it is not in Geyser.windowList
 -- itself.
+local dockDecoratedByWindowManager = getOS() == "windows" or getOS() == "mac"
+
 local function geometry(name)
   local x, y, width, height = getWindowGeometry(name)
   return {x = x, y = y, width = width, height = height}
@@ -100,10 +105,19 @@ describe("Tests functionality of Geyser.UserWindow", function()
       track(Geyser.Label:new({name = "guwRootChild", x = 0, y = 0, width = "100%", height = "100%"}, userWindow))
       local usableWidth, usableHeight = getUserWindowSize("guwRoot")
       assert.are.same({x = 0, y = 0, width = usableWidth, height = usableHeight}, geometry("guwRootChild"))
-      -- the usable area is inside the dock, so never bigger than it but still
-      -- real; the title bar always costs height, the frame need not cost width
-      assert.is_true(usableWidth > 0 and usableWidth <= 300)
-      assert.is_true(usableHeight > 0 and usableHeight < 200)
+      -- the dock is the size it was asked for, and the usable area is real and
+      -- inside it - by however much this platform's dock decoration costs
+      local dock = geometry("guwRoot")
+      assert.are.same({x = 10, y = 10, width = 300, height = 200}, dock)
+      assert.is_true(usableWidth > 0 and usableWidth <= dock.width,
+                     string.format("usable width %d is not inside the dock width %d", usableWidth, dock.width))
+      assert.is_true(usableHeight > 0 and usableHeight <= dock.height,
+                     string.format("usable height %d is not inside the dock height %d", usableHeight, dock.height))
+      if not dockDecoratedByWindowManager then
+        assert.is_true(usableHeight < dock.height,
+                       string.format("Qt draws the dock title bar here, so it must cost height: usable %d, dock %d",
+                                     usableHeight, dock.height))
+      end
     end)
 
     it("registers itself as a parent window so children can be put in it", function()
@@ -126,10 +140,16 @@ describe("Tests functionality of Geyser.UserWindow", function()
       assert.are.equal(40, getWindowWrap("guwFont"))
     end)
 
+    -- Ubuntu Mono is asked for rather than a system font like Courier New:
+    -- Mudlet ships and loads it itself, so it is there to be had on every
+    -- platform, where a bare Linux CI image has no Courier New and Qt quietly
+    -- substitutes the nearest match. It is also not the console default
+    -- (Bitstream Vera Sans Mono), so a font that never reached the widget still
+    -- fails this.
     it("takes the font family it was given", function()
-      local userWindow = track(Geyser.UserWindow:new({name = "guwFamily", x = 10, y = 10, width = 250, height = 180, font = "Courier New"}))
-      assert.are.equal("Courier New", getFont("guwFamily"))
-      assert.are.equal("Courier New", userWindow.font)
+      local userWindow = track(Geyser.UserWindow:new({name = "guwFamily", x = 10, y = 10, width = 250, height = 180, font = "Ubuntu Mono"}))
+      assert.are.equal("Ubuntu Mono", getFont("guwFamily"))
+      assert.are.equal("Ubuntu Mono", userWindow.font)
     end)
 
     it("derives an auto wrap from its usable width", function()
