@@ -245,7 +245,11 @@ function table.n_collect(tbl, func)
   assert(func_type == "function", string.format("table.n_collect: bad argument #2 type (function to run against each item in tbl as function expected, got %s)", func_type))
   local matches = {}
   for key,value in pairs(tbl) do
-    if func(value) == true and not table.contains(matches, value) then
+    -- table.contains matches keys and nested values too, so a value equal to
+    -- an index already in `matches` looked like a duplicate. table.index_of
+    -- compares by value over ipairs, which is the semantics a list of unique
+    -- values needs, and is what the sibling table.n_matches already uses.
+    if func(value) == true and not table.index_of(matches, value) then
       table.insert(matches, value)
     end
   end
