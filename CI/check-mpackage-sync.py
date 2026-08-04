@@ -21,26 +21,24 @@ import sys
 import zipfile
 from pathlib import Path
 
-# packages built from the loose sources next to them - the two must agree
-SOURCED_PACKAGES = [
-    "src/mudlet-lua/lua/base-ui/mudlet-base-ui.mpackage",
-    "src/mudlet-lua/lua/generic-mapper/generic_mapper.mpackage",
-    "src/mudlet-lua/lua/gui-drop/gui-drop.mpackage",
-]
+# every default package lives in its own directory under src/packages, built
+# from the loose sources next to it - the archive and those sources must agree.
+# mpkg is the exception: it is maintained upstream in the package repository and
+# synced in wholesale by update-3rdparty.yml, so it has no sources of ours.
+PACKAGES = sorted(str(path) for path in Path("src/packages").glob("*/*.mpackage"))
 
-# packages the repository syncs weekly, where mpkg needs a version bump to
-# offer the update - see update-core-packages.yml in the package repository
+# packages the package repository syncs weekly, where mpkg needs a version bump
+# to offer the update - see update-core-packages.yml over there
 PUBLISHED_PACKAGES = [
-    "src/deleteOldProfiles.mpackage",
-    "src/echo.mpackage",
-    "src/enable-accessibility.mpackage",
-    "src/mudlet-lua/lua/base-ui/mudlet-base-ui.mpackage",
-    "src/mudlet-lua/lua/generic-mapper/generic_mapper.mpackage",
-    "src/run-lua-code.mpackage",
+    "src/packages/deleteOldProfiles/deleteOldProfiles.mpackage",
+    "src/packages/echo/echo.mpackage",
+    "src/packages/enable-accessibility/enable-accessibility.mpackage",
+    "src/packages/generic_mapper/generic_mapper.mpackage",
+    "src/packages/mudlet-base-ui/mudlet-base-ui.mpackage",
+    "src/packages/run-lua-code/run-lua-code.mpackage",
 ]
 
 errors = []
-warnings = []
 
 
 def contents(archive):
@@ -71,16 +69,12 @@ def at_base_ref(path, base_ref):
     return contents(io.BytesIO(result.stdout))
 
 
-def check_sources_match(path, members, enforced):
+def check_sources_match(path, members):
     """Every member with a file of the same name beside the archive must match it."""
     for name, packaged in members.items():
         source = Path(path).parent / name
-        if not source.is_file():
-            continue
-        if source.read_bytes() == packaged:
-            continue
-        complaint = f"{path} does not match {source} - rebuild the archive after editing the source"
-        (errors if enforced else warnings).append(complaint)
+        if source.is_file() and source.read_bytes() != packaged:
+            errors.append(f"{path} does not match {source} - rebuild the archive after editing the source")
 
 
 def check_version_bumped(path, members, base_ref):
@@ -100,27 +94,25 @@ def main():
     parser.add_argument("--base-ref", help="branch to compare against, e.g. origin/development")
     arguments = parser.parse_args()
 
-    for path in sorted(set(SOURCED_PACKAGES) | set(PUBLISHED_PACKAGES)):
-        if not Path(path).is_file():
-            errors.append(f"{path} is listed in {__file__} but does not exist")
-            continue
+    for path in PUBLISHED_PACKAGES:
+        if path not in PACKAGES:
+            errors.append(f"{path} is listed as published but is not in src/packages")
 
+    for path in PACKAGES:
         members = contents(path)
-        check_sources_match(path, members, enforced=path in SOURCED_PACKAGES)
+        check_sources_match(path, members)
         if arguments.base_ref and path in PUBLISHED_PACKAGES:
             check_version_bumped(path, members, arguments.base_ref)
 
-    for warning in warnings:
-        print(f"warning: {warning}")
     for error in errors:
         print(f"error: {error}")
 
     if errors:
-        print(f"\n{len(errors)} problem(s) found. Rebuild an archive with:")
-        print("  cd <package directory> && zip -r <name>.mpackage config.lua <name>.xml .mudlet")
+        print(f"\n{len(errors)} problem(s) found. Rebuild an archive from its sources with:")
+        print("  cd src/packages/<name> && zip <name>.mpackage config.lua <name>.xml")
         return 1
 
-    print("mpackage archives match their sources.")
+    print(f"{len(PACKAGES)} mpackage archives match their sources.")
     return 0
 
 
