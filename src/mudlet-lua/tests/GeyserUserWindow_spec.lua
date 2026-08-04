@@ -1,8 +1,9 @@
 -- A Geyser.UserWindow is a Geyser.MiniConsole living in a dock widget of its
 -- own. getWindowGeometry reports that dock, which is what move()/resize() drive,
--- while getUserWindowSize reports the usable area inside it - always a little
--- smaller, because the dock spends pixels on its frame and title bar. The exact
--- difference is a style detail, so it is never hardcoded here.
+-- while getUserWindowSize reports the usable area inside it. That area is
+-- always shorter than the dock, which spends pixels on its title bar, but it
+-- need not be narrower: how wide a floating dock's frame is comes from the
+-- style, and can be nothing at all. Neither difference is hardcoded here.
 --
 -- Geyser gives every user window an extra root container named
 -- "<name>Container" whose size tracks the real user window; the user window is
@@ -93,11 +94,15 @@ describe("Tests functionality of Geyser.UserWindow", function()
       -- the user window belongs to that container, not to the root window list
       assert.is_nil(Geyser.windowList.guwRoot)
       assert.are.equal(userWindow, container.windowList.guwRoot)
+      -- that the container really is sized to the user window is read off a
+      -- child widget filling it, rather than off the same getter the container
+      -- was given as its own get_width/get_height
+      track(Geyser.Label:new({name = "guwRootChild", x = 0, y = 0, width = "100%", height = "100%"}, userWindow))
       local usableWidth, usableHeight = getUserWindowSize("guwRoot")
-      assert.are.equal(usableWidth, container.get_width())
-      assert.are.equal(usableHeight, container.get_height())
-      -- the usable area is inside the dock, so smaller than it but still real
-      assert.is_true(usableWidth > 0 and usableWidth < 300)
+      assert.are.same({x = 0, y = 0, width = usableWidth, height = usableHeight}, geometry("guwRootChild"))
+      -- the usable area is inside the dock, so never bigger than it but still
+      -- real; the title bar always costs height, the frame need not cost width
+      assert.is_true(usableWidth > 0 and usableWidth <= 300)
       assert.is_true(usableHeight > 0 and usableHeight < 200)
     end)
 
@@ -119,6 +124,40 @@ describe("Tests functionality of Geyser.UserWindow", function()
       track(Geyser.UserWindow:new({name = "guwFont", x = 10, y = 10, width = 250, height = 180, fontSize = 12, wrapAt = 40}))
       assert.are.equal(12, getFontSize("guwFont"))
       assert.are.equal(40, getWindowWrap("guwFont"))
+    end)
+
+    it("takes the font family it was given", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwFamily", x = 10, y = 10, width = 250, height = 180, font = "Courier New"}))
+      assert.are.equal("Courier New", getFont("guwFamily"))
+      assert.are.equal("Courier New", userWindow.font)
+    end)
+
+    it("derives an auto wrap from its usable width", function()
+      track(Geyser.UserWindow:new({name = "guwAutoWrap", x = 10, y = 10, width = 300, height = 200, wrapAt = "auto"}))
+      local usableWidth = getUserWindowSize("guwAutoWrap")
+      local charWidth = calcFontSize("guwAutoWrap")
+      assert.are.equal(math.floor(usableWidth / charWidth), getWindowWrap("guwAutoWrap"))
+    end)
+
+    -- Mudlet cannot report whether the scroll bar is on screen, but
+    -- Geyser.MiniConsole:resetAutoWrap keeps 15 pixels clear for one when it
+    -- is, so an auto wrapping console wraps that much earlier - which is
+    -- readable, and is what proves the constraint reached the widget.
+    it("keeps room for the scroll bar it was asked for when wrapping", function()
+      track(Geyser.UserWindow:new({name = "guwScrollBar", x = 10, y = 10, width = 300, height = 200, wrapAt = "auto", scrollBar = true}))
+      local usableWidth = getUserWindowSize("guwScrollBar")
+      local charWidth = calcFontSize("guwScrollBar")
+      assert.are.equal(math.floor((usableWidth - 15) / charWidth), getWindowWrap("guwScrollBar"))
+    end)
+
+    it("ignores the geometry it was given when it is asked to start docked", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwDocked", x = 10, y = 10, width = 300, height = 200, docked = true}))
+      -- a docked window keeps the dock position it was opened with instead of
+      -- being floated, and the dock area decides its geometry, not the
+      -- constraints, so only the position it kept is asserted here
+      assert.are.equal("r", userWindow.dockPosition)
+      assert.are.equal("userwindow", windowType("guwDocked"))
+      assert.is_true(windowVisible("guwDocked"))
     end)
 
     it("new2 marks the user window as using add2", function()
@@ -196,6 +235,20 @@ describe("Tests functionality of Geyser.UserWindow", function()
       assert.are.same({x = 0, y = 0, width = 80, height = 20}, geometry("guwCmdLine"))
     end)
 
+    it("holds a scroll box, which becomes a parent window inside it", function()
+      local scrollBox = track(Geyser.ScrollBox:new({name = "guwScrollBox", x = 0, y = 0, width = "100%", height = "50%"}, userWindow))
+      assert.are.equal("scrollbox", windowType("guwScrollBox"))
+      -- the scroll box takes over as parent window, remembering the user window
+      assert.are.equal("guwScrollBox", scrollBox.windowname)
+      assert.are.equal("guwHolder", scrollBox.parentWindowName)
+      local usableWidth, usableHeight = getUserWindowSize("guwHolder")
+      assert.are.same({x = 0, y = 0, width = usableWidth, height = math.floor(usableHeight / 2)}, geometry("guwScrollBox"))
+      -- and a child of the scroll box is placed in the scroll box's own space
+      local label = track(Geyser.Label:new({name = "guwScrollBoxLabel", x = 0, y = 0, width = "50%", height = "100%"}, scrollBox))
+      assert.are.equal("guwScrollBox", label.windowname)
+      assert.are.equal(math.floor(usableWidth / 2), geometry("guwScrollBoxLabel").width)
+    end)
+
     it("deletes its children with itself", function()
       track(Geyser.Label:new({name = "guwDoomedLabel", x = 0, y = 0, width = 20, height = 20}, userWindow))
       userWindow:delete()
@@ -242,12 +295,16 @@ describe("Tests functionality of Geyser.UserWindow", function()
   pending("Geyser.UserWindow stays hidden when its root container is shown - Geyser.UserWindow:show() drops the auto flag")
 
   describe("Geyser.UserWindow:setTitle/resetTitle", function()
+    -- setUserWindowTitle answers nil and a message rather than raising when it
+    -- cannot find the window, so the return value is what says the title
+    -- reached the right dock; without it a wrapper naming the wrong window
+    -- would still leave titleText looking right.
     it("remembers the title it was given, and empties it again on reset", function()
       local userWindow = track(Geyser.UserWindow:new({name = "guwTitle", x = 10, y = 20, width = 200, height = 150, titleText = "My window"}))
       assert.are.equal("My window", userWindow.titleText)
-      userWindow:setTitle("Renamed")
+      assert.is_true(userWindow:setTitle("Renamed"))
       assert.are.equal("Renamed", userWindow.titleText)
-      userWindow:resetTitle()
+      assert.is_true(userWindow:resetTitle())
       assert.are.equal("", userWindow.titleText)
     end)
 
@@ -274,9 +331,30 @@ describe("Tests functionality of Geyser.UserWindow", function()
 
   pending("Geyser.UserWindow:setStyleSheet applies the stylesheet to the dock - needs a getUserWindowStyleSheet getter")
 
-  pending("Geyser.UserWindow scrollBar constraint shows the console's scroll bar - scroll bar visibility is not readable from Lua, needs a scroll bar getter")
+  pending("Geyser.UserWindow scrollBar constraint puts a scroll bar on screen - the wrap it leaves room for is covered above, but the scroll bar's own visibility is not readable from Lua and needs a scroll bar getter")
 
-  pending("Geyser.UserWindow:setDockPosition/enableAutoDock/disableAutoDock - which edge a user window is docked to, and whether it docks by itself, are not readable from Lua")
+  describe("Geyser.UserWindow:enableAutoDock/disableAutoDock", function()
+    it("turns automatic docking off and on again without disturbing the window", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwAutoDock", x = 10, y = 20, width = 300, height = 200}))
+      assert.is_true(userWindow:disableAutoDock())
+      assert.is_false(userWindow.autoDock)
+      -- both of these reopen the window, so the dock must survive them intact
+      assert.is_true(windowVisible("guwAutoDock"))
+      assert.are.same({x = 10, y = 20, width = 300, height = 200}, geometry("guwAutoDock"))
+      assert.is_true(userWindow:enableAutoDock())
+      assert.is_true(userWindow.autoDock)
+      assert.is_true(windowVisible("guwAutoDock"))
+      assert.are.same({x = 10, y = 20, width = 300, height = 200}, geometry("guwAutoDock"))
+    end)
+  end)
+
+  pending("Geyser.UserWindow:setDockPosition - which edge a user window ended up docked to, and whether it docks by itself when dragged, are not readable from Lua")
+
+  -- restoreLayout = true makes the constructor reopen the window from the
+  -- layout saved in the profile and skip the move/resize it was given. Running
+  -- that here would write this file's window layouts into the shared self-test
+  -- profile, so repeat runs against the same profile would stop matching.
+  pending("Geyser.UserWindow restoreLayout reopens the window where it was last left")
 
   describe("Geyser.UserWindow:delete", function()
     it("closes the dock and unregisters the user window", function()

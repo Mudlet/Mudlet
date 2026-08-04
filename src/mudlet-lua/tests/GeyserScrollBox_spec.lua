@@ -127,6 +127,17 @@ describe("Tests functionality of Geyser.ScrollBox", function()
       assert.are.equal("gsbHolder", label.windowname)
       assert.are.same({x = 50, y = 0, width = 50, height = 75}, geometry("gsbInnerLabel"))
     end)
+
+    it("nests a scroll box inside a scroll box, each its own parent window", function()
+      local inner = track(Geyser.ScrollBox:new({name = "gsbNestedBox", x = 10, y = 10, width = "50%", height = "50%"}, scrollBox))
+      assert.are.equal("gsbNestedBox", inner.windowname)
+      assert.are.equal("gsbHolder", inner.parentWindowName)
+      assert.are.same({x = 10, y = 10, width = 100, height = 75}, geometry("gsbNestedBox"))
+      -- a child of the inner box is placed in the inner box's own space again
+      local label = track(Geyser.Label:new({name = "gsbNestedLabel", x = "50%", y = 0, width = "50%", height = "100%"}, inner))
+      assert.are.equal("gsbNestedBox", label.windowname)
+      assert.are.same({x = 50, y = 0, width = 50, height = 75}, geometry("gsbNestedLabel"))
+    end)
   end)
 
   describe("Geyser.ScrollBox:hide/show", function()
@@ -166,7 +177,36 @@ describe("Tests functionality of Geyser.ScrollBox", function()
     end)
   end)
 
-  pending("Geyser.ScrollBox shows a scroll bar once a child overflows it - scroll bar visibility is not readable from Lua, needs a getScrollBoxScrollBars getter")
+  -- Geyser:add2 runs from inside Geyser.Container:new, so the hide it asks for
+  -- lands before createScrollBox has made the widget. Every other Geyser widget
+  -- constructor hides itself again afterwards (GeyserCommandLine.lua:89,
+  -- GeyserMiniConsole.lua:605, GeyserLabel.lua:998, GeyserTextEdit.lua:70,
+  -- GeyserMapper.lua:133); Geyser.ScrollBox:new is the one that does not, so it
+  -- comes up on screen with auto_hidden already true. A Geyser.MiniConsole
+  -- built the same way stays hidden, which is the behaviour this asks for.
+  pending("Geyser.ScrollBox created in a hidden add2 container stays hidden - Geyser.ScrollBox:new never re-hides the widget it just created")
+
+  describe("Geyser.ScrollBox scroll bars", function()
+    -- A scroll box scrolls by being a QScrollArea (TScrollBox.h), not by being
+    -- a console, so Mudlet's scroll bar API cannot reach it: Host::findConsole
+    -- only looks through the sub-console map, and a scroll box is not in it.
+    -- Geyser.ScrollBox descends from Geyser.Window rather than
+    -- Geyser.MiniConsole, so it offers no scroll bar method of its own either.
+    -- Its scroll bars are Qt's, and appear on their own when a child overflows.
+    it("is not reachable by the console scroll bar functions", function()
+      track(Geyser.ScrollBox:new({name = "gsbScrollBar", x = 0, y = 0, width = 200, height = 150}))
+      local enabled, enableMessage = enableScrollBar("gsbScrollBar")
+      assert.is_nil(enabled)
+      assert.is_truthy(enableMessage:find("gsbScrollBar", 1, true))
+      local disabled, disableMessage = disableScrollBar("gsbScrollBar")
+      assert.is_nil(disabled)
+      assert.is_truthy(disableMessage:find("gsbScrollBar", 1, true))
+      assert.is_nil(Geyser.ScrollBox.enableScrollBar)
+      assert.is_nil(Geyser.ScrollBox.disableScrollBar)
+    end)
+  end)
+
+  pending("Geyser.ScrollBox shows Qt's own scroll bar once a child overflows it - a scroll box is not a console, so no console scroll bar getter can report it; this needs a scroll box specific getter")
 
   pending("Geyser.ScrollBox:setStyleSheet - the method is commented out in GeyserScrollBox.lua because Mudlet has no setScrollBoxStyleSheet primitive to call")
 

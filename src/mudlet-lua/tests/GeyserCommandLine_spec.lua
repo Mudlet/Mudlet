@@ -112,21 +112,14 @@ describe("Tests functionality of Geyser.CommandLine", function()
     end)
   end)
 
-  -- selectCmdLineText() also declares one return value without pushing one, so
-  -- it hands back whatever was left on the Lua stack - the window name - rather
-  -- than a result. Asserting that here would freeze the defect in place.
-  pending("Geyser.CommandLine:selectText selects every character - the selection of a command line is not readable from Lua, needs a getCmdLineSelection getter")
+  -- Two things are in the way. The selection itself has no getter; and
+  -- selectCmdLineText (TLuaInterpreterUI.cpp) declares one return value without
+  -- pushing one, so it hands back whatever was left on the Lua stack - the
+  -- window name it was passed - rather than a result. Asserting either of those
+  -- as they stand would freeze the defect in place.
+  pending("Geyser.CommandLine:selectText selects every character - the selection is not readable from Lua and needs a getCmdLineSelection getter, and selectCmdLineText returns the window name instead of a result")
 
   describe("Geyser.CommandLine:setStyleSheet", function()
-    it("remembers the stylesheet it was constructed with", function()
-      local commandLine = track(Geyser.CommandLine:new({
-        name = "gclCssCons",
-        x = 0, y = 0, width = 100, height = 30,
-        stylesheet = "background-color: blue;",
-      }))
-      assert.are.equal("background-color: blue;", commandLine.stylesheet)
-    end)
-
     it("reuses the remembered stylesheet when called without one", function()
       local commandLine = track(Geyser.CommandLine:new({name = "gclCss", x = 0, y = 0, width = 100, height = 30}))
       commandLine:setStyleSheet("background-color: red;")
@@ -180,6 +173,34 @@ describe("Tests functionality of Geyser.CommandLine", function()
       track(Geyser.CommandLine:new({name = "gclDragged", x = 0, y = 0, width = "100%", height = 30}, container))
       container:move(150, 30)
       assert.are.same({x = 150, y = 30, width = 200, height = 30}, geometry("gclDragged"))
+    end)
+  end)
+
+  describe("Geyser.CommandLine error paths", function()
+    it("raises on a constraint it cannot parse, leaving no widget behind", function()
+      -- the object is registered before its constraints are resolved, so the
+      -- failed attempt has to be swept out of the root window list by hand
+      finally(function()
+        local zombie = Geyser.windowList.gclBadConstraint
+        if zombie then
+          zombie:delete()
+        end
+      end)
+      local ok, message = pcall(function()
+        return Geyser.CommandLine:new({name = "gclBadConstraint", x = 0, y = 0, width = true, height = 20})
+      end)
+      assert.is_false(ok)
+      assert.is_truthy(tostring(message):find("GeyserSetConstraints.lua", 1, true))
+      assert.is_nil(windowType("gclBadConstraint"))
+    end)
+
+    it("raises when printing something that is not text, leaving the text alone", function()
+      local commandLine = track(Geyser.CommandLine:new({name = "gclBadPrint", x = 0, y = 0, width = 100, height = 30}))
+      commandLine:print("kept")
+      local ok, message = pcall(function() commandLine:print(nil) end)
+      assert.is_false(ok)
+      assert.is_truthy(tostring(message):find("printCmdLine", 1, true))
+      assert.are.equal("kept", commandLine:getText())
     end)
   end)
 

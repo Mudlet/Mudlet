@@ -7,13 +7,21 @@
 -- Every mapper here is created with embedded = false or a dock position, which
 -- is the map widget rather than a mapper drawn into the main console: see the
 -- pending below for why the embedded form cannot be exercised in this suite.
+--
+-- Opening the map widget is a one way door for the profile - Host::closeMapWidget
+-- only hides it - and busted runs its files in sorted order, so this file is
+-- now the first to open it, ahead of Mapper_spec.lua. That costs Mapper_spec's
+-- opening block its "registered before the widget was opened" premise; nothing
+-- there fails, but the deferred registration path it meant to cover is no
+-- longer reached from here on. Restoring it means moving that block into an
+-- earlier sorting file of its own.
 
 -- Reports whether the map widget is currently on screen, without leaving it in
 -- a different state than it was found in.
 local function mapWidgetVisible()
   local closed = closeMapWidget()
   if closed then
-    openMapWidget()
+    assert.is_true(openMapWidget(), "could not put the map widget back after probing it")
     return true
   end
   return false
@@ -156,6 +164,43 @@ describe("Tests functionality of Geyser.Mapper", function()
     end)
   end)
 
+  describe("Geyser.Mapper:setDockPosition", function()
+    it("puts a closed map widget back on screen", function()
+      local mapper = track(Geyser.Mapper:new({name = "gmpDockOpen", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      mapper:hide()
+      assert.is_false(mapWidgetVisible())
+      assert.is_true(mapper:setDockPosition("f"))
+      assert.is_true(mapWidgetVisible())
+    end)
+
+    it("refuses a dock position that is not one of the five", function()
+      local mapper = track(Geyser.Mapper:new({name = "gmpDockBad", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      local result, message = mapper:setDockPosition("nonsense")
+      assert.is_nil(result)
+      assert.is_string(message)
+      assert.is_truthy(message:find("not available", 1, true))
+      -- refusing is not fatal, the widget stays where it was
+      assert.is_true(mapWidgetVisible())
+    end)
+  end)
+
+  describe("Geyser.Mapper:reposition", function()
+    it("leaves the map widget alone when the main window is resized", function()
+      local mapper = track(Geyser.Mapper:new({name = "gmpReposition", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      local mainWidth, mainHeight = getMainWindowSize()
+      -- a mapper has no window for moveWindow/resizeWindow to act on, which is
+      -- why it overrides reposition to do nothing unless it is embedded. This
+      -- is a regression guard: the constraints cannot move today, so the
+      -- load-bearing assertion is that the widget is still on screen after.
+      GeyserReposition("sysWindowResizeEvent", mainWidth, mainHeight)
+      assert.are.equal(10, mapper:get_x())
+      assert.are.equal(20, mapper:get_y())
+      assert.are.equal(300, mapper:get_width())
+      assert.are.equal(200, mapper:get_height())
+      assert.is_true(mapWidgetVisible())
+    end)
+  end)
+
   describe("Geyser.Mapper:setTitle/resetTitle", function()
     it("remembers the title it was given, and empties it again on reset", function()
       local mapper = track(Geyser.Mapper:new({
@@ -165,9 +210,12 @@ describe("Tests functionality of Geyser.Mapper", function()
         titleText = "My map",
       }))
       assert.are.equal("My map", mapper.titleText)
-      mapper:setTitle("Renamed")
+      -- setMapWindowTitle answers nil and a message rather than raising when
+      -- there is no map window, so the return value is what says the title
+      -- reached one; without it titleText alone would look right regardless
+      assert.is_true(mapper:setTitle("Renamed"))
       assert.are.equal("Renamed", mapper.titleText)
-      mapper:resetTitle()
+      assert.is_true(mapper:resetTitle())
       assert.are.equal("", mapper.titleText)
     end)
 
@@ -179,7 +227,7 @@ describe("Tests functionality of Geyser.Mapper", function()
 
   pending("Geyser.Mapper:setTitle/resetTitle put the text on the map window's title bar - needs a getMapWindowTitle getter")
 
-  pending("Geyser.Mapper:setDockPosition - which edge the map widget is docked to is not readable from Lua")
+  pending("Geyser.Mapper:setDockPosition docks the map widget against the edge it names - which edge it ended up on is not readable from Lua")
 
   pending("Geyser.Mapper:raise/lower stack the map against the other windows - Mudlet exposes no z-order readback")
 
@@ -201,10 +249,29 @@ describe("Tests functionality of Geyser.Mapper", function()
 
     it("goes away with the container it was put in", function()
       local container = track(Geyser.Container:new({name = "gmpOuter", x = 0, y = 0, width = 300, height = 200}))
-      track(Geyser.Mapper:new({name = "gmpNested", x = 0, y = 0, width = "100%", height = "100%", embedded = false}, container))
+      local mapper = track(Geyser.Mapper:new({name = "gmpNested", x = 0, y = 0, width = "100%", height = "100%", embedded = false}, container))
+      assert.are.equal(mapper, container.windowList.gmpNested)
+      assert.is_true(mapWidgetVisible())
       container:delete()
-      assert.is_nil(Geyser.windowList.gmpNested)
+      -- the widget closing is what says the cascade reached the mapper:
+      -- Geyser.Container:delete empties its own windowList either way
+      assert.is_false(mapWidgetVisible())
       assert.is_nil(container.windowList.gmpNested)
+    end)
+
+    -- A profile has one map, so two Geyser.Mapper objects are two handles on
+    -- the same widget: deleting either one closes it under the other. That is
+    -- worth pinning down, because it is the trap a second mapper walks into.
+    it("closes the one shared map widget even when another mapper still holds it", function()
+      local first = track(Geyser.Mapper:new({name = "gmpShared", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      local second = track(Geyser.Mapper:new({name = "gmpSharing", x = 0, y = 0, width = 200, height = 150, embedded = false}))
+      assert.is_true(mapWidgetVisible())
+      second:delete()
+      assert.is_false(mapWidgetVisible())
+      -- the surviving mapper is untouched as an object, and can reopen the map
+      assert.are.equal(first, Geyser.windowList.gmpShared)
+      first:show()
+      assert.is_true(mapWidgetVisible())
     end)
   end)
 end)
