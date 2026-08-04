@@ -158,11 +158,22 @@ end
 -- than they need to on a fast machine on purpose: each postponed call queues
 -- another attempt for whenever the save does finish, and a pile of those all
 -- arriving at once starts a pile of saves.
+-- Lua has no direct way to ask whether a profile save is running, but
+-- installPackage() gives it away: while one is in progress it postpones
+-- whatever it was asked to do and answers true, even for an empty path it would
+-- otherwise refuse outright. Waiting for the refusal to come back is what keeps
+-- the installs below from being postponed - a postponed install is carried out
+-- later, and can put a package back after a spec has taken it away again.
+local function waitForProfileSaveToPass()
+  return waitUntil(function() return installPackage("") == nil end, 5000)
+end
+
 local function installUntilConfirmed(install, path, isInstalled, what)
   for attempt = 1, 3 do
     if isInstalled() then
       return
     end
+    waitForProfileSaveToPass()
     local ok, err = install(path)
     -- a postponed install can still be carried out while the pump below runs
     -- the event loop, so a repeat may legitimately come back "already installed"
@@ -183,6 +194,7 @@ end
 -- about the refusal waits for the save to pass and asks again.
 local function installUntilRefused(install, path)
   for attempt = 1, 3 do
+    waitForProfileSaveToPass()
     local ok, err = install(path)
     if ok == nil then
       return err
@@ -213,6 +225,7 @@ local function removeFixturePackage(name)
     if not packageInstalled(name) then
       return
     end
+    waitForProfileSaveToPass()
     -- uninstallPackage() refuses while a profile save is in progress, and the
     -- installs here start one, so keep asking until it takes
     assert.is_true(waitUntil(function() return uninstallPackage(name) == true end, 5000),
@@ -239,6 +252,7 @@ local function removeFixtureModule(name)
     if not moduleInstalled(name) then
       break
     end
+    waitForProfileSaveToPass()
     assert.is_true(waitUntil(function() return uninstallModule(name) == true end, 5000),
                    "could not uninstall the fixture module " .. name)
     pumpEventLoop(200)
