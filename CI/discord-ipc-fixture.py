@@ -17,8 +17,8 @@ Wire framing: [opcode:uint32 LE][length:uint32 LE][json payload]
 
 Capture file format: one JSON object per line,
   {"op": <opcode>, "payload": <parsed frame> | {"raw": "<undecodable text>"}}
-Records are appended with a single O_APPEND write so a spec reading the file
-concurrently never sees a half-written line.
+Records are appended under a lock to an O_APPEND descriptor so a spec reading
+the file concurrently never sees a half-written or spliced line.
 
 The C++ equivalent used by TDiscordModeTest is
 test/functional_tests/DiscordIpcServerStub.cpp - keep the two in step.
@@ -83,6 +83,7 @@ def ready_payload(username):
 class CaptureLog:
     def __init__(self, path):
         self._fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+        self._lock = threading.Lock()
 
     def append(self, opcode, payload_bytes):
         try:
@@ -90,10 +91,14 @@ class CaptureLog:
         except (UnicodeDecodeError, ValueError):
             payload = {"raw": payload_bytes.decode("utf-8", "replace")}
         line = (json.dumps({"op": opcode, "payload": payload}, sort_keys=True) + "\n").encode("utf-8")
-        # os.write() may write less than it was given; a short write here would
-        # splice two records into one line and the reading spec would drop both.
-        while line:
-            line = line[os.write(self._fd, line):]
+        # os.write() may write less than it was given, and discord-rpc's
+        # reconnects overlap connections, so two serve_connection() threads can
+        # be here at once. Without the lock one record's remainder could land
+        # after another record's first write, splicing both into one malformed
+        # line that framesAfter() would silently drop.
+        with self._lock:
+            while line:
+                line = line[os.write(self._fd, line):]
 
 
 def frame(opcode, payload_bytes):

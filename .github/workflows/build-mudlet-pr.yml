@@ -571,6 +571,13 @@ jobs:
         MUDLET_TEST_REQUIRE_DISCORD: 1
         XDG_RUNTIME_DIR: ${{env.MUDLET_TEST_DISCORD_RUNTIME_DIR}}
         LD_LIBRARY_PATH: ${{env.MUDLET_TEST_DISCORD_LIB_PATH}}
+        # The session bus socket lives in the runtime directory replaced above,
+        # so Qt's D-Bus platform theme can no longer find it and would fall back
+        # to spawning dbus-launch. Point it at nothing instead: libdbus leaks
+        # the buffer it reads the autolaunch reply into (1032 bytes, reported
+        # against this job by LeakSanitizer with no Mudlet frames in the stack),
+        # and no spec needs a session bus.
+        DBUS_SESSION_BUS_ADDRESS: 'disabled:'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
