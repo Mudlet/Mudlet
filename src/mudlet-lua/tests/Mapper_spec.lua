@@ -1395,6 +1395,59 @@ describe("Tests mapper functions against a shared fixture", function()
     end)
   end)
 
+  describe("Tests room name offset and visibility", function()
+    -- these three wrap the room.ui_nameOffset / room.ui_showName user data
+    -- keys the map renderer reads, so the round trip is the observable effect
+    after_each(function()
+      clearRoomUserDataItem(rSandA, "room.ui_nameOffset")
+      clearRoomUserDataItem(rSandA, "room.ui_showName")
+    end)
+
+    it("getRoomNameOffset returns zeroes for a room that has never been offset", function()
+      assert.are.same({0, 0}, {getRoomNameOffset(rSandA)})
+    end)
+
+    it("setRoomNameOffset round-trips an x and y shift", function()
+      setRoomNameOffset(rSandA, 3, 4)
+      assert.are.same({3, 4}, {getRoomNameOffset(rSandA)})
+      assert.are.equal("3 4", getRoomUserData(rSandA, "room.ui_nameOffset"))
+    end)
+
+    it("setRoomNameOffset stores only the y shift when x is zero", function()
+      setRoomNameOffset(rSandA, 0, 5)
+      assert.are.equal("5", getRoomUserData(rSandA, "room.ui_nameOffset"))
+      assert.are.same({0, 5}, {getRoomNameOffset(rSandA)})
+    end)
+
+    it("getRoomNameOffset reads a legacy single value as the y shift", function()
+      setRoomUserData(rSandA, "room.ui_nameOffset", "7")
+      assert.are.same({0, 7}, {getRoomNameOffset(rSandA)})
+    end)
+
+    it("setRoomNameVisible writes the flag the renderer looks for", function()
+      setRoomNameVisible(rSandA, true)
+      assert.are.equal("1", getRoomUserData(rSandA, "room.ui_showName"))
+      setRoomNameVisible(rSandA, false)
+      assert.are.equal("0", getRoomUserData(rSandA, "room.ui_showName"))
+    end)
+
+    it("all three reject arguments of the wrong type", function()
+      assert.has_error(function() getRoomNameOffset("1") end)
+      assert.has_error(function() setRoomNameOffset(rSandA, "1", 1) end)
+      assert.has_error(function() setRoomNameOffset(rSandA, 1, "1") end)
+      assert.has_error(function() setRoomNameVisible(rSandA, "yes") end)
+    end)
+
+    it("getRoomNameOffset keeps the sign of a negative shift", function()
+      -- BUG: setRoomNameOffset stores the offset as "x y", but
+      -- getRoomNameOffset reads it back with the pattern '[%.%d]+', which
+      -- cannot match a minus sign, so every negative shift comes back positive
+      pending("getRoomNameOffset drops the sign of a stored offset - see the Wave 3d report")
+      setRoomNameOffset(rSandA, -3, -4)
+      assert.are.same({-3, -4}, {getRoomNameOffset(rSandA)})
+    end)
+  end)
+
   describe("Tests area user data", function()
     it("setAreaUserData is read back by getAreaUserData", function()
       assert.is_true(setAreaUserData(areaAlpha, "climate", "temperate"))
