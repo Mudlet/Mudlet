@@ -9,6 +9,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetSgrDefaultColorTest.cpp
     TelnetTlsPromptTest.cpp
     TelnetBenchmark.cpp
+    DefaultGameDeleteTest.cpp
     ResetProfileTest.cpp
     TOscTest.cpp
     TUserWindowTest.cpp

@@ -1024,7 +1024,9 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
         });
     }
 
-    // record the deleted default profile so it does not get re-created in the future
+    // record the deletion; the games catalog deliberately ignores this list
+    // now - only the self-test entry in fillout_form() still honours it, and
+    // continueProfileSave() clears the entry on profile re-creation
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     if (!deletedDefaultMuds.contains(profile)) {
@@ -1396,35 +1398,45 @@ void dlgConnectionProfiles::fillout_form()
     QString description;
     QListWidgetItem* pItem;
 
-    auto& settings = *mudlet::self()->mpSettings;
-    auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
     const bool showOnlyMyProfiles = showingOnlyMyProfiles();
+    const QString selfTestProfile = qsl("Mudlet self-test");
+    const auto deletedDefaultMuds = mudlet::self()->mpSettings->value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     if (onlyShownPredefinedProfiles.isEmpty()) {
         const auto defaultGames = TGameDetails::keys();
+        // "My games" only lists games with profile data on disk; "All games"
+        // must keep offering every pre-installed game, even ones whose
+        // profile was deleted (recorded in deletedDefaultMuds). The self-test
+        // entry is the exception: it is a testing aid rather than a game, and
+        // is offered even without profile data on disk, so dismissing it has
+        // to keep it out of both tabs
         for (auto& game : defaultGames) {
-            if (!deletedDefaultMuds.contains(game)) {
-                if (showOnlyMyProfiles && !mProfileList.contains(game, Qt::CaseInsensitive)) {
-                    continue;
-                }
-                pItem = new QListWidgetItem();
-                auto details = TGameDetails::findGame(game);
-                setupMudProfile(pItem, game, (*details).description, (*details).icon);
+            if (game == selfTestProfile && deletedDefaultMuds.contains(game)) {
+                continue;
             }
+            if (showOnlyMyProfiles && !mProfileList.contains(game, Qt::CaseInsensitive)) {
+                continue;
+            }
+            pItem = new QListWidgetItem();
+            auto details = TGameDetails::findGame(game);
+            setupMudProfile(pItem, game, (*details).description, (*details).icon);
         }
 
 #if defined(QT_DEBUG)
-        const QString mudServer = qsl("Mudlet self-test");
-        if (!deletedDefaultMuds.contains(mudServer) && !mProfileList.contains(mudServer)) {
-            mProfileList.append(mudServer);
-            pItem = new QListWidgetItem();
-            // Can't use setupMudProfile(...) here as we do not set the icon in the same way:
-            setItemName(pItem, mudServer);
+        if (!deletedDefaultMuds.contains(selfTestProfile) && !mProfileList.contains(selfTestProfile)) {
+            mProfileList.append(selfTestProfile);
+            // "All games" already listed it from TGameDetails above, only
+            // "My games" is still missing an entry:
+            if (findData(*listWidget_profiles, selfTestProfile, csmNameRole).isEmpty()) {
+                pItem = new QListWidgetItem();
+                // Can't use setupMudProfile(...) here as we do not set the icon in the same way:
+                setItemName(pItem, selfTestProfile);
 
-            listWidget_profiles->addItem(pItem);
-            description = getDescription(qsl("mudlet.org"));
-            if (!description.isEmpty()) {
-                pItem->setToolTip(utils::richText(description));
+                listWidget_profiles->addItem(pItem);
+                description = getDescription(qsl("mudlet.org"));
+                if (!description.isEmpty()) {
+                    pItem->setToolTip(utils::richText(description));
+                }
             }
         }
 #endif
