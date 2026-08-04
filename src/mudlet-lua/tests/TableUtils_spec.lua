@@ -669,6 +669,24 @@ describe("Tests TableUtils.lua functions", function()
       local actual = table.union(tblA, tblB, tblC)
       assert.same(expected,actual)
     end)
+
+    it("should not modify a table it was given", function()
+      local first = { key = { 1, 2 } }
+      local actual = table.union(first, { key = 5 })
+      assert.same({ { 1, 2 }, 5 }, actual.key)
+      assert.same({ 1, 2 }, first.key)
+      assert.is_false(rawequal(actual.key, first.key))
+    end)
+
+    it("should collect a colliding false into a subtable", function()
+      local actual = table.union({ key = false }, { key = 7 })
+      assert.same({ false, 7 }, actual.key)
+    end)
+
+    it("should append a third colliding value to the same subtable", function()
+      local actual = table.union({ key = 1 }, { key = 2 }, { key = 3 })
+      assert.same({ 1, 2, 3 }, actual.key)
+    end)
   end)
 
   describe("Tests the functionality of table.n_union", function()
