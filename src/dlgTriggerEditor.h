@@ -109,6 +109,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     // Allow QTest-based test classes to access private members
     friend class dlgTriggerEditorUndoRedoTest;
     friend class BogusActionCleanupTest;
+    friend class EditorBannerViewSwitchTest;
 
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
@@ -175,6 +176,7 @@ public:
 
     Q_DISABLE_COPY(dlgTriggerEditor)
     dlgTriggerEditor(Host*);
+    ~dlgTriggerEditor();
 
     Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
@@ -204,6 +206,9 @@ public:
     int canRecast(QTreeWidgetItem*, int newNameType, int newValueType);
     void saveVar();
     void repopulateVars();
+    // true while the Variables view is the one shown on screen, so a profile
+    // save can avoid rebuilding the tree out from under the live widget
+    bool variablesViewActive() const;
     void changeView(EditorViewType);
     void recurseVariablesUp(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
     void recurseVariablesDown(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
@@ -808,6 +813,7 @@ private:
 
     // Banner methods
     void handleBannerDismiss();
+    void cancelBannerUndoTimer();
     void showBannerUndoToast();
     void undoBannerDismiss();
     void handlePermanentBannerDismiss();

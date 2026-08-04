@@ -640,6 +640,18 @@ describe("Tests DB.lua functions", function()
       assert.is.same(exp_total, total)
     end)
 
+    it("should apply a db:exp query when aggregating.",
+    function()
+      local total = db:aggregate(mydb.sheet.count, "total", db:exp("count > 5"))
+      local exp_total = 0
+      for _, v in ipairs(test_data) do
+        if v.count > 5 then
+          exp_total = exp_total + v.count
+        end
+      end
+      assert.is.same(exp_total, total)
+    end)
+
     it("should successfully calculate the average of all numbers.",
     function()
       local avg = db:aggregate(mydb.sheet.count, "avg")
@@ -1565,4 +1577,601 @@ describe("Tests DB.lua functions", function()
     end)
   end)
 
+  describe("Tests db query-expression builders against real fetches", function()
+    local function names(results)
+      local t = {}
+      for _, row in ipairs(results) do
+        t[#t + 1] = row.name
+      end
+      table.sort(t)
+      return t
+    end
+
+    before_each(function()
+      mydb = db:create("exprtestingonly", {
+        people = {
+          name = "",
+          city = "",
+          level = 0,
+          _index = { "city" },
+        }
+      })
+      db:add(mydb.people,
+        {name = "Ada",   city = "Boston",  level = 10},
+        {name = "Bram",  city = "Chicago", level = 20},
+        {name = "Cyra",  city = "Boston",  level = 30},
+        {name = "Drake", city = "Denver",  level = 40},
+        {name = "Eve",   city = "Chicago", level = 50})
+    end)
+
+    after_each(function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_exprtestingonly.db")
+      mydb = nil
+    end)
+
+    it("db:lt returns rows with a field below the value", function()
+      assert.are.same({"Ada", "Bram"}, names(db:fetch(mydb.people, db:lt(mydb.people.level, 30))))
+    end)
+
+    it("db:lte is inclusive of the boundary", function()
+      assert.are.same({"Ada", "Bram", "Cyra"}, names(db:fetch(mydb.people, db:lte(mydb.people.level, 30))))
+    end)
+
+    it("db:gt returns rows with a field above the value", function()
+      assert.are.same({"Drake", "Eve"}, names(db:fetch(mydb.people, db:gt(mydb.people.level, 30))))
+    end)
+
+    it("db:gte is inclusive of the boundary", function()
+      assert.are.same({"Cyra", "Drake", "Eve"}, names(db:fetch(mydb.people, db:gte(mydb.people.level, 30))))
+    end)
+
+    it("db:eq matches an exact value", function()
+      assert.are.same({"Ada", "Cyra"}, names(db:fetch(mydb.people, db:eq(mydb.people.city, "Boston"))))
+    end)
+
+    it("db:eq with case_insensitive matches regardless of case", function()
+      assert.are.same({"Ada", "Cyra"}, names(db:fetch(mydb.people, db:eq(mydb.people.city, "BOSTON", true))))
+    end)
+
+    it("db:not_eq excludes an exact value", function()
+      assert.are.same({"Bram", "Drake", "Eve"}, names(db:fetch(mydb.people, db:not_eq(mydb.people.city, "Boston"))))
+    end)
+
+    it("db:not_eq with case_insensitive excludes regardless of case", function()
+      assert.are.same({"Bram", "Drake", "Eve"}, names(db:fetch(mydb.people, db:not_eq(mydb.people.city, "BOSTON", true))))
+    end)
+
+    it("db:like matches SQL LIKE wildcards", function()
+      assert.are.same({"Ada", "Cyra"}, names(db:fetch(mydb.people, db:like(mydb.people.city, "Bo%"))))
+    end)
+
+    it("db:not_like excludes SQL LIKE matches", function()
+      assert.are.same({"Bram", "Drake", "Eve"}, names(db:fetch(mydb.people, db:not_like(mydb.people.city, "Bo%"))))
+    end)
+
+    it("db:between is inclusive of both bounds", function()
+      assert.are.same({"Bram", "Cyra", "Drake"}, names(db:fetch(mydb.people, db:between(mydb.people.level, 20, 40))))
+    end)
+
+    it("db:not_between excludes the inclusive range", function()
+      assert.are.same({"Ada", "Eve"}, names(db:fetch(mydb.people, db:not_between(mydb.people.level, 20, 40))))
+    end)
+
+    it("db:in_ matches any value in the list", function()
+      assert.are.same({"Ada", "Cyra", "Drake"}, names(db:fetch(mydb.people, db:in_(mydb.people.city, {"Boston", "Denver"}))))
+    end)
+
+    it("db:not_in excludes every value in the list", function()
+      assert.are.same({"Bram", "Eve"}, names(db:fetch(mydb.people, db:not_in(mydb.people.city, {"Boston", "Denver"}))))
+    end)
+
+    it("db:exp injects a raw SQL WHERE expression", function()
+      assert.are.same({"Cyra", "Drake", "Eve"}, names(db:fetch(mydb.people, db:exp("level > 25"))))
+    end)
+
+    it("db:exp still works inside an implicitly-ANDed table query", function()
+      local results = db:fetch(mydb.people, {
+        db:exp("level > 25"),
+        db:eq(mydb.people.city, "Chicago"),
+      })
+      assert.are.same({"Eve"}, names(results))
+    end)
+
+    it("db:exp still combines with db:AND and db:OR", function()
+      local anded = db:fetch(mydb.people, db:AND(db:exp("level > 25"), db:eq(mydb.people.city, "Chicago")))
+      assert.are.same({"Eve"}, names(anded))
+      local ored = db:fetch(mydb.people, db:OR(db:exp("level < 15"), db:exp("level > 45")))
+      assert.are.same({"Ada", "Eve"}, names(ored))
+    end)
+
+    it("db:AND requires all sub-expressions to match", function()
+      local query = db:AND(db:eq(mydb.people.city, "Boston"), db:gt(mydb.people.level, 15))
+      assert.are.same({"Cyra"}, names(db:fetch(mydb.people, query)))
+    end)
+
+    it("db:OR matches either sub-expression", function()
+      local query = db:OR(db:eq(mydb.people.city, "Denver"), db:eq(mydb.people.city, "Chicago"))
+      assert.are.same({"Bram", "Drake", "Eve"}, names(db:fetch(mydb.people, query)))
+    end)
+
+    it("a table-array query is implicitly ANDed", function()
+      local results = db:fetch(mydb.people, {
+        db:eq(mydb.people.city, "Chicago"),
+        db:gt(mydb.people.level, 30),
+      })
+      assert.are.same({"Eve"}, names(results))
+    end)
+
+    it("db:is_nil and db:is_not_nil partition rows by NULL", function()
+      db:set(mydb.people.city, db:Null(), db:eq(mydb.people.name, "Ada"))
+      assert.are.same({"Ada"}, names(db:fetch(mydb.people, db:is_nil(mydb.people.city))))
+      assert.are.same({"Bram", "Cyra", "Drake", "Eve"}, names(db:fetch(mydb.people, db:is_not_nil(mydb.people.city))))
+    end)
+  end)
+
+  describe("Tests db:delete", function()
+    before_each(function()
+      mydb = db:create("deletetestingonly", {
+        sheet = {
+          name = "",
+          city = "",
+          _index = { "name" },
+        }
+      })
+      db:add(mydb.sheet,
+        {name = "Ada",   city = "Boston"},
+        {name = "Bram",  city = "Chicago"},
+        {name = "Cyra",  city = "Boston"},
+        {name = "Drake", city = "Denver"})
+    end)
+
+    after_each(function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_deletetestingonly.db")
+      mydb = nil
+    end)
+
+    it("deletes a single row by _row_id number", function()
+      local ada = db:fetch(mydb.sheet, db:eq(mydb.sheet.name, "Ada"))[1]
+      db:delete(mydb.sheet, ada._row_id)
+      assert.are.equal(0, #db:fetch(mydb.sheet, db:eq(mydb.sheet.name, "Ada")))
+      assert.are.equal(3, #db:fetch(mydb.sheet))
+    end)
+
+    it("deletes a single row given a fetched result table", function()
+      local bram = db:fetch(mydb.sheet, db:eq(mydb.sheet.name, "Bram"))[1]
+      db:delete(mydb.sheet, bram)
+      assert.are.equal(0, #db:fetch(mydb.sheet, db:eq(mydb.sheet.name, "Bram")))
+      assert.are.equal(3, #db:fetch(mydb.sheet))
+    end)
+
+    it("deletes every row matching an expression", function()
+      db:delete(mydb.sheet, db:eq(mydb.sheet.city, "Boston"))
+      local remaining = db:fetch(mydb.sheet)
+      assert.are.equal(2, #remaining)
+      local cities = {}
+      for _, row in ipairs(remaining) do
+        cities[row.city] = true
+      end
+      assert.is_nil(cities["Boston"])
+    end)
+
+    it("deletes every row matching a db:exp expression", function()
+      db:delete(mydb.sheet, db:exp("city = 'Boston'"))
+      local remaining = db:fetch(mydb.sheet)
+      assert.are.equal(2, #remaining)
+      local cities = {}
+      for _, row in ipairs(remaining) do
+        cities[row.city] = true
+      end
+      assert.is_nil(cities["Boston"])
+    end)
+
+    it("truncates the whole sheet when the query is true", function()
+      db:delete(mydb.sheet, true)
+      assert.are.equal(0, #db:fetch(mydb.sheet))
+    end)
+
+    it("errors when no query argument is passed", function()
+      local ok, err = pcall(function() db:delete(mydb.sheet) end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "must pass a query argument", 1, true) ~= nil)
+    end)
+
+    it("errors when passed a table without a _row_id", function()
+      local ok, err = pcall(function() db:delete(mydb.sheet, {name = "Ada"}) end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "non-result table", 1, true) ~= nil)
+    end)
+  end)
+
+  describe("Tests db:merge_unique", function()
+    before_each(function()
+      mydb = db:create("mergetestingonly", {
+        friends = {
+          name = "",
+          city = "",
+          level = 0,
+          _unique = { "name" },
+          _violations = "REPLACE",
+        }
+      })
+      db:add(mydb.friends,
+        {name = "Ada",  city = "Boston",  level = 10},
+        {name = "Bram", city = "Chicago", level = 20})
+    end)
+
+    after_each(function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_mergetestingonly.db")
+      mydb = nil
+    end)
+
+    it("updates existing rows and inserts new ones in one call", function()
+      local rows = db:fetch(mydb.friends)
+      assert.are.equal(2, #rows)
+      for _, row in ipairs(rows) do
+        row.city = "Mutantville"
+      end
+      rows[#rows + 1] = {name = "Cyra", city = "Denver", level = 5}
+      db:merge_unique(mydb.friends, rows)
+
+      local after = db:fetch(mydb.friends)
+      assert.are.equal(3, #after)
+      local byName = {}
+      for _, row in ipairs(after) do
+        byName[row.name] = row
+      end
+      assert.are.equal("Mutantville", byName.Ada.city)
+      assert.are.equal("Mutantville", byName.Bram.city)
+      assert.are.equal(10, byName.Ada.level)
+      assert.are.equal("Denver", byName.Cyra.city)
+      assert.are.equal(5, byName.Cyra.level)
+    end)
+
+    it("does not duplicate a row when merging an existing unique key", function()
+      db:merge_unique(mydb.friends, { {name = "Ada", city = "Rome"} })
+      local rows = db:fetch(mydb.friends, db:eq(mydb.friends.name, "Ada"))
+      assert.are.equal(1, #rows)
+      assert.are.equal("Rome", rows[1].city)
+      assert.are.equal(10, rows[1].level)
+    end)
+
+    it("errors when the data argument is not a table", function()
+      local ok, err = pcall(function() db:merge_unique(mydb.friends, nil) end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "required table of data", 1, true) ~= nil)
+    end)
+
+    it("errors when a merged row is missing the unique key", function()
+      local ok, err = pcall(function()
+        db:merge_unique(mydb.friends, { {city = "Nowhere"} })
+      end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "does not have the unique key", 1, true) ~= nil)
+    end)
+
+    it("errors on a sheet whose unique index spans multiple columns", function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_mergetestingonly.db")
+      mydb = db:create("mergetestingonly", {
+        friends = {
+          name = "",
+          city = "",
+          _unique = { {"name", "city"} },
+        }
+      })
+      db:add(mydb.friends, {name = "Ada", city = "Boston"})
+      local ok, err = pcall(function()
+        db:merge_unique(mydb.friends, { {name = "Ada", city = "Boston"} })
+      end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "single unique index with a single column", 1, true) ~= nil)
+    end)
+  end)
+
+  describe("Tests db transaction rollback", function()
+    before_each(function()
+      mydb = db:create("rollbacktestingonly", {
+        sheet = {
+          name = "",
+          _index = { "name" },
+        }
+      })
+      db:add(mydb.sheet, {name = "committed"})
+    end)
+
+    after_each(function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_rollbacktestingonly.db")
+      mydb = nil
+    end)
+
+    it("discards uncommitted rows when rolled back", function()
+      assert.are.equal(1, #db:fetch(mydb.sheet))
+      mydb:_begin()
+      db:add(mydb.sheet, {name = "pending1"})
+      db:add(mydb.sheet, {name = "pending2"})
+      assert.are.equal(3, #db:fetch(mydb.sheet))
+      mydb:_rollback()
+      mydb:_end()
+      local after = db:fetch(mydb.sheet)
+      assert.are.equal(1, #after)
+      assert.are.equal("committed", after[1].name)
+    end)
+
+    it("persists committed rows across a close and reopen", function()
+      mydb:_begin()
+      db:add(mydb.sheet, {name = "pending"})
+      mydb:_commit()
+      mydb:_end()
+      -- reopen so the assertion sees the on-disk state, not this connection's
+      -- own uncommitted view - this is what discriminates commit from a no-op
+      db:close()
+      mydb = db:create("rollbacktestingonly", {
+        sheet = {
+          name = "",
+          _index = { "name" },
+        }
+      })
+      assert.are.equal(2, #db:fetch(mydb.sheet))
+    end)
+  end)
+
+  describe("Tests db:update and db:set edge cases", function()
+    before_each(function()
+      mydb = db:create("updatetestingonly", {
+        sheet = {
+          name = "",
+          city = "",
+          kills = 0,
+          _unique = { "name" },
+          _violations = "REPLACE",
+        }
+      })
+      db:add(mydb.sheet,
+        {name = "Ada",  city = "Boston",  kills = 3},
+        {name = "Bram", city = "Chicago", kills = 7})
+    end)
+
+    after_each(function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_updatetestingonly.db")
+      mydb = nil
+    end)
+
+    it("updates the changed field and preserves the rest", function()
+      local ada = db:fetch(mydb.sheet, db:eq(mydb.sheet.name, "Ada"))[1]
+      ada.city = "Rome"
+      db:update(mydb.sheet, ada)
+      local reread = db:fetch(mydb.sheet, db:eq(mydb.sheet.name, "Ada"))[1]
+      assert.are.equal("Rome", reread.city)
+      assert.are.equal("Ada", reread.name)
+      assert.are.equal(3, reread.kills)
+    end)
+
+    it("errors when updating a table without a _row_id", function()
+      local ok, err = pcall(function()
+        db:update(mydb.sheet, {name = "Ada", city = "Rome"})
+      end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "_row_id", 1, true) ~= nil)
+    end)
+
+    it("db:set changes a field for rows matching the query", function()
+      db:set(mydb.sheet.city, "Rome", db:eq(mydb.sheet.name, "Ada"))
+      assert.are.equal("Rome", db:fetch(mydb.sheet, db:eq(mydb.sheet.name, "Ada"))[1].city)
+      assert.are.equal("Chicago", db:fetch(mydb.sheet, db:eq(mydb.sheet.name, "Bram"))[1].city)
+    end)
+
+    it("db:set without a query updates every row", function()
+      db:set(mydb.sheet.kills, 0)
+      local rows = db:fetch(mydb.sheet)
+      assert.are.equal(2, #rows)
+      for _, row in ipairs(rows) do
+        assert.are.equal(0, row.kills)
+      end
+    end)
+
+    it("db:set evaluates a db:exp value instead of storing it literally", function()
+      db:set(mydb.sheet.kills, db:exp("kills + 1"), db:eq(mydb.sheet.name, "Ada"))
+      assert.are.equal(4, db:fetch(mydb.sheet, db:eq(mydb.sheet.name, "Ada"))[1].kills)
+      assert.are.equal(7, db:fetch(mydb.sheet, db:eq(mydb.sheet.name, "Bram"))[1].kills)
+    end)
+
+    it("db:set accepts a db:exp as the WHERE query", function()
+      db:set(mydb.sheet.city, "Rome", db:exp("kills > 5"))
+      assert.are.equal("Boston", db:fetch(mydb.sheet, db:eq(mydb.sheet.name, "Ada"))[1].city)
+      assert.are.equal("Rome", db:fetch(mydb.sheet, db:eq(mydb.sheet.name, "Bram"))[1].city)
+    end)
+  end)
+
+  describe("Tests db.Database:_drop", function()
+    before_each(function()
+      mydb = db:create("droptestingonly", {
+        people = {
+          name = "",
+          city = "",
+          _index = { "city" },
+          _unique = { "name" },
+        }
+      })
+      db:add(mydb.people,
+        {name = "Ada",  city = "Boston"},
+        {name = "Bram", city = "Chicago"})
+    end)
+
+    after_each(function()
+      pcall(function() db:close() end)
+      os.remove(getMudletHomeDir() .. "/Database_droptestingonly.db")
+      mydb = nil
+    end)
+
+    it("drops the sheet's table and indexes without erroring", function()
+      local ok, err = pcall(function() mydb:_drop("people") end)
+      assert.is_true(ok, err)
+
+      -- the table (and hence its rows and indexes) is really gone from the database
+      local conn = db.__conn[mydb._db_name]
+      local cur = conn:execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'people'")
+      local exists = cur and cur ~= 0 and cur:fetch({}, "a") ~= nil
+      if cur and cur ~= 0 then
+        cur:close()
+      end
+      assert.is_false(exists)
+    end)
+
+    it("drops a sheet whose _unique index is declared as a string", function()
+      local sdb = db:create("dropstrtestingonly", {
+        pets = {
+          name = "",
+          _unique = "name",
+        }
+      })
+      local ok, err = pcall(function() sdb:_drop("pets") end)
+      db:close("dropstrtestingonly")
+      os.remove(getMudletHomeDir() .. "/Database_dropstrtestingonly.db")
+      assert.is_true(ok, err)
+    end)
+  end)
+
+  describe("Tests db:close contracts and reopen", function()
+    after_each(function()
+      pcall(function() db:close("closetestingonly") end)
+      os.remove(getMudletHomeDir() .. "/Database_closetestingonly.db")
+      mydb = nil
+    end)
+
+    it("closes a named database and reports success", function()
+      db:create("closetestingonly", { sheet = { name = "" } })
+      local ok, msg = db:close("closetestingonly")
+      assert.is_true(ok)
+      assert.are.equal("", msg)
+    end)
+
+    it("returns false when closing a database that does not exist", function()
+      db:create("closetestingonly", { sheet = { name = "" } })
+      local ok, msg = db:close("nonexistentdbxyz")
+      assert.is_false(ok)
+      assert.is_true(string.find(msg, "does not exist", 1, true) ~= nil)
+      db:close("closetestingonly")
+    end)
+
+    it("returns false when called before any database environment exists", function()
+      local saved_env = db.__env
+      db.__env = nil
+      local ok, msg = db:close("whatever")
+      db.__env = saved_env
+      assert.is_false(ok)
+      assert.is_true(string.find(msg, "environment is nil", 1, true) ~= nil)
+    end)
+
+    it("errors when db_name is neither a string nor nil", function()
+      db:create("closetestingonly", { sheet = { name = "" } })
+      local ok, err = pcall(function() db:close(12345) end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "expected db_name to be string or nil", 1, true) ~= nil)
+      db:close("closetestingonly")
+    end)
+
+    it("persists data across close and reopen", function()
+      local d = db:create("closetestingonly", {
+        sheet = { name = "", city = "", _index = {"name"} }
+      })
+      db:add(d.sheet, {name = "Ada", city = "Boston"})
+      db:close("closetestingonly")
+
+      local d2 = db:create("closetestingonly", {
+        sheet = { name = "", city = "", _index = {"name"} }
+      })
+      local rows = db:fetch(d2.sheet)
+      assert.are.equal(1, #rows)
+      assert.are.equal("Ada", rows[1].name)
+      assert.are.equal("Boston", rows[1].city)
+      db:close("closetestingonly")
+    end)
+  end)
+
+  describe("Tests db:create schema validation", function()
+    after_each(function()
+      pcall(function() db:close("badschematestingonly") end)
+      os.remove(getMudletHomeDir() .. "/Database_badschematestingonly.db")
+      mydb = nil
+    end)
+
+    it("errors on an unrecognised _violations option", function()
+      local ok, err = pcall(function()
+        db:create("badschematestingonly", {
+          sheet = { name = "", _unique = { "name" }, _violations = "NONSENSE" }
+        })
+      end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "_validations must be one of", 1, true) ~= nil)
+    end)
+
+    it("errors on a non-string _violations option", function()
+      local ok, err = pcall(function()
+        db:create("badschematestingonly", {
+          sheet = { name = "", _unique = { "name" }, _violations = 42 }
+        })
+      end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "_validations must be a string", 1, true) ~= nil)
+    end)
+
+    it("errors on a malformed _unique constraint", function()
+      local ok, err = pcall(function()
+        db:create("badschematestingonly", {
+          sheet = { name = "", _unique = { 123 } }
+        })
+      end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "must be a string or table", 1, true) ~= nil)
+    end)
+
+    it("errors when _unique is neither a string nor a table", function()
+      local ok, err = pcall(function()
+        db:create("badschematestingonly", {
+          sheet = { name = "", _unique = 42 }
+        })
+      end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "_unique must be a string or a table", 1, true) ~= nil)
+    end)
+  end)
+
+end)
+
+describe("Tests db:echo_sql", function()
+  local saved
+
+  before_each(function()
+    saved = db.debug_sql
+  end)
+
+  after_each(function()
+    db.debug_sql = saved
+  end)
+
+  it("prints the statement it is handed when SQL debugging is on", function()
+    db.debug_sql = true
+    local printSpy = spy.on(_G, "print")
+    finally(function() print:revert() end)
+    db:echo_sql("SELECT 1;")
+    assert.spy(printSpy).was.called(1)
+    assert.spy(printSpy).was.called_with("SELECT 1;")
+  end)
+
+  it("stays silent while SQL debugging is off", function()
+    db.debug_sql = false
+    local printSpy = spy.on(_G, "print")
+    finally(function() print:revert() end)
+    db:echo_sql("SELECT 1;")
+    assert.spy(printSpy).was_not_called()
+  end)
+
+  it("is silent by default", function()
+    assert.is_falsy(saved)
+  end)
 end)

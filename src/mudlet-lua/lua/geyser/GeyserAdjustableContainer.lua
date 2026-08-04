@@ -60,8 +60,10 @@ end
 -- @param format A format list to use. 'c' - center, 'l' - left, 'r' - right,  'b' - bold, 'i' - italics, 'u' - underline, 's' - strikethrough,  '##' - font size.  For example, "cb18" specifies center bold 18pt font be used.  Order doesn't matter.
 function Adjustable.Container:setTitle(text, color, format)
     self.titleFormat = format or self.titleFormat or "l"
-    self.titleText = text or self.titleText or string.format("%s - Adjustable Container")
-    self.titleTxtColor = color or self.titleTxtColor or "green"
+    self.titleText = text or self.titleText or string.format("%s - Adjustable Container", self.name)
+    -- the fallback is only reached once resetTitle() has cleared the colour, so
+    -- it has to be the constructor's default for a reset to restore it
+    self.titleTxtColor = color or self.titleTxtColor or "grey"
     if self.locked and (self.connectedContainers or self.lockStyle == "standard" or self.lockStyle == "border" or self.lockStyle == "full") then
         return
     end
@@ -857,6 +859,81 @@ function Adjustable.Container:reposition()
     )
 end
 
+-- internal function: a container recreated under the same name builds its labels
+-- with the same widget names, so deleting the stale object must not take the live
+-- container's widgets with it
+-- @param label the label to delete if it is still the registered one
+local function deleteIfStillRegistered(label)
+    -- ask the container the label was added to: menu labels of a container that
+    -- lives in a user window are registered there, not in Geyser.windowList
+    local windowList = label and label.delete and label.container and label.container.windowList
+    if windowList and windowList[label.name] == label then
+        label:delete()
+    end
+end
+
+-- internal function to delete the "More..." labels doNestShow adds to a menu that
+-- does not fit on screen. They are kept in Geyser.Label.scrollV/scrollH, keyed by
+-- the menu they scroll, rather than in the menu's own MenuLabels.
+-- @param label the menu label whose scroll labels are to be deleted
+local function deleteScrollLabels(label)
+    for _, cache in pairs({vertical = Geyser.Label.scrollV, horizontal = Geyser.Label.scrollH}) do
+        local scrollLabels = cache[label]
+        if scrollLabels then
+            cache[label] = nil
+            for _, scrollLabel in ipairs(scrollLabels) do
+                deleteIfStillRegistered(scrollLabel)
+            end
+        end
+    end
+end
+
+-- internal function to delete the labels of a right click menu and of all its submenus.
+-- Menu labels are created as top level Geyser objects rather than as children of
+-- the menu they belong to, so Geyser.Container:delete()'s cascade never reaches them.
+-- @param menu the menu label whose MenuLabels are to be deleted
+local function deleteMenuLabels(menu)
+    if not menu or not menu.MenuLabels then
+        return
+    end
+    local menuLabels = menu.MenuLabels
+    menu.MenuLabels = {}
+    deleteScrollLabels(menu)
+    for _, label in pairs(menuLabels) do
+        deleteMenuLabels(label)
+        deleteIfStillRegistered(label)
+    end
+end
+
+-- internal function called by Geyser.Container:delete() to clean up what the
+-- delete cascade cannot reach: the right click menu labels, the event handlers
+-- that keep firing on a deleted container, and the container's entries in
+-- Adjustable.Container's own bookkeeping
+function Adjustable.Container:type_delete()
+    deleteMenuLabels(self.adjLabel and self.adjLabel.rightClickMenu)
+    -- detach() also kills the resize handler and drops the container out of
+    -- Adjustable.Container.Attached, which otherwise keeps reserving a border
+    if self.attached then
+        self:detach()
+    end
+    self:disconnect()
+    -- not disableAutoSave(), which kills an already nil handler and errors
+    if self.autoSaveHandler then
+        killAnonymousEventHandler(self.autoSaveHandler)
+        self.autoSaveHandler = nil
+    end
+    self.autoSave = false
+    -- a container recreated under the same name has taken over the registration,
+    -- so only unregister while it is still ours
+    if Adjustable.Container.all[self.name] == self then
+        Adjustable.Container.all[self.name] = nil
+        local index = table.index_of(Adjustable.Container.all_windows, self.name)
+        if index then
+            table.remove(Adjustable.Container.all_windows, index)
+        end
+    end
+end
+
 --- deletes the file where your saved settings are stored
 -- @param dir defines directory where the saved file is in [optional]
 -- @see Adjustable.Container:save
@@ -1040,7 +1117,7 @@ end
 --@param cons.attLabel.txt  text of the "attached menu" item
 --@param cons.lockStylesLabel.txt  text of the "lockstyle menu" item
 --@param cons.customItemsLabel.txt  text of the "custom menu" item
---@param[opt="green"] cons.titleTxtColor  color of the title text
+--@param[opt="grey"] cons.titleTxtColor  color of the title text
 --@param cons.titleText  title text
 --@param cons.titleFormat  a format list to use. 'c' - center, 'l' - left, 'r' - right,  'b' - bold, 'i' - italics, 'u' - underline, 's' - strikethrough,  '##' - font size.
 --@param[opt="standard"] cons.lockStyle  choose lockstyle at creation. possible integrated lockstyle are: "standard", "border", "light" and "full"

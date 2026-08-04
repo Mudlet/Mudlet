@@ -65,6 +65,14 @@ describe("Tests StringUtils.lua functions", function()
       local suffix = "system"
       assert.is_false(string.ends(s, suffix))
     end)
+
+    it("should return true for an empty suffix", function()
+      assert.is_true(("This is a test"):ends(""))
+    end)
+
+    it("should return false when the suffix is longer than the string", function()
+      assert.is_false(("hi"):ends("this is far too long"))
+    end)
   end)
 
   describe("Tests the functionality of string.genNocasePattern", function()
@@ -138,6 +146,25 @@ describe("Tests StringUtils.lua functions", function()
       local actual = str:split("")
       assert.same(expected, actual)
     end)
+
+    it("should split on a multi-character delimiter", function()
+      local str = "alpha::beta::gamma"
+      local expected = { "alpha", "beta", "gamma" }
+      assert.same(expected, str:split("::"))
+    end)
+
+    it("should treat the delimiter as a Lua pattern, not a plain string", function()
+      -- '.' is the 'any character' pattern, so it does not split on literal dots;
+      -- the dot must be escaped to split on real dots.
+      assert.same({ "1", "2", "3" }, ("1.2.3"):split("%."))
+      assert.are_not.same({ "1", "2", "3" }, ("1.2.3"):split("."))
+    end)
+
+    it("should produce empty leading and trailing segments when the delimiter is at the edges", function()
+      local str = ",a,b,"
+      local expected = { "", "a", "b", "" }
+      assert.same(expected, str:split(","))
+    end)
   end)
 
   describe("Tests the functionality of string.starts", function()
@@ -149,6 +176,15 @@ describe("Tests StringUtils.lua functions", function()
     it("should return false if str does not start with prefix", function()
       local str = "This is a test"
       assert.is_false(str:starts("Elephant"))
+    end)
+
+    it("should return true for an empty prefix", function()
+      assert.is_true(("This is a test"):starts(""))
+    end)
+
+    it("should return true when the prefix is the whole string", function()
+      local str = "This is a test"
+      assert.is_true(str:starts(str))
     end)
   end)
 
@@ -170,6 +206,14 @@ describe("Tests StringUtils.lua functions", function()
       local str = {}
       local errfn = function() string.title(str) end
       assert.has_error(errfn, "string.title: bad argument #1 type (string to title as string expected, got table!)")
+    end)
+
+    it("should return an empty string unchanged", function()
+      assert.equals("", string.title(""))
+    end)
+
+    it("should leave a string that does not start with a lowercase letter unchanged", function()
+      assert.equals("123abc", string.title("123abc"))
     end)
   end)
 
@@ -194,6 +238,10 @@ describe("Tests StringUtils.lua functions", function()
       local str = "This is a test"
       assert.equals(str, string.trim(str))
       assert.equals(str, str:trim())
+    end)
+
+    it("should strip leading and trailing tabs and newlines, not just spaces", function()
+      assert.equals("this is a test", ("\t\n  this is a test \n\t"):trim())
     end)
   end)
 

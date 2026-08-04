@@ -9,6 +9,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetSgrDefaultColorTest.cpp
     TelnetTlsPromptTest.cpp
     TelnetBenchmark.cpp
+    DefaultGameDeleteTest.cpp
     ResetProfileTest.cpp
     TOscTest.cpp
     TUserWindowTest.cpp
@@ -16,17 +17,38 @@ set(FUNCTIONAL_TEST_SOURCES
     TFeedTriggersRecursionTest.cpp
     TriggerSameLineMatchTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
+    EditorBannerViewSwitchTest.cpp
     TDiscordModeTest.cpp
     BogusActionCleanupTest.cpp
     MainConsoleSelectionTest.cpp
     EnableDisableByNameTest.cpp
     ColorTriggerFilterChildTest.cpp
     GMCPCharLoginTest.cpp
+    InsertTextCapTest.cpp
+    SetScriptCallbackTest.cpp
+    ClearWindowLogTest.cpp
+    XMLexportVariablesTest.cpp
+    SgrUnderlineStyleTest.cpp
     LogRestartDuplicateLineTest.cpp
     ProfileRoundTripTest.cpp
+    ProfileLoadTempFileTest.cpp
+    PackageSelfUninstallTest.cpp
     MapRoundTripTest.cpp
+    MapProgressDialogSeamTest.cpp
     UndoServerWrapTest.cpp
+    HostWidgetDecouplingTest.cpp
+    ActionSelfUninstallTest.cpp
+    ProfileFolderNameTest.cpp
+    DialogTeardownTest.cpp
+    TMediaLoopTest.cpp
+    DefaultPackagesTest.cpp
 )
+
+# The updater sources are only built with USE_UPDATER, and on macOS the
+# Updater wraps Sparkle instead of creating an UpdateDialog
+if(USE_UPDATER AND NOT APPLE)
+    list(APPEND FUNCTIONAL_TEST_SOURCES UpdaterTeardownTest.cpp)
+endif()
 
 set(FUNCTIONAL_TEST_UTILS
     TelnetServerStub.cpp
@@ -84,12 +106,22 @@ set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
 
+# InsertTextCapTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(InsertTextCapTest PROPERTIES TIMEOUT 300)
+
 # LogRestartDuplicateLineTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(LogRestartDuplicateLineTest PROPERTIES TIMEOUT 300)
 
+# TMediaLoopTest probes the audio backend and creates a fresh profile per test method,
+# and each clip has to be waited out in real time, so it needs a longer timeout
+set_tests_properties(TMediaLoopTest PROPERTIES TIMEOUT 300)
+
 # The round-trip tests boot a full mudlet instance and save/reload profile and
 # map data, so they need a longer timeout
-set_tests_properties(ProfileRoundTripTest MapRoundTripTest PROPERTIES TIMEOUT 300)
+set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeamTest PROPERTIES TIMEOUT 300)
+
+# HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
 
 # TDiscordModeTest drives the real discord-rpc library end-to-end. The library's
 # reconnect backoff is a process-global (60s ceiling) that the suite's
