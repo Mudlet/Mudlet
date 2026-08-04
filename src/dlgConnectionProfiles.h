@@ -25,10 +25,12 @@
 
 #include "ui_connection_profiles.h"
 #include <optional>
+#include <QRegularExpression>
 #include <QTimer>
 #include <QKeyEvent>
 
 class QDir;
+class QTabBar;
 
 namespace pugi {
 class xml_document;
@@ -50,6 +52,10 @@ public:
     QList<QListWidgetItem*> findData(const QListWidget& listWidget, const QVariant& what, const int role = Qt::UserRole) const;
     QList<int> findProfilesBeginningWith(const QString&) const;
     static const int csmNameRole{Qt::UserRole};
+    static QChar firstInvalidProfileNameChar(const QString& name);
+    static bool profileNameUsableAsIs(const QString& name);
+    static const QString scmAllowedProfileNameChars;
+    static const QRegularExpression scmUnusableProfileNameChars;
 
     QString btn_connect_enabled_accessDesc;
     QString btn_load_enabled_accessDesc;
@@ -134,6 +140,10 @@ private:
     void clearNotificationArea();
     void loadPasswordAsync(const QString& profileName);
     void revealConnectionDetails();
+    bool showingOnlyMyProfiles() const;
+
+    static constexpr int scmMyGamesTab = 0;
+    static constexpr int scmAllGamesTab = 1;
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
@@ -148,6 +158,8 @@ private:
     QPalette mErrorPalette;
     QPalette mReadOnlyPalette;
     QAction* mpCopyProfile = nullptr;
+    // switches the profiles list between the user's own games and the full catalog
+    QTabBar* mpTabBar = nullptr;
     QPushButton* offline_button = nullptr;
     QPushButton* connect_button = nullptr;
     QLineEdit* delete_profile_lineedit = nullptr;
@@ -178,6 +190,7 @@ private:
 
 
 private slots:
+    void slot_activeTabChanged(const int index);
     void slot_skipToGamesList();
     void slot_profileContextMenu(QPoint pos);
     void slot_setCustomIcon();

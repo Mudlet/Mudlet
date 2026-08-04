@@ -456,14 +456,25 @@ describe("Tests the functionality of IDMgr", function()
       assert.are.same({"regex_trig"}, getNamedTriggers(user))
     end)
 
-    it("Should list registered named triggers", function()
+    it("Should list registered named triggers, mixing substring and regex types", function()
+      -- https://github.com/Mudlet/Mudlet/issues/9542: substring and regex names
+      -- live in separate 1..n arrays, so merging them by index collides entries
+      -- and drops one. Registering one of each type guards that regression.
       registerNamedTrigger(user, "sub_one", "whatever_sub_one", function() end)
-      registerNamedTrigger(user, "sub_two", "whatever_sub_two", function() end)
+      registerNamedRegexTrigger(user, "regex_one", "^whatever_re$", function() end)
       local names = getNamedTriggers(user)
       assert.is_equal(2, #names)
       local present = {}
       for _, n in ipairs(names) do present[n] = true end
-      assert.is_true(present["sub_one"] and present["sub_two"], "both named triggers should be listed")
+      assert.is_true(present["sub_one"] and present["regex_one"], "both substring and regex named triggers should be listed")
+    end)
+
+    it("Should list a name held by both a substring and a regex trigger only once", function()
+      -- the two stores can hold the same name at once; the listing is a set of
+      -- names, so the #9542 union must dedupe rather than report the name twice
+      registerNamedTrigger(user, "shared", "whatever_shared_sub", function() end)
+      registerNamedRegexTrigger(user, "shared", "^whatever_shared_re$", function() end)
+      assert.are.same({"shared"}, getNamedTriggers(user))
     end)
 
     it("Should delete a named trigger", function()
@@ -472,12 +483,248 @@ describe("Tests the functionality of IDMgr", function()
       assert.are.same({}, getNamedTriggers(user))
     end)
 
-    it("Should delete all named triggers", function()
+    it("Should delete all named triggers across both substring and regex stores", function()
       registerNamedTrigger(user, "t1", "named_trig_all_a", function() end)
-      registerNamedTrigger(user, "t2", "named_trig_all_b", function() end)
+      registerNamedRegexTrigger(user, "t2", "^named_trig_all_re$", function() end)
       assert.is_equal(2, #getNamedTriggers(user))
       assert.is_true(deleteAllNamedTriggers(user))
       assert.are.same({}, getNamedTriggers(user))
+    end)
+  end)
+
+  describe("Tests the functionality of stopAllNamedTriggers", function()
+    local user = "stop all trig user"
+
+    after_each(function()
+      deleteAllNamedTriggers(user)
+      _G.StopAllTrigFire = nil
+    end)
+
+    it("Should stop a substring named trigger while leaving it registered", function()
+      _G.StopAllTrigFire = 0
+      registerNamedTrigger(user, "sub", "stop_all_sub", function() _G.StopAllTrigFire = _G.StopAllTrigFire + 1 end)
+      feedTriggers("\nstop_all_sub\n")
+      assert.is_true(_G.StopAllTrigFire >= 1, "the trigger should fire before being stopped")
+
+      assert.is_true(stopAllNamedTriggers(user))
+      -- killTrigger defers the deletion to the end of the next feed
+      feedTriggers("\nstop_all_sub\n")
+      local afterFlush = _G.StopAllTrigFire
+      feedTriggers("\nstop_all_sub\n")
+      assert.is_equal(afterFlush, _G.StopAllTrigFire, "a stopped named trigger must not keep firing")
+      -- stopped, not deleted
+      assert.are.same({"sub"}, getNamedTriggers(user))
+    end)
+
+    it("Should stop regex named triggers too", function()
+      -- BUG: stopAllNamedTriggers reaches IDMgr:stopAllTriggers, which only
+      -- walks the substring store; regex named triggers keep firing. Compare
+      -- deleteAllNamedTriggers, which clears both stores.
+      pending("stopAllNamedTriggers ignores regex named triggers - see the Wave 3d report")
+      _G.StopAllTrigFire = 0
+      registerNamedRegexTrigger(user, "re", "^stop_all_re$", function() _G.StopAllTrigFire = _G.StopAllTrigFire + 1 end)
+      feedTriggers("\nstop_all_re\n")
+      assert.is_true(_G.StopAllTrigFire >= 1)
+
+      stopAllNamedTriggers(user)
+      feedTriggers("\nstop_all_re\n")
+      local afterFlush = _G.StopAllTrigFire
+      feedTriggers("\nstop_all_re\n")
+      assert.is_equal(afterFlush, _G.StopAllTrigFire, "a stopped regex named trigger must not keep firing")
+    end)
+
+    it("Should raise an error if the userName is missing or wrong type", function()
+      assert.has_error(function() stopAllNamedTriggers() end)
+      assert.has_error(function() stopAllNamedTriggers(5) end)
+    end)
+  end)
+
+  describe("Tests the functionality of a private manager from getNewIDManager", function()
+    local mgr
+
+    before_each(function()
+      mgr = getNewIDManager()
+      _G.PrivateMgrFire = nil
+    end)
+
+    after_each(function()
+      mgr:deleteAllTimers()
+      mgr:deleteAllTriggers()
+      mgr:deleteAllEvents()
+      _G.PrivateMgrFire = nil
+    end)
+
+    it("Should hand out managers with independent stores", function()
+      local other = getNewIDManager()
+      finally(function() other:deleteAllTimers() end)
+      mgr:registerTimer("shared name", 100, function() end)
+      assert.are.same({"shared name"}, mgr:getTimers())
+      assert.are.same({}, other:getTimers())
+    end)
+
+    describe("Tests the functionality of IDMgr:registerTrigger and IDMgr:registerRegexTrigger", function()
+      it("Should register a substring trigger that fires", function()
+        _G.PrivateMgrFire = 0
+        assert.is_true(mgr:registerTrigger("sub", "private_mgr_sub", function() _G.PrivateMgrFire = _G.PrivateMgrFire + 1 end))
+        feedTriggers("\nprivate_mgr_sub\n")
+        assert.is_true(_G.PrivateMgrFire >= 1)
+      end)
+
+      it("Should register a regex trigger that fires", function()
+        _G.PrivateMgrFire = 0
+        assert.is_true(mgr:registerRegexTrigger("re", "^private_mgr_re$", function() _G.PrivateMgrFire = _G.PrivateMgrFire + 1 end))
+        feedTriggers("\nprivate_mgr_re\n")
+        assert.is_true(_G.PrivateMgrFire >= 1)
+      end)
+
+      it("Should keep substring and regex triggers in separate stores", function()
+        mgr:registerTrigger("same", "private_mgr_both_sub", function() end)
+        mgr:registerRegexTrigger("same", "^private_mgr_both_re$", function() end)
+        assert.is_not_nil(mgr.triggers["same"])
+        assert.is_not_nil(mgr.regexTriggers["same"])
+      end)
+
+      it("Should report the upstream failure instead of raising", function()
+        local ok, err = mgr:registerTrigger("bad", {}, function() end)
+        assert.is_nil(ok)
+        assert.is_string(err)
+        assert.is_nil(mgr.triggers["bad"])
+      end)
+    end)
+
+    describe("Tests the functionality of IDMgr:getTriggers", function()
+      it("Should list substring and regex names once each, sorted", function()
+        mgr:registerTrigger("bravo", "private_mgr_list_a", function() end)
+        mgr:registerRegexTrigger("alpha", "^private_mgr_list_b$", function() end)
+        mgr:registerRegexTrigger("bravo", "^private_mgr_list_c$", function() end)
+        assert.are.same({"alpha", "bravo"}, mgr:getTriggers())
+      end)
+
+      it("Should return an empty list for a fresh manager", function()
+        assert.are.same({}, mgr:getTriggers())
+      end)
+    end)
+
+    describe("Tests the functionality of IDMgr:stopTrigger and IDMgr:resumeTrigger", function()
+      it("Should stop a substring trigger and resume it again", function()
+        _G.PrivateMgrFire = 0
+        mgr:registerTrigger("sub", "private_mgr_stop", function() _G.PrivateMgrFire = _G.PrivateMgrFire + 1 end)
+        assert.is_true(mgr:stopTrigger("sub"))
+        assert.is_equal(-1, mgr.triggers["sub"].handlerID)
+        feedTriggers("\nprivate_mgr_stop\n") -- flush the deferred cleanup
+        local afterFlush = _G.PrivateMgrFire
+        feedTriggers("\nprivate_mgr_stop\n")
+        assert.is_equal(afterFlush, _G.PrivateMgrFire)
+
+        assert.is_true(mgr:resumeTrigger("sub"))
+        local before = _G.PrivateMgrFire
+        feedTriggers("\nprivate_mgr_stop\n")
+        assert.is_true(_G.PrivateMgrFire > before, "a resumed trigger should fire again")
+      end)
+
+      it("Should reach the regex store as well", function()
+        mgr:registerRegexTrigger("re", "^private_mgr_stop_re$", function() end)
+        assert.is_true(mgr:stopTrigger("re"))
+        assert.is_equal(-1, mgr.regexTriggers["re"].handlerID)
+        assert.is_true(mgr:resumeTrigger("re"))
+        assert.is_true(mgr.regexTriggers["re"].handlerID > 0)
+      end)
+
+      it("Should return false for a name it does not know", function()
+        assert.is_false(mgr:stopTrigger("nope"))
+        assert.is_false(mgr:resumeTrigger("nope"))
+      end)
+    end)
+
+    describe("Tests the functionality of IDMgr:deleteTrigger and IDMgr:deleteAllTriggers", function()
+      it("Should delete a substring trigger and forget its name", function()
+        mgr:registerTrigger("sub", "private_mgr_del", function() end)
+        assert.is_true(mgr:deleteTrigger("sub"))
+        assert.are.same({}, mgr:getTriggers())
+        assert.is_nil(mgr.triggers["sub"])
+      end)
+
+      it("Should delete a regex trigger too", function()
+        mgr:registerRegexTrigger("re", "^private_mgr_del_re$", function() end)
+        assert.is_true(mgr:deleteTrigger("re"))
+        assert.are.same({}, mgr:getTriggers())
+      end)
+
+      it("Should return false for a name it does not know", function()
+        assert.is_false(mgr:deleteTrigger("nope"))
+      end)
+
+      it("Should clear both stores at once", function()
+        mgr:registerTrigger("sub", "private_mgr_all_a", function() end)
+        mgr:registerRegexTrigger("re", "^private_mgr_all_b$", function() end)
+        assert.is_equal(2, #mgr:getTriggers())
+        assert.is_true(mgr:deleteAllTriggers())
+        assert.are.same({}, mgr:getTriggers())
+      end)
+    end)
+
+    describe("Tests the functionality of IDMgr:stopAllTimers and IDMgr:deleteAllTimers", function()
+      it("Should stop every timer while leaving them registered", function()
+        mgr:registerTimer("one", 100, function() end)
+        mgr:registerTimer("two", 100, function() end)
+        assert.is_true(mgr:stopAllTimers())
+        assert.is_equal(-1, mgr.timers["one"].handlerID)
+        assert.is_equal(-1, mgr.timers["two"].handlerID)
+        assert.are.same({"one", "two"}, mgr:getTimers())
+      end)
+
+      it("Should delete every timer", function()
+        mgr:registerTimer("one", 100, function() end)
+        mgr:registerTimer("two", 100, function() end)
+        assert.is_true(mgr:deleteAllTimers())
+        assert.are.same({}, mgr:getTimers())
+      end)
+    end)
+
+    describe("Tests the functionality of IDMgr:stopAllTriggers", function()
+      it("Should stop every substring trigger while leaving it registered", function()
+        mgr:registerTrigger("one", "private_mgr_stopall_a", function() end)
+        mgr:registerTrigger("two", "private_mgr_stopall_b", function() end)
+        assert.is_true(mgr:stopAllTriggers())
+        assert.is_equal(-1, mgr.triggers["one"].handlerID)
+        assert.is_equal(-1, mgr.triggers["two"].handlerID)
+        assert.are.same({"one", "two"}, mgr:getTriggers())
+      end)
+
+      it("Should stop regex triggers as well", function()
+        -- BUG: stopAllTriggers only calls stopAll("triggers"), so entries in
+        -- the regexTriggers store keep their live handlerID and keep firing
+        pending("IDMgr:stopAllTriggers ignores the regex store - see the Wave 3d report")
+        mgr:registerRegexTrigger("re", "^private_mgr_stopall_re$", function() end)
+        mgr:stopAllTriggers()
+        assert.is_equal(-1, mgr.regexTriggers["re"].handlerID)
+      end)
+    end)
+
+    describe("Tests the functionality of IDMgr:emergencyStop", function()
+      it("Should stop timers, events and substring triggers in one call", function()
+        mgr:registerTimer("timer", 100, function() end)
+        mgr:registerEvent("event", "someEventNameNobodyRaises", function() end)
+        mgr:registerTrigger("trigger", "private_mgr_emergency", function() end)
+
+        assert.is_true(mgr:emergencyStop())
+
+        assert.is_equal(-1, mgr.timers["timer"].handlerID)
+        assert.is_equal(-1, mgr.events["event"].handlerID)
+        assert.is_equal(-1, mgr.triggers["trigger"].handlerID)
+        -- everything stays registered so it can be resumed
+        assert.are.same({"timer"}, mgr:getTimers())
+        assert.are.same({"trigger"}, mgr:getTriggers())
+      end)
+
+      it("Should stop regex triggers too", function()
+        -- BUG: emergencyStop shares IDMgr:stopAllTriggers' blind spot and never
+        -- touches the regexTriggers store, so those triggers survive it
+        pending("IDMgr:emergencyStop leaves regex triggers running - see the Wave 3d report")
+        mgr:registerRegexTrigger("re", "^private_mgr_emergency_re$", function() end)
+        mgr:emergencyStop()
+        assert.is_equal(-1, mgr.regexTriggers["re"].handlerID)
+      end)
     end)
   end)
 end)

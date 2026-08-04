@@ -9,12 +9,41 @@ permissions:
   id-token: write
   contents: read
   actions: read
+  pull-requests: read
 
 jobs:
+  changes:
+    name: detect buildable changes
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    outputs:
+      build: ${{steps.filter.outputs.build}}
+    steps:
+    - name: Check whether anything affecting the build changed
+      id: filter
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Only genuinely inert paths are listed - CI, CMake and packaging scripts
+        # all affect the build. Anything unexpected falls through to building.
+        files=$(gh api --paginate \
+          "/repos/${{github.repository}}/pulls/${{github.event.pull_request.number}}/files" \
+          -q '.[].filename')
+        echo "Changed files:"
+        printf '%s\n' "$files"
+
+        if printf '%s\n' "$files" | grep -qvE '(^docs/|^\.github/ISSUE_TEMPLATE/|\.md$)'; then
+          echo "build=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "build=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::Documentation-only change - skipping the build matrix"
+        fi
+
   compile-mudlet:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
-    if: ${{ github.repository_owner == 'Mudlet' }}
+    needs: changes
+    if: ${{ github.repository_owner == 'Mudlet' && needs.changes.outputs.build == 'true' }}
     concurrency:
       group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -113,11 +142,13 @@ jobs:
         QT_FORCE_STDERR_LOGGING: 1
 
     - name: (Windows) Run Lua tests
-      timeout-minutes: 1
+      timeout-minutes: 2
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
+        MUDLET_TEST_REQUIRE_TTS_MOCK: 1
+        MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
       run: |
@@ -125,6 +156,42 @@ jobs:
         export LUA_PATH
         LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
         export LUA_CPATH
+
+        # Linux and macOS start the fixture HTTP server in a step of their own,
+        # but each msys2 step here is its own shell and a process backgrounded
+        # in one is not guaranteed to still be around in the next, so start the
+        # server in the very shell that runs the tests and stop it on the way
+        # out. Paths are handed over in mixed form (C:/...) because bash and
+        # the native Windows python both understand that.
+        temp_dir="$(cygpath -m "${RUNNER_TEMP}")"
+        port_file="${temp_dir}/mudlet-http-fixture-port"
+        fixture_log="${temp_dir}/http-fixture-server.log"
+        rm -f "${port_file}"
+        python_bin=python3
+        command -v "${python_bin}" > /dev/null 2>&1 || python_bin=python
+        MUDLET_TEST_HTTP_PORT_FILE="${port_file}" "${python_bin}" "$GITHUB_WORKSPACE/CI/http-fixture-server.py" > "${fixture_log}" 2>&1 &
+        fixture_pid=$!
+        # Disowned so that stopping it is not reported as a job crash, and -9
+        # because a plain SIGTERM does not reach a native Windows process from
+        # msys2. The server's log is one line when all is well, so print it
+        # either way rather than only where trouble is expected.
+        disown "${fixture_pid}" 2>/dev/null || true
+        trap 'kill -9 "${fixture_pid}" > /dev/null 2>&1 || true; cat "${fixture_log}" 2>/dev/null || true' EXIT
+        for _ in $(seq 1 100); do
+          [ -s "${port_file}" ] && break
+          sleep 0.1
+        done
+        if [ ! -s "${port_file}" ]; then
+          echo "fixture HTTP server failed to start" >&2
+          exit 1
+        fi
+        MUDLET_TEST_HTTP_PORT="$(cat "${port_file}")"
+        export MUDLET_TEST_HTTP_PORT
+        if ! curl -fsS --max-time 10 "http://127.0.0.1:${MUDLET_TEST_HTTP_PORT}/fixture.txt" > /dev/null; then
+          echo "fixture HTTP server is not serving fixtures" >&2
+          exit 1
+        fi
+        echo "fixture HTTP server ready on 127.0.0.1:${MUDLET_TEST_HTTP_PORT}"
 
         $GITHUB_WORKSPACE/build-$MSYSTEM/release/mudlet.exe --profile "Mudlet self-test"
 

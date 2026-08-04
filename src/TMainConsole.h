@@ -38,6 +38,8 @@
 
 class TMediaPlayer;
 class TTextBox;
+class QDialog;
+class QDockWidget;
 class QProgressDialog;
 
 class TMainConsole : public TConsole
@@ -95,6 +97,17 @@ public:
     void showPackageDownloadProgress(const QString& title, const QString& cancelText);
     void updatePackageDownloadProgress(qint64 got, qint64 total);
     void closePackageDownloadProgress();
+    void showMapTransferProgress(const QString& title, const QString& label, const QString& cancelButtonText);
+    void showMapJsonProgress(const QString& title, const QString& label, const QString& cancelButtonText, int maximum);
+    void setMapProgressDialogLabel(const QString& text);
+    void setMapProgressDialogRange(int minimum, int maximum);
+    void setMapProgressDialogValue(int value);
+    void disableMapProgressDialogCancel();
+    void closeMapProgressDialog();
+    void createMapperDock(const QString& title, const QString& objectName);
+    void showMapperScriptReminder();
+    void showUnpackingProgress(const QString& message, const QString& title);
+    void closeUnpackingProgress();
     void setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
     void hideVideoOutput(TMediaPlayer* player);
     const QString& getSystemSpellDictionary() const { return mSpellDic; }
@@ -131,6 +144,9 @@ public:
     QTextStream mLogStream;
     bool mLogToLogFile = false;
     QPointer<QProgressDialog> mpPackageDownloadProgressDialog;
+    QPointer<QProgressDialog> mpMapProgressDialog;
+    QPointer<QDockWidget> mpDockableMapWidget;
+    QPointer<QDialog> mpUnpackingDialog;
 
 
 public slots:
@@ -148,6 +164,8 @@ signals:
 
 
 private:
+    void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
+
     // Was public in Host class but made private there and cloned to here
     // (for main TConsole) to prevent it being changed without going through the
     // process to load in the changed dictionary:
