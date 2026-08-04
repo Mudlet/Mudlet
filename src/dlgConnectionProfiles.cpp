@@ -52,6 +52,39 @@
 
 using namespace std::chrono_literals;
 
+// Kept to a sub-set of ASCII because the profile name is also used as a
+// directory name on all supported OSes; parentheses are included so that
+// folders duplicated by a file manager (e.g. "profile (2)") work as-is:
+const QString dlgConnectionProfiles::scmAllowedProfileNameChars = qsl(". _()0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
+
+// Returns the first character not permitted in a (new) profile name, or a
+// null QChar if all of them are acceptable. An embedded U+0000 is
+// indistinguishable from the all-clear sentinel, but a QLineEdit never lets
+// one through:
+QChar dlgConnectionProfiles::firstInvalidProfileNameChar(const QString& name)
+{
+    for (const QChar& c : name) {
+        if (!scmAllowedProfileNameChars.contains(c)) {
+            return c;
+        }
+    }
+    return {};
+}
+
+// Characters that make a name unusable no matter where it came from:
+// utils::sanitizeForPath() silently rewrites them out of any path built from
+// the profile name, and CredentialManager::generateFilePath() refuses to
+// produce a path at all - so a profile named this way could never store or
+// retrieve its password. Mirrors the pattern used there:
+const QRegularExpression dlgConnectionProfiles::scmUnusableProfileNameChars{qsl(R"REGEX(\.\.|[/\\<>:"|?*\x00-\x1f])REGEX")};
+
+// Whether an existing profile folder can be taken as-is instead of being put
+// through the stricter rules that apply to names typed into the dialog:
+bool dlgConnectionProfiles::profileNameUsableAsIs(const QString& name)
+{
+    return !name.isEmpty() && !name.contains(scmUnusableProfileNameChars);
+}
+
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 : QDialog(parent)
 {
@@ -2114,19 +2147,26 @@ bool dlgConnectionProfiles::validateProfile()
 
     if (pItem) {
         QString name = profile_name_entry->text().trimmed();
-        const QString allowedChars = qsl(". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
 
-        for (int i = 0; i < name.size(); ++i) {
-            if (!allowedChars.contains(name.at(i))) {
-                notificationAreaIconLabelWarning->show();
-                notificationAreaMessageBox->setText(
-                        qsl("%1\n%2\n%3\n").arg(notificationAreaMessageBox->text(), tr("The %1 character is not permitted. Use one of the following:").arg(name.at(i)), allowedChars));
-                name.replace(name.at(i--), QString());
-                profile_name_entry->setText(name);
-                validName = false;
-                valid = false;
-                break;
-            }
+        // Only check the characters of a new or edited name: a profile folder
+        // already on disk may have been created outside of Mudlet (e.g. by a
+        // file manager copying a folder) with characters we would not permit
+        // for a new name - such a profile must still be loadable. Comparing
+        // against the trimmed item name covers folders with leading/trailing
+        // whitespace too, as the entered name always arrives trimmed. Names
+        // the rest of Mudlet cannot work with get no exemption: renaming them
+        // is worse for the user than a profile whose password never saves.
+        const QString selectedName = pItem->data(csmNameRole).toString();
+        const bool nameUnchangedAndOnDisk = (name == selectedName.trimmed()) && profileNameUsableAsIs(name) && QDir(mudlet::getMudletPath(enums::profileHomePath, selectedName)).exists();
+        const QChar invalidChar = nameUnchangedAndOnDisk ? QChar() : firstInvalidProfileNameChar(name);
+        if (!invalidChar.isNull()) {
+            notificationAreaIconLabelWarning->show();
+            notificationAreaMessageBox->setText(
+                    qsl("%1\n%2\n%3\n").arg(notificationAreaMessageBox->text(), tr("The %1 character is not permitted. Use one of the following:").arg(invalidChar), scmAllowedProfileNameChars));
+            name.remove(invalidChar);
+            profile_name_entry->setText(name);
+            validName = false;
+            valid = false;
         }
 
         // see if there is an edit that already uses a similar name
@@ -2430,11 +2470,8 @@ bool dlgConnectionProfiles::eventFilter(QObject* obj, QEvent* event)
     if (obj == listWidget_profiles && event->type() == QEvent::KeyPress) {
         QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
         switch (keyEvent->key()) {
-            // Process all the keys that could be used in a profile name
-            // fortunately we limit this to a sub-set of ASCII because we also use
-            // it for a directory name - based on "allowedChars" list in
-            // validateProfile() i.e.:
-            // ". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ"
+            // Process all the keys that could be used in a profile name,
+            // i.e. the "scmAllowedProfileNameChars" list
         default:
             // For other keys handle them as normal:
             return QObject::eventFilter(obj, event);
@@ -2462,6 +2499,8 @@ bool dlgConnectionProfiles::eventFilter(QObject* obj, QEvent* event)
         case Qt::Key_Minus:
         case Qt::Key_NumberSign:
         case Qt::Key_Ampersand:
+        case Qt::Key_ParenLeft:
+        case Qt::Key_ParenRight:
         case Qt::Key_A:
         case Qt::Key_B:
         case Qt::Key_C:
