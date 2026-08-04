@@ -7372,27 +7372,29 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
     const QHash<QString, QStringList> defaultScripts = {
             // clang-format off
         // scripts to pre-install for a profile      games this applies to, * means all games
-        {qsl(":/run-lua-code.mpackage"),             {qsl("*")}},
-        {qsl(":/echo.mpackage"),                     {qsl("*")}},
-        {qsl(":/deleteOldProfiles.mpackage"),        {qsl("*")}},
-        {qsl(":/enable-accessibility.mpackage"),     {qsl("*")}},
-        {qsl(":/mpkg.mpackage"),                     {qsl("*")}},
-        {qsl(":/mudlet-lua/lua/gui-drop/gui-drop.mpackage"), {qsl("*")}},
-        {qsl(":/CF-loader.xml"),                     {qsl("carrionfields.net")}},
-        {qsl(":/icesus-loader.xml"),                 {qsl("icesus.org")}},
-        {qsl(":/mg-loader.xml"),                     {qsl("mg.mud.de"),
-                                                      qsl("mud.morgengrauen.info"),
-                                                      qsl("mg.morgengrauen.info"),
-                                                      qsl("morgengrauen.info")}},
-        {qsl(":/run-tests.xml"),                     {qsl("mudlet.org")}},
-        {qsl(":/mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml"), {qsl("mudlet.org")}},
-        {qsl(":/mudlet-mapper.xml"),                 {qsl("aetolia.com"),
-                                                      qsl("achaea.com"),
-                                                      qsl("lusternia.com"),
-                                                      qsl("imperian.com"),
-                                                      qsl("starmourn.com"),
-                                                      qsl("stickmud.com")}},
-        {qsl(":/MedBootstrap.xml"),                  {qsl("medievia.com")}}
+        {qsl(":/packages/run-lua-code/run-lua-code.mpackage"), {qsl("*")}},
+        {qsl(":/packages/echo/echo.mpackage"), {qsl("*")}},
+        {qsl(":/packages/deleteOldProfiles/deleteOldProfiles.mpackage"), {qsl("*")}},
+        {qsl(":/packages/enable-accessibility/enable-accessibility.mpackage"), {qsl("*")}},
+        {qsl(":/packages/mpkg/mpkg.mpackage"), {qsl("*")}},
+        {qsl(":/packages/gui-drop/gui-drop.mpackage"), {qsl("*")}},
+        {qsl(":/packages/CF-loader/CF-loader.mpackage"), {qsl("carrionfields.net")}},
+        {qsl(":/packages/icesus-loader/icesus-loader.mpackage"), {qsl("icesus.org")}},
+        {qsl(":/packages/mg-loader/mg-loader.mpackage"), {qsl("mg.mud.de"),
+                                                          qsl("mud.morgengrauen.info"),
+                                                          qsl("mg.morgengrauen.info"),
+                                                          qsl("morgengrauen.info")}},
+        {qsl(":/packages/run-tests/run-tests.mpackage"), {qsl("mudlet.org")}},
+        {qsl(":/packages/StressinatorDisplayBench/StressinatorDisplayBench.mpackage"), {qsl("mudlet.org")}},
+        // the IRE mapper is maintained upstream and published as an xml, so it
+        // is the one preinstall that is not packaged - see update-3rdparty.yml
+        {qsl(":/mudlet-mapper.xml"), {qsl("aetolia.com"),
+                                      qsl("achaea.com"),
+                                      qsl("lusternia.com"),
+                                      qsl("imperian.com"),
+                                      qsl("starmourn.com"),
+                                      qsl("stickmud.com")}},
+        {qsl(":/packages/MedBootstrap/MedBootstrap.mpackage"), {qsl("medievia.com")}}
             // clang-format on
     };
 
@@ -7405,7 +7407,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
     }
 
     if (!mudlet::self()->mPackagesToInstallList.contains(qsl(":/mudlet-mapper.xml"))) {
-        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.mpackage"));
+        mudlet::self()->mPackagesToInstallList.append(qsl(":/packages/generic_mapper/generic_mapper.mpackage"));
     }
 
     // A modest starter UI that adapts to whatever any game provides, only for
@@ -7416,12 +7418,12 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
     // connect time are handled at runtime instead - the starter UI stands
     // aside when one installs.
     if (!mudlet::self()->experiencedMudletPlayer() && !TGameDetails::gameProvidesOwnUi(gameUrl)) {
-        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/base-ui/mudlet-base-ui.mpackage"));
+        mudlet::self()->mPackagesToInstallList.append(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage"));
     }
 
     // Don't play tutorial for every connection to localhost. There are legit other reasons to connect there.
     if (profileName == qsl("Mudlet Tutorial") && gameUrl == qsl("localhost")) {
-        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-tutorial.mpackage"));
+        mudlet::self()->mPackagesToInstallList.append(qsl(":/packages/mudlet-tutorial/mudlet-tutorial.mpackage"));
     }
 }
 

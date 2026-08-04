@@ -38,6 +38,7 @@ set(FUNCTIONAL_TEST_SOURCES
     ActionSelfUninstallTest.cpp
     DialogTeardownTest.cpp
     TMediaLoopTest.cpp
+    DefaultPackagesTest.cpp
 )
 
 # The updater sources are only built with USE_UPDATER, and on macOS the

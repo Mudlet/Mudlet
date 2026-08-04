@@ -5,10 +5,7 @@ name: Check mpackages
 on:
   pull_request:
     paths:
-      - '**.mpackage'
-      - 'src/mudlet-lua/lua/base-ui/**'
-      - 'src/mudlet-lua/lua/generic-mapper/**'
-      - 'src/mudlet-lua/lua/gui-drop/**'
+      - 'src/packages/**'
       - 'CI/check-mpackage-sync.lua'
       - '.github/workflows/check-mpackages.yml'
   workflow_dispatch:

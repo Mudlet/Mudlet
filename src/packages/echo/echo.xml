@@ -52,7 +52,7 @@ echo("\n")</script>
 	<ActionPackage />
 	<ScriptPackage />
 	<KeyPackage />
-	<HelpPackage>
-		<helpURL></helpURL>
-	</HelpPackage>
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
 </MudletPackage>

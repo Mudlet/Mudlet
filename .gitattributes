@@ -2,3 +2,7 @@
 # assert the exact bodies that come back, so a Windows checkout must not turn
 # its newlines into CRLF.
 CI/http-fixtures/** -text
+
+# Each .mpackage archive stores a copy of the sources beside it, byte for byte,
+# so a Windows checkout must not rewrite the newlines of one and not the other.
+src/packages/** -text

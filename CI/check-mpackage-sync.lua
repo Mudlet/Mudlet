@@ -17,26 +17,18 @@ require a version bump for any package whose contents changed:
   lua CI/check-mpackage-sync.lua --base-ref origin/development
 ]]
 
--- packages built from the loose sources next to them - the two must agree
-local sourcedPackages = {
-  "src/mudlet-lua/lua/base-ui/mudlet-base-ui.mpackage",
-  "src/mudlet-lua/lua/generic-mapper/generic_mapper.mpackage",
-  "src/mudlet-lua/lua/gui-drop/gui-drop.mpackage",
-}
-
--- packages the repository syncs weekly, where mpkg needs a version bump to
--- offer the update - see update-core-packages.yml in the package repository
+-- packages the package repository syncs weekly, where mpkg needs a version bump
+-- to offer the update - see update-core-packages.yml over there
 local publishedPackages = {
-  "src/deleteOldProfiles.mpackage",
-  "src/echo.mpackage",
-  "src/enable-accessibility.mpackage",
-  "src/mudlet-lua/lua/base-ui/mudlet-base-ui.mpackage",
-  "src/mudlet-lua/lua/generic-mapper/generic_mapper.mpackage",
-  "src/run-lua-code.mpackage",
+  "src/packages/deleteOldProfiles/deleteOldProfiles.mpackage",
+  "src/packages/echo/echo.mpackage",
+  "src/packages/enable-accessibility/enable-accessibility.mpackage",
+  "src/packages/generic_mapper/generic_mapper.mpackage",
+  "src/packages/mudlet-base-ui/mudlet-base-ui.mpackage",
+  "src/packages/run-lua-code/run-lua-code.mpackage",
 }
 
 local errors = {}
-local warnings = {}
 
 local function contains(list, wanted)
   for _, item in ipairs(list) do
@@ -134,14 +126,13 @@ local function contentsAtBaseRef(path, baseRef)
 end
 
 -- Every member with a file of the same name beside the archive must match it
-local function checkSourcesMatch(path, members, enforced)
+local function checkSourcesMatch(path, members)
   local directory = path:match("^(.*)/[^/]+$")
   for name, packaged in pairs(members) do
     local source = directory .. "/" .. name
     local onDisk = readFile(source)
     if onDisk and onDisk ~= packaged then
-      local complaint = string.format("%s does not match %s - rebuild the archive after editing the source", path, source)
-      table.insert(enforced and errors or warnings, complaint)
+      table.insert(errors, string.format("%s does not match %s - rebuild the archive after editing the source", path, source))
     end
   end
 end
@@ -167,38 +158,37 @@ for index = 1, #arg do
   end
 end
 
-local checked = {}
-for _, path in ipairs(sourcedPackages) do
-  table.insert(checked, path)
+-- every default package lives in its own directory under src/packages, named
+-- after the package, holding the archive and the sources it was built from
+local packages = {}
+for name in capture("ls -1 src/packages"):gmatch("[^\n]+") do
+  local archive = string.format("src/packages/%s/%s.mpackage", name, name)
+  if readFile(archive) then table.insert(packages, archive) end
 end
-for _, path in ipairs(publishedPackages) do
-  if not contains(checked, path) then table.insert(checked, path) end
-end
-table.sort(checked)
+table.sort(packages)
 
-for _, path in ipairs(checked) do
-  if not readFile(path) then
-    table.insert(errors, string.format("%s is listed in this script but does not exist", path))
-  else
-    local members = contentsOf(path)
-    checkSourcesMatch(path, members, contains(sourcedPackages, path))
-    if baseRef and contains(publishedPackages, path) then
-      checkVersionBumped(path, members, baseRef)
-    end
+for _, path in ipairs(publishedPackages) do
+  if not contains(packages, path) then
+    table.insert(errors, string.format("%s is listed as published but is not in src/packages", path))
   end
 end
 
-for _, warning in ipairs(warnings) do
-  print("warning: " .. warning)
+for _, path in ipairs(packages) do
+  local members = contentsOf(path)
+  checkSourcesMatch(path, members)
+  if baseRef and contains(publishedPackages, path) then
+    checkVersionBumped(path, members, baseRef)
+  end
 end
+
 for _, message in ipairs(errors) do
   print("error: " .. message)
 end
 
 if #errors > 0 then
-  print(string.format("\n%d problem(s) found. Rebuild an archive with:", #errors))
-  print("  cd <package directory> && zip <name>.mpackage config.lua <name>.xml")
+  print(string.format("\n%d problem(s) found. Rebuild an archive from its sources with:", #errors))
+  print("  cd src/packages/<name> && zip <name>.mpackage config.lua <name>.xml")
   os.exit(1)
 end
 
-print("mpackage archives match their sources.")
+print(string.format("%d mpackage archives match their sources.", #packages))
