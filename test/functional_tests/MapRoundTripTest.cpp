@@ -265,8 +265,8 @@ private:
         return file.commit();
     }
 
-    // QDataStream stores QStrings as a length prefix plus UTF-16 big-endian
-    // data, so the raw file can be scanned for a serialized string's bytes:
+    // QDataStream stores QStrings as a length prefix plus the string encoded as UTF-16BE,
+    // so the raw file can be scanned for a serialized string's bytes:
     static bool fileContainsSerializedString(const QString& fileName, const QString& needle)
     {
         QFile file(fileName);
@@ -277,9 +277,8 @@ private:
         QByteArray needleBytes;
         QDataStream out(&needleBytes, QIODevice::WriteOnly);
         out << needle;
-        // Keep the quint32 length prefix so a needle that is a byte prefix of
-        // a longer string in the file (e.g. "system.fallback_mapSymbolFont"
-        // vs. "system.fallback_mapSymbolFontFudgeFactor") cannot match it:
+        // The length prefix stays in the needle so a key cannot match a longer key it is
+        // a byte prefix of ("system.fallback_mapSymbolFont" vs. "...FontFudgeFactor"):
         return raw.contains(needleBytes);
     }
 
