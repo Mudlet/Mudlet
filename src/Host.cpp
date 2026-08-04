@@ -1925,7 +1925,9 @@ void Host::unregisterEventHandler(const QString& name, TScript* pScript)
     }
 }
 
-// If a handler matches the event, the Lua stack will be cleared after this function
+// Handlers run on this profile's shared lua_State, but each unwinds it back to
+// the level it found, so a C function raising an event mid-flight keeps its own
+// arguments and any return values it has already pushed
 void Host::raiseEvent(const TEvent& pE)
 {
     if (Q_UNLIKELY(mEmergencyStop)) {

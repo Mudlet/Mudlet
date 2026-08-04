@@ -371,11 +371,21 @@ int TLuaInterpreter::setDiscordGameUrl(lua_State* L)
         lua_pushboolean(L, true);
         return 1;
     }
-    QString inputText = getVerifiedString(L, __func__, 1, "url").trimmed();
-    host.setDiscordInviteURL(inputText.isEmpty() ? QString() : inputText);
+    // argument 1 is applied before argument 2 is checked, as it was before:
+    // setDiscordInviteURL() persists to the profile, and hoisting the second
+    // check above it would stop a bad game name from saving the URL
+    if (!checkStringArg(L, __func__, 1, "url")) {
+        return lua_error(L);
+    }
+    {
+        const QString inviteUrl = QString{lua_tostring(L, 1)}.trimmed();
+        host.setDiscordInviteURL(inviteUrl.isEmpty() ? QString() : inviteUrl);
+    }
     if (args > 1) {
-        inputText = getVerifiedString(L, __func__, 2, "game name").trimmed();
-        host.setDiscordGameName(inputText);
+        if (!checkStringArg(L, __func__, 2, "game name")) {
+            return lua_error(L);
+        }
+        host.setDiscordGameName(QString{lua_tostring(L, 2)}.trimmed());
     } else {
         host.setDiscordGameName(QString());
     }

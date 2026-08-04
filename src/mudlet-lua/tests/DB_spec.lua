@@ -2142,3 +2142,36 @@ describe("Tests DB.lua functions", function()
   end)
 
 end)
+
+describe("Tests db:echo_sql", function()
+  local saved
+
+  before_each(function()
+    saved = db.debug_sql
+  end)
+
+  after_each(function()
+    db.debug_sql = saved
+  end)
+
+  it("prints the statement it is handed when SQL debugging is on", function()
+    db.debug_sql = true
+    local printSpy = spy.on(_G, "print")
+    finally(function() print:revert() end)
+    db:echo_sql("SELECT 1;")
+    assert.spy(printSpy).was.called(1)
+    assert.spy(printSpy).was.called_with("SELECT 1;")
+  end)
+
+  it("stays silent while SQL debugging is off", function()
+    db.debug_sql = false
+    local printSpy = spy.on(_G, "print")
+    finally(function() print:revert() end)
+    db:echo_sql("SELECT 1;")
+    assert.spy(printSpy).was_not_called()
+  end)
+
+  it("is silent by default", function()
+    assert.is_falsy(saved)
+  end)
+end)

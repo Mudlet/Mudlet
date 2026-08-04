@@ -30,8 +30,11 @@
 int TLuaInterpreter::mmcpChatTo(lua_State* L)
 {
     const char* sFunc = "mmcp.chatTo";
-    const QString target = getVerifiedString(L, sFunc, 1, "target");
-    const QString msg = getVerifiedString(L, sFunc, 2, "message");
+    if (!checkStringArg(L, sFunc, 1, "target") || !checkStringArg(L, sFunc, 2, "message")) {
+        return lua_error(L);
+    }
+    const QString target{lua_tostring(L, 1)};
+    const QString msg{lua_tostring(L, 2)};
 
     Host* pHost = &getHostFromLua(L);
     if (!pHost->mMMCPServer) {
@@ -107,17 +110,23 @@ int TLuaInterpreter::mmcpAllowSnoop(lua_State* L)
 int TLuaInterpreter::mmcpCall(lua_State* L)
 {
     const char* sFunc = "mmcp.call";
-    const QString host = getVerifiedString(L, sFunc, 1, "host");
+    if (!checkStringArg(L, sFunc, 1, "host")) {
+        return lua_error(L);
+    }
     int port = csDefaultMMCPHostPort;
 
     const int n = lua_gettop(L);
     if (n > 1) {
-        port = getVerifiedInt(L, sFunc, 2, qsl("port number {default = %1}").arg(csDefaultMMCPHostPort).toUtf8().constData(), true);
+        // static: a temporary here would be alive inside getVerifiedInt() when
+        // it raises - see checkStringArg()
+        static const QByteArray portName = qsl("port number {default = %1}").arg(csDefaultMMCPHostPort).toUtf8();
+        port = getVerifiedInt(L, sFunc, 2, portName.constData(), true);
         if (port > 65535 || port < 1) {
             return warnArgumentValue(L, sFunc, qsl("invalid port number %1 given, if supplied it must be in range 1 to 65535").arg(port));
         }
     }
 
+    const QString host{lua_tostring(L, 1)};
     Host* pHost = &getHostFromLua(L);
     if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
@@ -186,8 +195,11 @@ int TLuaInterpreter::mmcpEmoteAll(lua_State* L)
 int TLuaInterpreter::mmcpChatGroup(lua_State* L)
 {
     const char* sFunc = "mmcp.chatGroup";
-    const QString group = getVerifiedString(L, sFunc, 1, "group");
-    const QString msg = getVerifiedString(L, sFunc, 2, "message");
+    if (!checkStringArg(L, sFunc, 1, "group") || !checkStringArg(L, sFunc, 2, "message")) {
+        return lua_error(L);
+    }
+    const QString group{lua_tostring(L, 1)};
+    const QString msg{lua_tostring(L, 2)};
 
     Host* pHost = &getHostFromLua(L);
     if (!pHost->mMMCPServer) {
@@ -363,8 +375,11 @@ int TLuaInterpreter::mmcpServe(lua_State* L)
 int TLuaInterpreter::mmcpSetGroup(lua_State* L)
 {
     const char* sFunc = "mmcp.setGroup";
-    const QString target = getVerifiedString(L, sFunc, 1, "target");
-    const QString group = getVerifiedString(L, sFunc, 2, "group");
+    if (!checkStringArg(L, sFunc, 1, "target") || !checkStringArg(L, sFunc, 2, "group")) {
+        return lua_error(L);
+    }
+    const QString target{lua_tostring(L, 1)};
+    const QString group{lua_tostring(L, 2)};
 
     Host* pHost = &getHostFromLua(L);
     if (!pHost->mMMCPServer) {
@@ -383,8 +398,11 @@ int TLuaInterpreter::mmcpSetGroup(lua_State* L)
 int TLuaInterpreter::mmcpSendSideChannel(lua_State* L)
 {
     const char* sFunc = "mmcp.sendSideChannel";
-    const QString channel = getVerifiedString(L, sFunc, 1, "channel");
-    const QString message = getVerifiedString(L, sFunc, 2, "message");
+    if (!checkStringArg(L, sFunc, 1, "channel") || !checkStringArg(L, sFunc, 2, "message")) {
+        return lua_error(L);
+    }
+    const QString channel{lua_tostring(L, 1)};
+    const QString message{lua_tostring(L, 2)};
 
     Host* pHost = &getHostFromLua(L);
     if (!pHost->mMMCPServer) {
@@ -453,8 +471,8 @@ int TLuaInterpreter::mmcpStopServer(lua_State* L)
         if (!result.first) {
             return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
         }
-    } 
-    
+    }
+
     lua_pushboolean(L, true);
     return 1;
 }
@@ -478,7 +496,8 @@ int TLuaInterpreter::mmcpDisconnect(lua_State* L)
     return 1;
 }
 
-int TLuaInterpreter::mmcpGetClientList(lua_State* L) {
+int TLuaInterpreter::mmcpGetClientList(lua_State* L)
+{
     Host* pHost = &getHostFromLua(L);
 
     if (!pHost->mMMCPServer) {
@@ -524,10 +543,10 @@ int TLuaInterpreter::mmcpGetClientList(lua_State* L) {
         lua_pushstring(L, pClient->getVersion().toUtf8().constData());
         lua_settable(L, -3);
 
-        
+
         lua_pushnumber(L, ++i); // Push outer table key (index)
-        lua_insert(L, -2);  // Swap the inner table and key so that the table is on top
-        lua_settable(L, -3);   // Set the inner table in the outer table.
+        lua_insert(L, -2);      // Swap the inner table and key so that the table is on top
+        lua_settable(L, -3);    // Set the inner table in the outer table.
     }
 
     return 1;

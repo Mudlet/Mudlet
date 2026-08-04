@@ -25,6 +25,7 @@
 
 #include "ui_connection_profiles.h"
 #include <optional>
+#include <QRegularExpression>
 #include <QTimer>
 #include <QKeyEvent>
 
@@ -51,6 +52,10 @@ public:
     QList<QListWidgetItem*> findData(const QListWidget& listWidget, const QVariant& what, const int role = Qt::UserRole) const;
     QList<int> findProfilesBeginningWith(const QString&) const;
     static const int csmNameRole{Qt::UserRole};
+    static QChar firstInvalidProfileNameChar(const QString& name);
+    static bool profileNameUsableAsIs(const QString& name);
+    static const QString scmAllowedProfileNameChars;
+    static const QRegularExpression scmUnusableProfileNameChars;
 
     QString btn_connect_enabled_accessDesc;
     QString btn_load_enabled_accessDesc;

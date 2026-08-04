@@ -458,16 +458,31 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
 
 bool TriggerUnit::killTrigger(const QString& name)
 {
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
+    // equal_range visits every same-named trigger; constFind() + (++it) can
+    // start mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
         TTrigger* pT = it.value();
-        if (pT->isTemporary()) //this function is only defined for tempTriggers, permanent objects cannot be removed
-        {
-            // there can only be a single tempTrigger by this name and this function ignores non-tempTriggers by definition
-            markCleanup(pT);
-            return true;
+        if (!pT->isTemporary()) {
+            // this function is only defined for tempTriggers, permanent objects cannot be removed
+            continue;
         }
-        it++;
+        // An already killed trigger is only unlinked from the lookup table once
+        // doCleanup() gets to free it, which cannot happen while a trigger script
+        // is on the call stack - so until then it is still findable by name.
+        // tempComplexRegexTrigger() replaces a temporary trigger under the name it
+        // was given, so a corpse and a live trigger can share one: keep looking
+        // rather than report a kill that would achieve nothing.
+        if (mCleanupSet.contains(pT)) {
+            continue;
+        }
+        // Deactivating matters as much as queueing the delete: the trigger stays
+        // in the list processDataStream() is walking until that deferred cleanup,
+        // and a killed trigger must no more fire on the rest of the line than a
+        // disabled one does
+        pT->setIsActive(false);
+        markCleanup(pT);
+        return true;
     }
     return false;
 }

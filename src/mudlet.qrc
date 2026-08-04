@@ -3,11 +3,11 @@
         <file alias="materiaMagicaIcon">icons/logo_mm-120x30px-verticalBlackBgd.png</file>
         <file alias="translation-stats.json">../translations/translated/translation-stats.json</file>
         <file>app-build.txt</file>
-        <file>CF-loader.xml</file>
-        <file>deleteOldProfiles.mpackage</file>
-        <file>echo.mpackage</file>
-        <file>mpkg.mpackage</file>
-        <file>MedBootstrap.xml</file>
+        <file>packages/CF-loader/CF-loader.mpackage</file>
+        <file>packages/deleteOldProfiles/deleteOldProfiles.mpackage</file>
+        <file>packages/echo/echo.mpackage</file>
+        <file>packages/mpkg/mpkg.mpackage</file>
+        <file>packages/MedBootstrap/MedBootstrap.mpackage</file>
         <file>edbee_defaults/Lua.tmLanguage</file>
         <file>edbee_defaults/Mudlet.tmTheme</file>
         <file>icons/120x30RoDLogo.png</file>
@@ -220,22 +220,22 @@
         <file>icons/window-close.png</file>
         <file>icons/wotmudicon.png</file>
         <file>icons/zombiemud.png</file>
-        <file>icesus-loader.xml</file>
+        <file>packages/icesus-loader/icesus-loader.mpackage</file>
         <file>lua-function-list.json</file>
-        <file>mg-loader.xml</file>
-        <file>mudlet-lua/lua/base-ui/mudlet-base-ui.mpackage</file>
-        <file>mudlet-lua/lua/generic-mapper/generic_mapper.mpackage</file>
-        <file>mudlet-lua/lua/gui-drop/gui-drop.mpackage</file>
-        <file>enable-accessibility.mpackage</file>
-        <file>mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml</file>
+        <file>packages/mg-loader/mg-loader.mpackage</file>
+        <file>packages/mudlet-base-ui/mudlet-base-ui.mpackage</file>
+        <file>packages/generic_mapper/generic_mapper.mpackage</file>
+        <file>packages/gui-drop/gui-drop.mpackage</file>
+        <file>packages/enable-accessibility/enable-accessibility.mpackage</file>
+        <file>packages/StressinatorDisplayBench/StressinatorDisplayBench.mpackage</file>
         <file>mudlet-lua/lua/utf8_filenames.lua</file>
         <file>mudlet-mapper.xml</file>
         <file>splash/Mudlet_splashscreen_main.png</file>
-        <file>run-lua-code.mpackage</file>
-        <file>run-tests.xml</file>
+        <file>packages/run-lua-code/run-lua-code.mpackage</file>
+        <file>packages/run-tests/run-tests.mpackage</file>
         <file>shaders/vertex.glsl</file>
         <file>shaders/fragment.glsl</file>
-        <file>mudlet-tutorial.mpackage</file>
+        <file>packages/mudlet-tutorial/mudlet-tutorial.mpackage</file>
         <file>ui/custom_lines.ui</file>
         <file>ui/custom_lines_properties.ui</file>
         <file>ui/delete_profile_confirmation.ui</file>

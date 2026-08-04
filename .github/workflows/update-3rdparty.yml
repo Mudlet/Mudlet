@@ -18,7 +18,7 @@ jobs:
             type: download
             url: https://raw.githubusercontent.com/Mudlet/mudlet-package-repository/refs/heads/main/packages/mpkg.mpackage
             file: mpkg.mpackage
-            path: src/
+            path: src/packages/mpkg/
             branch: update-mpkg-mpackage
             title: "Infrastructure: Update bundled mpkg.mpackage to latest upstream"
             body: |

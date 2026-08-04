@@ -153,7 +153,7 @@ ideally over a couple of runs or with a slightly relaxed threshold.
 `PipelineBenchmark` deliberately stops at the core pipeline: it runs offscreen
 and never paints a widget, so it does not measure the on-screen rendering and
 echo path. That path needs a live window and is covered by the **Stressinator
-display benchmark** (`src/mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml`),
+display benchmark** (`src/packages/StressinatorDisplayBench/`),
 pre-installed into the `mudlet.org` self-test profile.
 
 - Interactively, in a running profile, type `stresstest 100000` to feed that many
