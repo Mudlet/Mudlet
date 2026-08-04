@@ -34,6 +34,7 @@ set(FUNCTIONAL_TEST_SOURCES
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
     UndoServerWrapTest.cpp
+    NarrowWindowWrapTest.cpp
     HostWidgetDecouplingTest.cpp
     ActionSelfUninstallTest.cpp
     DialogTeardownTest.cpp

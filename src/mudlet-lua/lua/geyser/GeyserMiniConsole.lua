@@ -431,7 +431,9 @@ function Geyser.MiniConsole:resetAutoWrap()
   if self.scrollBar then
     consoleWidth = consoleWidth - 15
   end
-  local charactersWidth = math.floor(consoleWidth / fontWidth)
+  -- a console narrower than one character (or one the scroll bar leaves no
+  -- room in) works out as zero columns, which is not a width to wrap at
+  local charactersWidth = math.max(1, math.floor(consoleWidth / fontWidth))
 
   self.wrapAt = charactersWidth
   setWindowWrap(self.name, self.wrapAt)

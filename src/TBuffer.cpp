@@ -4987,7 +4987,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             xPos = 0;
             continue;
         }
-        int nextBoundary = boundaryFinder.toNextBoundary();
+        const int nextBoundary = boundaryFinder.toNextBoundary();
         const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
         const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
         // Safety check: during destruction, mpHost might be null
@@ -5005,13 +5005,21 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             const int firstNonIndentChar = firstChar + (needsIndent ? 0 : indentationHere);
             if (c == QChar::Space or lineBreakFinder.isAtBoundary() or lineBreakFinder.toPreviousBoundary() <= firstNonIndentChar) {
                 boundaryFinder.setPosition(indexOfChar);
-                output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
             } else {
                 indexOfChar = lineBreakFinder.position();
-                nextBoundary = lineBreakFinder.position();
-                boundaryFinder.setPosition(nextBoundary);
-                output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
+                boundaryFinder.setPosition(indexOfChar);
             }
+            if (indexOfChar <= firstChar) {
+                // no room for even one grapheme - either the wrap width is too
+                // narrow (or zero) or the indentation eats all of it. Breaking
+                // here would produce an empty segment and leave indexOfChar
+                // where it was, looping forever, so keep one grapheme on the
+                // line to guarantee the scan moves on
+                indexOfChar = (nextBoundary > firstChar) ? nextBoundary : firstChar + 1;
+                boundaryFinder.setPosition(indexOfChar);
+                totalWidth += charWidth;
+            }
+            output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
             isNewline = false;
             needsIndent = true;
             xPos = 0;
