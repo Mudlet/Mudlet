@@ -52,6 +52,12 @@ class DefaultPackagesTest : public QObject
     Q_OBJECT
 
 private:
+    // A package installs under the name its config.lua declares, which is
+    // normally the directory it lives in. These two are deliberately not: the
+    // tutorial uses a display name, and the Carrion Fields loader has to match
+    // the name its own script passes to uninstallPackage() when it is done.
+    inline static const QHash<QString, QString> scmInstallsAs = {{qsl("mudlet-tutorial"), qsl("Mudlet Tutorial")}, {qsl("CF-loader"), qsl("CF_Loader")}};
+
     const QString mProfileName = qsl("DefaultPackages-Test");
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
@@ -162,7 +168,7 @@ private slots:
         auto [installed, message] = mpHost->installPackage(qsl(":/packages/%1/%1.mpackage").arg(package), enums::PackageModuleType::Package, true);
         QVERIFY2(installed, qPrintable(qsl("%1 failed to install: %2").arg(package, message)));
 
-        const QString installedAs = (package == qsl("mudlet-tutorial")) ? qsl("Mudlet Tutorial") : package;
+        const QString installedAs = scmInstallsAs.value(package, package);
         QVERIFY2(mpHost->mInstalledPackages.contains(installedAs), qPrintable(qsl("%1 installed but is not registered as %2").arg(package, installedAs)));
     }
 
@@ -201,11 +207,7 @@ private slots:
             // the directory named the same is what makes the paths guessable.
             const QString declaredName = mpHost->getPackageConfig(contents.absoluteFilePath(qsl("config.lua")));
             QVERIFY2(!declaredName.isEmpty(), qPrintable(qsl("%1 declares no package name in its config.lua").arg(archive)));
-            if (package != qsl("mudlet-tutorial")) {
-                // the tutorial is the one package that installs under a display
-                // name ("Mudlet Tutorial") rather than under its file name
-                QCOMPARE(declaredName, package);
-            }
+            QCOMPARE(declaredName, scmInstallsAs.value(package, package));
         }
     }
 };
