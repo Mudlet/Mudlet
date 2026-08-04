@@ -3974,6 +3974,14 @@ void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QSt
     mServerPackage = mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
     mpHost->updateProxySettings(mpDownloader);
 
+    // Abort any in-flight predecessor while mpPackageDownloadReply still points
+    // at it, so it tears down via its own finished() path. Aborting after the
+    // reassignment below would instead cancel the new reply, and the stale
+    // reply's progress would otherwise keep driving the replacement dialog.
+    if (mpPackageDownloadReply) {
+        mpPackageDownloadReply->abort();
+    }
+
     auto request = QNetworkRequest(QUrl(url));
     mudlet::self()->setNetworkRequestDefaults(url, request);
     mpPackageDownloadReply = mpDownloader->get(request);
@@ -4583,7 +4591,6 @@ void cTelnet::gotPrompt(std::string& mud_data)
                 while (j < s) {
                     if (mMudData[j] == 'm') {
                         goto NEXT;
-                        break;
                     }
                     ++j;
                 }
@@ -4756,6 +4763,10 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     length = mZstream.avail_in;
     in_buffer = (char*)mZstream.next_in;
 
+    // Drop the borrowed caller-buffer pointers now that inflate() is done with
+    // them: mZstream is a member, so leaving them set would keep it referencing
+    // the caller's stack buffer after we return - a dangling pointer. mZstream
+    // should only reference them for the duration of the inflate() call above.
     mZstream.next_in = Z_NULL;
     mZstream.next_out = Z_NULL;
 

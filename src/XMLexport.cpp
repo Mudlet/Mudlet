@@ -83,7 +83,10 @@ XMLexport::XMLexport(TKey* pT)
 {
 }
 
-void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileName, bool async)
+// Builds the module's XML document into mExportDoc. This reads the live
+// trigger/timer/alias/action/script/key lists, so it must run on the main thread;
+// serialization to disk (saveModuleXml()) can then happen on a background thread.
+void XMLexport::writeModuleXML(const QString& moduleName)
 {
     auto pHost = mpHost;
     auto mudletPackage = writeXmlHeader();
@@ -155,12 +158,15 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
     } else {
         helpPackage.append_child("helpURL").text().set("");
     }
-    if (async) {
-        runAsyncSave(fileName, fileName);
-    } else {
-        saveXml(fileName);
-        mpHost->xmlSaved(fileName);
-    }
+}
+
+// Serializes the document previously built by writeModuleXML() to disk. Kept
+// separate from writeModuleXML() so the document build (main thread only) and the
+// file write (safe on a background thread as the document is not modified once
+// built) can run on different threads.
+bool XMLexport::saveModuleXml(const QString& fileName)
+{
+    return saveXml(fileName);
 }
 
 bool XMLexport::exportHost(const QString& filename_pugi_xml)
@@ -775,8 +781,16 @@ void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
         }
     }
 
+    // Refresh the variable tree so it reflects the current Lua state. The tree
+    // is otherwise only rebuilt at profile load and when the Variables editor
+    // populates it, so a variable (or saved table member) a script created
+    // afterwards would be missing here and silently dropped from the saved
+    // profile. Skip the refresh only while that editor view is on screen: it
+    // owns the tree and rebuilding it here would invalidate the widget the user
+    // is interacting with (its variables would stop responding until refreshed).
+    const bool variablesEditorOnScreen = pHost->mpEditorDialog && pHost->mpEditorDialog->variablesViewActive();
     TVar* base = vu->getBase();
-    if (!base) {
+    if (!variablesEditorOnScreen || !base) {
         lI->getVars(false);
         base = vu->getBase();
     }
@@ -861,9 +875,17 @@ void XMLexport::writeTriggerPackage(const Host* pHost, pugi::xml_node& mudletPac
     }
 }
 
-void XMLexport::writeVariable(TVar* pVar, LuaInterface* pLuaInterface, VarUnit* pVariableUnit, pugi::xml_node xmlParent)
+void XMLexport::writeVariable(TVar* pVar, LuaInterface* pLuaInterface, VarUnit* pVariableUnit, pugi::xml_node xmlParent, bool insideSavedTable)
 {
-    if (pVariableUnit->isSaved(pVar)) {
+    // a member of a saved table is saved with it even without its own
+    // savedVars entry: a missing entry cannot be told apart from a member a
+    // script added after the table was marked saved, and those must not be
+    // silently dropped (#9517). The ride-along skips hidden variables
+    // (Mudlet's internals and ones the user hid) and unsaveable ones
+    // (functions, references, oversized tables); an explicitly saved
+    // variable exports as it always has.
+    const bool exportable = pVariableUnit->isSaved(pVar) || (insideSavedTable && pVariableUnit->shouldSave(pVar) && !pVariableUnit->isHidden(pVar));
+    if (exportable) {
         if (pVar->getValueType() == LUA_TTABLE) {
             auto variableGroup = xmlParent.append_child("VariableGroup");
 
@@ -874,7 +896,7 @@ void XMLexport::writeVariable(TVar* pVar, LuaInterface* pLuaInterface, VarUnit* 
 
             QListIterator<TVar*> itNestedVariable(pVar->getChildren(false));
             while (itNestedVariable.hasNext()) {
-                writeVariable(itNestedVariable.next(), pLuaInterface, pVariableUnit, variableGroup);
+                writeVariable(itNestedVariable.next(), pLuaInterface, pVariableUnit, variableGroup, true);
             }
         } else {
             auto variable = xmlParent.append_child("Variable");

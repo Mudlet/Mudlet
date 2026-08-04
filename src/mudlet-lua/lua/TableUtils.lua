@@ -153,8 +153,10 @@ end
 
 --- <b><u>TODO</u></b> listRemove( list, what )
 function listRemove( list, what )
-  for k, v in ipairs( list ) do
-    if v == what then
+  -- iterate backwards so removing an element does not shift a following match
+  -- down into an index the loop has already passed
+  for k = #list, 1, -1 do
+    if list[k] == what then
       table.remove( list, k )
     end
   end
@@ -243,7 +245,11 @@ function table.n_collect(tbl, func)
   assert(func_type == "function", string.format("table.n_collect: bad argument #2 type (function to run against each item in tbl as function expected, got %s)", func_type))
   local matches = {}
   for key,value in pairs(tbl) do
-    if func(value) == true and not table.contains(matches, value) then
+    -- table.contains matches keys and nested values too, so a value equal to
+    -- an index already in `matches` looked like a duplicate. table.index_of
+    -- compares by value over ipairs, which is the semantics a list of unique
+    -- values needs, and is what the sibling table.n_matches already uses.
+    if func(value) == true and not table.index_of(matches, value) then
       table.insert(matches, value)
     end
   end
@@ -348,20 +354,31 @@ end
 ---      ["test2"] = function() return true end,
 ---   }
 ---   </pre>
+---
+--- When several tables hold different values for the same key, those values are
+--- collected into a new subtable, and any further collision on that key is
+--- appended to it. The tables you pass in are never modified.
 function table.union(...)
   local sets = { ... }
   local union = {}
+  -- `pairs()` never yields a nil value, so `union[key] == nil` is an exact
+  -- presence test and stays correct for a legitimate `false`. `merged` tracks
+  -- which keys hold a subtable that we created, so a table that came from a
+  -- caller is never appended to -- doing that both flattened the result and
+  -- modified the caller's table in place.
+  local merged = {}
 
   for _, set in ipairs(sets) do
     for key, val in pairs(set) do
-      if union[key] and union[key] ~= val then
-        if type(union[key]) == 'table' then
+      if union[key] == nil then
+        union[key] = val
+      elseif union[key] ~= val then
+        if merged[key] then
           table.insert(union[key], val)
         else
           union[key] = { union[key], val }
+          merged[key] = true
         end
-      else
-        union[key] = val
       end
     end
   end

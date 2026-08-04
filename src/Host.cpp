@@ -60,18 +60,22 @@
 
 #include <chrono>
 #include <QtConcurrentRun>
+#include <QApplication>
 #include <QCoreApplication>
 #include <QDataStream>
-#include <QDialog>
+#include <QDirIterator>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QKeyEvent>
-#include <QtUiTools>
+#include <QMovie>
 #include <QNetworkProxy>
+#include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QScopeGuard>
 #include <QSettings>
+#include <QTemporaryFile>
 #include <QTextStream>
 #include <zip.h>
 #include <memory>
@@ -242,7 +246,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpMap(new TMap(this, hostname))
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))
-, mpDockableMapWidget()
 , mTimerDebugOutputSuppressionInterval(QTime())
 , mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
 , mBufferSearchOptions(TConsole::SearchOption::SearchOptionNone)
@@ -453,11 +456,6 @@ Host::~Host()
 
     mStopWatchMap.clear();
 
-    if (mpDockableMapWidget) {
-        mpDockableMapWidget->deleteLater();
-    }
-
-
     mErrorLogStream.flush();
     mErrorLogFile.close();
     // Since this is a destructor, it's risky to rely on member variables within the destructor itself.
@@ -632,58 +630,83 @@ void Host::createModuleBackup(const QString& filename, const QString& saveName)
     QFile::copy(filename, saveName + time);
 }
 
-void Host::writeModule(const QString& moduleName, const QString& filename)
+QList<QFuture<bool>> Host::pendingXmlSaveFutures() const
 {
-    QString xml_filename = filename;
-    if (filename.endsWith(qsl("mpackage"), Qt::CaseInsensitive) || filename.endsWith(qsl("zip"), Qt::CaseInsensitive)) {
-        xml_filename = mudlet::getMudletPath(enums::profilePackagePathFileName, mHostName, moduleName);
+    QList<QFuture<bool>> futures;
+    for (const auto& writer : writers) {
+        futures += writer->saveFutures;
     }
-    auto writer = std::make_shared<XMLexport>(this);
-    writers.insert(xml_filename, writer);
-    writer->writeModuleXML(moduleName, xml_filename);
-    updateModuleZips(filename, moduleName);
+    return futures;
 }
 
 void Host::waitForAsyncXmlSave()
 {
-    // writers and futures are copied to prevent deletion during for loop (which would mean crash)
-    auto myWriters = writers;
-    for (auto& writer : myWriters) {
-        auto myFutures = writer->saveFutures;
-        for (auto& future : myFutures) {
-            future.waitForFinished();
-        }
+    // Snapshot on the main thread - see pendingXmlSaveFutures()
+    const auto futures = pendingXmlSaveFutures();
+    for (auto future : futures) {
+        future.waitForFinished();
     }
 }
 
-void Host::saveModules(bool backup)
+QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
 {
-    QMapIterator<QString, QStringList> it(modulesToWrite);
+    // Runs on the main thread so it can safely read the live trigger/timer/... lists
+    // (via writeModuleXML) and mutate the `writers`/`mModulesToSync`/`modulesToWrite`
+    // bookkeeping. The returned jobs carry everything writeModuleFiles() needs, so the
+    // background task never touches any of that shared state.
+    QList<ModuleWriteJob> jobs;
     mModulesToSync.clear();
-    const QString savePath = mudlet::getMudletPath(enums::moduleBackupsPath);
-    auto savePathDir = QDir(savePath);
-    if (!savePathDir.exists()) {
-        savePathDir.mkpath(savePath);
-    }
+    QMapIterator<QString, QStringList> it(modulesToWrite);
     while (it.hasNext()) {
         it.next();
-        QStringList entry = it.value();
+        const QStringList entry = it.value();
         const QString moduleName = it.key();
-        const QString filename = entry[0];
+        const QString filename = entry.at(0);
 
         if (!mModulesLoadedOk.contains(moduleName)) {
             continue;
         }
 
-        if (backup) {
-            createModuleBackup(filename, savePath + moduleName);
+        QString xmlFilename = filename;
+        if (filename.endsWith(qsl("mpackage"), Qt::CaseInsensitive) || filename.endsWith(qsl("zip"), Qt::CaseInsensitive)) {
+            xmlFilename = mudlet::getMudletPath(enums::profilePackagePathFileName, mHostName, moduleName);
         }
-        writeModule(moduleName, filename);
-        if (entry[1].toInt()) {
+
+        auto writer = std::make_shared<XMLexport>(this);
+        writer->writeModuleXML(moduleName);
+        // `writers` is the sole owner; the job carries a non-owning pointer so the
+        // XMLexport is only ever destroyed on the main thread (via xmlSaved()).
+        writers.insert(xmlFilename, writer);
+        jobs.append({writer.get(), moduleName, filename, xmlFilename, backup});
+
+        if (entry.at(1).toInt()) {
             mModulesToSync << moduleName;
         }
     }
     modulesToWrite.clear();
+    return jobs;
+}
+
+void Host::writeModuleFiles(const QList<ModuleWriteJob>& jobs)
+{
+    // Runs on a background thread: pure file I/O, no access to shared save-bookkeeping.
+    if (jobs.isEmpty()) {
+        return;
+    }
+    const QString savePath = mudlet::getMudletPath(enums::moduleBackupsPath);
+    auto savePathDir = QDir(savePath);
+    if (!savePathDir.exists()) {
+        savePathDir.mkpath(savePath);
+    }
+    for (const auto& job : jobs) {
+        if (job.backup) {
+            createModuleBackup(job.filename, savePath + job.moduleName);
+        }
+        if (!job.writer->saveModuleXml(job.xmlFilename)) {
+            qWarning().noquote().nospace() << "Host::writeModuleFiles() WARNING - failed to write module \"" << job.moduleName << "\" to \"" << job.xmlFilename << "\".";
+        }
+        updateModuleZips(job.filename, job.moduleName);
+    }
 }
 
 void Host::reloadModules()
@@ -850,6 +873,15 @@ bool Host::resetProfile_phase1()
         return false;
     }
 
+    // A test-mode waitForEvent() is blocked in a nested event loop on this
+    // profile's lua_State; phase2 would lua_close() that state underneath it (a
+    // use-after-free). Refuse until the wait finishes. Always empty (so a no-op)
+    // outside MUDLET_TEST_MODE, where waitForEvent() is inert.
+    if (mLuaInterpreter.hasPendingEventWaits()) {
+        qWarning() << "Host::resetProfile_phase1() called while a waitForEvent() is blocked, ignoring";
+        return false;
+    }
+
     mAliasUnit.stopAllTriggers();
     mTriggerUnit.stopAllTriggers();
     mTimerUnit.stopAllTriggers();
@@ -875,6 +907,7 @@ void Host::resetProfile_phase2()
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
+    mActionUnit.doCleanup();
     mpConsole->resetMainConsole();
     // Drain queued DeferredDelete events so old TLabel destructors run their
     // luaL_unref against the still-live Lua state. Without this, those unrefs
@@ -990,6 +1023,15 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         writers.remove(qsl("profile"));
         return {false, filename_xml, tr("the profile is no longer available")};
     }
+
+    // Build the module XML documents and register their writers here, on the main
+    // thread, while the live profile data is quiescent: the background task below then
+    // only serializes the prepared documents and never touches `writers`,
+    // `modulesToWrite` or `mModulesToSync` (doing so from a pool thread was a
+    // heap-corrupting data race).
+    const bool backupModules = saveName != qsl("autosave");
+    const QList<ModuleWriteJob> moduleJobs = prepareModuleSaves(backupModules);
+
     mWritingHostAndModules = true;
 
     // emit signal to notify the UI that the save button should get disabled momentarily
@@ -1003,18 +1045,34 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         qApp->processEvents();
     }
 
+    // Snapshot the pending profile-save futures on the main thread - see
+    // pendingXmlSaveFutures(): the background task must not read `writers`/`saveFutures`
+    // itself, as the main thread mutates them whenever a save starts or finishes.
+    const QList<QFuture<bool>> xmlSaveFutures = pendingXmlSaveFutures();
     auto watcher = new QFutureWatcher<void>;
-    mModuleFuture = QtConcurrent::run([=, this]() {
-        // wait for the host xml to be ready before starting to sync modules
-        waitForAsyncXmlSave();
-        saveModules(saveName != qsl("autosave"));
+    mModuleFuture = QtConcurrent::run([this, xmlSaveFutures, moduleJobs]() {
+        // wait for the host xml to be ready before writing the modules out
+        for (auto future : xmlSaveFutures) {
+            future.waitForFinished();
+        }
+        writeModuleFiles(moduleJobs);
     });
-    connect(watcher, &QFutureWatcher<void>::finished, this, [=, this]() {
-        // reload, or queue module reload for when xml is ready
+    connect(watcher, &QFutureWatcher<void>::finished, this, [this, watcher, moduleJobs, syncModules]() {
+        // Finish on the main thread: the module documents are now on disk. Consume
+        // mModulesToSync via reloadModules() *before* the xmlSaved() loop below empties
+        // `writers` and emits profileSaveFinished(): that signal fires synchronously,
+        // and a deferred handler (e.g. a queued package install) could start another
+        // save that clears/replaces mModulesToSync, making this save skip the module
+        // sync it owes to other profiles.
         if (syncModules) {
             reloadModules();
         }
         mWritingHostAndModules = false;
+        // Drop each module writer from `writers`; the last removal emits
+        // profileSaveFinished() once the profile writer is gone too.
+        for (const auto& job : moduleJobs) {
+            xmlSaved(job.xmlFilename);
+        }
         watcher->deleteLater();
     });
     watcher->setFuture(mModuleFuture);
@@ -1316,26 +1374,7 @@ bool Host::checkForMappingScript()
 void Host::check_for_mappingscript()
 {
     if (!checkForMappingScript()) {
-        QUiLoader loader;
-
-        QFile file(":/ui/lacking_mapper_script.ui");
-        if (!file.open(QFile::ReadOnly)) {
-            qWarning() << "Host: failed to open lacking_mapper_script.ui for reading:" << file.errorString();
-            return;
-        }
-
-        auto dialog = dynamic_cast<QDialog*>(loader.load(&file, mudlet::self()));
-        file.close();
-        if (!dialog) {
-            // could not load / not a QDialog
-            return;
-        }
-
-        connect(dialog, &QDialog::accepted, mudlet::self(), &mudlet::slot_openMappingScriptsPage);
-
-        dialog->show();
-        dialog->raise();
-        dialog->activateWindow();
+        emit signal_showMapperScriptReminder();
     }
 }
 
@@ -1788,6 +1827,10 @@ void Host::incomingStreamProcessor(const QString& data, int line)
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
+    mActionUnit.doCleanup();
+    // ScriptUnit defers deletes too (a package script uninstalling its own package
+    // mid-compile or mid-event-dispatch), so flush it here alongside the others:
+    mScriptUnit.doCleanup();
 }
 
 // When Mudlet is running in online mode, deleted temp* objects are cleaned up in bulk
@@ -1799,6 +1842,8 @@ void Host::slot_purgeTemps()
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
+    mActionUnit.doCleanup();
+    mScriptUnit.doCleanup();
 }
 
 void Host::registerEventHandler(const QString& name, TScript* pScript)
@@ -1833,7 +1878,9 @@ void Host::unregisterEventHandler(const QString& name, TScript* pScript)
     }
 }
 
-// If a handler matches the event, the Lua stack will be cleared after this function
+// Handlers run on this profile's shared lua_State, but each unwinds it back to
+// the level it found, so a C function raising an event mid-flight keeps its own
+// arguments and any return values it has already pushed
 void Host::raiseEvent(const TEvent& pE)
 {
     if (Q_UNLIKELY(mEmergencyStop)) {
@@ -1845,6 +1892,18 @@ void Host::raiseEvent(const TEvent& pE)
     }
 
     static const QString star = qsl("*");
+
+    // A handler can uninstall its own package mid-dispatch (a common package
+    // auto-updater pattern): whilst this frame is on the stack
+    // ScriptUnit::uninstall() defers its deletes so neither the executing
+    // handler nor the other TScript pointers in the lists copied below get
+    // freed under us; the deferred deletes are flushed once the outermost
+    // dispatch finishes:
+    mScriptUnit.beginProcessing();
+    const auto processingGuard = qScopeGuard([this] {
+        mScriptUnit.endProcessing();
+        mScriptUnit.doCleanup();
+    });
 
     if (mEventHandlerMap.contains(pE.mArgumentList.at(0))) {
         QList<TScript*> scriptList = mEventHandlerMap.value(pE.mArgumentList.at(0));
@@ -1871,6 +1930,10 @@ void Host::raiseEvent(const TEvent& pE)
             mLuaInterpreter.callEventHandler(function, pE);
         }
     }
+
+    // Let any test-mode waitForEvent() call blocked on this event capture its
+    // arguments and unblock. Cheap (an empty-list check) when nothing is waiting.
+    mLuaInterpreter.captureEventForWaits(pE);
 
     // After the event has been raised but before 'event' goes out of scope,
     // we need to safely dereference the members of 'event' that point to
@@ -1949,10 +2012,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         return {true, QString()};
     }
 
-    // As the pointer to dialog is only used now WITHIN this method and this
-    // method can be re-entered, it is best to use a local rather than a class
-    // pointer just in case we accidentally re-enter this method in the future.
-    QDialog* pUnzipDialog = nullptr;
+    bool showedUnpackingDialog = false;
 
     QString actualFileName = fileName;
     std::unique_ptr<QTemporaryFile> tempFile;
@@ -2045,41 +2105,16 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // window-manager focus from the user's other applications - see
         // issue #9170.
         if (thing != enums::PackageModuleType::ModuleFromUI && !quiet) {
-            QUiLoader loader(this);
-            QFile uiFile(qsl(":/ui/package_manager_unpack.ui"));
-            if (!uiFile.open(QFile::ReadOnly)) {
-                qWarning() << "Host: failed to open package_manager_unpack.ui for reading:" << uiFile.errorString();
-                return {false, qsl("could not open unpacking progress dialog UI file")};
-            }
-            pUnzipDialog = dynamic_cast<QDialog*>(loader.load(&uiFile, nullptr));
-            uiFile.close();
-            if (!pUnzipDialog) {
-                return {false, qsl("could not load unpacking progress dialog")};
-            }
-
-            auto* pLabel = pUnzipDialog->findChild<QLabel*>(qsl("label"));
-            if (pLabel) {
-                if (thing != enums::PackageModuleType::Package) {
-                    pLabel->setText(tr("Unpacking module:\n\"%1\"\nplease wait...").arg(packageName));
-                } else {
-                    pLabel->setText(tr("Unpacking package:\n\"%1\"\nplease wait...").arg(packageName));
-                }
-            }
-            pUnzipDialog->hide(); // Must hide to change WindowModality
-            pUnzipDialog->setWindowTitle(tr("Unpacking"));
-            pUnzipDialog->setWindowModality(Qt::ApplicationModal);
-            pUnzipDialog->show();
-            qApp->processEvents();
-            pUnzipDialog->raise();
-            pUnzipDialog->repaint(); // Force a redraw
-            qApp->processEvents();   // Try to ensure we are on top of any other dialogs and freshly drawn
+            const QString message =
+                    (thing != enums::PackageModuleType::Package) ? tr("Unpacking module:\n\"%1\"\nplease wait...").arg(packageName) : tr("Unpacking package:\n\"%1\"\nplease wait...").arg(packageName);
+            emit signal_showUnpackingProgress(message, tr("Unpacking"));
+            showedUnpackingDialog = true;
         }
 
         auto unzipSuccessful = mudlet::unzip(actualFileName, _dest, _tmpDir);
 
-        if (pUnzipDialog) {
-            pUnzipDialog->deleteLater();
-            pUnzipDialog = nullptr;
+        if (showedUnpackingDialog) {
+            emit signal_hideUnpackingProgress();
         }
         if (!unzipSuccessful) {
             return {false, qsl("could not unzip package")};
@@ -2414,6 +2449,12 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         // not to try to write to disk a package/module that just got uninstalled and removed from memory
         QTimer::singleShot(0ms, this, [this]() {
             mSaveTimer = false;
+            // If a package's own script uninstalled it mid-compile (from a script
+            // reached outside the compileAll()/editor/raiseEvent flush points, e.g. a
+            // permScript() run from an alias or key), the script deletes were deferred
+            // and are still registered. Flush them now, at depth 0, before saving so
+            // the save below does not serialize the just-uninstalled scripts back in:
+            mScriptUnit.doCleanup();
             if (auto [ok, filename, error] = saveProfile(); !ok) {
                 qDebug() << qsl("Host::uninstallPackage: Couldn't save '%1' to '%2' because: %3").arg(getName(), filename, error);
             }
@@ -3432,14 +3473,14 @@ void Host::setBufferSearchOptions(const TConsole::SearchOptions optionsState)
 
 std::pair<bool, QString> Host::setMapperTitle(const QString& title)
 {
-    if (!mpDockableMapWidget) {
+    if (!mpConsole || !mpConsole->mpDockableMapWidget) {
         return {false, "no floating/dockable type map window found"};
     }
 
     if (title.isEmpty()) {
-        mpDockableMapWidget->setWindowTitle(tr("Map - %1").arg(mHostName));
+        mpConsole->mpDockableMapWidget->setWindowTitle(tr("Map - %1").arg(mHostName));
     } else {
-        mpDockableMapWidget->setWindowTitle(title);
+        mpConsole->mpDockableMapWidget->setWindowTitle(title);
     }
 
     return {true, QString()};
@@ -3587,7 +3628,6 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         dockwidget = new TDockWidget(this, name);
         dockwidget->setObjectName(qsl("dockWindow_%1_%2").arg(hostName, name));
         dockwidget->setContentsMargins(0, 0, 0, 0);
-        dockwidget->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
         dockwidget->setWindowTitle(name);
         mpConsole->mDockWidgetMap.insert(name, dockwidget);
         // It wasn't obvious but the parent passed to the TConsole constructor
@@ -3597,7 +3637,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         console->setContentsMargins(0, 0, 0, 0);
         dockwidget->setTConsole(console);
         console->layerCommandLine->hide();
-        console->mpScrollBar->hide();
+        console->setScrollBarVisible(false);
         mpConsole->mSubConsoleMap.insert(name, console);
         dockwidget->setStyleSheet(mProfileStyleSheet);
         mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
@@ -4054,7 +4094,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     if (pDCheck) {
         return {false, qsl("element '%1' is the base of a floating/dockable user window and may not be moved").arg(name)};
     }
-    if (mpDockableMapWidget) {
+    if (mpConsole->mpDockableMapWidget) {
         if (!name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
             return {false, qsl("element '%1' is the map in a floating/dockable window and may not be moved").arg(name)};
         }
@@ -4154,11 +4194,11 @@ std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, 
         return {false, QString()};
     }
 
-    auto pM = mpDockableMapWidget;
+    auto pM = mpConsole->mpDockableMapWidget;
     auto pMapper = mpMap.data()->mpMapper;
     if (!pM && !pMapper) {
         showHideOrCreateMapper(true);
-        pM = mpDockableMapWidget;
+        pM = mpConsole->mpDockableMapWidget;
     }
     if (!pM) {
         return {false, qsl("cannot create map widget. Do you already use an embedded mapper?")};
@@ -4216,7 +4256,7 @@ std::pair<bool, QString> Host::closeMapWidget()
         return {false, QString()};
     }
 
-    auto pM = mpDockableMapWidget;
+    auto pM = mpConsole->mpDockableMapWidget;
     if (!pM) {
         return {false, qsl("no map widget found to close")};
     }
@@ -4475,8 +4515,8 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
         mpNotePad->setStyleSheet(styleSheet);
         mpNotePad->setTabsStyleSheet(styleSheet);
     }
-    if (mpDockableMapWidget) {
-        mpDockableMapWidget->setStyleSheet(styleSheet);
+    if (mpConsole->mpDockableMapWidget) {
+        mpConsole->mpDockableMapWidget->setStyleSheet(styleSheet);
     }
 
     for (auto& dockWidget : mpConsole->mDockWidgetMap) {
@@ -4660,7 +4700,7 @@ void Host::toggleMapperVisibility()
     if (pMap->mpMapper->isFloatAndDockable()) {
         // If we are using a floating/dockable widget we must show/hide that
         // only and not the mapper widget (otherwise it messes up {shrinks
-        // to a minimal size} the mapper inside the container QDockWidget). This
+        // to a minimal size} the mapper inside the container dock widget). This
         // is the same as the case for a TConsole inside a TDockWidget in
         // (void) TDockWidget::setVisible(bool).
         // When in a dock widget, check the parent's visibility, not the child's,
@@ -4681,17 +4721,21 @@ void Host::toggleMapperVisibility()
 
 void Host::createMapper(const bool loadDefaultMap)
 {
+    // The console owns the map dock; bail if the profile has no console yet or is
+    // already being torn down.
+    if (!mpConsole) {
+        return;
+    }
     auto pMap = mpMap.data();
     auto hostName(getName());
-    mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
-    mpDockableMapWidget->setObjectName(qsl("dockMap_%1").arg(hostName));
+    mpConsole->createMapperDock(tr("Map - %1").arg(hostName), qsl("dockMap_%1").arg(hostName));
     // Arrange for TMap member values to be copied from the Host masters so they
     // are in place when the 2D mapper is created:
     getPlayerRoomStyleDetails(pMap->mPlayerRoomStyle, pMap->mPlayerRoomOuterDiameterPercentage, pMap->mPlayerRoomInnerDiameterPercentage, pMap->mPlayerRoomOuterColor, pMap->mPlayerRoomInnerColor);
 
-    pMap->mpMapper = new dlgMapper(mpDockableMapWidget, this, pMap); //FIXME: mpHost definieren
+    pMap->mpMapper = new dlgMapper(mpConsole->mpDockableMapWidget, this, pMap); //FIXME: mpHost definieren
     pMap->mpMapper->setStyleSheet(mProfileStyleSheet);
-    mpDockableMapWidget->setWidget(pMap->mpMapper);
+    mpConsole->mpDockableMapWidget->setWidget(pMap->mpMapper);
 
     if (loadDefaultMap && pMap->mpRoomDB->isEmpty()) {
         qDebug() << "Host::create_mapper() - restore map case 3.";
@@ -4716,7 +4760,7 @@ void Host::createMapper(const bool loadDefaultMap)
             pMap->mpMapper->show();
         }
     }
-    mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, mpDockableMapWidget);
+    mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, mpConsole->mpDockableMapWidget);
 
     // XXX: should this be called multiple times?
     mudlet::self()->loadWindowLayout();
@@ -4725,7 +4769,7 @@ void Host::createMapper(const bool loadDefaultMap)
     // restored a previous hidden state, but when first creating the mapper, we
     // always want it to be visible.
     pMap->mpMapper->show();
-    mpDockableMapWidget->show();
+    mpConsole->mpDockableMapWidget->show();
     pMap->mpMapper->updateEmptyStateOverlay();
 
     check_for_mappingscript();
@@ -4849,12 +4893,82 @@ std::optional<QString> Host::windowType(const QString& name) const
         }
     }
 
+    if (mpConsole->mScrollBoxMap.contains(name)) {
+        return {qsl("scrollbox")};
+    }
+
     if (mpConsole->mSubCommandLineMap.contains(name)) {
         return {qsl("commandline")};
     }
 
     if (mpConsole->mTextBoxMap.contains(name)) {
         return {qsl("textedit")};
+    }
+
+    return {};
+}
+
+// Returns the position and size of a named window element, matching what
+// moveWindow()/resizeWindow() set. pos()/size() (rather than geometry()) are
+// used deliberately: they are the exact inverse of the move()/resize() calls
+// those setters make, including for a floating user-window dock where move()
+// targets the frame origin while geometry() would report the client area.
+// Mirrors the widget dispatch of moveWindow()/resizeWindow(); user windows are
+// moved/resized through their dock widget, so read the dock, not the console.
+std::optional<QRect> Host::windowGeometry(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+
+    if (auto pL = mpConsole->mLabelMap.value(name)) {
+        return {QRect(pL->pos(), pL->size())};
+    }
+    if (auto pC = mpConsole->mSubConsoleMap.value(name)) {
+        if (auto pD = mpConsole->mDockWidgetMap.value(name)) {
+            return {QRect(pD->pos(), pD->size())};
+        }
+        return {QRect(pC->pos(), pC->size())};
+    }
+    if (auto pS = mpConsole->mScrollBoxMap.value(name)) {
+        return {QRect(pS->pos(), pS->size())};
+    }
+    if (auto pN = mpConsole->mSubCommandLineMap.value(name)) {
+        return {QRect(pN->pos(), pN->size())};
+    }
+    if (auto pT = mpConsole->mTextBoxMap.value(name)) {
+        return {QRect(pT->pos(), pT->size())};
+    }
+
+    return {};
+}
+
+// Returns whether a named window element is currently visible. Mirrors the
+// widget dispatch of hideWindow()/showWindow(); user windows report the
+// visibility of their dock widget, which is what those functions toggle.
+std::optional<bool> Host::windowVisible(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+
+    if (auto pL = mpConsole->mLabelMap.value(name)) {
+        return {pL->isVisible()};
+    }
+    if (auto pC = mpConsole->mSubConsoleMap.value(name)) {
+        if (auto pD = mpConsole->mDockWidgetMap.value(name)) {
+            return {pD->isVisible()};
+        }
+        return {pC->isVisible()};
+    }
+    if (auto pS = mpConsole->mScrollBoxMap.value(name)) {
+        return {pS->isVisible()};
+    }
+    if (auto pN = mpConsole->mSubCommandLineMap.value(name)) {
+        return {pN->isVisible()};
+    }
+    if (auto pT = mpConsole->mTextBoxMap.value(name)) {
+        return {pT->isVisible()};
     }
 
     return {};
@@ -5030,7 +5144,7 @@ void Host::setBorders(QMargins borders)
     auto y = mpConsole->height();
     const QSize s = QSize(x, y);
     QResizeEvent event(s, s);
-    QApplication::sendEvent(mpConsole, &event);
+    QCoreApplication::sendEvent(mpConsole, &event);
     mpConsole->raiseMudletSysWindowResizeEvent(x, y);
 }
 

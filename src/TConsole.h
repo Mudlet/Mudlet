@@ -77,6 +77,7 @@ struct TFontAttributes
     bool operator==(const TFontAttributes& other) const = default;
     bool operator!=(const TFontAttributes& other) const = default;
 
+    TFontAttributes(const TFontAttributes& other) = default;
     TFontAttributes& operator=(const TFontAttributes& other) = default;
 
     QFont makeFont() const

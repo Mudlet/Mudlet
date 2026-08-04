@@ -79,6 +79,35 @@ public:
     // qsl all over the place:
     static QString richText(const QString& text) { return qsl("<p>%1</p>").arg(text); }
 
+    // Call this in the destructor of a window class that connects any of its
+    // own widgets to its own slots - keep it first, so that nothing else the
+    // destructor does can deliver a child's signal either.
+    //
+    // A visible window is taken off the screen while the base-class
+    // destructors unwind: ~QDialog hides it explicitly, and any other window
+    // class gets closed by ~QWidget. That moves the keyboard focus away from
+    // whichever child widget holds it, and an editing widget reacts to the
+    // focus-out by emitting - QLineEdit (once its text has been touched, which
+    // includes any setText()), QAbstractSpinBox and QKeySequenceEdit all emit
+    // editingFinished() there. Qt then tries to deliver that to a slot of a
+    // window whose derived part has already been destroyed, which aborts with
+    // "Called object is not of the correct type (class destructor may have
+    // already run)" (#9574). In a release build the assert is compiled out and
+    // the slot runs against destroyed members instead.
+    //
+    // A window that is being destroyed cannot do anything useful with a
+    // signal from its own widgets, so every one of them is severed rather
+    // than just the widget types that emit during teardown today. Note that
+    // this only reaches connections whose receiver is the window: a
+    // connect(child, &Signal, [this]{...}) written without a context object
+    // survives it and brings the crash back, so always pass the context:
+    static void disconnectChildSignals(QWidget* window)
+    {
+        for (QObject* child : window->findChildren<QObject*>()) {
+            QObject::disconnect(child, nullptr, window, nullptr);
+        }
+    }
+
     // Qt 6.9 deprecated QDateTime::setOffsetFromUtc(int) and made it hard to
     // replicate the exact strings that we had before:
     static QString dateStamp() {
