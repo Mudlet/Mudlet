@@ -46,8 +46,17 @@ local function defer(cleanup)
     finally(function()
       local queued = cleanups
       cleanups = nil
+      -- one clean-up giving up (an uninstall that never took, say) must not
+      -- strand the rest, so run them all and report the first failure after
+      local firstFailure
       for index = #queued, 1, -1 do
-        queued[index]()
+        local ok, err = pcall(queued[index])
+        if not ok and not firstFailure then
+          firstFailure = err
+        end
+      end
+      if firstFailure then
+        error(firstFailure, 0)
       end
     end)
   end
