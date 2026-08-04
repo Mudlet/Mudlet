@@ -216,6 +216,10 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
     aboutMakers.append({false, qsl("Erik Pettis"), qsl("Etomyutikos#9266"), qsl("Oneymus"), QString(),
                         //: about:Oneymus
                         tr("Developed the Vyzor GUI Manager for Mudlet.")});
+    aboutMakers.append({false, qsl("Harrison"), QString(), qsl("Harrison-Teeg"), qsl("harrison.martin@gmail.com"),
+                        //: about:Harrison
+                        tr("Brought the 3D mapper back to life with camera controls, lighting and proper geometry "
+                           "for z-squished rooms, and has fixed a number of console and command line annoyances.")});
     aboutMakers.append({false, qsl("ItsTheFae"), qsl("TheFae#9971"), qsl("Kae"), QString(),
                         //: about:TheFae
                         tr("Worked wonders in rejuvenating our Website in 2017 but who prefers a little anonymity - "
@@ -231,6 +235,10 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
     aboutMakers.append({false, qsl("John Dahlström"), QString(), QString(), qsl("email@johndahlstrom.se"),
                         //: about:John Dahlström
                         tr("Helped develop and debug the Lua API.")});
+    aboutMakers.append({false, qsl("John McKisson"), QString(), qsl("jmckisson"), qsl("john.mckisson@gmail.com"),
+                        //: about:John McKisson
+                        tr("Implemented MMCP, so Mudlet can join MudMaster chat networks, and has contributed "
+                           "a range of console and Lua API fixes.")});
     aboutMakers.append({false, qsl("Karsten Bock"), QString(), qsl("Beliaar"), QString(),
                         //: about:Beliaar
                         tr("Contributed several improvements and new features for Geyser.")});
@@ -240,6 +248,16 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
     aboutMakers.append({false, qsl("Maksym Grinenko"), QString(), QString(), qsl("maksym.grinenko@gmail.com"),
                         //: about:Maksym Grinenko
                         tr("Worked on the manual, forum help and helps with GUI design and documentation.")});
+    aboutMakers.append({false, qsl("Manuel Wegmann"), QString(), qsl("Edru2"), QString(),
+                        //: about:Edru2
+                        tr("Built much of the GUI toolkit you script with between 2020 and 2022: Adjustable Containers, "
+                           "Geyser's ScrollBox, animated labels and Geyser in UserWindows - plus the dark theme toggle "
+                           "and the Package Exporter rework.")});
+    aboutMakers.append({false, qsl("Mike Conley"), QString(), qsl("mpconley"), qsl("sousesider@gmail.com"),
+                        //: about:Mike Conley
+                        tr("Joined in 2018 and looks after nearly everything Mudlet plays or negotiates - MCMP media, "
+                           "sound and video, closed captioning, MXP, OSC 8 hyperlinks and text encodings - plus "
+                           "multi-window support with drag-and-drop tabs.")});
     aboutMakers.append({false, qsl("Stephen Hansen"), QString(), QString(), qsl("me+mudlet@ixokai.io"),
                         //: about:Stephen Hansen
                         tr("Developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.")});
@@ -247,6 +265,10 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                         //: about:Thorsten Wilms
                         tr("Designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. "
                            "Visit his homepage at <a href=\"http://thorwil.wordpress.com/\">thorwil.wordpress.com</a>.")});
+    aboutMakers.append({false, qsl("Tim Johnson"), QString(), qsl("atari2600tim"), QString(),
+                        //: about:Tim Johnson
+                        tr("Joined in 2020 and made Mudlet work far better with screen readers, alongside secure IRC "
+                           "connections, Discord improvements, and a batch of editor shortcuts and Lua configuration functions.")});
 
     QString aboutMudletBody("<p align=\"center\"><big><b>Credits:</b></big></p>");
     QVectorIterator<aboutMaker> iterateMakers(aboutMakers);
