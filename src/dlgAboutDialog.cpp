@@ -182,6 +182,11 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                         tr("Joined in 2020, reworking much of the 2D mapper and adding many Lua API features. "
                            "Outside the client they build Mudlet Web, the documentation extract that powers "
                            "autocompletion in code editors, and the tools that share Mudlet maps online.")});
+    aboutMakers.append({true, qsl("Zooka"), QString(), qsl("ZookaOnGit"), QString(),
+                        //: about:Zooka
+                        tr("Joined in 2023 and works across the whole client - script editor, preferences, package manager "
+                           "and mapper - along with many Lua API additions. Wrote the Mudlet Tutorial profile and "
+                           "maintains the Mudlet package repository.")});
     aboutMakers.append({false, qsl("Ahmed Charles"), QString(), qsl("ahmedcharles"), qsl("acharles@outlook.com"),
                         //: about:ahmedcharles
                         tr("Contributions to the Travis integration, CMake and Visual C++ build, "
