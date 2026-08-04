@@ -5,11 +5,13 @@
 #
 # The archives are committed rather than zipped at spec runtime so the specs do
 # not depend on a zip tool being installed on every platform CI runs busted on.
-# The timestamps are forced and -X drops the platform-specific extra fields, so
-# rebuilding from unchanged sources produces a byte-identical archive.
+# Each fixture is staged in a temporary folder where the timestamps are forced,
+# and -X drops the platform-specific extra fields, so rebuilding from unchanged
+# sources produces a byte-identical archive without disturbing the sources.
 set -eu
 
 cd "$(dirname "$0")"
+outputDirectory=$(pwd)
 
 command -v zip >/dev/null 2>&1 || { echo "zip is not installed" >&2; exit 1; }
 
@@ -22,9 +24,12 @@ for source in sources/*/; do
 	if [ "$name" = "mudlet-spec-xmlonly" ]; then
 		continue
 	fi
-	archive="$name.mpackage"
+	archive="$outputDirectory/$name.mpackage"
+	staging=$(mktemp -d)
+	cp -R "$source." "$staging"
+	find "$staging" -exec touch -t "$timestamp" {} +
 	rm -f "$archive"
-	find "$source" -exec touch -t "$timestamp" {} +
-	(cd "$source" && zip -q -r -X -9 "../../$archive" .)
-	echo "built $archive"
+	(cd "$staging" && zip -q -r -X -9 "$archive" .)
+	rm -rf "$staging"
+	echo "built $name.mpackage"
 done

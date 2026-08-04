@@ -7,11 +7,25 @@
 -- scripts actually exist, its script body actually ran, and getPackages() /
 -- getModules() actually list it.
 --
--- Everything these specs install is uninstalled again in a finally() block, and
+-- Everything these specs install is uninstalled again when the spec ends, and
 -- the last spec in the file asserts that nothing was left behind: the self-test
 -- profile is reused between runs, so a leak here would break the next run.
 
-local fixtureDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]") .. "/fixtures/packages"
+-- waitForEvent() is inert outside test mode, and without it these specs cannot
+-- let the profile save finish - the uninstalls would fail and strand fixture
+-- packages in the profile, so say so rather than make a mess of it.
+if not os.getenv("MUDLET_TEST_MODE") then
+  describe("Tests the package and module lifecycle", function()
+    it("needs test mode", function()
+      pending("the package specs need MUDLET_TEST_MODE (waitForEvent() does nothing without it)")
+    end)
+  end)
+  return
+end
+
+local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
+assert(specDirectory, "Package_spec.lua has to be run from a file so that it can find its fixtures")
+local fixtureDirectory = specDirectory .. "/fixtures/packages"
 
 -- Where the module fixtures are copied to before being installed - see
 -- installFixtureModule() for why they cannot be installed from the repository.
@@ -20,6 +34,25 @@ local scratchDirectory = getMudletHomeDir() .. "/busted-package-fixtures"
 local minimalPackage = "mudlet-spec-minimal"
 local resourcesPackage = "mudlet-spec-resources"
 local moduleName = "mudlet-spec-module"
+
+-- busted keeps only the last function handed to finally(), so everything that
+-- has to be undone at the end of a spec goes through one registration here -
+-- otherwise a spec that cleans up both a fixture and an event handler silently
+-- loses one of them.
+local cleanups
+local function defer(cleanup)
+  if not cleanups then
+    cleanups = {}
+    finally(function()
+      local queued = cleanups
+      cleanups = nil
+      for index = #queued, 1, -1 do
+        queued[index]()
+      end
+    end)
+  end
+  cleanups[#cleanups + 1] = cleanup
+end
 
 local function contains(haystack, needle)
   return type(haystack) == "string" and haystack:find(needle, 1, true) ~= nil
@@ -83,7 +116,7 @@ local function copyFile(from, to)
   source:close()
   local destination = io.open(to, "wb")
   assert.is_not_nil(destination, "could not write to " .. to)
-  destination:write(contents)
+  assert.is_not_nil(destination:write(contents), "could not write to " .. to)
   destination:close()
 end
 
@@ -93,12 +126,19 @@ end
 -- of this file), an uninstall is refused, and a module reload is dropped. Lua
 -- cannot ask whether a save is running, so each of the helpers below asks again
 -- until what it wanted has actually happened.
-local function installConfirmed(install, path, isInstalled, what)
+local function installUntilConfirmed(install, path, isInstalled, what)
   for attempt = 1, 5 do
+    if isInstalled() then
+      return
+    end
     local ok, err = install(path)
-    assert.is_true(ok == true, tostring(err))
+    -- a postponed install can still be carried out while the pump below runs
+    -- the event loop, so a repeat may legitimately come back "already installed"
+    if ok ~= true and not contains(err, "already installed") then
+      assert.is_true(false, tostring(err))
+    end
     -- an install that is carried out is carried out there and then, so if it is
-    -- not listed by the time the call returns it was postponed and dropped
+    -- not listed by the time the call returns it was postponed
     if isInstalled() then
       return
     end
@@ -109,7 +149,7 @@ end
 
 -- The same postponement answers a bad install path with true as well, so a spec
 -- about the refusal waits for the save to pass and asks again.
-local function refusedInstall(install, path)
+local function installUntilRefused(install, path)
   for attempt = 1, 5 do
     local ok, err = install(path)
     if ok == nil then
@@ -133,35 +173,45 @@ local function reloadModuleUntil(name, reloaded)
   assert.is_true(false, "the module was never reloaded")
 end
 
+-- Uninstalls and then waits, twice over if it has to: an install this file
+-- postponed earlier can be carried out while the wait runs the event loop, and
+-- would otherwise reinstall the package behind the spec's back.
 local function removeFixturePackage(name)
-  if not packageInstalled(name) then
-    return
+  for _ = 1, 3 do
+    if not packageInstalled(name) then
+      return
+    end
+    -- uninstallPackage() refuses while a profile save is in progress, and the
+    -- installs here start one, so keep asking until it takes
+    assert.is_true(waitUntil(function() return uninstallPackage(name) == true end, 5000),
+                   "could not uninstall the fixture package " .. name)
+    -- let the profile save that uninstallPackage() queues run now, rather than
+    -- during Mudlet's shutdown
+    pumpEventLoop(200)
   end
-  -- uninstallPackage() refuses while a profile save is in progress, and the
-  -- installs here start one, so keep asking until it takes.
-  assert.is_true(waitUntil(function() return uninstallPackage(name) == true end, 5000),
-                 "could not uninstall the fixture package " .. name)
-  -- Let the profile save that uninstallPackage() queues run now, rather than
-  -- during Mudlet's shutdown.
-  pumpEventLoop(200)
+  assert.is_false(packageInstalled(name), "the fixture package " .. name .. " reinstalled itself")
 end
 
 local function installFixturePackage(name)
-  installConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+  installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
                    function() return packageInstalled(name) end, "the fixture package " .. name)
 end
 
 local function withFixturePackage(name)
-  finally(function() removeFixturePackage(name) end)
+  defer(function() removeFixturePackage(name) end)
   installFixturePackage(name)
 end
 
 local function removeFixtureModule(name)
-  if moduleInstalled(name) then
+  for _ = 1, 3 do
+    if not moduleInstalled(name) then
+      break
+    end
     assert.is_true(waitUntil(function() return uninstallModule(name) == true end, 5000),
                    "could not uninstall the fixture module " .. name)
     pumpEventLoop(200)
   end
+  assert.is_false(moduleInstalled(name), "the fixture module " .. name .. " reinstalled itself")
   os.remove(scratchDirectory .. "/" .. name .. ".mpackage")
   lfs.rmdir(scratchDirectory)
 end
@@ -173,25 +223,25 @@ local function installFixtureModule(name)
   lfs.mkdir(scratchDirectory)
   local path = scratchDirectory .. "/" .. name .. ".mpackage"
   copyFile(fixtureDirectory .. "/" .. name .. ".mpackage", path)
-  installConfirmed(installModule, path, function() return moduleInstalled(name) end, "the fixture module " .. name)
+  installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the fixture module " .. name)
   return path
 end
 
 -- The clean-up is registered before the install so a fixture that only got
 -- half-way in still leaves nothing behind.
 local function withFixtureModule(name)
-  finally(function() removeFixtureModule(name) end)
+  defer(function() removeFixtureModule(name) end)
   return installFixtureModule(name)
 end
 
 -- Collects every occurrence of an event for the duration of one spec. The
 -- uninstall events are raised inside uninstallPackage() itself, before a
 -- waitForEvent() could be armed, so a pre-armed handler is what sees them.
-local function collect(eventName, into)
+local function collectEvents(eventName, into)
   local handler = registerAnonymousEventHandler(eventName, function(_, ...)
     into[#into + 1] = {...}
   end)
-  finally(function() killAnonymousEventHandler(handler) end)
+  defer(function() killAnonymousEventHandler(handler) end)
 end
 
 describe("Tests the functionality of installPackage", function()
@@ -203,21 +253,21 @@ describe("Tests the functionality of installPackage", function()
   end)
 
   it("returns nil+msg when given an empty path", function()
-    local err = refusedInstall(installPackage, "")
+    local err = installUntilRefused(installPackage, "")
     assert.is_true(contains(err, "no package file was actually given"), tostring(err))
   end)
 
   it("returns nil+msg for a file that is not there", function()
-    local err = refusedInstall(installPackage, fixtureDirectory .. "/mudlet-spec-there-is-no-such-package.mpackage")
+    local err = installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-there-is-no-such-package.mpackage")
     assert.is_true(contains(err, "could not open file"), tostring(err))
   end)
 
   it("returns nil+msg for a file that is not a zip archive", function()
     -- the failed unpacking still creates the destination folder; drop it so the
     -- profile is left exactly as it was found
-    finally(function() lfs.rmdir(getMudletHomeDir() .. "/mudlet-spec-notazip") end)
+    defer(function() lfs.rmdir(getMudletHomeDir() .. "/mudlet-spec-notazip") end)
 
-    local err = refusedInstall(installPackage, fixtureDirectory .. "/mudlet-spec-notazip.mpackage")
+    local err = installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-notazip.mpackage")
     assert.is_true(contains(err, "could not unzip package"), tostring(err))
     assert.is_false(packageInstalled("mudlet-spec-notazip"))
   end)
@@ -238,7 +288,7 @@ describe("Tests the functionality of installPackage", function()
   it("refuses to install a package that is already installed", function()
     withFixturePackage(minimalPackage)
 
-    local err = refusedInstall(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage")
+    local err = installUntilRefused(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage")
     assert.is_true(contains(err, "package " .. minimalPackage .. " is already installed"), tostring(err))
   end)
 
@@ -264,8 +314,8 @@ describe("Tests the functionality of installPackage", function()
 
   it("installs a package from a plain XML file", function()
     local path = fixtureDirectory .. "/sources/mudlet-spec-xmlonly/mudlet-spec-xmlonly.xml"
-    finally(function() removeFixturePackage("mudlet-spec-xmlonly") end)
-    installConfirmed(installPackage, path, function() return packageInstalled("mudlet-spec-xmlonly") end,
+    defer(function() removeFixturePackage("mudlet-spec-xmlonly") end)
+    installUntilConfirmed(installPackage, path, function() return packageInstalled("mudlet-spec-xmlonly") end,
                      "the XML fixture package")
 
     assert.equals(1, exists("mudlet-spec-xmlonly alias", "alias"))
@@ -276,8 +326,8 @@ describe("Tests the functionality of installPackage", function()
 
   it("raises sysInstall and sysInstallPackage once the install is complete", function()
     local generic, detailed = {}, {}
-    collect("sysInstall", generic)
-    collect("sysInstallPackage", detailed)
+    collectEvents("sysInstall", generic)
+    collectEvents("sysInstallPackage", detailed)
 
     withFixturePackage(minimalPackage)
     -- both events are raised from a zero-timer after the install returned
@@ -296,6 +346,9 @@ describe("Tests the functionality of uninstallPackage", function()
     assertArgError(function() uninstallPackage() end, "uninstallPackage: bad argument #1 type")
   end)
 
+  -- uninstallPackage() answers nil with no message where uninstallModule()
+  -- answers false: two conventions for the same case, pinned as they are
+  -- because packages published today read one or the other.
   it("returns nil and no message for a package that is not installed", function()
     local ok, err = uninstallPackage("mudlet-spec-never-installed")
     assert.is_nil(ok)
@@ -319,8 +372,8 @@ describe("Tests the functionality of uninstallPackage", function()
   it("raises sysUninstall and sysUninstallPackage", function()
     withFixturePackage(minimalPackage)
     local generic, detailed = {}, {}
-    collect("sysUninstall", generic)
-    collect("sysUninstallPackage", detailed)
+    collectEvents("sysUninstall", generic)
+    collectEvents("sysUninstallPackage", detailed)
 
     removeFixturePackage(minimalPackage)
 
@@ -418,7 +471,7 @@ describe("Tests the functionality of installModule", function()
   end)
 
   it("returns nil+msg for a file that is not there", function()
-    local err = refusedInstall(installModule, fixtureDirectory .. "/mudlet-spec-there-is-no-such-module.mpackage")
+    local err = installUntilRefused(installModule, fixtureDirectory .. "/mudlet-spec-there-is-no-such-module.mpackage")
     assert.is_true(contains(err, "could not open file"), tostring(err))
   end)
 
@@ -437,14 +490,14 @@ describe("Tests the functionality of installModule", function()
   it("refuses to install a module that is already installed", function()
     local path = withFixtureModule(moduleName)
 
-    local err = refusedInstall(installModule, path)
+    local err = installUntilRefused(installModule, path)
     assert.is_true(contains(err, "module " .. moduleName .. " is already installed"), tostring(err))
   end)
 
   it("raises sysInstall and sysLuaInstallModule", function()
     local generic, detailed = {}, {}
-    collect("sysInstall", generic)
-    collect("sysLuaInstallModule", detailed)
+    collectEvents("sysInstall", generic)
+    collectEvents("sysLuaInstallModule", detailed)
 
     withFixtureModule(moduleName)
     assert.is_true(waitUntil(function() return #detailed > 0 end, 2000), "sysLuaInstallModule was never raised")
@@ -482,8 +535,8 @@ describe("Tests the functionality of uninstallModule", function()
   it("raises sysUninstall and sysLuaUninstallModule", function()
     withFixtureModule(moduleName)
     local generic, detailed = {}, {}
-    collect("sysUninstall", generic)
-    collect("sysLuaUninstallModule", detailed)
+    collectEvents("sysUninstall", generic)
+    collectEvents("sysLuaUninstallModule", detailed)
 
     removeFixtureModule(moduleName)
 
@@ -559,6 +612,24 @@ describe("Tests the functionality of getModulePath", function()
   end)
 end)
 
+describe("Tests the functionality of getModulePriority", function()
+  -- Stays ahead of setModulePriority's specs on purpose: a priority outlives
+  -- the module it was set on (Host::uninstallPackage() leaves
+  -- mModulePriorities alone), so once one has been set for this module the
+  -- default this spec is about can never be observed again.
+  it("reports the default priority of a freshly installed module", function()
+    -- BUG: a module nobody has called setModulePriority() on has no entry in
+    -- the priority map, so getModulePriority() answers nil and "module doesn't
+    -- exist" for a module that plainly does exist. The module manager reads the
+    -- same map with operator[] and so shows 0, which is what this should
+    -- return. Left pending rather than pinning the wrong answer as the contract.
+    pending("getModulePriority() reports an installed module as non-existent until a priority is set")
+    withFixtureModule(moduleName)
+
+    assert.equals(0, getModulePriority(moduleName))
+  end)
+end)
+
 describe("Tests the functionality of setModulePriority", function()
   it("raises a Lua error when the priority is missing", function()
     assertArgError(function() setModulePriority(moduleName) end, "setModulePriority: bad argument #2 type")
@@ -577,20 +648,6 @@ describe("Tests the functionality of setModulePriority", function()
     assert.equals(7, getModulePriority(moduleName))
     setModulePriority(moduleName, -2)
     assert.equals(-2, getModulePriority(moduleName))
-  end)
-end)
-
-describe("Tests the functionality of getModulePriority", function()
-  it("reports the default priority of a freshly installed module", function()
-    -- BUG: a module nobody has called setModulePriority() on has no entry in
-    -- the priority map, so getModulePriority() answers nil and "module doesn't
-    -- exist" for a module that plainly does exist. The module manager shows
-    -- such a module with priority 0, which is what this should return. Left
-    -- pending rather than pinning the wrong answer as the contract.
-    pending("getModulePriority() reports an installed module as non-existent until a priority is set")
-    withFixtureModule(moduleName)
-
-    assert.equals(0, getModulePriority(moduleName))
   end)
 end)
 
@@ -687,6 +744,19 @@ describe("Tests the functionality of reloadModule", function()
     end)
   end)
 
+  it("keeps the module's sync setting", function()
+    withFixtureModule(moduleName)
+    assert.is_true(enableModuleSync(moduleName))
+    local runsBefore = mudletSpecModuleRuns
+
+    reloadModuleUntil(moduleName, function() return mudletSpecModuleRuns > runsBefore end)
+
+    assert.is_true(getModuleSync(moduleName))
+    -- leave it unsynced: a profile save rewrites a synced module's own
+    -- .mpackage, and the fixture copy is thrown away right after this
+    assert.is_true(disableModuleSync(moduleName))
+  end)
+
   it("keeps the module's priority", function()
     withFixtureModule(moduleName)
     setModulePriority(moduleName, 4)
@@ -703,7 +773,7 @@ describe("Tests a package that uninstalls itself", function()
   -- used to free the TScript objects that Host::raiseEvent() was still
   -- iterating over. Package auto-updaters do exactly this.
   it("survives a package uninstalling itself from its own event handler", function()
-    finally(function()
+    defer(function()
       removeFixturePackage("mudlet-spec-selfuninstall")
       mudletSpecSelfUninstallHandler = nil
       mudletSpecSelfUninstallSecondHandler = nil
@@ -746,7 +816,7 @@ describe("Tests installing a package while the profile is being saved", function
     -- true, so a script has no way to notice. Left pending rather than pinning
     -- a silently dropped install as correct.
     pending("installPackage() answers true but drops the install when a save is in progress")
-    finally(function()
+    defer(function()
       removeFixturePackage(minimalPackage)
       removeFixturePackage("mudlet-spec-noconfig")
     end)
@@ -765,9 +835,15 @@ describe("Tests installing an archive with nothing in it for Mudlet", function()
     -- profile for good. Left pending rather than pinning a success that
     -- installs nothing and cannot be undone.
     pending("installPackage() answers true for an archive with no package in it, and leaves it unremovable")
-    finally(function() removeFixturePackage("mudlet-spec-emptyarchive") end)
+    -- uninstallPackage() will not take a package it never registered, so the
+    -- unpacked folder has to go by hand
+    defer(function()
+      os.remove(getMudletHomeDir() .. "/mudlet-spec-emptyarchive/readme.txt")
+      lfs.rmdir(getMudletHomeDir() .. "/mudlet-spec-emptyarchive")
+    end)
 
-    local err = refusedInstall(installPackage, fixtureDirectory .. "/mudlet-spec-emptyarchive.mpackage")
+    local ok, err = installPackage(fixtureDirectory .. "/mudlet-spec-emptyarchive.mpackage")
+    assert.is_nil(ok)
     assert.is_string(err)
     assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-emptyarchive"))
   end)
@@ -776,21 +852,24 @@ end)
 describe("The package specs clean up after themselves", function()
   it("leaves no fixture package, module or folder behind", function()
     for _, name in ipairs(getPackages()) do
-      assert.is_false(name:find("mudlet%-spec%-") ~= nil, "left the package " .. name .. " installed")
+      assert.is_nil(name:find("mudlet%-spec%-"), "left the package " .. name .. " installed")
     end
     for _, name in ipairs(getModules()) do
-      assert.is_false(name:find("mudlet%-spec%-") ~= nil, "left the module " .. name .. " installed")
+      assert.is_nil(name:find("mudlet%-spec%-"), "left the module " .. name .. " installed")
     end
     for entry in lfs.dir(getMudletHomeDir()) do
-      assert.is_false(entry:find("mudlet%-spec%-") ~= nil, "left the folder " .. entry .. " behind")
+      assert.is_nil(entry:find("mudlet%-spec%-"), "left the folder " .. entry .. " behind")
     end
     assert.is_false(fileExists(scratchDirectory), "left the fixture scratch folder behind")
 
-    -- A synced module is copied into the shared module backup folder by a
-    -- profile save; drop any copy of the fixture module that made it there.
+    -- A profile save that catches the sync spec's module while syncing is on
+    -- copies it into the shared module backup folder. That is Mudlet working as
+    -- intended rather than a leak to fail the run over, but the copy is this
+    -- file's to take away again.
     local configurationDirectory = getMudletHomeDir():match("^(.*)[/\\]profiles[/\\]")
-    local backups = configurationDirectory and (configurationDirectory .. "/moduleBackups")
-    if backups and fileExists(backups) then
+    assert.is_string(configurationDirectory, "could not work out the configuration folder from " .. getMudletHomeDir())
+    local backups = configurationDirectory .. "/moduleBackups"
+    if fileExists(backups) then
       for entry in lfs.dir(backups) do
         if entry:find("mudlet%-spec%-") then
           os.remove(backups .. "/" .. entry)

@@ -15,7 +15,10 @@ archives, so never edit one in place - change the source and rebuild:
 The archives are committed instead of being zipped when the specs run because
 busted runs on every platform Mudlet builds on and a `zip` tool is not there on
 all of them. `build-fixtures.sh` forces the timestamps and passes `-X`, so
-rebuilding unchanged sources reproduces the committed archives byte for byte.
+rebuilding unchanged sources with Info-ZIP reproduces the committed archives
+byte for byte; another zip implementation may well write different bytes for the
+same contents, which is harmless as long as the archives are only rebuilt
+deliberately.
 
 | fixture | what it is for |
 | --- | --- |
