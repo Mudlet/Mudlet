@@ -1599,7 +1599,18 @@ void TBuffer::commitLineData(QString line, std::deque<TChar> chars, const char c
     const int lineIndex = lineBuffer.size() - 1;
     mCommitLineIndices.append(lineIndex);
     if (!mSkipTriggerProcessing) {
+        // Keep the just-committed formats around so that color triggers
+        // can match against the colors as received from the game even
+        // after earlier triggers in this pass have recolored the line;
+        // save/restore gives nested feedTriggers() passes (which re-enter
+        // this function) their own snapshot:
+        std::deque<TChar> savedPassLine = std::move(mPreTriggerPassLine);
+        const int savedPassLineNumber = mPreTriggerPassLineNumber;
+        mPreTriggerPassLine = std::move(chars);
+        mPreTriggerPassLineNumber = lineIndex;
         mpHost->mpConsole->runTriggers(lineIndex);
+        mPreTriggerPassLine = std::move(savedPassLine);
+        mPreTriggerPassLineNumber = savedPassLineNumber;
     }
 
     // Only use of TBuffer::wrap(), breaks up new text
@@ -1811,6 +1822,23 @@ void TBuffer::recordLineLengthForWrapDetection(const qsizetype length)
         hostGuard->mpConsole->echoLink(linkText, func, hint, false);
         hostGuard->mpConsole->print("\n");
     });
+}
+
+const std::deque<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
+{
+    if (lineNumber >= 0 && lineNumber == mPreTriggerPassLineNumber) {
+        return &mPreTriggerPassLine;
+    }
+    return nullptr;
+}
+
+// A structural edit to the trigger-pass line makes the edited text the new
+// baseline for color matching, as it was before the snapshot existed:
+void TBuffer::syncPreTriggerPassLine(int y)
+{
+    if (y >= 0 && y == mPreTriggerPassLineNumber && y < static_cast<int>(buffer.size())) {
+        mPreTriggerPassLine = buffer[y];
+    }
 }
 
 void TBuffer::processMxpWatchdogCallback()
@@ -2401,6 +2429,10 @@ void TBuffer::decodeSGR(const QString& sequence)
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
                                                  << "\") ERROR - failed to detect underline parameter element (the second part) in a SGR...;4:?;..m sequence assuming it is a zero!";
                 }
+                // Sub-parameter values follow the widely-adopted kitty/VTE
+                // convention: 0 none, 1 single, 2 double, 3 curly, 4 dotted,
+                // 5 dashed. Mudlet has no distinct double-underline style so
+                // 2 is shown as a plain single underline.
                 switch (value) {
                 case 0: // Underline off
                     mUnderline = false;
@@ -2408,29 +2440,35 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mUnderlineDotted = false;
                     mUnderlineDashed = false;
                     break;
-                case 1: // Underline on (solid)
+                case 1: // Single (straight) underline
                     mUnderline = true;
                     mUnderlineWavy = false;
                     mUnderlineDotted = false;
                     mUnderlineDashed = false;
                     break;
-                case 2: // Dashed underline
+                case 2: // Double underline - unsupported, show as single
                     mUnderline = true;
                     mUnderlineWavy = false;
                     mUnderlineDotted = false;
-                    mUnderlineDashed = true;
+                    mUnderlineDashed = false;
                     break;
-                case 3: // Dotted underline
+                case 3: // Curly (wavy) underline
+                    mUnderline = true;
+                    mUnderlineWavy = true;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
+                    break;
+                case 4: // Dotted underline
                     mUnderline = true;
                     mUnderlineWavy = false;
                     mUnderlineDotted = true;
                     mUnderlineDashed = false;
                     break;
-                case 4: // Wavy underline
+                case 5: // Dashed underline
                     mUnderline = true;
-                    mUnderlineWavy = true;
+                    mUnderlineWavy = false;
                     mUnderlineDotted = false;
-                    mUnderlineDashed = false;
+                    mUnderlineDashed = true;
                     break;
                 default: // Something unexpected
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
@@ -4723,6 +4761,10 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
     if (text.isEmpty()) {
         return false;
     }
+    // Bound a single insert to the same limit the echo/append path uses
+    // (see appendLine()), so an oversized insertText() cannot consume unbounded
+    // memory or processing time.
+    const QString insertedText = (text.size() > MAX_CHARACTERS_PER_ECHO) ? text.left(MAX_CHARACTERS_PER_ECHO) : text;
     const int x = P.x();
     const int y = P.y();
     if ((y >= 0) && (y < static_cast<int>(buffer.size()))) {
@@ -4733,14 +4775,14 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
             TChar c(mpConsole);
             expandLine(y, x - buffer.at(y).size(), c);
         }
-        for (int i = 0, total = text.size(); i < total; ++i) {
-            lineBuffer[y].insert(x + i, text.at(i));
-            const TChar c = format;
-            auto it = buffer[y].begin();
-            buffer[y].insert(it + x + i, c);
-        }
+        // Insert the whole run in one operation. Inserting one character at a
+        // time into the middle of the QString/std::deque is O(n) per character,
+        // which is quadratic for large inserts.
+        lineBuffer[y].insert(x, insertedText);
+        buffer[y].insert(buffer[y].begin() + x, static_cast<std::size_t>(insertedText.size()), format);
+        syncPreTriggerPassLine(y);
     } else {
-        appendLine(text, 0, text.size(), format.mFgColor, format.mBgColor, format.mFlags);
+        appendLine(insertedText, 0, insertedText.size(), format.mFgColor, format.mBgColor, format.mFlags);
     }
     return true;
 }
@@ -5294,6 +5336,7 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
         auto it1 = buffer[y].begin() + x;
         auto it2 = buffer[y].begin() + x_end;
         buffer[y].erase(it1, it2);
+        syncPreTriggerPassLine(y);
     }
 
     // insert replacement
@@ -5303,6 +5346,29 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
 
 void TBuffer::clear()
 {
+    // Clearing the display is not gagging: flush any deferred log text before
+    // the deleteLines() calls below would discard it, so a received line that
+    // was still pending for logging is not lost from the log file
+    if (!mpHost.isNull() && mpHost->mpConsole && this == &mpHost->mpConsole->buffer && mpHost->mpConsole->mLogToLogFile) {
+        logRemainingOutput();
+
+        // A line whose own trigger calls clearWindow() has been committed and
+        // displayed, but commitLine() defers its log() call until runTriggers()
+        // returns - and the deleteLines() below will reset its commit index to
+        // -1, suppressing that call. Log those still-pending lines now so they
+        // are not lost. mCommitLineIndices holds them in display order.
+        for (const int commitLineIndex : mCommitLineIndices) {
+            if (commitLineIndex >= 0 && commitLineIndex < static_cast<int>(lineBuffer.size())) {
+                mpHost->mpConsole->mLogStream << assembleLog(commitLineIndex, commitLineIndex);
+            }
+        }
+        mpHost->mpConsole->mLogStream.flush();
+
+        lastTextToLog.clear();
+        lastLoggedFromLine = -1;
+        lastloggedToLine = -1;
+    }
+
     mCurrentHyperlinkCommand.clear();
     mCurrentHyperlinkHint.clear();
     mCurrentHyperlinkLinkId = 0;
@@ -5426,6 +5492,7 @@ void TBuffer::shrinkBuffer()
     // We need to adjust the search result line as some lines have now gone
     // away:
     mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
+    mPreTriggerPassLineNumber = -1;
 
     // The removed leading lines shift every remaining index down; keep the
     // deferred logging state pointing at the same lines
@@ -5470,6 +5537,9 @@ bool TBuffer::deleteLines(int from, int to)
         }
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
+        if (mPreTriggerPassLineNumber >= from) {
+            mPreTriggerPassLineNumber = -1;
+        }
 
         // Keep the deferred logging state in step with the removed lines so
         // pending text is only dropped when the lines it holds were deleted

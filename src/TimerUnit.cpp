@@ -84,7 +84,21 @@ void TimerUnit::uninstall(const QString& packageName)
             uninstallList.append(rootTimer);
         }
     }
+    // Re-entrant uninstall (#9337): a timer's own script (e.g. a package
+    // auto-updater calling uninstallPackage()) is removing its package while
+    // TTimer::execute() is still on the call stack for that timer. Deleting now
+    // would be a use-after-free, so defer to doCleanup() at depth 0.
+    if (mProcessingDepth > 0) {
+        for (auto timer : uninstallList) {
+            timer->setIsActive(false);
+            mCleanupSet.remove(timer); // keep the two deferred-delete paths disjoint
+        }
+        return;
+    }
     for (auto& timer : uninstallList) {
+        // in case the timer was also queued for the markCleanup()/doCleanup()
+        // path - deleting it here would otherwise leave a dangling pointer there:
+        mCleanupSet.remove(timer);
         delete timer;
     }
     uninstallList.clear();
@@ -388,6 +402,14 @@ bool TimerUnit::killTimer(const QString& name)
             if (!timer->isTemporary()) {
                 return false;
             }
+            // An already killed timer is only unlinked from this list once
+            // doCleanup() gets to free it, which cannot happen while a timer
+            // script is on the call stack - so until then it is still findable
+            // by name. Killing it a second time achieves nothing and must be
+            // reported as the failure it is:
+            if (mCleanupSet.contains(timer)) {
+                return false;
+            }
             timer->killTimer();
             markCleanup(timer);
             return true;
@@ -423,14 +445,33 @@ int TimerUnit::getNewID()
 
 void TimerUnit::doCleanup()
 {
+    if (mProcessingDepth > 0) {
+        return;
+    }
+
+    QSet<TTimer*> deletedTimers;
     QMutableSetIterator<TTimer*> itTimer(mCleanupSet);
     while (itTimer.hasNext()) {
         auto pTimer = itTimer.next();
         // It is important to take the item OUT of the set before you delete
         // (and thus invalidate this pointer to) it...!
         itTimer.remove();
+        deletedTimers.insert(pTimer);
         delete pTimer;
     }
+    // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
+    // children-before-parents and each ~Tree unlinks from its parent, so deleting
+    // children first empties the parent's child list (no double free); the seen
+    // set guards a node queued twice by re-entrant uninstalls and is shared with
+    // the mCleanupSet loop above so an object that somehow ended up in both
+    // containers cannot be freed twice.
+    for (auto timer : uninstallList) {
+        if (!deletedTimers.contains(timer)) {
+            deletedTimers.insert(timer);
+            delete timer;
+        }
+    }
+    uninstallList.clear();
 }
 
 void TimerUnit::markCleanup(TTimer* pT)

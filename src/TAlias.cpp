@@ -282,7 +282,7 @@ void TAlias::compileRegex()
             TDebug(Qt::white, Qt::red) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
             TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in: ")" << mRegexCode << "\"\n" >> mpHost;
         }
-        setError(qsl("<b><font color='blue'>%1</font></b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)").arg(error)));
+        setError(qsl("<b>%1</b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)").arg(error)));
     } else {
         pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE);
         mOK_init = true;
@@ -332,6 +332,17 @@ void TAlias::compile()
 
 bool TAlias::setScript(const QString& script)
 {
+    // Switching from a registered anonymous Lua function (set up by tempAlias with a
+    // function argument) to a script string: release the old function from the Lua
+    // registry and leave callback mode. Otherwise execute() keeps calling the stale
+    // function so the new script never runs, and the registry entry leaks - the
+    // destructor would take its mScript-based branch and delete the compiled function.
+    if (mRegisteredAnonymousLuaFunction) {
+        if (mpHost) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        }
+        mRegisteredAnonymousLuaFunction = false;
+    }
     mScript = script;
     mNeedsToBeCompiled = true;
     mOK_code = compileScript();

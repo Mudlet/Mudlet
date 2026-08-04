@@ -887,8 +887,11 @@ if(APPLE)
     endif()
   endif()
 
-  file(GLOB_RECURSE MUDLET_LUA_FILES LIST_DIRECTORIES true "mudlet-lua/*")
-  file(GLOB_RECURSE LUA_TRANSLATIONS LIST_DIRECTORIES true "../translations/lua/*")
+  # LIST_DIRECTORIES must stay false: globbing directories too makes CMake emit a
+  # copy_directory rule that races the per-file bundling rules under Ninja,
+  # failing with "Error copying ...: No such file or directory"
+  file(GLOB_RECURSE MUDLET_LUA_FILES LIST_DIRECTORIES false "mudlet-lua/*")
+  file(GLOB_RECURSE LUA_TRANSLATIONS LIST_DIRECTORIES false "../translations/lua/*")
   file(GLOB DIC_FILES "*.dic")
   file(GLOB AFF_FILES "*.aff")
   target_sources(${EXE_MUDLET_TARGET} PUBLIC ${MUDLET_LUA_FILES} ${LUA_TRANSLATIONS} ${DIC_FILES} ${AFF_FILES} ${ICON_FILE})
@@ -921,7 +924,12 @@ if(UNIX AND NOT APPLE)
     DIRECTORY "mudlet-lua/tests"
     DESTINATION "share/mudlet"
     FILES_MATCHING
-    PATTERN "*.lua" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+    PATTERN "*.lua" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    # the package specs install these fixtures, so they have to travel with them
+    PATTERN "*.mpackage" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+                                     WORLD_READ
+    PATTERN "*.xml" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    PATTERN "*.txt" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
   install(
     DIRECTORY "../3rdparty/lcf"
     DESTINATION "share/mudlet/lua"

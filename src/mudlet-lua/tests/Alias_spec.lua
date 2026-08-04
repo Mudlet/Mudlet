@@ -270,6 +270,37 @@ describe("Alias processing", function()
             assert.is_false(killAlias("no_such_alias_name"), "killing a missing alias should return false")
         end)
 
+        it("killAlias returns false the second time, as the alias is already dead", function()
+            local id = tempAlias("^spec_double_kill_alias$", [[]])
+            assert.is_true(killAlias(id), "killing a live temporary alias should report success")
+            -- the alias is still present here: only the deferred cleanup frees it, so
+            -- the second kill really is being told about a corpse it can find
+            assert.are.equal(1, exists(id, "alias"), "the killed alias is still present until cleanup runs")
+            assert.are.equal(0, isActive(id, "alias"), "a killed alias is no longer active")
+            assert.is_false(killAlias(id),
+                "killing an already killed alias achieves nothing and has to say so")
+            -- an incoming line runs every unit's deferred cleanup, which is what
+            -- finally frees the alias; the answer has to be the same after it
+            feedTriggers("\nspec_alias_kill_flush\n")
+            assert.are.equal(0, exists(id, "alias"), "the alias should be gone after kill and cleanup")
+            assert.is_false(killAlias(id), "a freed alias cannot be killed either")
+        end)
+
+        it("killAlias returns false the second time inside the alias's own script", function()
+            _G.AliasSpec = {}
+            local id
+            id = tempAlias("^spec_self_kill_alias$", function()
+                _G.AliasSpec.killed = killAlias(id)
+                _G.AliasSpec.killedAgain = killAlias(id)
+            end)
+            expandAlias("spec_self_kill_alias")
+            assert.is_not_nil(_G.AliasSpec.killed, "the alias should have matched and run")
+            assert.is_true(_G.AliasSpec.killed,
+                "killAlias should report success from inside the alias's own script")
+            assert.is_false(_G.AliasSpec.killedAgain,
+                "killing the same alias twice from its own script must fail the second time")
+        end)
+
         it("killAlias returns false for a permanent alias (they cannot be killed)", function()
             local id = permAlias("SpecPermAliasKill", "", "^spec_perm_kill$", [[]])
             assert.is_true(id > 0)
