@@ -52,6 +52,7 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
     const QString mGame = qsl("Mudlet Tutorial");
+    const QString mSelfTest = qsl("Mudlet self-test");
 
     // the dialog holds two QTabBars: the games-list one, created directly on
     // the dialog, and QTabWidget's internal one - the parent check tells them
@@ -149,6 +150,56 @@ private slots:
         dlg->fillout_form();
 
         QVERIFY2(gameListed(dlg, mGame), "a game on the legacy deletedDefaultMuds blocklist must still be offered under 'All games'");
+
+        dlg->deleteLater();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
+    // the self-test entry is not a game: debug builds offer it without any
+    // profile data on disk, so unlike a real pre-installed game it has to
+    // stay dismissed once deleted
+    void test_deletedSelfTestStaysHidden()
+    {
+        mudlet::self()->mpSettings->setValue(qsl("deletedDefaultMuds"), QStringList{mSelfTest});
+
+        auto* dlg = new dlgConnectionProfiles();
+        dlg->show();
+        auto* tabBar = gamesTabBar(dlg);
+        QVERIFY(tabBar);
+        tabBar->setCurrentIndex(1); // "All games"
+        dlg->fillout_form();
+
+        QVERIFY2(!gameListed(dlg, mSelfTest), "a deleted self-test entry must not come back under 'All games'");
+
+        tabBar->setCurrentIndex(0); // "My games"
+        dlg->fillout_form();
+        QVERIFY2(!gameListed(dlg, mSelfTest), "a deleted self-test entry must not come back under 'My games'");
+
+        dlg->deleteLater();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
+    // debug builds add the self-test entry to "My games" themselves; "All
+    // games" already gets it from TGameDetails, so it must not be listed twice
+    void test_selfTestListedOnce()
+    {
+        mudlet::self()->mpSettings->setValue(qsl("deletedDefaultMuds"), QStringList{});
+
+        auto* dlg = new dlgConnectionProfiles();
+        dlg->show();
+        auto* tabBar = gamesTabBar(dlg);
+        QVERIFY(tabBar);
+
+        for (const int tab : {1, 0}) { // "All games", then "My games"
+            tabBar->setCurrentIndex(tab);
+            dlg->fillout_form();
+            const auto items = dlg->findData(*dlg->listWidget_profiles, mSelfTest, dlgConnectionProfiles::csmNameRole);
+#if defined(QT_DEBUG)
+            QCOMPARE(items.size(), 1);
+#else
+            QVERIFY2(items.size() <= 1, "the self-test entry must never be listed twice");
+#endif
+        }
 
         dlg->deleteLater();
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);

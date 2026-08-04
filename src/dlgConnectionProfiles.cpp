@@ -1019,8 +1019,8 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
     }
 
     // record the deletion; the games catalog deliberately ignores this list
-    // now - only the QT_DEBUG self-test entry in fillout_form() still honours
-    // it, and continueProfileSave() clears the entry on profile re-creation
+    // now - only the self-test entry in fillout_form() still honours it, and
+    // continueProfileSave() clears the entry on profile re-creation
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     if (!deletedDefaultMuds.contains(profile)) {
@@ -1392,12 +1392,20 @@ void dlgConnectionProfiles::fillout_form()
 
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
     const bool showOnlyMyProfiles = showingOnlyMyProfiles();
+    const QString selfTestProfile = qsl("Mudlet self-test");
+    const auto deletedDefaultMuds = mudlet::self()->mpSettings->value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     if (onlyShownPredefinedProfiles.isEmpty()) {
         const auto defaultGames = TGameDetails::keys();
         // "My games" only lists games with profile data on disk; "All games"
         // must keep offering every pre-installed game, even ones whose
-        // profile was deleted (recorded in deletedDefaultMuds)
+        // profile was deleted (recorded in deletedDefaultMuds). The self-test
+        // entry is the exception: it is a testing aid rather than a game, and
+        // is offered even without profile data on disk, so dismissing it has
+        // to keep it out of both tabs
         for (auto& game : defaultGames) {
+            if (game == selfTestProfile && deletedDefaultMuds.contains(game)) {
+                continue;
+            }
             if (showOnlyMyProfiles && !mProfileList.contains(game, Qt::CaseInsensitive)) {
                 continue;
             }
@@ -1407,22 +1415,20 @@ void dlgConnectionProfiles::fillout_form()
         }
 
 #if defined(QT_DEBUG)
-        const QString mudServer = qsl("Mudlet self-test");
-        // the last remaining reader of deletedDefaultMuds: the self-test
-        // entry stays in the "All games" catalog like any other game, but a
-        // deleted one must not be force-re-added to mProfileList (and so the
-        // "My games" tab) by this debug-only convenience
-        const auto deletedDefaultMuds = mudlet::self()->mpSettings->value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
-        if (!deletedDefaultMuds.contains(mudServer) && !mProfileList.contains(mudServer)) {
-            mProfileList.append(mudServer);
-            pItem = new QListWidgetItem();
-            // Can't use setupMudProfile(...) here as we do not set the icon in the same way:
-            setItemName(pItem, mudServer);
+        if (!deletedDefaultMuds.contains(selfTestProfile) && !mProfileList.contains(selfTestProfile)) {
+            mProfileList.append(selfTestProfile);
+            // "All games" already listed it from TGameDetails above, only
+            // "My games" is still missing an entry:
+            if (findData(*listWidget_profiles, selfTestProfile, csmNameRole).isEmpty()) {
+                pItem = new QListWidgetItem();
+                // Can't use setupMudProfile(...) here as we do not set the icon in the same way:
+                setItemName(pItem, selfTestProfile);
 
-            listWidget_profiles->addItem(pItem);
-            description = getDescription(qsl("mudlet.org"));
-            if (!description.isEmpty()) {
-                pItem->setToolTip(utils::richText(description));
+                listWidget_profiles->addItem(pItem);
+                description = getDescription(qsl("mudlet.org"));
+                if (!description.isEmpty()) {
+                    pItem->setToolTip(utils::richText(description));
+                }
             }
         }
 #endif
