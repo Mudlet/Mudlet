@@ -7,9 +7,15 @@
 -- scripts actually exist, its script body actually ran, and getPackages() /
 -- getModules() actually list it.
 --
--- Everything these specs install is uninstalled again when the spec ends, and
--- the last spec in the file asserts that nothing was left behind: the self-test
--- profile is reused between runs, so a leak here would break the next run.
+-- Installing or uninstalling anything costs a full profile save, so the specs
+-- that only read share one installed fixture through setup()/teardown() rather
+-- than each installing their own - a file that saved the profile fifty times
+-- took longer than the whole rest of the suite.
+--
+-- Everything these specs install is uninstalled again when the spec (or its
+-- block) ends, and the last spec in the file asserts that nothing was left
+-- behind: the self-test profile is reused between runs, so a leak here would
+-- break the next run.
 
 -- waitForEvent() is inert outside test mode, and without it these specs cannot
 -- let the profile save finish - the uninstalls would fail and strand fixture
@@ -134,9 +140,12 @@ end
 -- is postponed and answered with a bare true (see the pending spec at the end
 -- of this file), an uninstall is refused, and a module reload is dropped. Lua
 -- cannot ask whether a save is running, so each of the helpers below asks again
--- until what it wanted has actually happened.
+-- until what it wanted has actually happened. They wait longer between tries
+-- than they need to on a fast machine on purpose: each postponed call queues
+-- another attempt for whenever the save does finish, and a pile of those all
+-- arriving at once starts a pile of saves.
 local function installUntilConfirmed(install, path, isInstalled, what)
-  for attempt = 1, 5 do
+  for attempt = 1, 3 do
     if isInstalled() then
       return
     end
@@ -151,7 +160,7 @@ local function installUntilConfirmed(install, path, isInstalled, what)
     if isInstalled() then
       return
     end
-    pumpEventLoop(150 * attempt)
+    pumpEventLoop(400 * attempt)
   end
   assert.is_true(false, "could not install " .. what)
 end
@@ -159,12 +168,12 @@ end
 -- The same postponement answers a bad install path with true as well, so a spec
 -- about the refusal waits for the save to pass and asks again.
 local function installUntilRefused(install, path)
-  for attempt = 1, 5 do
+  for attempt = 1, 3 do
     local ok, err = install(path)
     if ok == nil then
       return err
     end
-    pumpEventLoop(150 * attempt)
+    pumpEventLoop(400 * attempt)
   end
   assert.is_true(false, "the install was postponed instead of being answered")
 end
@@ -172,12 +181,12 @@ end
 -- reloadModule() is postponed the same way and then quietly dropped, so ask
 -- until the reload is observable.
 local function reloadModuleUntil(name, reloaded)
-  for attempt = 1, 5 do
+  for attempt = 1, 3 do
     reloadModule(name)
     if waitUntil(reloaded, 300) then
       return
     end
-    pumpEventLoop(150 * attempt)
+    pumpEventLoop(400 * attempt)
   end
   assert.is_true(false, "the module was never reloaded")
 end
@@ -203,7 +212,7 @@ end
 
 local function installFixturePackage(name)
   installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
-                   function() return packageInstalled(name) end, "the fixture package " .. name)
+                        function() return packageInstalled(name) end, "the fixture package " .. name)
 end
 
 local function withFixturePackage(name)
@@ -243,14 +252,23 @@ local function withFixtureModule(name)
   return installFixtureModule(name)
 end
 
--- Collects every occurrence of an event for the duration of one spec. The
+-- Collects every occurrence of an event until stopCollecting() is called. The
 -- uninstall events are raised inside uninstallPackage() itself, before a
 -- waitForEvent() could be armed, so a pre-armed handler is what sees them.
-local function collectEvents(eventName, into)
+-- Returns the list the events land in and the handler id to kill.
+local function collectEvents(eventName)
+  local events = {}
   local handler = registerAnonymousEventHandler(eventName, function(_, ...)
-    into[#into + 1] = {...}
+    events[#events + 1] = {...}
   end)
+  return events, handler
+end
+
+-- The same, for a spec that can register its own clean-up.
+local function collectEventsForSpec(eventName)
+  local events, handler = collectEvents(eventName)
   defer(function() killAnonymousEventHandler(handler) end)
+  return events
 end
 
 describe("Tests the functionality of installPackage", function()
@@ -281,24 +299,49 @@ describe("Tests the functionality of installPackage", function()
     assert.is_false(packageInstalled("mudlet-spec-notazip"))
   end)
 
-  it("unpacks the package into the profile and runs its contents", function()
-    local runsBefore = mudletSpecMinimalRuns or 0
-    withFixturePackage(minimalPackage)
+  describe("with the fixture package installed", function()
+    local runsBefore, installEvents, packageEvents, handlers
 
-    local packageDirectory = getMudletHomeDir() .. "/" .. minimalPackage
-    assert.is_true(fileExists(packageDirectory), "the package folder was not created")
-    assert.is_true(fileExists(packageDirectory .. "/config.lua"))
-    assert.is_true(fileExists(packageDirectory .. "/" .. minimalPackage .. ".xml"))
-    assert.equals(1, exists(minimalPackage .. " alias", "alias"))
-    assert.equals(1, exists("mudletSpecMinimalScript", "script"))
-    assert.is_true(mudletSpecMinimalRuns > runsBefore, "the package's script did not run")
-  end)
+    setup(function()
+      runsBefore = mudletSpecMinimalRuns or 0
+      local genericHandler, detailedHandler
+      installEvents, genericHandler = collectEvents("sysInstall")
+      packageEvents, detailedHandler = collectEvents("sysInstallPackage")
+      handlers = {genericHandler, detailedHandler}
+      installFixturePackage(minimalPackage)
+      -- the install events are raised from a zero-timer once the install is done
+      waitUntil(function() return #packageEvents > 0 end, 2000)
+    end)
 
-  it("refuses to install a package that is already installed", function()
-    withFixturePackage(minimalPackage)
+    teardown(function()
+      for _, handler in ipairs(handlers) do
+        killAnonymousEventHandler(handler)
+      end
+      removeFixturePackage(minimalPackage)
+    end)
 
-    local err = installUntilRefused(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage")
-    assert.is_true(contains(err, "package " .. minimalPackage .. " is already installed"), tostring(err))
+    it("unpacks the package into the profile and runs its contents", function()
+      local packageDirectory = getMudletHomeDir() .. "/" .. minimalPackage
+      assert.is_true(fileExists(packageDirectory), "the package folder was not created")
+      assert.is_true(fileExists(packageDirectory .. "/config.lua"))
+      assert.is_true(fileExists(packageDirectory .. "/" .. minimalPackage .. ".xml"))
+      assert.equals(1, exists(minimalPackage .. " alias", "alias"))
+      assert.equals(1, exists("mudletSpecMinimalScript", "script"))
+      assert.is_true(mudletSpecMinimalRuns > runsBefore, "the package's script did not run")
+    end)
+
+    it("raises sysInstall and sysInstallPackage once the install is complete", function()
+      assert.equals(1, #installEvents)
+      assert.equals(minimalPackage, installEvents[1][1])
+      assert.equals(1, #packageEvents)
+      assert.equals(minimalPackage, packageEvents[1][1])
+      assert.is_true(contains(packageEvents[1][2], minimalPackage .. ".mpackage"), tostring(packageEvents[1][2]))
+    end)
+
+    it("refuses to install a package that is already installed", function()
+      local err = installUntilRefused(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage")
+      assert.is_true(contains(err, "package " .. minimalPackage .. " is already installed"), tostring(err))
+    end)
   end)
 
   it("unpacks a folder of resources that ships with a package", function()
@@ -312,6 +355,8 @@ describe("Tests the functionality of installPackage", function()
     local contents = handle:read("*a")
     handle:close()
     assert.is_true(contains(contents, "mudlet-spec-resources fixture resource"))
+    -- the resources package declares its own version, unlike the minimal one
+    assert.equals("2.5", getPackageInfo(resourcesPackage, "version"))
   end)
 
   it("names a package after its file when the archive has no config.lua", function()
@@ -325,28 +370,12 @@ describe("Tests the functionality of installPackage", function()
     local path = fixtureDirectory .. "/sources/mudlet-spec-xmlonly/mudlet-spec-xmlonly.xml"
     defer(function() removeFixturePackage("mudlet-spec-xmlonly") end)
     installUntilConfirmed(installPackage, path, function() return packageInstalled("mudlet-spec-xmlonly") end,
-                     "the XML fixture package")
+                          "the XML fixture package")
 
     assert.equals(1, exists("mudlet-spec-xmlonly alias", "alias"))
     -- nothing is unpacked for a bare XML: the file stays where it is
     assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-xmlonly"))
     assert.is_true(fileExists(path), "the package XML must not be moved out of the fixtures")
-  end)
-
-  it("raises sysInstall and sysInstallPackage once the install is complete", function()
-    local generic, detailed = {}, {}
-    collectEvents("sysInstall", generic)
-    collectEvents("sysInstallPackage", detailed)
-
-    withFixturePackage(minimalPackage)
-    -- both events are raised from a zero-timer after the install returned
-    assert.is_true(waitUntil(function() return #detailed > 0 end, 2000), "sysInstallPackage was never raised")
-
-    assert.equals(1, #generic)
-    assert.equals(minimalPackage, generic[1][1])
-    assert.equals(1, #detailed)
-    assert.equals(minimalPackage, detailed[1][1])
-    assert.is_true(contains(detailed[1][2], minimalPackage .. ".mpackage"), tostring(detailed[1][2]))
   end)
 end)
 
@@ -364,10 +393,13 @@ describe("Tests the functionality of uninstallPackage", function()
     assert.is_nil(err)
   end)
 
-  it("removes the package, its items and its folder", function()
+  it("removes the package, its items and its folder, and raises the uninstall events", function()
     withFixturePackage(minimalPackage)
     local packageDirectory = getMudletHomeDir() .. "/" .. minimalPackage
     assert.is_true(fileExists(packageDirectory))
+    assert.is_true(packageInstalled(minimalPackage))
+    local generic = collectEventsForSpec("sysUninstall")
+    local detailed = collectEventsForSpec("sysUninstallPackage")
 
     removeFixturePackage(minimalPackage)
 
@@ -376,16 +408,6 @@ describe("Tests the functionality of uninstallPackage", function()
     assert.equals(0, exists("mudletSpecMinimalScript", "script"))
     assert.is_false(fileExists(packageDirectory), "the package folder was left behind")
     assert.same({}, getPackageInfo(minimalPackage))
-  end)
-
-  it("raises sysUninstall and sysUninstallPackage", function()
-    withFixturePackage(minimalPackage)
-    local generic, detailed = {}, {}
-    collectEvents("sysUninstall", generic)
-    collectEvents("sysUninstallPackage", detailed)
-
-    removeFixturePackage(minimalPackage)
-
     assert.equals(1, #generic)
     assert.equals(minimalPackage, generic[1][1])
     assert.equals(1, #detailed)
@@ -399,78 +421,68 @@ describe("Tests the functionality of getPackages", function()
     assert.is_table(packages)
     -- run-tests is the package running these specs, so it is always installed
     assert.is_true(listContains(packages, "run-tests"))
-  end)
-
-  it("lists a package while it is installed and not before or after", function()
-    assert.is_false(packageInstalled(minimalPackage))
-    withFixturePackage(minimalPackage)
-    assert.is_true(packageInstalled(minimalPackage))
-    removeFixturePackage(minimalPackage)
-    assert.is_false(packageInstalled(minimalPackage))
+    assert.is_false(listContains(packages, "mudlet-spec-never-installed"))
   end)
 end)
 
-describe("Tests the functionality of getPackageInfo", function()
-  it("raises a Lua error when the package name is not a string", function()
-    assertArgError(function() getPackageInfo({}) end, "getPackageInfo: bad argument #1 type")
+describe("Tests the package info accessors", function()
+  setup(function() installFixturePackage(minimalPackage) end)
+  teardown(function() removeFixturePackage(minimalPackage) end)
+
+  describe("Tests the functionality of getPackageInfo", function()
+    it("raises a Lua error when the package name is not a string", function()
+      assertArgError(function() getPackageInfo({}) end, "getPackageInfo: bad argument #1 type")
+    end)
+
+    it("raises a Lua error when the requested field is not a string", function()
+      assertArgError(function() getPackageInfo(minimalPackage, {}) end, "getPackageInfo: bad argument #2 type")
+    end)
+
+    it("returns everything the package's config.lua declared", function()
+      assert.same({
+        mpackage = minimalPackage,
+        author = "Mudlet test suite",
+        title = "Minimal fixture package for Package_spec.lua",
+        version = "1.0",
+        description = "One alias and one script, just enough to prove a package installed.",
+      }, getPackageInfo(minimalPackage))
+    end)
+
+    it("returns a single field when one is named", function()
+      assert.equals("1.0", getPackageInfo(minimalPackage, "version"))
+      assert.equals("Mudlet test suite", getPackageInfo(minimalPackage, "author"))
+    end)
+
+    it("returns an empty string for a field the package does not have", function()
+      assert.equals("", getPackageInfo(minimalPackage, "no-such-field"))
+    end)
+
+    it("returns an empty table for a package that is not installed", function()
+      assert.same({}, getPackageInfo("mudlet-spec-never-installed"))
+    end)
   end)
 
-  it("raises a Lua error when the requested field is not a string", function()
-    assertArgError(function() getPackageInfo(minimalPackage, {}) end, "getPackageInfo: bad argument #2 type")
-  end)
+  describe("Tests the functionality of setPackageInfo", function()
+    it("raises a Lua error when called with no arguments", function()
+      assertArgError(function() setPackageInfo() end, "setPackageInfo: bad argument #1 type")
+    end)
 
-  it("returns everything the package's config.lua declared", function()
-    withFixturePackage(minimalPackage)
+    it("raises a Lua error when the value is missing", function()
+      assertArgError(function() setPackageInfo(minimalPackage, "version") end, "setPackageInfo: bad argument #3 type")
+    end)
 
-    assert.same({
-      mpackage = minimalPackage,
-      author = "Mudlet test suite",
-      title = "Minimal fixture package for Package_spec.lua",
-      version = "1.0",
-      description = "One alias and one script, just enough to prove a package installed.",
-    }, getPackageInfo(minimalPackage))
-  end)
+    it("round-trips a value through getPackageInfo", function()
+      defer(function() setPackageInfo(minimalPackage, "version", "1.0") end)
 
-  it("returns a single field when one is named", function()
-    withFixturePackage(resourcesPackage)
+      assert.is_true(setPackageInfo(minimalPackage, "version", "9.9"))
+      assert.equals("9.9", getPackageInfo(minimalPackage, "version"))
+      assert.equals("9.9", getPackageInfo(minimalPackage).version)
+    end)
 
-    assert.equals("2.5", getPackageInfo(resourcesPackage, "version"))
-    assert.equals("Mudlet test suite", getPackageInfo(resourcesPackage, "author"))
-  end)
-
-  it("returns an empty string for a field the package does not have", function()
-    withFixturePackage(minimalPackage)
-
-    assert.equals("", getPackageInfo(minimalPackage, "no-such-field"))
-  end)
-
-  it("returns an empty table for a package that is not installed", function()
-    assert.same({}, getPackageInfo("mudlet-spec-never-installed"))
-  end)
-end)
-
-describe("Tests the functionality of setPackageInfo", function()
-  it("raises a Lua error when called with no arguments", function()
-    assertArgError(function() setPackageInfo() end, "setPackageInfo: bad argument #1 type")
-  end)
-
-  it("raises a Lua error when the value is missing", function()
-    assertArgError(function() setPackageInfo(minimalPackage, "version") end, "setPackageInfo: bad argument #3 type")
-  end)
-
-  it("round-trips a value through getPackageInfo", function()
-    withFixturePackage(minimalPackage)
-
-    assert.is_true(setPackageInfo(minimalPackage, "version", "9.9"))
-    assert.equals("9.9", getPackageInfo(minimalPackage, "version"))
-    assert.equals("9.9", getPackageInfo(minimalPackage).version)
-  end)
-
-  it("adds a field the package did not declare", function()
-    withFixturePackage(minimalPackage)
-
-    assert.is_true(setPackageInfo(minimalPackage, "spec-added", "yes"))
-    assert.equals("yes", getPackageInfo(minimalPackage, "spec-added"))
+    it("adds a field the package did not declare", function()
+      assert.is_true(setPackageInfo(minimalPackage, "spec-added", "yes"))
+      assert.equals("yes", getPackageInfo(minimalPackage, "spec-added"))
+    end)
   end)
 end)
 
@@ -484,38 +496,47 @@ describe("Tests the functionality of installModule", function()
     assert.is_true(contains(err, "could not open file"), tostring(err))
   end)
 
-  it("installs the module, unpacks it and runs its contents", function()
-    local runsBefore = mudletSpecModuleRuns or 0
-    withFixtureModule(moduleName)
+  describe("with the fixture module installed", function()
+    local runsBefore, installEvents, moduleEvents, handlers, modulePath
 
-    assert.is_true(moduleInstalled(moduleName))
-    -- a module is not a package: it must not turn up in getPackages()
-    assert.is_false(packageInstalled(moduleName))
-    assert.is_true(fileExists(getMudletHomeDir() .. "/" .. moduleName))
-    assert.equals(1, exists(moduleName .. " alias", "alias"))
-    assert.is_true(mudletSpecModuleRuns > runsBefore, "the module's script did not run")
-  end)
+    setup(function()
+      runsBefore = mudletSpecModuleRuns or 0
+      local genericHandler, detailedHandler
+      installEvents, genericHandler = collectEvents("sysInstall")
+      moduleEvents, detailedHandler = collectEvents("sysLuaInstallModule")
+      handlers = {genericHandler, detailedHandler}
+      modulePath = installFixtureModule(moduleName)
+      waitUntil(function() return #moduleEvents > 0 end, 2000)
+    end)
 
-  it("refuses to install a module that is already installed", function()
-    local path = withFixtureModule(moduleName)
+    teardown(function()
+      for _, handler in ipairs(handlers) do
+        killAnonymousEventHandler(handler)
+      end
+      removeFixtureModule(moduleName)
+    end)
 
-    local err = installUntilRefused(installModule, path)
-    assert.is_true(contains(err, "module " .. moduleName .. " is already installed"), tostring(err))
-  end)
+    it("installs the module, unpacks it and runs its contents", function()
+      assert.is_true(moduleInstalled(moduleName))
+      -- a module is not a package: it must not turn up in getPackages()
+      assert.is_false(packageInstalled(moduleName))
+      assert.is_true(fileExists(getMudletHomeDir() .. "/" .. moduleName))
+      assert.equals(1, exists(moduleName .. " alias", "alias"))
+      assert.is_true(mudletSpecModuleRuns > runsBefore, "the module's script did not run")
+    end)
 
-  it("raises sysInstall and sysLuaInstallModule", function()
-    local generic, detailed = {}, {}
-    collectEvents("sysInstall", generic)
-    collectEvents("sysLuaInstallModule", detailed)
+    it("raises sysInstall and sysLuaInstallModule", function()
+      assert.equals(1, #installEvents)
+      assert.equals(moduleName, installEvents[1][1])
+      assert.equals(1, #moduleEvents)
+      assert.equals(moduleName, moduleEvents[1][1])
+      assert.is_true(contains(moduleEvents[1][2], moduleName .. ".mpackage"), tostring(moduleEvents[1][2]))
+    end)
 
-    withFixtureModule(moduleName)
-    assert.is_true(waitUntil(function() return #detailed > 0 end, 2000), "sysLuaInstallModule was never raised")
-
-    assert.equals(1, #generic)
-    assert.equals(moduleName, generic[1][1])
-    assert.equals(1, #detailed)
-    assert.equals(moduleName, detailed[1][1])
-    assert.is_true(contains(detailed[1][2], moduleName .. ".mpackage"), tostring(detailed[1][2]))
+    it("refuses to install a module that is already installed", function()
+      local err = installUntilRefused(installModule, modulePath)
+      assert.is_true(contains(err, "module " .. moduleName .. " is already installed"), tostring(err))
+    end)
   end)
 end)
 
@@ -528,10 +549,12 @@ describe("Tests the functionality of uninstallModule", function()
     assert.is_false(uninstallModule("mudlet-spec-never-installed"))
   end)
 
-  it("removes the module, its items and its folder", function()
+  it("removes the module, its items and its folder, and raises the uninstall events", function()
     withFixtureModule(moduleName)
     local moduleDirectory = getMudletHomeDir() .. "/" .. moduleName
     assert.is_true(fileExists(moduleDirectory))
+    local generic = collectEventsForSpec("sysUninstall")
+    local detailed = collectEventsForSpec("sysLuaUninstallModule")
 
     removeFixtureModule(moduleName)
 
@@ -539,16 +562,6 @@ describe("Tests the functionality of uninstallModule", function()
     assert.equals(0, exists(moduleName .. " alias", "alias"))
     assert.is_false(fileExists(moduleDirectory), "the module folder was left behind")
     assert.same({}, getModuleInfo(moduleName))
-  end)
-
-  it("raises sysUninstall and sysLuaUninstallModule", function()
-    withFixtureModule(moduleName)
-    local generic, detailed = {}, {}
-    collectEvents("sysUninstall", generic)
-    collectEvents("sysLuaUninstallModule", detailed)
-
-    removeFixtureModule(moduleName)
-
     assert.equals(1, #generic)
     assert.equals(moduleName, generic[1][1])
     assert.equals(1, #detailed)
@@ -557,169 +570,158 @@ describe("Tests the functionality of uninstallModule", function()
 end)
 
 describe("Tests the functionality of getModules", function()
-  it("returns a table", function()
-    assert.is_table(getModules())
-  end)
-
-  it("lists a module while it is installed and not before or after", function()
-    assert.is_false(moduleInstalled(moduleName))
-    withFixtureModule(moduleName)
-    assert.is_true(moduleInstalled(moduleName))
-    removeFixtureModule(moduleName)
-    assert.is_false(moduleInstalled(moduleName))
+  it("returns a table of the installed modules", function()
+    local modules = getModules()
+    assert.is_table(modules)
+    assert.is_false(listContains(modules, "mudlet-spec-never-installed"))
   end)
 end)
 
-describe("Tests the functionality of getModuleInfo", function()
-  it("raises a Lua error when the module name is not a string", function()
-    assertArgError(function() getModuleInfo({}) end, "getModuleInfo: bad argument #1 type")
+describe("Tests the module accessors", function()
+  local modulePath
+
+  setup(function() modulePath = installFixtureModule(moduleName) end)
+  teardown(function() removeFixtureModule(moduleName) end)
+
+  describe("Tests the functionality of getModuleInfo", function()
+    it("raises a Lua error when the module name is not a string", function()
+      assertArgError(function() getModuleInfo({}) end, "getModuleInfo: bad argument #1 type")
+    end)
+
+    it("returns everything the module's config.lua declared", function()
+      assert.same({
+        mpackage = moduleName,
+        author = "Mudlet test suite",
+        title = "Module fixture for Package_spec.lua",
+        version = "3.1",
+        description = "Counts how often its script has been compiled, so a reload is observable.",
+      }, getModuleInfo(moduleName))
+    end)
+
+    it("returns a single field when one is named", function()
+      assert.equals("3.1", getModuleInfo(moduleName, "version"))
+      assert.equals("", getModuleInfo(moduleName, "no-such-field"))
+    end)
+
+    it("returns an empty table for a module that is not installed", function()
+      assert.same({}, getModuleInfo("mudlet-spec-never-installed"))
+    end)
   end)
 
-  it("returns everything the module's config.lua declared", function()
-    withFixtureModule(moduleName)
+  describe("Tests the functionality of setModuleInfo", function()
+    it("raises a Lua error when the value is missing", function()
+      assertArgError(function() setModuleInfo(moduleName, "version") end, "setModuleInfo: bad argument #3 type")
+    end)
 
-    assert.same({
-      mpackage = moduleName,
-      author = "Mudlet test suite",
-      title = "Module fixture for Package_spec.lua",
-      version = "3.1",
-      description = "Counts how often its script has been compiled, so a reload is observable.",
-    }, getModuleInfo(moduleName))
+    it("round-trips a value through getModuleInfo", function()
+      defer(function() setModuleInfo(moduleName, "version", "3.1") end)
+
+      assert.is_true(setModuleInfo(moduleName, "version", "8.8"))
+      assert.equals("8.8", getModuleInfo(moduleName, "version"))
+      assert.equals("8.8", getModuleInfo(moduleName).version)
+    end)
   end)
 
-  it("returns a single field when one is named", function()
-    withFixtureModule(moduleName)
-
-    assert.equals("3.1", getModuleInfo(moduleName, "version"))
-    assert.equals("", getModuleInfo(moduleName, "no-such-field"))
+  describe("Tests the functionality of getModulePath", function()
+    it("returns the file the module was installed from", function()
+      assert.equals(modulePath, getModulePath(moduleName))
+    end)
   end)
 
-  it("returns an empty table for a module that is not installed", function()
-    assert.same({}, getModuleInfo("mudlet-spec-never-installed"))
-  end)
-end)
+  describe("Tests the functionality of getModulePriority", function()
+    -- Runs before setModulePriority's specs on purpose: a priority outlives the
+    -- module it was set on (Host::uninstallPackage() leaves mModulePriorities
+    -- alone), so once one has been set for this module the default this spec is
+    -- about can never be observed again.
+    it("reports the default priority of a freshly installed module", function()
+      -- BUG: a module nobody has called setModulePriority() on has no entry in
+      -- the priority map, so getModulePriority() answers nil and "module
+      -- doesn't exist" for a module that plainly does exist. The module manager
+      -- reads the same map with operator[] and so shows 0, which is what this
+      -- should return. Left pending rather than pinning the wrong answer.
+      pending("getModulePriority() reports an installed module as non-existent until a priority is set")
 
-describe("Tests the functionality of setModuleInfo", function()
-  it("raises a Lua error when the value is missing", function()
-    assertArgError(function() setModuleInfo(moduleName, "version") end, "setModuleInfo: bad argument #3 type")
-  end)
-
-  it("round-trips a value through getModuleInfo", function()
-    withFixtureModule(moduleName)
-
-    assert.is_true(setModuleInfo(moduleName, "version", "8.8"))
-    assert.equals("8.8", getModuleInfo(moduleName, "version"))
-    assert.equals("8.8", getModuleInfo(moduleName).version)
-  end)
-end)
-
-describe("Tests the functionality of getModulePath", function()
-  it("returns the file the module was installed from", function()
-    local path = withFixtureModule(moduleName)
-
-    assert.equals(path, getModulePath(moduleName))
-  end)
-end)
-
-describe("Tests the functionality of getModulePriority", function()
-  -- Stays ahead of setModulePriority's specs on purpose: a priority outlives
-  -- the module it was set on (Host::uninstallPackage() leaves
-  -- mModulePriorities alone), so once one has been set for this module the
-  -- default this spec is about can never be observed again.
-  it("reports the default priority of a freshly installed module", function()
-    -- BUG: a module nobody has called setModulePriority() on has no entry in
-    -- the priority map, so getModulePriority() answers nil and "module doesn't
-    -- exist" for a module that plainly does exist. The module manager reads the
-    -- same map with operator[] and so shows 0, which is what this should
-    -- return. Left pending rather than pinning the wrong answer as the contract.
-    pending("getModulePriority() reports an installed module as non-existent until a priority is set")
-    withFixtureModule(moduleName)
-
-    assert.equals(0, getModulePriority(moduleName))
-  end)
-end)
-
-describe("Tests the functionality of setModulePriority", function()
-  it("raises a Lua error when the priority is missing", function()
-    assertArgError(function() setModulePriority(moduleName) end, "setModulePriority: bad argument #2 type")
+      assert.equals(0, getModulePriority(moduleName))
+    end)
   end)
 
-  it("returns nil+msg for a module that is not installed", function()
-    local ok, err = setModulePriority("mudlet-spec-never-installed", 3)
-    assert.is_nil(ok)
-    assert.is_true(contains(err, "module doesn't exist"), tostring(err))
+  describe("Tests the functionality of setModulePriority", function()
+    it("raises a Lua error when the priority is missing", function()
+      assertArgError(function() setModulePriority(moduleName) end, "setModulePriority: bad argument #2 type")
+    end)
+
+    it("returns nil+msg for a module that is not installed", function()
+      local ok, err = setModulePriority("mudlet-spec-never-installed", 3)
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "module doesn't exist"), tostring(err))
+    end)
+
+    it("returns no values and is read back by getModulePriority", function()
+      assert.equals(0, select('#', setModulePriority(moduleName, 7)))
+      assert.equals(7, getModulePriority(moduleName))
+      setModulePriority(moduleName, -2)
+      assert.equals(-2, getModulePriority(moduleName))
+    end)
   end)
 
-  it("returns no values and is read back by getModulePriority", function()
-    withFixtureModule(moduleName)
+  describe("Tests the functionality of enableModuleSync", function()
+    it("raises a Lua error when called with no arguments", function()
+      assertArgError(function() enableModuleSync() end, "enableModuleSync: bad argument #1 type")
+    end)
 
-    assert.equals(0, select('#', setModulePriority(moduleName, 7)))
-    assert.equals(7, getModulePriority(moduleName))
-    setModulePriority(moduleName, -2)
-    assert.equals(-2, getModulePriority(moduleName))
-  end)
-end)
+    it("returns nil+msg for an empty module name", function()
+      local ok, err = enableModuleSync("")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "module name cannot be an empty string"), tostring(err))
+    end)
 
-describe("Tests the functionality of enableModuleSync", function()
-  it("raises a Lua error when called with no arguments", function()
-    assertArgError(function() enableModuleSync() end, "enableModuleSync: bad argument #1 type")
-  end)
+    it("returns nil+msg for a module that is not installed", function()
+      local ok, err = enableModuleSync("mudlet-spec-never-installed")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "not found"), tostring(err))
+    end)
 
-  it("returns nil+msg for an empty module name", function()
-    local ok, err = enableModuleSync("")
-    assert.is_nil(ok)
-    assert.is_true(contains(err, "module name cannot be an empty string"), tostring(err))
-  end)
+    it("turns syncing on for an installed module", function()
+      -- leave the module unsynced: a profile save rewrites a synced module's
+      -- own .mpackage, and the fixture copy is thrown away when this block ends
+      defer(function() disableModuleSync(moduleName) end)
+      assert.is_false(getModuleSync(moduleName))
 
-  it("returns nil+msg for a module that is not installed", function()
-    local ok, err = enableModuleSync("mudlet-spec-never-installed")
-    assert.is_nil(ok)
-    assert.is_true(contains(err, "not found"), tostring(err))
-  end)
-
-  it("turns syncing on for an installed module", function()
-    withFixtureModule(moduleName)
-    assert.is_false(getModuleSync(moduleName))
-
-    assert.is_true(enableModuleSync(moduleName))
-    assert.is_true(getModuleSync(moduleName))
-    -- leave the module unsynced: a profile save rewrites a synced module's own
-    -- .mpackage, and the fixture copy is thrown away right after this
-    assert.is_true(disableModuleSync(moduleName))
-  end)
-end)
-
-describe("Tests the functionality of disableModuleSync", function()
-  it("returns nil+msg for a module that is not installed", function()
-    local ok, err = disableModuleSync("mudlet-spec-never-installed")
-    assert.is_nil(ok)
-    assert.is_true(contains(err, "not found"), tostring(err))
+      assert.is_true(enableModuleSync(moduleName))
+      assert.is_true(getModuleSync(moduleName))
+    end)
   end)
 
-  it("turns syncing back off", function()
-    withFixtureModule(moduleName)
-    assert.is_true(enableModuleSync(moduleName))
+  describe("Tests the functionality of disableModuleSync", function()
+    it("returns nil+msg for a module that is not installed", function()
+      local ok, err = disableModuleSync("mudlet-spec-never-installed")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "not found"), tostring(err))
+    end)
 
-    assert.is_true(disableModuleSync(moduleName))
-    assert.is_false(getModuleSync(moduleName))
-  end)
-end)
+    it("turns syncing back off", function()
+      defer(function() disableModuleSync(moduleName) end)
+      assert.is_true(enableModuleSync(moduleName))
 
-describe("Tests the functionality of getModuleSync", function()
-  it("raises a Lua error when called with no arguments", function()
-    assertArgError(function() getModuleSync() end, "getModuleSync: bad argument #1 type")
-  end)
-
-  it("returns nil+msg for a module that is not installed", function()
-    local ok, err = getModuleSync("mudlet-spec-never-installed")
-    assert.is_nil(ok)
-    assert.is_true(contains(err, "not found"), tostring(err))
+      assert.is_true(disableModuleSync(moduleName))
+      assert.is_false(getModuleSync(moduleName))
+    end)
   end)
 
-  it("is false for a module that was just installed", function()
-    withFixtureModule(moduleName)
+  describe("Tests the functionality of getModuleSync", function()
+    it("raises a Lua error when called with no arguments", function()
+      assertArgError(function() getModuleSync() end, "getModuleSync: bad argument #1 type")
+    end)
 
-    assert.is_false(getModuleSync(moduleName))
+    it("returns nil+msg for a module that is not installed", function()
+      local ok, err = getModuleSync("mudlet-spec-never-installed")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "not found"), tostring(err))
+    end)
+
+    it("is false for a module that nobody has turned syncing on for", function()
+      assert.is_false(getModuleSync(moduleName))
+    end)
   end)
 end)
 
@@ -733,47 +735,39 @@ describe("Tests the functionality of reloadModule", function()
     assert.is_false(moduleInstalled("mudlet-spec-never-installed"))
   end)
 
-  it("runs the module's scripts again", function()
-    withFixtureModule(moduleName)
-    local runsBefore = mudletSpecModuleRuns
+  describe("with the fixture module installed", function()
+    setup(function() installFixtureModule(moduleName) end)
+    teardown(function() removeFixtureModule(moduleName) end)
 
-    reloadModuleUntil(moduleName, function() return mudletSpecModuleRuns > runsBefore end)
+    it("runs the module's scripts again", function()
+      local runsBefore = mudletSpecModuleRuns
 
-    assert.is_true(moduleInstalled(moduleName))
-    assert.equals(1, exists(moduleName .. " alias", "alias"))
-  end)
+      reloadModuleUntil(moduleName, function() return mudletSpecModuleRuns > runsBefore end)
 
-  it("re-reads the module's info from its config.lua", function()
-    withFixtureModule(moduleName)
-    setModuleInfo(moduleName, "title", "changed by the spec")
-    assert.equals("changed by the spec", getModuleInfo(moduleName, "title"))
-
-    reloadModuleUntil(moduleName, function()
-      return getModuleInfo(moduleName, "title") == "Module fixture for Package_spec.lua"
+      assert.is_true(moduleInstalled(moduleName))
+      assert.equals(1, exists(moduleName .. " alias", "alias"))
     end)
-  end)
 
-  it("keeps the module's sync setting", function()
-    withFixtureModule(moduleName)
-    assert.is_true(enableModuleSync(moduleName))
-    local runsBefore = mudletSpecModuleRuns
+    it("re-reads the module's info from its config.lua", function()
+      setModuleInfo(moduleName, "title", "changed by the spec")
+      assert.equals("changed by the spec", getModuleInfo(moduleName, "title"))
 
-    reloadModuleUntil(moduleName, function() return mudletSpecModuleRuns > runsBefore end)
+      reloadModuleUntil(moduleName, function()
+        return getModuleInfo(moduleName, "title") == "Module fixture for Package_spec.lua"
+      end)
+    end)
 
-    assert.is_true(getModuleSync(moduleName))
-    -- leave it unsynced: a profile save rewrites a synced module's own
-    -- .mpackage, and the fixture copy is thrown away right after this
-    assert.is_true(disableModuleSync(moduleName))
-  end)
+    it("keeps the module's priority and sync setting", function()
+      defer(function() disableModuleSync(moduleName) end)
+      setModulePriority(moduleName, 4)
+      assert.is_true(enableModuleSync(moduleName))
+      local runsBefore = mudletSpecModuleRuns
 
-  it("keeps the module's priority", function()
-    withFixtureModule(moduleName)
-    setModulePriority(moduleName, 4)
-    local runsBefore = mudletSpecModuleRuns
+      reloadModuleUntil(moduleName, function() return mudletSpecModuleRuns > runsBefore end)
 
-    reloadModuleUntil(moduleName, function() return mudletSpecModuleRuns > runsBefore end)
-
-    assert.equals(4, getModulePriority(moduleName))
+      assert.equals(4, getModulePriority(moduleName))
+      assert.is_true(getModuleSync(moduleName))
+    end)
   end)
 end)
 
