@@ -191,3 +191,116 @@ describe("Tests the argument and disconnected contract of sendGMCP", function()
     assert.is_true(contains(err, "not connected to game server"))
   end)
 end)
+
+describe("Tests the functionality of gmod.print", function()
+  it("Should write the tracker prefixed message to the main console", function()
+    clearWindow()
+    gmod.print("a tracker message")
+    local text = table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\n")
+    assert.is_truthy(text:find("[GMCP Tracker]", 1, true))
+    assert.is_truthy(text:find("a tracker message", 1, true))
+  end)
+
+  it("Should colour the prefix yellow and the message white", function()
+    clearWindow()
+    gmod.print("coloured message")
+    -- the message is wrapped in newlines, so park the cursor on its line
+    -- before selecting: selectString only searches the current line
+    local lines = getLines("main", 0, getLastLineNumber("main") + 1)
+    local index
+    for i, line in ipairs(lines) do
+      if line:find("[GMCP Tracker]", 1, true) then
+        index = i - 1
+      end
+    end
+    assert.is_not_nil(index, "gmod.print should have written a tracker line")
+    moveCursor(0, index)
+    selectString("[GMCP Tracker]", 1)
+    assert.are.same(color_table["yellow"], getTextFormat().foreground)
+    selectString("coloured message", 1)
+    assert.are.same(color_table["white"], getTextFormat().foreground)
+  end)
+end)
+
+describe("Tests the functionality of gmod.reenableModules", function()
+  local user = "reenableUser"
+  local module = "OogaBoogaReenableModule"
+
+  after_each(function()
+    gmod.disableModule(user, module)
+    gmcp.BustedReenableProbe = nil
+  end)
+
+  it("Should send nothing while the gmcp table is still empty", function()
+    -- reenableModules is driven by sysProtocolEnabled, which can fire before
+    -- the server has sent any GMCP at all
+    if next(gmcp) then
+      -- the profile or an earlier spec left GMCP data behind, so the guard
+      -- this test is about cannot be reached
+      pending("the gmcp table is not empty in this profile")
+    end
+    gmod.enableModule(user, module)
+    local sg = spy.on(_G, "sendGMCP")
+    finally(function() sendGMCP:revert() end)
+    gmod.reenableModules()
+    assert.spy(sg).was_not_called()
+  end)
+
+  it("Should re-announce every registered module once GMCP data has arrived", function()
+    gmod.enableModule(user, module)
+    gmcp.BustedReenableProbe = {}
+    local sg = spy.on(_G, "sendGMCP")
+    finally(function() sendGMCP:revert() end)
+    gmod.reenableModules()
+    assert.spy(sg).was_called_with(match.has_match("Core.Supports.Add .*" .. module .. " 1"))
+  end)
+
+  it("Should send nothing when no module is registered", function()
+    gmcp.BustedReenableProbe = {}
+    local sg = spy.on(_G, "sendGMCP")
+    finally(function() sendGMCP:revert() end)
+    -- a module registered by an earlier spec would be re-announced too, so
+    -- measure the difference this test's own module makes
+    gmod.reenableModules()
+    local withoutOurs = #sg.calls
+    gmod.enableModule(user, module)
+    sendGMCP:clear()
+    gmod.reenableModules()
+    assert.is_true(#sg.calls > 0, "a registered module should be re-announced")
+    assert.are.equal(0, withoutOurs, "nothing should be announced while no module is registered")
+  end)
+end)
+
+describe("Tests the functionality of __gmcp_merge_gmcp_sub_tables", function()
+  it("Should fold the staged table into the named sub table", function()
+    local a = {Char = {name = "old", level = 1}, __needMerge = {name = "new", hp = 50}}
+    __gmcp_merge_gmcp_sub_tables(a, "Char")
+    assert.are.same({name = "new", level = 1, hp = 50}, a.Char)
+  end)
+
+  it("Should clear the staging table afterwards", function()
+    local a = {Room = {}, __needMerge = {num = 7}}
+    __gmcp_merge_gmcp_sub_tables(a, "Room")
+    assert.is_nil(a.__needMerge)
+  end)
+
+  it("Should leave the sub table alone when nothing is staged", function()
+    local a = {Room = {num = 7}, __needMerge = {}}
+    __gmcp_merge_gmcp_sub_tables(a, "Room")
+    assert.are.same({num = 7}, a.Room)
+    assert.is_nil(a.__needMerge)
+  end)
+
+  it("Should raise rather than silently drop data when the sub table is missing", function()
+    -- the C++ side stages into __needMerge and calls this immediately, so a
+    -- module arriving before its sub table exists is a real ordering case
+    assert.has_error(function() __gmcp_merge_gmcp_sub_tables({__needMerge = {a = 1}}, "Char") end)
+    assert.has_error(function() __gmcp_merge_gmcp_sub_tables({Char = {}}, "Char") end)
+  end)
+
+  it("Should merge nested tables by replacing them wholesale", function()
+    local a = {Char = {Vitals = {hp = 1}}, __needMerge = {Vitals = {mp = 2}}}
+    __gmcp_merge_gmcp_sub_tables(a, "Char")
+    assert.are.same({Vitals = {mp = 2}}, a.Char)
+  end)
+end)
