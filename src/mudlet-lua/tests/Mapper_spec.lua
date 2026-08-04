@@ -27,6 +27,18 @@ describe("Tests map events and menus before the map widget is opened", function(
     assert.is_nil(getMapMenus()["PreWidgetMenu"])
   end)
 
+  it("should report that there is no map widget to read a title from", function()
+    local ok, err = getMapWindowTitle()
+    assert.is_nil(ok)
+    assert.are.equal("no floating/dockable type map window found", err)
+  end)
+
+  it("should report that there is no map widget to read a geometry from", function()
+    local ok, err = getMapWidgetGeometry()
+    assert.is_nil(ok)
+    assert.are.equal("no floating/dockable type map window found", err)
+  end)
+
   it("should retain a registration for when the widget opens later", function()
     assert.is_true(addMapEvent("preWidgetKeptEvent", "myEvent", "", "Kept Event"))
   end)

@@ -4089,3 +4089,321 @@ describe("Window and label state", function()
     end)
   end)
 end)
+
+-- Widget state getters: titles, stylesheets, tooltips, scroll bars and the map
+-- widget's geometry, all of which could previously only be set. Self-contained
+-- top-level block kept at the tail of the file; do not interleave it with the
+-- blocks above.
+describe("Widget state getters", function()
+  -- user windows and the map widget cannot be deleted from Lua, only hidden,
+  -- so keep the names unique per run
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local function name(base)
+    return base .. suffix
+  end
+
+  local userWindow = name("wsgUserWindow")
+  local label = name("wsgLabel")
+  local console = name("wsgConsole")
+  local cmdLine = name("wsgCmdLine")
+
+  setup(function()
+    -- loadLayout is off so a saved layout cannot move the window under us
+    openUserWindow(userWindow, false)
+    createLabel(label, 10, 20, 100, 50, 1)
+    createMiniConsole(console, 30, 40, 300, 150)
+    createCommandLine(cmdLine, 15, 25, 140, 35)
+  end)
+
+  teardown(function()
+    deleteLabel(label)
+    deleteMiniConsole(console)
+    deleteCommandLine(cmdLine)
+    hideWindow(userWindow)
+  end)
+
+  describe("getUserWindowTitle", function()
+    teardown(function()
+      resetUserWindowTitle(userWindow)
+    end)
+
+    it("returns the title set by setUserWindowTitle", function()
+      assert.is_true(setUserWindowTitle(userWindow, "A user window title"))
+      assert.are.equal("A user window title", getUserWindowTitle(userWindow))
+    end)
+
+    it("round-trips an updated title", function()
+      setUserWindowTitle(userWindow, "first title")
+      assert.are.equal("first title", getUserWindowTitle(userWindow))
+      setUserWindowTitle(userWindow, "second title")
+      assert.are.equal("second title", getUserWindowTitle(userWindow))
+    end)
+
+    it("reports the generated default title after resetUserWindowTitle", function()
+      setUserWindowTitle(userWindow, "not the default")
+      assert.is_true(resetUserWindowTitle(userWindow))
+      local title = getUserWindowTitle(userWindow)
+      assert.are.equal("string", type(title))
+      assert.is_truthy(title:find(getProfileName(), 1, true))
+      assert.is_truthy(title:find(userWindow, 1, true))
+    end)
+
+    it("returns nil and a message naming an unknown user window", function()
+      local unknown = name("wsgNoSuchUserWindow")
+      local ok, err = getUserWindowTitle(unknown)
+      assert.is_nil(ok)
+      assert.are.equal(("user window name '%s' not found"):format(unknown), err)
+    end)
+
+    it("says a miniconsole of that name is not a user window", function()
+      -- the same distinction setUserWindowTitle makes, so a script is not told
+      -- a name is free when it is already taken by something else
+      local ok, err = getUserWindowTitle(console)
+      assert.is_nil(ok)
+      assert.are.equal(('"%s" is not a user window'):format(console), err)
+    end)
+
+    it("rejects an empty name the way setUserWindowTitle does", function()
+      local ok, err = getUserWindowTitle("")
+      assert.is_nil(ok)
+      assert.are.equal("a user window cannot have an empty string as its name", err)
+    end)
+
+    it("errors when called without a name", function()
+      assert.has_error(function() getUserWindowTitle() end)
+    end)
+  end)
+
+  describe("getUserWindowStyleSheet", function()
+    teardown(function()
+      setUserWindowStyleSheet(userWindow, "")
+    end)
+
+    it("returns the stylesheet set by setUserWindowStyleSheet", function()
+      local css = "background-color: rgb(11,22,33);"
+      assert.is_true(setUserWindowStyleSheet(userWindow, css))
+      assert.are.equal(css, getUserWindowStyleSheet(userWindow))
+    end)
+
+    it("round-trips an updated stylesheet", function()
+      setUserWindowStyleSheet(userWindow, "background-color: rgb(1,2,3);")
+      assert.are.equal("background-color: rgb(1,2,3);", getUserWindowStyleSheet(userWindow))
+      setUserWindowStyleSheet(userWindow, "background-color: rgb(4,5,6);")
+      assert.are.equal("background-color: rgb(4,5,6);", getUserWindowStyleSheet(userWindow))
+    end)
+
+    it("reports an empty stylesheet once it is cleared", function()
+      setUserWindowStyleSheet(userWindow, "background-color: rgb(7,8,9);")
+      assert.is_true(setUserWindowStyleSheet(userWindow, ""))
+      assert.are.equal("", getUserWindowStyleSheet(userWindow))
+    end)
+
+    it("returns nil and a message naming an unknown user window", function()
+      local unknown = name("wsgNoSuchUserWindow")
+      local ok, err = getUserWindowStyleSheet(unknown)
+      assert.is_nil(ok)
+      assert.are.equal(("userwindow name '%s' not found"):format(unknown), err)
+    end)
+
+    it("rejects an empty name the way setUserWindowStyleSheet does", function()
+      local ok, err = getUserWindowStyleSheet("")
+      assert.is_nil(ok)
+      assert.are.equal("a userwindow cannot have an empty string as its name", err)
+    end)
+
+    it("errors when called without a name", function()
+      assert.has_error(function() getUserWindowStyleSheet() end)
+    end)
+  end)
+
+  describe("getCmdLineStyleSheet", function()
+    local originalMainStyleSheet
+
+    setup(function()
+      originalMainStyleSheet = getCmdLineStyleSheet()
+    end)
+
+    teardown(function()
+      setCmdLineStyleSheet("main", originalMainStyleSheet)
+      setCmdLineStyleSheet(cmdLine, "")
+    end)
+
+    it("returns the stylesheet set on a created command line", function()
+      local css = "color: rgb(12,34,56);"
+      assert.is_true(setCmdLineStyleSheet(cmdLine, css))
+      assert.are.equal(css, getCmdLineStyleSheet(cmdLine))
+    end)
+
+    it("round-trips an updated stylesheet", function()
+      setCmdLineStyleSheet(cmdLine, "color: rgb(1,2,3);")
+      assert.are.equal("color: rgb(1,2,3);", getCmdLineStyleSheet(cmdLine))
+      setCmdLineStyleSheet(cmdLine, "color: rgb(4,5,6);")
+      assert.are.equal("color: rgb(4,5,6);", getCmdLineStyleSheet(cmdLine))
+    end)
+
+    it("defaults to the main command line when given no name or nil", function()
+      -- the one-argument form of the setter targets "main" as well
+      local css = "color: rgb(9,9,9);"
+      assert.is_true(setCmdLineStyleSheet(css))
+      assert.are.equal(css, getCmdLineStyleSheet())
+      assert.are.equal(css, getCmdLineStyleSheet(nil))
+      assert.are.equal(css, getCmdLineStyleSheet("main"))
+    end)
+
+    it("returns nil and a message naming an unknown command line", function()
+      local unknown = name("wsgNoSuchCmdLine")
+      local ok, err = getCmdLineStyleSheet(unknown)
+      assert.is_nil(ok)
+      assert.are.equal(("command-line name '%s' not found"):format(unknown), err)
+    end)
+  end)
+
+  describe("getLabelToolTip", function()
+    teardown(function()
+      resetLabelToolTip(label)
+    end)
+
+    it("returns the tooltip set by setLabelToolTip", function()
+      assert.is_true(setLabelToolTip(label, "a tooltip"))
+      assert.are.equal("a tooltip", getLabelToolTip(label))
+    end)
+
+    it("keeps the text when a display duration is given", function()
+      assert.is_true(setLabelToolTip(label, "a timed tooltip", 5))
+      assert.are.equal("a timed tooltip", getLabelToolTip(label))
+    end)
+
+    it("reports an empty tooltip after resetLabelToolTip", function()
+      setLabelToolTip(label, "a tooltip to clear")
+      assert.is_true(resetLabelToolTip(label))
+      assert.are.equal("", getLabelToolTip(label))
+    end)
+
+    it("returns nil and a message naming an unknown label", function()
+      local unknown = name("wsgNoSuchLabel")
+      local ok, err = getLabelToolTip(unknown)
+      assert.is_nil(ok)
+      assert.are.equal(("label name '%s' not found"):format(unknown), err)
+    end)
+
+    it("rejects an empty name the way setLabelToolTip does", function()
+      local ok, err = getLabelToolTip("")
+      assert.is_nil(ok)
+      assert.are.equal("a label cannot have an empty string as its name", err)
+    end)
+
+    it("errors when called without a label name", function()
+      assert.has_error(function() getLabelToolTip() end)
+    end)
+  end)
+
+  describe("getScrollBarVisible", function()
+    local originalMainScrollBar
+
+    setup(function()
+      originalMainScrollBar = getScrollBarVisible("main")
+    end)
+
+    teardown(function()
+      -- restore the shared main window even if a spec above bailed out early
+      if originalMainScrollBar then
+        enableScrollBar("main")
+      else
+        disableScrollBar("main")
+      end
+    end)
+
+    it("reflects enableScrollBar and disableScrollBar on a miniconsole", function()
+      enableScrollBar(console)
+      assert.is_true(getScrollBarVisible(console))
+      disableScrollBar(console)
+      assert.is_false(getScrollBarVisible(console))
+      enableScrollBar(console)
+      assert.is_true(getScrollBarVisible(console))
+    end)
+
+    it("reports a miniconsole's scroll bar as hidden until it is enabled", function()
+      local fresh = name("wsgFreshConsole")
+      createMiniConsole(fresh, 10, 10, 200, 100)
+      assert.is_false(getScrollBarVisible(fresh))
+      enableScrollBar(fresh)
+      assert.is_true(getScrollBarVisible(fresh))
+      deleteMiniConsole(fresh)
+    end)
+
+    it("reflects disableScrollBar and enableScrollBar on the main window", function()
+      disableScrollBar("main")
+      assert.is_false(getScrollBarVisible("main"))
+      enableScrollBar("main")
+      assert.is_true(getScrollBarVisible("main"))
+    end)
+
+    it("defaults to the main window when given no name", function()
+      assert.are.equal(getScrollBarVisible("main"), getScrollBarVisible())
+    end)
+
+    it("returns nil and a message naming an unknown window", function()
+      local unknown = name("wsgNoSuchWindow")
+      local ok, err = getScrollBarVisible(unknown)
+      assert.is_nil(ok)
+      assert.are.equal(('window "%s" not found'):format(unknown), err)
+    end)
+  end)
+
+  -- The "no map widget" error path for these two is covered in Mapper_spec,
+  -- which runs first and whose opening spec is the only point in the session
+  -- where the widget does not exist yet.
+  describe("map widget getters", function()
+    setup(function()
+      assert.is_true(openMapWidget())
+    end)
+
+    teardown(function()
+      resetMapWindowTitle()
+    end)
+
+    it("getMapWindowTitle returns the title set by setMapWindowTitle", function()
+      assert.is_true(setMapWindowTitle("A map title"))
+      assert.are.equal("A map title", getMapWindowTitle())
+    end)
+
+    it("getMapWindowTitle round-trips an updated title", function()
+      setMapWindowTitle("first map title")
+      assert.are.equal("first map title", getMapWindowTitle())
+      setMapWindowTitle("second map title")
+      assert.are.equal("second map title", getMapWindowTitle())
+    end)
+
+    it("getMapWindowTitle reports the generated default after resetMapWindowTitle", function()
+      setMapWindowTitle("not the default")
+      assert.is_true(resetMapWindowTitle())
+      local title = getMapWindowTitle()
+      assert.are.equal("string", type(title))
+      assert.is_truthy(title:find(getProfileName(), 1, true))
+    end)
+
+    -- the sizes below are comfortably above the map widget's minimum size hint
+    -- so that a resize cannot come back clamped
+    it("getMapWidgetGeometry reflects resizeMapWidget", function()
+      -- size() is the exact inverse of the resize() resizeMapWidget makes and
+      -- does not depend on a window manager honouring a move
+      resizeMapWidget(640, 480)
+      local _, _, w, h = getMapWidgetGeometry()
+      assert.are.same({640, 480}, {w, h})
+      resizeMapWidget(560, 440)
+      local _, _, w2, h2 = getMapWidgetGeometry()
+      assert.are.same({560, 440}, {w2, h2})
+    end)
+
+    it("getMapWidgetGeometry keeps the size across moveMapWidget", function()
+      resizeMapWidget(600, 460)
+      moveMapWidget(120, 130)
+      local x, y, w, h = getMapWidgetGeometry()
+      -- where a floating dock lands is the window manager's call, so only the
+      -- size can be asserted exactly; the position still has to be reported
+      assert.are.same({600, 460}, {w, h})
+      assert.are.equal("number", type(x))
+      assert.are.equal("number", type(y))
+    end)
+  end)
+end)
