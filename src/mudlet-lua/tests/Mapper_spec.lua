@@ -27,15 +27,24 @@ describe("Tests map events and menus before the map widget is opened", function(
     assert.is_nil(getMapMenus()["PreWidgetMenu"])
   end)
 
+  -- nothing can destroy the map widget again once it exists, so a second
+  -- runTests in the same session inherits one and these two have nothing left
+  -- to observe
   it("should report that there is no map widget to read a title from", function()
-    local ok, err = getMapWindowTitle()
-    assert.is_nil(ok)
+    local title, err = getMapWindowTitle()
+    if title then
+      pending("the map widget is already open in this session")
+      return
+    end
     assert.are.equal("no floating/dockable type map window found", err)
   end)
 
   it("should report that there is no map widget to read a geometry from", function()
-    local ok, err = getMapWidgetGeometry()
-    assert.is_nil(ok)
+    local x, err = getMapWidgetGeometry()
+    if x then
+      pending("the map widget is already open in this session")
+      return
+    end
     assert.are.equal("no floating/dockable type map window found", err)
   end)
 

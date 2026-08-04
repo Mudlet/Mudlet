@@ -2650,10 +2650,10 @@ describe("Window state getters", function()
     end)
 
     it("returns nil and a message naming an unknown window", function()
-      local result, err = getWindowGeometry("wsgNoSuchWindow")
+      local result, err = getWindowGeometry("wdgNoSuchWindow")
       assert.is_nil(result)
       assert.are.equal("string", type(err))
-      assert.is_truthy(err:find("wsgNoSuchWindow", 1, true))
+      assert.is_truthy(err:find("wdgNoSuchWindow", 1, true))
     end)
 
     it("returns nil and a message for the main window", function()
@@ -2721,10 +2721,10 @@ describe("Window state getters", function()
     end)
 
     it("returns nil and a message naming an unknown window", function()
-      local result, err = windowVisible("wsgNoSuchWindow")
+      local result, err = windowVisible("wdgNoSuchWindow")
       assert.is_nil(result)
       assert.are.equal("string", type(err))
-      assert.is_truthy(err:find("wsgNoSuchWindow", 1, true))
+      assert.is_truthy(err:find("wdgNoSuchWindow", 1, true))
     end)
 
     it("returns nil and a message for the main window", function()
@@ -2752,10 +2752,10 @@ describe("Window state getters", function()
     end)
 
     it("returns nil and a message naming an unknown label", function()
-      local result, err = getLabelText("wsgNoSuchLabel")
+      local result, err = getLabelText("wdgNoSuchLabel")
       assert.is_nil(result)
       assert.are.equal("string", type(err))
-      assert.is_truthy(err:find("wsgNoSuchLabel", 1, true))
+      assert.is_truthy(err:find("wdgNoSuchLabel", 1, true))
     end)
 
     it("returns nil and a message for a non-label window", function()
@@ -4102,10 +4102,10 @@ describe("Widget state getters", function()
     return base .. suffix
   end
 
-  local userWindow = name("wsgUserWindow")
-  local label = name("wsgLabel")
-  local console = name("wsgConsole")
-  local cmdLine = name("wsgCmdLine")
+  local userWindow = name("wdgUserWindow")
+  local label = name("wdgLabel")
+  local console = name("wdgConsole")
+  local cmdLine = name("wdgCmdLine")
 
   setup(function()
     -- loadLayout is off so a saved layout cannot move the window under us
@@ -4149,7 +4149,7 @@ describe("Widget state getters", function()
     end)
 
     it("returns nil and a message naming an unknown user window", function()
-      local unknown = name("wsgNoSuchUserWindow")
+      local unknown = name("wdgNoSuchUserWindow")
       local ok, err = getUserWindowTitle(unknown)
       assert.is_nil(ok)
       assert.are.equal(("user window name '%s' not found"):format(unknown), err)
@@ -4199,7 +4199,7 @@ describe("Widget state getters", function()
     end)
 
     it("returns nil and a message naming an unknown user window", function()
-      local unknown = name("wsgNoSuchUserWindow")
+      local unknown = name("wdgNoSuchUserWindow")
       local ok, err = getUserWindowStyleSheet(unknown)
       assert.is_nil(ok)
       assert.are.equal(("userwindow name '%s' not found"):format(unknown), err)
@@ -4251,7 +4251,7 @@ describe("Widget state getters", function()
     end)
 
     it("returns nil and a message naming an unknown command line", function()
-      local unknown = name("wsgNoSuchCmdLine")
+      local unknown = name("wdgNoSuchCmdLine")
       local ok, err = getCmdLineStyleSheet(unknown)
       assert.is_nil(ok)
       assert.are.equal(("command-line name '%s' not found"):format(unknown), err)
@@ -4268,9 +4268,16 @@ describe("Widget state getters", function()
       assert.are.equal("a tooltip", getLabelToolTip(label))
     end)
 
+    -- only the text is read back: the setter's duration reaches Qt's own
+    -- tooltip timer, which reinterprets it, so it is not part of this getter
     it("keeps the text when a display duration is given", function()
       assert.is_true(setLabelToolTip(label, "a timed tooltip", 5))
       assert.are.equal("a timed tooltip", getLabelToolTip(label))
+    end)
+
+    it("round-trips a multi-byte tooltip unchanged", function()
+      assert.is_true(setLabelToolTip(label, "Ünïcödé tooltip - 日本語"))
+      assert.are.equal("Ünïcödé tooltip - 日本語", getLabelToolTip(label))
     end)
 
     it("reports an empty tooltip after resetLabelToolTip", function()
@@ -4280,7 +4287,7 @@ describe("Widget state getters", function()
     end)
 
     it("returns nil and a message naming an unknown label", function()
-      local unknown = name("wsgNoSuchLabel")
+      local unknown = name("wdgNoSuchLabel")
       local ok, err = getLabelToolTip(unknown)
       assert.is_nil(ok)
       assert.are.equal(("label name '%s' not found"):format(unknown), err)
@@ -4299,6 +4306,8 @@ describe("Widget state getters", function()
 
   describe("getScrollBarVisible", function()
     local originalMainScrollBar
+    local freshConsole = name("wdgFreshConsole")
+    local bufferName = name("wdgBuffer")
 
     setup(function()
       originalMainScrollBar = getScrollBarVisible("main")
@@ -4311,6 +4320,9 @@ describe("Widget state getters", function()
       else
         disableScrollBar("main")
       end
+      showWindow(console)
+      deleteMiniConsole(freshConsole)
+      deleteMiniConsole(bufferName)
     end)
 
     it("reflects enableScrollBar and disableScrollBar on a miniconsole", function()
@@ -4323,12 +4335,25 @@ describe("Widget state getters", function()
     end)
 
     it("reports a miniconsole's scroll bar as hidden until it is enabled", function()
-      local fresh = name("wsgFreshConsole")
-      createMiniConsole(fresh, 10, 10, 200, 100)
-      assert.is_false(getScrollBarVisible(fresh))
-      enableScrollBar(fresh)
-      assert.is_true(getScrollBarVisible(fresh))
-      deleteMiniConsole(fresh)
+      createMiniConsole(freshConsole, 10, 10, 200, 100)
+      assert.is_false(getScrollBarVisible(freshConsole))
+      enableScrollBar(freshConsole)
+      assert.is_true(getScrollBarVisible(freshConsole))
+    end)
+
+    it("keeps reporting an enabled scroll bar while the console is hidden", function()
+      -- the reason this reads back an intent rather than the widget: Mudlet
+      -- hides the whole console of any profile that is not the front tab
+      enableScrollBar(console)
+      hideWindow(console)
+      assert.is_true(getScrollBarVisible(console))
+      showWindow(console)
+      assert.is_true(getScrollBarVisible(console))
+    end)
+
+    it("reports a buffer, which never has a scroll bar, as not having one", function()
+      createBuffer(bufferName)
+      assert.is_false(getScrollBarVisible(bufferName))
     end)
 
     it("reflects disableScrollBar and enableScrollBar on the main window", function()
@@ -4339,11 +4364,14 @@ describe("Widget state getters", function()
     end)
 
     it("defaults to the main window when given no name", function()
-      assert.are.equal(getScrollBarVisible("main"), getScrollBarVisible())
+      disableScrollBar("main")
+      assert.is_false(getScrollBarVisible())
+      enableScrollBar("main")
+      assert.is_true(getScrollBarVisible())
     end)
 
     it("returns nil and a message naming an unknown window", function()
-      local unknown = name("wsgNoSuchWindow")
+      local unknown = name("wdgNoSuchWindow")
       local ok, err = getScrollBarVisible(unknown)
       assert.is_nil(ok)
       assert.are.equal(('window "%s" not found'):format(unknown), err)
@@ -4360,6 +4388,9 @@ describe("Widget state getters", function()
 
     teardown(function()
       resetMapWindowTitle()
+      -- resizeMapWidget/moveMapWidget force the widget floating; put it back so
+      -- this block does not hand a floating map widget to whatever runs next
+      openMapWidget("r")
     end)
 
     it("getMapWindowTitle returns the title set by setMapWindowTitle", function()
@@ -4395,15 +4426,20 @@ describe("Widget state getters", function()
       assert.are.same({560, 440}, {w2, h2})
     end)
 
-    it("getMapWidgetGeometry keeps the size across moveMapWidget", function()
+    it("getMapWidgetGeometry reflects moveMapWidget", function()
       resizeMapWidget(600, 460)
       moveMapWidget(120, 130)
-      local x, y, w, h = getMapWidgetGeometry()
-      -- where a floating dock lands is the window manager's call, so only the
-      -- size can be asserted exactly; the position still has to be reported
+      local x1, y1 = getMapWidgetGeometry()
+      moveMapWidget(300, 350)
+      local x2, y2, w, h = getMapWidgetGeometry()
+      -- a window manager can add a constant frame offset to where a floating
+      -- dock lands, so the movement is asserted rather than the position
+      assert.are.same({180, 220}, {x2 - x1, y2 - y1})
       assert.are.same({600, 460}, {w, h})
-      assert.are.equal("number", type(x))
-      assert.are.equal("number", type(y))
+    end)
+
+    it("getMapWidgetGeometry returns exactly four values", function()
+      assert.are.equal(4, select("#", getMapWidgetGeometry()))
     end)
   end)
 end)
