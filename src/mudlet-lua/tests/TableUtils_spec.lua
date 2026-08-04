@@ -276,6 +276,19 @@ describe("Tests TableUtils.lua functions", function()
     it("should keep a value that also appears inside a nested table", function()
       local actual = table.n_collect({ { "z" }, "z" }, function() return true end)
       assert.are.equal(2, #actual)
+      local nested, plain
+      for _, value in ipairs(actual) do
+        if type(value) == "table" then nested = value else plain = value end
+      end
+      assert.are.same({ "z" }, nested)
+      assert.are.equal("z", plain)
+    end)
+
+    it("should still drop real duplicates", function()
+      local actual = table.n_collect({ 5, "x", 5, "x" }, function() return true end)
+      assert.are.equal(2, #actual)
+      table.sort(actual, function(a, b) return tostring(a) < tostring(b) end)
+      assert.are.same({ 5, "x" }, actual)
     end)
   end)
 
