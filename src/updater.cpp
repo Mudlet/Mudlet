@@ -144,9 +144,25 @@ void Updater::checkUpdatesOnStart()
     mPeriodicCheck->start();
 }
 
+// Whether the platform updater is set up and can answer for itself. On macOS
+// that only happens in checkUpdatesOnStart(), so anything reaching the Updater
+// before then - the preferences dialog above all - has to ask first. Elsewhere
+// the automatic-update flag lives in QSettings and is readable straight away.
+bool Updater::ready() const
+{
+#if defined(Q_OS_MACOS)
+    return msparkleUpdater != nullptr;
+#else
+    return true;
+#endif
+}
+
 void Updater::setAutomaticUpdates(const bool state)
 {
 #if defined(Q_OS_MACOS)
+    if (!ready()) {
+        return;
+    }
     msparkleUpdater->setAutomaticallyDownloadsUpdates(state);
 #else
     dblsqd::UpdateDialog::enableAutoDownload(state, mSettings);
@@ -159,6 +175,9 @@ void Updater::setAutomaticUpdates(const bool state)
 bool Updater::updateAutomatically() const
 {
 #if defined(Q_OS_MACOS)
+    if (!ready()) {
+        return false;
+    }
     return msparkleUpdater->automaticallyDownloadsUpdates();
 #else
     return dblsqd::UpdateDialog::autoDownloadEnabled(true, mSettings);
@@ -168,6 +187,9 @@ bool Updater::updateAutomatically() const
 void Updater::manuallyCheckUpdates()
 {
 #if defined(Q_OS_MACOS)
+    if (!ready()) {
+        return;
+    }
     msparkleUpdater->checkForUpdates();
 #else
     if (mManualCheckInProgress) {
