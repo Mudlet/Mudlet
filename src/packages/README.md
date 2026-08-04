@@ -19,7 +19,7 @@ zip echo.mpackage config.lua echo.xml
 ```
 
 That updates the members in place and leaves the icon under `.mudlet/Icon/`
-alone. `CI/check-mpackage-sync.py` fails the build if the two ever disagree.
+alone. `CI/check-mpackage-sync.lua` fails the build if the two ever disagree.
 
 Bump `version` in `config.lua` whenever a package changes. Several of these are
 published to the [package repository](https://github.com/Mudlet/mudlet-package-repository),
