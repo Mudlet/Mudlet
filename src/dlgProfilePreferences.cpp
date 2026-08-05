@@ -914,14 +914,19 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_discordServerAccessToPartyInfo->setChecked(!(discordFlags & Host::DiscordSetPartyInfo));
         checkBox_discordServerAccessToTimerInfo->setChecked(!(discordFlags & Host::DiscordSetTimeInfo));
         lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
-        lineEdit_discordUserName->setToolTip(utils::richText(tr("Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted lowercase ASCII character set and not any \"Nickname\" that you may have set for a particular Server.")));
-        lineEdit_discordUserName->setAccessibleDescription(tr("Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted lowercase ASCII character set and not any \"Nickname\" that you may have set for a particular Server."));
+        lineEdit_discordUserName->setToolTip(utils::richText(tr("Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). "
+                                                                "Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted "
+                                                                "lowercase ASCII character set and not any \"Nickname\" that you may have set for a particular Server.")));
+        lineEdit_discordUserName->setAccessibleDescription(tr("Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). "
+                                                              "Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted lowercase "
+                                                              "ASCII character set and not any \"Nickname\" that you may have set for a particular Server."));
 
         const QString currentDiscordUser = Discord::getLoggedInUserName();
         if (!currentDiscordUser.isEmpty()) {
             //: Shows which Discord account is logged in:
             label_data_discordCurrentUser->setText(currentDiscordUser);
-            label_data_discordCurrentUser->setToolTip(utils::richText(tr("This is the unique username using a restricted character set for the Discord account, and not necessarily the nickname that you might have set for a particular Server.")));
+            label_data_discordCurrentUser->setToolTip(utils::richText(
+                    tr("This is the unique username using a restricted character set for the Discord account, and not necessarily the nickname that you might have set for a particular Server.")));
         } else {
             label_data_discordCurrentUser->setText(tr("(Not connected)"));
             //: Tooltip shown when Discord Rich Presence cannot detect a logged-in user
@@ -2095,7 +2100,14 @@ void dlgProfilePreferences::slot_purgeMediaCache()
         return;
     }
 
-    pHost->mpMedia->purgeMediaCache();
+    if (!pHost->mpMedia->purgeMediaCache()) {
+        //: Shown after the "Clear stored media" button in preferences fails to empty the profile's media directory.
+        pHost->postMessage(tr("[ WARN ]  - Could not clear all of the stored media; some files may still be in use."));
+        return;
+    }
+
+    //: Shown after the "Clear stored media" button in preferences empties the profile's media directory.
+    pHost->postMessage(tr("[  OK  ]  - The stored media files for this profile have been cleared."));
 }
 
 void dlgProfilePreferences::slot_resetColors()
