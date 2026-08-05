@@ -544,6 +544,18 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     layout->addWidget(layer);
     layerCommandLine->setAutoFillBackground(true);
 
+    if (mType == CentralDebugConsole) {
+        // The filters decide what arrives from now on; searching is how you get
+        // back to something that has already scrolled past. Its command line is
+        // hidden, so these go in the otherwise unused strip along the top:
+        mpBufferSearchBox->setMaximumWidth(300);
+        topBarLayout->addWidget(mpBufferSearchBox);
+        topBarLayout->addWidget(mpBufferSearchUp);
+        topBarLayout->addWidget(mpBufferSearchDown);
+        // Otherwise the box and its buttons stretch across the whole window:
+        topBarLayout->addStretch();
+    }
+
     if (mType == MainConsole) {
         // All console control buttons should only be on MainConsole
         layoutButtonLayer->addWidget(mpBufferSearchBox);
@@ -790,6 +802,20 @@ void TConsole::resizeEvent(QResizeEvent* event)
                 syncHost(otherHost, otherHost->mpConsole->mUpperPane);
             }
         }
+    }
+
+    if (mType & CentralDebugConsole) {
+        // Wrap to whatever the window is now, rather than the fixed 100 columns
+        // it starts at - debug messages are long and a narrow wrap turns most of
+        // them into continuation lines. Only new messages are affected, which is
+        // the same rule the filters follow.
+        // Deferred because the panes have not been laid out at this point, so
+        // asking them how wide they are here just returns the old size:
+        QTimer::singleShot(0ms, this, [this]() {
+            if (mUpperPane) {
+                setWrapAt(qMax(40, mUpperPane->getColumnCount()));
+            }
+        });
     }
 
     emit resized(event);

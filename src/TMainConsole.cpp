@@ -1518,7 +1518,9 @@ void TMainConsole::runTriggers(int line)
 
     if (TDebug::wants(TDebug::Category::GameLine)) {
         TDebug(Qt::darkGreen, Qt::black, TDebug::Category::GameLine) << "new line arrived:" >> mpHost;
-        TDebug(Qt::lightGray, Qt::black, TDebug::Category::GameLine) << TDebug::csmContinue << mCurrentLine << "\n" >> mpHost;
+        // mCurrentLine already ends in a newline - adding another leaves a
+        // blank row under every single game line:
+        TDebug(Qt::lightGray, Qt::black, TDebug::Category::GameLine) << TDebug::csmContinue << mCurrentLine >> mpHost;
     }
     mpHost->incomingStreamProcessor(mCurrentLine, line);
     mIsPromptLine = false;

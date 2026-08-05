@@ -22,8 +22,11 @@
 
 #include "TDebug.h"
 
+#include <QComboBox>
 #include <QMap>
 #include <QToolBar>
+
+#include <functional>
 
 class QAction;
 class QLabel;
@@ -31,6 +34,27 @@ class QLineEdit;
 class QMenu;
 class QTimer;
 class QToolButton;
+
+// A combo box that rebuilds its list as it is opened, so it always offers the
+// triggers, aliases and the rest that the profile has right now rather than
+// whatever it had when the console was first shown.
+class TRefreshingComboBox : public QComboBox
+{
+public:
+    explicit TRefreshingComboBox(QWidget* parent = nullptr)
+    : QComboBox(parent)
+    {
+    }
+    void showPopup() override
+    {
+        if (mRefresh) {
+            mRefresh();
+        }
+        QComboBox::showPopup();
+    }
+
+    std::function<void()> mRefresh;
+};
 
 // The controls along the bottom of the Central Debug Console. Everything it
 // changes is static filter state on TDebug, which is applied to messages as
@@ -44,6 +68,9 @@ public:
 
     // Called when a profile is loaded or closed, so the profile menu keeps up:
     void refreshProfiles();
+    // Called when something outside the bar changes the text filter, such as
+    // the console's own right-click menu:
+    void refreshTextFilter();
 
 private slots:
     void slot_togglePause(const bool);
@@ -55,8 +82,12 @@ private slots:
 private:
     void addCategoryMenu();
     void addProfileMenu();
+    void addItemFilter();
     void addTextFilter();
     void applyCategoryFromMenu();
+    void refreshCategoryLabel();
+    void refreshItemList();
+    static QString csmAllItems();
 
     QAction* mpActionPause = nullptr;
     QMenu* mpCategoryMenu = nullptr;
@@ -66,6 +97,8 @@ private:
     QAction* mpActionProfiles = nullptr;
     QMenu* mpProfileMenu = nullptr;
     QLineEdit* mpTextFilter = nullptr;
+    TRefreshingComboBox* mpItemFilter = nullptr;
+    QToolButton* mpCategoryButton = nullptr;
     QLabel* mpPausedLabel = nullptr;
     QAction* mpActionPausedLabel = nullptr;
     QTimer* mpPausedLabelTimer = nullptr;

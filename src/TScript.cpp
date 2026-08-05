@@ -104,7 +104,7 @@ void TScript::compile(bool saveLoadingError)
     if (mNeedsToBeCompiled) {
         if (!compileScript(saveLoadingError)) {
             if (TDebug::wants(TDebug::Category::Error)) {
-                TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> mpHost;
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
         }

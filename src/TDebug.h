@@ -126,6 +126,9 @@ private:
     inline static QSet<const Host*> smDisabledHosts;
     inline static QString smTextFilter;
     inline static Qt::CaseSensitivity smTextFilterCaseSensitivity = Qt::CaseInsensitive;
+    // When set, only messages about this trigger/alias/timer/key/button/script
+    // get through - plus system messages, so profile starts and ends still show:
+    inline static QString smItemFilter;
     inline static bool smPaused = false;
     // Whether the last non-continuation message got through the filters, so
     // that its continuation fragments can follow it rather than being orphaned:
@@ -141,11 +144,15 @@ private:
     QColor fgColor;
     QColor bgColor;
     Category mCategory;
+    // The trigger, alias, timer, key, button or script this message is about,
+    // empty when it is not about one in particular:
+    QString mItemName;
 
 public:
     // The category is deliberately not defaulted, so that a new call site
-    // cannot silently become unfilterable:
-    explicit TDebug(const QColor&, const QColor&, const Category);
+    // cannot silently become unfilterable. The item name is optional because
+    // plenty of messages genuinely do not belong to one:
+    explicit TDebug(const QColor&, const QColor&, const Category, const QString& itemName = QString());
     ~TDebug() = default;
 
     static void addHost(Host*, const QString);    // Might need to NOLINT this to prevent a warning about not using a reference
@@ -173,6 +180,13 @@ public:
     static void setTextFilter(const QString&, const Qt::CaseSensitivity);
     static QString textFilter() { return smTextFilter; }
     static Qt::CaseSensitivity textFilterCaseSensitivity() { return smTextFilterCaseSensitivity; }
+
+    static void setItemFilter(const QString& itemName) { smItemFilter = itemName; }
+    static QString itemFilter() { return smItemFilter; }
+
+    // Says up front how much is being held back, so an empty-looking console is
+    // never mistaken for a broken one:
+    static void announceFilters();
 
     static void setPaused(const bool);
     static bool paused() { return smPaused; }

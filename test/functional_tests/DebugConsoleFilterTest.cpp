@@ -253,6 +253,51 @@ private slots:
         QCOMPARE(console->buffer.timeBuffer.at(lineOfMessage).left(8), arrivalTime.left(8));
     }
 
+    // Narrowing to one trigger is the point of the item filter, so anything
+    // belonging to a different one has to go.
+    void test_itemFilterKeepsOnlyThatItem()
+    {
+        auto* host = startDebuggingProfile();
+
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        TDebug::setItemFilter(qsl("Combat trigger"));
+
+        TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch, qsl("Combat trigger")) << "the one being watched\n" >> host;
+        TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch, qsl("Healing trigger")) << "a different trigger\n" >> host;
+        TDebug(Qt::darkGreen, Qt::black, TDebug::Category::GameLine) << "a message about no item at all\n" >> host;
+
+        QVERIFY2(debugBufferContains(qsl("the one being watched")), "The item being filtered for was dropped");
+        QVERIFY2(!debugBufferContains(qsl("a different trigger")), "Another item's message got past the item filter");
+        QVERIFY2(!debugBufferContains(qsl("a message about no item at all")), "A message belonging to no item got past the item filter");
+    }
+
+    // ...but a console that shows literally nothing while a profile starts and
+    // stops is indistinguishable from a broken one.
+    void test_itemFilterStillShowsSystemMessages()
+    {
+        auto* host = startDebuggingProfile();
+
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        TDebug::setItemFilter(qsl("Combat trigger"));
+
+        TDebug(Qt::blue, Qt::white, TDebug::Category::System) << "a profile came or went\n" >> nullptr;
+
+        QVERIFY2(debugBufferContains(qsl("a profile came or went")), "The item filter silenced system messages too");
+    }
+
+    void test_clearingTheItemFilterRestoresEverything()
+    {
+        auto* host = startDebuggingProfile();
+
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        TDebug::setItemFilter(qsl("Combat trigger"));
+        TDebug::setItemFilter(QString());
+
+        TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch, qsl("Healing trigger")) << "back again\n" >> host;
+
+        QVERIFY2(debugBufferContains(qsl("back again")), "Clearing the item filter did not restore other items' messages");
+    }
+
     // Closing a profile must not leave its pointer behind in the filter state -
     // a later profile allocated at the same address would start life silenced.
     void test_closingAProfileForgetsItsFilterSetting()
@@ -351,6 +396,7 @@ private slots:
         TDebug::setPaused(false);
         TDebug::discardPausedMessages();
         TDebug::setTextFilter(QString(), Qt::CaseInsensitive);
+        TDebug::setItemFilter(QString());
         TDebug::setEnabledCategories(TDebug::csmAllCategories);
         // A profile muted by a test that failed part way through would
         // otherwise silence whatever runs next:

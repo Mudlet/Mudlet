@@ -30,6 +30,8 @@
 #include "Host.h"
 #include "TBuffer.h"
 #include "TConsole.h"
+#include "TDebug.h"
+#include "TDebugFilterBar.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "THyperlinkSelectionManager.h"
@@ -1701,6 +1703,51 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
 
 void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
 {
+    if (!(mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole)) {
+        event->accept();
+        return;
+    }
+
+    // Turning the line you are already looking at into a filter beats typing it
+    // into the box, so the selection drives most of this menu:
+    const QString selection = getSelectedText(QChar::Space).simplified();
+    QMenu menu(this);
+
+    auto* pActionCopy = menu.addAction(tr("Copy"));
+    pActionCopy->setEnabled(!selection.isEmpty());
+    connect(pActionCopy, &QAction::triggered, this, [this]() {
+        slot_copySelectionToClipboard();
+    });
+
+    if (!selection.isEmpty()) {
+        //: Central Debug Console right-click action, %1 is the text the user selected
+        auto* pActionFilter = menu.addAction(tr("Show only lines containing \"%1\"").arg(selection.left(40)));
+        connect(pActionFilter, &QAction::triggered, this, [selection]() {
+            TDebug::setTextFilter(selection, TDebug::textFilterCaseSensitivity());
+            if (mudlet::smpDebugFilterBar) {
+                mudlet::smpDebugFilterBar->refreshTextFilter();
+            }
+        });
+    }
+
+    if (!TDebug::textFilter().isEmpty()) {
+        auto* pActionClearFilter = menu.addAction(tr("Stop filtering by text"));
+        connect(pActionClearFilter, &QAction::triggered, this, []() {
+            TDebug::setTextFilter(QString(), TDebug::textFilterCaseSensitivity());
+            if (mudlet::smpDebugFilterBar) {
+                mudlet::smpDebugFilterBar->refreshTextFilter();
+            }
+        });
+    }
+
+    menu.addSeparator();
+    //: Central Debug Console right-click action that empties it
+    connect(menu.addAction(tr("Clear console")), &QAction::triggered, this, [this]() {
+        mpConsole->clear();
+        TDebug::discardPausedMessages();
+    });
+
+    menu.exec(event->globalPos());
     event->accept();
 }
 

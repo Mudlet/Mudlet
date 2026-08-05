@@ -1,0 +1,299 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - link "Skip to content" [ref=e4] [cursor=pointer]:
+      - /url: "#start-of-content"
+    - banner [ref=e8]:
+      - heading "Navigation Menu" [level=2] [ref=e9]
+      - generic [ref=e11]:
+        - button "Toggle navigation" [ref=e13] [cursor=pointer]
+        - link "Homepage" [ref=e17] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e20]:
+          - link "Sign in" [ref=e21] [cursor=pointer]:
+            - /url: /login?return_to=https%3A%2F%2Fgithub.com%2FMudlet%2FMudlet%2Fpull%2F9688
+          - button "Appearance settings" [ref=e22] [cursor=pointer]
+  - main [ref=e28]:
+    - generic [ref=e29]:
+      - generic [ref=e30]:
+        - generic [ref=e32]:
+          - link "Mudlet" [ref=e36] [cursor=pointer]:
+            - /url: /Mudlet
+          - generic [ref=e37]: /
+          - strong [ref=e38]:
+            - link "Mudlet" [ref=e39] [cursor=pointer]:
+              - /url: /Mudlet/Mudlet
+          - generic [ref=e40]: Public
+        - generic [ref=e41]:
+          - list:
+            - listitem
+            - listitem [ref=e42]:
+              - link "You must be signed in to change notification settings" [ref=e43] [cursor=pointer]:
+                - /url: /login?return_to=%2FMudlet%2FMudlet
+                - text: Notifications
+            - listitem [ref=e46]:
+              - link "Fork 369" [ref=e47] [cursor=pointer]:
+                - /url: /login?return_to=%2FMudlet%2FMudlet
+                - text: Fork
+                - generic "369" [ref=e50]
+            - listitem [ref=e51]:
+              - link "You must be signed in to star a repository" [ref=e53] [cursor=pointer]:
+                - /url: /login?return_to=%2FMudlet%2FMudlet
+                - text: Star
+                - generic "895 users starred this repository" [ref=e56]: "895"
+      - navigation "Repository" [ref=e57]:
+        - list [ref=e58]:
+          - listitem [ref=e59]:
+            - link "Code" [ref=e60] [cursor=pointer]:
+              - /url: /Mudlet/Mudlet
+          - listitem [ref=e64]:
+            - link "Issues 508" [ref=e65] [cursor=pointer]:
+              - /url: /Mudlet/Mudlet/issues
+              - generic [ref=e69]: Issues
+              - generic "508" [ref=e70]
+          - listitem [ref=e71]:
+            - link "Pull requests 49" [ref=e72] [cursor=pointer]:
+              - /url: /Mudlet/Mudlet/pulls
+              - generic [ref=e75]: Pull requests
+              - generic "49" [ref=e76]
+          - listitem [ref=e77]:
+            - link "Actions" [ref=e78] [cursor=pointer]:
+              - /url: /Mudlet/Mudlet/actions
+          - listitem [ref=e82]:
+            - link "Projects" [ref=e83] [cursor=pointer]:
+              - /url: /Mudlet/Mudlet/projects
+          - listitem [ref=e87]:
+            - link "Wiki" [ref=e88] [cursor=pointer]:
+              - /url: /Mudlet/Mudlet/wiki
+          - listitem [ref=e92]:
+            - link "Security and quality" [ref=e93] [cursor=pointer]:
+              - /url: /Mudlet/Mudlet/security
+          - listitem [ref=e97]
+        - button "Additional navigation options" [ref=e101] [cursor=pointer]
+    - generic [ref=e108]:
+      - generic [ref=e112]:
+        - generic [ref=e114]:
+          - 'heading "improve: filters, pause and clear for the debug window - #9688" [level=1] [ref=e115]':
+            - text: "improve: filters, pause and clear for the debug window"
+            - generic [ref=e116]: "- #9688"
+          - generic [ref=e117]: "#9688"
+        - generic [ref=e120]:
+          - generic [ref=e122]:
+            - img "Pull request" [ref=e123]
+            - text: Draft
+          - generic [ref=e126]:
+            - link "vadi2" [ref=e127] [cursor=pointer]:
+              - /url: /vadi2
+            - text: wants to merge 2 commits into
+            - generic [ref=e128]:
+              - link "development" [ref=e129] [cursor=pointer]:
+                - /url: /Mudlet/Mudlet/tree/development
+              - generic [ref=e130]: from
+              - generic [ref=e131]:
+                - link "debug-console-filters" [ref=e132] [cursor=pointer]:
+                  - /url: /Mudlet/Mudlet/tree/debug-console-filters
+                - button "Copy head branch name to clipboard" [ref=e133] [cursor=pointer]
+        - navigation "Pull request navigation tabs" [ref=e141]:
+          - generic [ref=e142]:
+            - link "Conversation" [ref=e143] [cursor=pointer]:
+              - /url: /Mudlet/Mudlet/pull/9688
+            - link "Commits (2)" [ref=e146] [cursor=pointer]:
+              - /url: /Mudlet/Mudlet/pull/9688/commits
+              - text: Commits
+              - generic [ref=e149]: "2"
+              - generic [ref=e150]: (2)
+            - link "Checks" [ref=e151] [cursor=pointer]:
+              - /url: /Mudlet/Mudlet/pull/9688/checks
+            - link "Files changed" [ref=e154] [cursor=pointer]:
+              - /url: /Mudlet/Mudlet/pull/9688/files
+      - generic [ref=e161]:
+        - generic [ref=e163]:
+          - heading "Conversation" [level=2] [ref=e164]
+          - generic [ref=e165]:
+            - generic [ref=e166]:
+              - generic [ref=e168]:
+                - link [ref=e169] [cursor=pointer]:
+                  - /url: /vadi2
+                  - img "@vadi2" [ref=e170]
+                - generic [ref=e172]:
+                  - generic [ref=e173]:
+                    - heading [level=3] [ref=e174]:
+                      - generic [ref=e175]:
+                        - strong [ref=e176]:
+                          - link "vadi2" [ref=e177] [cursor=pointer]:
+                            - /url: /vadi2
+                        - text: commented
+                        - link "Aug 5, 2026now" [ref=e178] [cursor=pointer]:
+                          - /url: "#issue-5071794188"
+                    - generic [ref=e179]:
+                      - group [ref=e181]:
+                        - button [ref=e182] [cursor=pointer]:
+                          - img "Show options" [ref=e185]
+                      - generic "This user is a member of the Mudlet organization." [ref=e188]: Member
+                  - generic [ref=e193]:
+                    - heading "Brief overview of PR changes/additions" [level=4] [ref=e194]
+                    - list [ref=e195]:
+                      - listitem [ref=e196]: Every debug message now carries a category, and the Central Debug Console gains a toolbar to filter by category, by profile and by text, plus Pause and Clear. The four noisiest categories start off.
+                      - listitem [ref=e197]: Filtering happens where a message is written, not where it is drawn, so switching a filter never rewrites what is already on screen - and a filtered-out message is never even assembled, which makes debug mode cheaper than it is today.
+                      - listitem [ref=e198]:
+                        - text: GMCP/MSDP/MSSP/MXP debug output moves out of the game window (where it appeared as
+                        - code [ref=e199]: "System Message: gmcp event <...>"
+                        - text: ) into the debug console as a filterable category.
+                    - heading "Motivation for adding to Mudlet" [level=4] [ref=e200]
+                    - paragraph [ref=e201]: The debug window is unusable on a live profile - 20 triggers against 6 game lines produce about 40 lines of output, three of which are the same game line repeated - so people don't use it.
+                    - heading "Other info (issues closed, discussion etc)" [level=4] [ref=e202]
+                    - paragraph [ref=e203]:
+                      - text: Closes
+                      - link "#8094" [ref=e204] [cursor=pointer]:
+                        - /url: https://github.com/Mudlet/Mudlet/issues/8094
+                      - text: .
+                    - paragraph [ref=e205]:
+                      - text: "Two incidental fixes found on the way: two module-save errors in"
+                      - code [ref=e206]: Host.cpp
+                      - text: were missing their
+                      - code [ref=e207]: ">> mpHost"
+                      - text: and had never reached the console at all, and six map/config errors were attributed to no profile despite a
+                      - code [ref=e208]: Host
+                      - text: being in scope.
+                    - paragraph [ref=e209]: "Behaviour changes worth knowing about: the noisy categories (every line from the game, trigger capture groups and match state, \"ran without errors\" chatter, selection calls) are off by default, and protocol debug output now appears in the debug console instead of the game window."
+                    - paragraph [ref=e210]:
+                      - strong [ref=e211]: "Test case:"
+                      - text: open a profile, Toolbox ▸ Script editor ▸ Debug, then run
+                      - code [ref=e212]: lua for i=1,20 do tempRegexTrigger("^(.*)pattern"..i.."(.*)$", function() end) end
+                      - text: followed by
+                      - code [ref=e213]: lua for i=1,6 do feedTriggers("You see a wandering merchant here, carrying pattern3 goods.\n") end
+                      - text: "- 6 debug lines instead of ~40. Tick \"Every line from the game\" back on and confirm the lines already printed are untouched."
+                    - paragraph [ref=e214]: "Assisted-by: Claude:claude-opus-5"
+              - generic [ref=e215]:
+                - generic [ref=e217]:
+                  - generic [ref=e222]:
+                    - link "vadi2" [ref=e223] [cursor=pointer]:
+                      - /url: /vadi2
+                    - text: added 2 commits
+                    - link "August 5, 2026 14:411 hour ago" [ref=e224] [cursor=pointer]:
+                      - /url: "#commits-pushed-5c0c2f1"
+                  - generic [ref=e225]:
+                    - generic [ref=e233]:
+                      - link [ref=e236] [cursor=pointer]:
+                        - /url: /vadi2
+                        - img "@vadi2" [ref=e237]
+                      - generic [ref=e238]:
+                        - code [ref=e239]:
+                          - 'link "add: filters, pause and clear for the debug window" [ref=e240] [cursor=pointer]':
+                            - /url: /Mudlet/Mudlet/pull/9688/commits/5c0c2f15d93f00e2b81a50ae7f8c0017d7f66361
+                        - button "Commit message body" [ref=e242] [cursor=pointer]: …
+                      - code [ref=e250]:
+                        - link "5c0c2f1" [ref=e251] [cursor=pointer]:
+                          - /url: /Mudlet/Mudlet/pull/9688/commits/5c0c2f15d93f00e2b81a50ae7f8c0017d7f66361
+                    - generic [ref=e259]:
+                      - link [ref=e262] [cursor=pointer]:
+                        - /url: /vadi2
+                        - img "@vadi2" [ref=e263]
+                      - generic [ref=e264]:
+                        - code [ref=e265]:
+                          - 'link "fix: issues found reviewing the debug window filters" [ref=e266] [cursor=pointer]':
+                            - /url: /Mudlet/Mudlet/pull/9688/commits/7dccc4548fddc0bd472e31e3cf6b3fdc854b16b4
+                        - button "Commit message body" [ref=e268] [cursor=pointer]: …
+                      - code [ref=e276]:
+                        - link "7dccc45" [ref=e277] [cursor=pointer]:
+                          - /url: /Mudlet/Mudlet/pull/9688/commits/7dccc4548fddc0bd472e31e3cf6b3fdc854b16b4
+                - generic [ref=e279]:
+                  - link [ref=e281] [cursor=pointer]:
+                    - /url: /apps/add-deployment-links
+                    - img "@add-deployment-links" [ref=e282]
+                  - generic [ref=e284]:
+                    - generic [ref=e285]:
+                      - heading "add-deployment-links Bot commented Aug 5, 2026now" [level=3] [ref=e286]:
+                        - generic [ref=e287]:
+                          - strong [ref=e288]:
+                            - link "add-deployment-links" [ref=e289] [cursor=pointer]:
+                              - /url: /apps/add-deployment-links
+                            - generic [ref=e290]: Bot
+                          - text: commented
+                          - link "Aug 5, 2026now" [ref=e291] [cursor=pointer]:
+                            - /url: "#issuecomment-5192871666"
+                      - group [ref=e294]:
+                        - button [ref=e295] [cursor=pointer]:
+                          - img "Show options" [ref=e298]
+                    - table [ref=e302]:
+                      - rowgroup [ref=e303]:
+                        - row [ref=e304]:
+                          - cell [ref=e305]:
+                            - paragraph [ref=e306]: Hey there! Thanks for helping Mudlet improve. 🌟
+                            - heading "Test versions" [level=2] [ref=e307]
+                            - paragraph [ref=e308]: "You can directly test the changes here:"
+                            - list [ref=e309]:
+                              - listitem [ref=e310]: "linux: (download pending, check back soon!)"
+                              - listitem [ref=e311]: "osx intel: (download pending, check back soon!)"
+                              - listitem [ref=e312]: "osx arm: (download pending, check back soon!)"
+                              - listitem [ref=e313]: "windows 64 bit: (download pending, check back soon!)"
+                            - paragraph [ref=e314]: No need to install anything - just unzip and run. Let us know if it works well, and if it doesn't, please give details.
+            - generic [ref=e318]:
+              - link "Sign up for free" [ref=e319] [cursor=pointer]:
+                - /url: /join?source=comment-repo
+              - strong [ref=e320]: to join this conversation on GitHub
+              - text: . Already have an account?
+              - link "Sign in to comment" [ref=e321] [cursor=pointer]:
+                - /url: /login?return_to=https%3A%2F%2Fgithub.com%2FMudlet%2FMudlet%2Fpull%2F9688
+        - generic [ref=e325]:
+          - form "Select reviewers" [ref=e327]:
+            - heading "Reviewers" [level=3] [ref=e328]
+            - text: No reviews
+          - form "Select assignees" [ref=e330]:
+            - heading "Assignees" [level=3] [ref=e331]
+            - text: No one assigned
+          - generic [ref=e332]:
+            - heading "Labels" [level=3] [ref=e333]
+            - generic [ref=e334]: None yet
+          - form "Select projects" [ref=e336]:
+            - heading "Projects" [level=3] [ref=e337]
+            - text: None yet
+          - form "Select milestones" [ref=e339]:
+            - heading "Milestone" [level=3] [ref=e340]
+            - text: No milestone
+          - form "Link issues" [ref=e346]:
+            - heading "Development" [level=3] [ref=e347]
+            - paragraph [ref=e348]: Successfully merging this pull request may close these issues.
+            - link [ref=e350] [cursor=pointer]:
+              - /url: https://github.com/Mudlet/Mudlet/issues/8094
+              - img "Open issue" [ref=e351]
+              - text: Add filtering options to the debug window
+          - generic [ref=e355]:
+            - heading "1 participant" [level=3] [ref=e356]
+            - link [ref=e358] [cursor=pointer]:
+              - /url: /vadi2
+              - img "@vadi2" [ref=e359]
+  - contentinfo [ref=e360]:
+    - heading "Footer" [level=2] [ref=e361]
+    - generic [ref=e362]:
+      - generic [ref=e363]:
+        - link "GitHub Homepage" [ref=e364] [cursor=pointer]:
+          - /url: https://github.com
+        - generic [ref=e367]: © 2026 GitHub, Inc.
+      - navigation "Footer" [ref=e368]:
+        - heading "Footer navigation" [level=3] [ref=e369]
+        - list "Footer navigation" [ref=e370]:
+          - listitem [ref=e371]:
+            - link "Terms" [ref=e372] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/github-terms/github-terms-of-service
+          - listitem [ref=e373]:
+            - link "Privacy" [ref=e374] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
+          - listitem [ref=e375]:
+            - link "Security" [ref=e376] [cursor=pointer]:
+              - /url: https://github.com/security
+          - listitem [ref=e377]:
+            - link "Status" [ref=e378] [cursor=pointer]:
+              - /url: https://www.githubstatus.com/
+          - listitem [ref=e379]:
+            - link "Community" [ref=e380] [cursor=pointer]:
+              - /url: https://github.community/
+          - listitem [ref=e381]:
+            - link "Docs" [ref=e382] [cursor=pointer]:
+              - /url: https://docs.github.com/
+          - listitem [ref=e383]:
+            - link "Contact" [ref=e384] [cursor=pointer]:
+              - /url: https://support.github.com?tags=dotcom-footer
+          - listitem [ref=e385]:
+            - button "Manage cookies" [ref=e387] [cursor=pointer]
+          - listitem [ref=e388]:
+            - button "Do not share my personal information" [ref=e390] [cursor=pointer]

@@ -54,10 +54,11 @@ using namespace std::chrono_literals;
 // TDebug::csmNoisyCategories:
 /* static */ TDebug::Categories TDebug::smEnabledCategories = TDebug::csmAllCategories & ~TDebug::csmNoisyCategories;
 
-TDebug::TDebug(const QColor& c, const QColor& d, const Category category)
+TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const QString& itemName)
 : fgColor(c)
 , bgColor(d)
 , mCategory(category)
+, mItemName(itemName)
 {
 }
 
@@ -113,6 +114,32 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category)
     if (!smPaused) {
         drainPausedQueue();
     }
+}
+
+// A console filtered down to nothing looks exactly like a console that has
+// stopped working, and some categories are hidden out of the box - so say so
+// rather than leaving people to wonder.
+/* static */ void TDebug::announceFilters()
+{
+    QPointer<TConsole> debugConsole = mudlet::smpDebugConsole;
+    if (!debugConsole) {
+        return;
+    }
+
+    const Categories hidden = csmAllCategories & ~smEnabledCategories;
+    if (!hidden) {
+        return;
+    }
+
+    int count = 0;
+    for (quint32 bit = 1; bit; bit <<= 1) {
+        if (hidden.testFlag(static_cast<Category>(bit))) {
+            ++count;
+        }
+    }
+
+    //: Shown in the Central Debug Console when it opens with some kinds of message hidden. %n is how many.
+    debugConsole->print(csmTagSystemMessage % tr("%n kind(s) of message are hidden - use \"Show\" below to change that.\n", "", count), Qt::white, Qt::darkBlue);
 }
 
 // Throws away anything held back while paused - used when the user clears the
@@ -218,6 +245,11 @@ bool TDebug::passesFilters(const Host* pHost)
         return false;
     }
     if (pHost && smDisabledHosts.contains(pHost)) {
+        return false;
+    }
+    if (!smItemFilter.isEmpty() && mItemName != smItemFilter && mCategory != Category::System) {
+        // Focusing on one item still leaves profile starts and ends visible,
+        // so the console does not look dead when nothing is happening:
         return false;
     }
     if (!smTextFilter.isEmpty() && !msg.contains(smTextFilter, smTextFilterCaseSensitivity)) {
