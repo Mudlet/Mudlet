@@ -63,7 +63,7 @@ set(FUNCTIONAL_TEST_UTILS
 # output - built but deliberately not registered with ctest:
 add_executable(UndoServerWrapReplay UndoServerWrapReplay.cpp ${FUNCTIONAL_TEST_UTILS})
 add_dependencies(UndoServerWrapReplay ${LIB_MUDLET_TARGET})
-target_link_libraries(UndoServerWrapReplay PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
+target_link_libraries(UndoServerWrapReplay PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
 set_target_properties(UndoServerWrapReplay PROPERTIES ENABLE_EXPORTS ON)
 
 # Report-only perf harness for manual before/after comparisons
@@ -75,7 +75,7 @@ set_target_properties(UndoServerWrapReplay PROPERTIES ENABLE_EXPORTS ON)
 option(REGISTER_PERF_BENCHMARK "Register the report-only PipelineBenchmark with ctest (it is built either way)" OFF)
 add_executable(PipelineBenchmark PipelineBenchmark.cpp ${FUNCTIONAL_TEST_UTILS})
 add_dependencies(PipelineBenchmark ${LIB_MUDLET_TARGET})
-target_link_libraries(PipelineBenchmark PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
+target_link_libraries(PipelineBenchmark PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
 set_target_properties(PipelineBenchmark PROPERTIES ENABLE_EXPORTS ON)
 if(REGISTER_PERF_BENCHMARK)
     add_test(NAME PipelineBenchmark COMMAND $<TARGET_FILE:PipelineBenchmark>)
@@ -86,11 +86,14 @@ if(REGISTER_PERF_BENCHMARK)
         TIMEOUT 600)
 endif()
 
+# mudlet_lsan_hooks below carries __lsan_default_suppressions; it has to be
+# linked explicitly because these binaries get their main() from QTEST_MAIN and
+# so never pull main.o (and with it the hooks) out of the mudlet_core archive.
 foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     get_filename_component(test_name ${test_file} NAME_WE)
     add_executable(${test_name} ${test_file} ${FUNCTIONAL_TEST_UTILS})
     add_dependencies(${test_name} ${LIB_MUDLET_TARGET})
-    target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
+    target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
     set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS ON)
     add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
     set_tests_properties(${test_name} PROPERTIES
