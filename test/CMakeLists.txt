@@ -102,12 +102,12 @@ if(NOT WIN32)
     )
 endif()
 
-# Checks the two CI scripts that exist to not fail quietly - the milestone
-# lookup that assigned nothing for months, and the merge state that is the only
-# red mark a conflicted pull request gets. gh is stubbed, so there is no network
+# Checks the milestone lookup that add-milestone runs - the one that matched a
+# title that no longer existed and assigned nothing for months, without ever
+# failing. gh is stubbed, so there is no network and no token
 if(NOT WIN32)
-    add_test(NAME MergeStateTest
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/merge-state-test.sh
+    add_test(NAME MilestoneResolutionTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/milestone-resolution-test.sh
     )
 endif()
 
