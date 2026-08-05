@@ -36,6 +36,7 @@ set(FUNCTIONAL_TEST_SOURCES
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
     UndoServerWrapTest.cpp
+    NarrowWindowWrapTest.cpp
     HostWidgetDecouplingTest.cpp
     ActionSelfUninstallTest.cpp
     ProfileFolderNameTest.cpp
@@ -113,8 +114,22 @@ set_tests_properties(InsertTextCapTest PROPERTIES TIMEOUT 300)
 set_tests_properties(LogRestartDuplicateLineTest PROPERTIES TIMEOUT 300)
 
 # TMediaLoopTest probes the audio backend and creates a fresh profile per test method,
-# and each clip has to be waited out in real time, so it needs a longer timeout
+# and each clip has to be waited out in real time, so it needs a longer timeout.
+# QTEST_MAIN does not run src/main.cpp, so pin QT_MEDIA_BACKEND to what main.cpp picks for
+# the shipped application - otherwise the tests silently exercise Qt's default backend for
+# the platform rather than the one users actually get.
+if(APPLE)
+    set(mediaLoopTestBackend "darwin")
+elseif(WIN32)
+    set(mediaLoopTestBackend "ffmpeg")
+else()
+    set(mediaLoopTestBackend "")
+endif()
 set_tests_properties(TMediaLoopTest PROPERTIES TIMEOUT 300)
+if(mediaLoopTestBackend)
+    # APPEND, so the environment set by the loop above stays in force rather than being replaced
+    set_property(TEST TMediaLoopTest APPEND PROPERTY ENVIRONMENT "QT_MEDIA_BACKEND=${mediaLoopTestBackend}")
+endif()
 
 # The round-trip tests boot a full mudlet instance and save/reload profile and
 # map data, so they need a longer timeout
@@ -122,6 +137,9 @@ set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeam
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
+
+# NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
 
 # TDiscordModeTest drives the real discord-rpc library end-to-end. The library's
 # reconnect backoff is a process-global (60s ceiling) that the suite's

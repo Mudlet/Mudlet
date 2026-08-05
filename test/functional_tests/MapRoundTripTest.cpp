@@ -38,6 +38,7 @@
 
 #include <QtTest/QtTest>
 
+#include <QFile>
 #include <QSaveFile>
 #include <QTemporaryDir>
 
@@ -113,10 +114,6 @@ private:
     AreaBounds mBoundsB;
     QImage mLabelImage;
     QSizeF mLabelSize;
-    // Once the source map has been saved at a format below 19 its mUserData
-    // carries stray system.fallback_mapSymbolFont* keys forever - see the
-    // QEXPECT_FAIL in verifyMap():
-    bool mSourcePollutedByPre19Save = false;
 
     static QMap<QString, QString> expectedMapUserData() { return {{qsl("map.author 日本語"), qsl("величина <>&\"' ]]>")}, {qsl("plain"), qsl("value")}}; }
 
@@ -268,6 +265,23 @@ private:
         return file.commit();
     }
 
+    // QDataStream stores QStrings as a length prefix plus the string encoded as UTF-16BE,
+    // so the raw file can be scanned for a serialized string's bytes:
+    static bool fileContainsSerializedString(const QString& fileName, const QString& needle)
+    {
+        QFile file(fileName);
+        if (!file.open(QIODevice::ReadOnly)) {
+            return false;
+        }
+        const QByteArray raw = file.readAll();
+        QByteArray needleBytes;
+        QDataStream out(&needleBytes, QIODevice::WriteOnly);
+        out << needle;
+        // The length prefix stays in the needle so a key cannot match a longer key it is
+        // a byte prefix of ("system.fallback_mapSymbolFont" vs. "...FontFudgeFactor"):
+        return raw.contains(needleBytes);
+    }
+
     void verifyArea(TArea* pArea, const AreaBounds& bounds, const QString& areaLabel)
     {
         QVERIFY2(pArea, qPrintable(qsl("%1 is missing").arg(areaLabel)));
@@ -346,14 +360,9 @@ private:
         QCOMPARE(pR1->customLinesColor, (QMap<QString, QColor>{{qsl("n"), scmCustomLineColor}}));
         QCOMPARE(pR1->customLinesStyle, (QMap<QString, Qt::PenStyle>{{qsl("n"), Qt::DashLine}}));
         QCOMPARE(pR1->customLinesArrow, (QMap<QString, bool>{{qsl("n"), true}}));
-        if (savedVersion == 19) {
-            // Finding: TMap::serialize() stores the symbol fallback for
-            // mSaveVersion <= 19 but TRoom::restore() only removes it again
-            // for version < 19, so a map saved at exactly format 19 leaves a
-            // stray "system.fallback_symbol" entry in the room's userData
-            // after loading:
-            QEXPECT_FAIL("", "system.fallback_symbol is written at save version 19 (TMap::serialize) but only stripped for versions below 19 (TRoom::restore)", Continue);
-        }
+        // The format 19 leg runs after the format 17/18 ones, so this also
+        // guards against a < 19 save leaving a stray system.fallback_symbol
+        // entry behind in the live source room's user data:
         QCOMPARE(pR1->userData, expectedRoom1UserData());
 
         TRoom* pR2 = pDB->getRoom(scmRoom2);
@@ -396,17 +405,10 @@ private:
         QCOMPARE(pR4->getOut(), scmRoom2);
         QCOMPARE(pR4->getNorthwest(), scmRoom3);
 
-        if (savedVersion >= 19 && mSourcePollutedByPre19Save) {
-            // Finding: TMap::serialize() inserts system.fallback_mapSymbolFont,
-            // system.fallback_mapSymbolFontFudgeFactor and
-            // system.fallback_onlyUseMapSymbolFont into the live map's
-            // mUserData when saving at format < 19 and never removes them
-            // afterwards, so every subsequent save at format >= 19 embeds
-            // those stale keys and TMap::restore() only strips them again for
-            // format < 19 loads:
-            QEXPECT_FAIL(
-                    "", "saving at format < 19 permanently pollutes TMap::mUserData with system.fallback_mapSymbolFont* keys (TMap::serialize) which leak into later format >= 19 saves", Continue);
-        }
+        // The format 19 leg runs after the format 17/18 ones, so this also
+        // guards against a < 19 save leaving stray
+        // system.fallback_mapSymbolFont* entries behind in the live source
+        // map's user data:
         QCOMPARE(pMap->mUserData, expectedMapUserData());
         QCOMPARE(pMap->mEnvColors, (QMap<int, int>{{5, 2}, {12, 7}}));
         QCOMPARE(pMap->mCustomEnvColors.value(300), QColor(12, 34, 56));
@@ -430,9 +432,13 @@ private:
     {
         const QString fileName = qsl("%1/map_v%2.dat").arg(mSaveDir.path()).arg(saveVersion);
         QVERIFY2(saveMapToFile(mpSource->mpMap.data(), fileName, saveVersion), qPrintable(qsl("failed to save map at format version %1").arg(saveVersion)));
-        if (saveVersion < 19) {
-            mSourcePollutedByPre19Save = true;
-        }
+
+        // Saving at any format must not leak system.fallback_* keys into the
+        // live source map's or rooms' user data - room 1 carries a symbol and
+        // a symbol color, room 3 is hidden:
+        QCOMPARE(mpSource->mpMap->mUserData, expectedMapUserData());
+        QCOMPARE(mpSource->mpMap->mpRoomDB->getRoom(scmRoom1)->userData, expectedRoom1UserData());
+        QVERIFY(mpSource->mpMap->mpRoomDB->getRoom(scmRoom3)->userData.isEmpty());
 
         TMap* pTargetMap = mpTarget->mpMap.data();
         pTargetMap->mapClear();
@@ -507,6 +513,52 @@ private slots:
     {
         QFETCH(int, saveVersion);
         roundTripAtVersion(saveVersion);
+    }
+
+    void test_taintedMapSelfCleansOnFormat19PlusLoad()
+    {
+        // Simulate a map already tainted in the wild by past versions whose
+        // saving in a format below 19 left the fallback keys behind in the
+        // live user data - which then rode along in every format >= 19 save:
+        TMap* pSourceMap = mpSource->mpMap.data();
+        TRoom* pSourceR1 = pSourceMap->mpRoomDB->getRoom(scmRoom1);
+        QVERIFY(pSourceR1);
+        pSourceMap->mUserData.insert(qsl("system.fallback_mapSymbolFont"), qsl("Stale Font,10,-1,5,400,0,0,0,0,0"));
+        pSourceMap->mUserData.insert(qsl("system.fallback_mapSymbolFontFudgeFactor"), qsl("9.99"));
+        pSourceMap->mUserData.insert(qsl("system.fallback_onlyUseMapSymbolFont"), qsl("false"));
+        // The unique value doubles as the proof below that this key really
+        // made it into the file:
+        pSourceR1->userData.insert(qsl("system.fallback_symbol"), qsl("stale-room-symbol-junk"));
+
+        const int saveVersion = pSourceMap->mDefaultVersion;
+        QVERIFY(saveVersion >= 19);
+        const QString fileName = qsl("%1/map_tainted_v%2.dat").arg(mSaveDir.path()).arg(saveVersion);
+        QVERIFY(saveMapToFile(pSourceMap, fileName, saveVersion));
+
+        // Undo the tainting of the live source map:
+        pSourceMap->mUserData = expectedMapUserData();
+        pSourceR1->userData = expectedRoom1UserData();
+
+        // The junk keys really did make it into the serialized stream:
+        QVERIFY(fileContainsSerializedString(fileName, qsl("system.fallback_mapSymbolFont")));
+        QVERIFY(fileContainsSerializedString(fileName, qsl("system.fallback_onlyUseMapSymbolFont")));
+        QVERIFY(fileContainsSerializedString(fileName, qsl("stale-room-symbol-junk")));
+
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        pTargetMap->mapClear();
+        QVERIFY(pTargetMap->restore(fileName));
+        pTargetMap->audit();
+
+        // Loading strips the junk keys while the legitimate user data - and
+        // the authoritative values stored directly in the stream - survive:
+        QCOMPARE(pTargetMap->mUserData, expectedMapUserData());
+        QCOMPARE(pTargetMap->mMapSymbolFont.family(), qsl("DejaVu Serif"));
+        QCOMPARE(pTargetMap->mMapSymbolFontFudgeFactor, 1.25);
+        QVERIFY(pTargetMap->mIsOnlyMapSymbolFontToBeUsed);
+        TRoom* pTargetR1 = pTargetMap->mpRoomDB->getRoom(scmRoom1);
+        QVERIFY(pTargetR1);
+        QCOMPARE(pTargetR1->userData, expectedRoom1UserData());
+        QCOMPARE(pTargetR1->mSymbol, qsl("⚔"));
     }
 };
 
