@@ -963,6 +963,31 @@ describe("Trigger processing", function()
             assert.are.equal(1, fires, "a trigger with expireAfter = 1 must not fire a second time")
         end)
 
+        it("does not let an expiring trigger fire again from its own nested feed", function()
+            -- A separate defect from the one above, found while fixing it: the
+            -- expiry count is decremented at the end of match(), after execute()
+            -- has run, so a trigger whose own script re-feeds the matching line is
+            -- still at its old count and still active when the nested pass reaches
+            -- it. Fixing that means moving the expiry accounting ahead of
+            -- execute(), which also has to keep the "return true to extend the
+            -- expiry" contract working - out of scope for the deactivate() fix.
+            pending("expiry is accounted after execute(), so a self-refeeding trigger overshoots expireAfter")
+            local fires = 0
+            local nestedFed = false
+            tempRegexTrigger("^self_expiry_reentry$", function()
+                fires = fires + 1
+                if not nestedFed then
+                    nestedFed = true
+                    feedTriggers("\nself_expiry_reentry\n")
+                end
+            end, 1)
+
+            feedTriggers("\nself_expiry_reentry\n")
+
+            assert.is_true(nestedFed)
+            assert.are.equal(1, fires, "a trigger with expireAfter = 1 must not fire a second time")
+        end)
+
         it("keeps a same-named permanent trigger in the lookup table", function()
             local name = "Spec Name Eviction"
             _G.NameEvictionSpec = 0
@@ -978,7 +1003,10 @@ describe("Trigger processing", function()
             assert.is_true(permanents >= 1)
 
             -- tempComplexRegexTrigger is the one temporary-trigger API that takes a
-            -- user-supplied name, so sharing one with a permanent trigger is easy
+            -- user-supplied name, so sharing one with a permanent trigger is easy.
+            -- Note it copies the pattern list of the trigger it finds under that
+            -- name, so this temporary also carries ^name_eviction_perm$ - harmless
+            -- here, since it is killed before anything is fed
             tempComplexRegexTrigger(name, "^name_eviction_temp$", [[]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
             assert.are.equal(permanents + 1, exists(name, "trigger"))
 

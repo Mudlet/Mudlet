@@ -392,23 +392,27 @@ std::vector<int> TimerUnit::findItems(const QString& name, const bool exactMatch
 bool TimerUnit::killTimer(const QString& name)
 {
     for (auto timer : mTimerRootNodeList) {
-        if (timer->getName() == name) {
-            // only temporary timers can be killed
-            if (!timer->isTemporary()) {
-                return false;
-            }
-            // An already killed timer is only unlinked from this list once
-            // doCleanup() gets to free it, which cannot happen while a timer
-            // script is on the call stack - so until then it is still findable
-            // by name. Killing it a second time achieves nothing and must be
-            // reported as the failure it is:
-            if (mCleanupSet.contains(timer)) {
-                return false;
-            }
-            timer->killTimer();
-            markCleanup(timer);
-            return true;
+        if (timer->getName() != name) {
+            continue;
         }
+        // Names are not unique, so keep looking rather than give up on the first
+        // same-named timer that cannot be killed - a permanent timer loaded from
+        // the profile precedes this session's temporaries in this list, and
+        // reporting a failure over it would strand a killable timer
+        if (!timer->isTemporary()) {
+            // only temporary timers can be killed
+            continue;
+        }
+        // An already killed timer is only unlinked from this list once doCleanup()
+        // gets to free it, which cannot happen while a timer script is on the call
+        // stack - so until then it is still findable by name. Killing it a second
+        // time achieves nothing:
+        if (mCleanupSet.contains(timer)) {
+            continue;
+        }
+        timer->killTimer();
+        markCleanup(timer);
+        return true;
     }
     return false;
 }
@@ -458,8 +462,10 @@ void TimerUnit::doCleanup()
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
     // children first empties the parent's child list (no double free); the seen
     // set guards a node queued twice by re-entrant uninstalls and is shared with
-    // the mCleanupSet loop above so an object that somehow ended up in both
-    // containers cannot be freed twice.
+    // the mCleanupSet loop above so an object that ended up in both containers is
+    // freed once. It matches on pointer identity only: a node freed indirectly, as
+    // a child of a queued parent, is not in the set (not reachable today - only
+    // temporary root nodes are ever queued, and those have no children).
     for (auto timer : uninstallList) {
         if (!deletedTimers.contains(timer)) {
             deletedTimers.insert(timer);

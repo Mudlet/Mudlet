@@ -332,15 +332,35 @@ describe("Alias processing", function()
             -- several aliases per name
             local tempId = tempAlias("^spec_evicted_temp$", [[]])
             local sharedName = tostring(tempId)
+            -- permanent aliases cannot be deleted from Lua, so earlier local runs
+            -- can leave same-named ones behind: work from a relative baseline
+            local before = exists(sharedName, "alias")
             assert.is_true(permAlias(sharedName, "", "^spec_evicted_perm$", [[]]) > 0)
-            assert.are.equal(2, exists(sharedName, "alias"))
+            finally(function() disableAlias(sharedName) end)
+            assert.are.equal(before + 1, exists(sharedName, "alias"))
 
             assert.is_true(killAlias(tempId), "the temporary alias is the one that can be killed")
             -- an incoming line runs every unit's deferred cleanup, which frees it
             feedTriggers("\nspec_alias_eviction_flush\n")
 
-            assert.are.equal(1, exists(sharedName, "alias"), "only the temporary alias should leave the lookup table")
+            assert.are.equal(before, exists(sharedName, "alias"), "only the temporary alias should leave the lookup table")
             assert.is_true(enableAlias(sharedName), "the permanent alias must still be reachable by name")
+        end)
+
+        it("killAlias finds a temporary alias behind a same-named permanent one", function()
+            -- killAlias walks the root node list in creation order, so a permanent
+            -- alias restored from the profile sits in front of this session's
+            -- temporaries: it must be scanned past, not reported as a failure
+            local seed = tempAlias("^spec_kill_order_seed$", [[]])
+            killAlias(seed)
+            -- permAlias itself takes seed + 1, so the next temporary takes seed + 2
+            local sharedName = tostring(seed + 2)
+            assert.is_true(permAlias(sharedName, "", "^spec_kill_order_perm$", [[]]) > 0)
+            finally(function() disableAlias(sharedName) end)
+
+            local tempId = tempAlias("^spec_kill_order_temp$", [[]])
+            assert.are.equal(seed + 2, tempId, "ids should still be handed out in sequence")
+            assert.is_true(killAlias(tempId), "killAlias must scan past the permanent alias")
         end)
 
     end)

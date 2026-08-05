@@ -25,13 +25,25 @@
  * - freeing a temporary item must unlink only that item from the by-name lookup
  *   table, not every item filed under the same name (#9649). The lookup table is
  *   a QMultiMap and names are not unique
+ * - killing by name must keep scanning past same-named items it cannot kill,
+ *   rather than report failure over the first one (#9649)
  * - the two deferred-delete containers, mCleanupSet and uninstallList, must never
  *   free the same object twice, whichever order it lands in them (#9650)
  *
- * The timer and key halves of #9649 cannot be reached from the busted Lua suite -
- * that runs inside a tempTimer, so TimerUnit's cleanup stays deferred for the
- * whole run - which is why they live here. The trigger and alias halves are
- * covered from Lua as well, in Trigger_spec.lua and Alias_spec.lua.
+ * The timer half of #9649 cannot be reached from the busted Lua suite - that runs
+ * inside a tempTimer, so TimerUnit's cleanup stays deferred for the whole run -
+ * which is why it lives here. The trigger, alias and key halves are covered from
+ * Lua as well, in Trigger_spec.lua, Alias_spec.lua and KeyBinds_spec.lua.
+ *
+ * Note on the ...ContainersStayDisjoint cases: a regression there is a double
+ * free, which has no post-condition to read back - the assertions below hold
+ * either way and the run aborts instead. That is a real signal because the
+ * functional tests always build with the address sanitizer on non-Windows
+ * (test/functional_tests/CMakeLists.txt includes EnableSanitizers.cmake, whose
+ * USE_SANITIZER defaults to "address"), but it does mean these four cases carry
+ * no weight in a build with sanitizers switched off. The trigger and timer
+ * variants are pure regression guards: those two units already had the guards on
+ * development, and only AliasUnit and KeyUnit gain them here.
  *
  * Run with: ctest -R UnitDeferredDeleteTest -V
  */
@@ -196,11 +208,136 @@ private slots:
         QVERIFY2(unit->enableKey(sharedName), "the permanent key must still be reachable by name");
     }
 
+    // #9649, the kill-by-name half: killX(name) walks the root node list, which
+    // holds items in creation order, so a permanent item restored from the profile
+    // at startup precedes this session's temporaries. Giving up on the first
+    // same-named item that cannot be killed strands the killable one and reports a
+    // bare false. Each case below renames a freshly created permanent item to the
+    // id the next temporary will take, which is exactly the collision a saved
+    // profile produces; the QCOMPARE on the temporary's id makes the test fail
+    // loudly rather than silently stop testing anything if ids stop being handed
+    // out in sequence.
+    void test_triggerKillByNameScansPastPermanent()
+    {
+        auto* unit = mpHost->getTriggerUnit();
+        const QStringList permPatterns{qsl("kill_order_trigger_perm")};
+        auto [permId, message] = mpHost->mLuaInterpreter.startPermSubstringTrigger(qsl("kill order placeholder"), QString(), permPatterns, QString());
+        QVERIFY2(permId > 0, qPrintable(message));
+        const QString sharedName = QString::number(permId + 1);
+        unit->getTrigger(permId)->setName(sharedName);
+
+        const int tempId = mpHost->mLuaInterpreter.startTempTrigger(qsl("kill_order_trigger_temp"), QString());
+        QCOMPARE(tempId, permId + 1);
+        QCOMPARE(lookupCount(unit->mLookupTable.count(sharedName)), 2);
+
+        QVERIFY2(unit->killTrigger(sharedName), "killTrigger must scan past the permanent trigger to the temporary one");
+        unit->doCleanup();
+        QVERIFY2(!unit->getTrigger(tempId), "the temporary trigger should have been freed");
+        QVERIFY(unit->getTrigger(permId));
+    }
+
+    void test_aliasKillByNameScansPastPermanent()
+    {
+        auto* unit = mpHost->getAliasUnit();
+        auto [permId, message] = mpHost->mLuaInterpreter.startPermAlias(qsl("kill order placeholder"), QString(), qsl("^kill_order_alias_perm$"), QString());
+        QVERIFY2(permId > 0, qPrintable(message));
+        const QString sharedName = QString::number(permId + 1);
+        unit->getAlias(permId)->setName(sharedName);
+
+        const int tempId = mpHost->mLuaInterpreter.startTempAlias(qsl("^kill_order_alias_temp$"), QString());
+        QCOMPARE(tempId, permId + 1);
+        QCOMPARE(lookupCount(unit->mLookupTable.count(sharedName)), 2);
+
+        QVERIFY2(unit->killAlias(sharedName), "killAlias must scan past the permanent alias to the temporary one");
+        unit->doCleanup();
+        QVERIFY2(!unit->getAlias(tempId), "the temporary alias should have been freed");
+        QVERIFY(unit->getAlias(permId));
+    }
+
+    void test_timerKillByNameScansPastPermanent()
+    {
+        auto* unit = mpHost->getTimerUnit();
+        auto [permId, message] = mpHost->mLuaInterpreter.startPermTimer(qsl("kill order placeholder"), QString(), 60.0, QString());
+        QVERIFY2(permId > 0, qPrintable(message));
+        const QString sharedName = QString::number(permId + 1);
+        unit->getTimer(permId)->setName(sharedName);
+
+        auto [tempId, tempMessage] = mpHost->mLuaInterpreter.startTempTimer(60.0, QString(), false);
+        QVERIFY2(tempId > 0, qPrintable(tempMessage));
+        QCOMPARE(tempId, permId + 1);
+        QCOMPARE(lookupCount(unit->mLookupTable.count(sharedName)), 2);
+
+        QVERIFY2(unit->killTimer(sharedName), "killTimer must scan past the permanent timer to the temporary one");
+        unit->doCleanup();
+        QVERIFY2(!unit->getTimer(tempId), "the temporary timer should have been freed");
+        QVERIFY(unit->getTimer(permId));
+    }
+
+    void test_keyKillByNameScansPastPermanent()
+    {
+        auto* unit = mpHost->getKeyUnit();
+        QString emptyScript;
+        QString parent;
+        QString placeholder = qsl("kill order placeholder");
+        int permModifier = Qt::NoModifier;
+        int permKeyCode = Qt::Key_F7;
+        auto [permId, message] = mpHost->mLuaInterpreter.startPermKey(placeholder, parent, permKeyCode, permModifier, emptyScript);
+        QVERIFY2(permId > 0, qPrintable(message));
+        QString sharedName = QString::number(permId + 1);
+        unit->getKey(permId)->setName(sharedName);
+
+        int tempModifier = Qt::NoModifier;
+        int tempKeyCode = Qt::Key_F8;
+        const int tempId = mpHost->mLuaInterpreter.startTempKey(tempModifier, tempKeyCode, emptyScript);
+        QCOMPARE(tempId, permId + 1);
+        QCOMPARE(lookupCount(unit->mLookupTable.count(sharedName)), 2);
+
+        QVERIFY2(unit->killKey(sharedName), "killKey must scan past the permanent key to the temporary one");
+        unit->doCleanup();
+        QVERIFY2(!unit->getKey(tempId), "the temporary key should have been freed");
+        QVERIFY(unit->getKey(permId));
+    }
+
+    // #9649 again, on the non-root removal path: a temporary child goes through
+    // removeTrigger() rather than removeTriggerRootNode(), and both got the same
+    // exact-match fix.
+    void test_temporaryChildTriggerLeavesSameNamedSiblingAlone()
+    {
+        auto* unit = mpHost->getTriggerUnit();
+        const QStringList parentPatterns{qsl("child_evict_parent")};
+        auto [parentId, message] = mpHost->mLuaInterpreter.startPermSubstringTrigger(qsl("Child Eviction Parent"), QString(), parentPatterns, QString());
+        QVERIFY2(parentId > 0, qPrintable(message));
+        auto* pParent = unit->getTrigger(parentId);
+        QVERIFY(pParent);
+
+        const QString sharedName = qsl("Child Eviction Shared");
+        const QStringList childPatterns{qsl("child_evict_perm")};
+        auto [permChildId, childMessage] = mpHost->mLuaInterpreter.startPermSubstringTrigger(sharedName, qsl("Child Eviction Parent"), childPatterns, QString());
+        QVERIFY2(permChildId > 0, qPrintable(childMessage));
+
+        auto* pTempChild = new TTrigger(pParent, mpHost);
+        pTempChild->setRegexCodeList(QStringList{qsl("child_evict_temp")}, QList<int>{REGEX_SUBSTRING});
+        pTempChild->setIsFolder(false);
+        pTempChild->setIsActive(true);
+        pTempChild->setTemporary(true);
+        pTempChild->registerTrigger();
+        pTempChild->setName(sharedName);
+        QCOMPARE(lookupCount(unit->mLookupTable.count(sharedName)), 2);
+
+        QVERIFY2(unit->killTrigger(sharedName), "the temporary child should be the one killed");
+        unit->doCleanup();
+
+        QCOMPARE(lookupCount(unit->mLookupTable.count(sharedName)), 1);
+        QCOMPARE(unit->mLookupTable.value(sharedName), unit->getTrigger(permChildId));
+    }
+
     // #9650: an item can be queued in mCleanupSet and in uninstallList at the same
-    // time (uninstall() at a non-zero processing depth leaves its items in
-    // uninstallList, and a script can then kill one of them). doCleanup() has to
-    // free such an item exactly once. Both containers are populated directly here
-    // because no current Lua path produces the overlap.
+    // time - uninstall() at a non-zero processing depth leaves its items in
+    // uninstallList and drops them from mCleanupSet, and a script killing one of
+    // them afterwards puts it back. doCleanup() has to free such an item exactly
+    // once. Both containers are populated directly here because reaching the
+    // overlap from Lua needs a package-owned temporary item, which no current
+    // import path produces.
     void test_triggerDeferredDeleteContainersStayDisjoint()
     {
         auto* unit = mpHost->getTriggerUnit();
@@ -233,8 +370,9 @@ private slots:
         unit->markCleanup(pTrigger);
         unit->uninstall(mPackageName);
 
-        // pointer comparison only - pTrigger is freed by now
-        QVERIFY2(!unit->mCleanupSet.contains(pTrigger), "uninstall() must take the trigger it freed out of the cleanup set");
+        // pTrigger is freed by now, so read the set's size rather than look the
+        // dangling pointer up in it
+        QVERIFY2(unit->mCleanupSet.isEmpty(), "uninstall() must take the trigger it freed out of the cleanup set");
         unit->doCleanup();
         QVERIFY2(!unit->getTrigger(id), "the trigger should have been freed exactly once");
     }
@@ -268,7 +406,7 @@ private slots:
         unit->markCleanup(pAlias);
         unit->uninstall(mPackageName);
 
-        QVERIFY2(!unit->mCleanupSet.contains(pAlias), "uninstall() must take the alias it freed out of the cleanup set");
+        QVERIFY2(unit->mCleanupSet.isEmpty(), "uninstall() must take the alias it freed out of the cleanup set");
         unit->doCleanup();
         QVERIFY2(!unit->getAlias(id), "the alias should have been freed exactly once");
     }
@@ -283,10 +421,9 @@ private slots:
 
         unit->uninstallList.append(pTimer);
         unit->markCleanup(pTimer);
-        // a second free would abort here; TimerUnit keeps mCleanupSet private, so
-        // there is no post-condition to read back beyond the timer being gone
         unit->doCleanup();
 
+        QVERIFY(unit->mCleanupSet.isEmpty());
         QVERIFY(unit->uninstallList.isEmpty());
         QVERIFY2(!unit->getTimer(id), "the timer should have been freed exactly once");
     }
@@ -303,7 +440,7 @@ private slots:
         unit->markCleanup(pTimer);
         unit->uninstall(mPackageName);
 
-        // doCleanup() would free the pointer uninstall() left behind a second time
+        QVERIFY2(unit->mCleanupSet.isEmpty(), "uninstall() must take the timer it freed out of the cleanup set");
         unit->doCleanup();
         QVERIFY2(!unit->getTimer(id), "the timer should have been freed exactly once");
     }
@@ -343,7 +480,7 @@ private slots:
         unit->markCleanup(pKey);
         unit->uninstall(mPackageName);
 
-        QVERIFY2(!unit->mCleanupSet.contains(pKey), "uninstall() must take the key it freed out of the cleanup set");
+        QVERIFY2(unit->mCleanupSet.isEmpty(), "uninstall() must take the key it freed out of the cleanup set");
         unit->doCleanup();
         QVERIFY2(!unit->getKey(id), "the key should have been freed exactly once");
     }

@@ -90,6 +90,7 @@ public:
 
     QMultiMap<QString, TTimer*> mLookupTable;
     QList<TTimer*> uninstallList;
+    QSet<TTimer*> mCleanupSet;
 
     // This will contain all the QTimers associated with the TTimer instances
     // it is needed so that should mpHost be renamed we can update them to have
@@ -114,7 +115,6 @@ private:
     std::list<TTimer*> mTimerRootNodeList;
     int mMaxID = 0;
     bool mModuleMember = false;
-    QSet<TTimer*> mCleanupSet;
     // > 0 whilst a TTimer::execute() is on the call stack; uninstall() and
     // doCleanup() must not delete timers then - see the note above the class:
     int mProcessingDepth = 0;

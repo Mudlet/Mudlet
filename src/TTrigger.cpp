@@ -1102,9 +1102,11 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
                 // pass ends, so an expired trigger that is still active would fire
                 // again from any pass that re-enters in the meantime (a later
                 // trigger's script calling feedTriggers(), most commonly).
-                // Deactivate first, as the line-trigger path above and
-                // TriggerUnit::killTrigger() both do.
-                deactivate();
+                // setIsActive(false) rather than deactivate(), matching
+                // TriggerUnit::killTrigger(): it also clears the user-active state,
+                // so an enableTrigger() before the deferred free cannot resurrect a
+                // trigger that has already spent its last fire.
+                setIsActive(false);
                 mpHost->getTriggerUnit()->markCleanup(this);
 
                 if (mudlet::smDebugMode) {

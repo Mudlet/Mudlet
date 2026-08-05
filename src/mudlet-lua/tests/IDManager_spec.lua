@@ -523,10 +523,26 @@ describe("Tests the functionality of IDMgr", function()
       assert.is_true(_G.StopAllTrigFire >= 1)
 
       stopAllNamedTriggers(user)
+      -- killTrigger deactivates synchronously, so not one more fire is allowed
+      local atStop = _G.StopAllTrigFire
       feedTriggers("\nstop_all_re\n")
-      local afterFlush = _G.StopAllTrigFire
       feedTriggers("\nstop_all_re\n")
-      assert.is_equal(afterFlush, _G.StopAllTrigFire, "a stopped regex named trigger must not keep firing")
+      assert.is_equal(atStop, _G.StopAllTrigFire, "a stopped regex named trigger must not keep firing")
+      -- stopped, not deleted
+      assert.are.same({"re"}, getNamedTriggers(user))
+    end)
+
+    it("Should let a stopped regex named trigger be resumed", function()
+      _G.StopAllTrigFire = 0
+      registerNamedRegexTrigger(user, "re", "^stop_all_resume_re$", function() _G.StopAllTrigFire = _G.StopAllTrigFire + 1 end)
+      stopAllNamedTriggers(user)
+      local atStop = _G.StopAllTrigFire
+      feedTriggers("\nstop_all_resume_re\n")
+      assert.is_equal(atStop, _G.StopAllTrigFire, "the regex named trigger should be stopped")
+
+      assert.is_true(resumeNamedTrigger(user, "re"), "a stopped regex named trigger must be resumable")
+      feedTriggers("\nstop_all_resume_re\n")
+      assert.is_true(_G.StopAllTrigFire > atStop, "the resumed regex named trigger should fire again")
     end)
 
     it("Should raise an error if the userName is missing or wrong type", function()

@@ -258,15 +258,35 @@ describe("Tests keybind-related functions", function()
       -- name
       local tempId = tempKey(mudlet.key.F11, [[echo("x")]])
       local sharedName = tostring(tempId)
+      -- permanent keys cannot be deleted from Lua, so earlier local runs can leave
+      -- same-named ones behind: work from a relative baseline
+      local before = exists(sharedName, "keybind")
       assert.is_true(permKey(sharedName, "", mudlet.key.F12, [[echo("x")]]) > 0)
-      assert.are.equal(2, exists(sharedName, "keybind"))
+      finally(function() disableKey(sharedName) end)
+      assert.are.equal(before + 1, exists(sharedName, "keybind"))
 
       assert.is_true(killKey(tempId), "the temporary key is the one that can be killed")
       -- an incoming line runs every unit's deferred cleanup, which frees it
       feedTriggers("\nspec_key_eviction_flush\n")
 
-      assert.are.equal(1, exists(sharedName, "keybind"), "only the temporary key should leave the lookup table")
+      assert.are.equal(before, exists(sharedName, "keybind"), "only the temporary key should leave the lookup table")
       assert.is_true(enableKey(sharedName), "the permanent key must still be reachable by name")
+    end)
+
+    it("killKey finds a temporary key behind a same-named permanent one", function()
+      -- killKey walks the root node list in creation order, so a permanent key
+      -- restored from the profile sits in front of this session's temporaries: it
+      -- must be scanned past, not reported as a failure
+      local seed = tempKey(mudlet.key.F9, [[echo("x")]])
+      killKey(seed)
+      -- permKey itself takes seed + 1, so the next temporary takes seed + 2
+      local sharedName = tostring(seed + 2)
+      assert.is_true(permKey(sharedName, "", mudlet.key.F10, [[echo("x")]]) > 0)
+      finally(function() disableKey(sharedName) end)
+
+      local tempId = tempKey(mudlet.key.F11, [[echo("x")]])
+      assert.are.equal(seed + 2, tempId, "ids should still be handed out in sequence")
+      assert.is_true(killKey(tempId), "killKey must scan past the permanent key")
     end)
 
   end)
