@@ -8,13 +8,14 @@
 -- is the map widget rather than a mapper drawn into the main console: see the
 -- pending below for why the embedded form cannot be exercised in this suite.
 --
--- Opening the map widget is a one way door for the profile - Host::closeMapWidget
--- only hides it - and busted runs its files in sorted order, so this file is
--- now the first to open it, ahead of Mapper_spec.lua. That costs Mapper_spec's
--- opening block its "registered before the widget was opened" premise; nothing
--- there fails, but the deferred registration path it meant to cover is no
--- longer reached from here on. Restoring it means moving that block into an
--- earlier sorting file of its own.
+-- Host::closeMapWidget() hides the dock widget and records the close, so the map
+-- window functions answer as they do for a profile that never opened one; what
+-- it does not do is destroy the dock. busted runs its files in sorted order, so
+-- this file opens the widget ahead of Mapper_spec.lua and its opening block
+-- therefore keeps its "there is no map widget" premise but loses its "registered
+-- before the widget was opened" one. Nothing there fails, but the deferred
+-- registration path that block meant to cover is no longer reached from here on.
+-- Restoring it means moving it into an earlier sorting file of its own.
 
 -- Reports whether the map widget is currently on screen, without leaving it in
 -- a different state than it was found in.
@@ -217,6 +218,16 @@ describe("Tests functionality of Geyser.Mapper", function()
       assert.are.equal("Renamed", mapper.titleText)
       assert.is_true(mapper:resetTitle())
       assert.are.equal("", mapper.titleText)
+    end)
+
+    it("applies a title that was set while the mapper was hidden", function()
+      local mapper = track(Geyser.Mapper:new({name = "gmpHiddenTitle", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      mapper:hide()
+      -- the map widget is off screen, so setMapWindowTitle has nothing to retitle
+      assert.is_nil(mapper:setTitle("Named while hidden"))
+      assert.are.equal("Named while hidden", mapper.titleText)
+      mapper:show()
+      assert.are.equal("Named while hidden", getMapWindowTitle())
     end)
 
     it("starts with an empty title when it was not given one", function()

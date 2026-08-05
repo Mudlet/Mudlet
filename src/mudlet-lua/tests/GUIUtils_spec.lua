@@ -1079,20 +1079,36 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.equals("FF", PadHexNum("FF"))
       assert.equals("0A", PadHexNum("0A"))
       assert.equals("10", PadHexNum("10"))
+      -- "00" is worth its own assertion: its value is below sixteen, so a pad
+      -- driven by value rather than by width grows it to three digits
+      assert.equals("00", PadHexNum("00"))
     end)
 
     it("Should error when not given a string", function()
       assert.has_error(function() PadHexNum(15) end)
     end)
 
+    it("Should error when the string is not a hex number", function()
+      -- the message matters: the old code reached the same outcome by accident,
+      -- comparing a nil tonumber() result against a number
+      assert.has_error(function() PadHexNum("zz") end,
+        'PadHexNum: bad argument #1 value (hex number as string expected, got "zz"!)')
+      assert.has_error(function() PadHexNum("") end,
+        'PadHexNum: bad argument #1 value (hex number as string expected, got ""!)')
+    end)
+
     it("Should zero-pad single hex digits above nine as well", function()
-      -- BUG: for values 11..15 the zero is appended instead of prepended, so
-      -- PadHexNum("B") is "B0" (176) rather than "0B" (11); the value 10 hits
-      -- neither branch and comes back as the unpadded, single character "A"
-      pending("PadHexNum pads on the wrong side above nine - see the Wave 3d report")
       assert.equals("0A", PadHexNum("A"))
       assert.equals("0B", PadHexNum("B"))
       assert.equals("0F", PadHexNum("F"))
+    end)
+
+    it("Should pad every single digit to the same width", function()
+      for value = 0, 15 do
+        local padded = PadHexNum(string.format("%X", value))
+        assert.equals(2, #padded)
+        assert.equals(value, tonumber(padded, 16))
+      end
     end)
   end)
 
@@ -1114,11 +1130,27 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should produce six hex digits for every component below sixteen", function()
-      -- BUG: RGB2Hex inherits PadHexNum's wrong-side padding, so a component
-      -- of 11 becomes "B0" (176) and one of 10 contributes a single "A",
-      -- yielding the malformed five character string "AB00C" here
-      pending("RGB2Hex mis-encodes components below sixteen - see the Wave 3d report")
       assert.equals("0A0B0C", RGB2Hex(10, 11, 12))
+      assert.equals("0A0A0A", RGB2Hex(10, 10, 10))
+    end)
+
+    it("Should encode a small component as its own value, not a shifted one", function()
+      -- the damaging case: a well formed six digit string that names the wrong
+      -- colour, so nothing downstream can notice. 11 must not become 0xB0 (176)
+      assert.equals("C80B0C", RGB2Hex(200, 11, 12))
+      assert.equals("FF0000", RGB2Hex(255, 0, 0))
+    end)
+
+    -- in 0-255 only: RGB2Hex range-checks nothing, so an out of range component
+    -- still produces a longer string. That is a separate defect from the padding
+    it("Should return six hex digits for every component value in 0-255", function()
+      for _, component in ipairs({0, 1, 9, 10, 15, 16, 17, 128, 255}) do
+        local hex = RGB2Hex(component, component, component)
+        assert.equals(6, #hex)
+        for position = 1, 5, 2 do
+          assert.equals(component, tonumber(hex:sub(position, position + 1), 16))
+        end
+      end
     end)
   end)
 
@@ -1355,6 +1387,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       it("Should accept an r, g, b triple", function()
         setGaugeText(gaugeName, "hurt", 0, 128, 255)
         assert.equals([[<font color="#0080FF">hurt</font>]], gaugesTable[gaugeName].text)
+      end)
+
+      it("Should emit a six digit colour for components below sixteen", function()
+        setGaugeText(gaugeName, "dim", 10, 11, 12)
+        assert.equals([[<font color="#0A0B0C">dim</font>]], gaugesTable[gaugeName].text)
       end)
 
       it("Should clear the caption when no text is given", function()

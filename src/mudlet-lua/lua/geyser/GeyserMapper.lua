@@ -59,6 +59,11 @@ function Geyser.Mapper:show_impl()
     createMapper(self.windowname, self:get_x(), self:get_y(), self:get_width(), self:get_height())
   else
     openMapWidget()
+    -- setMapWindowTitle only reaches a map window that is on screen, so a title
+    -- set while this mapper was hidden has to be applied now instead
+    if self.titleText and self.titleText ~= "" then
+      setMapWindowTitle(self.titleText)
+    end
   end
 end
 

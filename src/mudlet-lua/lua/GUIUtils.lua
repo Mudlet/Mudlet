@@ -413,22 +413,21 @@ end
 
 --- Pads a hex number to ensure a minimum of 2 digits.
 ---
---- @usage Following command will returns "F0".
+--- @usage Following command will return "0F".
 ---   <pre>
 ---   PadHexNum("F")
 ---   </pre>
 function PadHexNum(incString)
   assert(type(incString) == 'string', 'PadHexNum: bad argument #1 type (expected string, got '..type(incString)..'!)')
-  local l_Return = incString
-  if tonumber(incString, 16) < 16 then
-    if tonumber(incString, 16) < 10 then
-      l_Return = "0" .. l_Return
-    elseif tonumber(incString, 16) > 10 then
-      l_Return = l_Return .. "0"
-    end
+  assert(tonumber(incString, 16) ~= nil, 'PadHexNum: bad argument #1 value (hex number as string expected, got "'..incString..'"!)')
+
+  -- the pad goes on the front, and it is the width that decides whether one is
+  -- needed: "00" is already two digits wide even though its value is below 16
+  if #incString < 2 then
+    return "0" .. incString
   end
 
-  return l_Return
+  return incString
 end
 
 
@@ -2380,7 +2379,12 @@ function getRoomNameOffset(room)
   local d = getRoomUserData(room, "room.ui_nameOffset")
   if d == nil or d == "" then return 0,0 end
   local split = {}
-  for w in string.gfind(d, '[%.%d]+') do split[#split+1] = tonumber(w) end
+  -- the minus has to be part of the match: T2DMap parses the same user data with
+  -- QString::toDouble(), so a negative offset the renderer honours must read
+  -- back negative here too. This still only scrapes numbers out of the string,
+  -- so malformed user data reads back as a plausible pair the renderer will not
+  -- draw - unchanged by the sign fix
+  for w in string.gfind(d, '%-?[%.%d]+') do split[#split+1] = tonumber(w) end
   if #split == 1 then return 0,split[1] end
   if #split >= 2 then return split[1],split[2] end
   return 0,0

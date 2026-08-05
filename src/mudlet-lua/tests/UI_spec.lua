@@ -4389,8 +4389,7 @@ describe("Widget state getters", function()
   end)
 
   -- The "no map widget" error path for these two is covered in Mapper_spec,
-  -- which runs first and whose opening spec is the only point in the session
-  -- where the widget does not exist yet.
+  -- which runs first and reaches it by closing the widget.
   describe("map widget getters", function()
     setup(function()
       assert.is_true(openMapWidget())

@@ -149,6 +149,9 @@ public:
     bool mLogToLogFile = false;
     QPointer<QProgressDialog> mpPackageDownloadProgressDialog;
     QPointer<QProgressDialog> mpMapProgressDialog;
+    // Outlives Host::closeMapWidget(), which only hides it, so this being
+    // non-null says the profile has made a map widget at some point, not that it
+    // has one on screen - see Host::mapWidget() for the latter.
     QPointer<QDockWidget> mpDockableMapWidget;
     QPointer<QDialog> mpUnpackingDialog;
 
