@@ -1,22 +1,4 @@
 #!/bin/bash
-###########################################################################
-#   Copyright (C) 2026 by Vadim Peretokin - vadim.peretokin@mudlet.org    #
-#                                                                         #
-#   This program is free software; you can redistribute it and/or modify  #
-#   it under the terms of the GNU General Public License as published by  #
-#   the Free Software Foundation; either version 2 of the License, or     #
-#   (at your option) any later version.                                   #
-#                                                                         #
-#   This program is distributed in the hope that it will be useful,       #
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of        #
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
-#   GNU General Public License for more details.                          #
-#                                                                         #
-#   You should have received a copy of the GNU General Public License     #
-#   along with this program; if not, write to the                         #
-#   Free Software Foundation, Inc.,                                       #
-#   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
-###########################################################################
 # Tests the two CI scripts whose whole job is to not fail quietly.
 #
 # .github/scripts/resolve-milestone.sh replaces a jq filter that matched a
@@ -215,25 +197,36 @@ assert_absent "${STUB_DIR}/calls.log" 'state=open'
 assert_contains "${STUB_DIR}/calls.log" 'state=failure'
 
 #-----------------------------------------------------------------------------
+# The repository's real open milestones. "5.0 beginner-friendly" sitting next to
+# "5.0.0 next release" is the reason the prefix match is anchored on a following
+# space rather than being a bare startswith
 MILESTONES='[{"number":18,"title":"5.0 beginner-friendly"},
              {"number":62,"title":"future release"},
-             {"number":64,"title":"4.23.0 next release"}]'
+             {"number":64,"title":"5.0.0 next release"}]'
 
 start_test "a suffixed milestone title still matches the bare version (#9671)"
 new_stub milestone-prefix
 printf '%s\n' "${MILESTONES}" > "${STUB_DIR}/milestones.out"
-run_resolve_milestone 4.23.0
+run_resolve_milestone 5.0.0
 assert_status 0 $?
-assert_contains "${STUB_DIR}/out.log" '64 4.23.0 next release'
+assert_contains "${STUB_DIR}/out.log" '64 5.0.0 next release'
+
+start_test "a shorter milestone that shares a prefix is not swept in"
+new_stub milestone-shared-prefix
+printf '%s\n' "${MILESTONES}" > "${STUB_DIR}/milestones.out"
+run_resolve_milestone 5.0
+assert_status 0 $?
+assert_contains "${STUB_DIR}/out.log" '18 5.0 beginner-friendly'
+assert_absent "${STUB_DIR}/out.log" '5.0.0 next release'
 
 #-----------------------------------------------------------------------------
 start_test "an exact title wins over a longer one that also starts with it"
 new_stub milestone-exact
-printf '%s\n' '[{"number":64,"title":"4.23.0 next release"},{"number":70,"title":"4.23.0"}]' \
+printf '%s\n' '[{"number":64,"title":"5.0.0 next release"},{"number":70,"title":"5.0.0"}]' \
   > "${STUB_DIR}/milestones.out"
-run_resolve_milestone 4.23.0
+run_resolve_milestone 5.0.0
 assert_status 0 $?
-assert_contains "${STUB_DIR}/out.log" '70 4.23.0'
+assert_contains "${STUB_DIR}/out.log" '70 5.0.0'
 
 #-----------------------------------------------------------------------------
 start_test "a version that matches no milestone fails and says what is open"
@@ -242,14 +235,14 @@ printf '%s\n' "${MILESTONES}" > "${STUB_DIR}/milestones.out"
 run_resolve_milestone 4.99.0
 assert_status 1 $?
 assert_contains "${STUB_DIR}/out.log" '::error::No open milestone matches'
-assert_contains "${STUB_DIR}/out.log" '4.23.0 next release'
+assert_contains "${STUB_DIR}/out.log" '5.0.0 next release'
 
 #-----------------------------------------------------------------------------
 start_test "a version that matches several milestones is refused, not guessed"
 new_stub milestone-ambiguous
-printf '%s\n' '[{"number":64,"title":"4.23.0 next release"},{"number":71,"title":"4.23.0 stretch goals"}]' \
+printf '%s\n' '[{"number":64,"title":"5.0.0 next release"},{"number":71,"title":"5.0.0 stretch goals"}]' \
   > "${STUB_DIR}/milestones.out"
-run_resolve_milestone 4.23.0
+run_resolve_milestone 5.0.0
 assert_status 1 $?
 assert_contains "${STUB_DIR}/out.log" 'matches several open milestones'
 
@@ -257,7 +250,7 @@ assert_contains "${STUB_DIR}/out.log" 'matches several open milestones'
 start_test "a near miss on the version does not match"
 new_stub milestone-nearmiss
 printf '%s\n' "${MILESTONES}" > "${STUB_DIR}/milestones.out"
-run_resolve_milestone 4.2
+run_resolve_milestone 5.0.1
 assert_status 1 $?
 assert_contains "${STUB_DIR}/out.log" '::error::No open milestone matches'
 
@@ -265,7 +258,7 @@ assert_contains "${STUB_DIR}/out.log" '::error::No open milestone matches'
 start_test "a failed milestone read is loud"
 new_stub milestone-fails
 touch "${STUB_DIR}/milestones.fail"
-run_resolve_milestone 4.23.0
+run_resolve_milestone 5.0.0
 assert_status 1 $?
 assert_contains "${STUB_DIR}/out.log" '::error::Could not read the open milestones'
 
