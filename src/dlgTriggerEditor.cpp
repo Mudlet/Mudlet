@@ -10210,7 +10210,7 @@ namespace {
 bool hasEmptyBugImprint(const TAction* node)
 {
     return node && node->isFolder() && !node->isActive() && !node->isTemporary() && node->getScript().isEmpty() && node->getCommandButtonUp().isEmpty() && node->getCommandButtonDown().isEmpty()
-           && !node->mIsPushDownButton && node->mPackageName.isEmpty();
+           && !node->isPushDownButton() && node->mPackageName.isEmpty();
 }
 
 bool nameMatches(const QString& actual, const QString& expected)
