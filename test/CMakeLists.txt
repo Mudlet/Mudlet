@@ -50,6 +50,13 @@ foreach(test_name ${UNIT_TESTS})
     )
 endforeach()
 
+# Its focus traversal cases need an active window, which an X server with no
+# window manager never gives them, so a plain `xvfb-run ctest` used to report two
+# failures that meant nothing and cost the activation timeout twice (#9575). The
+# offscreen platform synthesises activation, and is already how the Linux CI job
+# runs the whole suite. APPEND so the sanitizer setting above survives.
+set_property(TEST TKeySequenceEditTest APPEND PROPERTY ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 # DiscordTest checks the Lua API permission gating contract by scanning the source
 target_compile_definitions(DiscordTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 

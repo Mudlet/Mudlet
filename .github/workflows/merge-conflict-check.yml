@@ -1,0 +1,54 @@
+# A pull request that conflicts with its base gets no build checks at all:
+# GitHub cannot create the merge ref that `pull_request` workflows are built
+# from, so those workflows never dispatch and the pull request reads as green
+# with nothing red anywhere on it (#9619). This runs from the base branch
+# instead, where the merge state is always readable, and publishes it as a
+# commit status on the pull request head so an unmergeable one has a single
+# unambiguous red check.
+#
+# For that check to block merging rather than only inform, add the
+# `no merge conflicts` status to the required status checks in the branch
+# protection rules for `development`. That is a repository setting and cannot be
+# done from here.
+name: Merge conflict check
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+  # A pull request that was clean becomes conflicting when the base moves under
+  # it, and that produces no pull request event at all, so every open pull
+  # request is re-checked whenever the base branch advances.
+  push:
+    branches: [development]
+
+permissions:
+  contents: read
+  pull-requests: read
+  statuses: write
+
+concurrency:
+  group: merge-conflict-check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  report-merge-state:
+    name: report merge state
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Mudlet' }}
+
+    steps:
+    # `pull_request_target` checks out the base branch, so the script being run
+    # is the reviewed one and never comes from the pull request under test
+    - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+
+    # The verdict is the commit status, not this job: a conflicted pull request
+    # should not also paint the base branch red on the push runs
+    - name: Report merge state on the pull request head
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO: ${{ github.repository }}
+        BASE_REF: ${{ github.event.pull_request.base.ref || github.ref_name }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: .github/scripts/report-merge-state.sh

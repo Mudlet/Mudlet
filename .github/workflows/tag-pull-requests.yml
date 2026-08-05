@@ -5,13 +5,17 @@ on:
 
 permissions:
   contents: read
+  issues: read
 
 jobs:
   add-milestone:
     runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Mudlet' }}
 
     steps:
     - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
 
     - name: Get next milestone
       id: next-milestone-string
@@ -20,30 +24,56 @@ jobs:
         cmd: yq eval '.milestones.next-milestone' '.github/repo-metadata.yml'
 
     - name: 'Convert milestone to Github #'
-      id: next-milestone-number
+      env:
+        # authenticated so this does not share the per-IP anonymous rate limit
+        # with every other job on the runner's address
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO: ${{ github.repository }}
+        NEXT_MILESTONE: ${{ steps.next-milestone-string.outputs.result }}
       run: |
-        MILESTONE_NUMBER=$(curl --silent --request GET                \
-          --url https://api.github.com/repos/Mudlet/Mudlet/milestones \
-          -H "Accept: application/vnd.github.v3+json" |               \
-          jq '.[] | select(.title == "${{ steps.next-milestone-string.outputs.result }}").number')
+        set -euo pipefail
 
-        echo "MILESTONE_NUMBER=$MILESTONE_NUMBER" >> "$GITHUB_ENV"
+        # Milestone titles carry a suffix in practice - "4.23.0 next release" for
+        # the bare "4.23.0" in repo-metadata.yml - so an exact-title match found
+        # nothing and left every pull request unassigned without failing (#9671).
+        # Match the version on its own or as the leading word of the title, and
+        # refuse to guess when that is ambiguous.
+        MILESTONES=$(gh api "repos/${REPO}/milestones?state=open&per_page=100")
+        MATCHES=$(jq -c --arg wanted "$NEXT_MILESTONE" \
+          '[.[] | select(.title == $wanted or (.title | startswith($wanted + " ")))]' <<< "$MILESTONES")
+
+        case "$(jq 'length' <<< "$MATCHES")" in
+          0)
+            echo "::error::No open milestone matches '${NEXT_MILESTONE}' from .github/repo-metadata.yml. Open milestones: $(jq -r '[.[].title] | join(", ")' <<< "$MILESTONES")"
+            exit 1
+            ;;
+          1) ;;
+          *)
+            echo "::error::'${NEXT_MILESTONE}' matches several open milestones, so it is not clear which one to use: $(jq -r '[.[].title] | join(", ")' <<< "$MATCHES")"
+            exit 1
+            ;;
+        esac
+
+        echo "Milestone: $(jq -r '.[0].title' <<< "$MATCHES")"
+        echo "MILESTONE_NUMBER=$(jq -r '.[0].number' <<< "$MATCHES")" >> "$GITHUB_ENV"
 
     - name: Assign PR to milestone
       env:
-        TOKEN: ${{ secrets.GH_PAT_UPDATE_PULL_REQUESTS }}
+        GH_TOKEN: ${{ secrets.GH_PAT_UPDATE_PULL_REQUESTS }}
+        REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
       run: |
-        # Fetch pull request details
-        PR_DETAILS=$(curl -s --request GET \
-          -H "Accept: application/vnd.github.v3+json"      \
-          --url ${{ github.event.pull_request.issue_url }} \
-          --header "authorization: token $TOKEN")
+        set -euo pipefail
 
-        # Check if the pull request has a milestone already
-        if [ $(echo "$PR_DETAILS" | jq '.milestone == null') == "true" ]; then
-            curl -s --request PATCH \
-              -H "Accept: application/vnd.github.v3+json"      \
-              --url ${{ github.event.pull_request.issue_url }} \
-              --header "authorization: token $TOKEN"           \
-              --data '{"milestone": '"$MILESTONE_NUMBER"'}'
+        if [ -z "${GH_TOKEN}" ]; then
+          echo "::error::GH_PAT_UPDATE_PULL_REQUESTS is not available, so the milestone cannot be set"
+          exit 1
         fi
+
+        # Whoever set a milestone by hand meant it, so only fill in an empty one
+        if [ -n "$(gh api "repos/${REPO}/issues/${PR_NUMBER}" --jq '.milestone.number // empty')" ]; then
+          echo "Pull request already has a milestone, leaving it as it is"
+          exit 0
+        fi
+
+        gh api --method PATCH "repos/${REPO}/issues/${PR_NUMBER}" -F "milestone=${MILESTONE_NUMBER}" --silent
