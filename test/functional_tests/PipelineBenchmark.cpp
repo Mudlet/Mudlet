@@ -271,8 +271,6 @@ private:
         return n;
     }
 
-    // loopbackTest() writes NUL bytes up to two past the data end, so the corpus
-    // is over-reserved in initTestCase().
     double feedCorpusBestPass(Host* host, int passes)
     {
         double best = std::numeric_limits<double>::max();
@@ -333,9 +331,6 @@ private slots:
         initializeQRCResources();
         mCorpus = generateCorpus(kCorpusLines, mCorpusLines);
         mCorpusBytes = mCorpus.size();
-        // loopbackTest() writes NUL bytes past the data end; reserve slack so that
-        // stays within the allocation.
-        mCorpus.reserve(mCorpus.size() + 16);
         // An invariant, emitted here so it is present regardless of which bench
         // slots run: the compare script rejects an ASan-vs-release comparison.
         emitMetric("build_asan", static_cast<qint64>(BENCH_BUILD_ASAN));
@@ -408,7 +403,6 @@ private slots:
         QVERIFY(sentinel->setScript(qsl("benchSentinelFired = true")));
         QVERIFY(sentinel->state());
         QByteArray probe{"__bench_sentinel__\r\n"};
-        probe.reserve(probe.size() + 16);
         host->mTelnet.loopbackTest(probe);
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(benchSentinelFired)")), "sentinel trigger did not fire - the trigger engine is not seeing pipeline data");
 

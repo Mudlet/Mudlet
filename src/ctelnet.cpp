@@ -5050,17 +5050,11 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (3 of 7) - investigate switching from using `char[]` to `std::array<char>`
     char out_buffer[BUFFER_SIZE + 10];
 
-    in_buffer[amount + 1] = '\0';
-
-    if (amount == -1) {
+    if (amount == -1 || amount == 0) {
         --mDecompressionRecursionDepth;
         return;
     }
-
-    if (amount == 0) {
-        --mDecompressionRecursionDepth;
-        return;
-    }
+    in_buffer[amount] = '\0';
 
     std::string cleandata;
     // Pre-allocate for worst case: decompressed data can be much larger than input

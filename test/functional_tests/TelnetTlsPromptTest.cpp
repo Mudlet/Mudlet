@@ -112,10 +112,6 @@ private slots:
         data.append(tlsPort);
         data.append(TN_IAC);
         data.append(TN_SE);
-        // processSocketData() writes a NUL at in_buffer[size + 1], so give the
-        // backing buffer a little slack before handing it its data pointer.
-        data.reserve(data.size() + 16);
-
         host->mTelnet.loopbackTest(data);
 
         // The signal is emitted synchronously inside loopbackTest(), so it has
