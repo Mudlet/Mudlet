@@ -344,9 +344,8 @@ describe("setDiscordDetail", function()
     if not readyForDiscord() then
       return
     end
-    -- What reaches Discord is fine; it is only the getter that mangles this,
-    -- which the pending spec at the end of this file covers. Reading it back
-    -- here would be the thing that misbehaves, so this one stops at the wire.
+    -- Only what reaches Discord is asserted on here; reading the same text back
+    -- is the other half, covered by the percent sequence specs below.
     local activity = activityFrom(function() setDiscordDetail("Level %d Mage") end,
                                   function(seen) return seen.details ~= nil end)
     assert.equals("Level %d Mage", activity.details)
@@ -491,6 +490,68 @@ describe("setDiscordLargeIcon and setDiscordSmallIcon", function()
     assert.is_nil(ok)
     assert.is_true(contains(message, "text of length 1 not allowed by Discord"))
     assert.equals("unchanged", getDiscordSmallIconText())
+  end)
+end)
+
+describe("presence text containing percent sequences", function()
+  -- The getters used to hand the stored text to lua_pushfstring() as its format
+  -- string, so every '%' in it was read as a printf specifier: "Level %d Mage"
+  -- came back with a garbage number where the %d was, and a "%s" dereferenced a
+  -- pointer that had never been passed. Presence text can arrive from the game
+  -- server over GMCP, so a status line with a stray percent sign in it was all
+  -- it took. All six getters are covered below rather than a sample of them,
+  -- so a seventh added the old way would be caught here too.
+  it("reports a detail text containing %d unchanged", function()
+    if not readyForDiscord() then
+      return
+    end
+    assert.is_true(setDiscordDetail("Level %d Mage"))
+    assert.equals("Level %d Mage", getDiscordDetail())
+  end)
+
+  it("reports a state text containing %s unchanged", function()
+    if not readyForDiscord() then
+      return
+    end
+    assert.is_true(setDiscordState("Wielding %s in the left hand"))
+    assert.equals("Wielding %s in the left hand", getDiscordState())
+  end)
+
+  it("reports an icon tooltip containing percent signs unchanged", function()
+    if not readyForDiscord() then
+      return
+    end
+    -- A doubled "%%" is the sequence the format-string path did not garble but
+    -- silently halved, and a bare "% " one it left alone - a caller could not
+    -- have escaped its way around either.
+    assert.is_true(setDiscordLargeIconText("100%% health, 50% mana"))
+    assert.equals("100%% health, 50% mana", getDiscordLargeIconText())
+  end)
+
+  it("reports a detail text ending in a percent sign unchanged", function()
+    if not readyForDiscord() then
+      return
+    end
+    -- The worst shape of the old bug rather than another spelling of the first
+    -- spec: on a trailing '%' the format-string path stepped one byte past the
+    -- terminator and scanned on, which ASan reports as a heap buffer overflow.
+    assert.is_true(setDiscordDetail("mana at 50%"))
+    assert.equals("mana at 50%", getDiscordDetail())
+  end)
+
+  it("reports the icon keys and the small icon tooltip unchanged", function()
+    if not readyForDiscord() then
+      return
+    end
+    -- The remaining three of the six getters. Icon keys come back lower-cased
+    -- because that is what Discord's asset names are, which is the only change
+    -- to them anyone should see.
+    assert.is_true(setDiscordLargeIcon("Level %d Mage"))
+    assert.equals("level %d mage", getDiscordLargeIcon())
+    assert.is_true(setDiscordSmallIcon("Shield %s"))
+    assert.equals("shield %s", getDiscordSmallIcon())
+    assert.is_true(setDiscordSmallIconText("100%% shielded, 50% rested"))
+    assert.equals("100%% shielded, 50% rested", getDiscordSmallIconText())
   end)
 end)
 
@@ -751,14 +812,6 @@ describe("setDiscordApplicationID", function()
 end)
 
 describe("known Discord API defects", function()
-  it("returns a detail text containing a percent sequence unchanged", function()
-    pending("getDiscordDetail() and the other five Discord getters pass the stored text to "
-            .. "lua_pushfstring() as its format string, so a detail of 'Level %d Mage' comes back "
-            .. "with a garbage number in place of the %d and a '%s' would dereference a pointer "
-            .. "that was never passed - fix TLuaInterpreterDiscord.cpp to push the string as data, "
-            .. "then unpend this")
-  end)
-
   it("truncates an overlong detail text on a character boundary", function()
     pending("localDiscordPresence cuts the text at 127 bytes without regard for UTF-8, so 64 "
             .. "two-byte characters reach Discord as 63 characters plus half of one - the frame is "

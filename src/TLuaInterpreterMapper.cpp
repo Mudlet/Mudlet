@@ -951,6 +951,22 @@ int TLuaInterpreter::closeMapWidget(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapWidgetGeometry
+int TLuaInterpreter::getMapWidgetGeometry(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+
+    if (auto geometry = host.mapWidgetGeometry()) {
+        lua_pushnumber(L, geometry->x());
+        lua_pushnumber(L, geometry->y());
+        lua_pushnumber(L, geometry->width());
+        lua_pushnumber(L, geometry->height());
+        return 4;
+    }
+
+    return warnArgumentValue(L, __func__, "no floating/dockable type map window found");
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#connectExitStub
 int TLuaInterpreter::connectExitStub(lua_State* L)
 {
