@@ -342,8 +342,8 @@ private:
         return out;
     }
 
-    // processSocketData() writes a NUL at in_buffer[size + 1], so the backing
-    // buffer needs a little slack past the data it is handed.
+    // processSocketData() terminates the data it is handed with a NUL at
+    // in_buffer[size], so the backing buffer needs a byte of slack past it.
     void feed(Host* host, QByteArray& data)
     {
         data.reserve(data.size() + 16);
