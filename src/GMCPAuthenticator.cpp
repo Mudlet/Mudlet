@@ -626,17 +626,14 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
     QPointer<CredentialManager> credentialManager = new CredentialManager();
     const auto attemptGeneration = mAuthAttemptGeneration;
     // Capture the per-connection facts this recovery needs before awaiting the keychain: a
-    // Char.Login.Default arriving while the read is in flight - a server re-offering sign-in on this
-    // connection, or the next connection - resets mConn, and comparing against a cleared hash would
-    // mistake another instance's freshly rotated token for a dead one.
+    // Char.Login.Default arriving while the read is in flight resets mConn, and the callback would then
+    // have no hash to recognise the rejected token by and no account or provider to keep a resume hint
+    // from - silently downgrading the drop below into discarding the whole entry.
     const auto sentTokenHash = mConn.sentReconnectTokenHash;
     const auto retriedRotatedToken = mConn.retriedRotatedToken;
     const auto reconnectAccount = mConn.reconnectAccount;
     const auto accountProvider = mConn.accountProvider;
-    // Latch the rejection now, synchronously, rather than when the read returns: whichever
-    // Char.Login.Default comes next must not replay the token that was just rejected - Char.Login 2
-    // forbids replaying a token rejected on the same connection - and the store rewrite below has not
-    // necessarily landed by then.
+    // Latch synchronously rather than when the read returns; see mReconnectRejected's declaration.
     mReconnectRejected = true;
     credentialManager->retrievePassword(
             mpHost->getName(),
@@ -649,9 +646,8 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
                     return;
                 }
                 // A newer sign-in attempt began while the read was in flight; it owns the connection now, so
-                // this recovery must not send anything or reconnect. The stored entry still has to be put
-                // right, though, so the decision below - rotated by another instance, or genuinely dead - is
-                // made either way, and only the parts that drive the connection are skipped.
+                // this recovery must not send anything or reconnect. It may still rewrite the stored entry,
+                // but only on positive evidence that the rejected token is the one stored - see the drop below.
                 const bool superseded = (attemptGeneration != mAuthAttemptGeneration);
                 // A read failure (locked/denied/timed-out keychain) is not "no token": log it so a dropped
                 // token that was actually unreadable can be told apart from a genuinely dead one. The recovery
@@ -660,8 +656,6 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
                     qWarning().noquote() << "GMCP Char.Login - could not read the stored sign-in while recovering a rejected token:" << errorMessage;
                 }
 
-                // Whether this read positively saw the token this connection sent still stored. A superseded
-                // recovery may only rewrite the entry on that evidence - see the drop below.
                 bool rejectedTokenStillStored = false;
 
                 // Shared-store rotation check: if the stored token no longer hashes to what this connection
@@ -705,8 +699,9 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
                                 sendReconnect(account, std::move(token));
                                 return;
                             }
-                            // Both branches above return, so reaching here means the stored token still
-                            // hashes to the one this connection sent: a genuinely dead token, not a rotation.
+                            // Both branches above return, so reaching here means the stored token is not a
+                            // rotation. That only counts as evidence the rejected token is still stored when
+                            // this connection recorded what it sent; with no hash there is nothing to match.
                             rejectedTokenStillStored = !sentTokenHash.isEmpty();
                         }
                         // Catch-all: scrub the parsed token on every path that did not move it into
@@ -729,6 +724,12 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
                 // if that attempt never completes, the next connection's rejection runs this recovery again
                 // un-superseded and drops it then.
                 if (superseded && !rejectedTokenStillStored) {
+                    // Leaving the rejected token stored means re-arming the latch. The Char.Login.Default
+                    // that superseded this recovery already consumed it in attemptReconnect(), so without
+                    // this the *next* Char.Login.Default would be free to replay a token the server has
+                    // already rejected - the very thing this whole path exists to prevent. Costs at most one
+                    // extra resume on the connection after that.
+                    mReconnectRejected = true;
                     return;
                 }
                 // The token really is dead. Keep the account+provider resume hint (dropping only the token) so
