@@ -22,6 +22,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TDiscordModeTest.cpp
     MainConsoleSelectionTest.cpp
     EnableDisableByNameTest.cpp
+    UnitDeferredDeleteTest.cpp
     ColorTriggerFilterChildTest.cpp
     GMCPCharLoginTest.cpp
     InsertTextCapTest.cpp
