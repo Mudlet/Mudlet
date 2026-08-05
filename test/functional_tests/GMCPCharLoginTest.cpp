@@ -530,6 +530,41 @@ private slots:
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
     }
 
+    void testRotationReplayClearsTheRejectionLatch()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        const QString tokenJson = qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"token-A\"}");
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), tokenJson));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+        QCOMPARE(sent.value(qsl("token")).toString(), qsl("token-A"));
+
+        // Another instance rotates the token, so our replay of token-A is rejected and the client replays
+        // the fresh token-B rather than discarding it.
+        const QString rotatedJson = qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"token-B\"}");
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), rotatedJson));
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the rotated token");
+        QCOMPARE(sent.value(qsl("token")).toString(), qsl("token-B"));
+
+        // Replaying a rotated token is an ordinary sign-in, not a recovery from a dead one, so the
+        // rejection latch must have been released again: a following Char.Login.Default may replay the
+        // stored token. Were the latch left set, this would come back as the token-less resume form and
+        // the player would face a browser sign-in despite holding a good token.
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "the rejection latch leaked past the rotation replay");
+        QCOMPARE(sent.value(qsl("token")).toString(), qsl("token-B"));
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Credentials")), 0);
+    }
+
     void testCorruptStoredEntryFallsThroughToHandoff()
     {
         Host* host = connectAndNegotiate();
@@ -660,14 +695,18 @@ private slots:
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
     }
 
-    // NOTE: the stale-callback (mAuthAttemptGeneration) guard in readStoredSignIn/retryOrDropRejectedToken
-    // - which drops a reconnect-token keychain read whose connection was superseded by a newer
-    // Char.Login.Default before the async read resolved - is intentionally NOT covered here. It is not
-    // deterministically testable with the current harness: in test/portable mode CredentialManager reads
-    // credentials synchronously and inline (see CredentialManager::retrievePassword), so a read always
-    // completes before any superseding Char.Login.Default can arrive, and the guarded race never occurs.
-    // Exercising it would require an injectable, genuinely-asynchronous credential manager. Documented
-    // rather than covered by a test that would pass without ever reaching the guard.
+    // NOTE: the superseded-callback (mAuthAttemptGeneration) path in readStoredSignIn and
+    // retryOrDropRejectedToken - taken when a newer Char.Login.Default arrives before the reconnect-token
+    // keychain read resolves - is intentionally NOT covered here. It is not deterministically testable
+    // with the current harness: in test/portable mode CredentialManager reads credentials synchronously
+    // and inline (see CredentialManager::retrievePassword), so a read always completes before any
+    // superseding Char.Login.Default can arrive, and the race never occurs. Exercising it would require an
+    // injectable, genuinely-asynchronous credential manager.
+    //
+    // Worth the seam if anyone revisits this: in readStoredSignIn the path is a bare early return, but in
+    // retryOrDropRejectedToken it decides whether to rewrite the stored entry and whether to re-arm
+    // mReconnectRejected. Getting either wrong loses a player's freshly saved token or lets a rejected one
+    // be replayed, and neither failure is reachable by hand.
 
     // ---- Char.Login.Result --------------------------------------------------
 

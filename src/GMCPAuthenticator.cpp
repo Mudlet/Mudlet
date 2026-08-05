@@ -625,91 +625,144 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
     QPointer<Host> safeHost = mpHost;
     QPointer<CredentialManager> credentialManager = new CredentialManager();
     const auto attemptGeneration = mAuthAttemptGeneration;
-    credentialManager->retrievePassword(mpHost->getName(), qsl("reconnect"), [this, safeHost, credentialManager, attemptGeneration](bool success, QString value, const QString& errorMessage) {
-        if (credentialManager) {
-            credentialManager->deleteLater();
-        }
-        if (!safeHost) {
-            return;
-        }
-        if (attemptGeneration != mAuthAttemptGeneration) {
-            return;
-        }
-        // A read failure (locked/denied/timed-out keychain) is not "no token": log it so a dropped
-        // token that was actually unreadable can be told apart from a genuinely dead one. The recovery
-        // below still proceeds - a fresh sign-in is the safe outcome either way.
-        if (!success) {
-            qWarning().noquote() << "GMCP Char.Login - could not read the stored sign-in while recovering a rejected token:" << errorMessage;
-        }
+    // Capture the per-connection facts this recovery needs before awaiting the keychain: a
+    // Char.Login.Default arriving while the read is in flight resets mConn, and the callback would then
+    // have no hash to recognise the rejected token by and no account or provider to keep a resume hint
+    // from - silently downgrading the drop below into discarding the whole entry.
+    const auto sentTokenHash = mConn.sentReconnectTokenHash;
+    const auto retriedRotatedToken = mConn.retriedRotatedToken;
+    const auto reconnectAccount = mConn.reconnectAccount;
+    const auto accountProvider = mConn.accountProvider;
+    // Latch synchronously rather than when the read returns; see mReconnectRejected's declaration.
+    mReconnectRejected = true;
+    credentialManager->retrievePassword(
+            mpHost->getName(),
+            qsl("reconnect"),
+            [this, safeHost, credentialManager, attemptGeneration, sentTokenHash, retriedRotatedToken, reconnectAccount, accountProvider](bool success, QString value, const QString& errorMessage) {
+                if (credentialManager) {
+                    credentialManager->deleteLater();
+                }
+                if (!safeHost) {
+                    return;
+                }
+                // A newer sign-in attempt began while the read was in flight; it owns the connection now, so
+                // this recovery must not send anything or reconnect. It may still rewrite the stored entry,
+                // but only on positive evidence that the rejected token is the one stored - see the drop below.
+                const bool superseded = (attemptGeneration != mAuthAttemptGeneration);
+                // A read failure (locked/denied/timed-out keychain) is not "no token": log it so a dropped
+                // token that was actually unreadable can be told apart from a genuinely dead one. The recovery
+                // below still proceeds - a fresh sign-in is the safe outcome either way.
+                if (!success) {
+                    qWarning().noquote() << "GMCP Char.Login - could not read the stored sign-in while recovering a rejected token:" << errorMessage;
+                }
 
-        // Shared-store rotation check: if the stored token no longer hashes to what this connection
-        // sent, another running instance rotated it (single-use) - replay the fresh one once, rather
-        // than discarding its token. A rejection whose stored token still matches (a genuinely dead
-        // token, or a non-rotation rejection) falls through to drop-and-re-sign-in below.
-        if (!mConn.retriedRotatedToken && success && !value.isEmpty()) {
-            // The stored JSON may hold a bearer token; parse from an owned buffer and scrub every owned
-            // copy - the QByteArray and the QString value (retrievePassword moved it in) - on all paths,
-            // including a corrupt entry that never parses.
-            QByteArray valueBytes = value.toUtf8();
-            const auto doc = QJsonDocument::fromJson(valueBytes);
-            SecureStringUtils::secureByteArrayClear(valueBytes);
-            SecureStringUtils::secureStringClear(value);
-            if (doc.isObject()) {
-                const auto account = doc.object()[qsl("account")].toString();
-                auto token = doc.object()[qsl("token")].toString();
-                if (!account.isEmpty() && !token.isEmpty()) {
-                    QByteArray tokenBytes = token.toUtf8();
-                    const QByteArray storedHash = QCryptographicHash::hash(tokenBytes, QCryptographicHash::Sha256);
-                    SecureStringUtils::secureByteArrayClear(tokenBytes);
-                    if (!mConn.sentReconnectTokenHash.isEmpty() && storedHash != mConn.sentReconnectTokenHash) {
+                bool rejectedTokenStillStored = false;
+
+                // Shared-store rotation check: if the stored token no longer hashes to what this connection
+                // sent, another running instance rotated it (single-use) - replay the fresh one once, rather
+                // than discarding its token. A rejection whose stored token still matches (a genuinely dead
+                // token, or a non-rotation rejection) falls through to drop-and-re-sign-in below.
+                if (!retriedRotatedToken && success && !value.isEmpty()) {
+                    // The stored JSON may hold a bearer token; parse from an owned buffer and scrub every owned
+                    // copy - the QByteArray and the QString value (retrievePassword moved it in) - on all paths,
+                    // including a corrupt entry that never parses.
+                    QByteArray valueBytes = value.toUtf8();
+                    const auto doc = QJsonDocument::fromJson(valueBytes);
+                    SecureStringUtils::secureByteArrayClear(valueBytes);
+                    SecureStringUtils::secureStringClear(value);
+                    if (doc.isObject()) {
+                        const auto account = doc.object()[qsl("account")].toString();
+                        auto token = doc.object()[qsl("token")].toString();
+                        if (!account.isEmpty() && !token.isEmpty()) {
+                            QByteArray tokenBytes = token.toUtf8();
+                            const QByteArray storedHash = QCryptographicHash::hash(tokenBytes, QCryptographicHash::Sha256);
+                            SecureStringUtils::secureByteArrayClear(tokenBytes);
+                            if (!sentTokenHash.isEmpty() && storedHash != sentTokenHash) {
+                                if (superseded) {
+                                    // The newer attempt reads the store for itself, so leave the other
+                                    // instance's fresh token in place and let it decide.
+                                    SecureStringUtils::secureStringClear(token);
+                                    return;
+                                }
 #if defined(DEBUG_GMCP_AUTHENTICATION)
-                        qDebug() << "GMCP reconnect token was rotated by another instance; replaying the fresh token";
+                                qDebug() << "GMCP reconnect token was rotated by another instance; replaying the fresh token";
 #endif
-                        mConn.retriedRotatedToken = true;
-                        mConn.sentReconnectTokenHash = storedHash;
-                        mConn.reconnectingWithToken = true;
-                        mConn.awaitingReconnectResult = true;
-                        mConn.reconnectAccount = account;
-                        sendReconnect(account, std::move(token));
-                        return;
+                                mConn.retriedRotatedToken = true;
+                                mConn.sentReconnectTokenHash = storedHash;
+                                mConn.reconnectingWithToken = true;
+                                mConn.awaitingReconnectResult = true;
+                                mConn.reconnectAccount = account;
+                                // This attempt is replaying a live token rather than recovering from a dead
+                                // one, so release the latch: the next Char.Login.Default is an ordinary
+                                // sign-in again and may use a stored token.
+                                mReconnectRejected = false;
+                                sendReconnect(account, std::move(token));
+                                return;
+                            }
+                            // Both branches above return, so reaching here means the stored token is not a
+                            // rotation. That only counts as evidence the rejected token is still stored when
+                            // this connection recorded what it sent; with no hash there is nothing to match.
+                            rejectedTokenStillStored = !sentTokenHash.isEmpty();
+                        }
+                        // Catch-all: scrub the parsed token on every path that did not move it into
+                        // sendReconnect - including a stored entry with a token but an empty account - so a
+                        // bearer secret is never dropped un-zeroed. Mirrors readStoredSignIn.
+                        SecureStringUtils::secureStringClear(token);
                     }
                 }
-                // Catch-all: scrub the parsed token on every path that did not move it into
-                // sendReconnect - including a stored entry with a token but an empty account - so a
-                // bearer secret is never dropped un-zeroed. Mirrors readStoredSignIn.
-                SecureStringUtils::secureStringClear(token);
-            }
-        }
-        // Scrub the retrieved store copy on the fall-through too: when the rotation block was skipped
-        // (a second rejection, or an empty read) value may still hold token JSON. Idempotent when the
-        // block above already cleared it.
-        SecureStringUtils::secureStringClear(value);
+                // Scrub the retrieved store copy on the fall-through too: when the rotation block was skipped
+                // (a second rejection, or an empty read) value may still hold token JSON. Idempotent when the
+                // block above already cleared it.
+                SecureStringUtils::secureStringClear(value);
 
-        // The token really is dead. Keep the account+provider resume hint (dropping only the token) so
-        // the next attempt restarts the same provider's browser sign-in with no menu, then reconnect:
-        // servers commonly drop the connection right after rejecting a reconnect, so the fresh sign-in
-        // needs a fresh, stable connection. mReconnectRejected makes that next connection read the entry
-        // without replaying a possibly not-yet-rewritten token.
-        dropTokenKeepResumeHint();
-        mReconnectRejected = true;
-        //: Shown when a saved password-less sign-in is no longer accepted; Mudlet reconnects so the user can sign in again.
-        mpHost->postMessage(tr("[ INFO ]  - Your saved sign-in has expired; reconnecting so you can sign in again."));
-        QTimer::singleShot(0ms, mpHost, [safeHost]() {
-            if (safeHost) {
-                safeHost->mTelnet.reconnect();
-            }
-        });
-    });
+                // A superseded recovery rewrites the entry only when this read positively saw the rejected
+                // token still stored. Without that evidence - a failed read, an entry that never parsed, or a
+                // second rejection after a rotation replay - the newer attempt may already have saved its own
+                // fresh token (its Char.Login.Token can land while this read is in flight), and a token-less
+                // rewrite here would erase it and force another browser sign-in. Leaving the entry alone is
+                // self-correcting instead: the latch keeps the newer attempt from replaying a dead token, and
+                // if that attempt never completes, the next connection's rejection runs this recovery again
+                // un-superseded and drops it then.
+                if (superseded && !rejectedTokenStillStored) {
+                    // Leaving the rejected token stored means re-arming the latch. The Char.Login.Default
+                    // that superseded this recovery already consumed it in attemptReconnect(), so without
+                    // this the *next* Char.Login.Default would be free to replay a token the server has
+                    // already rejected - the very thing this whole path exists to prevent. Costs at most one
+                    // extra resume on the connection after that.
+                    mReconnectRejected = true;
+                    return;
+                }
+                // The token really is dead. Keep the account+provider resume hint (dropping only the token) so
+                // the next attempt restarts the same provider's browser sign-in with no menu. The captured
+                // account and provider are used rather than mConn's, which a newer Char.Login.Default may have
+                // cleared - that would silently downgrade this to discarding the whole entry.
+                dropTokenKeepResumeHint(reconnectAccount, accountProvider);
+                if (superseded) {
+                    // A newer attempt is already driving the sign-in; it consumes the latch set above and
+                    // resumes (or hands off) without the dead token, so there is nothing left to do here.
+                    return;
+                }
+                // Reconnect: servers commonly drop the connection right after rejecting a reconnect, so the
+                // fresh sign-in needs a fresh, stable connection. The latch set above makes that next
+                // connection read the entry without replaying a possibly not-yet-rewritten token.
+                //: Shown when a saved password-less sign-in is no longer accepted; Mudlet reconnects so the user can sign in again.
+                mpHost->postMessage(tr("[ INFO ]  - Your saved sign-in has expired; reconnecting so you can sign in again."));
+                QTimer::singleShot(0ms, mpHost, [safeHost]() {
+                    if (safeHost) {
+                        safeHost->mTelnet.reconnect();
+                    }
+                });
+            });
 }
 
-void GMCPAuthenticator::dropTokenKeepResumeHint()
+void GMCPAuthenticator::dropTokenKeepResumeHint(const QString& account, const QString& provider)
 {
     // Without a remembered provider there is nothing to resume, so remove the whole entry.
-    if (mConn.reconnectAccount.isEmpty() || mConn.accountProvider.isEmpty()) {
+    if (account.isEmpty() || provider.isEmpty()) {
         discardReconnectToken();
         return;
     }
-    storeResumeHint(mConn.reconnectAccount, mConn.accountProvider);
+    storeResumeHint(account, provider);
 }
 
 // controller for GMCP authentication
