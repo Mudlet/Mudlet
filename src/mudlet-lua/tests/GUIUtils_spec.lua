@@ -1497,11 +1497,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end)
 
       it("Should keep the gauge hidden when show is passed as false", function()
-        -- BUG: setGaugeWindow does `show = show or true`, so an explicit false
-        -- is turned into true and the gauge is shown anyway
-        pending("setGaugeWindow cannot be told not to show the gauge - see the Wave 3d report")
         setGaugeWindow(userWindow, gaugeName, 0, 0, false)
         assert.is_false(windowVisible(gaugeName .. "_back"))
+        assert.is_false(windowVisible(gaugeName .. "_front"))
+        assert.is_false(windowVisible(gaugeName .. "_text"))
+      end)
+
+      it("Should still show the gauge when show is left out", function()
+        hideGauge(gaugeName)
+        setGaugeWindow(userWindow, gaugeName, 0, 0)
+        assert.is_true(windowVisible(gaugeName .. "_back"))
       end)
     end)
   end)
