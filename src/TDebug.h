@@ -130,6 +130,12 @@ private:
     // Whether the last non-continuation message got through the filters, so
     // that its continuation fragments can follow it rather than being orphaned:
     inline static bool smLastMessagePassed = true;
+    // A message whose head passed every filter but the text one, kept in case a
+    // continuation fragment of the same message matches instead:
+    inline static bool smHeadHeld = false;
+    inline static QString smHeldHead;
+    inline static QColor smHeldHeadForeground;
+    inline static QColor smHeldHeadBackground;
 
     QString msg;
     QColor fgColor;
@@ -159,6 +165,7 @@ public:
 
     static void setHostEnabled(const Host*, const bool);
     static bool hostEnabled(const Host* pHost) { return !smDisabledHosts.contains(pHost); }
+    static void enableAllHosts() { smDisabledHosts.clear(); }
     // Profile identifier ("[A] ") and name for each currently active profile,
     // for the filter bar's profile menu:
     static QList<QPair<const Host*, QString>> activeProfiles();
@@ -170,6 +177,8 @@ public:
     static void setPaused(const bool);
     static bool paused() { return smPaused; }
     static int pausedMessageCount() { return smPausedQueue.count(); }
+    static int pausedDroppedCount() { return smPausedDroppedCount; }
+    static int pausedMessageLimit() { return csmPausedQueueLimit; }
     static void discardPausedMessages();
 
     // Used to flush/print out the accumulated message:
@@ -200,7 +209,9 @@ private:
     static QString displayNewTable();
     static QString deduceProfileTag(QString&, Host*);
     bool passesFilters(const Host*);
+    QString displayLine(Host*);
     static QString composeLine(const QString& profileTag, const QString& text);
+    static void emitLine(const QString& line, const QColor& foreground, const QColor& background);
     static void drainPausedQueue();
 };
 

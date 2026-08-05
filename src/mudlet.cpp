@@ -3150,11 +3150,12 @@ void mudlet::readLateSettings(const QSettings& settings)
     if (settings.contains(qsl("debugConsole/categories"))) {
         // Only categories Mudlet still knows about, so that a category retired
         // in a later version cannot leave a stale bit set:
-        const auto stored = TDebug::Categories(static_cast<TDebug::Category>(settings.value(qsl("debugConsole/categories")).toUInt()));
+        const auto stored = TDebug::Categories::fromInt(settings.value(qsl("debugConsole/categories")).toInt());
         TDebug::setEnabledCategories(stored & TDebug::csmAllCategories);
     }
-    TDebug::setTextFilter(settings.value(qsl("debugConsole/textFilter"), QString()).toString(),
-                          settings.value(qsl("debugConsole/textFilterCaseSensitive"), false).toBool() ? Qt::CaseSensitive : Qt::CaseInsensitive);
+    // The text filter is deliberately NOT restored: which kinds of message are
+    // worth seeing is a lasting preference, but the string someone was hunting
+    // for last month would just make the console look broken today.
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -3334,9 +3335,7 @@ void mudlet::writeSettings()
     settings.setValue(qsl("enableMuteAPI"), mMuteAPI);
     settings.setValue(qsl("enableMuteGame"), mMuteGame);
     settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
-    settings.setValue(qsl("debugConsole/categories"), static_cast<uint>(TDebug::enabledCategories().toInt()));
-    settings.setValue(qsl("debugConsole/textFilter"), TDebug::textFilter());
-    settings.setValue(qsl("debugConsole/textFilterCaseSensitive"), TDebug::textFilterCaseSensitivity() == Qt::CaseSensitive);
+    settings.setValue(qsl("debugConsole/categories"), TDebug::enabledCategories().toInt());
 #if !defined(Q_OS_MACOS)
     if (!settings.contains(qsl("highDpiScaleFactorRoundingPolicy"))) {
         settings.setValue(qsl("highDpiScaleFactorRoundingPolicy"), qsl("PassThrough"));
@@ -4757,6 +4756,11 @@ void mudlet::attachDebugArea(const QString& hostname)
     smpDebugArea->setWindowTitle(tr("Central Debug Console"));
     smpDebugArea->setWindowIcon(QIcon(qsl(":/icons/mudlet_debug.png")));
 
+    // Pausing is a momentary thing, and the state is global while the toolbar
+    // showing it is not - a console left paused when its profile closed would
+    // otherwise come back silently dead:
+    TDebug::setPaused(false);
+    TDebug::discardPausedMessages();
     smpDebugFilterBar = new TDebugFilterBar(smpDebugArea);
     smpDebugArea->addToolBar(Qt::BottomToolBarArea, smpDebugFilterBar);
 

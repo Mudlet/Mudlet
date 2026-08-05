@@ -92,8 +92,8 @@ static QString categoryName(const TDebug::Category category)
         //: Central Debug Console filter: mapper callbacks
         return TDebugFilterBar::tr("Mapper");
     case TDebug::Category::Other:
-        //: Central Debug Console filter: anything not covered by the other entries
-        return TDebugFilterBar::tr("Everything else");
+        //: Central Debug Console filter: messages not belonging to any of the other groups, such as a script changing a setting
+        return TDebugFilterBar::tr("Other messages");
     }
     return QString();
 }
@@ -107,12 +107,16 @@ TDebugFilterBar::TDebugFilterBar(QWidget* parent)
     setMovable(false);
     setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
 
+    //: Button in the Central Debug Console that stops new messages appearing
     mpActionPause = addAction(style()->standardIcon(QStyle::SP_MediaPause), tr("Pause"));
     mpActionPause->setCheckable(true);
+    //: Tooltip for the Central Debug Console's Pause button
     mpActionPause->setToolTip(utils::richText(tr("Hold back new messages so the console stays still. They are shown when you resume.")));
     connect(mpActionPause, &QAction::toggled, this, &TDebugFilterBar::slot_togglePause);
 
+    //: Button in the Central Debug Console that empties it
     auto* pActionClear = addAction(style()->standardIcon(QStyle::SP_DialogResetButton), tr("Clear"));
+    //: Tooltip for the Central Debug Console's Clear button
     pActionClear->setToolTip(utils::richText(tr("Empty the console.")));
     connect(pActionClear, &QAction::triggered, this, &TDebugFilterBar::slot_clear);
 
@@ -135,9 +139,11 @@ void TDebugFilterBar::addCategoryMenu()
 {
     auto* pButton = new QToolButton(this);
     pButton->setIcon(QIcon(qsl(":/icons/view-filter.png")));
+    //: Menu button in the Central Debug Console for picking which kinds of message it shows
     pButton->setText(tr("Show"));
     pButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     pButton->setPopupMode(QToolButton::InstantPopup);
+    //: Tooltip for the Central Debug Console's category menu
     pButton->setToolTip(utils::richText(tr("Choose which kinds of message the console shows from now on.")));
 
     mpCategoryMenu = new QMenu(pButton);
@@ -182,8 +188,10 @@ void TDebugFilterBar::applyCategoryFromMenu()
 void TDebugFilterBar::addProfileMenu()
 {
     mpProfileButton = new QToolButton(this);
+    //: Menu button in the Central Debug Console for picking which profiles it shows messages from
     mpProfileButton->setText(tr("Profiles"));
     mpProfileButton->setPopupMode(QToolButton::InstantPopup);
+    //: Tooltip for the Central Debug Console's profile menu
     mpProfileButton->setToolTip(utils::richText(tr("Choose which profiles the console shows messages from.")));
 
     mpProfileMenu = new QMenu(mpProfileButton);
@@ -200,8 +208,15 @@ void TDebugFilterBar::refreshProfiles()
         return;
     }
 
-    mpProfileMenu->clear();
     const auto profiles = TDebug::activeProfiles();
+    if (profiles.count() <= 1) {
+        // The menu is about to be hidden, so anything muted through it would be
+        // stuck that way - and with a single profile there is nothing to tell
+        // apart in the first place:
+        TDebug::enableAllHosts();
+    }
+
+    mpProfileMenu->clear();
     for (const auto& profile : profiles) {
         auto* pAction = mpProfileMenu->addAction(profile.second);
         pAction->setCheckable(true);
@@ -228,9 +243,11 @@ void TDebugFilterBar::addTextFilter()
     connect(mpTextFilter, &QLineEdit::textChanged, this, &TDebugFilterBar::slot_textFilterChanged);
     addWidget(mpTextFilter);
 
+    //: Very short label on the Central Debug Console's case-sensitivity toggle, next to its text filter box. Keep it to a couple of characters.
     auto* pActionCaseSensitive = addAction(tr("Aa"));
     pActionCaseSensitive->setCheckable(true);
     pActionCaseSensitive->setChecked(TDebug::textFilterCaseSensitivity() == Qt::CaseSensitive);
+    //: Tooltip for the Central Debug Console's case-sensitivity toggle
     pActionCaseSensitive->setToolTip(utils::richText(tr("Match the text filter's upper and lower case exactly.")));
     connect(pActionCaseSensitive, &QAction::toggled, this, &TDebugFilterBar::slot_caseSensitivityChanged);
 }
@@ -239,6 +256,7 @@ void TDebugFilterBar::slot_togglePause(const bool paused)
 {
     TDebug::setPaused(paused);
     mpActionPause->setIcon(style()->standardIcon(paused ? QStyle::SP_MediaPlay : QStyle::SP_MediaPause));
+    //: Button in the Central Debug Console that lets held-back messages through again
     mpActionPause->setText(paused ? tr("Resume") : tr("Pause"));
     mpActionPausedLabel->setVisible(paused);
     if (paused) {
@@ -252,7 +270,14 @@ void TDebugFilterBar::slot_togglePause(const bool paused)
 void TDebugFilterBar::slot_updatePausedCount()
 {
     //: Shown in the Central Debug Console's toolbar while it is paused
-    mpPausedLabel->setText(tr("%n message(s) held", "", TDebug::pausedMessageCount()));
+    QString text = tr("%n message(s) held", "", TDebug::pausedMessageCount());
+    if (const int dropped = TDebug::pausedDroppedCount(); dropped) {
+        // Once the cap is reached the count stops climbing, so say what is
+        // happening rather than letting it look stuck:
+        //: Appended to the "N messages held" label once the Central Debug Console has been paused long enough to start discarding the oldest ones
+        text.append(tr(", %n dropped", "", dropped));
+    }
+    mpPausedLabel->setText(text);
 }
 
 void TDebugFilterBar::slot_clear()

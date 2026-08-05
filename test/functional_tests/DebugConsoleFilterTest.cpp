@@ -160,6 +160,114 @@ private slots:
         QVERIFY2(!debugBufferContains(qsl("<the captured text>")), "Continuation fragment survived although its header was filtered out");
     }
 
+    // The text worth searching for usually sits in the fragment, not the head -
+    // the game line in "new line arrived:", the trigger name in "ERROR:". A
+    // fragment that matches has to bring its head back with it, or filtering on
+    // the obvious thing hides the message it belongs to.
+    void test_matchingFragmentBringsBackItsHeader()
+    {
+        auto* host = startDebuggingProfile();
+
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        TDebug::setTextFilter(qsl("wandering merchant"), Qt::CaseInsensitive);
+
+        TDebug(Qt::darkGreen, Qt::black, TDebug::Category::GameLine) << "new line arrived:" >> host;
+        TDebug(Qt::lightGray, Qt::black, TDebug::Category::GameLine) << TDebug::csmContinue << "You see a wandering merchant here.\n" >> host;
+
+        const QString buffer = joinedDebugBuffer();
+        QVERIFY2(buffer.contains(qsl("You see a wandering merchant here.")), "Fragment matching the text filter was dropped");
+        QVERIFY2(buffer.contains(qsl("new line arrived:")), "Fragment matched the text filter but its header was left behind");
+        QVERIFY2(buffer.indexOf(qsl("new line arrived:")) < buffer.indexOf(qsl("wandering merchant")), "Header was printed after the fragment it introduces");
+    }
+
+    // A category the head fails is a real "no" - unlike the text filter, no
+    // fragment can talk its way past it.
+    void test_matchingFragmentCannotDefeatACategoryFilter()
+    {
+        auto* host = startDebuggingProfile();
+
+        TDebug::setEnabledCategories({TDebug::Category::TriggerMatch});
+        TDebug::setTextFilter(qsl("wandering merchant"), Qt::CaseInsensitive);
+
+        TDebug(Qt::darkGreen, Qt::black, TDebug::Category::GameLine) << "new line arrived:" >> host;
+        TDebug(Qt::lightGray, Qt::black, TDebug::Category::GameLine) << TDebug::csmContinue << "You see a wandering merchant here.\n" >> host;
+
+        QVERIFY2(!debugBufferContains(qsl("wandering merchant")), "A fragment matching the text filter got past a disabled category");
+    }
+
+    // Past the cap the OLDEST held messages are discarded and counted, so that
+    // resuming can say how much of the history is missing. Asserted on the
+    // queue rather than the console: replaying a full queue is by definition
+    // enough to overflow the console's own line limit, so what survives in the
+    // buffer afterwards says more about TBuffer::shrinkBuffer() than about the
+    // cap being tested here.
+    void test_pausedQueueDropsTheOldestPastItsCap()
+    {
+        auto* host = startDebuggingProfile();
+
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        TDebug::setPaused(true);
+
+        // Two more than the queue can hold, so exactly the first two go:
+        const int limit = TDebug::pausedMessageLimit();
+        for (int i = 0; i < limit + 2; ++i) {
+            TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << qsl("held message %1\n").arg(i) >> host;
+        }
+
+        QCOMPARE(TDebug::pausedMessageCount(), limit);
+        QCOMPARE(TDebug::pausedDroppedCount(), 2);
+
+        TDebug::setPaused(false);
+
+        QCOMPARE(TDebug::pausedMessageCount(), 0);
+        QVERIFY2(!TDebug::pausedDroppedCount(), "The dropped count survived the replay that was supposed to report it");
+        // The newest is at the tail of the replay, so it outlives any trimming:
+        QVERIFY2(debugBufferContains(qsl("held message %1").arg(limit + 1)), "The newest held message did not survive the replay");
+    }
+
+    // A message held back keeps the time it arrived, so a replayed burst does
+    // not look as though it all happened the moment the user hit Resume.
+    void test_replayedMessageKeepsItsArrivalTime()
+    {
+        auto* host = startDebuggingProfile();
+
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        TDebug::setPaused(true);
+        TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "timed message\n" >> host;
+        const QString arrivalTime = QTime::currentTime().toString(mudlet::smTimeStampFormat);
+
+        QTest::qWait(1200);
+        TDebug::setPaused(false);
+
+        auto* console = mudlet::smpDebugConsole.data();
+        int lineOfMessage = -1;
+        for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
+            if (console->buffer.line(i).contains(qsl("timed message"))) {
+                lineOfMessage = i;
+                break;
+            }
+        }
+        QVERIFY2(lineOfMessage >= 0, "Held-back message never arrived on resume");
+        // Same second, rather than the same millisecond, to stay clear of the
+        // wait's own jitter:
+        QCOMPARE(console->buffer.timeBuffer.at(lineOfMessage).left(8), arrivalTime.left(8));
+    }
+
+    // Closing a profile must not leave its pointer behind in the filter state -
+    // a later profile allocated at the same address would start life silenced.
+    void test_closingAProfileForgetsItsFilterSetting()
+    {
+        auto* host = startDebuggingProfile();
+
+        TDebug::setHostEnabled(host, false);
+        QVERIFY2(!TDebug::hostEnabled(host), "Profile was not muted to begin with");
+
+        // Mirrors what Host's destructor does - it has no pointer to pass:
+        TDebug::removeHost(nullptr, host->getName());
+
+        QVERIFY2(TDebug::hostEnabled(host), "A closed profile's muted setting outlived it");
+    }
+
     // Filtering by profile keeps another profile's chatter out without
     // silencing messages that belong to no profile at all.
     void test_disabledProfileIsSilencedButSystemMessagesAreNot()
@@ -244,6 +352,9 @@ private slots:
         TDebug::discardPausedMessages();
         TDebug::setTextFilter(QString(), Qt::CaseInsensitive);
         TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        // A profile muted by a test that failed part way through would
+        // otherwise silence whatever runs next:
+        TDebug::enableAllHosts();
         mudlet::smDebugMode = false;
 
         delete mpServer;

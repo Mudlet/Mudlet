@@ -32,7 +32,7 @@ class QMenu;
 class QTimer;
 class QToolButton;
 
-// The controls along the top of the Central Debug Console. Everything it
+// The controls along the bottom of the Central Debug Console. Everything it
 // changes is static filter state on TDebug, which is applied to messages as
 // they arrive - so switching a filter never disturbs what is already on screen.
 class TDebugFilterBar : public QToolBar
