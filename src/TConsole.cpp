@@ -742,6 +742,12 @@ void TConsole::resizeEvent(QResizeEvent* event)
         mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
     } else {
         mpMainFrame->resize(x, y);
+        // The debug console's top bar holds its search box, so unlike the other
+        // types that reach here it is not zero-height - without this the display
+        // overruns its parent and the newest lines are clipped off the bottom:
+        if (!mpTopToolBar->isHidden()) {
+            y -= mpTopToolBar->height();
+        }
         mpMainDisplay->resize(x, y);
     }
 
@@ -812,9 +818,17 @@ void TConsole::resizeEvent(QResizeEvent* event)
         // Deferred because the panes have not been laid out at this point, so
         // asking them how wide they are here just returns the old size:
         QTimer::singleShot(0ms, this, [this]() {
-            if (mUpperPane) {
-                setWrapAt(qMax(40, mUpperPane->getColumnCount()));
+            // A hidden console reports no width at all - leave the wrap alone
+            // rather than clamping it to something narrow that would then stick:
+            const int columns = mUpperPane->getColumnCount();
+            if (columns <= 0) {
+                return;
             }
+            // getColumnCount() rounds up where the renderer truncates, and the
+            // timestamp gutter is drawn outside the wrapped text, so both have
+            // to come off or the tail of every full-width line is cut:
+            const int gutter = showTimeStamps() ? mudlet::smTimeStampFormat.size() : 0;
+            setWrapAt(qMax(40, columns - gutter - 1));
         });
     }
 
@@ -2208,8 +2222,12 @@ void TConsole::slot_searchBufferUp()
     // The search term entry box is one widget that does not pass a mouse press
     // event up to the main TConsole and thus does not cause the focus to shift
     // to the profile's tab when in multi-view mode - so add a call to make that
-    // happen:
-    mudlet::self()->activateProfile(mpHost);
+    // happen. Only for a profile's own console: the Central Debug Console is
+    // shared, and its mpHost is whichever profile happened to be open when it
+    // was created, so searching it would drag the user to an unrelated tab:
+    if (mType == MainConsole) {
+        mudlet::self()->activateProfile(mpHost);
+    }
 
     if (mSearchQuery != mpBufferSearchBox->text()) {
         mSearchQuery = mpBufferSearchBox->text();

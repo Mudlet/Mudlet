@@ -1709,15 +1709,22 @@ void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
     }
 
     // Turning the line you are already looking at into a filter beats typing it
-    // into the box, so the selection drives most of this menu:
-    const QString selection = getSelectedText(QChar::Space).simplified();
+    // into the box, so the selection drives most of this menu. establishSelectedText()
+    // is what actually decides whether there IS a selection - mPA and mPB keep
+    // their old values after one is dropped, so without it the menu offers text
+    // the user can no longer see highlighted:
+    QString selection = establishSelectedText() ? getSelectedText(QChar::Space).simplified() : QString();
+    // The profile marking is added after the filters have run, so a selection
+    // that starts at the beginning of a line would otherwise contain a prefix
+    // that no message can ever match:
+    static const QRegularExpression profileTag(qsl("^\\[(?:[A-Z]|\\?|\\x{2731})\\]\\s*"));
+    selection.remove(profileTag);
+
     QMenu menu(this);
 
     auto* pActionCopy = menu.addAction(tr("Copy"));
     pActionCopy->setEnabled(!selection.isEmpty());
-    connect(pActionCopy, &QAction::triggered, this, [this]() {
-        slot_copySelectionToClipboard();
-    });
+    connect(pActionCopy, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboard);
 
     if (!selection.isEmpty()) {
         //: Central Debug Console right-click action, %1 is the text the user selected
@@ -1743,8 +1750,13 @@ void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
     menu.addSeparator();
     //: Central Debug Console right-click action that empties it
     connect(menu.addAction(tr("Clear console")), &QAction::triggered, this, [this]() {
-        mpConsole->clear();
-        TDebug::discardPausedMessages();
+        if (mudlet::smpDebugFilterBar) {
+            // Goes through the toolbar so its "N messages held" label keeps up:
+            mudlet::smpDebugFilterBar->slot_clear();
+        } else {
+            mpConsole->clear();
+            TDebug::discardPausedMessages();
+        }
     });
 
     menu.exec(event->globalPos());

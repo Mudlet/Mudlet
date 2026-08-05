@@ -4763,7 +4763,6 @@ void mudlet::attachDebugArea(const QString& hostname)
     TDebug::discardPausedMessages();
     smpDebugFilterBar = new TDebugFilterBar(smpDebugArea);
     smpDebugArea->addToolBar(Qt::BottomToolBarArea, smpDebugFilterBar);
-    TDebug::announceFilters();
 
     auto consoleCloser = new TConsoleMonitor(smpDebugArea);
     smpDebugArea->installEventFilter(consoleCloser);

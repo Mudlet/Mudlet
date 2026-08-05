@@ -4175,7 +4175,7 @@ void TLuaInterpreter::setMatches(lua_State* L)
 }
 
 // No documentation available in wiki - internal function
-bool TLuaInterpreter::call_luafunction(void* pT)
+bool TLuaInterpreter::call_luafunction(void* pT, const QString& itemName)
 {
     QElapsedTimer executionTimer;
 
@@ -4200,7 +4200,7 @@ bool TLuaInterpreter::call_luafunction(void* pT)
                 logError(e, _n, _n2);
                 if (TDebug::wants(TDebug::Category::Error)) {
                     auto& host = getHostFromLua(L);
-                    TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "LUA: ERROR running anonymous Lua function ERROR:" << e.c_str() >> &host;
+                    TDebug(Qt::white, Qt::red, TDebug::Category::Error, itemName) << "LUA: ERROR running anonymous Lua function ERROR:" << e.c_str() >> &host;
                 }
             }
         } else {
@@ -4250,7 +4250,7 @@ void TLuaInterpreter::delete_luafunction(const QString& name)
 // No documentation available in wiki - internal function
 // returns true if function ran without errors
 // as well as the boolean return value from the function
-std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
+std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT, const QString& itemName)
 {
     QElapsedTimer executionTimer;
 
@@ -4278,7 +4278,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
                 logError(e, _n, _n2);
                 if (TDebug::wants(TDebug::Category::Error)) {
                     auto& host = getHostFromLua(L);
-                    TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "LUA: ERROR running anonymous Lua function ERROR:" << e.c_str() >> &host;
+                    TDebug(Qt::white, Qt::red, TDebug::Category::Error, itemName) << "LUA: ERROR running anonymous Lua function ERROR:" << e.c_str() >> &host;
                 }
             }
         } else {
@@ -4897,8 +4897,8 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
 
     if (TDebug::wants(TDebug::Category::Error) && pE.mArgumentList.size() > LUA_FUNCTION_MAX_ARGS) {
         auto& host = getHostFromLua(L);
-        TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "LUA: ERROR running script " << function << " (" << function << ")\nError: more than " << LUA_FUNCTION_MAX_ARGS
-                                                            << " arguments passed to Lua function, exceeding Lua's limit. Trimmed arguments to " << LUA_FUNCTION_MAX_ARGS << " only.\n"
+        TDebug(Qt::white, Qt::red, TDebug::Category::Error, function) << "LUA: ERROR running script " << function << " (" << function << ")\nError: more than " << LUA_FUNCTION_MAX_ARGS
+                                                                      << " arguments passed to Lua function, exceeding Lua's limit. Trimmed arguments to " << LUA_FUNCTION_MAX_ARGS << " only.\n"
                 >> &host;
     }
 
@@ -4911,7 +4911,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         logError(err, name, function);
         if (TDebug::wants(TDebug::Category::Error)) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "LUA: ERROR running script " << function << " (" << function << ")\nError: " << err.c_str() << "\n" >> &host;
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error, function) << "LUA: ERROR running script " << function << " (" << function << ")\nError: " << err.c_str() << "\n" >> &host;
         }
     }
 

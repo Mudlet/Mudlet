@@ -22,11 +22,8 @@
 
 #include "TDebug.h"
 
-#include <QComboBox>
 #include <QMap>
 #include <QToolBar>
-
-#include <functional>
 
 class QAction;
 class QLabel;
@@ -34,31 +31,8 @@ class QLineEdit;
 class QMenu;
 class QTimer;
 class QToolButton;
+class TRefreshingComboBox;
 
-// A combo box that rebuilds its list as it is opened, so it always offers the
-// triggers, aliases and the rest that the profile has right now rather than
-// whatever it had when the console was first shown.
-class TRefreshingComboBox : public QComboBox
-{
-public:
-    explicit TRefreshingComboBox(QWidget* parent = nullptr)
-    : QComboBox(parent)
-    {
-    }
-    void showPopup() override
-    {
-        if (mRefresh) {
-            mRefresh();
-        }
-        QComboBox::showPopup();
-    }
-
-    std::function<void()> mRefresh;
-};
-
-// The controls along the bottom of the Central Debug Console. Everything it
-// changes is static filter state on TDebug, which is applied to messages as
-// they arrive - so switching a filter never disturbs what is already on screen.
 class TDebugFilterBar : public QToolBar
 {
     Q_OBJECT
@@ -72,9 +46,13 @@ public:
     // the console's own right-click menu:
     void refreshTextFilter();
 
+public slots:
+    // Public so the console's right-click menu can empty it through the bar,
+    // which keeps the "N messages held" label in step:
+    void slot_clear();
+
 private slots:
     void slot_togglePause(const bool);
-    void slot_clear();
     void slot_textFilterChanged(const QString&);
     void slot_caseSensitivityChanged(const bool);
     void slot_updatePausedCount();
@@ -87,7 +65,8 @@ private:
     void applyCategoryFromMenu();
     void refreshCategoryLabel();
     void refreshItemList();
-    static QString csmAllItems();
+    void applyTypedItemFilter();
+    static QString allItemsLabel();
 
     QAction* mpActionPause = nullptr;
     QMenu* mpCategoryMenu = nullptr;

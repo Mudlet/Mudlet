@@ -187,6 +187,7 @@ public:
     // Says up front how much is being held back, so an empty-looking console is
     // never mistaken for a broken one:
     static void announceFilters();
+    static int hiddenCategoryCount();
 
     static void setPaused(const bool);
     static bool paused() { return smPaused; }

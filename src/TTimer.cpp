@@ -240,7 +240,7 @@ void TTimer::execute()
 
     if (isTemporary()) {
         if (mScript.isEmpty()) {
-            mpHost->mLuaInterpreter.call_luafunction(this);
+            mpHost->mLuaInterpreter.call_luafunction(this, mName);
         } else {
             mpHost->mLuaInterpreter.compileAndExecuteScript(mScript);
         }

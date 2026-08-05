@@ -271,11 +271,25 @@ private slots:
         QVERIFY2(!debugBufferContains(qsl("a message about no item at all")), "A message belonging to no item got past the item filter");
     }
 
+    // The completer offers names case-insensitively, so the filter has to match
+    // that way too or picking what was offered silences the console.
+    void test_itemFilterIgnoresCase()
+    {
+        auto* host = startDebuggingProfile();
+
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        TDebug::setItemFilter(qsl("combat trigger"));
+
+        TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch, qsl("Combat Trigger")) << "differently cased\n" >> host;
+
+        QVERIFY2(debugBufferContains(qsl("differently cased")), "The item filter matched case-sensitively");
+    }
+
     // ...but a console that shows literally nothing while a profile starts and
     // stops is indistinguishable from a broken one.
     void test_itemFilterStillShowsSystemMessages()
     {
-        auto* host = startDebuggingProfile();
+        startDebuggingProfile();
 
         TDebug::setEnabledCategories(TDebug::csmAllCategories);
         TDebug::setItemFilter(qsl("Combat trigger"));

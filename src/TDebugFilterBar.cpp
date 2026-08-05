@@ -36,6 +36,7 @@
 #include "mudlet.h"
 
 #include <QAction>
+#include <QComboBox>
 #include <QCompleter>
 #include <QLabel>
 #include <QLineEdit>
@@ -45,6 +46,31 @@
 #include <QToolButton>
 
 using namespace std::chrono_literals;
+
+// A combo box that rebuilds its list as it is opened, so it always offers the
+// triggers, aliases and the rest that the profile has right now rather than
+// whatever it had when the console was first shown. Lives here rather than in
+// the header so that including TDebugFilterBar.h does not drag QComboBox in.
+class TRefreshingComboBox : public QComboBox
+{
+public:
+    explicit TRefreshingComboBox(std::function<void()> refresh, QWidget* parent = nullptr)
+    : QComboBox(parent)
+    , mRefresh(std::move(refresh))
+    {
+    }
+
+    void showPopup() override
+    {
+        if (mRefresh) {
+            mRefresh();
+        }
+        QComboBox::showPopup();
+    }
+
+private:
+    std::function<void()> mRefresh;
+};
 
 // Kept in the order they should appear in the menu, which is roughly "most
 // people want this" first:
@@ -62,20 +88,6 @@ static const QList<TDebug::Category> csmCategoryOrder = {TDebug::Category::Error
                                                          TDebug::Category::Map,
                                                          TDebug::Category::System,
                                                          TDebug::Category::Other};
-
-// The four unit lookup tables hold different item types with no common base -
-// Tree<T> is itself a template - so this one local helper stands in for four
-// identical loops. It exists to skip temporary items, which are named after
-// their id and would bury the real names under a list of numbers.
-template <typename T>
-static void collectNamedItems(const QMultiMap<QString, T*>& lookupTable, QStringList& names)
-{
-    for (auto it = lookupTable.cbegin(); it != lookupTable.cend(); ++it) {
-        if (it.value() && !it.value()->isTemporary()) {
-            names << it.key();
-        }
-    }
-}
 
 static QString categoryName(const TDebug::Category category)
 {
@@ -213,12 +225,9 @@ void TDebugFilterBar::refreshCategoryLabel()
     if (!mpCategoryButton) {
         return;
     }
-    int hidden = 0;
-    for (const auto category : csmCategoryOrder) {
-        if (!TDebug::categoryEnabled(category)) {
-            ++hidden;
-        }
-    }
+    // Counted by TDebug so this label and the notice it prints into the console
+    // can never disagree:
+    const int hidden = TDebug::hiddenCategoryCount();
 
     if (hidden) {
         //: Central Debug Console category menu button, %n is how many kinds of message are currently hidden
@@ -291,7 +300,11 @@ void TDebugFilterBar::refreshProfiles()
 // profile actually has - nobody knows their items by ID.
 void TDebugFilterBar::addItemFilter()
 {
-    mpItemFilter = new TRefreshingComboBox(this);
+    mpItemFilter = new TRefreshingComboBox(
+            [this]() {
+                refreshItemList();
+            },
+            this);
     mpItemFilter->setEditable(true);
     mpItemFilter->setInsertPolicy(QComboBox::NoInsert);
     mpItemFilter->setMinimumWidth(180);
@@ -301,20 +314,50 @@ void TDebugFilterBar::addItemFilter()
     mpItemFilter->completer()->setCaseSensitivity(Qt::CaseInsensitive);
     //: Tooltip for the Central Debug Console's item filter, which narrows it to one trigger, alias, timer and so on
     mpItemFilter->setToolTip(utils::richText(tr("Show only messages about one trigger, alias, timer, key, button or script. Type to search by name.")));
-    mpItemFilter->mRefresh = [this]() {
-        refreshItemList();
-    };
     refreshItemList();
 
-    connect(mpItemFilter, &QComboBox::currentTextChanged, this, [this](const QString& text) {
-        // The first entry means "no item filter", and so does an empty box:
-        TDebug::setItemFilter(text == csmAllItems() ? QString() : text);
+    // Deliberately NOT currentTextChanged: that fires per keystroke, so typing
+    // "Combat" would filter on "C", then "Co", then "Com"... each matching
+    // nothing and blanking the console while the user is still typing.
+    connect(mpItemFilter, &QComboBox::activated, this, [this](const int index) {
+        // Index 0 is the "all items" entry rather than a real name - compared by
+        // position so that an item genuinely called "All items" still works:
+        TDebug::setItemFilter(index == 0 ? QString() : mpItemFilter->itemText(index));
+    });
+    connect(mpItemFilter->lineEdit(), &QLineEdit::editingFinished, this, [this]() {
+        applyTypedItemFilter();
     });
     addWidget(mpItemFilter);
 }
 
+// Takes what was typed into the item box once the user has finished typing it.
+// A name that matches nothing would silence the console with no explanation, so
+// say so rather than leaving them staring at an empty window.
+void TDebugFilterBar::applyTypedItemFilter()
+{
+    const QString typed = mpItemFilter->currentText().trimmed();
+    if (typed.isEmpty() || typed == allItemsLabel()) {
+        TDebug::setItemFilter(QString());
+        return;
+    }
+
+    // findText matches the same way the box's own completer does, so what the
+    // completer offered is what gets applied:
+    const int index = mpItemFilter->findText(typed, Qt::MatchFixedString);
+    if (index > 0) {
+        TDebug::setItemFilter(mpItemFilter->itemText(index));
+        return;
+    }
+
+    TDebug::setItemFilter(typed);
+    if (mudlet::smpDebugConsole) {
+        //: Shown in the Central Debug Console when the name typed into its item filter matches nothing the profile has. %1 is what was typed.
+        mudlet::smpDebugConsole->print(tr("[*] Nothing called \"%1\" was found in this profile, so only its system messages will show.\n").arg(typed), Qt::white, Qt::darkRed);
+    }
+}
+
 // The first entry of the item filter, meaning "do not filter by item".
-/* static */ QString TDebugFilterBar::csmAllItems()
+/* static */ QString TDebugFilterBar::allItemsLabel()
 {
     //: First entry of the Central Debug Console's item filter, meaning no item filter is applied
     return tr("All items");
@@ -326,33 +369,59 @@ void TDebugFilterBar::refreshItemList()
         return;
     }
 
-    const QString current = mpItemFilter->currentText();
     QStringList names;
+    // Only the profile in the foreground: the console is shared by all of them,
+    // so an item belonging to another profile has to be typed rather than picked.
     if (auto* pHost = mudlet::self()->getActiveHost(); pHost) {
         // The lookup tables are keyed by name and flat, so there is no tree to
-        // walk. Temporary items are in there too and are named after their id,
-        // so a profile using tempTrigger() would otherwise bury the real names
-        // under a list of numbers:
-        collectNamedItems(pHost->getTriggerUnit()->mLookupTable, names);
-        collectNamedItems(pHost->getAliasUnit()->mLookupTable, names);
-        collectNamedItems(pHost->getTimerUnit()->mLookupTable, names);
-        collectNamedItems(pHost->getKeyUnit()->mLookupTable, names);
+        // walk. They also hold temporary items, which are named after their id -
+        // a profile using tempTrigger() would bury the real names under a list
+        // of numbers - and groups, which never emit anything of their own.
+        for (auto it = pHost->getTriggerUnit()->mLookupTable.cbegin(); it != pHost->getTriggerUnit()->mLookupTable.cend(); ++it) {
+            if (it.value() && !it.value()->isTemporary() && !it.value()->isFolder()) {
+                names << it.key();
+            }
+        }
+        for (auto it = pHost->getAliasUnit()->mLookupTable.cbegin(); it != pHost->getAliasUnit()->mLookupTable.cend(); ++it) {
+            if (it.value() && !it.value()->isTemporary() && !it.value()->isFolder()) {
+                names << it.key();
+            }
+        }
+        for (auto it = pHost->getTimerUnit()->mLookupTable.cbegin(); it != pHost->getTimerUnit()->mLookupTable.cend(); ++it) {
+            if (it.value() && !it.value()->isTemporary() && !it.value()->isFolder()) {
+                names << it.key();
+            }
+        }
+        for (auto it = pHost->getKeyUnit()->mLookupTable.cbegin(); it != pHost->getKeyUnit()->mLookupTable.cend(); ++it) {
+            if (it.value() && !it.value()->isTemporary() && !it.value()->isFolder()) {
+                names << it.key();
+            }
+        }
         for (auto* pScript : pHost->getScriptUnit()->getScriptList()) {
-            names << pScript->getName();
+            if (pScript && !pScript->isFolder()) {
+                names << pScript->getName();
+            }
         }
         for (auto* pAction : pHost->getActionUnit()->getActionList()) {
-            names << pAction->getName();
+            if (pAction && !pAction->isFolder()) {
+                names << pAction->getName();
+            }
         }
     }
+    // An item with no name at all cannot be told apart from "no item" by the
+    // filter, so there is nothing useful to offer for it:
     names.removeAll(QString());
     names.removeDuplicates();
     names.sort(Qt::CaseInsensitive);
-    names.prepend(csmAllItems());
+    names.prepend(allItemsLabel());
 
+    // Show what the filter actually is, rather than assuming it is unset - the
+    // filter is application-wide and outlives any one toolbar:
+    const QString wanted = TDebug::itemFilter().isEmpty() ? allItemsLabel() : TDebug::itemFilter();
     const QSignalBlocker blocker(mpItemFilter);
     mpItemFilter->clear();
     mpItemFilter->addItems(names);
-    mpItemFilter->setCurrentText(current.isEmpty() ? csmAllItems() : current);
+    mpItemFilter->setCurrentText(wanted);
 }
 
 void TDebugFilterBar::addTextFilter()

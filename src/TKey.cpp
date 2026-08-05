@@ -219,7 +219,7 @@ void TKey::execute()
     }
 
     if (mRegisteredAnonymousLuaFunction) {
-        mpHost->mLuaInterpreter.call_luafunction(this);
+        mpHost->mLuaInterpreter.call_luafunction(this, mName);
         return;
     }
 

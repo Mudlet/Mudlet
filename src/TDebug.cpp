@@ -126,20 +126,32 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
         return;
     }
 
-    const Categories hidden = csmAllCategories & ~smEnabledCategories;
-    if (!hidden) {
-        return;
+    const int hidden = hiddenCategoryCount();
+    if (hidden) {
+        //: Shown in the Central Debug Console when it opens with some kinds of message hidden. %n is how many.
+        debugConsole->print(csmTagSystemMessage % tr("%n kind(s) of message are hidden - use the controls below to change that.\n", "", hidden), Qt::white, Qt::darkBlue);
     }
 
+    if (!smItemFilter.isEmpty()) {
+        // Much more drastic than hiding a category - everything that is not
+        // about this one item is gone, so it needs saying out loud:
+        //: Shown in the Central Debug Console when it opens narrowed to a single trigger, alias, timer and so on. %1 is that item's name.
+        debugConsole->print(csmTagSystemMessage % tr("Showing only messages about \"%1\" - use the controls below to change that.\n").arg(smItemFilter), Qt::white, Qt::darkBlue);
+    }
+}
+
+// How many of the categories are currently switched off. Shared so that the
+// notice above and the toolbar's own label can never disagree.
+/* static */ int TDebug::hiddenCategoryCount()
+{
+    const Categories hidden = csmAllCategories & ~smEnabledCategories;
     int count = 0;
     for (quint32 bit = 1; bit; bit <<= 1) {
         if (hidden.testFlag(static_cast<Category>(bit))) {
             ++count;
         }
     }
-
-    //: Shown in the Central Debug Console when it opens with some kinds of message hidden. %n is how many.
-    debugConsole->print(csmTagSystemMessage % tr("%n kind(s) of message are hidden - use \"Show\" below to change that.\n", "", count), Qt::white, Qt::darkBlue);
+    return count;
 }
 
 // Throws away anything held back while paused - used when the user clears the
@@ -247,9 +259,15 @@ bool TDebug::passesFilters(const Host* pHost)
     if (pHost && smDisabledHosts.contains(pHost)) {
         return false;
     }
-    if (!smItemFilter.isEmpty() && mItemName != smItemFilter && mCategory != Category::System) {
+    // Case-insensitively, to agree with the completer that offered the name in
+    // the first place - typing "combat" after being shown "Combat trigger"
+    // should not silently match nothing:
+    if (!smItemFilter.isEmpty() && mItemName.compare(smItemFilter, Qt::CaseInsensitive) != 0 && mCategory != Category::System) {
         // Focusing on one item still leaves profile starts and ends visible,
-        // so the console does not look dead when nothing is happening:
+        // so the console does not look dead when nothing is happening.
+        // NOTE: this test must stay AHEAD of the text filter below - the
+        // held-head rule lets a fragment re-admit its head on a text match
+        // alone, which is only safe because the head already passed here:
         return false;
     }
     if (!smTextFilter.isEmpty() && !msg.contains(smTextFilter, smTextFilterCaseSensitivity)) {
