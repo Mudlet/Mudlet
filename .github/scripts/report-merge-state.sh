@@ -10,6 +10,9 @@
 #   PR_NUMBER a single pull request to report on; all open ones when unset
 #   DRY_RUN   when non-empty, print the statuses instead of posting them
 #   GH_TOKEN  token for the gh calls
+#
+# MERGE_STATE_MAX_ROUNDS and MERGE_STATE_ROUND_DELAY_SECONDS override the
+# polling shape, which is how the tests keep themselves quick.
 
 set -euo pipefail
 
@@ -22,17 +25,34 @@ readonly STATUS_CONTEXT='no merge conflicts'
 # invalidates the answer for every open pull request at once. So ask more than
 # once, but only about the ones still undecided, to keep a large backlog from
 # multiplying the wait.
-readonly MAX_ROUNDS=5
-readonly ROUND_DELAY_SECONDS=10
+readonly MAX_ROUNDS="${MERGE_STATE_MAX_ROUNDS:-5}"
+readonly ROUND_DELAY_SECONDS="${MERGE_STATE_ROUND_DELAY_SECONDS:-10}"
+
+failures=0
+reported=0
 
 if [ -n "${PR_NUMBER:-}" ]; then
   pull_requests=("${PR_NUMBER}")
 else
-  mapfile -t pull_requests < <(gh api --paginate \
-    "repos/${REPO}/pulls?state=open&base=${BASE_REF}&per_page=100" --jq '.[].number')
+  # Captured before it is split up, because a process substitution swallows the
+  # exit status of what it runs: a failed listing would otherwise look like a
+  # repository with nothing open, report on nothing, and leave every stale
+  # status in place - the false all-clear this workflow exists to prevent.
+  if ! pr_list=$(gh api --paginate \
+      "repos/${REPO}/pulls?state=open&base=${BASE_REF}&per_page=100" --jq '.[].number'); then
+    echo "::error::Could not list the open pull requests against ${BASE_REF}"
+    exit 1
+  fi
+  mapfile -t pull_requests <<< "${pr_list}"
+
+  # Invalidating the cached mergeability lags behind the push webhook that
+  # starts this run, so reading straight away can still return the answer from
+  # before the push - a clean bill of health for the pull request it just broke.
+  sleep "${ROUND_DELAY_SECONDS}"
 fi
 
-if [ "${#pull_requests[@]}" -eq 0 ]; then
+# mapfile over empty input leaves one empty element rather than none
+if [ "${#pull_requests[@]}" -eq 0 ] || [ -z "${pull_requests[0]}" ]; then
   echo "No open pull requests against ${BASE_REF}"
   exit 0
 fi
@@ -44,14 +64,22 @@ for ((round = 1; round <= MAX_ROUNDS; round++)); do
   still_undecided=()
 
   for pr in "${undecided[@]}"; do
-    read -r pr_state mergeable head_sha < <(gh api "repos/${REPO}/pulls/${pr}" \
-      --jq '"\(.state) \(.mergeable) \(.head.sha)"')
+    # One unreadable pull request must not cost the others their refresh, so it
+    # goes back in the queue and only counts as a failure if it never reads
+    if ! details=$(gh api "repos/${REPO}/pulls/${pr}" --jq '"\(.state) \(.mergeable) \(.head.sha)"'); then
+      echo "::warning::Could not read pull request #${pr}, will try again"
+      still_undecided+=("${pr}")
+      continue
+    fi
+
+    read -r pr_state mergeable head_sha <<< "${details}"
     head_sha_of["${pr}"]="${head_sha}"
 
     if [ "${pr_state}" != "open" ]; then
       # A closed pull request never gets a mergeability answer, so waiting for
-      # one would spend every round for nothing. Only PR_NUMBER can reach here,
-      # by the pull request closing between the event and this run.
+      # one would spend every round for nothing. Either path can land here: the
+      # pull request closing between the event and this run, or between the
+      # listing and this read.
       mergeable_of["${pr}"]="${pr_state}"
     elif [ "${mergeable}" = "null" ]; then
       still_undecided+=("${pr}")
@@ -78,6 +106,12 @@ if [ -n "${GITHUB_RUN_ID:-}" ]; then
 fi
 
 for pr in "${pull_requests[@]}"; do
+  if [ -z "${head_sha_of[${pr}]:-}" ]; then
+    echo "::error::Never managed to read pull request #${pr}, so its merge state goes unreported"
+    failures=$((failures + 1))
+    continue
+  fi
+
   case "${mergeable_of[${pr}]:-undecided}" in
     true)
       state=success
@@ -89,12 +123,13 @@ for pr in "${pull_requests[@]}"; do
       ;;
     closed)
       echo "#${pr} is closed, so there is no merge state to report"
+      reported=$((reported + 1))
       continue
       ;;
     *)
-      # Left as pending rather than guessed at, so nothing reads as reviewed
-      # when it has not been. The next push to the pull request or to the base
-      # branch runs this again.
+      # Left pending rather than guessed at, so nothing reads as checked when it
+      # has not been. The next push to the pull request or to the base branch
+      # runs this again.
       state=pending
       description="GitHub has not worked out the merge state yet"
       echo "::warning::Gave up waiting for GitHub to say whether #${pr} merges cleanly into ${BASE_REF}"
@@ -104,13 +139,28 @@ for pr in "${pull_requests[@]}"; do
   echo "#${pr} ${head_sha_of[${pr}]} -> ${state}: ${description}"
 
   if [ -n "${DRY_RUN:-}" ]; then
+    reported=$((reported + 1))
     continue
   fi
 
-  gh api --method POST "repos/${REPO}/statuses/${head_sha_of[${pr}]}" \
-    -f "state=${state}" \
-    -f "context=${STATUS_CONTEXT}" \
-    -f "description=${description}" \
-    -f "target_url=${target_url}" \
-    --silent
+  if gh api --method POST "repos/${REPO}/statuses/${head_sha_of[${pr}]}" \
+      -f "state=${state}" \
+      -f "context=${STATUS_CONTEXT}" \
+      -f "description=${description}" \
+      -f "target_url=${target_url}" \
+      --silent; then
+    reported=$((reported + 1))
+  else
+    echo "::error::Could not post the ${state} status for #${pr}"
+    failures=$((failures + 1))
+  fi
 done
+
+# Reconciling the two counts is what turns any future "quietly did nothing" back
+# into a red job, which is the whole point of this script
+if [ "${reported}" -ne "${#pull_requests[@]}" ] || [ "${failures}" -gt 0 ]; then
+  echo "::error::Reported the merge state of ${reported} of ${#pull_requests[@]} pull requests, with ${failures} failure(s)"
+  exit 1
+fi
+
+echo "Reported the merge state of ${reported} pull request(s)"

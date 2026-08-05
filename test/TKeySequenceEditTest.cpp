@@ -25,6 +25,26 @@
 #include <QVBoxLayout>
 #include <QtTest/QtTest>
 
+static constexpr const char* activationUnavailableMessage = "the window never became active, so focus traversal cannot be exercised - this "
+                                                            "display has no window manager. Run the suite through ctest, or set "
+                                                            "QT_QPA_PLATFORM=offscreen, or start a window manager such as openbox.";
+
+// Shared by the two traversal cases, because QSKIP and QFAIL only work from the
+// test function itself and the two must not drift apart. ctest sets
+// MUDLET_REQUIRE_WINDOW_ACTIVATION because every display it runs against can
+// activate a window, so a skip there would be hiding a regression rather than
+// reporting an environment - the same floor MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK
+// puts under the media tests.
+#define REQUIRE_WINDOW_ACTIVATION(window)                                                                                                                                                              \
+    do {                                                                                                                                                                                               \
+        if (!QTest::qWaitForWindowActive(&(window))) {                                                                                                                                                 \
+            if (qEnvironmentVariableIsSet("MUDLET_REQUIRE_WINDOW_ACTIVATION")) {                                                                                                                       \
+                QFAIL(activationUnavailableMessage);                                                                                                                                                   \
+            }                                                                                                                                                                                          \
+            QSKIP(activationUnavailableMessage);                                                                                                                                                       \
+        }                                                                                                                                                                                              \
+    } while (false)
+
 // Pins the accessibility behaviour that TKeySequenceEdit adds on top of the
 // stock QKeySequenceEdit (#8873). Key events are sent to the inner QLineEdit
 // because that is where keyboard focus lives via the focus proxy.
@@ -33,10 +53,6 @@ class TKeySequenceEditTest : public QObject
     Q_OBJECT
 
     static QLineEdit* innerLineEdit(TKeySequenceEdit& edit) { return edit.findChild<QLineEdit*>(); }
-
-    static constexpr const char* activationUnavailableMessage = "the window never became active, so focus traversal cannot be exercised - "
-                                                                "this display has no window manager. Run the suite through ctest, or set "
-                                                                "QT_QPA_PLATFORM=offscreen, or start a window manager such as openbox.";
 
 private slots:
     void focusIsRoutedToInnerLineEdit()
@@ -174,9 +190,7 @@ private slots:
         layout->addWidget(neighbour);
         layout->addWidget(edit);
         window.show();
-        if (!QTest::qWaitForWindowActive(&window)) {
-            QSKIP(activationUnavailableMessage);
-        }
+        REQUIRE_WINDOW_ACTIVATION(window);
 
         edit->setFocus();
         auto* lineEdit = edit->findChild<QLineEdit*>();
@@ -202,9 +216,7 @@ private slots:
         layout->addWidget(edit);
         layout->addWidget(neighbour);
         window.show();
-        if (!QTest::qWaitForWindowActive(&window)) {
-            QSKIP(activationUnavailableMessage);
-        }
+        REQUIRE_WINDOW_ACTIVATION(window);
 
         edit->setFocus();
         auto* lineEdit = edit->findChild<QLineEdit*>();

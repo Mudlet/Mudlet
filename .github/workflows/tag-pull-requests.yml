@@ -33,29 +33,16 @@ jobs:
       run: |
         set -euo pipefail
 
-        # Milestone titles carry a suffix in practice - "4.23.0 next release" for
-        # the bare "4.23.0" in repo-metadata.yml - so an exact-title match found
-        # nothing and left every pull request unassigned without failing (#9671).
-        # Match the version on its own or as the leading word of the title, and
-        # refuse to guess when that is ambiguous.
-        MILESTONES=$(gh api "repos/${REPO}/milestones?state=open&per_page=100")
-        MATCHES=$(jq -c --arg wanted "$NEXT_MILESTONE" \
-          '[.[] | select(.title == $wanted or (.title | startswith($wanted + " ")))]' <<< "$MILESTONES")
+        # Plain assignment, not a process substitution, so a failure to resolve
+        # the milestone stops the job instead of being read as an empty answer
+        if ! resolved=$(.github/scripts/resolve-milestone.sh); then
+          exit 1
+        fi
 
-        case "$(jq 'length' <<< "$MATCHES")" in
-          0)
-            echo "::error::No open milestone matches '${NEXT_MILESTONE}' from .github/repo-metadata.yml. Open milestones: $(jq -r '[.[].title] | join(", ")' <<< "$MILESTONES")"
-            exit 1
-            ;;
-          1) ;;
-          *)
-            echo "::error::'${NEXT_MILESTONE}' matches several open milestones, so it is not clear which one to use: $(jq -r '[.[].title] | join(", ")' <<< "$MATCHES")"
-            exit 1
-            ;;
-        esac
-
-        echo "Milestone: $(jq -r '.[0].title' <<< "$MATCHES")"
-        echo "MILESTONE_NUMBER=$(jq -r '.[0].number' <<< "$MATCHES")" >> "$GITHUB_ENV"
+        read -r number title <<< "${resolved}"
+        echo "Milestone: ${title}"
+        echo "MILESTONE_NUMBER=${number}" >> "$GITHUB_ENV"
+        echo "MILESTONE_TITLE=${title}" >> "$GITHUB_ENV"
 
     - name: Assign PR to milestone
       env:
@@ -75,10 +62,18 @@ jobs:
           exit 1
         fi
 
-        # Whoever set a milestone by hand meant it, so only fill in an empty one
-        if [ -n "$(gh api "repos/${REPO}/issues/${PR_NUMBER}" --jq '.milestone.number // empty')" ]; then
-          echo "Pull request already has a milestone, leaving it as it is"
+        # Captured rather than tested inline, because a failed read inside the
+        # test would look identical to "has no milestone" and overwrite one that
+        # somebody set on purpose
+        if ! existing=$(gh api "repos/${REPO}/issues/${PR_NUMBER}" --jq '.milestone.number // empty'); then
+          echo "::error::Could not read the current milestone of #${PR_NUMBER}"
+          exit 1
+        fi
+
+        if [ -n "${existing}" ]; then
+          echo "#${PR_NUMBER} is already on milestone ${existing}, leaving it as it is"
           exit 0
         fi
 
         gh api --method PATCH "repos/${REPO}/issues/${PR_NUMBER}" -F "milestone=${MILESTONE_NUMBER}" --silent
+        echo "Assigned #${PR_NUMBER} to milestone ${MILESTONE_TITLE}"

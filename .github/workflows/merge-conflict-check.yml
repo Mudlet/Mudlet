@@ -13,13 +13,33 @@
 name: Merge conflict check
 
 on:
+  # Only pull requests into development. Release pull requests are
+  # development -> main, so their head is a development commit, and checking
+  # them would stamp a status about `main` onto every commit on development -
+  # the same trap dangerjs.yml documents.
   pull_request_target:
-    types: [opened, reopened, synchronize]
+    branches: [development]
+    types: [opened, reopened, synchronize, edited]
   # A pull request that was clean becomes conflicting when the base moves under
   # it, and that produces no pull request event at all, so every open pull
   # request is re-checked whenever the base branch advances.
   push:
     branches: [development]
+  # Safety net: a run that was cancelled, or that gave up before GitHub had
+  # worked out a merge state, leaves a stale or pending status that nothing else
+  # would ever revisit.
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+  # This workflow cannot test itself through the triggers above, because they
+  # all run the copy on the base branch. Same-repository pull requests that
+  # touch the machinery run the copy under review instead, with a token that
+  # can post, so a change to it is exercised before it is merged.
+  pull_request:
+    branches: [development]
+    paths:
+      - .github/workflows/merge-conflict-check.yml
+      - .github/scripts/report-merge-state.sh
 
 permissions:
   contents: read
@@ -27,28 +47,30 @@ permissions:
   statuses: write
 
 concurrency:
-  group: merge-conflict-check-${{ github.event.pull_request.number || github.ref }}
+  group: merge-conflict-check-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   report-merge-state:
     name: report merge state
     runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'Mudlet' }}
+    if: ${{ github.repository_owner == 'Mudlet' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
 
     steps:
     # `pull_request_target` checks out the base branch, so the script being run
-    # is the reviewed one and never comes from the pull request under test
+    # is the reviewed one and never comes from the pull request under test. The
+    # `pull_request` self-test above is the deliberate exception, and the job
+    # condition limits it to branches pushed to this repository.
     - uses: actions/checkout@v7
       with:
         persist-credentials: false
 
     # The verdict is the commit status, not this job: a conflicted pull request
-    # should not also paint the base branch red on the push runs
+    # should not also paint the base branch red on the push and schedule runs
     - name: Report merge state on the pull request head
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         REPO: ${{ github.repository }}
-        BASE_REF: ${{ github.event.pull_request.base.ref || github.ref_name }}
+        BASE_REF: ${{ github.event.pull_request.base.ref || 'development' }}
         PR_NUMBER: ${{ github.event.pull_request.number }}
       run: .github/scripts/report-merge-state.sh
