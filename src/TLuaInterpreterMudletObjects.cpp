@@ -31,6 +31,7 @@
 #include "TLuaInterpreter.h"
 
 #include "EAction.h"
+#include "EventLoopPump.h"
 #include "Host.h"
 #include "TAlias.h"
 #include "TArea.h"
@@ -1549,14 +1550,21 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
     return 1;
 }
 
+// Nothing that spins the event loop should outlive the profile or the
+// application: pumping on past either would keep Lua running against objects
+// that are being torn down.
+static bool shuttingDown(const Host& host)
+{
+    return host.isClosingDown() || (mudlet::self() && mudlet::self()->isGoingDown());
+}
+
 // No documentation available in wiki - internal, test-only function
-// Blocks the calling Lua code inside a nested Qt event loop until the named
-// event is raised (returning the event name followed by its arguments, exactly
-// as an event handler would receive them) or the timeout elapses (returning
-// nil and an error message). Timers, networking and other events keep being
-// processed while blocked, which is what lets busted specs observe asynchronous
-// behaviour without sleeps. Gated behind MUDLET_TEST_MODE so it is inert for
-// normal users.
+// Blocks the calling Lua code until the named event is raised (returning the
+// event name followed by its arguments, exactly as an event handler would
+// receive them) or the timeout elapses (returning nil and an error message).
+// Timers, networking and other events keep being processed while blocked, which
+// is what lets busted specs observe asynchronous behaviour without sleeps.
+// Gated behind MUDLET_TEST_MODE so it is inert for normal users.
 int TLuaInterpreter::waitForEvent(lua_State* L)
 {
     if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
@@ -1598,20 +1606,14 @@ int TLuaInterpreter::waitForEvent(lua_State* L)
         return 2;
     }
 
-    QEventLoop loop;
     TEventWait wait;
     wait.mName = eventName;
-    wait.mpLoop = &loop;
     pLuaInterpreter->mPendingEventWaits.append(&wait);
 
-    QTimer timeoutTimer;
-    timeoutTimer.setSingleShot(true);
-    QObject::connect(&timeoutTimer, &QTimer::timeout, &loop, &QEventLoop::quit);
-    timeoutTimer.start(timeoutMs);
+    EventLoopPump::pumpFor(timeoutMs, [&wait, &host]() {
+        return wait.mCaptured || shuttingDown(host);
+    });
 
-    loop.exec();
-
-    timeoutTimer.stop();
     pLuaInterpreter->mPendingEventWaits.removeAll(&wait);
 
     if (!wait.mCaptured) {
@@ -1642,6 +1644,42 @@ int TLuaInterpreter::waitForEvent(lua_State* L)
     lua_remove(L, argsTableIndex);
     luaL_unref(L, LUA_REGISTRYINDEX, wait.mArgsRef);
     return argCount;
+}
+
+// No documentation available in wiki - internal, test-only function
+// Keeps Mudlet delivering events for the given number of milliseconds and then
+// returns true. This is the sleep a busted spec wants when it has to let queued
+// work - a zero-timer, a scheduled profile save, a network reply - actually
+// run, rather than waiting for a named event. Specs used to get this by calling
+// waitForEvent() with an event name nothing ever raises, which only ever
+// finished through the timeout path. Gated behind MUDLET_TEST_MODE so it is
+// inert for normal users.
+int TLuaInterpreter::pumpEvents(lua_State* L)
+{
+    if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
+        lua_pushnil(L);
+        lua_pushstring(L, "pumpEvents: only available in test mode (set the MUDLET_TEST_MODE environment variable)");
+        return 2;
+    }
+
+    // Matches waitForEvent()'s ceiling: long enough for the slowest thing a spec
+    // waits on, short enough that a runaway wait fails as a timeout rather than
+    // by having the whole suite killed.
+    constexpr int defaultTimeoutMs = 50;
+    constexpr int maximumTimeoutMs = 30000;
+    int timeoutMs = defaultTimeoutMs;
+    if (!lua_isnoneornil(L, 1)) {
+        timeoutMs = getVerifiedInt(L, __func__, 1, "duration in milliseconds", true);
+    }
+    timeoutMs = std::clamp(timeoutMs, 0, maximumTimeoutMs);
+
+    Host& host = getHostFromLua(L);
+    EventLoopPump::pumpFor(timeoutMs, [&host]() {
+        return shuttingDown(host);
+    });
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#raiseGlobalEvent

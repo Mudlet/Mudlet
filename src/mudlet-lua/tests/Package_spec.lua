@@ -97,21 +97,17 @@ local function assertArgError(fn, needle)
   assert.is_true(contains(err, needle), tostring(err))
 end
 
--- waitForEvent() spins the Qt event loop, so waiting for an event nothing ever
--- raises is how a spec gives Mudlet's queued work a chance to run: the install
--- events are raised from a zero-timer, and so is the profile save that
--- uninstallPackage() schedules.
-local function pumpEventLoop(milliseconds)
-  waitForEvent("mudletPackageSpecIdleEvent", milliseconds)
-end
-
+-- pumpEvents() keeps Mudlet delivering events for the given time, which is how
+-- a spec gives its queued work a chance to run: the install events are raised
+-- from a zero-timer, and so is the profile save that uninstallPackage()
+-- schedules.
 local function waitUntil(condition, timeoutMilliseconds)
   local waited = 0
   while waited < timeoutMilliseconds do
     if condition() then
       return true
     end
-    pumpEventLoop(50)
+    pumpEvents(50)
     waited = waited + 50
   end
   return condition() and true or false
@@ -185,7 +181,7 @@ local function installUntilConfirmed(install, path, isInstalled, what)
     if isInstalled() then
       return
     end
-    pumpEventLoop(400 * attempt)
+    pumpEvents(400 * attempt)
   end
   assert.is_true(false, "could not install " .. what)
 end
@@ -199,7 +195,7 @@ local function installUntilRefused(install, path)
     if ok == nil then
       return err
     end
-    pumpEventLoop(400 * attempt)
+    pumpEvents(400 * attempt)
   end
   assert.is_true(false, "the install was postponed instead of being answered")
 end
@@ -212,7 +208,7 @@ local function reloadModuleUntil(name, reloaded)
     if waitUntil(reloaded, 300) then
       return
     end
-    pumpEventLoop(400 * attempt)
+    pumpEvents(400 * attempt)
   end
   assert.is_true(false, "the module was never reloaded")
 end
@@ -232,7 +228,7 @@ local function removeFixturePackage(name)
                    "could not uninstall the fixture package " .. name)
     -- let the profile save that uninstallPackage() queues run now, rather than
     -- during Mudlet's shutdown
-    pumpEventLoop(200)
+    pumpEvents(200)
   end
   assert.is_false(packageInstalled(name), "the fixture package " .. name .. " reinstalled itself")
 end
@@ -255,7 +251,7 @@ local function removeFixtureModule(name)
     waitForProfileSaveToPass()
     assert.is_true(waitUntil(function() return uninstallModule(name) == true end, 5000),
                    "could not uninstall the fixture module " .. name)
-    pumpEventLoop(200)
+    pumpEvents(200)
   end
   assert.is_false(moduleInstalled(name), "the fixture module " .. name .. " reinstalled itself")
   os.remove(scratchDirectory .. "/" .. name .. ".mpackage")
@@ -900,7 +896,7 @@ describe("Tests a package that uninstalls itself", function()
     assert.equals(0, exists("mudletSpecSelfUninstallSecondHandler", "script"))
     -- raising the event again must not reach the removed scripts
     raiseEvent("mudletSpecSelfUninstall")
-    pumpEventLoop(100)
+    pumpEvents(100)
     assert.is_false(packageInstalled("mudlet-spec-selfuninstall"))
   end)
 end)
@@ -979,6 +975,6 @@ describe("The package specs clean up after themselves", function()
     -- Let the profile save that the last uninstall queued run while the profile
     -- is still up: it dereferences the profile when it fires, and Mudlet may be
     -- shutting down by the time it would otherwise get its turn.
-    pumpEventLoop(1500)
+    pumpEvents(1500)
   end)
 end)

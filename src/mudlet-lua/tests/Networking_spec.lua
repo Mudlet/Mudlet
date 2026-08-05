@@ -849,10 +849,10 @@ describe("MMCP effects against a scripted chat peer", function()
     return true
   end
 
-  -- Lets Mudlet's event loop run for ms without blocking it: waiting on an
-  -- event nothing raises is how a spec gives sockets and timers time to work.
+  -- Lets Mudlet's event loop run for ms without blocking it, so sockets and
+  -- timers get time to work.
   local function pump(ms)
-    waitForEvent("mmcpFixtureIdleEvent", ms)
+    pumpEvents(ms)
   end
 
   local function waitUntil(predicate, timeoutMs)

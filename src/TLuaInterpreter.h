@@ -398,6 +398,7 @@ public:
     static int tempLineTrigger(lua_State*);
     static int raiseEvent(lua_State*);
     static int waitForEvent(lua_State*);
+    static int pumpEvents(lua_State*);
     static int deleteLine(lua_State*);
     static int copy(lua_State*);
     static int cut(lua_State*);
@@ -794,11 +795,11 @@ public:
 
     // Test-only support for the waitForEvent() Lua helper (MUDLET_TEST_MODE):
     // called from Host::raiseEvent() so an event that fires while a busted spec
-    // is blocked inside a nested event loop can be captured and unblock it.
+    // is blocked waiting for it can be captured and unblock it.
     void captureEventForWaits(const TEvent&);
-    // True while a waitForEvent() call is blocked in its nested event loop. Lets
-    // Host refuse a profile reset that would lua_close() the state out from
-    // under it. Always false (a no-op) outside MUDLET_TEST_MODE.
+    // True while a waitForEvent() call is blocked pumping events. Lets Host
+    // refuse a profile reset that would lua_close() the state out from under
+    // it. Always false (a no-op) outside MUDLET_TEST_MODE.
     bool hasPendingEventWaits() const { return !mPendingEventWaits.isEmpty(); }
 
     inline static const QMap<Qt::MouseButton, QString> csmMouseButtons = {
@@ -925,12 +926,11 @@ private:
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
     QMap<QNetworkReply*, QString> downloadMap;
 
-    // A waitForEvent() call in progress: the nested event loop to quit when the
-    // named event arrives, plus a Lua registry reference to the captured args.
+    // A waitForEvent() call in progress: the event it is waiting for, and once
+    // that arrives a Lua registry reference to the captured arguments.
     struct TEventWait
     {
         QString mName;
-        QEventLoop* mpLoop = nullptr;
         int mArgsRef = LUA_NOREF;
         bool mCaptured = false;
     };
