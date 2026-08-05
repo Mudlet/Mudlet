@@ -27,24 +27,20 @@ describe("Tests map events and menus before the map widget is opened", function(
     assert.is_nil(getMapMenus()["PreWidgetMenu"])
   end)
 
-  -- nothing can destroy the map widget again once it exists, so a second
-  -- runTests in the same session inherits one and these two have nothing left
-  -- to observe
+  -- the dock widget itself outlives closeMapWidget(), but a closed one answers
+  -- the map window functions exactly as a never-opened profile does, so these
+  -- two reach the same branch whether or not an earlier file opened it
   it("should report that there is no map widget to read a title from", function()
+    closeMapWidget()
     local title, err = getMapWindowTitle()
-    if title then
-      pending("the map widget is already open in this session")
-      return
-    end
+    assert.is_nil(title)
     assert.are.equal("no floating/dockable type map window found", err)
   end)
 
   it("should report that there is no map widget to read a geometry from", function()
+    closeMapWidget()
     local x, err = getMapWidgetGeometry()
-    if x then
-      pending("the map widget is already open in this session")
-      return
-    end
+    assert.is_nil(x)
     assert.are.equal("no floating/dockable type map window found", err)
   end)
 
@@ -1460,12 +1456,31 @@ describe("Tests mapper functions against a shared fixture", function()
     end)
 
     it("getRoomNameOffset keeps the sign of a negative shift", function()
-      -- BUG: setRoomNameOffset stores the offset as "x y", but
-      -- getRoomNameOffset reads it back with the pattern '[%.%d]+', which
-      -- cannot match a minus sign, so every negative shift comes back positive
-      pending("getRoomNameOffset drops the sign of a stored offset - see the Wave 3d report")
       setRoomNameOffset(rSandA, -3, -4)
+      assert.are.equal("-3 -4", getRoomUserData(rSandA, "room.ui_nameOffset"))
       assert.are.same({-3, -4}, {getRoomNameOffset(rSandA)})
+    end)
+
+    it("getRoomNameOffset keeps the sign of a mixed pair", function()
+      setRoomNameOffset(rSandA, -3, 4)
+      assert.are.same({-3, 4}, {getRoomNameOffset(rSandA)})
+      setRoomNameOffset(rSandA, 3, -4)
+      assert.are.same({3, -4}, {getRoomNameOffset(rSandA)})
+    end)
+
+    it("getRoomNameOffset keeps the sign of a lone negative y shift", function()
+      -- x == 0 makes setRoomNameOffset store the y shift on its own, which is
+      -- the one-value branch of the reader
+      setRoomNameOffset(rSandA, 0, -5)
+      assert.are.equal("-5", getRoomUserData(rSandA, "room.ui_nameOffset"))
+      assert.are.same({0, -5}, {getRoomNameOffset(rSandA)})
+    end)
+
+    it("getRoomNameOffset keeps the sign of a fractional offset", function()
+      -- T2DMap reads the same user data with QString::toDouble(), so the Lua
+      -- getter has to accept everything the renderer does
+      setRoomUserData(rSandA, "room.ui_nameOffset", "-1.5 -2.5")
+      assert.are.same({-1.5, -2.5}, {getRoomNameOffset(rSandA)})
     end)
   end)
 
@@ -1802,6 +1817,103 @@ describe("Tests mapper functions against a shared fixture", function()
     end)
   end)
 
+end)
+
+-- closeMapWidget() has to leave the profile in a state that is distinguishable
+-- from "the map widget is open", or every map window function keeps answering
+-- for a widget the script just put away.
+--
+-- The map dock has no window name, so windowVisible() cannot reach it and these
+-- specs read the state through the map window functions instead. That works
+-- because Host::mapWidget() derives its answer from the dock's own hidden
+-- state: drop the hide() out of Host::closeMapWidget() and the two specs below
+-- that assert the closed answers fail.
+describe("Tests the open and closed states of the map widget", function()
+  setup(function()
+    assert.is_true(openMapWidget())
+  end)
+
+  teardown(function()
+    -- back to a right-docked, open widget: the position loop below leaves it
+    -- docked at the bottom otherwise, which shrinks the main console for
+    -- everything that runs after this file
+    openMapWidget("r")
+    resetMapWindowTitle()
+  end)
+
+  before_each(function()
+    openMapWidget()
+  end)
+
+  -- companion guard rather than a guard for the bug: closeMapWidget() reported
+  -- "already closed" before this was fixed too. It is here so that a fix which
+  -- stopped distinguishing the two calls would be caught.
+  it("reports the widget as closed once, and as already closed after that", function()
+    assert.is_true(closeMapWidget())
+    local closed, message = closeMapWidget()
+    assert.is_nil(closed)
+    assert.are.equal("map widget already closed", message)
+  end)
+
+  it("stops setMapWindowTitle from retitling a widget that was closed", function()
+    assert.is_true(setMapWindowTitle("still open"))
+    assert.is_true(closeMapWidget())
+    local set, message = setMapWindowTitle("closed already")
+    assert.is_nil(set)
+    assert.are.equal("no floating/dockable type map window found", message)
+  end)
+
+  it("makes the map window getters agree with setMapWindowTitle", function()
+    assert.is_true(closeMapWidget())
+    local title, titleMessage = getMapWindowTitle()
+    assert.is_nil(title)
+    local x, geometryMessage = getMapWidgetGeometry()
+    assert.is_nil(x)
+    -- same wording from all three, so a script can test one and trust the rest
+    assert.are.equal("no floating/dockable type map window found", titleMessage)
+    assert.are.equal("no floating/dockable type map window found", geometryMessage)
+  end)
+
+  it("hands the widget back on reopen", function()
+    setMapWindowTitle("before the close")
+    assert.is_true(closeMapWidget())
+    assert.is_true(openMapWidget())
+    -- the same dock comes back rather than a fresh one, so its title survives
+    assert.are.equal("before the close", getMapWindowTitle())
+    assert.are.equal(4, select("#", getMapWidgetGeometry()))
+    assert.is_true(setMapWindowTitle("after the reopen"))
+    assert.are.equal("after the reopen", getMapWindowTitle())
+  end)
+
+  it("reopens from every docking position", function()
+    for _, position in ipairs({"f", "l", "r", "t", "b"}) do
+      assert.is_true(closeMapWidget())
+      assert.is_true(openMapWidget(position), "could not reopen the map widget at " .. position)
+      assert.is_string(getMapWindowTitle())
+    end
+  end)
+
+  -- moveMapWidget/resizeMapWidget are openMapWidget in disguise, so they reopen
+  -- a closed widget rather than failing the way the getters do. Pinned because
+  -- it is the one place where the map functions do not agree about the state.
+  it("lets moveMapWidget and resizeMapWidget reopen a closed widget", function()
+    assert.is_true(closeMapWidget())
+    resizeMapWidget(640, 480)
+    local _, _, width, height = getMapWidgetGeometry()
+    assert.are.same({640, 480}, {width, height})
+
+    assert.is_true(closeMapWidget())
+    moveMapWidget(120, 130)
+    assert.are.equal(4, select("#", getMapWidgetGeometry()))
+  end)
+
+  -- Neither of these can be reached from Lua, so they are recorded rather than
+  -- covered: the dock's own title bar close button and mudlet's map toolbar
+  -- button both hide the same dock, and Host::mapWidget() reads the dock's
+  -- hidden state so that it follows them without either having to know.
+  pending("the map dock's title bar close button leaves the map window functions reporting no map window - needs GUI automation")
+
+  pending("the map toolbar button handing the map to a main window dock leaves the map window functions reporting no map window - needs GUI automation")
 end)
 
 -- deleteMap wipes the whole map, so it lives in its own block that runs after

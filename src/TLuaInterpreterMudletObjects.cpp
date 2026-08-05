@@ -202,11 +202,15 @@ static bool timerDelayFits(const double time)
 int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
 {
     const int n = lua_gettop(L);
+    // The mandatory text is last, but with no arguments at all that would be
+    // index 0 - not a valid Lua stack index, and Lua 5.1 hands back the first
+    // free slot for it rather than complaining:
+    const int textIndex = qMax(n, 1);
     const char* name = "main";
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    const QString text = getVerifiedString(L, __func__, n, "suggestion text");
+    const QString text = getVerifiedString(L, __func__, textIndex, "suggestion text");
     auto pN = COMMANDLINE(L, QString{name});
     pN->addSuggestion(text);
     return 0;
@@ -241,12 +245,14 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
 int TLuaInterpreter::appendCmdLine(lua_State* L)
 {
     const int n = lua_gettop(L);
+    // See addCmdLineSuggestion() on why the index is clamped:
+    const int textIndex = qMax(n, 1);
     const char* name = "main";
 
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    const QString text = getVerifiedString(L, __func__, n, "text to set on command line");
+    const QString text = getVerifiedString(L, __func__, textIndex, "text to set on command line");
     auto pN = COMMANDLINE(L, QString{name});
 
     const QString curText = pN->toPlainText();
@@ -356,11 +362,13 @@ int TLuaInterpreter::deleteStopWatch(lua_State* L)
 int TLuaInterpreter::removeCmdLineSuggestion(lua_State* L)
 {
     const int n = lua_gettop(L);
+    // See addCmdLineSuggestion() on why the index is clamped:
+    const int textIndex = qMax(n, 1);
     const char* name = "main";
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    const QString text = getVerifiedString(L, __func__, n, "suggestion text");
+    const QString text = getVerifiedString(L, __func__, textIndex, "suggestion text");
     auto pN = COMMANDLINE(L, QString{name});
     pN->removeSuggestion(text);
     return 0;
@@ -1472,11 +1480,13 @@ int TLuaInterpreter::permKey(lua_State* L)
 int TLuaInterpreter::printCmdLine(lua_State* L)
 {
     const int n = lua_gettop(L);
+    // See addCmdLineSuggestion() on why the index is clamped:
+    const int textIndex = qMax(n, 1);
     const char* name = "main";
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    const QString text = getVerifiedString(L, __func__, n, "text to set on command line");
+    const QString text = getVerifiedString(L, __func__, textIndex, "text to set on command line");
 
     auto pN = COMMANDLINE(L, QString{name});
     pN->setPlainText(text);

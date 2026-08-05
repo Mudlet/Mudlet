@@ -98,6 +98,9 @@ void KeyUnit::uninstall(const QString& packageName)
         return;
     }
     for (auto& key : uninstallList) {
+        // in case the key was also queued for the markCleanup()/doCleanup()
+        // path - deleting it here would otherwise leave a dangling pointer there:
+        mCleanupSet.remove(key);
         delete key;
     }
     uninstallList.clear();
@@ -228,23 +231,27 @@ bool KeyUnit::disableKey(const QString& name)
 bool KeyUnit::killKey(QString& name)
 {
     for (auto pChild : mKeyRootNodeList) {
-        if (pChild->getName() == name) {
-            // only temporary Keys can be killed
-            if (!pChild->isTemporary()) {
-                return false;
-            }
-            // An already killed key is only unlinked from this list once
-            // doCleanup() gets to free it, which cannot happen while a key script
-            // is on the call stack - so until then it is still findable by name.
-            // Killing it a second time achieves nothing and must be reported as
-            // the failure it is:
-            if (mCleanupSet.contains(pChild)) {
-                return false;
-            }
-            pChild->setIsActive(false);
-            markCleanup(pChild);
-            return true;
+        if (pChild->getName() != name) {
+            continue;
         }
+        // Names are not unique, so keep looking rather than give up on the first
+        // same-named key that cannot be killed - a permanent key loaded from the
+        // profile precedes this session's temporaries in this list, and reporting
+        // a failure over it would strand a killable key
+        if (!pChild->isTemporary()) {
+            // only temporary Keys can be killed
+            continue;
+        }
+        // An already killed key is only unlinked from this list once doCleanup()
+        // gets to free it, which cannot happen while a key script is on the call
+        // stack - so until then it is still findable by name. Killing it a second
+        // time achieves nothing:
+        if (mCleanupSet.contains(pChild)) {
+            continue;
+        }
+        pChild->setIsActive(false);
+        markCleanup(pChild);
+        return true;
     }
     return false;
 }
@@ -324,11 +331,12 @@ void KeyUnit::removeKeyRootNode(TKey* pT)
     if (!pT) {
         return;
     }
-    if (!pT->isTemporary()) {
-        mLookupTable.remove(pT->getName(), pT);
-    } else {
-        mLookupTable.remove(pT->getName());
-    }
+    // Names are not unique - the lookup table is a QMultiMap - so drop this one
+    // key's entry rather than every entry filed under the name. The
+    // single-argument remove() used to be taken for temporary keys, which evicted
+    // live same-named keys and left them unreachable by name for the rest of the
+    // session
+    mLookupTable.remove(pT->getName(), pT);
     mKeyMap.remove(pT->getID());
     mKeyRootNodeList.remove(pT);
 }
@@ -390,11 +398,8 @@ void KeyUnit::removeKey(TKey* pT)
     if (!pT) {
         return;
     }
-    if (!pT->isTemporary()) {
-        mLookupTable.remove(pT->getName(), pT);
-    } else {
-        mLookupTable.remove(pT->getName());
-    }
+    // see removeKeyRootNode(): one entry, not every same-named one
+    mLookupTable.remove(pT->getName(), pT);
     mKeyMap.remove(pT->getID());
 }
 
@@ -477,17 +482,22 @@ void KeyUnit::doCleanup()
         return;
     }
 
+    QSet<TKey*> deletedKeys;
     QMutableSetIterator<TKey*> itKey(mCleanupSet);
     while (itKey.hasNext()) {
         auto pKey = itKey.next();
         itKey.remove();
+        deletedKeys.insert(pKey);
         delete pKey;
     }
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
     // children first empties the parent's child list (no double free); the seen
-    // set guards a node queued twice by re-entrant uninstalls.
-    QSet<TKey*> deletedKeys;
+    // set guards a node queued twice by re-entrant uninstalls and is shared with
+    // the mCleanupSet loop above so an object that ended up in both containers is
+    // freed once. It matches on pointer identity only: a node freed indirectly, as
+    // a child of a queued parent, is not in the set (not reachable today - only
+    // temporary root nodes are ever queued, and those have no children).
     for (auto key : uninstallList) {
         if (!deletedKeys.contains(key)) {
             deletedKeys.insert(key);

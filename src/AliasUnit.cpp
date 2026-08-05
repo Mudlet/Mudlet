@@ -89,6 +89,9 @@ void AliasUnit::uninstall(const QString& packageName)
         return;
     }
     for (auto& alias : uninstallList) {
+        // in case the alias was also queued for the markCleanup()/doCleanup()
+        // path - deleting it here would otherwise leave a dangling pointer there:
+        mCleanupSet.remove(alias);
         delete alias;
     }
     uninstallList.clear();
@@ -177,11 +180,12 @@ void AliasUnit::removeAliasRootNode(TAlias* pT)
     if (!pT) {
         return;
     }
-    if (!pT->isTemporary()) {
-        mLookupTable.remove(pT->mName, pT);
-    } else {
-        mLookupTable.remove(pT->getName());
-    }
+    // Names are not unique - the lookup table is a QMultiMap - so drop this one
+    // alias' entry rather than every entry filed under the name. The
+    // single-argument remove() used to be taken for temporary aliases, which
+    // evicted live same-named aliases and left them unreachable by name for the
+    // rest of the session
+    mLookupTable.remove(pT->getName(), pT);
     mAliasMap.remove(pT->getID());
     mAliasRootNodeList.remove(pT);
 }
@@ -257,11 +261,8 @@ void AliasUnit::removeAlias(TAlias* pT)
     if (!pT) {
         return;
     }
-    if (!pT->isTemporary()) {
-        mLookupTable.remove(pT->mName, pT);
-    } else {
-        mLookupTable.remove(pT->getName());
-    }
+    // see removeAliasRootNode(): one entry, not every same-named one
+    mLookupTable.remove(pT->getName(), pT);
 
     mAliasMap.remove(pT->getID());
 }
@@ -380,23 +381,27 @@ bool AliasUnit::disableAlias(const QString& name)
 bool AliasUnit::killAlias(const QString& name)
 {
     for (auto alias : mAliasRootNodeList) {
-        if (alias->getName() == name) {
-            // only temporary Aliases can be killed
-            if (!alias->isTemporary()) {
-                return false;
-            }
-            // An already killed alias is only unlinked from this list once
-            // doCleanup() gets to free it, which cannot happen while an alias
-            // script is on the call stack - so until then it is still findable by
-            // name. Killing it a second time achieves nothing and must be reported
-            // as the failure it is:
-            if (mCleanupSet.contains(alias)) {
-                return false;
-            }
-            alias->setIsActive(false);
-            markCleanup(alias);
-            return true;
+        if (alias->getName() != name) {
+            continue;
         }
+        // Names are not unique, so keep looking rather than give up on the first
+        // same-named alias that cannot be killed - a permanent alias loaded from
+        // the profile precedes this session's temporaries in this list, and
+        // reporting a failure over it would strand a killable alias
+        if (!alias->isTemporary()) {
+            // only temporary Aliases can be killed
+            continue;
+        }
+        // An already killed alias is only unlinked from this list once doCleanup()
+        // gets to free it, which cannot happen while an alias script is on the
+        // call stack - so until then it is still findable by name. Killing it a
+        // second time achieves nothing:
+        if (mCleanupSet.contains(alias)) {
+            continue;
+        }
+        alias->setIsActive(false);
+        markCleanup(alias);
+        return true;
     }
     return false;
 }
@@ -441,17 +446,22 @@ void AliasUnit::doCleanup()
         return;
     }
 
+    QSet<TAlias*> deletedAliases;
     QMutableSetIterator<TAlias*> itAlias(mCleanupSet);
     while (itAlias.hasNext()) {
         auto pAlias = itAlias.next();
         itAlias.remove();
+        deletedAliases.insert(pAlias);
         delete pAlias;
     }
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
     // children first empties the parent's child list (no double free); the seen
-    // set guards a node queued twice by re-entrant uninstalls.
-    QSet<TAlias*> deletedAliases;
+    // set guards a node queued twice by re-entrant uninstalls and is shared with
+    // the mCleanupSet loop above so an object that ended up in both containers is
+    // freed once. It matches on pointer identity only: a node freed indirectly, as
+    // a child of a queued parent, is not in the set (not reachable today - only
+    // temporary root nodes are ever queued, and those have no children).
     for (auto alias : uninstallList) {
         if (!deletedAliases.contains(alias)) {
             deletedAliases.insert(alias);
