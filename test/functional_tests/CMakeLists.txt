@@ -8,6 +8,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetSubnegotiationTest.cpp
     TelnetSgrDefaultColorTest.cpp
     TelnetTlsPromptTest.cpp
+    TelnetMccp4Test.cpp
     TelnetBenchmark.cpp
     DefaultGameDeleteTest.cpp
     ResetProfileTest.cpp
@@ -121,6 +122,9 @@ set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeam
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
+
+# TelnetMccp4Test creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(TelnetMccp4Test PROPERTIES TIMEOUT 300)
 
 # TDiscordModeTest drives the real discord-rpc library end-to-end. The library's
 # reconnect backoff is a process-global (60s ceiling) that the suite's

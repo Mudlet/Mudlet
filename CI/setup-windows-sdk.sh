@@ -133,8 +133,7 @@ while true; do
     "${MINGW_PACKAGE_PREFIX}-curl" \
     "${MINGW_PACKAGE_PREFIX}-python" \
     "${MINGW_PACKAGE_PREFIX}-uasm" \
-    "${MINGW_PACKAGE_PREFIX}-clang" \
-    "${MINGW_PACKAGE_PREFIX}-lld" \
+    "${MINGW_PACKAGE_PREFIX}-cmake" \
     "${MINGW_PACKAGE_PREFIX}-jq"; then
       break
   fi

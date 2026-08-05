@@ -53,7 +53,6 @@
 #include <queue>
 #include <string>
 #include <vector>
-#include <QVector>
 
 #if defined(Q_OS_WINDOWS)
 #include <ws2tcpip.h>

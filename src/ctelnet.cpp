@@ -29,6 +29,7 @@
 
 #include "ctelnet.h"
 
+
 #include "Host.h"
 #include "TBuffer.h"
 #include "TMxpProcessor.h"
@@ -47,7 +48,6 @@
 #include "dlgComposer.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
-#include "utils.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
 #endif
@@ -65,7 +65,6 @@
 #include <QSignalBlocker>
 #include <QSslError>
 #include <QtGlobal>
-
 
 using namespace std::chrono_literals;
 
@@ -5479,6 +5478,25 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                     command = "";
                     iac = false;
                     insb = false;
+
+                    // MCCP4 turns compression on with an ordinary IAC SB ...
+                    // IAC SE subnegotiation rather than the malformed start
+                    // sequence MCCP1/2 use, so the look-ahead above never sees
+                    // it. Servers put the first compressed bytes in the same
+                    // segment, so everything past this IAC SE is compressed:
+                    // queue it for the re-entry at the end of this function,
+                    // which starts a fresh pass with the decompressor selected.
+                    // buffer == in_buffer means this pass began uncompressed,
+                    // so the remainder is untouched input and nothing else is
+                    // queued yet.
+                    if (mMCCP_version_4 && mNeedDecompression && buffer == in_buffer) {
+                        const int restLength = datalen - i - 1;
+                        if (restLength > 0) {
+                            remainingData = buffer + i + 1;
+                            remainingAmount = restLength;
+                        }
+                        break;
+                    }
                 } else if (iac && (ch == TN_IAC)) { // escaped TN_IAC
                     command.pop_back();
                     iac = false;
