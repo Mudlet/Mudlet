@@ -19,17 +19,17 @@
 
 #include <discord.h>
 #include <Host.h>
+#include <utils.h>
 #include <QFile>
 #include <QtTest/QtTest>
 
-class DiscordTest : public QObject {
+class DiscordTest : public QObject
+{
     Q_OBJECT
 
 private slots:
 
-    void initTestCase()
-    {
-    }
+    void initTestCase() {}
 
     // Test that convert() returns nullptr for empty string fields
     void testConvertNullIfEmpty()
@@ -199,6 +199,35 @@ private slots:
         presence.setStateText(QString(43, QChar(0x4F60)));
         converted = presence.convert();
         QCOMPARE(QByteArray(converted.state), QString(42, QChar(0x4F60)).toUtf8());
+
+        // And an emoji, the four-byte case, where the walk-back has to step
+        // over three continuation bytes: 33 of them are 132 bytes.
+        const char32_t grinningFace = 0x1F600;
+        const QString emoji = QString::fromUcs4(&grinningFace, 1);
+        presence.setDetailText(emoji.repeated(33));
+        converted = presence.convert();
+        QCOMPARE(QByteArray(converted.details), emoji.repeated(32).toUtf8());
+    }
+
+    // The truncation itself, at boundaries the fixed-size presence fields
+    // cannot reach.
+    void testCopyUtf8StringEdgeCases()
+    {
+        char buffer[8];
+        // Nothing to copy, and a destination too small even to terminate:
+        QCOMPARE(utils::copyUtf8String(buffer, sizeof(buffer), "", 0), size_t{0});
+        QCOMPARE(utils::copyUtf8String(buffer, 0, "abc", 3), size_t{0});
+        // Exactly filling the usable space is not a truncation, so there is
+        // nothing to walk back from:
+        QCOMPARE(utils::copyUtf8String(buffer, sizeof(buffer), "abcdefg", 7), size_t{7});
+        QCOMPARE(QByteArray(buffer), QByteArray("abcdefg"));
+        // One byte too many, cut between characters:
+        QCOMPARE(utils::copyUtf8String(buffer, sizeof(buffer), "abcdefgh", 8), size_t{7});
+        // Input that is nothing but continuation bytes cannot be cut anywhere
+        // valid, so an empty field is what comes out - never a broken sequence.
+        const char continuationBytes[] = "\x80\x80\x80\x80\x80\x80\x80\x80\x80";
+        QCOMPARE(utils::copyUtf8String(buffer, sizeof(buffer), continuationBytes, 9), size_t{0});
+        QCOMPARE(QByteArray(buffer), QByteArray());
     }
 
     // Test that Discord username comparison is case-insensitive.
@@ -269,9 +298,7 @@ private slots:
         QVERIFY2(checked >= 22, qPrintable(qsl("only categorised %1 Discord Lua functions - has the source moved?").arg(checked)));
     }
 
-    void cleanupTestCase()
-    {
-    }
+    void cleanupTestCase() {}
 };
 
 #include "DiscordTest.moc"

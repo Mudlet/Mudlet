@@ -2947,10 +2947,19 @@ void TMap::clearTransferProgress()
 
 void TMap::requestMapOperationAbort()
 {
-    if (!mMapOperationDepth) {
+    if (!mMapOperationDepth || mMapOperationAbortRequested) {
         return;
     }
-    slot_mapProgressDialogCancelled();
+    mMapOperationAbortRequested = true;
+    // Deliberately not slot_mapProgressDialogCancelled(): that is the user
+    // pressing Abort and says so in the console, whereas this is the profile
+    // going away and has no console left to say it to. What it does share is
+    // the flag the JSON import and export poll at their next progress step, and
+    // dropping a download that would otherwise hold the close up on the network.
+    mMapProgressCancelRequested = true;
+    if (mMapProgressIsTransfer && mpNetworkReply) {
+        mpNetworkReply->abort();
+    }
 }
 
 void TMap::slot_mapProgressDialogCancelled()

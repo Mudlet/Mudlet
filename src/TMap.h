@@ -193,8 +193,10 @@ public:
     // Ask an operation that is in progress to stop at its next opportunity, so
     // that a caller waiting on the above does not wait for a whole map. Only the
     // JSON import and export poll this; an XML import or a download runs to its
-    // own end.
+    // own end. Asking twice does nothing, which mapOperationAbortRequested()
+    // also lets a caller polling in a loop see.
     void requestMapOperationAbort();
+    bool mapOperationAbortRequested() const { return mMapOperationAbortRequested; }
 
     // Show which rooms have which symbols:
     QHash<QString, QSet<int>> roomSymbolsHash();
@@ -403,6 +405,9 @@ private:
         explicit MapOperationScope(TMap* pMap)
         : mpMap(pMap)
         {
+            if (!mpMap->mMapOperationDepth) {
+                mpMap->mMapOperationAbortRequested = false;
+            }
             ++mpMap->mMapOperationDepth;
         }
         ~MapOperationScope() { --mpMap->mMapOperationDepth; }
@@ -414,6 +419,9 @@ private:
     };
 
     int mMapOperationDepth = 0;
+    // requestMapOperationAbort() is asked again on every retry of a deferred
+    // profile close, and asking twice would abort a network reply twice over.
+    bool mMapOperationAbortRequested = false;
 
     void addDirectionalRoute(QHash<unsigned int, route>& bestRoutes,
                              const QMap<QString, int>& exitWeights,

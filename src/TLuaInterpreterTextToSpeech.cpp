@@ -59,6 +59,7 @@
 #include "glwidget_integration.h"
 #endif
 
+#include <chrono>
 #include <limits>
 #include <math.h>
 
@@ -67,6 +68,7 @@
 #include <QDesktopServices>
 #include <QFileInfo>
 #include <QMovie>
+#include <QTimer>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
@@ -88,6 +90,9 @@ static bool speechStartAnnounced = false;
 // and the Ready that reports that has to be told apart from the engine going
 // idle - see ttsSpeak().
 static bool speechInterrupting = false;
+// How long an engine is given to start the utterance that interrupted another
+// before a Ready held back on its account is taken at face value after all.
+static constexpr std::chrono::milliseconds scmInterruptedSpeechGrace{250};
 
 static const QTextToSpeech::State TEXT_TO_SPEECH_ERROR_STATE = QTextToSpeech::State::Error;
 
@@ -148,12 +153,22 @@ int TLuaInterpreter::ttsSkip(lua_State* L)
 // No documentation available in wiki - internal function
 void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 {
+    // ttsSpeak() announces an utterance itself when the engine was already
+    // speaking, because there is then no state edge to announce it. An engine
+    // that gets round to reporting the interruption afterwards ends up here
+    // with an edge back into Speaking for that same utterance, which would tell
+    // a script it started twice.
+    const bool alreadyAnnounced = (state == QTextToSpeech::State::Speaking && speechStartAnnounced);
+
     if (state != speechState) {
         speechState = state;
         TEvent event{};
         switch (state) {
         case QTextToSpeech::State::Paused:
             event.mArgumentList.append(QLatin1String("ttsSpeechPaused"));
+            // Resuming has always announced the utterance again, so let it:
+            // being paused is the end of what was announced before.
+            speechStartAnnounced = false;
             break;
         case QTextToSpeech::State::Speaking:
             event.mArgumentList.append(QLatin1String("ttsSpeechStarted"));
@@ -183,7 +198,9 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
             speechInterrupting = false;
         }
 
-        mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+        if (!alreadyAnnounced) {
+            mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+        }
     }
 
     if (state == QTextToSpeech::State::Ready && speechInterrupting) {
@@ -194,6 +211,17 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         // utterance next, which clears this above.
         speechInterrupting = false;
         bSpeechQueueing = false;
+        // Unless it does not: an engine that rejects an utterance outright, or
+        // that replaces one without ever reporting a state change, leaves this
+        // as the last word on the matter, and a queue waiting on a Ready that
+        // is never coming waits forever. Look again once the engine has had its
+        // chance to start speaking - if it is still idle, that Ready did mean
+        // idle and the queue is free to go.
+        QTimer::singleShot(scmInterruptedSpeechGrace, qApp, []() {
+            if (!speechUnit.isNull() && speechUnit->state() == QTextToSpeech::State::Ready && !speechQueue.isEmpty()) {
+                TLuaInterpreter::ttsStateChanged(QTextToSpeech::State::Ready);
+            }
+        });
         return;
     }
 

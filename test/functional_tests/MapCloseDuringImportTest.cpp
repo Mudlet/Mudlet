@@ -72,7 +72,11 @@ class MapCloseDuringImportTest : public QObject
 
 private:
     const QString mSourceName = qsl("MapCloseDuringImportSource-Test");
-    const QString mTargetName = qsl("MapCloseDuringImportTarget-Test");
+    // A name of its own per test: a test that fails part way through can leave
+    // its deferred close pending on a timer, and a later test reusing the name
+    // would have that close land on its profile instead.
+    const QString mImportTargetName = qsl("MapCloseDuringImportTarget-Test");
+    const QString mExportTargetName = qsl("MapCloseDuringExportTarget-Test");
     QTemporaryDir mConfigDir;
     QTemporaryDir mSaveDir;
     QByteArray mSavedXdg;
@@ -161,7 +165,7 @@ private slots:
 
     void test_closingTheProfileDuringAJsonImportDoesNotFreeTheMap()
     {
-        Host* pTarget = addProfile(mTargetName);
+        Host* pTarget = addProfile(mImportTargetName);
         QVERIFY2(pTarget, "failed to create the target Host");
         TMap* pTargetMap = pTarget->mpMap.data();
         const QPointer<TMap> mapWatch(pTargetMap);
@@ -175,7 +179,7 @@ private slots:
             // The same slot the tab's close button and closeProfile() use: it
             // posts closeHost() as a zero-millisecond timer, which the import's
             // own processEvents() then delivers with the import on the stack.
-            mudlet::self()->slot_closeProfileByName(mTargetName);
+            mudlet::self()->slot_closeProfileByName(mImportTargetName);
         });
         const auto [read, readMessage] = pTargetMap->readJsonMapFile(mMapFile);
         disconnect(closeOnProgress);
@@ -187,14 +191,14 @@ private slots:
         QVERIFY2(!read, "the import was expected to stop once the close asked it to");
         QCOMPARE(readMessage, qsl("aborted by user"));
         // ...and deferring the close must not drop it:
-        QVERIFY2(waitForProfileToClose(mTargetName), "the deferred close never completed once the import had unwound");
+        QVERIFY2(waitForProfileToClose(mImportTargetName), "the deferred close never completed once the import had unwound");
         QVERIFY2(mapWatch.isNull(), "the TMap outlived the profile it belongs to");
     }
 
     // The export half of the same loop, which pumps the event loop the same way.
     void test_closingTheProfileDuringAJsonExportDoesNotFreeTheMap()
     {
-        Host* pTarget = addProfile(mTargetName);
+        Host* pTarget = addProfile(mExportTargetName);
         QVERIFY2(pTarget, "failed to create the target Host");
         TMap* pTargetMap = pTarget->mpMap.data();
         buildMap(pTarget);
@@ -209,16 +213,18 @@ private slots:
                 return;
             }
             closeRequested = true;
-            mudlet::self()->slot_closeProfileByName(mTargetName);
+            mudlet::self()->slot_closeProfileByName(mExportTargetName);
         });
         const auto [wrote, writeMessage] = pTargetMap->writeJsonMapFile(qsl("%1/close-during-export.json").arg(mSaveDir.path()));
         disconnect(closeOnProgress);
-        Q_UNUSED(wrote)
-        Q_UNUSED(writeMessage)
 
         QVERIFY2(closeRequested, "the export never announced any progress, so no close was delivered into its pump");
         QVERIFY2(!mapWatch.isNull(), "the TMap was destroyed while its own export loop was still on the stack");
-        QVERIFY2(waitForProfileToClose(mTargetName), "the deferred close never completed once the export had unwound");
+        // As with the import: the close stops the operation rather than writing
+        // a whole map out of a profile that is going away.
+        QVERIFY2(!wrote, "the export was expected to stop once the close asked it to");
+        QCOMPARE(writeMessage, qsl("aborted by user"));
+        QVERIFY2(waitForProfileToClose(mExportTargetName), "the deferred close never completed once the export had unwound");
         QVERIFY2(mapWatch.isNull(), "the TMap outlived the profile it belongs to");
     }
 };

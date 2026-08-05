@@ -47,6 +47,8 @@
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
+#include "TScript.h"
+#include "ScriptUnit.h"
 #include "mudlet.h"
 
 #ifdef QT_TEXTTOSPEECH_LIB
@@ -75,6 +77,22 @@ private:
     // script's own error message when it does not run cleanly. Lua assert()s in
     // the snippet are how the queue and the current line are read back.
     bool runLua(const QString& script) { return mpHost->getLuaInterpreter()->compileAndExecuteScript(script); }
+
+    // Counts ttsSpeechStarted from here on in the Lua global ttsStartedCount. A
+    // TScript rather than registerAnonymousEventHandler(): this console-less
+    // Host never loads LuaGlobals.lua, where that function is defined.
+    bool countStartedEvents()
+    {
+        auto pScript = new TScript(nullptr, mpHost);
+        mpHost->getScriptUnit()->registerScript(pScript);
+        pScript->setName(qsl("ttsStartedCounter"));
+        if (!pScript->setScript(qsl("ttsStartedCount = 0\nfunction ttsStartedCounter(event, text)\n  ttsStartedCount = ttsStartedCount + 1\nend\n"))) {
+            return false;
+        }
+        pScript->setEventHandlerList(QStringList{qsl("ttsSpeechStarted")});
+        pScript->setIsActive(true);
+        return true;
+    }
 #endif
 
 private slots:
@@ -113,6 +131,18 @@ private slots:
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
+    // The TTS state - engine, queue, and the flags this fixes - is process
+    // global, so it is reset after every test method rather than at the end of
+    // each, where an assertion that fails would jump over it.
+    void cleanup()
+    {
+#ifdef QT_TEXTTOSPEECH_LIB
+        if (mpHost) {
+            runLua(qsl("ttsClearQueue() ttsSkip()"));
+        }
+#endif
+    }
+
     void test_theReadyFromAnInterruptedUtteranceDoesNotDrainTheQueue()
     {
 #ifndef QT_TEXTTOSPEECH_LIB
@@ -137,7 +167,37 @@ private slots:
         QVERIFY2(runLua(qsl("assert(ttsGetCurrentLine() == 'the utterance the script asked for', 'the current line became: '..tostring(ttsGetCurrentLine()))")),
                  "the drained line replaced the utterance the script asked for");
 
-        QVERIFY(runLua(qsl("ttsClearQueue() ttsSkip()")));
+        // The engine getting round to reporting that the requested utterance
+        // started must not announce it a second time: ttsSpeak() already did,
+        // there being no state edge at the time for it to have come from.
+        QVERIFY2(countStartedEvents(), "could not install the event handler that counts ttsSpeechStarted");
+        TLuaInterpreter::ttsStateChanged(QTextToSpeech::State::Speaking);
+        QVERIFY2(runLua(qsl("assert(ttsStartedCount == 0, 'the utterance was announced '..ttsStartedCount..' more time(s)')")),
+                 "the engine's late Speaking announced the same utterance a second time");
+#endif
+    }
+
+    // The control for the test above: with nothing interrupted, that same Ready
+    // is the engine going idle and has to drain the queue. Without this, a
+    // change that stopped ttsStateChanged() draining at all would leave the
+    // test above passing while the queue feature was dead.
+    void test_theReadyFromAnUninterruptedUtteranceStillDrainsTheQueue()
+    {
+#ifndef QT_TEXTTOSPEECH_LIB
+        QSKIP("Mudlet was built without text-to-speech support");
+#else
+        QVERIFY2(runLua(qsl("ttsClearQueue() ttsSkip()")), "could not reset the TTS state");
+        if (!runLua(qsl("assert(#ttsGetVoices() > 0)"))) {
+            QSKIP("Qt's mock speech engine is unavailable here, so nothing can be made to speak");
+        }
+
+        QVERIFY(runLua(qsl("ttsSpeak('the only utterance')")));
+        QVERIFY(runLua(qsl("ttsQueue('the queued line')")));
+
+        TLuaInterpreter::ttsStateChanged(QTextToSpeech::State::Ready);
+
+        QVERIFY2(runLua(qsl("assert(#ttsGetQueue() == 0, 'the queue was not drained, it holds '..#ttsGetQueue())")), "an idle engine left the queue undrained");
+        QVERIFY2(runLua(qsl("assert(ttsGetCurrentLine() == 'the queued line', 'the current line is: '..tostring(ttsGetCurrentLine()))")), "the drain did not start speaking the queued line");
 #endif
     }
 
@@ -160,8 +220,6 @@ private slots:
 
         QVERIFY2(runLua(qsl("assert(#ttsGetQueue() == 0, 'the queue still holds '..#ttsGetQueue())")), "an explicit skip left the queue undrained");
         QVERIFY2(runLua(qsl("assert(ttsGetCurrentLine() == 'the queued line', 'the current line is: '..tostring(ttsGetCurrentLine()))")), "the skip did not start speaking the queued line");
-
-        QVERIFY(runLua(qsl("ttsClearQueue() ttsSkip()")));
 #endif
     }
 };
