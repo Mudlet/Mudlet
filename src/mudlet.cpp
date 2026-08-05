@@ -1691,6 +1691,10 @@ void mudlet::slot_closeProfileRequested(int tab)
         return;
     }
 
+    if (closeHeldOffByEventPump(pH)) {
+        return;
+    }
+
     if (!pH->requestClose()) {
         return;
     }
@@ -1707,10 +1711,30 @@ void mudlet::slot_closeProfileRequested(int tab)
     });
 }
 
+// Closing one profile takes its Host, its interpreter and its lua_State with it.
+// A test-mode waitForEvent() or pumpEvents() is holding all three while it runs,
+// and is exactly what delivers the queued call that got us here, so closing now
+// would pull them out from under Lua code that is still executing. The
+// application-wide close paths are deliberately not guarded like this: refusing
+// there would cancel a shutdown nobody would retry. Always false (so a no-op)
+// outside MUDLET_TEST_MODE, where both helpers are inert.
+bool mudlet::closeHeldOffByEventPump(Host* pHost) const
+{
+    if (!pHost->getLuaInterpreter()->pumpingEvents()) {
+        return false;
+    }
+    qWarning() << "mudlet: asked to close profile" << pHost->getName() << "while the test-mode event pump is running on it, ignoring";
+    return true;
+}
+
 void mudlet::slot_closeProfileByName(const QString& profileName)
 {
     Host* pH = mHostManager.getHost(profileName);
     if (!pH) {
+        return;
+    }
+
+    if (closeHeldOffByEventPump(pH)) {
         return;
     }
 
