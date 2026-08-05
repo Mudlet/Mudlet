@@ -1340,12 +1340,15 @@ int TLuaInterpreter::getModulePriority(lua_State* L)
 {
     const QString moduleName = getVerifiedString(L, __func__, 1, "module name");
     Host& host = getHostFromLua(L);
-    if (host.mModulePriorities.contains(moduleName)) {
-        const int priority = host.mModulePriorities[moduleName];
-        lua_pushnumber(L, priority);
-        return 1;
+    // Installing a module does not seed mModulePriorities, so whether the module
+    // exists has to be asked of mInstalledModules - the same list
+    // setModulePriority() checks. A module nobody has set a priority on has the
+    // default of 0 that the module manager and the saved profile use (#9655).
+    if (!host.mInstalledModules.contains(moduleName)) {
+        return warnArgumentValue(L, __func__, "module doesn't exist");
     }
-    return warnArgumentValue(L, __func__, "module doesn't exist");
+    lua_pushnumber(L, host.mModulePriorities.value(moduleName));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setModulePriority
