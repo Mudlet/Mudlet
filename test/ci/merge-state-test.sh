@@ -91,11 +91,22 @@ STUB
   STUB_DIR="${dir}"
 }
 
-# env, not a bare assignment prefix: any extra VAR=VALUE arguments arrive by
-# expansion, and bash only treats literal words as assignments
+# These scripts take every input from the environment, so the environment has to
+# be built from nothing rather than inherited: `env -i`, not a bare assignment
+# prefix. Without it the suite passed locally and failed in CI, because
+# CI/set-build-info.sh exports PR_NUMBER into the whole job through $GITHUB_ENV,
+# and report-merge-state.sh treats a set PR_NUMBER as "report on this one pull
+# request" - so every case that exercises the listing path silently asked about
+# the real pull request the CI job was building.
+#
+# env, and not a bare assignment prefix, for a second reason too: extra
+# VAR=VALUE arguments arrive here by expansion, and bash only treats literal
+# words as assignments.
 run_merge_state() {
-  env GH_STUB_DIR="${STUB_DIR}" \
+  env -i \
     PATH="${STUB_DIR}/bin:${PATH}" \
+    HOME="${WORK_DIR}" \
+    GH_STUB_DIR="${STUB_DIR}" \
     REPO=Mudlet/Mudlet \
     BASE_REF=development \
     MERGE_STATE_MAX_ROUNDS=2 \
@@ -105,8 +116,10 @@ run_merge_state() {
 }
 
 run_resolve_milestone() {
-  env GH_STUB_DIR="${STUB_DIR}" \
+  env -i \
     PATH="${STUB_DIR}/bin:${PATH}" \
+    HOME="${WORK_DIR}" \
+    GH_STUB_DIR="${STUB_DIR}" \
     REPO=Mudlet/Mudlet \
     NEXT_MILESTONE="$1" \
     bash "${SCRIPTS_DIR}/resolve-milestone.sh" > "${STUB_DIR}/out.log" 2>&1
@@ -195,6 +208,21 @@ run_merge_state PR_NUMBER=9603
 assert_status 0 $?
 assert_absent "${STUB_DIR}/calls.log" 'state=open'
 assert_contains "${STUB_DIR}/calls.log" 'state=failure'
+
+#-----------------------------------------------------------------------------
+# What CI caught and a local run did not: the job that runs ctest has PR_NUMBER
+# exported into it by CI/set-build-info.sh, which turned every listing-path case
+# into a question about the real pull request being built
+start_test "the surrounding environment cannot change what is reported"
+new_stub hermetic
+printf '9603\n' > "${STUB_DIR}/list.out"
+printf 'open false bcc2b3e\n' > "${STUB_DIR}/pull-9603.out"
+PR_NUMBER=9679 DRY_RUN=1 BASE_REF=main run_merge_state
+assert_status 0 $?
+assert_contains "${STUB_DIR}/calls.log" 'pulls/9603'
+assert_absent "${STUB_DIR}/calls.log" '9679'
+assert_contains "${STUB_DIR}/calls.log" 'state=failure'
+assert_contains "${STUB_DIR}/out.log" 'Conflicts with development'
 
 #-----------------------------------------------------------------------------
 # The repository's real open milestones. "5.0 beginner-friendly" sitting next to
