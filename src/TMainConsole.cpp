@@ -145,6 +145,16 @@ std::optional<QSize> TMainConsole::getLabelSizeHint(const QString& name) const
     return {};
 }
 
+std::optional<QString> TMainConsole::getLabelToolTip(const QString& name) const
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return {};
+    }
+
+    return {pL->toolTip()};
+}
+
 // NOLINTNEXTLINE(readability-make-member-function-const)
 std::pair<bool, QString> TMainConsole::setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet)
 {
@@ -160,6 +170,16 @@ std::pair<bool, QString> TMainConsole::setUserWindowStyleSheet(const QString& na
     return {false, qsl("userwindow name '%1' not found").arg(name)};
 }
 
+std::optional<QString> TMainConsole::getUserWindowStyleSheet(const QString& name) const
+{
+    auto pW = mDockWidgetMap.value(name);
+    if (!pW) {
+        return {};
+    }
+
+    return {pW->styleSheet()};
+}
+
 std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name, const QString& styleSheet)
 {
     if (name.isEmpty() || !name.compare(qsl("main"))) {
@@ -173,6 +193,23 @@ std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name,
         return {true, QString()};
     }
     return {false, qsl("command-line name '%1' not found").arg(name)};
+}
+
+std::optional<QString> TMainConsole::getCmdLineStyleSheet(const QString& name) const
+{
+    if (name.isEmpty() || !name.compare(qsl("main"))) {
+        if (auto pMain = mpHost->mpConsole->mpCommandLine) {
+            return {pMain->styleSheet()};
+        }
+        return {};
+    }
+
+    auto pN = mSubCommandLineMap.value(name);
+    if (!pN) {
+        return {};
+    }
+
+    return {pN->styleSheet()};
 }
 
 void TMainConsole::toggleLogging(bool isMessageEnabled)
@@ -1373,6 +1410,32 @@ std::pair<bool, QString> TMainConsole::setUserWindowTitle(const QString& name, c
     // as it means that the TConsole is flagged as being a user window yet
     // it does not have a TDockWidget to hold it...
     return {false, qsl("internal error: TConsole \"%1\" is marked as a user window but does not have a TDockWidget to contain it").arg(name)};
+}
+
+// The title is in .second when .first is true, otherwise .second is why there
+// is none. Mirrors setUserWindowTitle's checks in the same order and words, so
+// that a miniconsole sharing the name is not reported as a missing window.
+std::pair<bool, QString> TMainConsole::getUserWindowTitle(const QString& name) const
+{
+    if (name.isEmpty()) {
+        return {false, qsl("a user window cannot have an empty string as its name")};
+    }
+
+    auto pC = mSubConsoleMap.value(name);
+    if (!pC) {
+        return {false, qsl("user window name '%1' not found").arg(name)};
+    }
+
+    if (pC->getType() != UserWindow) {
+        return {false, qsl("\"%1\" is not a user window").arg(name)};
+    }
+
+    auto pD = mDockWidgetMap.value(name);
+    if (!pD) {
+        return {false, qsl("internal error: TConsole \"%1\" is marked as a user window but does not have a TDockWidget to contain it").arg(name)};
+    }
+
+    return {true, pD->windowTitle()};
 }
 
 bool TMainConsole::setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags)

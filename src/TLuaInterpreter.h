@@ -371,6 +371,7 @@ public:
     static int getFontSize(lua_State*);
     static int openUserWindow(lua_State*);
     static int setUserWindowTitle(lua_State*);
+    static int getUserWindowTitle(lua_State*);
     static int echoUserWindow(lua_State*);
     static int clearUserWindow(lua_State*);
     static int enableTimer(lua_State*);
@@ -464,12 +465,14 @@ public:
     static int setTextEditTabMovesFocus(lua_State*);
     static int deleteScrollBox(lua_State*);
     static int setLabelToolTip(lua_State*);
+    static int getLabelToolTip(lua_State*);
     static int setLabelCursor(lua_State*);
     static int setLabelCustomCursor(lua_State*);
     static int moveWindow(lua_State*);
     static int setWindow(lua_State*);
     static int openMapWidget(lua_State*);
     static int closeMapWidget(lua_State*);
+    static int getMapWidgetGeometry(lua_State*);
     static int setTextFormat(lua_State*);
     static int setBackgroundImage(lua_State*);
     static int resetBackgroundImage(lua_State*);
@@ -486,6 +489,7 @@ public:
     static int setCmdLineAction(lua_State*);
     static int resetCmdLineAction(lua_State*);
     static int setCmdLineStyleSheet(lua_State*);
+    static int getCmdLineStyleSheet(lua_State*);
     static int getImageSize(lua_State*);
     static int setLabelDoubleClickCallback(lua_State*);
     static int setLabelReleaseCallback(lua_State*);
@@ -560,6 +564,7 @@ public:
     static int getConsoleBufferSize(lua_State*);
     static int setConsoleBufferSize(lua_State*);
     static int enableScrollBar(lua_State*);
+    static int getScrollBarVisible(lua_State*);
     static int disableScrollBar(lua_State*);
     static int disableHorizontalScrollBar(lua_State*);
     static int enableHorizontalScrollBar(lua_State*);
@@ -599,6 +604,7 @@ public:
     static int killAlias(lua_State*);
     static int permBeginOfLineStringTrigger(lua_State*);
     static int setUserWindowStyleSheet(lua_State*);
+    static int getUserWindowStyleSheet(lua_State*);
     static int getTime(lua_State*);
     static int getEpoch(lua_State*);
     static int invokeFileDialog(lua_State*);
@@ -727,6 +733,7 @@ public:
     static int getConnectionInfo(lua_State*);
     static int unzipAsync(lua_State*);
     static int setMapWindowTitle(lua_State*);
+    static int getMapWindowTitle(lua_State*);
     static int getMudletInfo(lua_State*);
     static int getMapBackgroundColor(lua_State*);
     static int setMapBackgroundColor(lua_State*);

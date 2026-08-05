@@ -1117,6 +1117,15 @@ int TLuaInterpreter::enableScrollBar(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getScrollBarVisible
+int TLuaInterpreter::getScrollBarVisible(lua_State* L)
+{
+    const QString windowName{WINDOW_NAME(L, 1)};
+    auto console = CONSOLE(L, windowName);
+    lua_pushboolean(L, console->getScrollBarVisible());
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableTimeStamps
 int TLuaInterpreter::enableTimeStamps(lua_State* L)
 {
@@ -2982,6 +2991,27 @@ int TLuaInterpreter::setCmdLineStyleSheet(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCmdLineStyleSheet
+int TLuaInterpreter::getCmdLineStyleSheet(lua_State* L)
+{
+    // an explicit nil means "the main command line", as it does for the window
+    // name of every other getter that takes an optional one
+    const bool hasName = lua_gettop(L) > 0 && !lua_isnil(L, 1);
+    if (hasName && !checkStringArg(L, __func__, 1, "command line name")) {
+        return lua_error(L);
+    }
+
+    const QString name = hasName ? QString{lua_tostring(L, 1)} : qsl("main");
+    const Host& host = getHostFromLua(L);
+
+    if (auto styleSheet = host.mpConsole->getCmdLineStyleSheet(name)) {
+        lua_pushstring(L, styleSheet->toUtf8().constData());
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, qsl("command-line name '%1' not found").arg(name));
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setFont
 int TLuaInterpreter::setFont(lua_State* L)
 {
@@ -3122,6 +3152,23 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
 
     lua_pushboolean(L, true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelToolTip
+int TLuaInterpreter::getLabelToolTip(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
+
+    const Host& host = getHostFromLua(L);
+    if (auto toolTip = host.mpConsole->getLabelToolTip(labelName)) {
+        lua_pushstring(L, toolTip->toUtf8().constData());
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelClickCallback
@@ -3294,6 +3341,19 @@ int TLuaInterpreter::setMapWindowTitle(lua_State* L)
 
     lua_pushboolean(L, true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapWindowTitle
+int TLuaInterpreter::getMapWindowTitle(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+
+    if (auto title = host.getMapperTitle()) {
+        lua_pushstring(L, title->toUtf8().constData());
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, "no floating/dockable type map window found");
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovie
@@ -3595,6 +3655,21 @@ int TLuaInterpreter::setUserWindowTitle(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getUserWindowTitle
+int TLuaInterpreter::getUserWindowTitle(lua_State* L)
+{
+    const QString name = getVerifiedString(L, __func__, 1, "name");
+    const Host& host = getHostFromLua(L);
+
+    auto [success, result] = host.mpConsole->getUserWindowTitle(name);
+    if (!success) {
+        return warnArgumentValue(L, __func__, result);
+    }
+
+    lua_pushstring(L, result.toUtf8().constData());
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setUserWindowStyleSheet
 int TLuaInterpreter::setUserWindowStyleSheet(lua_State* L)
 {
@@ -3611,6 +3686,23 @@ int TLuaInterpreter::setUserWindowStyleSheet(lua_State* L)
 
     lua_pushboolean(L, true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getUserWindowStyleSheet
+int TLuaInterpreter::getUserWindowStyleSheet(lua_State* L)
+{
+    const QString userWindowName = getVerifiedString(L, __func__, 1, "userwindow name");
+    if (userWindowName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a userwindow cannot have an empty string as its name");
+    }
+
+    const Host& host = getHostFromLua(L);
+    if (auto styleSheet = host.mpConsole->getUserWindowStyleSheet(userWindowName)) {
+        lua_pushstring(L, styleSheet->toUtf8().constData());
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, qsl("userwindow name '%1' not found").arg(userWindowName));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindow
