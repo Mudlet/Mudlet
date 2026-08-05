@@ -122,7 +122,7 @@ jobs:
         # Install all required dependencies
         # brew install can hang indefinitely during bottle pouring, so timeout and retry
         for attempt in 1 2 3; do
-          brew install libzzip libzip ccache expect assimp hunspell oniguruma pcre2 pugixml sqlite yajl boost &
+          brew install libzzip libzip ccache expect assimp hunspell oniguruma pcre2 pugixml sqlite yajl boost zstd &
           brew_pid=$!
           ( sleep 120 && kill $brew_pid 2>/dev/null ) &
           watcher_pid=$!
@@ -212,6 +212,7 @@ jobs:
           libxcb-image0-dev \
           libyajl-dev \
           libzip-dev \
+          libzstd-dev \
           qtkeychain-qt6-dev \
           pcre2-utils \
           pkg-config \
