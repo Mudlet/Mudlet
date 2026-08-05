@@ -701,6 +701,66 @@ describe("Tests Other.lua functions", function()
   -- A boolean is the bad value because lua_isstring() accepts numbers and
   -- lua_isnumber() accepts numeric strings, so neither a number nor a string
   -- reliably fails a check. Neither call gets far enough to register anything.
+  describe("Tests tempComplexRegexTrigger table and positional forms agreeing", function()
+    local created = {}
+
+    local function make(name, overrides)
+      local argument = {
+        triggerName = name,
+        regex = ".*probe.*",
+        code = "",
+        multiline = false,
+        fgColor = 0,
+        bgColor = 0,
+        filter = false,
+        matchAll = false,
+        highlightFgColor = 0,
+        highlightBgColor = 0,
+        soundFile = "",
+        fireLength = 0,
+        lineDelta = 0,
+      }
+      for key, value in pairs(overrides or {}) do
+        argument[key] = value
+      end
+      created[#created + 1] = name
+      return tempComplexRegexTrigger(argument)
+    end
+
+    teardown(function()
+      for _, name in ipairs(created) do
+        pcall(killTrigger, name)
+      end
+      created = {}
+    end)
+
+    -- The positional form kills a trigger of the same name before registering
+    -- the replacement, so re-registering carries the earlier patterns forward
+    -- onto one live trigger. The table form has to do the same, or the profile
+    -- ends up with two triggers of that name both matching.
+    --
+    -- exists() is the wrong probe here: killTrigger() only deactivates and
+    -- queues the trigger, and it stays findable by name until the deferred
+    -- cleanup frees it, so a corpse and its replacement both count. What the
+    -- kill actually changes is how many are still active.
+    it("leaves only one live trigger when the same name is registered twice", function()
+      local name = "tcrtReplaceProbe" .. os.time()
+      make(name)
+      make(name, {regex = ".*second.*"})
+      assert.are.equal(1, isActive(name, "trigger"))
+    end)
+
+    -- The positional form reads multiline with lua_tonumber, so a number is
+    -- what callers of this function already pass. The table form should not
+    -- reject what the same function accepts positionally.
+    it("accepts a number for multiline, as the positional form does", function()
+      local name = "tcrtMultilineProbe" .. os.time()
+      local id = make(name, {multiline = 0})
+      assert.are.equal("number", type(id))
+      assert.is_true(id > 0)
+    end)
+  end)
+
   describe("Tests table argument rejection in permKey and tempComplexRegexTrigger", function()
     local cases = {
       {"permKey", permKey, {name = false}},

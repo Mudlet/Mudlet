@@ -1360,6 +1360,38 @@ describe("Tests DB.lua functions", function()
   -- numbers and lua_isnumber() accepts numeric strings, so neither a number
   -- nor a string reliably fails a check. None of these calls gets far enough
   -- to build anything, so they leave no map state behind.
+  -- uniqueName and eventName reject a value that is not a string, so the other
+  -- string keys of the same table have to as well: silently dropping a bad
+  -- parent or displayName registered the event anyway, under a name the caller
+  -- never asked for.
+  describe("Tests addMapEvent treating all its string keys alike", function()
+    local registered = {}
+
+    teardown(function()
+      for _, uniqueName in ipairs(registered) do
+        removeMapEvent(uniqueName)
+      end
+      registered = {}
+    end)
+
+    local cases = {
+      {"parent", "addMapEventParentProbe"},
+      {"displayname", "addMapEventDisplayNameProbe"},
+    }
+
+    for _, case in ipairs(cases) do
+      local key, uniqueName = case[1], case[2]
+
+      it("rejects a non-string " .. key, function()
+        registered[#registered + 1] = uniqueName
+        assert.has_error(function()
+          addMapEvent({uniquename = uniqueName, eventname = "addMapEventProbeEvent", [key] = false})
+        end)
+        assert.is_nil(getMapEvents()[uniqueName])
+      end)
+    end
+  end)
+
   describe("Tests table argument rejection in the mapper functions", function()
     local cases = {
       {"addMapEvent", addMapEvent, {uniquename = "tableArgRejectProbe", eventname = false}},

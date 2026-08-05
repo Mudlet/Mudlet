@@ -1384,6 +1384,14 @@ int TLuaInterpreter::echoLink(lua_State* L)
                         errorPushed = true;
                         break;
                     }
+                    // a repeated spelling of this key replaces what the
+                    // earlier one gave, the way the scalar keys resolve: hand
+                    // back the registry reference it took, or nothing ever does
+                    if (luaReference) {
+                        luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
+                        luaReference = 0;
+                    }
+                    command.clear();
                     int valueIndex = -1;
                     parseCommandOrFunction(L, __func__, valueIndex, command, luaReference);
                     hasCommand = true;
@@ -2418,6 +2426,14 @@ int TLuaInterpreter::insertLink(lua_State* L)
                         errorPushed = true;
                         break;
                     }
+                    // a repeated spelling of this key replaces what the
+                    // earlier one gave, the way the scalar keys resolve: hand
+                    // back the registry reference it took, or nothing ever does
+                    if (luaReference) {
+                        luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
+                        luaReference = 0;
+                    }
+                    command.clear();
                     int valueIndex = -1;
                     parseCommandOrFunction(L, __func__, valueIndex, command, luaReference);
                     hasCommand = true;
@@ -2528,15 +2544,13 @@ int TLuaInterpreter::insertLink(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertPopup
 int TLuaInterpreter::insertPopup(lua_State* L)
 {
-    // Table argument support - check if it has named keys (not just array indices)
+    // Table argument support. The positional form always wants a string first -
+    // a window name or the text - so a table there is the named form and
+    // nothing else. Deciding that from a case-sensitive probe for a "text" key
+    // sent a table keyed TEXT, or one with no text at all, down the positional
+    // path to be reported as a bad argument #1.
     if (lua_istable(L, 1)) {
-        // Check if this is a named-key table (has "text", "commands", or "hints" key)
-        lua_pushstring(L, "text");
-        lua_gettable(L, 1);
-        bool isNamedTable = !lua_isnil(L, -1);
-        lua_pop(L, 1);
-
-        if (isNamedTable) {
+        {
             // lua_error() longjmps past C++ destructors, so every QString and
             // QStringList below has to be out of scope before the raise at the
             // end - see checkStringArg()
@@ -2586,6 +2600,17 @@ int TLuaInterpreter::insertPopup(lua_State* L)
                             errorPushed = true;
                             break;
                         }
+                        // a repeated spelling of this key replaces what the
+                        // earlier one gave, the way the scalar keys resolve;
+                        // appending instead left the command and hint counts
+                        // mismatched and the popup was refused
+                        for (const int reference : luaReferences) {
+                            if (reference) {
+                                luaL_unref(L, LUA_REGISTRYINDEX, reference);
+                            }
+                        }
+                        luaReferences.clear();
+                        commandList.clear();
                         parseCommandsOrFunctionsTable(L, __func__, valueIndex, commandList, luaReferences);
                         hasCommands = true;
                     } else if (!key.compare(QLatin1String("hints"), Qt::CaseInsensitive)) {
@@ -2594,6 +2619,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
                             errorPushed = true;
                             break;
                         }
+                        hintList.clear();
                         parseHintsTable(L, __func__, valueIndex, hintList);
                         hasHints = true;
                     } else if (!key.compare(QLatin1String("useCurrentFormat"), Qt::CaseInsensitive)) {

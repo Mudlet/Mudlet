@@ -2679,11 +2679,18 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
                         return warnArgumentValue(L, __func__, "code must be a string or function");
                     }
                 } else if (!key.compare(QLatin1String("multiline"), Qt::CaseInsensitive) || !key.compare(QLatin1String("multiLine"), Qt::CaseInsensitive)) {
-                    if (!checkBoolArg(L, __func__, -1, qPrintable(key))) {
-                        errorPushed = true;
-                        break;
+                    // the positional form reads this one with lua_tonumber, so
+                    // a number is what callers of this function already pass:
+                    // take either rather than have the two forms disagree
+                    if (lua_isnumber(L, -1)) {
+                        multiLine = lua_tonumber(L, -1) != 0;
+                    } else {
+                        if (!checkBoolArg(L, __func__, -1, qPrintable(key))) {
+                            errorPushed = true;
+                            break;
+                        }
+                        multiLine = lua_toboolean(L, -1);
                     }
-                    multiLine = lua_toboolean(L, -1);
                     hasMultiline = true;
                 } else if (!key.compare(QLatin1String("fgColor"), Qt::CaseInsensitive) || !key.compare(QLatin1String("foregroundColor"), Qt::CaseInsensitive)) {
                     if (lua_isnumber(L, -1)) {
@@ -2813,6 +2820,10 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
                     if (pP) {
                         patterns = pP->getPatternsList();
                         propertyList = pP->getRegexCodePropertyList();
+                        // the replacement carries the earlier patterns, so the
+                        // trigger they came from has to go - without this the
+                        // profile keeps both, each matching
+                        host.getTriggerUnit()->killTrigger(triggerName);
                     }
                     patterns << pattern;
                     if (colorTrigger) {

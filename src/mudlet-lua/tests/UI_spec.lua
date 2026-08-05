@@ -1495,6 +1495,67 @@ describe("Tests UI functions", function()
   -- numbers and lua_isnumber() accepts numeric strings, so neither a number
   -- nor a string reliably fails a check. None of these calls gets far enough
   -- to create a window, label or console.
+  describe("Tests table argument key handling in the link and popup functions", function()
+    -- insertPopup only ever takes a string as its first positional argument, so
+    -- a table there is unambiguously the named form and has to be handled as
+    -- one. Deciding that from a case-sensitive probe for a "text" key meant a
+    -- table keyed TEXT, or with no text at all, fell through to the positional
+    -- path and reported a type error about argument #1 instead.
+    it("reports the table form error when the table carries no text", function()
+      local created, message = insertPopup({commands = {"popupNoTextCmd"}, hints = {"popupNoTextHint"}})
+      assert.is_nil(created)
+      assert.is_truthy(message:find("text", 1, true))
+      assert.is_truthy(message:find("table", 1, true))
+    end)
+
+    it("accepts a mis-cased text key, as it does for every other key", function()
+      echo("test ")
+      assert.is_true(insertPopup({TEXT = "mis-cased", commands = {"popupMisCaseCmd"}, hints = {"popupMisCaseHint"}}))
+    end)
+
+    -- Repeated spellings of a key resolve last-wins everywhere else in these
+    -- table branches, so the second commands table has to replace the first
+    -- rather than append to it - appending left the command and hint counts
+    -- mismatched and the popup was refused.
+    it("lets the last spelling of a repeated key win instead of appending", function()
+      echo("test ")
+      assert.is_true(insertPopup({text = "repeated", commands = {"popupDupA"}, Commands = {"popupDupB"}, hints = {"popupDupHint"}}))
+    end)
+
+    -- A command given as a function is held by a Lua registry reference. When a
+    -- repeated spelling of the key replaces it, the reference it replaced has to
+    -- go back to the registry free list, otherwise every such call strands one.
+    -- One reference per call is handed to the console and legitimately stays
+    -- live, so the registry may grow by at most the number of calls.
+    local function assertRepeatedCommandKeyReleasesReference(callable, label)
+      local registry = debug.getregistry()
+
+      -- warm up: the first calls into a console allocate more than the
+      -- reference under test
+      for _ = 1, 5 do
+        callable({text = "warm", command = function() end, hint = "warm"})
+      end
+
+      local before = #registry
+      local calls = 40
+      for _ = 1, calls do
+        callable({text = "repeated", command = function() end, Command = function() end, hint = "repeated"})
+      end
+      local grew = #registry - before
+
+      assert.is_true(grew <= calls, ("%s stranded a registry reference: %d calls grew the registry by %d"):format(label, calls, grew))
+    end
+
+    it("echoLink releases the registry reference a repeated command key replaced", function()
+      assertRepeatedCommandKeyReleasesReference(echoLink, "echoLink")
+    end)
+
+    it("insertLink releases the registry reference a repeated command key replaced", function()
+      echo("test ")
+      assertRepeatedCommandKeyReleasesReference(insertLink, "insertLink")
+    end)
+  end)
+
   describe("Tests table argument rejection in the window and format functions", function()
     local cases = {
       {"createLabel", createLabel, {name = false}},

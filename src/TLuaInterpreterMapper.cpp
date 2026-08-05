@@ -844,13 +844,20 @@ int TLuaInterpreter::addMapEvent(lua_State* L)
                     eventName = lua_tostring(L, -1);
                     hasEventName = true;
                 } else if (!key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
-                    if (lua_isstring(L, -1)) {
-                        parent = QString::fromUtf8(lua_tostring(L, -1));
+                    // uniqueName and eventName above reject a value that is not
+                    // a string, so these have to as well: dropping a bad one
+                    // registered the event anyway, under a name nobody asked for
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
                     }
+                    parent = QString::fromUtf8(lua_tostring(L, -1));
                 } else if (!key.compare(QLatin1String("displayname"), Qt::CaseInsensitive) || !key.compare(QLatin1String("displayName"), Qt::CaseInsensitive)) {
-                    if (lua_isstring(L, -1)) {
-                        displayName = QString::fromUtf8(lua_tostring(L, -1));
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
                     }
+                    displayName = QString::fromUtf8(lua_tostring(L, -1));
                 } else if (!key.compare(QLatin1String("arguments"), Qt::CaseInsensitive) || !key.compare(QLatin1String("args"), Qt::CaseInsensitive)) {
                     if (lua_istable(L, -1)) {
                         lua_pushnil(L);
