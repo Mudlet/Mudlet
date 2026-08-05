@@ -116,6 +116,57 @@ describe("Tests functionality of Geyser.HBox", function()
     end)
   end)
 
+  -- The box lays itself out when a child arrives, and has to do the same when
+  -- one leaves: without it the survivors keep the geometry computed for the old
+  -- child count and the box is left with a permanent hole. contains_fixed is
+  -- false for a box of plain labels, so reposition() does not heal it either.
+  describe("Geyser.HBox:remove", function()
+    local box
+
+    before_each(function()
+      box = track(Geyser.HBox:new({name = "ghbShrink", x = 0, y = 0, width = 600, height = 50}))
+      track(Geyser.Label:new({name = "ghbShrinkA"}, box))
+      track(Geyser.Label:new({name = "ghbShrinkB"}, box))
+    end)
+
+    it("re-splits the row when a child is deleted", function()
+      local third = track(Geyser.Label:new({name = "ghbShrinkC"}, box))
+      third:delete()
+      assert.are.same({"ghbShrinkA", "ghbShrinkB"}, box.windows)
+      assert.are.same({x = 0, y = 0, width = 300, height = 50}, geometry("ghbShrinkA"))
+      assert.are.same({x = 300, y = 0, width = 300, height = 50}, geometry("ghbShrinkB"))
+    end)
+
+    it("re-splits the row when a child is removed by hand", function()
+      box:remove(box.windowList.ghbShrinkB)
+      assert.are.same({"ghbShrinkA"}, box.windows)
+      assert.are.same({x = 0, y = 0, width = 600, height = 50}, geometry("ghbShrinkA"))
+    end)
+
+    it("re-splits the row a child left for another container", function()
+      local elsewhere = track(Geyser.Container:new({name = "ghbElsewhere", x = 0, y = 100, width = 100, height = 100}))
+      box.windowList.ghbShrinkB:changeContainer(elsewhere)
+      assert.are.same({"ghbShrinkA"}, box.windows)
+      assert.are.same({x = 0, y = 0, width = 600, height = 50}, geometry("ghbShrinkA"))
+    end)
+
+    it("survives losing its last child", function()
+      box:remove(box.windowList.ghbShrinkA)
+      box:remove(box.windowList.ghbShrinkB)
+      assert.are.same({}, box.windows)
+    end)
+
+    it("holds the layout back while updates are deferred", function()
+      local third = track(Geyser.Label:new({name = "ghbShrinkDeferred"}, box))
+      box.defer_updates = true
+      third:delete()
+      assert.are.equal(199, geometry("ghbShrinkA").width)
+      box.defer_updates = false
+      box:reposition()
+      assert.are.equal(300, geometry("ghbShrinkA").width)
+    end)
+  end)
+
   describe("Geyser.HBox:reposition", function()
     local box
 

@@ -332,7 +332,11 @@ function setGaugeWindow(windowName, gaugeName, x, y, show)
   windowName = windowName or "main"
   x = x or 0
   y = y or 0
-  show = show or true
+  -- `show or true` would turn an explicit false into true, since false is the
+  -- one value the `x or default` idiom cannot carry
+  if show == nil then
+    show = true
+  end
   assert(gaugesTable[gaugeName], "setGaugeWindow: no such gauge exists.")
   setWindow(windowName, gaugeName .. "_back", x, y, show)
   setWindow(windowName, gaugeName .. "_front", x, y, show)

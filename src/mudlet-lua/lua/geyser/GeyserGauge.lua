@@ -21,50 +21,115 @@ Geyser.Gauge = Geyser.Container:new({
   strict = false,
   orientation = "horizontal" })
 
---- Helper function to extract spacing values (margin/border/padding) from CSS
--- @param css The CSS string to parse
--- @param property The property name to extract (e.g., "margin", "border", "padding")
--- @return left, right, top, bottom spacing values in pixels, or 0 if not found
-local function extractCSSSpacing(css, property)
-  if not css then return 0, 0, 0, 0 end
-  
-  -- Look for the property (e.g., "margin: 10px 30px;")
-  local pattern = property .. "%s*:%s*([^;]+)"
-  local value = css:match(pattern)
-  
-  if not value then return 0, 0, 0, 0 end
-  
-  -- Parse the values - CSS can have 1-4 values
-  local values = {}
-  for num in value:gmatch("(%d+%.?%d*)px") do
-    table.insert(values, tonumber(num))
+-- Reads one CSS token as a length in pixels. Qt reads a bare number as pixels
+-- and a negative length is meaningful, so both are taken; a unit that has no
+-- pixel value without knowing the font or the parent - em, %, pt - has none to
+-- give here, and neither has a keyword such as "solid".
+-- @param token The token to read
+-- @return the length in pixels, or nil if the token is not a pixel length
+local function pixelLength(token)
+  local number, unit = token:match("^([+-]?%d*%.?%d+)(.*)$")
+  if not number then
+    return nil
   end
-  
-  -- Handle border specially - extract width from "border: 2px solid color"
-  if property == "border" and #values == 0 then
-    local borderWidth = value:match("(%d+%.?%d*)px")
-    if borderWidth then
-      values = {tonumber(borderWidth)}
+  unit = unit:lower()
+  if unit ~= "" and unit ~= "px" then
+    return nil
+  end
+  return tonumber(number)
+end
+
+-- Finds the value of a CSS declaration. The property has to start a word of
+-- its own, or "qproperty-margin" would be read as a margin.
+-- @param css The CSS string to search
+-- @param property The property name, as a Lua pattern
+-- @return the value with its trailing whitespace removed, or nil
+local function cssValue(css, property)
+  local value = css:match("%f[%w%-]" .. property .. "%s*:%s*([^;]+)")
+  if not value then
+    return nil
+  end
+  return value:match("^(.-)%s*$")
+end
+
+-- Reads a one to four value CSS box shorthand into its four sides.
+-- @param value The declaration value, or nil
+-- @return top, right, bottom, left, or nil if any part of the value is not a
+--         pixel length: half a shorthand is worse than none, because the
+--         lengths that are left would be read in the wrong positions
+local function boxShorthand(value)
+  if not value then
+    return nil
+  end
+  local lengths = {}
+  for token in value:gmatch("%S+") do
+    local length = pixelLength(token)
+    if not length then
+      return nil
+    end
+    lengths[#lengths + 1] = length
+  end
+  if #lengths == 0 or #lengths > 4 then
+    return nil
+  end
+  local top, right = lengths[1], lengths[2] or lengths[1]
+  return top, right, lengths[3] or top, lengths[4] or right
+end
+
+-- Reads the width out of a CSS border shorthand such as "2px solid red", where
+-- only the first length is a width and the rest describes the line.
+-- @param value The declaration value, or nil
+-- @return the width in pixels, or nil
+local function borderWidth(value)
+  if not value then
+    return nil
+  end
+  for token in value:gmatch("%S+") do
+    local length = pixelLength(token)
+    if length then
+      return length
     end
   end
-  
-  if #values == 0 then
-    return 0, 0, 0, 0
-  elseif #values == 1 then
-    -- All sides same
-    return values[1], values[1], values[1], values[1]
-  elseif #values == 2 then
-    -- top/bottom, left/right
-    return values[2], values[2], values[1], values[1]
-  elseif #values == 3 then
-    -- top, left/right, bottom
-    return values[2], values[2], values[1], values[3]
-  elseif #values == 4 then
-    -- top, right, bottom, left
-    return values[4], values[2], values[1], values[3]
-  else
-    return 0, 0, 0, 0
+  return nil
+end
+
+--- Helper function to extract spacing values (margin/border/padding) from CSS
+-- Shorthands are read first and longhands over the top of them, so
+-- "margin: 5px; margin-left: 20px" gives 20 on the left and 5 elsewhere.
+-- @param css The CSS string to parse
+-- @param property The property name to extract ("margin", "border" or "padding")
+-- @return left, right, top, bottom spacing values in pixels, 0 for each side
+--         the stylesheet says nothing measurable about
+local function extractCSSSpacing(css, property)
+  if not css then return 0, 0, 0, 0 end
+  local spacing = {top = 0, right = 0, bottom = 0, left = 0}
+  local border = property == "border"
+
+  if border then
+    local width = borderWidth(cssValue(css, "border"))
+    if width then
+      spacing.top, spacing.right, spacing.bottom, spacing.left = width, width, width, width
+    end
   end
+
+  local top, right, bottom, left = boxShorthand(cssValue(css, border and "border%-width" or property))
+  if top then
+    spacing.top, spacing.right, spacing.bottom, spacing.left = top, right, bottom, left
+  end
+
+  for _, side in ipairs({"top", "right", "bottom", "left"}) do
+    local length
+    if border then
+      length = borderWidth(cssValue(css, "border%-" .. side)) or pixelLength(cssValue(css, "border%-" .. side .. "%-width") or "")
+    else
+      length = pixelLength(cssValue(css, property .. "%-" .. side) or "")
+    end
+    if length then
+      spacing[side] = length
+    end
+  end
+
+  return spacing.left, spacing.right, spacing.top, spacing.bottom
 end
 
 --- Sets the gauge amount.
@@ -122,10 +187,13 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
   -- Note: We use function-based constraints for dynamic sizing that accounts for margins
   -- The front label can have its own borders and padding (margins are stripped in setStyleSheet)
   -- Qt applies border/padding outside the widget's content area, so we don't need to compensate for them
-  
+  -- The offsets are given as functions rather than as "<n>px": a negative pixel
+  -- constraint is measured from the opposite edge, which is not what a negative
+  -- margin asks for
+
   if self.orientation == "horizontal" then
     -- Position the front label inside the back's content area
-    self.front:move(leftOffset .. "px", topOffset .. "px")
+    self.front:move(function() return leftOffset end, function() return topOffset end)
     -- For width: we want value% of the CONTENT width (back label's content area)
     -- Content width = back_label_width - leftOffset - rightOffset
     local totalBackOffset = leftOffset + rightOffset
@@ -141,7 +209,7 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
     local totalBackOffset = topOffset + bottomOffset
     local gaugeValue = self.value
     self.front:move(
-      leftOffset .. "px",
+      function() return leftOffset end,
       function() return topOffset + math.floor((self.back.get_height() - totalBackOffset) * (1 - gaugeValue / 100) + 0.5) end
     )
     self.front:resize(
@@ -163,7 +231,7 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
       function() return math.floor(self.back.get_height() - topOffset - bottomOffset + 0.5) end
     )
   else -- batty (top to bottom)
-    self.front:move(leftOffset .. "px", topOffset .. "px")
+    self.front:move(function() return leftOffset end, function() return topOffset end)
     local totalBackOffset = topOffset + bottomOffset
     local gaugeValue = self.value
     self.front:resize(
@@ -287,9 +355,13 @@ function Geyser.Gauge:setStyleSheet(css, cssback, cssText)
   
   -- For the front label, strip ONLY margins (borders and padding are safe and allow styling)
   -- Margins on the front label cause positioning issues, but borders/padding are fine
+  -- the trailing semicolon is optional: the last declaration in a stylesheet
+  -- usually carries none, and a margin left on the front label is applied on
+  -- top of the offset already worked out from the back label, doubling it.
+  -- The frontier keeps qproperty-margin, which is not a margin, out of it.
   local frontCSSStripped = css
   if frontCSSStripped then
-    frontCSSStripped = frontCSSStripped:gsub("%s*margin[^;]*;", "")
+    frontCSSStripped = frontCSSStripped:gsub("%s*%f[%w%-]margin[^;]*;?", "")
   end
   self.front:setStyleSheet(frontCSSStripped)
   

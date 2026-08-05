@@ -194,6 +194,69 @@ describe("Tests functionality of Geyser.Gauge", function()
       assert.are.same({x = 6, y = 4, width = 188, height = 88}, geometry("ggsThreePadding_front"))
     end)
 
+    -- A unitless zero is the ordinary way to write "no margin on this axis".
+    -- Counting only the px tokens dropped it, so what is left reads as a
+    -- shorter shorthand and every component shifts.
+    it("counts a unitless zero as a margin value", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsZero", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("margin: 0 10px;", "margin: 0 10px;")
+      assert.are.same({x = 10, y = 0, width = 180, height = 100}, geometry("ggsZero_front"))
+    end)
+
+    it("counts a unitless zero in a four value margin", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsZeroFour", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("margin: 10px 0 10px 0;", "margin: 10px 0 10px 0;")
+      assert.are.same({x = 0, y = 10, width = 200, height = 80}, geometry("ggsZeroFour_front"))
+    end)
+
+    it("keeps the sign of a negative margin", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsNegative", x = 20, y = 20, width = 200, height = 100}))
+      gauge:setStyleSheet("margin: -5px;", "margin: -5px;")
+      assert.are.same({x = 15, y = 15, width = 210, height = 110}, geometry("ggsNegative_front"))
+    end)
+
+    it("reads a margin longhand", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsLonghand", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("margin-left: 10px;", "margin-left: 10px;")
+      assert.are.same({x = 10, y = 0, width = 190, height = 100}, geometry("ggsLonghand_front"))
+    end)
+
+    it("lets a margin longhand override the shorthand it follows", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsOverride", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("margin: 5px; margin-left: 20px;", "margin: 5px; margin-left: 20px;")
+      assert.are.same({x = 20, y = 5, width = 175, height = 90}, geometry("ggsOverride_front"))
+    end)
+
+    it("reads a border-width longhand", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsBorderWidth", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("border-width: 2px;", "border-width: 2px;")
+      assert.are.same({x = 2, y = 2, width = 196, height = 96}, geometry("ggsBorderWidth_front"))
+    end)
+
+    it("reads an upper case px unit", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsUpperCase", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("margin: 10PX;", "margin: 10PX;")
+      assert.are.same({x = 10, y = 10, width = 180, height = 80}, geometry("ggsUpperCase_front"))
+    end)
+
+    -- em and % cannot be turned into pixels here, so the whole declaration is
+    -- left alone rather than half of it being read as zero
+    it("leaves a margin it cannot measure in pixels alone", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsEm", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("margin: 1em;", "margin: 1em;")
+      assert.are.same({x = 0, y = 0, width = 200, height = 100}, geometry("ggsEm_front"))
+      gauge:setStyleSheet("margin: 5% 10px;", "margin: 5% 10px;")
+      assert.are.same({x = 0, y = 0, width = 200, height = 100}, geometry("ggsEm_front"))
+    end)
+
+    -- qproperty-margin is a Qt property, not a margin, and used to be picked up
+    -- by the unanchored property pattern
+    it("does not read qproperty-margin as a margin", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsQProperty", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("qproperty-margin: 5px;", "qproperty-margin: 5px;")
+      assert.are.same({x = 0, y = 0, width = 200, height = 100}, geometry("ggsQProperty_front"))
+    end)
+
     it("reads a four value margin as top, right, bottom, left", function()
       local gauge = track(Geyser.Gauge:new({name = "ggsFourValue", x = 0, y = 0, width = 200, height = 100}))
       gauge:setStyleSheet("margin: 1px 2px 3px 4px;", "margin: 1px 2px 3px 4px;")
@@ -226,6 +289,16 @@ describe("Tests functionality of Geyser.Gauge", function()
       assert.is_truthy(getLabelStyleSheet("ggsCss_front"):find("background-color: red;", 1, true))
       assert.is_truthy(getLabelStyleSheet("ggsCss_back"):find("margin: 5px;", 1, true))
       assert.are.equal("margin: 5px; background-color: blue;", gauge.backCSS)
+    end)
+
+    -- the last declaration in a stylesheet carries no semicolon, and a margin
+    -- left on the front label is applied on top of the offset computed from the
+    -- back label, doubling it
+    it("strips a margin that carries no trailing semicolon", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsNoSemicolon", x = 0, y = 0, width = 200, height = 40}))
+      gauge:setStyleSheet("background-color: red; margin: 5px", "margin: 5px;")
+      assert.is_nil(getLabelStyleSheet("ggsNoSemicolon_front"):find("margin", 1, true))
+      assert.are.same({x = 5, y = 5, width = 190, height = 30}, geometry("ggsNoSemicolon_front"))
     end)
 
     it("uses the front stylesheet for the back when only one is given", function()

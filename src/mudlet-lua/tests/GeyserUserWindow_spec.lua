@@ -49,23 +49,10 @@ describe("Tests functionality of Geyser.UserWindow", function()
     created = {}
   end)
 
-  -- Deleting a user window leaves its "<name>Container" root container behind
-  -- (see the pending below), so sweep those out by hand to keep repeat runs of
-  -- this file against the same profile identical.
   after_each(function()
-    local names = {}
     for _, object in ipairs(created) do
-      if object.type == "userwindow" then
-        names[#names + 1] = object.name .. "Container"
-      end
       if alive(object) then
         object:delete()
-      end
-    end
-    for _, name in ipairs(names) do
-      local orphan = Geyser.windowList[name]
-      if orphan then
-        orphan:delete()
       end
     end
     created = {}
@@ -179,6 +166,33 @@ describe("Tests functionality of Geyser.UserWindow", function()
       assert.are.equal("r", userWindow.dockPosition)
       assert.are.equal("userwindow", windowType("guwDocked"))
       assert.is_true(windowVisible("guwDocked"))
+    end)
+
+    -- A window that is about to be floated must not be docked on the way there:
+    -- docking takes the dock's size off the main window, and the percentage
+    -- constraints the constructor resolves straight afterwards are measured
+    -- against the main window. Which dock position was asked for is what says
+    -- so; how much the main window shrinks by, and when, is Qt's business and
+    -- is not the same on every platform.
+    it("opens a window it is going to float as floating, not docked first", function()
+      local openWindow = spy.on(_G, "openUserWindow")
+      finally(function() openWindow:revert() end)
+      local mainWidth, mainHeight = getMainWindowSize()
+      track(Geyser.UserWindow:new({name = "guwPercent", x = "25%", y = "10%", width = "30%", height = "30%"}))
+      assert.spy(openWindow).was.called_with("guwPercent", false, true, "floating")
+      assert.are.same({
+        x = math.floor(mainWidth * 0.25),
+        y = math.floor(mainHeight * 0.1),
+        width = math.floor(mainWidth * 0.3),
+        height = math.floor(mainHeight * 0.3),
+      }, geometry("guwPercent"))
+    end)
+
+    it("still docks a window that was asked to start docked", function()
+      local openWindow = spy.on(_G, "openUserWindow")
+      finally(function() openWindow:revert() end)
+      track(Geyser.UserWindow:new({name = "guwStaysDocked", x = 10, y = 10, width = 300, height = 200, docked = true, dockPosition = "left"}))
+      assert.spy(openWindow).was.called_with("guwStaysDocked", false, true, "left")
     end)
 
     it("new2 marks the user window as using add2", function()
@@ -308,12 +322,31 @@ describe("Tests functionality of Geyser.UserWindow", function()
     end)
   end)
 
-  -- Geyser.UserWindow:show() (GeyserUserWindow.lua:52) forwards to its parent
-  -- without the `auto` flag its container passes down, so an automatic show
-  -- clears self.hidden as if the user had asked for it. A user window hidden by
-  -- hand therefore reappears the moment its root container is shown, where a
-  -- Geyser.MiniConsole in the same position correctly stays hidden.
-  pending("Geyser.UserWindow stays hidden when its root container is shown - Geyser.UserWindow:show() drops the auto flag")
+  -- Geyser.UserWindow:show() forwards to its parent, and has to pass on the
+  -- `auto` flag its container hands down: the base class picks which of the two
+  -- hidden bits to clear from it. Without the flag an automatic show clears
+  -- self.hidden as if the user had asked for it, and never clears auto_hidden.
+  describe("Geyser.UserWindow show cascade", function()
+    it("stays hidden when its root container is shown after a hand hide", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwHandHidden", x = 10, y = 20, width = 200, height = 150}))
+      userWindow:hide()
+      assert.is_true(userWindow.hidden)
+      assert.is_false(windowVisible("guwHandHidden"))
+      userWindow.container:show()
+      assert.is_true(userWindow.hidden)
+      assert.is_false(windowVisible("guwHandHidden"))
+    end)
+
+    it("comes back when the container that hid it is shown again", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwAutoHidden", x = 10, y = 20, width = 200, height = 150}))
+      userWindow.container:hide()
+      assert.is_true(userWindow.auto_hidden)
+      assert.is_false(windowVisible("guwAutoHidden"))
+      userWindow.container:show()
+      assert.is_false(userWindow.auto_hidden)
+      assert.is_true(windowVisible("guwAutoHidden"))
+    end)
+  end)
 
   describe("Geyser.UserWindow:setTitle/resetTitle", function()
     -- setUserWindowTitle answers nil and a message rather than raising when it
@@ -388,9 +421,42 @@ describe("Tests functionality of Geyser.UserWindow", function()
     end)
   end)
 
-  -- Geyser.Container:new (GeyserContainer.lua:361) makes the "<name>Container"
-  -- root container for a user window, but Geyser.Container:delete only unhooks
-  -- the user window from it, so the container is left registered in
-  -- Geyser.windowList and Geyser.windows for the rest of the session.
-  pending("deleting a Geyser.UserWindow also removes the root container it created")
+  -- Geyser.Container:new makes the "<name>Container" root container for a user
+  -- window. An orphaned one is not inert: its get_width/get_height ask
+  -- getUserWindowSize for a window that is gone, which falls back to the main
+  -- window size, so every leftover claims the whole main window in every
+  -- layout pass.
+  describe("Geyser.UserWindow root container cleanup", function()
+    it("removes the root container it created", function()
+      local trackedWindows = #Geyser.windows
+      local userWindow = track(Geyser.UserWindow:new({name = "guwRootGone", x = 10, y = 20, width = 200, height = 150}))
+      assert.are.equal(userWindow.container, Geyser.windowList.guwRootGoneContainer)
+      userWindow:delete()
+      assert.is_nil(Geyser.windowList.guwRootGoneContainer)
+      assert.is_nil(table.index_of(Geyser.windows, "guwRootGoneContainer"))
+      assert.are.equal(trackedWindows, #Geyser.windows)
+    end)
+
+    it("leaves nothing behind over repeated create and delete cycles", function()
+      local trackedWindows = #Geyser.windows
+      for index = 1, 5 do
+        Geyser.UserWindow:new({name = "guwCycle" .. index, x = 10, y = 20, width = 200, height = 150}):delete()
+      end
+      assert.are.equal(trackedWindows, #Geyser.windows)
+    end)
+
+    -- a root container still holding the user window has to be left alone: the
+    -- user window is deleted through its own container in the ordinary
+    -- container:delete() cascade, and that container is still in use
+    it("keeps the root container while the user window is still in it", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwRootKept", x = 10, y = 20, width = 200, height = 150}))
+      local root = userWindow.container
+      track(Geyser.Label:new({name = "guwRootKeptLabel", x = 0, y = 0, width = 20, height = 20}, userWindow))
+      assert.are.equal(root, Geyser.windowList.guwRootKeptContainer)
+      root:delete()
+      assert.is_nil(Geyser.windowList.guwRootKeptContainer)
+      assert.is_nil(windowType("guwRootKept"))
+      assert.is_nil(windowType("guwRootKeptLabel"))
+    end)
+  end)
 end)

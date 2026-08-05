@@ -178,13 +178,40 @@ describe("Tests functionality of Geyser.ScrollBox", function()
   end)
 
   -- Geyser:add2 runs from inside Geyser.Container:new, so the hide it asks for
-  -- lands before createScrollBox has made the widget. Every other Geyser widget
-  -- constructor hides itself again afterwards (GeyserCommandLine.lua:89,
-  -- GeyserMiniConsole.lua:605, GeyserLabel.lua:998, GeyserTextEdit.lua:70,
-  -- GeyserMapper.lua:133); Geyser.ScrollBox:new is the one that does not, so it
-  -- comes up on screen with auto_hidden already true. A Geyser.MiniConsole
-  -- built the same way stays hidden, which is the behaviour this asks for.
-  pending("Geyser.ScrollBox created in a hidden add2 container stays hidden - Geyser.ScrollBox:new never re-hides the widget it just created")
+  -- lands before createScrollBox has made the widget. Every Geyser widget
+  -- constructor therefore hides itself again afterwards
+  -- (GeyserCommandLine.lua:89, GeyserMiniConsole.lua:605, GeyserLabel.lua:998,
+  -- GeyserTextEdit.lua:70, GeyserMapper.lua:133), and a Geyser.MiniConsole
+  -- built the same way is the reference behaviour asserted alongside.
+  describe("Geyser.ScrollBox created in a hidden container", function()
+    it("stays off screen, and comes back when the container is shown", function()
+      local parent = track(Geyser.Container:new2({name = "gsbHiddenParent", x = 0, y = 0, width = 300, height = 200}))
+      parent:hide()
+      local scrollBox = track(Geyser.ScrollBox:new2({name = "gsbBornHidden", x = 0, y = 0, width = "100%", height = "50%"}, parent))
+      local console = track(Geyser.MiniConsole:new2({name = "gsbBornHiddenConsole", x = 0, y = "50%", width = "100%", height = "50%"}, parent))
+      assert.is_true(scrollBox.auto_hidden)
+      assert.is_true(console.auto_hidden)
+      assert.is_false(windowVisible("gsbBornHiddenConsole"))
+      assert.is_false(windowVisible("gsbBornHidden"))
+      parent:show()
+      assert.is_true(windowVisible("gsbBornHidden"))
+      assert.is_true(windowVisible("gsbBornHiddenConsole"))
+    end)
+
+    -- a scroll box that came up on screen while its bookkeeping said hidden
+    -- could not be taken off it again: Geyser.Container:hide skips hide_impl
+    -- for anything that already believes itself hidden, so neither an explicit
+    -- hide nor another parent:hide() reached it
+    it("can be taken off screen by hand without being shown first", function()
+      local parent = track(Geyser.Container:new2({name = "gsbHideParent", x = 0, y = 0, width = 300, height = 200}))
+      parent:hide()
+      local scrollBox = track(Geyser.ScrollBox:new2({name = "gsbHideByHand", x = 0, y = 0, width = "100%", height = "100%"}, parent))
+      scrollBox:hide()
+      assert.is_false(windowVisible("gsbHideByHand"))
+      parent:hide()
+      assert.is_false(windowVisible("gsbHideByHand"))
+    end)
+  end)
 
   describe("Geyser.ScrollBox scroll bars", function()
     -- A scroll box scrolls by being a QScrollArea (TScrollBox.h), not by being
