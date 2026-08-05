@@ -660,6 +660,10 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
                     qWarning().noquote() << "GMCP Char.Login - could not read the stored sign-in while recovering a rejected token:" << errorMessage;
                 }
 
+                // Whether this read positively saw the token this connection sent still stored. A superseded
+                // recovery may only rewrite the entry on that evidence - see the drop below.
+                bool rejectedTokenStillStored = false;
+
                 // Shared-store rotation check: if the stored token no longer hashes to what this connection
                 // sent, another running instance rotated it (single-use) - replay the fresh one once, rather
                 // than discarding its token. A rejection whose stored token still matches (a genuinely dead
@@ -701,6 +705,9 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
                                 sendReconnect(account, std::move(token));
                                 return;
                             }
+                            // Both branches above return, so reaching here means the stored token still
+                            // hashes to the one this connection sent: a genuinely dead token, not a rotation.
+                            rejectedTokenStillStored = !sentTokenHash.isEmpty();
                         }
                         // Catch-all: scrub the parsed token on every path that did not move it into
                         // sendReconnect - including a stored entry with a token but an empty account - so a
@@ -713,6 +720,17 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
                 // block above already cleared it.
                 SecureStringUtils::secureStringClear(value);
 
+                // A superseded recovery rewrites the entry only when this read positively saw the rejected
+                // token still stored. Without that evidence - a failed read, an entry that never parsed, or a
+                // second rejection after a rotation replay - the newer attempt may already have saved its own
+                // fresh token (its Char.Login.Token can land while this read is in flight), and a token-less
+                // rewrite here would erase it and force another browser sign-in. Leaving the entry alone is
+                // self-correcting instead: the latch keeps the newer attempt from replaying a dead token, and
+                // if that attempt never completes, the next connection's rejection runs this recovery again
+                // un-superseded and drops it then.
+                if (superseded && !rejectedTokenStillStored) {
+                    return;
+                }
                 // The token really is dead. Keep the account+provider resume hint (dropping only the token) so
                 // the next attempt restarts the same provider's browser sign-in with no menu. The captured
                 // account and provider are used rather than mConn's, which a newer Char.Login.Default may have
