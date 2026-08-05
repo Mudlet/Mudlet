@@ -1157,13 +1157,15 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     ofs << mCustomEnvColors;
     ofs << mpRoomDB->hashToRoomID;
     if (mSaveVersion < 19) {
-        // Save the data in the map user data for older versions
-        mUserData.insert(qsl("system.fallback_mapSymbolFont"), mMapSymbolFont.toString());
-        mUserData.insert(qsl("system.fallback_mapSymbolFontFudgeFactor"), QString::number(mMapSymbolFontFudgeFactor));
-        mUserData.insert(qsl("system.fallback_onlyUseMapSymbolFont"), mIsOnlyMapSymbolFontToBeUsed ? qsl("true") : qsl("false"));
-    }
-    ofs << mUserData;
-    if (mSaveVersion >= 19) {
+        // Save the data in the map user data for older versions - use a local
+        // copy so that saving does not modify the live map's user data:
+        QMap<QString, QString> userData{mUserData};
+        userData.insert(qsl("system.fallback_mapSymbolFont"), mMapSymbolFont.toString());
+        userData.insert(qsl("system.fallback_mapSymbolFontFudgeFactor"), QString::number(mMapSymbolFontFudgeFactor));
+        userData.insert(qsl("system.fallback_onlyUseMapSymbolFont"), mIsOnlyMapSymbolFontToBeUsed ? qsl("true") : qsl("false"));
+        ofs << userData;
+    } else {
+        ofs << mUserData;
         // Save the data directly in supported format versions (19 and above)
         ofs << mMapSymbolFont;
         ofs << mMapSymbolFontFudgeFactor;
@@ -1315,16 +1317,6 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         }
 
         ofs << pR->getId();
-        if (mSaveVersion <= 19) {
-            if (!pR->mSymbol.isEmpty()) {
-                pR->userData.insert(QLatin1String("system.fallback_symbol"), pR->mSymbol);
-            }
-        }
-        if (mSaveVersion < 21) {
-            if (pR->hidden) {
-                pR->userData.insert(QLatin1String("system.fallback_hidden"), QLatin1String("true"));
-            }
-        }
         ofs << pR->getArea();
         ofs << pR->x();
         ofs << pR->y();
@@ -1379,10 +1371,6 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
 
         if (mSaveVersion >= 21) {
             ofs << pR->mSymbolColor;
-        } else {
-            if (pR->mSymbolColor.isValid()) {
-                pR->userData.insert(QLatin1String("system.fallback_symbol_color"), pR->mSymbolColor.name());
-            }
         }
 
         // Border properties are stored in userData (not binary stream) to avoid map bloat
@@ -1397,7 +1385,25 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             pR->userData.remove(ROOM_UI_BORDERTHICKNESS);
         }
 
-        ofs << pR->userData;
+        // Formats before 21 carry the hidden flag and symbol color - and
+        // formats before 19 the symbol - as user data fallbacks; use a local
+        // copy so that saving does not modify the live room's user data.
+        // TRoom::restore() strips each key again when loading a format that
+        // carries it, so none may appear in formats which store the value
+        // directly in the stream:
+        QMap<QString, QString> userData{pR->userData};
+        if (mSaveVersion < 21) {
+            if (pR->hidden) {
+                userData.insert(QLatin1String("system.fallback_hidden"), QLatin1String("true"));
+            }
+            if (pR->mSymbolColor.isValid()) {
+                userData.insert(QLatin1String("system.fallback_symbol_color"), pR->mSymbolColor.name());
+            }
+        }
+        if (mSaveVersion < 19 && !pR->mSymbol.isEmpty()) {
+            userData.insert(QLatin1String("system.fallback_symbol"), pR->mSymbol);
+        }
+        ofs << userData;
         if (mSaveVersion >= 20) {
             // Before version 20 stored the style as an Latin1 string, the color
             // as a QList<int> for the RGB components and used UPPER case for
@@ -1695,6 +1701,12 @@ bool TMap::restore(QString location)
                 }
                 ifs >> mMapSymbolFontFudgeFactor;
                 ifs >> mIsOnlyMapSymbolFontToBeUsed;
+                // Clean up stale fallback keys that past versions could leave
+                // behind in the live map's user data (and thus in files saved
+                // from it) after saving in a format before 19:
+                mUserData.remove(qsl("system.fallback_mapSymbolFont"));
+                mUserData.remove(qsl("system.fallback_mapSymbolFontFudgeFactor"));
+                mUserData.remove(qsl("system.fallback_onlyUseMapSymbolFont"));
             } else {
                 // Fallback to reading the data from the map user data - and
                 // remove it from the data the user will see:
