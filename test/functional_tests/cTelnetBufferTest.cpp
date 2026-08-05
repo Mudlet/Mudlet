@@ -29,9 +29,13 @@
  * exactly to its contents - so the stray NUL landed one byte past the end of a
  * heap allocation.
  *
- * The discriminating test is nulTerminatorLandsAtTheDataEnd(): a sentinel is
- * planted at [amount + 1] and must still be there afterwards. It fails on the
- * unfixed code without needing a sanitizer.
+ * The discriminating tests are nulTerminatorLandsAtTheDataEnd(), its every-size
+ * sibling, and emptyAndErroredReadsLeaveTheBufferAlone(): a sentinel is planted
+ * at [amount + 1] and must still be there afterwards. Those fail on the unfixed
+ * code without needing a sanitizer, which matters because Windows CI builds
+ * without one. Note that the byte at [amount] is written by the later
+ * "buffer[datalen] = '\0'" too, so asserting on it only proves the call ran -
+ * the sentinel one byte further along is what catches the bug.
  *
  * Run with: ctest -R cTelnetBufferTest -V
  */
@@ -140,7 +144,13 @@ private slots:
         QVERIFY(mpHost);
         QVERIFY(mpHost->mpConsole);
         mpHost->mpConsole->buffer.clear();
+        // A leaked recursion level is permanent for the profile and eventually
+        // turns processSocketData() into a silent no-op, which would make the
+        // "nothing was written" assertions below pass for the wrong reason.
+        QCOMPARE(mpHost->mTelnet.mDecompressionRecursionDepth, 0);
     }
+
+    void cleanup() { QCOMPARE(mpHost->mTelnet.mDecompressionRecursionDepth, 0); }
 
     // The regression test for #1065. processSocketData() is handed `payloadSize`
     // bytes inside a buffer that has two spare bytes after them. It may write
@@ -173,29 +183,17 @@ private slots:
 
             mpHost->mTelnet.processSocketData(backing.data(), payloadSize, true);
 
+            // The terminator check proves the call actually ran, so the
+            // past-the-end check below cannot pass by the function bailing out.
+            QVERIFY2(backing.at(payloadSize) == '\0', qPrintable(qsl("processSocketData() did not terminate a %1 byte payload at all.").arg(payloadSize)));
             QVERIFY2(backing.at(payloadSize + 1) == scmPastTheEnd, qPrintable(qsl("processSocketData() wrote past the end of a %1 byte payload.").arg(payloadSize)));
         }
     }
 
-    // The heap shape that Lua's feedTelnet() actually produces: an allocation
-    // sized exactly to the data plus its terminator. Writing at [size + 1] runs
-    // off the end of it, which AddressSanitizer reports as a heap-buffer-overflow.
-    void exactlySizedHeapAllocationIsNotOverrun()
-    {
-        const QByteArray payload = QByteArrayLiteral("heap probe\r\n");
-        const auto size = static_cast<int>(payload.size());
-        auto buffer = std::make_unique<char[]>(size + 1); // +1 for the terminator, exactly as QByteArray allocates
-        std::memcpy(buffer.get(), payload.constData(), size);
-        buffer[size] = scmTerminatorSlot;
-
-        mpHost->mTelnet.processSocketData(buffer.get(), size, true);
-
-        QCOMPARE(buffer[size], '\0');
-    }
-
     // The production route from Lua: feedTelnet() -> loopbackTest() ->
-    // processSocketData(), with a QByteArray squeezed down to its contents so
-    // there is no slack to absorb a stray write.
+    // processSocketData(). loopbackTest() takes a non-const QByteArray and calls
+    // data(), which detaches, so the allocation shape is Qt's choice rather than
+    // ours - this is a "the pipeline still works" check, not a bounds check.
     void feedTelnetPathDisplaysItsDataIntact()
     {
         QByteArray payload = QByteArrayLiteral("BUFFER_TEST_MARKER\r\n");
@@ -212,20 +210,37 @@ private slots:
 
     // A closed or errored socket reports -1 and an empty read reports 0. Neither
     // may touch the caller's buffer, which for amount == 0 can legitimately have
-    // no writable byte at all.
+    // no writable byte at all. -2 stands in for the qsizetype narrowing in
+    // loopbackTest(), which can produce a negative that is not -1.
     void emptyAndErroredReadsLeaveTheBufferAlone()
     {
-        QByteArray backing(2, '\0');
-        backing[0] = scmTerminatorSlot;
-        backing[1] = scmPastTheEnd;
+        for (const int amount : {0, -1, -2}) {
+            QByteArray backing(2, '\0');
+            backing[0] = scmTerminatorSlot;
+            backing[1] = scmPastTheEnd;
 
-        mpHost->mTelnet.processSocketData(backing.data(), 0, true);
-        QCOMPARE(backing.at(0), scmTerminatorSlot);
-        QCOMPARE(backing.at(1), scmPastTheEnd);
+            mpHost->mTelnet.processSocketData(backing.data(), amount, true);
 
-        mpHost->mTelnet.processSocketData(backing.data(), -1, true);
-        QCOMPARE(backing.at(0), scmTerminatorSlot);
-        QCOMPARE(backing.at(1), scmPastTheEnd);
+            QVERIFY2(backing.at(0) == scmTerminatorSlot, qPrintable(qsl("processSocketData() wrote into the buffer for a read of %1.").arg(amount)));
+            QVERIFY2(backing.at(1) == scmPastTheEnd, qPrintable(qsl("processSocketData() wrote past the buffer for a read of %1.").arg(amount)));
+        }
+    }
+
+    // Declared last on purpose: on the unfixed code this trips AddressSanitizer,
+    // which aborts the process, so anything after it would never report. The
+    // sentinels give it teeth on Windows too, where CI builds without ASan.
+    void exactlySizedHeapAllocationIsNotOverrun()
+    {
+        const QByteArray payload = QByteArrayLiteral("heap probe\r\n");
+        const auto size = static_cast<int>(payload.size());
+        // Exactly the shape QByteArray allocates: the data plus its terminator.
+        auto buffer = std::make_unique<char[]>(size + 1);
+        std::memcpy(buffer.get(), payload.constData(), size);
+        buffer[size] = scmTerminatorSlot;
+
+        mpHost->mTelnet.processSocketData(buffer.get(), size, true);
+
+        QCOMPARE(buffer[size], '\0');
     }
 
     void cleanupTestCase()

@@ -167,9 +167,6 @@ const char NEW_ENVIRON_USERVAR = 3;
 class cTelnet : public QObject
 {
     Q_OBJECT
-    // Needs to call processSocketData() with a buffer it laid out itself, which
-    // the public loopbackTest() cannot express - see issue #1065.
-    friend class cTelnetBufferTest;
 
 public:
     Q_DISABLE_COPY(cTelnet)
@@ -327,6 +324,10 @@ private:
     // Lets the functional test drive the real download entry point and inspect
     // the in-flight reply, reproducing the dialog-swap cancellation cascade.
     friend class TelnetTlsPromptTest;
+
+    // Needs to call processSocketData() with a buffer it laid out itself, which
+    // the public loopbackTest() cannot express - see issue #1065.
+    friend class cTelnetBufferTest;
 
 #if defined(QT_NO_SSL)
     void abortLosingSocket(QTcpSocket* losingSocket);
