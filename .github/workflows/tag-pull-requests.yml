@@ -65,8 +65,13 @@ jobs:
       run: |
         set -euo pipefail
 
-        if [ -z "${GH_TOKEN}" ]; then
+        if [ -z "${GH_TOKEN:-}" ]; then
           echo "::error::GH_PAT_UPDATE_PULL_REQUESTS is not available, so the milestone cannot be set"
+          exit 1
+        fi
+
+        if [ -z "${MILESTONE_NUMBER:-}" ]; then
+          echo "::error::No milestone number was resolved by the previous step"
           exit 1
         fi
 
