@@ -10285,6 +10285,14 @@ void dlgTriggerEditor::checkForBogusActionsAndNotify()
 
     mBogusActionsNotified = true;
 
+    // showInfo() does not do this itself because its other callers all run from
+    // changeView(), which has already cancelled the timer by then. We arrive
+    // from showEvent() instead, so a banner dismissed less than the toast's
+    // lifetime before the editor was reopened would still have its expiry timer
+    // running - and that fires hideSystemMessageArea(), wiping the banner below.
+    // mBogusActionsNotified is already latched, so it would never come back.
+    cancelBannerUndoTimer();
+
     //: Banner shown in the script editor when leftover empty toolbar entries
     //: from a previously-fixed bug are detected. %n is the count; translators
     //: provide the plural forms. The <a href='...'>...</a> is a clickable
