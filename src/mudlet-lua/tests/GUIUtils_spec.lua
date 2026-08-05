@@ -1009,17 +1009,39 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
   end)
 
   -- Tests for table argument support in functions with 5+ parameters
-  describe("Tests prefix() table argument support", function()
+  --
+  -- These stub out the globals the function under test calls, so that only its
+  -- argument handling is exercised. busted's setup() gives a stub no scope of
+  -- its own, so anything left behind would still be in place for every later
+  -- spec in the run - stub through this helper, which puts the originals back.
+  local function stubGlobals(stubs)
+    local saved = {}
+
     setup(function()
-      _G.moveCursor = function() end
-      _G.insertText = function() end
-      _G.selectString = function() end
-      _G.setFgColor = function() end
-      _G.setBgColor = function() end
-      _G.resetFormat = function() end
-      _G.getCurrentLine = function() return "" end
-      _G.getLineNumber = function() return 0 end
+      for name, replacement in pairs(stubs) do
+        saved[name] = _G[name]
+        _G[name] = replacement
+      end
     end)
+
+    teardown(function()
+      for name in pairs(stubs) do
+        _G[name] = saved[name]
+      end
+    end)
+  end
+
+  describe("Tests prefix() table argument support", function()
+    stubGlobals({
+      moveCursor = function() end,
+      insertText = function() end,
+      selectString = function() end,
+      setFgColor = function() end,
+      setBgColor = function() end,
+      resetFormat = function() end,
+      getCurrentLine = function() return "" end,
+      getLineNumber = function() return 0 end,
+    })
 
     it("should accept positional arguments", function()
       local result = pcall(prefix, "test", echo, "red", "blue", "main")
@@ -1039,16 +1061,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
   end)
 
   describe("Tests suffix() table argument support", function()
-    setup(function()
-      _G.moveCursor = function() end
-      _G.insertText = function() end
-      _G.selectString = function() end
-      _G.setFgColor = function() end
-      _G.setBgColor = function() end
-      _G.resetFormat = function() end
-      _G.getCurrentLine = function() return "" end
-      _G.getLineNumber = function() return 0 end
-    end)
+    stubGlobals({
+      moveCursor = function() end,
+      insertText = function() end,
+      selectString = function() end,
+      setFgColor = function() end,
+      setBgColor = function() end,
+      resetFormat = function() end,
+      getCurrentLine = function() return "" end,
+      getLineNumber = function() return 0 end,
+    })
 
     it("should accept positional arguments", function()
       local result = pcall(suffix, "test", echo, "red", "blue", "main")
@@ -1068,13 +1090,13 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
   end)
 
   describe("Tests createGauge() table argument support", function()
-    setup(function()
-      _G.gaugesTable = {}
-      _G.createLabel = function() return true end
-      _G.setBackgroundColor = function() end
-      _G.moveWindow = function() end
-      _G.setLabelClickCallback = function() end
-    end)
+    stubGlobals({
+      gaugesTable = {},
+      createLabel = function() return true end,
+      setBackgroundColor = function() end,
+      moveWindow = function() end,
+      setLabelClickCallback = function() end,
+    })
 
     it("should accept positional arguments", function()
       local result = pcall(createGauge, "main", "testGauge", 100, 20, 10, 10, "HP", 255, 0, 0, "horizontal")
@@ -1099,11 +1121,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
   end)
 
   describe("Tests createConsole() table argument support", function()
-    setup(function()
-      _G.createMiniConsole = function() return true end
-      _G.setMiniConsoleFontSize = function() end
-      _G.setConsoleBufferSize = function() end
-    end)
+    stubGlobals({
+      createMiniConsole = function() return true end,
+      setMiniConsoleFontSize = function() end,
+      setConsoleBufferSize = function() end,
+    })
 
     it("should accept positional arguments (7 params)", function()
       local result = pcall(createConsole, "main", "testConsole", 10, 80, 20, 100, 100)

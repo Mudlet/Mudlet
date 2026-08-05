@@ -1136,31 +1136,54 @@ describe("Tests DB.lua functions", function()
 
   -- Tests for table argument support in mapper C++ functions with 5+ parameters
   describe("Tests createMapper() table argument support", function()
-    it("should accept positional arguments", function()
-      local result = pcall(createMapper, 0, 0, 300, 300)
-      assert.is_true(result)
+    -- A successful call is a one way door for the profile: it builds the
+    -- embedded mapper, which nothing can take down again, and from then on
+    -- openMapWidget() can only answer "do you already use an embedded mapper?".
+    -- This file sorts ahead of GeyserMapper_spec, Mapper_spec and UI_spec, all
+    -- of which need the dockable map widget, so the specs below stop at the
+    -- point where the arguments have been read and before anything is built.
+    pending("creates the embedded mapper, which cannot be undone for the rest of the session")
+
+    it("should reject a table that is missing a required key", function()
+      local created, message = createMapper({x = 0, y = 0, width = 300})
+      assert.is_nil(created)
+      assert.is_truthy(message:find("height", 1, true))
     end)
 
-    it("should accept table arguments", function()
-      local result = pcall(createMapper, {
-        x = 0,
-        y = 0,
-        width = 300,
-        height = 300
-      })
-      assert.is_true(result)
+    it("should type check the values it reads out of the table", function()
+      assert.has_error(function() createMapper({x = 0, y = 0, width = 300, height = "tall"}) end)
+    end)
+
+    it("should still type check positional arguments", function()
+      assert.has_error(function() createMapper(0, 0, 300) end)
     end)
   end)
 
   describe("Tests addMapEvent() table argument support", function()
+    -- getMapEvents() is profile wide, and Mapper_spec opens by asserting that
+    -- nothing is registered yet, so every event made here has to go again.
+    local registered = {}
+
+    local function track(uniqueName)
+      registered[#registered + 1] = uniqueName
+      return uniqueName
+    end
+
+    teardown(function()
+      for _, uniqueName in ipairs(registered) do
+        removeMapEvent(uniqueName)
+      end
+      registered = {}
+    end)
+
     it("should accept positional arguments", function()
-      local result = pcall(addMapEvent, "uniqueEvent" .. os.time(), "eventName", "parent", "displayName", "arg1,arg2")
+      local result = pcall(addMapEvent, track("uniqueEvent" .. os.time()), "eventName", "parent", "displayName", "arg1,arg2")
       assert.is_true(result)
     end)
 
     it("should accept table arguments", function()
       local result = pcall(addMapEvent, {
-        uniquename = "uniqueEvent2" .. os.time(),
+        uniquename = track("uniqueEvent2" .. os.time()),
         event = "eventName",
         parent = "parent",
         displayname = "displayName",

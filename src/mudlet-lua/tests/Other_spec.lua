@@ -544,9 +544,20 @@ describe("Tests Other.lua functions", function()
   end)
 
   describe("Tests timeframe() table argument support", function()
+    -- Only timeframe()'s argument handling is under test here, so the timer API
+    -- it drives is stubbed out. busted's setup() gives a stub no scope of its
+    -- own, so the originals have to be put back by hand: the timer API specs
+    -- further down this file drive the real timer engine.
+    local savedTempTimer, savedKillTimer
+
     setup(function()
+      savedTempTimer, savedKillTimer = _G.tempTimer, _G.killTimer
       _G.tempTimer = function() return 1 end
       _G.killTimer = function() end
+    end)
+
+    teardown(function()
+      _G.tempTimer, _G.killTimer = savedTempTimer, savedKillTimer
     end)
 
     it("should accept positional arguments", function()
