@@ -250,11 +250,117 @@ describe("Tests functionality of Geyser.Gauge", function()
     end)
 
     -- qproperty-margin is a Qt property, not a margin, and used to be picked up
-    -- by the unanchored property pattern
+    -- by the unanchored property pattern - both when working out the offset and
+    -- when stripping margins off the front label, where it left "qproperty-"
+    -- behind and Qt threw the whole sheet out
     it("does not read qproperty-margin as a margin", function()
       local gauge = track(Geyser.Gauge:new({name = "ggsQProperty", x = 0, y = 0, width = 200, height = 100}))
-      gauge:setStyleSheet("qproperty-margin: 5px;", "qproperty-margin: 5px;")
+      gauge:setStyleSheet("qproperty-margin: 5px; color: red;", "qproperty-margin: 5px;")
       assert.are.same({x = 0, y = 0, width = 200, height = 100}, geometry("ggsQProperty_front"))
+      assert.is_truthy(getLabelStyleSheet("ggsQProperty_front"):find("qproperty-margin: 5px;", 1, true))
+    end)
+
+    -- Qt takes !important on a declaration; it marks priority and is not one of
+    -- the box's sides
+    it("reads a margin that carries !important", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsImportant", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("margin: 10px !important;", "margin: 10px !important;")
+      assert.are.same({x = 10, y = 10, width = 180, height = 80}, geometry("ggsImportant_front"))
+      gauge:setStyleSheet("margin-left: 10px !important;", "margin-left: 10px !important;")
+      assert.are.same({x = 10, y = 0, width = 190, height = 100}, geometry("ggsImportant_front"))
+    end)
+
+    -- a declaration written inside a selector block usually carries no
+    -- semicolon, and the closing brace is neither part of the value nor
+    -- something the front label's margin strip may swallow
+    it("reads a margin inside a selector block without wrecking the sheet", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsBlock", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("QLabel { background-color: red; margin: 4px }", "QLabel { background-color: blue; margin: 4px }")
+      assert.are.same({x = 4, y = 4, width = 192, height = 92}, geometry("ggsBlock_front"))
+      local front = getLabelStyleSheet("ggsBlock_front")
+      assert.is_nil(front:find("margin", 1, true))
+      assert.is_truthy(front:find("background-color: red;", 1, true))
+      assert.is_truthy(front:find("}", 1, true))
+    end)
+
+    it("does not read a commented out margin, and leaves the comment whole", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsComment", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("background-color: red; /* margin: 20px */ padding: 3px;", "background-color: blue; /* margin: 20px */ padding: 3px;")
+      assert.are.same({x = 3, y = 3, width = 194, height = 94}, geometry("ggsComment_front"))
+      local front = getLabelStyleSheet("ggsComment_front")
+      assert.is_truthy(front:find("background-color: red;", 1, true))
+      assert.is_nil(front:find("20px", 1, true))
+      -- whatever is left of the comment, it must still be closed
+      assert.are.equal(select(2, front:gsub("/%*", "")), select(2, front:gsub("%*/", "")))
+    end)
+
+    it("reads a length written without a leading digit", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsLeadingDot", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("margin: .5px;", "margin: .5px;")
+      -- .5px used to match the "5px" inside it and inset the gauge tenfold; half
+      -- a pixel each side comes off the size and rounds away on the position
+      assert.are.same({x = 0, y = 0, width = 199, height = 99}, geometry("ggsLeadingDot_front"))
+    end)
+
+    it("reads border longhands", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsBorderLong", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("border-top: 3px solid red;", "border-top: 3px solid red;")
+      assert.are.same({x = 0, y = 3, width = 200, height = 97}, geometry("ggsBorderLong_front"))
+      gauge:setStyleSheet("border-left-width: 4px;", "border-left-width: 4px;")
+      assert.are.same({x = 4, y = 0, width = 196, height = 100}, geometry("ggsBorderLong_front"))
+      gauge:setStyleSheet("border-width: 1px 2px 3px 4px;", "border-width: 1px 2px 3px 4px;")
+      assert.are.same({x = 4, y = 1, width = 194, height = 96}, geometry("ggsBorderLong_front"))
+    end)
+
+    it("reads a padding longhand", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsPaddingLong", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("padding-bottom: 7px;", "padding-bottom: 7px;")
+      assert.are.same({x = 0, y = 0, width = 200, height = 93}, geometry("ggsPaddingLong_front"))
+    end)
+
+    -- the offsets reach the front label through a different branch per
+    -- orientation, and a negative one has to stay negative in each
+    it("keeps a negative margin in every orientation", function()
+      local expected = {
+        vertical = {x = 15, y = 15, width = 210, height = 110},
+        goofy = {x = 15, y = 15, width = 210, height = 110},
+        batty = {x = 15, y = 15, width = 210, height = 110},
+      }
+      for orientation, geometryWanted in pairs(expected) do
+        local name = "ggsNegative" .. orientation
+        local gauge = track(Geyser.Gauge:new({name = name, x = 20, y = 20, width = 200, height = 100, orientation = orientation}))
+        gauge:setStyleSheet("margin: -5px;", "margin: -5px;")
+        gauge:setValue(100)
+        assert.are.same(geometryWanted, geometry(name .. "_front"), orientation .. " gauge")
+      end
+    end)
+
+    -- Qt applies a spacing Geyser cannot measure, so the fill bar is laid out
+    -- against the wrong box: that has to be said rather than left looking like
+    -- a Geyser bug
+    it("says so when it cannot measure a spacing in pixels", function()
+      local debugMessage = spy.on(_G, "debugc")
+      finally(function() debugMessage:revert() end)
+      local gauge = track(Geyser.Gauge:new({name = "ggsUnreadable", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("margin: 1em;", "margin: 1em;")
+      assert.spy(debugMessage).was.called()
+      local said = debugMessage.calls[#debugMessage.calls].vals[1]
+      assert.is_truthy(said:find("ggsUnreadable", 1, true))
+      assert.is_truthy(said:find("margin: 1em", 1, true))
+      -- and it is latched, so a gauge updated every prompt does not flood
+      local saidOnce = #debugMessage.calls
+      gauge:setValue(50)
+      gauge:setValue(75)
+      assert.are.equal(saidOnce, #debugMessage.calls)
+    end)
+
+    it("says nothing about an ordinary borderless stylesheet", function()
+      local debugMessage = spy.on(_G, "debugc")
+      finally(function() debugMessage:revert() end)
+      local gauge = track(Geyser.Gauge:new({name = "ggsQuiet", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("border: none; background-color: red; margin: 0;", "border: none; background-color: blue; margin: 0;")
+      assert.spy(debugMessage).was_not.called()
+      assert.are.same({x = 0, y = 0, width = 200, height = 100}, geometry("ggsQuiet_front"))
     end)
 
     it("reads a four value margin as top, right, bottom, left", function()

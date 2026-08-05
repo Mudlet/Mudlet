@@ -150,20 +150,32 @@ describe("Tests functionality of Geyser.HBox", function()
       assert.are.same({x = 0, y = 0, width = 600, height = 50}, geometry("ghbShrinkA"))
     end)
 
+    -- an emptied box has no children to divide its width between, and organize()
+    -- still has to come through that without raising
     it("survives losing its last child", function()
-      box:remove(box.windowList.ghbShrinkA)
-      box:remove(box.windowList.ghbShrinkB)
+      assert.has_no.errors(function()
+        box:remove(box.windowList.ghbShrinkA)
+        box:remove(box.windowList.ghbShrinkB)
+      end)
       assert.are.same({}, box.windows)
     end)
 
     it("holds the layout back while updates are deferred", function()
       local third = track(Geyser.Label:new({name = "ghbShrinkDeferred"}, box))
+      local widthOfThree = geometry("ghbShrinkA").width
       box.defer_updates = true
       third:delete()
-      assert.are.equal(199, geometry("ghbShrinkA").width)
+      assert.are.equal(widthOfThree, geometry("ghbShrinkA").width)
       box.defer_updates = false
       box:reposition()
       assert.are.equal(300, geometry("ghbShrinkA").width)
+    end)
+
+    it("deletes a box that still holds children", function()
+      assert.has_no.errors(function() box:delete() end)
+      assert.is_nil(getWindowGeometry("ghbShrinkA"))
+      assert.is_nil(getWindowGeometry("ghbShrinkB"))
+      assert.is_nil(Geyser.windowList.ghbShrink)
     end)
   end)
 

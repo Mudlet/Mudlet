@@ -191,8 +191,12 @@ describe("Tests functionality of Geyser.UserWindow", function()
     it("still docks a window that was asked to start docked", function()
       local openWindow = spy.on(_G, "openUserWindow")
       finally(function() openWindow:revert() end)
-      track(Geyser.UserWindow:new({name = "guwStaysDocked", x = 10, y = 10, width = 300, height = 200, docked = true, dockPosition = "left"}))
+      local userWindow = track(Geyser.UserWindow:new({name = "guwStaysDocked", x = 10, y = 10, width = 300, height = 200, docked = true, dockPosition = "left"}))
       assert.spy(openWindow).was.called_with("guwStaysDocked", false, true, "left")
+      -- a docked window keeps the position it was opened with, where a floated
+      -- one has its dockPosition rewritten to "floating"
+      assert.are.equal("left", userWindow.dockPosition)
+      assert.is_true(windowVisible("guwStaysDocked"))
     end)
 
     it("new2 marks the user window as using add2", function()
@@ -445,10 +449,35 @@ describe("Tests functionality of Geyser.UserWindow", function()
       assert.are.equal(trackedWindows, #Geyser.windows)
     end)
 
-    -- a root container still holding the user window has to be left alone: the
-    -- user window is deleted through its own container in the ordinary
-    -- container:delete() cascade, and that container is still in use
-    it("keeps the root container while the user window is still in it", function()
+    -- anything else the user put in the root container is still using it, so it
+    -- has to survive the user window being deleted out of it
+    it("leaves a root container that still holds something else", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwRootShared", x = 10, y = 20, width = 200, height = 150}))
+      local root = userWindow.container
+      local lodger = track(Geyser.Label:new({name = "guwRootLodger", x = 0, y = 0, width = 20, height = 20}, root))
+      userWindow:delete()
+      assert.are.equal(root, Geyser.windowList.guwRootSharedContainer)
+      assert.are.equal(lodger, root.windowList.guwRootLodger)
+      root:delete()
+      assert.is_nil(Geyser.windowList.guwRootSharedContainer)
+    end)
+
+    -- a user window moved out of the root container Geyser made for it still
+    -- has to take that container with it, and the container is no longer the
+    -- one the user window reports as its own
+    it("removes the root container even after the user window was moved out of it", function()
+      local elsewhere = track(Geyser.Container:new({name = "guwNewHome", x = 0, y = 0, width = 200, height = 200}))
+      local userWindow = track(Geyser.UserWindow:new({name = "guwMovedOut", x = 10, y = 20, width = 200, height = 150}))
+      userWindow:changeContainer(elsewhere)
+      assert.are.equal(elsewhere, userWindow.container)
+      userWindow:delete()
+      assert.is_nil(Geyser.windowList.guwMovedOutContainer)
+    end)
+
+    -- deleting the root container deletes the user window inside it, which
+    -- reaches back for the root container it is being deleted by, so that
+    -- cascade has to come apart cleanly rather than recursing
+    it("comes apart cleanly when the root container is the one deleted", function()
       local userWindow = track(Geyser.UserWindow:new({name = "guwRootKept", x = 10, y = 20, width = 200, height = 150}))
       local root = userWindow.container
       track(Geyser.Label:new({name = "guwRootKeptLabel", x = 0, y = 0, width = 20, height = 20}, userWindow))

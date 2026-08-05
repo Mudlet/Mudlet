@@ -372,6 +372,9 @@ function Geyser.Container:new(cons, container)
             local w, h = getUserWindowSize(me.windowname)
             return h
         end
+        -- so the user window can take this container with it when it is deleted
+        -- without having to guess at the container by its name
+        me.rootContainer = container
     end
   end
 

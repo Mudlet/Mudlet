@@ -211,6 +211,15 @@ describe("Tests functionality of Geyser.ScrollBox", function()
       parent:hide()
       assert.is_false(windowVisible("gsbHideByHand"))
     end)
+
+    -- add2 carries a hidden constraint through as well as an inherited one
+    it("stays off screen when it was asked to start hidden", function()
+      local scrollBox = track(Geyser.ScrollBox:new2({name = "gsbBornHiddenFlag", x = 0, y = 0, width = 100, height = 100, hidden = true}))
+      assert.is_true(scrollBox.hidden)
+      assert.is_false(windowVisible("gsbBornHiddenFlag"))
+      scrollBox:show()
+      assert.is_true(windowVisible("gsbBornHiddenFlag"))
+    end)
   end)
 
   describe("Geyser.ScrollBox scroll bars", function()

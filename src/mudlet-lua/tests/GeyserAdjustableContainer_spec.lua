@@ -383,18 +383,23 @@ describe("Tests functionality of Adjustable.Container", function()
       borderBefore = getBorderLeft()
     end)
 
+    -- Deliberately same named containers share their children's names too, so
+    -- the one that still holds the registration is deleted first and takes the
+    -- widgets with it; the superseded one is then deleted for its own event
+    -- handlers and bookkeeping, which nothing else would clear.
     after_each(function()
       for index = #containers, 1, -1 do
         local container = containers[index]
         if container.attached then
           container:detach()
         end
-        if Geyser.windowList[container.name] == container then
-          container:delete()
-        end
+        container:delete()
       end
       containers = {}
       setBorderLeft(borderBefore)
+      assert.is_nil(Adjustable.Container.Attached.left.gasAttachPlain)
+      assert.is_nil(Adjustable.Container.Attached.left.gasAttachName)
+      assert.is_nil(Adjustable.Container.Attached.left.gasDetachName)
     end)
 
     it("reserves a border while attached and gives it back on detach", function()
