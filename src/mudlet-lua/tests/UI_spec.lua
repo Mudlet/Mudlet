@@ -4517,6 +4517,17 @@ describe("Command line argument handling", function()
     assert.are.equal("kept text", getCmdLine())
   end)
 
+  it("setCmdLineStyleSheet with no arguments does not apply unrelated stack data", function()
+    local functionName = "setCmdLineStyleSheet"
+    setCmdLineStyleSheet("color: rgb(12,34,56);")
+    pcall(function()
+      leaveOnStack("cmdArgHandlingLeftover")
+      _G[functionName]()
+    end)
+    assert.are.equal("color: rgb(12,34,56);", getCmdLineStyleSheet())
+    setCmdLineStyleSheet("")
+  end)
+
   describe("selectCmdLineText", function()
     it("returns true for the main command line", function()
       printCmdLine("select me")

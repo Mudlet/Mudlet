@@ -192,6 +192,12 @@ private slots:
         runDeferredDeletes();
 
         QVERIFY2(!console->mSubCommandLineMap.contains(cmdLineName), "stale command line entry left behind after deleting the scroll box that owned it");
+
+        // Observable consequence: the name is free again.
+        auto [recreated, recreateMsg] = console->createCommandLine(QString(), cmdLineName, 0, 0, 100, 30);
+        QVERIFY2(recreated, qPrintable(recreateMsg));
+        console->deleteCommandLine(cmdLineName);
+        runDeferredDeletes();
     }
 
     // Route 3: createCommandLine() into a user window, then deleteMiniConsole()
@@ -213,6 +219,11 @@ private slots:
         runDeferredDeletes();
 
         QVERIFY2(!console->mSubCommandLineMap.contains(cmdLineName), "stale command line entry left behind after deleting the user window that owned it");
+
+        auto [recreated, recreateMsg] = console->createCommandLine(QString(), cmdLineName, 0, 0, 100, 30);
+        QVERIFY2(recreated, qPrintable(recreateMsg));
+        console->deleteCommandLine(cmdLineName);
+        runDeferredDeletes();
     }
 
     // deleteCommandLine() must not leave the entry behind either - it takes the
@@ -262,6 +273,51 @@ private slots:
         QVERIFY2(fontSet, qPrintable(fontMsg));
 
         QVERIFY2(!console->mSubCommandLineMap.contains(name), "stale command line entry survived into the setFont() walk");
+
+        auto [recreated, recreateMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
+        QVERIFY2(recreated, qPrintable(recreateMsg));
+        console->deleteCommandLine(name);
+        runDeferredDeletes();
+    }
+
+    // Erasure has to be by value, not by name: a replacement registered under the
+    // same name before the old widget's deferred delete has run must survive it.
+    void test_recreatingBeforeTheDeferredDeleteKeepsTheNewCommandLine()
+    {
+        TMainConsole* console = mpHost->mpConsole;
+        const QString name = qsl("reusedCmdLineName");
+
+        auto [created, createMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
+        QVERIFY2(created, qPrintable(createMsg));
+        auto [deleted, deleteMsg] = console->deleteCommandLine(name);
+        QVERIFY2(deleted, qPrintable(deleteMsg));
+
+        // Deliberately no event loop turn here - the old widget is still alive.
+        auto [recreated, recreateMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
+        QVERIFY2(recreated, qPrintable(recreateMsg));
+        TCommandLine* replacement = console->mSubCommandLineMap.value(name);
+        QVERIFY(replacement);
+
+        runDeferredDeletes();
+
+        QVERIFY2(console->mSubCommandLineMap.value(name) == replacement, "the old command line's deregistration took the replacement with it");
+        console->deleteCommandLine(name);
+        runDeferredDeletes();
+    }
+
+    // Kept last on purpose: it leaves a registered command line behind, so that
+    // cleanupTestCase()'s teardown destroys the console with one still in its
+    // widget tree. ~TMainConsole has to drop its destroyed() handler first - that
+    // handler runs from ~QWidget, which is after the console's own members,
+    // mSubCommandLineMap included, have already been destroyed.
+    void test_destroyingTheConsoleWithALiveCommandLineIsSafe()
+    {
+        TMainConsole* console = mpHost->mpConsole;
+        const QString name = qsl("outlivesTheConsole");
+
+        auto [created, createMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
+        QVERIFY2(created, qPrintable(createMsg));
+        QVERIFY(console->mSubCommandLineMap.contains(name));
     }
 };
 

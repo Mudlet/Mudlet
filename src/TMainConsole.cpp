@@ -87,11 +87,17 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
 TMainConsole::~TMainConsole()
 {
-    // The registered command lines are descendants of this console, so they are
-    // destroyed by ~QWidget below - which is well after mSubCommandLineMap itself
-    // has gone. Drop the destroyed() handlers registerSubCommandLine() set up
-    // before they can be run against the dead map.
-    for (auto commandLine : std::as_const(mSubCommandLineMap)) {
+    // There is one window in which a command line's destroyed() handler is unsafe:
+    // after this console's members - mSubCommandLineMap among them - have been
+    // destroyed, but before ~QObject severs incoming connections. The only command
+    // lines that can be destroyed inside it are the ones QWidget::~QWidget deletes,
+    // i.e. this console's own children, so sweeping those is enough. Command lines
+    // created into a user window belong to a TDockWidget reparented onto the main
+    // window instead, and can only die after ~QObject has already dropped the
+    // connection. Children rather than map entries, because deleteCommandLine() and
+    // resetMainConsole() drop the entry while the widget lives on until its
+    // deferred delete is delivered.
+    for (auto commandLine : findChildren<TCommandLine*>()) {
         disconnect(commandLine, &QObject::destroyed, this, nullptr);
     }
     mSubCommandLineMap.clear();
@@ -529,11 +535,10 @@ void TMainConsole::resetMainConsole()
         itDockWidget.remove();
     }
 
-    QMutableMapIterator<QString, TCommandLine*> itCommandLine(mSubCommandLineMap);
-    while (itCommandLine.hasNext()) {
-        itCommandLine.next();
-        itCommandLine.value()->deleteLater();
-        itCommandLine.remove();
+    const QList<TCommandLine*> commandLines = mSubCommandLineMap.values();
+    for (auto commandLine : commandLines) {
+        deregisterSubCommandLine(commandLine);
+        commandLine->deleteLater();
     }
 
     // Remaining SubConsole/Buffer entries (UserWindow ones were already removed above)
@@ -748,8 +753,12 @@ std::pair<bool, QString> TMainConsole::deleteCommandLine(const QString& name)
         return {false, QLatin1String("a command line cannot have an empty string as its name")};
     }
 
-    auto pCmdLine = mSubCommandLineMap.take(name);
+    auto pCmdLine = mSubCommandLineMap.value(name);
     if (pCmdLine) {
+        // Deregister rather than just take() the entry: the widget outlives this
+        // call until its deferred delete is delivered, and its destroyed() handler
+        // must not be left armed for a console that may be gone by then.
+        deregisterSubCommandLine(pCmdLine);
         // Using deleteLater() rather than delete as it seems a safer option
         // given that this item is likely to be linked to some events and
         // suchlike:
@@ -980,6 +989,10 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
 
 void TMainConsole::registerSubCommandLine(const QString& name, TCommandLine* pCommandLine)
 {
+    if (auto pDisplaced = mSubCommandLineMap.value(name); pDisplaced && pDisplaced != pCommandLine) {
+        // Would otherwise be left connected but unreachable by name
+        deregisterSubCommandLine(pDisplaced);
+    }
     mSubCommandLineMap[name] = pCommandLine;
 
     // A TCommandLine is always a child widget of something else - the miniconsole
@@ -989,11 +1002,19 @@ void TMainConsole::registerSubCommandLine(const QString& name, TCommandLine* pCo
     // every later lookup of the name reads freed memory; TConsole::setFont() walks
     // the whole map, so even changing the display font in Preferences hits it.
     connect(pCommandLine, &QObject::destroyed, this, [this, pCommandLine]() {
-        // Erase by value rather than by name: a replacement command line may have
-        // been registered under the same name in the meantime and must be kept.
-        mSubCommandLineMap.removeIf([pCommandLine](const auto& it) {
-            return it.value() == pCommandLine;
-        });
+        deregisterSubCommandLine(pCommandLine);
+    });
+}
+
+void TMainConsole::deregisterSubCommandLine(TCommandLine* pCommandLine)
+{
+    // This is the only destroyed() connection made from a command line to this
+    // console, so severing all of them is severing just that one.
+    disconnect(pCommandLine, &QObject::destroyed, this, nullptr);
+    // Erase by value rather than by name: a replacement command line may have been
+    // registered under the same name in the meantime and must be left in place.
+    mSubCommandLineMap.removeIf([pCommandLine](const auto& it) {
+        return it.value() == pCommandLine;
     });
 }
 

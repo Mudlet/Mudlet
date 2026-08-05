@@ -2000,6 +2000,22 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.are_not.same(color_table["red"], getTextFormat(windowName).foreground)
     end)
 
+    it("Should not repaint the background of the current selection either", function()
+      selectSection(windowName, 0, 6)
+      prefix("[", nil, nil, "blue", windowName)
+      selectSection(windowName, 1, 6)
+      assert.are_not.same(color_table["blue"], getTextFormat(windowName).background)
+    end)
+
+    it("Should suffix onto an empty line", function()
+      clearWindow(windowName)
+      moveCursor(windowName, 0, 0)
+      echo(windowName, "\n")
+      moveCursor(windowName, 0, 0)
+      suffix("added", nil, nil, nil, windowName)
+      assert.equals("added", currentLine())
+    end)
+
     it("Should still colour what it adds when something is selected", function()
       selectSection(windowName, 0, 6)
       prefix("[", nil, "red", nil, windowName)
@@ -2059,6 +2075,14 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       moveCursor(windowName, 2, 1)
       moveCursorUp(windowName, 1, "yes")
       assert.equals(0, getColumnNumber(windowName))
+    end)
+
+    -- pairs with the assertion above: without this, "coerced to false" and
+    -- "keep_horizontal ignored entirely" would look the same for moveCursorUp
+    it("Should let moveCursorUp keep the column when asked with a boolean", function()
+      moveCursor(windowName, 2, 1)
+      moveCursorUp(windowName, 1, true)
+      assert.equals(2, getColumnNumber(windowName))
     end)
   end)
 

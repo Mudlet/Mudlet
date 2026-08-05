@@ -2690,6 +2690,7 @@ function scrollDown(window, lines)
   -- see scrollUp() on why the guard is on getScroll() rather than on the line count
   local curScroll = getScroll(window)
   if not curScroll then return nil, "window does not exist" end
+  -- getScroll() having answered means the window exists, so this cannot fail
   scrollTo(window, math.min(curScroll + lines, getLastLineNumber(window)))
 end
 
