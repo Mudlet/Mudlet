@@ -10,6 +10,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetTlsPromptTest.cpp
     TelnetMccp4Test.cpp
     TelnetBenchmark.cpp
+    cTelnetBufferTest.cpp
     DefaultGameDeleteTest.cpp
     ResetProfileTest.cpp
     TOscTest.cpp
