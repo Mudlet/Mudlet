@@ -77,6 +77,8 @@ public:
     TLabel* createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
     std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int);
     std::pair<bool, QString> createCommandLine(const QString& windowname, const QString& name, int, int, int, int);
+    void registerSubCommandLine(const QString& name, TCommandLine* pCommandLine);
+    void deregisterSubCommandLine(TCommandLine* pCommandLine);
     std::pair<bool, QString> createTextBox(const QString& windowname, const QString& name, int, int, int, int);
     QSize getUserWindowSize(const QString& windowname) const;
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);

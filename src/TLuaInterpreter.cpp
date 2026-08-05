@@ -2802,15 +2802,19 @@ int TLuaInterpreter::getEpoch(lua_State* L)
 int TLuaInterpreter::addCmdLineBlacklist(lua_State* L)
 {
     const int n = lua_gettop(L);
+    // The mandatory text is last, but with no arguments at all that would be
+    // index 0 - not a valid Lua stack index, and Lua 5.1 hands back the first
+    // free slot for it rather than complaining:
+    const int textIndex = qMax(n, 1);
     const char* name = "main";
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    if (!checkStringArg(L, __func__, n, "suggestion text")) {
+    if (!checkStringArg(L, __func__, textIndex, "suggestion text")) {
         return lua_error(L);
     }
     auto pN = COMMANDLINE(L, QString{name});
-    pN->addBlacklist(QString{lua_tostring(L, n)});
+    pN->addBlacklist(QString{lua_tostring(L, textIndex)});
     return 0;
 }
 
@@ -2818,15 +2822,17 @@ int TLuaInterpreter::addCmdLineBlacklist(lua_State* L)
 int TLuaInterpreter::removeCmdLineBlacklist(lua_State* L)
 {
     const int n = lua_gettop(L);
+    // See addCmdLineBlacklist() on why the index is clamped:
+    const int textIndex = qMax(n, 1);
     const char* name = "main";
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    if (!checkStringArg(L, __func__, n, "suggestion text")) {
+    if (!checkStringArg(L, __func__, textIndex, "suggestion text")) {
         return lua_error(L);
     }
     auto pN = COMMANDLINE(L, QString{name});
-    pN->removeBlacklist(QString{lua_tostring(L, n)});
+    pN->removeBlacklist(QString{lua_tostring(L, textIndex)});
     return 0;
 }
 

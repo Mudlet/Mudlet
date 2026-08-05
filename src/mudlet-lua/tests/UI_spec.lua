@@ -4452,3 +4452,99 @@ describe("Widget state getters", function()
     end)
   end)
 end)
+
+-- https://wiki.mudlet.org/w/Manual:UI_Functions
+describe("Command line argument handling", function()
+  local cmdLine = "cmdArgHandlingLine"
+
+  setup(function()
+    createCommandLine(cmdLine, 10, 10, 150, 30)
+  end)
+
+  teardown(function()
+    deleteCommandLine(cmdLine)
+    clearCmdLine()
+  end)
+
+  -- These seven take an optional leading window name and used to locate their
+  -- mandatory string at lua_gettop(L). Called with no arguments at all that is
+  -- index 0, which Lua 5.1 resolves to the first free stack slot instead of
+  -- rejecting - so the type check ran against whatever an earlier call had left
+  -- there, and a leftover string made the call quietly succeed on it.
+  local zeroArgumentFunctions = {
+    "addCmdLineSuggestion",
+    "appendCmdLine",
+    "removeCmdLineSuggestion",
+    "printCmdLine",
+    "setCmdLineStyleSheet",
+    "addCmdLineBlacklist",
+    "removeCmdLineBlacklist",
+  }
+
+  -- leaves its argument in the stack slot the next call in the same function
+  -- body starts from, which is exactly the slot index 0 used to resolve to
+  local function leaveOnStack() end
+
+  for _, functionName in ipairs(zeroArgumentFunctions) do
+    it(functionName .. " reports its missing argument as #1", function()
+      local ok, err = pcall(function()
+        leaveOnStack("cmdArgHandlingLeftover")
+        _G[functionName]()
+      end)
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("bad argument #1", 1, true))
+    end)
+  end
+
+  it("printCmdLine with no arguments does not print unrelated stack data", function()
+    local functionName = "printCmdLine"
+    printCmdLine("kept text")
+    pcall(function()
+      leaveOnStack("cmdArgHandlingLeftover")
+      _G[functionName]()
+    end)
+    assert.are.equal("kept text", getCmdLine())
+  end)
+
+  it("appendCmdLine with no arguments does not append unrelated stack data", function()
+    local functionName = "appendCmdLine"
+    printCmdLine("kept text")
+    pcall(function()
+      leaveOnStack("cmdArgHandlingLeftover")
+      _G[functionName]()
+    end)
+    assert.are.equal("kept text", getCmdLine())
+  end)
+
+  it("setCmdLineStyleSheet with no arguments does not apply unrelated stack data", function()
+    local functionName = "setCmdLineStyleSheet"
+    setCmdLineStyleSheet("color: rgb(12,34,56);")
+    pcall(function()
+      leaveOnStack("cmdArgHandlingLeftover")
+      _G[functionName]()
+    end)
+    assert.are.equal("color: rgb(12,34,56);", getCmdLineStyleSheet())
+    setCmdLineStyleSheet("")
+  end)
+
+  describe("selectCmdLineText", function()
+    it("returns true for the main command line", function()
+      printCmdLine("select me")
+      assert.is_true(selectCmdLineText())
+      -- selecting must not disturb what is typed
+      assert.are.equal("select me", getCmdLine())
+    end)
+
+    it("returns true for a named command line", function()
+      printCmdLine(cmdLine, "select me too")
+      assert.is_true(selectCmdLineText(cmdLine))
+      assert.are.equal("select me too", getCmdLine(cmdLine))
+    end)
+
+    it("returns nil and a message naming an unknown command line", function()
+      local ok, err = selectCmdLineText("cmdArgHandlingNoSuchLine")
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("cmdArgHandlingNoSuchLine", 1, true))
+    end)
+  end)
+end)
