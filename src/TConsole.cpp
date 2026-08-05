@@ -1806,10 +1806,10 @@ int TConsole::select(const QString& text, int numOfMatch)
         return -1;
     }
 
-    if (mudlet::smDebugMode) {
-        TDebug(Qt::darkMagenta, Qt::black) << "line under current user cursor: " >> mpHost;
-        TDebug(Qt::red, Qt::black) << TDebug::csmContinue << mUserCursor.y() << "#:" >> mpHost;
-        TDebug(Qt::gray, Qt::black) << TDebug::csmContinue << buffer.line(mUserCursor.y()) << "\n" >> mpHost;
+    if (TDebug::wants(TDebug::Category::Selection)) {
+        TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Selection) << "line under current user cursor: " >> mpHost;
+        TDebug(Qt::red, Qt::black, TDebug::Category::Selection) << TDebug::csmContinue << mUserCursor.y() << "#:" >> mpHost;
+        TDebug(Qt::gray, Qt::black, TDebug::Category::Selection) << TDebug::csmContinue << buffer.line(mUserCursor.y()) << "\n" >> mpHost;
     }
 
     int begin = -1;
@@ -1834,9 +1834,9 @@ int TConsole::select(const QString& text, int numOfMatch)
     P_begin = QPoint(begin, mUserCursor.y());
     P_end = QPoint(end, mUserCursor.y());
 
-    if (mudlet::smDebugMode) {
-        TDebug(Qt::darkRed, Qt::black) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
-                                       << ") selectedText = " << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\n"
+    if (TDebug::wants(TDebug::Category::Selection)) {
+        TDebug(Qt::darkRed, Qt::black, TDebug::Category::Selection) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
+                                                                    << ") selectedText = " << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\n"
                 >> mpHost;
     }
     return begin;
@@ -1844,8 +1844,9 @@ int TConsole::select(const QString& text, int numOfMatch)
 
 bool TConsole::selectSection(int from, int to)
 {
-    if (mudlet::smDebugMode) {
-        TDebug(Qt::darkMagenta, Qt::black) << "selectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n" >> mpHost;
+    if (TDebug::wants(TDebug::Category::Selection)) {
+        TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Selection) << "selectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n"
+                >> mpHost;
     }
     if (from < 0) {
         return false;
@@ -1860,9 +1861,9 @@ bool TConsole::selectSection(int from, int to)
     P_begin = QPoint(from, mUserCursor.y());
     P_end = QPoint(from + to, mUserCursor.y());
 
-    if (mudlet::smDebugMode) {
-        TDebug(Qt::darkMagenta, Qt::black) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y() << ") selectedText:\n\""
-                                           << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\"\n"
+    if (TDebug::wants(TDebug::Category::Selection)) {
+        TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Selection) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y() << ") selectedText:\n\""
+                                                                        << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\"\n"
                 >> mpHost;
     }
     return true;
@@ -2055,9 +2056,9 @@ void TConsole::print(const QString& msg)
 
 // printDebug(QColor& c, QColor& d, const QString& msg) was functionally the
 // same as this method it was just that the arguments were in a different order
-void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgColor)
+void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgColor, const QString& timeStampOverride)
 {
-    buffer.append(msg, 0, msg.size(), fgColor, bgColor);
+    buffer.append(msg, 0, msg.size(), fgColor, bgColor, TChar::None, 0, timeStampOverride);
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 

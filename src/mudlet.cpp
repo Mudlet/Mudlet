@@ -33,6 +33,7 @@
 #include "DarkTheme.h"
 #include "LuaInterface.h"
 #include "TDebug.h"
+#include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
 #include "TDetachedWindow.h"
 #include "TDockWidget.h"
@@ -3145,6 +3146,15 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     slot_muteAPI(settings.contains(qsl("enableMuteAPI")) ? settings.value(qsl("enableMuteAPI"), QVariant(false)).toBool() : false);
     slot_muteGame(settings.contains(qsl("enableMuteGame")) ? settings.value(qsl("enableMuteGame"), QVariant(false)).toBool() : false);
+
+    if (settings.contains(qsl("debugConsole/categories"))) {
+        // Only categories Mudlet still knows about, so that a category retired
+        // in a later version cannot leave a stale bit set:
+        const auto stored = TDebug::Categories(static_cast<TDebug::Category>(settings.value(qsl("debugConsole/categories")).toUInt()));
+        TDebug::setEnabledCategories(stored & TDebug::csmAllCategories);
+    }
+    TDebug::setTextFilter(settings.value(qsl("debugConsole/textFilter"), QString()).toString(),
+                          settings.value(qsl("debugConsole/textFilterCaseSensitive"), false).toBool() ? Qt::CaseSensitive : Qt::CaseInsensitive);
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -3324,6 +3334,9 @@ void mudlet::writeSettings()
     settings.setValue(qsl("enableMuteAPI"), mMuteAPI);
     settings.setValue(qsl("enableMuteGame"), mMuteGame);
     settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
+    settings.setValue(qsl("debugConsole/categories"), static_cast<uint>(TDebug::enabledCategories().toInt()));
+    settings.setValue(qsl("debugConsole/textFilter"), TDebug::textFilter());
+    settings.setValue(qsl("debugConsole/textFilterCaseSensitive"), TDebug::textFilterCaseSensitivity() == Qt::CaseSensitive);
 #if !defined(Q_OS_MACOS)
     if (!settings.contains(qsl("highDpiScaleFactorRoundingPolicy"))) {
         settings.setValue(qsl("highDpiScaleFactorRoundingPolicy"), qsl("PassThrough"));
@@ -4743,6 +4756,9 @@ void mudlet::attachDebugArea(const QString& hostname)
     smpDebugArea->setCentralWidget(smpDebugConsole);
     smpDebugArea->setWindowTitle(tr("Central Debug Console"));
     smpDebugArea->setWindowIcon(QIcon(qsl(":/icons/mudlet_debug.png")));
+
+    smpDebugFilterBar = new TDebugFilterBar(smpDebugArea);
+    smpDebugArea->addToolBar(Qt::BottomToolBarArea, smpDebugFilterBar);
 
     auto consoleCloser = new TConsoleMonitor(smpDebugArea);
     smpDebugArea->installEventFilter(consoleCloser);

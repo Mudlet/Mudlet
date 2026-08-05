@@ -2447,8 +2447,8 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
             }
 
             length = QString::fromStdString(s).size();
-            if (mudlet::smDebugMode) {
-                TDebug(Qt::white, Qt::red) << "selectCaptureGroup(" << begin << ", " << length << ")\n" >> &host;
+            if (TDebug::wants(TDebug::Category::Selection)) {
+                TDebug(Qt::white, Qt::red, TDebug::Category::Selection) << "selectCaptureGroup(" << begin << ", " << length << ")\n" >> &host;
             }
         }
     } else if (lua_isstring(L, 1)) {

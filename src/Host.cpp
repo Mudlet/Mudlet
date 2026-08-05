@@ -771,9 +771,11 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
     const int xmlIndex = zip_name_locate(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), ZIP_FL_ENC_GUESS);
     zip_delete(zipFile, xmlIndex);
     struct zip_source* s = zip_source_file(zipFile, filename_xml.toUtf8().constData(), 0, -1);
-    if (mudlet::smDebugMode && s == nullptr) {
+    if (TDebug::wants(TDebug::Category::Error) && s == nullptr) {
         //: This error message will appear when the xml file inside the module zip cannot be updated for some reason.
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to open xml file \"%1\" inside module %2 to update it. Error message was: \"%3\".").arg(filename_xml, zipName, zip_strerror(zipFile));
+        TDebug(QColor(Qt::white), QColor(Qt::red), TDebug::Category::Error)
+                        << tr("Failed to open xml file \"%1\" inside module %2 to update it. Error message was: \"%3\".").arg(filename_xml, zipName, zip_strerror(zipFile))
+                >> this;
     }
     err = zip_file_add(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), s, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE);
 
@@ -784,9 +786,11 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
     }
 
     if (err == -1) {
-        if (mudlet::smDebugMode && err == -1) {
+        if (TDebug::wants(TDebug::Category::Error) && err == -1) {
             //: This error message will appear when a module is saved as package but cannot be done for some reason.
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to save \"%1\" to module \"%2\". Error message was: \"%3\".").arg(moduleName, zipName, zip_strerror(zipFile));
+            TDebug(QColor(Qt::white), QColor(Qt::red), TDebug::Category::Error)
+                            << tr("Failed to save \"%1\" to module \"%2\". Error message was: \"%3\".").arg(moduleName, zipName, zip_strerror(zipFile))
+                    >> this;
         }
         // Properly dispose of things after failing to zip_close(...) the
         // archive:
@@ -2607,8 +2611,8 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
         break;
     }
 
-    if (mudlet::smDebugMode) {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: " << reason.c_str() << " in " << luaConfig << " ERROR:" << e.c_str() << "\n" >> 0;
+    if (TDebug::wants(TDebug::Category::Error)) {
+        TDebug(QColor(Qt::white), QColor(Qt::red), TDebug::Category::Error) << "LUA: " << reason.c_str() << " in " << luaConfig << " ERROR:" << e.c_str() << "\n" >> this;
     }
 
     lua_pop(L, -1);

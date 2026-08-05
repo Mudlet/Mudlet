@@ -90,6 +90,7 @@ class Host;
 class MudletInstanceCoordinator;
 class ShortcutManager;
 class TConsole;
+class TDebugFilterBar;
 class TDetachedWindow;
 class TDockWidget;
 class TEvent;
@@ -181,6 +182,7 @@ public:
     inline static QVariantHash smLuaFunctionNames;
     inline static QPointer<TConsole> smpDebugConsole;
     inline static QPointer<QMainWindow> smpDebugArea;
+    inline static QPointer<TDebugFilterBar> smpDebugFilterBar;
     // mirror everything shown in any console to stdout. Helpful for CI environments
     inline static bool smMirrorToStdOut = false;
     // adjust Mudlet settings to match Steam's requirements

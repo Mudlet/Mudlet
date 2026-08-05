@@ -279,7 +279,9 @@ public:
     void scrollUp(int lines);
     void print(const QString& msg);
     void print(const char*);
-    void print(const QString& msg, QColor fgColor, QColor bgColor);
+    // timeStampOverride is for content being replayed after being held back -
+    // it keeps the time the text arrived instead of the time it is shown:
+    void print(const QString& msg, QColor fgColor, QColor bgColor, const QString& timeStampOverride = QString());
     void printFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore);
     void printSystemMessage(const QString& msg);
     void printCommand(QString&);

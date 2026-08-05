@@ -356,9 +356,9 @@ int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, c
         lua_pushboolean(L, false);
     }
     lua_pushstring(L, message.toUtf8().constData());
-    if (mudlet::smDebugMode) {
+    if (TDebug::wants(TDebug::Category::LuaWarning)) {
         auto& host = getHostFromLua(L);
-        TDebug(Qt::white, QColorConstants::Svg::orange) << "Lua: " << functionName << ": " << message << "\n" >> &host;
+        TDebug(Qt::white, QColorConstants::Svg::orange, TDebug::Category::LuaWarning) << "Lua: " << functionName << ": " << message << "\n" >> &host;
     }
     return 2;
 }
@@ -372,9 +372,9 @@ int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, c
         lua_pushboolean(L, false);
     }
     lua_pushstring(L, message);
-    if (mudlet::smDebugMode) {
+    if (TDebug::wants(TDebug::Category::LuaWarning)) {
         auto& host = getHostFromLua(L);
-        TDebug(Qt::white, QColorConstants::Svg::orange) << "Lua: " << functionName << ": " << message << "\n" >> &host;
+        TDebug(Qt::white, QColorConstants::Svg::orange, TDebug::Category::LuaWarning) << "Lua: " << functionName << ": " << message << "\n" >> &host;
     }
     return 2;
 }
@@ -3488,13 +3488,13 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
             e.append("error object is a ").append(luaL_typename(L, -1)).append(" value");
         }
         errorMsg = qsl("<b>%1</b>").arg(QString::fromStdString(e).toHtmlEscaped());
-        if (mudlet::smDebugMode) {
+        if (TDebug::wants(TDebug::Category::Error)) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::red) << "\n " << e.c_str() << "\n" >> &host;
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "\n " << e.c_str() << "\n" >> &host;
         }
-    } else if (mudlet::smDebugMode) {
+    } else if (TDebug::wants(TDebug::Category::LuaSuccess)) {
         auto& host = getHostFromLua(L);
-        TDebug(Qt::white, Qt::darkGreen) << "LUA: code compiled without errors. OK\n" >> &host;
+        TDebug(Qt::white, Qt::darkGreen, TDebug::Category::LuaSuccess) << "LUA: code compiled without errors. OK\n" >> &host;
     }
     lua_settop(L, callerStackTop);
 
@@ -3712,9 +3712,8 @@ void TLuaInterpreter::signalMXPEvent(const QString& type, const QMap<QString, QS
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 
     Host& host = getHostFromLua(L);
-    if (mudlet::smDebugMode) {
-        const QString msg = qsl("\n%1 event <%2> display(%1) to see the full content\n").arg("mxp", token);
-        host.mpConsole->printSystemMessage(msg);
+    if (TDebug::wants(TDebug::Category::Protocol)) {
+        TDebug(Qt::white, Qt::darkBlue, TDebug::Category::Protocol) << qsl("%1 event <%2> display(%1) to see the full content\n").arg("mxp", token) >> &host;
     }
     host.raiseEvent(event);
 }
@@ -3893,9 +3892,8 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(key);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        if (mudlet::smDebugMode) {
-            const QString msg = qsl("\n%1 event <%2> display(%1) to see the full content\n").arg(protocol, token);
-            host.mpConsole->printSystemMessage(msg);
+        if (TDebug::wants(TDebug::Category::Protocol)) {
+            TDebug(Qt::white, Qt::darkBlue, TDebug::Category::Protocol) << qsl("%1 event <%2> display(%1) to see the full content\n").arg(protocol, token) >> &host;
         }
         host.raiseEvent(event);
     }
@@ -3990,9 +3988,8 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             event.mArgumentList.append(token);
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            if (mudlet::smDebugMode) {
-                const QString msg = qsl("\n%1 event <%2> display(%1) to see the full content\n").arg(protocol, token);
-                host.mpConsole->printSystemMessage(msg);
+            if (TDebug::wants(TDebug::Category::Protocol)) {
+                TDebug(Qt::white, Qt::darkBlue, TDebug::Category::Protocol) << qsl("%1 event <%2> display(%1) to see the full content\n").arg(protocol, token) >> &host;
             }
             host.raiseEvent(event);
 
@@ -4182,7 +4179,7 @@ bool TLuaInterpreter::call_luafunction(void* pT)
 {
     QElapsedTimer executionTimer;
 
-    if (mudlet::smDebugMode) {
+    if (TDebug::wants(TDebug::Category::LuaSuccess)) {
         executionTimer.start();
     }
 
@@ -4201,16 +4198,16 @@ bool TLuaInterpreter::call_luafunction(void* pT)
                 const QString _n = "error in anonymous Lua function";
                 const QString _n2 = "no debug data available";
                 logError(e, _n, _n2);
-                if (mudlet::smDebugMode) {
+                if (TDebug::wants(TDebug::Category::Error)) {
                     auto& host = getHostFromLua(L);
-                    TDebug(Qt::white, Qt::red) << "LUA: ERROR running anonymous Lua function ERROR:" << e.c_str() >> &host;
+                    TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "LUA: ERROR running anonymous Lua function ERROR:" << e.c_str() >> &host;
                 }
             }
         } else {
-            if (mudlet::smDebugMode) {
+            if (TDebug::wants(TDebug::Category::LuaSuccess)) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::darkGreen) << "LUA OK anonymous Lua function ran without errors"
-                                                 << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n")
+                TDebug(Qt::white, Qt::darkGreen, TDebug::Category::LuaSuccess)
+                                << "LUA OK anonymous Lua function ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n")
                         >> &host;
             }
         }
@@ -4257,7 +4254,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 {
     QElapsedTimer executionTimer;
 
-    if (mudlet::smDebugMode) {
+    if (TDebug::wants(TDebug::Category::LuaSuccess)) {
         executionTimer.start();
     }
 
@@ -4279,9 +4276,9 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
                 const QString _n = "error in anonymous Lua function";
                 const QString _n2 = "no debug data available";
                 logError(e, _n, _n2);
-                if (mudlet::smDebugMode) {
+                if (TDebug::wants(TDebug::Category::Error)) {
                     auto& host = getHostFromLua(L);
-                    TDebug(Qt::white, Qt::red) << "LUA: ERROR running anonymous Lua function ERROR:" << e.c_str() >> &host;
+                    TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "LUA: ERROR running anonymous Lua function ERROR:" << e.c_str() >> &host;
                 }
             }
         } else {
@@ -4289,10 +4286,10 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
                 returnValue = lua_toboolean(L, -1);
             }
 
-            if (mudlet::smDebugMode) {
+            if (TDebug::wants(TDebug::Category::LuaSuccess)) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::darkGreen) << "LUA OK anonymous Lua function ran without errors"
-                                                 << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n")
+                TDebug(Qt::white, Qt::darkGreen, TDebug::Category::LuaSuccess)
+                                << "LUA OK anonymous Lua function ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n")
                         >> &host;
             }
         }
@@ -4316,7 +4313,7 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
 {
     QElapsedTimer executionTimer;
 
-    if (mudlet::smDebugMode) {
+    if (TDebug::wants(TDebug::Category::LuaSuccess)) {
         executionTimer.start();
     }
 
@@ -4331,16 +4328,16 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
         if (lua_isstring(L, -1)) {
             e += lua_tostring(L, -1);
             logError(e, mName, function);
-            if (mudlet::smDebugMode) {
+            if (TDebug::wants(TDebug::Category::Error)) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::red) << "LUA ERROR: when running script " << mName << " (" << function << "),\nreason: " << e.c_str() << "\n" >> &host;
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "LUA ERROR: when running script " << mName << " (" << function << "),\nreason: " << e.c_str() << "\n" >> &host;
             }
         }
     } else {
-        if (mudlet::smDebugMode && !muteDebugOutput) {
+        if (TDebug::wants(TDebug::Category::LuaSuccess) && !muteDebugOutput) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK: script " << mName << " (" << function << ") ran without errors"
-                                             << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n")
+            TDebug(Qt::white, Qt::darkGreen, TDebug::Category::LuaSuccess) << "LUA OK: script " << mName << " (" << function << ") ran without errors"
+                                                                           << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n")
                     >> &host;
         }
     }
@@ -4354,7 +4351,7 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
 {
     QElapsedTimer executionTimer;
 
-    if (mudlet::smDebugMode) {
+    if (TDebug::wants(TDebug::Category::LuaSuccess)) {
         executionTimer.start();
     }
 
@@ -4371,9 +4368,9 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
         if (lua_isstring(L, -1)) {
             e += lua_tostring(L, -1);
             logError(e, mName, function);
-            if (mudlet::smDebugMode) {
+            if (TDebug::wants(TDebug::Category::Error)) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::red) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> &host;
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> &host;
             }
         }
     } else {
@@ -4381,10 +4378,10 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
             returnValue = lua_toboolean(L, -1);
         }
 
-        if (mudlet::smDebugMode) {
+        if (TDebug::wants(TDebug::Category::LuaSuccess)) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors"
-                                             << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n")
+            TDebug(Qt::white, Qt::darkGreen, TDebug::Category::LuaSuccess) << "LUA OK script " << mName << " (" << function << ") ran without errors"
+                                                                           << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n")
                     >> &host;
         }
     }
@@ -4459,7 +4456,7 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
 {
     QElapsedTimer executionTimer;
 
-    if (mudlet::smDebugMode) {
+    if (TDebug::wants(TDebug::Category::LuaSuccess)) {
         executionTimer.start();
     }
 
@@ -4474,16 +4471,16 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
             e += lua_tostring(L, -1);
             const QString _f = function.c_str();
             logError(e, mName, _f);
-            if (mudlet::smDebugMode) {
+            if (TDebug::wants(TDebug::Category::Error)) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::red) << "LUA: ERROR running script " << mName << " (" << function.c_str() << ") ERROR:" << e.c_str() << "\n" >> &host;
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "LUA: ERROR running script " << mName << " (" << function.c_str() << ") ERROR:" << e.c_str() << "\n" >> &host;
             }
         }
     } else {
-        if (mudlet::smDebugMode) {
+        if (TDebug::wants(TDebug::Category::LuaSuccess)) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function.c_str() << ") ran without errors"
-                                             << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n")
+            TDebug(Qt::white, Qt::darkGreen, TDebug::Category::LuaSuccess) << "LUA OK script " << mName << " (" << function.c_str() << ") ran without errors"
+                                                                           << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n")
                     >> &host;
         }
     }
@@ -4503,7 +4500,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 {
     QElapsedTimer executionTimer;
 
-    if (mudlet::smDebugMode) {
+    if (TDebug::wants(TDebug::Category::LuaSuccess)) {
         executionTimer.start();
     }
 
@@ -4540,16 +4537,16 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
         if (lua_isstring(L, -1)) {
             e += lua_tostring(L, -1);
             logError(e, mName, function);
-            if (mudlet::smDebugMode) {
+            if (TDebug::wants(TDebug::Category::Error)) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::red) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> &host;
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> &host;
             }
         }
     } else {
-        if (mudlet::smDebugMode) {
+        if (TDebug::wants(TDebug::Category::LuaSuccess)) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors"
-                                             << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n")
+            TDebug(Qt::white, Qt::darkGreen, TDebug::Category::LuaSuccess) << "LUA OK script " << mName << " (" << function << ") ran without errors"
+                                                                           << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n")
                     >> &host;
         }
     }
@@ -4562,7 +4559,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
 {
     QElapsedTimer executionTimer;
 
-    if (mudlet::smDebugMode) {
+    if (TDebug::wants(TDebug::Category::LuaSuccess)) {
         executionTimer.start();
     }
 
@@ -4596,9 +4593,9 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
         if (lua_isstring(L, -1)) {
             e += lua_tostring(L, -1);
             logError(e, mName, function);
-            if (mudlet::smDebugMode) {
+            if (TDebug::wants(TDebug::Category::Error)) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::red) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> &host;
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> &host;
             }
         }
     } else {
@@ -4606,10 +4603,10 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
             returnValue = lua_toboolean(L, -1);
         }
 
-        if (mudlet::smDebugMode) {
+        if (TDebug::wants(TDebug::Category::LuaSuccess)) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors"
-                                             << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n")
+            TDebug(Qt::white, Qt::darkGreen, TDebug::Category::LuaSuccess) << "LUA OK script " << mName << " (" << function << ") ran without errors"
+                                                                           << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n")
                     >> &host;
         }
     }
@@ -4634,9 +4631,9 @@ bool TLuaInterpreter::callReference(lua_State* L, QString name, int parameters)
             err += lua_tostring(L, -1);
         }
         logError(err, name, qsl("anonymous Lua function"));
-        if (mudlet::smDebugMode) {
+        if (TDebug::wants(TDebug::Category::Error)) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::red) << "LUA: ERROR running anonymous Lua function (" << name << ")\nError: " << err.c_str() << "\n" >> &host;
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "LUA: ERROR running anonymous Lua function (" << name << ")\nError: " << err.c_str() << "\n" >> &host;
         }
     }
     lua_settop(L, callerStackTop);
@@ -4898,10 +4895,10 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
 
     error = lua_pcall(L, maxArguments, LUA_MULTRET, 0);
 
-    if (mudlet::smDebugMode && pE.mArgumentList.size() > LUA_FUNCTION_MAX_ARGS) {
+    if (TDebug::wants(TDebug::Category::Error) && pE.mArgumentList.size() > LUA_FUNCTION_MAX_ARGS) {
         auto& host = getHostFromLua(L);
-        TDebug(Qt::white, Qt::red) << "LUA: ERROR running script " << function << " (" << function << ")\nError: more than " << LUA_FUNCTION_MAX_ARGS
-                                   << " arguments passed to Lua function, exceeding Lua's limit. Trimmed arguments to " << LUA_FUNCTION_MAX_ARGS << " only.\n"
+        TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "LUA: ERROR running script " << function << " (" << function << ")\nError: more than " << LUA_FUNCTION_MAX_ARGS
+                                                            << " arguments passed to Lua function, exceeding Lua's limit. Trimmed arguments to " << LUA_FUNCTION_MAX_ARGS << " only.\n"
                 >> &host;
     }
 
@@ -4912,9 +4909,9 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         }
         const QString name = "event handler function";
         logError(err, name, function);
-        if (mudlet::smDebugMode) {
+        if (TDebug::wants(TDebug::Category::Error)) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::red) << "LUA: ERROR running script " << function << " (" << function << ")\nError: " << err.c_str() << "\n" >> &host;
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "LUA: ERROR running script " << function << " (" << function << ")\nError: " << err.c_str() << "\n" >> &host;
         }
     }
 
@@ -4993,7 +4990,7 @@ double TLuaInterpreter::condenseMapLoad()
 {
     QElapsedTimer executionTimer;
 
-    if (mudlet::smDebugMode) {
+    if (TDebug::wants(TDebug::Category::LuaSuccess)) {
         executionTimer.start();
     }
 
@@ -5011,15 +5008,16 @@ double TLuaInterpreter::condenseMapLoad()
             e += lua_tostring(L, -1);
             const QString _f = luaFunction.toUtf8().constData();
             logError(e, luaFunction, _f);
-            if (mudlet::smDebugMode) {
+            if (TDebug::wants(TDebug::Category::Error)) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::red) << "LUA: ERROR running " << luaFunction << " ERROR:" << e.c_str() << "\n" >> &host;
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "LUA: ERROR running " << luaFunction << " ERROR:" << e.c_str() << "\n" >> &host;
             }
         }
     } else {
-        if (mudlet::smDebugMode) {
+        if (TDebug::wants(TDebug::Category::LuaSuccess)) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK " << luaFunction << " ran without errors in" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n")
+            TDebug(Qt::white, Qt::darkGreen, TDebug::Category::LuaSuccess)
+                            << "LUA OK " << luaFunction << " ran without errors in" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n")
                     >> &host;
         }
     }
@@ -5095,8 +5093,8 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
         reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, QByteArray{verb}, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
     };
 
-    if (mudlet::smDebugMode) {
-        TDebug(Qt::white, Qt::blue) << functionName << ": script is uploading data to " << reply->url().toString() << "\n" >> &host;
+    if (TDebug::wants(TDebug::Category::Network)) {
+        TDebug(Qt::white, Qt::blue, TDebug::Category::Network) << functionName << ": script is uploading data to " << reply->url().toString() << "\n" >> &host;
     }
 
     lua_pushboolean(L, true);
@@ -7752,8 +7750,8 @@ int TLuaInterpreter::setConfig(lua_State* L)
     }
 
     auto success = [&]() {
-        if (mudlet::smDebugMode) {
-            TDebug(Qt::white, Qt::blue) << qsl("setConfig: a script has changed %1\n").arg(QString::fromUtf8(lua_tostring(L, 1))) >> &host;
+        if (TDebug::wants(TDebug::Category::Other)) {
+            TDebug(Qt::white, Qt::blue, TDebug::Category::Other) << qsl("setConfig: a script has changed %1\n").arg(QString::fromUtf8(lua_tostring(L, 1))) >> &host;
         }
         lua_pushboolean(L, true);
         return 1;

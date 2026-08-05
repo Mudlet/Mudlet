@@ -340,11 +340,27 @@ public:
     void flushPendingServerWrapJoin();
     void flushPendingDestinationContent();
     void resetCurrentTextFormat();
-    void append(const QString& chunk, int sub_start, int sub_end, const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
+    // timeStampOverride lets a caller replaying held-back content stamp it with
+    // the time it arrived rather than the time it is being shown:
+    void append(const QString& chunk,
+                int sub_start,
+                int sub_end,
+                const QColor& fg,
+                const QColor& bg,
+                const TChar::AttributeFlags flags = TChar::None,
+                const int linkID = 0,
+                const QString& timeStampOverride = QString());
     // Only the bits within TChar::TestMask are considered for formatting:
     void append(const QString& chunk, const int sub_start, const int sub_end, const TChar& format, const int linkID = 0);
     void appendFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore);
-    void appendLine(const QString& chunk, const int sub_start, const int sub_end, const QColor& fg, const QColor& bg, TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
+    void appendLine(const QString& chunk,
+                    const int sub_start,
+                    const int sub_end,
+                    const QColor& fg,
+                    const QColor& bg,
+                    TChar::AttributeFlags flags = TChar::None,
+                    const int linkID = 0,
+                    const QString& timeStampOverride = QString());
     void appendEmptyLine();
     void setWrapAt(int i) { mWrapAt = i; }
     void setWrapIndent(int i) { mWrapIndent = i; }

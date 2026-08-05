@@ -138,8 +138,8 @@ void TTimer::compile()
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            if (mudlet::smDebugMode) {
-                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
+            if (TDebug::wants(TDebug::Category::Error)) {
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
         }
@@ -153,8 +153,8 @@ void TTimer::compileAll()
 {
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
-        if (mudlet::smDebugMode) {
-            TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
+        if (TDebug::wants(TDebug::Category::Error)) {
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
     }

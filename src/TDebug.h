@@ -26,9 +26,11 @@
 
 
 #include <QColor>
+#include <QCoreApplication>
 #include <QList>
 #include <QMap>
 #include <QQueue>
+#include <QSet>
 #include <QString>
 
 #include "utils.h"
@@ -37,22 +39,58 @@ class Host;
 
 struct TDebugMessage
 {
-    TDebugMessage(const QString& text, const QString& tag, const QColor& foreground, const QColor& background)
+    TDebugMessage(const QString& text, const QString& profileTag, const QColor& foreground, const QColor& background, const QString& timeStamp = QString())
     : mMessage(text)
-    , mTag(tag)
+    , mProfileTag(profileTag)
     , mForeground(foreground)
     , mBackground(background)
-    {}
+    , mTimeStamp(timeStamp)
+    {
+    }
 
     QString mMessage;
-    QString mTag;
+    // The "[A] ".."[Z] " marking identifying which profile the message came
+    // from, NOT the message's category:
+    QString mProfileTag;
     QColor mForeground;
     QColor mBackground;
-
+    // When the message arrived, so that one held back while the console is
+    // paused is not stamped with the time it was eventually shown:
+    QString mTimeStamp;
 };
 
 class TDebug
 {
+    Q_DECLARE_TR_FUNCTIONS(TDebug)
+
+public:
+    // Identifies the subsystem a message came from so that the Central Debug
+    // Console can drop the high volume ones without losing the rest. The values
+    // are persisted in the settings, so do not renumber them:
+    enum class Category : quint32 {
+        System = 0x0001,        // profile started/ended, the identifier legend
+        Error = 0x0002,         // compile and run-time errors, any subsystem
+        Network = 0x0004,       // connection establishment, HTTP transfers
+        Protocol = 0x0008,      // GMCP, MSDP, MSSP and MXP events
+        GameLine = 0x0010,      // every line arriving from the game
+        TriggerMatch = 0x0020,  // "Trigger name=... matched."
+        TriggerDetail = 0x0040, // capture groups and multiline match state
+        Alias = 0x0080,
+        Item = 0x0100,       // housekeeping: compiled OK, expiry, fire counts
+        LuaSuccess = 0x0200, // "... ran without errors in Nms"
+        LuaWarning = 0x0400,
+        Selection = 0x0800, // selectString(), selectSection() and friends
+        Map = 0x1000,
+        Other = 0x2000,
+    };
+    Q_DECLARE_FLAGS(Categories, Category)
+
+    // The categories that make the console unreadable on a busy profile - off
+    // by default, and what the "Quiet" preset in the filter bar restores:
+    static const Categories csmNoisyCategories;
+    static const Categories csmAllCategories;
+
+private:
     // A shared map that is uses to put a short identifier on each debug message
     // - the first value is used to create a table to display on changes and the
     // second value is the short identifier used:
@@ -74,21 +112,65 @@ class TDebug
     inline static const QString csmTagFault = QString();
     // Used as a tag for messages on the 27th and above currently active
     // profiles:
-    inline static const QString csmTagOverflow  = qsl("[?] ");
+    inline static const QString csmTagOverflow = qsl("[?] ");
+
+    // Messages held back while the user has the console paused. Bounded because
+    // the console's own buffer only holds 10,000 lines - anything beyond that
+    // could only be replayed straight into the trimmer:
+    inline static QQueue<TDebugMessage> smPausedQueue;
+    inline static int smPausedDroppedCount = 0;
+    static constexpr int csmPausedQueueLimit = 10000;
+
+    // Filter state, all shared by the single Central Debug Console:
+    static Categories smEnabledCategories;
+    inline static QSet<const Host*> smDisabledHosts;
+    inline static QString smTextFilter;
+    inline static Qt::CaseSensitivity smTextFilterCaseSensitivity = Qt::CaseInsensitive;
+    inline static bool smPaused = false;
+    // Whether the last non-continuation message got through the filters, so
+    // that its continuation fragments can follow it rather than being orphaned:
+    inline static bool smLastMessagePassed = true;
 
     QString msg;
     QColor fgColor;
     QColor bgColor;
+    Category mCategory;
 
 public:
-    explicit TDebug(const QColor&, const QColor&);
+    // The category is deliberately not defaulted, so that a new call site
+    // cannot silently become unfilterable:
+    explicit TDebug(const QColor&, const QColor&, const Category);
     ~TDebug() = default;
 
-    static void addHost(Host*, const QString); // Might need to NOLINT this to prevent a warning about not using a reference
+    static void addHost(Host*, const QString);    // Might need to NOLINT this to prevent a warning about not using a reference
     static void removeHost(Host*, const QString); // Might need to NOLINT this to prevent a warning about not using a reference
     static void changeHostName(const Host*, const QString&);
     static void flushMessageQueue();
     static QString getTag(Host*);
+
+    // Cheap enough to use in place of a bare 'mudlet::smDebugMode' test, so
+    // that the message is never even assembled when it would be filtered out:
+    static bool wants(const Category);
+
+    static Categories enabledCategories() { return smEnabledCategories; }
+    static void setEnabledCategories(const Categories);
+    static void setCategoryEnabled(const Category, const bool);
+    static bool categoryEnabled(const Category category) { return smEnabledCategories.testFlag(category); }
+
+    static void setHostEnabled(const Host*, const bool);
+    static bool hostEnabled(const Host* pHost) { return !smDisabledHosts.contains(pHost); }
+    // Profile identifier ("[A] ") and name for each currently active profile,
+    // for the filter bar's profile menu:
+    static QList<QPair<const Host*, QString>> activeProfiles();
+
+    static void setTextFilter(const QString&, const Qt::CaseSensitivity);
+    static QString textFilter() { return smTextFilter; }
+    static Qt::CaseSensitivity textFilterCaseSensitivity() { return smTextFilterCaseSensitivity; }
+
+    static void setPaused(const bool);
+    static bool paused() { return smPaused; }
+    static int pausedMessageCount() { return smPausedQueue.count(); }
+    static void discardPausedMessages();
 
     // Used to flush/print out the accumulated message:
     TDebug& operator>>(Host*);
@@ -117,6 +199,11 @@ private:
 
     static QString displayNewTable();
     static QString deduceProfileTag(QString&, Host*);
+    bool passesFilters(const Host*);
+    static QString composeLine(const QString& profileTag, const QString& text);
+    static void drainPausedQueue();
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(TDebug::Categories)
 
 #endif // MUDLET_TDEBUG_H

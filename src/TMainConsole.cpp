@@ -1516,9 +1516,9 @@ void TMainConsole::runTriggers(int line)
     mpHost->getLuaInterpreter()->set_lua_string(cmLuaLineVariable, mCurrentLine);
     mCurrentLine.append('\n');
 
-    if (mudlet::smDebugMode) {
-        TDebug(Qt::darkGreen, Qt::black) << "new line arrived:" >> mpHost;
-        TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << mCurrentLine << "\n" >> mpHost;
+    if (TDebug::wants(TDebug::Category::GameLine)) {
+        TDebug(Qt::darkGreen, Qt::black, TDebug::Category::GameLine) << "new line arrived:" >> mpHost;
+        TDebug(Qt::lightGray, Qt::black, TDebug::Category::GameLine) << TDebug::csmContinue << mCurrentLine << "\n" >> mpHost;
     }
     mpHost->incomingStreamProcessor(mCurrentLine, line);
     mIsPromptLine = false;

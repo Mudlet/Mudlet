@@ -25,6 +25,7 @@
 #include "TDebug.h"
 
 #include "TConsole.h"
+#include "TDebugFilterBar.h"
 #include "TTabBar.h"
 #include "mudlet.h"
 
@@ -32,10 +33,161 @@
 
 using namespace std::chrono_literals;
 
-TDebug::TDebug(const QColor& c, const QColor& d)
+/* static */ const TDebug::Categories TDebug::csmNoisyCategories = {Category::GameLine, Category::TriggerDetail, Category::LuaSuccess, Category::Selection};
+
+/* static */ const TDebug::Categories TDebug::csmAllCategories = {Category::System,
+                                                                  Category::Error,
+                                                                  Category::Network,
+                                                                  Category::Protocol,
+                                                                  Category::GameLine,
+                                                                  Category::TriggerMatch,
+                                                                  Category::TriggerDetail,
+                                                                  Category::Alias,
+                                                                  Category::Item,
+                                                                  Category::LuaSuccess,
+                                                                  Category::LuaWarning,
+                                                                  Category::Selection,
+                                                                  Category::Map,
+                                                                  Category::Other};
+
+// The console is unusable with the noisy categories on, so they start off - see
+// TDebug::csmNoisyCategories:
+/* static */ TDebug::Categories TDebug::smEnabledCategories = TDebug::csmAllCategories & ~TDebug::csmNoisyCategories;
+
+TDebug::TDebug(const QColor& c, const QColor& d, const Category category)
 : fgColor(c)
 , bgColor(d)
+, mCategory(category)
 {
+}
+
+/* static */ bool TDebug::wants(const Category category)
+{
+    return mudlet::smDebugMode && smEnabledCategories.testFlag(category);
+}
+
+/* static */ void TDebug::setEnabledCategories(const Categories categories)
+{
+    smEnabledCategories = categories;
+}
+
+/* static */ void TDebug::setCategoryEnabled(const Category category, const bool enabled)
+{
+    smEnabledCategories.setFlag(category, enabled);
+}
+
+/* static */ void TDebug::setHostEnabled(const Host* pHost, const bool enabled)
+{
+    if (enabled) {
+        smDisabledHosts.remove(pHost);
+    } else {
+        smDisabledHosts.insert(pHost);
+    }
+}
+
+/* static */ QList<QPair<const Host*, QString>> TDebug::activeProfiles()
+{
+    QList<QPair<const Host*, QString>> profiles;
+    QMapIterator<const Host*, QPair<QString, QString>> itIdentifier(smIdentifierMap);
+    while (itIdentifier.hasNext()) {
+        itIdentifier.next();
+        if (itIdentifier.key()) {
+            profiles.append(qMakePair(itIdentifier.key(), qsl("%1%2").arg(itIdentifier.value().second, itIdentifier.value().first)));
+        }
+    }
+    return profiles;
+}
+
+/* static */ void TDebug::setTextFilter(const QString& text, const Qt::CaseSensitivity caseSensitivity)
+{
+    smTextFilter = text;
+    smTextFilterCaseSensitivity = caseSensitivity;
+}
+
+/* static */ void TDebug::setPaused(const bool paused)
+{
+    if (smPaused == paused) {
+        return;
+    }
+    smPaused = paused;
+    if (!smPaused) {
+        drainPausedQueue();
+    }
+}
+
+// Throws away anything held back while paused - used when the user clears the
+// console, so that resuming does not immediately refill it.
+/* static */ void TDebug::discardPausedMessages()
+{
+    smPausedQueue.clear();
+    smPausedDroppedCount = 0;
+}
+
+// Prints everything that arrived while the console was paused, in the order it
+// arrived, followed by a note if the cap meant some of it had to be dropped.
+/* static */ void TDebug::drainPausedQueue()
+{
+    QPointer<TConsole> debugConsole = mudlet::smpDebugConsole;
+    while (!smPausedQueue.isEmpty() && debugConsole) {
+        const auto& message = smPausedQueue.dequeue();
+        debugConsole->print(composeLine(message.mProfileTag, message.mMessage), message.mForeground, message.mBackground, message.mTimeStamp);
+        debugConsole = mudlet::smpDebugConsole;
+    }
+    smPausedQueue.clear();
+
+    if (smPausedDroppedCount && debugConsole) {
+        //: Shown in the Central Debug Console after resuming, when more messages arrived while paused than could be held back.
+        debugConsole->print(csmTagSystemMessage % tr("%n message(s) dropped while paused.\n", "", smPausedDroppedCount), Qt::white, Qt::darkRed);
+    }
+    smPausedDroppedCount = 0;
+}
+
+// The profile marking is only worth showing when it tells the reader something
+// they cannot already infer:
+/* static */ QString TDebug::composeLine(const QString& profileTag, const QString& text)
+{
+    if (profileTag.isNull()) {
+        return text;
+    }
+    if (profileTag == csmTagSystemMessage || Q_UNLIKELY(profileTag == csmTagFault) || smIdentifierMap.count() > 1) {
+        return profileTag % text;
+    }
+    // Only one profile active - so don't print the tag:
+    return text;
+}
+
+// Decides whether this message should reach the console at all. Filtering here,
+// rather than when drawing, means enabling or disabling a filter never disturbs
+// what is already on screen and that filtered-out messages cost nothing.
+bool TDebug::passesFilters(const Host* pHost)
+{
+    if (msg.isEmpty() && !pHost) {
+        // The dummy message used to flush the queue when the console is first
+        // shown - it must never be filtered out:
+        return true;
+    }
+
+    if (msg.startsWith(csmContinue)) {
+        // A continuation of the preceding message: it has to share that
+        // message's fate or the console is left with orphaned fragments such as
+        // a bare "<some captured text>":
+        return smLastMessagePassed;
+    }
+
+    smLastMessagePassed = false;
+
+    if (!smEnabledCategories.testFlag(mCategory)) {
+        return false;
+    }
+    if (pHost && smDisabledHosts.contains(pHost)) {
+        return false;
+    }
+    if (!smTextFilter.isEmpty() && !msg.contains(smTextFilter, smTextFilterCaseSensitivity)) {
+        return false;
+    }
+
+    smLastMessagePassed = true;
+    return true;
 }
 
 // This is the method that pushes the accumulated text out to the Central Debug
@@ -44,6 +196,22 @@ TDebug::TDebug(const QColor& c, const QColor& d)
 // came, which is deduced from the supplied Host pointer.
 TDebug& TDebug::operator>>(Host* pHost)
 {
+    if (!passesFilters(pHost)) {
+        return *this;
+    }
+
+    // An empty message with no profile is the dummy used to flush the queue
+    // when the console is first shown, and has to get through even when paused:
+    if (Q_UNLIKELY(smPaused) && !(msg.isEmpty() && !pHost)) {
+        auto tag = deduceProfileTag(msg, pHost);
+        if (smPausedQueue.count() >= csmPausedQueueLimit) {
+            smPausedQueue.dequeue();
+            ++smPausedDroppedCount;
+        }
+        smPausedQueue.enqueue(TDebugMessage(msg, tag, fgColor, bgColor, QTime::currentTime().toString(mudlet::smTimeStampFormat)));
+        return *this;
+    }
+
     if (Q_UNLIKELY(!mudlet::smpDebugConsole)) {
         if (Q_LIKELY(!msg.isEmpty())) {
             // Don't enqueue empty messages
@@ -64,10 +232,10 @@ TDebug& TDebug::operator>>(Host* pHost)
                 QPointer<TConsole> localDebugConsole = debugConsole;
 
                 if (localDebugConsole) {
-                    if (message.mTag.isNull()) {
+                    if (message.mProfileTag.isNull()) {
                         localDebugConsole->print(message.mMessage, message.mForeground, message.mBackground);
                     } else {
-                        localDebugConsole->print(message.mTag % message.mMessage, message.mForeground, message.mBackground);
+                        localDebugConsole->print(message.mProfileTag % message.mMessage, message.mForeground, message.mBackground);
                     }
                 } else {
                     // Console became invalid, break out of the loop
@@ -234,9 +402,12 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
         newIdentifier = qMakePair(hostName, smAvailableIdentifiers.dequeue());
         TDebug::smIdentifierMap.insert(pHost, newIdentifier);
     }
-    TDebug localMessage(Qt::blue, Qt::white);
+    if (mudlet::smpDebugFilterBar) {
+        mudlet::smpDebugFilterBar->refreshProfiles();
+    }
+    TDebug localMessage(Qt::blue, Qt::white, Category::System);
     localMessage << qsl("Profile '%1' started.\n").arg(hostName) >> nullptr;
-    TDebug tableMessage(Qt::white, Qt::black);
+    TDebug tableMessage(Qt::white, Qt::black, Category::System);
     tableMessage << TDebug::displayNewTable() >> nullptr;
     if (mudlet::smDebugMode) {
         // Can't use TTabBar::applyPrefixToDisplayedText(hostName, newIdentifier.second)
@@ -252,6 +423,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
 /* static */ void TDebug::removeHost(Host* pHost, const QString hostName)
 {
     QPair<QString, QString> identifier;
+    const Host* removedHost = pHost;
 
     if (pHost) {
         // Normal case: remove by Host pointer
@@ -270,6 +442,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
 
         if (foundHost) {
             smIdentifierMap.remove(foundHost);
+            removedHost = foundHost;
         }
     }
 
@@ -279,9 +452,16 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
         smAvailableIdentifiers.enqueue(identifier.second);
     }
 
-    TDebug localMessage(Qt::darkGray, Qt::white);
+    // The profile is gone, so its filter setting goes with it - the pointer
+    // could otherwise be matched by a later, unrelated Host at the same address:
+    smDisabledHosts.remove(removedHost);
+    if (mudlet::smpDebugFilterBar) {
+        mudlet::smpDebugFilterBar->refreshProfiles();
+    }
+
+    TDebug localMessage(Qt::darkGray, Qt::white, Category::System);
     localMessage << qsl("Profile '%1' ended.\n").arg(hostName) >> nullptr;
-    TDebug tableMessage(Qt::white, Qt::black);
+    TDebug tableMessage(Qt::white, Qt::black, Category::System);
     tableMessage << TDebug::displayNewTable() >> nullptr;
 }
 
@@ -319,7 +499,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
 
 /* static */ void TDebug::flushMessageQueue()
 {
-    TDebug localMessage(Qt::black, Qt::white);
+    TDebug localMessage(Qt::black, Qt::white, Category::System);
     localMessage << QString() >> nullptr;
 }
 
