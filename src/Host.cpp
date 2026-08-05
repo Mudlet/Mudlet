@@ -3486,6 +3486,15 @@ std::pair<bool, QString> Host::setMapperTitle(const QString& title)
     return {true, QString()};
 }
 
+std::optional<QString> Host::getMapperTitle() const
+{
+    if (!mpConsole || !mpConsole->mpDockableMapWidget) {
+        return {};
+    }
+
+    return {mpConsole->mpDockableMapWidget->windowTitle()};
+}
+
 std::pair<int, QString> Host::createMapView(int areaId)
 {
     if (!mpMap) {
@@ -4248,6 +4257,20 @@ std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, 
     }
 
     return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
+}
+
+// The inverse of moveMapWidget()/resizeMapWidget(), which reach the dock widget
+// through openMapWidget(). pos()/size() rather than geometry() for the same
+// reason as Host::windowGeometry(): they are what move()/resize() were given,
+// while a floating dock's geometry() reports the client area instead.
+std::optional<QRect> Host::mapWidgetGeometry() const
+{
+    if (!mpConsole || !mpConsole->mpDockableMapWidget) {
+        return {};
+    }
+
+    auto pM = mpConsole->mpDockableMapWidget;
+    return {QRect(pM->pos(), pM->size())};
 }
 
 std::pair<bool, QString> Host::closeMapWidget()

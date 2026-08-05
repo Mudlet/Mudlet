@@ -395,6 +395,7 @@ public:
     void setSearchOptions(const dlgTriggerEditor::SearchOptions);
     void setBufferSearchOptions(const TConsole::SearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
+    std::optional<QString> getMapperTitle() const;
 
     // Multiple map views support
     std::pair<int, QString> createMapView(int areaId = 0);
@@ -429,6 +430,7 @@ public:
     std::pair<bool, QString> setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show);
     std::pair<bool, QString> openMapWidget(const QString& area, int x, int y, int width, int height);
     std::pair<bool, QString> closeMapWidget();
+    std::optional<QRect> mapWidgetGeometry() const;
     bool closeWindow(const QString&);
     bool echoWindow(const QString&, const QString&);
     bool pasteWindow(const QString& name);
