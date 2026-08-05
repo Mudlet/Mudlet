@@ -230,6 +230,37 @@ describe("Tests functionality of Geyser.Mapper", function()
       assert.are.equal("Named while hidden", getMapWindowTitle())
     end)
 
+    it("applies a reset that was made while the mapper was hidden", function()
+      local mapper = track(Geyser.Mapper:new({
+        name = "gmpHiddenReset",
+        x = 10, y = 20, width = 300, height = 200,
+        embedded = false,
+        titleText = "Named before hiding",
+      }))
+      mapper:hide()
+      assert.is_nil(mapper:resetTitle())
+      assert.are.equal("", mapper.titleText)
+      mapper:show()
+      -- an empty titleText is a reset, not "no title to apply", so the map
+      -- window has to come back with its generated default rather than the
+      -- title it carried before the hide
+      local title = getMapWindowTitle()
+      assert.is_truthy(title:find(getProfileName(), 1, true))
+      assert.are_not.equal("Named before hiding", title)
+    end)
+
+    it("does not overwrite a directly set title when a mapper is shown", function()
+      local mapper = track(Geyser.Mapper:new({name = "gmpNoClobber", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      mapper:hide()
+      openMapWidget()
+      assert.is_true(setMapWindowTitle("Set without Geyser"))
+      mapper:show()
+      -- this mapper never had a title of its own, so showing it has nothing to
+      -- reapply and must leave the map window titled as it was found
+      assert.are.equal("Set without Geyser", getMapWindowTitle())
+      resetMapWindowTitle()
+    end)
+
     it("starts with an empty title when it was not given one", function()
       local mapper = track(Geyser.Mapper:new({name = "gmpNoTitle", x = 10, y = 20, width = 300, height = 200, embedded = false}))
       assert.are.equal("", mapper.titleText)
