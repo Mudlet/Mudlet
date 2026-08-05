@@ -30,16 +30,12 @@ on:
   # would ever revisit.
   schedule:
     - cron: '17 */6 * * *'
+  # Deliberately no `pull_request` trigger. It would run the copy of this
+  # workflow under review, which is the only way to exercise it before merging,
+  # but it would also hand `statuses: write` to code from the pull request - and
+  # the status this posts is meant to gate merging. Changes here are covered by
+  # MergeStateTest, and workflow_dispatch re-runs the real thing after merge.
   workflow_dispatch:
-  # This workflow cannot test itself through the triggers above, because they
-  # all run the copy on the base branch. Same-repository pull requests that
-  # touch the machinery run the copy under review instead, with a token that
-  # can post, so a change to it is exercised before it is merged.
-  pull_request:
-    branches: [development]
-    paths:
-      - .github/workflows/merge-conflict-check.yml
-      - .github/scripts/report-merge-state.sh
 
 permissions:
   contents: read
@@ -54,13 +50,12 @@ jobs:
   report-merge-state:
     name: report merge state
     runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'Mudlet' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    if: ${{ github.repository_owner == 'Mudlet' }}
 
     steps:
-    # `pull_request_target` checks out the base branch, so the script being run
-    # is the reviewed one and never comes from the pull request under test. The
-    # `pull_request` self-test above is the deliberate exception, and the job
-    # condition limits it to branches pushed to this repository.
+    # Every trigger here runs the base branch's copy, so the script this checks
+    # out is always the reviewed one and never comes from the pull request being
+    # reported on
     - uses: actions/checkout@v7
       with:
         persist-credentials: false
