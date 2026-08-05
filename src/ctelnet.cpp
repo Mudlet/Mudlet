@@ -4867,7 +4867,12 @@ void cTelnet::initStreamDecompressor()
     inflateInit(&mZstream);
 }
 
-void cTelnet::cleanupMCCP4()
+// Ends the current compression run and nothing more. The option stays
+// negotiated, because a completed frame is not the server giving MCCP4 up - it
+// can start a new run at any time with a fresh BEGIN_ENCODING, and until it
+// does MCCP4 is still the agreed compression, so MCCP1/2 offers have to keep
+// being refused in its favour.
+void cTelnet::endMCCP4Compression()
 {
     if (mZstdDstream) {
         ZSTD_freeDStream(mZstdDstream);
@@ -4877,11 +4882,17 @@ void cTelnet::cleanupMCCP4()
         inflateEnd(&mZstream);
     }
     mZstdOutBuffer.clear();
-    mMCCP_version_4 = false;
     mMCCP4_encoding = MCCP4_ENCODING_NONE;
     if (!mMCCP_version_1 && !mMCCP_version_2) {
         mNeedDecompression = false;
     }
+}
+
+// Full teardown: MCCP4 is off and no longer negotiated.
+void cTelnet::cleanupMCCP4()
+{
+    endMCCP4Compression();
+    mMCCP_version_4 = false;
     hisOptionState[static_cast<int>(OPT_COMPRESS4)] = false;
 }
 
@@ -4939,12 +4950,13 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
         hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
         hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
 
-        // Clean up MCCP4 state if deflate was being used via MCCP4.
-        // Reset encoding first so cleanupMCCP4() won't call inflateEnd()
+        // End the compression run if deflate was being used via MCCP4, but
+        // leave the option negotiated so the server can restart it.
+        // Reset encoding first so endMCCP4Compression() won't call inflateEnd()
         // again (it was already called above).
         if (mMCCP_version_4 && mMCCP4_encoding == MCCP4_ENCODING_DEFLATE) {
             mMCCP4_encoding = MCCP4_ENCODING_NONE;
-            cleanupMCCP4();
+            endMCCP4Compression();
         }
 
         // zval should always be NULL on inflateEnd.  No need for an else block. MCCP Rev. 3 -MH //
@@ -5012,18 +5024,19 @@ int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buff
         totalOutput += output.pos;
 
         if (result == 0) {
-            // Full zstd frame decoded. The end of the frame ends compression
-            // (the MCCP4 counterpart of MCCP2's Z_STREAM_END): reference
-            // servers announce any restart with a fresh BEGIN_ENCODING
-            // subnegotiation, so whatever follows the frame is raw telnet
-            // for the caller to reprocess.
+            // Full zstd frame decoded. The end of the frame ends this
+            // compression run (the MCCP4 counterpart of MCCP2's Z_STREAM_END):
+            // reference servers announce any restart with a fresh
+            // BEGIN_ENCODING subnegotiation, so whatever follows the frame is
+            // raw telnet for the caller to reprocess. The option stays
+            // negotiated so that restart is possible.
             size_t remainingInput = input.size - input.pos;
 
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 2)
             qDebug() << "MCCP4: Frame complete, ending compression - consumed:" << input.pos << "remaining:" << remainingInput;
 #endif
 
-            cleanupMCCP4();
+            endMCCP4Compression();
 
             in_buffer += input.pos;
             length = static_cast<int>(remainingInput);
@@ -5307,9 +5320,13 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     if (mNeedDecompression) {
         if (mMCCP_version_4 && mMCCP4_encoding == MCCP4_ENCODING_ZSTD) {
             datalen = decompressMCCP4Buffer(in_buffer, amount, out_buffer);
-        } else if (mMCCP_version_4 && mMCCP4_encoding != MCCP4_ENCODING_DEFLATE) {
+        } else if (mMCCP_version_4 && mMCCP4_encoding != MCCP4_ENCODING_NONE && mMCCP4_encoding != MCCP4_ENCODING_DEFLATE) {
             // Unknown MCCP4 encoding - drop compression; the unconsumed input
-            // is queued below and reprocessed as plain data
+            // is queued below and reprocessed as plain data.
+            // MCCP4_ENCODING_NONE is not an unknown encoding: it means MCCP4 is
+            // negotiated but not currently compressing, which is where a
+            // finished frame leaves it. Decompression is still on in that case
+            // only because MCCP1/2 is driving it, so fall through to zlib.
             qWarning() << "MCCP4: Unknown encoding type, disabling MCCP4";
             //: Message shown in the main console when MCCP4 decompression encounters an internal error
             postMessage(tr("[ WARN  ]  - MCCP4 compression error, disabling. The connection may need to be restarted."));

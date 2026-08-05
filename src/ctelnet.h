@@ -344,6 +344,7 @@ private:
     // feedTelnet(...) Lua function.
     void processSocketData(char* data, int size, const bool loopbackTesting = false);
     void initStreamDecompressor();
+    void endMCCP4Compression();
     void cleanupMCCP4();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     int decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buffer);

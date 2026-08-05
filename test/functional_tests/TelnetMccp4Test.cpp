@@ -180,6 +180,44 @@ private slots:
         QVERIFY2(waitForBufferToContain("MCCP4_PLAIN_AFTER_REJECT"), qPrintable(qsl("Plain text after an unsupported MCCP4 encoding was not displayed. Buffer holds:\n%1").arg(bufferContents())));
     }
 
+    // A completed zstd frame ends that compression run, but it must not
+    // un-negotiate the option: the server can re-arm it with a fresh
+    // BEGIN_ENCODING, and until it does MCCP4 is still the agreed compression,
+    // so a late MCCP2 offer has to keep being refused.
+    void test_mccp2IsStillRejectedAfterAZstdFrameEnds()
+    {
+        auto* host = connectedHost();
+        QVERIFY2(host, "No active host available for the test.");
+        offerCompress4(host);
+
+        QByteArray refuseCompress2;
+        refuseCompress2.append(TN_IAC);
+        refuseCompress2.append(TN_DONT);
+        refuseCompress2.append(OPT_COMPRESS2);
+
+        QByteArray acceptCompress2;
+        acceptCompress2.append(TN_IAC);
+        acceptCompress2.append(TN_DO);
+        acceptCompress2.append(OPT_COMPRESS2);
+
+        // Control: before any frame has run, the offer is refused
+        mpServer->clearReceivedData();
+        offerCompress2(host);
+        QVERIFY2(waitForServerToReceive(refuseCompress2), "MCCP2 was not refused even before an MCCP4 frame ran, so this test cannot tell the two states apart.");
+
+        // Run one complete zstd frame, which ends the compression run
+        QByteArray data = beginEncoding("zstd");
+        data.append(zstdCompress("MCCP4_FRAME_COMPLETE\r\n"));
+        feed(host, data);
+        QVERIFY2(waitForBufferToContain("MCCP4_FRAME_COMPLETE"), "The zstd frame was not decompressed, so the frame-end state was never reached.");
+
+        // The identical offer must still be refused
+        mpServer->clearReceivedData();
+        offerCompress2(host);
+        QVERIFY2(waitForServerToReceive(refuseCompress2), "MCCP2 was accepted after an MCCP4 zstd frame ended - the completed frame wrongly un-negotiated MCCP4.");
+        QVERIFY2(!mpServer->receivedData().contains(acceptCompress2), "Client sent IAC DO COMPRESS2 after an MCCP4 zstd frame ended - the completed frame wrongly un-negotiated MCCP4.");
+    }
+
     void cleanup()
     {
         delete mpServer;
@@ -242,6 +280,15 @@ private:
         will.append(TN_IAC);
         will.append(TN_WILL);
         will.append(OPT_COMPRESS4);
+        feed(host, will);
+    }
+
+    void offerCompress2(Host* host)
+    {
+        QByteArray will;
+        will.append(TN_IAC);
+        will.append(TN_WILL);
+        will.append(OPT_COMPRESS2);
         feed(host, will);
     }
 
