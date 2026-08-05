@@ -1221,13 +1221,15 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
             mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Media error: %1").arg(errorString)));
         }
 
-        // Only media the backend has given up on is ended from here, and InvalidMedia is how it
-        // says so. An error it can recover from leaves the source loaded and playable, and
-        // ending that would silence a track that was about to play perfectly well - the release
-        // armed below does not consult the playback state, by design, so nothing downstream
-        // would catch it. A track that was playing when the error took it down reports
-        // StoppedState too, and is ended by the playback state handler either way.
-        if (lockedPlayer->mediaPlayer()->mediaStatus() != QMediaPlayer::InvalidMedia) {
+        // Only a failure nothing else will report is ended from here. A track that was playing
+        // reports StoppedState when the error takes it down, and the playback state handler
+        // ends it from there. That leaves two cases: a player already stopped, which is where a
+        // load failure lands because claimSource() leaves it stopped and there is no state to
+        // change from; and Qt's darwin backend, which reports PlayingState for media it has
+        // just failed to load and then never moves off it. InvalidMedia catches that second
+        // case and only that one - it cannot be asked to carry the first, because Qt's FFmpeg
+        // backend raises this signal before it sets the status.
+        if (lockedPlayer->mediaPlayer()->mediaStatus() != QMediaPlayer::InvalidMedia && lockedPlayer->getPlaybackState() != QMediaPlayer::StoppedState) {
             return;
         }
 
@@ -1249,6 +1251,15 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
             const auto endingPlayer = weakPlayer.lock();
 
             if (!endingPlayer || !endingPlayer->mediaPlayer() || endingPlayer->claimGeneration() != claimedAt) {
+                return;
+            }
+
+            // The release armed below ignores playback state by design, since darwin claims to
+            // be playing media it has just failed to load. That makes this the only place an
+            // error the backend recovered from can be told apart from one it did not: a turn
+            // on, media it has condemned says so with InvalidMedia, and media that is playing
+            // without having been condemned is fine after all and must be left alone.
+            if (endingPlayer->mediaPlayer()->mediaStatus() != QMediaPlayer::InvalidMedia && endingPlayer->getPlaybackState() == QMediaPlayer::PlayingState) {
                 return;
             }
 
