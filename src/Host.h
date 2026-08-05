@@ -352,6 +352,9 @@ public:
     QString readProfileIniData(const QString& item);
     void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
+    // Whether a package install or uninstall still owes the profile a save - see
+    // mDeferredSaveTimer.
+    bool hasPendingProfileSave() const { return mDeferredSaveTimer.isActive(); }
     void processDiscordGMCP(const QString& packageMessage, const QString& data);
     void waitForProfileSave();
     void clearDiscordData();
@@ -890,6 +893,7 @@ signals:
 
 private slots:
     void slot_purgeTemps();
+    void slot_saveProfileAfterPackageChange();
 
 private:
     void setBorders(const QMargins);
@@ -956,8 +960,15 @@ private:
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
     GifTracker mGifTracker;
-    // ensures that only one saveProfile call is active when multiple modules are being uninstalled in one go
-    std::optional<bool> mSaveTimer;
+    // The profile save that a package/module install or uninstall owes is put off
+    // to the next event loop pass, so that the asynchronous save mechanism is not
+    // asked to write out something that was just taken out of memory. Restarting
+    // this timer also folds a batch of installs/uninstalls into a single save.
+    // It has to be a member timer rather than a QTimer::singleShot(): a call
+    // queued on the Host is still delivered after the Host has been destroyed,
+    // and the save then reads freed members - closeChildren() and ~Host() stop
+    // this one instead (#9653).
+    QTimer mDeferredSaveTimer;
 
     QFile mErrorLogFile;
 

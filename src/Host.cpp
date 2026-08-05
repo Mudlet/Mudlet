@@ -412,6 +412,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         }
     });
     connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_purgeTemps);
+    mDeferredSaveTimer.setSingleShot(true);
+    connect(&mDeferredSaveTimer, &QTimer::timeout, this, &Host::slot_saveProfileAfterPackageChange);
     connect(this, &Host::signal_forceMXPProcessorOnChanged, this, [this](bool enabled) {
         if (enabled) {
             if (!mMxpProcessor.isEnabled()) {
@@ -448,6 +450,11 @@ Host::~Host()
 {
     // Mark the host as closing down to prevent keybinding processing during destruction
     mIsClosingDown = true;
+
+    // closeChildren() normally does this, but a Host whose console has already
+    // gone never gets there - and a package save left to fire from a Host that
+    // is being taken apart runs against freed members (#9653):
+    mDeferredSaveTimer.stop();
 
     // This needs to be cleared here while the Host object is still valid,
     // otherwise it'll be cleared when the Host object is being destroyed,
@@ -514,6 +521,14 @@ bool Host::requestClose()
 void Host::closeChildren()
 {
     mIsClosingDown = true;
+    // Drop the profile save a package install/uninstall put off: the close path
+    // has already saved the profile with that change in it (or the user declined
+    // to save at all), and a save that outlives the profile runs on a destroyed
+    // Host (#9653).
+    if (mDeferredSaveTimer.isActive()) {
+        qDebug().nospace().noquote() << "Host::closeChildren() INFO - dropping the profile save that a package change owed \"" << getName() << "\": the close saves the profile itself.";
+        mDeferredSaveTimer.stop();
+    }
     const auto hostToolBarMap = getActionUnit()->getToolBarList();
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
     mTelnet.terminateConnection();
@@ -1846,6 +1861,30 @@ void Host::slot_purgeTemps()
     mScriptUnit.doCleanup();
 }
 
+// The profile save that installPackage()/uninstallPackage() put off to the next
+// event loop pass - see mDeferredSaveTimer.
+void Host::slot_saveProfileAfterPackageChange()
+{
+    if (currentlySavingProfile()) {
+        // saveProfile() would refuse outright, and this is the only save the
+        // package change has coming: ask again once the one in flight is out of
+        // the way rather than leaving the change unwritten until something else
+        // happens to save. The profile close stops this timer, so the retries
+        // cannot outlive the profile.
+        mDeferredSaveTimer.start(100ms);
+        return;
+    }
+    // If a package's own script uninstalled it mid-compile (from a script
+    // reached outside the compileAll()/editor/raiseEvent flush points, e.g. a
+    // permScript() run from an alias or key), the script deletes were deferred
+    // and are still registered. Flush them now, at depth 0, before saving so
+    // the save below does not serialize the just-uninstalled scripts back in:
+    mScriptUnit.doCleanup();
+    if (auto [ok, filename, error] = saveProfile(); !ok) {
+        qWarning() << qsl("Host::slot_saveProfileAfterPackageChange() WARNING - couldn't save '%1' to '%2' because: %3").arg(getName(), filename, error);
+    }
+}
+
 void Host::registerEventHandler(const QString& name, TScript* pScript)
 {
     if (mEventHandlerMap.contains(name)) {
@@ -2095,10 +2134,17 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // home directory for the PROFILE
         const QDir _tmpDir(_home);
         // directory to store the expanded archive file contents
+        // Noted before it is made: the only folder this install may ever delete
+        // again is one it made itself. The package name is the archive's own file
+        // name, and then whatever its config.lua says, so it can just as well name
+        // a folder of the profile's that was already here ("map", "log",
+        // "current") - see the refusal further down.
+        const bool destinationAlreadyExisted = QDir(_dest).exists();
         const bool mkpathSuccessful = _tmpDir.mkpath(_dest);
         if (!mkpathSuccessful) {
             return {false, qsl("could not create destination folder")};
         }
+        QString folderThisInstallMade = destinationAlreadyExisted ? QString() : QDir(_dest).absolutePath();
 
         // Skip the unpacking dialog for modules created from UI, and for
         // script-initiated installs (passed via quiet) to avoid stealing
@@ -2146,18 +2192,26 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             }
             // continuing, so update the folder name on disk
             const QString newpath(qsl("%1/%2").arg(_home, packageName));
-            _dir.rename(_dir.absolutePath(), newpath);
+            // A rename onto a folder that is already there fails, and then the
+            // folder this install made is still at its old name while _dir goes
+            // on to the folder that was already here - which is not ours to
+            // delete, whatever the archive would like.
+            if (_dir.rename(_dir.absolutePath(), newpath) && !folderThisInstallMade.isEmpty()) {
+                folderThisInstallMade = QDir(newpath).absolutePath();
+            }
             _dir = QDir(newpath);
         }
         QStringList _filterList;
         _filterList << qsl("*.xml") << qsl("*.trigger");
         const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
+        bool registeredFromArchive = false;
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
             if (!file2.open(QFile::ReadOnly | QFile::Text)) {
                 qWarning() << "Host: failed to open file for reading:" << entry.absoluteFilePath() << file2.errorString();
                 continue;
             }
+            registeredFromArchive = true;
             XMLimport reader(this);
             if (thing != enums::PackageModuleType::Package) {
                 QStringList moduleEntry;
@@ -2178,6 +2232,31 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 }
             }
             file2.close();
+        }
+
+        // Registering the package is this loop's job, so an archive that holds no
+        // package XML that could be read is not installed anywhere: it would be
+        // missing from getPackages()/getModules(), uninstallPackage() would refuse
+        // it, and the folder it was just unpacked into would stay in the profile
+        // for good (#9654). Take that folder away again and say so. Asking the
+        // loop whether it registered anything, rather than asking
+        // mInstalledPackages/mInstalledModules afterwards, is what makes this hold
+        // for a module whose name is already in mInstalledModules on the way in
+        // (profile loading, and installModule() over a stale entry, both do that).
+        if (!registeredFromArchive) {
+            // Only ever remove the folder this install made, and only if it is
+            // inside the profile: the package name can come out empty (a file
+            // called ".mpackage"), name a folder of the user's ("map"), or be
+            // whatever an untrusted archive's config.lua says (".." - the folder
+            // holding every profile), and removeDir() takes everything below what
+            // it is given.
+            const QString profileHome = QDir(mudlet::getMudletPath(enums::profileHomePath, getName())).absolutePath();
+            if (!folderThisInstallMade.isEmpty() && folderThisInstallMade.startsWith(profileHome + QLatin1Char('/'))) {
+                removeDir(folderThisInstallMade, folderThisInstallMade);
+            } else {
+                qWarning() << "Host::installPackage() WARNING - refused" << fileName << "as package" << packageName << "but leaving" << _dir.absolutePath() << "alone: this install did not make it";
+            }
+            return {false, qsl("no package found in %1 - no Mudlet package file in it could be read").arg(fileName)};
         }
     } else {
         file2.setFileName(fileName);
@@ -2223,7 +2302,15 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // Defer raising install events until the next event loop iteration
     // This ensures all package installation is complete (including variable loading)
     // before event handlers execute, preventing Lua state corruption
-    QTimer::singleShot(0ms, this, [this, thing, packageName, fileName]() {
+    QTimer::singleShot(0ms, this, [this, guard = QPointer<Host>(this), thing, packageName, fileName]() {
+        // The queued call can still be delivered once this Host has been
+        // destroyed - the profile save queued the same way was #9653 - and the
+        // isClosingDown() check below would then be read off freed memory. The
+        // guard lives in the queued call rather than in the Host, so it is safe
+        // to ask and is null by then:
+        if (!guard) {
+            return;
+        }
         // Don't raise events if Host is shutting down to avoid handlers executing during teardown
         if (isClosingDown()) {
             return;
@@ -2277,9 +2364,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // Save profile to ensure modules persist and appear in module manager
     if (thing != enums::PackageModuleType::Package) {
         // Use a timer to save profile after module installation completes
-        QTimer::singleShot(100ms, this, [this]() {
-            saveProfile();
-        });
+        mDeferredSaveTimer.start(100ms);
     }
 
     return {true, QString()};
@@ -2442,24 +2527,9 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     const QString dest = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
     removeDir(dest, dest);
 
-    // ensure only one timer is running in case multiple modules are uninstalled at once
-    if (!mSaveTimer.has_value() || !mSaveTimer.value()) {
-        mSaveTimer = true;
-        // save the profile on the next Qt main loop cycle in order for the asyncronous save mechanism
-        // not to try to write to disk a package/module that just got uninstalled and removed from memory
-        QTimer::singleShot(0ms, this, [this]() {
-            mSaveTimer = false;
-            // If a package's own script uninstalled it mid-compile (from a script
-            // reached outside the compileAll()/editor/raiseEvent flush points, e.g. a
-            // permScript() run from an alias or key), the script deletes were deferred
-            // and are still registered. Flush them now, at depth 0, before saving so
-            // the save below does not serialize the just-uninstalled scripts back in:
-            mScriptUnit.doCleanup();
-            if (auto [ok, filename, error] = saveProfile(); !ok) {
-                qDebug() << qsl("Host::uninstallPackage: Couldn't save '%1' to '%2' because: %3").arg(getName(), filename, error);
-            }
-        });
-    }
+    // save the profile on the next Qt main loop cycle in order for the asyncronous save mechanism
+    // not to try to write to disk a package/module that just got uninstalled and removed from memory
+    mDeferredSaveTimer.start(0ms);
 
     //NOW we reset if we're uninstalling a module
     if (mpEditorDialog && thing == enums::PackageModuleType::ModuleFromScript) {
