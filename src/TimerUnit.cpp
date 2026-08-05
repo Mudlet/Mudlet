@@ -210,13 +210,13 @@ void TimerUnit::_removeTimerRootNode(TTimer* pT)
     if (!pT) {
         return;
     }
-    // temp timers do not need to check for names referring to multiple different
-    // objects as names=ID -> much faster tempTimer creation
-    if (!pT->isTemporary()) {
-        mLookupTable.remove(pT->mName, pT);
-    } else {
-        mLookupTable.remove(pT->getName());
-    }
+    // Names are not unique - the lookup table is a QMultiMap - so drop this one
+    // timer's entry rather than every entry filed under the name. The
+    // single-argument remove() used to be taken for temporary timers on the
+    // grounds that their name is their id, but a permanent timer named after
+    // that id was evicted with it and left unreachable by name for the rest of
+    // the session
+    mLookupTable.remove(pT->getName(), pT);
     mTimerMap.remove(pT->getID());
     mTimerRootNodeList.remove(pT);
 }
@@ -296,13 +296,8 @@ void TimerUnit::_removeTimer(TTimer* pT)
         return;
     }
 
-    // temp timers do not need to check for names referring to multiple different
-    // objects as names=ID -> much faster tempTimer creation
-    if (!pT->isTemporary()) {
-        mLookupTable.remove(pT->mName, pT);
-    } else {
-        mLookupTable.remove(pT->getName());
-    }
+    // see _removeTimerRootNode(): one entry, not every same-named one
+    mLookupTable.remove(pT->getName(), pT);
     mTimerMap.remove(pT->getID());
 }
 

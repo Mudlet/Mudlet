@@ -517,10 +517,6 @@ describe("Tests the functionality of IDMgr", function()
     end)
 
     it("Should stop regex named triggers too", function()
-      -- BUG: stopAllNamedTriggers reaches IDMgr:stopAllTriggers, which only
-      -- walks the substring store; regex named triggers keep firing. Compare
-      -- deleteAllNamedTriggers, which clears both stores.
-      pending("stopAllNamedTriggers ignores regex named triggers - see the Wave 3d report")
       _G.StopAllTrigFire = 0
       registerNamedRegexTrigger(user, "re", "^stop_all_re$", function() _G.StopAllTrigFire = _G.StopAllTrigFire + 1 end)
       feedTriggers("\nstop_all_re\n")
@@ -692,12 +688,13 @@ describe("Tests the functionality of IDMgr", function()
       end)
 
       it("Should stop regex triggers as well", function()
-        -- BUG: stopAllTriggers only calls stopAll("triggers"), so entries in
-        -- the regexTriggers store keep their live handlerID and keep firing
-        pending("IDMgr:stopAllTriggers ignores the regex store - see the Wave 3d report")
+        mgr:registerTrigger("sub", "private_mgr_stopall_sub", function() end)
         mgr:registerRegexTrigger("re", "^private_mgr_stopall_re$", function() end)
-        mgr:stopAllTriggers()
+        assert.is_true(mgr:stopAllTriggers())
         assert.is_equal(-1, mgr.regexTriggers["re"].handlerID)
+        -- the substring store must not regress while the regex one is added
+        assert.is_equal(-1, mgr.triggers["sub"].handlerID)
+        assert.are.same({"re", "sub"}, mgr:getTriggers())
       end)
     end)
 
@@ -718,12 +715,11 @@ describe("Tests the functionality of IDMgr", function()
       end)
 
       it("Should stop regex triggers too", function()
-        -- BUG: emergencyStop shares IDMgr:stopAllTriggers' blind spot and never
-        -- touches the regexTriggers store, so those triggers survive it
-        pending("IDMgr:emergencyStop leaves regex triggers running - see the Wave 3d report")
         mgr:registerRegexTrigger("re", "^private_mgr_emergency_re$", function() end)
-        mgr:emergencyStop()
+        assert.is_true(mgr:emergencyStop())
         assert.is_equal(-1, mgr.regexTriggers["re"].handlerID)
+        -- stopped, not deleted, so it can still be resumed
+        assert.are.same({"re"}, mgr:getTriggers())
       end)
     end)
   end)

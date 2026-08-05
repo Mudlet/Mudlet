@@ -252,6 +252,23 @@ describe("Tests keybind-related functions", function()
       assert.are.equal(exists("SpecDupKeys", "keybind"), isActive("SpecDupKeys", "keybind"), "enabling by name must reactivate every duplicate")
     end)
 
+    it("freeing a temporary key leaves a same-named permanent one reachable", function()
+      -- tempKey names its key after its id, so a permanent key called after that
+      -- number shares the name - and the name lookup table holds several keys per
+      -- name
+      local tempId = tempKey(mudlet.key.F11, [[echo("x")]])
+      local sharedName = tostring(tempId)
+      assert.is_true(permKey(sharedName, "", mudlet.key.F12, [[echo("x")]]) > 0)
+      assert.are.equal(2, exists(sharedName, "keybind"))
+
+      assert.is_true(killKey(tempId), "the temporary key is the one that can be killed")
+      -- an incoming line runs every unit's deferred cleanup, which frees it
+      feedTriggers("\nspec_key_eviction_flush\n")
+
+      assert.are.equal(1, exists(sharedName, "keybind"), "only the temporary key should leave the lookup table")
+      assert.is_true(enableKey(sharedName), "the permanent key must still be reachable by name")
+    end)
+
   end)
 
 end)

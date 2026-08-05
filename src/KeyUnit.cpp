@@ -98,6 +98,9 @@ void KeyUnit::uninstall(const QString& packageName)
         return;
     }
     for (auto& key : uninstallList) {
+        // in case the key was also queued for the markCleanup()/doCleanup()
+        // path - deleting it here would otherwise leave a dangling pointer there:
+        mCleanupSet.remove(key);
         delete key;
     }
     uninstallList.clear();
@@ -324,11 +327,12 @@ void KeyUnit::removeKeyRootNode(TKey* pT)
     if (!pT) {
         return;
     }
-    if (!pT->isTemporary()) {
-        mLookupTable.remove(pT->getName(), pT);
-    } else {
-        mLookupTable.remove(pT->getName());
-    }
+    // Names are not unique - the lookup table is a QMultiMap - so drop this one
+    // key's entry rather than every entry filed under the name. The
+    // single-argument remove() used to be taken for temporary keys, which evicted
+    // live same-named keys and left them unreachable by name for the rest of the
+    // session
+    mLookupTable.remove(pT->getName(), pT);
     mKeyMap.remove(pT->getID());
     mKeyRootNodeList.remove(pT);
 }
@@ -390,11 +394,8 @@ void KeyUnit::removeKey(TKey* pT)
     if (!pT) {
         return;
     }
-    if (!pT->isTemporary()) {
-        mLookupTable.remove(pT->getName(), pT);
-    } else {
-        mLookupTable.remove(pT->getName());
-    }
+    // see removeKeyRootNode(): one entry, not every same-named one
+    mLookupTable.remove(pT->getName(), pT);
     mKeyMap.remove(pT->getID());
 }
 
@@ -477,17 +478,20 @@ void KeyUnit::doCleanup()
         return;
     }
 
+    QSet<TKey*> deletedKeys;
     QMutableSetIterator<TKey*> itKey(mCleanupSet);
     while (itKey.hasNext()) {
         auto pKey = itKey.next();
         itKey.remove();
+        deletedKeys.insert(pKey);
         delete pKey;
     }
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
     // children first empties the parent's child list (no double free); the seen
-    // set guards a node queued twice by re-entrant uninstalls.
-    QSet<TKey*> deletedKeys;
+    // set guards a node queued twice by re-entrant uninstalls and is shared with
+    // the mCleanupSet loop above so an object that somehow ended up in both
+    // containers cannot be freed twice.
     for (auto key : uninstallList) {
         if (!deletedKeys.contains(key)) {
             deletedKeys.insert(key);

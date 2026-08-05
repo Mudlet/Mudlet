@@ -194,11 +194,13 @@ void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
     if (!pT) {
         return;
     }
-    if (!pT->isTemporary()) {
-        mLookupTable.remove(pT->mName, pT);
-    } else {
-        mLookupTable.remove(pT->getName());
-    }
+    // Names are not unique - the lookup table is a QMultiMap - so drop this one
+    // trigger's entry rather than every entry filed under the name. The
+    // single-argument remove() used to be taken for temporary triggers, which
+    // evicted live same-named triggers and left them unreachable by name for the
+    // rest of the session (tempComplexRegexTrigger() takes a user-supplied name,
+    // so a collision needs no coincidence)
+    mLookupTable.remove(pT->getName(), pT);
     mTriggerMap.remove(pT->getID());
     mTriggerRootNodeList.remove(pT);
     // A node can be removed and deleted mid-pass without going through the
@@ -274,11 +276,8 @@ void TriggerUnit::removeTrigger(TTrigger* pT)
     if (!pT) {
         return;
     }
-    if (!pT->isTemporary()) {
-        mLookupTable.remove(pT->mName, pT);
-    } else {
-        mLookupTable.remove(pT->getName());
-    }
+    // see removeTriggerRootNode(): one entry, not every same-named one
+    mLookupTable.remove(pT->getName(), pT);
 
     mTriggerMap.remove(pT->getID());
 }

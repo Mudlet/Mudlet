@@ -934,4 +934,61 @@ describe("Trigger processing", function()
         end)
 
     end)
+
+    -- The delete of an expired or killed trigger is deferred until the outermost
+    -- processDataStream() pass ends, so everything between the queueing and the
+    -- free has to behave as if the trigger were already gone.
+    describe("deferred deletion", function()
+
+        it("does not let an expired trigger fire again from a nested feed", function()
+            local fires = 0
+            -- expireAfter = 1, so this must fire exactly once no matter how many
+            -- lines reach it
+            tempRegexTrigger("^expiry_reentry$", function() fires = fires + 1 end, 1)
+
+            local nestedFed = false
+            local reentrantId = tempRegexTrigger("^expiry_reentry$", function()
+                if not nestedFed then
+                    nestedFed = true
+                    -- re-enters trigger processing while the expired trigger is
+                    -- still queued for deletion
+                    feedTriggers("\nexpiry_reentry\n")
+                end
+            end)
+            finally(function() killTrigger(reentrantId) end)
+
+            feedTriggers("\nexpiry_reentry\n")
+
+            assert.is_true(nestedFed, "the re-entrant trigger should have fed a nested line")
+            assert.are.equal(1, fires, "a trigger with expireAfter = 1 must not fire a second time")
+        end)
+
+        it("keeps a same-named permanent trigger in the lookup table", function()
+            local name = "Spec Name Eviction"
+            _G.NameEvictionSpec = 0
+            finally(function()
+                disableTrigger(name)
+                _G.NameEvictionSpec = nil
+            end)
+
+            -- permanent triggers cannot be deleted from Lua, so earlier local runs
+            -- leave same-named ones behind: work from a relative baseline
+            assert.is_true(permRegexTrigger(name, "", {"^name_eviction_perm$"}, [[_G.NameEvictionSpec = (_G.NameEvictionSpec or 0) + 1]]) > 0)
+            local permanents = exists(name, "trigger")
+            assert.is_true(permanents >= 1)
+
+            -- tempComplexRegexTrigger is the one temporary-trigger API that takes a
+            -- user-supplied name, so sharing one with a permanent trigger is easy
+            tempComplexRegexTrigger(name, "^name_eviction_temp$", [[]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            assert.are.equal(permanents + 1, exists(name, "trigger"))
+
+            killTrigger(name) -- only the temporary one can be killed
+            feedTriggers("\nname_eviction_perm\n") -- the pass ends, flushing the deferred delete
+
+            assert.are.equal(permanents, exists(name, "trigger"), "only the temporary trigger should leave the lookup table")
+            assert.is_true(_G.NameEvictionSpec >= 1, "the permanent trigger should still fire")
+            assert.is_true(disableTrigger(name), "the permanent trigger must still be reachable by name")
+        end)
+
+    end)
 end)

@@ -326,5 +326,22 @@ describe("Alias processing", function()
             killAlias(id)
         end)
 
+        it("freeing a temporary alias leaves a same-named permanent one reachable", function()
+            -- tempAlias names its alias after its id, so a permanent alias called
+            -- after that number shares the name - and the name lookup table holds
+            -- several aliases per name
+            local tempId = tempAlias("^spec_evicted_temp$", [[]])
+            local sharedName = tostring(tempId)
+            assert.is_true(permAlias(sharedName, "", "^spec_evicted_perm$", [[]]) > 0)
+            assert.are.equal(2, exists(sharedName, "alias"))
+
+            assert.is_true(killAlias(tempId), "the temporary alias is the one that can be killed")
+            -- an incoming line runs every unit's deferred cleanup, which frees it
+            feedTriggers("\nspec_alias_eviction_flush\n")
+
+            assert.are.equal(1, exists(sharedName, "alias"), "only the temporary alias should leave the lookup table")
+            assert.is_true(enableAlias(sharedName), "the permanent alias must still be reachable by name")
+        end)
+
     end)
 end)
