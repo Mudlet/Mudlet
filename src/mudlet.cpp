@@ -7723,7 +7723,7 @@ void mudlet::slot_detachedWindowClosed(const QString& profileName)
 
         // Properly close the host to avoid dangling connections
         Host* pHost = mHostManager.getHost(profileName);
-        if (pHost) {
+        if (pHost && !closeHeldOffByEventPump(pHost)) {
             if (pHost->requestClose()) {
                 QTimer::singleShot(0ms, this, [this, profileName] {
                     closeHost(profileName);
