@@ -8,11 +8,13 @@
 -- function returns when its precondition (a connection, a peer, an enabled
 -- protocol, an available API) is not met.
 --
--- The download and HTTP families are the exception: their infrastructure can be
--- stood up locally, so their real effects are checked against the fixture
--- server in CI/http-fixture-server.py, whose ephemeral port arrives in
--- MUDLET_TEST_HTTP_PORT. They skip cleanly when it is absent so the suite still
--- passes without a server. Nothing here mocks a real API function.
+-- The download, HTTP and MMCP families are the exception: their infrastructure
+-- can be stood up locally, so their real effects are checked against the
+-- fixture server in CI/http-fixture-server.py (ephemeral port in
+-- MUDLET_TEST_HTTP_PORT) and the scripted chat peer in CI/mmcp-peer.py
+-- (handover directory in MUDLET_TEST_MMCP_DIR). Both skip cleanly when absent
+-- so the suite still passes without them. Nothing here mocks a real API
+-- function.
 
 local function contains(haystack, needle)
   return type(haystack) == "string" and haystack:find(needle, 1, true) ~= nil
@@ -777,6 +779,901 @@ describe("MMCP chat commands report the absence of a session", function()
       assert.is_nil(ok)
       assert.is_true(contains(err, "tilde"))
     end)
+  end)
+end)
+
+-- The MMCP specs above check the no-peer contracts. These drive the real
+-- protocol against the scripted peer in CI/mmcp-peer.py: it accepts the call
+-- mmcp.call() places, records the bytes Mudlet sends and sends chat traffic
+-- back when a spec asks it to. Nothing is mocked - each assertion is either a
+-- byte the peer received, an event Mudlet raised in response to real socket
+-- traffic, or a value read back through the mmcp API.
+--
+-- The peer's port is ephemeral (MMCP's default 4050 would collide between CI
+-- jobs and parallel worktrees) and is handed over through the directory named
+-- by MUDLET_TEST_MMCP_DIR. Without a peer these specs skip, unless
+-- MUDLET_TEST_REQUIRE_MMCP_PEER is set, which is how CI turns a fixture that
+-- failed to start into a failure rather than a green skip. Linux and macOS
+-- start one; the Windows job does not, so the block pends there.
+--
+-- The specs share one connection and run in the order they are declared, after
+-- the no-peer contracts above them. Anything that shuffles the suite would
+-- need them made independent first.
+describe("MMCP effects against a scripted chat peer", function()
+  -- Both of these are what CI/mmcp-peer.py calls itself
+  local PEER_NAME = "BustedPeer"
+  local PEER_VERSION = "Mudlet 0.0.0-busted-peer"
+  local CHAT_NAME = "MudletBustedTester"
+  local mmcpDir = os.getenv("MUDLET_TEST_MMCP_DIR")
+  local peerRequired = os.getenv("MUDLET_TEST_REQUIRE_MMCP_PEER")
+  local commandCounter = 0
+  local originalChatName
+
+  local function readFile(path)
+    local handle = io.open(path, "r")
+    if not handle then
+      return nil
+    end
+    local contents = handle:read("*a")
+    handle:close()
+    return contents
+  end
+
+  -- The peer writes its port only once it is accepting, so a readable port file
+  -- means the fixture is up.
+  local function peerPort()
+    if not mmcpDir then
+      return nil
+    end
+    local raw = readFile(mmcpDir .. "/port")
+    return raw and tonumber(raw:match("%d+"))
+  end
+
+  -- Returns true when the caller should stop because the fixture cannot be
+  -- talked to and skipping is allowed.
+  local function peerUnavailable()
+    local reason
+    if not peerPort() then
+      reason = "MMCP peer fixture not running (run CI/mmcp-peer.py with MUDLET_TEST_MMCP_DIR set)"
+    elseif type(yajl) ~= "table" then
+      -- yajl is loaded as an optional module, and both channels to the peer are
+      -- JSON, so say so rather than dying on a nil index further down.
+      reason = "the yajl Lua module is unavailable, so the peer's JSON channels cannot be used"
+    else
+      return false
+    end
+    if peerRequired then
+      assert.is_true(false, "MUDLET_TEST_REQUIRE_MMCP_PEER is set but " .. reason .. " (MUDLET_TEST_MMCP_DIR=" .. tostring(mmcpDir) .. ")")
+    end
+    pending(reason)
+    return true
+  end
+
+  -- Lets Mudlet's event loop run for ms without blocking it: waiting on an
+  -- event nothing raises is how a spec gives sockets and timers time to work.
+  local function pump(ms)
+    waitForEvent("mmcpFixtureIdleEvent", ms)
+  end
+
+  local function waitUntil(predicate, timeoutMs)
+    local step = 20
+    for _ = 1, math.ceil((timeoutMs or 2000) / step) do
+      if predicate() then
+        return true
+      end
+      pump(step)
+    end
+    return predicate()
+  end
+
+  local function capture()
+    local raw = readFile(mmcpDir .. "/capture.json")
+    if not raw or raw == "" then
+      return nil
+    end
+    local ok, decoded = pcall(yajl.to_value, raw)
+    if not ok then
+      return nil
+    end
+    return decoded
+  end
+
+  -- How far the peer's history has got, so a spec can disregard what earlier
+  -- specs left behind and look only at what its own action produced. An
+  -- unreadable capture would silently widen that to the whole history, so it
+  -- fails here instead.
+  local function captureSeq()
+    local decoded = capture()
+    assert.is_table(decoded)
+    assert.is_number(decoded.seq)
+    return decoded.seq
+  end
+
+  local function waitForPeerEvent(afterSeq, matches, timeoutMs)
+    local found
+    waitUntil(function()
+      local decoded = capture()
+      found = nil
+      for _, event in ipairs(decoded and decoded.events or {}) do
+        if event.seq > afterSeq and matches(event) then
+          found = event
+          break
+        end
+      end
+      return found ~= nil
+    end, timeoutMs)
+    return found
+  end
+
+  -- Waits for a protocol command of this name to reach the peer and returns it,
+  -- or nil if none arrived in time.
+  local function waitForCommand(name, afterSeq, timeoutMs)
+    return waitForPeerEvent(afterSeq, function(event)
+      return event.type == "command" and event.name == name
+    end, timeoutMs)
+  end
+
+  -- Instructs the peer. Written as "<n>.json.tmp" and renamed into place so the
+  -- peer never picks up a half-written command.
+  local function tellPeer(command)
+    commandCounter = commandCounter + 1
+    local path = mmcpDir .. "/commands/" .. commandCounter .. ".json"
+    local handle = assert(io.open(path .. ".tmp", "w"))
+    handle:write(yajl.to_string(command))
+    handle:close()
+    assert(os.rename(path .. ".tmp", path))
+  end
+
+  local function peerSends(code, text)
+    tellPeer({action = "send", code = code, text = text})
+  end
+
+  -- The command channel is JSON, so bytes that are not valid UTF-8 - the 0xff
+  -- terminator above all - have to travel as hex.
+  local function peerSendsRaw(bytes)
+    tellPeer({action = "send_hex", hex = (bytes:gsub(".", function(char)
+      return string.format("%02x", char:byte())
+    end))})
+  end
+
+  local function peerClient()
+    local clients = mmcp.getClientList()
+    if type(clients) ~= "table" then
+      return nil
+    end
+    for _, client in ipairs(clients) do
+      if client.name == PEER_NAME then
+        return client
+      end
+    end
+    return nil
+  end
+
+  -- Set once the peer has failed to answer a call. Every spec calls ensurePeer,
+  -- so without this a peer that died mid-run would cost each of them the full
+  -- handshake wait and blow the workflow's one-minute cap before busted could
+  -- report anything.
+  local peerNotAnswering
+
+  -- Places a call to the fixture peer unless one is already up, and returns the
+  -- peer's entry in mmcp.getClientList().
+  local function ensurePeer()
+    local client = peerClient()
+    if client then
+      return client
+    end
+    if peerNotAnswering then
+      assert.is_true(false, peerNotAnswering)
+    end
+    -- A peer under some other name is one an earlier spec renamed and did not
+    -- rename back; drop it so this call is not refused as a duplicate.
+    local stale = mmcp.getClientList()
+    if type(stale) == "table" then
+      for _, entry in ipairs(stale) do
+        mmcp.disconnect(entry.name)
+      end
+      waitUntil(function() return mmcp.getClientList() == nil end, 2000)
+    end
+    originalChatName = originalChatName or mmcp.chatName()
+    -- A fixed name, so the bytes the peer records are predictable.
+    mmcp.chatName(CHAT_NAME)
+    assert.is_true(mmcp.call("127.0.0.1", peerPort()))
+    -- A peer joins the client list only once it has accepted the call, and that
+    -- is what raises sysMMCPPeerUpdateEvent.
+    if waitForEvent("sysMMCPPeerUpdateEvent", 3000) ~= "sysMMCPPeerUpdateEvent" then
+      peerNotAnswering = "the MMCP peer fixture never answered a call on port " .. tostring(peerPort())
+      assert.is_true(false, peerNotAnswering)
+    end
+    client = peerClient()
+    assert.is_table(client)
+    return client
+  end
+
+  -- Runs action with a handler armed for eventName and returns the argument
+  -- lists it saw. Events Mudlet raises inside an mmcp.* call are raised before
+  -- that call returns, so they have to be watched for, not waited on.
+  local function collectEvents(eventName, action)
+    local seen = {}
+    local handlerId = registerAnonymousEventHandler(eventName, function(_, ...)
+      seen[#seen + 1] = {...}
+    end)
+    local ok, err = pcall(action)
+    killAnonymousEventHandler(handlerId)
+    if not ok then
+      error(err, 0)
+    end
+    return seen
+  end
+
+  -- Every spec below leaves the peer's flags as it found them, so this does
+  -- nothing on a passing run. It matters when one does fail: an assertion that
+  -- stops a spec halfway through a toggle would otherwise leave the peer
+  -- ignored or private and take the specs after it down as well.
+  after_each(function()
+    if not peerClient() then
+      return
+    end
+    local flags = mmcp.getClientFlags(PEER_NAME)
+    if type(flags) ~= "string" then
+      return
+    end
+    if flags:sub(3, 3) ~= " " then mmcp.setPrivate(PEER_NAME) end
+    if flags:sub(4, 4) ~= " " then mmcp.ignore(PEER_NAME) end
+    if flags:sub(5, 5) ~= " " then mmcp.serve(PEER_NAME) end
+    if flags:sub(7, 7) ~= " " then mmcp.allowSnoop(PEER_NAME) end
+  end)
+
+  describe("mmcp.call", function()
+    it("completes the MudMaster handshake with the peer", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local decoded = capture()
+      assert.is_table(decoded.caller)
+      -- "CHAT:<name>\n<address><port left aligned in 5 columns>", asserted
+      -- whole: the port's padding is part of the format a MudMaster peer reads
+      -- back, and only the exact string keeps it honest.
+      local port = tostring(peerPort())
+      local padded = port .. string.rep(" ", math.max(0, 5 - #port))
+      assert.equals("CHAT:" .. CHAT_NAME .. "\n127.0.0.1" .. padded, decoded.caller.raw)
+    end)
+
+    it("announces itself as Mudlet once the call is accepted", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local sent = waitForPeerEvent(0, function(event)
+        return event.type == "command" and event.name == "Version"
+      end, 2000)
+      assert.is_table(sent)
+      -- Peers switch behaviour on this string - a Mudlet peer only forwards side
+      -- channel data to versions saying "Mudlet", and picks the snoop colour
+      -- format from "MudMaster" - so the prefix is load-bearing, not cosmetic.
+      assert.equals("Mudlet ", sent.text:sub(1, 7))
+    end)
+
+    it("lists the accepted peer with its address, port and version", function()
+      if peerUnavailable() then return end
+      local client = ensurePeer()
+      assert.equals(1, client.id)
+      assert.equals(PEER_NAME, client.name)
+      assert.equals("127.0.0.1", client.host)
+      assert.equals(peerPort(), client.port)
+      -- The peer's version arrives just after its acceptance, which is what
+      -- releases ensurePeer, so give it its own wait rather than assuming the
+      -- two landed in the same read.
+      assert.is_true(waitUntil(function()
+        local entry = peerClient()
+        return entry ~= nil and entry.version == PEER_VERSION
+      end, 2000), tostring(peerClient() and peerClient().version))
+    end)
+
+    it("refuses to place a second call to a peer it is already talking to", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local before = capture().connections
+      local ok, err = mmcp.call("127.0.0.1", peerPort())
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "already connected to that client"))
+      pump(200)
+      assert.equals(before, capture().connections)
+    end)
+
+    it("leaves no client behind when nothing answers the port", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      -- Port 1 on loopback refuses rather than listens. The call is placed
+      -- (that much is asynchronous), but the client it creates has to be
+      -- disposed of on the error rather than lingering in the session.
+      assert.is_true(mmcp.call("127.0.0.1", 1))
+      pump(500)
+      assert.equals(1, #mmcp.getClientList())
+      assert.is_table(peerClient())
+    end)
+
+    it("leaves no client behind when the peer refuses the call", function()
+      if peerUnavailable() then return end
+      if peerClient() then
+        mmcp.disconnect(PEER_NAME)
+        waitUntil(function() return peerClient() == nil end, 2000)
+      end
+      tellPeer({action = "accept", accept = false})
+      waitUntil(function()
+        local decoded = capture()
+        return decoded ~= nil and decoded.accepting == false
+      end, 1000)
+
+      local mark = captureSeq()
+      assert.is_true(mmcp.call("127.0.0.1", peerPort()))
+      -- The peer answers "NO:<name>" and hangs up, so the call never reaches
+      -- the connected state and nothing is added to the client list.
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "handshake"
+      end, 2000))
+      pump(300)
+      assert.is_nil(mmcp.getClientList())
+
+      tellPeer({action = "accept", accept = true})
+      waitUntil(function()
+        local decoded = capture()
+        return decoded ~= nil and decoded.accepting == true
+      end, 1000)
+    end)
+  end)
+
+  describe("outgoing chat", function()
+    it("chatAll sends the message to the peer and echoes it locally", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      local echoes = collectEvents("sysMMCPChatMessage", function()
+        assert.is_true(mmcp.chatAll("hello everyone"))
+      end)
+      local sent = waitForCommand("TextEveryone", mark)
+      assert.is_table(sent)
+      assert.equals(CHAT_NAME .. " chats to everybody, 'hello everyone'\n", sent.text)
+      -- One echo, attributed to "System" because it was addressed to no-one in
+      -- particular.
+      assert.equals(1, #echoes)
+      assert.equals("System", echoes[1][1])
+      assert.is_true(contains(echoes[1][2], "You chat to everybody, 'hello everyone'"), tostring(echoes[1][2]))
+    end)
+
+    it("chatTo sends a personal message to the named peer", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      local echoes = collectEvents("sysMMCPChatMessage", function()
+        assert.is_true(mmcp.chatTo(PEER_NAME, "just for you"))
+      end)
+      local sent = waitForCommand("TextPersonal", mark)
+      assert.is_table(sent)
+      assert.equals(CHAT_NAME .. " chats to you, 'just for you'\n", sent.text)
+      -- Unlike chatAll's echo this one is attributed to the peer it was
+      -- addressed to, not to "System", even though we are the ones speaking.
+      assert.equals(1, #echoes)
+      assert.equals(PEER_NAME, echoes[1][1])
+      assert.is_true(contains(echoes[1][2], "You chat to " .. PEER_NAME .. ", 'just for you'"), tostring(echoes[1][2]))
+    end)
+
+    it("emoteAll sends an unquoted emote to everyone", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      local echoes = collectEvents("sysMMCPChatMessage", function()
+        assert.is_true(mmcp.emoteAll("waves at the room"))
+      end)
+      local sent = waitForCommand("TextEveryone", mark)
+      assert.is_table(sent)
+      assert.equals(CHAT_NAME .. " waves at the room\n", sent.text)
+      assert.equals(1, #echoes)
+      assert.equals("System", echoes[1][1])
+      -- The profile default leaves emotes unprefixed, so the echo is the bare
+      -- emote and not the "You emote to everyone: '...'" wording.
+      assert.is_true(contains(echoes[1][2], CHAT_NAME .. " waves at the room"), tostring(echoes[1][2]))
+      assert.is_false(contains(echoes[1][2], "You emote to everyone"), tostring(echoes[1][2]))
+    end)
+  end)
+
+  describe("mmcp.setGroup and mmcp.chatGroup", function()
+    it("reports an empty group and sends nothing until a peer is assigned", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      local ok, err = mmcp.chatGroup("testers", "nobody there")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "nobody in group 'testers' now"))
+      assert.is_nil(waitForCommand("TextGroup", mark, 500))
+    end)
+
+    it("reaches the peer once it has been assigned to the group", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.setGroup(PEER_NAME, "testers"))
+      local mark = captureSeq()
+      assert.is_true(mmcp.chatGroup("testers", "group hello"))
+      local sent = waitForCommand("TextGroup", mark)
+      assert.is_table(sent)
+      -- MudMaster's group field is a fixed 15 characters wide
+      assert.equals("testers        ", sent.text:sub(1, 15))
+      assert.is_true(contains(sent.text, " chats to the group, 'group hello'"), sent.text)
+    end)
+
+    it("reads back a group chat of its own making", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.setGroup(PEER_NAME, "testers"))
+      local mark = captureSeq()
+      assert.is_true(mmcp.chatGroup("testers", "round trip"))
+      local sent = waitForCommand("TextGroup", mark)
+      assert.is_table(sent)
+      -- Hand Mudlet's own bytes straight back: sender and parser have to agree
+      -- about where the 15 character group field ends, or a Mudlet peer would
+      -- render another Mudlet's group chat wrongly.
+      local received = collectEvents("sysMMCPChatMessage", function()
+        peerSendsRaw(string.char(6) .. sent.text .. string.char(255))
+        pump(500)
+      end)
+      assert.equals(1, #received)
+      assert.equals(PEER_NAME, received[1][1])
+      assert.is_true(contains(received[1][2], "(testers)"), tostring(received[1][2]))
+      assert.is_true(contains(received[1][2], "'round trip'"), tostring(received[1][2]))
+    end)
+
+    it("stops reaching the peer once it is removed from the group", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.setGroup(PEER_NAME, "none"))
+      local mark = captureSeq()
+      local ok, err = mmcp.chatGroup("testers", "still there?")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "nobody in group 'testers' now"))
+      assert.is_nil(waitForCommand("TextGroup", mark, 500))
+    end)
+  end)
+
+  describe("per-peer flags", function()
+    -- getClientFlags returns a fixed 8 character field: two spaces, then
+    -- Private, Ignored, Served, Firewalled, the snoop state and a trailing
+    -- space.
+    it("are all clear while nothing has been toggled", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.equals("        ", mmcp.getClientFlags(PEER_NAME))
+    end)
+
+    it("setPrivate toggles the P flag", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.setPrivate(PEER_NAME))
+      assert.equals("  P     ", mmcp.getClientFlags(PEER_NAME))
+      assert.is_true(mmcp.setPrivate(PEER_NAME))
+      assert.equals("        ", mmcp.getClientFlags(PEER_NAME))
+    end)
+
+    it("ignore toggles the I flag", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.ignore(PEER_NAME))
+      assert.equals("   I    ", mmcp.getClientFlags(PEER_NAME))
+      assert.is_true(mmcp.ignore(PEER_NAME))
+      assert.equals("        ", mmcp.getClientFlags(PEER_NAME))
+    end)
+
+    it("serve toggles the S flag and tells the peer both times", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      assert.is_true(mmcp.serve(PEER_NAME))
+      assert.equals("    S   ", mmcp.getClientFlags(PEER_NAME))
+      local told = waitForCommand("Message", mark)
+      assert.is_table(told)
+      assert.equals("<CHAT> You are now being served by " .. CHAT_NAME .. ".", told.text)
+
+      mark = captureSeq()
+      assert.is_true(mmcp.serve(PEER_NAME))
+      assert.equals("        ", mmcp.getClientFlags(PEER_NAME))
+      told = waitForCommand("Message", mark)
+      assert.is_table(told)
+      assert.equals("<CHAT> You are no longer being served by " .. CHAT_NAME .. ".", told.text)
+    end)
+
+    it("allowSnoop toggles the n flag and tells the peer both times", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      assert.is_true(mmcp.allowSnoop(PEER_NAME))
+      assert.equals("      n ", mmcp.getClientFlags(PEER_NAME))
+      local told = waitForCommand("Message", mark)
+      assert.is_table(told)
+      assert.equals("<CHAT> You are now allowed to snoop " .. CHAT_NAME .. ".", told.text)
+
+      mark = captureSeq()
+      assert.is_true(mmcp.allowSnoop(PEER_NAME))
+      assert.equals("        ", mmcp.getClientFlags(PEER_NAME))
+      told = waitForCommand("Message", mark)
+      assert.is_table(told)
+      assert.equals("<CHAT> You are no longer allowed to snoop " .. CHAT_NAME .. ".", told.text)
+    end)
+  end)
+
+  describe("incoming chat", function()
+    it("raises sysMMCPChatMessage for a chat to everyone", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      peerSends(4, PEER_NAME .. " chats to everybody, 'peer speaking'\n")
+      local name, from, message = waitForEvent("sysMMCPChatMessage", 2000)
+      assert.equals("sysMMCPChatMessage", name)
+      assert.equals(PEER_NAME, from)
+      assert.is_true(contains(message, PEER_NAME .. " chats to everybody, 'peer speaking'"), tostring(message))
+    end)
+
+    it("raises sysMMCPChatMessage for a personal chat", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      peerSends(5, PEER_NAME .. " chats to you, 'just between us'\n")
+      local _, from, message = waitForEvent("sysMMCPChatMessage", 2000)
+      assert.equals(PEER_NAME, from)
+      assert.is_true(contains(message, "chats to you, 'just between us'"), tostring(message))
+    end)
+
+    it("names the group an incoming group chat arrived on", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      -- MudMaster's format: a 15 character group field, then the message.
+      -- Mudlet's own sender adds a newline after that field, which the
+      -- round-trip spec above covers.
+      peerSends(6, "testers        " .. PEER_NAME .. " chats to the group, 'group inbound'")
+      local _, from, message = waitForEvent("sysMMCPChatMessage", 2000)
+      assert.equals(PEER_NAME, from)
+      assert.is_true(contains(message, "(testers)"), tostring(message))
+      assert.is_true(contains(message, "'group inbound'"), tostring(message))
+    end)
+
+    it("displays a plain protocol message from the peer", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      peerSends(7, "<CHAT> the peer has something to say")
+      local _, from, message = waitForEvent("sysMMCPChatMessage", 2000)
+      assert.equals(PEER_NAME, from)
+      assert.is_true(contains(message, "the peer has something to say"), tostring(message))
+    end)
+
+    it("waits for the rest of a command that arrives in two pieces", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      -- Commands are only complete at their 0xff terminator, and TCP is free to
+      -- deliver one in as many reads as it likes. Mudlet has to hold the first
+      -- half rather than displaying a truncated line or dropping it.
+      peerSendsRaw(string.char(4) .. PEER_NAME .. " chats to everybody, 'split ")
+      pump(150)
+      peerSendsRaw("message'\n" .. string.char(255))
+      local _, from, message = waitForEvent("sysMMCPChatMessage", 2000)
+      assert.equals(PEER_NAME, from)
+      assert.is_true(contains(message, "'split message'"), tostring(message))
+    end)
+
+    it("handles two commands that arrive in a single write", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      -- The parser walks the buffer command by command, so a write carrying
+      -- two of them has to produce two messages rather than one or none.
+      local received = collectEvents("sysMMCPChatMessage", function()
+        peerSendsRaw(string.char(7) .. "<CHAT> first of two" .. string.char(255)
+                     .. string.char(7) .. "<CHAT> second of two" .. string.char(255))
+        pump(500)
+      end)
+      assert.equals(2, #received)
+      assert.is_true(contains(received[1][2], "first of two"), tostring(received[1][2]))
+      assert.is_true(contains(received[2][2], "second of two"), tostring(received[2][2]))
+    end)
+
+    it("skips a command it does not know without losing the next one", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      -- An unknown command byte must be skipped up to its terminator; consuming
+      -- the wrong number of bytes would swallow whatever followed it.
+      local received = collectEvents("sysMMCPChatMessage", function()
+        peerSendsRaw(string.char(99) .. "nonsense" .. string.char(255)
+                     .. string.char(7) .. "<CHAT> after the unknown" .. string.char(255))
+        pump(500)
+      end)
+      assert.equals(1, #received)
+      assert.is_true(contains(received[1][2], "after the unknown"), tostring(received[1][2]))
+    end)
+
+    it("drops chat from an ignored peer and resumes when un-ignored", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.ignore(PEER_NAME))
+      peerSends(4, PEER_NAME .. " chats to everybody, 'ignored line'\n")
+      assert.is_nil(waitForEvent("sysMMCPChatMessage", 500))
+
+      assert.is_true(mmcp.ignore(PEER_NAME))
+      peerSends(4, PEER_NAME .. " chats to everybody, 'heard line'\n")
+      local _, _, message = waitForEvent("sysMMCPChatMessage", 2000)
+      assert.is_true(contains(message, "'heard line'"), tostring(message))
+    end)
+  end)
+
+  describe("connection lists a peer sends", function()
+    -- A connection list makes Mudlet dial the addresses in it, so this is the
+    -- one incoming command that has a peer reaching outside the session. The
+    -- fixture's second port answers nothing and hangs up, which is enough to
+    -- record that Mudlet dialled it.
+    local function dialPort()
+      return capture().dial_port
+    end
+
+    local function dialled(afterSeq, timeoutMs)
+      return waitForPeerEvent(afterSeq, function(event)
+        return event.type == "dialled"
+      end, timeoutMs)
+    end
+
+    it("dials an address the peer hands over", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      peerSends(3, "127.0.0.1," .. dialPort())
+      assert.is_table(dialled(mark, 2000))
+      -- Nothing answered, so no peer joined the session over it.
+      pump(300)
+      assert.is_table(peerClient())
+      assert.equals(1, #mmcp.getClientList())
+    end)
+
+    it("dials nothing when the list has a host without a port", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      -- An odd number of fields is rejected as badly formatted rather than
+      -- being half-parsed into a connection attempt.
+      peerSends(3, "127.0.0.1," .. dialPort() .. ",127.0.0.1")
+      assert.is_nil(dialled(mark, 600))
+    end)
+  end)
+
+  describe("mmcp.sendSideChannel", function()
+    it("sends channel and message to the peer as one comma separated payload", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      assert.is_true(mmcp.sendSideChannel("TestChannel", "payload here"))
+      local sent = waitForCommand("SideChannel", mark)
+      assert.is_table(sent)
+      assert.equals("TestChannel,payload here", sent.text)
+    end)
+
+    it("raises sysMMCPSideChannelMessage for incoming side channel data", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      peerSends(40, "TestChannel,inbound payload")
+      local name, from, channel, message = waitForEvent("sysMMCPSideChannelMessage", 2000)
+      assert.equals("sysMMCPSideChannelMessage", name)
+      assert.equals(PEER_NAME, from)
+      assert.equals("TestChannel", channel)
+      assert.equals("inbound payload", message)
+    end)
+  end)
+
+  describe("mmcp.snoop", function()
+    it("asks the peer for a snoop feed", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      assert.is_true(mmcp.snoop(PEER_NAME))
+      local sent = waitForCommand("Snoop", mark)
+      assert.is_table(sent)
+      assert.equals("", sent.text)
+      -- Asking a second time is what stops a snoop, since the command is a
+      -- toggle at the far end. That is not asserted here: the local "am I
+      -- snooping them" flag is never set (nothing calls setSnooped(true)), so
+      -- MMCPServer::snoop's stop branch cannot be reached and asserting either
+      -- way would freeze the defect in place.
+    end)
+
+    it("refuses a snoop from a peer that has not been allowed one", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      -- An incoming Snoop with the n flag clear: the peer is told no, and never
+      -- starts receiving what the game sends us.
+      peerSends(30, "")
+      local told = waitForCommand("Message", mark)
+      assert.is_table(told)
+      assert.equals("<CHAT> You do not have permission to snoop " .. CHAT_NAME .. ".", told.text)
+      assert.equals("        ", mmcp.getClientFlags(PEER_NAME))
+    end)
+
+    it("starts and stops snooping for a peer that has been allowed one", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      assert.is_true(mmcp.allowSnoop(PEER_NAME))
+      -- Granting permission sends a Message of its own; let it land before
+      -- marking, so what is waited for below cannot be that one.
+      assert.is_table(waitForCommand("Message", mark))
+
+      mark = captureSeq()
+      peerSends(30, "")
+      local told = waitForCommand("Message", mark)
+      assert.is_table(told)
+      assert.equals("<CHAT> You have begun snooping " .. CHAT_NAME .. ".", told.text)
+      -- N, not n: the peer is snooping us now rather than merely permitted to.
+      assert.equals("      N ", mmcp.getClientFlags(PEER_NAME))
+
+      mark = captureSeq()
+      peerSends(30, "")
+      told = waitForCommand("Message", mark)
+      assert.is_table(told)
+      assert.equals("<CHAT> You have stopped snooping " .. CHAT_NAME .. ".", told.text)
+      assert.equals("      n ", mmcp.getClientFlags(PEER_NAME))
+      assert.is_true(mmcp.allowSnoop(PEER_NAME))
+    end)
+
+    it("raises sysMMCPIncomingSnoopMessage for snooped output", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      peerSends(31, "You see a snooped line of game output")
+      local name, from, message = waitForEvent("sysMMCPIncomingSnoopMessage", 2000)
+      assert.equals("sysMMCPIncomingSnoopMessage", name)
+      assert.equals(PEER_NAME, from)
+      assert.is_true(contains(message, "a snooped line of game output"), tostring(message))
+    end)
+
+    it("keeps the colour of a snooped line", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      -- Snoop data is where the other end's colour arrives, and Mudlet tracks
+      -- it across lines, so the escape sequences have to survive into the event
+      -- rather than being stripped or reordered away from their text.
+      peerSendsRaw(string.char(31) .. "\27[1;32ma green snooped line\27[0m" .. string.char(255))
+      local _, _, message = waitForEvent("sysMMCPIncomingSnoopMessage", 2000)
+      assert.is_true(contains(message, "\27[1;32ma green snooped line"), tostring(message))
+    end)
+  end)
+
+  describe("mmcp.ping", function()
+    it("sends a timestamped ping the peer can answer", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      assert.is_true(mmcp.ping(PEER_NAME))
+      local sent = waitForCommand("PingRequest", mark)
+      assert.is_table(sent)
+      -- the payload is milliseconds since the epoch, which is what comes back
+      assert.is_number(tonumber(sent.text))
+    end)
+
+    it("answers an incoming ping with the same payload", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      peerSends(26, "1234567890123")
+      local answered = waitForCommand("PingResponse", mark)
+      assert.is_table(answered)
+      assert.equals("1234567890123", answered.text)
+    end)
+  end)
+
+  describe("mmcp.chatName", function()
+    it("announces a new name to connected peers and reads it back", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      assert.is_true(mmcp.chatName("RenamedTester"))
+      local sent = waitForCommand("NameChange", mark)
+      assert.is_table(sent)
+      assert.equals("RenamedTester", sent.text)
+      assert.equals("RenamedTester", mmcp.chatName())
+
+      mark = captureSeq()
+      assert.is_true(mmcp.chatName(CHAT_NAME))
+      local restored = waitForCommand("NameChange", mark)
+      assert.is_table(restored)
+      assert.equals(CHAT_NAME, restored.text)
+    end)
+
+    it("does not announce a name that has not changed", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.chatName(CHAT_NAME))
+      local mark = captureSeq()
+      assert.is_true(mmcp.chatName(CHAT_NAME))
+      assert.is_nil(waitForCommand("NameChange", mark, 500))
+    end)
+
+    it("does not announce a rejected name", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      local ok, err = mmcp.chatName("bad,name")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "comma"))
+      assert.is_nil(waitForCommand("NameChange", mark, 500))
+      assert.equals(CHAT_NAME, mmcp.chatName())
+    end)
+
+    it("follows the peer when it renames itself", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      peerSends(1, "RenamedPeer")
+      assert.is_true(waitUntil(function()
+        local clients = mmcp.getClientList()
+        return type(clients) == "table" and clients[1] ~= nil and clients[1].name == "RenamedPeer"
+      end, 2000))
+      -- and the new name is what addresses it from then on
+      assert.is_true(mmcp.chatTo("RenamedPeer", "hello again"))
+
+      peerSends(1, PEER_NAME)
+      assert.is_true(waitUntil(function() return peerClient() ~= nil end, 2000))
+    end)
+  end)
+
+  describe("mmcp.displayClientList", function()
+    it("prints the connected peer with its address and port", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local printed = collectEvents("sysMMCPChatMessage", function()
+        assert.is_true(mmcp.displayClientList())
+      end)
+      -- The whole table goes out as one message, attributed to nobody in
+      -- particular.
+      assert.equals(1, #printed)
+      assert.equals("System", printed[1][1])
+      local text = printed[1][2]
+      assert.is_true(contains(text, PEER_NAME), text)
+      assert.is_true(contains(text, "127.0.0.1"), text)
+      assert.is_true(contains(text, tostring(peerPort())), text)
+    end)
+  end)
+
+  describe("mmcp.accept and mmcp.deny", function()
+    -- No peer needed: this is about what the mmcp table contains.
+    it("are not reachable from Lua, so incoming calls cannot be covered", function()
+      -- Mudlet's pending-call notice tells the user to run mmcp.accept(id) or
+      -- mmcp.deny(id), but neither is in the mmcp table: their registration in
+      -- TLuaInterpreter.cpp is commented out, along with setDoNotDisturb,
+      -- startServer, stopServer, request and peek. Without startServer Mudlet
+      -- cannot listen either, so no incoming call can be staged here at all.
+      -- Left pending rather than asserted so the gap is not locked in place -
+      -- but registering them has to be noticed, hence the failure below.
+      if mmcp.accept ~= nil or mmcp.deny ~= nil then
+        assert.is_true(false, "mmcp.accept/mmcp.deny are registered now - replace this spec with real accept and deny coverage")
+      end
+      pending("mmcp.accept/mmcp.deny are not registered in the Lua mmcp table")
+    end)
+  end)
+
+  describe("disconnection", function()
+    it("notices when the peer closes the connection", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      tellPeer({action = "close"})
+      assert.equals("sysMMCPPeerUpdateEvent", waitForEvent("sysMMCPPeerUpdateEvent", 2000))
+      assert.is_nil(peerClient())
+    end)
+
+    it("mmcp.disconnect closes the connection from this end", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      assert.is_true(mmcp.disconnect(PEER_NAME))
+      assert.equals("sysMMCPPeerUpdateEvent", waitForEvent("sysMMCPPeerUpdateEvent", 2000))
+      assert.is_nil(mmcp.getClientList())
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "disconnect"
+      end, 2000))
+      assert.is_false(capture().connected)
+    end)
+
+  end)
+
+  -- Restores whatever chat name the profile was carrying before these specs
+  -- ran, so nothing that follows sees a name this file chose.
+  teardown(function()
+    if originalChatName then
+      mmcp.chatName(originalChatName)
+    end
   end)
 end)
 

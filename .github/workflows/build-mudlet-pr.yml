@@ -411,6 +411,11 @@ jobs:
       env:
         QT_QPA_PLATFORM: offscreen
         QT_FORCE_STDERR_LOGGING: 1
+        # This runner has Qt's FFmpeg backend and can decode, so TMediaLoopTest must
+        # demonstrate every media behaviour rather than skip any of them. Without a floor
+        # somewhere, a lost codec or a changed default backend would turn the whole file
+        # green-by-skip on every platform and say nothing about it.
+        MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK: 1
 
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
@@ -549,6 +554,32 @@ jobs:
         echo "MUDLET_TEST_DISCORD_LIB_PATH=${{github.workspace}}/3rdparty/discord/rpc/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" >> "${GITHUB_ENV}"
         echo "fake Discord IPC server ready in ${runtime_dir}"
 
+    - name: (Linux/macOS) Start MMCP peer fixture for Lua tests
+      if: matrix.run_tests == 'true'
+      shell: bash
+      run: |
+        peer_dir="${{runner.temp}}/mudlet-mmcp-peer"
+        rm -rf "${peer_dir}"
+        mkdir -p "${peer_dir}"
+        MUDLET_TEST_MMCP_DIR="${peer_dir}" nohup python3 "${{github.workspace}}/CI/mmcp-peer.py" > "${{runner.temp}}/mmcp-peer.log" 2>&1 &
+        for _ in $(seq 1 50); do
+          [ -s "${peer_dir}/port" ] && break
+          sleep 0.1
+        done
+        if [ ! -s "${peer_dir}/port" ]; then
+          echo "MMCP peer fixture failed to start" >&2
+          cat "${{runner.temp}}/mmcp-peer.log" 2>/dev/null || true
+          exit 1
+        fi
+        port="$(cat "${peer_dir}/port")"
+        if ! python3 -c "import socket, sys; socket.create_connection(('127.0.0.1', int(sys.argv[1])), 5).close()" "${port}"; then
+          echo "MMCP peer fixture is not accepting connections" >&2
+          cat "${{runner.temp}}/mmcp-peer.log" 2>/dev/null || true
+          exit 1
+        fi
+        echo "MUDLET_TEST_MMCP_DIR=${peer_dir}" >> "${GITHUB_ENV}"
+        echo "MMCP peer fixture ready on 127.0.0.1:$(cat "${peer_dir}/port")"
+
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       # Longer than the other platforms': this leg also drives the real
@@ -560,6 +591,7 @@ jobs:
         MUDLET_TEST_MODE: 1
         MUDLET_TEST_REQUIRE_TTS_MOCK: 1
         MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
+        MUDLET_TEST_REQUIRE_MMCP_PEER: 1
         # Qt Multimedia runs a player here even without an audio device, so a
         # media effect spec that cannot play is a regression rather than an
         # environment quirk. macOS runners start no player at all, so the gate
@@ -592,6 +624,7 @@ jobs:
         MUDLET_TEST_MODE: 1
         MUDLET_TEST_REQUIRE_TTS_MOCK: 1
         MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
+        MUDLET_TEST_REQUIRE_MMCP_PEER: 1
         # No MUDLET_TEST_REQUIRE_MEDIA: Qt Multimedia starts no player on the
         # macOS runners, so the media effect specs pend here by design.
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests

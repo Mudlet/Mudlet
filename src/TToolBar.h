@@ -39,6 +39,7 @@ public:
     Q_DISABLE_COPY(TToolBar)
     TToolBar(Host*, TAction*, const QString&, QWidget* pW = nullptr);
     void addButton(TFlipButton* pW);
+    void resetItemCount(const int initialOffset) { mItemCount = initialOffset; }
     void resizeEvent(QResizeEvent* e) override;
     void moveEvent(QMoveEvent* e) override;
     void mousePressEvent(QMouseEvent*) override;

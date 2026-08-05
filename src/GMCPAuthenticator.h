@@ -82,7 +82,9 @@ private:
     // replayed once instead of destroyed. Only a genuinely dead token is dropped, keeping the
     // account+provider resume hint so the next sign-in needs no provider menu.
     void retryOrDropRejectedToken();
-    void dropTokenKeepResumeHint();
+    // Takes the account and provider explicitly: the caller captures them before its keychain read, so
+    // a Char.Login.Default arriving mid-read cannot clear mConn and turn this into a full discard.
+    void dropTokenKeepResumeHint(const QString& account, const QString& provider);
     // Rewrites the stored entry as {account, provider} with no token: enough to resume later, nothing
     // any longer a bearer secret.
     void storeResumeHint(const QString& account, const QString& provider);
@@ -144,11 +146,19 @@ private:
     };
     PerConnectionState mConn;
 
-    // Set when a reconnect token is rejected and we reconnect for a clean sign-in. Deliberately NOT part
-    // of mConn: it is a one-shot latch consumed by attemptReconnect() on the very next connection, so it
-    // must survive the per-connection reset that the reconnect it triggers performs. The saved token is
-    // cleared asynchronously, so this makes that next connection skip a token replay rather than racing
-    // the keychain rewrite and looping back into another rejected reconnect.
+    // Set when a reconnect token is rejected, before the keychain read that decides what to do about it.
+    // Deliberately NOT part of mConn: attemptReconnect() consumes it on the next Char.Login.Default, so it
+    // must survive the per-connection reset that Default performs. The saved token is cleared
+    // asynchronously, so this makes the next attempt skip a token replay rather than racing the keychain
+    // rewrite and looping back into another rejected reconnect. That next Default usually arrives on the
+    // connection we reconnect to, but a server is also permitted to re-offer one on this connection
+    // instead, and Char.Login 2 forbids replaying a token rejected on it - hence latching synchronously at
+    // the rejection rather than when the read returns.
+    //
+    // Consumed in one place (attemptReconnect()) but cleared or re-armed in two others, so audit all three
+    // together: retryOrDropRejectedToken() clears it when it replays a live rotated token, and re-arms it
+    // when a superseded recovery leaves the rejected token stored - by then the superseding Default has
+    // already consumed the latch, so without re-arming the Default after that could replay the dead token.
     bool mReconnectRejected = false;
     // Incremented on every per-connection auth reset (each Char.Login.Default). The asynchronous
     // reconnect-token keychain read captures the value current when it started and re-checks it in its

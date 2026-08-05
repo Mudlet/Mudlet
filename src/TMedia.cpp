@@ -317,6 +317,24 @@ void TMedia::stopMedia(TMediaData& mediaData)
             continue;
         }
 
+        // A pooled player between tracks holds no source and has nothing to stop. Criteria this
+        // broad are the common case - a bare stopMusic() or Client.Media.Stop {} matches every
+        // player there is - so without this each idle one would be ended all over again, and
+        // told about with an empty file name and the key and tag of its last track.
+        if (!pPlayer->mediaPlayer() || pPlayer->mediaPlayer()->source().isEmpty()) {
+            continue;
+        }
+
+        // Whichever way this track is being ended below, it is not to start again. A looping
+        // or multi-entry track restarts itself from the EndOfMedia handler in
+        // connectMediaPlayer(), which would undo the stop that was just asked for - on a
+        // StoppedState-first backend that signal can still be on its way when the stop
+        // arrives. An emptied playlist is what that handler checks, and play() builds a fresh
+        // one whenever this player is picked up again.
+        if (pPlayer->playlist()) {
+            pPlayer->playlist()->clear();
+        }
+
         if ((mediaData.mediaFadeAway() == TMediaData::MediaFadeAwayEnabled || mediaData.mediaFadeOut() != TMediaData::MediaFadeNotSet)
             && pPlayer->mediaData().mediaEnd() == TMediaData::MediaEndNotSet) {
             const int finishPosition = pPlayer->mediaData().mediaFinish();
@@ -340,7 +358,22 @@ void TMedia::stopMedia(TMediaData& mediaData)
         }
 
         // **Stop the player but keep it for reuse**
+        // Only a player that had started reports a change back to StoppedState, and that
+        // signal is what ends the playback and releases the source. One that is still loading
+        // - where a stop issued soon after a play lands on an asynchronous backend - is
+        // already stopped as far as Qt is concerned, so it reports nothing and its source
+        // would be held for good.
+        const bool willReportItsOwnStop = pPlayer->getPlaybackState() != QMediaPlayer::StoppedState;
+
         pPlayer->mediaPlayer()->stop();
+
+        if (!willReportItsOwnStop) {
+            releaseMediaSourceAfterEvents(pPlayer, pPlayer->mediaData(), PlaybackEnd::Stopped);
+            // Announced at most once per playback, so a handler that stops the media it has
+            // just been told about does not arrive back here for the same track: the source it
+            // reads as live stays set until the deferred release above runs.
+            raiseMediaFinishedEvent(pPlayer, pPlayer->mediaPlayer()->source(), pPlayer->mediaData());
+        }
     }
 }
 
@@ -394,7 +427,12 @@ bool TMedia::purgeMediaCache()
     }
 
     stopAllMediaPlayers();
-    mediaDir.removeRecursively();
+
+    if (!mediaDir.removeRecursively()) {
+        qWarning() << qsl("TMedia::purgeMediaCache() WARNING - not able to remove all of directory: %1").arg(mediaPath);
+        return false;
+    }
+
     return true;
 }
 
@@ -564,11 +602,53 @@ void TMedia::stopAllMediaPlayers()
     QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     for (const auto& pPlayer : std::as_const(mediaPlayerList)) {
-        if (!pPlayer) {
-            continue;
+        if (!pPlayer || !pPlayer->mediaPlayer() || pPlayer->mediaPlayer()->source().isEmpty()) {
+            continue; // A pooled player between tracks has nothing playing to stop
+        }
+
+        // Everything the ending is described by has to be read before the source goes, because
+        // releasing is what makes it unreadable.
+        const TMediaData endedData = pPlayer->mediaData();
+        const QUrl endedUrl = pPlayer->mediaPlayer()->source();
+        const bool hadVideoOutput = pPlayer->mediaPlayer()->videoOutput() != nullptr;
+        const quint64 claimedAt = pPlayer->claimGeneration();
+
+        // No loop is to survive this: the EndOfMedia handler restarts one from the playlist,
+        // and a StoppedState-first backend can still have that signal on its way.
+        if (pPlayer->playlist()) {
+            pPlayer->playlist()->clear();
         }
 
         pPlayer->mediaPlayer()->stop();
+
+        // stop() can deliver StoppedState synchronously, whose handler raises sysMediaFinished
+        // and so lets a script hand this player straight to another track. The release below is
+        // direct - it carries no generation of its own for releaseMediaSourceAfterEvents()'
+        // checks to catch - so this is the one thing standing between that new track and having
+        // its source cleared out from under it.
+        if (pPlayer->claimGeneration() != claimedAt) {
+            continue;
+        }
+
+        // Released here rather than left to releaseMediaSourceAfterEvents(): this is a
+        // teardown, so there is no loop left to restart and no reason to wait a turn, and a
+        // caller may need the files free straight away - purgeMediaCache() deletes them. The
+        // empty source left behind is also what tells any release already scheduled for this
+        // player to stay quiet when its turn comes, so nothing is said twice.
+        pPlayer->releaseSource();
+
+        if (endedData.mediaWidget() == TMediaData::MediaWidgetLabel && endedData.mediaClose() == TMediaData::MediaCloseEnabled && hadVideoOutput) {
+            emit signal_hideVideoOutput(pPlayer.get());
+        }
+
+        // Announced from here because releasing synchronously means no deferred turn will do
+        // it: on a backend that reports StoppedState asynchronously nothing else ever would,
+        // and a script waiting on sysMediaFinished would sit through the teardown none the
+        // wiser. Skipped when stop() above already announced it - see endAnnounced().
+        raiseMediaFinishedEvent(pPlayer, endedUrl, endedData);
+
+        //: This word is part of a sentence like "Music stops" when the music is about to stop.
+        printClosedCaption(endedData, tr("stops"));
     }
 }
 
@@ -588,23 +668,25 @@ int TMedia::playersHoldingSource() const
            + countHeld(mAPIVideoList);
 }
 
-// The cleanup that releases a stopped player's source runs one event-loop turn
-// after the stop (see handlePlayerPlaybackStateChanged), so a player reused for
-// a new play request can still hold the file it just finished. Replaying that
-// same file leaves QMediaPlayer with its media already loaded, so play() starts
-// it synchronously, raising sysMediaStarted re-entrantly inside the script call
-// that started it. Finish the deferred cleanup here instead, so every fresh
-// play request loads its media asynchronously, as it did when the cleanup ran
-// at stop time.
-void TMedia::releaseStoppedSource(const std::shared_ptr<TMediaPlayer>& player)
+int TMedia::playersInPlayingState() const
 {
-    if (!player || !player->mediaPlayer()) {
-        return;
-    }
+    const auto countPlaying = [](const QList<std::shared_ptr<TMediaPlayer>>& list) {
+        int playing = 0;
+        for (const auto& player : list) {
+            if (player && player->getPlaybackState() == QMediaPlayer::PlayingState) {
+                ++playing;
+            }
+        }
+        return playing;
+    };
 
-    if (player->getPlaybackState() == QMediaPlayer::StoppedState && !player->mediaPlayer()->source().isEmpty()) {
-        player->mediaPlayer()->setSource(QUrl());
-    }
+    return countPlaying(mMSPSoundList) + countPlaying(mMSPMusicList) + countPlaying(mGMCPSoundList) + countPlaying(mGMCPMusicList) + countPlaying(mGMCPVideoList) + countPlaying(mAPISoundList)
+           + countPlaying(mAPIMusicList) + countPlaying(mAPIVideoList);
+}
+
+int TMedia::mediaPlayerCount() const
+{
+    return mMSPSoundList.size() + mMSPMusicList.size() + mGMCPSoundList.size() + mGMCPMusicList.size() + mGMCPVideoList.size() + mAPISoundList.size() + mAPIMusicList.size() + mAPIVideoList.size();
 }
 
 void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state)
@@ -1086,7 +1168,7 @@ QString TMedia::setupMediaAbsolutePathFileName(TMediaData& mediaData)
 
 void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
 {
-    if (!player) {
+    if (!player || !player->mediaPlayer()) {
         qWarning() << qsl("TMedia::connectMediaPlayer() WARNING - Attempted to connect a null TMediaPlayer.");
         return;
     }
@@ -1112,18 +1194,78 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
                     QUrl nextMedia = lockedPlayer->playlist()->next();
 
                     if (!nextMedia.isEmpty()) {
-                        lockedPlayer->noteContinued();
-                        lockedPlayer->mediaPlayer()->setSource(nextMedia);
-                        lockedPlayer->mediaPlayer()->play();
+                        lockedPlayer->continuePlaying(nextMedia);
                     } else if (lockedPlayer->playlist()->playbackMode() == TMediaPlaylist::Loop) {
-                        lockedPlayer->noteContinued();
                         lockedPlayer->playlist()->setCurrentIndex(0);
-                        lockedPlayer->mediaPlayer()->setSource(lockedPlayer->playlist()->currentMedia());
-                        lockedPlayer->mediaPlayer()->play();
+                        lockedPlayer->continuePlaying(lockedPlayer->playlist()->currentMedia());
                     }
                 }
             }
         }
+    });
+
+    // Error connection
+    disconnect(player->mediaPlayer(), &QMediaPlayer::errorOccurred, nullptr, nullptr);
+    connect(player->mediaPlayer(), &QMediaPlayer::errorOccurred, this, [this, weakPlayer](QMediaPlayer::Error error, const QString& errorString) {
+        const auto lockedPlayer = weakPlayer.lock();
+
+        if (!lockedPlayer || !lockedPlayer->mediaPlayer() || error == QMediaPlayer::NoError) {
+            return;
+        }
+
+        qWarning().noquote() << qsl("TMedia::connectMediaPlayer() WARNING - media player error %1 on \"%2\": %3")
+                                        .arg(QString::number(static_cast<int>(error)), lockedPlayer->mediaPlayer()->source().toString(), errorString);
+
+        if (mudlet::smDebugMode && mpHost && mpHost->mpConsole) {
+            //: %1 is the media backend's own description of what went wrong, e.g. "Failed to load media".
+            mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Media error: %1").arg(errorString)));
+        }
+
+        // Only a failure nothing else will report is ended from here. A track that was playing
+        // reports StoppedState when the error takes it down, and the playback state handler
+        // ends it from there. That leaves two cases: a player already stopped, which is where a
+        // load failure lands because claimSource() leaves it stopped and there is no state to
+        // change from; and Qt's darwin backend, which reports PlayingState for media it has
+        // just failed to load and then never moves off it. InvalidMedia catches that second
+        // case and only that one - it cannot be asked to carry the first, because Qt's FFmpeg
+        // backend raises this signal before it sets the status.
+        if (lockedPlayer->mediaPlayer()->mediaStatus() != QMediaPlayer::InvalidMedia && lockedPlayer->getPlaybackState() != QMediaPlayer::StoppedState) {
+            return;
+        }
+
+        // Nothing else will end it: a source set on a player that was already stopped - which
+        // is what every claimSource() on a new or finished player does, and what a loop restart
+        // or playlist advance does from the EndOfMedia handler - has no state to change from.
+        // Left alone the track falls silent still holding a source nothing will ever release,
+        // and a script waiting on sysMediaFinished to start the next one waits forever.
+        //
+        // Ended a turn from now rather than here, because setSource() can deliver this error
+        // synchronously from inside claimSource(): sysMediaFinished would then reach a script
+        // in the middle of the playMusic() call that asked for the track, and a handler that
+        // responds by playing the same undecodable file again would recurse until the stack
+        // gave out. The claim generation says whether this failure is still anyone's to report
+        // by the time the turn comes: a track that took the player over in between owns it now.
+        const quint64 claimedAt = lockedPlayer->claimGeneration();
+
+        QTimer::singleShot(0, this, [this, weakPlayer, claimedAt] {
+            const auto endingPlayer = weakPlayer.lock();
+
+            if (!endingPlayer || !endingPlayer->mediaPlayer() || endingPlayer->claimGeneration() != claimedAt) {
+                return;
+            }
+
+            // The release armed below ignores playback state by design, since darwin claims to
+            // be playing media it has just failed to load. That makes this the only place an
+            // error the backend recovered from can be told apart from one it did not: a turn
+            // on, media it has condemned says so with InvalidMedia, and media that is playing
+            // without having been condemned is fine after all and must be left alone.
+            if (endingPlayer->mediaPlayer()->mediaStatus() != QMediaPlayer::InvalidMedia && endingPlayer->getPlaybackState() == QMediaPlayer::PlayingState) {
+                return;
+            }
+
+            releaseMediaSourceAfterEvents(endingPlayer, endingPlayer->mediaData(), PlaybackEnd::Failed);
+            raiseMediaFinishedEvent(endingPlayer, endingPlayer->mediaPlayer()->source(), endingPlayer->mediaData());
+        });
     });
 
     // Playback state changed connection
@@ -1381,6 +1523,128 @@ void TMedia::getMediaPlayerCounts(int& soundPlayers, int& musicPlayers, int& sto
 }
 #endif // MUDLET_MEMORY_TRACKING
 
+// Tells scripts a playback is over. Raised for a failed load as well as for a stop, because a
+// script that starts its next track from sysMediaFinished otherwise waits forever on the first
+// file the backend cannot decode.
+void TMedia::raiseMediaFinishedEvent(const std::shared_ptr<TMediaPlayer>& player, const QUrl& endedUrl, const TMediaData& endedData)
+{
+    if (!mpHost || !player) {
+        return;
+    }
+
+    if (endedUrl.isEmpty()) {
+        // A pooled player between tracks. There is no playback to report, and the event would
+        // carry an empty file name and path with the key and tag of whatever it last played.
+        return;
+    }
+
+    if (player->endAnnounced()) {
+        // Already reported by whichever of the stop, the error and the StoppedState got here
+        // first - see TMediaPlayer::endAnnounced().
+        return;
+    }
+
+    // Set before the handlers run, not after: raiseEvent() dispatches synchronously, and a
+    // handler that stops this player would otherwise arrive back here and announce again.
+    player->noteEndAnnounced();
+
+    TEvent mediaFinished{};
+    mediaFinished.mArgumentList.append(qsl("sysMediaFinished"));
+
+    mediaFinished.mArgumentList.append(endedUrl.fileName());
+    mediaFinished.mArgumentList.append(endedUrl.path());
+    mediaFinished.mArgumentList.append(mediaTypeToString(endedData.mediaType()));
+    mediaFinished.mArgumentList.append(endedData.mediaKey());
+    mediaFinished.mArgumentList.append(endedData.mediaTag());
+    mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+    mpHost->raiseEvent(mediaFinished);
+}
+
+// Ends a playback: releases the media source and prints the closing caption, one event-loop
+// turn from now. Deferred so a StoppedState-first backend can still emit the EndOfMedia that
+// restarts a loop - clearing the source immediately destroys the playback engine and that
+// signal never arrives (#9566). See TMediaPlayer for the generation counters this compares.
+//
+// endedBy decides whether the player's own state gets a say in the deferred turn. A stop needs
+// it: on an EndOfMedia-first backend the restart happened before the snapshot, so the
+// continuation counter cannot see it and a player still reporting PlayingState is the only sign
+// the track carried on. A failure must not have it, because a backend can report PlayingState
+// for media it has just failed to load (Qt 6.9's darwin backend does), and believing that would
+// leave the dead source held forever - no state change follows to schedule another release.
+void TMedia::releaseMediaSourceAfterEvents(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& endedData, const PlaybackEnd endedBy)
+{
+    const bool playbackStateDecides = (endedBy == PlaybackEnd::Stopped);
+
+    if (!player->mediaPlayer() || player->mediaPlayer()->source().isEmpty()) {
+        // Nothing left to end, so no caption for it either
+        qDebug() << "TMedia::releaseMediaSourceAfterEvents() - asked to end a playback that is already holding no source; nothing to do.";
+        return;
+    }
+
+    const std::weak_ptr<TMediaPlayer> weakPlayer = player;
+    const quint64 claimedAt = player->claimGeneration();
+    const quint64 continuedAt = player->continuationGeneration();
+
+    QTimer::singleShot(0, this, [this, weakPlayer, endedData, claimedAt, continuedAt, playbackStateDecides] {
+        const auto lockedPlayer = weakPlayer.lock();
+        const bool stillOurs = lockedPlayer && lockedPlayer->claimGeneration() == claimedAt;
+        // Two ways the same playback can have carried on during the deferred turn. On a
+        // StoppedState-first backend the loop restarts from the EndOfMedia handler after the
+        // snapshot above, so the counter is what sees it; on an EndOfMedia-first backend the
+        // restart already happened before the snapshot, so the counter cannot see it and the
+        // player still reporting PlayingState is.
+        const bool sameMediaContinues =
+                lockedPlayer && (lockedPlayer->continuationGeneration() != continuedAt || (playbackStateDecides && stillOurs && lockedPlayer->getPlaybackState() == QMediaPlayer::PlayingState));
+
+        if (sameMediaContinues) {
+            // No caption either: nothing ended, so "stops" between the passes of a looping
+            // track would be wrong. Logged because this is the one outcome that keeps a source
+            // on purpose, which makes it the first thing to rule out when one is held too long.
+            qDebug() << "TMedia::releaseMediaSourceAfterEvents() - the same playback carried on into another pass; keeping its source.";
+            return;
+        }
+
+        // Releasing bumps no generation, so any path that clears the source itself leaves a
+        // pending turn still looking entitled to end this playback - an error and the stop
+        // that follows it, stopAllMediaPlayers(), the setupVideo() failure in play(). Each of
+        // those announces its own ending, so this one has nothing left to do or to say.
+        if (stillOurs && lockedPlayer->mediaPlayer() && lockedPlayer->mediaPlayer()->source().isEmpty()) {
+            qDebug() << "TMedia::releaseMediaSourceAfterEvents() - this playback was already ended by whoever released the source; nothing left to do.";
+            return;
+        }
+
+        if (!lockedPlayer) {
+            qDebug() << "TMedia::releaseMediaSourceAfterEvents() - player was destroyed before its deferred release ran; its destructor released the source.";
+        } else if (!stillOurs) {
+            // A claimed player is already loading the source of the track that took it over,
+            // which on an asynchronous backend still reads as stopped.
+            qDebug() << "TMedia::releaseMediaSourceAfterEvents() - another track claimed this player before its deferred release ran; keeping the new source.";
+        } else if (!lockedPlayer->mediaPlayer()) {
+            qWarning() << "TMedia::releaseMediaSourceAfterEvents() WARNING - mediaPlayer() is null, cannot release the media source.";
+        } else if (playbackStateDecides && lockedPlayer->getPlaybackState() != QMediaPlayer::StoppedState) {
+            qDebug() << "TMedia::releaseMediaSourceAfterEvents() - player is no longer stopped, keeping its source.";
+        } else {
+            qDebug() << "TMedia::releaseMediaSourceAfterEvents() - releasing the media source of the playback that ended.";
+            lockedPlayer->releaseSource();
+
+            if (endedData.mediaWidget() == TMediaData::MediaWidgetLabel && endedData.mediaClose() == TMediaData::MediaCloseEnabled && lockedPlayer->mediaPlayer()->videoOutput() != nullptr) {
+                emit signal_hideVideoOutput(lockedPlayer.get());
+            }
+        }
+
+        // Printed on every path that got past the continuation check: the track this release
+        // was scheduled for is over regardless of what has become of the player since.
+        //: This word is part of a sentence like "Music stops" when the music is about to stop.
+        printClosedCaption(endedData, tr("stops"));
+    });
+}
+
 void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const std::shared_ptr<TMediaPlayer>& player)
 {
     if (!player) {
@@ -1388,60 +1652,20 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
     }
 
     if (playbackState == QMediaPlayer::StoppedState) {
-        // Captured before the event below, because a sysMediaFinished handler runs
-        // synchronously and may hand this player to the next track.
-        const std::weak_ptr<TMediaPlayer> weakPlayer = player;
-        const TMediaData stoppedData = player->mediaData();
-        const quint64 claimGeneration = player->claimGeneration();
-        const quint64 continuationGeneration = player->continuationGeneration();
-
-        TEvent mediaFinished{};
-        mediaFinished.mArgumentList.append(qsl("sysMediaFinished"));
-
-        const QUrl mediaUrl = player->mediaPlayer()->source();
-        mediaFinished.mArgumentList.append(mediaUrl.fileName());
-        mediaFinished.mArgumentList.append(mediaUrl.path());
-        mediaFinished.mArgumentList.append(mediaTypeToString(player->mediaData().mediaType()));
-        mediaFinished.mArgumentList.append(player->mediaData().mediaKey());
-        mediaFinished.mArgumentList.append(player->mediaData().mediaTag());
-        mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-
-        if (mpHost) {
-            mpHost->raiseEvent(mediaFinished);
+        if (!player->mediaPlayer() || player->mediaPlayer()->source().isEmpty()) {
+            // Whoever released the source already ended this playback and raised its event. A
+            // second one from here would carry an empty file name and path, because the URL
+            // they describe is exactly what was just cleared.
+            qDebug() << "TMedia::handlePlayerPlaybackStateChanged() - stopped a player that is already holding no source; its playback was ended elsewhere.";
+            return;
         }
 
-        // Deferred so the backend can still emit EndOfMedia, which is what restarts a loop:
-        // clearing the source here destroys the playback engine and that signal never arrives.
-        QTimer::singleShot(0, this, [this, weakPlayer, stoppedData, claimGeneration, continuationGeneration] {
-            const auto lockedPlayer = weakPlayer.lock();
-            const bool stillOurs = lockedPlayer && lockedPlayer->claimGeneration() == claimGeneration;
-            // Backends that emit EndOfMedia before StoppedState have already restarted the
-            // loop by now, so a player still playing its own track has not stopped either.
-            const bool sameMediaContinues =
-                    lockedPlayer && (lockedPlayer->continuationGeneration() != continuationGeneration || (stillOurs && lockedPlayer->getPlaybackState() == QMediaPlayer::PlayingState));
+        // Scheduled before the event below, because a sysMediaFinished handler runs
+        // synchronously and may hand this player to the next track - which would change both
+        // the media data and the generations the release has to be judged against.
+        releaseMediaSourceAfterEvents(player, player->mediaData(), PlaybackEnd::Stopped);
+        raiseMediaFinishedEvent(player, player->mediaPlayer()->source(), player->mediaData());
 
-            if (sameMediaContinues) {
-                return;
-            }
-
-            // Only release a player nothing else has taken over: a claimed one is already
-            // loading its new source, which on an asynchronous backend still reads as stopped.
-            if (stillOurs && lockedPlayer->mediaPlayer() && lockedPlayer->getPlaybackState() == QMediaPlayer::StoppedState) {
-                lockedPlayer->mediaPlayer()->setSource(QUrl());
-
-                if (stoppedData.mediaWidget() == TMediaData::MediaWidgetLabel && stoppedData.mediaClose() == TMediaData::MediaCloseEnabled && lockedPlayer->mediaPlayer()->videoOutput() != nullptr) {
-                    emit signal_hideVideoOutput(lockedPlayer.get());
-                }
-            }
-
-            //: This word is part of a sentence like "Music stops" when the music is about to stop.
-            printClosedCaption(stoppedData, tr("stops"));
-        });
         return;
     } else if (playbackState == QMediaPlayer::PlayingState && player->mediaData().mediaVolume() != TMediaData::MediaVolumePreload) { // NOLINT(readability-else-after-return)
         TEvent mediaStarted{};
@@ -1677,9 +1901,7 @@ void TMedia::play(TMediaData& mediaData)
         }
 
         const QUrl mediaSource = mediaData.mediaInput() == TMediaData::MediaInputFile ? QUrl::fromLocalFile(absolutePathFileName) : QUrl(absolutePathFileName);
-        releaseStoppedSource(pPlayer);
-        pPlayer->noteClaimed();
-        pPlayer->mediaPlayer()->setSource(mediaSource);
+        pPlayer->claimSource(mediaSource);
     } else {
         if (mediaData.mediaLoops() == TMediaData::MediaLoopsRepeat) { // Repeat indefinitely
             playlist->setPlaybackMode(TMediaPlaylist::Loop);
@@ -1745,9 +1967,7 @@ void TMedia::play(TMediaData& mediaData)
 
         playlist->setCurrentIndex(0);
         pPlayer->setPlaylist(playlist);
-        releaseStoppedSource(pPlayer);
-        pPlayer->noteClaimed();
-        pPlayer->mediaPlayer()->setSource(playlist->currentMedia());
+        pPlayer->claimSource(playlist->currentMedia());
     }
 
     // Set volume and start position
@@ -1772,6 +1992,16 @@ void TMedia::play(TMediaData& mediaData)
 
     // Handle video setup if applicable
     if (mediaData.mediaType() == TMediaData::MediaTypeVideo && !setupVideo(pPlayer)) {
+        // Claiming the player disarmed any release still pending on it, so drop the source it
+        // is now never going to play rather than leave it held indefinitely.
+        pPlayer->releaseSource();
+
+        // Same guards as the deferred release: a reused player can still be showing the widget
+        // of an earlier clip, and hiding that is only wanted when this request asked for it.
+        if (mediaData.mediaWidget() == TMediaData::MediaWidgetLabel && mediaData.mediaClose() == TMediaData::MediaCloseEnabled && pPlayer->mediaPlayer()->videoOutput() != nullptr) {
+            emit signal_hideVideoOutput(pPlayer.get());
+        }
+
         return;
     }
 
