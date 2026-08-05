@@ -1150,13 +1150,18 @@ describe("Tests DB.lua functions", function()
       assert.is_truthy(message:find("height", 1, true))
     end)
 
-    -- The table branches added by this PR read their keys with the raising
-    -- getVerified* helpers while a QString key is already built, so the first
-    -- bad value longjmps past its destructor and strands the buffer. Asserting
-    -- on that path here would fail the leak detection CI job rather than the
-    -- assertion. Un-pend once the table branches move onto the non-raising
-    -- checkStringArg/checkIntArg helpers, the way TLuaInterpreterMedia.cpp does.
-    pending("should type check the values it reads out of the table")
+    -- The table branch reads its keys with the non-raising checkStringArg /
+    -- checkIntArg helpers and defers the raise until every QString is out of
+    -- scope, so this path no longer strands the key buffer under the leak
+    -- detection job. A boolean is used rather than a string because
+    -- lua_isnumber() accepts a numeric string.
+    it("should type check the values it reads out of the table", function()
+      assert.has_error(function() createMapper({x = 0, y = 0, width = 300, height = false}) end)
+    end)
+
+    it("should reject a key that is neither a string nor a number", function()
+      assert.has_error(function() createMapper({[true] = 1}) end)
+    end)
 
     it("should still type check positional arguments", function()
       assert.has_error(function() createMapper(0, 0, 300) end)

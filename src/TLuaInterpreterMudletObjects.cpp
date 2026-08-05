@@ -1435,71 +1435,105 @@ int TLuaInterpreter::permKey(lua_State* L)
 {
     // Support table argument format
     if (lua_istable(L, 1)) {
-        QString keyName;
-        QString parentGroup;
-        QString luaFunction;
-        int keyModifier = Qt::NoModifier;
-        int keyCode = 0;
-        bool hasName = false, hasParent = false, hasKeyCode = false, hasCode = false;
+        // lua_error() longjmps past C++ destructors, so every QString below has
+        // to be out of scope before the raise at the end - see checkStringArg()
+        bool errorPushed = false;
+        {
+            QString keyName;
+            QString parentGroup;
+            QString luaFunction;
+            int keyModifier = Qt::NoModifier;
+            int keyCode = 0;
+            bool hasName = false, hasParent = false, hasKeyCode = false, hasCode = false;
 
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
                 lua_pop(L, 1);
-                continue;
+
+                if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("keyName"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    keyName = lua_tostring(L, -1);
+                    hasName = true;
+                } else if (!key.compare(QLatin1String("parent"), Qt::CaseInsensitive) || !key.compare(QLatin1String("parentGroup"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    parentGroup = lua_tostring(L, -1);
+                    hasParent = true;
+                } else if (!key.compare(QLatin1String("modifier"), Qt::CaseInsensitive) || !key.compare(QLatin1String("keyModifier"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key), true)) {
+                        errorPushed = true;
+                        break;
+                    }
+                    keyModifier = static_cast<int>(lua_tointeger(L, -1));
+                } else if (!key.compare(QLatin1String("keyCode"), Qt::CaseInsensitive) || !key.compare(QLatin1String("key"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    keyCode = static_cast<int>(lua_tointeger(L, -1));
+                    hasKeyCode = true;
+                } else if (!key.compare(QLatin1String("code"), Qt::CaseInsensitive) || !key.compare(QLatin1String("luaCode"), Qt::CaseInsensitive)
+                           || !key.compare(QLatin1String("luaFunction"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    luaFunction = lua_tostring(L, -1);
+                    hasCode = true;
+                }
+
+                lua_pop(L, 1);
             }
-            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
-            if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("keyName"), Qt::CaseInsensitive)) {
-                keyName = getVerifiedString(L, __func__, -1, qPrintable(key));
-                hasName = true;
-            } else if (!key.compare(QLatin1String("parent"), Qt::CaseInsensitive) || !key.compare(QLatin1String("parentGroup"), Qt::CaseInsensitive)) {
-                parentGroup = getVerifiedString(L, __func__, -1, qPrintable(key));
-                hasParent = true;
-            } else if (!key.compare(QLatin1String("modifier"), Qt::CaseInsensitive) || !key.compare(QLatin1String("keyModifier"), Qt::CaseInsensitive)) {
-                keyModifier = getVerifiedInt(L, __func__, -1, qPrintable(key), true);
-            } else if (!key.compare(QLatin1String("keyCode"), Qt::CaseInsensitive) || !key.compare(QLatin1String("key"), Qt::CaseInsensitive)) {
-                keyCode = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasKeyCode = true;
-            } else if (!key.compare(QLatin1String("code"), Qt::CaseInsensitive) || !key.compare(QLatin1String("luaCode"), Qt::CaseInsensitive)
-                       || !key.compare(QLatin1String("luaFunction"), Qt::CaseInsensitive)) {
-                luaFunction = getVerifiedString(L, __func__, -1, qPrintable(key));
-                hasCode = true;
+            if (!errorPushed) {
+                if (!hasName) {
+                    lua_pushstring(L, "permKey: missing required 'name' in table");
+                    errorPushed = true;
+                } else if (!hasParent) {
+                    lua_pushstring(L, "permKey: missing required 'parent' in table");
+                    errorPushed = true;
+                } else if (!hasKeyCode) {
+                    lua_pushstring(L, "permKey: missing required 'keyCode' in table");
+                    errorPushed = true;
+                } else if (!hasCode) {
+                    lua_pushstring(L, "permKey: missing required 'code' in table");
+                    errorPushed = true;
+                } else {
+                    Host& host = getHostFromLua(L);
+                    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+                    if (auto [validationResult, validationMessage] = pLuaInterpreter->validLuaCode(luaFunction); !validationResult) {
+                        lua_pushfstring(L, "permKey: bad code argument (%s)", validationMessage.toUtf8().constData());
+                        errorPushed = true;
+                    } else {
+                        auto [keyID, message] = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifier, luaFunction);
+                        if (keyID == -1) {
+                            lua_pushfstring(L, "permKey: cannot create key (%s)", message.toUtf8().constData());
+                            errorPushed = true;
+                        } else {
+                            lua_pushnumber(L, keyID);
+                            return 1;
+                        }
+                    }
+                }
             }
-            lua_pop(L, 1);
         }
 
-        if (!hasName) {
-            lua_pushstring(L, "permKey: missing required 'name' in table");
-            return lua_error(L);
-        }
-        if (!hasParent) {
-            lua_pushstring(L, "permKey: missing required 'parent' in table");
-            return lua_error(L);
-        }
-        if (!hasKeyCode) {
-            lua_pushstring(L, "permKey: missing required 'keyCode' in table");
-            return lua_error(L);
-        }
-        if (!hasCode) {
-            lua_pushstring(L, "permKey: missing required 'code' in table");
-            return lua_error(L);
-        }
-
-        Host& host = getHostFromLua(L);
-        TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-        if (auto [validationResult, validationMessage] = pLuaInterpreter->validLuaCode(luaFunction); !validationResult) {
-            lua_pushfstring(L, "permKey: bad code argument (%s)", validationMessage.toUtf8().constData());
-            return lua_error(L);
-        }
-
-        auto [keyID, message] = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifier, luaFunction);
-        if (keyID == -1) {
-            lua_pushfstring(L, "permKey: cannot create key (%s)", message.toUtf8().constData());
-            return lua_error(L);
-        }
-        lua_pushnumber(L, keyID);
-        return 1;
+        return lua_error(L);
     }
 
     if (!checkStringArg(L, __func__, 1, "key name") || !checkStringArg(L, __func__, 2, "key parent group")) {
@@ -2582,203 +2616,251 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
 
     // Check if first argument is a table for named-key format
     if (lua_istable(L, 1)) {
-        QString triggerName, pattern;
-        bool multiLine = false, filter = false, matchAll = false;
-        int fireLength = 0, lineDelta = 0, expiryCount = -1;
-        bool hasName = false, hasPattern = false, hasCode = false, hasMultiline = false;
-        bool hasFilter = false, hasMatchAll = false, hasFireLength = false, hasLineDelta = false;
-        bool colorTrigger = false, highlight = false, playSound = false;
-        QString fgColor, bgColor, soundFile;
-        QColor hlFgColor, hlBgColor;
-        bool isCodeFunction = false;
-        QString codeString;
-        int codeFunctionRef = LUA_NOREF; // Reference to store the function in the registry
+        // Reference to store the function in the registry - kept outside the
+        // scope below so it can still be released on the deferred raise
+        int codeFunctionRef = LUA_NOREF;
+        // lua_error() longjmps past C++ destructors, so every QString, QStringList
+        // and QList below has to be out of scope before the raise at the end -
+        // see checkStringArg()
+        bool errorPushed = false;
+        {
+            QString triggerName, pattern;
+            bool multiLine = false, filter = false, matchAll = false;
+            int fireLength = 0, lineDelta = 0, expiryCount = -1;
+            bool hasName = false, hasPattern = false, hasCode = false, hasMultiline = false;
+            bool hasFilter = false, hasMatchAll = false, hasFireLength = false, hasLineDelta = false;
+            bool colorTrigger = false, highlight = false, playSound = false;
+            QString fgColor, bgColor, soundFile;
+            QColor hlFgColor, hlBgColor;
+            bool isCodeFunction = false;
+            QString codeString;
 
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
                 lua_pop(L, 1);
-                continue;
-            }
-            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
-            if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("triggerName"), Qt::CaseInsensitive)) {
-                triggerName = getVerifiedString(L, __func__, -1, qPrintable(key));
-                hasName = true;
-            } else if (!key.compare(QLatin1String("regex"), Qt::CaseInsensitive) || !key.compare(QLatin1String("pattern"), Qt::CaseInsensitive)) {
-                pattern = getVerifiedString(L, __func__, -1, qPrintable(key));
-                hasPattern = true;
-            } else if (!key.compare(QLatin1String("code"), Qt::CaseInsensitive) || !key.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
-                if (lua_isfunction(L, -1)) {
-                    isCodeFunction = true;
-                    // Store a reference to the function in the registry (luaL_ref pops the value)
-                    lua_pushvalue(L, -1);
-                    codeFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
-                    hasCode = true;
-                } else if (lua_isstring(L, -1)) {
-                    codeString = QString::fromUtf8(lua_tostring(L, -1));
-                    hasCode = true;
-                } else {
-                    lua_pop(L, 2);
-                    luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
-                    return warnArgumentValue(L, __func__, "code must be a string or function");
-                }
-            } else if (!key.compare(QLatin1String("multiline"), Qt::CaseInsensitive) || !key.compare(QLatin1String("multiLine"), Qt::CaseInsensitive)) {
-                multiLine = getVerifiedBool(L, __func__, -1, qPrintable(key));
-                hasMultiline = true;
-            } else if (!key.compare(QLatin1String("fgColor"), Qt::CaseInsensitive) || !key.compare(QLatin1String("foregroundColor"), Qt::CaseInsensitive)) {
-                if (lua_isnumber(L, -1)) {
-                    colorTrigger = false;
-                } else {
-                    colorTrigger = true;
-                    fgColor = getVerifiedString(L, __func__, -1, qPrintable(key));
-                }
-            } else if (!key.compare(QLatin1String("bgColor"), Qt::CaseInsensitive) || !key.compare(QLatin1String("backgroundColor"), Qt::CaseInsensitive)) {
-                if (!lua_isnumber(L, -1)) {
-                    bgColor = getVerifiedString(L, __func__, -1, qPrintable(key));
-                }
-            } else if (!key.compare(QLatin1String("filter"), Qt::CaseInsensitive)) {
-                filter = getVerifiedBool(L, __func__, -1, qPrintable(key));
-                hasFilter = true;
-            } else if (!key.compare(QLatin1String("matchAll"), Qt::CaseInsensitive)) {
-                matchAll = getVerifiedBool(L, __func__, -1, qPrintable(key));
-                hasMatchAll = true;
-            } else if (!key.compare(QLatin1String("highlightFgColor"), Qt::CaseInsensitive) || !key.compare(QLatin1String("highlightForegroundColor"), Qt::CaseInsensitive)) {
-                if (lua_isnumber(L, -1)) {
-                    highlight = false;
-                } else {
-                    highlight = true;
-                    QString color = getVerifiedString(L, __func__, -1, qPrintable(key));
-#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
-                    hlFgColor.setNamedColor(color);
-#else
-                    hlFgColor = QColor::fromString(color);
-#endif
-                }
-            } else if (!key.compare(QLatin1String("highlightBgColor"), Qt::CaseInsensitive) || !key.compare(QLatin1String("highlightBackgroundColor"), Qt::CaseInsensitive)) {
-                if (!lua_isnumber(L, -1)) {
-                    highlight = true;
-                    QString color = getVerifiedString(L, __func__, -1, qPrintable(key));
-#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
-                    hlBgColor.setNamedColor(color);
-#else
-                    hlBgColor = QColor::fromString(color);
-#endif
-                }
-            } else if (!key.compare(QLatin1String("soundFile"), Qt::CaseInsensitive) || !key.compare(QLatin1String("playSoundFile"), Qt::CaseInsensitive)) {
-                if (lua_type(L, -1) == LUA_TSTRING) {
-                    playSound = true;
-                    soundFile = getVerifiedString(L, __func__, -1, qPrintable(key));
-                }
-            } else if (!key.compare(QLatin1String("fireLength"), Qt::CaseInsensitive)) {
-                fireLength = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasFireLength = true;
-            } else if (!key.compare(QLatin1String("lineDelta"), Qt::CaseInsensitive)) {
-                lineDelta = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasLineDelta = true;
-            } else if (!key.compare(QLatin1String("expireAfter"), Qt::CaseInsensitive) || !key.compare(QLatin1String("expiryCount"), Qt::CaseInsensitive)) {
-                if (lua_isnumber(L, -1)) {
-                    expiryCount = lua_tonumber(L, -1);
-                    if (expiryCount < 1) {
+                if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("triggerName"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    triggerName = lua_tostring(L, -1);
+                    hasName = true;
+                } else if (!key.compare(QLatin1String("regex"), Qt::CaseInsensitive) || !key.compare(QLatin1String("pattern"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    pattern = lua_tostring(L, -1);
+                    hasPattern = true;
+                } else if (!key.compare(QLatin1String("code"), Qt::CaseInsensitive) || !key.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
+                    if (lua_isfunction(L, -1)) {
+                        isCodeFunction = true;
+                        // Store a reference to the function in the registry (luaL_ref pops the value)
+                        lua_pushvalue(L, -1);
+                        codeFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
+                        hasCode = true;
+                    } else if (lua_isstring(L, -1)) {
+                        codeString = QString::fromUtf8(lua_tostring(L, -1));
+                        hasCode = true;
+                    } else {
                         lua_pop(L, 2);
                         luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
-                        return warnArgumentValue(L, __func__, qsl("trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
+                        return warnArgumentValue(L, __func__, "code must be a string or function");
+                    }
+                } else if (!key.compare(QLatin1String("multiline"), Qt::CaseInsensitive) || !key.compare(QLatin1String("multiLine"), Qt::CaseInsensitive)) {
+                    if (!checkBoolArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    multiLine = lua_toboolean(L, -1);
+                    hasMultiline = true;
+                } else if (!key.compare(QLatin1String("fgColor"), Qt::CaseInsensitive) || !key.compare(QLatin1String("foregroundColor"), Qt::CaseInsensitive)) {
+                    if (lua_isnumber(L, -1)) {
+                        colorTrigger = false;
+                    } else {
+                        colorTrigger = true;
+                        if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                            errorPushed = true;
+                            break;
+                        }
+                        fgColor = lua_tostring(L, -1);
+                    }
+                } else if (!key.compare(QLatin1String("bgColor"), Qt::CaseInsensitive) || !key.compare(QLatin1String("backgroundColor"), Qt::CaseInsensitive)) {
+                    if (!lua_isnumber(L, -1)) {
+                        if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                            errorPushed = true;
+                            break;
+                        }
+                        bgColor = lua_tostring(L, -1);
+                    }
+                } else if (!key.compare(QLatin1String("filter"), Qt::CaseInsensitive)) {
+                    if (!checkBoolArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    filter = lua_toboolean(L, -1);
+                    hasFilter = true;
+                } else if (!key.compare(QLatin1String("matchAll"), Qt::CaseInsensitive)) {
+                    if (!checkBoolArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    matchAll = lua_toboolean(L, -1);
+                    hasMatchAll = true;
+                } else if (!key.compare(QLatin1String("highlightFgColor"), Qt::CaseInsensitive) || !key.compare(QLatin1String("highlightForegroundColor"), Qt::CaseInsensitive)) {
+                    if (lua_isnumber(L, -1)) {
+                        highlight = false;
+                    } else {
+                        highlight = true;
+                        if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                            errorPushed = true;
+                            break;
+                        }
+                        const QString color{lua_tostring(L, -1)};
+#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
+                        hlFgColor.setNamedColor(color);
+#else
+                        hlFgColor = QColor::fromString(color);
+#endif
+                    }
+                } else if (!key.compare(QLatin1String("highlightBgColor"), Qt::CaseInsensitive) || !key.compare(QLatin1String("highlightBackgroundColor"), Qt::CaseInsensitive)) {
+                    if (!lua_isnumber(L, -1)) {
+                        highlight = true;
+                        if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                            errorPushed = true;
+                            break;
+                        }
+                        const QString color{lua_tostring(L, -1)};
+#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
+                        hlBgColor.setNamedColor(color);
+#else
+                        hlBgColor = QColor::fromString(color);
+#endif
+                    }
+                } else if (!key.compare(QLatin1String("soundFile"), Qt::CaseInsensitive) || !key.compare(QLatin1String("playSoundFile"), Qt::CaseInsensitive)) {
+                    if (lua_type(L, -1) == LUA_TSTRING) {
+                        playSound = true;
+                        soundFile = lua_tostring(L, -1);
+                    }
+                } else if (!key.compare(QLatin1String("fireLength"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    fireLength = static_cast<int>(lua_tointeger(L, -1));
+                    hasFireLength = true;
+                } else if (!key.compare(QLatin1String("lineDelta"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    lineDelta = static_cast<int>(lua_tointeger(L, -1));
+                    hasLineDelta = true;
+                } else if (!key.compare(QLatin1String("expireAfter"), Qt::CaseInsensitive) || !key.compare(QLatin1String("expiryCount"), Qt::CaseInsensitive)) {
+                    if (lua_isnumber(L, -1)) {
+                        expiryCount = lua_tonumber(L, -1);
+                        if (expiryCount < 1) {
+                            lua_pop(L, 2);
+                            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
+                            return warnArgumentValue(L, __func__, qsl("trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
+                        }
                     }
                 }
+
+                lua_pop(L, 1);
             }
 
-            lua_pop(L, 1);
+            if (!errorPushed) {
+                if (!hasName) {
+                    lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'name' or 'triggerName' in table");
+                    errorPushed = true;
+                } else if (!hasPattern) {
+                    lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'regex' or 'pattern' in table");
+                    errorPushed = true;
+                } else if (!hasCode) {
+                    lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'code' or 'script' in table");
+                    errorPushed = true;
+                } else if (!hasMultiline) {
+                    lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'multiline' or 'multiLine' in table");
+                    errorPushed = true;
+                } else if (!hasFilter) {
+                    lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'filter' in table");
+                    errorPushed = true;
+                } else if (!hasMatchAll) {
+                    lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'matchAll' in table");
+                    errorPushed = true;
+                } else if (!hasFireLength) {
+                    lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'fireLength' in table");
+                    errorPushed = true;
+                } else if (!hasLineDelta) {
+                    lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'lineDelta' in table");
+                    errorPushed = true;
+                } else {
+                    QStringList patterns;
+                    QList<int> propertyList;
+                    TTrigger* pP = host.getTriggerUnit()->findTrigger(triggerName);
+                    if (pP) {
+                        patterns = pP->getPatternsList();
+                        propertyList = pP->getRegexCodePropertyList();
+                    }
+                    patterns << pattern;
+                    if (colorTrigger) {
+                        propertyList << REGEX_COLOR_PATTERN;
+                    } else {
+                        propertyList << REGEX_PERL;
+                    }
+
+                    auto pT = new TTrigger("a", patterns, propertyList, multiLine, &host);
+                    pT->setIsFolder(false);
+                    pT->setIsActive(true);
+                    pT->setTemporary(true);
+                    pT->registerTrigger();
+                    pT->setName(triggerName);
+                    pT->mPerlSlashGOption = matchAll;
+                    pT->mFilterTrigger = filter;
+                    pT->setConditionLineDelta(lineDelta);
+                    pT->mStayOpen = fireLength;
+                    pT->mSoundTrigger = playSound;
+                    if (playSound) {
+                        pT->setSound(soundFile);
+                    }
+                    pT->setIsColorizerTrigger(highlight);
+                    pT->setExpiryCount(expiryCount);
+                    if (highlight) {
+                        pT->setColorizerFgColor(hlFgColor);
+                        pT->setColorizerBgColor(hlBgColor);
+                    }
+
+                    if (isCodeFunction) {
+                        pT->setScript(QString());
+                        pT->mRegisteredAnonymousLuaFunction = true;
+                        lua_pushlightuserdata(L, pT);
+                        lua_rawgeti(L, LUA_REGISTRYINDEX, codeFunctionRef);
+                        lua_settable(L, LUA_REGISTRYINDEX);
+                        luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
+                    } else {
+                        pT->setScript(codeString);
+                    }
+
+                    lua_pushnumber(L, pT->getID());
+                    return 1;
+                }
+            }
         }
 
-        if (!hasName) {
-            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
-            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'name' or 'triggerName' in table");
-            return lua_error(L);
-        }
-        if (!hasPattern) {
-            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
-            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'regex' or 'pattern' in table");
-            return lua_error(L);
-        }
-        if (!hasCode) {
-            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
-            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'code' or 'script' in table");
-            return lua_error(L);
-        }
-        if (!hasMultiline) {
-            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
-            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'multiline' or 'multiLine' in table");
-            return lua_error(L);
-        }
-        if (!hasFilter) {
-            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
-            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'filter' in table");
-            return lua_error(L);
-        }
-        if (!hasMatchAll) {
-            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
-            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'matchAll' in table");
-            return lua_error(L);
-        }
-        if (!hasFireLength) {
-            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
-            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'fireLength' in table");
-            return lua_error(L);
-        }
-        if (!hasLineDelta) {
-            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
-            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'lineDelta' in table");
-            return lua_error(L);
-        }
-
-        QStringList patterns;
-        QList<int> propertyList;
-        TTrigger* pP = host.getTriggerUnit()->findTrigger(triggerName);
-        if (pP) {
-            patterns = pP->getPatternsList();
-            propertyList = pP->getRegexCodePropertyList();
-        }
-        patterns << pattern;
-        if (colorTrigger) {
-            propertyList << REGEX_COLOR_PATTERN;
-        } else {
-            propertyList << REGEX_PERL;
-        }
-
-        auto pT = new TTrigger("a", patterns, propertyList, multiLine, &host);
-        pT->setIsFolder(false);
-        pT->setIsActive(true);
-        pT->setTemporary(true);
-        pT->registerTrigger();
-        pT->setName(triggerName);
-        pT->mPerlSlashGOption = matchAll;
-        pT->mFilterTrigger = filter;
-        pT->setConditionLineDelta(lineDelta);
-        pT->mStayOpen = fireLength;
-        pT->mSoundTrigger = playSound;
-        if (playSound) {
-            pT->setSound(soundFile);
-        }
-        pT->setIsColorizerTrigger(highlight);
-        pT->setExpiryCount(expiryCount);
-        if (highlight) {
-            pT->setColorizerFgColor(hlFgColor);
-            pT->setColorizerBgColor(hlBgColor);
-        }
-
-        if (isCodeFunction) {
-            pT->setScript(QString());
-            pT->mRegisteredAnonymousLuaFunction = true;
-            lua_pushlightuserdata(L, pT);
-            lua_rawgeti(L, LUA_REGISTRYINDEX, codeFunctionRef);
-            lua_settable(L, LUA_REGISTRYINDEX);
-            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
-        } else {
-            pT->setScript(codeString);
-        }
-
-        lua_pushnumber(L, pT->getID());
-        return 1;
+        luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
+        return lua_error(L);
     }
 
     if (!checkStringArg(L, __func__, 1, "trigger name create or add to") || !checkStringArg(L, __func__, 2, "regex pattern to match")) {

@@ -325,67 +325,106 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
 {
     // Table argument support
     if (lua_istable(L, 1)) {
-        QString windowName = qsl("main");
-        QString commandLineName;
-        int x = 0, y = 0, width = 0, height = 0;
-        bool hasName = false, hasX = false, hasY = false, hasWidth = false, hasHeight = false;
+        // lua_error() longjmps past C++ destructors, so every QString below has
+        // to be out of scope before the raise at the end - see checkStringArg()
+        bool errorPushed = false;
+        {
+            QString windowName = qsl("main");
+            QString commandLineName;
+            int x = 0, y = 0, width = 0, height = 0;
+            bool hasName = false, hasX = false, hasY = false, hasWidth = false, hasHeight = false;
 
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            if (lua_type(L, -2) != LUA_TSTRING) {
-                lua_pop(L, 1);
-                continue;
-            }
-            const QString key = getVerifiedString(L, __func__, -2, "table key");
-
-            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
-                if (isMain(windowName)) {
-                    windowName.clear();
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
                 }
-            } else if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("commandLineName"), Qt::CaseInsensitive)) {
-                commandLineName = getVerifiedString(L, __func__, -1, qPrintable(key));
-                hasName = true;
-            } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
-                x = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasX = true;
-            } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
-                y = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasY = true;
-            } else if (!key.compare(QLatin1String("width"), Qt::CaseInsensitive)) {
-                width = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasWidth = true;
-            } else if (!key.compare(QLatin1String("height"), Qt::CaseInsensitive)) {
-                height = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasHeight = true;
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
+                lua_pop(L, 1);
+
+                if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    windowName = lua_tostring(L, -1);
+                    if (isMain(windowName)) {
+                        windowName.clear();
+                    }
+                } else if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("commandLineName"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    commandLineName = lua_tostring(L, -1);
+                    hasName = true;
+                } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    x = static_cast<int>(lua_tointeger(L, -1));
+                    hasX = true;
+                } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    y = static_cast<int>(lua_tointeger(L, -1));
+                    hasY = true;
+                } else if (!key.compare(QLatin1String("width"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    width = static_cast<int>(lua_tointeger(L, -1));
+                    hasWidth = true;
+                } else if (!key.compare(QLatin1String("height"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    height = static_cast<int>(lua_tointeger(L, -1));
+                    hasHeight = true;
+                }
+
+                lua_pop(L, 1);
             }
 
-            lua_pop(L, 1);
+            if (!errorPushed) {
+                if (!hasName) {
+                    return warnArgumentValue(L, __func__, "missing required 'name' in table");
+                }
+                if (!hasX) {
+                    return warnArgumentValue(L, __func__, "missing required 'x' in table");
+                }
+                if (!hasY) {
+                    return warnArgumentValue(L, __func__, "missing required 'y' in table");
+                }
+                if (!hasWidth) {
+                    return warnArgumentValue(L, __func__, "missing required 'width' in table");
+                }
+                if (!hasHeight) {
+                    return warnArgumentValue(L, __func__, "missing required 'height' in table");
+                }
+
+                const Host& host = getHostFromLua(L);
+                if (auto [success, message] = host.mpConsole->createCommandLine(windowName, commandLineName, x, y, width, height); !success) {
+                    return warnArgumentValue(L, __func__, message);
+                }
+
+                lua_pushboolean(L, true);
+                return 1;
+            }
         }
 
-        if (!hasName) {
-            return warnArgumentValue(L, __func__, "missing required 'name' in table");
-        }
-        if (!hasX) {
-            return warnArgumentValue(L, __func__, "missing required 'x' in table");
-        }
-        if (!hasY) {
-            return warnArgumentValue(L, __func__, "missing required 'y' in table");
-        }
-        if (!hasWidth) {
-            return warnArgumentValue(L, __func__, "missing required 'width' in table");
-        }
-        if (!hasHeight) {
-            return warnArgumentValue(L, __func__, "missing required 'height' in table");
-        }
-
-        const Host& host = getHostFromLua(L);
-        if (auto [success, message] = host.mpConsole->createCommandLine(windowName, commandLineName, x, y, width, height); !success) {
-            return warnArgumentValue(L, __func__, message);
-        }
-
-        lua_pushboolean(L, true);
-        return 1;
+        return lua_error(L);
     }
 
     const int n = lua_gettop(L);
@@ -439,81 +478,123 @@ int TLuaInterpreter::createLabel(lua_State* L)
     // Support both table and ordered arguments
     if (lua_istable(L, 1)) {
         // Table argument format: {windowName="name", name="labelName", x=x, y=y, width=w, height=h, fillBackground=bool, clickthrough=bool}
-        QString windowName = QLatin1String("main");
-        QString labelName;
-        int x = 0, y = 0, width = 0, height = 0;
-        bool fillBackground = false, clickthrough = false;
-        bool hasName = false, hasX = false, hasY = false, hasWidth = false, hasHeight = false, hasFillBackground = false;
+        // lua_error() longjmps past C++ destructors, so every QString below has
+        // to be out of scope before the raise at the end - see checkStringArg()
+        bool errorPushed = false;
+        {
+            QString windowName = QLatin1String("main");
+            QString labelName;
+            int x = 0, y = 0, width = 0, height = 0;
+            bool fillBackground = false, clickthrough = false;
+            bool hasName = false, hasX = false, hasY = false, hasWidth = false, hasHeight = false, hasFillBackground = false;
 
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
                 lua_pop(L, 1);
-                continue;
+
+                if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, "windowName")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    windowName = lua_tostring(L, -1);
+                } else if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("labelName"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, "label name")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    labelName = lua_tostring(L, -1);
+                    hasName = true;
+                } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive) || !key.compare(QLatin1String("Xpos"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "x")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    x = static_cast<int>(lua_tointeger(L, -1));
+                    hasX = true;
+                } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive) || !key.compare(QLatin1String("Ypos"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "y")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    y = static_cast<int>(lua_tointeger(L, -1));
+                    hasY = true;
+                } else if (!key.compare(QLatin1String("width"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "width")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    width = static_cast<int>(lua_tointeger(L, -1));
+                    hasWidth = true;
+                } else if (!key.compare(QLatin1String("height"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "height")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    height = static_cast<int>(lua_tointeger(L, -1));
+                    hasHeight = true;
+                } else if (!key.compare(QLatin1String("fillBackground"), Qt::CaseInsensitive)) {
+                    if (!checkBoolArg(L, __func__, -1, "fillBackground")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    fillBackground = lua_toboolean(L, -1);
+                    hasFillBackground = true;
+                } else if (!key.compare(QLatin1String("clickthrough"), Qt::CaseInsensitive) || !key.compare(QLatin1String("enableClickthrough"), Qt::CaseInsensitive)) {
+                    if (!checkBoolArg(L, __func__, -1, "clickthrough")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    clickthrough = lua_toboolean(L, -1);
+                }
+
+                lua_pop(L, 1); // Remove value, keep key for next iteration
             }
-            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
-            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, "windowName");
-            } else if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("labelName"), Qt::CaseInsensitive)) {
-                labelName = getVerifiedString(L, __func__, -1, "label name");
-                hasName = true;
-            } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive) || !key.compare(QLatin1String("Xpos"), Qt::CaseInsensitive)) {
-                x = getVerifiedInt(L, __func__, -1, "x");
-                hasX = true;
-            } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive) || !key.compare(QLatin1String("Ypos"), Qt::CaseInsensitive)) {
-                y = getVerifiedInt(L, __func__, -1, "y");
-                hasY = true;
-            } else if (!key.compare(QLatin1String("width"), Qt::CaseInsensitive)) {
-                width = getVerifiedInt(L, __func__, -1, "width");
-                hasWidth = true;
-            } else if (!key.compare(QLatin1String("height"), Qt::CaseInsensitive)) {
-                height = getVerifiedInt(L, __func__, -1, "height");
-                hasHeight = true;
-            } else if (!key.compare(QLatin1String("fillBackground"), Qt::CaseInsensitive)) {
-                fillBackground = getVerifiedBool(L, __func__, -1, "fillBackground");
-                hasFillBackground = true;
-            } else if (!key.compare(QLatin1String("clickthrough"), Qt::CaseInsensitive) || !key.compare(QLatin1String("enableClickthrough"), Qt::CaseInsensitive)) {
-                clickthrough = getVerifiedBool(L, __func__, -1, "clickthrough");
+            if (!errorPushed) {
+                // Validate required parameters
+                if (!hasName) {
+                    lua_pushfstring(L, "%s: missing required 'name' or 'labelName' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasX) {
+                    lua_pushfstring(L, "%s: missing required 'x' or 'Xpos' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasY) {
+                    lua_pushfstring(L, "%s: missing required 'y' or 'Ypos' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasWidth) {
+                    lua_pushfstring(L, "%s: missing required 'width' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasHeight) {
+                    lua_pushfstring(L, "%s: missing required 'height' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasFillBackground) {
+                    lua_pushfstring(L, "%s: missing required 'fillBackground' in table", __func__);
+                    errorPushed = true;
+                } else {
+                    // Create the label
+                    Host& host = getHostFromLua(L);
+                    if (auto [success, message] = host.createLabel(windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
+                        return warnArgumentValue(L, __func__, message, true);
+                    }
+
+                    lua_pushboolean(L, true);
+                    return 1;
+                }
             }
-
-            lua_pop(L, 1); // Remove value, keep key for next iteration
         }
 
-        // Validate required parameters
-        if (!hasName) {
-            lua_pushfstring(L, "%s: missing required 'name' or 'labelName' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasX) {
-            lua_pushfstring(L, "%s: missing required 'x' or 'Xpos' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasY) {
-            lua_pushfstring(L, "%s: missing required 'y' or 'Ypos' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasWidth) {
-            lua_pushfstring(L, "%s: missing required 'width' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasHeight) {
-            lua_pushfstring(L, "%s: missing required 'height' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasFillBackground) {
-            lua_pushfstring(L, "%s: missing required 'fillBackground' in table", __func__);
-            return lua_error(L);
-        }
-
-        // Create the label
-        Host& host = getHostFromLua(L);
-        if (auto [success, message] = host.createLabel(windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
-            return warnArgumentValue(L, __func__, message, true);
-        }
-
-        lua_pushboolean(L, true);
-        return 1;
+        return lua_error(L);
     }
 
     if (lua_type(L, 1) != LUA_TSTRING) {
@@ -536,67 +617,106 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
 {
     // Table argument support
     if (lua_istable(L, 1)) {
-        QString windowName;
-        QString name;
-        int x = 0, y = 0, width = 0, height = 0;
-        bool hasName = false, hasX = false, hasY = false, hasWidth = false, hasHeight = false;
+        // lua_error() longjmps past C++ destructors, so every QString below has
+        // to be out of scope before the raise at the end - see checkStringArg()
+        bool errorPushed = false;
+        {
+            QString windowName;
+            QString name;
+            int x = 0, y = 0, width = 0, height = 0;
+            bool hasName = false, hasX = false, hasY = false, hasWidth = false, hasHeight = false;
 
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            if (lua_type(L, -2) != LUA_TSTRING) {
-                lua_pop(L, 1);
-                continue;
-            }
-            const QString key = getVerifiedString(L, __func__, -2, "table key");
-
-            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
-                if (isMain(windowName)) {
-                    windowName.clear();
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
                 }
-            } else if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("miniConsoleName"), Qt::CaseInsensitive)) {
-                name = getVerifiedString(L, __func__, -1, qPrintable(key));
-                hasName = true;
-            } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
-                x = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasX = true;
-            } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
-                y = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasY = true;
-            } else if (!key.compare(QLatin1String("width"), Qt::CaseInsensitive)) {
-                width = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasWidth = true;
-            } else if (!key.compare(QLatin1String("height"), Qt::CaseInsensitive)) {
-                height = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasHeight = true;
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
+                lua_pop(L, 1);
+
+                if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    windowName = lua_tostring(L, -1);
+                    if (isMain(windowName)) {
+                        windowName.clear();
+                    }
+                } else if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("miniConsoleName"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    name = lua_tostring(L, -1);
+                    hasName = true;
+                } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    x = static_cast<int>(lua_tointeger(L, -1));
+                    hasX = true;
+                } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    y = static_cast<int>(lua_tointeger(L, -1));
+                    hasY = true;
+                } else if (!key.compare(QLatin1String("width"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    width = static_cast<int>(lua_tointeger(L, -1));
+                    hasWidth = true;
+                } else if (!key.compare(QLatin1String("height"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    height = static_cast<int>(lua_tointeger(L, -1));
+                    hasHeight = true;
+                }
+
+                lua_pop(L, 1);
             }
 
-            lua_pop(L, 1);
+            if (!errorPushed) {
+                if (!hasName) {
+                    return warnArgumentValue(L, __func__, "missing required 'name' in table");
+                }
+                if (!hasX) {
+                    return warnArgumentValue(L, __func__, "missing required 'x' in table");
+                }
+                if (!hasY) {
+                    return warnArgumentValue(L, __func__, "missing required 'y' in table");
+                }
+                if (!hasWidth) {
+                    return warnArgumentValue(L, __func__, "missing required 'width' in table");
+                }
+                if (!hasHeight) {
+                    return warnArgumentValue(L, __func__, "missing required 'height' in table");
+                }
+
+                Host& host = getHostFromLua(L);
+                if (auto [success, message] = host.createMiniConsole(windowName, name, x, y, width, height); !success) {
+                    return warnArgumentValue(L, __func__, message, true);
+                }
+
+                lua_pushboolean(L, true);
+                return 1;
+            }
         }
 
-        if (!hasName) {
-            return warnArgumentValue(L, __func__, "missing required 'name' in table");
-        }
-        if (!hasX) {
-            return warnArgumentValue(L, __func__, "missing required 'x' in table");
-        }
-        if (!hasY) {
-            return warnArgumentValue(L, __func__, "missing required 'y' in table");
-        }
-        if (!hasWidth) {
-            return warnArgumentValue(L, __func__, "missing required 'width' in table");
-        }
-        if (!hasHeight) {
-            return warnArgumentValue(L, __func__, "missing required 'height' in table");
-        }
-
-        Host& host = getHostFromLua(L);
-        if (auto [success, message] = host.createMiniConsole(windowName, name, x, y, width, height); !success) {
-            return warnArgumentValue(L, __func__, message, true);
-        }
-
-        lua_pushboolean(L, true);
-        return 1;
+        return lua_error(L);
     }
 
     int counter = 3;
@@ -653,67 +773,106 @@ int TLuaInterpreter::createScrollBox(lua_State* L)
 {
     // Table argument support
     if (lua_istable(L, 1)) {
-        QString windowName;
-        QString name;
-        int x = 0, y = 0, width = 0, height = 0;
-        bool hasName = false, hasX = false, hasY = false, hasWidth = false, hasHeight = false;
+        // lua_error() longjmps past C++ destructors, so every QString below has
+        // to be out of scope before the raise at the end - see checkStringArg()
+        bool errorPushed = false;
+        {
+            QString windowName;
+            QString name;
+            int x = 0, y = 0, width = 0, height = 0;
+            bool hasName = false, hasX = false, hasY = false, hasWidth = false, hasHeight = false;
 
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            if (lua_type(L, -2) != LUA_TSTRING) {
-                lua_pop(L, 1);
-                continue;
-            }
-            const QString key = getVerifiedString(L, __func__, -2, "table key");
-
-            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
-                if (isMain(windowName)) {
-                    windowName.clear();
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
                 }
-            } else if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("scrollBoxName"), Qt::CaseInsensitive)) {
-                name = getVerifiedString(L, __func__, -1, qPrintable(key));
-                hasName = true;
-            } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
-                x = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasX = true;
-            } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
-                y = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasY = true;
-            } else if (!key.compare(QLatin1String("width"), Qt::CaseInsensitive)) {
-                width = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasWidth = true;
-            } else if (!key.compare(QLatin1String("height"), Qt::CaseInsensitive)) {
-                height = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasHeight = true;
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
+                lua_pop(L, 1);
+
+                if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    windowName = lua_tostring(L, -1);
+                    if (isMain(windowName)) {
+                        windowName.clear();
+                    }
+                } else if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("scrollBoxName"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    name = lua_tostring(L, -1);
+                    hasName = true;
+                } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    x = static_cast<int>(lua_tointeger(L, -1));
+                    hasX = true;
+                } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    y = static_cast<int>(lua_tointeger(L, -1));
+                    hasY = true;
+                } else if (!key.compare(QLatin1String("width"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    width = static_cast<int>(lua_tointeger(L, -1));
+                    hasWidth = true;
+                } else if (!key.compare(QLatin1String("height"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    height = static_cast<int>(lua_tointeger(L, -1));
+                    hasHeight = true;
+                }
+
+                lua_pop(L, 1);
             }
 
-            lua_pop(L, 1);
+            if (!errorPushed) {
+                if (!hasName) {
+                    return warnArgumentValue(L, __func__, "missing required 'name' in table");
+                }
+                if (!hasX) {
+                    return warnArgumentValue(L, __func__, "missing required 'x' in table");
+                }
+                if (!hasY) {
+                    return warnArgumentValue(L, __func__, "missing required 'y' in table");
+                }
+                if (!hasWidth) {
+                    return warnArgumentValue(L, __func__, "missing required 'width' in table");
+                }
+                if (!hasHeight) {
+                    return warnArgumentValue(L, __func__, "missing required 'height' in table");
+                }
+
+                const Host& host = getHostFromLua(L);
+                if (auto [success, message] = host.createScrollBox(windowName, name, x, y, width, height); !success) {
+                    return warnArgumentValue(L, __func__, message, true);
+                }
+
+                lua_pushboolean(L, true);
+                return 1;
+            }
         }
 
-        if (!hasName) {
-            return warnArgumentValue(L, __func__, "missing required 'name' in table");
-        }
-        if (!hasX) {
-            return warnArgumentValue(L, __func__, "missing required 'x' in table");
-        }
-        if (!hasY) {
-            return warnArgumentValue(L, __func__, "missing required 'y' in table");
-        }
-        if (!hasWidth) {
-            return warnArgumentValue(L, __func__, "missing required 'width' in table");
-        }
-        if (!hasHeight) {
-            return warnArgumentValue(L, __func__, "missing required 'height' in table");
-        }
-
-        const Host& host = getHostFromLua(L);
-        if (auto [success, message] = host.createScrollBox(windowName, name, x, y, width, height); !success) {
-            return warnArgumentValue(L, __func__, message, true);
-        }
-
-        lua_pushboolean(L, true);
-        return 1;
+        return lua_error(L);
     }
 
     int counter = 3;
@@ -1175,76 +1334,104 @@ int TLuaInterpreter::echoLink(lua_State* L)
 {
     // Check if first argument is a table for named-key format
     if (lua_istable(L, 1)) {
+        // lua_error() longjmps past C++ destructors, so every QString and
+        // QStringList below has to be out of scope before the raise at the end
+        // - see checkStringArg()
+        bool errorPushed = false;
         int luaReference = 0;
-        bool useCurrentFormat = false;
-        QString windowName = qsl("main");
-        QString hint;
-        QString command;
-        QString text;
-        QStringList commandList;
-        QStringList hintList;
-        QVector<int> luaReferences;
-        bool hasText = false;
-        bool hasCommand = false;
-        bool hasHint = false;
+        {
+            bool useCurrentFormat = false;
+            QString windowName = qsl("main");
+            QString hint;
+            QString command;
+            QString text;
+            QStringList commandList;
+            QStringList hintList;
+            QVector<int> luaReferences;
+            bool hasText = false;
+            bool hasCommand = false;
+            bool hasHint = false;
 
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
                 lua_pop(L, 1);
-                continue;
-            }
-            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
-            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
-            } else if (!key.compare(QLatin1String("text"), Qt::CaseInsensitive)) {
-                text = getVerifiedString(L, __func__, -1, qPrintable(key));
-                hasText = true;
-            } else if (!key.compare(QLatin1String("command"), Qt::CaseInsensitive)) {
-                int valueIndex = -1;
-                parseCommandOrFunction(L, __func__, valueIndex, command, luaReference);
-                hasCommand = true;
-            } else if (!key.compare(QLatin1String("hint"), Qt::CaseInsensitive)) {
-                hint = getVerifiedString(L, __func__, -1, qPrintable(key));
-                hasHint = true;
-            } else if (!key.compare(QLatin1String("useCurrentFormat"), Qt::CaseInsensitive) || !key.compare(QLatin1String("useCurrentLinkFormat"), Qt::CaseInsensitive)) {
-                useCurrentFormat = getVerifiedBool(L, __func__, -1, qPrintable(key));
+                if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    windowName = lua_tostring(L, -1);
+                } else if (!key.compare(QLatin1String("text"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    text = lua_tostring(L, -1);
+                    hasText = true;
+                } else if (!key.compare(QLatin1String("command"), Qt::CaseInsensitive)) {
+                    if (!checkCommandOrFunctionArg(L, __func__, -1)) {
+                        errorPushed = true;
+                        break;
+                    }
+                    int valueIndex = -1;
+                    parseCommandOrFunction(L, __func__, valueIndex, command, luaReference);
+                    hasCommand = true;
+                } else if (!key.compare(QLatin1String("hint"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    hint = lua_tostring(L, -1);
+                    hasHint = true;
+                } else if (!key.compare(QLatin1String("useCurrentFormat"), Qt::CaseInsensitive) || !key.compare(QLatin1String("useCurrentLinkFormat"), Qt::CaseInsensitive)) {
+                    if (!checkBoolArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    useCurrentFormat = lua_toboolean(L, -1);
+                }
+
+                lua_pop(L, 1);
             }
 
-            lua_pop(L, 1);
+            if (!errorPushed) {
+                if (!hasText) {
+                    lua_pushfstring(L, "echoLink: bad argument, missing 'text' in table");
+                    errorPushed = true;
+                } else if (!hasCommand) {
+                    lua_pushfstring(L, "echoLink: bad argument, missing 'command' in table");
+                    errorPushed = true;
+                } else if (!hasHint) {
+                    lua_pushfstring(L, "echoLink: bad argument, missing 'hint' in table");
+                    errorPushed = true;
+                } else {
+                    commandList << command;
+                    luaReferences << luaReference;
+                    hintList << hint;
+
+                    auto console = CONSOLE(L, windowName);
+                    console->echoLink(text, commandList, hintList, useCurrentFormat, luaReferences);
+                    lua_pushboolean(L, true);
+                    return 1;
+                }
+            }
         }
 
-        if (!hasText) {
-            if (luaReference) {
-                luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
-            }
-            lua_pushfstring(L, "echoLink: bad argument, missing 'text' in table");
-            return lua_error(L);
+        if (luaReference) {
+            luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
         }
-        if (!hasCommand) {
-            if (luaReference) {
-                luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
-            }
-            lua_pushfstring(L, "echoLink: bad argument, missing 'command' in table");
-            return lua_error(L);
-        }
-        if (!hasHint) {
-            if (luaReference) {
-                luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
-            }
-            lua_pushfstring(L, "echoLink: bad argument, missing 'hint' in table");
-            return lua_error(L);
-        }
-
-        commandList << command;
-        luaReferences << luaReference;
-        hintList << hint;
-
-        auto console = CONSOLE(L, windowName);
-        console->echoLink(text, commandList, hintList, useCurrentFormat, luaReferences);
-        lua_pushboolean(L, true);
-        return 1;
+        return lua_error(L);
     }
 
     const int n = lua_gettop(L);
@@ -2188,71 +2375,106 @@ int TLuaInterpreter::insertLink(lua_State* L)
 {
     // Table argument support
     if (lua_istable(L, 1)) {
-        QString windowName = qsl("main");
-        QString text, command, hint;
+        // lua_error() longjmps past C++ destructors, so every QString and
+        // QStringList below has to be out of scope before the raise at the end
+        // - see checkStringArg()
+        bool errorPushed = false;
         int luaReference = 0;
-        bool useCurrentFormat = false;
-        bool hasText = false, hasCommand = false, hasHint = false;
+        {
+            QString windowName = qsl("main");
+            QString text, command, hint;
+            bool useCurrentFormat = false;
+            bool hasText = false, hasCommand = false, hasHint = false;
 
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            if (lua_type(L, -2) != LUA_TSTRING) {
-                lua_pop(L, 1);
-                continue;
-            }
-            const QString key = getVerifiedString(L, __func__, -2, "table key");
-
-            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
-            } else if (!key.compare(QLatin1String("text"), Qt::CaseInsensitive)) {
-                text = getVerifiedString(L, __func__, -1, qPrintable(key));
-                hasText = true;
-            } else if (!key.compare(QLatin1String("command"), Qt::CaseInsensitive)) {
-                int valueIndex = -1;
-                parseCommandOrFunction(L, __func__, valueIndex, command, luaReference);
-                hasCommand = true;
-            } else if (!key.compare(QLatin1String("hint"), Qt::CaseInsensitive) || !key.compare(QLatin1String("tooltip"), Qt::CaseInsensitive)) {
-                hint = getVerifiedString(L, __func__, -1, qPrintable(key));
-                hasHint = true;
-            } else if (!key.compare(QLatin1String("useCurrentFormat"), Qt::CaseInsensitive)) {
-                if (lua_isboolean(L, -1)) {
-                    useCurrentFormat = lua_toboolean(L, -1);
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
                 }
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
+                lua_pop(L, 1);
+
+                if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    windowName = lua_tostring(L, -1);
+                } else if (!key.compare(QLatin1String("text"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    text = lua_tostring(L, -1);
+                    hasText = true;
+                } else if (!key.compare(QLatin1String("command"), Qt::CaseInsensitive)) {
+                    if (!checkCommandOrFunctionArg(L, __func__, -1)) {
+                        errorPushed = true;
+                        break;
+                    }
+                    int valueIndex = -1;
+                    parseCommandOrFunction(L, __func__, valueIndex, command, luaReference);
+                    hasCommand = true;
+                } else if (!key.compare(QLatin1String("hint"), Qt::CaseInsensitive) || !key.compare(QLatin1String("tooltip"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    hint = lua_tostring(L, -1);
+                    hasHint = true;
+                } else if (!key.compare(QLatin1String("useCurrentFormat"), Qt::CaseInsensitive)) {
+                    if (lua_isboolean(L, -1)) {
+                        useCurrentFormat = lua_toboolean(L, -1);
+                    }
+                }
+
+                lua_pop(L, 1);
             }
 
-            lua_pop(L, 1);
+            if (!errorPushed) {
+                if (!hasText) {
+                    if (luaReference) {
+                        luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
+                    }
+                    return warnArgumentValue(L, __func__, "missing required 'text' in table");
+                }
+                if (!hasCommand) {
+                    if (luaReference) {
+                        luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
+                    }
+                    return warnArgumentValue(L, __func__, "missing required 'command' in table");
+                }
+                if (!hasHint) {
+                    if (luaReference) {
+                        luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
+                    }
+                    return warnArgumentValue(L, __func__, "missing required 'hint' in table");
+                }
+
+                QStringList commandList;
+                QStringList hintList;
+                QVector<int> luaReferences;
+                commandList << command;
+                luaReferences << luaReference;
+                hintList << hint;
+
+                auto console = CONSOLE(L, windowName);
+                console->insertLink(text, commandList, hintList, useCurrentFormat, luaReferences);
+                lua_pushboolean(L, true);
+                return 1;
+            }
         }
 
-        if (!hasText) {
-            if (luaReference) {
-                luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
-            }
-            return warnArgumentValue(L, __func__, "missing required 'text' in table");
+        if (luaReference) {
+            luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
         }
-        if (!hasCommand) {
-            if (luaReference) {
-                luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
-            }
-            return warnArgumentValue(L, __func__, "missing required 'command' in table");
-        }
-        if (!hasHint) {
-            if (luaReference) {
-                luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
-            }
-            return warnArgumentValue(L, __func__, "missing required 'hint' in table");
-        }
-
-        QStringList commandList;
-        QStringList hintList;
-        QVector<int> luaReferences;
-        commandList << command;
-        luaReferences << luaReference;
-        hintList << hint;
-
-        auto console = CONSOLE(L, windowName);
-        console->insertLink(text, commandList, hintList, useCurrentFormat, luaReferences);
-        lua_pushboolean(L, true);
-        return 1;
+        return lua_error(L);
     }
 
     const int n = lua_gettop(L);
@@ -2315,87 +2537,128 @@ int TLuaInterpreter::insertPopup(lua_State* L)
         lua_pop(L, 1);
 
         if (isNamedTable) {
-            QString windowName = qsl("main");
-            QString text;
-            QStringList commandList;
-            QStringList hintList;
-            QVector<int> luaReferences;
-            bool useCurrentFormat = false;
-            bool hasText = false, hasCommands = false, hasHints = false;
+            // lua_error() longjmps past C++ destructors, so every QString and
+            // QStringList below has to be out of scope before the raise at the
+            // end - see checkStringArg()
+            bool errorPushed = false;
+            {
+                QString windowName = qsl("main");
+                QString text;
+                QStringList commandList;
+                QStringList hintList;
+                QVector<int> luaReferences;
+                bool useCurrentFormat = false;
+                bool hasText = false, hasCommands = false, hasHints = false;
 
-            lua_pushnil(L);
-            while (lua_next(L, 1) != 0) {
-                if (lua_type(L, -2) != LUA_TSTRING) {
-                    lua_pop(L, 1);
-                    continue;
-                }
-                const QString key = getVerifiedString(L, __func__, -2, "table key");
-
-                if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
-                    windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
-                } else if (!key.compare(QLatin1String("text"), Qt::CaseInsensitive)) {
-                    text = getVerifiedString(L, __func__, -1, qPrintable(key));
-                    hasText = true;
-                } else if (!key.compare(QLatin1String("commands"), Qt::CaseInsensitive)) {
-                    int valueIndex = -1;
-                    parseCommandsOrFunctionsTable(L, __func__, valueIndex, commandList, luaReferences);
-                    hasCommands = true;
-                } else if (!key.compare(QLatin1String("hints"), Qt::CaseInsensitive)) {
-                    int valueIndex = -1;
-                    parseHintsTable(L, __func__, valueIndex, hintList);
-                    hasHints = true;
-                } else if (!key.compare(QLatin1String("useCurrentFormat"), Qt::CaseInsensitive)) {
-                    if (lua_isboolean(L, -1)) {
-                        useCurrentFormat = lua_toboolean(L, -1);
-                    }
-                }
-
-                lua_pop(L, 1);
-            }
-
-            if (!hasText) {
-                for (int ref : luaReferences) {
-                    if (ref) {
-                        luaL_unref(L, LUA_REGISTRYINDEX, ref);
-                    }
-                }
-                return warnArgumentValue(L, __func__, "missing required 'text' in table");
-            }
-            if (!hasCommands) {
-                for (int ref : luaReferences) {
-                    if (ref) {
-                        luaL_unref(L, LUA_REGISTRYINDEX, ref);
-                    }
-                }
-                return warnArgumentValue(L, __func__, "missing required 'commands' in table");
-            }
-            if (!hasHints) {
-                for (int ref : luaReferences) {
-                    if (ref) {
-                        luaL_unref(L, LUA_REGISTRYINDEX, ref);
-                    }
-                }
-                return warnArgumentValue(L, __func__, "missing required 'hints' in table");
-            }
-
-            if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
-                for (int ref : luaReferences) {
-                    if (ref) {
-                        luaL_unref(L, LUA_REGISTRYINDEX, ref);
-                    }
-                }
                 lua_pushnil(L);
-                lua_pushfstring(L,
-                                "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup",
-                                commandList.size(),
-                                hintList.size());
-                return 2;
+                while (lua_next(L, 1) != 0) {
+                    if (!checkStringArg(L, __func__, -2, "table key")) {
+                        errorPushed = true;
+                        break;
+                    }
+
+                    // read the key from a copy: lua_tostring() on the slot
+                    // itself converts a numeric key in place, which makes the
+                    // next lua_next() fail
+                    lua_pushvalue(L, -2);
+                    const QString key = QString{lua_tostring(L, -1)};
+                    lua_pop(L, 1);
+
+                    if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
+                        if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                            errorPushed = true;
+                            break;
+                        }
+                        windowName = lua_tostring(L, -1);
+                    } else if (!key.compare(QLatin1String("text"), Qt::CaseInsensitive)) {
+                        if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                            errorPushed = true;
+                            break;
+                        }
+                        text = lua_tostring(L, -1);
+                        hasText = true;
+                    } else if (!key.compare(QLatin1String("commands"), Qt::CaseInsensitive)) {
+                        // the check runs lua_next() on the index it is given, so
+                        // the value has to be named by an absolute index - which
+                        // is also what the parse would have normalised -1 to
+                        int valueIndex = lua_gettop(L);
+                        if (!checkCommandsOrFunctionsTable(L, __func__, valueIndex)) {
+                            errorPushed = true;
+                            break;
+                        }
+                        parseCommandsOrFunctionsTable(L, __func__, valueIndex, commandList, luaReferences);
+                        hasCommands = true;
+                    } else if (!key.compare(QLatin1String("hints"), Qt::CaseInsensitive)) {
+                        int valueIndex = lua_gettop(L);
+                        if (!checkHintsTable(L, __func__, valueIndex)) {
+                            errorPushed = true;
+                            break;
+                        }
+                        parseHintsTable(L, __func__, valueIndex, hintList);
+                        hasHints = true;
+                    } else if (!key.compare(QLatin1String("useCurrentFormat"), Qt::CaseInsensitive)) {
+                        if (lua_isboolean(L, -1)) {
+                            useCurrentFormat = lua_toboolean(L, -1);
+                        }
+                    }
+
+                    lua_pop(L, 1);
+                }
+
+                if (!errorPushed) {
+                    if (!hasText) {
+                        for (int ref : luaReferences) {
+                            if (ref) {
+                                luaL_unref(L, LUA_REGISTRYINDEX, ref);
+                            }
+                        }
+                        return warnArgumentValue(L, __func__, "missing required 'text' in table");
+                    }
+                    if (!hasCommands) {
+                        for (int ref : luaReferences) {
+                            if (ref) {
+                                luaL_unref(L, LUA_REGISTRYINDEX, ref);
+                            }
+                        }
+                        return warnArgumentValue(L, __func__, "missing required 'commands' in table");
+                    }
+                    if (!hasHints) {
+                        for (int ref : luaReferences) {
+                            if (ref) {
+                                luaL_unref(L, LUA_REGISTRYINDEX, ref);
+                            }
+                        }
+                        return warnArgumentValue(L, __func__, "missing required 'hints' in table");
+                    }
+
+                    if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
+                        for (int ref : luaReferences) {
+                            if (ref) {
+                                luaL_unref(L, LUA_REGISTRYINDEX, ref);
+                            }
+                        }
+                        lua_pushnil(L);
+                        lua_pushfstring(L,
+                                        "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup",
+                                        commandList.size(),
+                                        hintList.size());
+                        return 2;
+                    }
+
+                    auto console = CONSOLE(L, windowName);
+                    console->insertLink(text, commandList, hintList, useCurrentFormat, luaReferences);
+                    lua_pushboolean(L, true);
+                    return 1;
+                }
+
+                for (int ref : luaReferences) {
+                    if (ref) {
+                        luaL_unref(L, LUA_REGISTRYINDEX, ref);
+                    }
+                }
             }
 
-            auto console = CONSOLE(L, windowName);
-            console->insertLink(text, commandList, hintList, useCurrentFormat, luaReferences);
-            lua_pushboolean(L, true);
-            return 1;
+            return lua_error(L);
         }
     }
 
@@ -3115,73 +3378,107 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
 
     // Support both table and ordered arguments
     if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
-        QString windowName;
-        int r = 0, g = 0, b = 0;
-        int alpha = 255;
-        // Table argument format: {windowName="name", r=N, g=N, b=N, alpha=N}
-        bool hasR = false, hasG = false, hasB = false;
+        // lua_error() longjmps past C++ destructors, so every QString below has
+        // to be out of scope before the raise at the end - see checkStringArg()
+        bool errorPushed = false;
+        {
+            QString windowName;
+            int r = 0, g = 0, b = 0;
+            int alpha = 255;
+            // Table argument format: {windowName="name", r=N, g=N, b=N, alpha=N}
+            bool hasR = false, hasG = false, hasB = false;
 
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
                 lua_pop(L, 1);
-                continue;
+
+                if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, "windowName")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    windowName = lua_tostring(L, -1);
+                } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) || !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "red component")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    r = static_cast<int>(lua_tointeger(L, -1));
+                    hasR = true;
+                } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) || !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "green component")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    g = static_cast<int>(lua_tointeger(L, -1));
+                    hasG = true;
+                } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) || !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "blue component")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    b = static_cast<int>(lua_tointeger(L, -1));
+                    hasB = true;
+                } else if (!key.compare(QLatin1String("alpha"), Qt::CaseInsensitive) || !key.compare(QLatin1String("transparency"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "alpha component")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    alpha = static_cast<int>(lua_tointeger(L, -1));
+                }
+
+                lua_pop(L, 1); // Remove value, keep key for next iteration
             }
-            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
-            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, "windowName");
-            } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) || !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
-                r = getVerifiedInt(L, __func__, -1, "red component");
-                hasR = true;
-            } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) || !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
-                g = getVerifiedInt(L, __func__, -1, "green component");
-                hasG = true;
-            } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) || !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
-                b = getVerifiedInt(L, __func__, -1, "blue component");
-                hasB = true;
-            } else if (!key.compare(QLatin1String("alpha"), Qt::CaseInsensitive) || !key.compare(QLatin1String("transparency"), Qt::CaseInsensitive)) {
-                alpha = getVerifiedInt(L, __func__, -1, "alpha component");
+            if (!errorPushed) {
+                // Validate required parameters
+                if (!hasR) {
+                    lua_pushfstring(L, "%s: missing required 'r' or 'red' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasG) {
+                    lua_pushfstring(L, "%s: missing required 'g' or 'green' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasB) {
+                    lua_pushfstring(L, "%s: missing required 'b' or 'blue' in table", __func__);
+                    errorPushed = true;
+                } else {
+                    // Validate RGB and alpha values
+                    if (!validRange(r)) {
+                        return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
+                    }
+                    if (!validRange(g)) {
+                        return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
+                    }
+                    if (!validRange(b)) {
+                        return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
+                    }
+                    if (!validRange(alpha)) {
+                        return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(alpha));
+                    }
+
+                    if (isMain(windowName)) {
+                        host.mBgColor.setRgb(r, g, b, alpha);
+                        host.mpConsole->setConsoleBgColor(r, g, b, alpha);
+                    } else if (!host.setBackgroundColor(windowName, r, g, b, alpha)) {
+                        return warnArgumentValue(L, __func__, qsl("window/label '%1' not found").arg(windowName));
+                    }
+                    lua_pushboolean(L, true);
+                    return 1;
+                }
             }
-
-            lua_pop(L, 1); // Remove value, keep key for next iteration
         }
 
-        // Validate required parameters
-        if (!hasR) {
-            lua_pushfstring(L, "%s: missing required 'r' or 'red' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasG) {
-            lua_pushfstring(L, "%s: missing required 'g' or 'green' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasB) {
-            lua_pushfstring(L, "%s: missing required 'b' or 'blue' in table", __func__);
-            return lua_error(L);
-        }
-        // Validate RGB and alpha values
-        if (!validRange(r)) {
-            return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
-        }
-        if (!validRange(g)) {
-            return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
-        }
-        if (!validRange(b)) {
-            return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
-        }
-        if (!validRange(alpha)) {
-            return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(alpha));
-        }
-
-        if (isMain(windowName)) {
-            host.mBgColor.setRgb(r, g, b, alpha);
-            host.mpConsole->setConsoleBgColor(r, g, b, alpha);
-        } else if (!host.setBackgroundColor(windowName, r, g, b, alpha)) {
-            return warnArgumentValue(L, __func__, qsl("window/label '%1' not found").arg(windowName));
-        }
-        lua_pushboolean(L, true);
-        return 1;
+        return lua_error(L);
     }
 
     const char* windowNameArg = "";
@@ -3300,69 +3597,102 @@ int TLuaInterpreter::setBgColor(lua_State* L)
 
     // Support both table and ordered arguments
     if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
-        QString windowName;
-        int r = 0, g = 0, b = 0;
-        int alpha = 255;
-        // Table argument format: {windowName="name", r=N, g=N, b=N, alpha=N}
-        bool hasR = false, hasG = false, hasB = false;
+        // lua_error() longjmps past C++ destructors, so every QString below has
+        // to be out of scope before the raise at the end - see checkStringArg()
+        bool errorPushed = false;
+        {
+            QString windowName;
+            int r = 0, g = 0, b = 0;
+            int alpha = 255;
+            // Table argument format: {windowName="name", r=N, g=N, b=N, alpha=N}
+            bool hasR = false, hasG = false, hasB = false;
 
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
                 lua_pop(L, 1);
-                continue;
+
+                if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, "windowName")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    windowName = lua_tostring(L, -1);
+                } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) || !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "red component")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    r = static_cast<int>(lua_tointeger(L, -1));
+                    hasR = true;
+                } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) || !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "green component")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    g = static_cast<int>(lua_tointeger(L, -1));
+                    hasG = true;
+                } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) || !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "blue component")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    b = static_cast<int>(lua_tointeger(L, -1));
+                    hasB = true;
+                } else if (!key.compare(QLatin1String("alpha"), Qt::CaseInsensitive) || !key.compare(QLatin1String("transparency"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "alpha component")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    alpha = static_cast<int>(lua_tointeger(L, -1));
+                }
+
+                lua_pop(L, 1); // Remove value, keep key for next iteration
             }
-            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
-            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, "windowName");
-            } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) || !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
-                r = getVerifiedInt(L, __func__, -1, "red component");
-                hasR = true;
-            } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) || !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
-                g = getVerifiedInt(L, __func__, -1, "green component");
-                hasG = true;
-            } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) || !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
-                b = getVerifiedInt(L, __func__, -1, "blue component");
-                hasB = true;
-            } else if (!key.compare(QLatin1String("alpha"), Qt::CaseInsensitive) || !key.compare(QLatin1String("transparency"), Qt::CaseInsensitive)) {
-                alpha = getVerifiedInt(L, __func__, -1, "alpha component");
+            if (!errorPushed) {
+                // Validate required parameters
+                if (!hasR) {
+                    lua_pushfstring(L, "%s: missing required 'r' or 'red' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasG) {
+                    lua_pushfstring(L, "%s: missing required 'g' or 'green' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasB) {
+                    lua_pushfstring(L, "%s: missing required 'b' or 'blue' in table", __func__);
+                    errorPushed = true;
+                } else {
+                    if (!validRange(r)) {
+                        return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
+                    }
+                    if (!validRange(g)) {
+                        return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
+                    }
+                    if (!validRange(b)) {
+                        return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
+                    }
+                    if (!validRange(alpha)) {
+                        return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(alpha));
+                    }
+
+                    auto console = CONSOLE(L, windowName);
+                    console->setBgColor(r, g, b, alpha);
+                    lua_pushboolean(L, true);
+                    return 1;
+                }
             }
-
-            lua_pop(L, 1); // Remove value, keep key for next iteration
         }
 
-        // Validate required parameters
-        if (!hasR) {
-            lua_pushfstring(L, "%s: missing required 'r' or 'red' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasG) {
-            lua_pushfstring(L, "%s: missing required 'g' or 'green' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasB) {
-            lua_pushfstring(L, "%s: missing required 'b' or 'blue' in table", __func__);
-            return lua_error(L);
-        }
-
-        if (!validRange(r)) {
-            return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
-        }
-        if (!validRange(g)) {
-            return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
-        }
-        if (!validRange(b)) {
-            return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
-        }
-        if (!validRange(alpha)) {
-            return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(alpha));
-        }
-
-        auto console = CONSOLE(L, windowName);
-        console->setBgColor(r, g, b, alpha);
-        lua_pushboolean(L, true);
-        return 1;
+        return lua_error(L);
     }
 
     const char* windowName = "";
@@ -4147,138 +4477,173 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 
     // Check if first argument is a table for named-key format
     if (lua_istable(L, 1)) {
-        QString windowName = qsl("main");
-        int bgR = 0, bgG = 0, bgB = 0, fgR = 0, fgG = 0, fgB = 0;
-        bool bold = false, underline = false, italics = false;
-        bool strikeout = false, overline = false, reverse = false;
-        bool hasBgR = false, hasBgG = false, hasBgB = false;
-        bool hasFgR = false, hasFgG = false, hasFgB = false;
-        bool hasBold = false, hasUnderline = false, hasItalics = false;
+        // lua_error() longjmps past C++ destructors, so every QString below has
+        // to be out of scope before the raise at the end - see checkStringArg()
+        bool errorPushed = false;
+        {
+            QString windowName = qsl("main");
+            int bgR = 0, bgG = 0, bgB = 0, fgR = 0, fgG = 0, fgB = 0;
+            bool bold = false, underline = false, italics = false;
+            bool strikeout = false, overline = false, reverse = false;
+            bool hasBgR = false, hasBgG = false, hasBgB = false;
+            bool hasFgR = false, hasFgG = false, hasFgB = false;
+            bool hasBold = false, hasUnderline = false, hasItalics = false;
 
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
                 lua_pop(L, 1);
-                continue;
+
+                if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    windowName = lua_tostring(L, -1);
+                } else if (!key.compare(QLatin1String("bgR"), Qt::CaseInsensitive) || !key.compare(QLatin1String("bgRed"), Qt::CaseInsensitive)
+                           || !key.compare(QLatin1String("backgroundRed"), Qt::CaseInsensitive)) {
+                    if (!checkNumberArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    bgR = qRound(qBound(0.0, lua_tonumber(L, -1), 255.0));
+                    hasBgR = true;
+                } else if (!key.compare(QLatin1String("bgG"), Qt::CaseInsensitive) || !key.compare(QLatin1String("bgGreen"), Qt::CaseInsensitive)
+                           || !key.compare(QLatin1String("backgroundGreen"), Qt::CaseInsensitive)) {
+                    if (!checkNumberArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    bgG = qRound(qBound(0.0, lua_tonumber(L, -1), 255.0));
+                    hasBgG = true;
+                } else if (!key.compare(QLatin1String("bgB"), Qt::CaseInsensitive) || !key.compare(QLatin1String("bgBlue"), Qt::CaseInsensitive)
+                           || !key.compare(QLatin1String("backgroundBlue"), Qt::CaseInsensitive)) {
+                    if (!checkNumberArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    bgB = qRound(qBound(0.0, lua_tonumber(L, -1), 255.0));
+                    hasBgB = true;
+                } else if (!key.compare(QLatin1String("fgR"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fgRed"), Qt::CaseInsensitive)
+                           || !key.compare(QLatin1String("foregroundRed"), Qt::CaseInsensitive)) {
+                    if (!checkNumberArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    fgR = qRound(qBound(0.0, lua_tonumber(L, -1), 255.0));
+                    hasFgR = true;
+                } else if (!key.compare(QLatin1String("fgG"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fgGreen"), Qt::CaseInsensitive)
+                           || !key.compare(QLatin1String("foregroundGreen"), Qt::CaseInsensitive)) {
+                    if (!checkNumberArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    fgG = qRound(qBound(0.0, lua_tonumber(L, -1), 255.0));
+                    hasFgG = true;
+                } else if (!key.compare(QLatin1String("fgB"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fgBlue"), Qt::CaseInsensitive)
+                           || !key.compare(QLatin1String("foregroundBlue"), Qt::CaseInsensitive)) {
+                    if (!checkNumberArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    fgB = qRound(qBound(0.0, lua_tonumber(L, -1), 255.0));
+                    hasFgB = true;
+                } else if (!key.compare(QLatin1String("bold"), Qt::CaseInsensitive)) {
+                    if (lua_isboolean(L, -1)) {
+                        bold = lua_toboolean(L, -1);
+                    } else if (lua_isnumber(L, -1)) {
+                        bold = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                    }
+                    hasBold = true;
+                } else if (!key.compare(QLatin1String("underline"), Qt::CaseInsensitive)) {
+                    if (lua_isboolean(L, -1)) {
+                        underline = lua_toboolean(L, -1);
+                    } else if (lua_isnumber(L, -1)) {
+                        underline = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                    }
+                    hasUnderline = true;
+                } else if (!key.compare(QLatin1String("italics"), Qt::CaseInsensitive) || !key.compare(QLatin1String("italic"), Qt::CaseInsensitive)) {
+                    if (lua_isboolean(L, -1)) {
+                        italics = lua_toboolean(L, -1);
+                    } else if (lua_isnumber(L, -1)) {
+                        italics = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                    }
+                    hasItalics = true;
+                } else if (!key.compare(QLatin1String("strikeout"), Qt::CaseInsensitive) || !key.compare(QLatin1String("strikeOut"), Qt::CaseInsensitive)) {
+                    if (lua_isboolean(L, -1)) {
+                        strikeout = lua_toboolean(L, -1);
+                    } else if (lua_isnumber(L, -1)) {
+                        strikeout = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                    }
+                } else if (!key.compare(QLatin1String("overline"), Qt::CaseInsensitive)) {
+                    if (lua_isboolean(L, -1)) {
+                        overline = lua_toboolean(L, -1);
+                    } else if (lua_isnumber(L, -1)) {
+                        overline = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                    }
+                } else if (!key.compare(QLatin1String("reverse"), Qt::CaseInsensitive)) {
+                    if (lua_isboolean(L, -1)) {
+                        reverse = lua_toboolean(L, -1);
+                    } else if (lua_isnumber(L, -1)) {
+                        reverse = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                    }
+                }
+
+                lua_pop(L, 1);
             }
-            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
-            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
-            } else if (!key.compare(QLatin1String("bgR"), Qt::CaseInsensitive) || !key.compare(QLatin1String("bgRed"), Qt::CaseInsensitive)
-                       || !key.compare(QLatin1String("backgroundRed"), Qt::CaseInsensitive)) {
-                bgR = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, qPrintable(key)), 255.0));
-                hasBgR = true;
-            } else if (!key.compare(QLatin1String("bgG"), Qt::CaseInsensitive) || !key.compare(QLatin1String("bgGreen"), Qt::CaseInsensitive)
-                       || !key.compare(QLatin1String("backgroundGreen"), Qt::CaseInsensitive)) {
-                bgG = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, qPrintable(key)), 255.0));
-                hasBgG = true;
-            } else if (!key.compare(QLatin1String("bgB"), Qt::CaseInsensitive) || !key.compare(QLatin1String("bgBlue"), Qt::CaseInsensitive)
-                       || !key.compare(QLatin1String("backgroundBlue"), Qt::CaseInsensitive)) {
-                bgB = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, qPrintable(key)), 255.0));
-                hasBgB = true;
-            } else if (!key.compare(QLatin1String("fgR"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fgRed"), Qt::CaseInsensitive)
-                       || !key.compare(QLatin1String("foregroundRed"), Qt::CaseInsensitive)) {
-                fgR = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, qPrintable(key)), 255.0));
-                hasFgR = true;
-            } else if (!key.compare(QLatin1String("fgG"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fgGreen"), Qt::CaseInsensitive)
-                       || !key.compare(QLatin1String("foregroundGreen"), Qt::CaseInsensitive)) {
-                fgG = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, qPrintable(key)), 255.0));
-                hasFgG = true;
-            } else if (!key.compare(QLatin1String("fgB"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fgBlue"), Qt::CaseInsensitive)
-                       || !key.compare(QLatin1String("foregroundBlue"), Qt::CaseInsensitive)) {
-                fgB = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, qPrintable(key)), 255.0));
-                hasFgB = true;
-            } else if (!key.compare(QLatin1String("bold"), Qt::CaseInsensitive)) {
-                if (lua_isboolean(L, -1)) {
-                    bold = lua_toboolean(L, -1);
-                } else if (lua_isnumber(L, -1)) {
-                    bold = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
-                }
-                hasBold = true;
-            } else if (!key.compare(QLatin1String("underline"), Qt::CaseInsensitive)) {
-                if (lua_isboolean(L, -1)) {
-                    underline = lua_toboolean(L, -1);
-                } else if (lua_isnumber(L, -1)) {
-                    underline = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
-                }
-                hasUnderline = true;
-            } else if (!key.compare(QLatin1String("italics"), Qt::CaseInsensitive) || !key.compare(QLatin1String("italic"), Qt::CaseInsensitive)) {
-                if (lua_isboolean(L, -1)) {
-                    italics = lua_toboolean(L, -1);
-                } else if (lua_isnumber(L, -1)) {
-                    italics = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
-                }
-                hasItalics = true;
-            } else if (!key.compare(QLatin1String("strikeout"), Qt::CaseInsensitive) || !key.compare(QLatin1String("strikeOut"), Qt::CaseInsensitive)) {
-                if (lua_isboolean(L, -1)) {
-                    strikeout = lua_toboolean(L, -1);
-                } else if (lua_isnumber(L, -1)) {
-                    strikeout = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
-                }
-            } else if (!key.compare(QLatin1String("overline"), Qt::CaseInsensitive)) {
-                if (lua_isboolean(L, -1)) {
-                    overline = lua_toboolean(L, -1);
-                } else if (lua_isnumber(L, -1)) {
-                    overline = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
-                }
-            } else if (!key.compare(QLatin1String("reverse"), Qt::CaseInsensitive)) {
-                if (lua_isboolean(L, -1)) {
-                    reverse = lua_toboolean(L, -1);
-                } else if (lua_isnumber(L, -1)) {
-                    reverse = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+            if (!errorPushed) {
+                if (!hasBgR) {
+                    lua_pushfstring(L, "setTextFormat: bad argument, missing 'bgR', 'bgRed', or 'backgroundRed' in table");
+                    errorPushed = true;
+                } else if (!hasBgG) {
+                    lua_pushfstring(L, "setTextFormat: bad argument, missing 'bgG', 'bgGreen', or 'backgroundGreen' in table");
+                    errorPushed = true;
+                } else if (!hasBgB) {
+                    lua_pushfstring(L, "setTextFormat: bad argument, missing 'bgB', 'bgBlue', or 'backgroundBlue' in table");
+                    errorPushed = true;
+                } else if (!hasFgR) {
+                    lua_pushfstring(L, "setTextFormat: bad argument, missing 'fgR', 'fgRed', or 'foregroundRed' in table");
+                    errorPushed = true;
+                } else if (!hasFgG) {
+                    lua_pushfstring(L, "setTextFormat: bad argument, missing 'fgG', 'fgGreen', or 'foregroundGreen' in table");
+                    errorPushed = true;
+                } else if (!hasFgB) {
+                    lua_pushfstring(L, "setTextFormat: bad argument, missing 'fgB', 'fgBlue', or 'foregroundBlue' in table");
+                    errorPushed = true;
+                } else if (!hasBold) {
+                    lua_pushfstring(L, "setTextFormat: bad argument, missing 'bold' in table");
+                    errorPushed = true;
+                } else if (!hasUnderline) {
+                    lua_pushfstring(L, "setTextFormat: bad argument, missing 'underline' in table");
+                    errorPushed = true;
+                } else if (!hasItalics) {
+                    lua_pushfstring(L, "setTextFormat: bad argument, missing 'italics' or 'italic' in table");
+                    errorPushed = true;
+                } else {
+                    TChar::AttributeFlags const flags = (bold ? TChar::Bold : TChar::None) | (italics ? TChar::Italic : TChar::None) | (overline ? TChar::Overline : TChar::None)
+                                                        | (reverse ? TChar::Reverse : TChar::None) | (strikeout ? TChar::StrikeOut : TChar::None) | (underline ? TChar::Underline : TChar::None);
+
+                    if (!host.mpConsole->setTextFormat(windowName, QColor(fgR, fgG, fgB), QColor(bgR, bgG, bgB), flags)) {
+                        return warnArgumentValue(L, __func__, qsl("window '%1' does not exist").arg(windowName), true);
+                    }
+
+                    lua_pushboolean(L, true);
+                    return 1;
                 }
             }
-
-            lua_pop(L, 1);
         }
 
-        if (!hasBgR) {
-            lua_pushfstring(L, "setTextFormat: bad argument, missing 'bgR', 'bgRed', or 'backgroundRed' in table");
-            return lua_error(L);
-        }
-        if (!hasBgG) {
-            lua_pushfstring(L, "setTextFormat: bad argument, missing 'bgG', 'bgGreen', or 'backgroundGreen' in table");
-            return lua_error(L);
-        }
-        if (!hasBgB) {
-            lua_pushfstring(L, "setTextFormat: bad argument, missing 'bgB', 'bgBlue', or 'backgroundBlue' in table");
-            return lua_error(L);
-        }
-        if (!hasFgR) {
-            lua_pushfstring(L, "setTextFormat: bad argument, missing 'fgR', 'fgRed', or 'foregroundRed' in table");
-            return lua_error(L);
-        }
-        if (!hasFgG) {
-            lua_pushfstring(L, "setTextFormat: bad argument, missing 'fgG', 'fgGreen', or 'foregroundGreen' in table");
-            return lua_error(L);
-        }
-        if (!hasFgB) {
-            lua_pushfstring(L, "setTextFormat: bad argument, missing 'fgB', 'fgBlue', or 'foregroundBlue' in table");
-            return lua_error(L);
-        }
-        if (!hasBold) {
-            lua_pushfstring(L, "setTextFormat: bad argument, missing 'bold' in table");
-            return lua_error(L);
-        }
-        if (!hasUnderline) {
-            lua_pushfstring(L, "setTextFormat: bad argument, missing 'underline' in table");
-            return lua_error(L);
-        }
-        if (!hasItalics) {
-            lua_pushfstring(L, "setTextFormat: bad argument, missing 'italics' or 'italic' in table");
-            return lua_error(L);
-        }
-
-        TChar::AttributeFlags const flags = (bold ? TChar::Bold : TChar::None) | (italics ? TChar::Italic : TChar::None) | (overline ? TChar::Overline : TChar::None)
-                                            | (reverse ? TChar::Reverse : TChar::None) | (strikeout ? TChar::StrikeOut : TChar::None) | (underline ? TChar::Underline : TChar::None);
-
-        if (!host.mpConsole->setTextFormat(windowName, QColor(fgR, fgG, fgB), QColor(bgR, bgG, bgB), flags)) {
-            return warnArgumentValue(L, __func__, qsl("window '%1' does not exist").arg(windowName), true);
-        }
-
-        lua_pushboolean(L, true);
-        return 1;
+        return lua_error(L);
     }
 
     // Every argument check below can raise a Lua error, and lua_error() longjmps
@@ -4619,74 +4984,107 @@ int TLuaInterpreter::setCommandBackgroundColor(lua_State* L)
 
     // Check if first argument is a table for named-key format
     if (lua_istable(L, 1)) {
-        QString windowName = qsl("main");
-        int r = 0, g = 0, b = 0;
-        int alpha = 255;
-        bool hasR = false, hasG = false, hasB = false;
+        // lua_error() longjmps past C++ destructors, so every QString below has
+        // to be out of scope before the raise at the end - see checkStringArg()
+        bool errorPushed = false;
+        {
+            QString windowName = qsl("main");
+            int r = 0, g = 0, b = 0;
+            int alpha = 255;
+            bool hasR = false, hasG = false, hasB = false;
 
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
                 lua_pop(L, 1);
-                continue;
+
+                if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    windowName = lua_tostring(L, -1);
+                } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) || !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    r = static_cast<int>(lua_tointeger(L, -1));
+                    hasR = true;
+                    if (!validRange(r)) {
+                        lua_pop(L, 2);
+                        return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
+                    }
+                } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) || !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    g = static_cast<int>(lua_tointeger(L, -1));
+                    hasG = true;
+                    if (!validRange(g)) {
+                        lua_pop(L, 2);
+                        return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
+                    }
+                } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) || !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    b = static_cast<int>(lua_tointeger(L, -1));
+                    hasB = true;
+                    if (!validRange(b)) {
+                        lua_pop(L, 2);
+                        return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
+                    }
+                } else if (!key.compare(QLatin1String("alpha"), Qt::CaseInsensitive) || !key.compare(QLatin1String("transparency"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    alpha = static_cast<int>(lua_tointeger(L, -1));
+                    if (!validRange(alpha)) {
+                        lua_pop(L, 2);
+                        return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(alpha));
+                    }
+                }
+
+                lua_pop(L, 1);
             }
-            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
-            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
-            } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) || !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
-                r = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasR = true;
-                if (!validRange(r)) {
-                    lua_pop(L, 2);
-                    return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
-                }
-            } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) || !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
-                g = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasG = true;
-                if (!validRange(g)) {
-                    lua_pop(L, 2);
-                    return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
-                }
-            } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) || !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
-                b = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasB = true;
-                if (!validRange(b)) {
-                    lua_pop(L, 2);
-                    return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
-                }
-            } else if (!key.compare(QLatin1String("alpha"), Qt::CaseInsensitive) || !key.compare(QLatin1String("transparency"), Qt::CaseInsensitive)) {
-                alpha = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                if (!validRange(alpha)) {
-                    lua_pop(L, 2);
-                    return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(alpha));
+            if (!errorPushed) {
+                if (!hasR) {
+                    lua_pushfstring(L, "setCommandBackgroundColor: bad argument, missing 'r' or 'red' in table");
+                    errorPushed = true;
+                } else if (!hasG) {
+                    lua_pushfstring(L, "setCommandBackgroundColor: bad argument, missing 'g' or 'green' in table");
+                    errorPushed = true;
+                } else if (!hasB) {
+                    lua_pushfstring(L, "setCommandBackgroundColor: bad argument, missing 'b' or 'blue' in table");
+                    errorPushed = true;
+                } else {
+                    if (isMain(windowName)) {
+                        host.mCommandBgColor.setRgb(r, g, b, alpha);
+                        host.mpConsole->setCommandBgColor(r, g, b, alpha);
+                    } else if (!host.setCommandBackgroundColor(windowName, r, g, b, alpha)) {
+                        return warnArgumentValue(L, __func__, qsl("window/label '%1' not found").arg(windowName));
+                    }
+                    lua_pushboolean(L, true);
+                    return 1;
                 }
             }
-
-            lua_pop(L, 1);
         }
 
-        if (!hasR) {
-            lua_pushfstring(L, "setCommandBackgroundColor: bad argument, missing 'r' or 'red' in table");
-            return lua_error(L);
-        }
-        if (!hasG) {
-            lua_pushfstring(L, "setCommandBackgroundColor: bad argument, missing 'g' or 'green' in table");
-            return lua_error(L);
-        }
-        if (!hasB) {
-            lua_pushfstring(L, "setCommandBackgroundColor: bad argument, missing 'b' or 'blue' in table");
-            return lua_error(L);
-        }
-
-        if (isMain(windowName)) {
-            host.mCommandBgColor.setRgb(r, g, b, alpha);
-            host.mpConsole->setCommandBgColor(r, g, b, alpha);
-        } else if (!host.setCommandBackgroundColor(windowName, r, g, b, alpha)) {
-            return warnArgumentValue(L, __func__, qsl("window/label '%1' not found").arg(windowName));
-        }
-        lua_pushboolean(L, true);
-        return 1;
+        return lua_error(L);
     }
 
     const char* windowNameArg = "";
@@ -4750,74 +5148,107 @@ int TLuaInterpreter::setCommandForegroundColor(lua_State* L)
 
     // Check if first argument is a table for named-key format
     if (lua_istable(L, 1)) {
-        QString windowName = qsl("main");
-        int r = 0, g = 0, b = 0;
-        int alpha = 255;
-        bool hasR = false, hasG = false, hasB = false;
+        // lua_error() longjmps past C++ destructors, so every QString below has
+        // to be out of scope before the raise at the end - see checkStringArg()
+        bool errorPushed = false;
+        {
+            QString windowName = qsl("main");
+            int r = 0, g = 0, b = 0;
+            int alpha = 255;
+            bool hasR = false, hasG = false, hasB = false;
 
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
                 lua_pop(L, 1);
-                continue;
+
+                if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    windowName = lua_tostring(L, -1);
+                } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) || !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    r = static_cast<int>(lua_tointeger(L, -1));
+                    hasR = true;
+                    if (!validRange(r)) {
+                        lua_pop(L, 2);
+                        return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
+                    }
+                } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) || !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    g = static_cast<int>(lua_tointeger(L, -1));
+                    hasG = true;
+                    if (!validRange(g)) {
+                        lua_pop(L, 2);
+                        return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
+                    }
+                } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) || !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    b = static_cast<int>(lua_tointeger(L, -1));
+                    hasB = true;
+                    if (!validRange(b)) {
+                        lua_pop(L, 2);
+                        return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
+                    }
+                } else if (!key.compare(QLatin1String("alpha"), Qt::CaseInsensitive) || !key.compare(QLatin1String("transparency"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    alpha = static_cast<int>(lua_tointeger(L, -1));
+                    if (!validRange(alpha)) {
+                        lua_pop(L, 2);
+                        return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(alpha));
+                    }
+                }
+
+                lua_pop(L, 1);
             }
-            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
-            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
-            } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) || !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
-                r = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasR = true;
-                if (!validRange(r)) {
-                    lua_pop(L, 2);
-                    return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
-                }
-            } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) || !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
-                g = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasG = true;
-                if (!validRange(g)) {
-                    lua_pop(L, 2);
-                    return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
-                }
-            } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) || !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
-                b = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                hasB = true;
-                if (!validRange(b)) {
-                    lua_pop(L, 2);
-                    return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
-                }
-            } else if (!key.compare(QLatin1String("alpha"), Qt::CaseInsensitive) || !key.compare(QLatin1String("transparency"), Qt::CaseInsensitive)) {
-                alpha = getVerifiedInt(L, __func__, -1, qPrintable(key));
-                if (!validRange(alpha)) {
-                    lua_pop(L, 2);
-                    return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(alpha));
+            if (!errorPushed) {
+                if (!hasR) {
+                    lua_pushfstring(L, "setCommandForegroundColor: bad argument, missing 'r' or 'red' in table");
+                    errorPushed = true;
+                } else if (!hasG) {
+                    lua_pushfstring(L, "setCommandForegroundColor: bad argument, missing 'g' or 'green' in table");
+                    errorPushed = true;
+                } else if (!hasB) {
+                    lua_pushfstring(L, "setCommandForegroundColor: bad argument, missing 'b' or 'blue' in table");
+                    errorPushed = true;
+                } else {
+                    if (isMain(windowName)) {
+                        host.mCommandFgColor.setRgb(r, g, b, alpha);
+                        host.mpConsole->setCommandFgColor(r, g, b, alpha);
+                    } else if (!host.setCommandForegroundColor(windowName, r, g, b, alpha)) {
+                        return warnArgumentValue(L, __func__, qsl("window/label '%1' not found").arg(windowName));
+                    }
+                    lua_pushboolean(L, true);
+                    return 1;
                 }
             }
-
-            lua_pop(L, 1);
         }
 
-        if (!hasR) {
-            lua_pushfstring(L, "setCommandForegroundColor: bad argument, missing 'r' or 'red' in table");
-            return lua_error(L);
-        }
-        if (!hasG) {
-            lua_pushfstring(L, "setCommandForegroundColor: bad argument, missing 'g' or 'green' in table");
-            return lua_error(L);
-        }
-        if (!hasB) {
-            lua_pushfstring(L, "setCommandForegroundColor: bad argument, missing 'b' or 'blue' in table");
-            return lua_error(L);
-        }
-
-        if (isMain(windowName)) {
-            host.mCommandFgColor.setRgb(r, g, b, alpha);
-            host.mpConsole->setCommandFgColor(r, g, b, alpha);
-        } else if (!host.setCommandForegroundColor(windowName, r, g, b, alpha)) {
-            return warnArgumentValue(L, __func__, qsl("window/label '%1' not found").arg(windowName));
-        }
-        lua_pushboolean(L, true);
-        return 1;
+        return lua_error(L);
     }
 
     const char* windowNameArg = "";
