@@ -57,6 +57,7 @@
 #include "TMxpProcessor.h"
 #include "TMxpFrameManager.h"
 
+class QDockWidget;
 class QJsonObject;
 class QKeyEvent;
 
@@ -396,6 +397,7 @@ public:
     void setBufferSearchOptions(const TConsole::SearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
     std::optional<QString> getMapperTitle() const;
+    QDockWidget* mapWidget() const;
 
     // Multiple map views support
     std::pair<int, QString> createMapView(int areaId = 0);
