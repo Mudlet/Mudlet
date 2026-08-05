@@ -119,24 +119,26 @@ private:
     // comment above). The buffers are one byte larger than the limit they hold:
     // sized at exactly the limit, the null terminator would take the last byte
     // and a field of the full documented length would always lose its final
-    // character.
-    static constexpr size_t scmTextByteLimit = 128;
-    static constexpr size_t scmImageKeyByteLimit = 32;
+    // character. Named in the 'k' form the rest of the codebase gives an array
+    // size (TArea.cpp's kPixmapDataLineSize) rather than the 'scm' one it gives
+    // other static class members.
+    static constexpr size_t kTextByteLimit = 128;
+    static constexpr size_t kImageKeyByteLimit = 32;
 
-    char mState[scmTextByteLimit + 1];
-    char mDetails[scmTextByteLimit + 1];
+    char mState[kTextByteLimit + 1];
+    char mDetails[kTextByteLimit + 1];
     int64_t mStartTimestamp = 0;
     int64_t mEndTimestamp = 0;
-    char mLargeImageKey[scmImageKeyByteLimit + 1];
-    char mLargeImageText[scmTextByteLimit + 1];
-    char mSmallImageKey[scmImageKeyByteLimit + 1];
-    char mSmallImageText[scmTextByteLimit + 1];
-    char mPartyId[scmTextByteLimit + 1];
+    char mLargeImageKey[kImageKeyByteLimit + 1];
+    char mLargeImageText[kTextByteLimit + 1];
+    char mSmallImageKey[kImageKeyByteLimit + 1];
+    char mSmallImageText[kTextByteLimit + 1];
+    char mPartyId[kTextByteLimit + 1];
     int mPartySize = 0;
     int mPartyMax = 0;
-    char mMatchSecret[scmTextByteLimit + 1];
-    char mJoinSecret[scmTextByteLimit + 1];
-    char mSpectateSecret[scmTextByteLimit + 1];
+    char mMatchSecret[kTextByteLimit + 1];
+    char mJoinSecret[kTextByteLimit + 1];
+    char mSpectateSecret[kTextByteLimit + 1];
     int8_t mInstance = 1;
 };
 
