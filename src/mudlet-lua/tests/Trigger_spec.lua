@@ -127,6 +127,124 @@ describe("Trigger processing", function()
 
     end)
 
+    -- Color triggers must match the colors a line arrived with, even when an
+    -- earlier trigger in the same pass has already recolored it. The display
+    -- must still show the recolored version. Recoloring uses the same
+    -- TConsole::setFgColor path as the colorizer trigger checkbox, so this
+    -- covers both channels.
+    --
+    -- The color trigger callbacks are string code because tempAnsiColorTrigger
+    -- does not run function callbacks when the expiry argument is omitted, and
+    -- assertions check containment because default-palette text also matches
+    -- ANSI white-on-black, so the triggers can fire on unrelated lines too.
+    describe("color trigger original-color matching", function()
+
+        local function contains(list, value)
+            for _, v in ipairs(list) do
+                if v == value then
+                    return true
+                end
+            end
+            return false
+        end
+
+        it("should match original colors after an earlier trigger recolors the line", function()
+            _G.colorSnapshotMatches = {}
+            local highlighted = false
+            local lineNumber = nil
+
+            local highlightTrigger = tempRegexTrigger("^ColorSnapshotTest$", function()
+                lineNumber = getLineNumber()
+                if selectString("ColorSnapshotTest", 1) > -1 then
+                    setFgColor(255, 0, 0)
+                    setBgColor(255, 255, 0)
+                    highlighted = true
+                end
+                resetFormat()
+            end)
+            -- ANSI 7 = white foreground, ANSI 0 = black background
+            local colorTrigger = tempAnsiColorTrigger(7, 0,
+                [[table.insert(_G.colorSnapshotMatches, matches[1])]])
+
+            feedTriggers("\n\27[37;40mColorSnapshotTest\27[0m\n")
+
+            local matched = contains(_G.colorSnapshotMatches, "ColorSnapshotTest")
+            killTrigger(highlightTrigger)
+            killTrigger(colorTrigger)
+            _G.colorSnapshotMatches = nil
+
+            assert.is_true(highlighted, "Highlighting trigger should have run")
+            assert.is_true(matched, "Color trigger should match the original colors despite the recoloring")
+
+            -- The display must keep the recolored version
+            moveCursor(0, lineNumber)
+            selectString("ColorSnapshotTest", 1)
+            local r, g, b = getFgColor()
+            deselect()
+            resetFormat()
+            assert.are.equal(255, r, "Display should show the recolored foreground")
+            assert.are.equal(0, g)
+            assert.are.equal(0, b)
+        end)
+
+        it("should match original colors when the color trigger runs before the recoloring one", function()
+            _G.colorControlMatches = {}
+            local highlighted = false
+
+            local colorTrigger = tempAnsiColorTrigger(7, 0,
+                [[table.insert(_G.colorControlMatches, matches[1])]])
+            local highlightTrigger = tempRegexTrigger("^ColorSnapshotControl$", function()
+                if selectString("ColorSnapshotControl", 1) > -1 then
+                    setFgColor(255, 0, 0)
+                    highlighted = true
+                end
+                resetFormat()
+            end)
+
+            feedTriggers("\n\27[37;40mColorSnapshotControl\27[0m\n")
+
+            local matched = contains(_G.colorControlMatches, "ColorSnapshotControl")
+            killTrigger(colorTrigger)
+            killTrigger(highlightTrigger)
+            _G.colorControlMatches = nil
+
+            assert.is_true(matched, "Color trigger should match when it runs first")
+            assert.is_true(highlighted, "Highlighting trigger should have run")
+        end)
+
+        it("should keep the outer line's original colors across a nested feedTriggers", function()
+            _G.innerSnapshotMatches = {}
+            _G.outerSnapshotMatches = {}
+
+            local outerTrigger = tempRegexTrigger("^OuterSnapshotLine$", function()
+                if selectString("OuterSnapshotLine", 1) > -1 then
+                    setFgColor(0, 0, 255)
+                end
+                resetFormat()
+                -- ANSI 32/41 = green foreground on red background
+                feedTriggers("\n\27[32;41mInnerSnapshotLine\27[0m\n")
+            end)
+            local innerColorTrigger = tempAnsiColorTrigger(2, 1,
+                [[table.insert(_G.innerSnapshotMatches, matches[1])]])
+            local outerColorTrigger = tempAnsiColorTrigger(7, 0,
+                [[table.insert(_G.outerSnapshotMatches, matches[1])]])
+
+            feedTriggers("\n\27[37;40mOuterSnapshotLine\27[0m\n")
+
+            local innerMatched = contains(_G.innerSnapshotMatches, "InnerSnapshotLine")
+            local outerMatched = contains(_G.outerSnapshotMatches, "OuterSnapshotLine")
+            killTrigger(outerTrigger)
+            killTrigger(innerColorTrigger)
+            killTrigger(outerColorTrigger)
+            _G.innerSnapshotMatches = nil
+            _G.outerSnapshotMatches = nil
+
+            assert.is_true(innerMatched, "Inner pass should match the inner line's original colors")
+            assert.is_true(outerMatched, "Outer pass should still match its original colors after the nested pass")
+        end)
+
+    end)
+
     describe("tempAnsiColorTrigger callbacks", function()
 
         it("should fire a function callback when the expiry argument is omitted", function()
@@ -191,12 +309,10 @@ describe("Trigger processing", function()
 
     end)
 
-    -- feedTelnet only performs injection while the telnet socket is unconnected.
-    -- The self-test profile's socket is NOT in the unconnected state (the same
-    -- limitation MXP_spec documents), so feedTelnet refuses here with nil + a
-    -- message; its successful-injection and prompt paths cannot be exercised in
-    -- busted. The type-check happens before the connection check, so the
-    -- argument-type contract is still verifiable.
+    -- feedTelnet only performs injection while the telnet socket is unconnected;
+    -- otherwise it refuses with nil + a message. Its successful-injection and
+    -- prompt paths cannot be exercised in busted. The type-check happens before
+    -- the connection check, so the argument-type contract is still verifiable.
     describe("feedTelnet contract", function()
 
         it("raises an error when the data argument is not a string", function()
@@ -206,9 +322,14 @@ describe("Trigger processing", function()
 
         it("refuses to inject while the socket is not unconnected", function()
             -- safety property: feedTelnet never injects into a live connection.
-            -- In the self-test profile the socket is not unconnected, so it must
-            -- return nil plus a refusal message rather than feeding.
+            -- Establish the precondition here rather than relying on the
+            -- profile's ambient socket state, which other specs may have cleared
+            -- with disconnect(): reconnect() starts a fresh lookup and leaves the
+            -- unconnected state synchronously, without the connection needing to
+            -- succeed. Restore a clean state afterwards with disconnect().
+            reconnect()
             local ok, msg = feedTelnet("some server data")
+            disconnect()
             assert.is_nil(ok, "feedTelnet must not succeed against a non-unconnected socket")
             assert.is_string(msg)
             assert.is_truthy(msg:find("refused", 1, true), "expected a refusal message, got: " .. tostring(msg))
@@ -353,6 +474,25 @@ describe("Trigger processing", function()
             -- if it somehow survived, make sure it is gone
             if type(id) == "number" and id > 0 then killTrigger(id) end
             assert.is_equal(2, count, "a trigger set to expire after 2 fires should fire exactly twice")
+        end)
+
+        -- Regression: the C++ helpers that run trigger/alias/script code used to
+        -- read the script's return value from an absolute stack slot and then
+        -- wipe the whole shared Lua stack. Running inside feedTriggers() those
+        -- slots hold feedTriggers' own arguments, so the Utf8Encoded boolean
+        -- below was mistaken for "the script returned true" and kept renewing
+        -- the expiry count, and the wipe took the caller's arguments with it.
+        it("expires on schedule when fed by a call that has arguments on the Lua stack", function()
+            _G.TrigSpecExpire = {count = 0}
+            local id = tempTrigger("expire_me_utf8", [[_G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1]], 1)
+            assert.is_number(id)
+            feedTriggers("\nexpire_me_utf8\n", true)
+            feedTriggers("\nexpire_me_utf8\n", true)
+            feedTriggers("\nexpire_me_utf8\n", true)
+            local count = _G.TrigSpecExpire.count
+            _G.TrigSpecExpire = nil
+            if type(id) == "number" and id > 0 then killTrigger(id) end
+            assert.is_equal(1, count, "a trigger set to expire after 1 fire must not be renewed by the caller's stack")
         end)
 
     end)
@@ -590,6 +730,77 @@ describe("Trigger processing", function()
 
         it("killTrigger returns false for a name that does not exist", function()
             assert.is_false(killTrigger("no_such_trigger_name"))
+        end)
+
+        it("killTrigger returns false the second time, as the trigger is already dead", function()
+            local id = tempRegexTrigger("^double_kill_probe$", [[]])
+            assert.is_true(killTrigger(id), "killing a live temporary trigger should report success")
+            -- the trigger is still present here: only the deferred cleanup frees it,
+            -- so the second kill really is being told about a corpse it can find
+            assert.is_equal(1, exists(id, "trigger"), "the killed trigger is still present until cleanup runs")
+            assert.is_equal(0, isActive(id, "trigger"), "a killed trigger is no longer active")
+            assert.is_false(killTrigger(id),
+                "killing an already killed trigger achieves nothing and has to say so")
+            -- a fed line runs that cleanup, and the answer has to be the same after it
+            feedTriggers("\ndouble_kill_flush\n")
+            assert.is_equal(0, exists(id, "trigger"), "the trigger should be gone after kill and cleanup")
+            assert.is_false(killTrigger(id), "a freed trigger cannot be killed either")
+        end)
+
+        it("a trigger killed earlier in a line's pass does not fire on that line", function()
+            _G.TrigSpec = {count = 0, witness = 0}
+            -- the killer is created first, so the trigger unit reaches it first and
+            -- its victim is still in the list this pass is walking; only the cleanup
+            -- at the end of the line frees the victim. The witness is created last so
+            -- that it proves the pass really did carry on past the killer
+            local victimId
+            local killerId = tempRegexTrigger("^kill_stops_firing$", function()
+                _G.TrigSpec.killed = killTrigger(victimId)
+            end)
+            victimId = tempRegexTrigger("^kill_stops_firing$", function()
+                _G.TrigSpec.count = _G.TrigSpec.count + 1
+            end)
+            local witnessId = tempRegexTrigger("^kill_stops_firing$", function()
+                _G.TrigSpec.witness = _G.TrigSpec.witness + 1
+            end)
+            feedTriggers("\nkill_stops_firing\n")
+            killTrigger(killerId)
+            killTrigger(witnessId)
+            assert.is_true(_G.TrigSpec.killed, "the first trigger should have killed the second")
+            assert.is_equal(1, _G.TrigSpec.witness, "the line should still reach triggers behind the killer")
+            assert.is_equal(0, _G.TrigSpec.count,
+                "a killed trigger must no more fire on the rest of the line than a disabled one does")
+        end)
+
+        it("killTrigger returns false for a trigger that has used up its last firing", function()
+            -- an expiring trigger queues itself for the same deferred cleanup a killed
+            -- one does, so it is just as dead - as killTimer reports for a one-shot
+            -- timer that has already fired
+            _G.TrigSpec = {}
+            local expiringId = tempRegexTrigger("^expiry_kill_probe$", [[]], 1)
+            local killerId = tempRegexTrigger("^expiry_kill_probe$", function()
+                _G.TrigSpec.killedExpired = killTrigger(expiringId)
+            end)
+            feedTriggers("\nexpiry_kill_probe\n")
+            killTrigger(killerId)
+            assert.is_not_nil(_G.TrigSpec.killedExpired, "the killing trigger should have fired")
+            assert.is_false(_G.TrigSpec.killedExpired,
+                "a trigger that just used up its last firing cannot be killed again")
+        end)
+
+        it("killTrigger returns false the second time inside the trigger's own script", function()
+            _G.TrigSpec = {}
+            local id
+            id = tempRegexTrigger("^self_kill_probe$", function()
+                _G.TrigSpec.killed = killTrigger(id)
+                _G.TrigSpec.killedAgain = killTrigger(id)
+            end)
+            feedTriggers("\nself_kill_probe\n")
+            assert.is_not_nil(_G.TrigSpec.killed, "the trigger should have fired")
+            assert.is_true(_G.TrigSpec.killed,
+                "killTrigger should report success from inside the trigger's own script")
+            assert.is_false(_G.TrigSpec.killedAgain,
+                "killing the same trigger twice from its own script must fail the second time")
         end)
 
         it("exists rejects an invalid item type", function()

@@ -29,6 +29,8 @@
 #include "TFlipButton.h"
 #include "mudlet.h"
 
+#include <QScopeGuard>
+
 
 TToolBar::TToolBar(Host* pHost, TAction* pA, const QString& name, QWidget* pW)
 : QDockWidget(pW)
@@ -190,6 +192,19 @@ void TToolBar::slot_pressed(const bool isChecked)
     }
 
     TAction* pA = pB->mpTAction;
+
+    // Hold off ActionUnit deletes for this whole slot so a self-uninstall (the
+    // button's own script removing its package) cannot free pA out from under the
+    // dereferences below, even if a Host catch-all doCleanup() fires at depth 0
+    // mid-slot. The scope guard flushes once at the end, after pA's last use (see
+    // ActionUnit::uninstall()):
+    ActionUnit* pActionUnit = mpHost->getActionUnit();
+    pActionUnit->beginProcessing();
+    const auto processingGuard = qScopeGuard([pActionUnit] {
+        pActionUnit->endProcessing();
+        pActionUnit->doCleanup();
+    });
+
     // NOTE: This function blocks until an item is selected from the menu, and,
     // as the action to "pop-up" the menu is the same as "buttons" use to
     // perform their command/scripts is why "commands" are (no longer) permitted

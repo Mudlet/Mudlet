@@ -89,7 +89,18 @@ void TLuaInterpreter::ttsBuild()
         return;
     }
 
-    speechUnit = new QTextToSpeech();
+    // Under automated tests always request Qt's deterministic "mock" engine and
+    // never fall back to a real backend, which would speak aloud and make specs
+    // host-dependent. When the mock plugin is absent Qt leaves the engine in the
+    // Error state with no voices, so the TTS specs skip (or fail where the mock
+    // is mandatory) instead of exercising a developer's real speech engine. This
+    // also makes a non-empty voice list a reliable proof that the mock was
+    // selected. Outside test mode the default engine is built exactly as before.
+    if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
+        speechUnit = new QTextToSpeech(qsl("mock"));
+    } else {
+        speechUnit = new QTextToSpeech();
+    }
     bSpeechBuilt = true;
     bSpeechQueueing = false;
 
@@ -150,11 +161,12 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         return;
     }
 
-    QString textToSay;
-    textToSay = speechQueue.takeFirst();
+    const QString textToSay = speechQueue.takeFirst();
 
-    speechUnit->say(textToSay);
+    // recorded before say() because the engine can switch to Speaking inside
+    // that call, and this function reports speechCurrent with the event
     speechCurrent = textToSay;
+    speechUnit->say(textToSay);
 
     return;
 }
@@ -168,7 +180,7 @@ int TLuaInterpreter::ttsClearQueue(lua_State* L)
         int index = getVerifiedInt(L, __func__, 1, "index");
         index--;
         if (index < 0 || index >= speechQueue.size()) {
-            return warnArgumentValue(L, __func__, qsl("index %1 out of bounds for queue size %2").arg(index + 1, speechQueue.size()));
+            return warnArgumentValue(L, __func__, qsl("index %1 out of bounds for queue size %2").arg(index + 1).arg(speechQueue.size()));
         }
 
         speechQueue.remove(index);
@@ -220,7 +232,7 @@ int TLuaInterpreter::ttsGetQueue(lua_State* L)
     if (lua_gettop(L) > 0) {
         int index = getVerifiedInt(L, __func__, 1, "index");
         index--;
-        if (index < 0 || index > speechQueue.size()) {
+        if (index < 0 || index >= speechQueue.size()) {
             lua_pushboolean(L, false);
             return 1;
         }
@@ -311,10 +323,22 @@ int TLuaInterpreter::ttsPause(lua_State* L)
 int TLuaInterpreter::ttsQueue(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-    QString inputText = getVerifiedString(L, __func__, 1, "input").trimmed();
-    if (inputText.isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
-        return warnArgumentValue(L, __func__, qsl("skipped empty text to speak (TTS)"));
+    if (!checkStringArg(L, __func__, 1, "input")) {
+        return lua_error(L);
     }
+    // the empty-input refusal has to stay ahead of the argument #2 check, as it
+    // did before, or ttsQueue("", <bad index>) would raise instead of returning
+    // nil and a message
+    {
+        const QString trimmedText = QString{lua_tostring(L, 1)}.trimmed();
+        if (trimmedText.isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
+            return warnArgumentValue(L, __func__, qsl("skipped empty text to speak (TTS)"));
+        }
+    }
+    if (lua_gettop(L) > 1 && !checkIntArg(L, __func__, 2, "index")) {
+        return lua_error(L);
+    }
+    QString inputText = QString{lua_tostring(L, 1)}.trimmed();
 
     std::vector<QString> const dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
     for (const QString& dropThis : dontSpeak) {
@@ -329,7 +353,7 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
 
     int index;
     if (lua_gettop(L) > 1) {
-        index = getVerifiedInt(L, __func__, 2, "index");
+        index = static_cast<int>(lua_tointeger(L, 2));
         index--;
         if (index < 0) {
             index = 0;
@@ -392,8 +416,10 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
         }
     }
 
-    speechUnit->say(textToSay);
+    // recorded before say() because the engine can switch to Speaking inside
+    // that call, and ttsStateChanged() reports speechCurrent with the event
     speechCurrent = textToSay;
+    speechUnit->say(textToSay);
     return 0;
 }
 
@@ -511,7 +537,6 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
     for (const auto& voice : speechVoices) {
         if (voice.name() == nextVoice) {
             speechUnit->setVoice(voice);
-            lua_pushboolean(L, true);
 
             TEvent event{};
             event.mArgumentList.append(QLatin1String("ttsVoiceChanged"));
@@ -520,6 +545,7 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
 
+            lua_pushboolean(L, true);
             return 1;
         }
     }

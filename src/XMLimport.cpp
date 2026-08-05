@@ -35,6 +35,8 @@
 #include "mudlet.h"
 
 #include <QBuffer>
+#include <QClipboard>
+#include <QGuiApplication>
 #include <QtMath>
 #include <QVersionNumber>
 
@@ -226,7 +228,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
 std::pair<EditorViewType, int> XMLimport::importFromClipboard()
 {
     QString xml;
-    QClipboard* clipboard = QApplication::clipboard();
+    QClipboard* clipboard = QGuiApplication::clipboard();
     std::pair<EditorViewType, int> result;
 
     xml = clipboard->text(QClipboard::Clipboard);
