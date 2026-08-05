@@ -34,6 +34,8 @@ set(FUNCTIONAL_TEST_SOURCES
     PackageSelfUninstallTest.cpp
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
+    MapCloseDuringImportTest.cpp
+    TtsInterruptingSpeakTest.cpp
     UndoServerWrapTest.cpp
     NarrowWindowWrapTest.cpp
     HostWidgetDecouplingTest.cpp
@@ -132,7 +134,7 @@ endif()
 
 # The round-trip tests boot a full mudlet instance and save/reload profile and
 # map data, so they need a longer timeout
-set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeamTest PROPERTIES TIMEOUT 300)
+set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeamTest MapCloseDuringImportTest PROPERTIES TIMEOUT 300)
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)

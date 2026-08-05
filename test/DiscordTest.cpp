@@ -155,14 +155,50 @@ private slots:
     void testStringTruncation()
     {
         localDiscordPresence presence;
-        // Details buffer is 128 bytes - test with a string longer than that
+        // Discord documents details as holding 128 bytes, so a longer string is
+        // cut down to exactly that - the buffer allows for its own terminator
+        // rather than spending one of those 128 bytes on it (#9634).
         QString longString(200, QChar('A'));
         presence.setDetailText(longString);
 
         DiscordRichPresence converted = presence.convert();
         QVERIFY(converted.details != nullptr);
-        // Should be truncated but not crash
-        QVERIFY(strlen(converted.details) < 128);
+        QCOMPARE(strlen(converted.details), size_t{128});
+    }
+
+    // A field of exactly the documented length has to arrive whole: an asset key
+    // that loses its last character resolves to no icon at all (#9634).
+    void testFullLengthFieldsSurviveWhole()
+    {
+        localDiscordPresence presence;
+        presence.setLargeImageKey(QString(32, QChar('a')));
+        presence.setStateText(QString(128, QChar('s')));
+
+        DiscordRichPresence converted = presence.convert();
+        QCOMPARE(strlen(converted.largeImageKey), size_t{32});
+        QCOMPARE(strlen(converted.state), size_t{128});
+    }
+
+    // Truncation has to fall between characters. A field cut through the middle
+    // of a multi-byte one is no longer valid UTF-8, and Discord discards the
+    // whole presence frame carrying it rather than just that field (#9634).
+    void testTruncationKeepsUtf8Intact()
+    {
+        localDiscordPresence presence;
+        // 65 two-byte characters: 130 bytes, so the cut has to fall inside the
+        // 65th and take all of it.
+        presence.setDetailText(QString(65, QChar(0x00E9)));
+        // 17 of the same in a 32 byte field, which holds 16 of them.
+        presence.setLargeImageKey(QString(17, QChar(0x00E9)));
+
+        DiscordRichPresence converted = presence.convert();
+        QCOMPARE(QByteArray(converted.details), QString(64, QChar(0x00E9)).toUtf8());
+        QCOMPARE(QByteArray(converted.largeImageKey), QString(16, QChar(0x00E9)).toUtf8());
+        // A three-byte character has two ways to be cut in half, so check the
+        // other one too: 43 of them are 129 bytes.
+        presence.setStateText(QString(43, QChar(0x4F60)));
+        converted = presence.convert();
+        QCOMPARE(QByteArray(converted.state), QString(42, QChar(0x4F60)).toUtf8());
     }
 
     // Test that Discord username comparison is case-insensitive.

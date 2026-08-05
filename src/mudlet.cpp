@@ -2007,6 +2007,21 @@ void mudlet::closeHost(const QString& name)
         return;
     }
 
+    if (pH->mpMap && pH->mpMap->mapOperationInProgress()) {
+        // A map import, export or download is on the stack, and it is that
+        // operation's own qApp->processEvents() that has delivered whatever
+        // asked for this close. Destroying the Host here would free the TMap
+        // under its running loop (#9520), so tell the operation to stop and try
+        // again once the stack has unwound. Retried on a timer rather than
+        // immediately: the retry would otherwise land back in the same pump,
+        // spinning until the operation ends instead of letting it get there.
+        pH->mpMap->requestMapOperationAbort();
+        QTimer::singleShot(50ms, this, [this, name]() {
+            closeHost(name);
+        });
+        return;
+    }
+
     migrateDebugConsole(pH);
 
     // Clean up any main window dock widgets for this profile

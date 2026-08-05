@@ -79,8 +79,30 @@ bool bSpeechBuilt;
 bool bSpeechQueueing;
 int speechState = QTextToSpeech::State::Ready;
 QString speechCurrent;
+// Whether a ttsSpeechStarted has been raised for what speechCurrent holds. The
+// events are raised off the engine's state edges, and an engine that is already
+// speaking has no edge to report when it is given something else to say.
+static bool speechStartAnnounced = false;
+// Set while the utterance ttsSpeak() last asked for was started over one that
+// was still being spoken. Every engine stops the running utterance inside say(),
+// and the Ready that reports that has to be told apart from the engine going
+// idle - see ttsSpeak().
+static bool speechInterrupting = false;
 
 static const QTextToSpeech::State TEXT_TO_SPEECH_ERROR_STATE = QTextToSpeech::State::Error;
+
+// ttsStateChanged() raises this same event whenever the engine reports a state
+// edge into Speaking; ttsSpeak() raises it through here for the utterance an
+// already-speaking engine starts without any such edge.
+static void raiseSpeechStartedEvent(const QString& text)
+{
+    TEvent event{};
+    event.mArgumentList.append(QLatin1String("ttsSpeechStarted"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(text);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mudlet::self()->getHostManager().postInterHostEvent(nullptr, event, true);
+}
 
 // No documentation available in wiki - internal function
 void TLuaInterpreter::ttsBuild()
@@ -114,6 +136,10 @@ int TLuaInterpreter::ttsSkip(lua_State* L)
     Q_UNUSED(L)
     TLuaInterpreter::ttsBuild();
 
+    // An explicit stop ends whatever is being spoken outright, so the Ready it
+    // produces is the engine going idle and must drain the queue as it always
+    // has - it is not the interruption ttsSpeak() has to defend against.
+    speechInterrupting = false;
     speechUnit->stop();
 
     return 0;
@@ -151,9 +177,24 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         if (state == QTextToSpeech::Speaking) {
             event.mArgumentList.append(speechCurrent);
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            // The engine has taken up what it was last given, so ttsSpeak() has
+            // nothing left to announce and any interruption is over.
+            speechStartAnnounced = true;
+            speechInterrupting = false;
         }
 
         mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+    }
+
+    if (state == QTextToSpeech::State::Ready && speechInterrupting) {
+        // Not the engine falling idle but the utterance ttsSpeak() spoke over
+        // ending inside say(). Draining here would speak a queued line on top of
+        // the one the script has just asked for, and that one is then never
+        // heard at all (#9659). The engine reports Speaking for the requested
+        // utterance next, which clears this above.
+        speechInterrupting = false;
+        bSpeechQueueing = false;
+        return;
     }
 
     if (state != QTextToSpeech::State::Ready || speechQueue.empty()) {
@@ -166,6 +207,7 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
     // recorded before say() because the engine can switch to Speaking inside
     // that call, and this function reports speechCurrent with the event
     speechCurrent = textToSay;
+    speechStartAnnounced = false;
     speechUnit->say(textToSay);
 
     return;
@@ -379,6 +421,9 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
 
     if (speechQueue.size() == 1 && speechUnit->state() == QTextToSpeech::State::Ready && !bSpeechQueueing) {
         bSpeechQueueing = true;
+        // The engine says it is idle, so nothing is left of any utterance an
+        // earlier ttsSpeak() interrupted and this queued line is free to start.
+        speechInterrupting = false;
         TLuaInterpreter::ttsStateChanged(speechUnit->state());
     }
 
@@ -419,7 +464,21 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
     // recorded before say() because the engine can switch to Speaking inside
     // that call, and ttsStateChanged() reports speechCurrent with the event
     speechCurrent = textToSay;
+    speechStartAnnounced = false;
+    // Every engine stops what it is saying inside say() and reports Ready for
+    // it, some during the call and some shortly after. That Ready says the
+    // interrupted utterance ended, not that the engine has nothing to do, so
+    // ttsStateChanged() must not drain the queue over the top of this one.
+    speechInterrupting = (speechUnit->state() == QTextToSpeech::State::Speaking);
     speechUnit->say(textToSay);
+
+    // An engine that was already speaking stays in the Speaking state through
+    // all of that, and the events are raised off state edges - so without this
+    // nothing tells a script that what is being spoken has changed (#9659).
+    if (!speechStartAnnounced && speechUnit->state() == QTextToSpeech::State::Speaking) {
+        speechStartAnnounced = true;
+        raiseSpeechStartedEvent(textToSay);
+    }
     return 0;
 }
 
