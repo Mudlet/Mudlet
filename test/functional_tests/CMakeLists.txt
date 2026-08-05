@@ -9,6 +9,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetSgrDefaultColorTest.cpp
     TelnetTlsPromptTest.cpp
     TelnetBenchmark.cpp
+    DefaultGameDeleteTest.cpp
     ResetProfileTest.cpp
     TOscTest.cpp
     TUserWindowTest.cpp
@@ -36,8 +37,10 @@ set(FUNCTIONAL_TEST_SOURCES
     UndoServerWrapTest.cpp
     HostWidgetDecouplingTest.cpp
     ActionSelfUninstallTest.cpp
+    ProfileFolderNameTest.cpp
     DialogTeardownTest.cpp
     TMediaLoopTest.cpp
+    DefaultPackagesTest.cpp
 )
 
 # The updater sources are only built with USE_UPDATER, and on macOS the

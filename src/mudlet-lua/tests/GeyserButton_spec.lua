@@ -355,5 +355,77 @@ describe("Tests functionality of Geyser.Button", function()
       assert.is_nil(getWindowGeometry("gbsDelete"))
       assert.is_nil(Geyser.windowList.gbsDelete)
     end)
+
+    describe('Geyser.Button command, function and style setters', function()
+      local button
+
+      before_each(function()
+        button = track(Geyser.Button:new({name = "gbsSetters", x = 0, y = 0, width = 60, height = 20, msg = "up", downMsg = "down"}))
+        button:enableTwoState()
+      end)
+
+      it("setClickCommand and setDownCommand store the alias to expand per state", function()
+        button:setClickCommand("say up")
+        button:setDownCommand("say down")
+        assert.are.equal("say up", button.clickCommand)
+        assert.are.equal("say down", button.downCommand)
+
+        local expand = spy.on(_G, "expandAlias")
+        finally(function() expand:revert() end)
+        button:press()
+        assert.spy(expand).was.called_with("say up")
+        button:press()
+        assert.spy(expand).was.called_with("say down")
+      end)
+
+      it("setClickCommand and setDownCommand reject a non string", function()
+        assert.has_error(function() button:setClickCommand(5) end)
+        assert.has_error(function() button:setDownCommand(5) end)
+      end)
+
+      it("setDownColor and setColor apply the colour used for each state", function()
+        -- a label's background colour has no getter, so watch what reaches
+        -- setBackgroundColor; spy.on leaves the real call in place
+        local backgroundColor = spy.on(_G, "setBackgroundColor")
+        finally(function() backgroundColor:revert() end)
+
+        local function lastColour()
+          local calls = backgroundColor.calls
+          local vals = calls[#calls].vals
+          return {vals[1], vals[2], vals[3], vals[4]}
+        end
+
+        button:setColor("green")
+        assert.are.equal("green", button.color)
+        assert.are.same({"gbsSetters", 0, 255, 0}, lastColour())
+
+        button:setDownColor("red")
+        assert.are.equal("red", button.downColor)
+        button:setState("down")
+        assert.are.same({"gbsSetters", 255, 0, 0}, lastColour())
+
+        button:setState("up")
+        assert.are.same({"gbsSetters", 0, 255, 0}, lastColour())
+      end)
+
+      it("setStyle and setDownStyle put the right sheet on the widget per state", function()
+        button:setStyle("background-color: green;")
+        button:setDownStyle("background-color: red;")
+        assert.are.equal("background-color: green;", button.style)
+        assert.are.equal("background-color: red;", button.downStyle)
+
+        button:setState("up")
+        assert.are.equal("background-color: green;", getLabelStyleSheet("gbsSetters"))
+        button:setState("down")
+        assert.are.equal("background-color: red;", getLabelStyleSheet("gbsSetters"))
+      end)
+
+      it("setStyle accepts a Geyser.StyleSheet object", function()
+        local sheet = Geyser.StyleSheet:new("background-color: blue;")
+        button:setStyle(sheet)
+        button:setState("up")
+        assert.are.equal(sheet:getCSS(), getLabelStyleSheet("gbsSetters"))
+      end)
+    end)
   end)
 end)

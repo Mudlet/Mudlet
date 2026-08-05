@@ -441,6 +441,13 @@ describe("Tests Other.lua functions", function()
       assert.is_false(_comp(true,false))
     end)
 
+    it("compares tables holding false like tables holding any other value", function()
+      assert.is_true(_comp({ key = false }, { key = false }))
+      assert.is_false(_comp({ key = false }, { key = true }))
+      assert.is_false(_comp({ key = false }, {}))
+      assert.is_true(_comp({ outer = { inner = false } }, { outer = { inner = false } }))
+    end)
+
     it("returns true if table B has the same value for every key which table A contains.", function()
       local tableA = { "One", "Two" }
       local tableB = { "One", "Two" }
@@ -1791,6 +1798,157 @@ describe("Tests the script API", function()
       assert.is_true(disableScript("W2aScriptSwitched"))
       assert.equals(untouched, isActive("W2aScriptUntouched", "script"))
       assert.equals(0, isActive("W2aScriptSwitched", "script"))
+    end)
+  end)
+
+  describe("Tests the functionality of speedwalktimer", function()
+    -- resume first so a paused walk is re-armed and stopSpeedwalk can then
+    -- clear its walklist; both are shared upvalues of Other.lua
+    after_each(function()
+      pcall(resumeSpeedwalk)
+      pcall(stopSpeedwalk)
+    end)
+
+    it("Should send the head of the walklist and shorten it", function()
+      local list = {"n", "e"}
+      local send = spy.on(_G, "send")
+      finally(function() send:revert() end)
+      speedwalktimer(list, 100, false)
+      assert.spy(send).was.called(1)
+      assert.spy(send).was.called_with("n", false)
+      assert.are.same({"e"}, list)
+    end)
+
+    it("Should arm a timer for the rest of the walklist", function()
+      local list = {"n", "e"}
+      local send = spy.on(_G, "send")
+      finally(function() send:revert() end)
+      speedwalktimer(list, 100, false)
+      -- pauseSpeedwalk only succeeds while a step timer is armed
+      assert.is_true(pauseSpeedwalk())
+    end)
+
+    it("Should raise sysSpeedwalkFinished on the last step", function()
+      local finished = false
+      local handler = registerAnonymousEventHandler("sysSpeedwalkFinished", function() finished = true end)
+      finally(function() killAnonymousEventHandler(handler) end)
+      local send = spy.on(_G, "send")
+      finally(function() send:revert() end)
+      -- clear any step timer an earlier test armed so the pause check below
+      -- can only be answering for this walklist
+      pcall(pauseSpeedwalk)
+      local list = {"n"}
+      speedwalktimer(list, 100, false)
+      assert.spy(send).was.called_with("n", false)
+      assert.are.same({}, list)
+      assert.is_true(finished)
+      -- nothing was queued, so there is no timer left to pause
+      assert.is_nil((pauseSpeedwalk()))
+    end)
+  end)
+
+  describe("Tests the functionality of deleteFull", function()
+    after_each(function()
+      -- deleteFull leaves a one line trigger behind; flush it so it cannot
+      -- gag a line belonging to a later spec
+      feedTriggers("deleteFullFlush\n")
+    end)
+
+    it("Should delete the line it runs on", function()
+      local id = tempTrigger("deleteFullMarker", function() deleteFull() end)
+      feedTriggers("deleteFullMarker line\n")
+      killTrigger(id)
+      moveCursorEnd()
+      moveCursorUp()
+      assert.are_not.equal("deleteFullMarker line", getCurrentLine())
+    end)
+
+    it("Should arm a one line trigger that gags a following prompt", function()
+      local lineTrigger = spy.on(_G, "tempLineTrigger")
+      finally(function() lineTrigger:revert() end)
+      local id = tempTrigger("deleteFullArmMarker", function() deleteFull() end)
+      feedTriggers("deleteFullArmMarker line\n")
+      killTrigger(id)
+      assert.spy(lineTrigger).was.called(1)
+      assert.spy(lineTrigger).was.called_with(1, 1, [[if isPrompt() then deleteLine() end]])
+    end)
+  end)
+
+  describe("Tests the functionality of condenseMapLoad", function()
+    before_each(function()
+      clearWindow()
+      moveCursorEnd()
+    end)
+
+    it("Should delete the map loading block and return the time it took", function()
+      echo("[ INFO ]  - Reading map. Please wait...\n")
+      echo("[ INFO ]  - Map read in 1.5s.\n")
+      echo("[ INFO ]  - Map deserialised in 0.25s.\n")
+      local loadTime = condenseMapLoad()
+      assert.are.equal(1.75, loadTime)
+      local text = table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\n")
+      assert.is_falsy(text:find("Reading map", 1, true))
+      assert.is_falsy(text:find("deserialised", 1, true))
+    end)
+
+    it("Should refuse to condense when the user must see an alert", function()
+      echo("[ INFO ]  - Reading map. Please wait...\n")
+      echo("[ ALERT ] - something the user has to read\n")
+      local loadTime, err = condenseMapLoad()
+      assert.is_nil(loadTime)
+      assert.are.equal("an alert, warning, or error that the user must see is present", err)
+      local text = table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\n")
+      assert.is_truthy(text:find("something the user has to read", 1, true))
+    end)
+
+    it("Should report when there is no map load output to condense", function()
+      echo("nothing to do with maps at all\n")
+      local loadTime, err = condenseMapLoad()
+      assert.is_nil(loadTime)
+      assert.are.equal("couldn't find the starting line for map load output", err)
+    end)
+  end)
+
+  describe("Tests the functionality of loadTranslations", function()
+    it("Should return the strings of the package it is asked for", function()
+      local translations = loadTranslations("AdjustableContainer")
+      assert.is_table(translations)
+      assert.is_table(translations.attach)
+      assert.is_string(translations.attach.message)
+      assert.is_truthy(translations.top and translations.bottom and translations.left and translations.right)
+    end)
+
+    it("Should strip the package prefix off every key", function()
+      local translations = loadTranslations("AdjustableContainer")
+      for key in pairs(translations) do
+        assert.is_falsy(key:find("AdjustableContainer.", 1, true))
+      end
+    end)
+
+    it("Should report a package the translation file has no strings for", function()
+      local translations, err = loadTranslations("NoSuchPackageInTheTranslationFile")
+      assert.is_nil(translations)
+      assert.are.equal("couldn't find translations for 'NoSuchPackageInTheTranslationFile'", err)
+    end)
+
+    it("Should report a translation file it cannot find", function()
+      local translations, err = loadTranslations("AdjustableContainer", "noSuchTranslationFile")
+      assert.is_nil(translations)
+      assert.is_truthy(err:find("unable to find 'noSuchTranslationFile.json'", 1, true))
+    end)
+
+    it("Should reject arguments of the wrong type", function()
+      assert.has_error(function() loadTranslations(5) end)
+      assert.has_error(function() loadTranslations("AdjustableContainer", 5) end)
+      assert.has_error(function() loadTranslations("AdjustableContainer", "mudlet-lua", 5) end)
+    end)
+  end)
+
+  describe("Tests the functionality of onConnect", function()
+    -- defined in LuaGlobal.lua as an empty default users may override
+    it("Should exist and do nothing", function()
+      assert.are.equal("function", type(onConnect))
+      assert.are.same({}, {onConnect()})
     end)
   end)
 end)

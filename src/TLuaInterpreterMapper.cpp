@@ -2870,6 +2870,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
             name,
             [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
                 Q_UNUSED(infoColor)
+                const int callerStackTop = lua_gettop(L);
                 lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
                 if (roomID > 0) {
                     lua_pushinteger(L, roomID);
@@ -2882,21 +2883,15 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
 
                 const int error = lua_pcall(L, 4, 6, 0);
                 if (error) {
-                    const int errorCount = lua_gettop(L);
-                    if (mudlet::smDebugMode) {
-                        for (int i = 1; i <= errorCount; i++) {
-                            if (lua_isstring(L, i)) {
-                                auto errorMessage = lua_tostring(L, i);
-                                TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: when running map info callback for '" << name << "\nreason: " << errorMessage << "\n" >> 0;
-                            }
-                        }
+                    if (mudlet::smDebugMode && lua_isstring(L, -1)) {
+                        auto errorMessage = lua_tostring(L, -1);
+                        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: when running map info callback for '" << name << "\nreason: " << errorMessage << "\n" >> 0;
                     }
-                    lua_pop(L, errorCount);
+                    lua_settop(L, callerStackTop);
                     return MapInfoProperties{};
                 }
 
-                auto nResult = lua_gettop(L);
-                auto index = -nResult;
+                auto index = -6; // the lua_pcall() above always leaves exactly this many results
                 const QString text = lua_tostring(L, index);
                 const bool isBold = lua_toboolean(L, ++index);
                 const bool isItalic = lua_toboolean(L, ++index);
@@ -2916,7 +2911,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
                 if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
                     color = QColor(r, g, b);
                 }
-                lua_pop(L, nResult);
+                lua_settop(L, callerStackTop);
                 return MapInfoProperties{isBold, isItalic, text, color};
             },
             L,

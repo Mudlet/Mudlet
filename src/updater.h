@@ -58,6 +58,7 @@ public:
     void setAutomaticUpdates(bool state);
     bool updateAutomatically() const;
     bool shouldShowChangelog();
+    bool ready() const;
 
 private:
     std::unique_ptr<dblsqd::Feed> feed;
@@ -101,7 +102,9 @@ private:
 #elif defined(Q_OS_WINDOWS)
     QString mDownloadedInstallerPath;
 #elif defined(Q_OS_MACOS)
-    SparkleUpdater* msparkleUpdater;
+    // Only exists once checkUpdatesOnStart() has run - every use must cope with
+    // it still being null, see ready()
+    SparkleUpdater* msparkleUpdater = nullptr;
 #endif
 
 

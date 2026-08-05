@@ -476,6 +476,25 @@ describe("Trigger processing", function()
             assert.is_equal(2, count, "a trigger set to expire after 2 fires should fire exactly twice")
         end)
 
+        -- Regression: the C++ helpers that run trigger/alias/script code used to
+        -- read the script's return value from an absolute stack slot and then
+        -- wipe the whole shared Lua stack. Running inside feedTriggers() those
+        -- slots hold feedTriggers' own arguments, so the Utf8Encoded boolean
+        -- below was mistaken for "the script returned true" and kept renewing
+        -- the expiry count, and the wipe took the caller's arguments with it.
+        it("expires on schedule when fed by a call that has arguments on the Lua stack", function()
+            _G.TrigSpecExpire = {count = 0}
+            local id = tempTrigger("expire_me_utf8", [[_G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1]], 1)
+            assert.is_number(id)
+            feedTriggers("\nexpire_me_utf8\n", true)
+            feedTriggers("\nexpire_me_utf8\n", true)
+            feedTriggers("\nexpire_me_utf8\n", true)
+            local count = _G.TrigSpecExpire.count
+            _G.TrigSpecExpire = nil
+            if type(id) == "number" and id > 0 then killTrigger(id) end
+            assert.is_equal(1, count, "a trigger set to expire after 1 fire must not be renewed by the caller's stack")
+        end)
+
     end)
 
     describe("tempColorTrigger legacy colour remap", function()
@@ -711,6 +730,77 @@ describe("Trigger processing", function()
 
         it("killTrigger returns false for a name that does not exist", function()
             assert.is_false(killTrigger("no_such_trigger_name"))
+        end)
+
+        it("killTrigger returns false the second time, as the trigger is already dead", function()
+            local id = tempRegexTrigger("^double_kill_probe$", [[]])
+            assert.is_true(killTrigger(id), "killing a live temporary trigger should report success")
+            -- the trigger is still present here: only the deferred cleanup frees it,
+            -- so the second kill really is being told about a corpse it can find
+            assert.is_equal(1, exists(id, "trigger"), "the killed trigger is still present until cleanup runs")
+            assert.is_equal(0, isActive(id, "trigger"), "a killed trigger is no longer active")
+            assert.is_false(killTrigger(id),
+                "killing an already killed trigger achieves nothing and has to say so")
+            -- a fed line runs that cleanup, and the answer has to be the same after it
+            feedTriggers("\ndouble_kill_flush\n")
+            assert.is_equal(0, exists(id, "trigger"), "the trigger should be gone after kill and cleanup")
+            assert.is_false(killTrigger(id), "a freed trigger cannot be killed either")
+        end)
+
+        it("a trigger killed earlier in a line's pass does not fire on that line", function()
+            _G.TrigSpec = {count = 0, witness = 0}
+            -- the killer is created first, so the trigger unit reaches it first and
+            -- its victim is still in the list this pass is walking; only the cleanup
+            -- at the end of the line frees the victim. The witness is created last so
+            -- that it proves the pass really did carry on past the killer
+            local victimId
+            local killerId = tempRegexTrigger("^kill_stops_firing$", function()
+                _G.TrigSpec.killed = killTrigger(victimId)
+            end)
+            victimId = tempRegexTrigger("^kill_stops_firing$", function()
+                _G.TrigSpec.count = _G.TrigSpec.count + 1
+            end)
+            local witnessId = tempRegexTrigger("^kill_stops_firing$", function()
+                _G.TrigSpec.witness = _G.TrigSpec.witness + 1
+            end)
+            feedTriggers("\nkill_stops_firing\n")
+            killTrigger(killerId)
+            killTrigger(witnessId)
+            assert.is_true(_G.TrigSpec.killed, "the first trigger should have killed the second")
+            assert.is_equal(1, _G.TrigSpec.witness, "the line should still reach triggers behind the killer")
+            assert.is_equal(0, _G.TrigSpec.count,
+                "a killed trigger must no more fire on the rest of the line than a disabled one does")
+        end)
+
+        it("killTrigger returns false for a trigger that has used up its last firing", function()
+            -- an expiring trigger queues itself for the same deferred cleanup a killed
+            -- one does, so it is just as dead - as killTimer reports for a one-shot
+            -- timer that has already fired
+            _G.TrigSpec = {}
+            local expiringId = tempRegexTrigger("^expiry_kill_probe$", [[]], 1)
+            local killerId = tempRegexTrigger("^expiry_kill_probe$", function()
+                _G.TrigSpec.killedExpired = killTrigger(expiringId)
+            end)
+            feedTriggers("\nexpiry_kill_probe\n")
+            killTrigger(killerId)
+            assert.is_not_nil(_G.TrigSpec.killedExpired, "the killing trigger should have fired")
+            assert.is_false(_G.TrigSpec.killedExpired,
+                "a trigger that just used up its last firing cannot be killed again")
+        end)
+
+        it("killTrigger returns false the second time inside the trigger's own script", function()
+            _G.TrigSpec = {}
+            local id
+            id = tempRegexTrigger("^self_kill_probe$", function()
+                _G.TrigSpec.killed = killTrigger(id)
+                _G.TrigSpec.killedAgain = killTrigger(id)
+            end)
+            feedTriggers("\nself_kill_probe\n")
+            assert.is_not_nil(_G.TrigSpec.killed, "the trigger should have fired")
+            assert.is_true(_G.TrigSpec.killed,
+                "killTrigger should report success from inside the trigger's own script")
+            assert.is_false(_G.TrigSpec.killedAgain,
+                "killing the same trigger twice from its own script must fail the second time")
         end)
 
         it("exists rejects an invalid item type", function()

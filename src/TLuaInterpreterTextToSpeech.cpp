@@ -545,8 +545,6 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
 
-            // pushed only after the event: dispatching it runs Lua event
-            // handlers, which clear this lua_State's stack
             lua_pushboolean(L, true);
             return 1;
         }
