@@ -69,20 +69,6 @@ local function defer(cleanup)
   cleanups[#cleanups + 1] = cleanup
 end
 
--- Mudlet stops responding part way through this file on macOS: every install
--- and uninstall starts a profile save, and on that platform the run wedges
--- somewhere in the middle of them, so the one-minute CI step for the Lua tests
--- is killed. Linux (including the AddressSanitizer build) and Windows run the
--- whole file fine. Until the save is fixed the specs that install something are
--- pending on macOS; the contract specs still run there.
-local installsWedgeThisPlatform = getOS() == "mac"
-
-local function requireWorkingInstalls()
-  if installsWedgeThisPlatform then
-    pending("installing a package wedges Mudlet on macOS - see the PR that added this file")
-  end
-end
-
 local function contains(haystack, needle)
   return type(haystack) == "string" and haystack:find(needle, 1, true) ~= nil
 end
@@ -327,9 +313,6 @@ describe("Tests the functionality of installPackage", function()
     local runsBefore, installEvents, packageEvents, handlers
 
     setup(function()
-      if installsWedgeThisPlatform then
-        return
-      end
       runsBefore = mudletSpecMinimalRuns or 0
       local genericHandler, detailedHandler
       installEvents, genericHandler = collectEvents("sysInstall")
@@ -341,9 +324,6 @@ describe("Tests the functionality of installPackage", function()
     end)
 
     teardown(function()
-      if installsWedgeThisPlatform then
-        return
-      end
       for _, handler in ipairs(handlers) do
         killAnonymousEventHandler(handler)
       end
@@ -351,7 +331,6 @@ describe("Tests the functionality of installPackage", function()
     end)
 
     it("unpacks the package into the profile and runs its contents", function()
-      requireWorkingInstalls()
       local packageDirectory = getMudletHomeDir() .. "/" .. minimalPackage
       assert.is_true(fileExists(packageDirectory), "the package folder was not created")
       assert.is_true(fileExists(packageDirectory .. "/config.lua"))
@@ -362,7 +341,6 @@ describe("Tests the functionality of installPackage", function()
     end)
 
     it("raises sysInstall and sysInstallPackage once the install is complete", function()
-      requireWorkingInstalls()
       assert.equals(1, #installEvents)
       assert.equals(minimalPackage, installEvents[1][1])
       assert.equals(1, #packageEvents)
@@ -371,14 +349,12 @@ describe("Tests the functionality of installPackage", function()
     end)
 
     it("refuses to install a package that is already installed", function()
-      requireWorkingInstalls()
       local err = installUntilRefused(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage")
       assert.is_true(contains(err, "package " .. minimalPackage .. " is already installed"), tostring(err))
     end)
   end)
 
   it("unpacks a folder of resources that ships with a package", function()
-    requireWorkingInstalls()
     withFixturePackage(resourcesPackage)
 
     local packageDirectory = getMudletHomeDir() .. "/" .. resourcesPackage
@@ -394,7 +370,6 @@ describe("Tests the functionality of installPackage", function()
   end)
 
   it("names a package after its file when the archive has no config.lua", function()
-    requireWorkingInstalls()
     withFixturePackage("mudlet-spec-noconfig")
 
     assert.equals(1, exists("mudlet-spec-noconfig alias", "alias"))
@@ -402,7 +377,6 @@ describe("Tests the functionality of installPackage", function()
   end)
 
   it("installs a package from a plain XML file", function()
-    requireWorkingInstalls()
     local path = fixtureDirectory .. "/sources/mudlet-spec-xmlonly/mudlet-spec-xmlonly.xml"
     defer(function() removeFixturePackage("mudlet-spec-xmlonly") end)
     installUntilConfirmed(installPackage, path, function() return packageInstalled("mudlet-spec-xmlonly") end,
@@ -430,7 +404,6 @@ describe("Tests the functionality of uninstallPackage", function()
   end)
 
   it("removes the package, its items and its folder, and raises the uninstall events", function()
-    requireWorkingInstalls()
     withFixturePackage(minimalPackage)
     local packageDirectory = getMudletHomeDir() .. "/" .. minimalPackage
     assert.is_true(fileExists(packageDirectory))
@@ -464,14 +437,10 @@ end)
 
 describe("Tests the package info accessors", function()
   setup(function()
-    if not installsWedgeThisPlatform then
-      installFixturePackage(minimalPackage)
-    end
+    installFixturePackage(minimalPackage)
   end)
   teardown(function()
-    if not installsWedgeThisPlatform then
-      removeFixturePackage(minimalPackage)
-    end
+    removeFixturePackage(minimalPackage)
   end)
 
   describe("Tests the functionality of getPackageInfo", function()
@@ -480,12 +449,10 @@ describe("Tests the package info accessors", function()
     end)
 
     it("raises a Lua error when the requested field is not a string", function()
-      requireWorkingInstalls()
       assertArgError(function() getPackageInfo(minimalPackage, {}) end, "getPackageInfo: bad argument #2 type")
     end)
 
     it("returns everything the package's config.lua declared", function()
-      requireWorkingInstalls()
       assert.same({
         mpackage = minimalPackage,
         author = "Mudlet test suite",
@@ -496,13 +463,11 @@ describe("Tests the package info accessors", function()
     end)
 
     it("returns a single field when one is named", function()
-      requireWorkingInstalls()
       assert.equals("1.0", getPackageInfo(minimalPackage, "version"))
       assert.equals("Mudlet test suite", getPackageInfo(minimalPackage, "author"))
     end)
 
     it("returns an empty string for a field the package does not have", function()
-      requireWorkingInstalls()
       assert.equals("", getPackageInfo(minimalPackage, "no-such-field"))
     end)
 
@@ -517,12 +482,10 @@ describe("Tests the package info accessors", function()
     end)
 
     it("raises a Lua error when the value is missing", function()
-      requireWorkingInstalls()
       assertArgError(function() setPackageInfo(minimalPackage, "version") end, "setPackageInfo: bad argument #3 type")
     end)
 
     it("round-trips a value through getPackageInfo", function()
-      requireWorkingInstalls()
       defer(function() setPackageInfo(minimalPackage, "version", "1.0") end)
 
       assert.is_true(setPackageInfo(minimalPackage, "version", "9.9"))
@@ -531,7 +494,6 @@ describe("Tests the package info accessors", function()
     end)
 
     it("adds a field the package did not declare", function()
-      requireWorkingInstalls()
       assert.is_true(setPackageInfo(minimalPackage, "spec-added", "yes"))
       assert.equals("yes", getPackageInfo(minimalPackage, "spec-added"))
     end)
@@ -552,9 +514,6 @@ describe("Tests the functionality of installModule", function()
     local runsBefore, installEvents, moduleEvents, handlers, modulePath
 
     setup(function()
-      if installsWedgeThisPlatform then
-        return
-      end
       runsBefore = mudletSpecModuleRuns or 0
       local genericHandler, detailedHandler
       installEvents, genericHandler = collectEvents("sysInstall")
@@ -565,9 +524,6 @@ describe("Tests the functionality of installModule", function()
     end)
 
     teardown(function()
-      if installsWedgeThisPlatform then
-        return
-      end
       for _, handler in ipairs(handlers) do
         killAnonymousEventHandler(handler)
       end
@@ -575,7 +531,6 @@ describe("Tests the functionality of installModule", function()
     end)
 
     it("installs the module, unpacks it and runs its contents", function()
-      requireWorkingInstalls()
       assert.is_true(moduleInstalled(moduleName))
       -- a module is not a package: it must not turn up in getPackages()
       assert.is_false(packageInstalled(moduleName))
@@ -585,7 +540,6 @@ describe("Tests the functionality of installModule", function()
     end)
 
     it("raises sysInstall and sysLuaInstallModule", function()
-      requireWorkingInstalls()
       assert.equals(1, #installEvents)
       assert.equals(moduleName, installEvents[1][1])
       assert.equals(1, #moduleEvents)
@@ -594,7 +548,6 @@ describe("Tests the functionality of installModule", function()
     end)
 
     it("refuses to install a module that is already installed", function()
-      requireWorkingInstalls()
       local err = installUntilRefused(installModule, modulePath)
       assert.is_true(contains(err, "module " .. moduleName .. " is already installed"), tostring(err))
     end)
@@ -611,7 +564,6 @@ describe("Tests the functionality of uninstallModule", function()
   end)
 
   it("removes the module, its items and its folder, and raises the uninstall events", function()
-    requireWorkingInstalls()
     withFixtureModule(moduleName)
     local moduleDirectory = getMudletHomeDir() .. "/" .. moduleName
     assert.is_true(fileExists(moduleDirectory))
@@ -643,14 +595,10 @@ describe("Tests the module accessors", function()
   local modulePath
 
   setup(function()
-    if not installsWedgeThisPlatform then
-      modulePath = installFixtureModule(moduleName)
-    end
+    modulePath = installFixtureModule(moduleName)
   end)
   teardown(function()
-    if not installsWedgeThisPlatform then
-      removeFixtureModule(moduleName)
-    end
+    removeFixtureModule(moduleName)
   end)
 
   describe("Tests the functionality of getModuleInfo", function()
@@ -659,7 +607,6 @@ describe("Tests the module accessors", function()
     end)
 
     it("returns everything the module's config.lua declared", function()
-      requireWorkingInstalls()
       assert.same({
         mpackage = moduleName,
         author = "Mudlet test suite",
@@ -670,7 +617,6 @@ describe("Tests the module accessors", function()
     end)
 
     it("returns a single field when one is named", function()
-      requireWorkingInstalls()
       assert.equals("3.1", getModuleInfo(moduleName, "version"))
       assert.equals("", getModuleInfo(moduleName, "no-such-field"))
     end)
@@ -682,12 +628,10 @@ describe("Tests the module accessors", function()
 
   describe("Tests the functionality of setModuleInfo", function()
     it("raises a Lua error when the value is missing", function()
-      requireWorkingInstalls()
       assertArgError(function() setModuleInfo(moduleName, "version") end, "setModuleInfo: bad argument #3 type")
     end)
 
     it("round-trips a value through getModuleInfo", function()
-      requireWorkingInstalls()
       defer(function() setModuleInfo(moduleName, "version", "3.1") end)
 
       assert.is_true(setModuleInfo(moduleName, "version", "8.8"))
@@ -698,7 +642,6 @@ describe("Tests the module accessors", function()
 
   describe("Tests the functionality of getModulePath", function()
     it("returns the file the module was installed from", function()
-      requireWorkingInstalls()
       assert.equals(modulePath, getModulePath(moduleName))
     end)
   end)
@@ -722,7 +665,6 @@ describe("Tests the module accessors", function()
 
   describe("Tests the functionality of setModulePriority", function()
     it("raises a Lua error when the priority is missing", function()
-      requireWorkingInstalls()
       assertArgError(function() setModulePriority(moduleName) end, "setModulePriority: bad argument #2 type")
     end)
 
@@ -733,7 +675,6 @@ describe("Tests the module accessors", function()
     end)
 
     it("returns no values and is read back by getModulePriority", function()
-      requireWorkingInstalls()
       assert.equals(0, select('#', setModulePriority(moduleName, 7)))
       assert.equals(7, getModulePriority(moduleName))
       setModulePriority(moduleName, -2)
@@ -759,7 +700,6 @@ describe("Tests the module accessors", function()
     end)
 
     it("turns syncing on for an installed module", function()
-      requireWorkingInstalls()
       -- leave the module unsynced: a profile save rewrites a synced module's
       -- own .mpackage, and the fixture copy is thrown away when this block ends
       defer(function() disableModuleSync(moduleName) end)
@@ -778,7 +718,6 @@ describe("Tests the module accessors", function()
     end)
 
     it("turns syncing back off", function()
-      requireWorkingInstalls()
       defer(function() disableModuleSync(moduleName) end)
       assert.is_true(enableModuleSync(moduleName))
 
@@ -799,7 +738,6 @@ describe("Tests the module accessors", function()
     end)
 
     it("is false for a module that nobody has turned syncing on for", function()
-      requireWorkingInstalls()
       assert.is_false(getModuleSync(moduleName))
     end)
   end)
@@ -817,18 +755,13 @@ describe("Tests the functionality of reloadModule", function()
 
   describe("with the fixture module installed", function()
     setup(function()
-      if not installsWedgeThisPlatform then
-        installFixtureModule(moduleName)
-      end
+      installFixtureModule(moduleName)
     end)
     teardown(function()
-      if not installsWedgeThisPlatform then
-        removeFixtureModule(moduleName)
-      end
+      removeFixtureModule(moduleName)
     end)
 
     it("runs the module's scripts again", function()
-      requireWorkingInstalls()
       local runsBefore = mudletSpecModuleRuns
 
       reloadModuleUntil(moduleName, function() return mudletSpecModuleRuns > runsBefore end)
@@ -838,7 +771,6 @@ describe("Tests the functionality of reloadModule", function()
     end)
 
     it("re-reads the module's info from its config.lua", function()
-      requireWorkingInstalls()
       setModuleInfo(moduleName, "title", "changed by the spec")
       assert.equals("changed by the spec", getModuleInfo(moduleName, "title"))
 
@@ -848,7 +780,6 @@ describe("Tests the functionality of reloadModule", function()
     end)
 
     it("keeps the module's priority and sync setting", function()
-      requireWorkingInstalls()
       defer(function() disableModuleSync(moduleName) end)
       setModulePriority(moduleName, 4)
       assert.is_true(enableModuleSync(moduleName))
@@ -867,7 +798,6 @@ describe("Tests a package that uninstalls itself", function()
   -- used to free the TScript objects that Host::raiseEvent() was still
   -- iterating over. Package auto-updaters do exactly this.
   it("survives a package uninstalling itself from its own event handler", function()
-    requireWorkingInstalls()
     defer(function()
       removeFixturePackage("mudlet-spec-selfuninstall")
       mudletSpecSelfUninstallHandler = nil
