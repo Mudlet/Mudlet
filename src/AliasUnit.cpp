@@ -26,6 +26,8 @@
 #include "Host.h"
 #include "TAlias.h"
 
+#include <QScopeGuard>
+
 #include <functional>
 
 /* We need an explicit constructor in this file as the Host class is forward
@@ -281,6 +283,13 @@ bool AliasUnit::processDataStream(const QString& data)
     auto copyOfNodeList = mAliasRootNodeList;
 
     mProcessingDepth++;
+    const auto processingGuard = qScopeGuard([this] {
+        mProcessingDepth--;
+        Q_ASSERT(mProcessingDepth >= 0);
+        if (mProcessingDepth == 0) {
+            doCleanup();
+        }
+    });
 
     for (auto alias : copyOfNodeList) {
         if (!alias->isActive() && !alias->shouldBeActive()) {
@@ -290,12 +299,6 @@ bool AliasUnit::processDataStream(const QString& data)
         if (alias->match(data)) {
             state = true;
         }
-    }
-
-    mProcessingDepth--;
-    Q_ASSERT(mProcessingDepth >= 0);
-    if (mProcessingDepth == 0) {
-        doCleanup();
     }
 
     // the idea to get "command" after alias processing is finished and send its value

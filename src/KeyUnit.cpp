@@ -27,6 +27,8 @@
 #include "Host.h"
 #include "TKey.h"
 
+#include <QScopeGuard>
+
 #include <functional>
 
 KeyUnit::KeyUnit(Host* pHost)
@@ -108,6 +110,13 @@ bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers m
     bool isMatchFound = false;
 
     mProcessingDepth++;
+    const auto processingGuard = qScopeGuard([this] {
+        mProcessingDepth--;
+        Q_ASSERT(mProcessingDepth >= 0);
+        if (mProcessingDepth == 0) {
+            doCleanup();
+        }
+    });
 
     for (auto keyObject : mKeyRootNodeList) {
         // Skip null or invalid key objects during profile closing/destruction
@@ -117,21 +126,10 @@ bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers m
 
         if (keyObject->match(key, modifiers, mRunAllKeyMatches)) {
             if (!mRunAllKeyMatches) {
-                mProcessingDepth--;
-                Q_ASSERT(mProcessingDepth >= 0);
-                if (mProcessingDepth == 0) {
-                    doCleanup();
-                }
                 return true;
             }
             isMatchFound = true;
         }
-    }
-
-    mProcessingDepth--;
-    Q_ASSERT(mProcessingDepth >= 0);
-    if (mProcessingDepth == 0) {
-        doCleanup();
     }
 
     return isMatchFound;

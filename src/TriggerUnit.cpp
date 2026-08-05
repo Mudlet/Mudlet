@@ -28,6 +28,8 @@
 #include "TConsole.h"
 #include "TTrigger.h"
 
+#include <QScopeGuard>
+
 #include <algorithm>
 #include <functional>
 
@@ -324,6 +326,16 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     subject[utf8Length] = '\0';
 
     mProcessingDepth++;
+    const auto processingGuard = qScopeGuard([this] {
+        mProcessingDepth--;
+        Q_ASSERT(mProcessingDepth >= 0);
+        if (mProcessingDepth == 0) {
+            // Deletion is deferred while any pass runs, so these pointers stayed
+            // valid; drop them before doCleanup() frees the underlying triggers.
+            mRootNodesAddedWhileProcessing.clear();
+            doCleanup();
+        }
+    });
 
     // Iterate a snapshot of the root list: a trigger's Lua script can call
     // uninstallPackage()/installPackage() and mutate mTriggerRootNodeList
@@ -356,15 +368,6 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         trigger->match(subject, data, line);
     }
     free(subject);
-
-    mProcessingDepth--;
-    Q_ASSERT(mProcessingDepth >= 0);
-    if (mProcessingDepth == 0) {
-        // Deletion is deferred while any pass runs, so these pointers stayed
-        // valid; drop them before doCleanup() frees the underlying triggers.
-        mRootNodesAddedWhileProcessing.clear();
-        doCleanup();
-    }
 }
 
 void TriggerUnit::compileAll()
