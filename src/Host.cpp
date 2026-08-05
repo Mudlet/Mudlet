@@ -2134,10 +2134,17 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // home directory for the PROFILE
         const QDir _tmpDir(_home);
         // directory to store the expanded archive file contents
+        // Noted before it is made: the only folder this install may ever delete
+        // again is one it made itself. The package name is the archive's own file
+        // name, and then whatever its config.lua says, so it can just as well name
+        // a folder of the profile's that was already here ("map", "log",
+        // "current") - see the refusal further down.
+        const bool destinationAlreadyExisted = QDir(_dest).exists();
         const bool mkpathSuccessful = _tmpDir.mkpath(_dest);
         if (!mkpathSuccessful) {
             return {false, qsl("could not create destination folder")};
         }
+        QString folderThisInstallMade = destinationAlreadyExisted ? QString() : QDir(_dest).absolutePath();
 
         // Skip the unpacking dialog for modules created from UI, and for
         // script-initiated installs (passed via quiet) to avoid stealing
@@ -2185,7 +2192,13 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             }
             // continuing, so update the folder name on disk
             const QString newpath(qsl("%1/%2").arg(_home, packageName));
-            _dir.rename(_dir.absolutePath(), newpath);
+            // A rename onto a folder that is already there fails, and then the
+            // folder this install made is still at its old name while _dir goes
+            // on to the folder that was already here - which is not ours to
+            // delete, whatever the archive would like.
+            if (_dir.rename(_dir.absolutePath(), newpath) && !folderThisInstallMade.isEmpty()) {
+                folderThisInstallMade = QDir(newpath).absolutePath();
+            }
             _dir = QDir(newpath);
         }
         QStringList _filterList;
@@ -2231,17 +2244,17 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // for a module whose name is already in mInstalledModules on the way in
         // (profile loading, and installModule() over a stale entry, both do that).
         if (!registeredFromArchive) {
-            // Only ever remove a folder of this package's own. The package name
-            // can come out empty (a file called ".mpackage") or be whatever an
-            // untrusted archive's config.lua says (".." above), in which case
-            // _dir is the profile itself or the folder holding every profile -
-            // and removeDir() takes everything below what it is given.
+            // Only ever remove the folder this install made, and only if it is
+            // inside the profile: the package name can come out empty (a file
+            // called ".mpackage"), name a folder of the user's ("map"), or be
+            // whatever an untrusted archive's config.lua says (".." - the folder
+            // holding every profile), and removeDir() takes everything below what
+            // it is given.
             const QString profileHome = QDir(mudlet::getMudletPath(enums::profileHomePath, getName())).absolutePath();
-            const QString unpackedPath = _dir.absolutePath();
-            if (unpackedPath.startsWith(profileHome + QLatin1Char('/'))) {
-                removeDir(unpackedPath, unpackedPath);
+            if (!folderThisInstallMade.isEmpty() && folderThisInstallMade.startsWith(profileHome + QLatin1Char('/'))) {
+                removeDir(folderThisInstallMade, folderThisInstallMade);
             } else {
-                qWarning() << "Host::installPackage() WARNING - not removing" << unpackedPath << "for the refused package" << packageName << "as it is not a folder inside the profile" << profileHome;
+                qWarning() << "Host::installPackage() WARNING - refused" << fileName << "as package" << packageName << "but leaving" << _dir.absolutePath() << "alone: this install did not make it";
             }
             return {false, qsl("no package found in %1 - no Mudlet package file in it could be read").arg(fileName)};
         }

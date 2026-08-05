@@ -50,6 +50,7 @@
 #include <zip.h>
 
 #include "Host.h"
+#include "AliasUnit.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -150,25 +151,28 @@ private:
         QVERIFY2(mpHost->hasPendingProfileSave(), "Uninstalling a package left the profile no save to do");
     }
 
-    // Writes an archive holding nothing but a config.lua that names the package,
-    // i.e. one installPackage() unpacks and then refuses, having registered
-    // nothing from it.
-    static bool writeConfigOnlyArchive(const QString& path, const QString& declaredName)
+    // Writes an archive holding one file, i.e. one installPackage() unpacks and
+    // then refuses, having registered nothing from it.
+    static bool writeArchive(const QString& path, const QString& entryName, const QByteArray& contents)
     {
-        const QByteArray config = qsl("mpackage = \"%1\"\n").arg(declaredName).toUtf8();
         int errorCode = 0;
         zip* archive = zip_open(path.toUtf8().constData(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
         if (!archive) {
             return false;
         }
-        zip_source* source = zip_source_buffer(archive, config.constData(), config.size(), 0);
-        if (!source || zip_file_add(archive, "config.lua", source, ZIP_FL_ENC_UTF_8) < 0) {
+        zip_source* source = zip_source_buffer(archive, contents.constData(), contents.size(), 0);
+        if (!source || zip_file_add(archive, entryName.toUtf8().constData(), source, ZIP_FL_ENC_UTF_8) < 0) {
             zip_source_free(source);
             zip_discard(archive);
             return false;
         }
         return zip_close(archive) == 0;
     }
+
+    // ...specifically one whose config.lua renames the package to declaredName.
+    static bool writeConfigOnlyArchive(const QString& path, const QString& declaredName) { return writeArchive(path, qsl("config.lua"), qsl("mpackage = \"%1\"\n").arg(declaredName).toUtf8()); }
+
+    QString profileFilePath(const QString& relativePath) const { return qsl("%1/%2").arg(mudlet::getMudletPath(enums::profileHomePath, mProfileName), relativePath); }
 
 private slots:
     void initTestCase()
@@ -258,6 +262,92 @@ private slots:
         QVERIFY2(QDir(profilesDirectory).exists(), "Refusing the archive took the folder holding every profile with it");
         QVERIFY2(QDir(profileHome).exists(), "Refusing the archive took the profile with it");
         QVERIFY2(!savedProfileFiles(mProfileName).isEmpty(), "Refusing the archive took the saved profile with it");
+    }
+
+    // ...and it may only remove a folder it made itself. The package name is the
+    // archive's own file name, and then whatever its config.lua says, so it can
+    // just as well be "map" - the folder the profile keeps the user's maps in.
+    void test_refusingAnArchiveLeavesFoldersItDidNotMake()
+    {
+        const QString mapFolder = profileFilePath(qsl("map"));
+        const QString mapFile = qsl("%1/spec-map.dat").arg(mapFolder);
+        QVERIFY2(QDir().mkpath(mapFolder), "Could not create the map folder the profile would have");
+        QFile map(mapFile);
+        QVERIFY2(map.open(QFile::WriteOnly), "Could not write the map file this test is about");
+        map.write("map data that was here before any package was installed");
+        map.close();
+
+        QTemporaryDir archiveDir;
+        QVERIFY2(archiveDir.isValid(), "Could not create a temporary directory for the test archives");
+        mpHost->waitForProfileSave(); // an install during a save is postponed and answered with a bare true
+
+        // named through config.lua, from an archive called something harmless
+        const QString viaConfig = archiveDir.filePath(qsl("uninstall-save-mapgrab.mpackage"));
+        QVERIFY2(writeConfigOnlyArchive(viaConfig, qsl("map")), "Could not write the test archive");
+        auto [configOk, configMessage] = mpHost->installPackage(viaConfig, enums::PackageModuleType::Package, true);
+        QVERIFY2(!configOk, "An archive holding no package was installed");
+        QVERIFY2(QFile::exists(mapFile), "Refusing the archive took the profile's map folder with it");
+        // the folder the install did make is this one, and it does have to go
+        QVERIFY2(!QDir(profileFilePath(qsl("uninstall-save-mapgrab"))).exists(), "Refusing the archive left the folder it unpacked behind");
+
+        // ...and the same through the archive's file name alone, no config.lua
+        mpHost->waitForProfileSave();
+        const QString viaFileName = archiveDir.filePath(qsl("map.mpackage"));
+        QVERIFY2(writeArchive(viaFileName, qsl("readme.txt"), QByteArray("no package in here")), "Could not write the test archive");
+        auto [fileNameOk, fileNameMessage] = mpHost->installPackage(viaFileName, enums::PackageModuleType::Package, true);
+        QVERIFY2(!fileNameOk, "An archive holding no package was installed");
+        QVERIFY2(QFile::exists(mapFile), "Refusing the archive took the profile's map folder with it");
+    }
+
+    // The refusal is about archives nothing could be read out of, not about
+    // archives whose XML turns out to be no good - those are a different case,
+    // and one this deliberately leaves alone.
+    void test_anArchiveWithABadXmlIsStillARemovablePackage()
+    {
+        QTemporaryDir archiveDir;
+        QVERIFY2(archiveDir.isValid(), "Could not create a temporary directory for the test archives");
+
+        // 1. well-formed XML that is not a Mudlet package at all. XMLimport only
+        //    reports the XML reader's own errors, so the import of this one
+        //    SUCCEEDS - checking the import result would not refuse it either.
+        mpHost->waitForProfileSave();
+        const QString notAPackage = archiveDir.filePath(qsl("spec-notapackage.mpackage"));
+        QVERIFY2(writeArchive(notAPackage, qsl("spec-notapackage.xml"), QByteArray("<?xml version=\"1.0\"?>\n<something-else/>\n")), "Could not write the test archive");
+        auto [notAPackageOk, notAPackageMessage] = mpHost->installPackage(notAPackage, enums::PackageModuleType::Package, true);
+        QVERIFY2(notAPackageOk, qPrintable(notAPackageMessage));
+        QVERIFY2(mpHost->mInstalledPackages.contains(qsl("spec-notapackage")), "The package was not registered");
+        mpHost->waitForProfileSave(); // installing a package saves, and an uninstall during a save is refused
+        QVERIFY2(mpHost->uninstallPackage(qsl("spec-notapackage"), enums::PackageModuleType::Package), "The package could not be uninstalled");
+        QVERIFY2(!QDir(profileFilePath(qsl("spec-notapackage"))).exists(), "Uninstalling left the package folder behind");
+
+        // 2. XML the reader does fail on, after it has already read items out of
+        //    it. The import answers false, but the alias it created is in the
+        //    profile - refusing the archive here would delete the folder and
+        //    strand what was imported, and the package is registered either way,
+        //    so it is listed and can be uninstalled. That is what #9654 was about.
+        mpHost->waitForProfileSave();
+        const QString truncated = archiveDir.filePath(qsl("spec-truncatedxml.mpackage"));
+        const QByteArray truncatedXml = QByteArray("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                                                   "<!DOCTYPE MudletPackage>\n"
+                                                   "<MudletPackage version=\"1.001\">\n"
+                                                   "<AliasPackage>\n"
+                                                   "<Alias isActive=\"yes\" isFolder=\"no\">\n"
+                                                   "<name>spec-truncatedxml alias</name>\n"
+                                                   "<script>send(\"hello\")</script>\n"
+                                                   "<command></command>\n"
+                                                   "<packageName></packageName>\n"
+                                                   "<regex>^spec-truncatedxml$</regex>\n"
+                                                   "</Alias>\n"
+                                                   "</AliasPackage>\n"
+                                                   "<ActionPackage");
+        QVERIFY2(writeArchive(truncated, qsl("spec-truncatedxml.xml"), truncatedXml), "Could not write the test archive");
+        auto [truncatedOk, truncatedMessage] = mpHost->installPackage(truncated, enums::PackageModuleType::Package, true);
+        QVERIFY2(truncatedOk, qPrintable(truncatedMessage));
+        QVERIFY2(mpHost->getAliasUnit()->findFirstAlias(qsl("spec-truncatedxml alias")), "The alias read before the XML gave out was not created");
+        QVERIFY2(mpHost->mInstalledPackages.contains(qsl("spec-truncatedxml")), "The package was not registered");
+        mpHost->waitForProfileSave();
+        QVERIFY2(mpHost->uninstallPackage(qsl("spec-truncatedxml"), enums::PackageModuleType::Package), "The package could not be uninstalled");
+        QVERIFY2(!QDir(profileFilePath(qsl("spec-truncatedxml"))).exists(), "Uninstalling left the package folder behind");
     }
 
     // ...and closing the profile straight after an uninstall must leave nothing
