@@ -221,21 +221,37 @@ jobs:
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
+    - name: (Linux) Cache xcb-util-cursor 0.1.5
+      id: cache-xcb-cursor
+      if: runner.os == 'Linux'
+      uses: actions/cache@v6
+      with:
+        path: ${{runner.workspace}}/xcb-util-cursor-stage
+        key: xcb-util-cursor-0.1.5-${{matrix.os}}-${{runner.arch}}
+
     - name: (Linux) Build xcb-util-cursor 0.1.5
       timeout-minutes: 5
-      if: runner.os == 'Linux'
+      if: runner.os == 'Linux' && steps.cache-xcb-cursor.outputs.cache-hit != 'true'
       run: |
-        # Download and extract xcb-util-cursor 0.1.5
         # This version fixes the off-by-one heap buffer overflow in _XcursorThemeInherits
         # that causes PTB builds to crash with AddressSanitizer
-        # Fall back to the xcb project's dist host: xorg.freedesktop.org served an
-        # expired TLS certificate on 2026-07-28, breaking every CI run
+        # Several mirrors, each retried: xorg.freedesktop.org served an expired
+        # TLS certificate on 2026-07-28, breaking every CI run
         for url in \
           https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz \
-          https://xcb.freedesktop.org/dist/xcb-util-cursor-0.1.5.tar.xz; do
-          wget -q --connect-timeout=10 --read-timeout=30 --tries=3 --waitretry=5 -O xcb-util-cursor-0.1.5.tar.xz "$url" && break
-        done || echo "all xcb-util-cursor mirrors failed" >&2
+          https://www.x.org/releases/individual/lib/xcb-util-cursor-0.1.5.tar.xz \
+          https://xcb.freedesktop.org/dist/xcb-util-cursor-0.1.5.tar.xz
+        do
+          for attempt in 1 2 3; do
+            if wget -q --connect-timeout=10 --read-timeout=30 --tries=3 --waitretry=5 -O xcb-util-cursor-0.1.5.tar.xz "$url"; then
+              break 2
+            fi
+            echo "::warning::download attempt $attempt from $url failed, retrying..."
+            sleep $((attempt * 5))
+          done
+        done
         # Checksum from https://lists.x.org/archives/xorg-announce/2023-October/003428.html
+        # also fails the step if every mirror was unreachable
         echo "0caf99b0d60970f81ce41c7ba694e5eaaf833227bb2cbcdb2f6dc9666a663c57  xcb-util-cursor-0.1.5.tar.xz" | sha256sum -c
         tar xf xcb-util-cursor-0.1.5.tar.xz
         cd xcb-util-cursor-0.1.5
@@ -244,8 +260,14 @@ jobs:
         ./configure --prefix=/usr --libdir=/usr/lib/x86_64-linux-gnu
         make -j$(nproc)
 
+        # staged rather than installed directly so the result can be cached
+        make DESTDIR="${{runner.workspace}}/xcb-util-cursor-stage" install
+
+    - name: (Linux) Install xcb-util-cursor 0.1.5
+      if: runner.os == 'Linux'
+      run: |
         # Install system-wide (replaces Ubuntu 22.04's buggy 0.1.1)
-        sudo make install
+        sudo cp -a "${{runner.workspace}}/xcb-util-cursor-stage/." /
 
         # Update library cache so linker finds new version
         sudo ldconfig
@@ -374,13 +396,18 @@ jobs:
       run: ctest --output-on-failure
       env:
         QT_QPA_PLATFORM: offscreen
+        QT_FORCE_STDERR_LOGGING: 1
 
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
+      env:
+        QT_FORCE_STDERR_LOGGING: 1
 
+    # the full ctest run above already covers every functional-labelled test
     - name: Run QTest
+      if: matrix.run_tests != 'true'
       run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
       env:
         QT_FORCE_STDERR_LOGGING: 1
@@ -484,13 +511,89 @@ jobs:
         cd ~/Desktop
         sudo codesign --remove-signature ~/Desktop/Mudlet.app
 
+    - name: (Linux/macOS) Start fixture HTTP server for Lua tests
+      if: matrix.run_tests == 'true'
+      shell: bash
+      run: |
+        port_file="${{runner.temp}}/mudlet-http-fixture-port"
+        rm -f "${port_file}"
+        MUDLET_TEST_HTTP_PORT_FILE="${port_file}" nohup python3 "${{github.workspace}}/CI/http-fixture-server.py" > "${{runner.temp}}/http-fixture-server.log" 2>&1 &
+        for _ in $(seq 1 50); do
+          [ -s "${port_file}" ] && break
+          sleep 0.1
+        done
+        if [ ! -s "${port_file}" ]; then
+          echo "fixture HTTP server failed to start" >&2
+          cat "${{runner.temp}}/http-fixture-server.log" 2>/dev/null || true
+          exit 1
+        fi
+        port="$(cat "${port_file}")"
+        if ! curl -fsS "http://127.0.0.1:${port}/fixture.txt" > /dev/null; then
+          echo "fixture HTTP server is not serving fixtures" >&2
+          cat "${{runner.temp}}/http-fixture-server.log" 2>/dev/null || true
+          exit 1
+        fi
+        echo "MUDLET_TEST_HTTP_PORT=${port}" >> "${GITHUB_ENV}"
+        echo "fixture HTTP server ready on 127.0.0.1:${port}"
+
+    - name: (Linux) Start fake Discord IPC server for Lua tests
+      if: matrix.run_tests == 'true' && runner.os == 'Linux'
+      shell: bash
+      run: |
+        # A short runtime directory of its own: the whole discord-ipc-0 socket
+        # path has to fit into sockaddr_un's 108 character sun_path, and
+        # runner.temp does not leave room for it.
+        runtime_dir="$(mktemp -d /tmp/mdxdg-XXXX)"
+        ready_file="${{runner.temp}}/mudlet-discord-fixture-ready"
+        rm -f "${ready_file}"
+        nohup python3 "${{github.workspace}}/CI/discord-ipc-fixture.py" \
+          --runtime-dir "${runtime_dir}" \
+          --capture-file "${{runner.temp}}/mudlet-discord-frames.jsonl" \
+          --ready-file "${ready_file}" > "${{runner.temp}}/discord-ipc-fixture.log" 2>&1 &
+        for _ in $(seq 1 50); do
+          [ -s "${ready_file}" ] && break
+          sleep 0.1
+        done
+        if [ ! -s "${ready_file}" ] || [ ! -S "${runtime_dir}/discord-ipc-0" ]; then
+          echo "fake Discord IPC server failed to start" >&2
+          cat "${{runner.temp}}/discord-ipc-fixture.log" 2>/dev/null || true
+          exit 1
+        fi
+        cat "${ready_file}" >> "${GITHUB_ENV}"
+        # Prepended rather than replacing: the Qt install action puts Qt's own
+        # libraries on this path.
+        echo "MUDLET_TEST_DISCORD_LIB_PATH=${{github.workspace}}/3rdparty/discord/rpc/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" >> "${GITHUB_ENV}"
+        echo "fake Discord IPC server ready in ${runtime_dir}"
+
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
-      timeout-minutes: 1
+      # Longer than the other platforms': this leg also drives the real
+      # discord-rpc library, whose reconnects happen in wall-clock time.
+      timeout-minutes: 3
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
+        MUDLET_TEST_REQUIRE_TTS_MOCK: 1
+        MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
+        # Qt Multimedia runs a player here even without an audio device, so a
+        # media effect spec that cannot play is a regression rather than an
+        # environment quirk. macOS runners start no player at all, so the gate
+        # stays off there.
+        MUDLET_TEST_REQUIRE_MEDIA: 1
+        # The fake Discord IPC server's socket lives in this runtime directory,
+        # and the bundled discord-rpc library is only reachable through this
+        # library path - without both the Discord specs have nothing to talk to.
+        MUDLET_TEST_REQUIRE_DISCORD: 1
+        XDG_RUNTIME_DIR: ${{env.MUDLET_TEST_DISCORD_RUNTIME_DIR}}
+        LD_LIBRARY_PATH: ${{env.MUDLET_TEST_DISCORD_LIB_PATH}}
+        # The session bus socket lives in the runtime directory replaced above,
+        # so Qt's D-Bus platform theme can no longer find it and would fall back
+        # to spawning dbus-launch. Point it at nothing instead: libdbus leaks
+        # the buffer it reads the autolaunch reply into (1032 bytes, reported
+        # against this job by LeakSanitizer with no Mudlet frames in the stack),
+        # and no spec needs a session bus.
+        DBUS_SESSION_BUS_ADDRESS: 'disabled:'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
@@ -503,9 +606,22 @@ jobs:
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
+        MUDLET_TEST_REQUIRE_TTS_MOCK: 1
+        MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
+        # No MUDLET_TEST_REQUIRE_MEDIA: Qt Multimedia starts no player on the
+        # macOS runners, so the media effect specs pend here by design.
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: detect_leaks=0
+
+    - name: (Linux) Show the captured Discord frames on failure
+      if: failure() && matrix.run_tests == 'true' && runner.os == 'Linux'
+      shell: bash
+      run: |
+        echo "--- fake Discord IPC server log ---"
+        cat "${{runner.temp}}/discord-ipc-fixture.log" 2>/dev/null || true
+        echo "--- frames it captured ---"
+        cat "${{runner.temp}}/mudlet-discord-frames.jsonl" 2>/dev/null || true
 
     - name: Passed Lua tests
       if: matrix.run_tests == 'true'

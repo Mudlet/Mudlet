@@ -1,0 +1,1 @@
+mudlet-spec-resources fixture resource

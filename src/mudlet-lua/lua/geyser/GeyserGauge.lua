@@ -56,6 +56,9 @@ local function extractCSSSpacing(css, property)
   elseif #values == 2 then
     -- top/bottom, left/right
     return values[2], values[2], values[1], values[1]
+  elseif #values == 3 then
+    -- top, left/right, bottom
+    return values[2], values[2], values[1], values[3]
   elseif #values == 4 then
     -- top, right, bottom, left
     return values[4], values[2], values[1], values[3]
@@ -70,9 +73,24 @@ end
 --        used to set the gauge.
 -- @param maxValue Maximum numeric value.  Optionally nil, see above.
 -- @param text The text to display on the gauge, it is optional.
+-- @return true, or nil and a message if maxValue has no reading to give
 function Geyser.Gauge:setValue (currentValue, maxValue, text)
   assert(type(currentValue) == "number", string.format("bad argument #1 type (currentValue as number expected, got %s!)", type(currentValue)))
   assert(maxValue == nil or type(maxValue) == "number", string.format("bad argument #2 type (optional maxValue as number expected, got %s!)", type(maxValue)))
+  -- A zero, negative or NaN maximum has no sensible reading: dividing by it leaves
+  -- the gauge on an infinite or negative value that sticks until the next good
+  -- call. Games do report these while a stat is still unknown, so refuse the
+  -- reading and leave the gauge as it was rather than aborting the caller.
+  if maxValue ~= nil and not (maxValue > 0) then
+    local message = string.format("Geyser.Gauge:setValue: bad argument #2 value (maxValue must be a positive number, got %s!) - gauge '%s' was left as it was", tostring(maxValue), self.name)
+    -- latched, because a game that reports a bad maximum reports it every prompt
+    if not self.warnedBadMaxValue then
+      self.warnedBadMaxValue = true
+      debugc(message)
+    end
+    return nil, message
+  end
+  self.warnedBadMaxValue = nil
   -- Use sensible defaults for missing parameters.
   if currentValue < 0 then
     currentValue = 0
@@ -157,6 +175,7 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
   if text then
     self.text:echo(text)
   end
+  return true
 end
 
 --- Sets the gauge color.

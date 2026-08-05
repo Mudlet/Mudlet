@@ -48,6 +48,7 @@ class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 public:
     Q_DISABLE_COPY(dlgProfilePreferences)
     explicit dlgProfilePreferences(QWidget*, Host* pHost = nullptr);
+    ~dlgProfilePreferences();
     void setTab(QString tab);
 
 public slots:

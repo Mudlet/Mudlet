@@ -47,6 +47,7 @@
 #include "dlgTriggerEditor.h"
 #include "edbee/views/texteditorscrollarea.h"
 #include "MMCP.h"
+#include "utils.h"
 
 #include <chrono>
 #include <QtConcurrentRun>
@@ -216,6 +217,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         checkbox_noAutomaticUpdates->setChecked(true);
         checkbox_noAutomaticUpdates->setDisabled(true);
         checkbox_noAutomaticUpdates->setToolTip(utils::richText(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.")));
+    } else if (!pMudlet->pUpdater->ready()) {
+        // Nothing to show a setting for until the platform updater is set up,
+        // and a checkbox that silently does nothing is worse than no checkbox
+        groupBox_updates->hide();
     } else {
         checkbox_noAutomaticUpdates->setChecked(!pMudlet->pUpdater->updateAutomatically());
         // This is the extra connect(...) relating to settings' changes saved by
@@ -377,6 +382,15 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     connect(comboBox_crashReportPolicy, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_crashReportPolicyChanged);
 
     setupPasswordsMigration();
+}
+
+dlgProfilePreferences::~dlgProfilePreferences()
+{
+    // ~QDialog hides the dialog once this destructor is done, and the widget
+    // that has the keyboard focus then emits its editingFinished() - the chat
+    // name field and the shortcut editors both act on that one - when this
+    // object is no longer a valid receiver (#9574)
+    utils::disconnectChildSignals(this);
 }
 
 void dlgProfilePreferences::setupPasswordsMigration()
