@@ -1350,6 +1350,36 @@ describe("Tests DB.lua functions", function()
     end)
   end)
 
+  -- Rejecting a value must not strand the QString the table branch built for
+  -- the key: lua_error() longjmps past C++ destructors, so those branches
+  -- record the failure and defer the raise until that scope has closed. The
+  -- leak detection CI job only reports a leak on a path some spec actually
+  -- runs, so these are what keeps the class from coming back.
+  --
+  -- A boolean is the bad value throughout because lua_isstring() accepts
+  -- numbers and lua_isnumber() accepts numeric strings, so neither a number
+  -- nor a string reliably fails a check. None of these calls gets far enough
+  -- to build anything, so they leave no map state behind.
+  describe("Tests table argument rejection in the mapper functions", function()
+    local cases = {
+      {"addMapEvent", addMapEvent, {uniquename = "tableArgRejectProbe", eventname = false}},
+      {"createMapLabel", createMapLabel, {area = false}},
+      {"createMapImageLabel", createMapImageLabel, {areaID = false}},
+      {"highlightRoom", highlightRoom, {roomID = false}},
+      {"setCustomEnvColor", setCustomEnvColor, {environmentID = false}},
+      {"addCustomLine", addCustomLine, {roomID = false}},
+    }
+
+    for _, case in ipairs(cases) do
+      local label, callable, argument = case[1], case[2], case[3]
+
+      it(label .. " raises on a bad value type without stranding the key", function()
+        assert.is_function(callable, label .. " is unavailable in this profile")
+        assert.has_error(function() callable(argument) end)
+      end)
+    end
+  end)
+
   describe("Tests, if hanging indexes are removed", function()
     local test_db_name = db:safe_name("remove_indexes_test")
     local test_db_file = getMudletHomeDir() .. "/Database_" .. test_db_name .. ".db"

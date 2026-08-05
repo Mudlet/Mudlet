@@ -1483,6 +1483,44 @@ describe("Tests UI functions", function()
     end)
   end)
 
+  -- Rejecting a value must not strand the QString the table branch built for
+  -- the key, nor the Lua registry reference a command or function value was
+  -- already given: lua_error() longjmps past C++ destructors, so those
+  -- branches record the failure, release what they hold and defer the raise
+  -- until that scope has closed. The leak detection CI job only reports a leak
+  -- on a path some spec actually runs, so these are what keeps the class from
+  -- coming back.
+  --
+  -- A boolean is the bad value throughout because lua_isstring() accepts
+  -- numbers and lua_isnumber() accepts numeric strings, so neither a number
+  -- nor a string reliably fails a check. None of these calls gets far enough
+  -- to create a window, label or console.
+  describe("Tests table argument rejection in the window and format functions", function()
+    local cases = {
+      {"createLabel", createLabel, {name = false}},
+      {"createMiniConsole", createMiniConsole, {name = false}},
+      {"createCommandLine", createCommandLine, {name = false}},
+      {"createScrollBox", createScrollBox, {name = false}},
+      {"echoLink", echoLink, {text = false}},
+      {"insertLink", insertLink, {text = false}},
+      {"insertPopup", insertPopup, {text = false}},
+      {"setBackgroundColor", setBackgroundColor, {r = false}},
+      {"setBgColor", setBgColor, {r = false}},
+      {"setTextFormat", setTextFormat, {bgR = false}},
+      {"setCommandBackgroundColor", setCommandBackgroundColor, {r = false}},
+      {"setCommandForegroundColor", setCommandForegroundColor, {r = false}},
+    }
+
+    for _, case in ipairs(cases) do
+      local label, callable, argument = case[1], case[2], case[3]
+
+      it(label .. " raises on a bad value type without stranding the key", function()
+        assert.is_function(callable, label .. " is unavailable in this profile")
+        assert.has_error(function() callable(argument) end)
+      end)
+    end
+  end)
+
   -- https://github.com/Mudlet/Mudlet/issues/8945
   -- insertText with newlines should create new lines, not insert literal \n
   describe("Tests the functionality of insertText", function()

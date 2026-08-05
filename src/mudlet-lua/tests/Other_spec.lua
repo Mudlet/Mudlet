@@ -692,6 +692,31 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
+  -- Rejecting a value must not strand the QString the table branch built for
+  -- the key: lua_error() longjmps past C++ destructors, so those branches
+  -- record the failure and defer the raise until that scope has closed. The
+  -- leak detection CI job only reports a leak on a path some spec actually
+  -- runs, so these are what keeps the class from coming back.
+  --
+  -- A boolean is the bad value because lua_isstring() accepts numbers and
+  -- lua_isnumber() accepts numeric strings, so neither a number nor a string
+  -- reliably fails a check. Neither call gets far enough to register anything.
+  describe("Tests table argument rejection in permKey and tempComplexRegexTrigger", function()
+    local cases = {
+      {"permKey", permKey, {name = false}},
+      {"tempComplexRegexTrigger", tempComplexRegexTrigger, {name = false}},
+    }
+
+    for _, case in ipairs(cases) do
+      local label, callable, argument = case[1], case[2], case[3]
+
+      it(label .. " raises on a bad value type without stranding the key", function()
+        assert.is_function(callable, label .. " is unavailable in this profile")
+        assert.has_error(function() callable(argument) end)
+      end)
+    end
+  end)
+
   describe("Tests timeframe", function()
     teardown(function()
       -- timeframe schedules a real cleanup tempTimer; cancel any pending ones
