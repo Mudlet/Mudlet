@@ -357,4 +357,87 @@ describe("Tests functionality of Adjustable.Container", function()
       other:delete()
     end)
   end)
+
+  -- Adjustable.Container.Attached is keyed by container name, so two live
+  -- containers sharing a name land on the same key. resetBorder/adjustBorder
+  -- walk those entries to work out how much border to reserve, so a container
+  -- that is still attached but no longer registered loses its reservation and
+  -- the main console is drawn underneath it.
+  describe("Tests the functionality of Adjustable.Container:attachToBorder/detach", function()
+    local containers
+    local borderBefore
+
+    local function make(name, width)
+      local container = Adjustable.Container:new({
+        name = name,
+        x = 0, y = 0, width = width, height = 100,
+        autoLoad = false,
+        autoSave = false,
+      })
+      containers[#containers + 1] = container
+      return container
+    end
+
+    before_each(function()
+      containers = {}
+      borderBefore = getBorderLeft()
+    end)
+
+    -- Deliberately same named containers share their children's names too, so
+    -- the one that still holds the registration is deleted first and takes the
+    -- widgets with it; the superseded one is then deleted for its own event
+    -- handlers and bookkeeping, which nothing else would clear.
+    after_each(function()
+      for index = #containers, 1, -1 do
+        local container = containers[index]
+        if container.attached then
+          container:detach()
+        end
+        container:delete()
+      end
+      containers = {}
+      setBorderLeft(borderBefore)
+      assert.is_nil(Adjustable.Container.Attached.left.gasAttachPlain)
+      assert.is_nil(Adjustable.Container.Attached.left.gasAttachName)
+      assert.is_nil(Adjustable.Container.Attached.left.gasDetachName)
+    end)
+
+    it("reserves a border while attached and gives it back on detach", function()
+      local container = make("gasAttachPlain", 200)
+      container:attachToBorder("left")
+      assert.are.equal("left", container.attached)
+      assert.are.equal(container.borderSize, getBorderLeft())
+      assert.are.equal(container, Adjustable.Container.Attached.left.gasAttachPlain)
+      container:detach()
+      assert.is_false(container.attached)
+      assert.is_nil(Adjustable.Container.Attached.left.gasAttachPlain)
+      assert.are.equal(0, getBorderLeft())
+    end)
+
+    it("detaches a same named container it takes the registration from", function()
+      local first = make("gasAttachName", 200)
+      local second = make("gasAttachName", 400)
+      first:attachToBorder("left")
+      assert.are.equal(first.borderSize, getBorderLeft())
+      second:attachToBorder("left")
+      assert.are.equal(second, Adjustable.Container.Attached.left.gasAttachName)
+      assert.are.equal(second.borderSize, getBorderLeft())
+      -- the superseded container must not be left believing it is attached
+      -- while nothing reserves a border for it any more
+      assert.is_false(first.attached)
+      assert.is_nil(first.borderSize)
+    end)
+
+    it("leaves a same named container's reservation alone when a superseded one detaches", function()
+      local first = make("gasDetachName", 200)
+      local second = make("gasDetachName", 400)
+      first:attachToBorder("left")
+      second:attachToBorder("left")
+      local reserved = getBorderLeft()
+      first:detach()
+      assert.are.equal(second, Adjustable.Container.Attached.left.gasDetachName)
+      assert.are.equal("left", second.attached)
+      assert.are.equal(reserved, getBorderLeft())
+    end)
+  end)
 end)

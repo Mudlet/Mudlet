@@ -240,10 +240,6 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("selectCmdLinetext reports success after selecting the typed text", function()
-      -- BUG: the C++ selectCmdLineText declares one return value but pushes
-      -- nothing, so Lua hands back whatever was left on the stack - here the
-      -- window name that was passed in
-      pending("selectCmdLineText returns a stack leftover, not a result - see the Wave 3d report")
       console:printCmd("select me")
       assert.is_true(console:selectCmdLinetext())
     end)

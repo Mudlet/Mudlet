@@ -2423,8 +2423,8 @@ void mudlet::slot_timerFires()
         // on the stack (a timer script uninstalling its own package). Doing it
         // here - after the last use of pTT - keeps the window in which the
         // "uninstalled" timers linger down to this event loop iteration, before
-        // the profile save that Host::uninstallPackage() queues with a 0ms
-        // single-shot can serialize them back into the profile:
+        // the profile save that Host::uninstallPackage() queues for the next
+        // event loop pass can serialize them back into the profile:
         pHost->getTimerUnit()->doCleanup();
 
         // Okay now we've found it we are done:

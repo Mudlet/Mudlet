@@ -105,9 +105,8 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  -- __printTable is an internal helper of printTable and is not tested directly;
-  -- printTable, listPrint, listAdd and listRemove are covered near the end of
-  -- this file.
+  -- printTable, listPrint, __printTable, listAdd and listRemove are covered
+  -- near the end of this file.
 
   describe("Tests the functionality of table.size", function()
 
@@ -952,6 +951,41 @@ describe("Tests TableUtils.lua functions", function()
       assert.spy(echo).was.called_with("key=alpha value=one\n")
       assert.spy(echo).was.called_with("key=beta value=two\n")
     end)
+
+    it("should render a value that is neither a string nor a number", function()
+      local echo = spy.on(_G, "echo")
+      finally(function() echo:revert() end)
+      local nested = {}
+      printTable({ flag = true, nested = nested, fn = print })
+      assert.spy(echo).was.called(5)
+      assert.spy(echo).was.called_with("key=flag value=true\n")
+      assert.spy(echo).was.called_with("key=nested value=" .. tostring(nested) .. "\n")
+      assert.spy(echo).was.called_with("key=fn value=" .. tostring(print) .. "\n")
+    end)
+
+    it("should render a key that is neither a string nor a number", function()
+      local echo = spy.on(_G, "echo")
+      finally(function() echo:revert() end)
+      local key = {}
+      printTable({ [key] = "one", [true] = "two" })
+      assert.spy(echo).was.called(4)
+      assert.spy(echo).was.called_with("key=" .. tostring(key) .. " value=one\n")
+      assert.spy(echo).was.called_with("key=true value=two\n")
+    end)
+
+    it("should not raise on a table of mixed value types", function()
+      local echo = spy.on(_G, "echo")
+      finally(function() echo:revert() end)
+      assert.has_no.errors(function() printTable({ 1, "two", true, {}, print }) end)
+      assert.has_no.errors(function() printTable({}) end)
+    end)
+
+    it("should name itself when it is not given a table", function()
+      assert.has_error(function() printTable(nil) end,
+        'printTable: bad argument #1 type (table expected, got nil!)')
+      assert.has_error(function() listPrint("not a table") end,
+        'listPrint: bad argument #1 type (table expected, got string!)')
+    end)
   end)
 
   describe("Tests the contract of listPrint", function()
@@ -963,6 +997,16 @@ describe("Tests TableUtils.lua functions", function()
       assert.spy(echo).was.called(4)
       assert.spy(echo).was.called_with("1. ) first\n")
       assert.spy(echo).was.called_with("2. ) second\n")
+    end)
+
+    it("should render entries that are neither strings nor numbers", function()
+      local echo = spy.on(_G, "echo")
+      finally(function() echo:revert() end)
+      local nested = {}
+      listPrint({ true, nested })
+      assert.spy(echo).was.called(4)
+      assert.spy(echo).was.called_with("1. ) true\n")
+      assert.spy(echo).was.called_with("2. ) " .. tostring(nested) .. "\n")
     end)
   end)
 
