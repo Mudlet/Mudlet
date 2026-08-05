@@ -9,10 +9,12 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetSgrDefaultColorTest.cpp
     TelnetTlsPromptTest.cpp
     TelnetBenchmark.cpp
+    cTelnetBufferTest.cpp
     DefaultGameDeleteTest.cpp
     ResetProfileTest.cpp
     TOscTest.cpp
     TUserWindowTest.cpp
+    SubCommandLineLifetimeTest.cpp
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerSameLineMatchTest.cpp
@@ -21,6 +23,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TDiscordModeTest.cpp
     MainConsoleSelectionTest.cpp
     EnableDisableByNameTest.cpp
+    UnitDeferredDeleteTest.cpp
     ColorTriggerFilterChildTest.cpp
     GMCPCharLoginTest.cpp
     InsertTextCapTest.cpp
@@ -32,6 +35,7 @@ set(FUNCTIONAL_TEST_SOURCES
     ProfileRoundTripTest.cpp
     ProfileLoadTempFileTest.cpp
     PackageSelfUninstallTest.cpp
+    PackageUninstallSaveTeardownTest.cpp
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
     UndoServerWrapTest.cpp
