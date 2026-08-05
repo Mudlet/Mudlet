@@ -365,7 +365,6 @@ describe("Trigger processing", function()
             _G.TrigSpec = {count = 0}
             local id = tempExactMatchTrigger("exact_line_only", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end)
             assert.is_number(id)
-            -- superset line must NOT match an exact trigger
             feedTriggers("\nexact_line_only and more\n")
             assert.is_equal(0, _G.TrigSpec.count, "an exact-match trigger must not fire on a superset line")
             feedTriggers("\nexact_line_only\n")

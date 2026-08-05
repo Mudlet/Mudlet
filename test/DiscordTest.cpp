@@ -229,7 +229,6 @@ private slots:
                 ++checked;
             }
         }
-        // All 22 Discord Lua API functions should have been categorised:
         QVERIFY2(checked >= 22, qPrintable(qsl("only categorised %1 Discord Lua functions - has the source moved?").arg(checked)));
     }
 
