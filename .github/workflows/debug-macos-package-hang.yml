@@ -1,0 +1,370 @@
+# Debugging harness for issue #9670, "Mudlet stops responding on macOS part way
+# through the package specs, after a burst of profile saves".
+#
+# This fixes nothing. It exists to get evidence off a macOS runner, because the
+# hang has only ever happened there and nobody working on it has a Mac.
+#
+# It is dispatch-only on purpose, and deliberately NOT part of build-mudlet.yml
+# or build-mudlet-pr.yml: dispatching those would build all five matrix legs and
+# then package, notarise, upload and submit the result to make.mudlet.org, which
+# is far too much side effect for a debugging run. Nothing here runs unless
+# somebody asks for it from the Actions tab.
+#
+# Two layers, because the hang does not schedule itself around office hours:
+#   1. CI/macos-hang-watchdog.sh wraps the Lua test run and, when the run goes
+#      quiet or outstays its budget, captures full thread backtraces of the
+#      process before killing it. This works with nobody watching.
+#   2. An optional detached tmate session, started just before the test step, so
+#      that someone who *is* watching can attach while the process is still hung.
+#
+# The build steps here are copied from build-mudlet.yml's macOS leg on purpose,
+# so the binary under test matches the one that hangs. If that leg's
+# dependencies change, this file has to be brought along by hand.
+name: 🐞 Debug macOS package-spec hang
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Which macOS runner(s) to reproduce on'
+        type: choice
+        default: 'macos-14'
+        options:
+          - 'macos-14'
+          - 'macos-15-intel'
+          - 'both'
+      debug_macos_hang:
+        description: 'Lift the macOS pending gate so the package specs really install things (off = control run, which should pass)'
+        type: boolean
+        default: false
+      tmate:
+        description: 'Start a detached tmate session before the tests (SSH restricted to whoever dispatched this)'
+        type: boolean
+        default: false
+      hold_minutes:
+        description: 'Keep the hung process alive this long after the stacks are captured, for interactive poking. macOS runner minutes bill at 10x, so leave this at 0 unless you are about to attach.'
+        type: choice
+        default: '0'
+        options:
+          - '0'
+          - '5'
+          - '15'
+          - '30'
+
+jobs:
+  reproduce:
+    name: ${{matrix.os}} / package-spec hang
+    runs-on: ${{matrix.os}}
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(inputs.runner == 'both' && '["macos-14", "macos-15-intel"]' || format('["{0}"]', inputs.runner)) }}
+    env:
+      LUA_VERSION: '5.1.5'
+      QT_VERSION: '6.9.0'
+      # The watchdog's own triggers. The whole Lua suite takes about 14 seconds
+      # on this runner, and the reported hang is total silence for ~54 seconds,
+      # so 30 seconds of nothing is already well past normal.
+      WATCHDOG_STALL_SECONDS: '30'
+      # Has to stay comfortably under the test step's timeout-minutes below,
+      # because capturing three sets of stacks after the budget expires takes
+      # time of its own and the watchdog must not be killed mid-capture.
+      WATCHDOG_MAX_SECONDS: '240'
+
+    steps:
+    - name: Checkout Mudlet source code
+      uses: actions/checkout@v7
+      with:
+        submodules: recursive
+        fetch-depth: 0
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: ${{env.QT_VERSION}}
+        dir: ${{runner.workspace}}
+        cache: true
+        modules: qt5compat qtmultimedia qtspeech
+
+    - name: Use CMake 3.30.3
+      uses: lukka/get-cmake@v4.4.0
+
+    - name: Install Lua via GitHub Actions
+      uses: leafo/gh-actions-lua@v13
+      with:
+        luaVersion: ${{env.LUA_VERSION}}
+        buildCache: false
+
+    - name: Install Luarocks via GitHub Actions
+      uses: leafo/gh-actions-luarocks@v6
+
+    - name: Install dependencies
+      env:
+        HOMEBREW_NO_ANALYTICS: "ON"
+        HOMEBREW_NO_AUTO_UPDATE: "ON"
+        HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
+        HOMEBREW_NO_INSTALL_CLEANUP: "ON"
+      timeout-minutes: 7
+      run: |
+        # Remove Homebrew LLVM to prevent it from shadowing AppleClang.
+        # Upstream LLVM can't compile Objective-C++ against Apple SDK headers.
+        brew uninstall --ignore-dependencies llvm@15 2>/dev/null || true
+
+        # brew install can hang indefinitely during bottle pouring, so timeout and retry
+        for attempt in 1 2 3; do
+          brew install libzzip libzip ccache expect assimp hunspell oniguruma pcre2 pugixml sqlite yajl boost &
+          brew_pid=$!
+          ( sleep 120 && kill $brew_pid 2>/dev/null ) &
+          watcher_pid=$!
+          wait $brew_pid && { kill $watcher_pid 2>/dev/null || true; wait $watcher_pid 2>/dev/null || true; break; }
+          kill $watcher_pid 2>/dev/null || true; wait $watcher_pid 2>/dev/null || true
+          echo "::warning::brew install attempt $attempt failed or timed out, retrying..."
+          if [ "$attempt" -eq 3 ]; then
+            echo "::error::brew install failed after 3 attempts"
+            exit 1
+          fi
+        done
+
+        if [ "$(uname -m)" = "arm64" ]; then
+          HOMEBREW_PREFIX=/opt/homebrew
+        else
+          HOMEBREW_PREFIX=/usr/local
+        fi
+
+        luarocks --lua-version 5.1 install --local lua-yajl "YAJL_DIR=${HOMEBREW_PREFIX}/opt/yajl"
+        eval "$(luarocks path --local --lua-version "5.1")"
+
+        {
+          echo "CCACHE_DIR=${{runner.workspace}}/ccache"
+          echo "DEVELOPER_DIR=$(xcode-select --print-path)"
+          echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)"
+          echo "HOMEBREW_PREFIX=${HOMEBREW_PREFIX}"
+          echo "CMAKE_PREFIX_PATH=${QT_ROOT_DIR}:${HOMEBREW_PREFIX}"
+          echo "LUA_DIR=${HOME}/.lua"
+          echo "PKG_CONFIG_PATH=${HOMEBREW_PREFIX}/opt/pcre2/lib/pkgconfig:${PKG_CONFIG_PATH-}"
+          echo "LUA_PATH=${LUA_PATH}"
+          echo "LUA_CPATH=${LUA_CPATH}"
+        } >> "$GITHUB_ENV"
+
+    # The same key build-mudlet.yml's macOS legs use, so a dispatch starts from
+    # development's warm cache instead of compiling Mudlet from scratch.
+    - name: Restore ccache
+      id: restore-ccache
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{runner.workspace}}/ccache
+        key: ccache-${{matrix.os}}-${{runner.arch}}-clang_64-${{env.QT_VERSION}}-${{github.ref_name}}
+        restore-keys: ccache-${{matrix.os}}-${{runner.arch}}-clang_64-${{env.QT_VERSION}}-development
+
+    - name: Set build info
+      run: |
+        "${{github.workspace}}/CI/validate_deployment.sh"
+        "${{github.workspace}}/CI/set-build-info.sh"
+        # ccache can't reliably detect that the compiler is clang on macOS, so just say so explicitly.
+        {
+          echo "CXX=clang++"
+          echo "CC=clang"
+        } >> "$GITHUB_ENV"
+
+    - name: Get sentry-native commit hash
+      id: sentry-hash
+      run: echo "SENTRY_HASH=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache sentry-native
+      uses: actions/cache@v6
+      with:
+        path: |
+          3rdparty/sentry-native/install_without_transport
+          3rdparty/sentry-native/install_with_transport
+        key: sentry-${{runner.os}}-${{runner.arch}}-${{steps.sentry-hash.outputs.SENTRY_HASH}}
+
+    - name: Build Mudlet
+      uses: lukka/run-cmake@v3
+      with:
+        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
+        buildDirectory: '${{runner.workspace}}/b/ninja'
+        cmakeAppendedArgs: >-
+          -G Ninja
+          -DCMAKE_PREFIX_PATH=${{env.CMAKE_PREFIX_PATH}}
+          -DLUA_INCLUDE_DIR=${{github.workspace}}/.lua/include
+          -DLUA_LIBRARY=${{github.workspace}}/.lua/lib/liblua.a
+          -DWITH_SENTRY=ON
+          -DSENTRY_SEND_DEBUG=0
+          -DSENTRY_DSN=${{secrets.SENTRY_DSN}}
+      env:
+        NINJA_STATUS: '[%f/%t %o/sec] '
+        SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
+
+    - name: Save ccache
+      if: always()
+      uses: actions/cache/save@v6
+      with:
+        path: ${{runner.workspace}}/ccache
+        key: ${{steps.restore-ccache.outputs.cache-primary-key}}
+
+    - name: Install test dependencies
+      run: |
+        LUAROCKS="luarocks --lua-version 5.1 install --local"
+
+        $LUAROCKS LuaFileSystem
+        $LUAROCKS luautf8
+        $LUAROCKS lpeg
+        $LUAROCKS lua-zip "ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip"
+        $LUAROCKS LuaSQL-SQLite3 2.6.1 "SQLITE_DIR=${HOMEBREW_PREFIX}/opt/sqlite"
+        $LUAROCKS lrexlib-pcre2 "PCRE2_DIR=${HOMEBREW_PREFIX}/opt/pcre2"
+        $LUAROCKS busted
+
+    # Same placement and unsigning as the real leg: LuaGlobals.lua has to be
+    # findable, and an unsigned binary is one the debugger can attach to.
+    - name: Prep binary for running tests
+      run: |
+        cp -r "${{runner.workspace}}/b/ninja/src/mudlet.app" ~/Desktop/Mudlet.app
+        # This build was never packaged, so unlike the real CI leg it may carry
+        # no signature to remove - which is the state the command is trying to
+        # reach anyway, so not having to do it is not a failure.
+        sudo codesign --remove-signature ~/Desktop/Mudlet.app || echo "nothing to unsign"
+        if [ ! -x ~/Desktop/Mudlet.app/Contents/MacOS/mudlet ]; then
+          echo "::error::the build produced no runnable Mudlet binary, so there is nothing to watch"
+          exit 1
+        fi
+
+    - name: Start fixture HTTP server for Lua tests
+      shell: bash
+      run: |
+        port_file="${{runner.temp}}/mudlet-http-fixture-port"
+        rm -f "${port_file}"
+        MUDLET_TEST_HTTP_PORT_FILE="${port_file}" nohup python3 "${{github.workspace}}/CI/http-fixture-server.py" > "${{runner.temp}}/http-fixture-server.log" 2>&1 &
+        for _ in $(seq 1 50); do
+          [ -s "${port_file}" ] && break
+          sleep 0.1
+        done
+        if [ ! -s "${port_file}" ]; then
+          echo "fixture HTTP server failed to start" >&2
+          cat "${{runner.temp}}/http-fixture-server.log" 2>/dev/null || true
+          exit 1
+        fi
+        port="$(cat "${port_file}")"
+        if ! curl -fsS "http://127.0.0.1:${port}/fixture.txt" > /dev/null; then
+          echo "fixture HTTP server is not serving fixtures" >&2
+          cat "${{runner.temp}}/http-fixture-server.log" 2>/dev/null || true
+          exit 1
+        fi
+        echo "MUDLET_TEST_HTTP_PORT=${port}" >> "${GITHUB_ENV}"
+        echo "fixture HTTP server ready on 127.0.0.1:${port}"
+
+    - name: Start MMCP peer fixture for Lua tests
+      shell: bash
+      run: |
+        peer_dir="${{runner.temp}}/mudlet-mmcp-peer"
+        rm -rf "${peer_dir}"
+        mkdir -p "${peer_dir}"
+        MUDLET_TEST_MMCP_DIR="${peer_dir}" nohup python3 "${{github.workspace}}/CI/mmcp-peer.py" > "${{runner.temp}}/mmcp-peer.log" 2>&1 &
+        for _ in $(seq 1 50); do
+          [ -s "${peer_dir}/port" ] && break
+          sleep 0.1
+        done
+        if [ ! -s "${peer_dir}/port" ]; then
+          echo "MMCP peer fixture failed to start" >&2
+          cat "${{runner.temp}}/mmcp-peer.log" 2>/dev/null || true
+          exit 1
+        fi
+        port="$(cat "${peer_dir}/port")"
+        if ! python3 -c "import socket, sys; socket.create_connection(('127.0.0.1', int(sys.argv[1])), 5).close()" "${port}"; then
+          echo "MMCP peer fixture is not accepting connections" >&2
+          cat "${{runner.temp}}/mmcp-peer.log" 2>/dev/null || true
+          exit 1
+        fi
+        echo "MUDLET_TEST_MMCP_DIR=${peer_dir}" >> "${GITHUB_ENV}"
+        echo "MMCP peer fixture ready on 127.0.0.1:${port}"
+
+    # Started before the tests and detached, so that a session is already up
+    # while the process is hung rather than after the watchdog has killed it.
+    # limit-access-to-actor is not optional - Mudlet is a public repository, and
+    # an unrestricted session would let anyone attach to a live runner. It
+    # authorises the dispatcher's GitHub SSH keys and nobody else, so a
+    # dispatcher with no keys on their account simply gets a session nobody can
+    # connect to.
+    - name: Start a detached tmate session
+      if: ${{ inputs.tmate }}
+      uses: mxschmitt/action-tmate@v3
+      with:
+        limit-access-to-actor: true
+        detached: true
+
+    # 45 minutes covers the 240 second budget, the three capture tools after it
+    # and the longest hold on offer, with room to spare. It has to: if the step
+    # cap fires first the watchdog is killed before it writes anything, which is
+    # exactly the outcome this harness exists to avoid (it reports that as exit
+    # 92 rather than pretending it captured something).
+    - name: Run Lua tests under the hang watchdog
+      id: lua-tests
+      timeout-minutes: 45
+      shell: bash
+      run: |
+        rm -f /tmp/busted-tests-failed
+        "${{github.workspace}}/CI/macos-hang-watchdog.sh" \
+          --capture-dir "${{runner.temp}}/mudlet-hang-capture" \
+          --stall-seconds "${WATCHDOG_STALL_SECONDS}" \
+          --max-seconds "${WATCHDOG_MAX_SECONDS}" \
+          --hold-seconds "$(( HOLD_MINUTES * 60 ))" \
+          -- ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
+      env:
+        HOLD_MINUTES: ${{inputs.hold_minutes}}
+        AUTORUN_BUSTED_TESTS: 'true'
+        MUDLET_TEST_MODE: 1
+        MUDLET_TEST_REQUIRE_TTS_MOCK: 1
+        MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
+        MUDLET_TEST_REQUIRE_MMCP_PEER: 1
+        # The whole point of the dispatch: without this the package specs that
+        # install something stay pending on macOS and the hang cannot happen.
+        MUDLET_TEST_FORCE_PACKAGE_INSTALLS: ${{ inputs.debug_macos_hang && '1' || '' }}
+        TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
+        QUIT_MUDLET_AFTER_TESTS: 'true'
+        ASAN_OPTIONS: detect_leaks=0
+
+    - name: Summarise what the watchdog caught
+      if: always()
+      shell: bash
+      env:
+        FORCED_INSTALLS: ${{inputs.debug_macos_hang}}
+      run: |
+        capture_dir="${{runner.temp}}/mudlet-hang-capture"
+        {
+          echo "## ${{matrix.os}}"
+          echo
+          echo "Package installs forced: \`${FORCED_INSTALLS}\`"
+          echo
+          if [ -f "${capture_dir}/outcome.txt" ]; then
+            echo '```'
+            cat "${capture_dir}/outcome.txt"
+            echo '```'
+          else
+            echo "The watchdog wrote no outcome file - it did not get as far as running the tests."
+          fi
+          if [ -f "${capture_dir}/capture-failures.txt" ]; then
+            echo
+            echo "Capture problems:"
+            echo '```'
+            cat "${capture_dir}/capture-failures.txt"
+            echo '```'
+          fi
+          if [ -e /tmp/busted-tests-failed ]; then
+            echo
+            echo "busted also reported at least one failing spec."
+          fi
+        } >> "${GITHUB_STEP_SUMMARY}"
+
+    # if-no-files-found: error on purpose - a harness that quietly uploads
+    # nothing is worse than no harness, because the empty artifact reads as a
+    # clean run. Only skipped when the tests never started, so that a build
+    # failure is not reported as a capture failure.
+    - name: Upload the hang capture
+      if: ${{ always() && steps.lua-tests.conclusion != 'skipped' }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: hang-capture-${{matrix.os}}
+        path: ${{runner.temp}}/mudlet-hang-capture
+        if-no-files-found: error
+        retention-days: 14

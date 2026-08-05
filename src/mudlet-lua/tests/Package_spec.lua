@@ -75,7 +75,11 @@ end
 -- is killed. Linux (including the AddressSanitizer build) and Windows run the
 -- whole file fine. Until the save is fixed the specs that install something are
 -- pending on macOS; the contract specs still run there.
-local installsWedgeThisPlatform = getOS() == "mac"
+--
+-- MUDLET_TEST_FORCE_PACKAGE_INSTALLS=1 lifts the gate so that the hang can be
+-- reproduced deliberately. Only the debug-macos-package-hang workflow sets it,
+-- and only when dispatched by hand, so every ordinary run still pends.
+local installsWedgeThisPlatform = getOS() == "mac" and os.getenv("MUDLET_TEST_FORCE_PACKAGE_INSTALLS") ~= "1"
 
 local function requireWorkingInstalls()
   if installsWedgeThisPlatform then
