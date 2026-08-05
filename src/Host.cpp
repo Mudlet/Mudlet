@@ -491,6 +491,16 @@ bool Host::requestClose()
         return true;
     }
 
+    // A test-mode waitForEvent() or pumpEvents() is pumping the event loop on
+    // this profile's lua_State, and closing takes the Host, its interpreter and
+    // that state with it while the pump is still holding all three. Refuse, the
+    // way resetProfile_phase1() does. Always false (so a no-op) outside
+    // MUDLET_TEST_MODE, where both helpers are inert.
+    if (mLuaInterpreter.pumpingEvents()) {
+        qWarning() << "Host::requestClose() called while the test-mode event pump is running, ignoring";
+        return false;
+    }
+
     // This call ends up at the (void) TMainConsole::closeEvent(...) and causes
     // the close() method called here to return a true if the event was
     // accepted:
