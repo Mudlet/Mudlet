@@ -2325,7 +2325,17 @@ describe("Tests UI functions", function()
     end)
 
     it("setWindowWrap round-trips through getWindowWrap", function()
+      assert.is_true(setWindowWrap(win, 42))
+      assert.are.equal(42, getWindowWrap(win))
+    end)
+
+    -- a window zero columns wide can show nothing, and used to hang Mudlet
+    -- as soon as the next line was displayed in it (issue #9622)
+    it("setWindowWrap refuses a wrap width below one and keeps the old width", function()
       setWindowWrap(win, 42)
+      local ok, err = setWindowWrap(win, 0)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("greater than zero", 1, true))
       assert.are.equal(42, getWindowWrap(win))
     end)
 

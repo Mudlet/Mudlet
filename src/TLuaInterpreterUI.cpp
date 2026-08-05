@@ -3746,10 +3746,17 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
     }
     const int luaFrom = getVerifiedInt(L, __func__, s, "wrapAt");
     auto console = CONSOLE(L, QString{windowName});
+    if (luaFrom < 1) {
+        // a width of zero or less cannot hold a single character, so nothing
+        // could be displayed in such a window - the preferences dialog does not
+        // offer these values either
+        return warnArgumentValue(L, __func__, qsl("wrapAt must be greater than zero, got %1").arg(luaFrom));
+    }
     console->setWrapAt(luaFrom);
-    // only mirror values the preferences dialog itself accepts into the
-    // profile, otherwise an invalid width would reach NAWS and get saved
-    if (luaFrom >= 1 && console->getType() == TConsole::MainConsole) {
+    // only the main console's width belongs to the profile - it is what the
+    // preferences dialog shows, what NEW-ENVIRON reports as WORD_WRAP and what
+    // caps the width NAWS reports to the game
+    if (console->getType() == TConsole::MainConsole) {
         Host& host = getHostFromLua(L);
         const int priorWrapAt = host.mWrapAt;
         host.mWrapAt = luaFrom;
@@ -3758,7 +3765,8 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
         }
         host.updateDisplayDimensions();
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowWrapIndent

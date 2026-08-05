@@ -35,6 +35,7 @@ set(FUNCTIONAL_TEST_SOURCES
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
     UndoServerWrapTest.cpp
+    NarrowWindowWrapTest.cpp
     HostWidgetDecouplingTest.cpp
     ActionSelfUninstallTest.cpp
     ProfileFolderNameTest.cpp
@@ -135,6 +136,9 @@ set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeam
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
+
+# NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
 
 # TDiscordModeTest drives the real discord-rpc library end-to-end. The library's
 # reconnect backoff is a process-global (60s ceiling) that the suite's
