@@ -2205,7 +2205,10 @@ function suffix(what, func, fgc, bgc, window)
   window = window or "main"
   func = insertFuncs[func] or func or insertText
   local length = utf8.len(getCurrentLine(window))
-  moveCursor(window, length - 1, getLineNumber(window))
+  moveCursor(window, length, getLineNumber(window))
+  -- fg()/bg() also repaint whatever is selected in the window, so drop any
+  -- live selection first - only the text being added is meant to be coloured
+  deselect(window)
   if fgc then fg(window,fgc) end
   if bgc then bg(window,bgc) end
   func(window,what)
@@ -2227,6 +2230,8 @@ function prefix(what, func, fgc, bgc, window)
   window = window or "main"
   func = insertFuncs[func] or func or insertText
   moveCursor(window, 0, getLineNumber(window))
+  -- see suffix() - colouring must not leak onto the current selection
+  deselect(window)
   if fgc then fg(window,fgc) end
   if bgc then bg(window,bgc) end
   func(window,what)
@@ -2240,7 +2245,7 @@ end
 function moveCursorUp(window, lines, keep_horizontal)
   if type(window) ~= "string" then lines, window, keep_horizontal = window, "main", lines end
   lines = tonumber(lines) or 1
-  if not type(keep_horizontal) == "boolean" then keep_horizontal = false end
+  if type(keep_horizontal) ~= "boolean" then keep_horizontal = false end
   local curLine = getLineNumber(window)
   if not curLine then return nil, "window does not exist" end
   local x = 0
@@ -2255,7 +2260,7 @@ end
 function moveCursorDown(window, lines, keep_horizontal)
   if type(window) ~= "string" then lines, window, keep_horizontal = window, "main", lines end
   lines = tonumber(lines) or 1
-  if not type(keep_horizontal) == "boolean" then keep_horizontal = false end
+  if type(keep_horizontal) ~= "boolean" then keep_horizontal = false end
   local curLine = getLineNumber(window)
   if not curLine then return nil, "window does not exist" end
   local x = 0
@@ -2669,9 +2674,10 @@ end
 function scrollUp(window, lines)
   if type(window) ~= "string" then window, lines = "main", window end
   lines = tonumber(lines) or 1
-  local numLines = getLastLineNumber(window)
-  if not numLines then return nil, "window does not exist" end
+  -- getScroll() is what actually answers nil for an unknown window;
+  -- getLastLineNumber() answers -1, so guarding on it never fires
   local curScroll = getScroll(window)
+  if not curScroll then return nil, "window does not exist" end
   scrollTo(window, math.max(curScroll - lines, 0))
 end
 
@@ -2681,10 +2687,10 @@ end
 function scrollDown(window, lines)
   if type(window) ~= "string" then window, lines = "main", window end
   lines = tonumber(lines) or 1
-  local numLines = getLastLineNumber(window)
-  if not numLines then return nil, "window does not exist" end
+  -- see scrollUp() on why the guard is on getScroll() rather than on the line count
   local curScroll = getScroll(window)
-  scrollTo(window, math.min(curScroll + lines, numLines))
+  if not curScroll then return nil, "window does not exist" end
+  scrollTo(window, math.min(curScroll + lines, getLastLineNumber(window)))
 end
 
 --[[

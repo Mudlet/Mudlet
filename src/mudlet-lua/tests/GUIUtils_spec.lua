@@ -1961,6 +1961,51 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.has_error(function() prefix(5) end)
       assert.has_error(function() suffix(5) end)
     end)
+
+    -- A line that has been finished off with a newline is the ordinary trigger
+    -- case, and the only one where landing a column short is visible: on the
+    -- unfinished line the block above uses, an insert past the last character
+    -- is appended either way.
+    local function completedLine()
+      clearWindow(windowName)
+      moveCursor(windowName, 0, 0)
+      echo(windowName, "PROBE has a TARGET word\n")
+      moveCursor(windowName, 0, 0)
+    end
+
+    it("Should put text after the last character of a completed line", function()
+      completedLine()
+      suffix(" SUF", nil, nil, nil, windowName)
+      assert.equals("PROBE has a TARGET word SUF", currentLine())
+    end)
+
+    it("Should put text after the last character of a completed line when colouring it", function()
+      completedLine()
+      suffix(" SUF", nil, "red", nil, windowName)
+      assert.equals("PROBE has a TARGET word SUF", currentLine())
+    end)
+
+    it("Should not recolour the current selection when prefixing", function()
+      selectSection(windowName, 0, 6)
+      prefix("[", nil, "red", nil, windowName)
+      -- "middle" now starts one column along, and must have kept its colour
+      selectSection(windowName, 1, 6)
+      assert.are_not.same(color_table["red"], getTextFormat(windowName).foreground)
+    end)
+
+    it("Should not recolour the current selection when suffixing", function()
+      selectSection(windowName, 0, 6)
+      suffix("]", nil, "red", nil, windowName)
+      selectSection(windowName, 0, 6)
+      assert.are_not.same(color_table["red"], getTextFormat(windowName).foreground)
+    end)
+
+    it("Should still colour what it adds when something is selected", function()
+      selectSection(windowName, 0, 6)
+      prefix("[", nil, "red", nil, windowName)
+      selectSection(windowName, 0, 1)
+      assert.are.same(color_table["red"], getTextFormat(windowName).foreground)
+    end)
   end)
 
   describe("Tests the functionality of moveCursorDown", function()
@@ -2005,6 +2050,15 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local ok, err = moveCursorDown("guiUtilsNoSuchWindow", 1)
       assert.is_nil(ok)
       assert.equals("window does not exist", err)
+    end)
+
+    it("Should treat a non-boolean keep_horizontal as false", function()
+      moveCursor(windowName, 2, 0)
+      moveCursorDown(windowName, 1, "yes")
+      assert.equals(0, getColumnNumber(windowName))
+      moveCursor(windowName, 2, 1)
+      moveCursorUp(windowName, 1, "yes")
+      assert.equals(0, getColumnNumber(windowName))
     end)
   end)
 
@@ -2154,10 +2208,6 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should report an unknown window rather than raising", function()
-      -- BUG: the guard reads getLastLineNumber, which answers -1 rather than
-      -- nil for a window it does not know, so the documented nil + message
-      -- never happens and getScroll's nil blows up in the arithmetic below it
-      pending("scrollUp/scrollDown raise on an unknown window - see the Wave 3d report")
       local ok, err = scrollUp("guiUtilsNoSuchWindow", 1)
       assert.is_nil(ok)
       assert.equals("window does not exist", err)

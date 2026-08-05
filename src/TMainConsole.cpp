@@ -87,6 +87,15 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
 TMainConsole::~TMainConsole()
 {
+    // The registered command lines are descendants of this console, so they are
+    // destroyed by ~QWidget below - which is well after mSubCommandLineMap itself
+    // has gone. Drop the destroyed() handlers registerSubCommandLine() set up
+    // before they can be run against the dead map.
+    for (auto commandLine : std::as_const(mSubCommandLineMap)) {
+        disconnect(commandLine, &QObject::destroyed, this, nullptr);
+    }
+    mSubCommandLineMap.clear();
+
     // Neither is a child of this console: the map dock is reparented onto the main
     // window by addDockWidget(), and the unpacking dialog is parentless. So neither
     // dies with the console automatically.
@@ -960,13 +969,32 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
         } else {
             pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, mpMainFrame);
         }
-        mSubCommandLineMap[name] = pN;
+        registerSubCommandLine(name, pN);
         pN->resize(width, height);
         pN->move(x, y);
         pN->show();
         return {true, QString()};
     }
     return {false, QLatin1String("couldn't create commandLine")};
+}
+
+void TMainConsole::registerSubCommandLine(const QString& name, TCommandLine* pCommandLine)
+{
+    mSubCommandLineMap[name] = pCommandLine;
+
+    // A TCommandLine is always a child widget of something else - the miniconsole
+    // it is embedded in, or the user window / scroll box it was created into - so
+    // it can be destroyed without deleteCommandLine() ever being called, and this
+    // map does not hold QPointers. Without this the entry outlives the widget and
+    // every later lookup of the name reads freed memory; TConsole::setFont() walks
+    // the whole map, so even changing the display font in Preferences hits it.
+    connect(pCommandLine, &QObject::destroyed, this, [this, pCommandLine]() {
+        // Erase by value rather than by name: a replacement command line may have
+        // been registered under the same name in the meantime and must be kept.
+        mSubCommandLineMap.removeIf([pCommandLine](const auto& it) {
+            return it.value() == pCommandLine;
+        });
+    });
 }
 
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)

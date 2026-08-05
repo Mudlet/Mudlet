@@ -13,6 +13,7 @@ set(FUNCTIONAL_TEST_SOURCES
     ResetProfileTest.cpp
     TOscTest.cpp
     TUserWindowTest.cpp
+    SubCommandLineLifetimeTest.cpp
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerSameLineMatchTest.cpp

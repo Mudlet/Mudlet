@@ -112,12 +112,17 @@ describe("Tests functionality of Geyser.CommandLine", function()
     end)
   end)
 
-  -- Two things are in the way. The selection itself has no getter; and
-  -- selectCmdLineText (TLuaInterpreterUI.cpp) declares one return value without
-  -- pushing one, so it hands back whatever was left on the Lua stack - the
-  -- window name it was passed - rather than a result. Asserting either of those
-  -- as they stand would freeze the defect in place.
-  pending("Geyser.CommandLine:selectText selects every character - the selection is not readable from Lua and needs a getCmdLineSelection getter, and selectCmdLineText returns the window name instead of a result")
+  describe("Geyser.CommandLine:selectText", function()
+    it("reports success", function()
+      local commandLine = track(Geyser.CommandLine:new({name = "gclSelect", x = 0, y = 0, width = 100, height = 30}))
+      commandLine:print("select me")
+      assert.is_true(commandLine:selectText())
+      -- selecting must not disturb what is typed
+      assert.are.equal("select me", commandLine:getText())
+    end)
+  end)
+
+  pending("Geyser.CommandLine:selectText selects every character - the selection itself is not readable from Lua and needs a getCmdLineSelection getter")
 
   describe("Geyser.CommandLine:setStyleSheet", function()
     it("reuses the remembered stylesheet when called without one", function()
