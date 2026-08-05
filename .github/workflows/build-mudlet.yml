@@ -815,7 +815,7 @@ jobs:
           echo "LUA_CPATH=${LUA_CPATH}"
         } >> "$GITHUB_ENV"
 
-    # The same key build-mudlet.yml's macOS legs use, so a dispatch starts from
+    # The same key compile-mudlet's macOS legs use, so a dispatch starts from
     # development's warm cache instead of compiling Mudlet from scratch.
     - name: Restore ccache
       id: restore-ccache

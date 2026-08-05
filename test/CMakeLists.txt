@@ -86,4 +86,15 @@ if(NOT WIN32)
     )
 endif()
 
+# Checks the watchdog that is meant to capture Mudlet's stacks when it stops
+# responding on a macOS runner (issue #9670). The capture tools it drives are
+# macOS-only, so what is checked everywhere is that it reports honestly - a
+# watchdog that captured nothing but said nothing is the failure to avoid
+if(NOT WIN32)
+    add_test(NAME MacOSHangWatchdogTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/macos-hang-watchdog-test.sh
+    )
+    set_tests_properties(MacOSHangWatchdogTest PROPERTIES TIMEOUT 180)
+endif()
+
 add_subdirectory(functional_tests)

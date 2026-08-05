@@ -77,8 +77,8 @@ end
 -- pending on macOS; the contract specs still run there.
 --
 -- MUDLET_TEST_FORCE_PACKAGE_INSTALLS=1 lifts the gate so that the hang can be
--- reproduced deliberately. Only the debug-macos-package-hang workflow sets it,
--- and only when dispatched by hand, so every ordinary run still pends.
+-- reproduced deliberately. Only build-mudlet.yml's debug-macos-hang job sets
+-- it, and only when dispatched by hand, so every ordinary run still pends.
 local installsWedgeThisPlatform = getOS() == "mac" and os.getenv("MUDLET_TEST_FORCE_PACKAGE_INSTALLS") ~= "1"
 
 local function requireWorkingInstalls()
