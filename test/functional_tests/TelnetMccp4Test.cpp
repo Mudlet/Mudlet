@@ -218,6 +218,82 @@ private slots:
         QVERIFY2(!mpServer->receivedData().contains(acceptCompress2), "Client sent IAC DO COMPRESS2 after an MCCP4 zstd frame ended - the completed frame wrongly un-negotiated MCCP4.");
     }
 
+    // A server may negotiate MCCP2 before it offers MCCP4, which leaves both
+    // marked as negotiated. The end of an MCCP4 frame must then still switch
+    // decompression off, or the plain telnet that follows is fed to zlib.
+    void test_plainTelnetAfterAZstdFrameWhenMccp2CameFirst()
+    {
+        auto* host = connectedHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        offerCompress2(host); // accepted, MCCP4 is not negotiated yet
+        offerCompress4(host);
+
+        QByteArray data = beginEncoding("zstd");
+        data.append(zstdCompress("MCCP4_FRAME_BEFORE_PLAIN\r\n"));
+        feed(host, data);
+        QVERIFY2(waitForBufferToContain("MCCP4_FRAME_BEFORE_PLAIN"), "The zstd frame was not decompressed, so the frame-end state was never reached.");
+
+        mpServer->clearReceivedData();
+        QByteArray plain("MCCP4_PLAIN_AFTER_FRAME\r\n");
+        feed(host, plain);
+        QVERIFY2(waitForBufferToContain("MCCP4_PLAIN_AFTER_FRAME"),
+                 qPrintable(qsl("Plain telnet after a finished zstd frame was swallowed - decompression was left on with nothing driving it. Buffer holds:\n%1").arg(bufferContents())));
+
+        // The text can still surface via the zlib error path, so the telling
+        // symptom is the error itself and the DONT it puts on the wire
+        QVERIFY2(!bufferContents().contains(qsl("decompression error")), qPrintable(qsl("Plain telnet after a finished zstd frame was fed to zlib. Buffer holds:\n%1").arg(bufferContents())));
+
+        QByteArray refuseCompress2;
+        refuseCompress2.append(TN_IAC);
+        refuseCompress2.append(TN_DONT);
+        refuseCompress2.append(OPT_COMPRESS2);
+        QVERIFY2(!mpServer->receivedData().contains(refuseCompress2), "Client dropped MCCP2 over a zlib error that plain telnet after a finished zstd frame should never have caused.");
+    }
+
+    // BEGIN_ENCODING for an option that was never agreed must be refused, not
+    // obeyed: otherwise one unsolicited subnegotiation switches compression on,
+    // including when the user has forced compression off.
+    void test_beginEncodingWithoutNegotiationIsRefused()
+    {
+        auto* host = connectedHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        mpServer->clearReceivedData();
+        QByteArray data = beginEncoding("zstd");
+        data.append("MCCP4_PLAIN_NO_NEGOTIATION\r\n");
+        feed(host, data);
+
+        QByteArray refuse;
+        refuse.append(TN_IAC);
+        refuse.append(TN_DONT);
+        refuse.append(OPT_COMPRESS4);
+        QVERIFY2(waitForServerToReceive(refuse), "An unsolicited MCCP4 BEGIN_ENCODING was obeyed instead of refused.");
+
+        QVERIFY2(waitForBufferToContain("MCCP4_PLAIN_NO_NEGOTIATION"), qPrintable(qsl("Plain telnet was lost after an unsolicited BEGIN_ENCODING. Buffer holds:\n%1").arg(bufferContents())));
+
+        // Obeying the subnegotiation would have run that plain text through the
+        // zstd decoder first, which is what the error line reports
+        QVERIFY2(!bufferContents().contains(qsl("decompression error")), qPrintable(qsl("An unsolicited BEGIN_ENCODING switched compression on. Buffer holds:\n%1").arg(bufferContents())));
+    }
+
+    // Announcing compression and then sending uncompressed data is the common
+    // server bug the zlib path already tolerates; that data has to reach the
+    // player rather than being dropped along with the rest of the buffer.
+    void test_uncompressedDataAfterBeginEncodingIsNotDropped()
+    {
+        auto* host = connectedHost();
+        QVERIFY2(host, "No active host available for the test.");
+        offerCompress4(host);
+
+        QByteArray data = beginEncoding("zstd");
+        data.append("MCCP4_UNCOMPRESSED_PAYLOAD\r\n");
+        feed(host, data);
+
+        QVERIFY2(waitForBufferToContain("MCCP4_UNCOMPRESSED_PAYLOAD"),
+                 qPrintable(qsl("Uncompressed data sent after BEGIN_ENCODING was discarded instead of being reprocessed as plain telnet. Buffer holds:\n%1").arg(bufferContents())));
+    }
+
     void cleanup()
     {
         delete mpServer;

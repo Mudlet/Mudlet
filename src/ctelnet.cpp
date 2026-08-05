@@ -68,7 +68,8 @@
 
 using namespace std::chrono_literals;
 
-static const QStringList MCCP4_SUPPORTED_ENCODINGS{qsl("zstd"), qsl("deflate")};
+// The MCCP4 encodings this client can decode, in the order they are offered
+static const char MCCP4_SUPPORTED_ENCODINGS[] = "zstd,deflate";
 
 constexpr int AUTO_LOGIN_USERNAME_DELAY_MS = 2000;
 constexpr int AUTO_LOGIN_PASSWORD_DELAY_MS = 1000;
@@ -2987,7 +2988,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     if (mpHost->mFORCE_NO_COMPRESSION) {
                         sendTelnetOption(TN_DONT, option);
                         hisOptionState.reset(idxOption);
-                        QString version = (option == OPT_COMPRESS) ? "1" : (option == OPT_COMPRESS2) ? "2" : "4";
+                        const char* version = (option == OPT_COMPRESS) ? "1" : (option == OPT_COMPRESS2) ? "2" : "4";
                         qDebug().nospace().noquote() << "Rejecting MCCP v" << version << ", because the 'Force compression off' option is enabled.";
                     } else if ((option == OPT_COMPRESS) && (hisOptionState.test(static_cast<size_t>(OPT_COMPRESS2)) || hisOptionState.test(static_cast<size_t>(OPT_COMPRESS4)))) {
                         //protocol says: reject MCCP v1 if you have previously accepted MCCP v2 or v4...
@@ -3011,13 +3012,13 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                             qDebug() << "MCCP v2 negotiated.";
                         } else if (option == OPT_COMPRESS4) {
                             mMCCP_version_4 = true;
-                            qDebug() << "MCCP v4 negotiated! Offering supported encodings:" << MCCP4_SUPPORTED_ENCODINGS.join(",");
+                            qDebug() << "MCCP v4 negotiated! Offering supported encodings:" << MCCP4_SUPPORTED_ENCODINGS;
                             std::string response;
                             response += TN_IAC;
                             response += TN_SB;
                             response += OPT_COMPRESS4;
                             response += MCCP4_ACCEPT_ENCODING;
-                            response += MCCP4_SUPPORTED_ENCODINGS.join(",").toStdString();
+                            response += MCCP4_SUPPORTED_ENCODINGS;
                             response += TN_IAC;
                             response += TN_SE;
                             socketOutRaw(response);
@@ -3799,6 +3800,17 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         case OPT_COMPRESS4: {
             if (telnetCommand.length() >= 5 && telnetCommand[3] == MCCP4_BEGIN_ENCODING) {
+                // Only a server we actually said DO COMPRESS4 to may start
+                // compressing. Without this an unsolicited subnegotiation could
+                // switch compression on behind the user's back - including when
+                // they have "Force compression off" set, or when MCCP4 was
+                // refused in favour of an option already in use.
+                if (!hisOptionState.test(static_cast<size_t>(OPT_COMPRESS4))) {
+                    qWarning() << "MCCP4: BEGIN_ENCODING received for an option that was never agreed, ignoring";
+                    sendTelnetOption(TN_DONT, OPT_COMPRESS4);
+                    break;
+                }
+
                 std::string compressionType;
                 for (size_t i = 4; i < telnetCommand.length() - 2; ++i) {
                     if (telnetCommand[i] == TN_IAC) {
@@ -3807,13 +3819,14 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     compressionType += telnetCommand[i];
                 }
 
+                std::byte requestedEncoding{0};
                 if (compressionType == "zstd") {
-                    mMCCP4_encoding = MCCP4_ENCODING_ZSTD;
+                    requestedEncoding = MCCP4_ENCODING_ZSTD;
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
                     qDebug() << "MCCP4: Server selected zstd";
 #endif
                 } else if (compressionType == "deflate") {
-                    mMCCP4_encoding = MCCP4_ENCODING_DEFLATE;
+                    requestedEncoding = MCCP4_ENCODING_DEFLATE;
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
                     qDebug() << "MCCP4: Server selected deflate";
 #endif
@@ -3826,49 +3839,50 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     return;
                 }
 
+                // A fresh BEGIN_ENCODING supersedes any run still in flight, so
+                // release that decoder first: inflateInit() on a live stream
+                // orphans zlib's state, and a reused ZSTD_DStream would still be
+                // positioned mid-frame in the run being replaced.
+                endMCCP4Compression();
+                mMCCP4_encoding = requestedEncoding;
+
                 if (mMCCP4_encoding == MCCP4_ENCODING_ZSTD) {
+                    mZstdOutBuffer.resize(BUFFER_SIZE);
+
+                    mZstdDstream = ZSTD_createDStream();
                     if (!mZstdDstream) {
-                        mZstdOutBuffer.resize(BUFFER_SIZE);
-
-                        mZstdDstream = ZSTD_createDStream();
-                        if (!mZstdDstream) {
-                            qWarning() << "MCCP4: Failed to create ZSTD decompression context";
-                            //: Message shown in the main console when MCCP4 compression setup fails
-                            postMessage(tr("[ WARN  ]  - MCCP4 compression setup failed. The connection may not work correctly."));
-                            sendTelnetOption(TN_DONT, OPT_COMPRESS4);
-                            cleanupMCCP4();
-                            return;
-                        }
-
-                        size_t const initResult = ZSTD_initDStream(mZstdDstream);
-                        if (ZSTD_isError(initResult)) {
-                            qWarning() << "MCCP4: Failed to initialize ZSTD stream:" << ZSTD_getErrorName(initResult);
-                            //: Message shown in the main console when MCCP4 compression setup fails
-                            postMessage(tr("[ WARN  ]  - MCCP4 compression setup failed. The connection may not work correctly."));
-                            sendTelnetOption(TN_DONT, OPT_COMPRESS4);
-                            cleanupMCCP4();
-                            return;
-                        }
-#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
-                        qDebug() << "MCCP4: ZSTD decompression context created and initialized";
-#endif
+                        qWarning() << "MCCP4: Failed to create ZSTD decompression context";
+                        //: Message shown in the main console when MCCP4 compression setup fails
+                        postMessage(tr("[ WARN  ]  - MCCP4 compression setup failed. The connection may not work correctly."));
+                        sendTelnetOption(TN_DONT, OPT_COMPRESS4);
+                        cleanupMCCP4();
+                        return;
                     }
-                } else if (mMCCP4_encoding == MCCP4_ENCODING_DEFLATE) {
+
+                    size_t const initResult = ZSTD_initDStream(mZstdDstream);
+                    if (ZSTD_isError(initResult)) {
+                        qWarning() << "MCCP4: Failed to initialize ZSTD stream:" << ZSTD_getErrorName(initResult);
+                        //: Message shown in the main console when MCCP4 compression setup fails
+                        postMessage(tr("[ WARN  ]  - MCCP4 compression setup failed. The connection may not work correctly."));
+                        sendTelnetOption(TN_DONT, OPT_COMPRESS4);
+                        cleanupMCCP4();
+                        return;
+                    }
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
+                    qDebug() << "MCCP4: ZSTD decompression context created and initialized";
+#endif
+                } else {
                     initStreamDecompressor();
                 }
 
-                // BEGIN_ENCODING may also arrive when the server restarts
-                // compression after a completed zstd frame ended the previous
-                // run, so restore the full MCCP4 state here
-                mMCCP_version_4 = true;
                 mNeedDecompression = true;
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
                 qDebug() << "MCCP4: Compression started with" << compressionType.c_str();
 #endif
             } else if (telnetCommand.length() >= 4 && static_cast<unsigned char>(telnetCommand[3]) != 255) {
                 unsigned char unknownSuboption = static_cast<unsigned char>(telnetCommand[3]);
-                qWarning() << "MCCP4: Unknown suboption received:" << unknownSuboption << "(" << QString::number(unknownSuboption, 16) << "hex), expected MCCP4_BEGIN_ENCODING ("
-                           << MCCP4_BEGIN_ENCODING << "), disabling MCCP4";
+                qWarning() << "MCCP4: Unknown suboption received:" << static_cast<int>(unknownSuboption) << "(" << QString::number(unknownSuboption, 16) << "hex), expected MCCP4_BEGIN_ENCODING ("
+                           << static_cast<int>(MCCP4_BEGIN_ENCODING) << "), disabling MCCP4";
                 //: Message shown in the main console when MCCP4 receives an unknown suboption from the server
                 postMessage(tr("[ WARN  ]  - MCCP4: Unknown suboption received, disabling compression."));
                 sendTelnetOption(TN_DONT, OPT_COMPRESS4);
@@ -4874,6 +4888,13 @@ void cTelnet::initStreamDecompressor()
 // being refused in its favour.
 void cTelnet::endMCCP4Compression()
 {
+    // Whether MCCP4 was the one actually decompressing. There is a single
+    // mNeedDecompression flag, so if MCCP4 owned the run then MCCP1/2 cannot
+    // have been driving it at the same time and it is ours to clear. Keying off
+    // mMCCP_version_1/2 instead would be wrong: those only mean the option was
+    // negotiated, and a server that offers MCCP2 before MCCP4 gets DO for both.
+    const bool mccp4WasCompressing = (mMCCP4_encoding != MCCP4_ENCODING_NONE);
+
     if (mZstdDstream) {
         ZSTD_freeDStream(mZstdDstream);
         mZstdDstream = nullptr;
@@ -4883,7 +4904,7 @@ void cTelnet::endMCCP4Compression()
     }
     mZstdOutBuffer.clear();
     mMCCP4_encoding = MCCP4_ENCODING_NONE;
-    if (!mMCCP_version_1 && !mMCCP_version_2) {
+    if (mccp4WasCompressing) {
         mNeedDecompression = false;
     }
 }
@@ -4893,7 +4914,7 @@ void cTelnet::cleanupMCCP4()
 {
     endMCCP4Compression();
     mMCCP_version_4 = false;
-    hisOptionState[static_cast<int>(OPT_COMPRESS4)] = false;
+    hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS4));
 }
 
 int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
@@ -4993,6 +5014,7 @@ int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buff
     // Loop to consume all input - a single ZSTD_decompressStream call may
     // not consume everything if the output buffer fills up
     while (input.pos < input.size) {
+        const size_t inputPosBefore = input.pos;
         // Cap zstd output to remaining space so it never produces more than we can fit
         size_t spaceLeft = static_cast<size_t>(BUFFER_SIZE) - totalOutput;
         ZSTD_outBuffer output = {mZstdOutBuffer.data(), std::min(mZstdOutBuffer.size(), spaceLeft), 0};
@@ -5008,8 +5030,12 @@ int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buff
             // Copy any partial decompressed data before cleanup frees the buffer
             memcpy(out_buffer + totalOutput, mZstdOutBuffer.data(), output.pos);
             totalOutput += output.pos;
-            in_buffer += length;
-            length = 0;
+            // Leave whatever was not consumed for the caller, the way the zlib
+            // path does: a server that announces compression and then sends
+            // plain text is the usual cause here, and that text still has to
+            // reach the player once cleanupMCCP4() turns compression back off.
+            in_buffer += input.pos;
+            length -= static_cast<int>(input.pos);
 
             cleanupMCCP4();
             return static_cast<int>(totalOutput);
@@ -5045,6 +5071,14 @@ int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buff
 
         // Output buffer full - let the caller handle remaining input via recursion
         if (totalOutput >= static_cast<size_t>(BUFFER_SIZE)) {
+            break;
+        }
+
+        // A pass that neither consumed input nor produced output would spin
+        // forever on the main thread, so treat it as the end of what we can do
+        // with this buffer and let the caller re-enter with the remainder.
+        if (input.pos == inputPosBefore && output.pos == 0) {
+            qWarning() << "MCCP4: zstd made no progress on" << (input.size - input.pos) << "bytes of input, leaving them to the caller";
             break;
         }
     }
@@ -5320,20 +5354,11 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     if (mNeedDecompression) {
         if (mMCCP_version_4 && mMCCP4_encoding == MCCP4_ENCODING_ZSTD) {
             datalen = decompressMCCP4Buffer(in_buffer, amount, out_buffer);
-        } else if (mMCCP_version_4 && mMCCP4_encoding != MCCP4_ENCODING_NONE && mMCCP4_encoding != MCCP4_ENCODING_DEFLATE) {
-            // Unknown MCCP4 encoding - drop compression; the unconsumed input
-            // is queued below and reprocessed as plain data.
-            // MCCP4_ENCODING_NONE is not an unknown encoding: it means MCCP4 is
-            // negotiated but not currently compressing, which is where a
-            // finished frame leaves it. Decompression is still on in that case
-            // only because MCCP1/2 is driving it, so fall through to zlib.
-            qWarning() << "MCCP4: Unknown encoding type, disabling MCCP4";
-            //: Message shown in the main console when MCCP4 decompression encounters an internal error
-            postMessage(tr("[ WARN  ]  - MCCP4 compression error, disabling. The connection may need to be restarted."));
-            sendTelnetOption(TN_DONT, OPT_COMPRESS4);
-            cleanupMCCP4();
-            datalen = 0;
         } else {
+            // Everything else is zlib: MCCP1, MCCP2, and MCCP4's deflate
+            // encoding all share mZstream. MCCP4 sitting at
+            // MCCP4_ENCODING_NONE lands here too, which only happens while
+            // MCCP1/2 is the one driving decompression.
             datalen = decompressBuffer(in_buffer, amount, out_buffer);
         }
         buffer = out_buffer;
