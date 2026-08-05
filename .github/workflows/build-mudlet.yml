@@ -53,7 +53,7 @@ jobs:
     # burn runner minutes and submit a build to make.mudlet.org for no reason.
     # On every other event the inputs context is empty, so this reads as it
     # always did.
-    if: ${{ github.repository_owner == 'Mudlet' && !inputs.debug_macos_hang }}
+    if: ${{ github.repository_owner == 'Mudlet' && inputs.debug_macos_hang != true }}
     env:
       LUA_VERSION: '5.1.5'
     strategy:
@@ -717,17 +717,23 @@ jobs:
   #      that someone who *is* watching can attach while the process is still hung.
   #
   # The build steps below are compile-mudlet's macOS ones minus everything to do
-  # with packaging, so that the binary under test matches the one that hangs. If
-  # that leg's dependencies change, this job has to be brought along by hand.
+  # with packaging, so if that leg's dependencies change this job has to be
+  # brought along by hand. Note the one deliberate difference: the app under test
+  # comes straight out of the build tree rather than through macdeployqt, so it
+  # finds Qt through the runner's Qt prefix instead of from inside the bundle. A
+  # reproduction here still means something; a non-reproduction is weaker
+  # evidence than it looks.
   debug-macos-hang:
     name: '#9670: ${{matrix.os}} / package-spec hang'
     runs-on: ${{matrix.os}}
-    if: ${{ github.repository_owner == 'Mudlet' && inputs.debug_macos_hang }}
+    if: ${{ github.repository_owner == 'Mudlet' && inputs.debug_macos_hang == true }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON(inputs.debug_runner == 'both' && '["macos-14", "macos-15-intel"]' || format('["{0}"]', inputs.debug_runner)) }}
+        # The fallback keeps this a valid runner label on events that carry no
+        # inputs at all, where the job is skipped anyway
+        os: ${{ fromJSON(inputs.debug_runner == 'both' && '["macos-14", "macos-15-intel"]' || format('["{0}"]', inputs.debug_runner || 'macos-14')) }}
     env:
       LUA_VERSION: '5.1.5'
       QT_VERSION: '6.9.0'
@@ -865,12 +871,9 @@ jobs:
         NINJA_STATUS: '[%f/%t %o/sec] '
         SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
 
-    - name: Save ccache
-      if: always()
-      uses: actions/cache/save@v6
-      with:
-        path: ${{runner.workspace}}/ccache
-        key: ${{steps.restore-ccache.outputs.cache-primary-key}}
+    # No matching cache save: this job only reads development's cache. Writing a
+    # ~1GB macOS entry per debugged branch would eat the repository's cache quota
+    # and could evict the entry the real build legs depend on.
 
     - name: Install test dependencies
       run: |
@@ -889,10 +892,22 @@ jobs:
     - name: Prep binary for running tests
       run: |
         cp -r "${{runner.workspace}}/b/ninja/src/mudlet.app" ~/Desktop/Mudlet.app
-        # This build was never packaged, so unlike the real CI leg it may carry
-        # no signature to remove - which is the state the command is trying to
-        # reach anyway, so not having to do it is not a failure.
-        sudo codesign --remove-signature ~/Desktop/Mudlet.app || echo "nothing to unsign"
+        # An app that is still signed is one lldb cannot attach to, and that
+        # would show up three steps later as a capture-tool failure rather than
+        # as the setup problem it is. So only the one benign outcome - there was
+        # nothing to remove, which this build being unpackaged makes likely - is
+        # allowed through.
+        if ! unsign_error="$(sudo codesign --remove-signature ~/Desktop/Mudlet.app 2>&1)"; then
+          case "${unsign_error}" in
+            *"not signed at all"*)
+              echo "already unsigned: ${unsign_error}"
+              ;;
+            *)
+              echo "::error::could not unsign the app, so lldb will not be able to attach: ${unsign_error}"
+              exit 1
+              ;;
+          esac
+        fi
         if [ ! -x ~/Desktop/Mudlet.app/Contents/MacOS/mudlet ]; then
           echo "::error::the build produced no runnable Mudlet binary, so there is nothing to watch"
           exit 1
@@ -951,24 +966,32 @@ jobs:
     # while the process is hung rather than after the watchdog has killed it.
     # limit-access-to-actor is not optional - Mudlet is a public repository, and
     # an unrestricted session would let anyone attach to a live runner. It
-    # authorises the dispatcher's GitHub SSH keys and nobody else, so a
-    # dispatcher with no keys on their account simply gets a session nobody can
-    # connect to.
+    # authorises the dispatcher's GitHub SSH keys and nobody else, and the action
+    # fails outright if that account has no keys, which is why the step is
+    # allowed to fail: an optional convenience must not throw away the stack
+    # capture, which is the part that works unattended. Pinned to a commit rather
+    # than a tag because this one opens an interactive shell on the runner.
     - name: Start a detached tmate session
       if: ${{ inputs.debug_tmate }}
-      uses: mxschmitt/action-tmate@v3
+      continue-on-error: true
+      uses: mxschmitt/action-tmate@35b54afac29c97fb54faba5b513f8fbd1882f113 # v3.23.0
       with:
         limit-access-to-actor: true
         detached: true
 
-    # 45 minutes covers the 240 second budget, the three capture tools after it
-    # and the longest hold on offer, with room to spare. It has to: if the step
-    # cap fires first the watchdog is killed before it writes anything, which is
-    # exactly the outcome this harness exists to avoid (it reports that as exit
-    # 92 rather than pretending it captured something).
+    - name: Warn about a tmate session with nothing to look at
+      if: ${{ inputs.debug_tmate && inputs.debug_hold_minutes == '0' }}
+      run: echo "::warning::debug_tmate is on but debug_hold_minutes is 0, so the process will be killed seconds after its stacks are taken. Dispatch again with a hold if you meant to inspect it."
+
+    # The worst case is the 240 second budget, then up to about six minutes of
+    # capture tools hitting their own limits, then the longest hold on offer -
+    # roughly 42 minutes. The cap has to stay clear of that: if it fires first
+    # the watchdog is killed before it writes anything, which is exactly the
+    # outcome this harness exists to avoid (it reports that as exit 92 rather
+    # than pretending it captured something).
     - name: Run Lua tests under the hang watchdog
       id: lua-tests
-      timeout-minutes: 45
+      timeout-minutes: 60
       shell: bash
       run: |
         rm -f /tmp/busted-tests-failed
@@ -987,29 +1010,50 @@ jobs:
         MUDLET_TEST_REQUIRE_MMCP_PEER: 1
         # The whole point of the dispatch: without this the package specs that
         # install something stay pending on macOS and the hang cannot happen.
-        MUDLET_TEST_FORCE_PACKAGE_INSTALLS: ${{ inputs.debug_macos_hang && '1' || '' }}
+        MUDLET_TEST_FORCE_PACKAGE_INSTALLS: '1'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: detect_leaks=0
 
+    # Everything reported here is read back off disk rather than echoed from the
+    # dispatch inputs. A run that pended every install because the environment
+    # variable never reached the Lua would otherwise finish green and be read as
+    # "we forced the installs on macOS and it did not hang".
     - name: Summarise what the watchdog caught
-      if: always()
+      if: ${{ always() && steps.lua-tests.conclusion != 'skipped' }}
       shell: bash
-      env:
-        FORCED_INSTALLS: ${{inputs.debug_macos_hang}}
       run: |
         capture_dir="${{runner.temp}}/mudlet-hang-capture"
+        log="${capture_dir}/command-output.log"
+        mkdir -p "${capture_dir}"
+
+        # Carry the rest of the evidence into the artifact, so a wedge caused by
+        # a fixture rather than by Mudlet leaves a trace too
+        cp "${{runner.temp}}/http-fixture-server.log" "${capture_dir}/" 2>/dev/null || true
+        cp "${{runner.temp}}/mmcp-peer.log" "${capture_dir}/" 2>/dev/null || true
+        cp /tmp/busted-tests-failed "${capture_dir}/" 2>/dev/null || true
+
+        gate_lifted=no
+        if [ -f "${log}" ] && grep -qF "MUDLET_TEST_FORCE_PACKAGE_INSTALLS is set" "${log}"; then
+          gate_lifted=yes
+        fi
+
         {
           echo "## ${{matrix.os}}"
           echo
-          echo "Package installs forced: \`${FORCED_INSTALLS}\`"
+          echo "Package specs ran with the macOS pending gate lifted: **${gate_lifted}** (read from the run's own output, not from the dispatch input)"
           echo
           if [ -f "${capture_dir}/outcome.txt" ]; then
             echo '```'
             cat "${capture_dir}/outcome.txt"
             echo '```'
+          elif [ -s "${log}" ]; then
+            echo "The watchdog wrote no outcome file although the command produced $(wc -c < "${log}" | tr -d ' ') bytes, so it was killed part way through. Its last lines:"
+            echo '```'
+            tail -20 "${log}"
+            echo '```'
           else
-            echo "The watchdog wrote no outcome file - it did not get as far as running the tests."
+            echo "The watchdog wrote no outcome file and the command produced nothing."
           fi
           if [ -f "${capture_dir}/capture-failures.txt" ]; then
             echo
@@ -1024,10 +1068,21 @@ jobs:
           fi
         } >> "${GITHUB_STEP_SUMMARY}"
 
-    # if-no-files-found: error on purpose - a harness that quietly uploads
-    # nothing is worse than no harness, because the empty artifact reads as a
-    # clean run. Only skipped when the tests never started, so that a build
-    # failure is not reported as a capture failure.
+        problems=0
+        if [ "${gate_lifted}" != "yes" ]; then
+          echo "::error::the package specs never reported the pending gate as lifted, so this run proves nothing about #9670 - check that MUDLET_TEST_FORCE_PACKAGE_INSTALLS reached the Lua"
+          problems=1
+        fi
+        if [ -e /tmp/busted-tests-failed ]; then
+          echo "::error::busted reported failing specs - read command-output.log in the artifact before reading anything into the hang result"
+          problems=1
+        fi
+        exit "${problems}"
+
+    # if-no-files-found: error catches the case where the watchdog never ran at
+    # all - it creates its output log before anything else, so a directory that
+    # is still empty means the step never reached it. What the artifact actually
+    # contains is the summary step's job, above.
     - name: Upload the hang capture
       if: ${{ always() && steps.lua-tests.conclusion != 'skipped' }}
       uses: actions/upload-artifact@v7

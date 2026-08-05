@@ -10,12 +10,15 @@
 #
 # Two independent triggers, because either one alone can be fooled:
 #   --stall-seconds  the command has written nothing for this long. This is the
-#                    one that matches the bug (total silence), but Lua's print()
-#                    goes through C stdio, which block-buffers when stdout is a
-#                    pipe, so a quiet stretch is not proof of a hang.
-#   --max-seconds    the command has simply run too long. Catches the hang even
-#                    if buffering hid the silence.
+#                    one that matches the bug, which is total silence. It is not
+#                    armed until the command has written something, so a slow
+#                    start is not mistaken for a hang.
+#   --max-seconds    the command has simply run too long. Catches a wedge that
+#                    still dribbles output, which the stall trigger would miss.
 # Both capture. Nothing is killed before a capture has been attempted.
+#
+# Neither trigger can tell a hang from something merely slow - only the stacks
+# can - so what is reported is which trigger fired, not a diagnosis.
 #
 # Deliberately not "set -e": a capture tool that fails must be *reported*, not
 # allowed to abort the script before it has tried the other tools or written its
@@ -35,8 +38,9 @@ Usage: macos-hang-watchdog.sh --capture-dir DIR [options] -- command [args...]
 
   --capture-dir DIR    directory for the output log, the stacks and the outcome
                        file (created if missing, required)
-  --stall-seconds N    capture once the command has produced no output for N
-                       seconds (default 30, 0 disables this trigger)
+  --stall-seconds N    capture once the command has gone N seconds without
+                       adding to its output, counting only from its first byte
+                       (default 30, 0 disables this trigger)
   --max-seconds N      capture once the command has run for N seconds whatever
                        it is printing (default 240, 0 disables this trigger)
   --hold-seconds N     after capturing, leave the process running for up to N
@@ -152,7 +156,12 @@ if ! : > "${log_file}"; then
   echo "macos-hang-watchdog: cannot write to '${log_file}'" >&2
   exit "${EXIT_USAGE}"
 fi
-rm -f "${failures_file}" "${capture_dir}/CAPTURE-FAILED"
+# Anything an earlier run left here would otherwise be counted as this run's
+# evidence - record_tool_result only looks at whether a file is non-empty
+rm -f "${failures_file}" "${capture_dir}/CAPTURE-FAILED" \
+  "${capture_dir}/sample.txt" "${capture_dir}/spindump.txt" \
+  "${capture_dir}/lldb.txt" "${capture_dir}/lldb-sudo.txt" \
+  "${capture_dir}/processes.txt" "${outcome_file}"
 
 # A process that has exited but not been reaped is still signalable, so
 # "kill -0" would say it is alive forever. Ask for its state instead: gone means
@@ -161,6 +170,15 @@ process_running() {
   local state
   state="$(ps -p "$1" -o stat= 2>/dev/null | tr -d ' ')"
   [ -n "${state}" ] && [ "${state#Z}" = "${state}" ]
+}
+
+# spindump and the lldb retry run under sudo, so their process is root-owned and
+# an ordinary kill from this shell is refused. Escalate rather than let a wedged
+# capture tool outlive the limit that is supposed to bound it.
+signal_tool() {
+  local signal="$1" pid="$2"
+  kill "-${signal}" "${pid}" 2>/dev/null && return 0
+  sudo -n kill "-${signal}" "${pid}" 2>/dev/null
 }
 
 # Runs a command with a hard limit, so a capture tool that wedges cannot take
@@ -176,9 +194,21 @@ run_with_limit() {
     waited=$((waited + 1))
   done
   if process_running "${tool_pid}"; then
-    kill -TERM "${tool_pid}" 2>/dev/null
+    signal_tool TERM "${tool_pid}"
     sleep 2
-    kill -KILL "${tool_pid}" 2>/dev/null
+    signal_tool KILL "${tool_pid}"
+    # Only reap once it has actually gone: waiting on a process this shell
+    # cannot signal would block for as long as the tool decides to run, which is
+    # the very thing the limit exists to prevent.
+    waited=0
+    while [ "${waited}" -lt 10 ] && process_running "${tool_pid}"; do
+      sleep 1
+      waited=$((waited + 1))
+    done
+    if process_running "${tool_pid}"; then
+      note_capture_failure "could not kill $1 (pid ${tool_pid}), leaving it to finish on its own"
+      return 124
+    fi
     wait "${tool_pid}" 2>/dev/null
     return 124
   fi
@@ -197,12 +227,17 @@ note_capture_failure() {
 # $1 tool name, $2 exit status, $3 file it should have filled
 record_tool_result() {
   local tool="$1" status="$2" output="$3"
-  if [ "${status}" -eq 124 ]; then
-    note_capture_failure "${tool} did not finish in time and was killed"
-    return
-  fi
   if [ "${status}" -ne 0 ]; then
-    note_capture_failure "${tool} exited ${status}"
+    if [ "${status}" -eq 124 ]; then
+      note_capture_failure "${tool} did not finish in time and was killed"
+    else
+      note_capture_failure "${tool} exited ${status}"
+    fi
+    # A tool that died part way through may still have written something worth
+    # reading, so say so - but do not let it count as a successful capture
+    if [ -s "${output}" ]; then
+      note_capture_failure "${tool} did leave $(wc -c < "${output}" | tr -d ' ') bytes in ${output}, which may still be readable"
+    fi
     return
   fi
   if [ ! -s "${output}" ]; then
@@ -220,12 +255,13 @@ capture_stacks() {
 
   {
     echo "--- the watched process ---"
-    ps -p "${pid}" -o pid,ppid,stat,etime,command 2>&1
+    ps -p "${pid}" -o pid,ppid,stat,etime,command 2>&1 || echo "pid ${pid} is already gone"
     echo "--- every mudlet process on the runner ---"
     # pgrep cannot report elapsed time, which is what says whether a stray
     # process has been sitting there since before the run started
     # shellcheck disable=SC2009
-    ps ax -o pid,ppid,stat,etime,command 2>&1 | grep -i '[m]udlet'
+    ps ax -o pid,ppid,stat,etime,command 2>&1 | grep -i '[m]udlet' \
+      || echo "no process with 'mudlet' in its command line - the target had already gone"
   } > "${capture_dir}/processes.txt" 2>&1
 
   # sample first: it does not stop the target, so the stacks it takes are of a
@@ -253,17 +289,22 @@ capture_stacks() {
   if command -v lldb > /dev/null 2>&1; then
     run_with_limit 120 lldb -p "${pid}" --batch -o "thread backtrace all" -o "process detach" > "${capture_dir}/lldb.txt" 2>&1
     local lldb_status=$?
-    if [ "${lldb_status}" -eq 0 ] && ! grep -q "thread #" "${capture_dir}/lldb.txt"; then
-      # Attaching without privileges fails on some macOS configurations, and
-      # lldb reports that on stdout with a zero exit status.
-      echo "macos-hang-watchdog: lldb attached without producing frames, retrying under sudo"
-      run_with_limit 120 sudo -n lldb -p "${pid}" --batch -o "thread backtrace all" -o "process detach" > "${capture_dir}/lldb.txt" 2>&1
-      lldb_status=$?
-    fi
-    if [ "${lldb_status}" -eq 0 ] && ! grep -q "thread #" "${capture_dir}/lldb.txt"; then
-      note_capture_failure "lldb ran but captured no thread backtraces - see ${capture_dir}/lldb.txt"
+    if [ "${lldb_status}" -eq 0 ] && grep -q "thread #" "${capture_dir}/lldb.txt"; then
+      record_tool_result "lldb" 0 "${capture_dir}/lldb.txt"
     else
-      record_tool_result "lldb" "${lldb_status}" "${capture_dir}/lldb.txt"
+      # Attaching without privileges fails on some macOS configurations, and
+      # lldb reports that either as a non-zero status or as a zero status with
+      # no frames, so retry on both. The retry writes its own file: overwriting
+      # lldb.txt would destroy the reason the first attempt came up empty.
+      echo "macos-hang-watchdog: lldb produced no backtraces (exit ${lldb_status}), retrying under sudo"
+      note_capture_failure "lldb without sudo produced no thread backtraces (exit ${lldb_status}) - see lldb.txt"
+      run_with_limit 120 sudo -n lldb -p "${pid}" --batch -o "thread backtrace all" -o "process detach" > "${capture_dir}/lldb-sudo.txt" 2>&1
+      local lldb_sudo_status=$?
+      if [ "${lldb_sudo_status}" -eq 0 ] && ! grep -q "thread #" "${capture_dir}/lldb-sudo.txt"; then
+        note_capture_failure "lldb under sudo ran but captured no thread backtraces - see lldb-sudo.txt"
+      else
+        record_tool_result "lldb (sudo)" "${lldb_sudo_status}" "${capture_dir}/lldb-sudo.txt"
+      fi
     fi
   else
     note_capture_failure "lldb is not on this runner (is this macOS?)"
@@ -313,15 +354,20 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# If the caller's own timeout fires first there is no time to sample anything,
-# but saying so beats leaving an empty artifact that looks like a clean run.
+# Being signalled from outside means the caller gave up on us: a step timeout, a
+# cancelled job, the job's own cap, a preempted runner. Which of those it was is
+# not knowable from in here, so list them rather than assert one - but do say
+# loudly that nothing was sampled, because the alternative is an artifact that
+# looks like a clean run.
 # shellcheck disable=SC2317  # reached through the TERM/INT trap below
 on_external_kill() {
   trap - TERM INT
-  echo "::error::macos-hang-watchdog was killed after ${SECONDS}s before it could capture anything - the step timeout is shorter than the watchdog budget of ${max_seconds}s"
+  echo "::error::macos-hang-watchdog was killed by a signal after ${SECONDS}s without capturing anything (its own budget was ${max_seconds}s). A step timeout shorter than that budget, a cancelled job or a preempted runner would all look like this."
   {
-    echo "outcome: watchdog killed externally after ${SECONDS}s"
+    echo "outcome: watchdog killed by a signal after ${SECONDS}s"
+    echo "stacks captured: no"
     echo "watchdog budget: ${max_seconds}s"
+    echo "log bytes at that point: $(wc -c < "${log_file}" 2>/dev/null | tr -d ' ')"
   } > "${outcome_file}"
   terminate_child "${child_pid}"
   cleanup
@@ -347,7 +393,11 @@ while process_running "${child_pid}"; do
   elapsed=$((now - start_time))
   stalled=$((now - last_change))
 
-  if [ "${stall_seconds}" -gt 0 ] && [ "${stalled}" -ge "${stall_seconds}" ]; then
+  # Only armed once the command has written something. A cold start that takes
+  # longer than the stall window to produce its first line is a slow launch, not
+  # the silence-after-progress this is looking for, and the budget still covers
+  # a command that never says anything at all.
+  if [ "${stall_seconds}" -gt 0 ] && [ "${last_size}" -gt 0 ] && [ "${stalled}" -ge "${stall_seconds}" ]; then
     hang_reason="no output for ${stalled}s (stall trigger ${stall_seconds}s, ${elapsed}s into the run)"
     break
   fi
@@ -364,13 +414,24 @@ while process_running "${child_pid}"; do
   sleep 1
 done
 
+# A command that went quiet and then exited on the very tick the trigger fired
+# finished normally, and reporting that as a hang would throw away its real
+# status - so the trigger only stands if the process is still there.
+if [ -n "${hang_reason}" ] && ! process_running "${child_pid}"; then
+  echo "macos-hang-watchdog: ${hang_reason}, but the command exited as the trigger fired - treating it as a normal exit"
+  hang_reason=""
+fi
+
 if [ -z "${hang_reason}" ]; then
   command_status=0
   wait "${child_pid}" || command_status=$?
   # Let tail catch up with whatever the command wrote as it exited.
   sleep 1
   end_time="$(date +%s)"
-  echo "outcome: command exited with status ${command_status} after $((end_time - start_time))s" > "${outcome_file}"
+  {
+    echo "outcome: command exited with status ${command_status} after $((end_time - start_time))s"
+    echo "log bytes: $(wc -c < "${log_file}" 2>/dev/null | tr -d ' ')"
+  } > "${outcome_file}"
   echo "macos-hang-watchdog: command exited with status ${command_status}"
   exit "${command_status}"
 fi
@@ -380,11 +441,32 @@ capture_status=0
 capture_stacks "${hang_reason}" "${child_pid}" || capture_status=$?
 
 {
-  echo "outcome: hang caught"
+  # "trigger fired" rather than "hang": neither trigger can tell a wedge from
+  # something slow, and only the stacks can settle it
+  echo "outcome: trigger fired, process sampled while still running"
   echo "reason: ${hang_reason}"
   echo "stacks captured: $([ "${captured_anything}" -eq 1 ] && echo yes || echo no)"
+  echo "log bytes at capture: $(wc -c < "${log_file}" 2>/dev/null | tr -d ' ')"
   echo "command: $*"
 } > "${outcome_file}"
+
+# The result is on disk now, so a signal from here on must not overwrite it with
+# "captured nothing" - which is exactly what ending a tmate session by
+# cancelling the job would otherwise do during the hold below. Swap the trap for
+# one that still tidies the child up but keeps the outcome that was written.
+# shellcheck disable=SC2317  # reached through the TERM/INT trap below
+on_kill_after_capture() {
+  trap - TERM INT
+  echo "macos-hang-watchdog: signalled after the stacks were already captured, keeping the outcome as it stands"
+  echo "note: the hold was cut short by a signal" >> "${outcome_file}"
+  terminate_child "${child_pid}"
+  cleanup
+  if [ "${capture_status}" -ne 0 ]; then
+    exit "${EXIT_HANG_NOT_CAPTURED}"
+  fi
+  exit "${EXIT_HANG_CAPTURED}"
+}
+trap on_kill_after_capture TERM INT
 
 if [ "${hold_seconds}" -gt 0 ]; then
   echo "macos-hang-watchdog: holding pid ${child_pid} for up to ${hold_seconds}s so it can be inspected live"

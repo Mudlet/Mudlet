@@ -123,7 +123,7 @@ else
   fail "a silent command exited ${stall_status}, expected 90 or 91"
   cat "${WORK_DIR}/stalled.log" >&2
 fi
-assert_contains "${run_dir}/outcome.txt" "outcome: hang caught"
+assert_contains "${run_dir}/outcome.txt" "outcome: trigger fired"
 assert_contains "${run_dir}/outcome.txt" "no output for"
 assert_exists "${run_dir}/processes.txt"
 if [[ "${stall_status}" == "91" ]]; then
@@ -178,8 +178,115 @@ kill -TERM "${watchdog_pid}" 2>/dev/null
 killed_status=0
 wait "${watchdog_pid}" || killed_status=$?
 assert_status 92 "${killed_status}" "a watchdog killed by its caller"
-assert_contains "${run_dir}/outcome.txt" "watchdog killed externally"
+assert_contains "${run_dir}/outcome.txt" "watchdog killed by a signal"
 assert_contains "${WORK_DIR}/killed.log" "::error::"
+
+#-----------------------------------------------------------------------------
+start_test "a slow start is not mistaken for a hang"
+run_dir="${WORK_DIR}/slow-start"
+"${WATCHDOG}" --capture-dir "${run_dir}" --stall-seconds 2 --max-seconds 60 \
+  -- bash -c 'sleep 5; echo finally; exit 3' > "${WORK_DIR}/slow-start.log" 2>&1
+assert_status 3 $? "a command silent for longer than the stall window before its first line"
+assert_contains "${run_dir}/outcome.txt" "command exited with status 3"
+
+#-----------------------------------------------------------------------------
+start_test "a command that exits as the trigger fires keeps its own status"
+run_dir="${WORK_DIR}/raced"
+"${WATCHDOG}" --capture-dir "${run_dir}" --stall-seconds 3 --max-seconds 60 \
+  -- bash -c 'echo started; sleep 3; exit 5' > "${WORK_DIR}/raced.log" 2>&1
+raced_status=$?
+# Either the command won the race (5) or the watchdog did (90/91) - the failure
+# to avoid is 91 with the command's real status thrown away when it had exited
+if [[ "${raced_status}" == "5" ]]; then
+  pass "the command's own status survived the race"
+  assert_contains "${run_dir}/outcome.txt" "command exited with status 5"
+elif [[ "${raced_status}" == "90" || "${raced_status}" == "91" ]]; then
+  pass "the watchdog won the race and reported the trigger (exit ${raced_status})"
+else
+  fail "a command exiting as the trigger fires gave ${raced_status}, expected 5, 90 or 91"
+fi
+
+#-----------------------------------------------------------------------------
+# The only successful outcome, exit 90, needs the macOS capture tools. Stub them
+# so the branch is covered everywhere rather than only on a Mac.
+start_test "a capture that works reports success and does not cry wolf"
+run_dir="${WORK_DIR}/captured"
+stub_dir="${WORK_DIR}/stubs"
+mkdir -p "${stub_dir}"
+cat > "${stub_dir}/sample" <<'STUB'
+#!/bin/bash
+# mimics: sample <pid> <seconds> -file <out>
+echo "stub sample of $1" > "$4"
+STUB
+cat > "${stub_dir}/spindump" <<'STUB'
+#!/bin/bash
+echo "stub spindump" > "$4"
+STUB
+cat > "${stub_dir}/lldb" <<'STUB'
+#!/bin/bash
+echo "  thread #1"
+echo "    frame #0: stub"
+STUB
+chmod +x "${stub_dir}/sample" "${stub_dir}/spindump" "${stub_dir}/lldb"
+PATH="${stub_dir}:${PATH}" "${WATCHDOG}" --capture-dir "${run_dir}" --stall-seconds 3 --max-seconds 60 \
+  -- bash -c 'echo started; exec sleep 60' > "${WORK_DIR}/captured.log" 2>&1
+assert_status 90 $? "a stall with working capture tools"
+assert_contains "${run_dir}/outcome.txt" "stacks captured: yes"
+assert_contains "${run_dir}/sample.txt" "stub sample"
+assert_contains "${run_dir}/lldb.txt" "thread #1"
+if [[ -e "${run_dir}/CAPTURE-FAILED" ]]; then
+  fail "a successful capture still left a CAPTURE-FAILED marker"
+else
+  pass "a successful capture leaves no CAPTURE-FAILED marker"
+fi
+if grep -qF "::error::" "${WORK_DIR}/captured.log"; then
+  fail "a successful capture emitted an error annotation"
+else
+  pass "a successful capture emits no error annotation"
+fi
+
+#-----------------------------------------------------------------------------
+start_test "a signal after the stacks are captured does not erase them"
+run_dir="${WORK_DIR}/kill-after-capture"
+PATH="${stub_dir}:${PATH}" "${WATCHDOG}" --capture-dir "${run_dir}" --stall-seconds 3 --max-seconds 60 \
+  --hold-seconds 60 -- bash -c 'echo started; exec sleep 120' > "${WORK_DIR}/kill-after-capture.log" 2>&1 &
+watchdog_pid=$!
+# Past the 3 second trigger and into the hold, where a cancelled job would land
+sleep 8
+kill -TERM "${watchdog_pid}" 2>/dev/null
+held_status=0
+wait "${watchdog_pid}" || held_status=$?
+assert_status 90 "${held_status}" "a watchdog signalled during the hold"
+assert_contains "${run_dir}/outcome.txt" "stacks captured: yes"
+assert_contains "${run_dir}/outcome.txt" "the hold was cut short by a signal"
+assert_exists "${run_dir}/sample.txt"
+
+#-----------------------------------------------------------------------------
+start_test "leftovers from an earlier run are not passed off as this run's evidence"
+run_dir="${WORK_DIR}/stale"
+mkdir -p "${run_dir}"
+echo "backtraces from some other day" > "${run_dir}/sample.txt"
+"${WATCHDOG}" --capture-dir "${run_dir}" --stall-seconds 3 --max-seconds 60 \
+  -- bash -c 'echo started; exec sleep 60' > "${WORK_DIR}/stale.log" 2>&1
+stale_status=$?
+if [[ "${stale_status}" == "91" ]]; then
+  pass "the stale sample.txt did not count as a capture"
+  if grep -qF "some other day" "${run_dir}/sample.txt" 2>/dev/null; then
+    fail "the stale sample.txt is still there and would be uploaded as evidence"
+  else
+    pass "the stale sample.txt was cleared"
+  fi
+elif [[ "${stale_status}" == "90" ]]; then
+  # Only reachable where the real tools exist and genuinely captured something
+  assert_contains "${run_dir}/outcome.txt" "stacks captured: yes"
+  if grep -qF "some other day" "${run_dir}/sample.txt" 2>/dev/null; then
+    fail "sample.txt still holds the earlier run's contents"
+  else
+    pass "sample.txt was replaced by this run's capture"
+  fi
+else
+  fail "a stalled run over a stale capture directory exited ${stale_status}"
+fi
 
 #-----------------------------------------------------------------------------
 start_test "misuse is refused rather than quietly watching nothing"

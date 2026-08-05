@@ -76,10 +76,17 @@ end
 -- whole file fine. Until the save is fixed the specs that install something are
 -- pending on macOS; the contract specs still run there.
 --
--- MUDLET_TEST_FORCE_PACKAGE_INSTALLS=1 lifts the gate so that the hang can be
--- reproduced deliberately. Only build-mudlet.yml's debug-macos-hang job sets
--- it, and only when dispatched by hand, so every ordinary run still pends.
-local installsWedgeThisPlatform = getOS() == "mac" and os.getenv("MUDLET_TEST_FORCE_PACKAGE_INSTALLS") ~= "1"
+-- MUDLET_TEST_FORCE_PACKAGE_INSTALLS, set to exactly "1" (nothing else counts),
+-- lifts the gate so that the hang can be reproduced deliberately. Only
+-- build-mudlet.yml's debug-macos-hang job sets it, and only when dispatched by
+-- hand, so every ordinary run still pends. It says so on stdout because the
+-- job that sets it has no other way to tell "the installs ran and did not hang"
+-- from "the variable never arrived and everything pended".
+local forcePackageInstalls = os.getenv("MUDLET_TEST_FORCE_PACKAGE_INSTALLS") == "1"
+if forcePackageInstalls then
+  (ioprint or print)("MUDLET_TEST_FORCE_PACKAGE_INSTALLS is set - the macOS pending gate is lifted")
+end
+local installsWedgeThisPlatform = getOS() == "mac" and not forcePackageInstalls
 
 local function requireWorkingInstalls()
   if installsWedgeThisPlatform then
