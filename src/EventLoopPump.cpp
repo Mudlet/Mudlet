@@ -21,6 +21,7 @@
 
 #include <QCoreApplication>
 #include <QDeadlineTimer>
+#include <QDebug>
 #include <QEventLoop>
 #include <QThread>
 
@@ -47,6 +48,14 @@
 // serviced whatever the platform run loop is or is not doing.
 bool EventLoopPump::pumpFor(const int timeoutMs, const std::function<bool()>& stopCondition)
 {
+    // Without a dispatcher QCoreApplication::processEvents() returns silently,
+    // which would turn this into a plain sleep that reports a timeout as though
+    // it had been waiting for something.
+    if (!QThread::currentThread()->eventDispatcher()) {
+        qWarning() << "EventLoopPump::pumpFor() called with no event dispatcher on this thread, no events can be delivered";
+        return false;
+    }
+
     QDeadlineTimer deadline(qMax(timeoutMs, 0));
     if (stopCondition && stopCondition()) {
         return true;

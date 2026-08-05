@@ -17,13 +17,13 @@
 -- behind: the self-test profile is reused between runs, so a leak here would
 -- break the next run.
 
--- waitForEvent() is inert outside test mode, and without it these specs cannot
+-- pumpEvents() is inert outside test mode, and without it these specs cannot
 -- let the profile save finish - the uninstalls would fail and strand fixture
 -- packages in the profile, so say so rather than make a mess of it.
 if not os.getenv("MUDLET_TEST_MODE") then
   describe("Tests the package and module lifecycle", function()
     it("needs test mode", function()
-      pending("the package specs need MUDLET_TEST_MODE (waitForEvent() does nothing without it)")
+      pending("the package specs need MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
     end)
   end)
   return
@@ -155,7 +155,7 @@ local function installUntilConfirmed(install, path, isInstalled, what)
     if isInstalled() then
       return
     end
-    waitForProfileSaveToPass()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s, so this install would be postponed")
     local ok, err = install(path)
     -- a postponed install can still be carried out while the pump below runs
     -- the event loop, so a repeat may legitimately come back "already installed"
@@ -176,7 +176,7 @@ end
 -- about the refusal waits for the save to pass and asks again.
 local function installUntilRefused(install, path)
   for attempt = 1, 3 do
-    waitForProfileSaveToPass()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s, so this install would be postponed")
     local ok, err = install(path)
     if ok == nil then
       return err
@@ -207,7 +207,7 @@ local function removeFixturePackage(name)
     if not packageInstalled(name) then
       return
     end
-    waitForProfileSaveToPass()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s, so this uninstall would be refused")
     -- uninstallPackage() refuses while a profile save is in progress, and the
     -- installs here start one, so keep asking until it takes
     assert.is_true(waitUntil(function() return uninstallPackage(name) == true end, 5000),
@@ -234,7 +234,7 @@ local function removeFixtureModule(name)
     if not moduleInstalled(name) then
       break
     end
-    waitForProfileSaveToPass()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s, so this uninstall would be refused")
     assert.is_true(waitUntil(function() return uninstallModule(name) == true end, 5000),
                    "could not uninstall the fixture module " .. name)
     pumpEvents(200)

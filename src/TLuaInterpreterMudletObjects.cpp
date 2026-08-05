@@ -86,9 +86,7 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QEventLoop>
 #include <QFileDialog>
-#include <QTimer>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -1552,10 +1550,13 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
 
 // Nothing that spins the event loop should outlive the profile or the
 // application: pumping on past either would keep Lua running against objects
-// that are being torn down.
-static bool shuttingDown(const Host& host)
+// that are being torn down. A Host that has already gone, or a mudlet singleton
+// already past its destructor, counts as shutting down - those are further
+// along than the flags, not healthier.
+static bool shuttingDown(const QPointer<Host>& pHost)
 {
-    return host.isClosingDown() || (mudlet::self() && mudlet::self()->isGoingDown());
+    mudlet* pMudlet = mudlet::self();
+    return !pHost || pHost->isClosingDown() || !pMudlet || pMudlet->isGoingDown();
 }
 
 // No documentation available in wiki - internal, test-only function
@@ -1597,9 +1598,9 @@ int TLuaInterpreter::waitForEvent(lua_State* L)
 
     // A profile reset recreates this profile's lua_State (initLuaGlobals() calls
     // lua_close()), and shutdown destroys the interpreter outright. Either would
-    // free the state L is executing on while we block, so refuse rather than risk
-    // a use-after-free when the nested loop unwinds. resetProfile_phase1() guards
-    // the mirror case where a reset is requested while we are already blocked.
+    // free the state L is executing on while we wait, so refuse rather than risk
+    // a use-after-free when the wait returns. resetProfile_phase1() guards the
+    // mirror case where a reset is requested while we are already blocked.
     if (host.profileResetInProgress() || host.isClosingDown()) {
         lua_pushnil(L);
         lua_pushstring(L, "waitForEvent: cannot wait while the profile is being reset or Mudlet is closing");
@@ -1610,15 +1611,23 @@ int TLuaInterpreter::waitForEvent(lua_State* L)
     wait.mName = eventName;
     pLuaInterpreter->mPendingEventWaits.append(&wait);
 
-    EventLoopPump::pumpFor(timeoutMs, [&wait, &host]() {
-        return wait.mCaptured || shuttingDown(host);
+    const QPointer<Host> pHost(&host);
+    const bool stoppedEarly = EventLoopPump::pumpFor(timeoutMs, [&wait, &pHost]() {
+        return wait.mCaptured || shuttingDown(pHost);
     });
 
     pLuaInterpreter->mPendingEventWaits.removeAll(&wait);
 
     if (!wait.mCaptured) {
         lua_pushnil(L);
-        lua_pushstring(L, qsl("waitForEvent: timed out after %1ms waiting for event '%2'").arg(QString::number(timeoutMs), eventName).toUtf8().constData());
+        if (stoppedEarly) {
+            // The stop condition fired without capturing anything, so Mudlet is
+            // going away. Saying "timed out" here would send whoever reads the
+            // CI log hunting for a slow event that was never coming.
+            lua_pushstring(L, qsl("waitForEvent: gave up waiting for event '%1', Mudlet is shutting down").arg(eventName).toUtf8().constData());
+        } else {
+            lua_pushstring(L, qsl("waitForEvent: timed out after %1ms waiting for event '%2'").arg(QString::number(timeoutMs), eventName).toUtf8().constData());
+        }
         return 2;
     }
 
@@ -1662,9 +1671,10 @@ int TLuaInterpreter::pumpEvents(lua_State* L)
         return 2;
     }
 
-    // Matches waitForEvent()'s ceiling: long enough for the slowest thing a spec
-    // waits on, short enough that a runaway wait fails as a timeout rather than
-    // by having the whole suite killed.
+    // One step of a spec's own retry loop is the common case, so that is the
+    // default. The ceiling matches waitForEvent()'s: long enough for the slowest
+    // thing a spec waits on, short enough that a runaway pump shows up as its
+    // own failure rather than by having the whole suite killed.
     constexpr int defaultTimeoutMs = 50;
     constexpr int maximumTimeoutMs = 30000;
     int timeoutMs = defaultTimeoutMs;
@@ -1674,9 +1684,32 @@ int TLuaInterpreter::pumpEvents(lua_State* L)
     timeoutMs = std::clamp(timeoutMs, 0, maximumTimeoutMs);
 
     Host& host = getHostFromLua(L);
-    EventLoopPump::pumpFor(timeoutMs, [&host]() {
-        return shuttingDown(host);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+
+    // Same use-after-free hazard waitForEvent() guards: a profile reset closes
+    // the lua_State this is running on, and the pump is exactly what delivers
+    // the zero-timer that phase2 is armed on.
+    if (host.profileResetInProgress() || host.isClosingDown()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "pumpEvents: cannot pump while the profile is being reset or Mudlet is closing");
+        return 2;
+    }
+
+    const QPointer<Host> pHost(&host);
+    ++pLuaInterpreter->mEventPumpDepth;
+    const bool stoppedEarly = EventLoopPump::pumpFor(timeoutMs, [&pHost]() {
+        return shuttingDown(pHost);
     });
+    --pLuaInterpreter->mEventPumpDepth;
+
+    if (stoppedEarly) {
+        // Ran for less than it was asked to, so whatever the caller queued may
+        // not have happened. Callers that only wanted a pause can ignore this;
+        // the ones flushing a queued profile save should not.
+        lua_pushnil(L);
+        lua_pushstring(L, "pumpEvents: stopped early, Mudlet is shutting down");
+        return 2;
+    }
 
     lua_pushboolean(L, true);
     return 1;

@@ -62,7 +62,6 @@ extern "C" {
 #include <optional>
 
 class Host;
-class QEventLoop;
 class TAction;
 class TEvent;
 class TLuaThread;
@@ -797,10 +796,10 @@ public:
     // called from Host::raiseEvent() so an event that fires while a busted spec
     // is blocked waiting for it can be captured and unblock it.
     void captureEventForWaits(const TEvent&);
-    // True while a waitForEvent() call is blocked pumping events. Lets Host
-    // refuse a profile reset that would lua_close() the state out from under
-    // it. Always false (a no-op) outside MUDLET_TEST_MODE.
-    bool hasPendingEventWaits() const { return !mPendingEventWaits.isEmpty(); }
+    // True while a waitForEvent() or pumpEvents() call is pumping the event
+    // loop. Lets Host refuse a profile reset that would lua_close() the state
+    // out from under it. Always false (a no-op) outside MUDLET_TEST_MODE.
+    bool pumpingEvents() const { return !mPendingEventWaits.isEmpty() || mEventPumpDepth > 0; }
 
     inline static const QMap<Qt::MouseButton, QString> csmMouseButtons = {
             {Qt::NoButton, qsl("NoButton")},           {Qt::LeftButton, qsl("LeftButton")},       {Qt::RightButton, qsl("RightButton")},     {Qt::MiddleButton, qsl("MidButton")},
@@ -935,6 +934,9 @@ private:
         bool mCaptured = false;
     };
     QList<TEventWait*> mPendingEventWaits;
+    // Nesting depth of pumpEvents(), which has no TEventWait of its own to
+    // register but needs the same protection from a profile reset.
+    int mEventPumpDepth = 0;
     int createEventArgsTableRef(const TEvent&);
 
     lua_State* pGlobalLua = nullptr;

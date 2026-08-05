@@ -31,7 +31,7 @@ public:
     //
     // This is deliberately not a nested QEventLoop::exec(): see the comment in
     // EventLoopPump.cpp for why exec() cannot be used here.
-    static bool pumpFor(int timeoutMs, const std::function<bool()>& stopCondition = {});
+    [[nodiscard]] static bool pumpFor(int timeoutMs, const std::function<bool()>& stopCondition = {});
 };
 
 #endif // MUDLET_EVENTLOOPPUMP_H

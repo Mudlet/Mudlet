@@ -24,6 +24,7 @@ set(UNIT_TESTS
     TMxpEdgeCasesTest
     TMxpElementDefinitionHandlerTest
     TLuaInterfaceTest
+    EventLoopPumpTest
     TVariableEditorTest
     SecureStringUtilsTest
     CredentialManagerTest
@@ -49,6 +50,11 @@ foreach(test_name ${UNIT_TESTS})
         ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
     )
 endforeach()
+
+# EventLoopPumpTest is the regression test for #9670, where the thing it covers
+# hung rather than failed. A wedge here should end the job in a minute, not run
+# out ctest's default 25.
+set_tests_properties(EventLoopPumpTest PROPERTIES TIMEOUT 60)
 
 # DiscordTest checks the Lua API permission gating contract by scanning the source
 target_compile_definitions(DiscordTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")

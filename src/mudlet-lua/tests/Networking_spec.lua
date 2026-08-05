@@ -294,8 +294,8 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
   -- checked too.
   --
   -- The requests are asynchronous: nothing is sent until the event loop runs,
-  -- which only happens inside waitForEvent(), so arming the wait after issuing
-  -- the request cannot miss the reply.
+  -- which only happens inside waitForEvent() and pumpEvents(), so arming the
+  -- wait after issuing the request cannot miss the reply.
   local httpPort = os.getenv("MUDLET_TEST_HTTP_PORT")
   -- the contents of CI/http-fixtures/fixture.txt
   local fixtureBody = "Mudlet self-test HTTP fixture.\n"
