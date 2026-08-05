@@ -7535,6 +7535,21 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
 void mudlet::armForceClose()
 {
     QTimer::singleShot(0ms, this, [this]() {
+        // Deferring by one event loop iteration is meant to get out of Lua
+        // before closing, but a test-mode waitForEvent() or pumpEvents() runs
+        // the event loop from inside Lua, so this can land right back in it.
+        // Wait for the pump instead of closing on top of it - both are bounded
+        // at 30s. Always false (so a straight close) outside MUDLET_TEST_MODE,
+        // where both helpers are inert.
+        for (auto pHost : mHostManager) {
+            if (pHost->getLuaInterpreter()->pumpingEvents()) {
+                qWarning() << "mudlet::armForceClose() - the test-mode event pump is running, waiting for it to finish";
+                QTimer::singleShot(50ms, this, [this]() {
+                    armForceClose();
+                });
+                return;
+            }
+        }
         forceClose();
     });
 }
