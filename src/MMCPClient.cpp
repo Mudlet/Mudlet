@@ -303,10 +303,24 @@ void MMCPClient::slot_readData()
         const int colonPos = mPeerBuffer.indexOf(':');
         const int nlPos = mPeerBuffer.indexOf('\n');
 
-        bool isNo = mPeerBuffer.startsWith("NO:");
+        const bool isYes = mPeerBuffer.startsWith("YES:");
+        const bool isNo = mPeerBuffer.startsWith("NO:");
 
-        if (!(mPeerBuffer.startsWith("YES:") || isNo) || nlPos == -1 || colonPos == -1) {
+        // A reply can be split across TCP segments, either part way through the
+        // "YES:"/"NO:" itself or before the newline that ends the line. Neither
+        // is a refusal, so wait for the rest of it rather than giving up - but
+        // only up to a sane length, so a peer that never sends the newline
+        // cannot make us buffer indefinitely.
+        const bool couldBecomeReply = QByteArrayLiteral("YES:").startsWith(mPeerBuffer) || QByteArrayLiteral("NO:").startsWith(mPeerBuffer);
+        if ((couldBecomeReply || ((isYes || isNo) && nlPos == -1)) && mPeerBuffer.size() <= csMMCPMaxHandshakeReplyLength) {
+            return;
+        }
+
+        if (!(isYes || isNo) || nlPos == -1 || colonPos == -1) {
             mState = Disconnected;
+            // Nothing else tidies this connection up, so without this the socket
+            // and this object stay alive for the rest of the session
+            disconnect();
 
             // In this case we do not get details of the connection from the
             // other end - instead we can only report the apparent details from
@@ -319,6 +333,8 @@ void MMCPClient::slot_readData()
         } else if (isNo) {
             // We were rejected by the other end, but we do get details of the connection from them, so we can report that:
             mState = Disconnected;
+            // The far end usually closes on us here, but we should not rely on it
+            disconnect();
             const QByteArray peerName = mPeerBuffer.mid(colonPos + 1, nlPos - colonPos - 1);
             const QString rejectedBy = QString::fromUtf8(peerName);
             const QString infoMsg = tr("[ CHAT ]  - Connection to %1 at %2:%3 rejected.")
