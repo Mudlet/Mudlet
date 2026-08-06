@@ -204,6 +204,129 @@ private slots:
         QVERIFY2(bufferContains(qsl("NESTED=inner,outer#")), "Expected the mid-pass trigger to match the nested line first, then the outer line it was created on");
     }
 
+    // The counterweight to all of the above: giving mid-pass triggers the current
+    // line means a trigger that re-creates itself keeps extending the list the
+    // pass is walking, so the line never finishes - 100% CPU and unbounded memory
+    // on the first matching line, from ordinary game text. The naive "one-shot
+    // that re-arms itself at the end of its own handler" shape is the one users
+    // write, so it is the one pinned here. Without the generation budget in
+    // TriggerUnit::processDataStream() this test does not fail, it hangs, and only
+    // the ctest TIMEOUT ends it.
+    void test_selfRecreatingTriggerIsStopped()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("loopFires = 0\n"
+                                                               "function arm()\n"
+                                                               "  tempRegexTrigger('^hploop$', [[loopFires = loopFires + 1; arm()]], 1)\n"
+                                                               "end\n"
+                                                               "arm()\n"
+                                                               "feedTriggers('hploop\\n')\n"
+                                                               "echo('LOOPFIRES=' .. loopFires .. '#\\n')\n"));
+
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "Expected the same-line re-creation abort error in the console buffer");
+        // One fire from the trigger that was already there when the line arrived,
+        // then one per generation the budget allows.
+        QVERIFY2(bufferContains(qsl("LOOPFIRES=%1").arg(TriggerUnit::scmMaxProcessingDepth)),
+                 qPrintable(qsl("Expected the re-arming trigger to fire exactly %1 times").arg(TriggerUnit::scmMaxProcessingDepth)));
+    }
+
+    // The abort has to name the trigger to be actionable - the user has to know
+    // which of their scripts to change.
+    void test_selfRecreatingTriggerAbortNamesTheTrigger()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("function armNamed()\n"
+                                                               "  tempComplexRegexTrigger('hpWatcher', '^hpnamed$', [[armNamed()]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)\n"
+                                                               "end\n"
+                                                               "armNamed()\n"
+                                                               "feedTriggers('hpnamed\\n')\n"));
+
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(bufferContains(qsl("trigger 'hpWatcher'")), "Expected the abort message to name the trigger that keeps re-creating itself");
+    }
+
+    // A chain that ends on its own must not be cut short: only the runaway case
+    // may hit the budget, and legitimate chains are a handful of generations deep.
+    void test_finiteCreationChainIsUnaffected()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("chainFires = 0\n"
+                                                               "function chainStep()\n"
+                                                               "  chainFires = chainFires + 1\n"
+                                                               "  if chainFires < 10 then\n"
+                                                               "    tempRegexTrigger('^chain$', [[chainStep()]], 1)\n"
+                                                               "  end\n"
+                                                               "end\n"
+                                                               "tempRegexTrigger('^chain$', [[chainStep()]], 1)\n"
+                                                               "feedTriggers('chain\\n')\n"
+                                                               "echo('CHAINFIRES=' .. chainFires .. '#\\n')\n"));
+
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(bufferContains(qsl("CHAINFIRES=10")), "Expected all ten generations of the finite chain to match the current line");
+        QVERIFY2(!bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "A chain that ends on its own must not trip the same-line generation budget");
+    }
+
+    // Stopping the line is only half of it. A re-arming trigger with no expiry
+    // leaves everything it created still active, so the next line would start
+    // with a budget's worth of them and each would spawn a budget's worth again:
+    // measured at 50 fires on the first line and 2600 on the second, i.e. the
+    // freeze merely postponed. The abort therefore disables what the loop created
+    // during the line, which holds it at the same cost per line for ever.
+    void test_selfRecreatingTriggerDoesNotAccumulateAcrossLines()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("keptFires = 0\n"
+                                                               "function armKept()\n"
+                                                               "  tempRegexTrigger('^kept$', [[keptFires = keptFires + 1; armKept()]])\n"
+                                                               "end\n"
+                                                               "armKept()\n"
+                                                               "feedTriggers('kept\\n')\n"
+                                                               "feedTriggers('kept\\n')\n"
+                                                               "echo('KEPTFIRES=' .. keptFires .. '#\\n')\n"));
+
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(bufferContains(qsl("KEPTFIRES=%1").arg(2 * TriggerUnit::scmMaxProcessingDepth)),
+                 qPrintable(qsl("Expected the second line to cost the same %1 fires as the first, not a multiple of them").arg(TriggerUnit::scmMaxProcessingDepth)));
+    }
+
+    // The loop is not a feedTriggers() curiosity: an ordinary line arriving from
+    // the game reaches processDataStream() the same way, and froze Mudlet on the
+    // login banner. Driving it from the socket also proves the abort leaves the
+    // event loop running rather than wedging the connection.
+    void test_selfRecreatingTriggerFromServerTextIsStopped()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("function armFromServer()\n"
+                                                               "  tempRegexTrigger('^HP: 100/100$', [[armFromServer()]], 1)\n"
+                                                               "end\n"
+                                                               "armFromServer()\n"));
+
+        mpServer->sendRaw(QByteArray("HP: 100/100\r\n"));
+        QTRY_VERIFY2_WITH_TIMEOUT(bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "Expected server text to reach the same-line generation budget and be stopped", 10000);
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+    }
+
     void cleanup()
     {
         delete mpServer;

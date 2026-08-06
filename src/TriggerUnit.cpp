@@ -307,6 +307,70 @@ int TriggerUnit::getNewID()
     return ++mMaxID;
 }
 
+// Ends a same-line creation loop that has used up the generation budget, and
+// tells the user which trigger to go and fix.
+//
+// Abandoning the remaining generations is not enough on its own: everything the
+// loop created this pass is a live root trigger matching the same pattern, so
+// the next line would start with a budget's worth of them and each would spawn a
+// budget's worth again. Measured at 50 fires on the first such line and 2600 on
+// the second - the freeze would only be postponed by a few lines. The pass
+// therefore disowns what it created: temporary triggers go the way
+// killTrigger() sends them (deactivated now, freed once no script is on the
+// stack), permanent ones are only deactivated - deleting something the user can
+// see in the editor is not this function's call to make. A pass that is 50
+// generations deep is a runaway by construction, so nothing a working script
+// created can be caught by this.
+//
+// pendingIndex is where the generation that could not be run starts; the first
+// trigger still there names the script doing the re-creating, which in every
+// looping shape is the same script as its creator's.
+void TriggerUnit::stopSameLineCreationLoop(const qsizetype firstNodeAddedThisPass, const qsizetype pendingIndex)
+{
+    QString triggerName;
+    for (qsizetype i = pendingIndex; i < mRootNodesAddedWhileProcessing.size(); ++i) {
+        if (auto trigger = mRootNodesAddedWhileProcessing.at(i); trigger) {
+            triggerName = trigger->getName();
+            break;
+        }
+    }
+
+    int disabledCount = 0;
+    for (qsizetype i = firstNodeAddedThisPass; i < mRootNodesAddedWhileProcessing.size(); ++i) {
+        auto trigger = mRootNodesAddedWhileProcessing.at(i);
+        if (!trigger) {
+            continue;
+        }
+        trigger->setIsActive(false);
+        if (trigger->isTemporary()) {
+            markCleanup(trigger);
+        }
+        ++disabledCount;
+    }
+
+    qWarning().nospace() << "TriggerUnit::processDataStream(...) aborting: triggers created while processing a line reached the limit of " << scmMaxProcessingDepth
+                         << " - probably a trigger that re-creates itself. " << disabledCount << " trigger(s) created during the line have been disabled.";
+    if (!mpHost) {
+        return;
+    }
+    if (triggerName.isEmpty()) {
+        //: %n is a count of triggers. Shown in the game window when a trigger keeps creating new triggers that match the same line, which would otherwise never end
+        mpHost->postMessage(tr("[ ERROR ] - Trigger processing stopped to prevent a freeze: a trigger (or another trigger it creates) keeps creating new triggers that match the line being "
+                               "processed, so that line never finishes. The %n trigger(s) created while processing this line have been disabled. Create the trigger once, outside its own "
+                               "script, or give it a pattern that does not match the line it is created on.",
+                               nullptr,
+                               disabledCount));
+        return;
+    }
+    //: %1 is the name of a trigger - the name of a trigger made by tempTrigger() and friends is its id number - and %n is a count of triggers
+    mpHost->postMessage(tr("[ ERROR ] - Trigger processing stopped to prevent a freeze: trigger '%1' (or another trigger it creates) keeps creating new triggers that match the line being "
+                           "processed, so that line never finishes. The %n trigger(s) created while processing this line have been disabled. Create the trigger once, outside its own "
+                           "script, or give it a pattern that does not match the line it is created on.",
+                           nullptr,
+                           disabledCount)
+                                .arg(triggerName));
+}
+
 void TriggerUnit::processDataStream(const QString& data, int line)
 {
     if (data.isEmpty()) {
@@ -324,9 +388,13 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     memcpy(subject, utf8Ptr, utf8Length);
     subject[utf8Length] = '\0';
 
+    const int entryProcessingDepth = mProcessingDepth;
     mProcessingDepth++;
-    const auto processingGuard = qScopeGuard([this] {
-        mProcessingDepth--;
+    // Restores rather than decrements: the same-line drain below spends a level
+    // of depth per generation of triggers it processes, and any of them can leave
+    // through this guard.
+    const auto processingGuard = qScopeGuard([this, entryProcessingDepth] {
+        mProcessingDepth = entryProcessingDepth;
         Q_ASSERT(mProcessingDepth >= 0);
         if (mProcessingDepth == 0) {
             // Deletion is deferred while any pass runs, so these pointers stayed
@@ -358,13 +426,28 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     }
     // Index-based loop: a match here can register yet more triggers, growing
     // the list; they too get a shot at the current line, just as with the
-    // live-list iteration.
-    for (qsizetype i = firstNodeAddedThisPass; i < mRootNodesAddedWhileProcessing.size(); ++i) {
-        auto trigger = mRootNodesAddedWhileProcessing.at(i);
-        if (!trigger || !trigger->isActive()) {
-            continue;
+    // live-list iteration. Taken one generation at a time - the triggers added
+    // while the previous generation ran - so that each round of same-line
+    // re-processing costs a level of the shared processing-depth budget. A
+    // trigger that re-creates itself otherwise extends the list in front of the
+    // loop for ever and the line never finishes: the depth stays at 1, so
+    // neither the feedTriggers() guard nor anything else notices (#9458 restored
+    // the same-line match without bounding it).
+    for (qsizetype generationStart = firstNodeAddedThisPass; generationStart < mRootNodesAddedWhileProcessing.size();) {
+        if (mProcessingDepth >= scmMaxProcessingDepth) {
+            stopSameLineCreationLoop(firstNodeAddedThisPass, generationStart);
+            break;
         }
-        trigger->match(subject, data, line);
+        mProcessingDepth++;
+        const qsizetype generationEnd = mRootNodesAddedWhileProcessing.size();
+        for (qsizetype i = generationStart; i < generationEnd; ++i) {
+            auto trigger = mRootNodesAddedWhileProcessing.at(i);
+            if (!trigger || !trigger->isActive()) {
+                continue;
+            }
+            trigger->match(subject, data, line);
+        }
+        generationStart = generationEnd;
     }
     free(subject);
 }
@@ -429,6 +512,17 @@ bool TriggerUnit::enableTrigger(const QString& name)
     // start mid-run and skip duplicates on some QMultiMap implementations
     const auto [begin, end] = mLookupTable.equal_range(name);
     for (auto it = begin; it != end; ++it) {
+        // A killed or expired temporary trigger is only unlinked from the lookup
+        // table once doCleanup() frees it, which is deferred while a trigger
+        // script is on the call stack - so it is still findable by name for the
+        // rest of the line. Re-activating that corpse resurrects it: a one-shot
+        // trigger fires a second time, and killTrigger() is undone from another
+        // script - see the guarantee TTrigger::match() relies on when it expires
+        // a trigger, and killTrigger() below, which skips corpses for the same
+        // reason.
+        if (mCleanupSet.contains(it.value())) {
+            continue;
+        }
         it.value()->setIsActive(true);
         found = true;
     }

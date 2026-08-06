@@ -109,6 +109,13 @@ set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 # Undo/redo tests need a longer timeout due to large batch operations
 set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 
+# TriggerSameLineMatchTest creates a fresh profile per test method, so it needs a
+# longer timeout. Its self-re-creating-trigger cases are also the only thing
+# standing between a regression there and a test run that never ends - without
+# the generation budget in TriggerUnit::processDataStream() they do not fail,
+# they hang - so this timeout is what turns that into a reported failure.
+set_tests_properties(TriggerSameLineMatchTest PROPERTIES TIMEOUT 300)
+
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
 

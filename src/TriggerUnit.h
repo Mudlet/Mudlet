@@ -26,6 +26,7 @@
 
 #include "utils.h"
 
+#include <QCoreApplication>
 #include <QMultiMap>
 #include <QPointer>
 #include <QSet>
@@ -38,6 +39,7 @@ class TTrigger;
 
 class TriggerUnit
 {
+    Q_DECLARE_TR_FUNCTIONS(TriggerUnit) // Needed so we can use tr() even though TriggerUnit is NOT derived from QObject
     friend class XMLexport;
     friend class XMLimport;
 
@@ -85,6 +87,8 @@ public:
     // it overflows the stack. Sized for the smallest platform stack (~1MB on
     // Windows, where the original crash hit before Lua's own 200-C-call guard):
     // a few times any legitimate nesting, comfortably below the native limit.
+    // The same budget bounds the generations of triggers that can be created
+    // while one line is being processed - see processDataStream().
     inline static const int scmMaxProcessingDepth = 50;
 
     QList<TTrigger*> uninstallList;
@@ -97,6 +101,7 @@ private:
     void addTrigger(TTrigger* pT);
     void removeTriggerRootNode(TTrigger* pT);
     void removeTrigger(TTrigger*);
+    void stopSameLineCreationLoop(const qsizetype firstNodeAddedThisPass, const qsizetype pendingIndex);
 
     QPointer<Host> mpHost;
     QMap<int, TTrigger*> mTriggerMap;
