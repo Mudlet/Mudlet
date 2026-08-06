@@ -1591,10 +1591,14 @@ bool TConsole::setWindowBackgroundImage(const QString& imgPath, int mode)
             return false;
         }
         const QPixmap previousSource = mWindowBgSourcePixmap;
+        // the stylesheet has to go first: clearing one repolishes the widget and
+        // would drop the pixmap brush that updateWindowBackgroundCoverPixmap sets
+        const QString previousStyleSheet = mpWindowBackground->styleSheet();
         mWindowBgSourcePixmap = pixmap;
         mpWindowBackground->setStyleSheet(QString());
         if (!updateWindowBackgroundCoverPixmap()) {
             mWindowBgSourcePixmap = previousSource;
+            mpWindowBackground->setStyleSheet(previousStyleSheet);
             return false;
         }
     } else {

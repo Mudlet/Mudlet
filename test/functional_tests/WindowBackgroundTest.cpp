@@ -282,6 +282,22 @@ private slots:
         QVERIFY(!widgetSize.isEmpty());
         QCOMPARE(mpHost->mpConsole->mpWindowBackground->palette().brush(QPalette::Window).texture().size(), widgetSize);
     }
+
+    // Switching from a stylesheet-driven mode to 'cover' has to leave the pixmap
+    // brush in the palette: clearing a stylesheet repolishes the widget.
+    void test_switchingFromStylesheetModeToCoverInstallsTheBrush()
+    {
+        const QString imagePath = writeImage(qsl("switch.png"), QSize(256, 128), Qt::magenta);
+        QVERIFY(!imagePath.isEmpty());
+
+        runLua(qsl("setBackgroundImage('main', [[%1]], 'border', true)").arg(imagePath));
+        QVERIFY(!mpHost->mpConsole->mpWindowBackground->styleSheet().isEmpty());
+
+        runLua(qsl("setBackgroundImage('main', [[%1]], 'cover', true)").arg(imagePath));
+
+        QVERIFY(mpHost->mpConsole->mpWindowBackground->styleSheet().isEmpty());
+        QCOMPARE(mpHost->mpConsole->mpWindowBackground->palette().brush(QPalette::Window).texture().size(), mpHost->mpConsole->mpWindowBackground->size());
+    }
 };
 
 void initializeQRCResourcesForWindowBackgroundTest()
