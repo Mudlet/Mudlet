@@ -65,6 +65,7 @@
 #include <QFileDialog>
 #include <QJsonDocument>
 #include <QImage>
+#include <QKeyEvent>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QNetworkDiskCache>
@@ -2115,31 +2116,58 @@ void mudlet::switchToProfileTab(int index)
     }
 }
 
-// Whether this key press is one of the profile tab switching shortcuts, i.e.
-// one that a user's own key binding is allowed to take priority over:
+// Whether this key press would activate one of the profile tab switching
+// shortcuts. Has to reproduce QShortcutMap's matching rather than compare the
+// key press literally, because a shortcut can be spelt differently to the key
+// press that activates it:
 bool mudlet::profileSwitchShortcutMatches(const QKeyEvent* ke) const
 {
     if (!ke) {
         return false;
     }
 
-    const QKeySequence pressed(ke->keyCombination());
-    // Shift+Tab arrives as Key_Backtab (with the Shift modifier retained) but
-    // the sequences are spelt with Key_Tab, so accept that spelling as well -
-    // the same asymmetry the sequence definitions above comment on. Stays
-    // empty, and so matches nothing, for every other key:
-    const QKeySequence backtabAlternative = (ke->key() == Qt::Key_Backtab) ? QKeySequence(QKeyCombination(ke->modifiers() | Qt::ShiftModifier, Qt::Key_Tab)) : QKeySequence();
+    const auto key = static_cast<Qt::Key>(ke->key());
+    const Qt::KeyboardModifiers modifiers = ke->modifiers();
 
-    auto matches = [&pressed, &backtabAlternative](const QKeySequence& sequence) {
-        return !sequence.isEmpty() && (sequence == pressed || sequence == backtabAlternative);
+    // QShortcutMap retries the match with the modifiers the platform consumed
+    // producing the character stripped off, so a shortcut fires for presses
+    // spelt differently to itself. Both retries that reach these shortcuts land
+    // on the digits: Ctrl and a numpad digit activates Ctrl+1, and on layouts
+    // that need Shift for a top-row digit (French AZERTY) so does Ctrl+Shift+1 -
+    // which is the same reason handleCtrlTabChange() ignores Shift.
+    QList<QKeySequence> candidates;
+    const Qt::KeyboardModifiers strippable[] = {Qt::NoModifier, Qt::KeypadModifier, Qt::ShiftModifier, Qt::ShiftModifier | Qt::KeypadModifier};
+    for (const auto stripped : strippable) {
+        // Only single key combinations are ever produced here, so a shortcut
+        // remapped to a multi-step sequence would never be matched - none of
+        // the defaults are, and the shortcut editor cannot record one:
+        const QKeySequence candidate(QKeyCombination(modifiers & ~stripped, key));
+        if (!candidates.contains(candidate)) {
+            candidates.append(candidate);
+        }
+    }
+
+    if (key == Qt::Key_Backtab) {
+        // The other direction: Shift+Tab produces the Backtab keysym, while the
+        // sequences are spelt with Key_Tab (see mudlet::mudlet(), where they are
+        // defined). Shift is normally still set on such an event, but Qt's own
+        // Backtab handling does not rely on that, so put it back rather than
+        // assume it is there:
+        candidates.append(QKeySequence(QKeyCombination(modifiers | Qt::ShiftModifier, Qt::Key_Tab)));
+    }
+
+    auto shadows = [&candidates](const QKeySequence& sequence) {
+        // A shortcut the user cleared in the preferences is an empty sequence,
+        // and comparing it would match any candidate that was also empty:
+        return !sequence.isEmpty() && candidates.contains(sequence);
     };
 
-    if (matches(mKeySequenceNextProfile) || matches(mKeySequencePreviousProfile)) {
+    if (shadows(mKeySequenceNextProfile) || shadows(mKeySequencePreviousProfile)) {
         return true;
     }
 
     for (const auto& sequence : mKeySequencesSwitchToProfile) {
-        if (matches(sequence)) {
+        if (shadows(sequence)) {
             return true;
         }
     }

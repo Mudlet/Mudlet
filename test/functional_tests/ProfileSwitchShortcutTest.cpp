@@ -19,13 +19,16 @@
 
 /*
  * The profile tab switching shortcuts (Ctrl+1 to Ctrl+9, Ctrl+Tab) are
- * application-wide QShortcuts on the main window. Qt resolves a QShortcut by
- * first sending a QEvent::ShortcutOverride to the focus widget and, unless that
- * widget accepts it, running the shortcut and never delivering the KeyPress.
- * A user's own key binding on one of those keys therefore only survives if the
- * command line claims the override - which is what these tests check, along
- * with the two ways it must NOT claim it: no binding, and a binding that is
- * disabled (directly or through its group).
+ * QShortcuts on the main window. Qt resolves a QShortcut by first sending a
+ * QEvent::ShortcutOverride to the focus widget and, unless that widget accepts
+ * it, running the shortcut and never delivering the KeyPress. A user's own key
+ * binding on one of those keys therefore only survives if the command line
+ * claims the override.
+ *
+ * The invariant under test: the command line claims the override exactly when
+ * a live user key binding matches a key press that would otherwise activate a
+ * profile switching shortcut - including the presses QShortcutMap matches to a
+ * differently spelt shortcut - and never otherwise.
  *
  * Run with: ctest -R ProfileSwitchShortcutTest -V
  */
@@ -39,6 +42,7 @@
 #include "TCommandLine.h"
 #include "TKey.h"
 #include "TLuaInterpreter.h"
+#include "ShortcutsManager.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -112,8 +116,9 @@ private:
         QApplication::sendEvent(commandLine(), &event);
     }
 
-    // The shortcuts are only worth overriding if they are actually installed,
-    // so every test that asserts a claim also proves the collision is real.
+    // A claim is only worth asserting if a shortcut is actually competing for
+    // the key, so every test that asserts one first proves the collision is
+    // real - otherwise a mis-mapped sequence would look like a code failure.
     bool shortcutInstalledFor(const QKeySequence& sequence) const
     {
         const auto shortcuts = mudlet::self()->findChildren<QShortcut*>();
@@ -123,6 +128,18 @@ private:
             }
         }
         return false;
+    }
+
+    // Read from the shortcuts manager rather than hard coded, since it is
+    // Alt+E on Linux and Windows but Ctrl+E on macOS.
+    std::pair<int, Qt::KeyboardModifiers> scriptEditorShortcut() const
+    {
+        auto* sequence = mudlet::self()->shortcutsManager()->getSequence(qsl("Script editor"));
+        if (!sequence || sequence->isEmpty()) {
+            return {Qt::Key_unknown, Qt::NoModifier};
+        }
+        const QKeyCombination combination = (*sequence)[0];
+        return {combination.key(), combination.keyboardModifiers()};
     }
 
     int luaCounter(const QString& globalName) const
@@ -148,10 +165,14 @@ private:
         return id;
     }
 
+    // Deleting the roots outright is only safe because every key here is
+    // permanent and none is killed or uninstalled, so KeyUnit's deferred-delete
+    // set is always empty. Add a temporary key or a killKey() call to this file
+    // and this has to go through markCleanup()/doCleanup() instead.
     void removeAllKeys()
     {
         auto* keyUnit = mpHost->getKeyUnit();
-        const auto rootKeys = keyUnit->getKeyRootNodeList();
+        const auto rootKeys = keyUnit->getKeyRootNodeList(); // by value: ~TKey mutates the real list
         for (auto* key : rootKeys) {
             delete key;
         }
@@ -176,6 +197,11 @@ private slots:
         mpHost = mudlet::self()->getActiveHost();
         QVERIFY2(mpHost, "No active host after profile creation");
         QVERIFY2(commandLine(), "No command line available for the test");
+
+        // The caret shortcut is checked before this code in TCommandLine::event()
+        // and CtrlTab would claim Ctrl+Tab itself, so pin it to the default
+        // rather than let an unrelated feature decide what these tests measure:
+        mpHost->mCaretShortcut = Host::CaretShortcut::None;
     }
 
     void cleanupTestCase()
@@ -217,18 +243,29 @@ private slots:
     }
 
     // A disabled binding is not a binding, so it must not steal the key from
-    // the tab switch.
+    // the tab switch. Disabled through KeyUnit::disableKey(), which is the path
+    // the editor and the Lua disableKey() take - it clears mActive, not the
+    // mUserActiveState that setIsActive() writes.
     void test_disabledUserBindingDoesNotClaimTheShortcut()
     {
-        const int id = createCountingKey(qsl("Disabled Ctrl+2 binding"), Qt::Key_2, Qt::ControlModifier, qsl("_testCtrl2"));
-        QVERIFY(id > 0);
+        const QString name = qsl("Disabled Ctrl+2 binding");
+        QVERIFY(createCountingKey(name, Qt::Key_2, Qt::ControlModifier, qsl("_testCtrl2")) > 0);
         QVERIFY(overrideClaimed(Qt::Key_2, Qt::ControlModifier));
 
-        auto* key = mpHost->getKeyUnit()->getKey(id);
-        QVERIFY(key);
-        key->setIsActive(false);
+        QVERIFY(mpHost->getKeyUnit()->disableKey(name));
 
         QVERIFY2(!overrideClaimed(Qt::Key_2, Qt::ControlModifier), "A disabled key binding still claimed Ctrl+2");
+    }
+
+    // The nine switch-to-profile shortcuts are generated in a loop, so check
+    // the far end of it too.
+    void test_userBindingOnCtrlNineClaimsTheShortcut()
+    {
+        QVERIFY2(shortcutInstalledFor(QKeySequence(Qt::CTRL | Qt::Key_9)), "No profile switching shortcut is installed for Ctrl+9, so this test proves nothing");
+
+        QVERIFY(createCountingKey(qsl("Ctrl+9 binding"), Qt::Key_9, Qt::ControlModifier, qsl("_testCtrl9")) > 0);
+
+        QVERIFY2(overrideClaimed(Qt::Key_9, Qt::ControlModifier), "A user key binding on Ctrl+9 did not claim the key");
     }
 
     // Same for an active binding sitting inside a disabled group.
@@ -251,11 +288,85 @@ private slots:
     // treatment, in both directions.
     void test_userBindingOnCtrlTabClaimsTheShortcut()
     {
+        QVERIFY2(shortcutInstalledFor(QKeySequence(nextProfileModifier | Qt::Key_Tab)), "No 'Next profile' shortcut is installed for Ctrl+Tab, so this test proves nothing");
         QVERIFY2(!overrideClaimed(Qt::Key_Tab, nextProfileModifier), "Ctrl+Tab was claimed with no user key binding present");
 
         QVERIFY(createCountingKey(qsl("Ctrl+Tab binding"), Qt::Key_Tab, nextProfileModifier, qsl("_testCtrlTab")) > 0);
 
         QVERIFY2(overrideClaimed(Qt::Key_Tab, nextProfileModifier), "A user key binding on Ctrl+Tab did not claim the key");
+    }
+
+    // "Previous profile" is Ctrl+Shift+Tab, but Shift+Tab reaches the widget as
+    // Key_Backtab with the Shift modifier kept, so the sequence (spelt with
+    // Key_Tab) and the key press disagree on the spelling and the match has to
+    // bridge that.
+    void test_userBindingOnCtrlShiftTabClaimsTheShortcut()
+    {
+        const auto modifiers = nextProfileModifier | Qt::ShiftModifier;
+        QVERIFY2(!overrideClaimed(Qt::Key_Backtab, modifiers), "Ctrl+Shift+Tab was claimed with no user key binding present");
+
+        QVERIFY(createCountingKey(qsl("Ctrl+Shift+Tab binding"), Qt::Key_Backtab, modifiers, qsl("_testCtrlShiftTab")) > 0);
+
+        QVERIFY2(overrideClaimed(Qt::Key_Backtab, modifiers), "A user key binding on Ctrl+Shift+Tab did not claim the key");
+    }
+
+    // Only the profile switching shortcuts are overridden. Every other
+    // application shortcut keeps its key, so a binding on the script editor
+    // shortcut must not be claimed.
+    void test_bindingOnAnotherApplicationShortcutIsNotClaimed()
+    {
+        auto [key, modifiers] = scriptEditorShortcut();
+        QVERIFY2(key != Qt::Key_unknown, "Could not read the script editor shortcut");
+
+        QVERIFY(createCountingKey(qsl("Script editor shortcut binding"), key, modifiers, qsl("_testEditor")) > 0);
+
+        QVERIFY2(!overrideClaimed(key, modifiers), "A key binding claimed the script editor shortcut, which is outside the profile switching set");
+    }
+
+    // Guards the "empty sequence matches everything" failure mode. A key press
+    // that is not Backtab has no alternative spelling to compare against, so
+    // without the isEmpty() guard a shortcut the user has cleared in
+    // Preferences would compare equal to every key and claim the lot.
+    void test_aClearedProfileShortcutDoesNotClaimEveryKey()
+    {
+        auto* sequence = mudlet::self()->shortcutsManager()->getSequence(qsl("Switch to profile 1"));
+        QVERIFY2(sequence, "'Switch to profile 1' is not registered with the shortcuts manager");
+        const QKeySequence saved = *sequence;
+        *sequence = QKeySequence();
+
+        auto [key, modifiers] = scriptEditorShortcut();
+        QVERIFY(createCountingKey(qsl("Script editor shortcut binding"), key, modifiers, qsl("_testEditorCleared")) > 0);
+        QVERIFY(createCountingKey(qsl("F5 binding"), Qt::Key_F5, Qt::NoModifier, qsl("_testF5")) > 0);
+
+        const bool editorClaimed = overrideClaimed(key, modifiers);
+        const bool f5Claimed = overrideClaimed(Qt::Key_F5, Qt::NoModifier);
+        *sequence = saved;
+
+        QVERIFY2(!editorClaimed, "A cleared profile switching shortcut made an unrelated bound key claim the override");
+        QVERIFY2(!f5Claimed, "A cleared profile switching shortcut made an unrelated bound key claim the override");
+    }
+
+    // QShortcutMap retries a match with the keypad modifier stripped, so Ctrl
+    // and a numpad digit activates the plain Ctrl+1 shortcut even though the
+    // two key combinations differ. Verified against the real thing: without the
+    // claim, Ctrl+numpad-2 switches profile and the binding never runs.
+    void test_userBindingOnAKeypadDigitClaimsTheShortcut()
+    {
+        const auto modifiers = Qt::ControlModifier | Qt::KeypadModifier;
+        QVERIFY(createCountingKey(qsl("Ctrl+keypad 1 binding"), Qt::Key_1, modifiers, qsl("_testKeypad1")) > 0);
+
+        QVERIFY2(overrideClaimed(Qt::Key_1, modifiers), "A user key binding on Ctrl and a keypad digit did not claim the key");
+    }
+
+    // Layouts that need Shift for a top-row digit (French AZERTY) record the
+    // binding with Shift and still activate the plain Ctrl+1 shortcut, because
+    // QShortcutMap drops the Shift that was consumed producing the digit.
+    void test_userBindingOnAShiftedDigitClaimsTheShortcut()
+    {
+        const auto modifiers = Qt::ControlModifier | Qt::ShiftModifier;
+        QVERIFY(createCountingKey(qsl("Ctrl+Shift+1 binding"), Qt::Key_1, modifiers, qsl("_testShift1")) > 0);
+
+        QVERIFY2(overrideClaimed(Qt::Key_1, modifiers), "A user key binding on Ctrl+Shift and a digit did not claim the key");
     }
 
     // Claiming the override only defers the key - the binding must then run
