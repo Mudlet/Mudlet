@@ -860,12 +860,8 @@ QPair<bool, QString> MMCPServer::snoop(const QVariant& target)
     MMCPClient* pClient = clientByNameOrId(target);
 
     if (pClient) {
-        if (pClient->isSnooped()) {
-            pClient->setSnooped(false);
-        } else {
-            pClient->snoop();
-        }
-
+        // MMCPClient::snoop() sends the toggle and updates our record of it
+        pClient->snoop();
         return {true, QString()};
     }
 

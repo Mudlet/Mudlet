@@ -559,7 +559,9 @@ void MMCPClient::writeData(const QByteArray& data)
 }
 
 /**
- * Attempt to snoop this client.
+ * Start or stop snooping this client.
+ * The snoop command is a toggle at the far end, so our record of whether we are
+ * snooping them has to flip with every command we send or the two drift apart.
  */
 void MMCPClient::snoop()
 {
@@ -567,6 +569,8 @@ void MMCPClient::snoop()
     snoopCmd.append(static_cast<char>(Snoop));
     snoopCmd.append(static_cast<char>(End));
     writeData(snoopCmd);
+
+    mSnooped = !mSnooped;
 }
 
 /**
