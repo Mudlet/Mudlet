@@ -69,8 +69,12 @@ public:
     void uninstall(const QString&);
     void _uninstall(TKey* pChild, const QString& packageName);
     bool processDataStream(const Qt::Key, const Qt::KeyboardModifiers);
+    // Reports whether processDataStream() would find a binding for this key
+    // combination, without running any of them
+    bool wouldMatch(const Qt::Key, const Qt::KeyboardModifiers) const;
     void markCleanup(TKey* pT);
     void doCleanup();
+    int processingDepth() const { return mProcessingDepth; }
     void stopAllTriggers();
     void reenableAllTriggers();
 

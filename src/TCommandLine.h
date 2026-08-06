@@ -116,6 +116,7 @@ private:
     void enterCommand(QKeyEvent*);
     void processNormalKey(QEvent*);
     bool keybindingMatched(QKeyEvent*);
+    bool keybindingWouldMatchProfileSwitchShortcut(const QKeyEvent*) const;
     void spellCheckWord(QTextCursor& c);
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
     void restoreHistory();

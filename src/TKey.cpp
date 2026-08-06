@@ -103,6 +103,29 @@ bool TKey::match(const Qt::Key key, const Qt::KeyboardModifiers modifier, const 
 }
 
 
+bool TKey::wouldMatch(const Qt::Key key, const Qt::KeyboardModifiers modifier) const
+{
+    // isActive() is also false for a half-destroyed key, so this covers the
+    // dereference below. Nothing runs during this walk, so unlike match() there
+    // is no re-entrancy to guard against:
+    if (!isActive()) {
+        return false;
+    }
+
+    if (!isFolder() && (mKeyCode == key) && (mKeyModifier == modifier)) {
+        return true;
+    }
+
+    for (auto childKey : *mpMyChildrenList) {
+        if (childKey->wouldMatch(key, modifier)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
 bool TKey::registerKey()
 {
     if (!mpHost) {

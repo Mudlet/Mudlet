@@ -85,7 +85,8 @@ XMLexport::XMLexport(TKey* pT)
 
 // Builds the module's XML document into mExportDoc. This reads the live
 // trigger/timer/alias/action/script/key lists, so it must run on the main thread;
-// serialization to disk (saveModuleXml()) can then happen on a background thread.
+// serializing a copy of it (cloneExportDocument()) to disk can then happen on a
+// background thread.
 void XMLexport::writeModuleXML(const QString& moduleName)
 {
     auto pHost = mpHost;
@@ -160,13 +161,17 @@ void XMLexport::writeModuleXML(const QString& moduleName)
     }
 }
 
-// Serializes the document previously built by writeModuleXML() to disk. Kept
-// separate from writeModuleXML() so the document build (main thread only) and the
-// file write (safe on a background thread as the document is not modified once
-// built) can run on different threads.
-bool XMLexport::saveModuleXml(const QString& fileName)
+// Deep copy of the document built so far, so the write can outlive both this XMLexport
+// and the Host it belongs to. The copy is made while the main thread is already
+// quiescent, and each document owns its own tree, so the clone can be serialized off
+// the main thread without touching anything shared.
+std::shared_ptr<pugi::xml_document> XMLexport::cloneExportDocument() const
 {
-    return saveXml(fileName);
+    auto clone = std::make_shared<pugi::xml_document>();
+    for (pugi::xml_node child = mExportDoc.first_child(); child; child = child.next_sibling()) {
+        clone->append_copy(child);
+    }
+    return clone;
 }
 
 bool XMLexport::exportHost(const QString& filename_pugi_xml)
@@ -187,19 +192,16 @@ bool XMLexport::exportHost(const QString& filename_pugi_xml)
 // notify host when complete
 void XMLexport::runAsyncSave(const QString& fileName, const QString& xmlSavedKey)
 {
-    // Clone XML document on main thread, then serialize and save on background thread.
-    // Cloning is fast and safe; each document owns its own tree, so the clone can be
-    // serialized on a background thread without thread-safety issues.
+    // Clone the XML document on the main thread, then serialize and save it on a
+    // background thread that owns the clone outright.
     QPointer<Host> host = mpHost;
-    pugi::xml_document docClone;
-    // Deep copy the entire document tree
-    for (pugi::xml_node child = mExportDoc.first_child(); child; child = child.next_sibling()) {
-        docClone.append_copy(child);
-    }
-    auto future = QtConcurrent::run([fileName, docClone = std::move(docClone)]() mutable {
-        return XMLexport::saveXmlDocToFile(fileName, docClone);
+    auto future = QtConcurrent::run([fileName, docClone = cloneExportDocument()]() {
+        return XMLexport::saveXmlDocToFile(fileName, *docClone);
     });
-    auto watcher = new QFutureWatcher<bool>;
+    // Parented to the profile for the same reason the module save's watcher is: the
+    // deleteLater() below needs an event loop that is still running to be delivered,
+    // and the save that matters most here is the one on the way out.
+    auto watcher = new QFutureWatcher<bool>(host);
     connect(watcher, &QFutureWatcher<bool>::finished, host, [host, xmlSavedKey]() {
         if (!host) {
             return;

@@ -60,7 +60,9 @@
 
 class QAction;
 class QCloseEvent;
+class QDateTime;
 class QDir;
+class QKeyEvent;
 class QMediaDevices;
 class QMediaPlayer;
 class QMenu;
@@ -200,6 +202,7 @@ public:
     void setupConfig();
     void activateProfile(Host*);
     void switchToProfileTab(int index);
+    bool profileSwitchShortcutMatches(const QKeyEvent*) const;
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
     void addConsoleForNewHost(Host*);
@@ -327,7 +330,12 @@ public:
     void showedMuteAllMediaTutorial();
     bool showCharacterModeWarning();
     void showedCharacterModeWarning();
+    // True if the player has used Mudlet long enough not to need the tutorial
+    // tips, the interface tour or the starter UI. Memoised.
     bool experiencedMudletPlayer();
+    // The two below are public only so they can be tested
+    static void rememberFirstLaunch(QSettings& settings, const QString& profilesPath, const QDateTime& now);
+    static bool evaluateExperiencedPlayer(const QSettings& settings, const QString& profilesPath, const QDateTime& now);
 
     // Telnet URI handling
     void handleTelnetUri(const QString& uri);

@@ -51,6 +51,22 @@ foreach(test_name ${UNIT_TESTS})
     )
 endforeach()
 
+# TKeySequenceEditTest's focus traversal cases need an active window, which an X
+# server with no window manager never gives them, so a plain `xvfb-run ctest`
+# reported two failures that meant nothing and cost the activation timeout twice
+# (#9575). The offscreen platform synthesises activation, and is already how the
+# Linux CI job runs the whole suite. Only on X11: macOS and Windows have a real
+# window manager, and running there natively is the only coverage of platform
+# focus traversal there is. APPEND so the sanitizer setting above survives.
+if(UNIX AND NOT APPLE)
+    set_property(TEST TKeySequenceEditTest APPEND PROPERTY ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+endif()
+
+# Every ctest run has a display that can activate a window, one way or the other,
+# so a skipped traversal case there is a regression and not an environment. Only
+# somebody running the binary by hand on a bare X server is allowed the skip.
+set_property(TEST TKeySequenceEditTest APPEND PROPERTY ENVIRONMENT "MUDLET_REQUIRE_WINDOW_ACTIVATION=1")
+
 # DiscordTest checks the Lua API permission gating contract by scanning the source
 target_compile_definitions(DiscordTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 
@@ -84,6 +100,15 @@ set_tests_properties(UpdaterChecksumTest PROPERTIES
 if(NOT WIN32)
     add_test(NAME ReleaseChecksumsTest
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/release-checksums-test.sh
+    )
+endif()
+
+# Checks the milestone lookup that add-milestone runs - the one that matched a
+# title that no longer existed and assigned nothing for months, without ever
+# failing. gh is stubbed, so there is no network and no token
+if(NOT WIN32)
+    add_test(NAME MilestoneResolutionTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/milestone-resolution-test.sh
     )
 endif()
 
