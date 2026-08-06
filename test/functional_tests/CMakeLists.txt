@@ -49,6 +49,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TMediaLoopTest.cpp
     DefaultPackagesTest.cpp
     StarterUiTriggerCostTest.cpp
+    ExperiencedPlayerGateTest.cpp
 )
 
 # The updater sources are only built with USE_UPDATER, and on macOS the
@@ -109,6 +110,17 @@ set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 
 # Undo/redo tests need a longer timeout due to large batch operations
 set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
+
+# TriggerSameLineMatchTest creates a fresh profile per test method, so it needs a
+# longer timeout. Its self-re-creating-trigger cases do not fail on a regression,
+# they hang and grow the heap by ~110MB/s, so the two backstops below are what
+# turn that into a reported failure: an RSS ceiling that aborts in seconds rather
+# than letting a runner's OOM killer pick a victim, and the timeout behind it.
+# The ENVIRONMENT here replaces the one the loop above sets, so it repeats
+# QT_QPA_PLATFORM.
+set_tests_properties(TriggerSameLineMatchTest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0:hard_rss_limit_mb=3000"
+    TIMEOUT 300)
 
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
