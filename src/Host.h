@@ -197,9 +197,11 @@ public:
     void setPass(const QString& password) { mPass = password; }
     bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && !mPass.isEmpty(); }
     // True once the user has sent any command to the game on the current connection. It gates whether
-    // an unsolicited GMCP Char.Login.URL may auto-open the browser: a URL that arrives only after the
+    // an unsolicited GMCP sign-in address may auto-open the browser: one that arrives only after the
     // player acted (e.g. chose a provider on the game's own sign-in screen) is a consequence of their
     // input, whereas one at an untouched connection is not and must not silently launch a browser.
+    // GMCPAuthenticator clears it again when it auto-opens, so one player action can launch at most
+    // one browser hand-off however many sign-in addresses the game pushes.
     bool userSentInputThisConnection() const { return mUserSentInputThisConnection; }
     void setUserSentInputThisConnection(const bool b) { mUserSentInputThisConnection = b; }
     int getRetries() { return mRetries; }

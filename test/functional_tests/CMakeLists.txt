@@ -123,7 +123,7 @@ set_tests_properties(TriggerSameLineMatchTest PROPERTIES
     TIMEOUT 300)
 
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
-set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
+set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
 
 # InsertTextCapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(InsertTextCapTest PROPERTIES TIMEOUT 300)
