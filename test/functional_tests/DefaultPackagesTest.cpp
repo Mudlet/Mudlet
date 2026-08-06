@@ -135,8 +135,11 @@ private slots:
 
     // Games that install an interface of their own get a loader instead of the
     // starter UI, which would otherwise fight it for the same screen space.
+    // Every other game gets it, as long as the player is new to Mudlet - this
+    // config dir has no profiles and no recorded history, so they are.
     void test_gamesWithTheirOwnUiSkipTheStarterUi()
     {
+        QVERIFY(preinstallsFor(qsl("example.com")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
         QVERIFY(!preinstallsFor(qsl("mg.mud.de")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
         QVERIFY(preinstallsFor(qsl("mg.mud.de")).contains(qsl(":/packages/mg-loader/mg-loader.mpackage")));
     }
