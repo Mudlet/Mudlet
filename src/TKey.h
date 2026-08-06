@@ -64,8 +64,7 @@ public:
 
 
     bool match(const Qt::Key, const Qt::KeyboardModifiers, const bool);
-    // Same walk as match() but without running anything - for asking whether a
-    // key press is spoken for before deciding to let it through:
+    // Query-only counterpart to match(), which executes what it matches
     bool wouldMatch(const Qt::Key, const Qt::KeyboardModifiers) const;
     bool registerKey();
     void validateKeyBinding();
