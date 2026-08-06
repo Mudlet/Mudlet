@@ -48,6 +48,7 @@ set(FUNCTIONAL_TEST_SOURCES
     DialogTeardownTest.cpp
     TMediaLoopTest.cpp
     DefaultPackagesTest.cpp
+    ProfileSwitchShortcutTest.cpp
     ExperiencedPlayerGateTest.cpp
 )
 

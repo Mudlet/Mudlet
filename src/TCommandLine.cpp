@@ -163,6 +163,20 @@ bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
     return false;
 }
 
+bool TCommandLine::keybindingWouldMatchProfileSwitchShortcut(const QKeyEvent* keyEvent) const
+{
+    if (!mpKeyUnit || (mpHost && mpHost->isClosingDown())) {
+        return false;
+    }
+
+    auto* pMudlet = mudlet::self();
+    if (!pMudlet || !pMudlet->profileSwitchShortcutMatches(keyEvent)) {
+        return false;
+    }
+
+    return mpKeyUnit->wouldMatch(static_cast<Qt::Key>(keyEvent->key()), keyEvent->modifiers());
+}
+
 // This function overrides the QWidget::event() and should return true if the
 // event was recognized, otherwise it should return false. If the recognized
 // event was accepted (see QEvent::accepted), any further processing such as
@@ -183,6 +197,18 @@ bool TCommandLine::event(QEvent* event)
         // keys - so claim it here to make it arrive as a KeyPress for the
         // caret-toggling code below:
         if (mpHost->caretShortcutMatches(ke)) {
+            ke->accept();
+            return true;
+        }
+
+        // A user's own key binding beats the profile tab switching shortcuts,
+        // the precedence handleCtrlTabChange() below describes - but those are
+        // QShortcuts on the main window, and QShortcutMap consumes a matching
+        // key before the KeyPress is ever delivered here, so the binding has to
+        // be spotted now. Only the keys those shortcuts occupy are asked about,
+        // and asked without running anything - the binding runs when the
+        // KeyPress that this claim lets through arrives:
+        if (keybindingWouldMatchProfileSwitchShortcut(ke)) {
             ke->accept();
             return true;
         }
@@ -1331,6 +1357,14 @@ bool TCommandLine::handleCtrlTabChange(QKeyEvent* ke, int tabNumber)
         // hasn't created one then we fallback to tab switching - however
         // since some locales need the SHIFT modifier to enter numbers from the
         // top keyboard row (e.g. French AZERTY) we must ignore that one!
+        //
+        // Since the "Switch to profile N" QShortcuts were added this branch is
+        // no longer where that precedence is decided: whenever such a shortcut
+        // is set, the key only arrives here at all because event() claimed the
+        // ShortcutOverride for a matching binding, so the binding always wins
+        // and the tab switch below runs through the shortcut instead. The
+        // fallback still matters for Ctrl+0, which has no shortcut, and for
+        // shortcuts the user has cleared or remapped.
         if (keybindingMatched(ke)) {
             // Ah the user HAS created a matching binding:
             return true;
