@@ -65,6 +65,7 @@ public:
     void renameVar(TVar*);
     void createVar(TVar*);
     VarUnit* getVarUnit();
+    void releaseVariableReferences();
     bool loadVar(TVar* var);
     bool reparentCVariable(TVar* from, TVar* to, TVar* curVar);
     bool reparentVariable(QTreeWidgetItem*, QTreeWidgetItem*, QTreeWidgetItem*);

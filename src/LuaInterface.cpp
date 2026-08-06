@@ -68,6 +68,25 @@ VarUnit* LuaInterface::getVarUnit()
     return varUnit.data();
 }
 
+lua_State* LuaInterface::getState()
+{
+    return mL;
+}
+
+// Hands back the Lua registry references taken for reference-keyed variables
+// (a table or a function used as a key has no printable name, so it is named by
+// its registry reference instead). getVars() calls this for the tree it is
+// about to replace; anything that builds a tree it then throws away has to call
+// it itself, as the destructor cannot - a profile reset closes the lua_State
+// before the Host's LuaInterface is replaced.
+void LuaInterface::releaseVariableReferences()
+{
+    for (const int ref : std::as_const(lrefs)) {
+        luaL_unref(mL, LUA_REGISTRYINDEX, ref);
+    }
+    lrefs.clear();
+}
+
 QStringList LuaInterface::varName(TVar* var)
 {
     QStringList names;
@@ -830,12 +849,7 @@ void LuaInterface::getVars(bool hide)
     auto global = new TVar();
     global->setName("_G", LUA_TSTRING);
     global->setValue("{}", LUA_TTABLE);
-    QListIterator<int> it(lrefs);
-    while (it.hasNext()) {
-        const int ref = it.next();
-        luaL_unref(mL, LUA_REGISTRYINDEX, ref);
-    }
-    lrefs.clear();
+    releaseVariableReferences();
     varUnit->clear();
     varUnit->setBase(global);
     varUnit->addVariable(global);

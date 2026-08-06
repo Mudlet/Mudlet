@@ -783,33 +783,49 @@ void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
         }
     }
 
-    // Refresh the variable tree so it reflects the current Lua state. The tree
-    // is otherwise only rebuilt at profile load and when the Variables editor
-    // populates it, so a variable (or saved table member) a script created
-    // afterwards would be missing here and silently dropped from the saved
-    // profile. Skip the refresh only while that editor view is on screen: it
-    // owns the tree and rebuilding it here would invalidate the widget the user
-    // is interacting with (its variables would stop responding until refreshed).
-    const bool variablesEditorOnScreen = pHost->mpEditorDialog && pHost->mpEditorDialog->variablesViewActive();
-    TVar* base = vu->getBase();
-    if (!variablesEditorOnScreen || !base) {
-        lI->getVars(false);
-        base = vu->getBase();
-    }
+    // The variables have to be read out of Lua afresh here or a variable (or a
+    // saved table's member) that a script created since the tree was last built
+    // is silently dropped from the save - the tree is otherwise only rebuilt at
+    // profile load and when the Variables editor populates it (#9492, #9517).
+    // That reading goes into a throwaway tree of its own: the live one is what
+    // the Variables editor's QTreeWidgetItems point into, and rebuilding it
+    // from here would strand every one of them - killing the editor's variable
+    // search results, and losing whatever the user is doing on the Variables
+    // view if it happens to be open.
+    LuaInterface saveTimeInterface(lI->getState());
+    VarUnit* saveTimeUnit = saveTimeInterface.getVarUnit();
+    // A tree built from scratch carries no per-variable saved/hidden flags, so
+    // isSaved(), isHidden() and shouldSave() answer from these name-keyed sets:
+    saveTimeUnit->savedVars = vu->savedVars;
+    saveTimeUnit->hidden = vu->hidden;
+    saveTimeUnit->hiddenByUser = vu->hiddenByUser;
+    saveTimeInterface.getVars(false);
 
-    if (base) {
+    if (TVar* base = saveTimeUnit->getBase()) {
         QListIterator<TVar*> itVariable(base->getChildren(false));
         while (itVariable.hasNext()) {
-            writeVariable(itVariable.next(), lI, vu, variablePackage);
+            writeVariable(itVariable.next(), &saveTimeInterface, saveTimeUnit, variablePackage);
         }
     }
+    // ~LuaInterface deliberately does not do this - a profile reset closes the
+    // lua_State before the Host's own LuaInterface is replaced - so the
+    // registry references this pass took have to be handed back by hand:
+    saveTimeInterface.releaseVariableReferences();
 }
 
 void XMLexport::writeKeyPackage(const Host* pHost, pugi::xml_node& mudletPackage, bool skipModuleMembers)
 {
     auto keyPackage = mudletPackage.append_child("KeyPackage");
     for (auto it : pHost->mKeyUnit.mKeyRootNodeList) {
-        if (!it || it->isTemporary() || (skipModuleMembers && it->mModuleMember)) {
+        // uninstallList holds items whose package has been uninstalled but
+        // whose delete the unit had to defer because it was busy executing one
+        // of them (#9337/#9383). They are gone as far as the profile is
+        // concerned, so a save taken before the unit's processing depth returns
+        // to zero must not write them back in - doing so resurrects them on the
+        // next load as items of a package that is no longer installed, which
+        // the Package Manager then cannot remove. Every unit below is filtered
+        // for the same reason.
+        if (!it || pHost->mKeyUnit.uninstallList.contains(it) || it->isTemporary() || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
         writeKey(it, keyPackage);
@@ -820,7 +836,7 @@ void XMLexport::writeScriptPackage(const Host* pHost, pugi::xml_node& mudletPack
 {
     auto scriptPackage = mudletPackage.append_child("ScriptPackage");
     for (auto it : pHost->mScriptUnit.mScriptRootNodeList) {
-        if (!it || (skipModuleMembers && it->mModuleMember)) {
+        if (!it || pHost->mScriptUnit.uninstallList.contains(it) || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
         writeScript(it, scriptPackage);
@@ -831,7 +847,7 @@ void XMLexport::writeActionPackage(const Host* pHost, pugi::xml_node& mudletPack
 {
     auto actionPackage = mudletPackage.append_child("ActionPackage");
     for (auto it : pHost->mActionUnit.mActionRootNodeList) {
-        if (!it || (skipModuleMembers && it->mModuleMember)) {
+        if (!it || pHost->mActionUnit.uninstallList.contains(it) || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
         writeAction(it, actionPackage);
@@ -842,7 +858,7 @@ void XMLexport::writeAliasPackage(const Host* pHost, pugi::xml_node& mudletPacka
 {
     auto aliasPackage = mudletPackage.append_child("AliasPackage");
     for (auto it : pHost->mAliasUnit.mAliasRootNodeList) {
-        if (!it || (skipModuleMembers && it->mModuleMember)) {
+        if (!it || pHost->mAliasUnit.uninstallList.contains(it) || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
         if (!it->isTemporary()) {
@@ -855,7 +871,7 @@ void XMLexport::writeTimerPackage(const Host* pHost, pugi::xml_node& mudletPacka
 {
     auto timerPackage = mudletPackage.append_child("TimerPackage");
     for (auto it : pHost->mTimerUnit.mTimerRootNodeList) {
-        if (!it || (skipModuleMembers && it->mModuleMember)) {
+        if (!it || pHost->mTimerUnit.uninstallList.contains(it) || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
         if (!it->isTemporary()) {
@@ -868,7 +884,7 @@ void XMLexport::writeTriggerPackage(const Host* pHost, pugi::xml_node& mudletPac
 {
     auto triggerPackage = mudletPackage.append_child("TriggerPackage");
     for (auto it : pHost->mTriggerUnit.mTriggerRootNodeList) {
-        if (!it || (ignoreModuleMembers && it->mModuleMember)) {
+        if (!it || pHost->mTriggerUnit.uninstallList.contains(it) || (ignoreModuleMembers && it->mModuleMember)) {
             continue;
         }
         if (!it->isTemporary()) {

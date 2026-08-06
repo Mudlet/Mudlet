@@ -40,7 +40,10 @@
 #include "XMLexport.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
+#include "dlgTriggerEditor.h"
 #include "mudlet.h"
+
+#include <QTreeWidget>
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -68,6 +71,7 @@ class XMLexportVariablesTest : public QObject
 private:
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
+    dlgTriggerEditor* mpEditor = nullptr;
     const QString mHostname = "XMLexportVars-Test";
     const QString mLocalhost = "localhost";
 
@@ -95,6 +99,7 @@ private slots:
 
     void cleanupTestCase()
     {
+        mpEditor = nullptr;
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
@@ -387,7 +392,104 @@ private slots:
         vu->removeHidden(qsl("userHiddenPrefVar"));
     }
 
+    // The everyday shape of the loss: the script editor is parked on the
+    // Variables view (the last save of a session is taken with whatever view
+    // was left on screen, so quitting from there is enough), a script adds to a
+    // saved table, and the save has to carry that addition. The export used to
+    // skip its refresh whenever that view was on screen, on the grounds that
+    // the editor keeps the tree current - but the editor only rebuilds it on
+    // entering the view, so everything a script did afterwards was lost.
+    void test_savedTableMemberIsExportedWithVariablesViewOpen()
+    {
+        showEditorOnVariablesView();
+
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "varsViewTable = {seedMember = 'seed member value'}"), 0);
+        vu->savedVars.insert(qsl("varsViewTable"));
+        vu->savedVars.insert(qsl("varsViewTable.seedMember"));
+        // populating the view is what builds the tree the export used to reuse
+        mpEditor->repopulateVars();
+
+        // ... and this is a script running afterwards, with the view still up
+        QCOMPARE(luaL_dostring(L, "varsViewTable.lateMember = 'late member value'"), 0);
+        QCOMPARE(luaL_dostring(L, "varsViewTable.seedMember = nil"), 0);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("late member value")), "a member added while the Variables view was open must still be saved");
+        QVERIFY2(!xml.contains(qsl("seed member value")), "a member a script removed while the Variables view was open must not be saved back");
+
+        vu->savedVars.remove(qsl("varsViewTable"));
+        vu->savedVars.remove(qsl("varsViewTable.seedMember"));
+        QCOMPARE(luaL_dostring(L, "varsViewTable = nil"), 0);
+    }
+
+    // ... and the same for a whole variable rather than a table member.
+    void test_lateSavedVariableIsExportedWithVariablesViewOpen()
+    {
+        showEditorOnVariablesView();
+
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        mpEditor->repopulateVars();
+
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "varsViewLateVar = 'late variable value'"), 0);
+        vu->savedVars.insert(qsl("varsViewLateVar"));
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("late variable value")), "a saved variable created while the Variables view was open must still be saved");
+
+        vu->savedVars.remove(qsl("varsViewLateVar"));
+        QCOMPARE(luaL_dostring(L, "varsViewLateVar = nil"), 0);
+    }
+
+    // The other side of the same interaction: a save must not pull the variable
+    // tree out from under the editor. Its variables tree widget and its search
+    // results resolve their items through VarUnit's item -> TVar map, and an
+    // export that rebuilt the shared tree emptied that map, leaving every
+    // variable search result silently dead until the search was re-run.
+    void test_variablesEditorItemMappingSurvivesExport()
+    {
+        showEditorOnVariablesView();
+        mpEditor->repopulateVars();
+
+        VarUnit* vu = mpHost->getLuaInterface()->getVarUnit();
+        auto* pVariablesTree = mpEditor->findChild<QTreeWidget*>(qsl("treeWidget_variables"));
+        QVERIFY2(pVariablesTree, "the editor has no variables tree widget");
+        QTreeWidgetItem* pBaseItem = pVariablesTree->topLevelItem(0);
+        QVERIFY2(pBaseItem && pBaseItem->childCount() > 0, "the Variables view did not populate");
+        QTreeWidgetItem* pVariableItem = pBaseItem->child(0);
+        TVar* pMappedBefore = vu->getWVar(pVariableItem);
+        QVERIFY2(pMappedBefore, "the Variables view's items should resolve to a variable");
+
+        // a save from a view other than Variables is the reported case - the
+        // editor's own Save Profile button, the two-minute autosave, or any
+        // package install or uninstall
+        mpEditor->slot_showTriggers();
+        QVERIFY(!exportProfileXml().isEmpty());
+
+        QVERIFY2(vu->getWVar(pVariableItem) == pMappedBefore, "a profile save must leave the Variables editor's items resolving to their variables");
+    }
+
 private:
+    // The editor is created lazily so that the tests above run in the state a
+    // profile that never opened it is in.
+    void showEditorOnVariablesView()
+    {
+        if (!mpEditor) {
+            mudlet::self()->slot_showScriptDialog();
+            QTest::qWait(100);
+            mpEditor = mpHost->mpEditorDialog;
+            QVERIFY2(mpEditor, "the script editor was not created");
+        }
+        mpEditor->slot_showVariables();
+        QTest::qWait(50);
+    }
+
     QString exportProfileXml()
     {
         const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/xmlexport-test.xml");
