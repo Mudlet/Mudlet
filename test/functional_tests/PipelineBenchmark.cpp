@@ -470,11 +470,10 @@ private slots:
         // Without this the slot degenerates into a second copy of
         // benchTextPipeline and the gated defaults_text_lines_per_sec reports a
         // large improvement forever. It is a live risk rather than a
-        // hypothetical one: the starter UI's preinstall is gated on
-        // experiencedMudletPlayer(), which scans the REAL profiles directory,
-        // so on any machine with a Mudlet profile more than six months old this
-        // profile gets no starter UI at all. Run the benchmark under a fresh
-        // HOME/XDG_CONFIG_HOME.
+        // hypothetical one: part of what a new profile gets - the starter UI -
+        // is gated on mudlet::experiencedMudletPlayer(), which answers from the
+        // machine's own Mudlet history, so run under a fresh HOME and
+        // XDG_CONFIG_HOME or this profile is not the one a new user gets.
         QVERIFY2(rootTriggers > 0,
                  "the default packages armed no triggers - this profile is not the one a new user gets, so "
                  "defaults_* would describe nothing. Re-run under a fresh HOME and XDG_CONFIG_HOME.");

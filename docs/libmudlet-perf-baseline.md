@@ -107,13 +107,13 @@ and monotonic, so the two are not independent: read `defaults_peak_rss_kb` as
 the whole-run high-water mark and its **excess** over `peak_rss_kb` as what the
 default packages cost.
 
-**Run the benchmark under a fresh `HOME` and `XDG_CONFIG_HOME`.** The starter
-UI's preinstall is gated on `mudlet::experiencedMudletPlayer()`, which scans the
-*real* profiles directory and reports true if any profile is more than six
-months old - so on a developer machine the `defaults_*` profile would quietly
-not get the starter UI, and `defaults_text_lines_per_sec` would become a second
-copy of `text_lines_per_sec`. `benchDefaultPackages` fails the run rather than
-report that, and `defaults_root_triggers` records how many triggers the packages
+**Run the benchmark under a fresh `HOME` and `XDG_CONFIG_HOME`.** Part of what a
+new profile gets - the starter UI - is gated on
+`mudlet::experiencedMudletPlayer()`, which answers from the machine's own Mudlet
+history, so on a developer machine the `defaults_*` profile would quietly not
+get it and `defaults_text_lines_per_sec` would become a second copy of
+`text_lines_per_sec`. `benchDefaultPackages` fails the run rather than report
+that, and `defaults_root_triggers` records how many triggers the packages
 actually armed:
 
 ```bash
