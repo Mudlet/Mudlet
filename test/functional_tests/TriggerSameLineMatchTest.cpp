@@ -269,8 +269,8 @@ private slots:
         QVERIFY2(!bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "A chain that ends on its own must not trip the same-line generation budget");
     }
 
-    // Without disowning what the loop created, the second line costs a multiple
-    // of the first: measured at 50 fires, then 2600.
+    // Without disowning what the loop created, each line costs a multiple of the
+    // one before it, so the freeze is postponed rather than prevented.
     void test_selfRecreatingTriggerDoesNotAccumulateAcrossLines()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);

@@ -109,7 +109,7 @@ private:
         QApplication::sendEvent(commandLine(), &event);
     }
 
-    // Asserted before each expected claim, so a mis-mapped sequence cannot
+    // Asserted where a claim is expected, so a mis-mapped sequence cannot
     // masquerade as a code failure
     bool shortcutInstalledFor(const QKeySequence& sequence) const
     {
@@ -224,8 +224,6 @@ private slots:
         QVERIFY2(!overrideClaimed(Qt::Key_0, Qt::ControlModifier), "Ctrl+0 is not a profile switching shortcut, so the command line must not claim it");
     }
 
-    // Through KeyUnit::disableKey(), the path the editor and Lua take: it
-    // clears mActive, not the mUserActiveState setIsActive() writes
     void test_disabledUserBindingDoesNotClaimTheShortcut()
     {
         const QString name = qsl("Disabled Ctrl+2 binding");
@@ -293,8 +291,6 @@ private slots:
         QVERIFY2(!overrideClaimed(key, modifiers), "A key binding claimed the script editor shortcut, which is outside the profile switching set");
     }
 
-    // Without the isEmpty() guard a shortcut cleared in Preferences compares
-    // equal to every key press and claims the lot
     void test_aClearedProfileShortcutDoesNotClaimEveryKey()
     {
         auto* sequence = mudlet::self()->shortcutsManager()->getSequence(qsl("Switch to profile 1"));

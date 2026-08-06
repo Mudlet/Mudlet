@@ -308,11 +308,11 @@ int TriggerUnit::getNewID()
 }
 
 // Stopping the pass is not enough: what the loop created is still live and still
-// matching, so the next line starts with a budget's worth of them and each spawns
-// a budget's worth again - measured at 50 fires on the first such line and 2600
-// on the second. Everything registered during the pass is disowned, not just the
-// loop's offspring: the list records no lineage, so an unrelated capture trigger
-// armed on the same line is caught too. Permanent triggers get deactivate() and
+// matching, so the next line would start with a budget's worth of them and each
+// would spawn a budget's worth again, costing a multiple of the line before it.
+// Everything registered during the pass is disowned, not just the loop's
+// offspring: the list records no lineage, so an unrelated capture trigger armed
+// on the same line is caught too. Permanent triggers get deactivate() and
 // not setIsActive(false), which would clear the user-active state XMLexport saves
 // and leave them switched off after a restart.
 void TriggerUnit::stopSameLineCreationLoop(const qsizetype firstNodeAddedThisPass)
