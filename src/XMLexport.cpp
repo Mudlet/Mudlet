@@ -47,6 +47,7 @@
 #include <QMetaEnum>
 
 #include <sstream>
+#include <utility>
 
 XMLexport::XMLexport(Host* pH)
 : mpHost(pH)
@@ -85,8 +86,8 @@ XMLexport::XMLexport(TKey* pT)
 
 // Builds the module's XML document into mExportDoc. This reads the live
 // trigger/timer/alias/action/script/key lists, so it must run on the main thread;
-// serializing a copy of it (cloneExportDocument()) to disk can then happen on a
-// background thread.
+// serializing the document (handed off via takeExportDocument()) to disk can then
+// happen on a background thread.
 void XMLexport::writeModuleXML(const QString& moduleName)
 {
     auto pHost = mpHost;
@@ -161,17 +162,15 @@ void XMLexport::writeModuleXML(const QString& moduleName)
     }
 }
 
-// Deep copy of the document built so far, so the write can outlive both this XMLexport
-// and the Host it belongs to. The copy is made while the main thread is already
-// quiescent, and each document owns its own tree, so the clone can be serialized off
-// the main thread without touching anything shared.
-std::shared_ptr<pugi::xml_document> XMLexport::cloneExportDocument() const
+// Moves the document built so far out of this XMLexport, so the write can outlive
+// both it and the Host it belongs to without ever holding two copies of the tree.
+// The writer only lives on as the save-in-progress token in Host::writers - nothing
+// reads its document again - and the move leaves mExportDoc a valid empty document.
+// Any xml_node handle taken before the move (e.g. from writeXmlHeader()) now points
+// into the document the background task owns, so it must not be used afterwards.
+std::shared_ptr<pugi::xml_document> XMLexport::takeExportDocument()
 {
-    auto clone = std::make_shared<pugi::xml_document>();
-    for (pugi::xml_node child = mExportDoc.first_child(); child; child = child.next_sibling()) {
-        clone->append_copy(child);
-    }
-    return clone;
+    return std::make_shared<pugi::xml_document>(std::move(mExportDoc));
 }
 
 bool XMLexport::exportHost(const QString& filename_pugi_xml)
@@ -188,15 +187,15 @@ bool XMLexport::exportHost(const QString& filename_pugi_xml)
     return true;
 }
 
-// Helper to encapsulate async save pattern: clone document, save in background thread,
-// notify host when complete
+// Helper to encapsulate the async save pattern: take ownership of the document, save
+// it on a background thread, notify the host when complete
 void XMLexport::runAsyncSave(const QString& fileName, const QString& xmlSavedKey)
 {
-    // Clone the XML document on the main thread, then serialize and save it on a
-    // background thread that owns the clone outright.
+    // Take the XML document on the main thread, then serialize and save it on a
+    // background thread that owns it outright.
     QPointer<Host> host = mpHost;
-    auto future = QtConcurrent::run([fileName, docClone = cloneExportDocument()]() {
-        return XMLexport::saveXmlDocToFile(fileName, *docClone);
+    auto future = QtConcurrent::run([fileName, doc = takeExportDocument()]() {
+        return XMLexport::saveXmlDocToFile(fileName, *doc);
     });
     // Parented to the profile for the same reason the module save's watcher is: the
     // deleteLater() below needs an event loop that is still running to be delivered,
@@ -326,10 +325,9 @@ bool XMLexport::saveXml(const QString& fileName)
 }
 
 // Save an XML document to a file. This is thread-safe and can be called from a background thread
-// as long as the document is not being modified concurrently (which we ensure by passing a clone).
-// Static method so it can be called without keeping XMLexport alive.
-// Note: This is a static member method that doesn't access any instance state,
-// making it safe to call from background threads.
+// as long as the document is not being modified concurrently, which we ensure by moving the
+// document into the background task via takeExportDocument() so nothing else holds a reference
+// to it. Static so it neither keeps the XMLexport alive nor touches any instance state.
 bool XMLexport::saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc)
 {
     QSaveFile file(fileName);
