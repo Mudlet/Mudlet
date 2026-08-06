@@ -1882,9 +1882,9 @@ describe("Tests UI functions", function()
     -- while the prefilter matches EVERY line a shape reads a value from.
     -- The exhaustive version of this check - every label spelling crossed with
     -- every layout - lives in test/functional_tests/StarterUiTriggerCostTest.cpp,
-    -- because this whole block is skipped on any profile without the starter UI
-    -- installed, which includes the one CI runs the Lua suite in. What follows
-    -- is the readable sample of it.
+    -- which installs the package itself and so always runs. This block is only
+    -- reached where the profile already has the starter UI, so treat it as the
+    -- readable sample rather than as the guard.
     describe("the vitals trigger prefilter", function()
       local readableLines = {
         -- prompt shapes, labels after and before the numbers
@@ -1948,7 +1948,9 @@ describe("Tests UI functions", function()
 
       for _, line in ipairs(ordinaryOutput) do
         it("keeps out: " .. line, function()
-          assert.is_nil(rex.find(line, BaseUI.vitalsPrefilter))
+          -- extra parens: rex.find returns two values on a match, and the
+          -- second would land in luassert's message slot
+          assert.is_nil((rex.find(line, BaseUI.vitalsPrefilter)))
         end)
       end
 

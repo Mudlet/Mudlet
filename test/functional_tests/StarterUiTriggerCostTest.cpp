@@ -60,9 +60,12 @@ private:
     const QString mLocalhost = qsl("localhost");
     quint16 mPort = 0;
 
-    // Comfortably above the three chat groups plus the one vitals prefilter, and
-    // far below the 77 the layers used to arm. A change that needs more than this
-    // is a change that should be measured before it ships.
+    // A full default-package profile measures 5 root triggers: the starter UI's
+    // three chat groups and one vitals prefilter, plus one folder from another
+    // preinstalled package. 8 leaves headroom for another package growing one
+    // without failing this, while still being far below the 77 the capture
+    // layers used to arm. A change that needs more than this is a change that
+    // should be measured before it ships.
     static constexpr int kMaxRootTriggers = 8;
 
 private slots:
@@ -98,10 +101,11 @@ private slots:
         QVERIFY(host);
 
         const int rootTriggers = static_cast<int>(host->getTriggerUnit()->getTriggerRootNodeList().size());
-        QVERIFY2(rootTriggers > 0, "the starter UI armed no capture triggers at all - the fallback layers are dead");
+        qInfo("%s", qPrintable(qsl("root triggers on a full default-package profile: %1").arg(rootTriggers)));
+        QVERIFY2(rootTriggers > 0, "no triggers are registered at all - the profile did not finish loading its packages");
         QVERIFY2(rootTriggers <= kMaxRootTriggers,
-                 qPrintable(qsl("the starter UI armed %1 always-active triggers; every line of game text is matched "
-                                "against all of them, which is what made 5.0 half the speed of 4.22.0")
+                 qPrintable(qsl("a new user's profile arms %1 always-active root triggers; every line of game text is "
+                                "matched against all of them, which is what made 5.0 half the speed of 4.22.0")
                                     .arg(rootTriggers)));
 
         QVERIFY(luaTrue(host, qsl("#BaseUI.vitalsTriggerIds == 1")));
@@ -114,20 +118,27 @@ private slots:
     //
     // Rather than pin a handful of sample lines, this crosses every label
     // spelling the shapes accept with every layout they describe and asserts the
-    // implication over the lot - so a label added to a shape without being added
-    // to the prefilter's union is caught by construction rather than by whoever
-    // remembers to add a sample.
+    // implication over the lot.
+    //
+    // What that does and does not guarantee: the label list below is written out
+    // by hand, not derived from the package's label tables, so it catches a NEW
+    // shape whose spelling is missing from the prefilter (the shape never fires,
+    // and the shape-coverage assertion drops below the total), but it cannot
+    // catch a new spelling bolted onto an EXISTING shape unless the same
+    // spelling is added here too. Adding spellings to promptLabels / coreLabels
+    // / shortLabels / scoreLabels / sentenceLabels instead keeps them in the
+    // prefilter automatically, which is why the package prefers that.
     void test_thePrefilterMatchesEveryLineTheShapesRead()
     {
         Host* host = startProfileWithStarterUi();
         QVERIFY(host);
 
         QVERIFY2(runLua(host, prefilterDifferentialScript()), "the prefilter differential did not run - see the profile's error console");
-        QVERIFY2(luaTrue(host, qsl("__starterUiMisses == 0")), "the vitals prefilter drops lines the shapes read - the first few are in the error console");
+        QVERIFY2(luaTrue(host, qsl("__starterUi.misses == 0")), "the vitals prefilter drops lines the shapes read - the first few are in the error console");
         // Guards the corpus itself: if a refactor stopped the generated lines
         // producing readings, the implication above would hold vacuously.
-        QVERIFY2(luaTrue(host, qsl("__starterUiReadable > 1500")), "the generated corpus stopped producing readings, so the prefilter check proved nothing");
-        QVERIFY2(luaTrue(host, qsl("__starterUiShapesFired == __starterUiShapeCount")),
+        QVERIFY2(luaTrue(host, qsl("__starterUi.readable > 1500")), "the generated corpus stopped producing readings, so the prefilter check proved nothing");
+        QVERIFY2(luaTrue(host, qsl("__starterUi.shapesFired == __starterUi.shapeCount")),
                  "the generated corpus no longer exercises every vitals shape - a new shape needs a layout or label "
                  "adding to the lists in prefilterDifferentialScript()");
     }
@@ -295,9 +306,8 @@ local templates = {
   "| @: 100(120) |", "| @ : 100 of 120 |", "| Race: Undead | @: 4252/4252 |",
 }
 
-__starterUiMisses = 0
-__starterUiReadable = 0
-__starterUiShapeSeen = {}
+-- one global rather than five: the profile outlives this script
+__starterUi = { misses = 0, readable = 0, shapeSeen = {} }
 local reported = 0
 
 for _, label in ipairs(labels) do
@@ -306,14 +316,14 @@ for _, label in ipairs(labels) do
       local line = template:gsub("@", spelling)
       local readings = BaseUI.parseVitalsLine(line)
       if #readings > 0 then
-        __starterUiReadable = __starterUiReadable + 1
+        __starterUi.readable = __starterUi.readable + 1
         for _, reading in ipairs(readings) do
-          __starterUiShapeSeen[reading.pattern] = true
+          __starterUi.shapeSeen[reading.pattern] = true
         end
         -- rex.find, not rex.match: an unset first capture group comes back as
         -- false, which a truthiness test would read as "no match"
         if not rex.find(line, BaseUI.vitalsPrefilter) then
-          __starterUiMisses = __starterUiMisses + 1
+          __starterUi.misses = __starterUi.misses + 1
           if reported < 5 then
             reported = reported + 1
             echo("\n[ prefilter MISS ] " .. line .. "\n")
@@ -324,11 +334,11 @@ for _, label in ipairs(labels) do
   end
 end
 
-__starterUiShapesFired = 0
-for _ in pairs(__starterUiShapeSeen) do
-  __starterUiShapesFired = __starterUiShapesFired + 1
+__starterUi.shapesFired = 0
+for _ in pairs(__starterUi.shapeSeen) do
+  __starterUi.shapesFired = __starterUi.shapesFired + 1
 end
-__starterUiShapeCount = BaseUI.vitalsShapeCount()
+__starterUi.shapeCount = BaseUI.vitalsShapeCount()
 )LUA");
     }
 

@@ -467,16 +467,18 @@ private slots:
         Host* host = startProfile(DefaultPackages::Install);
         QVERIFY(host);
         const int rootTriggers = static_cast<int>(host->getTriggerUnit()->getTriggerRootNodeList().size());
-        // Without this the slot degenerates into a second copy of
-        // benchTextPipeline and the gated defaults_text_lines_per_sec reports a
-        // large improvement forever. It is a live risk rather than a
-        // hypothetical one: part of what a new profile gets - the starter UI -
-        // is gated on mudlet::experiencedMudletPlayer(), which answers from the
-        // machine's own Mudlet history, so run under a fresh HOME and
-        // XDG_CONFIG_HOME or this profile is not the one a new user gets.
-        QVERIFY2(rootTriggers > 0,
-                 "the default packages armed no triggers - this profile is not the one a new user gets, so "
-                 "defaults_* would describe nothing. Re-run under a fresh HOME and XDG_CONFIG_HOME.");
+        // Name the package rather than counting triggers. The starter UI is the
+        // expensive part of what a new profile gets and the only part gated on
+        // mudlet::experiencedMudletPlayer(), which answers from the machine's
+        // own Mudlet history - so on a developer's real HOME this profile
+        // quietly becomes a second copy of benchTextPipeline, and the gated
+        // defaults_text_lines_per_sec would report a large improvement forever.
+        // A trigger count would not catch that: the other default packages
+        // register root-level trigger folders of their own, so it stays above
+        // zero either way.
+        QVERIFY2(host->mInstalledPackages.contains(qsl("mudlet-base-ui")),
+                 "the starter UI is not installed, so this profile is not the one a new user gets and defaults_* "
+                 "would describe something else entirely. Re-run under a fresh HOME and XDG_CONFIG_HOME.");
 
         const double seconds = feedCorpusBestPass(host, kFeedPasses);
         const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();

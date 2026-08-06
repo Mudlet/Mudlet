@@ -78,8 +78,10 @@ METRIC text_mb_per_sec 0.41
 METRIC trigger_lines_per_sec 3323.25
 METRIC trigger_overhead_ms 1683.64
 METRIC peak_rss_kb 1402384
-METRIC defaults_text_lines_per_sec ...
 METRIC defaults_root_triggers ...
+METRIC defaults_text_lines_per_sec ...
+METRIC defaults_text_best_pass_ms ...
+METRIC defaults_peak_rss_kb ...
 ...
 ```
 
@@ -112,9 +114,9 @@ new profile gets - the starter UI - is gated on
 `mudlet::experiencedMudletPlayer()`, which answers from the machine's own Mudlet
 history, so on a developer machine the `defaults_*` profile would quietly not
 get it and `defaults_text_lines_per_sec` would become a second copy of
-`text_lines_per_sec`. `benchDefaultPackages` fails the run rather than report
-that, and `defaults_root_triggers` records how many triggers the packages
-actually armed:
+`text_lines_per_sec`. `benchDefaultPackages` checks the starter UI is installed
+and fails the run rather than report that, and `defaults_root_triggers` records
+how many root triggers the packages between them armed:
 
 ```bash
 scratch=$(mktemp -d)
@@ -126,8 +128,9 @@ Comparing a build from before this split against one from after it will abort
 with "gated metric defaults_text_lines_per_sec is missing from the before run".
 That is the script working as intended - the two harnesses are not comparable.
 Pass `--gate text_lines_per_sec,trigger_lines_per_sec` to compare across the
-change, bearing in mind the older run's `text_lines_per_sec` includes the
-default packages and the newer one does not.
+change, bearing in mind the older run's `text_lines_per_sec` includes whichever
+default packages that machine's `experiencedMudletPlayer()` allowed it - the
+older harness had no guard - while the newer one includes none.
 
 ## The before/after workflow (the 10% gate)
 

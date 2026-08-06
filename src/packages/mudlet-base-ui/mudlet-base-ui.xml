@@ -300,9 +300,11 @@ function BaseUI.routeTaggedChatLine()
 end
 
 -- which trigger a shape is folded into: shapes that route a line the same way
--- can share one. Groups are armed in the order their first shape appears, so
--- keep chatPatterns sorted by family - a "tells" shape appended after the
--- tagged ones would quietly change which group wins a line both can match.
+-- can share one. A group is armed at the position of its FIRST shape, so
+-- appending to an existing family is safe; introducing a shape with a new
+-- family value arms that group last, and moving the first "tells" shape below
+-- the tagged ones would reorder those two. Either changes which group wins a
+-- line both could match.
 local function chatGroupOf(pattern)
   if pattern.tagged then
     return "tagged"
@@ -310,12 +312,17 @@ local function chatGroupOf(pattern)
   return pattern.family or "plain"
 end
 
--- one trigger per routing group rather than one per shape. Every shape here is
--- anchored with ^, and trigger regexes are compiled without PCRE2_MULTILINE, so
--- PCRE tries the alternation at offset 0 only instead of scanning the line
--- twelve times over - and the trigger engine walks three root nodes per line
--- instead of twelve. Public so the test suite can check the grouped patterns
--- still fire on the lines the individual ones captured.
+-- one trigger per routing group rather than one per shape. The saving is in the
+-- trigger engine, which now walks three root nodes per line instead of twelve;
+-- the regex work is roughly unchanged, because these shapes were already cheap.
+-- Folding them is only worth doing BECAUSE they are cheap: every one is
+-- anchored with ^, and trigger regexes are compiled without PCRE2_MULTILINE
+-- (src/TTrigger.cpp), so PCRE settles the union at offset 0 and gives up. An
+-- unanchored union would be retried at every offset instead and the fold would
+-- cost more than it saved - which is exactly why the 65 vitals shapes get a
+-- prefilter rather than the same treatment.
+-- Public so the test suite can check the grouped patterns still fire on the
+-- lines the individual ones captured.
 function BaseUI.chatTriggerPatterns()
   local order, grouped = {}, {}
   for _, pattern in ipairs(chatPatterns) do
@@ -383,10 +390,13 @@ local labelFirstGuard = [=[(?&lt;![\d%])(?&lt;!\d[ ]|\d[ ]{2}|\d[ ]{3}|\d[ ]{4}|
 -- out inline so that anyVitalsLabel - the single prefilter that fronts this
 -- whole layer - is built from the very same strings: a spelling added here is
 -- in the prefilter automatically. That only holds for shapes that draw their
--- label from one of these tables; three spell a label inline (a lone "m" for
--- mana in two shapes, "hit points" in one, all three already covered by the
--- union), and anything else added inline has to be added to anyVitalsLabel by
--- hand. StarterUiTriggerCostTest is what catches it if it is not.
+-- label from one of these tables; four spell one inline - a lone "m" for mana
+-- in two prompt shapes, and "hit points" in two score-screen ones - and all
+-- four happen to be covered by the union already. A spelling added inline has
+-- to be added to anyVitalsLabel by hand, and the test that would catch it
+-- (StarterUiTriggerCostTest::test_thePrefilterMatchesEveryLineTheShapesRead)
+-- only will if the spelling is also added to the label list that test crosses.
+-- Prefer adding to these tables.
 local promptLabels = {
   hp = [=[hp|health|hits?]=],
   mp = [=[mp|mana|sp|magic|energy]=],
@@ -619,20 +629,21 @@ local vitalsLinePatterns = {
     regex = [=[(?i)(?&lt;![\d/.,:%])(\d+)\s*(?:]=] .. shortLabels.mv .. [=[)\b(?!\s*[/%])]=] },
 }
 
--- rex.match given a pattern STRING recompiles it on every call - lrexlib holds
--- no cache for the function-style form - so reading one line meant 77 PCRE
--- compilations (12 chat shapes for chatLikeLine, then 65 vitals shapes) before
--- a single match ran, which dwarfed the matching itself. Compile each shape
--- once, on first use.
+-- rex.match given a pattern STRING compiles it afresh on every call, so reading
+-- one line meant recompiling every shape it was tested against immediately
+-- before the match that shape fed - up to 77 of them (12 chat shapes in
+-- chatLikeLine, which stops at the first hit, then all 65 vitals shapes). That
+-- dwarfed the matching itself. Compile each shape once, on first use.
+-- BaseUI.shapesArePrecompiled() below is what holds this to it.
 local compiledPattern = setmetatable({}, {
   __index = function(cache, regex)
     local ok, compiled = pcall(rex.new, regex)
     if not ok then
       -- leave it as a string: rex.match raises on it exactly as it did before,
-      -- rather than the shape silently disappearing. Say so, though - the
-      -- error is precise here and useless once it resurfaces per line.
+      -- rather than the shape silently disappearing. Say so, though - the error
+      -- is precise here and useless once it resurfaces once per line.
       debugc("[ Mudlet UI ] a vitals/chat shape would not compile, falling back to per-line compilation: "
-        .. tostring(compiled))
+        .. tostring(compiled) .. " in: " .. regex)
     end
     local value = ok and compiled or regex
     rawset(cache, regex, value)
@@ -640,15 +651,15 @@ local compiledPattern = setmetatable({}, {
   end,
 })
 
--- exposed so the test suite can prove the shapes really are precompiled: the
--- fallback above keeps working, so nothing else would notice it silently
--- restoring the per-line recompilation this replaced
 -- how many shapes parseVitalsLine walks, so the test suite can tell that its
 -- generated corpus still reaches all of them rather than most of them
 function BaseUI.vitalsShapeCount()
   return #vitalsLinePatterns
 end
 
+-- exposed so the test suite can prove the shapes really are precompiled: the
+-- fallback above keeps working, so nothing else would notice it silently
+-- restoring the per-line recompilation this replaced
 function BaseUI.shapesArePrecompiled()
   for _, list in ipairs({ chatPatterns, vitalsLinePatterns }) do
     for _, pattern in ipairs(list) do
@@ -739,10 +750,13 @@ function BaseUI.scoreWindowOpen()
   return BaseUI.scoreWindowUntil ~= nil and getEpoch() &lt; BaseUI.scoreWindowUntil
 end
 
--- the one prefilter trigger runs every shape on the line in a single pass. The
--- marker is still needed for the other two ways a line can arrive here twice:
--- the chat layer having already taken it, and the line being renumbered when
--- building the dock resizes the main window.
+-- the one prefilter trigger runs every shape on the line in a single pass, so
+-- this no longer has to shut out its own siblings. The two line-number guards
+-- still earn their place: lastChatLine keeps a line the chat layer already
+-- routed out of the vitals layer, and refreshing lastVitalsLine after
+-- applyVitals stops the marker going stale when building the dock rewraps the
+-- buffer - a later, unrelated line could otherwise inherit the old number and
+-- be skipped.
 function BaseUI.onVitalsLine()
   local lineNumber = getLineNumber()
   if lineNumber == BaseUI.lastVitalsLine or lineNumber == BaseUI.lastChatLine then
