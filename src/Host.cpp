@@ -701,8 +701,7 @@ QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
         writer->writeModuleXML(moduleName);
         // The writer stays in `writers` purely as the save-in-progress token that
         // xmlSaved() retires on the main thread, so the XMLexport - a QObject with
-        // main-thread affinity - is only ever destroyed there. The document itself
-        // moves into the job, which outlives both of them.
+        // main-thread affinity - is only ever destroyed there.
         writers.insert(xmlFilename, writer);
         jobs.append({writer->takeExportDocument(), moduleName, filename, xmlFilename, backup ? backupPath + moduleName : QString()});
 
