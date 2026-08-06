@@ -71,6 +71,7 @@ public:
     bool processDataStream(const Qt::Key, const Qt::KeyboardModifiers);
     void markCleanup(TKey* pT);
     void doCleanup();
+    int processingDepth() const { return mProcessingDepth; }
     void stopAllTriggers();
     void reenableAllTriggers();
 
