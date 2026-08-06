@@ -61,6 +61,7 @@
 class QAction;
 class QCloseEvent;
 class QDir;
+class QKeyEvent;
 class QMediaDevices;
 class QMediaPlayer;
 class QMenu;
@@ -200,6 +201,7 @@ public:
     void setupConfig();
     void activateProfile(Host*);
     void switchToProfileTab(int index);
+    bool profileSwitchShortcutMatches(const QKeyEvent*) const;
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
     void addConsoleForNewHost(Host*);

@@ -2115,6 +2115,38 @@ void mudlet::switchToProfileTab(int index)
     }
 }
 
+// Whether this key press is one of the profile tab switching shortcuts, i.e.
+// one that a user's own key binding is allowed to take priority over:
+bool mudlet::profileSwitchShortcutMatches(const QKeyEvent* ke) const
+{
+    if (!ke) {
+        return false;
+    }
+
+    const QKeySequence pressed(ke->keyCombination());
+    // Shift+Tab arrives as Key_Backtab (with the Shift modifier retained) but
+    // the sequences are spelt with Key_Tab, so accept that spelling as well -
+    // the same asymmetry the sequence definitions above comment on. Stays
+    // empty, and so matches nothing, for every other key:
+    const QKeySequence backtabAlternative = (ke->key() == Qt::Key_Backtab) ? QKeySequence(QKeyCombination(ke->modifiers() | Qt::ShiftModifier, Qt::Key_Tab)) : QKeySequence();
+
+    auto matches = [&pressed, &backtabAlternative](const QKeySequence& sequence) {
+        return !sequence.isEmpty() && (sequence == pressed || sequence == backtabAlternative);
+    };
+
+    if (matches(mKeySequenceNextProfile) || matches(mKeySequencePreviousProfile)) {
+        return true;
+    }
+
+    for (const auto& sequence : mKeySequencesSwitchToProfile) {
+        if (matches(sequence)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // Moved as much as possible to activateProfile()...
 void mudlet::slot_tabChanged(int tabID)
 {

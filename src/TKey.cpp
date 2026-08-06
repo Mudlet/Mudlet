@@ -103,6 +103,28 @@ bool TKey::match(const Qt::Key key, const Qt::KeyboardModifiers modifier, const 
 }
 
 
+bool TKey::wouldMatch(const Qt::Key key, const Qt::KeyboardModifiers modifier) const
+{
+    // Same re-entrancy guard as match(): cleanup may have deleted this key
+    // while the walk was still on the call stack
+    if (!mpMyChildrenList || !isActive()) {
+        return false;
+    }
+
+    if (!isFolder() && (mKeyCode == key) && (mKeyModifier == modifier)) {
+        return true;
+    }
+
+    for (auto childKey : *mpMyChildrenList) {
+        if (childKey->wouldMatch(key, modifier)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
 bool TKey::registerKey()
 {
     if (!mpHost) {
