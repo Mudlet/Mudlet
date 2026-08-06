@@ -534,6 +534,34 @@ private slots:
         QCOMPARE(readGlobalInt(qsl("oneShotFires")), 1);
     }
 
+    // The other deferred-delete container needs the same treatment: uninstall()
+    // at a non-zero processing depth deactivates its package's triggers, drops
+    // them from mCleanupSet to keep the two paths disjoint, and leaves them in
+    // uninstallList to be freed at depth 0. They stay in the lookup table for
+    // that window, so enableTrigger() would otherwise bring a trigger belonging
+    // to an already-uninstalled package back to life. The container is populated
+    // directly, as the cases below do: reaching this state from Lua needs a
+    // package-owned temporary item, which no current import path produces.
+    void test_triggerEnableByNameCannotReviveAnUninstalledTrigger()
+    {
+        auto* unit = mpHost->getTriggerUnit();
+        const int id = mpHost->mLuaInterpreter.startTempTrigger(qsl("uninstall_revive_trigger"), QString(), -1);
+        QVERIFY(id > 0);
+        auto* pTrigger = unit->getTrigger(id);
+        QVERIFY(pTrigger);
+        const QString name = QString::number(id);
+
+        pTrigger->setIsActive(false);
+        unit->uninstallList.append(pTrigger);
+        QVERIFY2(!unit->mCleanupSet.contains(pTrigger), "uninstall() keeps the two deferred-delete containers disjoint");
+
+        QVERIFY2(!unit->enableTrigger(name), "enableTrigger() must not report success for a trigger an uninstall is waiting to free");
+        QVERIFY2(!pTrigger->isActive(), "a trigger whose package has been uninstalled must stay inactive");
+
+        unit->doCleanup();
+        QVERIFY2(!unit->getTrigger(id), "the uninstalled trigger should still have been freed");
+    }
+
     // The skip must not stop the walk: a corpse and a live trigger can share a
     // name (tempComplexRegexTrigger() takes a user-supplied one), and #9366's
     // guarantee that enable-by-name reaches every same-named trigger still holds

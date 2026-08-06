@@ -515,14 +515,16 @@ bool TriggerUnit::enableTrigger(const QString& name)
     // start mid-run and skip duplicates on some QMultiMap implementations
     const auto [begin, end] = mLookupTable.equal_range(name);
     for (auto it = begin; it != end; ++it) {
-        // A killed or expired temporary trigger is only unlinked from the lookup
-        // table once doCleanup() frees it, which does not happen while a pass is
+        // A trigger waiting to be freed is only unlinked from the lookup table
+        // once doCleanup() gets to it, which does not happen while a pass is
         // running - so it is still findable by name for the rest of the line.
         // Re-activating that corpse resurrects it: a one-shot trigger fires a
-        // second time, and killTrigger() is undone from another script. This skip
-        // is what makes the guarantee TTrigger::match() states where it expires a
-        // trigger true; killTrigger() below skips corpses too, for its own reason.
-        if (mCleanupSet.contains(it.value())) {
+        // second time, killTrigger() is undone from another script, and a trigger
+        // whose package a script uninstalled mid-pass (uninstallList, filled by
+        // uninstall() at a non-zero depth) starts firing again. This skip is what
+        // makes the guarantee TTrigger::match() states where it expires a trigger
+        // true; killTrigger() below skips mCleanupSet too, for its own reason.
+        if (mCleanupSet.contains(it.value()) || uninstallList.contains(it.value())) {
             continue;
         }
         it.value()->setIsActive(true);
