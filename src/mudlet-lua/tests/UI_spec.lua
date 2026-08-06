@@ -1872,6 +1872,153 @@ describe("Tests UI functions", function()
       -- absurd magnitudes are ids or timestamps, never vitals
       assert.are.same({}, BaseUI.parseVitalsLine("Health: 1234567890123/9999999999999"))
     end)
+
+    -- The starter UI used to arm one always-on regex trigger per vitals shape -
+    -- 65 of them, matched against every line of game output, which roughly
+    -- halved Mudlet's text throughput for every new profile. They are now
+    -- fronted by a single cheap prefilter, and parseVitalsLine (unchanged) runs
+    -- the real shapes only on the lines it lets through. That is only correct
+    -- while the prefilter matches EVERY line a shape reads a value from, so
+    -- pin exactly that.
+    describe("the vitals trigger prefilter", function()
+      local readableLines = {
+        -- prompt shapes, labels after and before the numbers
+        "<523/600hp 210/250m 80/100mv>",
+        "HP: 523/600 MP: 210/250",
+        "523/600hp",
+        "100hp",
+        "hp100/120",
+        "<87%hp 80%m>",
+        "hp: 87%",
+        "<523hp 210m 80mv>",
+        "1200/1500 tnl",
+        "End: 40/60",
+        "Stamina 40/60",
+        -- score screens
+        "Health : 523/600",
+        "Mana   : 210/250",
+        "Moves  : 80/100",
+        "Experience: 1000/5000",
+        "Spell Points: 90/95",
+        "Hit Points: 12,345/23,456",
+        "Hitpoints: 90    of    90",
+        "PRACT: 005   Hitpoints: 90    of    90",
+        "Hit    : [  168/168  ]",
+        "| Level: 201  Hit Points: 500/500  Moves: 1000/1000 |",
+        "| Race: Undead Atavian | Health: 4252/4252 |",
+        "Health:   3600/3600     Mana:     3400/3400",
+        "Hp: 2331(2331)  Gp: 433(459)  Xp: 1143225  Burden: 21%",
+        "Hp: 143 (167) Gp: 240 (240) Xp: 267000",
+        "Level: 5              HitPoints:  100/  100      Pager    ( )",
+        "Race : Human           Mana     :  1000/ 1000      Autoexit (X)",
+        -- score sentences
+        "You have 100/120 hit points left.",
+        "You have 100(100) hit, 90(90) mana, and 100(100) movement points.",
+        "You have 123 experience points, 45 gold coins, 50 hit points(50).",
+        "You have 1110 (1110) hit points, 167 (167) guild points, 2 (684) quest points.",
+      }
+
+      for _, line in ipairs(readableLines) do
+        it("lets through: " .. line, function()
+          -- the corpus is only meaningful while these really are readable
+          assert.is_true(#BaseUI.parseVitalsLine(line) > 0,
+            "sample line no longer produces any reading - fix the sample, not the prefilter")
+          assert.is_not_nil(rex.match(line, BaseUI.vitalsPrefilter),
+            "prefilter drops a line the vitals shapes read: the gauges would never appear")
+        end)
+      end
+
+      -- the prefilter earns its keep by rejecting the overwhelming majority of
+      -- game output before any of the real shapes are tried
+      local ordinaryOutput = {
+        "You are standing in a dark forest. The trees tower above you.",
+        "A gentle breeze carries the scent of pine and distant woodsmoke.",
+        "You are carrying: a rusty sword, a silver ring, and 12 gold coins.",
+        "The Village Square",
+        "A glowing ember drifts past the Ancient Tower.",
+        "Gandalf tells you 'meet me at the tower'",
+      }
+
+      for _, line in ipairs(ordinaryOutput) do
+        it("keeps out: " .. line, function()
+          assert.is_nil(rex.match(line, BaseUI.vitalsPrefilter))
+        end)
+      end
+
+      it("arms exactly one trigger, not one per shape", function()
+        if BaseUI.dormant() then
+          pending("the starter UI is dormant in this profile")
+          return
+        end
+        local savedIds, savedLock = BaseUI.vitalsTriggerIds, BaseUI.vitalsLock
+        BaseUI.vitalsTriggerIds, BaseUI.vitalsLock = {}, 0
+        BaseUI.createVitalsTriggers()
+        assert.are.equal(1, #BaseUI.vitalsTriggerIds)
+        BaseUI.killVitalsTriggers()
+        BaseUI.vitalsTriggerIds, BaseUI.vitalsLock = savedIds, savedLock
+      end)
+
+      -- a game that speaks GMCP or MSDP supplies the same numbers, and
+      -- applyVitals discards the plain-text layer's readings anyway once one of
+      -- them holds the lock - so leaving it armed is pure cost per line
+      it("stays retired while a protocol owns the gauges", function()
+        if BaseUI.dormant() then
+          pending("the starter UI is dormant in this profile")
+          return
+        end
+        local savedIds, savedLock = BaseUI.vitalsTriggerIds, BaseUI.vitalsLock
+        BaseUI.vitalsTriggerIds, BaseUI.vitalsLock = {}, 3
+        assert.is_true(BaseUI.structuredVitalsOwnGauges())
+        BaseUI.createVitalsTriggers()
+        assert.are.same({}, BaseUI.vitalsTriggerIds)
+        BaseUI.vitalsTriggerIds, BaseUI.vitalsLock = savedIds, savedLock
+      end)
+    end)
+
+    -- the twelve chat shapes share three triggers now, one per routing group.
+    -- Folding them together must not change which lines are captured.
+    describe("the grouped chat triggers", function()
+      local chatLines = {
+        "Bob tells you, 'hello there'",
+        "You tell Bob, 'hi'",
+        "You tell the group 'incoming'",
+        "Bob whispers to you, 'psst'",
+        "Bob tells the group 'incoming'",
+        "Bob says, 'hello'",
+        "You say, 'hello'",
+        "Bob yells, 'help!'",
+        "You shout, 'hello'",
+        "[newbie] Ann: how do I get out of here?",
+        "(gossip) Ann: anyone around?",
+        "< chat | Ann: anyone around?",
+        "You are standing in a dark forest.",
+        "The orc hits you for 14 damage!",
+        "[combat] 100/120 hp",
+        "(12) something that is not a channel",
+      }
+
+      it("fires on exactly the lines the individual shapes did", function()
+        local grouped = BaseUI.chatTriggerPatterns()
+        assert.are.equal(3, #grouped)
+        for _, line in ipairs(chatLines) do
+          local anyGroupMatches = false
+          for _, pattern in ipairs(grouped) do
+            if rex.match(line, pattern.regex) then
+              anyGroupMatches = true
+              break
+            end
+          end
+          -- chatLikeLine walks the individual shapes, so it is the reference
+          -- for what the twelve separate triggers used to capture. It also
+          -- applies the channel-name check the tagged shapes are subject to,
+          -- so a tagged match it rejects may still fire a trigger.
+          if BaseUI.chatLikeLine(line) then
+            assert.is_true(anyGroupMatches,
+              "grouped triggers miss a line the individual shapes captured: " .. line)
+          end
+        end
+      end)
+    end)
   end)
 
   -- when a game installs its own interface (a Client.GUI package), the

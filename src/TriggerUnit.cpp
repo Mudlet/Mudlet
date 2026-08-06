@@ -32,6 +32,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <vector>
 
 /* We need an explicit constructor in this file as the Host class is forward
  * declared in the header file and it is problematic to define any dereferencing
@@ -341,7 +342,10 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // mid-iteration (the underlying std::list::remove frees the iterator's
     // current node → use-after-free on the next ++). AliasUnit dodges the
     // same hazard for the same reason — see Mudlet issue #4297.
-    auto copyOfNodeList = mTriggerRootNodeList;
+    // A vector rather than a std::list copy: this runs on every line, and
+    // copying the list costs one allocation per root trigger where a reserved
+    // vector costs exactly one.
+    std::vector<TTrigger*> copyOfNodeList(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
     // Triggers registered by a script during this pass (tempTrigger() & Co.)
     // are missing from the snapshot but must still match the current line:
     // before the snapshot the loop walked the live std::list, which a push_back

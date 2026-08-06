@@ -78,8 +78,39 @@ METRIC text_mb_per_sec 0.41
 METRIC trigger_lines_per_sec 3323.25
 METRIC trigger_overhead_ms 1683.64
 METRIC peak_rss_kb 1402384
+METRIC defaults_text_lines_per_sec 3980.10
 ...
 ```
+
+### Two profiles, and why the split matters
+
+The benchmark measures the same corpus twice, on two different profiles:
+
+- **`text_*`, `trigger_*`, `peak_rss_kb`** come from a profile with the default
+  packages suppressed. They describe the pipeline itself, which is what the
+  libmudlet gate is about.
+- **`defaults_*`** comes from a profile carrying the shipped default packages,
+  the way a new user's profile does. `defaults_root_triggers` records how many
+  root triggers those packages left armed.
+
+Before this split the benchmark only had the first family, but measured it on a
+profile that *did* get the default packages - so the starter UI's always-on
+triggers were inside `text_lines_per_sec`, and the guard meant to catch a
+throughput regression was reporting one as its own baseline. Keeping the two
+separate means a package regression moves `defaults_*` while the pipeline
+numbers stay flat, instead of the two being indistinguishable.
+
+`defaults_peak_rss_kb` is read after `peak_rss_kb`, and VmHWM is process-wide
+and monotonic, so the two are not independent: read `defaults_peak_rss_kb` as
+the whole-run high-water mark and its **excess** over `peak_rss_kb` as what the
+default packages cost.
+
+Comparing a build from before this split against one from after it will abort
+with "gated metric defaults_text_lines_per_sec is missing from the before run".
+That is the script working as intended - the two harnesses are not comparable.
+Pass `--gate text_lines_per_sec,trigger_lines_per_sec` to compare across the
+change, bearing in mind the older run's `text_lines_per_sec` includes the
+default packages and the newer one does not.
 
 ## The before/after workflow (the 10% gate)
 
@@ -115,8 +146,9 @@ on different hardware, or from an ASan build against a release build - only ever
    test/compare-perf-baseline.py before.txt after.txt
    ```
 
-`compare-perf-baseline.py` gates on `text_lines_per_sec` and
-`trigger_lines_per_sec` by default (the two throughput numbers); every other
+`compare-perf-baseline.py` gates on `text_lines_per_sec`,
+`trigger_lines_per_sec` and `defaults_text_lines_per_sec` by default (pipeline
+throughput, plus the shipped default packages on the same corpus); every other
 metric is reported for context. It exits non-zero if any gated metric regressed
 by more than the threshold, so it drops straight into a script or CI step. Tune
 it with `--threshold 0.10` and `--gate metric,metric,...`. A `--threshold` of 1

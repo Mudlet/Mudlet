@@ -279,7 +279,15 @@ function BaseUI.routeChatLine(family)
 end
 
 function BaseUI.routeTaggedChatLine()
-  local tag = matches[2]:match("(%S+)")
+  -- the tagged shapes share one trigger, so the tag arrives in whichever
+  -- capture group belongs to the branch that matched
+  local tag
+  for i = 2, #matches do
+    tag = type(matches[i]) == "string" and matches[i]:match("(%S+)")
+    if tag then
+      break
+    end
+  end
   if not tag then
     return
   end
@@ -291,16 +299,47 @@ function BaseUI.routeTaggedChatLine()
   BaseUI.routeChatLine(family)
 end
 
+-- which trigger a shape is folded into: shapes that route a line the same way
+-- can share one
+local function chatGroupOf(pattern)
+  if pattern.tagged then
+    return "tagged"
+  end
+  return pattern.family or "plain"
+end
+
+-- one trigger per routing group rather than one per shape. Every shape here is
+-- anchored at the start of the line, so PCRE settles the combined alternation
+-- almost as quickly as a single pattern, and the trigger engine walks three
+-- root nodes per line instead of twelve. Public so the test suite can check the
+-- grouped patterns still fire on exactly the lines the individual ones did.
+function BaseUI.chatTriggerPatterns()
+  local order, grouped = {}, {}
+  for _, pattern in ipairs(chatPatterns) do
+    local group = chatGroupOf(pattern)
+    if not grouped[group] then
+      grouped[group] = {}
+      order[#order + 1] = group
+    end
+    table.insert(grouped[group], "(?:" .. pattern.regex .. ")")
+  end
+  local patterns = {}
+  for _, group in ipairs(order) do
+    table.insert(patterns, { group = group, regex = table.concat(grouped[group], "|") })
+  end
+  return patterns
+end
+
 function BaseUI.createChatTriggers()
   if BaseUI.dormant() or BaseUI.gmcpChat or next(BaseUI.chatTriggerIds) then
     return
   end
-  for _, pattern in ipairs(chatPatterns) do
+  for _, pattern in ipairs(BaseUI.chatTriggerPatterns()) do
     local handler
-    if pattern.tagged then
+    if pattern.group == "tagged" then
       handler = BaseUI.routeTaggedChatLine
     else
-      local family = pattern.family
+      local family = pattern.group ~= "plain" and pattern.group or nil
       handler = function() BaseUI.routeChatLine(family) end
     end
     table.insert(BaseUI.chatTriggerIds, tempRegexTrigger(pattern.regex, handler))
@@ -336,6 +375,30 @@ end
 -- lengths (up to 8) as fixed-length alternatives.
 local numberFirstGuard = [=[(?&lt;![\d:=])(?&lt;![:=][ ]|[:=][ ]{2}|[:=][ ]{3}|[:=][ ]{4}|[:=][ ]{5}|[:=][ ]{6}|[:=][ ]{7}|[:=][ ]{8})]=]
 local labelFirstGuard = [=[(?&lt;![\d%])(?&lt;!\d[ ]|\d[ ]{2}|\d[ ]{3}|\d[ ]{4}|\d[ ]{5}|\d[ ]{6}|\d[ ]{7}|\d[ ]{8})]=]
+
+-- the label spellings the prompt shapes below accept. Named rather than spelled
+-- out inline so that anyVitalsLabel - the single prefilter that fronts this
+-- whole layer - is built from the very same strings: a spelling added here is in
+-- the prefilter automatically, and the two cannot drift apart.
+local promptLabels = {
+  hp = [=[hp|health|hits?]=],
+  mp = [=[mp|mana|sp|magic|energy]=],
+  mv = [=[mv|moves?|movement|end(?:urance)?|st(?:amina)?]=],
+  xp = [=[xp|exp|tnl]=],
+}
+-- the conservative subset: percentages and current-only prompts read these,
+-- because a looser spelling turns too much ordinary prose into a reading
+local coreLabels = {
+  hp = [=[hp|health]=],
+  mp = [=[mp|mana|sp]=],
+}
+-- what a terse prompt abbreviates to once the number has already been read
+-- ("523h", "310m", "94mv")
+local shortLabels = {
+  hp = [=[h(?:p|its?)?]=],
+  mp = [=[m(?:p|ana)?]=],
+  mv = [=[mv|moves?]=],
+}
 
 -- score screens across the codebase families (Diku/Merc/ROM, Circle/tbaMUD,
 -- SMAUG, LPMud, IRE, Aardwolf...) share a handful of label spellings per
@@ -400,49 +463,73 @@ local function scoreSentence(stat, pair)
   return youHave .. [=[.*?\b]=] .. pair .. [=[\s*]=] .. sentenceLabels[stat] .. sentenceTail
 end
 
+-- One trigger fronts the whole list below instead of one trigger per shape.
+-- Every shape keys off one of the label spellings collected here, so a line
+-- carrying none of them cannot be a reading and never needs looking at; the
+-- shapes themselves are then run, unchanged, by BaseUI.parseVitalsLine on the
+-- few lines that do get through. This is arithmetic rather than taste: the
+-- shapes are mostly unanchored, case-insensitive and carry lookbehinds, so
+-- matching all of them against every line a game sends costs ~15us per line on
+-- a modern desktop, against ~0.2us for the prefilter - which every Mudlet user
+-- on a game with no GMCP was paying on every line of output.
+-- The edges are (?&lt;![a-z]) and (?![a-z]) rather than \b because a label may sit
+-- straight against its number ("hp100/120"), where there is no word boundary.
+local anyVitalsLabel = table.concat({
+  promptLabels.hp, promptLabels.mp, promptLabels.mv, promptLabels.xp,
+  coreLabels.hp, coreLabels.mp,
+  shortLabels.hp, shortLabels.mp, shortLabels.mv,
+  scoreLabels.hp, scoreLabels.mp, scoreLabels.mv, scoreLabels.xp,
+  sentenceLabels.hp, sentenceLabels.mp, sentenceLabels.mv,
+  -- the two prompt shapes that allow a lone "m" for mana spell it inline
+  [=[m]=],
+}, "|")
+-- public so the test suite can hold it to its one contract: it must match every
+-- line the shapes below read a value from
+BaseUI.vitalsPrefilter = [=[(?i)(?&lt;![a-z])(?:]=] .. anyVitalsLabel .. [=[)(?![a-z])]=]
+
 local vitalsLinePatterns = {
   -- self-sufficient prompt shapes: cur/max with the label after the numbers
   { stat = "hp", kind = "curmax", gated = true,
-    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)\s*/\s*(\d+)\s*(?:hp|health|hits?)\b]=] },
+    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)\s*/\s*(\d+)\s*(?:]=] .. promptLabels.hp .. [=[)\b]=] },
   { stat = "mp", kind = "curmax", gated = true,
-    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)\s*/\s*(\d+)\s*(?:mp|mana|sp|magic|energy|m)\b]=] },
+    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)\s*/\s*(\d+)\s*(?:]=] .. promptLabels.mp .. [=[|m)\b]=] },
   { stat = "mv", kind = "curmax", gated = true,
-    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)\s*/\s*(\d+)\s*(?:mv|moves?|movement|end(?:urance)?|st(?:amina)?)\b]=] },
+    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)\s*/\s*(\d+)\s*(?:]=] .. promptLabels.mv .. [=[)\b]=] },
   { stat = "xp", kind = "curmax", gated = true,
-    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)\s*/\s*(\d+)\s*(?:xp|exp|tnl)\b]=] },
+    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)\s*/\s*(\d+)\s*(?:]=] .. promptLabels.xp .. [=[)\b]=] },
   -- self-sufficient prompt shapes: cur/max with the label first. The
   -- explicit-separator form is trusted anywhere; the separator-less form
   -- needs the digit lookbehinds so "523/600 hp ..." cannot have its own
   -- trailing label re-read as the start of a new reading
   { stat = "hp", kind = "curmax", gated = true,
-    regex = [=[(?i)(?&lt;!%)\b(?:hp|health|hits?)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
+    regex = [=[(?i)(?&lt;!%)\b(?:]=] .. promptLabels.hp .. [=[)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
   { stat = "hp", kind = "curmax", gated = true,
-    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:hp|health|hits?)\s*(\d+)\s*/\s*(\d+)]=] },
+    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. promptLabels.hp .. [=[)\s*(\d+)\s*/\s*(\d+)]=] },
   { stat = "mp", kind = "curmax", gated = true,
-    regex = [=[(?i)(?&lt;!%)\b(?:mp|mana|sp|magic|energy)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
+    regex = [=[(?i)(?&lt;!%)\b(?:]=] .. promptLabels.mp .. [=[)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
   { stat = "mp", kind = "curmax", gated = true,
-    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:mp|mana|sp|magic|energy)\s*(\d+)\s*/\s*(\d+)]=] },
+    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. promptLabels.mp .. [=[)\s*(\d+)\s*/\s*(\d+)]=] },
   { stat = "mv", kind = "curmax", gated = true,
-    regex = [=[(?i)(?&lt;!%)\b(?:mv|moves?|movement|end(?:urance)?|st(?:amina)?)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
+    regex = [=[(?i)(?&lt;!%)\b(?:]=] .. promptLabels.mv .. [=[)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
   { stat = "mv", kind = "curmax", gated = true,
-    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:mv|moves?|movement|end(?:urance)?|st(?:amina)?)\s*(\d+)\s*/\s*(\d+)]=] },
+    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. promptLabels.mv .. [=[)\s*(\d+)\s*/\s*(\d+)]=] },
   { stat = "xp", kind = "curmax", gated = true,
-    regex = [=[(?i)(?&lt;!%)\b(?:xp|exp|tnl)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
+    regex = [=[(?i)(?&lt;!%)\b(?:]=] .. promptLabels.xp .. [=[)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
   { stat = "xp", kind = "curmax", gated = true,
-    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:xp|exp|tnl)\s*(\d+)\s*/\s*(\d+)]=] },
+    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. promptLabels.xp .. [=[)\s*(\d+)\s*/\s*(\d+)]=] },
   -- labelled percentages need no maximum at all
   { stat = "hp", kind = "percent", gated = true,
-    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)%\s*(?:hp|health)\b]=] },
+    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)%\s*(?:]=] .. coreLabels.hp .. [=[)\b]=] },
   { stat = "hp", kind = "percent", gated = true,
-    regex = [=[(?i)(?&lt;!%)\b(?:hp|health)[:=]\s*(\d+)%]=] },
+    regex = [=[(?i)(?&lt;!%)\b(?:]=] .. coreLabels.hp .. [=[)[:=]\s*(\d+)%]=] },
   { stat = "hp", kind = "percent", gated = true,
-    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:hp|health)\s*(\d+)%]=] },
+    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. coreLabels.hp .. [=[)\s*(\d+)%]=] },
   { stat = "mp", kind = "percent", gated = true,
-    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)%\s*(?:mp|mana|sp|m)\b]=] },
+    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)%\s*(?:]=] .. coreLabels.mp .. [=[|m)\b]=] },
   { stat = "mp", kind = "percent", gated = true,
-    regex = [=[(?i)(?&lt;!%)\b(?:mp|mana|sp)[:=]\s*(\d+)%]=] },
+    regex = [=[(?i)(?&lt;!%)\b(?:]=] .. coreLabels.mp .. [=[)[:=]\s*(\d+)%]=] },
   { stat = "mp", kind = "percent", gated = true,
-    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:mp|mana|sp)\s*(\d+)%]=] },
+    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. coreLabels.mp .. [=[)\s*(\d+)%]=] },
   -- score-screen shapes, all trusted on first sight. A single labelled row,
   -- with or without a separator, possibly behind table borders:
   -- "Health : 523/600", "| Hit Points 3,600/3,600 |"
@@ -507,15 +594,15 @@ local vitalsLinePatterns = {
   -- current-only prompt shapes; the lookarounds keep them off cur/max and
   -- percentage lines, which belong to the shapes above
   { stat = "hp", kind = "bare", gated = true,
-    regex = [=[(?i)(?&lt;![\d/.,:%])(\d+)\s*h(?:p|its?)?\b(?!\s*[/%])]=] },
+    regex = [=[(?i)(?&lt;![\d/.,:%])(\d+)\s*]=] .. shortLabels.hp .. [=[\b(?!\s*[/%])]=] },
   { stat = "hp", kind = "bare", gated = true,
-    regex = [=[(?i)\b(?:hp|health|hits?)[:=]\s*(\d+)\b(?!\s*[/%.])]=] },
+    regex = [=[(?i)\b(?:]=] .. promptLabels.hp .. [=[)[:=]\s*(\d+)\b(?!\s*[/%.])]=] },
   { stat = "mp", kind = "bare", gated = true,
-    regex = [=[(?i)(?&lt;![\d/.,:%])(\d+)\s*m(?:p|ana)?\b(?!\s*[/%])]=] },
+    regex = [=[(?i)(?&lt;![\d/.,:%])(\d+)\s*]=] .. shortLabels.mp .. [=[\b(?!\s*[/%])]=] },
   { stat = "mp", kind = "bare", gated = true,
-    regex = [=[(?i)\b(?:mp|mana|sp)[:=]\s*(\d+)\b(?!\s*[/%.])]=] },
+    regex = [=[(?i)\b(?:]=] .. coreLabels.mp .. [=[)[:=]\s*(\d+)\b(?!\s*[/%.])]=] },
   { stat = "mv", kind = "bare", gated = true,
-    regex = [=[(?i)(?&lt;![\d/.,:%])(\d+)\s*(?:mv|moves?)\b(?!\s*[/%])]=] },
+    regex = [=[(?i)(?&lt;![\d/.,:%])(\d+)\s*(?:]=] .. shortLabels.mv .. [=[)\b(?!\s*[/%])]=] },
 }
 
 -- lines the chat layer would route are never harvested for vitals - a tell
@@ -635,13 +722,18 @@ function BaseUI.onVitalsLine()
   end
 end
 
+-- the plain-text layer is a fallback for games that offer no protocol. Once
+-- GMCP or MSDP owns the gauges its readings are discarded by applyVitals
+-- anyway, so keeping it armed is pure cost on every line the game sends
+function BaseUI.structuredVitalsOwnGauges()
+  return BaseUI.vitalsLock &gt;= sourceRanks.msdp
+end
+
 function BaseUI.createVitalsTriggers()
-  if BaseUI.dormant() or next(BaseUI.vitalsTriggerIds) then
+  if BaseUI.dormant() or BaseUI.structuredVitalsOwnGauges() or next(BaseUI.vitalsTriggerIds) then
     return
   end
-  for _, pattern in ipairs(vitalsLinePatterns) do
-    table.insert(BaseUI.vitalsTriggerIds, tempRegexTrigger(pattern.regex, BaseUI.onVitalsLine))
-  end
+  BaseUI.vitalsTriggerIds = { tempRegexTrigger(BaseUI.vitalsPrefilter, BaseUI.onVitalsLine) }
 end
 
 function BaseUI.killVitalsTriggers()
@@ -968,6 +1060,13 @@ function BaseUI.applyVitals(source, readings, snapshot)
     -- the lock and everything the previous source reported is dropped
     BaseUI.vitalsData = {}
     BaseUI.vitalsLock = rank
+    -- and with a protocol supplying the same numbers, the plain-text fallback
+    -- has nothing left to contribute - retire it for the rest of the
+    -- connection (handleDisconnect re-arms it, since the next one may be to a
+    -- game without GMCP)
+    if BaseUI.structuredVitalsOwnGauges() then
+      BaseUI.killVitalsTriggers()
+    end
   end
   for _, stat in ipairs(vitalsStats) do
     local reading = readings[stat.key]
@@ -1124,6 +1223,9 @@ function BaseUI.handleDisconnect()
   -- ring already covers the echo race that comes with that)
   BaseUI.gmcpChat = false
   BaseUI.createChatTriggers()
+  -- the vitals layer retires itself once a protocol takes the gauges over; the
+  -- lock was just cleared above, so re-arm it for the next connection too
+  BaseUI.createVitalsTriggers()
 end
 
 function BaseUI.addChatMessage()

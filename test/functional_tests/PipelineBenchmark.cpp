@@ -28,6 +28,13 @@
  * corpus through the production cTelnet::loopbackTest() path and prints one
  * `METRIC <name> <value>` line per measurement.
  *
+ * Two profiles are measured, and the distinction matters:
+ *   - `text_*`, `trigger_*` and `peak_rss_kb` come from a profile with the
+ *     default packages suppressed, so they describe the pipeline itself;
+ *   - `defaults_*` comes from a profile carrying the shipped default packages,
+ *     so a package that costs throughput moves its own metric instead of
+ *     silently redefining the pipeline baseline.
+ *
  * Built with the functional tests but deliberately NOT registered with ctest by
  * default (report-only and slow); run it directly, or configure with
  * -DREGISTER_PERF_BENCHMARK=ON to also get it under ctest:
@@ -364,6 +371,7 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
+        QVERIFY(noForeignTriggersAreRunning(host));
 
         const double seconds = feedCorpusBestPass(host, kFeedPasses);
         mTextBestPassSeconds = seconds;
@@ -383,11 +391,17 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
+        QVERIFY(noForeignTriggersAreRunning(host));
 
         bool triggersOk = true;
         const int triggerCount = installTriggerSet(host, triggersOk);
         QVERIFY2(triggerCount > 0, "no triggers were installed");
         QVERIFY2(triggersOk, "a trigger failed to compile, register or take its script");
+        // The count this slot reports has to be the count that actually runs, or
+        // trigger_overhead_ms is dividing out a baseline it does not describe.
+        const int rootTriggers = static_cast<int>(host->getTriggerUnit()->getTriggerRootNodeList().size());
+        QVERIFY2(rootTriggers == triggerCount,
+                 qPrintable(qsl("installed %1 root triggers but %2 are running - something else registered triggers on this profile").arg(triggerCount).arg(rootTriggers)));
 
         const double seconds = feedCorpusBestPass(host, kFeedPasses);
         const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
@@ -424,6 +438,7 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
+        QVERIFY(noForeignTriggersAreRunning(host));
         // Feed one pass so the peak still reflects pipeline work when this slot
         // runs on its own.
         feedCorpusBestPass(host, 1);
@@ -436,10 +451,57 @@ private slots:
         }
     }
 
-private:
-    // Mirrors the profile-creation helper the other functional tests use.
-    Host* startProfile()
+    // Everything above measures the pipeline on a bare profile. This one measures
+    // what a new user actually gets: the same corpus through a profile carrying
+    // the shipped default packages. Reported as its own `defaults_*` family so a
+    // package that costs throughput shows up as a package regression instead of
+    // quietly resetting the pipeline baseline - which is exactly how the starter
+    // UI's cost hid inside text_lines_per_sec until the 5.0 QA sweep.
+    //
+    // Runs last on purpose: VmHWM is process-wide and monotonic, so the bare
+    // peak_rss_kb above has to be read before any packaged profile exists.
+    // defaults_peak_rss_kb is therefore the high-water mark including this pass,
+    // and its excess over peak_rss_kb is what the packages cost.
+    void benchDefaultPackages()
     {
+        Host* host = startProfile(DefaultPackages::Install);
+        QVERIFY(host);
+        const int rootTriggers = static_cast<int>(host->getTriggerUnit()->getTriggerRootNodeList().size());
+
+        const double seconds = feedCorpusBestPass(host, kFeedPasses);
+        const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
+        QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
+
+        emitMetric("defaults_root_triggers", static_cast<qint64>(rootTriggers));
+        emitMetric("defaults_text_lines_per_sec", mCorpusLines / seconds);
+        emitMetric("defaults_text_best_pass_ms", seconds * 1000.0);
+        const qint64 peakRssKb = readPeakRssKb();
+        if (peakRssKb >= 0) {
+            emitMetric("defaults_peak_rss_kb", peakRssKb);
+        }
+    }
+
+private:
+    enum class DefaultPackages { Skip, Install };
+
+    // The benchmark's own triggers are the only ones its numbers may describe.
+    bool noForeignTriggersAreRunning(Host* host)
+    {
+        const size_t rootTriggers = host->getTriggerUnit()->getTriggerRootNodeList().size();
+        if (rootTriggers == 0) {
+            return true;
+        }
+        qWarning("%s",
+                 qPrintable(qsl("%1 triggers are running on a profile that should have none - default-package "
+                                "suppression is not working, and this run measures those triggers as pipeline cost")
+                                    .arg(rootTriggers)));
+        return false;
+    }
+
+    // Mirrors the profile-creation helper the other functional tests use.
+    Host* startProfile(DefaultPackages defaultPackages = DefaultPackages::Skip)
+    {
+        mudlet::self()->mSkipDefaultPackageInstall = (defaultPackages == DefaultPackages::Skip);
         const QString port = QString::number(mPort);
         QTimer::singleShot(0, qApp, [this, port]() {
             mudlet::self()->startAutoLogin({});
