@@ -753,7 +753,6 @@ describe("Tests the module accessors", function()
   -- unless a spec puts a synced module in the profile first.
   describe("Tests saving a profile that has a module to write", function()
     it("writes the synced module out again", function()
-      requireWorkingInstalls()
       -- rewriting this module's own .mpackage is only safe because
       -- installFixtureModule() installed a scratch copy, not the committed one
       defer(function() disableModuleSync(moduleName) end)

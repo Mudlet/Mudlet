@@ -780,6 +780,7 @@ private:
     QPointer<QDockWidget> mpCurrentMapDockWidget;
 
     // Helper methods for detached windows
+    void closeHostOfClosedDetachedWindow(const QString& profileName);
     void detachTab(int tabIndex, const QPoint& position);
     void reattachTab(const QString& profileName, int insertIndex = -1);
     TMainConsole* removeConsoleFromSplitter(const QString& profileName);

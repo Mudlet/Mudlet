@@ -7722,20 +7722,39 @@ void mudlet::slot_detachedWindowClosed(const QString& profileName)
         updateMainWindowTitle();
 
         // Properly close the host to avoid dangling connections
-        Host* pHost = mHostManager.getHost(profileName);
-        if (pHost && !closeHeldOffByEventPump(pHost)) {
-            if (pHost->requestClose()) {
-                QTimer::singleShot(0ms, this, [this, profileName] {
-                    closeHost(profileName);
-                    // Check to see if there are any profiles left...
-                    if (!mHostManager.getHostCount() && !mIsGoingDown) {
-                        disableToolbarButtons();
-                        slot_showConnectionDialog();
-                        setWindowTitle(scmVersion);
-                    }
-                });
+        closeHostOfClosedDetachedWindow(profileName);
+    }
+}
+
+// Unlike the tab-close slots, by the time we get here the window and its
+// bookkeeping are already gone, so simply dropping the close while a test-mode
+// event pump is running would leave the profile loaded with no way to reach it.
+// Wait the pump out instead, the way armForceClose() does. Outside
+// MUDLET_TEST_MODE there is never a pump, so this closes straight away.
+void mudlet::closeHostOfClosedDetachedWindow(const QString& profileName)
+{
+    Host* pHost = mHostManager.getHost(profileName);
+    if (!pHost) {
+        return;
+    }
+
+    if (closeHeldOffByEventPump(pHost)) {
+        QTimer::singleShot(50ms, this, [this, profileName]() {
+            closeHostOfClosedDetachedWindow(profileName);
+        });
+        return;
+    }
+
+    if (pHost->requestClose()) {
+        QTimer::singleShot(0ms, this, [this, profileName] {
+            closeHost(profileName);
+            // Check to see if there are any profiles left...
+            if (!mHostManager.getHostCount() && !mIsGoingDown) {
+                disableToolbarButtons();
+                slot_showConnectionDialog();
+                setWindowTitle(scmVersion);
             }
-        }
+        });
     }
 }
 

@@ -61,6 +61,8 @@
 #include "glwidget_integration.h"
 #endif
 
+#include <QScopeGuard>
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -1707,10 +1709,12 @@ int TLuaInterpreter::pumpEvents(lua_State* L)
 
     const QPointer<Host> pHost(&host);
     ++pLuaInterpreter->mEventPumpDepth;
+    const auto pumpGuard = qScopeGuard([pLuaInterpreter]() {
+        --pLuaInterpreter->mEventPumpDepth;
+    });
     const bool stoppedEarly = EventLoopPump::pumpFor(timeoutMs, [&pHost]() {
         return shuttingDown(pHost);
     });
-    --pLuaInterpreter->mEventPumpDepth;
 
     if (stoppedEarly) {
         // Ran for less than it was asked to, so whatever the caller queued may
