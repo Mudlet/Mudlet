@@ -1103,9 +1103,12 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
                 // again from any pass that re-enters in the meantime (a later
                 // trigger's script calling feedTriggers(), most commonly).
                 // setIsActive(false) rather than deactivate(), matching
-                // TriggerUnit::killTrigger(): it also clears the user-active state,
-                // so an enableTrigger() before the deferred free cannot resurrect a
-                // trigger that has already spent its last fire.
+                // TriggerUnit::killTrigger(): it also clears the user-active state.
+                // What stops an enableTrigger() before the deferred free from
+                // resurrecting a trigger that has spent its last fire is the
+                // markCleanup() below: TriggerUnit::enableTrigger() skips anything
+                // in mCleanupSet, as clearing the user-active state alone would
+                // not - enableTrigger() sets it straight back.
                 setIsActive(false);
                 mpHost->getTriggerUnit()->markCleanup(this);
 
