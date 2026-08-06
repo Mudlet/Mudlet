@@ -4761,8 +4761,21 @@ void mudlet::attachDebugArea(const QString& hostname)
     // otherwise come back silently dead:
     TDebug::setPaused(false);
     TDebug::discardPausedMessages();
+
+    // Two rows along the bottom: the find bar sits directly under the text and
+    // stays hidden until Ctrl+F, the filters are always there beneath it.
+    // Letting the QMainWindow own both means it handles the room they take.
+    auto* pFindBar = new QToolBar(smpDebugArea);
+    pFindBar->setObjectName(qsl("debugFindBar"));
+    //: Title of the Central Debug Console's find bar
+    pFindBar->setWindowTitle(tr("Find"));
+    pFindBar->setMovable(false);
+    smpDebugArea->addToolBar(Qt::BottomToolBarArea, pFindBar);
+    smpDebugConsole->populateFindBar(pFindBar);
+
     smpDebugFilterBar = new TDebugFilterBar(smpDebugArea);
     smpDebugArea->addToolBar(Qt::BottomToolBarArea, smpDebugFilterBar);
+    smpDebugArea->insertToolBarBreak(smpDebugFilterBar);
 
     auto consoleCloser = new TConsoleMonitor(smpDebugArea);
     smpDebugArea->installEventFilter(consoleCloser);
