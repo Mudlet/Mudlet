@@ -99,8 +99,9 @@ static Host* gpMidPassExportHost = nullptr;
 static QString gMidPassExportPath;
 static QString gMidPassExportedXml;
 
-static int exportProfileMidPass(lua_State*)
+static int exportProfileMidPass(lua_State* L)
 {
+    Q_UNUSED(L)
     gMidPassExportedXml.clear();
     if (!gpMidPassExportHost) {
         return 0;
