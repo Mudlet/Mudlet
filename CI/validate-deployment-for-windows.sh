@@ -25,6 +25,21 @@ function validate_cmake() {
   # there is no static "APP_BUILD" line left to validate here.
 }
 
+# A tag that does not spell out the same version as APP_VERSION disables
+# auto-update for every existing user without a word of complaint anywhere - see
+# CI/check-release-tag.sh
+function validate_release_tag() {
+  local TAG_NAME=""
+  if [[ "${GITHUB_REF:-}" =~ ^refs/tags/ ]]; then
+    TAG_NAME="${GITHUB_REF#refs/tags/}"
+  fi
+
+  local APP_VERSION
+  APP_VERSION=$(pcre2grep --only-matching=1 "set\(APP_VERSION (.+)\)$" < CMakeLists.txt)
+
+  bash "$(dirname "${BASH_SOURCE[0]}")/check-release-tag.sh" "${TAG_NAME}" "${APP_VERSION}" || exit $?
+}
+
 function validate_updater_environment_variable() {
   if [ "$WITH_UPDATER" == "NO" ]; then
     error "Updater is disabled in a release build."
@@ -32,5 +47,6 @@ function validate_updater_environment_variable() {
 }
 
 validate_cmake
+validate_release_tag
 validate_updater_environment_variable
 

@@ -160,6 +160,11 @@ jobs:
           COMMIT=$(echo "$META" | jq -r '.commit')
 
           if [[ "$REF" == refs/tags/Mudlet-* ]]; then
+            # Last gate before anything is published. The build-time copy of this
+            # check runs from the tagged commit, so it is missing when an older
+            # commit is tagged; this workflow always runs from the default branch
+            bash release-scripts/CI/check-release-tag.sh "${REF#refs/tags/}" "${VERSION}"
+
             echo "type=release" >> "$GITHUB_OUTPUT"
             echo "tag=${REF#refs/tags/}" >> "$GITHUB_OUTPUT"
             echo "title=Mudlet ${VERSION}" >> "$GITHUB_OUTPUT"

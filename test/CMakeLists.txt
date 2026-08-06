@@ -102,6 +102,15 @@ if(NOT WIN32)
     )
 endif()
 
+# Checks the guard that keeps a release from being published under a tag that does
+# not spell out APP_VERSION - the updater reads its version from the tag, so a tag
+# like "Mudlet-5.0" stops every existing user being offered the release, silently
+if(NOT WIN32)
+    add_test(NAME ReleaseTagVersionTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/release-tag-version-test.sh
+    )
+endif()
+
 # Checks the milestone lookup that add-milestone runs - the one that matched a
 # title that no longer existed and assigned nothing for months, without ever
 # failing. gh is stubbed, so there is no network and no token
