@@ -86,8 +86,9 @@ EOF
   exit 1
 fi
 
+# Silence would be ambiguous on the one path where it matters: a release log with no
+# line here looks the same whether the tag was checked or the guard was never
+# reached. A PTB says nothing, since it runs nightly and has no tag to report
 if [ -n "${TAG}" ]; then
   echo "Release tag '${TAG}' matches APP_VERSION '${VERSION}'."
-else
-  echo "APP_VERSION '${VERSION}' can be offered as an update."
 fi
