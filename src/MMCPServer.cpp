@@ -829,7 +829,10 @@ QPair<bool, QString> MMCPServer::allowSnoop(const QVariant& target)
     if (pClient) {
         if (pClient->canSnoop()) {
             pClient->setCanSnoop(false);
-            pClient->setSnooping(false);
+            if (pClient->isSnooping()) {
+                pClient->setSnooping(false);
+                decrementSnoopCount();
+            }
             pClient->sendMessage(qsl("<CHAT> You are no longer allowed to snoop %1.").arg(getChatName()));
 
             const QString infoMsg = tr("[ CHAT ]  - %1 is no longer allowed to snoop you.").arg(pClient->chatName());
