@@ -18,23 +18,9 @@
  ***************************************************************************/
 
 /*
- * Three ways the connection dialog dereferenced a pointer that was not there,
- * all driven through the real dialog against an isolated config directory:
- *
- * - Right-clicking the games list with no profile selected. The "My games" tab
- *   of a fresh install is that state: nothing on disk to list, so fillout_form()
- *   selects nothing, and slot_profileContextMenu() read currentItem() anyway.
- * - Copying a profile while the list is rebuilt underneath the copy. The copy
- *   runs on a thread pool and reports back through the event loop, so anything
- *   that calls fillout_form() in between - switching the games tab is one click
- *   away - destroyed the QListWidgetItem the completion handler had kept.
- * - Quitting before the queued lambda in mudlet::slot_showConnectionDialog()
- *   has had its turn. mudlet::closeEvent() closes the dialog and clears the
- *   QPointer to it, and the lambda then showed a dialog that was gone.
- *
- * Each of these is a crash rather than a wrong answer, so the assertions are
- * mostly "the run got this far"; the extra checks pin the behaviour that
- * replaced the crash, so a fix that merely returns early is not enough.
+ * Crashes of the connection dialog, driven through the real dialog against an
+ * isolated config directory. Reaching the end of a test is most of what it
+ * asserts; the rest pins the behaviour that replaced the crash.
  *
  * Run with: ctest -R ConnectionDialogCrashTest -V
  */
@@ -83,8 +69,8 @@ private:
     QTemporaryDir mXdgDir;
     QByteArray mSavedXdg;
 
-    // Deliberately not created in initTestCase(): the first test needs the
-    // genuine fresh-install state, with nothing at all under profiles/
+    // not created in initTestCase(): the first test needs a profiles/ with
+    // nothing in it at all
     const QString mProfileName = qsl("ConnDialogCrash-Test");
     // what copyProfileWidget() names the copy of a name not ending in a digit
     const QString mCopyName = qsl("ConnDialogCrash-Test1");
@@ -93,36 +79,28 @@ private:
 
     static constexpr int scmMyGamesTab = 0;
     static constexpr int scmAllGamesTab = 1;
-    // a role of this test's own, well clear of dlgConnectionProfiles::csmNameRole
     static constexpr int scmTestMarkerRole = Qt::UserRole + 99;
-    // what makeProfileFolder() writes, so a copy can be checked for carrying it
     const QString mProfileUrl = qsl("mudlet.org");
     const QString mProfilePort = qsl("23");
 
-    // setupConfig() consults portable.txt before the XDG logic; skip rather
-    // than run against an unexpected config dir (see ConfigDirOverrideTest).
+    // setupConfig() consults portable.txt before the XDG logic, so its presence
+    // would put this test on the user's real config dir (see ConfigDirOverrideTest)
     bool portableMarkerPresent() const
     {
         return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
     }
 
-    // The tab bar splitting "My games" from "All games" is a private member of
-    // the dialog. It is not the dialog's only QTabBar - QTabWidget builds one
-    // for itself too - so ask for it by name.
+    // by name: QTabWidget gives the dialog a second QTabBar
     QTabBar* gamesTabBar(dlgConnectionProfiles* dialog) const { return dialog->findChild<QTabBar*>(qsl("gamesTabBar")); }
 
-    // What the last armMenuCloser() run saw. Members rather than locals of the
-    // calling test method: when no menu appears the timer is still armed when
-    // that method returns, and writing into a stack frame that has gone is the
-    // very bug this file exists to catch.
+    // members, not locals of the calling test: with no menu the timer is still
+    // armed when that method returns
     QStringList mMenuActionTexts;
     bool mSawMenu = false;
     QString mUnexpectedPopup;
 
-    // The context menu runs its own event loop in menu.exec(), so whatever it
-    // puts on screen has to be inspected and dismissed from inside that loop.
-    // Callers stop the returned timer, which is what ends it when no menu turns
-    // up - the case the crash tests want.
+    // menu.exec() runs its own event loop, so the menu can only be inspected and
+    // dismissed from inside it; callers stop the timer when no menu appears
     QTimer* armMenuCloser()
     {
         mMenuActionTexts.clear();
@@ -137,8 +115,8 @@ private:
             }
             auto* menu = qobject_cast<QMenu*>(popup);
             if (!menu) {
-                // something else has the popup and menu.exec() is waiting on
-                // it, so close it anyway rather than let the run time out
+                // menu.exec() waits on whatever holds the popup, so close it
+                // rather than time the run out
                 mUnexpectedPopup = QString::fromLatin1(popup->metaObject()->className());
                 popup->close();
                 closer->stop();
@@ -156,21 +134,16 @@ private:
         return closer;
     }
 
-    // menu.exec() has returned by now either way, so the closer has done its job
     void disarmMenuCloser(QTimer* closer)
     {
         closer->stop();
         closer->deleteLater();
     }
 
-    // so that a popup from somewhere else shows up in the failure rather than
-    // just looking like "no menu appeared"
     QString menuOutcome() const { return mUnexpectedPopup.isEmpty() ? QString() : qsl(" (a %1 took the popup instead)").arg(mUnexpectedPopup); }
 
-    // What a right-click on the list does. The event has to go to the viewport,
-    // the way the window system delivers it: QAbstractScrollArea ignores a
-    // mouse-reason context menu sent to the scroll area itself, and it is its
-    // viewportEvent() that turns the viewport's event into the list's own
+    // Must go to the viewport: QAbstractScrollArea ignores a mouse-reason
+    // context menu sent to itself, and its viewportEvent() is what raises
     // customContextMenuRequested.
     void rightClickBelowTheLastItem(QAbstractScrollArea* view) const
     {
@@ -180,8 +153,7 @@ private:
         QApplication::sendEvent(viewport, &event);
     }
 
-    // returns rather than QVERIFYs: a QVERIFY here would only leave this
-    // helper, and the caller would carry on without the profile
+    // reports instead of QVERIFYing: a QVERIFY here would only leave the helper
     bool makeProfileFolder(const QString& name) const
     {
         return QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, name)) && mudlet::self()->writeProfileData(name, qsl("url"), mProfileUrl).first
@@ -203,15 +175,14 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        // never touch the user's real profiles:
         QVERIFY(mudlet::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
         mudlet::self()->startAutoLogin({});
-        // slot_showConnectionDialog() only shows the dialog from a queued
-        // lambda, so wait for that rather than for the pointer
+        // the dialog is only shown from a queued lambda, so the pointer turning
+        // up is not enough
         QVERIFY(QTest::qWaitFor(
                 []() {
                     return mudlet::self()->mpConnectionDialog && mudlet::self()->mpConnectionDialog->isVisible();
@@ -225,9 +196,6 @@ private slots:
         delete mudlet::self();
     }
 
-    // C9: ~40 seconds into a fresh install - skip the tutorial invitation,
-    // click "My games", right-click the list. There is no profile on disk, so
-    // fillout_form() leaves nothing current and the menu had nothing to act on.
     void test_rightClickWithNoProfileSelected()
     {
         auto* dialog = mudlet::self()->mpConnectionDialog.data();
@@ -244,9 +212,8 @@ private slots:
         tabBar->setCurrentIndex(scmMyGamesTab);
         QTest::qWait(100ms);
 
-        // the state the crash needs. It is not the same as an empty list: a
-        // debug build still offers the self-test entry here, and fillout_form()
-        // makes nothing current because none of what it listed is on disk
+        // not an empty list: a debug build still lists the self-test entry, but
+        // none of it is on disk so fillout_form() makes nothing current
         QVERIFY2(!dialog->listWidget_profiles->currentItem(),
                  qPrintable(
                          qsl("The 'My games' tab of a fresh install selected something (%1 items listed) - this test no longer covers the reported crash").arg(dialog->listWidget_profiles->count())));
@@ -260,7 +227,6 @@ private slots:
         QVERIFY2(!QApplication::activePopupWidget(), "A popup was left on screen");
     }
 
-    // The same right-click against a list with no items in it at all
     void test_rightClickOnAnEmptyList()
     {
         auto* dialog = mudlet::self()->mpConnectionDialog.data();
@@ -276,14 +242,11 @@ private slots:
         QVERIFY2(!mSawMenu, "A context menu was offered for an empty games list");
         QVERIFY2(mUnexpectedPopup.isEmpty(), qPrintable(menuOutcome()));
 
-        // put the list back, rather than leaving the next test to notice
         dialog->fillout_form();
         QTest::qWait(100ms);
     }
 
-    // The other half of the guard: with a profile selected the menu still has
-    // to appear, so that "return early when nothing is current" cannot be
-    // mistaken for "return early".
+    // so that "return early when nothing is current" cannot become "return early"
     void test_contextMenuStillOpensForASelectedProfile()
     {
         auto* dialog = mudlet::self()->mpConnectionDialog.data();
@@ -308,9 +271,6 @@ private slots:
         QVERIFY2(!mMenuActionTexts.first().isEmpty(), "The menu offered a nameless action");
     }
 
-    // C2/F10: the copy is asynchronous and the dialog stays usable while it
-    // runs, so switching the games tab mid-copy rebuilds the list and destroys
-    // the item the completion handler was holding on to.
     void test_copiedProfileSurvivesTheListBeingRebuilt()
     {
         auto* dialog = mudlet::self()->mpConnectionDialog.data();
@@ -323,8 +283,8 @@ private slots:
         QVERIFY(tabBar);
         tabBar->setCurrentIndex(scmMyGamesTab);
         dialog->fillout_form();
-        // slot_itemClicked() ignores a second selection of the same profile
-        // within 100ms, and fillout_form() clears the form before it re-selects
+        // clear slot_itemClicked()'s 100ms same-profile debounce, which would
+        // otherwise leave the form blank after fillout_form() cleared it
         QTest::qWait(300ms);
 
         const auto items = dialog->findData(*dialog->listWidget_profiles, mProfileName, dlgConnectionProfiles::csmNameRole);
@@ -338,13 +298,10 @@ private slots:
 
         dialog->slot_copyProfile();
         QVERIFY2(!copyAction->isEnabled(), "The copy did not take the asynchronous path");
-        // Nothing of the copy has completed: it runs on a thread pool and
-        // reports back through the event loop, which has not run since. This is
-        // the user clicking the other games tab while "Copying..." is up, and
-        // it destroys every item in the list - including the copy's.
+        // the copy reports back through the event loop, which has not run since,
+        // so this destroys the copy's item before the handler sees it
         tabBar->setCurrentIndex(scmAllGamesTab);
 
-        // the completion handler runs in here, and used to read the freed item
         QVERIFY2(QTest::qWaitFor(
                          [copyAction]() {
                              return copyAction->isEnabled();
@@ -356,12 +313,9 @@ private slots:
         QCOMPARE(dialog->readProfileData(mCopyName, qsl("url")), mProfileUrl);
         QCOMPARE(dialog->readProfileData(mCopyName, qsl("port")), mProfilePort);
         QVERIFY2(!dialog->findData(*dialog->listWidget_profiles, mCopyName, dlgConnectionProfiles::csmNameRole).isEmpty(), "The copy is not listed in the games list");
-        // the point of the completion handler: the copy ends up selected.
-        // The form fields are deliberately not asserted here - slot_itemClicked()
-        // drops a second selection of the same profile within 100ms, and a copy
-        // of an ordinary profile completes well inside that window, so an
-        // undisturbed copy leaves Server address and Port blank. That is a
-        // separate, pre-existing bug and not this PR's to fix.
+        // No assertions on the form fields: a copy completes inside
+        // slot_itemClicked()'s 100ms debounce, which swallows the fill and
+        // leaves Server address and Port blank - a separate bug.
         auto* pCurrentItem = dialog->listWidget_profiles->currentItem();
         QVERIFY2(pCurrentItem, "Nothing is selected after the copy finished");
         QCOMPARE(pCurrentItem->data(dlgConnectionProfiles::csmNameRole).toString(), mCopyName);
@@ -372,9 +326,7 @@ private slots:
         QTest::qWait(100ms);
     }
 
-    // The same copy with nothing disturbing the list, which is the other branch
-    // of the completion handler: the item it made is still there and still
-    // current, so it is used directly rather than looked up again.
+    // the branch where the copy's item is still there and still current
     void test_copiedProfileIsSelectedWhenTheListIsLeftAlone()
     {
         auto* dialog = mudlet::self()->mpConnectionDialog.data();
@@ -402,9 +354,7 @@ private slots:
 
         const auto created = dialog->findData(*dialog->listWidget_profiles, mQuietCopyName, dlgConnectionProfiles::csmNameRole);
         QVERIFY2(!created.isEmpty(), "The copy got no entry in the list");
-        // marks the item slot_copyProfile() made. Checking for the mark
-        // afterwards says whether that same item is still there without
-        // holding on to a pointer that a rebuild would have freed.
+        // a mark outlives a rebuild check; a pointer would have been freed by one
         created.first()->setData(scmTestMarkerRole, true);
 
         QVERIFY2(QTest::qWaitFor(
@@ -420,8 +370,6 @@ private slots:
         auto* pCurrentItem = dialog->listWidget_profiles->currentItem();
         QVERIFY2(pCurrentItem, "Nothing is selected after the copy finished");
         QCOMPARE(pCurrentItem->data(dlgConnectionProfiles::csmNameRole).toString(), mQuietCopyName);
-        // still the marked item, so nothing rebuilt the list and this really is
-        // the branch the other test cannot reach
         QVERIFY2(pCurrentItem->data(scmTestMarkerRole).toBool(), "The list was rebuilt after all - this test no longer covers the undisturbed branch");
 
         QDir(mudlet::getMudletPath(enums::profileHomePath, mQuietCopyName)).removeRecursively();
@@ -430,13 +378,8 @@ private slots:
         QTest::qWait(100ms);
     }
 
-    // Has to stay last: it leaves the main window hidden and no connection
-    // dialog behind, which every other test here needs.
-    // C15: closing the last profile calls slot_showConnectionDialog(), which
-    // queues a lambda to show the dialog on the next pass of the event loop.
-    // Quitting first takes closeEvent() through closing the dialog (it is
-    // WA_DeleteOnClose) and clearing the QPointer to it, leaving the lambda
-    // with nothing to show.
+    // Must stay last: leaves the main window hidden and no connection dialog,
+    // both of which the other tests need.
     void test_connectionDialogClosedBeforeItIsShown()
     {
         auto* mudletApp = mudlet::self();
@@ -450,9 +393,8 @@ private slots:
         mudletApp->slot_showConnectionDialog();
         QVERIFY2(mudletApp->mpConnectionDialog, "No connection dialog was created");
 
-        // exactly what mudlet::closeEvent() does - close the dialog, clear the
-        // pointer, hide the main window - and the event loop has not run since
-        // the lambda was queued
+        // what closeEvent() does, with the event loop not having run since
+        // slot_showConnectionDialog() queued its lambda
         QVERIFY2(mudletApp->isVisible(), "The main window has to start out visible for the hide() below to mean anything");
         mudletApp->mpConnectionDialog->close();
         mudletApp->mpConnectionDialog = nullptr;
@@ -462,8 +404,6 @@ private slots:
         QTest::qWait(300ms); // the queued lambda gets its turn in here
 
         QVERIFY2(!mudletApp->mpConnectionDialog, "The queued lambda brought the connection dialog back");
-        // without the guard the lambda also re-showed the main window, undoing
-        // the hide() that closeEvent() had just done
         QVERIFY2(!mudletApp->isVisible(), "The queued lambda re-showed the main window Mudlet was shutting down");
     }
 };

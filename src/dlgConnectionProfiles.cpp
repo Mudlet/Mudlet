@@ -126,8 +126,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(listWidget_profiles, &QWidget::customContextMenuRequested, this, &dlgConnectionProfiles::slot_profileContextMenu);
 
     mpTabBar = new QTabBar(this);
-    // named so it can be told apart from the tab bar QTabWidget makes for
-    // itself, which is also a QTabBar child of this dialog
+    // QTabWidget gives this dialog a second QTabBar, so this one needs a name
     mpTabBar->setObjectName(qsl("gamesTabBar"));
     //: Tab showing only the games the user already has profiles for
     mpTabBar->insertTab(scmMyGamesTab, tr("My games"));
@@ -1675,9 +1674,8 @@ void dlgConnectionProfiles::generateCustomProfile(const QString& profileName) co
     listWidget_profiles->addItem(pItem);
 }
 
-// The items are destroyed and rebuilt wholesale by fillout_form(), so anything
-// that has let the event loop run since it last saw one has to ask for the
-// profile by name again instead of keeping the pointer.
+// fillout_form() destroys and rebuilds every item, so callers that have let the
+// event loop run cannot hold on to one.
 void dlgConnectionProfiles::setIconOfListedProfile(const QString& profileName, const QIcon& icon) const
 {
     const auto pItems = findData(*listWidget_profiles, profileName, csmNameRole);
@@ -1687,15 +1685,11 @@ void dlgConnectionProfiles::setIconOfListedProfile(const QString& profileName, c
     pItems.first()->setIcon(icon);
 }
 
-// Empty when nothing is selected. The three context-menu actions below each
-// need this, and cannot simply trust the check slot_profileContextMenu() made:
-// menu.exec() runs a nested event loop, so a queued fillout_form() - the
-// profile-copy completion handler runs one - can rebuild the list, and with it
-// the current selection, while the menu is still open.
-// That rebuild can also leave a *different* profile current, in which case the
-// action is applied to that one although the menu was built for the profile
-// selected at the time. That mis-targeting is long-standing and is not what
-// this is fixing; the crash of acting on nothing at all is.
+// Empty when nothing is selected. The context-menu actions re-check rather than
+// trust slot_profileContextMenu(): menu.exec() runs a nested event loop, and the
+// profile-copy completion handler calls fillout_form() from it, which can clear
+// the selection - or leave a different profile current, in which case the action
+// still mis-targets. Only the crash of acting on nothing is handled here.
 QString dlgConnectionProfiles::selectedProfileName() const
 {
     const auto* pItem = listWidget_profiles->currentItem();
@@ -1704,10 +1698,7 @@ QString dlgConnectionProfiles::selectedProfileName() const
 
 void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
 {
-    // The list can be right-clicked with nothing selected: the "My games" tab
-    // of a fresh install has no profile to offer, and fillout_form() only makes
-    // an item current when it finds one worth selecting. Every entry of this
-    // menu acts on the current profile, so without one there is nothing to show.
+    // "My games" on a fresh install lists nothing, so nothing is current
     const auto profileName = selectedProfileName();
     if (profileName.isEmpty()) {
         return;
@@ -1759,8 +1750,7 @@ void dlgConnectionProfiles::slot_setCustomIcon()
     }
 
     auto icon = QIcon(QPixmap(imageLocation).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
-    // the file dialog ran a nested event loop, so re-find the profile the icon
-    // was picked for rather than assuming it is still the current item
+    // the file dialog ran a nested event loop, so the current item may have moved
     setIconOfListedProfile(profileName, icon);
 }
 void dlgConnectionProfiles::slot_setCustomColor()
@@ -1782,7 +1772,6 @@ void dlgConnectionProfiles::slot_setCustomColor()
         if (!file.commit()) {
             qDebug() << "dlgConnectionProfiles::slot_setCustomColor: error saving custom icon color: " << file.errorString();
         }
-        // as in slot_setCustomIcon(): the colour dialog ran a nested event loop
         setIconOfListedProfile(profileName, customIcon(profileName, {color}));
     }
 }
@@ -1840,20 +1829,17 @@ void dlgConnectionProfiles::slot_copyProfile()
     auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(enums::profileHomePath, oldname), mudlet::getMudletPath(enums::profileHomePath, profile_name));
     auto watcher = new QFutureWatcher<bool>(this);
     connect(watcher, &QFutureWatcher<bool>::finished, this, [this, profile_name, oldPassword, watcher]() {
-        // a rebuild during the copy can already have picked the new folder up
         if (!mProfileList.contains(profile_name)) {
             mProfileList << profile_name;
         }
 
-        // The dialog stays usable while the copy runs, and anything that calls
-        // fillout_form() - switching the games tab is one click away - destroys
-        // every item in the list, including the one made for this copy. So the
-        // copy has to be looked up again by name here: holding the pointer
-        // across the copy leaves it dangling.
+        // The dialog stays usable while the copy runs, and switching the games
+        // tab calls fillout_form(), which destroys every item - including the
+        // one made for this copy. Hence look it up by name rather than hold it.
         auto pCopiedItems = findData(*listWidget_profiles, profile_name, csmNameRole);
         if (pCopiedItems.isEmpty()) {
-            // that rebuild scanned the profiles directory before the copy had
-            // finished landing in it, so the copy is not listed - scan again
+            // that rebuild scanned the profiles directory before the copy
+            // landed in it
             fillout_form();
             pCopiedItems = findData(*listWidget_profiles, profile_name, csmNameRole);
         }
@@ -1862,7 +1848,7 @@ void dlgConnectionProfiles::slot_copyProfile()
             if (listWidget_profiles->currentItem() == pCopiedItem) {
                 slot_itemClicked(pCopiedItem);
             } else {
-                // currentItemChanged is connected to slot_itemClicked
+                // reaches slot_itemClicked() through currentItemChanged
                 listWidget_profiles->setCurrentItem(pCopiedItem);
             }
         }
