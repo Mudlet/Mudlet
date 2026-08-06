@@ -330,13 +330,11 @@ public:
     void showedMuteAllMediaTutorial();
     bool showCharacterModeWarning();
     void showedCharacterModeWarning();
-    // True if the player has used Mudlet long enough not to need the basic
-    // tutorial tips, the interface tour or the starter UI. Memoised.
+    // True if the player has used Mudlet long enough not to need the tutorial
+    // tips, the interface tour or the starter UI. Memoised.
     bool experiencedMudletPlayer();
-    // Records the first launch. Must be called exactly once, from init(),
-    // before any profile can exist - public only so it can be tested.
+    // The two below are public only so they can be tested
     static void rememberFirstLaunch(QSettings& settings, const QString& profilesPath, const QDateTime& now);
-    // The uncached body of experiencedMudletPlayer() - public only for testing.
     static bool evaluateExperiencedPlayer(const QSettings& settings, const QString& profilesPath, const QDateTime& now);
 
     // Telnet URI handling
