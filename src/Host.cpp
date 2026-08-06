@@ -456,12 +456,10 @@ Host::~Host()
     // is being taken apart runs against freed members (#9653):
     mDeferredSaveTimer.stop();
 
-    // The editor is a parentless top-level window that closeChildren() deletes
-    // on the normal profile-close path; a Host destroyed without that call
-    // would leak the whole editor and its item trees, so delete it here while
-    // the units it references are still alive. Null the pointer first so that
-    // nothing looking at mpEditorDialog mid-teardown finds a half-destroyed
-    // widget - a QPointer only clears itself once ~QObject is reached:
+    // The editor is a parentless top-level window, so delete it here while the
+    // units it references are still alive. Null the QPointer first: it only
+    // clears itself once ~QObject is reached, so anything looking at
+    // mpEditorDialog mid-teardown would find a half-destroyed widget:
     if (auto* pEditor = mpEditorDialog.data()) {
         mpEditorDialog = nullptr;
         delete pEditor;

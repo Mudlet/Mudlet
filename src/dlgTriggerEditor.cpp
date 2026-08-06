@@ -1422,9 +1422,8 @@ dlgTriggerEditor::~dlgTriggerEditor()
     // into one of the slot_saveProperty_...() slots when this object is no
     // longer a valid receiver (#9574)
     utils::disconnectChildSignals(this);
-    // That does not cover the edbee text undo stack: it belongs to a parentless
-    // CharTextDocument, not to this widget's child tree, so break its
-    // connections into the editor by hand:
+    // The undo stacks are not in this widget's child tree - the edbee one hangs
+    // off a parentless CharTextDocument - so disconnect them by hand:
     if (mpTextUndoStack) {
         disconnect(mpTextUndoStack, nullptr, this, nullptr);
     }
@@ -1890,10 +1889,6 @@ void dlgTriggerEditor::slot_setTreeWidgetIconSize(const int s)
 
 void dlgTriggerEditor::closeEvent(QCloseEvent* event)
 {
-    // The undo-stack disconnects that used to live here (behind a
-    // WA_DeleteOnClose check) moved into the destructor, which covers every
-    // destruction path - including a plain delete that never sends this event.
-
     emit editorClosing();
     writeSettings();
     event->accept();
@@ -3095,8 +3090,8 @@ void dlgTriggerEditor::delete_alias()
         mpUndoStack->pushCommand(qtCmd);
     }
 
-    // Detaching an item strips the tree widget off its whole subtree, so this
-    // catches a new selection that sat inside another removed subtree:
+    // Detaching an item nulls treeWidget() on its whole subtree, which is how a
+    // newSelection that sat inside another removed subtree is caught here:
     if (newSelection && !newSelection->treeWidget()) {
         newSelection = mpAliasBaseItem;
     }
@@ -3111,8 +3106,8 @@ void dlgTriggerEditor::delete_alias()
         clearAliasForm();
     }
 
-    // Must stay after the selection handling above: the selection slots the
-    // removeChild() calls fired may still be reading the detached items.
+    // Has to stay after the selection handling: the slots it fires still read
+    // the detached items.
     qDeleteAll(removedItems);
 }
 
@@ -3255,8 +3250,6 @@ void dlgTriggerEditor::delete_action()
         mpUndoStack->pushCommand(qtCmd);
     }
 
-    // Detaching an item strips the tree widget off its whole subtree, so this
-    // catches a new selection that sat inside another removed subtree:
     if (newSelection && !newSelection->treeWidget()) {
         newSelection = mpActionBaseItem;
     }
@@ -3271,8 +3264,6 @@ void dlgTriggerEditor::delete_action()
         clearActionForm();
     }
 
-    // Must stay after the selection handling above: the selection slots the
-    // removeChild() calls fired may still be reading the detached items.
     qDeleteAll(removedItems);
 
     mpHost->getActionUnit()->updateAllToolbars();
@@ -3332,11 +3323,10 @@ void dlgTriggerEditor::delete_variable()
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
                 removedItems.append(pItem);
-                // Deleting this TVar below also frees its descendants, and unlike the
-                // other units nothing unregisters them, so getWVar() must stop
-                // resolving the whole detached subtree right now - both to keep a
-                // later loop pass over a selected descendant from looking up a freed
-                // TVar and to purge the item pointers before qDeleteAll() frees them:
+                // Deleting the TVar below frees its descendants too and nothing
+                // unregisters those, so drop the whole detached subtree from the
+                // lookup maps now: a later pass over a selected descendant would
+                // otherwise resolve a freed TVar, as would a recycled item address:
                 QList<QTreeWidgetItem*> pendingPurge{pItem};
                 while (!pendingPurge.isEmpty()) {
                     QTreeWidgetItem* pEntry = pendingPurge.takeLast();
@@ -3350,8 +3340,6 @@ void dlgTriggerEditor::delete_variable()
         }
     }
 
-    // Detaching an item strips the tree widget off its whole subtree, so this
-    // catches a new selection that sat inside another removed subtree:
     if (newSelection && !newSelection->treeWidget()) {
         newSelection = mpVarBaseItem;
     }
@@ -3366,8 +3354,6 @@ void dlgTriggerEditor::delete_variable()
         clearVarForm();
     }
 
-    // Must stay after the selection handling above: the selection slots the
-    // removeChild() calls fired may still be reading the detached items.
     qDeleteAll(removedItems);
 }
 
@@ -3496,8 +3482,6 @@ void dlgTriggerEditor::delete_script()
         mpUndoStack->pushCommand(qtCmd);
     }
 
-    // Detaching an item strips the tree widget off its whole subtree, so this
-    // catches a new selection that sat inside another removed subtree:
     if (newSelection && !newSelection->treeWidget()) {
         newSelection = mpScriptsBaseItem;
     }
@@ -3512,8 +3496,6 @@ void dlgTriggerEditor::delete_script()
         clearScriptForm();
     }
 
-    // Must stay after the selection handling above: the selection slots the
-    // removeChild() calls fired may still be reading the detached items.
     qDeleteAll(removedItems);
 }
 
@@ -3642,8 +3624,6 @@ void dlgTriggerEditor::delete_key()
         mpUndoStack->pushCommand(qtCmd);
     }
 
-    // Detaching an item strips the tree widget off its whole subtree, so this
-    // catches a new selection that sat inside another removed subtree:
     if (newSelection && !newSelection->treeWidget()) {
         newSelection = mpKeyBaseItem;
     }
@@ -3658,8 +3638,6 @@ void dlgTriggerEditor::delete_key()
         clearKeyForm();
     }
 
-    // Must stay after the selection handling above: the selection slots the
-    // removeChild() calls fired may still be reading the detached items.
     qDeleteAll(removedItems);
 }
 
@@ -3793,8 +3771,6 @@ void dlgTriggerEditor::delete_trigger()
         mpUndoStack->pushCommand(qtCmd);
     }
 
-    // Detaching an item strips the tree widget off its whole subtree, so this
-    // catches a new selection that sat inside another removed subtree:
     if (newSelection && !newSelection->treeWidget()) {
         newSelection = mpTriggerBaseItem;
     }
@@ -3809,8 +3785,6 @@ void dlgTriggerEditor::delete_trigger()
         clearTriggerForm();
     }
 
-    // Must stay after the selection handling above: the selection slots the
-    // removeChild() calls fired may still be reading the detached items.
     qDeleteAll(removedItems);
 }
 
@@ -3939,8 +3913,6 @@ void dlgTriggerEditor::delete_timer()
         mpUndoStack->pushCommand(qtCmd);
     }
 
-    // Detaching an item strips the tree widget off its whole subtree, so this
-    // catches a new selection that sat inside another removed subtree:
     if (newSelection && !newSelection->treeWidget()) {
         newSelection = mpTimerBaseItem;
     }
@@ -3955,8 +3927,6 @@ void dlgTriggerEditor::delete_timer()
         clearTimerForm();
     }
 
-    // Must stay after the selection handling above: the selection slots the
-    // removeChild() calls fired may still be reading the detached items.
     qDeleteAll(removedItems);
 }
 
