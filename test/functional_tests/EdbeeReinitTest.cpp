@@ -18,13 +18,10 @@
  ***************************************************************************/
 
 /*
- * mudlet::initEdbee() runs only once per process: edbee's own init() has no
- * re-entry guard and a second call orphans the whole manager graph (~75KB a
- * time). This test pins the other half of that bargain - after a mudlet
- * instance is destroyed and a new one constructed (as every functional test
- * with a per-method init() does), the edbee singleton must still be fully
- * alive: Lua grammar present, Mudlet theme present, and the script editor
- * must open against them.
+ * mudlet::initEdbee() only runs once per process, so destroying a mudlet
+ * instance and constructing another - what every functional test with a
+ * per-method init() does - must leave the edbee singleton fully usable: Lua
+ * grammar, Mudlet theme, and a script editor that opens against them.
  *
  * Run with: ctest -R EdbeeReinitTest -V
  */
@@ -182,12 +179,9 @@ private slots:
 
     void test_editorAliveAfterMudletReconstruction()
     {
-        // first mudlet instance primes edbee, then goes away - the pattern of
-        // every functional test whose per-method init() re-boots mudlet
         bootMudlet();
         delete mudlet::self();
 
-        // second instance: initEdbee() takes its early return here
         bootMudlet();
         deleteProfileDirectory(mProfileName);
 

@@ -324,10 +324,6 @@ private slots:
         QVERIFY2(mpHost->getTriggerUnit()->findTrigger(nameBefore), "The trigger lost its name while the editor was destroyed");
     }
 
-    // The protocol actions are parented to their menu so QMenu::clear() in
-    // initWithHost() can delete them (they used to leak on every preferences
-    // open). Prove a reopened dialog repopulates the menu with live actions
-    // whose connections still fire
     void test_protocolActionsFireAfterPreferencesReopen()
     {
         mudlet::self()->showOptionsDialog(qsl("tab_general"), mpHost);
@@ -351,8 +347,8 @@ private slots:
         }
         QVERIFY2(gmcpAction, "GMCP protocol action not found under the reopened dialog - parenting to the menu broke discovery or population");
 
-        // initWithHost() connects the action's toggled() to this button's
-        // setEnabled(), so the button flipping proves the fresh action is wired
+        // initWithHost() wires GMCP's toggled() to this button's setEnabled(),
+        // so the button flipping proves the fresh action is connected
         const bool enabledBefore = preferences->pushButton_forgetSavedSignIn->isEnabled();
         QCOMPARE(enabledBefore, gmcpAction->isChecked());
         gmcpAction->toggle();

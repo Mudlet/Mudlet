@@ -19,23 +19,14 @@
 
 #include "LsanSuppressions.h"
 
-// These hooks are only consulted when the LeakSanitizer runtime is linked in
-// (USE_SANITIZER builds, i.e. PTBs and testing builds); elsewhere they are two
-// inert functions. They cannot be guarded with an "is ASAN on" macro check:
-// Mudlet only applies -fsanitize=address at link time, so no compiler macro is
-// set, and Qt's qcompilerdetection.h shims __has_feature to 0 on GCC anyway.
+// Inert unless the LeakSanitizer runtime is linked in. They cannot be guarded
+// with an "is ASAN on" macro check: Mudlet only applies -fsanitize=address at
+// link time, so no compiler macro is set, and Qt's qcompilerdetection.h shims
+// __has_feature to 0 on GCC anyway. Built as their own OBJECT library, see
+// src/CMakeLists.txt.
 
-// They live in their own translation unit, built as the mudlet_lsan_hooks
-// OBJECT library, because LeakSanitizer looks them up as weak symbols. A weak
-// reference does not pull a member out of a static archive, so keeping them in
-// mudlet_core would leave every binary that brings its own main() - the Qt Test
-// executables, which get theirs from QTEST_MAIN - without any suppressions at
-// all. Linking the OBJECT library directly puts the definitions on the link
-// line unconditionally, where the weak reference can bind to them.
-
-// Embeds the suppression list into the binary so leak reports shown to users
-// by testing/PTB builds exclude third-party noise (GPU drivers, font stack)
-// with no LSAN_OPTIONS needed at runtime:
+// Keeps third-party noise (GPU drivers, font stack) out of the leak reports
+// that testing/PTB builds show users, with no LSAN_OPTIONS set at runtime
 extern "C" const char* __lsan_default_suppressions()
 {
     return mudletLsanSuppressions;

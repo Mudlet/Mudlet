@@ -775,13 +775,11 @@ string(REPLACE "\n" "\\n" MUDLET_LSAN_SUPPRESSIONS_CONTENT "${MUDLET_LSAN_SUPPRE
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/LsanSuppressions.h.in" "${CMAKE_CURRENT_BINARY_DIR}/LsanSuppressions.h" @ONLY)
 target_include_directories(${LIB_MUDLET_TARGET} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
-# LeakSanitizer resolves __lsan_default_suppressions/__lsan_default_options as
-# weak symbols, and a weak reference never pulls a member out of a static
-# archive. Keeping them inside ${LIB_MUDLET_TARGET} therefore only worked for
-# the mudlet executable, which drags the same object in for main(); the Qt Test
-# binaries supply their own main() via QTEST_MAIN and so linked no suppressions
-# at all. An OBJECT library gets its objects put on the link line directly, so
-# every target that links it definitely has the hooks.
+# LeakSanitizer resolves its hooks as weak symbols and a weak reference never
+# pulls a member out of a static archive, so they cannot live in
+# ${LIB_MUDLET_TARGET}: binaries that bring their own main() (the Qt Test ones,
+# via QTEST_MAIN) would link no suppressions at all. An OBJECT library puts the
+# definitions on the link line of every target that links it.
 add_library(mudlet_lsan_hooks OBJECT LsanHooks.cpp)
 target_include_directories(mudlet_lsan_hooks PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 set_target_properties(mudlet_lsan_hooks PROPERTIES AUTOMOC OFF POSITION_INDEPENDENT_CODE ON)

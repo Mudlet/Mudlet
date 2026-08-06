@@ -43,7 +43,7 @@ set(UNIT_TESTS
 foreach(test_name ${UNIT_TESTS})
     add_executable(${test_name} ${test_name}.cpp)
     add_dependencies(${test_name} ${LIB_MUDLET_TARGET})
-    # mudlet_lsan_hooks carries __lsan_default_suppressions; see src/CMakeLists.txt
+    # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
     target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
     add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
     set_tests_properties(${test_name} PROPERTIES

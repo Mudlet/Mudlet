@@ -954,13 +954,10 @@ void mudlet::setupConfig()
     }
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
 
-    // delete any previous instance (tests call setupConfig() repeatedly) and
-    // parent the new one to the application, not this window: the window
-    // deletes itself on close (WA_DeleteOnClose) and the Updater - which
-    // holds this QSettings - must outlive it to offer an update after the
-    // last window closes (#9388). For the same reason setupConfig() must not
-    // be re-run once init() has created the Updater, as the delete would
-    // dangle the pointer the Updater holds.
+    // parented to the application, not this window: the window deletes itself
+    // on close and the Updater keeps using this QSettings past that point.
+    // Which is also why setupConfig() must not run again once init() has
+    // created the Updater - the delete below would dangle its pointer.
     delete mpSettings;
     mpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(confPath), QSettings::IniFormat, qApp);
     migrateConfig(*mpSettings);
@@ -975,12 +972,10 @@ void mudlet::setupConfig()
 
 void mudlet::initEdbee()
 {
-    // edbee's init() has no re-entry guard - a second call reassigns all of
-    // its manager members and orphans the previous graph. Everything set up
-    // here is process-global (the edbee singleton, the Lua function list, Qt
-    // metatype registration), so one pass suffices even when tests construct
-    // several mudlet instances in one process (QTest's per-method init()
-    // re-runs mudlet::start() + mudlet::init() in many functional tests).
+    // edbee's init() has no re-entry guard - a second call reassigns all of its
+    // manager members and orphans the previous graph. Everything set up here is
+    // process-global, so one pass is enough however many mudlet instances a
+    // test constructs.
     static bool initialised = false;
     if (initialised) {
         return;
