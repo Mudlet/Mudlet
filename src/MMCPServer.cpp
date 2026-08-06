@@ -338,9 +338,11 @@ QPair<bool, QString> MMCPServer::chatGroup(const QString& group, const QString& 
 
     using namespace AnsiColors;
 
-    QString outMsg = qsl("%1%2\n%3%4 chats to the group, '%5'\n%6")
+    // The group field is a fixed 15 characters with no separator after it, so it
+    // has to be truncated as well as padded or the receiver's split desynchronises
+    QString outMsg = qsl("%1%2%3%4 chats to the group, '%5'\n%6")
                             .arg(QChar(static_cast<char>(TextGroup)))
-                            .arg(group, -15)
+                            .arg(group.left(csMMCPGroupFieldWidth), -csMMCPGroupFieldWidth)
                             .arg(getChatName(), FBLDRED, message)
                             .arg(QChar(static_cast<char>(End)));
 

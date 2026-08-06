@@ -23,6 +23,7 @@
  #include "utils.h"
 
 inline const uint16_t csDefaultMMCPHostPort{4050};
+inline constexpr int csMMCPGroupFieldWidth{15};
 inline const auto csDefaultMMCPChatName{qsl("MudletUser")};
 inline const auto csDefaultMMCPGroupName{qsl("<none>")};
 inline const auto csDefaultChatPrefix{qsl("<CHAT>")};

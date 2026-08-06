@@ -766,8 +766,8 @@ void MMCPClient::handleIncomingChatPersonal(const QString& msg)
  */
 void MMCPClient::handleIncomingChatGroup(const QString& msg)
 {
-    const QString groupStr = msg.left(15).trimmed();
-    const QString trimmedMsg = msg.right(msg.length() - 15);
+    const QString groupStr = msg.left(csMMCPGroupFieldWidth).trimmed();
+    const QString trimmedMsg = msg.mid(csMMCPGroupFieldWidth);
 
     using namespace AnsiColors;
 
