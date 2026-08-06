@@ -176,6 +176,11 @@ mudlet::mudlet()
 void mudlet::init()
 {
     smFirstLaunch = !QFile::exists(mudlet::getMudletPath(enums::profilesPath));
+    // Has to happen after setupConfig() has created mpSettings and before
+    // anything can create a profile, which is only true here. Note this asks a
+    // slightly different question to smFirstLaunch above: an existing but empty
+    // profiles directory still counts as a first launch. See rememberFirstLaunch()
+    rememberFirstLaunch(*mpSettings, mudlet::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
 
     QFile gitShaFile(":/app-build.txt");
     if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -7545,8 +7550,98 @@ void mudlet::showedCharacterModeWarning()
     mCharacterModeWarningsShown = std::min(mCharacterModeWarningsShown + 1, mCharacterModeWarningsMax);
 }
 
-// returns true if the Mudlet player is considered 'experienced' and doesn't need to be shown the basic
-// tutorial tips, such as splitscreen cancel shortcut
+// When Mudlet was first used on this installation, as UTC ISO-8601. Absent on
+// installations that predate the key - see rememberFirstLaunch().
+static const QLatin1String settingsKeyFirstLaunch("firstLaunchDate");
+static constexpr int experiencedPlayerMonths = 6;
+
+static bool anyProfilesExist(const QString& profilesPath)
+{
+    const QDir profiles(profilesPath);
+    if (!profiles.exists()) {
+        return false;
+    }
+    if (!QFileInfo(profilesPath).isReadable()) {
+        // An unlistable directory looks exactly like an empty one, and reading
+        // it as empty would stamp a long-time user with today's date as their
+        // first launch - permanently, since that is only ever written once.
+        qWarning() << "anyProfilesExist() WARNING - the profiles directory exists but cannot be read:" << profilesPath
+                   << "- assuming it holds profiles, so an existing user is not mistaken for a new one.";
+        return true;
+    }
+    return !profiles.entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty();
+}
+
+// Evidence that Mudlet has run here before the first-launch key existed: a
+// profile, or any other setting already on file. Either rules out a first-ever
+// run, including for someone who kept their settings but not their profiles -
+// a restored backup, or a move to a new machine.
+static bool mudletUsedBefore(const QSettings& settings, const QString& profilesPath)
+{
+    return anyProfilesExist(profilesPath) || !settings.allKeys().isEmpty();
+}
+
+// Intended to be called exactly once, from init(), after setupConfig() has made
+// the settings available and before any profile or setting of this run can be
+// written - only then does "no trace of earlier use" really mean the user is
+// starting today.
+//
+// Where there is such a trace the start date is not recoverable, so nothing is
+// recorded and evaluateExperiencedPlayer() falls back instead. No timestamp can
+// stand in: Mudlet's own writes refresh them, and whether a copied or restored
+// profile keeps its modification times depends entirely on the tool used, while
+// its birth time is reset either way.
+/*static*/ void mudlet::rememberFirstLaunch(QSettings& settings, const QString& profilesPath, const QDateTime& now)
+{
+    // The parse is deliberately not consulted: re-recording an unreadable value
+    // would restart the six month clock today, which is the harmful direction.
+    if (settings.contains(settingsKeyFirstLaunch) || mudletUsedBefore(settings, profilesPath)) {
+        return;
+    }
+
+    settings.setValue(settingsKeyFirstLaunch, now.toUTC().toString(Qt::ISODate));
+    settings.sync();
+    if (settings.status() != QSettings::NoError) {
+        // Worth saying out loud: the write is never retried, because by the next
+        // run the user has a profile and is indistinguishable from an upgrader.
+        // A newcomer who hits this loses their onboarding for good.
+        qWarning() << "mudlet::rememberFirstLaunch() WARNING - could not record the first launch date in" << settings.fileName() << "- QSettings status:" << settings.status()
+                   << "- this installation will later be taken for an experienced user's.";
+    }
+}
+
+// Returns true if the player has been using Mudlet long enough that first-time
+// guidance - the interface tour, the starter UI, the one-line hints - would be
+// an interruption rather than a help.
+//
+// This used to be inferred from profile directory modification times, which
+// measured the opposite of what was wanted: the per-profile data writes (url,
+// port, password, profile.ini, command history) all land directly in the
+// profile directory and bump its mtime on every session, so only a profile left
+// untouched for the whole window ever looked old. An active player of ten
+// years' standing classified as brand new.
+/*static*/ bool mudlet::evaluateExperiencedPlayer(const QSettings& settings, const QString& profilesPath, const QDateTime& now)
+{
+    const QString recorded = settings.value(settingsKeyFirstLaunch).toString();
+    const QDateTime firstLaunch = QDateTime::fromString(recorded, Qt::ISODate);
+    if (firstLaunch.isValid()) {
+        return firstLaunch <= now.addMonths(-experiencedPlayerMonths);
+    }
+    if (!recorded.isEmpty()) {
+        // The value is meant to be legible and hand-editable, so say when a
+        // hand-edit did not take rather than ignoring it in silence.
+        qWarning().nospace().noquote() << "evaluateExperiencedPlayer() WARNING - \"" << settingsKeyFirstLaunch << "\" holds \"" << recorded
+                                       << "\", which is not ISO 8601 - falling back to looking for signs of earlier use.";
+    }
+
+    // No usable record: an installation that predates the key, or one whose
+    // record was lost or corrupted. Either way the only signal left is whether
+    // Mudlet has been used here before. Erring towards 'experienced' is
+    // deliberate - interrupting a veteran with a beginner tour is far worse
+    // than a newcomer missing one.
+    return mudletUsedBefore(settings, profilesPath);
+}
+
 bool mudlet::experiencedMudletPlayer()
 {
     static std::optional<bool> cachedResult;
@@ -7554,19 +7649,17 @@ bool mudlet::experiencedMudletPlayer()
         return cachedResult.value();
     }
 
-    // crude metric to check if the player is experienced in Mudlet: see if any of the profiles is more than 6mo old
-    QDir profilesDir(mudlet::getMudletPath(enums::profilesPath));
-    QFileInfoList entries = profilesDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
-    QDateTime sixMonthsAgo = QDateTime::currentDateTime().addMonths(-6);
-
-    for (const QFileInfo& entry : std::as_const(entries)) {
-        if (entry.lastModified() < sixMonthsAgo) {
-            cachedResult = true;
-            return true;
-        }
+    const auto* settings = getQSettings();
+    if (!settings) {
+        // setupConfig() has not created them yet, so answer 'experienced',
+        // which shows nothing. Deliberately not cached: the answer is a guess,
+        // and caching it would pin every gate for the rest of the process.
+        qWarning() << "mudlet::experiencedMudletPlayer() WARNING - called before setupConfig(), so assuming an experienced player and showing no first-run guidance.";
+        return true;
     }
-    cachedResult = false;
-    return false;
+
+    cachedResult = evaluateExperiencedPlayer(*settings, getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
+    return cachedResult.value();
 }
 
 dlgTriggerEditor* mudlet::createMudletEditor()
