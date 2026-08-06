@@ -126,6 +126,24 @@ private slots:
         QVERIFY(luaTrue(host, qsl("BaseUI.vitalsData.hp.current == 521")));
     }
 
+    // A different shape family through the same prefilter: score-screen rows are
+    // trusted on first sight, and a score screen may only ever be shown once.
+    void test_aScoreScreenIsStillReadOnFirstSight()
+    {
+        Host* host = startProfileWithStarterUi();
+        QVERIFY(host);
+
+        feedLine(host, qsl("Health:   3600/3600     Mana:     3400/3400"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.vitalsData.hp ~= nil and BaseUI.vitalsData.hp.max == 3600")), "a score-screen row was not read on first sight");
+        QVERIFY(luaTrue(host, qsl("BaseUI.vitalsData.mp ~= nil and BaseUI.vitalsData.mp.max == 3400")));
+
+        // Chat is conversation, not a prompt: a tell quoting numbers must not
+        // move the gauges, which is the chat shapes being consulted from the
+        // vitals path.
+        feedLine(host, qsl("Bob tells you, 'I am somehow alive at 11/12 hp'"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.vitalsData.hp.max == 3600")), "a tell was harvested for vitals");
+    }
+
     // Each chat group has to keep routing into the tab its shapes always did.
     void test_chatCaptureStillSortsLinesIntoTheirTabs()
     {
@@ -138,14 +156,22 @@ private slots:
         // Tells' unread counter while All (the active tab) does not move.
         QVERIFY2(luaTrue(host, qsl("BaseUI.unread.tells == 1")), "a tell was not routed into the Tells tab");
 
+        // The three tagged shapes are one alternation, so each writes its tag
+        // into a different capture group and the unmatched branches come back
+        // empty. Exercise all three: only the first would be found by a handler
+        // that still read matches[2] and nothing else.
         feedLine(host, qsl("[newbie] Ann: how do I get out of here?"));
         QVERIFY2(luaTrue(host, qsl("BaseUI.unread.channels == 1")),
-                 "a tagged channel line was not routed into the Channels tab - the grouped tagged trigger is not "
+                 "a [tag] channel line was not routed into the Channels tab - the grouped tagged trigger is not "
                  "finding its capture group");
+        feedLine(host, qsl("(gossip) Ann: anyone around?"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.unread.channels == 2")), "a (tag) channel line was not routed");
+        feedLine(host, qsl("< chat | Ann: anyone around?"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.unread.channels == 3")), "a < tag | channel line was not routed");
 
         // A tag that is not a known channel name is not chat, grouped or not.
         feedLine(host, qsl("[12:34] the clock strikes noon")); // NOLINT(readability-magic-numbers)
-        QVERIFY(luaTrue(host, qsl("BaseUI.unread.channels == 1")));
+        QVERIFY(luaTrue(host, qsl("BaseUI.unread.channels == 3")));
     }
 
     // Once a protocol owns the gauges the plain-text layer's readings are thrown

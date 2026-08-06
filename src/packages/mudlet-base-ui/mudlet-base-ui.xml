@@ -605,11 +605,25 @@ local vitalsLinePatterns = {
     regex = [=[(?i)(?&lt;![\d/.,:%])(\d+)\s*(?:]=] .. shortLabels.mv .. [=[)\b(?!\s*[/%])]=] },
 }
 
+-- rex.match given a pattern STRING recompiles it on every call - lrexlib keeps
+-- no cache - so walking these shapes over one line meant 77 PCRE compilations,
+-- which dwarfed the matching itself. Compile each shape once, on first use.
+local compiledPattern = setmetatable({}, {
+  __index = function(cache, regex)
+    local ok, compiled = pcall(rex.new, regex)
+    -- a shape that will not compile is left as a string, so it fails exactly
+    -- the way it did before rather than silently disappearing
+    local value = ok and compiled or regex
+    rawset(cache, regex, value)
+    return value
+  end,
+})
+
 -- lines the chat layer would route are never harvested for vitals - a tell
 -- saying "I am on 100/120 hp" is conversation, not a prompt
 function BaseUI.chatLikeLine(text)
   for _, pattern in ipairs(chatPatterns) do
-    local capture = rex.match(text, pattern.regex)
+    local capture = rex.match(text, compiledPattern[pattern.regex])
     if capture then
       if not pattern.tagged then
         return true
@@ -651,7 +665,7 @@ function BaseUI.parseVitalsLine(text)
     return readings
   end
   for index, pattern in ipairs(vitalsLinePatterns) do
-    local first, second = rex.match(text, pattern.regex)
+    local first, second = rex.match(text, compiledPattern[pattern.regex])
     local reading
     if pattern.kind == "curmax" and first then
       local current, max = parseVitalsNumber(first), parseVitalsNumber(second)
