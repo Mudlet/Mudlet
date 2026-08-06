@@ -2702,6 +2702,10 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
 
     Host* host = &getHostFromLua(L);
     if (!host->setBackgroundImage(windowName, imgPath, mode, fullWindow)) {
+        if (fullWindow) {
+            // the console name is already validated above, so this is about the image
+            return warnArgumentValue(L, __func__, qsl("could not use '%1' as a full window background image").arg(imgPath));
+        }
         return warnArgumentValue(L, __func__, qsl("console or label '%1' not found").arg(windowName));
     }
 

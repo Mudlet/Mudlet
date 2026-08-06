@@ -48,8 +48,7 @@ extern void qInitResources_mudlet_fonts_common();
 extern void qInitResources_mudlet_fonts_posix();
 void initializeQRCResourcesForWindowBackgroundTest();
 
-// Covers the full-window background feature added in #9394: its interaction
-// with lowerWindow(), with setBorderColor(), and the cost of its 'cover' mode.
+// Covers the full-window background feature added in #9394.
 class WindowBackgroundTest : public QObject
 {
     Q_OBJECT
@@ -62,10 +61,15 @@ private:
     const QString mLocalhost = "localhost";
     QTemporaryDir mImageDir;
 
-    QString writeImage(const QString& fileName, const QSize& size, const QColor& colour)
+    // a pattern rather than a flat fill, so that resampling differences show up
+    QString writeImage(const QString& fileName, const QSize& size, const QColor& seed)
     {
         QImage image(size, QImage::Format_ARGB32);
-        image.fill(colour);
+        for (int y = 0; y < size.height(); ++y) {
+            for (int x = 0; x < size.width(); ++x) {
+                image.setPixel(x, y, qRgb((seed.red() + x * 7) % 256, (seed.green() + y * 13) % 256, (seed.blue() + (x + y) * 3) % 256));
+            }
+        }
         const QString path = mImageDir.filePath(fileName);
         if (!image.save(path, "PNG")) {
             return QString();
@@ -73,7 +77,7 @@ private:
         return path;
     }
 
-    void runLua(const QString& script) { mpHost->getLuaInterpreter()->compileAndExecuteScript(script); }
+    void runLua(const QString& script) { QVERIFY2(mpHost->getLuaInterpreter()->compileAndExecuteScript(script), qPrintable(script)); }
 
     int luaInt(const QString& global)
     {
@@ -84,7 +88,37 @@ private:
         return value;
     }
 
+    QString luaString(const QString& global)
+    {
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        lua_getglobal(L, global.toUtf8().constData());
+        const QString value = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        return value;
+    }
+
+    bool luaNil(const QString& global)
+    {
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        lua_getglobal(L, global.toUtf8().constData());
+        const bool value = lua_isnil(L, -1);
+        lua_pop(L, 1);
+        return value;
+    }
+
     int stackIndex(const QWidget* widget) const { return mpHost->mpConsole->mpMainFrame->children().indexOf(widget); }
+
+    void verifyStackedBelow(const QWidget* lower, const QWidget* upper, const char* message)
+    {
+        QVERIFY(lower);
+        QVERIFY(upper);
+        const int lowerIndex = stackIndex(lower);
+        const int upperIndex = stackIndex(upper);
+        QVERIFY2(lowerIndex >= 0 && upperIndex >= 0, "a widget under test is not a child of mpMainFrame");
+        QVERIFY2(lowerIndex < upperIndex, message);
+    }
+
+    QPixmap installedBackgroundBrush() const { return mpHost->mpConsole->mpWindowBackground->palette().brush(QPalette::Window).texture(); }
 
 private slots:
     void initTestCase()
@@ -154,14 +188,21 @@ private slots:
     {
         QVERIFY(mpHost);
         QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mpConsole->mpWindowBackground);
         runLua(qsl("resetBackgroundImage('main', true)"));
+        QCOMPARE(mpHost->mpConsole->mWindowBgImageMode, 0);
         runLua(qsl("setBorderColor(0, 0, 0)"));
     }
 
+    // runs even when a QVERIFY aborts a test body, so nothing leaks into the next one
+    void cleanup()
+    {
+        mpHost->mpConsole->deleteLabel(qsl("lowerTarget"));
+        mpHost->mpConsole->deleteMiniConsole(qsl("lowerConsole"));
+    }
+
     // lowerWindow() drops mpMainDisplay to the bottom of mpMainFrame's stack so a
-    // lowered label still sits above the console. The full-window background is a
-    // sibling in that same stack, so it has to stay below the display or it paints
-    // over the whole console.
+    // lowered label still sits above the console - and the background is a sibling there.
     void test_lowerWindowKeepsWindowBackgroundBottomMost()
     {
         const QString imagePath = writeImage(qsl("solid.png"), QSize(64, 64), Qt::red);
@@ -175,28 +216,35 @@ private slots:
 
         runLua(qsl("lowerWindow('lowerTarget')"));
 
-        QVERIFY2(stackIndex(mpHost->mpConsole->mpWindowBackground) < stackIndex(mpHost->mpConsole->mpMainDisplay), "lowerWindow() left the full-window background painting on top of the main display");
-        QVERIFY2(stackIndex(mpHost->mpConsole->mpMainDisplay) < stackIndex(mpHost->mpConsole->mLabelMap.value(qsl("lowerTarget"))),
-                 "lowerWindow() left the lowered label hidden behind the main display");
-
-        runLua(qsl("deleteLabel('lowerTarget')"));
+        verifyStackedBelow(mpHost->mpConsole->mpWindowBackground, mpHost->mpConsole->mpMainDisplay, "lowerWindow() left the full-window background painting on top of the main display");
+        verifyStackedBelow(mpHost->mpConsole->mpMainDisplay, mpHost->mpConsole->mLabelMap.value(qsl("lowerTarget")), "lowerWindow() left the lowered label hidden behind the main display");
     }
 
-    // Same ordering has to hold with no background image set, since the widget
-    // exists either way.
+    // The six branches of lowerWindow() are copy-pasted, so cover a second one.
+    void test_lowerWindowKeepsWindowBackgroundBottomMostForAMiniConsole()
+    {
+        const QString imagePath = writeImage(qsl("solidConsole.png"), QSize(64, 64), Qt::cyan);
+        QVERIFY(!imagePath.isEmpty());
+
+        runLua(qsl("setBackgroundImage('main', [[%1]], 'cover', true)").arg(imagePath));
+        runLua(qsl("createMiniConsole('lowerConsole', 10, 10, 200, 100)"));
+        QVERIFY(mpHost->mpConsole->mSubConsoleMap.contains(qsl("lowerConsole")));
+
+        runLua(qsl("lowerWindow('lowerConsole')"));
+
+        verifyStackedBelow(mpHost->mpConsole->mpWindowBackground, mpHost->mpConsole->mpMainDisplay, "lowerWindow() left the full-window background painting on top of the main display");
+    }
+
     void test_lowerWindowOrderingHoldsWithoutABackgroundImage()
     {
         runLua(qsl("createLabel('lowerTarget', 10, 10, 100, 100, 1)"));
         runLua(qsl("lowerWindow('lowerTarget')"));
 
-        QVERIFY(stackIndex(mpHost->mpConsole->mpWindowBackground) < stackIndex(mpHost->mpConsole->mpMainDisplay));
-        QVERIFY(stackIndex(mpHost->mpConsole->mpMainDisplay) < stackIndex(mpHost->mpConsole->mLabelMap.value(qsl("lowerTarget"))));
-
-        runLua(qsl("deleteLabel('lowerTarget')"));
+        verifyStackedBelow(mpHost->mpConsole->mpWindowBackground, mpHost->mpConsole->mpMainDisplay, "lowerWindow() put the main display below the full-window background widget");
+        verifyStackedBelow(mpHost->mpConsole->mpMainDisplay, mpHost->mpConsole->mLabelMap.value(qsl("lowerTarget")), "lowerWindow() left the lowered label hidden behind the main display");
     }
 
-    // changeColors() rebuilds mpMainFrame's palette, and a game can reach it with
-    // no user action at all through an OSC palette change.
+    // a game can reach changeColors() with no user action, through an OSC palette change
     void test_borderColorSurvivesChangeColors()
     {
         runLua(qsl("setBorderColor(10, 20, 30)"));
@@ -216,9 +264,33 @@ private slots:
         QCOMPARE(mpHost->mpConsole->mpMainFrame->palette().color(QPalette::Window), QColor(40, 50, 60));
     }
 
-    // A full-window background deliberately makes the frame transparent, so the
-    // border colour has to be reported from where it was stored rather than read
-    // back out of the palette.
+    void test_borderColorReturnsAfterResettingTheBackground()
+    {
+        const QString imagePath = writeImage(qsl("reset.png"), QSize(64, 64), Qt::yellow);
+        QVERIFY(!imagePath.isEmpty());
+
+        runLua(qsl("setBorderColor(255, 0, 0)"));
+        runLua(qsl("setBackgroundImage('main', [[%1]], 'cover', true)").arg(imagePath));
+        QCOMPARE(mpHost->mpConsole->mpMainFrame->palette().color(QPalette::Window).alpha(), 0);
+
+        runLua(qsl("resetBackgroundImage('main', true)"));
+
+        QCOMPARE(mpHost->mpConsole->mpMainFrame->palette().color(QPalette::Window), QColor(255, 0, 0));
+    }
+
+    void test_setBorderColorUnderAFullWindowBackgroundKeepsTheFrameTransparent()
+    {
+        const QString imagePath = writeImage(qsl("order.png"), QSize(64, 64), Qt::white);
+        QVERIFY(!imagePath.isEmpty());
+
+        runLua(qsl("setBackgroundImage('main', [[%1]], 'cover', true)").arg(imagePath));
+        runLua(qsl("setBorderColor(11, 22, 33)"));
+
+        QCOMPARE(mpHost->mpConsole->mpMainFrame->palette().color(QPalette::Window).alpha(), 0);
+        QCOMPARE(mpHost->mpConsole->borderColor(), QColor(11, 22, 33));
+    }
+
+    // the frame is transparent under a full-window background, so the palette cannot be the source
     void test_getBorderColorReportsSetValueUnderFullWindowBackground()
     {
         const QString imagePath = writeImage(qsl("solid2.png"), QSize(64, 64), Qt::blue);
@@ -235,10 +307,6 @@ private slots:
         QCOMPARE(mpHost->mpConsole->mpMainFrame->palette().color(QPalette::Window).alpha(), 0);
     }
 
-    // 'cover' must crop the source down to the target aspect before scaling. The
-    // scale-then-crop order allocates an intermediate proportional to the aspect
-    // mismatch - 32400x1080 (~140MB) for a 3000x100 image in a 1920x1080 window -
-    // on every resize event.
     void test_coverSourceRectNeverExceedsTheSourceImage()
     {
         const QVector<QSize> sourceSizes{{3000, 100}, {100, 3000}, {1920, 1080}, {64, 64}, {1, 4000}, {4000, 1}};
@@ -254,8 +322,6 @@ private slots:
         }
     }
 
-    // The crop has to pick the same region the scale-then-crop order arrived at,
-    // i.e. the largest centred rectangle of the target's aspect ratio.
     void test_coverSourceRectMatchesAspectPreservingCentreCrop()
     {
         const QRect wideSource = TConsole::coverSourceRect(QSize(3000, 100), QSize(1920, 1080));
@@ -269,8 +335,6 @@ private slots:
         QCOMPARE(tallSource.center().y(), QRect(0, 0, 100, 3000).center().y());
     }
 
-    // End to end: an extreme-aspect source still produces a brush exactly the size
-    // of the background widget.
     void test_coverBrushMatchesWidgetSizeForExtremeAspectImage()
     {
         const QString imagePath = writeImage(qsl("wide.png"), QSize(3000, 100), Qt::green);
@@ -280,11 +344,63 @@ private slots:
 
         const QSize widgetSize = mpHost->mpConsole->mpWindowBackground->size();
         QVERIFY(!widgetSize.isEmpty());
-        QCOMPARE(mpHost->mpConsole->mpWindowBackground->palette().brush(QPalette::Window).texture().size(), widgetSize);
+        QCOMPARE(installedBackgroundBrush().size(), widgetSize);
     }
 
-    // Switching from a stylesheet-driven mode to 'cover' has to leave the pixmap
-    // brush in the palette: clearing a stylesheet repolishes the widget.
+    // the two orders resample differently, so this fails if the crop stops coming first
+    void test_coverBrushIsScaledFromTheCroppedSourceRegion()
+    {
+        const QSize sourceSize(3000, 100);
+        const QString imagePath = writeImage(qsl("order-wide.png"), sourceSize, Qt::darkGreen);
+        QVERIFY(!imagePath.isEmpty());
+
+        runLua(qsl("setBackgroundImage('main', [[%1]], 'cover', true)").arg(imagePath));
+
+        const QSize widgetSize = mpHost->mpConsole->mpWindowBackground->size();
+        const QPixmap source(imagePath);
+        QCOMPARE(source.size(), sourceSize);
+        const QPixmap expected = source.copy(TConsole::coverSourceRect(sourceSize, widgetSize)).scaled(widgetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+
+        QCOMPARE(installedBackgroundBrush().toImage(), expected.toImage());
+    }
+
+    void test_unloadableCoverImageIsReportedAndKeepsThePreviousBackground()
+    {
+        const QString goodPath = writeImage(qsl("good.png"), QSize(300, 200), Qt::gray);
+        QVERIFY(!goodPath.isEmpty());
+
+        runLua(qsl("setBackgroundImage('main', [[%1]], 'cover', true)").arg(goodPath));
+        const QImage installed = installedBackgroundBrush().toImage();
+        QVERIFY(!installed.isNull());
+
+        runLua(qsl("bgOk, bgError = setBackgroundImage('main', [[%1]], 'cover', true)").arg(mImageDir.filePath(qsl("no-such-file.png"))));
+
+        QVERIFY(luaNil(qsl("bgOk")));
+        QVERIFY2(luaString(qsl("bgError")).contains(qsl("full window background image")), qPrintable(luaString(qsl("bgError"))));
+        QCOMPARE(mpHost->mpConsole->mWindowBgImagePath, goodPath);
+        QCOMPARE(installedBackgroundBrush().toImage(), installed);
+    }
+
+    void test_coverBrushFollowsAWindowResize()
+    {
+        const QString imagePath = writeImage(qsl("resize.png"), QSize(3000, 100), Qt::darkRed);
+        QVERIFY(!imagePath.isEmpty());
+
+        runLua(qsl("setBackgroundImage('main', [[%1]], 'cover', true)").arg(imagePath));
+        const QSize sizeBefore = mpHost->mpConsole->mpWindowBackground->size();
+
+        mudlet::self()->resize(900, 640);
+        QTest::qWait(200ms);
+
+        const QSize sizeAfter = mpHost->mpConsole->mpWindowBackground->size();
+        QVERIFY2(sizeAfter != sizeBefore, "the window did not actually resize");
+        QCOMPARE(installedBackgroundBrush().size(), sizeAfter);
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(200ms);
+    }
+
+    // clearing a stylesheet repolishes the widget, which can drop the palette brush
     void test_switchingFromStylesheetModeToCoverInstallsTheBrush()
     {
         const QString imagePath = writeImage(qsl("switch.png"), QSize(256, 128), Qt::magenta);
