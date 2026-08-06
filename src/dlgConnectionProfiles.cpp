@@ -1672,10 +1672,31 @@ void dlgConnectionProfiles::generateCustomProfile(const QString& profileName) co
     listWidget_profiles->addItem(pItem);
 }
 
+// The items are destroyed and rebuilt wholesale by fillout_form(), so anything
+// that has let the event loop run since it last saw one has to ask for the
+// profile by name again instead of keeping the pointer.
+void dlgConnectionProfiles::setIconOfProfile(const QString& profileName, const QIcon& icon) const
+{
+    const auto pItems = findData(*listWidget_profiles, profileName, csmNameRole);
+    if (pItems.isEmpty()) {
+        return;
+    }
+    pItems.first()->setIcon(icon);
+}
+
 void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
 {
+    // The list can be right-clicked with nothing selected: the "My games" tab
+    // of a fresh install has no profile to offer, and fillout_form() only makes
+    // an item current when it finds one worth selecting. Every entry of this
+    // menu acts on the current profile, so without one there is nothing to show.
+    const auto* pItem = listWidget_profiles->currentItem();
+    if (!pItem) {
+        return;
+    }
+
     const QPoint globalPos = listWidget_profiles->mapToGlobal(pos);
-    auto profileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
+    const auto profileName = pItem->data(csmNameRole).toString();
 
     QMenu menu;
     if (hasCustomIcon(profileName)) {
@@ -1718,7 +1739,9 @@ void dlgConnectionProfiles::slot_setCustomIcon()
     }
 
     auto icon = QIcon(QPixmap(imageLocation).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
-    listWidget_profiles->currentItem()->setIcon(icon);
+    // the file dialog ran a nested event loop, so re-find the profile the icon
+    // was picked for rather than assuming it is still the current item
+    setIconOfProfile(profileName, icon);
 }
 void dlgConnectionProfiles::slot_setCustomColor()
 {
@@ -1736,7 +1759,8 @@ void dlgConnectionProfiles::slot_setCustomColor()
         if (!file.commit()) {
             qDebug() << "dlgConnectionProfiles::slot_setCustomColor: error saving custom icon color: " << file.errorString();
         }
-        listWidget_profiles->currentItem()->setIcon(customIcon(profileName, {color}));
+        // as in slot_setCustomIcon(): the colour dialog ran a nested event loop
+        setIconOfProfile(profileName, customIcon(profileName, {color}));
     }
 }
 void dlgConnectionProfiles::slot_resetCustomIcon()
@@ -1788,10 +1812,31 @@ void dlgConnectionProfiles::slot_copyProfile()
     mpCopyProfile->setText(tr("Copying..."));
     mpCopyProfile->setEnabled(false);
     auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(enums::profileHomePath, oldname), mudlet::getMudletPath(enums::profileHomePath, profile_name));
-    auto watcher = new QFutureWatcher<bool>;
-    connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
+    auto watcher = new QFutureWatcher<bool>(this);
+    connect(watcher, &QFutureWatcher<bool>::finished, this, [this, profile_name, oldPassword, watcher]() {
         mProfileList << profile_name;
-        slot_itemClicked(pItem);
+
+        // The dialog stays usable while the copy runs, and anything that calls
+        // fillout_form() - switching the games tab is one click away - destroys
+        // every item in the list, including the one made for this copy. So the
+        // copy has to be looked up again by name here: holding the pointer
+        // across the copy leaves it dangling.
+        auto pCopiedItems = findData(*listWidget_profiles, profile_name, csmNameRole);
+        if (pCopiedItems.isEmpty()) {
+            // rebuilt before the copy had reached the disk, so it is not listed
+            // yet - rebuild once more now that it is there
+            fillout_form();
+            pCopiedItems = findData(*listWidget_profiles, profile_name, csmNameRole);
+        }
+        if (!pCopiedItems.isEmpty()) {
+            auto* pCopiedItem = pCopiedItems.first();
+            if (listWidget_profiles->currentItem() == pCopiedItem) {
+                slot_itemClicked(pCopiedItem);
+            } else {
+                // currentItemChanged is connected to slot_itemClicked
+                listWidget_profiles->setCurrentItem(pCopiedItem);
+            }
+        }
 
         // restore the password, which won't be copied by the disk copy if stored in the credential manager
         // Temporarily block textChanged signal to avoid triggering save on programmatic setText

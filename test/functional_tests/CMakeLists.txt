@@ -46,6 +46,7 @@ set(FUNCTIONAL_TEST_SOURCES
     ActionSelfUninstallTest.cpp
     ProfileFolderNameTest.cpp
     DialogTeardownTest.cpp
+    ConnectionDialogCrashTest.cpp
     TMediaLoopTest.cpp
     DefaultPackagesTest.cpp
 )
