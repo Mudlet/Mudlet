@@ -65,13 +65,16 @@ public:
     void renameVar(TVar*);
     void createVar(TVar*);
     VarUnit* getVarUnit();
+    // Hands the Lua registry references this interface took for reference-keyed
+    // variables back to the state. Anything that builds a variable tree and then
+    // throws it away owes this call; the destructor cannot make it - see there.
     void releaseVariableReferences();
     bool loadVar(TVar* var);
     bool reparentCVariable(TVar* from, TVar* to, TVar* curVar);
     bool reparentVariable(QTreeWidgetItem*, QTreeWidgetItem*, QTreeWidgetItem*);
     std::pair<bool, QString> validMove(QTreeWidgetItem*);
     void getAllChildren(TVar* var, QList<TVar*>* list);
-    lua_State* getState();
+    lua_State* getState() const;
     static int onPanic(lua_State*);
 
 private:

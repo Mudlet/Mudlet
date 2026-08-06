@@ -32,7 +32,8 @@
  * compileScript() was in the middle of compiling - heap corruption every way.
  * TriggerUnit/AliasUnit/KeyUnit gained a processing-depth deferral in #9383;
  * this covers TimerUnit and ScriptUnit (both the event-dispatch and the
- * compile-time body paths).
+ * compile-time body paths). The resurrection half below covers the trigger,
+ * alias, timer, button and event-dispatch routes.
  *
  * Under AddressSanitizer the pre-fix code aborts with heap-use-after-free
  * inside TTimer::execute() / Host::raiseEvent() / TScript::compileScript(); with
@@ -48,27 +49,35 @@
 
 #include <QtTest/QtTest>
 
+#include <QScopeGuard>
 #include <QTemporaryDir>
 
 #include "ActionUnit.h"
+#include "AliasUnit.h"
 #include "Host.h"
 #include "HostManager.h"
+#include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
 #include "ScriptUnit.h"
 #include "TAction.h"
+#include "TAlias.h"
 #include "TEvent.h"
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
 #include "TimerUnit.h"
 #include "TriggerUnit.h"
+#include "VarUnit.h"
 #include "XMLexport.h"
+#include "XMLimport.h"
 #include "mudlet.h"
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lauxlib.h>
 #include <lua5.1/lua.h>
 #else
+#include <lauxlib.h>
 #include <lua.h>
 #endif
 }
@@ -97,13 +106,21 @@ static int exportProfileMidPass(lua_State*)
         return 0;
     }
     auto writer = std::make_shared<XMLexport>(gpMidPassExportHost);
-    if (!writer->exportPackage(gMidPassExportPath, true, true)) {
+    // variables included: this is the only export in the file that builds the
+    // variable tree, and doing it from here means doing it with a Lua call
+    // frame live, which is how a script-driven save reaches it
+    if (!writer->exportPackage(gMidPassExportPath, true, false)) {
+        qWarning() << "exportProfileMidPass() - the export itself failed";
         return 0;
     }
     QFile file(gMidPassExportPath);
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        gMidPassExportedXml = QString::fromUtf8(file.readAll());
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "exportProfileMidPass() - could not read back" << gMidPassExportPath;
+        return 0;
     }
+    gMidPassExportedXml = QString::fromUtf8(file.readAll());
+    file.close();
+    QFile::remove(gMidPassExportPath);
     return 0;
 }
 
@@ -144,6 +161,7 @@ private slots:
         // NB: mLoadedOk is left false on purpose - the deferred saveProfile()
         // that uninstallPackage() schedules then declines to run, which this
         // console-less test Host could not service anyway.
+        createKeeperItems();
     }
 
     void cleanupTestCase()
@@ -315,6 +333,9 @@ private slots:
     //
     // This is the trigger route, driven the whole way: the package's own
     // trigger fires, uninstalls its package and saves, all inside the pass.
+    // It also carries the cross-check between this file's two halves - its
+    // export is the only one here that includes the variables, so the variable
+    // tree gets built from inside a live Lua call frame.
     void test_saveFromTriggerScriptDoesNotResurrectItsPackage()
     {
         const QString packageName = qsl("resurrect-trigger");
@@ -322,7 +343,10 @@ private slots:
 
         gpMidPassExportHost = mpHost;
         gMidPassExportPath = qsl("%1/mid-pass-export.xml").arg(mConfigDir.path());
-        lua_register(mpHost->mLuaInterpreter.getLuaGlobalState(), "qaExportProfileMidPass", exportProfileMidPass);
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        lua_register(L, "qaExportProfileMidPass", exportProfileMidPass);
+        QCOMPARE(luaL_dostring(L, "midPassSavedVar = 'saved from inside the pass'"), 0);
+        mpHost->getLuaInterface()->getVarUnit()->savedVars.insert(qsl("midPassSavedVar"));
 
         auto pGroup = new TTrigger(nullptr, mpHost);
         pGroup->setIsFolder(true);
@@ -346,6 +370,8 @@ private slots:
         pBystander->setName(qsl("resurrectTriggerBystander"));
         pBystander->setIsActive(true);
 
+        QVERIFY2(exportedProfileXml().contains(qsl("resurrectTriggerGroup")), "the trigger group should be in the profile before its package is uninstalled");
+
         mpHost->getTriggerUnit()->processDataStream(qsl("resurrect me"), -1);
 
         QVERIFY2(!mpHost->mInstalledPackages.contains(packageName), "package was not uninstalled");
@@ -353,18 +379,57 @@ private slots:
         QVERIFY2(!gMidPassExportedXml.contains(qsl("resurrectTriggerGroup")), "a save taken mid-pass wrote the uninstalled package's trigger group back into the profile");
         QVERIFY2(!gMidPassExportedXml.contains(qsl("resurrectTriggerKicker")), "a save taken mid-pass wrote the uninstalled package's trigger back into the profile");
         QVERIFY2(!gMidPassExportedXml.contains(qsl("resurrectTriggerBystander")), "a save taken mid-pass wrote the uninstalled package's trigger back into the profile");
+        const QString keeperError = keepersMissingFrom(gMidPassExportedXml);
+        QVERIFY2(keeperError.isEmpty(), qPrintable(keeperError));
+        QVERIFY2(gMidPassExportedXml.contains(qsl("saved from inside the pass")), "the variables were not read out of Lua by a save taken from inside a script");
 
         // the pass ended, so the deferred deletes must have been flushed
         QVERIFY2(mpHost->getTriggerUnit()->findItems(qsl("resurrectTriggerKicker")).empty(), "uninstalled trigger is still registered");
+
+        mpHost->getLuaInterface()->getVarUnit()->savedVars.remove(qsl("midPassSavedVar"));
         gpMidPassExportHost = nullptr;
     }
 
-    // The timer route is the one that makes the corruption permanent: TTimer's
-    // processing depth is held for the whole of execute(), so even the save
-    // uninstallPackage() defers to the next event loop pass runs inside it, and
-    // when that is the last save of the session there is nothing left to undo
-    // it. beginProcessing()/endProcessing() here are the very calls
-    // TTimer::execute() wraps its callback in.
+    // The alias route, driven the same way. This is the likeliest real-world
+    // shape of the bug: a package ships a "<name> uninstall" alias that removes
+    // its own package and saves.
+    void test_saveFromAliasScriptDoesNotResurrectItsPackage()
+    {
+        const QString packageName = qsl("resurrect-alias");
+        mpHost->mInstalledPackages << packageName;
+
+        gpMidPassExportHost = mpHost;
+        gMidPassExportPath = qsl("%1/mid-pass-alias-export.xml").arg(mConfigDir.path());
+        lua_register(mpHost->mLuaInterpreter.getLuaGlobalState(), "qaExportProfileMidPass", exportProfileMidPass);
+
+        auto pAlias = new TAlias(qsl("resurrectAlias"), mpHost);
+        pAlias->setRegexCode(qsl("^resurrect me$"));
+        mpHost->getAliasUnit()->registerAlias(pAlias);
+        pAlias->mPackageName = packageName;
+        QVERIFY2(pAlias->setScript(qsl("uninstallPackage(\"%1\")\nqaExportProfileMidPass()").arg(packageName)), "alias script failed to compile");
+        pAlias->setIsActive(true);
+
+        QVERIFY2(exportedProfileXml().contains(qsl("resurrectAlias")), "the alias should be in the profile before its package is uninstalled");
+
+        mpHost->getAliasUnit()->processDataStream(qsl("resurrect me"));
+
+        QVERIFY2(!mpHost->mInstalledPackages.contains(packageName), "package was not uninstalled");
+        QVERIFY2(!gMidPassExportedXml.isEmpty(), "the mid-pass export produced nothing to check");
+        QVERIFY2(!gMidPassExportedXml.contains(qsl("resurrectAlias")), "a save taken mid-pass wrote the uninstalled package's alias back into the profile");
+        const QString keeperError = keepersMissingFrom(gMidPassExportedXml);
+        QVERIFY2(keeperError.isEmpty(), qPrintable(keeperError));
+
+        QVERIFY2(!mpHost->getAliasUnit()->findFirstAlias(qsl("resurrectAlias")), "uninstalled alias is still registered");
+        gpMidPassExportHost = nullptr;
+    }
+
+    // The timer route matters because TimerUnit's depth covers the whole of
+    // TTimer::execute(), so anything the callback reaches that saves the profile
+    // synchronously - a Lua saveProfile(), an installPackage() - saves at depth,
+    // and a callback that spins the event loop itself lets even the save
+    // uninstallPackage() queues run there. When that is the session's last save
+    // there is nothing left to undo it. beginProcessing()/endProcessing() below
+    // are the very calls TTimer::execute() wraps its callback in.
     void test_saveDuringTimerCallbackDoesNotResurrectItsPackage()
     {
         const QString packageName = qsl("resurrect-timer");
@@ -377,14 +442,23 @@ private slots:
 
         QVERIFY2(exportedProfileXml().contains(qsl("resurrectTimer")), "the timer should be in the profile before its package is uninstalled");
 
-        mpHost->getTimerUnit()->beginProcessing();
-        QVERIFY(mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package));
-        const QString xml = exportedProfileXml();
-        mpHost->getTimerUnit()->endProcessing();
-        mpHost->getTimerUnit()->doCleanup();
+        QString xml;
+        {
+            mpHost->getTimerUnit()->beginProcessing();
+            // a failed QVERIFY returns from the slot, and a level left on would
+            // wedge every later test's doCleanup()
+            const auto depthGuard = qScopeGuard([this]() {
+                mpHost->getTimerUnit()->endProcessing();
+                mpHost->getTimerUnit()->doCleanup();
+            });
+            QVERIFY(mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package));
+            xml = exportedProfileXml();
+        }
 
         QVERIFY2(!xml.isEmpty(), "the export produced nothing to check");
         QVERIFY2(!xml.contains(qsl("resurrectTimer")), "a save taken during a timer callback wrote the uninstalled package's timer back into the profile");
+        const QString keeperError = keepersMissingFrom(xml);
+        QVERIFY2(keeperError.isEmpty(), qPrintable(keeperError));
         QVERIFY2(!mpHost->getTimerUnit()->findFirstTimer(qsl("resurrectTimer")), "uninstalled timer is still registered");
     }
 
@@ -401,14 +475,21 @@ private slots:
 
         QVERIFY2(exportedProfileXml().contains(qsl("resurrectAction")), "the button should be in the profile before its package is uninstalled");
 
-        mpHost->getActionUnit()->beginProcessing();
-        QVERIFY(mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package));
-        const QString xml = exportedProfileXml();
-        mpHost->getActionUnit()->endProcessing();
-        mpHost->getActionUnit()->doCleanup();
+        QString xml;
+        {
+            mpHost->getActionUnit()->beginProcessing();
+            const auto depthGuard = qScopeGuard([this]() {
+                mpHost->getActionUnit()->endProcessing();
+                mpHost->getActionUnit()->doCleanup();
+            });
+            QVERIFY(mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package));
+            xml = exportedProfileXml();
+        }
 
         QVERIFY2(!xml.isEmpty(), "the export produced nothing to check");
         QVERIFY2(!xml.contains(qsl("resurrectAction")), "a save taken during a button script wrote the uninstalled package's button back into the profile");
+        const QString keeperError = keepersMissingFrom(xml);
+        QVERIFY2(keeperError.isEmpty(), qPrintable(keeperError));
         QVERIFY2(!mpHost->getActionUnit()->findAction(qsl("resurrectAction")), "uninstalled button is still registered");
     }
 
@@ -427,18 +508,163 @@ private slots:
 
         QVERIFY2(exportedProfileXml().contains(qsl("resurrectScript")), "the script should be in the profile before its package is uninstalled");
 
-        mpHost->getScriptUnit()->beginProcessing();
-        QVERIFY(mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package));
-        const QString xml = exportedProfileXml();
-        mpHost->getScriptUnit()->endProcessing();
-        mpHost->getScriptUnit()->doCleanup();
+        QString xml;
+        {
+            mpHost->getScriptUnit()->beginProcessing();
+            const auto depthGuard = qScopeGuard([this]() {
+                mpHost->getScriptUnit()->endProcessing();
+                mpHost->getScriptUnit()->doCleanup();
+            });
+            QVERIFY(mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package));
+            xml = exportedProfileXml();
+        }
 
         QVERIFY2(!xml.isEmpty(), "the export produced nothing to check");
         QVERIFY2(!xml.contains(qsl("resurrectScript")), "a save taken during an event dispatch wrote the uninstalled package's script back into the profile");
+        const QString keeperError = keepersMissingFrom(xml);
+        QVERIFY2(keeperError.isEmpty(), qPrintable(keeperError));
         QVERIFY2(mpHost->getScriptUnit()->findItems(qsl("resurrectScript")).empty(), "uninstalled script is still registered");
     }
 
+    // The module writer has the same hazard with an extra twist: reloading a
+    // module (Host::reloadModule(), reachable from Lua) uninstalls and
+    // reinstalls it back to back, so from inside a script the old items are
+    // still registered when the new ones arrive and the module's own file gets
+    // written with both copies - which then both come back on the next load.
+    void test_moduleSaveDuringReloadDoesNotDuplicateItsItems()
+    {
+        const QString moduleName = qsl("resurrect-module");
+        registerModuleAs(moduleName);
+        QVERIFY2(importModuleTimerNamed(moduleName, qsl("moduleTimerBeforeReload")), "could not import the module's timer");
+
+        QVERIFY2(exportedModuleXml(moduleName).contains(qsl("moduleTimerBeforeReload")), "the module's timer should be in its file before the reload");
+
+        QString xml;
+        {
+            mpHost->getTimerUnit()->beginProcessing();
+            const auto depthGuard = qScopeGuard([this]() {
+                mpHost->getTimerUnit()->endProcessing();
+                mpHost->getTimerUnit()->doCleanup();
+            });
+            // the uninstall half of a reload: at depth the old timer is only
+            // deactivated, and stays registered
+            QVERIFY(mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleSync));
+            // ... and the reinstall half brings the module back with fresh items
+            registerModuleAs(moduleName);
+            QVERIFY2(importModuleTimerNamed(moduleName, qsl("moduleTimerAfterReload")), "could not re-import the module's timer");
+
+            xml = exportedModuleXml(moduleName);
+        }
+
+        QVERIFY2(!xml.isEmpty(), "the module export produced nothing to check");
+        QVERIFY2(xml.contains(qsl("moduleTimerAfterReload")), "the reloaded module's timer must be written to its file");
+        QVERIFY2(!xml.contains(qsl("moduleTimerBeforeReload")), "a module save taken mid-reload wrote the pre-reload copy of the timer back into the module file");
+    }
+
 private:
+    // One item per unit belonging to a package that is never uninstalled. Every
+    // assertion about the deferred-delete filter is an absence, so without these
+    // an over-broad filter - or a writer that gave up on the whole unit while a
+    // delete was outstanding - would pass every test in this file while emptying
+    // the user's profile.
+    void createKeeperItems()
+    {
+        const QString keeperPackage = qsl("keeper-package");
+        mpHost->mInstalledPackages << keeperPackage;
+
+        auto pTrigger = new TTrigger(nullptr, mpHost);
+        pTrigger->setRegexCodeList({qsl("^never matched$")}, {REGEX_PERL});
+        pTrigger->registerTrigger();
+        pTrigger->setName(qsl("keeperTrigger"));
+        pTrigger->mPackageName = keeperPackage;
+
+        auto pAlias = new TAlias(qsl("keeperAlias"), mpHost);
+        pAlias->setRegexCode(qsl("^never matched$"));
+        mpHost->getAliasUnit()->registerAlias(pAlias);
+        pAlias->mPackageName = keeperPackage;
+
+        auto pTimer = new TTimer(qsl("keeperTimer"), QTime(0, 0, 30), mpHost);
+        mpHost->getTimerUnit()->registerTimer(pTimer);
+        pTimer->mPackageName = keeperPackage;
+
+        auto pAction = new TAction(qsl("keeperAction"), mpHost);
+        mpHost->getActionUnit()->registerAction(pAction);
+        pAction->mPackageName = keeperPackage;
+
+        auto pScript = new TScript(nullptr, mpHost);
+        mpHost->getScriptUnit()->registerScript(pScript);
+        pScript->setName(qsl("keeperScript"));
+        pScript->mPackageName = keeperPackage;
+    }
+
+    QString keepersMissingFrom(const QString& xml) const
+    {
+        for (const auto& name : {qsl("keeperTrigger"), qsl("keeperAlias"), qsl("keeperTimer"), qsl("keeperAction"), qsl("keeperScript")}) {
+            if (!xml.contains(name)) {
+                return qsl("a save taken while a delete was outstanding dropped \"%1\", which belongs to a package that is still installed").arg(name);
+            }
+        }
+        return {};
+    }
+
+    void registerModuleAs(const QString& moduleName)
+    {
+        mpHost->mInstalledModules[moduleName] = QStringList{qsl("%1/%2.xml").arg(mConfigDir.path(), moduleName), qsl("0")};
+        mpHost->mModulesLoadedOk << moduleName;
+    }
+
+    // The module-member flag is private to XMLimport, so a genuine module item
+    // can only be made by importing one. Importing under a package name with the
+    // module flag set gives each unit the module's master folder, which is what
+    // writeModuleXML() writes; renaming the timer's one afterwards is what makes
+    // the copy from before a reload tellable from the copy after it.
+    bool importModuleTimerNamed(const QString& moduleName, const QString& itemName)
+    {
+        // the file to import is written by Mudlet's own timer exporter, so its
+        // shape cannot drift away from what the importer expects
+        const QString path = qsl("%1/%2-import.xml").arg(mConfigDir.path(), itemName);
+        auto* pSeed = new TTimer(itemName, QTime(0, 0, 30), mpHost);
+        mpHost->getTimerUnit()->registerTimer(pSeed);
+        pSeed->setScript(qsl("local noop = true\n"));
+        const bool exported = XMLexport(pSeed).exportTimer(path);
+        mpHost->getTimerUnit()->unregisterTimer(pSeed);
+        delete pSeed;
+        if (!exported) {
+            return false;
+        }
+
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            return false;
+        }
+        XMLimport importer(mpHost);
+        const bool imported = importer.importPackage(&file, moduleName, 1).first;
+        file.close();
+        QFile::remove(path);
+        if (!imported) {
+            return false;
+        }
+        TTimer* pTimer = mpHost->getTimerUnit()->findFirstTimer(moduleName);
+        if (!pTimer) {
+            return false;
+        }
+        pTimer->setName(itemName);
+        return true;
+    }
+
+    // The module half of the same thing: builds the document writeModuleXML()
+    // produces for a profile save and reads it back.
+    QString exportedModuleXml(const QString& moduleName)
+    {
+        const QString path = qsl("%1/module-export.xml").arg(mConfigDir.path());
+        XMLexport writer(mpHost);
+        writer.writeModuleXML(moduleName);
+        if (!XMLexport::saveXmlDocToFile(path, *writer.cloneExportDocument())) {
+            return {};
+        }
+        return readBack(path);
+    }
+
     // Writes the profile's items out through the same writers a profile save
     // uses, without needing the console a full Host::saveProfile() would.
     QString exportedProfileXml()
@@ -448,6 +674,11 @@ private:
         if (!writer->exportPackage(path, true, true)) {
             return {};
         }
+        return readBack(path);
+    }
+
+    static QString readBack(const QString& path)
+    {
         QFile file(path);
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             return {};
