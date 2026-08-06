@@ -230,12 +230,32 @@ private slots:
         QVERIFY(stale.open(QIODevice::WriteOnly));
         stale.close();
         const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
-        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(legacy))); // real profiles live here
+        QVERIFY(makeProfile(legacy, qsl("AlphaGame"))); // real profiles live here
         qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
 
         const auto r = utils::xdgConfigDir(legacy);
         QCOMPARE(r.path, legacy);
         QVERIFY2(r.migrationPending, "a stale non-Mudlet XDG dir must not shadow real profiles");
+    }
+
+    // Deleting the last profile leaves an empty legacy profiles/ behind, which
+    // must not pull a config root in active use back out of $XDG_CONFIG_HOME.
+    void test_emptyLegacyProfilesDirDoesNotOutrankXdgSettings()
+    {
+        QTemporaryDir xdg;
+        QTemporaryDir legacyHome;
+        QVERIFY(xdg.isValid() && legacyHome.isValid());
+        const QString target = mudletUnder(xdg.path());
+        QVERIFY(QDir().mkpath(target));
+        QVERIFY(makeSettingsFile(target));
+        const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(legacy)));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = utils::xdgConfigDir(legacy);
+        QCOMPARE(r.path, target);
+        QVERIFY(!r.migrationPending);
+        QVERIFY(r.shadowedProfilesPath.isEmpty());
     }
 
     void test_guardKeepsLegacyWhenXdgTargetMissing()

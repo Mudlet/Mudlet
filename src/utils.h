@@ -168,25 +168,7 @@ public:
     };
 
     // A directory that cannot be listed must never read as "nothing here": that
-    // inference is what hides profiles, so both predicates below assume the
-    // strongest content instead.
-    static ConfigDirClaim configDirClaim(const QString& dir)
-    {
-        if (!QDir(dir).exists()) {
-            return ConfigDirClaim::absent;
-        }
-        if (!QFileInfo(dir).isReadable()) {
-            return ConfigDirClaim::profiles;
-        }
-        if (QDir(qsl("%1/profiles").arg(dir)).exists()) {
-            return ConfigDirClaim::profiles;
-        }
-        if (QFileInfo::exists(qsl("%1/Mudlet.ini").arg(dir))) {
-            return ConfigDirClaim::settings;
-        }
-        return ConfigDirClaim::unclaimed;
-    }
-
+    // inference is what hides profiles, so assume the strongest content instead.
     static bool configDirHoldsProfiles(const QString& dir)
     {
         if (!QDir(dir).exists()) {
@@ -203,6 +185,32 @@ public:
         return !QFileInfo(profiles.path()).isReadable() || !profiles.entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty();
     }
 
+    static ConfigDirClaim configDirClaim(const QString& dir)
+    {
+        if (!QDir(dir).exists()) {
+            return ConfigDirClaim::absent;
+        }
+        if (configDirHoldsProfiles(dir)) {
+            return ConfigDirClaim::profiles;
+        }
+        if (QFileInfo::exists(qsl("%1/Mudlet.ini").arg(dir))) {
+            return ConfigDirClaim::settings;
+        }
+        return ConfigDirClaim::unclaimed;
+    }
+
+    // $XDG_CONFIG_HOME/mudlet claims more than it holds, because creating
+    // profiles/ there is the deliberate opt-in into an isolated config root. The
+    // legacy dir gets no such credit: an empty profiles/ left behind by deleting
+    // the last profile would otherwise outrank a config root in active use.
+    static ConfigDirClaim xdgConfigDirClaim(const QString& dir)
+    {
+        if (QDir(qsl("%1/profiles").arg(dir)).exists()) {
+            return ConfigDirClaim::profiles;
+        }
+        return configDirClaim(dir);
+    }
+
     // cleanPath() is not enough: a symlinked ~/.config gives one directory two
     // spellings, and dotfile managers produce exactly that
     static QString configDirIdentity(const QString& dir)
@@ -213,9 +221,7 @@ public:
 
     // Resolve Mudlet's config root honoring XDG_CONFIG_HOME; the caller handles
     // portable.txt first, which still wins. $XDG_CONFIG_HOME/mudlet takes a tie so
-    // that a fresh install lands there, and creating profiles/ under it is how a
-    // test harness opts into an isolated config root - the directory alone is not
-    // enough, because other tooling creates that by accident.
+    // that a fresh install lands there.
     static ConfigDirResolution xdgConfigDir(const QString& legacyDefault)
     {
         const QString xdgConfigHome = qEnvironmentVariable("XDG_CONFIG_HOME");
@@ -225,7 +231,7 @@ public:
             return {legacyDefault, false, QString()};
         }
         const QString xdgTarget = QDir::cleanPath(qsl("%1/mudlet").arg(xdgConfigHome));
-        if (configDirClaim(xdgTarget) < configDirClaim(legacyDefault)) {
+        if (xdgConfigDirClaim(xdgTarget) < configDirClaim(legacyDefault)) {
             return {legacyDefault, true, QString()};
         }
         // XDG_CONFIG_HOME=$HOME/.config makes both candidates one directory
