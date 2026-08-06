@@ -148,42 +148,72 @@ public:
     {
         QString path;
         // True only in the migration-guard case: XDG_CONFIG_HOME is set but
-        // $XDG_CONFIG_HOME/mudlet is not (yet) Mudlet's, so an existing legacy
-        // dir is used instead. The caller can then hint the user how to migrate.
+        // $XDG_CONFIG_HOME/mudlet holds no profiles, so an existing legacy dir is
+        // used instead. The caller can then hint the user how to migrate.
         bool migrationPending = false;
+        // Set to the config dir that lost, when it holds profiles of its own. The
+        // caller has to name it, or those profiles read as gone.
+        QString shadowedProfilesPath;
     };
 
-    // Resolve Mudlet's config root honoring XDG_CONFIG_HOME, with a migration
-    // guard. The caller handles portable.txt first (it still wins); this covers
-    // the rest:
-    //  - XDG_CONFIG_HOME unset/empty/relative   -> legacyDefault (~/.config/mudlet)
-    //  - $XDG_CONFIG_HOME/mudlet is Mudlet's      -> it (already migrated / opt-in)
-    //  - not Mudlet's but legacyDefault exists    -> legacyDefault, so exporting
-    //    XDG_CONFIG_HOME never strands existing profiles
-    //  - neither is usable                        -> $XDG_CONFIG_HOME/mudlet (fresh)
-    // "Mudlet's" means the dir holds a Mudlet.ini or profiles/, or is an empty
-    // opt-in dir a test harness pre-created. This deliberately ignores the stale
-    // $XDG_CONFIG_HOME/mudlet/Mudlet.conf that pre-4.19 Mudlet wrote there (its
-    // NativeFormat settings) while profiles stayed in ~/.config/mudlet - treating
-    // that leftover as the config root would hide such a user's profiles.
+    // How strongly a directory claims to be Mudlet's config root. Ordering
+    // matters: the stronger claim wins in xdgConfigDir().
+    enum class ConfigDirClaim {
+        absent = 0,
+        // Exists, but holds nothing Mudlet put there. Covers the stale
+        // $XDG_CONFIG_HOME/mudlet/Mudlet.conf that pre-4.19 Mudlet wrote (its
+        // NativeFormat settings) while profiles stayed in ~/.config/mudlet.
+        unclaimed = 1,
+        settings = 2,
+        profiles = 3,
+    };
+
+    static ConfigDirClaim configDirClaim(const QString& dir)
+    {
+        if (!QDir(dir).exists()) {
+            return ConfigDirClaim::absent;
+        }
+        if (QDir(qsl("%1/profiles").arg(dir)).exists()) {
+            return ConfigDirClaim::profiles;
+        }
+        if (QFileInfo::exists(qsl("%1/Mudlet.ini").arg(dir))) {
+            return ConfigDirClaim::settings;
+        }
+        return ConfigDirClaim::unclaimed;
+    }
+
+    static bool configDirHoldsProfiles(const QString& dir)
+    {
+        const QDir profiles(qsl("%1/profiles").arg(dir));
+        return profiles.exists() && !profiles.isEmpty();
+    }
+
+    // Resolve Mudlet's config root honoring XDG_CONFIG_HOME. The caller handles
+    // portable.txt first (it still wins); this covers the rest:
+    //  - XDG_CONFIG_HOME unset/empty/relative -> legacyDefault (~/.config/mudlet)
+    //  - otherwise whichever of $XDG_CONFIG_HOME/mudlet and legacyDefault makes
+    //    the stronger claim, with $XDG_CONFIG_HOME/mudlet winning a tie so that
+    //    a fresh install and a deliberate opt-in both land there
+    // A profiles/ directory outranks a Mudlet.ini, so neither a pre-created empty
+    // $XDG_CONFIG_HOME/mudlet nor one Mudlet has already dropped a Mudlet.ini into
+    // can hide profiles that live in the legacy dir. Creating profiles/ is
+    // therefore how a test harness opts into an isolated config root.
     static ConfigDirResolution xdgConfigDir(const QString& legacyDefault)
     {
         const QString xdgConfigHome = qEnvironmentVariable("XDG_CONFIG_HOME");
         // The XDG base-dir spec requires an absolute path; a relative (or empty)
         // value must be ignored, which also avoids a surprising CWD-relative root.
         if (xdgConfigHome.isEmpty() || !QDir::isAbsolutePath(xdgConfigHome)) {
-            return {legacyDefault, false};
+            return {legacyDefault, false, QString()};
         }
         const QString xdgTarget = QDir::cleanPath(qsl("%1/mudlet").arg(xdgConfigHome));
-        const QDir xdgDir(xdgTarget);
-        const bool xdgIsMudlets = xdgDir.exists() && (QFileInfo::exists(qsl("%1/Mudlet.ini").arg(xdgTarget)) || QDir(qsl("%1/profiles").arg(xdgTarget)).exists() || xdgDir.isEmpty());
-        if (xdgIsMudlets) {
-            return {xdgTarget, false};
+        if (configDirClaim(xdgTarget) < configDirClaim(legacyDefault)) {
+            return {legacyDefault, true, QString()};
         }
-        if (QDir(legacyDefault).exists()) {
-            return {legacyDefault, true};
-        }
-        return {xdgTarget, false};
+        // With XDG_CONFIG_HOME=$HOME/.config both candidates are the same
+        // directory, and it cannot shadow itself.
+        const bool shadowing = QDir::cleanPath(legacyDefault) != xdgTarget && configDirHoldsProfiles(legacyDefault);
+        return {xdgTarget, false, shadowing ? legacyDefault : QString()};
     }
 
     inline static const auto scmfileSystemUnsafeChars = QRegularExpression(qsl(R"REGEX([/\\:*?"<>|])REGEX"));

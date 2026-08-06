@@ -25,6 +25,9 @@
  * or the guard, which resurfaces as parallel-run sqlite flakiness or, worse,
  * users' profiles appearing to vanish on upgrade.
  *
+ * Creating $XDG_CONFIG_HOME/mudlet/profiles is the opt-in; the directory above it
+ * on its own is not, because that is a state other tooling creates by accident.
+ *
  * The resolution logic lives in utils::xdgConfigDir(legacyDefault), which takes
  * the legacy candidate as an argument, so most cases test it directly and stay
  * platform-independent (no HOME/USERPROFILE juggling). A couple of cases drive
@@ -46,6 +49,14 @@ private:
     QByteArray mSavedXdg;
 
     QString mudletUnder(const QString& dir) const { return QDir::cleanPath(qsl("%1/mudlet").arg(dir)); }
+
+    bool makeProfile(const QString& configDir, const QString& profileName) const { return QDir().mkpath(qsl("%1/profiles/%2").arg(configDir, profileName)); }
+
+    bool makeSettingsFile(const QString& configDir) const
+    {
+        QFile ini(qsl("%1/Mudlet.ini").arg(configDir));
+        return ini.open(QIODevice::WriteOnly);
+    }
 
     // setupConfig() consults portable.txt beside the executable and in the home
     // config dir before the XDG/default logic; the setupConfig() integration
@@ -101,13 +112,13 @@ private slots:
         QVERIFY(!r.migrationPending);
     }
 
-    void test_emptyXdgDirIsOptInAndWinsOverLegacy()
+    void test_emptyXdgDirWinsOverALegacyDirWithoutProfiles()
     {
         QTemporaryDir xdg;
         QTemporaryDir legacyHome;
         QVERIFY(xdg.isValid() && legacyHome.isValid());
         const QString target = mudletUnder(xdg.path());
-        QVERIFY(QDir().mkpath(target)); // empty opt-in dir
+        QVERIFY(QDir().mkpath(target));
         const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
         QVERIFY(QDir().mkpath(legacy));
         qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
@@ -115,6 +126,82 @@ private slots:
         const auto r = utils::xdgConfigDir(legacy);
         QCOMPARE(r.path, target);
         QVERIFY(!r.migrationPending);
+        QVERIFY(r.shadowedProfilesPath.isEmpty());
+    }
+
+    // The whole point of the guard: an empty $XDG_CONFIG_HOME/mudlet is something
+    // a dotfile manager, container script or aborted move leaves behind, and it
+    // must not make an existing user's profiles disappear.
+    void test_emptyXdgDirDoesNotHideLegacyProfiles()
+    {
+        QTemporaryDir xdg;
+        QTemporaryDir legacyHome;
+        QVERIFY(xdg.isValid() && legacyHome.isValid());
+        QVERIFY(QDir().mkpath(mudletUnder(xdg.path())));
+        const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
+        QVERIFY(makeProfile(legacy, qsl("AlphaGame")));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = utils::xdgConfigDir(legacy);
+        QCOMPARE(r.path, legacy);
+        QVERIFY(r.migrationPending);
+    }
+
+    // The state a user is left in once they have launched against the empty dir
+    // once: Mudlet wrote its Mudlet.ini there. Removing whatever created the
+    // directory has to be enough to recover, so settings alone must not outrank
+    // real profiles.
+    void test_xdgSettingsFileDoesNotHideLegacyProfiles()
+    {
+        QTemporaryDir xdg;
+        QTemporaryDir legacyHome;
+        QVERIFY(xdg.isValid() && legacyHome.isValid());
+        const QString target = mudletUnder(xdg.path());
+        QVERIFY(QDir().mkpath(qsl("%1/fonts").arg(target)));
+        QVERIFY(makeSettingsFile(target));
+        const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
+        QVERIFY(makeProfile(legacy, qsl("AlphaGame")));
+        QVERIFY(makeProfile(legacy, qsl("BetaGame")));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = utils::xdgConfigDir(legacy);
+        QCOMPARE(r.path, legacy);
+        QVERIFY(r.migrationPending);
+    }
+
+    // Creating profiles/ is the deliberate opt-in, so it wins - but the legacy
+    // profiles it hides have to be reported rather than silently dropped.
+    void test_xdgProfilesDirWinsAndReportsShadowedLegacyProfiles()
+    {
+        QTemporaryDir xdg;
+        QTemporaryDir legacyHome;
+        QVERIFY(xdg.isValid() && legacyHome.isValid());
+        const QString target = mudletUnder(xdg.path());
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(target)));
+        const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
+        QVERIFY(makeProfile(legacy, qsl("AlphaGame")));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = utils::xdgConfigDir(legacy);
+        QCOMPARE(r.path, target);
+        QVERIFY(!r.migrationPending);
+        QCOMPARE(r.shadowedProfilesPath, legacy);
+    }
+
+    void test_noShadowReportedWhenLegacyProfilesDirIsEmpty()
+    {
+        QTemporaryDir xdg;
+        QTemporaryDir legacyHome;
+        QVERIFY(xdg.isValid() && legacyHome.isValid());
+        const QString target = mudletUnder(xdg.path());
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(target)));
+        const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(legacy)));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = utils::xdgConfigDir(legacy);
+        QCOMPARE(r.path, target);
+        QVERIFY(r.shadowedProfilesPath.isEmpty());
     }
 
     void test_migratedXdgDirWinsOverLegacy()
@@ -212,7 +299,7 @@ private slots:
         QTemporaryDir xdg;
         QVERIFY(xdg.isValid());
         const QString target = mudletUnder(xdg.path());
-        QVERIFY(QDir().mkpath(target));
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(target)));
         qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
 
         mudlet::self()->setupConfig();
