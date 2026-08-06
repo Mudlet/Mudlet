@@ -112,11 +112,9 @@ private slots:
     // must still be written out - the save path has to refresh the tree.
     void test_lateCreatedSavedVariableIsExported()
     {
-        // the slots up to test_exportDoesNotLeakLuaRegistryReferences() stand
-        // for a profile whose Variables view was never opened, and QTest runs
-        // them in declaration order - so none of the slots that do open it may
-        // be declared before them. (Profile load builds the editor dialog
-        // itself, so the thing to check is that no test has shown it yet.)
+        // QTest runs slots in declaration order and these stand for a profile
+        // whose Variables view was never opened. Profile load builds the editor
+        // dialog itself, so what matters is that no slot has shown it yet.
         QVERIFY2(!mpEditor, "a Variables-view test was declared before the ones that must run without it");
         LuaInterface* lI = mpHost->getLuaInterface();
         VarUnit* vu = lI->getVarUnit();
@@ -398,11 +396,9 @@ private slots:
         vu->removeHidden(qsl("userHiddenPrefVar"));
     }
 
-    // VarUnit keeps two hidden-variable sets: hiddenByUser, which the tests
-    // above cover, and hidden, which Host::hideMudletsVariables() fills with the
-    // whole of Mudlet's own Lua API at profile load. Both have to reach the tree
-    // the export builds, or a saved table's members would drag Mudlet's
-    // internals into the profile XML.
+    // VarUnit has two hidden sets: hiddenByUser, and hidden, which
+    // Host::hideMudletsVariables() fills with Mudlet's own Lua API. Both have to
+    // reach the export's tree or a saved table drags the internals into the XML.
     void test_internallyHiddenMemberOfSavedTableIsNotExported()
     {
         LuaInterface* lI = mpHost->getLuaInterface();
@@ -423,23 +419,18 @@ private slots:
         QCOMPARE(luaL_dostring(L, "internalHiddenTable = nil"), 0);
     }
 
-    // Reference-keyed variables are named by a Lua registry reference, so
-    // building a variable tree takes one per such key. The tree the export
-    // builds is thrown away, and if its references went with it the registry
-    // would grow by that many slots on every save - every two minutes with the
-    // editor focused, and on every package install or uninstall.
+    // A variable tree takes a Lua registry reference per reference-keyed entry.
+    // The export throws its tree away, so if the references went with it the
+    // registry would grow by that many slots on every save.
     void test_exportDoesNotLeakLuaRegistryReferences()
     {
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
         // several reference-keyed members, so a leak grows the registry visibly
         QCOMPARE(luaL_dostring(L, "refKeyLeakTable = {} for i = 1, 20 do refKeyLeakTable[{}] = i end"), 0);
 
-        // luaL_unref returns slots to the registry's free list and luaL_ref
-        // hands them straight back out, so the number a fresh reference gets
-        // stops climbing once the registry is big enough for one pass's worth.
-        // Measuring after one export rather than before it takes that one-off
-        // growth out of the comparison; what is left is per-export growth,
-        // which only happens if a pass keeps its references.
+        // freed slots go on a free list and come straight back out, so the
+        // number stops climbing once the registry fits one pass's worth.
+        // Measuring after the first export leaves that one-off growth out.
         QVERIFY(!exportProfileXml().isEmpty());
         lua_pushboolean(L, 1);
         const int refAfterOne = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -460,13 +451,9 @@ private slots:
         QCOMPARE(luaL_dostring(L, "refKeyLeakTable = nil"), 0);
     }
 
-    // The everyday shape of the loss: the script editor is parked on the
-    // Variables view (the last save of a session is taken with whatever view
-    // was left on screen, so quitting from there is enough), a script adds to a
-    // saved table, and the save has to carry that addition. The export used to
-    // skip its refresh whenever that view was on screen, on the grounds that
-    // the editor keeps the tree current - but the editor only rebuilds it on
-    // entering the view, so everything a script did afterwards was lost.
+    // A script adds to a saved table while the editor sits on the Variables
+    // view. A session's last save is taken with whatever view was left on
+    // screen, so quitting from there is enough to reach this.
     void test_savedTableMemberIsExportedWithVariablesViewOpen()
     {
         QVERIFY2(showEditorOnVariablesView(), "the script editor could not be opened on the Variables view");
@@ -477,22 +464,19 @@ private slots:
         QCOMPARE(luaL_dostring(L, "varsViewTable = {seedMember = 'seed member value'}"), 0);
         vu->savedVars.insert(qsl("varsViewTable"));
         vu->savedVars.insert(qsl("varsViewTable.seedMember"));
-        // populating the view is what builds the tree the export used to reuse
         mpEditor->repopulateVars();
 
-        // ... and this is a script running afterwards, with the view still up
+        // a script running afterwards, with the view still up
         QCOMPARE(luaL_dostring(L, "varsViewTable.lateMember = 'late member value'"), 0);
         QCOMPARE(luaL_dostring(L, "varsViewTable.seedMember = nil"), 0);
 
         const QString xml = exportProfileXml();
         QVERIFY(!xml.isEmpty());
         QVERIFY2(xml.contains(qsl("late member value")), "a member added while the Variables view was open must still be saved");
-        // belt and braces rather than the regression guard: writeVariable()
-        // re-reads the value out of Lua, so a stale tree writes this one out
-        // empty rather than with its old value
+        // secondary: writeVariable() re-reads values from Lua, so a stale tree
+        // writes this one out empty rather than with its old value
         QVERIFY2(!xml.contains(qsl("seed member value")), "a member a script removed while the Variables view was open must not be saved back");
 
-        // and the view must survive the save it was open for
         auto* pVariablesTree = mpEditor->findChild<QTreeWidget*>(qsl("treeWidget_variables"));
         QVERIFY2(pVariablesTree, "the editor has no variables tree widget");
         QTreeWidgetItem* pBaseItem = pVariablesTree->topLevelItem(0);
@@ -525,11 +509,9 @@ private slots:
         QCOMPARE(luaL_dostring(L, "varsViewLateVar = nil"), 0);
     }
 
-    // The other side of the same interaction: a save must not pull the variable
-    // tree out from under the editor. Its variables tree widget and its search
-    // results resolve their items through VarUnit's item -> TVar map, and an
-    // export that rebuilt the shared tree emptied that map, leaving every
-    // variable search result silently dead until the search was re-run.
+    // The other side: a save must not pull the tree out from under the editor.
+    // Its tree widget and search results resolve items through VarUnit's
+    // item -> TVar map, which rebuilding the shared tree empties.
     void test_variablesEditorItemMappingSurvivesExport()
     {
         QVERIFY2(showEditorOnVariablesView(), "the script editor could not be opened on the Variables view");
@@ -544,9 +526,7 @@ private slots:
         TVar* pMappedBefore = vu->getWVar(pVariableItem);
         QVERIFY2(pMappedBefore, "the Variables view's items should resolve to a variable");
 
-        // a save from a view other than Variables is the reported case - the
-        // editor's own Save Profile button, its autosave, or any package
-        // install or uninstall
+        // any save does it: the Save Profile button, the autosave, a package change
         mpEditor->slot_showTriggers();
         QVERIFY(!exportProfileXml().isEmpty());
 
@@ -554,10 +534,8 @@ private slots:
     }
 
 private:
-    // The editor is created lazily so that the tests above run in the state a
-    // profile that never opened it is in. Returns false rather than asserting:
-    // a QVERIFY here would only return from this helper, leaving its caller to
-    // dereference a null editor.
+    // Returns false rather than asserting: a QVERIFY here would only return from
+    // this helper, leaving the caller to dereference a null editor.
     bool showEditorOnVariablesView()
     {
         if (!mpEditor) {

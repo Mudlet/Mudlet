@@ -65,9 +65,8 @@ public:
     void renameVar(TVar*);
     void createVar(TVar*);
     VarUnit* getVarUnit();
-    // Hands the Lua registry references this interface took for reference-keyed
-    // variables back to the state. Anything that builds a variable tree and then
-    // throws it away owes this call; the destructor cannot make it - see there.
+    // Anything that builds a variable tree and throws it away owes this call:
+    // ~LuaInterface cannot make it, see there.
     void releaseVariableReferences();
     bool loadVar(TVar* var);
     bool reparentCVariable(TVar* from, TVar* to, TVar* curVar);

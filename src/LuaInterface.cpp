@@ -49,11 +49,8 @@ LuaInterface::LuaInterface(lua_State* L)
     lua_atpanic(L, &onPanic);
 }
 
-// Deliberately does not hand back the Lua registry references in lrefs: a
-// profile reset closes the lua_State before this object is replaced
-// (Host::resetProfile_phase2()), so unref'ing here would write into a freed
-// state. Anything that builds a variable tree it then throws away calls
-// releaseVariableReferences() itself instead.
+// Does not release lrefs: a profile reset closes the lua_State before this
+// object is replaced, so unref'ing here would write into a freed state.
 LuaInterface::~LuaInterface() = default;
 
 int LuaInterface::onPanic(lua_State* L)
@@ -78,10 +75,6 @@ lua_State* LuaInterface::getState() const
     return mL;
 }
 
-// Hands back the Lua registry references taken for reference-keyed variables
-// (a table or a function used as a key has no printable name, so it is named by
-// its registry reference instead). getVars() calls this for the tree it is
-// about to replace.
 void LuaInterface::releaseVariableReferences()
 {
     for (const int ref : std::as_const(lrefs)) {
@@ -847,12 +840,9 @@ void LuaInterface::getVars(bool hide)
     //returns the base item
     // QElapsedTimer t;
     // t.start();
-    // Guarded like every other Lua-touching method here: onPanic() longjmp()s
-    // to the shared buf, and without a setjmp of our own that jump lands in
-    // whichever frame set it last - usually one that has already returned.
-    // Returning instead leaves a partial tree, but lets the caller's scope run,
-    // which is what frees a tree built for a profile save and hands its registry
-    // references back.
+    // onPanic() longjmp()s to the shared buf, so without a setjmp of our own
+    // that jump lands in whichever frame set it last - usually one that has
+    // already returned, taking the caller's scope down with it.
     if (setjmp(buf) != 0) {
         qWarning() << "LuaInterface::getVars() WARNING - Lua panicked while reading the variables in; the variable tree is incomplete.";
         return;
