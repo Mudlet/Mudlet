@@ -176,6 +176,8 @@ mudlet::mudlet()
 void mudlet::init()
 {
     smFirstLaunch = !QFile::exists(mudlet::getMudletPath(enums::profilesPath));
+    // Has to happen here, before anything can create a profile - see rememberFirstLaunch()
+    rememberFirstLaunch(*mpSettings, mudlet::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
 
     QFile gitShaFile(":/app-build.txt");
     if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -7545,28 +7547,67 @@ void mudlet::showedCharacterModeWarning()
     mCharacterModeWarningsShown = std::min(mCharacterModeWarningsShown + 1, mCharacterModeWarningsMax);
 }
 
-// returns true if the Mudlet player is considered 'experienced' and doesn't need to be shown the basic
-// tutorial tips, such as splitscreen cancel shortcut
+// When Mudlet was first used on this installation, as UTC ISO-8601. Absent on
+// installations that predate the key - see rememberFirstLaunch().
+static const QLatin1String settingsKeyFirstLaunch("firstLaunchDate");
+static constexpr int experiencedPlayerMonths = 6;
+
+static bool anyProfilesExist(const QString& profilesPath)
+{
+    return !QDir(profilesPath).entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty();
+}
+
+// Called once per run, before anything can create a profile, so "no profiles
+// yet" reliably means this is a brand new installation and today is the user's
+// day one. An installation that already has profiles was in use before this key
+// existed and its start date is simply not recoverable: profile directory and
+// file timestamps are rewritten by Mudlet's own saves, and a profile copied to a
+// new machine or restored from a backup looks new whichever timestamp is read.
+// Rather than record a guess, record nothing and let evaluateExperiencedPlayer()
+// fall back.
+/*static*/ void mudlet::rememberFirstLaunch(QSettings& settings, const QString& profilesPath, const QDateTime& now)
+{
+    if (settings.contains(settingsKeyFirstLaunch) || anyProfilesExist(profilesPath)) {
+        return;
+    }
+
+    settings.setValue(settingsKeyFirstLaunch, now.toUTC().toString(Qt::ISODate));
+    settings.sync();
+}
+
+// Returns true if the player has been using Mudlet long enough that first-time
+// guidance - the interface tour, the starter UI, the one-line hints - would be
+// an interruption rather than a help.
+//
+// This used to be inferred from profile directory modification times, which
+// measured the opposite of what was wanted: a directory's mtime is bumped every
+// time a file inside it is created or renamed, which every QSaveFile profile
+// write does, so only a profile left untouched for six months looked old. An
+// active player of ten years' standing classified as brand new.
+/*static*/ bool mudlet::evaluateExperiencedPlayer(const QSettings& settings, const QString& profilesPath, const QDateTime& now)
+{
+    const QDateTime firstLaunch = QDateTime::fromString(settings.value(settingsKeyFirstLaunch).toString(), Qt::ISODate);
+    if (firstLaunch.isValid()) {
+        return firstLaunch <= now.addMonths(-experiencedPlayerMonths);
+    }
+
+    // No record, so this installation predates the key - which is all we can
+    // tell, and owning a profile is the one thing that distinguishes it from a
+    // fresh install. Erring towards 'experienced' is deliberate: interrupting a
+    // veteran with a beginner tour is far worse than a newcomer missing one.
+    return anyProfilesExist(profilesPath);
+}
+
 bool mudlet::experiencedMudletPlayer()
 {
     static std::optional<bool> cachedResult;
-    if (cachedResult.has_value()) {
-        return cachedResult.value();
+    if (!cachedResult.has_value()) {
+        const auto* settings = getQSettings();
+        // Only reachable before setupConfig() has run, i.e. from tests: stay
+        // quiet rather than guess.
+        cachedResult = !settings || evaluateExperiencedPlayer(*settings, getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
     }
-
-    // crude metric to check if the player is experienced in Mudlet: see if any of the profiles is more than 6mo old
-    QDir profilesDir(mudlet::getMudletPath(enums::profilesPath));
-    QFileInfoList entries = profilesDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
-    QDateTime sixMonthsAgo = QDateTime::currentDateTime().addMonths(-6);
-
-    for (const QFileInfo& entry : std::as_const(entries)) {
-        if (entry.lastModified() < sixMonthsAgo) {
-            cachedResult = true;
-            return true;
-        }
-    }
-    cachedResult = false;
-    return false;
+    return cachedResult.value();
 }
 
 dlgTriggerEditor* mudlet::createMudletEditor()

@@ -60,6 +60,7 @@
 
 class QAction;
 class QCloseEvent;
+class QDateTime;
 class QDir;
 class QMediaDevices;
 class QMediaPlayer;
@@ -328,6 +329,8 @@ public:
     bool showCharacterModeWarning();
     void showedCharacterModeWarning();
     bool experiencedMudletPlayer();
+    static void rememberFirstLaunch(QSettings& settings, const QString& profilesPath, const QDateTime& now);
+    static bool evaluateExperiencedPlayer(const QSettings& settings, const QString& profilesPath, const QDateTime& now);
 
     // Telnet URI handling
     void handleTelnetUri(const QString& uri);
