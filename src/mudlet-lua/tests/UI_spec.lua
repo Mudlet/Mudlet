@@ -2666,11 +2666,15 @@ describe("Window state getters", function()
       assert.is_truthy(err:find("wdgNoSuchWindow", 1, true))
     end)
 
-    it("returns nil and a message for the main window", function()
-      -- mirrors moveWindow/resizeWindow, which likewise do not act on "main"
-      local result, err = getWindowGeometry("main")
-      assert.is_nil(result)
-      assert.are.equal("string", type(err))
+    it("returns the main window's geometry under both of its names", function()
+      local width, height = getMainWindowSize()
+      for _, name in ipairs({"main", ""}) do
+        local x, y, w, h = getWindowGeometry(name)
+        assert.are.equal(0, x)
+        assert.are.equal(0, y)
+        assert.are.equal(width, w)
+        assert.are.equal(height, h)
+      end
     end)
 
     it("errors when called without a window name", function()
@@ -2737,10 +2741,9 @@ describe("Window state getters", function()
       assert.is_truthy(err:find("wdgNoSuchWindow", 1, true))
     end)
 
-    it("returns nil and a message for the main window", function()
-      local result, err = windowVisible("main")
-      assert.is_nil(result)
-      assert.are.equal("string", type(err))
+    it("reports the main window as visible under both of its names", function()
+      assert.is_true(windowVisible("main"))
+      assert.is_true(windowVisible(""))
     end)
 
     it("errors when called without a window name", function()
