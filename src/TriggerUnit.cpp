@@ -313,9 +313,9 @@ int TriggerUnit::getNewID()
 // Stopping the pass is not enough on its own: everything the loop created is a
 // live root trigger matching the same pattern, so the next line would start with
 // a budget's worth of them and each would spawn a budget's worth again. Measured
-// on the previous line: 50 fires on the first such line, 2600 on the second, so
-// the freeze would only be postponed. The pass therefore disowns what it
-// created, from firstNodeAddedThisPass to the end of the list.
+// while trying that (with a smaller budget): 50 fires on the first such line,
+// 2600 on the second, so the freeze would only be postponed. The pass therefore
+// disowns what it created, from firstNodeAddedThisPass to the end of the list.
 //
 // That range is every root trigger registered while this pass ran, not only the
 // loop's own offspring - the list records no lineage, so a capture trigger armed
