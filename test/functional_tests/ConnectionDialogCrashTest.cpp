@@ -93,6 +93,8 @@ private:
 
     static constexpr int scmMyGamesTab = 0;
     static constexpr int scmAllGamesTab = 1;
+    // a role of this test's own, well clear of dlgConnectionProfiles::csmNameRole
+    static constexpr int scmTestMarkerRole = Qt::UserRole + 99;
 
     // setupConfig() consults portable.txt before the XDG logic; skip rather
     // than run against an unexpected config dir (see ConfigDirOverrideTest).
@@ -366,7 +368,10 @@ private slots:
 
         const auto created = dialog->findData(*dialog->listWidget_profiles, mQuietCopyName, dlgConnectionProfiles::csmNameRole);
         QVERIFY2(!created.isEmpty(), "The copy got no entry in the list");
-        const auto* pCreatedItem = created.first();
+        // marks the item slot_copyProfile() made. Checking for the mark
+        // afterwards says whether that same item is still there without
+        // holding on to a pointer that a rebuild would have freed.
+        created.first()->setData(scmTestMarkerRole, true);
 
         QVERIFY2(QTest::qWaitFor(
                          [copyAction]() {
@@ -379,9 +384,9 @@ private slots:
         auto* pCurrentItem = dialog->listWidget_profiles->currentItem();
         QVERIFY2(pCurrentItem, "Nothing is selected after the copy finished");
         QCOMPARE(pCurrentItem->data(dlgConnectionProfiles::csmNameRole).toString(), mQuietCopyName);
-        // same item, so the list was never rebuilt and this really is the
-        // branch the other test cannot reach
-        QCOMPARE(static_cast<const QListWidgetItem*>(pCurrentItem), pCreatedItem);
+        // still the marked item, so nothing rebuilt the list and this really is
+        // the branch the other test cannot reach
+        QVERIFY2(pCurrentItem->data(scmTestMarkerRole).toBool(), "The list was rebuilt after all - this test no longer covers the undisturbed branch");
 
         QDir(mudlet::getMudletPath(enums::profileHomePath, mQuietCopyName)).removeRecursively();
         QDir(mudlet::getMudletPath(enums::profileHomePath, mQuietProfileName)).removeRecursively();
