@@ -547,13 +547,26 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     if (mType == CentralDebugConsole) {
         // The filters decide what arrives from now on; searching is how you get
         // back to something that has already scrolled past. Its command line is
-        // hidden, so these go in the otherwise unused strip along the top:
+        // hidden, so these go in the otherwise unused strip along the top - and
+        // stay out of sight until Ctrl+F asks for them, because the filters are
+        // the everyday controls and this is the occasional one:
         mpBufferSearchBox->setMaximumWidth(300);
         topBarLayout->addWidget(mpBufferSearchBox);
         topBarLayout->addWidget(mpBufferSearchUp);
         topBarLayout->addWidget(mpBufferSearchDown);
         // Otherwise the box and its buttons stretch across the whole window:
         topBarLayout->addStretch();
+        mpTopToolBar->hide();
+
+        auto* pShortcut_find = new QShortcut(QKeySequence::Find, this);
+        pShortcut_find->setContext(Qt::WindowShortcut);
+        connect(pShortcut_find, &QShortcut::activated, this, &TConsole::showSearchBar);
+
+        // Escape only while the bar has the focus, so it stays available to
+        // anything else in the window:
+        auto* pShortcut_hide = new QShortcut(QKeySequence(Qt::Key_Escape), mpTopToolBar);
+        pShortcut_hide->setContext(Qt::WidgetWithChildrenShortcut);
+        connect(pShortcut_hide, &QShortcut::activated, this, &TConsole::hideSearchBar);
     }
 
     if (mType == MainConsole) {
@@ -2198,6 +2211,40 @@ void TConsole::slot_stopAllItems(bool b)
     } else {
         mpHost->reenableAllTriggers();
     }
+}
+
+// The Central Debug Console's search strip, revealed on demand rather than
+// taking up room the whole time.
+void TConsole::showSearchBar()
+{
+    if (!(mType & CentralDebugConsole) || mpTopToolBar->isVisible()) {
+        mpBufferSearchBox->setFocus();
+        return;
+    }
+    mpTopToolBar->show();
+    resizeDisplayForToolBar();
+    mpBufferSearchBox->setFocus();
+    mpBufferSearchBox->selectAll();
+}
+
+void TConsole::hideSearchBar()
+{
+    if (!(mType & CentralDebugConsole) || mpTopToolBar->isHidden()) {
+        return;
+    }
+    mpTopToolBar->hide();
+    resizeDisplayForToolBar();
+    buffer.clearSearchHighlights();
+    mUpperPane->forceUpdate();
+    mUpperPane->setFocus();
+}
+
+// Showing or hiding the top strip changes how much room the text has, but the
+// display is sized by hand in resizeEvent rather than by a layout - so re-run it.
+void TConsole::resizeDisplayForToolBar()
+{
+    QResizeEvent event(size(), size());
+    QCoreApplication::sendEvent(this, &event);
 }
 
 void TConsole::focusOnSearchResultAndAnnounce(int searchX, int searchY)

@@ -72,14 +72,14 @@ private:
     std::function<void()> mRefresh;
 };
 
-// Kept in the order they should appear in the menu, which is roughly "most
-// people want this" first:
-static const QList<TDebug::Category> csmCategoryOrder = {TDebug::Category::Error,
+// Kept in the order they should appear in the menu. "Every line from the game"
+// leads because it is off by default and the one most people come looking for:
+static const QList<TDebug::Category> csmCategoryOrder = {TDebug::Category::GameLine,
+                                                         TDebug::Category::Error,
                                                          TDebug::Category::TriggerMatch,
                                                          TDebug::Category::TriggerDetail,
                                                          TDebug::Category::Alias,
                                                          TDebug::Category::Item,
-                                                         TDebug::Category::GameLine,
                                                          TDebug::Category::LuaSuccess,
                                                          TDebug::Category::LuaWarning,
                                                          TDebug::Category::Selection,
@@ -181,6 +181,8 @@ void TDebugFilterBar::addCategoryMenu()
     mpCategoryButton = new QToolButton(this);
     auto* pButton = mpCategoryButton;
     pButton->setIcon(QIcon(qsl(":/icons/view-filter.png")));
+    //: Menu button in the Central Debug Console for picking which kinds of message it shows
+    pButton->setText(tr("Show"));
     pButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     pButton->setPopupMode(QToolButton::InstantPopup);
     //: Tooltip for the Central Debug Console's category menu
@@ -193,19 +195,29 @@ void TDebugFilterBar::addCategoryMenu()
         pAction->setChecked(TDebug::categoryEnabled(category));
         connect(pAction, &QAction::toggled, this, [this, category](const bool checked) {
             TDebug::setCategoryEnabled(category, checked);
-            refreshCategoryLabel();
             mudlet::self()->writeSettings();
         });
         mCategoryActions.insert(category, pAction);
     }
 
     mpCategoryMenu->addSeparator();
-    //: Central Debug Console filter preset that turns every category on
-    connect(mpCategoryMenu->addAction(tr("Show everything")), &QAction::triggered, this, [this]() {
+    //: Central Debug Console filter preset that turns every kind of message on
+    connect(mpCategoryMenu->addAction(tr("Show all")), &QAction::triggered, this, [this]() {
         TDebug::setEnabledCategories(TDebug::csmAllCategories);
         applyCategoryFromMenu();
     });
-    //: Central Debug Console filter preset that turns off the categories which flood the console
+    //: Central Debug Console filter preset that turns every kind of message off
+    connect(mpCategoryMenu->addAction(tr("Hide all")), &QAction::triggered, this, [this]() {
+        TDebug::setEnabledCategories({});
+        applyCategoryFromMenu();
+        // Nothing at all will arrive from here on, and there is no longer a
+        // running count on the button to explain why - so say it once, now:
+        if (mudlet::smpDebugConsole) {
+            //: Shown in the Central Debug Console the moment the user hides every kind of message
+            mudlet::smpDebugConsole->print(tr("[*] Every kind of message is hidden now - nothing further will appear until you show some again.\n"), Qt::white, Qt::darkBlue);
+        }
+    });
+    //: Central Debug Console filter preset that turns off only the kinds of message which flood it
     connect(mpCategoryMenu->addAction(tr("Quiet (hide the noisy ones)")), &QAction::triggered, this, [this]() {
         TDebug::setEnabledCategories(TDebug::csmAllCategories & ~TDebug::csmNoisyCategories);
         applyCategoryFromMenu();
@@ -213,29 +225,6 @@ void TDebugFilterBar::addCategoryMenu()
 
     pButton->setMenu(mpCategoryMenu);
     addWidget(pButton);
-    refreshCategoryLabel();
-}
-
-// Says how much is being held back. Without this a console filtered down to
-// nothing is indistinguishable from a console that has stopped working - and
-// four categories are hidden by default, so that is most people's first sight
-// of it.
-void TDebugFilterBar::refreshCategoryLabel()
-{
-    if (!mpCategoryButton) {
-        return;
-    }
-    // Counted by TDebug so this label and the notice it prints into the console
-    // can never disagree:
-    const int hidden = TDebug::hiddenCategoryCount();
-
-    if (hidden) {
-        //: Central Debug Console category menu button, %n is how many kinds of message are currently hidden
-        mpCategoryButton->setText(tr("Show (%n hidden)", "", hidden));
-    } else {
-        //: Central Debug Console menu button for picking which kinds of message it shows, when none are hidden
-        mpCategoryButton->setText(tr("Show"));
-    }
 }
 
 // Pushes the filter state back into the menu's tick boxes after a preset has

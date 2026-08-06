@@ -1748,6 +1748,15 @@ void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
     }
 
     menu.addSeparator();
+    // The search strip is hidden until asked for, so this is where people find
+    // out it exists at all:
+    //: Central Debug Console right-click action that reveals its search box
+    auto* pActionFind = menu.addAction(tr("Find..."));
+    pActionFind->setShortcut(QKeySequence::Find);
+    connect(pActionFind, &QAction::triggered, this, [this]() {
+        mpConsole->showSearchBar();
+    });
+
     //: Central Debug Console right-click action that empties it
     connect(menu.addAction(tr("Clear console")), &QAction::triggered, this, [this]() {
         if (mudlet::smpDebugFilterBar) {

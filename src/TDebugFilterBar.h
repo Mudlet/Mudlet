@@ -63,7 +63,6 @@ private:
     void addItemFilter();
     void addTextFilter();
     void applyCategoryFromMenu();
-    void refreshCategoryLabel();
     void refreshItemList();
     void applyTypedItemFilter();
     static QString allItemsLabel();

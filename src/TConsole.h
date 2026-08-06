@@ -282,6 +282,9 @@ public:
     // timeStampOverride is for content being replayed after being held back -
     // it keeps the time the text arrived instead of the time it is shown:
     void print(const QString& msg, QColor fgColor, QColor bgColor, const QString& timeStampOverride = QString());
+    // The Central Debug Console keeps its search strip hidden until Ctrl+F, or
+    // until its right-click menu asks for it:
+    void showSearchBar();
     void printFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore);
     void printSystemMessage(const QString& msg);
     void printCommand(QString&);
@@ -467,6 +470,8 @@ private slots:
     void slot_adjustAccessibleNames();
     void slot_clearSearchResults();
     void focusOnSearchResultAndAnnounce(int searchX, int searchY);
+    void hideSearchBar();
+    void resizeDisplayForToolBar();
 
 private:
     void createSearchOptionIcon();
