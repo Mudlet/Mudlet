@@ -86,6 +86,18 @@ if(REGISTER_PERF_BENCHMARK)
         TIMEOUT 600)
 endif()
 
+# Leak checking is on by default: LeakSanitizer's non-zero exit code makes a
+# leaking test fail ctest on sanitizer builds. Tests listed here still leak
+# and stay unchecked until their defects are fixed:
+# - dlgTriggerEditorUndoRedoTest: ~3.4MB editor tree-item QIcon/QPixmap graph,
+#   the dlgTriggerEditor instance is never destroyed by the test
+# - UpdaterTeardownTest: Qt's one-time system CA-certificate store load on
+#   first TLS use, cached for the process lifetime
+set(leakCheckExcludedTests
+    dlgTriggerEditorUndoRedoTest
+    UpdaterTeardownTest
+)
+
 # mudlet_lsan_hooks below carries __lsan_default_suppressions; it has to be
 # linked explicitly because these binaries get their main() from QTEST_MAIN and
 # so never pull main.o (and with it the hooks) out of the mudlet_core archive.
@@ -96,8 +108,15 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
     set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS ON)
     add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
+    if(APPLE OR test_name IN_LIST leakCheckExcludedTests)
+        # Apple's ASan runtime does not support LeakSanitizer; the listed
+        # tests still leak (see leakCheckExcludedTests above)
+        set(leakCheck "detect_leaks=0")
+    else()
+        set(leakCheck "detect_leaks=1")
+    endif()
     set_tests_properties(${test_name} PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=${leakCheck}"
         LABELS "functional"
         TIMEOUT 60  # seconds
     )
