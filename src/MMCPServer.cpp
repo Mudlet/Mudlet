@@ -906,8 +906,10 @@ quint16 MMCPServer::addConnectedClient(MMCPClient* pClient)
 
 void MMCPServer::slot_clientDisconnected(MMCPClient* pClient)
 {
+    // A client that never completed a handshake was never added to the list,
+    // so its going away is not a peer list change
+    const bool wasAPeer = mPeersList.removeOne(pClient);
 
-    mPeersList.removeOne(pClient);
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
@@ -917,13 +919,15 @@ void MMCPServer::slot_clientDisconnected(MMCPClient* pClient)
         cl->setId(mPeersList.indexOf(cl) + 1);
     }
 
-    // Raise event after client has been removed from mPeersList
-    // in case they want to use getClientList in response to the event
-    TEvent event {};
-    event.mArgumentList << csMMCPPeerUpdateEvent;
-    event.mArgumentList << pClient->chatName();
-    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
-    mpHost->raiseEvent(event);
+    if (wasAPeer) {
+        // Raise event after client has been removed from mPeersList
+        // in case they want to use getClientList in response to the event
+        TEvent event {};
+        event.mArgumentList << csMMCPPeerUpdateEvent;
+        event.mArgumentList << pClient->chatName();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
+        mpHost->raiseEvent(event);
+    }
 
     pClient->deleteLater();
 }

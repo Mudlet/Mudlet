@@ -210,14 +210,14 @@ void MMCPClient::slot_readData()
         const QByteArray peerName = mPeerBuffer.mid(5, nlPos - 5);
 
         // The spec really doesnt dictate a max length, but we should have one to avoid abuse
-        if (peerName.length() > 64) {
+        if (peerName.length() > csMMCPMaxPeerNameLength) {
             qWarning() << "MMCPClient::slot_readData() - Rejecting connection: peer name too long (" << peerName.length() << " bytes)";
             mState = Disconnected;
             writeData(qsl("NO:%1\n").arg(mpMMCPServer->getChatName()));
             disconnect();
 
             const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 denied (Peer name too long (64 chars max)).")
-                                            .arg(mPeerName,
+                                            .arg(QString::fromUtf8(peerName.left(csMMCPMaxPeerNameLength)),
                                                  convertToIPv4(mTcpSocket.peerAddress()),
                                                  QString::number(mTcpSocket.peerPort()));
 
@@ -225,6 +225,10 @@ void MMCPClient::slot_readData()
 
             return;
         }
+
+        // Record the name now so that the messages below, and the disconnection
+        // message, can identify the peer even if we go on to refuse them
+        mPeerName = QString::fromUtf8(peerName);
 
         const QByteArray ipAndPort = mPeerBuffer.mid(nlPos + 1);
 
@@ -255,13 +259,12 @@ void MMCPClient::slot_readData()
 
             mpHost->postMessage(infoMsg);
         } else {
-
-            mPeerName = QString::fromUtf8(peerName);
-
             // The ipAddress string to QHostAddress may have failed
             mPeerAddress = host.isNull() ? "<Unknown>" : convertToIPv4(host);
             bool ok;
-            mPeerPort = QString::fromUtf8(port).toUInt(&ok);
+            // The port is a fixed 5 character field, so a shorter port number is
+            // padded out and the padding has to come off before converting it
+            mPeerPort = QString::fromUtf8(port).trimmed().toUInt(&ok);
             if (!ok) {
                 mState = Disconnected;
                 disconnect();
