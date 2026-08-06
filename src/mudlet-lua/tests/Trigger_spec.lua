@@ -989,10 +989,8 @@ describe("Trigger processing", function()
         end)
 
         it("does not let enableTrigger revive a trigger that is waiting to be freed", function()
-            -- a killed temporary trigger stays in the by-name lookup table until
-            -- the deferred delete runs, so it is still findable by name - but
-            -- enabling it again would resurrect a trigger already killed, and the
-            -- same window reopens a one-shot trigger that has spent its last fire
+            -- a killed trigger stays findable by name until the deferred delete
+            -- runs, so enabling it again would resurrect it
             local name = "Spec Enable Resurrection"
             _G.EnableResurrectionSpec = 0
             finally(function() _G.EnableResurrectionSpec = nil end)
