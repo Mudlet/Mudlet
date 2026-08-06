@@ -64,6 +64,7 @@ private:
     void addTextFilter();
     void applyCategoryFromMenu();
     void refreshItemList();
+    QStringList itemNames() const;
     void applyTypedItemFilter();
     static QString allItemsLabel();
 

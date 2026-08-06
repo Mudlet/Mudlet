@@ -330,15 +330,16 @@ void TDebugFilterBar::applyTypedItemFilter()
         return;
     }
 
-    // findText matches the same way the box's own completer does, so what the
-    // completer offered is what gets applied:
-    const int index = mpItemFilter->findText(typed, Qt::MatchFixedString);
-    if (index > 0) {
-        TDebug::setItemFilter(mpItemFilter->itemText(index));
-        return;
-    }
-
     TDebug::setItemFilter(typed);
+
+    // Asked of the profile rather than of the combo's model: the model is
+    // emptied and rebuilt every time the list is opened, so checking it can
+    // warn about a name that exists perfectly well.
+    for (const auto& name : itemNames()) {
+        if (name.compare(typed, Qt::CaseInsensitive) == 0) {
+            return;
+        }
+    }
     if (mudlet::smpDebugConsole) {
         //: Shown in the Central Debug Console when the name typed into its item filter matches nothing the profile has. %1 is what was typed.
         mudlet::smpDebugConsole->print(tr("[*] Nothing called \"%1\" was found in this profile, so only its system messages will show.\n").arg(typed), Qt::white, Qt::darkRed);
@@ -352,12 +353,9 @@ void TDebugFilterBar::applyTypedItemFilter()
     return tr("All items");
 }
 
-void TDebugFilterBar::refreshItemList()
+// Every trigger, alias, timer, key, button and script the profile has, by name.
+QStringList TDebugFilterBar::itemNames() const
 {
-    if (!mpItemFilter) {
-        return;
-    }
-
     QStringList names;
     // Only the profile in the foreground: the console is shared by all of them,
     // so an item belonging to another profile has to be typed rather than picked.
@@ -402,6 +400,16 @@ void TDebugFilterBar::refreshItemList()
     names.removeAll(QString());
     names.removeDuplicates();
     names.sort(Qt::CaseInsensitive);
+    return names;
+}
+
+void TDebugFilterBar::refreshItemList()
+{
+    if (!mpItemFilter) {
+        return;
+    }
+
+    QStringList names = itemNames();
     names.prepend(allItemsLabel());
 
     // Show what the filter actually is, rather than assuming it is unset - the
