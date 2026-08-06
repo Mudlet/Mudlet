@@ -3,9 +3,13 @@ name: Pull request
 on:
   pull_request_target:
 
+# issues covers reading the milestone list and setting the milestone on the
+# pull request, which the REST API treats as an issue; pull-requests is granted
+# as well because GitHub gates issue endpoints on it when the target is a PR
 permissions:
   contents: read
-  issues: read
+  issues: write
+  pull-requests: write
 
 jobs:
   add-milestone:
@@ -46,16 +50,14 @@ jobs:
 
     - name: Assign PR to milestone
       env:
-        GH_TOKEN: ${{ secrets.GH_PAT_UPDATE_PULL_REQUESTS }}
+        # The built-in token has write access here because pull_request_target
+        # runs in the base repository; the fine-grained PAT this replaces was
+        # blocked by the organisation's 366-day token lifetime policy
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         REPO: ${{ github.repository }}
         PR_NUMBER: ${{ github.event.pull_request.number }}
       run: |
         set -euo pipefail
-
-        if [ -z "${GH_TOKEN:-}" ]; then
-          echo "::error::GH_PAT_UPDATE_PULL_REQUESTS is not available, so the milestone cannot be set"
-          exit 1
-        fi
 
         if [ -z "${MILESTONE_NUMBER:-}" ]; then
           echo "::error::No milestone number was resolved by the previous step"
