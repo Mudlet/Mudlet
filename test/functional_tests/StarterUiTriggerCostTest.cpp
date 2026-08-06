@@ -108,22 +108,92 @@ private slots:
         QVERIFY(luaTrue(host, qsl("#BaseUI.chatTriggerIds == 3")));
     }
 
+    // The one contract the prefilter has: it must match every line one of the 65
+    // shapes reads a value from. Miss one and the gauges silently never appear
+    // for whichever game writes its prompt that way.
+    //
+    // Rather than pin a handful of sample lines, this crosses every label
+    // spelling the shapes accept with every layout they describe and asserts the
+    // implication over the lot - so a label added to a shape without being added
+    // to the prefilter's union is caught by construction rather than by whoever
+    // remembers to add a sample.
+    void test_thePrefilterMatchesEveryLineTheShapesRead()
+    {
+        Host* host = startProfileWithStarterUi();
+        QVERIFY(host);
+
+        QVERIFY2(runLua(host, prefilterDifferentialScript()), "the prefilter differential did not run - see the profile's error console");
+        QVERIFY2(luaTrue(host, qsl("__starterUiMisses == 0")), "the vitals prefilter drops lines the shapes read - the first few are in the error console");
+        // Guards the corpus itself: if a refactor stopped the generated lines
+        // producing readings, the implication above would hold vacuously.
+        QVERIFY2(luaTrue(host, qsl("__starterUiReadable > 1500")), "the generated corpus stopped producing readings, so the prefilter check proved nothing");
+        QVERIFY2(luaTrue(host, qsl("__starterUiShapesFired == __starterUiShapeCount")),
+                 "the generated corpus no longer exercises every vitals shape - a new shape needs a layout or label "
+                 "adding to the lists in prefilterDifferentialScript()");
+    }
+
+    // The precompilation falls back to the pattern string if rex.new ever fails,
+    // which still works and would leave every test green while silently
+    // restoring the per-line recompilation it replaced.
+    void test_theShapesArePrecompiled()
+    {
+        Host* host = startProfileWithStarterUi();
+        QVERIFY(host);
+        QVERIFY2(luaTrue(host, qsl("BaseUI.shapesArePrecompiled()")), "a chat or vitals shape is not a compiled regex object, so it is recompiled on every line");
+    }
+
     // The prefilter is only a saving if the shapes behind it still read a prompt.
-    // The cur/max prompt shapes are gated on three sightings, so feed it three
-    // times the way a real prompt recurs.
+    // Uses a label-after-the-numbers prompt, which only the recurrence-gated
+    // shapes read, so this also pins the gate: nothing may reach the gauges until
+    // the third sighting.
     void test_aPlainTextPromptStillDrivesTheGauges()
     {
         Host* host = startProfileWithStarterUi();
         QVERIFY(host);
 
-        feedLine(host, qsl("HP: 523/600 MP: 210/250"));
-        feedLine(host, qsl("HP: 522/600 MP: 209/250"));
-        feedLine(host, qsl("HP: 521/600 MP: 208/250"));
+        feedLine(host, qsl("<523/600hp 210/250m 80/100mv>"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.vitalsData.hp == nil")), "a gated prompt shape drove the gauges on first sight");
+        feedLine(host, qsl("<522/600hp 209/250m 79/100mv>"));
+        QVERIFY(luaTrue(host, qsl("BaseUI.vitalsData.hp == nil")));
 
+        feedLine(host, qsl("<521/600hp 208/250m 78/100mv>"));
         QVERIFY2(luaTrue(host, qsl("BaseUI.vitalsData.hp ~= nil and BaseUI.vitalsData.hp.max == 600")),
                  "a recurring cur/max prompt no longer reaches the gauges - the prefilter is dropping lines the "
                  "vitals shapes read");
         QVERIFY(luaTrue(host, qsl("BaseUI.vitalsData.hp.current == 521")));
+        // mv is only read by shapes nothing else in this test touches.
+        QVERIFY(luaTrue(host, qsl("BaseUI.vitalsData.mv ~= nil and BaseUI.vitalsData.mv.max == 100")));
+    }
+
+    // A percentage prompt needs no maximum at all, and is the one family with no
+    // cur/max shape behind it.
+    void test_aPercentagePromptStillDrivesTheGauges()
+    {
+        Host* host = startProfileWithStarterUi();
+        QVERIFY(host);
+
+        for (int i = 0; i < 3; ++i) {
+            feedLine(host, qsl("<87%hp 80%m>"));
+        }
+        QVERIFY2(luaTrue(host, qsl("BaseUI.vitalsData.hp ~= nil and BaseUI.vitalsData.hp.percent == 87")), "a recurring percentage prompt no longer reaches the gauges");
+        QVERIFY(luaTrue(host, qsl("BaseUI.vitalsData.mp.percent == 80")));
+    }
+
+    // Current-only prompts are the family with a user-visible side effect: they
+    // cannot invent a maximum, so the layer asks the game for its score screen
+    // once. That only happens if the prefilter lets the prompt through.
+    void test_aCurrentOnlyPromptStillAsksTheGameForItsScoreScreen()
+    {
+        Host* host = startProfileWithStarterUi();
+        QVERIFY(host);
+        QVERIFY(luaTrue(host, qsl("not BaseUI.scoreRequested")));
+
+        for (int i = 0; i < 3; ++i) {
+            feedLine(host, qsl("<523hp 210m 80mv>"));
+        }
+        QVERIFY2(luaTrue(host, qsl("BaseUI.scoreRequested")),
+                 "a current-only prompt no longer reaches BaseUI.maybeRequestScore, so games whose prompt carries no "
+                 "maximum never get gauges");
     }
 
     // A different shape family through the same prefilter: score-screen rows are
@@ -169,9 +239,10 @@ private slots:
         feedLine(host, qsl("< chat | Ann: anyone around?"));
         QVERIFY2(luaTrue(host, qsl("BaseUI.unread.channels == 3")), "a < tag | channel line was not routed");
 
-        // A tag that is not a known channel name is not chat, grouped or not.
-        feedLine(host, qsl("[12:34] the clock strikes noon")); // NOLINT(readability-magic-numbers)
-        QVERIFY(luaTrue(host, qsl("BaseUI.unread.channels == 3")));
+        // A tag the shape captures but that is not a known channel name is not
+        // chat, grouped or not - BaseUI.chatChannelNames is still consulted.
+        feedLine(host, qsl("[inventory] a rusty sword"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.unread.channels == 3")), "an unknown tag was routed as a channel");
     }
 
     // Once a protocol owns the gauges the plain-text layer's readings are thrown
@@ -197,6 +268,70 @@ private slots:
     }
 
 private:
+    // Crosses every label spelling the shapes accept with every layout they
+    // describe, in three casings, and checks the prefilter's contract over the
+    // result. Kept as one script so it runs inside the profile's own Lua state,
+    // against the real BaseUI.parseVitalsLine and BaseUI.vitalsPrefilter.
+    static QString prefilterDifferentialScript()
+    {
+        return qsl(R"LUA(
+local labels = {
+  "hp", "health", "hit", "hits", "hitpoint", "hitpoints", "hit point", "hit points", "h",
+  "mp", "mana", "sp", "magic", "energy", "blood", "spell point", "spell points", "spellpoints", "m",
+  "mv", "move", "moves", "movement", "movements", "move point", "move points", "movement points",
+  "stamina", "st", "endurance", "end", "vitality",
+  "xp", "exp", "experience", "experience point", "experience points", "exp points", "tnl",
+}
+local templates = {
+  "@: 100/120", "@ 100/120", "@100/120", "100/120 @", "100/120@", "100 / 120 @",
+  "@: 87%", "87% @", "@ 87%", "87%@", "@87%",
+  "@: 100", "100 @", "100@",
+  "| @: 100/120 |", "| @ : 100/120 |", "@ : 100 of 120", "@: 100(120)", "@ 100 ( 120 )",
+  "You have 100/120 @.", "You have 100(120) @.", "You have 100/120 @points.",
+  "You have 100/120 @ and 50/60 mana.", "You have 100/120 @ left.",
+  "Level: 5   @: 100/120   Pager ( )", "@   :  [ 100/120 ]", "@: 12,345/23,456",
+  "PRACT: 005   @: 90    of    90", "  @: 3600/3600     Mana:     3400/3400",
+  "#### @ 100/120 ####", "50 @(50).",
+  "| @: 100(120) |", "| @ : 100 of 120 |", "| Race: Undead | @: 4252/4252 |",
+}
+
+__starterUiMisses = 0
+__starterUiReadable = 0
+__starterUiShapeSeen = {}
+local reported = 0
+
+for _, label in ipairs(labels) do
+  for _, template in ipairs(templates) do
+    for _, spelling in ipairs({ label, label:sub(1, 1):upper() .. label:sub(2), label:upper() }) do
+      local line = template:gsub("@", spelling)
+      local readings = BaseUI.parseVitalsLine(line)
+      if #readings > 0 then
+        __starterUiReadable = __starterUiReadable + 1
+        for _, reading in ipairs(readings) do
+          __starterUiShapeSeen[reading.pattern] = true
+        end
+        -- rex.find, not rex.match: an unset first capture group comes back as
+        -- false, which a truthiness test would read as "no match"
+        if not rex.find(line, BaseUI.vitalsPrefilter) then
+          __starterUiMisses = __starterUiMisses + 1
+          if reported < 5 then
+            reported = reported + 1
+            echo("\n[ prefilter MISS ] " .. line .. "\n")
+          end
+        end
+      end
+    end
+  end
+end
+
+__starterUiShapesFired = 0
+for _ in pairs(__starterUiShapeSeen) do
+  __starterUiShapesFired = __starterUiShapesFired + 1
+end
+__starterUiShapeCount = BaseUI.vitalsShapeCount()
+)LUA");
+    }
+
     Host* startProfileWithStarterUi()
     {
         startProfile();

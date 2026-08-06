@@ -371,7 +371,7 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
-        QVERIFY(noForeignTriggersAreRunning(host));
+        QVERIFY(noTriggersAreRunningYet(host));
 
         const double seconds = feedCorpusBestPass(host, kFeedPasses);
         mTextBestPassSeconds = seconds;
@@ -391,7 +391,7 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
-        QVERIFY(noForeignTriggersAreRunning(host));
+        QVERIFY(noTriggersAreRunningYet(host));
 
         bool triggersOk = true;
         const int triggerCount = installTriggerSet(host, triggersOk);
@@ -438,7 +438,7 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
-        QVERIFY(noForeignTriggersAreRunning(host));
+        QVERIFY(noTriggersAreRunningYet(host));
         // Feed one pass so the peak still reflects pipeline work when this slot
         // runs on its own.
         feedCorpusBestPass(host, 1);
@@ -467,6 +467,17 @@ private slots:
         Host* host = startProfile(DefaultPackages::Install);
         QVERIFY(host);
         const int rootTriggers = static_cast<int>(host->getTriggerUnit()->getTriggerRootNodeList().size());
+        // Without this the slot degenerates into a second copy of
+        // benchTextPipeline and the gated defaults_text_lines_per_sec reports a
+        // large improvement forever. It is a live risk rather than a
+        // hypothetical one: the starter UI's preinstall is gated on
+        // experiencedMudletPlayer(), which scans the REAL profiles directory,
+        // so on any machine with a Mudlet profile more than six months old this
+        // profile gets no starter UI at all. Run the benchmark under a fresh
+        // HOME/XDG_CONFIG_HOME.
+        QVERIFY2(rootTriggers > 0,
+                 "the default packages armed no triggers - this profile is not the one a new user gets, so "
+                 "defaults_* would describe nothing. Re-run under a fresh HOME and XDG_CONFIG_HOME.");
 
         const double seconds = feedCorpusBestPass(host, kFeedPasses);
         const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
@@ -484,16 +495,17 @@ private slots:
 private:
     enum class DefaultPackages { Skip, Install };
 
-    // The benchmark's own triggers are the only ones its numbers may describe.
-    bool noForeignTriggersAreRunning(Host* host)
+    // The benchmark has not installed its own triggers at any of these call sites,
+    // so anything running here came from elsewhere and would be timed as pipeline cost.
+    bool noTriggersAreRunningYet(Host* host)
     {
         const size_t rootTriggers = host->getTriggerUnit()->getTriggerRootNodeList().size();
         if (rootTriggers == 0) {
             return true;
         }
         qWarning("%s",
-                 qPrintable(qsl("%1 triggers are running on a profile that should have none - default-package "
-                                "suppression is not working, and this run measures those triggers as pipeline cost")
+                 qPrintable(qsl("%1 root triggers are running on a profile that should have none - a package or a "
+                                "leftover profile is being measured as pipeline cost")
                                     .arg(rootTriggers)));
         return false;
     }

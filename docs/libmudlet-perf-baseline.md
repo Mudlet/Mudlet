@@ -78,13 +78,15 @@ METRIC text_mb_per_sec 0.41
 METRIC trigger_lines_per_sec 3323.25
 METRIC trigger_overhead_ms 1683.64
 METRIC peak_rss_kb 1402384
-METRIC defaults_text_lines_per_sec 3980.10
+METRIC defaults_text_lines_per_sec ...
+METRIC defaults_root_triggers ...
 ...
 ```
 
-### Two profiles, and why the split matters
+### Two profile configurations, and why the split matters
 
-The benchmark measures the same corpus twice, on two different profiles:
+The benchmark feeds the corpus under two profile configurations (one slot per
+phase, so four profiles are created in all):
 
 - **`text_*`, `trigger_*`, `peak_rss_kb`** come from a profile with the default
   packages suppressed. They describe the pipeline itself, which is what the
@@ -104,6 +106,21 @@ numbers stay flat, instead of the two being indistinguishable.
 and monotonic, so the two are not independent: read `defaults_peak_rss_kb` as
 the whole-run high-water mark and its **excess** over `peak_rss_kb` as what the
 default packages cost.
+
+**Run the benchmark under a fresh `HOME` and `XDG_CONFIG_HOME`.** The starter
+UI's preinstall is gated on `mudlet::experiencedMudletPlayer()`, which scans the
+*real* profiles directory and reports true if any profile is more than six
+months old - so on a developer machine the `defaults_*` profile would quietly
+not get the starter UI, and `defaults_text_lines_per_sec` would become a second
+copy of `text_lines_per_sec`. `benchDefaultPackages` fails the run rather than
+report that, and `defaults_root_triggers` records how many triggers the packages
+actually armed:
+
+```bash
+scratch=$(mktemp -d)
+HOME=$scratch XDG_CONFIG_HOME=$scratch/.config QT_QPA_PLATFORM=offscreen \
+  ./test/functional_tests/PipelineBenchmark
+```
 
 Comparing a build from before this split against one from after it will abort
 with "gated metric defaults_text_lines_per_sec is missing from the before run".
@@ -207,6 +224,11 @@ The table below is **an example of one run on one machine, kept only to show the
 shape and rough ratios of the output**. Do not treat any figure here as a target
 or a committed baseline - capture your own "before" on the machine you are
 testing on and compare against that.
+
+It was also captured **before** the two-profile split above, so its
+`text_lines_per_sec` still includes the default packages and there are no
+`defaults_*` rows. Read the ratios between the `text_*` and `trigger_*` rows;
+do not compare any figure here against a current run.
 
 | Metric | Example value |
 | --- | --- |

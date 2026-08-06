@@ -1873,13 +1873,18 @@ describe("Tests UI functions", function()
       assert.are.same({}, BaseUI.parseVitalsLine("Health: 1234567890123/9999999999999"))
     end)
 
-    -- The starter UI used to arm one always-on regex trigger per vitals shape -
-    -- 65 of them, matched against every line of game output, which roughly
+    -- The starter UI used to arm one always-on regex trigger per capture shape -
+    -- 65 vitals ones always, plus 12 chat ones until the game turned out to
+    -- speak GMCP chat - matched against every line of game output, which roughly
     -- halved Mudlet's text throughput for every new profile. They are now
     -- fronted by a single cheap prefilter, and parseVitalsLine (unchanged) runs
     -- the real shapes only on the lines it lets through. That is only correct
-    -- while the prefilter matches EVERY line a shape reads a value from, so
-    -- pin exactly that.
+    -- while the prefilter matches EVERY line a shape reads a value from.
+    -- The exhaustive version of this check - every label spelling crossed with
+    -- every layout - lives in test/functional_tests/StarterUiTriggerCostTest.cpp,
+    -- because this whole block is skipped on any profile without the starter UI
+    -- installed, which includes the one CI runs the Lua suite in. What follows
+    -- is the readable sample of it.
     describe("the vitals trigger prefilter", function()
       local readableLines = {
         -- prompt shapes, labels after and before the numbers
@@ -1923,7 +1928,9 @@ describe("Tests UI functions", function()
           -- the corpus is only meaningful while these really are readable
           assert.is_true(#BaseUI.parseVitalsLine(line) > 0,
             "sample line no longer produces any reading - fix the sample, not the prefilter")
-          assert.is_not_nil(rex.match(line, BaseUI.vitalsPrefilter),
+          -- rex.find, not rex.match: rex.match returns the first capture group,
+          -- and an unset group comes back as false, which reads as "no match"
+          assert.is_not_nil(rex.find(line, BaseUI.vitalsPrefilter),
             "prefilter drops a line the vitals shapes read: the gauges would never appear")
         end)
       end
@@ -1941,8 +1948,27 @@ describe("Tests UI functions", function()
 
       for _, line in ipairs(ordinaryOutput) do
         it("keeps out: " .. line, function()
-          assert.is_nil(rex.match(line, BaseUI.vitalsPrefilter))
+          assert.is_nil(rex.find(line, BaseUI.vitalsPrefilter))
         end)
+      end
+
+      it("is precompiled rather than recompiled per line", function()
+        assert.is_true(BaseUI.shapesArePrecompiled())
+      end)
+
+      -- these two swap out the live trigger state, so restore it whatever the
+      -- assertions do: leaving vitalsLock raised would make createVitalsTriggers
+      -- silently no-op for every test after them
+      local savedIds, savedLock
+
+      local function borrowVitalsTriggerState(lock)
+        savedIds, savedLock = BaseUI.vitalsTriggerIds, BaseUI.vitalsLock
+        BaseUI.vitalsTriggerIds, BaseUI.vitalsLock = {}, lock
+      end
+
+      local function returnVitalsTriggerState()
+        BaseUI.killVitalsTriggers()
+        BaseUI.vitalsTriggerIds, BaseUI.vitalsLock = savedIds, savedLock
       end
 
       it("arms exactly one trigger, not one per shape", function()
@@ -1950,12 +1976,13 @@ describe("Tests UI functions", function()
           pending("the starter UI is dormant in this profile")
           return
         end
-        local savedIds, savedLock = BaseUI.vitalsTriggerIds, BaseUI.vitalsLock
-        BaseUI.vitalsTriggerIds, BaseUI.vitalsLock = {}, 0
-        BaseUI.createVitalsTriggers()
-        assert.are.equal(1, #BaseUI.vitalsTriggerIds)
-        BaseUI.killVitalsTriggers()
-        BaseUI.vitalsTriggerIds, BaseUI.vitalsLock = savedIds, savedLock
+        borrowVitalsTriggerState(0)
+        local ok, err = pcall(function()
+          BaseUI.createVitalsTriggers()
+          assert.are.equal(1, #BaseUI.vitalsTriggerIds)
+        end)
+        returnVitalsTriggerState()
+        assert.is_true(ok, tostring(err))
       end)
 
       -- a game that speaks GMCP or MSDP supplies the same numbers, and
@@ -1966,12 +1993,14 @@ describe("Tests UI functions", function()
           pending("the starter UI is dormant in this profile")
           return
         end
-        local savedIds, savedLock = BaseUI.vitalsTriggerIds, BaseUI.vitalsLock
-        BaseUI.vitalsTriggerIds, BaseUI.vitalsLock = {}, 3
-        assert.is_true(BaseUI.structuredVitalsOwnGauges())
-        BaseUI.createVitalsTriggers()
-        assert.are.same({}, BaseUI.vitalsTriggerIds)
-        BaseUI.vitalsTriggerIds, BaseUI.vitalsLock = savedIds, savedLock
+        borrowVitalsTriggerState(3)
+        local ok, err = pcall(function()
+          assert.is_true(BaseUI.structuredVitalsOwnGauges())
+          BaseUI.createVitalsTriggers()
+          assert.are.same({}, BaseUI.vitalsTriggerIds)
+        end)
+        returnVitalsTriggerState()
+        assert.is_true(ok, tostring(err))
       end)
     end)
 
@@ -1997,24 +2026,36 @@ describe("Tests UI functions", function()
         "(12) something that is not a channel",
       }
 
-      it("fires on exactly the lines the individual shapes did", function()
+      -- a tagged shape can match a line chatLikeLine still rejects, because
+      -- chatLikeLine additionally requires the tag to be a known channel name.
+      -- The trigger fires on these; routeTaggedChatLine is what turns them away.
+      local taggedButNotAChannel = {
+        ["[combat] 100/120 hp"] = true,
+        ["(12) something that is not a channel"] = true,
+      }
+
+      it("fires on the same lines the individual shapes did", function()
         local grouped = BaseUI.chatTriggerPatterns()
         assert.are.equal(3, #grouped)
         for _, line in ipairs(chatLines) do
           local anyGroupMatches = false
           for _, pattern in ipairs(grouped) do
-            if rex.match(line, pattern.regex) then
+            -- rex.find, not rex.match: the tagged group's three branches each
+            -- have their own capture group, and an unset one comes back as
+            -- false, which a truthiness test reads as "no match"
+            if rex.find(line, pattern.regex) then
               anyGroupMatches = true
               break
             end
           end
           -- chatLikeLine walks the individual shapes, so it is the reference
-          -- for what the twelve separate triggers used to capture. It also
-          -- applies the channel-name check the tagged shapes are subject to,
-          -- so a tagged match it rejects may still fire a trigger.
+          -- for what the twelve separate triggers used to capture
           if BaseUI.chatLikeLine(line) then
             assert.is_true(anyGroupMatches,
               "grouped triggers miss a line the individual shapes captured: " .. line)
+          elseif not taggedButNotAChannel[line] then
+            assert.is_false(anyGroupMatches,
+              "grouped triggers capture a line the individual shapes did not: " .. line)
           end
         end
       end)

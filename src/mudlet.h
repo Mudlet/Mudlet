@@ -360,10 +360,11 @@ public:
     QStringList mOnlyShownPredefinedProfiles;
     QPointer<dlgAboutDialog> mpAboutDlg;
     QStringList mPackagesToInstallList;
-    // Set by the performance benchmarks so a profile they create measures the
-    // pipeline alone. Without it the shipped default packages - the starter UI
-    // above all - end up inside the baseline they are supposed to be measured
-    // against, which is how a package-driven throughput regression can hide.
+    // Test-only, and set by exactly one caller: PipelineBenchmark, so a profile
+    // it creates measures the pipeline alone. Without it the shipped default
+    // packages - the starter UI above all - end up inside the baseline they are
+    // supposed to be measured against, which is how a package-driven throughput
+    // regression can hide.
     bool mSkipDefaultPackageInstall = false;
     QPointer<dlgConnectionProfiles> mpConnectionDialog;
     QPointer<Host> mpCurrentActiveHost;
