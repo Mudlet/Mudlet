@@ -1588,7 +1588,7 @@ bool TConsole::setWindowBackgroundImage(const QString& imgPath, int mode)
     if (mode == 5) {
         QPixmap pixmap(imgPath);
         if (pixmap.isNull()) {
-            qWarning().nospace() << "TConsole::setWindowBackgroundImage() ERROR - could not load \"" << imgPath << "\" as an image.";
+            qWarning().nospace().noquote() << "TConsole::setWindowBackgroundImage() ERROR - could not load \"" << imgPath << "\" as an image.";
             return false;
         }
         const QPixmap previousSource = mWindowBgSourcePixmap;
@@ -1603,6 +1603,9 @@ bool TConsole::setWindowBackgroundImage(const QString& imgPath, int mode)
             mWindowBgSourcePixmap = previousSource;
             mWindowBgImagePath = previousPath;
             mpWindowBackground->setStyleSheet(previousStyleSheet);
+            // the failed attempt dropped the brush, so rebuild the one the previous
+            // source was showing rather than waiting for the next resize
+            updateWindowBackgroundCoverPixmap();
             return false;
         }
     } else {
@@ -1696,8 +1699,8 @@ bool TConsole::updateWindowBackgroundCoverPixmap()
     if (scaled.isNull()) {
         if (!mWindowBgCoverScaleFailed) {
             mWindowBgCoverScaleFailed = true;
-            qWarning().nospace() << "TConsole::updateWindowBackgroundCoverPixmap() ERROR - could not scale \"" << mWindowBgImagePath << "\" (source area " << sourceRect << ") to " << targetSize
-                                 << '.';
+            qWarning().nospace().noquote() << "TConsole::updateWindowBackgroundCoverPixmap() ERROR - could not scale \"" << mWindowBgImagePath << "\" (source area " << sourceRect << ") to "
+                                           << targetSize << '.';
         }
         // a brush smaller than the widget tiles, so drop the stale one
         mpWindowBackground->setAutoFillBackground(false);
