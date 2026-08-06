@@ -101,7 +101,6 @@ private slots:
         QVERIFY(host);
 
         const int rootTriggers = static_cast<int>(host->getTriggerUnit()->getTriggerRootNodeList().size());
-        qInfo("%s", qPrintable(qsl("root triggers on a full default-package profile: %1").arg(rootTriggers)));
         QVERIFY2(rootTriggers > 0, "no triggers are registered at all - the profile did not finish loading its packages");
         QVERIFY2(rootTriggers <= kMaxRootTriggers,
                  qPrintable(qsl("a new user's profile arms %1 always-active root triggers; every line of game text is "
