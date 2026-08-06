@@ -44,6 +44,7 @@ set(FUNCTIONAL_TEST_SOURCES
     ActionSelfUninstallTest.cpp
     ProfileFolderNameTest.cpp
     DialogTeardownTest.cpp
+    EdbeeReinitTest.cpp
     TMediaLoopTest.cpp
     DefaultPackagesTest.cpp
 )
