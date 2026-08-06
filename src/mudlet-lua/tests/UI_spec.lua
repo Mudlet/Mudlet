@@ -1873,18 +1873,9 @@ describe("Tests UI functions", function()
       assert.are.same({}, BaseUI.parseVitalsLine("Health: 1234567890123/9999999999999"))
     end)
 
-    -- The starter UI used to arm one always-on regex trigger per capture shape -
-    -- 65 vitals ones always, plus 12 chat ones until the game turned out to
-    -- speak GMCP chat - matched against every line of game output, which roughly
-    -- halved Mudlet's text throughput for every new profile. They are now
-    -- fronted by a single cheap prefilter, and parseVitalsLine (unchanged) runs
-    -- the real shapes only on the lines it lets through. That is only correct
-    -- while the prefilter matches EVERY line a shape reads a value from.
-    -- The exhaustive version of this check - every label spelling crossed with
-    -- every layout - lives in test/functional_tests/StarterUiTriggerCostTest.cpp,
-    -- which installs the package itself and so always runs. This block is only
-    -- reached where the profile already has the starter UI, so treat it as the
-    -- readable sample rather than as the guard.
+    -- The readable sample. The exhaustive version - every label spelling
+    -- crossed with every layout - is in StarterUiTriggerCostTest.cpp, which
+    -- installs the package itself and so always runs.
     describe("the vitals trigger prefilter", function()
       local readableLines = {
         -- prompt shapes, labels after and before the numbers
@@ -1925,18 +1916,14 @@ describe("Tests UI functions", function()
 
       for _, line in ipairs(readableLines) do
         it("lets through: " .. line, function()
-          -- the corpus is only meaningful while these really are readable
           assert.is_true(#BaseUI.parseVitalsLine(line) > 0,
             "sample line no longer produces any reading - fix the sample, not the prefilter")
-          -- rex.find, not rex.match: rex.match returns the first capture group,
-          -- and an unset group comes back as false, which reads as "no match"
+          -- rex.find: rex.match returns false for an unset capture group
           assert.is_not_nil(rex.find(line, BaseUI.vitalsPrefilter),
             "prefilter drops a line the vitals shapes read: the gauges would never appear")
         end)
       end
 
-      -- the prefilter earns its keep by rejecting the overwhelming majority of
-      -- game output before any of the real shapes are tried
       local ordinaryOutput = {
         "You are standing in a dark forest. The trees tower above you.",
         "A gentle breeze carries the scent of pine and distant woodsmoke.",
@@ -1948,8 +1935,8 @@ describe("Tests UI functions", function()
 
       for _, line in ipairs(ordinaryOutput) do
         it("keeps out: " .. line, function()
-          -- extra parens: rex.find returns two values on a match, and the
-          -- second would land in luassert's message slot
+          -- extra parens: rex.find's second return value would land in
+          -- luassert's message slot
           assert.is_nil((rex.find(line, BaseUI.vitalsPrefilter)))
         end)
       end
@@ -1958,9 +1945,8 @@ describe("Tests UI functions", function()
         assert.is_true(BaseUI.shapesArePrecompiled())
       end)
 
-      -- these two swap out the live trigger state, so restore it whatever the
-      -- assertions do: leaving vitalsLock raised would make createVitalsTriggers
-      -- silently no-op for every test after them
+      -- restore whatever the assertions do: a raised vitalsLock left behind
+      -- makes createVitalsTriggers a silent no-op for every later test
       local savedIds, savedLock
 
       local function borrowVitalsTriggerState(lock)
@@ -1987,9 +1973,6 @@ describe("Tests UI functions", function()
         assert.is_true(ok, tostring(err))
       end)
 
-      -- a game that speaks GMCP or MSDP supplies the same numbers, and
-      -- applyVitals discards the plain-text layer's readings anyway once one of
-      -- them holds the lock - so leaving it armed is pure cost per line
       it("stays retired while a protocol owns the gauges", function()
         if BaseUI.dormant() then
           pending("the starter UI is dormant in this profile")
@@ -2006,8 +1989,6 @@ describe("Tests UI functions", function()
       end)
     end)
 
-    -- the twelve chat shapes share three triggers now, one per routing group.
-    -- Folding them together must not change which lines are captured.
     describe("the grouped chat triggers", function()
       local chatLines = {
         "Bob tells you, 'hello there'",
@@ -2028,9 +2009,8 @@ describe("Tests UI functions", function()
         "(12) something that is not a channel",
       }
 
-      -- a tagged shape can match a line chatLikeLine still rejects, because
-      -- chatLikeLine additionally requires the tag to be a known channel name.
-      -- The trigger fires on these; routeTaggedChatLine is what turns them away.
+      -- chatLikeLine additionally requires the tag to be a known channel name,
+      -- so the trigger fires on these and routeTaggedChatLine turns them away
       local taggedButNotAChannel = {
         ["[combat] 100/120 hp"] = true,
         ["(12) something that is not a channel"] = true,
@@ -2042,16 +2022,13 @@ describe("Tests UI functions", function()
         for _, line in ipairs(chatLines) do
           local anyGroupMatches = false
           for _, pattern in ipairs(grouped) do
-            -- rex.find, not rex.match: the tagged group's three branches each
-            -- have their own capture group, and an unset one comes back as
-            -- false, which a truthiness test reads as "no match"
+            -- rex.find: rex.match returns false for an unset capture group
             if rex.find(line, pattern.regex) then
               anyGroupMatches = true
               break
             end
           end
-          -- chatLikeLine walks the individual shapes, so it is the reference
-          -- for what the twelve separate triggers used to capture
+          -- chatLikeLine walks the shapes individually, so it is the reference
           if BaseUI.chatLikeLine(line) then
             assert.is_true(anyGroupMatches,
               "grouped triggers miss a line the individual shapes captured: " .. line)

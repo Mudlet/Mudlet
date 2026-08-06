@@ -28,12 +28,8 @@
  * corpus through the production cTelnet::loopbackTest() path and prints one
  * `METRIC <name> <value>` line per measurement.
  *
- * Two profiles are measured, and the distinction matters:
- *   - `text_*`, `trigger_*` and `peak_rss_kb` come from a profile with the
- *     default packages suppressed, so they describe the pipeline itself;
- *   - `defaults_*` comes from a profile carrying the shipped default packages,
- *     so a package that costs throughput moves its own metric instead of
- *     silently redefining the pipeline baseline.
+ * `text_*`, `trigger_*` and `peak_rss_kb` come from a profile with the default
+ * packages suppressed; `defaults_*` from one carrying them.
  *
  * Built with the functional tests but deliberately NOT registered with ctest by
  * default (report-only and slow); run it directly, or configure with
@@ -397,8 +393,8 @@ private slots:
         const int triggerCount = installTriggerSet(host, triggersOk);
         QVERIFY2(triggerCount > 0, "no triggers were installed");
         QVERIFY2(triggersOk, "a trigger failed to compile, register or take its script");
-        // The count this slot reports has to be the count that actually runs, or
-        // trigger_overhead_ms is dividing out a baseline it does not describe.
+        // trigger_overhead_ms subtracts the text pass, so the count reported has
+        // to be the count actually running.
         const int rootTriggers = static_cast<int>(host->getTriggerUnit()->getTriggerRootNodeList().size());
         QVERIFY2(rootTriggers == triggerCount,
                  qPrintable(qsl("installed %1 root triggers but %2 are running - something else registered triggers on this profile").arg(triggerCount).arg(rootTriggers)));
@@ -451,31 +447,20 @@ private slots:
         }
     }
 
-    // Everything above measures the pipeline on a bare profile. This one measures
-    // what a new user actually gets: the same corpus through a profile carrying
-    // the shipped default packages. Reported as its own `defaults_*` family so a
-    // package that costs throughput shows up as a package regression instead of
-    // quietly resetting the pipeline baseline - which is exactly how the starter
-    // UI's cost hid inside text_lines_per_sec until the 5.0 QA sweep.
-    //
-    // Runs last on purpose: VmHWM is process-wide and monotonic, so the bare
-    // peak_rss_kb above has to be read before any packaged profile exists.
-    // defaults_peak_rss_kb is therefore the high-water mark including this pass,
-    // and its excess over peak_rss_kb is what the packages cost.
+    // Must run after benchPeakMemory: VmHWM is process-wide and monotonic, so
+    // the bare peak_rss_kb has to be read before any packaged profile exists.
+    // defaults_peak_rss_kb is then the high-water mark including this pass, and
+    // its excess over peak_rss_kb is what the packages cost.
     void benchDefaultPackages()
     {
         Host* host = startProfile(DefaultPackages::Install);
         QVERIFY(host);
         const int rootTriggers = static_cast<int>(host->getTriggerUnit()->getTriggerRootNodeList().size());
-        // Name the package rather than counting triggers. The starter UI is the
-        // expensive part of what a new profile gets and the only part gated on
+        // Needs a fresh HOME/XDG_CONFIG_HOME: the starter UI is gated on
         // mudlet::experiencedMudletPlayer(), which answers from the machine's
-        // own Mudlet history - so on a developer's real HOME this profile
-        // quietly becomes a second copy of benchTextPipeline, and the gated
-        // defaults_text_lines_per_sec would report a large improvement forever.
-        // A trigger count would not catch that: the other default packages
-        // register root-level trigger folders of their own, so it stays above
-        // zero either way.
+        // own Mudlet history, and without it this slot silently measures the
+        // same thing as benchTextPipeline. A trigger count would not catch that
+        // - the other default packages register root folders of their own.
         QVERIFY2(host->mInstalledPackages.contains(qsl("mudlet-base-ui")),
                  "the starter UI is not installed, so this profile is not the one a new user gets and defaults_* "
                  "would describe something else entirely. Re-run under a fresh HOME and XDG_CONFIG_HOME.");
@@ -496,8 +481,8 @@ private slots:
 private:
     enum class DefaultPackages { Skip, Install };
 
-    // The benchmark has not installed its own triggers at any of these call sites,
-    // so anything running here came from elsewhere and would be timed as pipeline cost.
+    // Called before the benchmark installs any of its own, so anything running
+    // came from elsewhere and would be timed as pipeline cost.
     bool noTriggersAreRunningYet(Host* host)
     {
         const size_t rootTriggers = host->getTriggerUnit()->getTriggerRootNodeList().size();

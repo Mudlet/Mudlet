@@ -97,12 +97,8 @@ phase, so four profiles are created in all):
   the way a new user's profile does. `defaults_root_triggers` records how many
   root triggers those packages left armed.
 
-Before this split the benchmark only had the first family, but measured it on a
-profile that *did* get the default packages - so the starter UI's always-on
-triggers were inside `text_lines_per_sec`, and the guard meant to catch a
-throughput regression was reporting one as its own baseline. Keeping the two
-separate means a package regression moves `defaults_*` while the pipeline
-numbers stay flat, instead of the two being indistinguishable.
+Keeping them separate means a package regression moves `defaults_*` while the
+pipeline numbers stay flat, instead of the two being indistinguishable.
 
 `defaults_peak_rss_kb` is read after `peak_rss_kb`, and VmHWM is process-wide
 and monotonic, so the two are not independent: read `defaults_peak_rss_kb` as
@@ -228,10 +224,10 @@ shape and rough ratios of the output**. Do not treat any figure here as a target
 or a committed baseline - capture your own "before" on the machine you are
 testing on and compare against that.
 
-It was also captured **before** the two-profile split above, so its
-`text_lines_per_sec` still includes the default packages and there are no
-`defaults_*` rows. Read the ratios between the `text_*` and `trigger_*` rows;
-do not compare any figure here against a current run.
+It predates the two-profile split above, so its `text_lines_per_sec` includes
+the default packages and there are no `defaults_*` rows. Read the ratios between
+the `text_*` and `trigger_*` rows; do not compare any figure here against a
+current run.
 
 | Metric | Example value |
 | --- | --- |

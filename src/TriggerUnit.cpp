@@ -342,9 +342,6 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // mid-iteration (the underlying std::list::remove frees the iterator's
     // current node → use-after-free on the next ++). AliasUnit dodges the
     // same hazard for the same reason — see Mudlet issue #4297.
-    // A vector rather than a std::list copy: this runs on every line, and
-    // copying the list allocates a node per root trigger where the vector
-    // allocates once.
     std::vector<TTrigger*> copyOfNodeList(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
     // Triggers registered by a script during this pass (tempTrigger() & Co.)
     // are missing from the snapshot but must still match the current line:

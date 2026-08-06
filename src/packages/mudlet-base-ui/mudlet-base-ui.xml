@@ -279,8 +279,7 @@ function BaseUI.routeChatLine(family)
 end
 
 function BaseUI.routeTaggedChatLine()
-  -- the tagged shapes share one trigger, so the tag arrives in whichever
-  -- capture group belongs to the branch that matched
+  -- one trigger, three branches: only the matching branch's group is set
   local tag
   for i = 2, #matches do
     tag = type(matches[i]) == "string" and matches[i]:match("(%S+)")
@@ -299,12 +298,8 @@ function BaseUI.routeTaggedChatLine()
   BaseUI.routeChatLine(family)
 end
 
--- which trigger a shape is folded into: shapes that route a line the same way
--- can share one. A group is armed at the position of its FIRST shape, so
--- appending to an existing family is safe; introducing a shape with a new
--- family value arms that group last, and moving the first "tells" shape below
--- the tagged ones would reorder those two. Either changes which group wins a
--- line both could match.
+-- a group is armed at the position of its FIRST shape, so reordering
+-- chatPatterns across families changes which group wins a line both can match
 local function chatGroupOf(pattern)
   if pattern.tagged then
     return "tagged"
@@ -312,17 +307,11 @@ local function chatGroupOf(pattern)
   return pattern.family or "plain"
 end
 
--- one trigger per routing group rather than one per shape. The saving is in the
--- trigger engine, which now walks three root nodes per line instead of twelve;
--- the regex work is roughly unchanged, because these shapes were already cheap.
--- Folding them is only worth doing BECAUSE they are cheap: every one is
--- anchored with ^, and trigger regexes are compiled without PCRE2_MULTILINE
--- (src/TTrigger.cpp), so PCRE settles the union at offset 0 and gives up. An
--- unanchored union would be retried at every offset instead and the fold would
--- cost more than it saved - which is exactly why the 65 vitals shapes get a
--- prefilter rather than the same treatment.
--- Public so the test suite can check the grouped patterns still fire on the
--- lines the individual ones captured.
+-- Folding shapes into one alternation is only cheap while every one of them is
+-- ^-anchored: trigger regexes compile without PCRE2_MULTILINE, so PCRE tries
+-- the union at offset 0 and gives up. An unanchored shape added here would be
+-- retried at every offset in the line - give it its own trigger, or a prefilter
+-- like the vitals shapes have.
 function BaseUI.chatTriggerPatterns()
   local order, grouped = {}, {}
   for _, pattern in ipairs(chatPatterns) do
@@ -386,31 +375,22 @@ end
 local numberFirstGuard = [=[(?&lt;![\d:=])(?&lt;![:=][ ]|[:=][ ]{2}|[:=][ ]{3}|[:=][ ]{4}|[:=][ ]{5}|[:=][ ]{6}|[:=][ ]{7}|[:=][ ]{8})]=]
 local labelFirstGuard = [=[(?&lt;![\d%])(?&lt;!\d[ ]|\d[ ]{2}|\d[ ]{3}|\d[ ]{4}|\d[ ]{5}|\d[ ]{6}|\d[ ]{7}|\d[ ]{8})]=]
 
--- the label spellings the prompt shapes below accept. Named rather than spelled
--- out inline so that anyVitalsLabel - the single prefilter that fronts this
--- whole layer - is built from the very same strings: a spelling added here is
--- in the prefilter automatically. That only holds for shapes that draw their
--- label from one of these tables; four spell one inline - a lone "m" for mana
--- in two prompt shapes, and "hit points" in two score-screen ones - and all
--- four happen to be covered by the union already. A spelling added inline has
--- to be added to anyVitalsLabel by hand, and the test that would catch it
--- (StarterUiTriggerCostTest::test_thePrefilterMatchesEveryLineTheShapesRead)
--- only will if the spelling is also added to the label list that test crosses.
--- Prefer adding to these tables.
+-- Add label spellings here rather than inline in a shape below: anyVitalsLabel
+-- is built from these tables, and a spelling that only exists inline is missing
+-- from the prefilter, so the shape never sees a line to read.
 local promptLabels = {
   hp = [=[hp|health|hits?]=],
   mp = [=[mp|mana|sp|magic|energy]=],
   mv = [=[mv|moves?|movement|end(?:urance)?|st(?:amina)?]=],
   xp = [=[xp|exp|tnl]=],
 }
--- the conservative subset: percentages and current-only prompts read these,
--- because a looser spelling turns too much ordinary prose into a reading
+-- percentages and current-only prompts need the conservative spellings: a
+-- looser one turns ordinary prose into a reading
 local coreLabels = {
   hp = [=[hp|health]=],
   mp = [=[mp|mana|sp]=],
 }
--- what a terse prompt abbreviates to once the number has already been read
--- ("523h", "310m", "94mv")
+-- what a terse prompt abbreviates to once the number has been read: "523h"
 local shortLabels = {
   hp = [=[h(?:p|its?)?]=],
   mp = [=[m(?:p|ana)?]=],
@@ -480,35 +460,23 @@ local function scoreSentence(stat, pair)
   return youHave .. [=[.*?\b]=] .. pair .. [=[\s*]=] .. sentenceLabels[stat] .. sentenceTail
 end
 
--- One trigger fronts the whole list below instead of one trigger per shape. It
--- is the union of every label spelling those shapes key off, matched loosely
--- (no digits, no structure), so a line carrying none of them cannot be a
--- reading and never reaches them; BaseUI.parseVitalsLine then runs the shapes,
--- unchanged, on the lines that do get through.
+-- The single trigger fronting every shape below. Its one contract: it must
+-- match every line a shape reads a value from, or that game's gauges silently
+-- never appear. Being loose the other way only costs a Lua shape walk, so keep
+-- it loose - "the orc hits you for 12 damage" gets through and that is fine.
 --
--- Its one contract is that it must match every line a shape reads a value
--- from. It is deliberately much looser than that in the other direction:
--- ordinary combat text ("the orc hits you for 12 damage") and prose carrying
--- "end", "energy" or "experience points" all get through and pay the full
--- shape walk in Lua. That is affordable because the shapes are compiled once
--- (see compiledPattern below); before this the same lines paid 65 trigger
--- matches in C++ as well, on every line the game sent.
---
--- The edges are (?&lt;![a-z]) and (?![a-z]) rather than \b because a label may sit
--- straight against its number ("hp100/120"), where there is no word boundary.
--- The optional "points" tail is there because a score sentence may run the two
--- together ("You have 100/120 manapoints."), which a shape reads and a bare
--- (?![a-z]) would reject.
+-- (?&lt;![a-z]) / (?![a-z]) rather than \b: a label may abut its number
+-- ("hp100/120"), which is not a word boundary. The optional "points" tail is
+-- for score sentences that run the two together ("100/120 manapoints").
 local anyVitalsLabel = table.concat({
   promptLabels.hp, promptLabels.mp, promptLabels.mv, promptLabels.xp,
   coreLabels.hp, coreLabels.mp,
   shortLabels.hp, shortLabels.mp, shortLabels.mv,
   scoreLabels.hp, scoreLabels.mp, scoreLabels.mv, scoreLabels.xp,
   sentenceLabels.hp, sentenceLabels.mp, sentenceLabels.mv,
-  -- the two prompt shapes that allow a lone "m" for mana spell it inline
+  -- two prompt shapes spell a lone "m" for mana inline
   [=[m]=],
 }, "|")
--- public so the test suite can sample it against lines the shapes read
 BaseUI.vitalsPrefilter = [=[(?i)(?&lt;![a-z])(?:]=] .. anyVitalsLabel .. [=[)(?:\s*points?)?(?![a-z])]=]
 
 local vitalsLinePatterns = {
@@ -629,19 +597,15 @@ local vitalsLinePatterns = {
     regex = [=[(?i)(?&lt;![\d/.,:%])(\d+)\s*(?:]=] .. shortLabels.mv .. [=[)\b(?!\s*[/%])]=] },
 }
 
--- rex.match given a pattern STRING compiles it afresh on every call, so reading
--- one line meant recompiling every shape it was tested against immediately
--- before the match that shape fed - up to 77 of them (12 chat shapes in
--- chatLikeLine, which stops at the first hit, then all 65 vitals shapes). That
--- dwarfed the matching itself. Compile each shape once, on first use.
--- BaseUI.shapesArePrecompiled() below is what holds this to it.
+-- rex.match given a pattern STRING compiles it afresh on every call, and a line
+-- reaching this layer is tested against up to 77 shapes. Never pass .regex to
+-- rex.match directly.
 local compiledPattern = setmetatable({}, {
   __index = function(cache, regex)
     local ok, compiled = pcall(rex.new, regex)
     if not ok then
-      -- leave it as a string: rex.match raises on it exactly as it did before,
-      -- rather than the shape silently disappearing. Say so, though - the error
-      -- is precise here and useless once it resurfaces once per line.
+      -- keep the string so rex.match still raises on it rather than the shape
+      -- vanishing; the error is only precise here, not once per line
       debugc("[ Mudlet UI ] a vitals/chat shape would not compile, falling back to per-line compilation: "
         .. tostring(compiled) .. " in: " .. regex)
     end
@@ -651,15 +615,13 @@ local compiledPattern = setmetatable({}, {
   end,
 })
 
--- how many shapes parseVitalsLine walks, so the test suite can tell that its
--- generated corpus still reaches all of them rather than most of them
+-- for the test suite: how many shapes parseVitalsLine walks
 function BaseUI.vitalsShapeCount()
   return #vitalsLinePatterns
 end
 
--- exposed so the test suite can prove the shapes really are precompiled: the
--- fallback above keeps working, so nothing else would notice it silently
--- restoring the per-line recompilation this replaced
+-- for the test suite: the fallback above still works, so only an explicit check
+-- notices a shape that fell back to per-line compilation
 function BaseUI.shapesArePrecompiled()
   for _, list in ipairs({ chatPatterns, vitalsLinePatterns }) do
     for _, pattern in ipairs(list) do
@@ -750,13 +712,9 @@ function BaseUI.scoreWindowOpen()
   return BaseUI.scoreWindowUntil ~= nil and getEpoch() &lt; BaseUI.scoreWindowUntil
 end
 
--- the one prefilter trigger runs every shape on the line in a single pass, so
--- this no longer has to shut out its own siblings. The two line-number guards
--- still earn their place: lastChatLine keeps a line the chat layer already
--- routed out of the vitals layer, and refreshing lastVitalsLine after
--- applyVitals stops the marker going stale when building the dock rewraps the
--- buffer - a later, unrelated line could otherwise inherit the old number and
--- be skipped.
+-- lastChatLine keeps a line the chat layer routed out of the vitals layer; the
+-- refresh after applyVitals is because building the dock rewraps the buffer and
+-- renumbers lines, which would otherwise leave the marker on an unrelated line
 function BaseUI.onVitalsLine()
   local lineNumber = getLineNumber()
   if lineNumber == BaseUI.lastVitalsLine or lineNumber == BaseUI.lastChatLine then
@@ -793,9 +751,8 @@ function BaseUI.onVitalsLine()
   end
 end
 
--- the plain-text layer is a fallback for games that offer no protocol. Once
--- GMCP or MSDP owns the gauges its readings are discarded by applyVitals
--- anyway, so keeping it armed is pure cost on every line the game sends
+-- applyVitals discards prompt readings once a protocol holds the lock, so the
+-- plain-text layer is pure per-line cost from then on
 function BaseUI.structuredVitalsOwnGauges()
   return BaseUI.vitalsLock &gt;= sourceRanks.msdp
 end
@@ -1131,10 +1088,7 @@ function BaseUI.applyVitals(source, readings, snapshot)
     -- the lock and everything the previous source reported is dropped
     BaseUI.vitalsData = {}
     BaseUI.vitalsLock = rank
-    -- and with a protocol supplying the same numbers, the plain-text fallback
-    -- has nothing left to contribute - retire it for the rest of the
-    -- connection (handleDisconnect re-arms it, since the next one may be to a
-    -- game without GMCP)
+    -- handleDisconnect re-arms these: the next connection may have no protocol
     if BaseUI.structuredVitalsOwnGauges() then
       BaseUI.killVitalsTriggers()
     end
@@ -1294,8 +1248,7 @@ function BaseUI.handleDisconnect()
   -- ring already covers the echo race that comes with that)
   BaseUI.gmcpChat = false
   BaseUI.createChatTriggers()
-  -- the vitals layer retires itself once a protocol takes the gauges over; the
-  -- lock was just cleared above, so re-arm it for the next connection too
+  -- only re-arms because the lock was cleared above
   BaseUI.createVitalsTriggers()
 end
 

@@ -17,20 +17,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// The starter UI (mudlet-base-ui) is preinstalled into new profiles, and its
-// capture layers used to arm 77 always-active PCRE triggers - one per chat shape
-// and one per vitals shape - which every line the game sent was then matched
-// against. That roughly halved Mudlet's text throughput for every new user, and
-// cost far more on a chatty game.
-//
-// The shapes themselves are unchanged; they are now fronted by a handful of
-// triggers, with the full shape list run in Lua only on the lines that get
-// through. This test pins both halves of that: the trigger count stays small,
-// and the capture layers still capture.
-//
-// The package is installed by hand when the new-profile preinstall gate did not
-// install it, so this stays about the package's own cost regardless of who is
-// considered a new user (DefaultPackagesTest covers the gating).
+// The starter UI (mudlet-base-ui) is preinstalled into new profiles, so every
+// always-active trigger it arms is matched against every line the game sends.
+// This pins what that costs and that the capture layers still capture.
 
 #include <QtTest/QtTest>
 
@@ -60,12 +49,9 @@ private:
     const QString mLocalhost = qsl("localhost");
     quint16 mPort = 0;
 
-    // A full default-package profile measures 5 root triggers: the starter UI's
-    // three chat groups and one vitals prefilter, plus one folder from another
-    // preinstalled package. 8 leaves headroom for another package growing one
-    // without failing this, while still being far below the 77 the capture
-    // layers used to arm. A change that needs more than this is a change that
-    // should be measured before it ships.
+    // A full default-package profile measures 5: the starter UI's three chat
+    // groups and one vitals prefilter, plus one folder from another package.
+    // Raising this is a throughput change and wants measuring first.
     static constexpr int kMaxRootTriggers = 8;
 
 private slots:
@@ -93,8 +79,6 @@ private slots:
         delete mudlet::self();
     }
 
-    // The regression guard proper: whatever the capture layers do, they may not
-    // put a per-shape trigger on the hot path.
     void test_captureLayersArmAHandfulOfTriggersNotOnePerShape()
     {
         Host* host = startProfileWithStarterUi();
@@ -103,30 +87,20 @@ private slots:
         const int rootTriggers = static_cast<int>(host->getTriggerUnit()->getTriggerRootNodeList().size());
         QVERIFY2(rootTriggers > 0, "no triggers are registered at all - the profile did not finish loading its packages");
         QVERIFY2(rootTriggers <= kMaxRootTriggers,
-                 qPrintable(qsl("a new user's profile arms %1 always-active root triggers; every line of game text is "
-                                "matched against all of them, which is what made 5.0 half the speed of 4.22.0")
+                 qPrintable(qsl("a new user's profile arms %1 always-active root triggers, and every line of game "
+                                "text is matched against all of them")
                                     .arg(rootTriggers)));
 
         QVERIFY(luaTrue(host, qsl("#BaseUI.vitalsTriggerIds == 1")));
         QVERIFY(luaTrue(host, qsl("#BaseUI.chatTriggerIds == 3")));
     }
 
-    // The one contract the prefilter has: it must match every line one of the 65
-    // shapes reads a value from. Miss one and the gauges silently never appear
-    // for whichever game writes its prompt that way.
+    // Miss a line here and that game's gauges silently never appear.
     //
-    // Rather than pin a handful of sample lines, this crosses every label
-    // spelling the shapes accept with every layout they describe and asserts the
-    // implication over the lot.
-    //
-    // What that does and does not guarantee: the label list below is written out
-    // by hand, not derived from the package's label tables, so it catches a NEW
-    // shape whose spelling is missing from the prefilter (the shape never fires,
-    // and the shape-coverage assertion drops below the total), but it cannot
-    // catch a new spelling bolted onto an EXISTING shape unless the same
-    // spelling is added here too. Adding spellings to promptLabels / coreLabels
-    // / shortLabels / scoreLabels / sentenceLabels instead keeps them in the
-    // prefilter automatically, which is why the package prefers that.
+    // The label list in the script is hand-written, not derived from the
+    // package's label tables, so this catches a new shape whose spelling is
+    // missing from the prefilter but not a new spelling bolted onto an existing
+    // shape - add spellings to promptLabels and friends, not inline.
     void test_thePrefilterMatchesEveryLineTheShapesRead()
     {
         Host* host = startProfileWithStarterUi();
@@ -134,17 +108,15 @@ private slots:
 
         QVERIFY2(runLua(host, prefilterDifferentialScript()), "the prefilter differential did not run - see the profile's error console");
         QVERIFY2(luaTrue(host, qsl("__starterUi.misses == 0")), "the vitals prefilter drops lines the shapes read - the first few are in the error console");
-        // Guards the corpus itself: if a refactor stopped the generated lines
-        // producing readings, the implication above would hold vacuously.
+        // Without this the assertion above holds vacuously.
         QVERIFY2(luaTrue(host, qsl("__starterUi.readable > 1500")), "the generated corpus stopped producing readings, so the prefilter check proved nothing");
         QVERIFY2(luaTrue(host, qsl("__starterUi.shapesFired == __starterUi.shapeCount")),
                  "the generated corpus no longer exercises every vitals shape - a new shape needs a layout or label "
                  "adding to the lists in prefilterDifferentialScript()");
     }
 
-    // The precompilation falls back to the pattern string if rex.new ever fails,
-    // which still works and would leave every test green while silently
-    // restoring the per-line recompilation it replaced.
+    // The fallback to a pattern string still works, so nothing else fails when
+    // a shape is recompiled per line.
     void test_theShapesArePrecompiled()
     {
         Host* host = startProfileWithStarterUi();
@@ -152,10 +124,8 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("BaseUI.shapesArePrecompiled()")), "a chat or vitals shape is not a compiled regex object, so it is recompiled on every line");
     }
 
-    // The prefilter is only a saving if the shapes behind it still read a prompt.
-    // Uses a label-after-the-numbers prompt, which only the recurrence-gated
-    // shapes read, so this also pins the gate: nothing may reach the gauges until
-    // the third sighting.
+    // A label-after-the-numbers prompt is read only by recurrence-gated shapes,
+    // so this pins the gate as well: nothing until the third sighting.
     void test_aPlainTextPromptStillDrivesTheGauges()
     {
         Host* host = startProfileWithStarterUi();
@@ -171,12 +141,9 @@ private slots:
                  "a recurring cur/max prompt no longer reaches the gauges - the prefilter is dropping lines the "
                  "vitals shapes read");
         QVERIFY(luaTrue(host, qsl("BaseUI.vitalsData.hp.current == 521")));
-        // mv is only read by shapes nothing else in this test touches.
         QVERIFY(luaTrue(host, qsl("BaseUI.vitalsData.mv ~= nil and BaseUI.vitalsData.mv.max == 100")));
     }
 
-    // A percentage prompt needs no maximum at all, and is the one family with no
-    // cur/max shape behind it.
     void test_aPercentagePromptStillDrivesTheGauges()
     {
         Host* host = startProfileWithStarterUi();
@@ -189,9 +156,8 @@ private slots:
         QVERIFY(luaTrue(host, qsl("BaseUI.vitalsData.mp.percent == 80")));
     }
 
-    // Current-only prompts are the family with a user-visible side effect: they
-    // cannot invent a maximum, so the layer asks the game for its score screen
-    // once. That only happens if the prefilter lets the prompt through.
+    // A current-only prompt cannot supply a maximum, so the layer sends "score"
+    // once - the one capture path with a visible side effect on the game.
     void test_aCurrentOnlyPromptStillAsksTheGameForItsScoreScreen()
     {
         Host* host = startProfileWithStarterUi();
@@ -206,8 +172,7 @@ private slots:
                  "maximum never get gauges");
     }
 
-    // A different shape family through the same prefilter: score-screen rows are
-    // trusted on first sight, and a score screen may only ever be shown once.
+    // Score-screen rows are trusted on first sight: a score may only be shown once.
     void test_aScoreScreenIsStillReadOnFirstSight()
     {
         Host* host = startProfileWithStarterUi();
@@ -236,10 +201,8 @@ private slots:
         // Tells' unread counter while All (the active tab) does not move.
         QVERIFY2(luaTrue(host, qsl("BaseUI.unread.tells == 1")), "a tell was not routed into the Tells tab");
 
-        // The three tagged shapes are one alternation, so each writes its tag
-        // into a different capture group and the unmatched branches come back
-        // empty. Exercise all three: only the first would be found by a handler
-        // that still read matches[2] and nothing else.
+        // All three tagged branches: each writes its tag into a different
+        // capture group, and only the matching branch's is set.
         feedLine(host, qsl("[newbie] Ann: how do I get out of here?"));
         QVERIFY2(luaTrue(host, qsl("BaseUI.unread.channels == 1")),
                  "a [tag] channel line was not routed into the Channels tab - the grouped tagged trigger is not "
@@ -249,15 +212,11 @@ private slots:
         feedLine(host, qsl("< chat | Ann: anyone around?"));
         QVERIFY2(luaTrue(host, qsl("BaseUI.unread.channels == 3")), "a < tag | channel line was not routed");
 
-        // A tag the shape captures but that is not a known channel name is not
-        // chat, grouped or not - BaseUI.chatChannelNames is still consulted.
+        // BaseUI.chatChannelNames still has the last word on a captured tag.
         feedLine(host, qsl("[inventory] a rusty sword"));
         QVERIFY2(luaTrue(host, qsl("BaseUI.unread.channels == 3")), "an unknown tag was routed as a channel");
     }
 
-    // Once a protocol owns the gauges the plain-text layer's readings are thrown
-    // away by applyVitals anyway, so leaving it armed costs every line for
-    // nothing.
     void test_theVitalsLayerRetiresOnceAProtocolOwnsTheGauges()
     {
         Host* host = startProfileWithStarterUi();
@@ -271,17 +230,14 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("BaseUI.structuredVitalsOwnGauges()")), "GMCP vitals did not take the source lock");
         QVERIFY2(luaTrue(host, qsl("#BaseUI.vitalsTriggerIds == 0")), "the plain-text vitals triggers stayed armed after GMCP took the gauges over");
 
-        // A reconnect may be to a game with no GMCP at all, so the layer has to
-        // come back.
+        // The next connection may have no protocol at all.
         QVERIFY(runLua(host, qsl("BaseUI.handleDisconnect()")));
         QVERIFY2(luaTrue(host, qsl("#BaseUI.vitalsTriggerIds == 1")), "the vitals layer did not re-arm after a disconnect");
     }
 
 private:
-    // Crosses every label spelling the shapes accept with every layout they
-    // describe, in three casings, and checks the prefilter's contract over the
-    // result. Kept as one script so it runs inside the profile's own Lua state,
-    // against the real BaseUI.parseVitalsLine and BaseUI.vitalsPrefilter.
+    // Runs inside the profile's Lua state, against the real
+    // BaseUI.parseVitalsLine and BaseUI.vitalsPrefilter.
     static QString prefilterDifferentialScript()
     {
         return qsl(R"LUA(
@@ -305,7 +261,6 @@ local templates = {
   "| @: 100(120) |", "| @ : 100 of 120 |", "| Race: Undead | @: 4252/4252 |",
 }
 
--- one global rather than five: the profile outlives this script
 __starterUi = { misses = 0, readable = 0, shapeSeen = {} }
 local reported = 0
 
@@ -319,8 +274,7 @@ for _, label in ipairs(labels) do
         for _, reading in ipairs(readings) do
           __starterUi.shapeSeen[reading.pattern] = true
         end
-        -- rex.find, not rex.match: an unset first capture group comes back as
-        -- false, which a truthiness test would read as "no match"
+        -- rex.find: rex.match returns false for an unset capture group
         if not rex.find(line, BaseUI.vitalsPrefilter) then
           __starterUi.misses = __starterUi.misses + 1
           if reported < 5 then
@@ -349,9 +303,8 @@ __starterUi.shapeCount = BaseUI.vitalsShapeCount()
             return nullptr;
         }
         host->mEchoLuaErrors = true;
-        // A brand-new profile normally gets the package from the preinstall list
-        // already; install it here only when that gate did not, so this test says
-        // nothing about who counts as a new user.
+        // Installed by hand only when the preinstall gate did not, so this test
+        // says nothing about who counts as a new user.
         if (!host->mInstalledPackages.contains(qsl("mudlet-base-ui"))) {
             auto [installed, message] = host->installPackage(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage"), enums::PackageModuleType::Package, true);
             if (!installed) {
@@ -359,9 +312,7 @@ __starterUi.shapeCount = BaseUI.vitalsShapeCount()
                 return nullptr;
             }
         }
-        // The package script arms its triggers as it loads; a hidden or
-        // stood-aside setting left over from an earlier run would suppress them,
-        // and there is no profile directory to carry one in, but be explicit.
+        // A hidden or stood-aside setting would suppress every capture trigger.
         if (!luaTrue(host, qsl("type(BaseUI) == 'table' and not BaseUI.dormant()"))) {
             qWarning("the starter UI did not load, or loaded dormant");
             return nullptr;
@@ -369,8 +320,7 @@ __starterUi.shapeCount = BaseUI.vitalsShapeCount()
         return host;
     }
 
-    // Starts a profile the way a user would via the GUI (mirrors the helper the
-    // other functional tests use).
+    // Mirrors the helper the other functional tests use.
     void startProfile()
     {
         const QString port = QString::number(mPort);
@@ -406,8 +356,6 @@ __starterUi.shapeCount = BaseUI.vitalsShapeCount()
         }
     }
 
-    // Through the production socket path, so the triggers see the line exactly
-    // as they would from a game.
     void feedLine(Host* host, const QString& text)
     {
         QByteArray data = text.toUtf8() + "\r\n";
@@ -417,8 +365,6 @@ __starterUi.shapeCount = BaseUI.vitalsShapeCount()
 
     bool runLua(Host* host, const QString& script) { return host->getLuaInterpreter()->compileAndExecuteScript(script); }
 
-    // Reports the truth of a Lua expression back through a global, so a false
-    // result is a plain failure rather than a Lua error in the console.
     bool luaTrue(Host* host, const QString& expression)
     {
         if (!runLua(host, qsl("__starterUiProbe = not not (%1)").arg(expression))) {
