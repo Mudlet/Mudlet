@@ -1590,9 +1590,13 @@ bool TConsole::setWindowBackgroundImage(const QString& imgPath, int mode)
         if (pixmap.isNull()) {
             return false;
         }
+        const QPixmap previousSource = mWindowBgSourcePixmap;
         mWindowBgSourcePixmap = pixmap;
         mpWindowBackground->setStyleSheet(QString());
-        updateWindowBackgroundCoverPixmap();
+        if (!updateWindowBackgroundCoverPixmap()) {
+            mWindowBgSourcePixmap = previousSource;
+            return false;
+        }
     } else {
         const QColor bgColor = mpHost ? mpHost->mBgColor : QColorConstants::Black;
         const QString styleSheet = buildBackgroundImageStyleSheet(qsl("WindowBackground"), bgColor, mode, imgPath);
@@ -1636,30 +1640,63 @@ void TConsole::updateMainFrameTransparency()
     QPalette framePalette;
     framePalette.setColor(QPalette::Text, QColor(Qt::black));
     framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
-    framePalette.setColor(QPalette::Window, mWindowBgImageMode ? QColor(0, 0, 0, 0) : QColor(0, 0, 0, 255));
+    framePalette.setColor(QPalette::Window, mWindowBgImageMode ? QColor(0, 0, 0, 0) : mBorderColor);
     mpMainFrame->setPalette(framePalette);
     mpMainFrame->setAutoFillBackground(true);
 }
 
-// Simulates CSS "cover" since QT stylesheets do not support it
-void TConsole::updateWindowBackgroundCoverPixmap()
+void TConsole::setBorderColor(const QColor& color)
+{
+    mBorderColor = color;
+    updateMainFrameTransparency();
+}
+
+void TConsole::lowerMainDisplay()
+{
+    mpMainDisplay->lower();
+    if (mpWindowBackground) {
+        mpWindowBackground->lower();
+    }
+}
+
+// The part of the source that "cover" ends up showing: the largest centred
+// rectangle with the target's aspect ratio.
+QRect TConsole::coverSourceRect(const QSize& sourceSize, const QSize& targetSize)
+{
+    QSize cropSize = targetSize;
+    cropSize.scale(sourceSize, Qt::KeepAspectRatio);
+    cropSize = cropSize.boundedTo(sourceSize).expandedTo(QSize(1, 1));
+    return QRect(QPoint((sourceSize.width() - cropSize.width()) / 2, (sourceSize.height() - cropSize.height()) / 2), cropSize);
+}
+
+// Simulates CSS "cover" since QT stylesheets do not support it. Cropping before
+// scaling keeps the working pixmap source-sized: scaling first multiplies it by
+// the aspect mismatch, so a 3000x100 image in a 1920x1080 window builds a
+// 32400x1080 (~140MB) intermediate on every resize event.
+bool TConsole::updateWindowBackgroundCoverPixmap()
 {
     if (!mpWindowBackground || mWindowBgSourcePixmap.isNull()) {
-        return;
+        return true;
     }
 
     const QSize targetSize = mpWindowBackground->size();
     if (targetSize.isEmpty()) {
-        return;
+        return true;
     }
 
-    const QPixmap scaled = mWindowBgSourcePixmap.scaled(targetSize, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
-    const QRect cropRect(qMax(0, (scaled.width() - targetSize.width()) / 2), qMax(0, (scaled.height() - targetSize.height()) / 2), targetSize.width(), targetSize.height());
+    const QRect sourceRect = coverSourceRect(mWindowBgSourcePixmap.size(), targetSize);
+    const QPixmap scaled = mWindowBgSourcePixmap.copy(sourceRect).scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    if (scaled.isNull()) {
+        qWarning().nospace() << "TConsole::updateWindowBackgroundCoverPixmap() ERROR - could not scale \"" << mWindowBgImagePath << "\" (source area " << sourceRect << ") to " << targetSize
+                             << ", leaving the previous background in place.";
+        return false;
+    }
 
     QPalette palette;
-    palette.setBrush(QPalette::Window, QBrush(scaled.copy(cropRect)));
+    palette.setBrush(QPalette::Window, QBrush(scaled));
     mpWindowBackground->setPalette(palette);
     mpWindowBackground->setAutoFillBackground(true);
+    return true;
 }
 
 void TConsole::setCmdVisible(bool isVisible)
