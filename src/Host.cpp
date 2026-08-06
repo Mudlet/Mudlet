@@ -667,10 +667,12 @@ QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
 {
     // Runs on the main thread so it can safely read the live trigger/timer/... lists
     // (via writeModuleXML) and mutate the `writers`/`mModulesToSync`/`modulesToWrite`
-    // bookkeeping. The returned jobs carry everything writeModuleFiles() needs, so the
-    // background task never touches any of that shared state.
+    // bookkeeping. The returned jobs carry everything writeModuleFiles() needs - the
+    // document and every path - so the background task touches neither that shared
+    // state nor the Host, which may well be destroyed before the task even starts.
     QList<ModuleWriteJob> jobs;
     mModulesToSync.clear();
+    const QString backupPath = backup ? mudlet::getMudletPath(enums::moduleBackupsPath) : QString();
     QMapIterator<QString, QStringList> it(modulesToWrite);
     while (it.hasNext()) {
         it.next();
@@ -685,42 +687,53 @@ QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
         QString xmlFilename = filename;
         if (filename.endsWith(qsl("mpackage"), Qt::CaseInsensitive) || filename.endsWith(qsl("zip"), Qt::CaseInsensitive)) {
             xmlFilename = mudlet::getMudletPath(enums::profilePackagePathFileName, mHostName, moduleName);
+            // The write below goes into this folder, so it has to exist before the
+            // write and not - as it used to - after it: a module whose unpacked folder
+            // the user has removed would otherwise fail to write, and then have its
+            // now-stale XML dropped from its archive without a replacement going in.
+            const QString packagePath = mudlet::getMudletPath(enums::profilePackagePath, mHostName, moduleName);
+            if (auto packageDir = QDir(packagePath); !packageDir.exists()) {
+                packageDir.mkpath(packagePath);
+            }
         }
 
         auto writer = std::make_shared<XMLexport>(this);
         writer->writeModuleXML(moduleName);
-        // `writers` is the sole owner; the job carries a non-owning pointer so the
-        // XMLexport is only ever destroyed on the main thread (via xmlSaved()).
+        // The writer stays in `writers` purely as the save-in-progress token that
+        // xmlSaved() retires on the main thread, so the XMLexport - a QObject with
+        // main-thread affinity - is only ever destroyed there. What gets written out
+        // is the job's own copy of the document, which outlives both of them.
         writers.insert(xmlFilename, writer);
-        jobs.append({writer.get(), moduleName, filename, xmlFilename, backup});
+        jobs.append({writer->cloneExportDocument(), moduleName, filename, xmlFilename, backup ? backupPath + moduleName : QString()});
 
         if (entry.at(1).toInt()) {
             mModulesToSync << moduleName;
         }
     }
     modulesToWrite.clear();
+    if (!backupPath.isEmpty() && !jobs.isEmpty()) {
+        auto backupDir = QDir(backupPath);
+        if (!backupDir.exists()) {
+            backupDir.mkpath(backupPath);
+        }
+    }
     return jobs;
 }
 
 void Host::writeModuleFiles(const QList<ModuleWriteJob>& jobs)
 {
-    // Runs on a background thread: pure file I/O, no access to shared save-bookkeeping.
-    if (jobs.isEmpty()) {
-        return;
-    }
-    const QString savePath = mudlet::getMudletPath(enums::moduleBackupsPath);
-    auto savePathDir = QDir(savePath);
-    if (!savePathDir.exists()) {
-        savePathDir.mkpath(savePath);
-    }
+    // Pure file I/O over self-contained jobs, usually on a thread pool thread. It is
+    // static because a close that answers "No" to "Save profile?", and one that finds
+    // the main console already gone, wait for nothing: the Host that ordered these
+    // writes can be, and regularly is, destroyed while they are still queued.
     for (const auto& job : jobs) {
-        if (job.backup) {
-            createModuleBackup(job.filename, savePath + job.moduleName);
+        if (!job.backupName.isEmpty()) {
+            createModuleBackup(job.filename, job.backupName);
         }
-        if (!job.writer->saveModuleXml(job.xmlFilename)) {
+        if (!XMLexport::saveXmlDocToFile(job.xmlFilename, *job.document)) {
             qWarning().noquote().nospace() << "Host::writeModuleFiles() WARNING - failed to write module \"" << job.moduleName << "\" to \"" << job.xmlFilename << "\".";
         }
-        updateModuleZips(job.filename, job.moduleName);
+        updateModuleZip(job);
     }
 }
 
@@ -754,14 +767,17 @@ void Host::reloadModules()
     mModulesToSync.clear();
 }
 
-void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
+void Host::updateModuleZip(const ModuleWriteJob& job)
 {
+    // Static for the same reason writeModuleFiles() is: every path it needs was
+    // resolved, and every folder it needs created, on the main thread beforehand.
+    const QString zipName = job.filename;
+    const QString moduleName = job.moduleName;
     if (!(zipName.endsWith(qsl("mpackage"), Qt::CaseInsensitive) || zipName.endsWith(qsl("zip"), Qt::CaseInsensitive))) {
         return;
     }
     zip* zipFile = nullptr;
-    const QString packagePathName = mudlet::getMudletPath(enums::profilePackagePath, mHostName, moduleName);
-    const QString filename_xml = mudlet::getMudletPath(enums::profilePackagePathFileName, mHostName, moduleName);
+    const QString filename_xml = job.xmlFilename;
     int err = 0;
     zipFile = zip_open(zipName.toStdString().c_str(), ZIP_CREATE, &err);
     if (!zipFile) {
@@ -774,14 +790,10 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
  existing file that is to be overwritten may be a source of problems
  here.
         */
-        qWarning().noquote().nospace() << "Host::updateModuleZips(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to open module to update it, error: \""
+        qWarning().noquote().nospace() << "Host::updateModuleZip(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to open module to update it, error: \""
                                        << zip_error_strerror(&zipError) << "\"";
         zip_error_fini(&zipError);
         return;
-    }
-    const QDir packageDir = QDir(packagePathName);
-    if (!packageDir.exists()) {
-        packageDir.mkpath(packagePathName);
     }
     const int xmlIndex = zip_name_locate(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), ZIP_FL_ENC_GUESS);
     zip_delete(zipFile, xmlIndex);
@@ -1064,15 +1076,28 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     // pendingXmlSaveFutures(): the background task must not read `writers`/`saveFutures`
     // itself, as the main thread mutates them whenever a save starts or finishes.
     const QList<QFuture<bool>> xmlSaveFutures = pendingXmlSaveFutures();
-    auto watcher = new QFutureWatcher<void>;
-    mModuleFuture = QtConcurrent::run([this, xmlSaveFutures, moduleJobs]() {
+    // Parented so the profile owns the watcher outright. The deleteLater() below only
+    // arrives if the event loop lives long enough to deliver `finished` and then the
+    // deferred delete, which on the way out it does not - and a Host destroyed while
+    // the write is still queued would leave the watcher with no owner at all.
+    auto watcher = new QFutureWatcher<void>(this);
+    // Captures values only, never `this`: no wait for this task is guaranteed, so the
+    // Host can be destroyed while it is still queued or running.
+    mModuleFuture = QtConcurrent::run([xmlSaveFutures, moduleJobs]() {
         // wait for the host xml to be ready before writing the modules out
         for (auto future : xmlSaveFutures) {
             future.waitForFinished();
         }
-        writeModuleFiles(moduleJobs);
+        Host::writeModuleFiles(moduleJobs);
     });
-    connect(watcher, &QFutureWatcher<void>::finished, this, [this, watcher, moduleJobs, syncModules]() {
+    // Only the names: holding the whole jobs would keep every module's document in
+    // memory until this runs, and all it needs is what to retire from `writers`.
+    QStringList savedModuleXmlNames;
+    savedModuleXmlNames.reserve(moduleJobs.size());
+    for (const auto& job : moduleJobs) {
+        savedModuleXmlNames << job.xmlFilename;
+    }
+    connect(watcher, &QFutureWatcher<void>::finished, this, [this, savedModuleXmlNames, syncModules]() {
         // Finish on the main thread: the module documents are now on disk. Consume
         // mModulesToSync via reloadModules() *before* the xmlSaved() loop below empties
         // `writers` and emits profileSaveFinished(): that signal fires synchronously,
@@ -1085,11 +1110,11 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         mWritingHostAndModules = false;
         // Drop each module writer from `writers`; the last removal emits
         // profileSaveFinished() once the profile writer is gone too.
-        for (const auto& job : moduleJobs) {
-            xmlSaved(job.xmlFilename);
+        for (const auto& xmlFilename : savedModuleXmlNames) {
+            xmlSaved(xmlFilename);
         }
-        watcher->deleteLater();
     });
+    connect(watcher, &QFutureWatcher<void>::finished, watcher, &QObject::deleteLater);
     watcher->setFuture(mModuleFuture);
     return {true, filename_xml, QString()};
 }
