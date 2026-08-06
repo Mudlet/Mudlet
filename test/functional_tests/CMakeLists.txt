@@ -35,7 +35,9 @@ set(FUNCTIONAL_TEST_SOURCES
     ProfileRoundTripTest.cpp
     ProfileLoadTempFileTest.cpp
     PackageSelfUninstallTest.cpp
+    UnitProcessingDepthTest.cpp
     PackageUninstallSaveTeardownTest.cpp
+    ModuleSaveTeardownTest.cpp
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
     UndoServerWrapTest.cpp

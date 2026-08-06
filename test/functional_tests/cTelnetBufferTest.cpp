@@ -41,6 +41,9 @@
  */
 
 #include <QtTest/QtTest>
+
+#include <QScopeGuard>
+
 #include <chrono>
 #include <cstring>
 #include <memory>
@@ -223,6 +226,63 @@ private slots:
 
             QVERIFY2(backing.at(0) == scmTerminatorSlot, qPrintable(qsl("processSocketData() wrote into the buffer for a read of %1.").arg(amount)));
             QVERIFY2(backing.at(1) == scmPastTheEnd, qPrintable(qsl("processSocketData() wrote past the buffer for a read of %1.").arg(amount)));
+        }
+    }
+
+    // Every exit from processSocketData() has to hand back the recursion level it
+    // took, including the one that refuses the read outright. That refusal is the
+    // only exit no other test here reaches, and a level leaked there would be
+    // permanent for the profile: once enough have piled up the connection stops
+    // accepting data altogether. Seeding the counter reaches the refusal without
+    // needing a real decompression bomb to recurse.
+    //
+    // Whether the refusal happened is read off the caller's buffer rather than
+    // the warning text: the refusal returns before the NUL terminator is written,
+    // so an untouched sentinel means the read was dropped. That also pins the
+    // threshold exactly, and unlike the posted message it does not depend on the
+    // interface language.
+    void recursionDepthIsHandedBackOnEveryExit()
+    {
+        constexpr int payloadSize = 12;
+        const int seededDepthLimit = cTelnet::scmMaxDecompressionRecursion + 3;
+        // A failed QVERIFY2 below aborts the slot mid-sweep, so put the counter
+        // back from here rather than at the end - otherwise the seeded value
+        // survives into cleanup() and the next slot's init(), and one real
+        // failure reports as three with two of them pointing at the wrong place.
+        const auto depthRestoreGuard = qScopeGuard([this] {
+            mpHost->mTelnet.mDecompressionRecursionDepth = 0;
+        });
+
+        for (int seededDepth = 0; seededDepth <= seededDepthLimit; ++seededDepth) {
+            // This read takes the level to seededDepth + 1, which is the value
+            // the cap is tested against.
+            const bool expectRefusal = (seededDepth + 1) > cTelnet::scmMaxDecompressionRecursion;
+
+            // A full payload takes the ordinary fall-through exit, 0 and -1 the
+            // nothing-to-read one; past the cap all three take the refusal.
+            for (const int amount : {payloadSize, 0, -1}) {
+                QByteArray backing(payloadSize + 1, 'A');
+                backing[payloadSize] = scmTerminatorSlot;
+                mpHost->mTelnet.mDecompressionRecursionDepth = seededDepth;
+
+                mpHost->mTelnet.processSocketData(backing.data(), amount, true);
+
+                QVERIFY2(mpHost->mTelnet.mDecompressionRecursionDepth == seededDepth,
+                         qPrintable(qsl("processSocketData() came back from a %1 byte read at depth %2 with the depth at %3 - a recursion level was leaked.")
+                                            .arg(amount)
+                                            .arg(seededDepth)
+                                            .arg(mpHost->mTelnet.mDecompressionRecursionDepth)));
+
+                if (amount != payloadSize) {
+                    continue; // a non-positive read never terminates the buffer either way
+                }
+                const bool wasRefused = backing.at(payloadSize) == scmTerminatorSlot;
+                QVERIFY2(wasRefused == expectRefusal,
+                         qPrintable(qsl("at depth %1 of %2 the read was %3 - the over-limit cap moved.")
+                                            .arg(seededDepth + 1)
+                                            .arg(cTelnet::scmMaxDecompressionRecursion)
+                                            .arg(wasRefused ? qsl("dropped") : qsl("processed"))));
+            }
         }
     }
 

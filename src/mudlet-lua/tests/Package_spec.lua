@@ -744,6 +744,40 @@ describe("Tests the module accessors", function()
       assert.is_false(getModuleSync(moduleName))
     end)
   end)
+
+  -- A synced module is the only thing that makes a profile save do any module
+  -- work at all: with none installed the save's module list comes out empty and
+  -- the background write returns at its first line. The write itself and
+  -- everything it touches - the module documents, the backup, the archive
+  -- rewrite - therefore go unseen by the sanitizers this suite runs under
+  -- unless a spec puts a synced module in the profile first.
+  describe("Tests saving a profile that has a module to write", function()
+    it("writes the synced module out again", function()
+      requireWorkingInstalls()
+      -- rewriting this module's own .mpackage is only safe because
+      -- installFixtureModule() installed a scratch copy, not the committed one
+      defer(function() disableModuleSync(moduleName) end)
+      assert.is_true(enableModuleSync(moduleName))
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+      -- taking the unpacked XML away is what makes "the save wrote the module
+      -- out" a plain yes or no rather than a guess about file timestamps
+      local moduleXml = getMudletHomeDir() .. "/" .. moduleName .. "/" .. moduleName .. ".xml"
+      os.remove(moduleXml)
+      assert.is_nil(lfs.attributes(moduleXml), "the module's unpacked XML could not be cleared")
+
+      assert.is_true(saveProfile())
+      assert.is_true(waitUntil(function() return lfs.attributes(moduleXml) ~= nil end, 10000), "the profile save never wrote the synced module out")
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+      -- a file that merely exists could be an empty or half-written one
+      local written = io.open(moduleXml, "rb")
+      assert.is_not_nil(written, "the module's XML could not be read back")
+      local contents = written:read("*a")
+      written:close()
+      assert.is_true(contains(contents, "<MudletPackage"), "the module's XML was written without a package in it")
+    end)
+  end)
 end)
 
 describe("Tests the functionality of reloadModule", function()
