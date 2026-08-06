@@ -18,29 +18,12 @@
  ***************************************************************************/
 
 /*
- * The windows a Host hands out - the notepad, the IRC client and the toolbars
- * its actions put on the main window - are all created without a Host parent,
- * so the Qt parent-child system does not dispose of them along with the
- * profile. Only Host::closeChildren() did, and a Host that is destroyed
- * without it (its shared pointer being dropped from the host pool is all it
- * takes) orphaned the lot.
- *
- * Two more windows are in the same family and deliberately not covered here:
- * the trigger editor, which PR #9700 "fix: trigger editor and deleted item
- * subtrees leaking memory" is fixing in the same place, and the user windows
- * TMainConsole hands out.
- *
- * The tests below take the three orderings a Host goes away in - destroyed on
- * its own, destroyed after closeChildren(), and destroyed by the main window
- * going - and assert the same thing of each: after the Host is gone, so are its
- * windows. The QPointers are what makes that provable in any build, a leak
- * leaves them still set, while an AddressSanitizer build additionally turns the
- * double delete that a naive "delete it in both places" fix would introduce
- * into a failure.
- *
- * Note that the toolbars are parented to the main window, so the third ordering
- * reclaims them either way; there it is the notepad and the IRC client that are
- * orphaned.
+ * The notepad, the IRC client and the toolbars an action puts on the main
+ * window are created without a Host parent, so nothing disposes of them along
+ * with the profile unless the teardown does it by hand. Each test takes one of
+ * the three orderings a Host goes away in and asserts the same thing: once the
+ * Host is gone, so are its windows. The QPointers make a leak provable in any
+ * build; an AddressSanitizer build additionally catches a double delete.
  *
  * Run with: ctest -R HostChildTeardownTest -V
  */
@@ -81,7 +64,7 @@ class HostChildTeardownTest : public QObject
 
 private:
     TelnetServerStub* mpServer = nullptr;
-    QString mPort; // the stub's actual ephemeral port, so concurrent test runs cannot collide
+    QString mPort;
     const QString mLocalhost = qsl("localhost");
 
     void deleteProfileDirectory(const QString& profileName)
@@ -124,7 +107,7 @@ private:
     }
 
     // A root action set to be a floating toolbar is what puts a TToolBar on the
-    // main window; the toolbar is only built when the unit regenerates them.
+    // main window, once the unit is asked to regenerate its toolbars.
     void createToolBarAction(Host* pHost, const QString& name)
     {
         auto* pAction = new TAction(name, pHost);
@@ -139,7 +122,6 @@ private:
         pAction->registerAction();
     }
 
-    // Every test here wants a profile with all of those windows open.
     struct OpenWindows
     {
         QPointer<dlgNotepad> notePad;
@@ -155,15 +137,13 @@ private:
         mudlet::self()->slot_notes();
         windows.notePad = pHost->mpNotePad;
         if (windows.notePad) {
-            // gives the destructor's save() something to write, and this test
-            // something to read back
             if (auto* note = qobject_cast<QPlainTextEdit*>(windows.notePad->tabWidget->widget(0))) {
                 note->setPlainText(csmNoteText);
             }
         }
 
-        // built directly rather than through the Lua openIrc(): that connects to
-        // the network, which a test has no business doing
+        // built directly rather than through openIrc(), which would connect to
+        // the network
         pHost->mpDlgIRC = new dlgIRC(pHost);
         pHost->mpDlgIRC->show();
         windows.dlgIrc = pHost->mpDlgIRC;
@@ -177,8 +157,6 @@ private:
         return windows;
     }
 
-    // Reports every one of them rather than stopping at the first, so that a
-    // failure says which of the windows were left behind.
     static QStringList windowsLeftBehind(const OpenWindows& windows)
     {
         QStringList leftBehind;
@@ -198,8 +176,6 @@ private:
 
     static bool everyWindowWasOpened(const OpenWindows& windows) { return windows.notePad && windows.dlgIrc && windows.toolBars.size() == 2 && windows.toolBars.at(0) && windows.toolBars.at(1); }
 
-    // What the notepad is made to hold, so that the notes the destructor writes
-    // out can be told apart from an empty note
     static inline const QString csmNoteText = qsl("HostChildTeardown note text");
 
     QString noteContentOnDisk(const QString& profileName) const
@@ -216,7 +192,6 @@ private:
         return tabs.at(0).toObject().value(qsl("content")).toString();
     }
 
-    // The profile whose windows cleanupTestCase() checks on, left open on purpose
     OpenWindows mWindowsLeftOpenAtTheEnd;
     bool mLeftOpenProfileWasSetUp = false;
     const QString mProfileLeftOpenAtTheEnd = qsl("HostChildTeardown-LeftOpen");
@@ -228,8 +203,8 @@ private slots:
 
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
-        // a stub that did not bind only warns, and every test would then fail
-        // five seconds later saying the profile was slow to load
+        // a stub that failed to bind only warns, and every test would then
+        // report the profile as slow to load instead
         QVERIFY2(mpServer->serverPort() != 0, "The telnet stub did not start listening");
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
@@ -240,9 +215,8 @@ private slots:
     }
 
     // A test that stops at a failed assertion leaves its Host in the pool, and
-    // the next one would then load its profile alongside it and could take the
-    // wrong one as active - one failure reporting as three. The profile the last
-    // test leaves open on purpose is not named here.
+    // getActiveHost() could then hand the next test the wrong one. The profile
+    // the last test leaves open on purpose is deliberately not named here.
     void cleanup()
     {
         for (const QString& profileName : {qsl("HostChildTeardown-NoCloseChildren"), qsl("HostChildTeardown-CloseChildren")}) {
@@ -262,10 +236,8 @@ private slots:
         // while there still is one
         const QString leftOpenProfilePath = mudlet::getMudletPath(enums::profileHomePath, mProfileLeftOpenAtTheEnd);
 
-        // The third case: a profile that is still loaded when the main window
-        // goes. ~mudlet destroys the host pool as one of its members, so the
-        // Host is destroyed with no close of any kind having been asked for -
-        // and this is what most of the functional tests do to their profiles.
+        // The third ordering: a profile still loaded when the main window goes,
+        // so the Host is destroyed with no close of any kind asked for.
         QVERIFY2(mLeftOpenProfileWasSetUp, "The profile this checks on was never opened, so the check below would pass on three null pointers");
         delete mudlet::self();
         // Only the notepad and the IRC client carry weight here: the toolbars
@@ -276,10 +248,9 @@ private slots:
         QDir(leftOpenProfilePath).removeRecursively();
     }
 
-    // The reported leak: nothing called closeChildren(), the host pool simply
-    // let go of the Host. Mudlet itself gets here whenever the profile's main
-    // console has already gone, because Host::requestClose() then answers "we
-    // must already be dying" and returns before it reaches closeChildren().
+    // Nothing calls closeChildren(): the host pool simply lets go of the Host.
+    // Mudlet reaches this whenever the profile's main console has already gone,
+    // as Host::requestClose() then returns before it gets to closeChildren().
     void test_destroyingTheHostTakesItsWindowsWithIt()
     {
         const QString profileName = qsl("HostChildTeardown-NoCloseChildren");
@@ -290,8 +261,7 @@ private slots:
         QVERIFY2(everyWindowWasOpened(windows), "Not all of the profile's windows were opened");
 
         // forceClose() stops TMainConsole::closeEvent() asking whether to save,
-        // which would block on a modal dialog here; the console carries
-        // WA_DeleteOnClose, so closing it is what takes it away
+        // which would block on a modal dialog here
         pHost->forceClose();
         pHost->mpConsole->close();
         QTRY_VERIFY2(pHost->mpConsole.isNull(), "The main console did not go away"); // Qt 6 disposes of a WA_DeleteOnClose widget by deleteLater()
@@ -300,26 +270,21 @@ private slots:
 
         const QPointer<Host> hostGuard(pHost);
         pHost = nullptr;
-        // dropping the pool's shared pointer is all that mudlet::closeHost()
-        // does to the Host itself, and it is where ~Host() runs
         mudlet::self()->getHostManager().deleteHost(profileName);
         QVERIFY2(hostGuard.isNull(), "The Host outlived deleteHost(), so ~Host() never ran");
 
         const QStringList leftBehind = windowsLeftBehind(windows);
         QVERIFY2(leftBehind.isEmpty(), qPrintable(qsl("Destroying the Host left %1 behind").arg(leftBehind.join(qsl(" and ")))));
-        // ~Host() closes the notepad rather than only deleting it, which is what
-        // gets the notes and the window state written out
+        // only reaches the disk if ~Host() closed the notepad rather than just
+        // deleting it
         QCOMPARE(noteContentOnDisk(profileName), csmNoteText);
 
         deleteProfileDirectory(profileName);
     }
 
-    // The path every ordinary profile close takes. closeChildren() hands the
-    // toolbars and the IRC client to deleteLater() and closes the notepad, which
-    // Qt 6 also defers - and mudlet::closeEvent() destroys the Host in the same
-    // call stack, so ~Host() meets windows whose deferred delete has not run
-    // yet. Deleting one of those a second time would end this run under
-    // AddressSanitizer.
+    // closeChildren() disposes of these windows through deleteLater(), and
+    // mudlet::closeEvent() destroys the Host in the same call stack, so ~Host()
+    // meets windows whose deferred delete has not run yet.
     void test_closeChildrenFollowedByDestructionIsSafe()
     {
         const QString profileName = qsl("HostChildTeardown-CloseChildren");
@@ -339,22 +304,19 @@ private slots:
         mudlet::self()->getHostManager().deleteHost(profileName);
         QVERIFY2(hostGuard.isNull(), "The Host outlived deleteHost(), so ~Host() never ran");
 
-        // Checked before the event loop gets a turn, so that the deferred
-        // deletes closeChildren() queued cannot be what satisfies it: ~Host()
-        // deletes the toolbars outright, and that is the half of this the rest
-        // of the run would otherwise not notice going missing
+        // checked before the event loop gets a turn, so that the deletes
+        // closeChildren() deferred cannot be what satisfies it
         for (const auto& pToolBar : windows.toolBars) {
             QVERIFY2(pToolBar.isNull(), "Destroying the Host did not delete a toolbar closeChildren() had only queued");
         }
 
-        // and now let what closeChildren() deferred run, which is where a second
-        // delete of anything ~Host() already took would land
+        // letting what closeChildren() deferred run is where a second delete of
+        // anything ~Host() already took would land
         QTRY_VERIFY2(windowsLeftBehind(windows).isEmpty(), "Closing and then destroying the Host left one of its windows behind");
         deleteProfileDirectory(profileName);
     }
 
-    // Leaves the profile loaded for cleanupTestCase() to destroy the main window
-    // on top of.
+    // cleanupTestCase() is what destroys the main window on top of it.
     void test_leaveAProfileOpenForTheMainWindowToTakeDown()
     {
         Host* pHost = startProfile(mProfileLeftOpenAtTheEnd);

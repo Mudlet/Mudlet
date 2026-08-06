@@ -456,26 +456,17 @@ Host::~Host()
     // is being taken apart runs against freed members (#9653):
     mDeferredSaveTimer.stop();
 
-    // The notepad and the IRC client are parentless top-level windows that only
-    // closeChildren() takes down, so a Host that never gets there orphans them.
-    // Null each pointer before deleting it so that nothing looking at the member
-    // mid-teardown finds a half-destroyed widget - a QPointer only clears itself
-    // once ~QObject is reached:
+    // The notepad and the IRC client are parentless top-level windows, so they
+    // outlive a Host that closeChildren() never got to. Null each QPointer
+    // before deleting - it only clears itself once ~QObject is reached - and
+    // note closeChildren() nulls them too, so this cannot double-delete:
     if (auto* pNotePad = mpNotePad.data()) {
-        // The notes and the notepad's window state only reach the disk when it
-        // is closed, so close it the way closeChildren() does rather than just
-        // deleting it: save() writes the notes and closeEvent() writes the
-        // window state, and a delete delivers no close event. It has no
-        // WA_DeleteOnClose here - closeChildren() is what sets that - so this
-        // only hides it and the delete below is still what disposes of it.
-        // Both re-enter this Host for the profile name and nothing else, which
-        // is intact in a destructor body; anything more they grow would not be.
-        // Skipped once the main window has gone: ~mudlet clears mudlet::self()
-        // in its own body and only then destroys the host pool it holds, and
-        // getMudletPath() reads the main window. The notes are then dropped -
-        // acceptable because a user closing the application goes through
-        // mudlet::closeEvent(), which has written both by way of
-        // closeChildren(); only a bare delete of the main window lands here.
+        // Notes and window state only reach the disk through closeEvent(), which
+        // a delete does not deliver; close() merely hides it, WA_DeleteOnClose
+        // being closeChildren()'s doing rather than the notepad's own. Skipped
+        // with no main window left, as getMudletPath() needs one: ~mudlet clears
+        // mudlet::self() before destroying the host pool. Only a bare delete of
+        // the main window lands there, never a quit via mudlet::closeEvent().
         if (mudlet::self()) {
             pNotePad->save();
             pNotePad->close();
@@ -489,14 +480,11 @@ Host::~Host()
         delete pDlgIRC;
     }
 
-    // The toolbars are parented to the main window instead, so Qt does free them
-    // eventually - but not before the application closes, and until then they
-    // stay on screen holding a TAction this Host is about to take with it. An
-    // outright delete rather than the deleteLater() closeChildren() uses, for
-    // that same reason: the deferred one would run after the actions had gone.
-    // getToolBarList() hands back a copy of the list, and each entry a
-    // closeChildren() already queued is deleted here instead, which drops the
-    // pending deferred delete with it - ~QObject unposts its own events:
+    // The toolbars are parented to the main window, so they stay on screen
+    // holding this Host's TActions until the application closes. Deleted
+    // outright rather than deferred the way closeChildren() does it, since a
+    // deleteLater() would run after the actions have gone; taking one that
+    // closeChildren() already queued is safe, as ~QObject unposts its events:
     for (const auto& pToolBar : mActionUnit.getToolBarList()) {
         delete pToolBar.data();
     }
