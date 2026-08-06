@@ -160,9 +160,8 @@ jobs:
           COMMIT=$(echo "$META" | jq -r '.commit')
 
           if [[ "$REF" == refs/tags/Mudlet-* ]]; then
-            # Last gate before anything is published. The build-time copy of this
-            # check runs from the tagged commit, so it is missing whenever an older
-            # commit is tagged
+            # release-scripts/ is this workflow's own ref, so the guard is present
+            # even when the tagged commit predates it
             bash release-scripts/CI/check-release-tag.sh "${VERSION}" "${REF#refs/tags/}"
 
             echo "type=release" >> "$GITHUB_OUTPUT"
@@ -174,10 +173,8 @@ jobs:
               echo "::error::COMMIT field is empty or missing in release metadata for PTB"
               exit 1
             fi
-            # A PTB's tag is generated rather than pushed, so it cannot disagree
-            # with APP_VERSION - but a two-component APP_VERSION makes the version
-            # it carries unofferable in exactly the same way, and no build-time
-            # check runs on the development branch to catch that
+            # Nothing validates APP_VERSION on development, and a two-component one
+            # makes a PTB unofferable the same way
             bash release-scripts/CI/check-release-tag.sh "${VERSION}"
 
             PTB_TAG="Mudlet-${VERSION}${BUILD_SUFFIX}-${COMMIT}"

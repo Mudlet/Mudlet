@@ -1,32 +1,16 @@
 #!/bin/bash
-# Asserts that the version a release will be published under can actually be
-# offered as an update: APP_VERSION has to be a three-component semantic version,
-# and the release tag - when there is one - has to be exactly "Mudlet-<APP_VERSION>".
-#
-# This exists because getting it wrong fails silently. The updater takes the version
-# it offers from the release tag, not from APP_VERSION (Release::Release() in
-# src/updater/Release.cpp strips the "Mudlet-" prefix), and SemVer::getRegExp() in
-# src/updater/SemVer.cpp needs three components. Tag "Mudlet-5.0" and every
-# installed copy of Mudlet decides the release is not newer than what it already
-# has. Nothing is raised and the update check logs "0 update(s) available", which is
-# exactly what it logs in a week when there genuinely is no release - so there is no
-# signal to notice.
-#
-# CI/prepare-release-assets.sh cannot catch this: its check is a tag *prefix* match
-# against the asset names, and "Mudlet-5.0.0-linux-x64.AppImage.tar" does start with
-# "Mudlet-5.0". The opposite mistake - a stale APP_VERSION with a correct tag - is
-# caught there, which is exactly why this one is worth a check of its own.
-#
-# Suffixed release tags such as "Mudlet-5.0.0-rc1" are rejected too. Not because the
-# updater could not parse them - SemVer does accept a prerelease component - but
-# because APP_VERSION cannot carry the suffix (CI/validate_deployment.sh requires
-# three plain components), so tag and binary would disagree and the assets, which
-# are named after APP_VERSION, would all fail the prefix match above. Supporting a
-# release candidate means teaching APP_VERSION and this guard about it together.
-#
 # Usage: check-release-tag.sh <version> [tag]
-#   With no tag - a PTB, whose tag is generated rather than pushed - only the shape
-#   of the version is checked, which is the half that breaks a PTB the same way.
+#
+# The updater offers the version from the release tag, not from APP_VERSION
+# (src/updater/Release.cpp), and SemVer needs three components - so "Mudlet-5.0" is
+# never offered to anyone, silently. CI/prepare-release-assets.sh cannot see it: that
+# check matches the tag as a prefix of the asset names, and "Mudlet-5.0.0-linux-x64"
+# does start with "Mudlet-5.0". Only the opposite mistake fails there.
+#
+# "Mudlet-5.0.0-rc1" is rejected as well - SemVer would accept it, but APP_VERSION
+# cannot carry a suffix, so the assets named after it would not match the tag.
+#
+# A PTB passes no tag, its tag being generated rather than pushed.
 
 set -euo pipefail
 
@@ -38,9 +22,7 @@ if [ $# -lt 1 ] || [ $# -gt 2 ] || [ -z "${VERSION}" ]; then
   exit 2
 fi
 
-# The explanations below are worth reading in full, but a multi-line message cannot
-# become a GitHub annotation, so leave a one-line summary where a red X is looked
-# for first
+# A multi-line message cannot become a GitHub annotation, so summarise in one line
 annotate() {
   if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
     echo "::error::$1"
@@ -72,8 +54,7 @@ updater reads the version it offers from the tag rather than from the binary, so
 tag like 'Mudlet-5.0' offers version '5.0' - not a three-component semantic
 version, therefore never newer than the installed 4.22.0, therefore never offered.
 No error is shown and the update check logs "0 update(s) available", the same line
-it logs when there is genuinely nothing new, so nobody notices until the download
-numbers do not move.
+it logs when there is genuinely nothing new.
 
 It also desynchronises macOS: create-github-release.yml puts the tag's version into
 <sparkle:version> while the app reports APP_VERSION as its CFBundleVersion, so a
@@ -86,9 +67,8 @@ EOF
   exit 1
 fi
 
-# Silence would be ambiguous on the one path where it matters: a release log with no
-# line here looks the same whether the tag was checked or the guard was never
-# reached. A PTB says nothing, since it runs nightly and has no tag to report
+# A release log with no line here reads the same whether the tag was compared or the
+# guard was never reached
 if [ -n "${TAG}" ]; then
   echo "Release tag '${TAG}' matches APP_VERSION '${VERSION}'."
 fi

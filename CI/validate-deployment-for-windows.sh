@@ -25,8 +25,6 @@ function validate_cmake() {
   # there is no static "APP_BUILD" line left to validate here.
 }
 
-# Release tags have to spell out APP_VERSION - CI/check-release-tag.sh explains
-# what goes wrong when they do not
 function validate_release_tag() {
   local TAG_NAME=""
   if [[ "${GITHUB_REF:-}" =~ ^refs/tags/ ]]; then
