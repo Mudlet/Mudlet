@@ -230,9 +230,11 @@ private slots:
         QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
         QVERIFY2(bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "Expected the same-line re-creation abort error in the console buffer");
         // One fire from the trigger that was already there when the line arrived,
-        // then one per generation the budget allows.
-        QVERIFY2(bufferContains(qsl("LOOPFIRES=%1").arg(TriggerUnit::scmMaxProcessingDepth)),
-                 qPrintable(qsl("Expected the re-arming trigger to fire exactly %1 times").arg(TriggerUnit::scmMaxProcessingDepth)));
+        // then one per trigger the budget lets the re-arming chain add to it. The
+        // trailing # anchors the count: without it the check also passes on ten
+        // times the number.
+        const int expectedFires = 1 + static_cast<int>(TriggerUnit::scmMaxSameLineCreations);
+        QVERIFY2(bufferContains(qsl("LOOPFIRES=%1#").arg(expectedFires)), qPrintable(qsl("Expected the re-arming trigger to fire exactly %1 times").arg(expectedFires)));
     }
 
     // The abort has to name the trigger to be actionable - the user has to know
@@ -275,16 +277,17 @@ private slots:
                                                                "echo('CHAINFIRES=' .. chainFires .. '#\\n')\n"));
 
         QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
-        QVERIFY2(bufferContains(qsl("CHAINFIRES=10")), "Expected all ten generations of the finite chain to match the current line");
+        QVERIFY2(bufferContains(qsl("CHAINFIRES=10#")), "Expected all ten generations of the finite chain to match the current line");
         QVERIFY2(!bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "A chain that ends on its own must not trip the same-line generation budget");
     }
 
     // Stopping the line is only half of it. A re-arming trigger with no expiry
     // leaves everything it created still active, so the next line would start
     // with a budget's worth of them and each would spawn a budget's worth again:
-    // measured at 50 fires on the first line and 2600 on the second, i.e. the
-    // freeze merely postponed. The abort therefore disables what the loop created
-    // during the line, which holds it at the same cost per line for ever.
+    // measured at 50 fires on the first line and 2600 on the second (with an
+    // earlier, smaller budget), i.e. the freeze merely postponed. The abort
+    // therefore stops what was created during the line, which holds the cost at
+    // one budget per line for ever.
     void test_selfRecreatingTriggerDoesNotAccumulateAcrossLines()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
@@ -302,8 +305,68 @@ private slots:
                                                                "echo('KEPTFIRES=' .. keptFires .. '#\\n')\n"));
 
         QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
-        QVERIFY2(bufferContains(qsl("KEPTFIRES=%1").arg(2 * TriggerUnit::scmMaxProcessingDepth)),
-                 qPrintable(qsl("Expected the second line to cost the same %1 fires as the first, not a multiple of them").arg(TriggerUnit::scmMaxProcessingDepth)));
+        const int firesPerLine = 1 + static_cast<int>(TriggerUnit::scmMaxSameLineCreations);
+        QVERIFY2(bufferContains(qsl("KEPTFIRES=%1#").arg(2 * firesPerLine)),
+                 qPrintable(qsl("Expected the second line to cost the same %1 fires as the first, not a multiple of them").arg(firesPerLine)));
+    }
+
+    // permRegexTrigger() from a trigger's script loops the same way, and those
+    // objects are saved with the profile. They must be stopped like the temporary
+    // ones, but not deleted (the user owns them, and they are visible in the
+    // editor) and not switched off in a way that survives a save: deactivate()
+    // leaves the user-active state XMLexport writes alone, so a restart brings
+    // them back rather than confronting the user with a tree of unticked
+    // triggers they never touched.
+    void test_selfRecreatingPermanentTriggerIsStoppedButNotDeleted()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("permFires = 0\n"
+                                                               "function armPerm()\n"
+                                                               "  permRegexTrigger('Perm Loop', '', {'^permloop$'}, [[permFires = permFires + 1; armPerm()]])\n"
+                                                               "end\n"
+                                                               "armPerm()\n"
+                                                               "feedTriggers('permloop\\n')\n"
+                                                               "echo('PERMFIRES=' .. permFires .. '#\\n')\n"
+                                                               "echo('PERMACTIVE=' .. isActive('Perm Loop', 'trigger') .. '#\\n')\n"
+                                                               "echo('PERMEXISTS=' .. exists('Perm Loop', 'trigger') .. '#\\n')\n"));
+
+        const int expectedFires = 1 + static_cast<int>(TriggerUnit::scmMaxSameLineCreations);
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "Expected a permanent trigger re-creating itself to be stopped too");
+        QVERIFY2(bufferContains(qsl("PERMFIRES=%1#").arg(expectedFires)), qPrintable(qsl("Expected the re-arming permanent trigger to fire exactly %1 times").arg(expectedFires)));
+        QVERIFY2(bufferContains(qsl("PERMACTIVE=1#")), "Expected only the trigger that predates the line to still be active");
+        QVERIFY2(bufferContains(qsl("PERMEXISTS=%1#").arg(expectedFires + 1)), "Expected the stopped permanent triggers to still exist - stopping them is not deleting them");
+    }
+
+    // A runaway inside a nested feedTriggers() pass must stop that pass only: the
+    // outer line's own mid-pass triggers were registered before the nested pass
+    // began, so they stay live and still match the outer line afterwards.
+    void test_nestedPassAbortLeavesTheOuterLineAlone()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("seen = {}\n"
+                                                               "function armInner()\n"
+                                                               "  tempRegexTrigger('^inner$', [[armInner()]], 1)\n"
+                                                               "end\n"
+                                                               "armInner()\n"
+                                                               "tempRegexTrigger('^outer$', [=[\n"
+                                                               "  tempRegexTrigger('^(.*)$', [[table.insert(seen, matches[2])]], 10)\n"
+                                                               "  feedTriggers('inner\\n')\n"
+                                                               "]=], 1)\n"
+                                                               "feedTriggers('outer\\n')\n"
+                                                               "echo('SEEN=' .. table.concat(seen, ',') .. '#\\n')\n"));
+
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "Expected the runaway in the nested pass to be stopped");
+        QVERIFY2(bufferContains(qsl("SEEN=inner,outer#")), "Expected the capture trigger created by the outer line to survive the nested pass's abort and still match the outer line");
     }
 
     // The loop is not a feedTriggers() curiosity: an ordinary line arriving from

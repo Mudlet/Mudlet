@@ -534,6 +534,34 @@ private slots:
         QCOMPARE(readGlobalInt(qsl("oneShotFires")), 1);
     }
 
+    // The skip must not stop the walk: a corpse and a live trigger can share a
+    // name (tempComplexRegexTrigger() takes a user-supplied one), and #9366's
+    // guarantee that enable-by-name reaches every same-named trigger still holds
+    // for the ones that are actually alive.
+    void test_triggerEnableByNameStillReachesALiveSameNamedTrigger()
+    {
+        auto* unit = mpHost->getTriggerUnit();
+        const QStringList permPatterns{qsl("mixed_corpse_perm")};
+        auto [permId, message] = mpHost->mLuaInterpreter.startPermSubstringTrigger(qsl("mixed corpse placeholder"), QString(), permPatterns, QString());
+        QVERIFY2(permId > 0, qPrintable(message));
+        const QString sharedName = QString::number(permId + 1);
+        unit->getTrigger(permId)->setName(sharedName);
+
+        const int tempId = mpHost->mLuaInterpreter.startTempTrigger(qsl("mixed_corpse_temp"), QString());
+        QCOMPARE(tempId, permId + 1);
+        QCOMPARE(lookupCount(unit->mLookupTable.count(sharedName)), 2);
+
+        QVERIFY2(unit->killTrigger(sharedName), "the temporary trigger should be the one killed");
+        unit->getTrigger(permId)->setIsActive(false);
+
+        QVERIFY2(unit->enableTrigger(sharedName), "enableTrigger must walk past the corpse to the live trigger filed under the same name");
+        QVERIFY2(unit->getTrigger(permId)->isActive(), "the live same-named trigger should have been enabled");
+        QVERIFY2(!unit->getTrigger(tempId)->isActive(), "the killed trigger must stay dead");
+
+        unit->doCleanup();
+        QVERIFY(!unit->getTrigger(tempId));
+    }
+
     // Helpers (reused from the ResetProfileTest pattern)
 
     int readGlobalInt(const QString& name)

@@ -110,11 +110,15 @@ set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 
 # TriggerSameLineMatchTest creates a fresh profile per test method, so it needs a
-# longer timeout. Its self-re-creating-trigger cases are also the only thing
-# standing between a regression there and a test run that never ends - without
-# the generation budget in TriggerUnit::processDataStream() they do not fail,
-# they hang - so this timeout is what turns that into a reported failure.
-set_tests_properties(TriggerSameLineMatchTest PROPERTIES TIMEOUT 300)
+# longer timeout. Its self-re-creating-trigger cases do not fail on a regression,
+# they hang and grow the heap by ~110MB/s, so the two backstops below are what
+# turn that into a reported failure: an RSS ceiling that aborts in seconds rather
+# than letting a runner's OOM killer pick a victim, and the timeout behind it.
+# The ENVIRONMENT here replaces the one the loop above sets, so it repeats
+# QT_QPA_PLATFORM.
+set_tests_properties(TriggerSameLineMatchTest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0:hard_rss_limit_mb=3000"
+    TIMEOUT 300)
 
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
