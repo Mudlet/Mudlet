@@ -95,14 +95,28 @@ bool MMCPClient::incoming(qintptr socketDesc)
     return mTcpSocket.setSocketDescriptor(socketDesc);
 }
 
+/**
+ * The address and port this peer can be called back on. For an outgoing
+ * connection that is the endpoint we dialled; for an incoming one it is the one
+ * they declared in their handshake, which is not the socket's source port - that
+ * is ephemeral and nobody can call back on it.
+ */
 QString MMCPClient::host()
 {
-    return convertToIPv4(mTcpSocket.peerAddress());
+    return mPeerAddress;
 }
 
 quint16 MMCPClient::port()
 {
-    return mTcpSocket.peerPort();
+    return mPeerPort;
+}
+
+/**
+ * Whether this peer gave us an endpoint that somebody else could actually dial.
+ */
+bool MMCPClient::hasCallbackEndpoint() const
+{
+    return mPeerPort != 0 && !QHostAddress(mPeerAddress).isNull();
 }
 
 
@@ -114,10 +128,13 @@ void MMCPClient::slot_connected()
     mPeerAddress = convertToIPv4(mTcpSocket.peerAddress());
     mPeerPort = mTcpSocket.peerPort();
 
+    // The address and port carried in the handshake are our own callback details
+    // for the peer to record, not the ones we just dialled - those are theirs and
+    // they know them already
     QString str = qsl("CHAT:%1\n%2%3")
                           .arg(mpMMCPServer->getChatName(),
-                               mPeerAddress)
-                          .arg(mPeerPort, -5);
+                               convertToIPv4(mTcpSocket.localAddress()))
+                          .arg(mpHost->getMMCPPort(), -csMMCPPortFieldWidth);
 
     mTcpSocket.write(str.toLatin1());
 
@@ -136,18 +153,23 @@ void MMCPClient::slot_disconnected()
         mPendingTimer.stop();
     }
 
-    /*: This message is used when a MMCP peer without a name disconnects,
-     * %1 is the peer's IP address (numbers or URL), %2 is the port they are
-     * listening on. Should be similiar to the one when we do have a name.
-     */
-    const QString infoMsg = mPeerName.isEmpty() ? tr("[ CHAT ]  - You are now disconnected from <unknown> - %1:%2.").arg(mPeerAddress, QString::number(mPeerPort))
-    /*: This message is used when a MMCP peer with a name disconnects,
-     * %1 is the peer's name, %2 is the peer's IP address (numbers or URL),
-     * %3 is the port they are listening on. Should be similiar to the one when
-     * we do not have a name.
-     */
-                                                : tr("[ CHAT ]  - You are now disconnected from %1 - %2:%3.").arg(mPeerName, mPeerAddress, QString::number(mPeerPort));
-    mpHost->postMessage(infoMsg);
+    // An id is only handed out once we join the peer list, so without one we were
+    // never announced as connected - a refused call, say - and reporting a
+    // disconnection would just be confusing
+    if (mId) {
+        /*: This message is used when a MMCP peer without a name disconnects,
+         * %1 is the peer's IP address (numbers or URL), %2 is the port they are
+         * listening on. Should be similiar to the one when we do have a name.
+         */
+        const QString infoMsg = mPeerName.isEmpty() ? tr("[ CHAT ]  - You are now disconnected from <unknown> - %1:%2.").arg(mPeerAddress, QString::number(mPeerPort))
+        /*: This message is used when a MMCP peer with a name disconnects,
+         * %1 is the peer's name, %2 is the peer's IP address (numbers or URL),
+         * %3 is the port they are listening on. Should be similiar to the one when
+         * we do not have a name.
+         */
+                                                    : tr("[ CHAT ]  - You are now disconnected from %1 - %2:%3.").arg(mPeerName, mPeerAddress, QString::number(mPeerPort));
+        mpHost->postMessage(infoMsg);
+    }
 
     if (isSnooping()) {
         setSnooping(false);
@@ -213,15 +235,18 @@ void MMCPClient::slot_readData()
         if (peerName.length() > csMMCPMaxPeerNameLength) {
             qWarning() << "MMCPClient::slot_readData() - Rejecting connection: peer name too long (" << peerName.length() << " bytes)";
             mState = Disconnected;
-            writeData(qsl("NO:%1\n").arg(mpMMCPServer->getChatName()));
-            disconnect();
 
+            // The socket forgets the peer once it is disconnected, so anything we
+            // want to say about them has to be said first
             const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 denied (Peer name too long (64 chars max)).")
                                             .arg(QString::fromUtf8(peerName.left(csMMCPMaxPeerNameLength)),
                                                  convertToIPv4(mTcpSocket.peerAddress()),
                                                  QString::number(mTcpSocket.peerPort()));
 
             mpHost->postMessage(infoMsg);
+
+            writeData(qsl("NO:%1\n").arg(mpMMCPServer->getChatName()));
+            disconnect();
 
             return;
         }
@@ -233,7 +258,7 @@ void MMCPClient::slot_readData()
         const QByteArray ipAndPort = mPeerBuffer.mid(nlPos + 1);
 
         // Validate that we have enough data for IP and port (at least 5 chars for port)
-        if (ipAndPort.size() < 5) {
+        if (ipAndPort.size() < csMMCPPortFieldWidth) {
             qWarning() << "MMCPClient::slot_readData() - Malformed handshake: insufficient data for IP and port";
             mState = Disconnected;
             disconnect();
@@ -241,16 +266,14 @@ void MMCPClient::slot_readData()
         }
 
         // Exclude the last 5 characters for the IP address
-        const QByteArray ipAddress = ipAndPort.left(ipAndPort.size() - 5);
+        const QByteArray ipAddress = ipAndPort.left(ipAndPort.size() - csMMCPPortFieldWidth);
         // Last 5 characters for the port
-        const QByteArray port = ipAndPort.right(5);
+        const QByteArray port = ipAndPort.right(csMMCPPortFieldWidth);
 
         QHostAddress host(QString::fromUtf8(ipAddress));
 
         if (mpMMCPServer->isDoNotDisturb()) {
             mState = Disconnected;
-            writeData(qsl("NO:%1\n").arg(mpMMCPServer->getChatName()));
-            disconnect();
 
             const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 denied (DoNotDisturb).")
                                             .arg(mPeerName,
@@ -258,6 +281,9 @@ void MMCPClient::slot_readData()
                                                  QString::number(mTcpSocket.peerPort()));
 
             mpHost->postMessage(infoMsg);
+
+            writeData(qsl("NO:%1\n").arg(mpMMCPServer->getChatName()));
+            disconnect();
         } else {
             // The ipAddress string to QHostAddress may have failed
             mPeerAddress = host.isNull() ? "<Unknown>" : convertToIPv4(host);
@@ -318,9 +344,6 @@ void MMCPClient::slot_readData()
 
         if (!(isYes || isNo) || nlPos == -1 || colonPos == -1) {
             mState = Disconnected;
-            // Nothing else tidies this connection up, so without this the socket
-            // and this object stay alive for the rest of the session
-            disconnect();
 
             // In this case we do not get details of the connection from the
             // other end - instead we can only report the apparent details from
@@ -330,11 +353,13 @@ void MMCPClient::slot_readData()
                                                  QString::number(mTcpSocket.peerPort()));
             mpHost->postMessage(infoMsg);
 
+            // Nothing else tidies this connection up, so without this the socket
+            // and this object stay alive for the rest of the session
+            disconnect();
+
         } else if (isNo) {
             // We were rejected by the other end, but we do get details of the connection from them, so we can report that:
             mState = Disconnected;
-            // The far end usually closes on us here, but we should not rely on it
-            disconnect();
             const QByteArray peerName = mPeerBuffer.mid(colonPos + 1, nlPos - colonPos - 1);
             const QString rejectedBy = QString::fromUtf8(peerName);
             const QString infoMsg = tr("[ CHAT ]  - Connection to %1 at %2:%3 rejected.")
@@ -342,6 +367,9 @@ void MMCPClient::slot_readData()
                                                 convertToIPv4(mTcpSocket.peerAddress()),
                                                 QString::number(mTcpSocket.peerPort()));
             mpHost->postMessage(infoMsg);
+
+            // The far end usually closes on us here, but we should not rely on it
+            disconnect();
 
         } else {
             // We have got a "YES:" - yippee!
@@ -421,16 +449,17 @@ void MMCPClient::denyCall() {
     mPendingTimer.stop();  // Stop timeout
     mState = Disconnected;
 
-    writeData(qsl("NO:%1\n").arg(mpMMCPServer->getChatName()));
-
-    disconnect();
-
+    // The socket forgets the peer once it is disconnected, so report first
     const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 denied.")
                                     .arg(mPeerName,
                                             convertToIPv4(mTcpSocket.peerAddress()),
                                             QString::number(mTcpSocket.peerPort()));
 
     mpHost->postMessage(infoMsg);
+
+    writeData(qsl("NO:%1\n").arg(mpMMCPServer->getChatName()));
+
+    disconnect();
 }
 
 
@@ -1164,8 +1193,8 @@ const QString MMCPClient::getInfoString(int colName, int colAddr, int colPort, i
 
     return qsl("%1%6 %2 %3 %4 %5")
             .arg(mPeerName, -colName)
-            .arg(convertToIPv4(mTcpSocket.peerAddress()), -colAddr)
-            .arg(mTcpSocket.peerPort(), colPort)
+            .arg(mPeerAddress, -colAddr)
+            .arg(mPeerPort, colPort)
             .arg(groupStr, -colGroup)
             .arg(getFlagsString(), -colFlags)
             .arg(RST);

@@ -24,6 +24,7 @@
 
 inline const uint16_t csDefaultMMCPHostPort{4050};
 inline constexpr int csMMCPGroupFieldWidth{15};
+inline constexpr int csMMCPPortFieldWidth{5};
 inline constexpr int csMMCPMaxPeerNameLength{64};
 inline constexpr int csMMCPMaxHandshakeReplyLength{128};
 inline const auto csDefaultMMCPChatName{qsl("MudletUser")};

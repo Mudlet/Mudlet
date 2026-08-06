@@ -1042,7 +1042,8 @@ void MMCPServer::sendPublicConnections(MMCPClient* pClient)
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
 
-        if (cl && cl != pClient && !cl->isPrivate()) {
+        // No point handing out an endpoint the recipient cannot dial
+        if (cl && cl != pClient && !cl->isPrivate() && cl->hasCallbackEndpoint()) {
             peerList << qsl("%1,%2").arg(cl->host(), QString::number(cl->port()));
         }
     }
@@ -1072,7 +1073,7 @@ void MMCPServer::sendPublicPeek(MMCPClient* pClient)
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
 
-        if (cl && cl != pClient && !cl->isPrivate()) {
+        if (cl && cl != pClient && !cl->isPrivate() && cl->hasCallbackEndpoint()) {
             peerList << qsl("%1~%2~%3").arg(cl->host(), QString::number(cl->port()), cl->chatName());
         }
     }
