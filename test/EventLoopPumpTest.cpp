@@ -25,12 +25,9 @@
 #include "EventLoopPump.h"
 
 /*
- * EventLoopPump exists because a nested QEventLoop::exec() entered from inside a
- * Qt timer callback stops seeing Qt timers on macOS, so a wait armed with a
- * QTimer never ends (issue #9670). The case that matters most here is therefore
- * pumpingFromInsideATimerCallback(): on the platform the bug lives on, running a
- * nested exec() in that position is what wedges, and these run on the macOS CI
- * legs.
+ * The macOS CI legs are what make pumpingFromInsideATimerCallback() worth
+ * having: that is the position a nested QEventLoop::exec() stops seeing Qt
+ * timers in (issue #9670), and no other platform reproduces it.
  */
 class EventLoopPumpTest : public QObject
 {
@@ -100,8 +97,8 @@ void EventLoopPumpTest::stopsWithoutPumpingWhenTheConditionAlreadyHolds()
     }));
     QVERIFY2(!mDelivered, "a condition that already held should not have pumped anything");
 
-    // The event is still queued rather than lost, and draining it here keeps it
-    // from turning up in the middle of the next test.
+    // Drain the still-queued event so it cannot turn up mid-way through the
+    // next test.
     QVERIFY(!EventLoopPump::pumpFor(20));
     QVERIFY(mDelivered);
 }
@@ -119,9 +116,8 @@ void EventLoopPumpTest::deliversATimerThatComesDueWhilePumping()
 
 void EventLoopPumpTest::pumpingFromInsideATimerCallback()
 {
-    // The #9670 shape. If Qt timers stop being delivered once the pump is
-    // entered from a timer callback, the inner timer never fires and the outer
-    // callback never finishes.
+    // A regression here hangs rather than fails: nothing ever completes the
+    // outer callback.
     bool innerFired = false;
     bool firedDuringPump = false;
     bool outerDone = false;

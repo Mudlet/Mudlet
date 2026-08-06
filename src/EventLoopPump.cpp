@@ -25,32 +25,16 @@
 #include <QEventLoop>
 #include <QThread>
 
-// Why this pumps rather than running a nested QEventLoop::exec():
-//
-// On macOS a nested exec() entered from inside a Qt timer callback stops seeing
-// Qt timers, so a wait armed with a QTimer never ends. Stacks captured from a
-// wedged CI run (issue #9670) show the main thread in
-// QTimerInfoList::activateTimers() -> a Qt timer's slot -> a nested
-// QEventLoop::exec(), which QCocoaEventDispatcher services by re-entering
-// -[NSApplication run] from inside the run loop callout the outer loop is
-// already in. That nested [NSApp run] sat in
-// _BlockUntilNextEventMatchingListInModeWithFilter for every one of 3314
-// samples, using 0.02s of CPU in 86 seconds: no Qt timer fired again, including
-// the single-shot one whose timeout was the only way out.
-//
-// The difference is that QEventLoop::exec() asks the event dispatcher to
-// process events with QEventLoop::EventLoopExec set, and QCocoaEventDispatcher
-// answers that by handing control to AppKit and relying on the platform run
-// loop to wake it for the single CFRunLoopTimer that drives every Qt timer.
-// QCoreApplication::processEvents() runs the dispatcher without EventLoopExec,
-// and that branch calls the dispatcher's own processTimers() - i.e.
-// QTimerInfoList::activateTimers() - directly on each pass, so Qt timers are
-// serviced whatever the platform run loop is or is not doing.
+// A nested QEventLoop::exec() cannot be used here. exec() sets
+// QEventLoop::EventLoopExec, which QCocoaEventDispatcher answers by re-entering
+// -[NSApplication run] and leaving Qt's timers to the platform run loop; nested
+// inside a Qt timer callback that run loop never wakes it again, so not even
+// the wait's own timeout fires (issue #9670). processEvents() instead takes the
+// branch that drives the dispatcher's processTimers() on every pass.
 bool EventLoopPump::pumpFor(const int timeoutMs, const std::function<bool()>& stopCondition)
 {
-    // Without a dispatcher QCoreApplication::processEvents() returns silently,
-    // which would turn this into a plain sleep that reports a timeout as though
-    // it had been waiting for something.
+    // processEvents() returns silently without a dispatcher, which would make
+    // this a plain sleep that then reports a timeout as though it had waited.
     if (!QThread::currentThread()->eventDispatcher()) {
         qWarning() << "EventLoopPump::pumpFor() called with no event dispatcher on this thread, no events can be delivered";
         return false;
@@ -69,8 +53,8 @@ bool EventLoopPump::pumpFor(const int timeoutMs, const std::function<bool()>& st
         if (deadline.hasExpired()) {
             return false;
         }
-        // A pass returns as soon as nothing more is pending, so without a pause
-        // this would spin a core flat for the whole timeout.
+        // A pass returns as soon as nothing is pending, so without this the loop
+        // spins a core flat for the whole timeout.
         QThread::msleep(1);
     }
 }

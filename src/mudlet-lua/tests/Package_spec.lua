@@ -17,9 +17,9 @@
 -- behind: the self-test profile is reused between runs, so a leak here would
 -- break the next run.
 
--- pumpEvents() is inert outside test mode, and without it these specs cannot
--- let the profile save finish - the uninstalls would fail and strand fixture
--- packages in the profile, so say so rather than make a mess of it.
+-- pumpEvents() is inert outside test mode, and without it the profile save
+-- never finishes: the uninstalls fail and strand fixture packages in the
+-- profile, so say so rather than make that mess.
 if not os.getenv("MUDLET_TEST_MODE") then
   describe("Tests the package and module lifecycle", function()
     it("needs test mode", function()
@@ -83,10 +83,8 @@ local function assertArgError(fn, needle)
   assert.is_true(contains(err, needle), tostring(err))
 end
 
--- pumpEvents() keeps Mudlet delivering events for the given time, which is how
--- a spec gives its queued work a chance to run: the install events are raised
--- from a zero-timer, and so is the profile save that uninstallPackage()
--- schedules.
+-- The install events, and the profile save uninstallPackage() schedules, are
+-- all raised from a zero-timer, so none of them happen unless a spec pumps.
 local function waitUntil(condition, timeoutMilliseconds)
   local waited = 0
   while waited < timeoutMilliseconds do

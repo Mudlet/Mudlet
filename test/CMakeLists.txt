@@ -51,9 +51,8 @@ foreach(test_name ${UNIT_TESTS})
     )
 endforeach()
 
-# EventLoopPumpTest is the regression test for #9670, where the thing it covers
-# hung rather than failed. A wedge here should end the job in a minute, not run
-# out ctest's default 25.
+# A regression in what EventLoopPumpTest covers hangs rather than fails, so cap
+# it well under ctest's default 25 minutes.
 set_tests_properties(EventLoopPumpTest PROPERTIES TIMEOUT 60)
 
 # TKeySequenceEditTest's focus traversal cases need an active window, which an X

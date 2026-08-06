@@ -101,8 +101,7 @@ describe("waitForEvent test helper", function()
       end)
 
     it("observes an event raised from inside another timer's callback", function()
-        -- The shape #9670 wedged on: a wait is armed from Lua that is itself
-        -- running inside a Qt timer callback.
+        -- The #9670 shape: the wait itself is armed from inside a timer callback.
         tempTimer(0, function()
             tempTimer(0.05, function() raiseEvent("mudletTestNestedTimer", "deep") end)
             _G.mudletTestNestedTimerResult = {waitForEvent("mudletTestNestedTimer", 2000)}
@@ -152,9 +151,8 @@ describe("pumpEvents test helper", function()
       end)
 
     it("keeps running timers when pumping from inside a timer's callback", function()
-        -- This is the #9670 shape: on macOS a nested QEventLoop::exec() entered
-        -- from a Qt timer callback stopped seeing Qt timers altogether, so
-        -- nothing - not even the wait's own timeout - could end it.
+        -- The #9670 shape: on macOS this position stops Qt timers entirely, so
+        -- a regression hangs the spec rather than failing it.
         local result = {}
         tempTimer(0, function()
             tempTimer(0.05, function() result.innerFired = true end)

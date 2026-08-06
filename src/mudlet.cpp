@@ -1711,13 +1711,9 @@ void mudlet::slot_closeProfileRequested(int tab)
     });
 }
 
-// Closing one profile takes its Host, its interpreter and its lua_State with it.
-// A test-mode waitForEvent() or pumpEvents() is holding all three while it runs,
-// and is exactly what delivers the queued call that got us here, so closing now
-// would pull them out from under Lua code that is still executing. The
+// Closing a profile destroys the lua_State the pump is still executing on. The
 // application-wide close paths are deliberately not guarded like this: refusing
-// there would cancel a shutdown nobody would retry. Always false (so a no-op)
-// outside MUDLET_TEST_MODE, where both helpers are inert.
+// there would cancel a shutdown nobody would retry.
 bool mudlet::closeHeldOffByEventPump(Host* pHost) const
 {
     if (!pHost->getLuaInterpreter()->pumpingEvents()) {
@@ -7535,12 +7531,9 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
 void mudlet::armForceClose()
 {
     QTimer::singleShot(0ms, this, [this]() {
-        // Deferring by one event loop iteration is meant to get out of Lua
-        // before closing, but a test-mode waitForEvent() or pumpEvents() runs
-        // the event loop from inside Lua, so this can land right back in it.
-        // Wait for the pump instead of closing on top of it - both are bounded
-        // at 30s. Always false (so a straight close) outside MUDLET_TEST_MODE,
-        // where both helpers are inert.
+        // Deferring by one event loop iteration is meant to land outside Lua,
+        // but the pump runs the event loop from inside Lua, so it can land
+        // right back in it. Retrying terminates: the pump is capped at 30s.
         for (auto pHost : mHostManager) {
             if (pHost->getLuaInterpreter()->pumpingEvents()) {
                 qWarning() << "mudlet::armForceClose() - the test-mode event pump is running, waiting for it to finish";
@@ -7726,11 +7719,9 @@ void mudlet::slot_detachedWindowClosed(const QString& profileName)
     }
 }
 
-// Unlike the tab-close slots, by the time we get here the window and its
-// bookkeeping are already gone, so simply dropping the close while a test-mode
-// event pump is running would leave the profile loaded with no way to reach it.
-// Wait the pump out instead, the way armForceClose() does. Outside
-// MUDLET_TEST_MODE there is never a pump, so this closes straight away.
+// Unlike the tab-close slots, the window and its bookkeeping are already gone by
+// the time we get here, so dropping the close while the pump runs would leave
+// the profile loaded with no way to reach it. Wait the pump out instead.
 void mudlet::closeHostOfClosedDetachedWindow(const QString& profileName)
 {
     Host* pHost = mHostManager.getHost(profileName);

@@ -4977,8 +4977,6 @@ int TLuaInterpreter::createEventArgsTableRef(const TEvent& pE)
 }
 
 // No documentation available in wiki - internal, test-only helper for waitForEvent()
-// If a waitForEvent() call is blocked waiting for this event, capture its
-// arguments so that call can stop waiting. Called from Host::raiseEvent().
 void TLuaInterpreter::captureEventForWaits(const TEvent& pE)
 {
     if (mPendingEventWaits.isEmpty() || pE.mArgumentList.isEmpty()) {

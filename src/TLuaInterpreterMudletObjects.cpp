@@ -1560,11 +1560,9 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
     return 1;
 }
 
-// Nothing that spins the event loop should outlive the profile or the
-// application: pumping on past either would keep Lua running against objects
-// that are being torn down. A Host that has already gone, or a mudlet singleton
-// already past its destructor, counts as shutting down - those are further
-// along than the flags, not healthier.
+// A gone Host, or a mudlet singleton already past its destructor, is further
+// along than the flags rather than healthier, so the nulls count as shutting
+// down too.
 static bool shuttingDown(const QPointer<Host>& pHost)
 {
     mudlet* pMudlet = mudlet::self();
@@ -1572,12 +1570,9 @@ static bool shuttingDown(const QPointer<Host>& pHost)
 }
 
 // No documentation available in wiki - internal, test-only function
-// Blocks the calling Lua code until the named event is raised (returning the
-// event name followed by its arguments, exactly as an event handler would
-// receive them) or the timeout elapses (returning nil and an error message).
-// Timers, networking and other events keep being processed while blocked, which
-// is what lets busted specs observe asynchronous behaviour without sleeps.
-// Gated behind MUDLET_TEST_MODE so it is inert for normal users.
+// Blocks the calling Lua code until the named event is raised, returning the
+// event name and its arguments exactly as an event handler would receive them,
+// or nil and an error message. Timers and networking run on meanwhile.
 int TLuaInterpreter::waitForEvent(lua_State* L)
 {
     if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
@@ -1608,11 +1603,9 @@ int TLuaInterpreter::waitForEvent(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
-    // A profile reset recreates this profile's lua_State (initLuaGlobals() calls
-    // lua_close()), and shutdown destroys the interpreter outright. Either would
-    // free the state L is executing on while we wait, so refuse rather than risk
-    // a use-after-free when the wait returns. resetProfile_phase1() guards the
-    // mirror case where a reset is requested while we are already blocked.
+    // A reset recreates this lua_State and a shutdown destroys the interpreter,
+    // either of which frees the state L runs on mid-wait. resetProfile_phase1()
+    // guards the mirror case, a reset asked for once we are already blocked.
     if (host.profileResetInProgress() || host.isClosingDown()) {
         lua_pushnil(L);
         lua_pushstring(L, "waitForEvent: cannot wait while the profile is being reset or Mudlet is closing");
@@ -1633,9 +1626,6 @@ int TLuaInterpreter::waitForEvent(lua_State* L)
     if (!wait.mCaptured) {
         lua_pushnil(L);
         if (stoppedEarly) {
-            // The stop condition fired without capturing anything, so Mudlet is
-            // going away. Saying "timed out" here would send whoever reads the
-            // CI log hunting for a slow event that was never coming.
             lua_pushstring(L, qsl("waitForEvent: gave up waiting for event '%1', Mudlet is shutting down").arg(eventName).toUtf8().constData());
         } else {
             lua_pushstring(L, qsl("waitForEvent: timed out after %1ms waiting for event '%2'").arg(QString::number(timeoutMs), eventName).toUtf8().constData());
@@ -1668,13 +1658,9 @@ int TLuaInterpreter::waitForEvent(lua_State* L)
 }
 
 // No documentation available in wiki - internal, test-only function
-// Keeps Mudlet delivering events for the given number of milliseconds and then
-// returns true. This is the sleep a busted spec wants when it has to let queued
-// work - a zero-timer, a scheduled profile save, a network reply - actually
-// run, rather than waiting for a named event. Specs used to get this by calling
-// waitForEvent() with an event name nothing ever raises, which only ever
-// finished through the timeout path. Gated behind MUDLET_TEST_MODE so it is
-// inert for normal users.
+// Keeps Mudlet delivering events for the given number of milliseconds: the
+// sleep a spec wants to let queued work run when there is no named event to
+// wait for.
 int TLuaInterpreter::pumpEvents(lua_State* L)
 {
     if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
@@ -1683,10 +1669,8 @@ int TLuaInterpreter::pumpEvents(lua_State* L)
         return 2;
     }
 
-    // One step of a spec's own retry loop is the common case, so that is the
-    // default. The ceiling matches waitForEvent()'s: long enough for the slowest
-    // thing a spec waits on, short enough that a runaway pump shows up as its
-    // own failure rather than by having the whole suite killed.
+    // The ceiling matches waitForEvent()'s: below busted's per-spec CI timeout,
+    // so a runaway pump fails on its own rather than taking the suite with it.
     constexpr int defaultTimeoutMs = 50;
     constexpr int maximumTimeoutMs = 30000;
     int timeoutMs = defaultTimeoutMs;
@@ -1698,9 +1682,8 @@ int TLuaInterpreter::pumpEvents(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
-    // Same use-after-free hazard waitForEvent() guards: a profile reset closes
-    // the lua_State this is running on, and the pump is exactly what delivers
-    // the zero-timer that phase2 is armed on.
+    // Same use-after-free waitForEvent() guards, and worse here: the pump is
+    // itself what delivers the zero-timer phase2 is armed on.
     if (host.profileResetInProgress() || host.isClosingDown()) {
         lua_pushnil(L);
         lua_pushstring(L, "pumpEvents: cannot pump while the profile is being reset or Mudlet is closing");
@@ -1717,9 +1700,8 @@ int TLuaInterpreter::pumpEvents(lua_State* L)
     });
 
     if (stoppedEarly) {
-        // Ran for less than it was asked to, so whatever the caller queued may
-        // not have happened. Callers that only wanted a pause can ignore this;
-        // the ones flushing a queued profile save should not.
+        // Ran short, so whatever the caller queued may not have happened - a
+        // spec flushing a profile save needs to hear that, not just get true.
         lua_pushnil(L);
         lua_pushstring(L, "pumpEvents: stopped early, Mudlet is shutting down");
         return 2;

@@ -25,11 +25,8 @@
 class EventLoopPump
 {
 public:
-    // Keeps delivering Qt events for up to timeoutMs milliseconds, returning
-    // early as soon as stopCondition (if given) returns true. Returns true if it
-    // stopped on the condition, false if it ran out of time.
-    //
-    // This is deliberately not a nested QEventLoop::exec(): see the comment in
+    // Delivers Qt events for up to timeoutMs. True means stopCondition became
+    // true, false means the time ran out. Not a nested QEventLoop::exec(): see
     // EventLoopPump.cpp for why exec() cannot be used here.
     [[nodiscard]] static bool pumpFor(int timeoutMs, const std::function<bool()>& stopCondition = {});
 };

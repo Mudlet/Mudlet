@@ -849,8 +849,6 @@ describe("MMCP effects against a scripted chat peer", function()
     return true
   end
 
-  -- Lets Mudlet's event loop run for ms without blocking it, so sockets and
-  -- timers get time to work.
   local function pump(ms)
     pumpEvents(ms)
   end

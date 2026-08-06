@@ -900,10 +900,8 @@ bool Host::resetProfile_phase1()
         return false;
     }
 
-    // A test-mode waitForEvent() or pumpEvents() is pumping the event loop on
-    // this profile's lua_State; phase2 would lua_close() that state underneath
-    // it (a use-after-free). Refuse until the pump finishes. Always false (so a
-    // no-op) outside MUDLET_TEST_MODE, where both helpers are inert.
+    // Phase 2 lua_close()s the very state the pump is running Lua code on, so
+    // refuse rather than reset into a use-after-free.
     if (mLuaInterpreter.pumpingEvents()) {
         qWarning() << "Host::resetProfile_phase1() called while the test-mode event pump is running, ignoring";
         return false;
