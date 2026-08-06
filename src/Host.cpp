@@ -459,8 +459,13 @@ Host::~Host()
     // The editor is a parentless top-level window that closeChildren() deletes
     // on the normal profile-close path; a Host destroyed without that call
     // would leak the whole editor and its item trees, so delete it here while
-    // the units it references are still alive:
-    delete mpEditorDialog;
+    // the units it references are still alive. Null the pointer first so that
+    // nothing looking at mpEditorDialog mid-teardown finds a half-destroyed
+    // widget - a QPointer only clears itself once ~QObject is reached:
+    if (auto* pEditor = mpEditorDialog.data()) {
+        mpEditorDialog = nullptr;
+        delete pEditor;
+    }
 
     // This needs to be cleared here while the Host object is still valid,
     // otherwise it'll be cleared when the Host object is being destroyed,

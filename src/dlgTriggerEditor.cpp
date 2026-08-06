@@ -1422,6 +1422,15 @@ dlgTriggerEditor::~dlgTriggerEditor()
     // into one of the slot_saveProperty_...() slots when this object is no
     // longer a valid receiver (#9574)
     utils::disconnectChildSignals(this);
+    // That does not cover the edbee text undo stack: it belongs to a parentless
+    // CharTextDocument, not to this widget's child tree, so break its
+    // connections into the editor by hand:
+    if (mpTextUndoStack) {
+        disconnect(mpTextUndoStack, nullptr, this, nullptr);
+    }
+    if (mpUndoStack) {
+        disconnect(mpUndoStack, nullptr, this, nullptr);
+    }
 }
 
 void dlgTriggerEditor::slot_searchSplitterMoved(const int pos, const int index)
@@ -1881,16 +1890,9 @@ void dlgTriggerEditor::slot_setTreeWidgetIconSize(const int s)
 
 void dlgTriggerEditor::closeEvent(QCloseEvent* event)
 {
-    // Only disconnect signals and clear undo stack if the dialog is being destroyed (WA_DeleteOnClose set)
-    // This happens when the profile closes (Host::closeChildren), not when the user just closes the editor window
-    if (testAttribute(Qt::WA_DeleteOnClose)) {
-        if (mpTextUndoStack) {
-            disconnect(mpTextUndoStack, nullptr, this, nullptr);
-        }
-        if (mpUndoStack) {
-            disconnect(mpUndoStack, nullptr, this, nullptr);
-        }
-    }
+    // The undo-stack disconnects that used to live here (behind a
+    // WA_DeleteOnClose check) moved into the destructor, which covers every
+    // destruction path - including a plain delete that never sends this event.
 
     emit editorClosing();
     writeSettings();
@@ -3109,6 +3111,8 @@ void dlgTriggerEditor::delete_alias()
         clearAliasForm();
     }
 
+    // Must stay after the selection handling above: the selection slots the
+    // removeChild() calls fired may still be reading the detached items.
     qDeleteAll(removedItems);
 }
 
@@ -3267,6 +3271,8 @@ void dlgTriggerEditor::delete_action()
         clearActionForm();
     }
 
+    // Must stay after the selection handling above: the selection slots the
+    // removeChild() calls fired may still be reading the detached items.
     qDeleteAll(removedItems);
 
     mpHost->getActionUnit()->updateAllToolbars();
@@ -3326,6 +3332,19 @@ void dlgTriggerEditor::delete_variable()
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
                 removedItems.append(pItem);
+                // Deleting this TVar below also frees its descendants, and unlike the
+                // other units nothing unregisters them, so getWVar() must stop
+                // resolving the whole detached subtree right now - both to keep a
+                // later loop pass over a selected descendant from looking up a freed
+                // TVar and to purge the item pointers before qDeleteAll() frees them:
+                QList<QTreeWidgetItem*> pendingPurge{pItem};
+                while (!pendingPurge.isEmpty()) {
+                    QTreeWidgetItem* pEntry = pendingPurge.takeLast();
+                    vu->removeTreeItem(pEntry);
+                    for (int i = 0; i < pEntry->childCount(); ++i) {
+                        pendingPurge.append(pEntry->child(i));
+                    }
+                }
             }
             delete var;
         }
@@ -3347,6 +3366,8 @@ void dlgTriggerEditor::delete_variable()
         clearVarForm();
     }
 
+    // Must stay after the selection handling above: the selection slots the
+    // removeChild() calls fired may still be reading the detached items.
     qDeleteAll(removedItems);
 }
 
@@ -3491,6 +3512,8 @@ void dlgTriggerEditor::delete_script()
         clearScriptForm();
     }
 
+    // Must stay after the selection handling above: the selection slots the
+    // removeChild() calls fired may still be reading the detached items.
     qDeleteAll(removedItems);
 }
 
@@ -3635,6 +3658,8 @@ void dlgTriggerEditor::delete_key()
         clearKeyForm();
     }
 
+    // Must stay after the selection handling above: the selection slots the
+    // removeChild() calls fired may still be reading the detached items.
     qDeleteAll(removedItems);
 }
 
@@ -3784,6 +3809,8 @@ void dlgTriggerEditor::delete_trigger()
         clearTriggerForm();
     }
 
+    // Must stay after the selection handling above: the selection slots the
+    // removeChild() calls fired may still be reading the detached items.
     qDeleteAll(removedItems);
 }
 
@@ -3928,6 +3955,8 @@ void dlgTriggerEditor::delete_timer()
         clearTimerForm();
     }
 
+    // Must stay after the selection handling above: the selection slots the
+    // removeChild() calls fired may still be reading the detached items.
     qDeleteAll(removedItems);
 }
 
