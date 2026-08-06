@@ -126,6 +126,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(listWidget_profiles, &QWidget::customContextMenuRequested, this, &dlgConnectionProfiles::slot_profileContextMenu);
 
     mpTabBar = new QTabBar(this);
+    // named so it can be told apart from the tab bar QTabWidget makes for
+    // itself, which is also a QTabBar child of this dialog
+    mpTabBar->setObjectName(qsl("gamesTabBar"));
     //: Tab showing only the games the user already has profiles for
     mpTabBar->insertTab(scmMyGamesTab, tr("My games"));
     //: Tab showing every game Mudlet has a built-in profile for
@@ -1675,7 +1678,7 @@ void dlgConnectionProfiles::generateCustomProfile(const QString& profileName) co
 // The items are destroyed and rebuilt wholesale by fillout_form(), so anything
 // that has let the event loop run since it last saw one has to ask for the
 // profile by name again instead of keeping the pointer.
-void dlgConnectionProfiles::setIconOfProfile(const QString& profileName, const QIcon& icon) const
+void dlgConnectionProfiles::setIconOfListedProfile(const QString& profileName, const QIcon& icon) const
 {
     const auto pItems = findData(*listWidget_profiles, profileName, csmNameRole);
     if (pItems.isEmpty()) {
@@ -1741,7 +1744,7 @@ void dlgConnectionProfiles::slot_setCustomIcon()
     auto icon = QIcon(QPixmap(imageLocation).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
     // the file dialog ran a nested event loop, so re-find the profile the icon
     // was picked for rather than assuming it is still the current item
-    setIconOfProfile(profileName, icon);
+    setIconOfListedProfile(profileName, icon);
 }
 void dlgConnectionProfiles::slot_setCustomColor()
 {
@@ -1760,7 +1763,7 @@ void dlgConnectionProfiles::slot_setCustomColor()
             qDebug() << "dlgConnectionProfiles::slot_setCustomColor: error saving custom icon color: " << file.errorString();
         }
         // as in slot_setCustomIcon(): the colour dialog ran a nested event loop
-        setIconOfProfile(profileName, customIcon(profileName, {color}));
+        setIconOfListedProfile(profileName, customIcon(profileName, {color}));
     }
 }
 void dlgConnectionProfiles::slot_resetCustomIcon()
@@ -1814,7 +1817,10 @@ void dlgConnectionProfiles::slot_copyProfile()
     auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(enums::profileHomePath, oldname), mudlet::getMudletPath(enums::profileHomePath, profile_name));
     auto watcher = new QFutureWatcher<bool>(this);
     connect(watcher, &QFutureWatcher<bool>::finished, this, [this, profile_name, oldPassword, watcher]() {
-        mProfileList << profile_name;
+        // a rebuild during the copy can already have picked the new folder up
+        if (!mProfileList.contains(profile_name)) {
+            mProfileList << profile_name;
+        }
 
         // The dialog stays usable while the copy runs, and anything that calls
         // fillout_form() - switching the games tab is one click away - destroys
@@ -1823,8 +1829,8 @@ void dlgConnectionProfiles::slot_copyProfile()
         // across the copy leaves it dangling.
         auto pCopiedItems = findData(*listWidget_profiles, profile_name, csmNameRole);
         if (pCopiedItems.isEmpty()) {
-            // rebuilt before the copy had reached the disk, so it is not listed
-            // yet - rebuild once more now that it is there
+            // that rebuild scanned the profiles directory before the copy had
+            // finished landing in it, so the copy is not listed - scan again
             fillout_form();
             pCopiedItems = findData(*listWidget_profiles, profile_name, csmNameRole);
         }
