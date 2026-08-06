@@ -456,6 +456,12 @@ Host::~Host()
     // is being taken apart runs against freed members (#9653):
     mDeferredSaveTimer.stop();
 
+    // The editor is a parentless top-level window that closeChildren() deletes
+    // on the normal profile-close path; a Host destroyed without that call
+    // would leak the whole editor and its item trees, so delete it here while
+    // the units it references are still alive:
+    delete mpEditorDialog;
+
     // This needs to be cleared here while the Host object is still valid,
     // otherwise it'll be cleared when the Host object is being destroyed,
     // which can lead to a crash when closing multiple profiles at once.
