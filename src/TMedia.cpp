@@ -36,6 +36,32 @@
 #include <QStandardPaths>
 #include <QTimer>
 
+namespace {
+// Marks a player as belonging to the play() call that is setting it up, and gives it back
+// however that call returns. See TMediaPlayer::reservedForPlay().
+class MediaPlayerReservation
+{
+public:
+    MediaPlayerReservation() = default;
+    ~MediaPlayerReservation()
+    {
+        if (mPlayer) {
+            mPlayer->setReservedForPlay(false);
+        }
+    }
+    Q_DISABLE_COPY(MediaPlayerReservation)
+
+    void reserve(const std::shared_ptr<TMediaPlayer>& player)
+    {
+        mPlayer = player;
+        mPlayer->setReservedForPlay(true);
+    }
+
+private:
+    std::shared_ptr<TMediaPlayer> mPlayer;
+};
+} // namespace
+
 // Public
 TMedia::TMedia(Host* pHost, const QString& profileName)
 {
@@ -416,24 +442,25 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#purgeMediaCache
-bool TMedia::purgeMediaCache()
+std::pair<bool, QString> TMedia::purgeMediaCache()
 {
     const QString mediaPath = mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName());
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << qsl("TMedia::purgeMediaCache() WARNING - not able to reference directory: %1").arg(mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName()));
-        return false;
+        qWarning() << qsl("TMedia::purgeMediaCache() WARNING - not able to reference directory: %1").arg(mediaPath);
+        return {false, qsl("could not access the media directory \"%1\"").arg(mediaPath)};
     }
 
     stopAllMediaPlayers();
 
     if (!mediaDir.removeRecursively()) {
         qWarning() << qsl("TMedia::purgeMediaCache() WARNING - not able to remove all of directory: %1").arg(mediaPath);
-        return false;
+        // Whatever could be removed has been, so the caller is told which of the two it got.
+        return {false, qsl("removed what could be removed, but not all of the media directory \"%1\" - some files may be in use or write protected").arg(mediaPath)};
     }
 
-    return true;
+    return {true, QString()};
 }
 
 void TMedia::refreshAudioDevices()
@@ -1130,6 +1157,19 @@ void TMedia::downloadFile(TMediaData& mediaData)
     const QString scheme = fileUrl.scheme();
     if (scheme != qsl("http") && scheme != qsl("https")) {
         qWarning() << qsl("TMedia::downloadFile() WARNING - refused to download media from a non-HTTP(S) URL: %1").arg(fileUrl.toString());
+
+        // Reported the same way a download that fails is, so a script waiting on the media it
+        // asked for is told the request is over rather than left waiting on it.
+        TEvent event{};
+        event.mArgumentList << qsl("sysDownloadError");
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << qsl("Media can only be downloaded from an http:// or https:// URL");
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << mediaData.mediaAbsolutePathFileName();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << fileUrl.toString();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        mpHost->raiseEvent(event);
         return;
     }
 
@@ -1430,8 +1470,11 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
             continue;
         }
 
+        if (existingPlayer->reservedForPlay()) {
+            continue; // Another play() call is setting this one up
+        }
+
         if (existingPlayer->getPlaybackState() != QMediaPlayer::PlayingState && existingPlayer->mediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
-            existingPlayer->setMediaData(mediaData);
             return existingPlayer; // Reuse existing player
         }
     }
@@ -1470,7 +1513,6 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
         return nullptr;
     }
 
-    newPlayer->setMediaData(mediaData);
     connectMediaPlayer(newPlayer);
     mediaPlayerList.append(newPlayer);
 
@@ -1645,6 +1687,34 @@ void TMedia::releaseMediaSourceAfterEvents(const std::shared_ptr<TMediaPlayer>& 
     });
 }
 
+// Ends the playback a player picked up between tracks is still holding, so the track taking it
+// over starts from a player that has nothing loaded. A paused one is what makes this necessary:
+// it keeps its source, and handing setSource() a player that is not stopped stops it, which
+// would otherwise be reported as the *new* track ending - the media data has moved on by then -
+// and could clear the new source a turn later.
+void TMedia::endDisplacedPlayback(const std::shared_ptr<TMediaPlayer>& player)
+{
+    if (!player || !player->mediaPlayer() || player->mediaPlayer()->source().isEmpty()) {
+        return;
+    }
+
+    // Read before the source goes, because releasing is what makes it unreadable.
+    const TMediaData endedData = player->mediaData();
+    const QUrl endedUrl = player->mediaPlayer()->source();
+
+    // The playlist is the new track's to fill; anything left in it would restart the displaced
+    // one from the EndOfMedia handler.
+    if (player->playlist()) {
+        player->playlist()->clear();
+    }
+
+    player->mediaPlayer()->stop();
+    player->releaseSource();
+
+    // Skipped when the stop above already announced it - see endAnnounced().
+    raiseMediaFinishedEvent(player, endedUrl, endedData);
+}
+
 void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const std::shared_ptr<TMediaPlayer>& player)
 {
     if (!player) {
@@ -1652,6 +1722,11 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
     }
 
     if (playbackState == QMediaPlayer::StoppedState) {
+        if (player->claimingSource()) {
+            // The previous track being displaced, not this one ending - see claimingSource().
+            return;
+        }
+
         if (!player->mediaPlayer() || player->mediaPlayer()->source().isEmpty()) {
             // Whoever released the source already ended this playback and raised its event. A
             // second one from here would carry an empty file name and path, because the URL
@@ -1836,6 +1911,7 @@ void TMedia::play(TMediaData& mediaData)
     }
 
     std::shared_ptr<TMediaPlayer> pPlayer;
+    MediaPlayerReservation reservation;
 
     // Only match an existing media player for music and video
     if (mediaData.mediaType() == TMediaData::MediaTypeMusic || mediaData.mediaType() == TMediaData::MediaTypeVideo) {
@@ -1852,6 +1928,12 @@ void TMedia::play(TMediaData& mediaData)
             qWarning() << "TMedia::play() - Failed to create a new TMediaPlayer.";
             return;
         }
+
+        reservation.reserve(pPlayer);
+        endDisplacedPlayback(pPlayer);
+        // After the displaced track has been reported, since that report names the track that
+        // ended by the key and tag the player is still carrying for it.
+        pPlayer->setMediaData(mediaData);
     }
 
     if (!pPlayer->mediaPlayer()) {

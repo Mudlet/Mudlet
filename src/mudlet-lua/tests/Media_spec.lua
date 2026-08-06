@@ -188,8 +188,10 @@ describe("Media playback effects with a generated sound file", function()
   -- own, and a long one for the specs that have to still be playing when they
   -- stop or pause it, so a slow runner cannot turn a natural finish into a
   -- spurious failure.
+  -- A second long file so a spec can tell one playback from another by name.
   local soundFile = "busted-media-tone.wav"
   local longSoundFile = "busted-media-hold.wav"
+  local otherLongSoundFile = "busted-media-hold-other.wav"
   local mediaDirectory = getMudletHomeDir() .. "/media"
   local playbackObserved
 
@@ -224,6 +226,7 @@ describe("Media playback effects with a generated sound file", function()
   local function writeSoundFiles()
     writeMediaFile(soundFile, 150)
     writeMediaFile(longSoundFile, 10000)
+    writeMediaFile(otherLongSoundFile, 10000)
   end
 
   -- purgeMediaCache() empties the whole media directory, not just the fixtures
@@ -234,7 +237,7 @@ describe("Media playback effects with a generated sound file", function()
     local stash = getMudletHomeDir() .. "/busted-media-stash"
     local preserved = {}
     for entry in lfs.dir(mediaDirectory) do
-      if entry ~= "." and entry ~= ".." and entry ~= soundFile and entry ~= longSoundFile then
+      if entry ~= "." and entry ~= ".." and entry ~= soundFile and entry ~= longSoundFile and entry ~= otherLongSoundFile then
         preserved[#preserved + 1] = entry
       end
     end
@@ -263,6 +266,18 @@ describe("Media playback effects with a generated sound file", function()
       into[#into + 1] = {file = file, path = path, mediaType = mediaType, key = key, tag = tag}
     end)
     finally(function() killAnonymousEventHandler(handler) end)
+  end
+
+  -- Waits until collected holds count entries. A media event can be raised
+  -- inside the call that caused it, so a spec cannot arm waitForEvent() first
+  -- and has to be able to find the event already collected.
+  local function waitForCount(eventName, collected, count)
+    for _ = 1, 10 do
+      if #collected >= count then
+        return
+      end
+      waitForEvent(eventName, 2000)
+    end
   end
 
   -- The media events carry QUrl::path(), which puts a slash in front of a
@@ -416,6 +431,95 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPausedSounds())
   end)
 
+  it("playing a different sound while one is paused ends the paused one and starts the new one", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-parked", tag = "busted-parked-tag"}))
+    waitForCount("sysMediaStarted", started, 1)
+    assert.is_true(pauseSounds())
+    assert.equals(1, #getPausedSounds())
+
+    assert.is_true(playSoundFile({name = otherLongSoundFile, key = "busted-replacement"}))
+
+    -- the paused track is the one that ended, and it is reported under its own
+    -- key and tag rather than the replacement's
+    assert.equals(1, #finished)
+    assert.equals(longSoundFile, finished[1].file)
+    assert.equals("busted-parked", finished[1].key)
+    assert.equals("busted-parked-tag", finished[1].tag)
+
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started)
+    assert.equals(otherLongSoundFile, started[2].file)
+    local playing = getPlayingSounds()
+    assert.equals(1, #playing)
+    assert.equals(otherLongSoundFile, playing[1].name)
+    assert.equals(0, #getPausedSounds())
+  end)
+
+  it("a finite loop count plays every pass and reports each one", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = soundFile, key = "busted-looped", tag = "busted-looped-tag", loops = 2}))
+    waitForCount("sysMediaFinished", finished, 2)
+
+    assert.equals(2, #started)
+    assert.equals(2, #finished)
+    assert.equals(soundFile, finished[2].file)
+    assert.equals("busted-looped", finished[2].key)
+    assert.equals("busted-looped-tag", finished[2].tag)
+    assert.equals(0, #getPlayingSounds())
+  end)
+
+  it("a sysMediaFinished handler that starts a sound leaves the caller's own request playing", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+
+    -- The re-entrant call can only reach the player this call is setting up if
+    -- that player is already in the pool, and a player joins the pool only once
+    -- the play() that made it has returned. So warm several up, each started
+    -- while the one before it is playing.
+    local warmed = {}
+    collect("sysMediaStarted", warmed)
+    for index, key in ipairs({"busted-warm-one", "busted-warm-two", "busted-warm-three"}) do
+      assert.is_true(playSoundFile({name = longSoundFile, key = key}))
+      waitForCount("sysMediaStarted", warmed, index)
+    end
+    assert.equals(3, #getPlayingSounds())
+    assert.is_true(stopSounds())
+
+    local reentered = 0
+    local handler = registerAnonymousEventHandler("sysMediaFinished", function()
+      reentered = reentered + 1
+      playSoundFile({name = otherLongSoundFile, key = "busted-handler-sound"})
+    end)
+    finally(function() killAnonymousEventHandler(handler) end)
+
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-quiet", priority = 10}))
+    -- stops the sound above while it is still loading, which raises
+    -- sysMediaFinished into the handler from inside this very call
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-loud", priority = 90, loops = 3}))
+
+    assert.is_true(reentered > 0, "the priority stop raised no sysMediaFinished, so nothing re-entered")
+    local loud = getPlayingSounds({key = "busted-loud"})
+    assert.equals(1, #loud)
+    assert.equals(longSoundFile, loud[1].name)
+  end)
+
   it("the key filter picks out which sound is listed and stopped", function()
     if mediaPlaybackUnavailable() then
       return
@@ -502,6 +606,60 @@ describe("Media playback effects with a generated sound file", function()
     -- it stops every player before removing the directory
     assert.equals(0, #getPlayingSounds())
     assert.is_nil(lfs.attributes(soundPath, "mode"))
+  end)
+
+  it("purgeMediaCache returns nil and a message when it cannot empty the directory", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    if getOS() == "windows" then
+      pending("staging an undeletable file needs chmod")
+      return
+    end
+    writeSoundFiles()
+    preserveMediaDirectory()
+
+    local lockedDirectory = mediaDirectory .. "/busted-media-locked"
+    lfs.mkdir(lockedDirectory)
+    local pinnedFile = lockedDirectory .. "/busted-media-pinned.wav"
+    local handle = io.open(pinnedFile, "wb")
+    assert.is_not_nil(handle, "could not write the pinned media fixture")
+    handle:write("pinned")
+    handle:close()
+    os.execute("chmod 500 '" .. lockedDirectory .. "'")
+    finally(function()
+      os.execute("chmod 700 '" .. lockedDirectory .. "'")
+      os.remove(pinnedFile)
+      lfs.rmdir(lockedDirectory)
+    end)
+
+    if os.remove(pinnedFile) then
+      pending("this user can delete files out of a directory it cannot write")
+      return
+    end
+
+    local ok, err = purgeMediaCache()
+    assert.is_nil(ok)
+    assert.is_true(contains(err, mediaDirectory), tostring(err))
+    -- everything it could remove is gone, so the caller is told about a purge
+    -- that half happened rather than one that did not happen
+    assert.is_nil(lfs.attributes(mediaDirectory .. "/" .. soundFile, "mode"))
+  end)
+
+  it("a media url that is not http(s) reports a download error", function()
+    local errors = {}
+    local handler = registerAnonymousEventHandler("sysDownloadError", function(_, message, path)
+      errors[#errors + 1] = {message = message, path = path}
+    end)
+    finally(function() killAnonymousEventHandler(handler) end)
+
+    -- a file the media directory does not have, so the url is the only way to
+    -- get it and refusing to fetch it ends the request
+    assert.is_true(playSoundFile({name = "busted-media-absent-scheme.wav", url = "ftp://example.invalid/sounds"}))
+    waitForCount("sysDownloadError", errors, 1)
+    assert.equals(1, #errors)
+    assert.is_true(contains(errors[1].message, "http"), tostring(errors[1].message))
+    assert.is_true(contains(errors[1].path, "busted-media-absent-scheme.wav"), tostring(errors[1].path))
   end)
 end)
 

@@ -2706,6 +2706,12 @@ int TLuaInterpreter::pauseVideos(lua_State* L)
 int TLuaInterpreter::purgeMediaCache(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    lua_pushboolean(L, host.mTelnet.purgeMediaCache());
+    const auto [purged, message] = host.mTelnet.purgeMediaCache();
+
+    if (!purged) {
+        return warnArgumentValue(L, __func__, message);
+    }
+
+    lua_pushboolean(L, true);
     return 1;
 }
