@@ -1687,19 +1687,33 @@ void dlgConnectionProfiles::setIconOfListedProfile(const QString& profileName, c
     pItems.first()->setIcon(icon);
 }
 
+// Empty when nothing is selected. The three context-menu actions below each
+// need this, and cannot simply trust the check slot_profileContextMenu() made:
+// menu.exec() runs a nested event loop, so a queued fillout_form() - the
+// profile-copy completion handler runs one - can rebuild the list, and with it
+// the current selection, while the menu is still open.
+// That rebuild can also leave a *different* profile current, in which case the
+// action is applied to that one although the menu was built for the profile
+// selected at the time. That mis-targeting is long-standing and is not what
+// this is fixing; the crash of acting on nothing at all is.
+QString dlgConnectionProfiles::selectedProfileName() const
+{
+    const auto* pItem = listWidget_profiles->currentItem();
+    return pItem ? pItem->data(csmNameRole).toString() : QString();
+}
+
 void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
 {
     // The list can be right-clicked with nothing selected: the "My games" tab
     // of a fresh install has no profile to offer, and fillout_form() only makes
     // an item current when it finds one worth selecting. Every entry of this
     // menu acts on the current profile, so without one there is nothing to show.
-    const auto* pItem = listWidget_profiles->currentItem();
-    if (!pItem) {
+    const auto profileName = selectedProfileName();
+    if (profileName.isEmpty()) {
         return;
     }
 
     const QPoint globalPos = listWidget_profiles->mapToGlobal(pos);
-    const auto profileName = pItem->data(csmNameRole).toString();
 
     QMenu menu;
     if (hasCustomIcon(profileName)) {
@@ -1723,7 +1737,10 @@ void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
 
 void dlgConnectionProfiles::slot_setCustomIcon()
 {
-    auto profileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
+    const auto profileName = selectedProfileName();
+    if (profileName.isEmpty()) {
+        return;
+    }
 
     QSettings& settings = *mudlet::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
@@ -1748,7 +1765,10 @@ void dlgConnectionProfiles::slot_setCustomIcon()
 }
 void dlgConnectionProfiles::slot_setCustomColor()
 {
-    auto profileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
+    const auto profileName = selectedProfileName();
+    if (profileName.isEmpty()) {
+        return;
+    }
     QColor color = QColorDialog::getColor(getCustomColor(profileName).value_or(QColor(255, 255, 255)));
     if (color.isValid()) {
         auto profileColorPath = mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
@@ -1768,7 +1788,10 @@ void dlgConnectionProfiles::slot_setCustomColor()
 }
 void dlgConnectionProfiles::slot_resetCustomIcon()
 {
-    auto profileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
+    const auto profileName = selectedProfileName();
+    if (profileName.isEmpty()) {
+        return;
+    }
 
     const bool success = mudlet::self()->resetProfileIcon(profileName).first;
     if (!success) {
