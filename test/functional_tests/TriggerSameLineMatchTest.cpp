@@ -204,14 +204,8 @@ private slots:
         QVERIFY2(bufferContains(qsl("NESTED=inner,outer#")), "Expected the mid-pass trigger to match the nested line first, then the outer line it was created on");
     }
 
-    // The counterweight to all of the above: giving mid-pass triggers the current
-    // line means a trigger that re-creates itself keeps extending the list the
-    // pass is walking, so the line never finishes - 100% CPU and unbounded memory
-    // on the first matching line, from ordinary game text. The naive "one-shot
-    // that re-arms itself at the end of its own handler" shape is the one users
-    // write, so it is the one pinned here. Without the generation budget in
-    // TriggerUnit::processDataStream() this test does not fail, it hangs, and only
-    // the ctest TIMEOUT ends it.
+    // The naive "one-shot that re-arms itself at the end of its own handler" is
+    // the shape users write. Without the budget this does not fail, it hangs.
     void test_selfRecreatingTriggerIsStopped()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
@@ -229,16 +223,12 @@ private slots:
 
         QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
         QVERIFY2(bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "Expected the same-line re-creation abort error in the console buffer");
-        // One fire from the trigger that was already there when the line arrived,
-        // then one per trigger the budget lets the re-arming chain add to it. The
-        // trailing # anchors the count: without it the check also passes on ten
-        // times the number.
+        // one fire from the trigger already there, then one per budgeted creation;
+        // the trailing # keeps the check from also passing on ten times the number
         const int expectedFires = 1 + static_cast<int>(TriggerUnit::scmMaxSameLineCreations);
         QVERIFY2(bufferContains(qsl("LOOPFIRES=%1#").arg(expectedFires)), qPrintable(qsl("Expected the re-arming trigger to fire exactly %1 times").arg(expectedFires)));
     }
 
-    // The abort has to name the trigger to be actionable - the user has to know
-    // which of their scripts to change.
     void test_selfRecreatingTriggerAbortNamesTheTrigger()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
@@ -256,8 +246,6 @@ private slots:
         QVERIFY2(bufferContains(qsl("trigger 'hpWatcher'")), "Expected the abort message to name the trigger that keeps re-creating itself");
     }
 
-    // A chain that ends on its own must not be cut short: only the runaway case
-    // may hit the budget, and legitimate chains are a handful of generations deep.
     void test_finiteCreationChainIsUnaffected()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
@@ -281,13 +269,8 @@ private slots:
         QVERIFY2(!bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "A chain that ends on its own must not trip the same-line generation budget");
     }
 
-    // Stopping the line is only half of it. A re-arming trigger with no expiry
-    // leaves everything it created still active, so the next line would start
-    // with a budget's worth of them and each would spawn a budget's worth again:
-    // measured at 50 fires on the first line and 2600 on the second (with an
-    // earlier, smaller budget), i.e. the freeze merely postponed. The abort
-    // therefore stops what was created during the line, which holds the cost at
-    // one budget per line for ever.
+    // Without disowning what the loop created, the second line costs a multiple
+    // of the first: measured at 50 fires, then 2600.
     void test_selfRecreatingTriggerDoesNotAccumulateAcrossLines()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
@@ -310,13 +293,9 @@ private slots:
                  qPrintable(qsl("Expected the second line to cost the same %1 fires as the first, not a multiple of them").arg(firesPerLine)));
     }
 
-    // permRegexTrigger() from a trigger's script loops the same way, and those
-    // objects are saved with the profile. They must be stopped like the temporary
-    // ones, but not deleted (the user owns them, and they are visible in the
-    // editor) and not switched off in a way that survives a save: deactivate()
-    // leaves the user-active state XMLexport writes alone, so a restart brings
-    // them back rather than confronting the user with a tree of unticked
-    // triggers they never touched.
+    // Permanent triggers are saved with the profile, so they are stopped without
+    // being deleted and with deactivate(), which leaves the user-active state
+    // XMLexport writes alone.
     void test_selfRecreatingPermanentTriggerIsStoppedButNotDeleted()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
@@ -342,9 +321,8 @@ private slots:
         QVERIFY2(bufferContains(qsl("PERMEXISTS=%1#").arg(expectedFires + 1)), "Expected the stopped permanent triggers to still exist - stopping them is not deleting them");
     }
 
-    // A runaway inside a nested feedTriggers() pass must stop that pass only: the
-    // outer line's own mid-pass triggers were registered before the nested pass
-    // began, so they stay live and still match the outer line afterwards.
+    // The outer line's own mid-pass triggers were registered before the nested
+    // pass began, so its abort must not take them.
     void test_nestedPassAbortLeavesTheOuterLineAlone()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
@@ -369,10 +347,8 @@ private slots:
         QVERIFY2(bufferContains(qsl("SEEN=inner,outer#")), "Expected the capture trigger created by the outer line to survive the nested pass's abort and still match the outer line");
     }
 
-    // The loop is not a feedTriggers() curiosity: an ordinary line arriving from
-    // the game reaches processDataStream() the same way, and froze Mudlet on the
-    // login banner. Driving it from the socket also proves the abort leaves the
-    // event loop running rather than wedging the connection.
+    // Not a feedTriggers() curiosity - real socket text takes the same path - and
+    // driving it from the socket also proves the abort leaves the event loop running.
     void test_selfRecreatingTriggerFromServerTextIsStopped()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
