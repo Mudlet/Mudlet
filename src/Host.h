@@ -857,6 +857,11 @@ public:
     bool mAdvertiseScreenReader = false;
     bool mEnableClosedCaption = false;
 
+    // Turning this off both ignores incoming OSC 8 sequences and stops
+    // advertising support for them, so a server can fall back to MXP or
+    // plain text rather than sending links Mudlet will not render.
+    bool mEnableOSC8Hyperlinks = true;
+
     enum class BlankLineBehaviour { Show, Hide, ReplaceWithSpace };
     Q_ENUM(BlankLineBehaviour)
     BlankLineBehaviour mBlankLineBehaviour = BlankLineBehaviour::Show;

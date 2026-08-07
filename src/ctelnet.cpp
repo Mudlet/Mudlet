@@ -1971,67 +1971,67 @@ QString cTelnet::getNewEnvironOSCColorPalette()
 
 QString cTelnet::getNewEnvironOSCHyperlinks()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksSend()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksPrompt()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksStyleBasic()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksStyleStates()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksTooltip()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksMenu()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksCompact()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksPresets()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksVisibility()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksSelection()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksSpoiler()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksDisabled()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 bool cTelnet::oscHyperlinkConfigFeatureEnabled()

@@ -3128,6 +3128,10 @@ void TBuffer::decodeOSC(const QString& sequence)
         }
         break;
     case static_cast<quint8>('8'): {
+        if (!mpHost->mEnableOSC8Hyperlinks) {
+            return;
+        }
+
         QStringView rest = QStringView(sequence).mid(1); // skip selector "8"
         int firstSemi = rest.indexOf(';');
 

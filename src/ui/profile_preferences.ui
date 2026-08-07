@@ -4782,6 +4782,19 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="checkBox_enableOSC8Hyperlinks">
+            <property name="toolTip">
+             <string>&lt;p&gt;OSC 8 lets a game server put clickable links in its output, which can send commands, pre-fill your input line, or open a web page. Uncheck to ignore them and to stop telling servers that Mudlet supports them.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>When checked, clickable OSC 8 hyperlinks from the game server are shown and Mudlet advertises support for them. When unchecked, the sequences are ignored and the capability is not advertised.</string>
+            </property>
+            <property name="text">
+             <string>Enable OSC 8 hyperlinks from the server</string>
+            </property>
+           </widget>
+          </item>
           <item row="3" column="0" colspan="2">
            <widget class="QLabel" name="need_reconnect_for_specialoption">
             <property name="enabled">
@@ -5345,6 +5358,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
   <tabstop>mFORCE_GA_OFF</tabstop>
   <tabstop>checkBox_mForceMXPProcessorOn</tabstop>
+  <tabstop>checkBox_enableOSC8Hyperlinks</tabstop>
   <tabstop>checkBox_mUSE_FORCE_LF_AFTER_PROMPT</tabstop>
   <tabstop>checkBox_mVersionInTTYPE</tabstop>
   <tabstop>buttonPurgeMediaCache</tabstop>
