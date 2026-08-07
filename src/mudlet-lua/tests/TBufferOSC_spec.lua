@@ -155,9 +155,10 @@ describe("Tests TBuffer OSC sequence handling", function()
 
     local previousEncoding
 
-    -- these tests are not encoding agnostic: a single byte encoding would
-    -- decode the "\195\169" pairs below as two characters rather than as the
-    -- one 'e' acute whose lead byte the parser must not swallow
+    -- these tests are not encoding agnostic: feedTriggers transcodes its UTF-8
+    -- argument into the server encoding, so under anything else the "\195\169"
+    -- pairs below reach the parser as a single byte and stop exercising the
+    -- multibyte lead byte that it must not swallow
     setup(function()
       previousEncoding = getServerEncoding()
       setServerEncoding("UTF-8")
