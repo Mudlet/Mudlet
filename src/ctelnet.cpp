@@ -2129,22 +2129,36 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
 // SEND INFO per https://www.rfc-editor.org/rfc/rfc1572
 void cTelnet::sendInfoNewEnvironValue(const QString& var)
 {
+    sendInfoNewEnvironValues(QStringList{var});
+}
+
+// RFC 1572 gives INFO the same syntax as IS, so one subnegotiation may carry
+// several variables. Preferred when a single preference changes a group of
+// them, because the server then sees one consistent change rather than a run of
+// partial ones.
+void cTelnet::sendInfoNewEnvironValues(const QStringList& vars)
+{
     if (!enableNewEnviron || !mpHost->mEnableNEWENVIRON) {
-        return;
-    }
-
-    if (mpHost->mEnableMNES && !isMNESVariable(var)) {
-        return;
-    }
-
-    if (!newEnvironVariablesSent.contains(var)) {
-        qDebug() << "We did not update NEW_ENVIRON" << var << "because the server did not request it yet";
         return;
     }
 
     const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
 
-    if (newEnvironDataMap.contains(var)) {
+    std::string payload;
+    for (const auto& var : vars) {
+        if (mpHost->mEnableMNES && !isMNESVariable(var)) {
+            continue;
+        }
+
+        if (!newEnvironVariablesSent.contains(var)) {
+            qDebug() << "We did not update NEW_ENVIRON" << var << "because the server did not request it yet";
+            continue;
+        }
+
+        if (!newEnvironDataMap.contains(var)) {
+            continue;
+        }
+
         qDebug() << "We updated NEW_ENVIRON" << var;
 
         // QPair first: NEW_ENVIRON_USERVAR indicator, second: data
@@ -2152,24 +2166,15 @@ void cTelnet::sendInfoNewEnvironValue(const QString& var)
         const bool isUserVar = !mpHost->mEnableMNES && newEnvironData.first;
         const QString val = newEnvironData.second;
 
-        std::string output;
-        output += TN_IAC;
-        output += TN_SB;
-        output += OPT_NEW_ENVIRON;
-        output += NEW_ENVIRON_INFO;
-        output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
-        output += prepareNewEnvironData(var).toStdString();
-        output += NEW_ENVIRON_VAL;
+        payload += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
+        payload += prepareNewEnvironData(var).toStdString();
+        payload += NEW_ENVIRON_VAL;
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
         // variable is defined, but has no value.
         if (!val.isEmpty()) {
-            output += prepareNewEnvironData(val).toStdString();
+            payload += prepareNewEnvironData(val).toStdString();
         }
-
-        output += TN_IAC;
-        output += TN_SE;
-        socketOutRaw(output);
 
         if (mpHost->mEnableMNES) {
             if (!val.isEmpty()) {
@@ -2189,6 +2194,39 @@ void cTelnet::sendInfoNewEnvironValue(const QString& var)
             qDebug() << "WE inform NEW_ENVIRON USERVAR" << var << "as an empty VAL";
         }
     }
+
+    // Nothing the server asked for changed, so say nothing at all rather than
+    // sending an empty INFO.
+    if (payload.empty()) {
+        return;
+    }
+
+    std::string output;
+    output += TN_IAC;
+    output += TN_SB;
+    output += OPT_NEW_ENVIRON;
+    output += NEW_ENVIRON_INFO;
+    output += payload;
+    output += TN_IAC;
+    output += TN_SE;
+    socketOutRaw(output);
+}
+
+// The OSC 8 preference flips every one of these at once.
+void cTelnet::sendInfoNewEnvironOSCHyperlinks()
+{
+    // Derived from the advertised set rather than a second hand-kept list, so a
+    // capability added later is announced without touching this.
+    const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
+
+    QStringList vars;
+    for (auto it = newEnvironDataMap.cbegin(); it != newEnvironDataMap.cend(); ++it) {
+        if (it.key().startsWith(qsl("OSC_HYPERLINKS"))) {
+            vars.append(it.key());
+        }
+    }
+
+    sendInfoNewEnvironValues(vars);
 }
 
 void cTelnet::appendAllNewEnvironValues(std::string& output, const bool isUserVar, const QMap<QString, QPair<bool, QString>>& newEnvironDataMap)

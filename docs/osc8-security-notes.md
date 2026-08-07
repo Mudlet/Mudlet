@@ -52,6 +52,12 @@ server" preference defaults to on. Unchecking it makes Mudlet ignore OSC 8 seque
 stop advertising every `OSC_HYPERLINKS*` capability over NEW-ENVIRON, so a server that
 honours the handshake falls back to MXP or plain text instead of emitting links into a void.
 
+Toggling it mid-session tells the server immediately, rather than waiting for a reconnect.
+RFC 1572 gives `INFO` the same syntax as `IS`, so all of the changed `OSC_HYPERLINKS*`
+variables go out in a single `INFO` subnegotiation and the server sees one consistent change
+instead of a run of partial ones. Only variables the server actually asked for are included,
+so a server that requested just the umbrella `OSC_HYPERLINKS` receives only that one.
+
 ## What Mudlet does not guarantee
 
 **Link body text is not sanitized.** Only metadata is. Bidi and zero-width handling in
@@ -142,6 +148,13 @@ Players can disable OSC 8 entirely with '''Settings → Special Options → Enab
 hyperlinks from the server''' (on by default). When it is off, Mudlet ignores OSC 8
 sequences and advertises <code>0</code> for every <code>OSC_HYPERLINKS*</code> NEW-ENVIRON
 variable, so a well-behaved server should fall back to MXP or plain text.
+
+Changing the setting during a session sends an ad-hoc INFO (2) message covering every
+<code>OSC_HYPERLINKS*</code> variable the server previously requested, in one
+subnegotiation. Servers that track these capabilities should honour it without waiting for
+a reconnect:
+
+ IAC SB NEW-ENVIRON (39) INFO (2) USERVAR (3) ''OSC_HYPERLINKS'' VAL (1) ''0'' USERVAR (3) ''OSC_HYPERLINKS_SEND'' VAL (1) ''0'' [ .. ] IAC SE
 
 ===== Reserved Parameters =====
 

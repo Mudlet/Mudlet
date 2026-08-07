@@ -818,6 +818,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
     connect(checkBox_advertiseScreenReader, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAdvertiseScreenReader);
     checkBox_enableOSC8Hyperlinks->setChecked(pHost->mEnableOSC8Hyperlinks);
+    connect(checkBox_enableOSC8Hyperlinks, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks);
 
     checkBox_enableClosedCaption->setChecked(pHost->mEnableClosedCaption);
     connect(checkBox_enableClosedCaption, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleEnableClosedCaption);
@@ -5039,6 +5040,20 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
         pHost->mAdvertiseScreenReader = state;
         pHost->mTelnet.sendInfoNewEnvironValue(qsl("SCREEN_READER"));
         pHost->mTelnet.sendInfoNewEnvironValue(qsl("MTTS"));
+    }
+}
+
+void dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks(const bool state)
+{
+    Host* pHost = mpHost;
+
+    if (!pHost) {
+        return;
+    }
+
+    if (pHost->mEnableOSC8Hyperlinks != state) {
+        pHost->mEnableOSC8Hyperlinks = state;
+        pHost->mTelnet.sendInfoNewEnvironOSCHyperlinks();
     }
 }
 
