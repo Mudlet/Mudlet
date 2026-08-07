@@ -713,14 +713,18 @@ describe("Tests the module accessors", function()
     -- alone), so once one has been set for this module the default this spec is
     -- about can never be observed again.
     it("reports the default priority of a freshly installed module", function()
-      -- BUG: a module nobody has called setModulePriority() on has no entry in
-      -- the priority map, so getModulePriority() answers nil and "module
-      -- doesn't exist" for a module that plainly does exist. The module manager
-      -- reads the same map with operator[] and so shows 0, which is what this
-      -- should return. Left pending rather than pinning the wrong answer.
-      pending("getModulePriority() reports an installed module as non-existent until a priority is set")
-
+      requireWorkingInstalls()
+      -- Installing a module seeds no priority for it, so this is the default the
+      -- module manager displays and the profile exporter writes out, rather than
+      -- the "module doesn't exist" that reading the priority map as an existence
+      -- check used to answer here.
       assert.equals(0, getModulePriority(moduleName))
+    end)
+
+    it("returns nil+msg for a module that is not installed", function()
+      local ok, err = getModulePriority("mudlet-spec-never-installed")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "module doesn't exist"), tostring(err))
     end)
   end)
 
@@ -807,6 +811,40 @@ describe("Tests the module accessors", function()
       assert.is_false(getModuleSync(moduleName))
     end)
   end)
+
+  -- A synced module is the only thing that makes a profile save do any module
+  -- work at all: with none installed the save's module list comes out empty and
+  -- the background write returns at its first line. The write itself and
+  -- everything it touches - the module documents, the backup, the archive
+  -- rewrite - therefore go unseen by the sanitizers this suite runs under
+  -- unless a spec puts a synced module in the profile first.
+  describe("Tests saving a profile that has a module to write", function()
+    it("writes the synced module out again", function()
+      requireWorkingInstalls()
+      -- rewriting this module's own .mpackage is only safe because
+      -- installFixtureModule() installed a scratch copy, not the committed one
+      defer(function() disableModuleSync(moduleName) end)
+      assert.is_true(enableModuleSync(moduleName))
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+      -- taking the unpacked XML away is what makes "the save wrote the module
+      -- out" a plain yes or no rather than a guess about file timestamps
+      local moduleXml = getMudletHomeDir() .. "/" .. moduleName .. "/" .. moduleName .. ".xml"
+      os.remove(moduleXml)
+      assert.is_nil(lfs.attributes(moduleXml), "the module's unpacked XML could not be cleared")
+
+      assert.is_true(saveProfile())
+      assert.is_true(waitUntil(function() return lfs.attributes(moduleXml) ~= nil end, 10000), "the profile save never wrote the synced module out")
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+      -- a file that merely exists could be an empty or half-written one
+      local written = io.open(moduleXml, "rb")
+      assert.is_not_nil(written, "the module's XML could not be read back")
+      local contents = written:read("*a")
+      written:close()
+      assert.is_true(contains(contents, "<MudletPackage"), "the module's XML was written without a package in it")
+    end)
+  end)
 end)
 
 describe("Tests the functionality of reloadModule", function()
@@ -863,6 +901,19 @@ describe("Tests the functionality of reloadModule", function()
       assert.equals(4, getModulePriority(moduleName))
       assert.is_true(getModuleSync(moduleName))
     end)
+  end)
+end)
+
+-- Runs once the block above has uninstalled the module it shares, which is what
+-- this is about - it installs nothing of its own.
+describe("Tests reading the priority of a module that has been uninstalled", function()
+  it("stops answering for it, even though the priority it was given is remembered", function()
+    assert.is_false(moduleInstalled(moduleName), "the module accessor specs left their module installed")
+    -- Uninstalling leaves the module's entry in the priority map behind, so
+    -- reading that map is not a way to tell whether the module is there.
+    local ok, err = getModulePriority(moduleName)
+    assert.is_nil(ok)
+    assert.is_true(contains(err, "module doesn't exist"), tostring(err))
   end)
 end)
 
@@ -928,22 +979,28 @@ end)
 
 describe("Tests installing an archive with nothing in it for Mudlet", function()
   it("refuses an archive that holds neither a config.lua nor a package XML", function()
-    -- BUG: such an archive is unpacked into the profile and answered with true,
-    -- but nothing is registered: it is missing from getPackages(), so
-    -- uninstallPackage() will not take it and the unpacked folder stays in the
-    -- profile for good. Left pending rather than pinning a success that
-    -- installs nothing and cannot be undone.
-    pending("installPackage() answers true for an archive with no package in it, and leaves it unremovable")
-    -- uninstallPackage() will not take a package it never registered, so the
-    -- unpacked folder has to go by hand
+    requireWorkingInstalls()
+    -- Nothing in such an archive registers the package, so answering true would
+    -- leave a name that getPackages() does not list, that uninstallPackage()
+    -- refuses, and a folder in the profile that only a file manager can take
+    -- away. If the refusal ever regresses, this puts the folder back by hand.
     defer(function()
-      os.remove(getMudletHomeDir() .. "/mudlet-spec-emptyarchive/readme.txt")
-      lfs.rmdir(getMudletHomeDir() .. "/mudlet-spec-emptyarchive")
+      if fileExists(getMudletHomeDir() .. "/mudlet-spec-emptyarchive") then
+        os.remove(getMudletHomeDir() .. "/mudlet-spec-emptyarchive/readme.txt")
+        lfs.rmdir(getMudletHomeDir() .. "/mudlet-spec-emptyarchive")
+      end
     end)
+
+    -- an install asked for while a save is running is postponed and answered
+    -- with a bare true, which would read here as the refusal not happening
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
 
     local ok, err = installPackage(fixtureDirectory .. "/mudlet-spec-emptyarchive.mpackage")
     assert.is_nil(ok)
-    assert.is_string(err)
+    -- the message matters: "could not unzip package" here would mean the fixture
+    -- has rotted and the spec is passing for the wrong reason
+    assert.is_true(contains(err, "no package found in"), tostring(err))
+    assert.is_false(packageInstalled("mudlet-spec-emptyarchive"))
     assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-emptyarchive"))
   end)
 end)
@@ -977,8 +1034,7 @@ describe("The package specs clean up after themselves", function()
     end
 
     -- Let the profile save that the last uninstall queued run while the profile
-    -- is still up: it dereferences the profile when it fires, and Mudlet may be
-    -- shutting down by the time it would otherwise get its turn.
+    -- is still up, rather than leaving it to be stopped by the profile close.
     pumpEventLoop(1500)
   end)
 end)

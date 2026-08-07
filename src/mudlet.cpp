@@ -66,6 +66,7 @@
 #include <QFileDialog>
 #include <QJsonDocument>
 #include <QImage>
+#include <QKeyEvent>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QNetworkDiskCache>
@@ -177,6 +178,8 @@ mudlet::mudlet()
 void mudlet::init()
 {
     smFirstLaunch = !QFile::exists(mudlet::getMudletPath(enums::profilesPath));
+    // Must be after setupConfig() created mpSettings and before anything of this run is written
+    rememberFirstLaunch(*mpSettings, mudlet::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
 
     QFile gitShaFile(":/app-build.txt");
     if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -2116,6 +2119,56 @@ void mudlet::switchToProfileTab(int index)
     }
 }
 
+// Whether this key press would activate one of the profile tab switching
+// shortcuts. Comparing it to them literally is not enough - a shortcut can be
+// spelt differently to the press that activates it:
+bool mudlet::profileSwitchShortcutMatches(const QKeyEvent* ke) const
+{
+    if (!ke) {
+        return false;
+    }
+
+    const auto key = static_cast<Qt::Key>(ke->key());
+    const Qt::KeyboardModifiers modifiers = ke->modifiers();
+
+    // QShortcutMap retries with the modifiers the platform consumed producing
+    // the character stripped off, so Ctrl and a numpad digit activates Ctrl+1,
+    // and so does Ctrl+Shift+1 on layouts needing Shift for a top-row digit
+    // (French AZERTY) - the same reason handleCtrlTabChange() ignores Shift.
+    QList<QKeySequence> candidates;
+    const Qt::KeyboardModifiers strippable[] = {Qt::NoModifier, Qt::KeypadModifier, Qt::ShiftModifier, Qt::ShiftModifier | Qt::KeypadModifier};
+    for (const auto stripped : strippable) {
+        const QKeySequence candidate(QKeyCombination(modifiers & ~stripped, key));
+        if (!candidates.contains(candidate)) {
+            candidates.append(candidate);
+        }
+    }
+
+    if (key == Qt::Key_Backtab) {
+        // Shift+Tab produces the Backtab keysym while the sequences are spelt
+        // with Key_Tab. Shift is normally still set here, but Qt's own Backtab
+        // handling does not rely on that, so put it back rather than assume:
+        candidates.append(QKeySequence(QKeyCombination(modifiers | Qt::ShiftModifier, Qt::Key_Tab)));
+    }
+
+    auto shadows = [&candidates](const QKeySequence& sequence) {
+        // A shortcut cleared in the preferences is empty, and would match any candidate that was too
+        return !sequence.isEmpty() && candidates.contains(sequence);
+    };
+
+    if (shadows(mKeySequenceNextProfile) || shadows(mKeySequencePreviousProfile)) {
+        return true;
+    }
+
+    for (const auto& sequence : mKeySequencesSwitchToProfile) {
+        if (shadows(sequence)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // Moved as much as possible to activateProfile()...
 void mudlet::slot_tabChanged(int tabID)
 {
@@ -2424,8 +2477,8 @@ void mudlet::slot_timerFires()
         // on the stack (a timer script uninstalling its own package). Doing it
         // here - after the last use of pTT - keeps the window in which the
         // "uninstalled" timers linger down to this event loop iteration, before
-        // the profile save that Host::uninstallPackage() queues with a 0ms
-        // single-shot can serialize them back into the profile:
+        // the profile save that Host::uninstallPackage() queues for the next
+        // event loop pass can serialize them back into the profile:
         pHost->getTimerUnit()->doCleanup();
 
         // Okay now we've found it we are done:
@@ -7578,8 +7631,67 @@ void mudlet::showedCharacterModeWarning()
     mCharacterModeWarningsShown = std::min(mCharacterModeWarningsShown + 1, mCharacterModeWarningsMax);
 }
 
-// returns true if the Mudlet player is considered 'experienced' and doesn't need to be shown the basic
-// tutorial tips, such as splitscreen cancel shortcut
+static const QLatin1String settingsKeyFirstLaunch("firstLaunchDate");
+static constexpr int experiencedPlayerMonths = 6;
+
+static bool anyProfilesExist(const QString& profilesPath)
+{
+    const QDir profiles(profilesPath);
+    if (!profiles.exists()) {
+        return false;
+    }
+    if (!QFileInfo(profilesPath).isReadable()) {
+        // Unlistable reads as empty, which would stamp an existing user with today as their first launch
+        qWarning() << "anyProfilesExist() WARNING - the profiles directory exists but cannot be read:" << profilesPath
+                   << "- assuming it holds profiles, so an existing user is not mistaken for a new one.";
+        return true;
+    }
+    return !profiles.entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty();
+}
+
+// Settings count as well as profiles: someone who kept their Mudlet.ini but not
+// their profiles is still not on their first run.
+static bool mudletUsedBefore(const QSettings& settings, const QString& profilesPath)
+{
+    return anyProfilesExist(profilesPath) || !settings.allKeys().isEmpty();
+}
+
+// Called only from init(), before anything of this run has been written. Where
+// there is a trace of earlier use the start date is unrecoverable - no timestamp
+// survives Mudlet's own writes, nor a copy to another machine - so nothing is
+// recorded and evaluateExperiencedPlayer() falls back.
+/*static*/ void mudlet::rememberFirstLaunch(QSettings& settings, const QString& profilesPath, const QDateTime& now)
+{
+    // Not conditioned on the value parsing: re-recording would restart the clock today
+    if (settings.contains(settingsKeyFirstLaunch) || mudletUsedBefore(settings, profilesPath)) {
+        return;
+    }
+
+    settings.setValue(settingsKeyFirstLaunch, now.toUTC().toString(Qt::ISODate));
+    settings.sync();
+    if (settings.status() != QSettings::NoError) {
+        qWarning() << "mudlet::rememberFirstLaunch() WARNING - could not record the first launch date in" << settings.fileName() << "- QSettings status:" << settings.status()
+                   << "- this installation will later be taken for an experienced user's.";
+    }
+}
+
+/*static*/ bool mudlet::evaluateExperiencedPlayer(const QSettings& settings, const QString& profilesPath, const QDateTime& now)
+{
+    const QString recorded = settings.value(settingsKeyFirstLaunch).toString();
+    const QDateTime firstLaunch = QDateTime::fromString(recorded, Qt::ISODate);
+    if (firstLaunch.isValid()) {
+        return firstLaunch <= now.addMonths(-experiencedPlayerMonths);
+    }
+    if (!recorded.isEmpty()) {
+        qWarning().nospace().noquote() << "evaluateExperiencedPlayer() WARNING - \"" << settingsKeyFirstLaunch << "\" holds \"" << recorded
+                                       << "\", which is not ISO 8601 - falling back to looking for signs of earlier use.";
+    }
+
+    // Erring towards 'experienced' is deliberate: interrupting a veteran with a
+    // beginner tour is worse than a newcomer missing one.
+    return mudletUsedBefore(settings, profilesPath);
+}
+
 bool mudlet::experiencedMudletPlayer()
 {
     static std::optional<bool> cachedResult;
@@ -7587,19 +7699,15 @@ bool mudlet::experiencedMudletPlayer()
         return cachedResult.value();
     }
 
-    // crude metric to check if the player is experienced in Mudlet: see if any of the profiles is more than 6mo old
-    QDir profilesDir(mudlet::getMudletPath(enums::profilesPath));
-    QFileInfoList entries = profilesDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
-    QDateTime sixMonthsAgo = QDateTime::currentDateTime().addMonths(-6);
-
-    for (const QFileInfo& entry : std::as_const(entries)) {
-        if (entry.lastModified() < sixMonthsAgo) {
-            cachedResult = true;
-            return true;
-        }
+    const auto* settings = getQSettings();
+    if (!settings) {
+        // Not cached: a guess, and caching it would pin every gate for the process
+        qWarning() << "mudlet::experiencedMudletPlayer() WARNING - called before setupConfig(), so assuming an experienced player and showing no first-run guidance.";
+        return true;
     }
-    cachedResult = false;
-    return false;
+
+    cachedResult = evaluateExperiencedPlayer(*settings, getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
+    return cachedResult.value();
 }
 
 dlgTriggerEditor* mudlet::createMudletEditor()

@@ -26,6 +26,8 @@
 
 #include "utils.h"
 
+#include <QCoreApplication>
+#include <QElapsedTimer>
 #include <QMultiMap>
 #include <QPointer>
 #include <QSet>
@@ -38,6 +40,7 @@ class TTrigger;
 
 class TriggerUnit
 {
+    Q_DECLARE_TR_FUNCTIONS(TriggerUnit) // Needed so we can use tr() even though TriggerUnit is NOT derived from QObject
     friend class XMLexport;
     friend class XMLimport;
 
@@ -86,6 +89,11 @@ public:
     // Windows, where the original crash hit before Lua's own 200-C-call guard):
     // a few times any legitimate nesting, comfortably below the native limit.
     inline static const int scmMaxProcessingDepth = 50;
+    // How many triggers created while one line is processed may match that same
+    // line. Separate from the depth above, which measures the C stack: nothing
+    // recurses here, it is the list processDataStream() walks that grows. A
+    // room-capture script needs a handful, so 100 is ample.
+    inline static const qsizetype scmMaxSameLineCreations = 100;
 
     QList<TTrigger*> uninstallList;
 
@@ -97,6 +105,7 @@ private:
     void addTrigger(TTrigger* pT);
     void removeTriggerRootNode(TTrigger* pT);
     void removeTrigger(TTrigger*);
+    void stopSameLineCreationLoop(const qsizetype firstNodeAddedThisPass);
 
     QPointer<Host> mpHost;
     QMap<int, TTrigger*> mTriggerMap;
@@ -115,6 +124,7 @@ private:
     // pass can match the ones created during it against the line being
     // processed - see processDataStream(). Cleared once the outermost pass ends.
     QList<TTrigger*> mRootNodesAddedWhileProcessing;
+    QElapsedTimer mSameLineLoopReportTimer;
 };
 
 #endif // MUDLET_TRIGGERUNIT_H

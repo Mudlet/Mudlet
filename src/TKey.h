@@ -64,6 +64,8 @@ public:
 
 
     bool match(const Qt::Key, const Qt::KeyboardModifiers, const bool);
+    // Query-only counterpart to match(), which executes what it matches
+    bool wouldMatch(const Qt::Key, const Qt::KeyboardModifiers) const;
     bool registerKey();
     void validateKeyBinding();
 

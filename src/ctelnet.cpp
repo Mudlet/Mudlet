@@ -61,6 +61,7 @@
 #include <QNetworkProxy>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QScopeGuard>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QSslError>
@@ -85,13 +86,6 @@ constexpr size_t BUFFER_SIZE = 100000L;
 // accumulation buffer without bound across reads.
 constexpr size_t MAX_TELNET_SUBNEGOTIATION_LENGTH = 5_MB;
 
-// How many times processSocketData() may re-enter itself to drain data left
-// over after a decompression pass (compressed input that did not fit in one
-// output buffer, or plain data following the compressed stream). Each level
-// puts ~100 KB (out_buffer) on the stack, so this also caps decompressed
-// output at ~MAX_DECOMPRESSION_RECURSION * BUFFER_SIZE per socket read, which
-// bounds a decompression bomb.
-constexpr int MAX_DECOMPRESSION_RECURSION = 8;
 // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (1 of 7) - investigate switching from using `char[]` to `std::array<char>`
 char loadBuffer[BUFFER_SIZE + 1];
 int loadedBytes;
@@ -5043,28 +5037,37 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     // each level allocates ~100 KB on the stack for out_buffer. Per-connection
     // (a member, not thread-wide) so one profile's drain - or a re-entrant
     // feedTelnet() - cannot spend another connection's budget.
-    if (++mDecompressionRecursionDepth > MAX_DECOMPRESSION_RECURSION) {
+    // Being a member, a level leaked by an early return would be permanent:
+    // scmMaxDecompressionRecursion of them and the connection refuses all further
+    // data, so the count comes off in a guard rather than at each return.
+    ++mDecompressionRecursionDepth;
+    const auto recursionGuard = qScopeGuard([this] {
+        --mDecompressionRecursionDepth;
+        // A second decrement reinstated on any of the exits below would drive
+        // the count negative and quietly disable the cap altogether:
+        Q_ASSERT(mDecompressionRecursionDepth >= 0);
+    });
+
+    if (mDecompressionRecursionDepth > scmMaxDecompressionRecursion) {
         qWarning() << "cTelnet::processSocketData(...) WARNING - recursion depth exceeded, dropping remaining data";
         //: Shown when too much data expands out of one compressed read (e.g. a decompression bomb) to process safely.
         postMessage(tr("[ WARN  ]  - Too much data to process at once, some may have been lost."));
-        --mDecompressionRecursionDepth;
         return;
     }
 
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (3 of 7) - investigate switching from using `char[]` to `std::array<char>`
     char out_buffer[BUFFER_SIZE + 10];
 
-    in_buffer[amount + 1] = '\0';
-
-    if (amount == -1) {
-        --mDecompressionRecursionDepth;
+    // read() reports -1 on error and 0 when nothing was available; loopbackTest()
+    // narrows a qsizetype into this int, so treat every non-positive value the
+    // same rather than testing for -1 exactly. Terminating before this point is
+    // what wrote a NUL outside the caller's buffer - see issue #1065.
+    if (amount <= 0) {
         return;
     }
-
-    if (amount == 0) {
-        --mDecompressionRecursionDepth;
-        return;
-    }
+    // Restates the input contract for decompressBuffer() below, which may swap
+    // `buffer` over to out_buffer before the terminator is written again.
+    in_buffer[amount] = '\0';
 
     std::string cleandata;
     // Pre-allocate for worst case: decompressed data can be much larger than input
@@ -5316,7 +5319,6 @@ Some data loss is likely - please mention this problem to the game admins.)",
     // compressed stream). finalize() runs only at the deepest level.
     if (remainingData && remainingAmount > 0) {
         processSocketData(remainingData, remainingAmount, loopbackTesting);
-        --mDecompressionRecursionDepth;
         return;
     }
 
@@ -5325,7 +5327,6 @@ Some data loss is likely - please mention this problem to the game admins.)",
     }
 
     mRecordLastChunkMSecTimeOffset = mRecordingChunkTimer.elapsed();
-    --mDecompressionRecursionDepth;
 }
 
 void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)

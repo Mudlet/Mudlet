@@ -2477,6 +2477,7 @@ int TLuaInterpreter::selectCmdLineText(lua_State* L)
     }
     auto commandline = COMMANDLINE(L, name);
     commandline->selectAll();
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -2972,15 +2973,19 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L)
 int TLuaInterpreter::setCmdLineStyleSheet(lua_State* L)
 {
     const int n = lua_gettop(L);
+    // The mandatory stylesheet is last, but with no arguments at all that would
+    // be index 0 - not a valid Lua stack index, and Lua 5.1 hands back the first
+    // free slot for it rather than complaining:
+    const int styleSheetIndex = qMax(n, 1);
     if (n > 1 && !checkStringArg(L, __func__, 1, "command line name", true)) {
         return lua_error(L);
     }
-    if (!checkStringArg(L, __func__, n, "StyleSheet")) {
+    if (!checkStringArg(L, __func__, styleSheetIndex, "StyleSheet")) {
         return lua_error(L);
     }
 
     const QString name = (n > 1) ? QString{lua_tostring(L, 1)} : qsl("main");
-    const QString styleSheet{lua_tostring(L, n)};
+    const QString styleSheet{lua_tostring(L, styleSheetIndex)};
     const Host& host = getHostFromLua(L);
 
     if (auto [success, message] = host.mpConsole->setCmdLineStyleSheet(name, styleSheet); !success) {

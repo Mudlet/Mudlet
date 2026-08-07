@@ -9,10 +9,12 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetSgrDefaultColorTest.cpp
     TelnetTlsPromptTest.cpp
     TelnetBenchmark.cpp
+    cTelnetBufferTest.cpp
     DefaultGameDeleteTest.cpp
     ResetProfileTest.cpp
     TOscTest.cpp
     TUserWindowTest.cpp
+    SubCommandLineLifetimeTest.cpp
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerSameLineMatchTest.cpp
@@ -21,6 +23,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TDiscordModeTest.cpp
     MainConsoleSelectionTest.cpp
     EnableDisableByNameTest.cpp
+    UnitDeferredDeleteTest.cpp
     ColorTriggerFilterChildTest.cpp
     GMCPCharLoginTest.cpp
     InsertTextCapTest.cpp
@@ -33,6 +36,9 @@ set(FUNCTIONAL_TEST_SOURCES
     ProfileRoundTripTest.cpp
     ProfileLoadTempFileTest.cpp
     PackageSelfUninstallTest.cpp
+    UnitProcessingDepthTest.cpp
+    PackageUninstallSaveTeardownTest.cpp
+    ModuleSaveTeardownTest.cpp
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
     UndoServerWrapTest.cpp
@@ -43,6 +49,8 @@ set(FUNCTIONAL_TEST_SOURCES
     DialogTeardownTest.cpp
     TMediaLoopTest.cpp
     DefaultPackagesTest.cpp
+    ProfileSwitchShortcutTest.cpp
+    ExperiencedPlayerGateTest.cpp
 )
 
 # The updater sources are only built with USE_UPDATER, and on macOS the
@@ -103,6 +111,14 @@ set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 
 # Undo/redo tests need a longer timeout due to large batch operations
 set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
+
+# A regression in the self-re-creating-trigger cases does not fail, it hangs and
+# grows the heap by ~110MB/s: the RSS ceiling and the timeout are what turn that
+# into a reported failure. ENVIRONMENT replaces the loop's, hence QT_QPA_PLATFORM
+# again.
+set_tests_properties(TriggerSameLineMatchTest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0:hard_rss_limit_mb=3000"
+    TIMEOUT 300)
 
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
