@@ -523,6 +523,127 @@ private slots:
         QVERIFY2(bufferContains(qsl("LATERFIRES=%1#").arg(bulkCount)), qPrintable(qsl("Expected all %1 triggers armed on the later line to survive and fire").arg(bulkCount)));
     }
 
+    // A lineage that starts in the outer pass and runs away inside a nested
+    // feedTriggers() has members either side of the nested pass's first-node
+    // index, which is why stopping one scans the whole list rather than the
+    // tail of the tripping pass. Scanning only the tail leaves the first link
+    // alive, and the outer pass then has to trip on the same lineage all over
+    // again - the fire count is what shows that, at twice this number.
+    void test_runawayCrossingIntoANestedPassIsStoppedWhole()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("nestFires, nestSafeFires = 0, 0\n"
+                                                               "function armNested()\n"
+                                                               "  tempRegexTrigger('^nestin$', [[nestFires = nestFires + 1; armNested()]])\n"
+                                                               "end\n"
+                                                               "tempRegexTrigger('^nestout$', [=[\n"
+                                                               "  armNested()\n"
+                                                               "  tempRegexTrigger('^nestsafe$', [[nestSafeFires = nestSafeFires + 1]])\n"
+                                                               "  feedTriggers('nestin\\n')\n"
+                                                               "]=], 1)\n"
+                                                               "feedTriggers('nestout\\n')\n"
+                                                               "echo('NESTFIRES=' .. nestFires .. '#\\n')\n"
+                                                               "nestFires = 0\n"
+                                                               "feedTriggers('nestin\\n')\n"
+                                                               "feedTriggers('nestsafe\\n')\n"
+                                                               "echo('NESTAFTER=' .. nestFires .. '#\\n')\n"
+                                                               "echo('NESTSAFE=' .. nestSafeFires .. '#\\n')\n"));
+
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "Expected a runaway that crosses into a nested pass to be stopped");
+        QVERIFY2(bufferContains(qsl("NESTFIRES=%1#").arg(TriggerUnit::scmMaxSameLineGenerations)), "Expected the runaway to cost one budget, not one per pass the lineage is spread across");
+        QVERIFY2(bufferContains(qsl("NESTAFTER=0#")), "Expected no member of the stopped lineage to be left armed, wherever in the list it sat");
+        QVERIFY2(bufferContains(qsl("NESTSAFE=1#")), "Expected a trigger armed by an unrelated script on the outer line to survive the nested pass's abort");
+    }
+
+    // Creations made inside a nested pass are appended to the same list the outer
+    // pass is walking, so a batch armed there has to be read as one generation
+    // just the same.
+    void test_bulkCreationsInsideANestedPassAreNotStopped()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        const int bulkCount = TriggerUnit::scmMaxSameLineGenerations + 1;
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("crossFires = 0\n"
+                                                               "tempRegexTrigger('^crossout$', [==[\n"
+                                                               "  tempRegexTrigger('^crossin$', [=[\n"
+                                                               "    for i = 1, %1 do\n"
+                                                               "      tempRegexTrigger('^crosspay$', [[crossFires = crossFires + 1]])\n"
+                                                               "    end\n"
+                                                               "  ]=], 1)\n"
+                                                               "  feedTriggers('crossin\\n')\n"
+                                                               "]==], 1)\n"
+                                                               "feedTriggers('crossout\\n')\n"
+                                                               "feedTriggers('crosspay\\n')\n"
+                                                               "echo('CROSSFIRES=' .. crossFires .. '#\\n')\n")
+                                                                   .arg(bulkCount));
+
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(!bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "A batch armed inside a nested pass is still one generation and must not be stopped");
+        QVERIFY2(bufferContains(qsl("CROSSFIRES=%1#").arg(bulkCount)), qPrintable(qsl("Expected all %1 triggers armed inside the nested pass to survive and fire").arg(bulkCount)));
+    }
+
+    // Only root triggers carry a lineage, so a trigger sitting in a folder creates
+    // on the folder's behalf. Read the child's own (always empty) lineage instead
+    // and every round would start a fresh one, which never deepens and so never
+    // trips - the run would only end at the per-line creation ceiling.
+    void test_folderChildCreatesOnItsRootsBehalf()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("folderFires, folderCount = 0, 0\n"
+                                                               "function makeFolderGen()\n"
+                                                               "  folderCount = folderCount + 1\n"
+                                                               "  local name = 'FGen' .. folderCount\n"
+                                                               "  permGroup(name, 'trigger')\n"
+                                                               "  permRegexTrigger('FChild' .. folderCount, name, {'^folderloop$'}, [[folderFires = folderFires + 1; makeFolderGen()]])\n"
+                                                               "end\n"
+                                                               "makeFolderGen()\n"
+                                                               "feedTriggers('folderloop\\n')\n"
+                                                               "echo('FOLDERFIRES=' .. folderFires .. '#\\n')\n"));
+
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "Expected a runaway driven from inside a folder to be stopped");
+        QVERIFY2(bufferContains(qsl("FOLDERFIRES=%1#").arg(1 + TriggerUnit::scmMaxSameLineGenerations)),
+                 "Expected the folder's lineage to deepen by one per round, so the generation budget is what ends it");
+    }
+
+    // The same for a filter chain, where the child is reached through the parent's
+    // capture rather than by the root list passing data down.
+    void test_filterChainChildCreatesOnItsRootsBehalf()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("filterFires, filterCount = 0, 0\n"
+                                                               "function makeFilterGen()\n"
+                                                               "  filterCount = filterCount + 1\n"
+                                                               "  local name = 'FiltP' .. filterCount\n"
+                                                               "  tempComplexRegexTrigger(name, '^(filterloop)$', '', 0, 0, 0, 1, 0, 0, 0, 0, 0, 0)\n"
+                                                               "  permRegexTrigger('FiltC' .. filterCount, name, {'filterloop'}, [[filterFires = filterFires + 1; makeFilterGen()]])\n"
+                                                               "end\n"
+                                                               "makeFilterGen()\n"
+                                                               "feedTriggers('filterloop\\n')\n"
+                                                               "echo('FILTERFIRES=' .. filterFires .. '#\\n')\n"));
+
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "Expected a runaway driven from inside a filter chain to be stopped");
+        QVERIFY2(bufferContains(qsl("FILTERFIRES=%1#").arg(1 + TriggerUnit::scmMaxSameLineGenerations)),
+                 "Expected the filter parent's lineage to deepen by one per round, so the generation budget is what ends it");
+    }
+
     // The outer line's own mid-pass triggers were registered before the nested
     // pass began, so its abort must not take them.
     void test_nestedPassAbortLeavesTheOuterLineAlone()
