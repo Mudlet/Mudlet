@@ -42,9 +42,10 @@ public:
     static bool unsafeCharacter(char32_t codePoint);
 
     // As unsafeCharacter(), minus the zero-width joiner and non-joiner and the
-    // tag character block. Those three are load-bearing in text meant to be
-    // read: ZWJ builds 👨‍🍳 and 🏳️‍🌈, the tag block builds subdivision flags
-    // like 🏴󠁧󠁢󠁳󠁣󠁴󠁿, and ZWNJ is required for correct Persian and Indic shaping.
+    // assigned tag characters U+E0020 to U+E007F. Those are load-bearing in
+    // text meant to be read: ZWJ builds 👨‍🍳 and 🏳️‍🌈, the tag characters build
+    // subdivision flags like 🏴󠁧󠁢󠁳󠁣󠁴󠁿, and ZWNJ is required for correct Persian
+    // and Indic shaping.
     static bool unsafeAuthoredCharacter(char32_t codePoint);
 
     // Replace every unsafe code point with a visible \u{...} escape carrying

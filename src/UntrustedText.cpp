@@ -55,7 +55,12 @@ bool UntrustedText::unsafeAuthoredCharacter(char32_t codePoint)
     if (codePoint == 0x200C || codePoint == 0x200D) {
         return false;
     }
-    if (codePoint >= 0xE0000 && codePoint <= 0xE007F) {
+    // Only the assigned tag characters, which is all an emoji subdivision flag
+    // needs - the lowest any of them uses is U+E0062. U+E0001 is a deprecated
+    // language tag and U+E0000 and U+E0002 to U+E001F are unassigned, so none
+    // of them can be needed by text meant to be read, and they keep no hiding
+    // space they do not have to.
+    if (codePoint >= 0xE0020 && codePoint <= 0xE007F) {
         return false;
     }
 
