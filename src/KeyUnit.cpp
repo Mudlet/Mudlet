@@ -138,6 +138,21 @@ bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers m
     return isMatchFound;
 }
 
+bool KeyUnit::wouldMatch(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
+{
+    for (auto keyObject : mKeyRootNodeList) {
+        if (!keyObject || !keyObject->isActive() || (keyObject->mpHost && keyObject->mpHost->isClosingDown())) {
+            continue;
+        }
+
+        if (keyObject->wouldMatch(key, modifiers)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void KeyUnit::compileAll()
 {
     for (auto key : mKeyRootNodeList) {

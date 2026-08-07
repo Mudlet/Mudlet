@@ -62,6 +62,7 @@ class QAction;
 class QCloseEvent;
 class QDateTime;
 class QDir;
+class QKeyEvent;
 class QMediaDevices;
 class QMediaPlayer;
 class QMenu;
@@ -201,6 +202,7 @@ public:
     void setupConfig();
     void activateProfile(Host*);
     void switchToProfileTab(int index);
+    bool profileSwitchShortcutMatches(const QKeyEvent*) const;
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
     void addConsoleForNewHost(Host*);
@@ -239,6 +241,7 @@ public:
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool isGoingDown() { return mIsGoingDown; }
+    bool closeHeldOffByEventPump(Host*) const;
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     bool loadWindowLayout();
@@ -328,13 +331,11 @@ public:
     void showedMuteAllMediaTutorial();
     bool showCharacterModeWarning();
     void showedCharacterModeWarning();
-    // True if the player has used Mudlet long enough not to need the basic
-    // tutorial tips, the interface tour or the starter UI. Memoised.
+    // True if the player has used Mudlet long enough not to need the tutorial
+    // tips, the interface tour or the starter UI. Memoised.
     bool experiencedMudletPlayer();
-    // Records the first launch. Must be called exactly once, from init(),
-    // before any profile can exist - public only so it can be tested.
+    // The two below are public only so they can be tested
     static void rememberFirstLaunch(QSettings& settings, const QString& profilesPath, const QDateTime& now);
-    // The uncached body of experiencedMudletPlayer() - public only for testing.
     static bool evaluateExperiencedPlayer(const QSettings& settings, const QString& profilesPath, const QDateTime& now);
 
     // Telnet URI handling
@@ -790,6 +791,7 @@ private:
     QPointer<QDockWidget> mpCurrentMapDockWidget;
 
     // Helper methods for detached windows
+    void closeHostOfClosedDetachedWindow(const QString& profileName);
     void detachTab(int tabIndex, const QPoint& position);
     void reattachTab(const QString& profileName, int insertIndex = -1);
     TMainConsole* removeConsoleFromSplitter(const QString& profileName);

@@ -65,6 +65,7 @@
 #include <QFileDialog>
 #include <QJsonDocument>
 #include <QImage>
+#include <QKeyEvent>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QNetworkDiskCache>
@@ -176,10 +177,7 @@ mudlet::mudlet()
 void mudlet::init()
 {
     smFirstLaunch = !QFile::exists(mudlet::getMudletPath(enums::profilesPath));
-    // Has to happen after setupConfig() has created mpSettings and before
-    // anything can create a profile, which is only true here. Note this asks a
-    // slightly different question to smFirstLaunch above: an existing but empty
-    // profiles directory still counts as a first launch. See rememberFirstLaunch()
+    // Must be after setupConfig() created mpSettings and before anything of this run is written
     rememberFirstLaunch(*mpSettings, mudlet::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
 
     QFile gitShaFile(":/app-build.txt");
@@ -956,7 +954,12 @@ void mudlet::setupConfig()
     }
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
 
-    mpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(confPath), QSettings::IniFormat);
+    // parented to the application, not this window: the window deletes itself
+    // on close and the Updater keeps using this QSettings past that point.
+    // Which is also why setupConfig() must not run again once init() has
+    // created the Updater - the delete below would dangle its pointer.
+    delete mpSettings;
+    mpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(confPath), QSettings::IniFormat, qApp);
     migrateConfig(*mpSettings);
 }
 
@@ -969,6 +972,16 @@ void mudlet::setupConfig()
 
 void mudlet::initEdbee()
 {
+    // edbee's init() has no re-entry guard - a second call reassigns all of its
+    // manager members and orphans the previous graph. Everything set up here is
+    // process-global, so one pass is enough however many mudlet instances a
+    // test constructs.
+    static bool initialised = false;
+    if (initialised) {
+        return;
+    }
+    initialised = true;
+
     auto edbee = edbee::Edbee::instance();
     edbee->init();
     edbee->autoShutDownOnAppExit();
@@ -1696,6 +1709,10 @@ void mudlet::slot_closeProfileRequested(int tab)
         return;
     }
 
+    if (closeHeldOffByEventPump(pH)) {
+        return;
+    }
+
     if (!pH->requestClose()) {
         return;
     }
@@ -1712,10 +1729,26 @@ void mudlet::slot_closeProfileRequested(int tab)
     });
 }
 
+// Closing a profile destroys the lua_State the pump is still executing on. The
+// application-wide close paths are deliberately not guarded like this: refusing
+// there would cancel a shutdown nobody would retry.
+bool mudlet::closeHeldOffByEventPump(Host* pHost) const
+{
+    if (!pHost->getLuaInterpreter()->pumpingEvents()) {
+        return false;
+    }
+    qWarning() << "mudlet: asked to close profile" << pHost->getName() << "while the test-mode event pump is running on it, ignoring";
+    return true;
+}
+
 void mudlet::slot_closeProfileByName(const QString& profileName)
 {
     Host* pH = mHostManager.getHost(profileName);
     if (!pH) {
+        return;
+    }
+
+    if (closeHeldOffByEventPump(pH)) {
         return;
     }
 
@@ -2012,6 +2045,39 @@ void mudlet::closeHost(const QString& name)
         return;
     }
 
+    if (pH->mpMap && pH->mpMap->mapOperationInProgress()) {
+        // A map import, export or download is on the stack, and it is that
+        // operation's own qApp->processEvents() that has delivered whatever
+        // asked for this close. Destroying the Host here would free the TMap
+        // under its running loop (#9520), so tell the operation to stop and try
+        // again once the stack has unwound. Retried on a timer rather than
+        // immediately: the retry would otherwise land back in the same pump,
+        // spinning until the operation ends instead of letting it get there.
+        if (!pH->mpMap->mapOperationAbortRequested()) {
+            qDebug().nospace().noquote() << "mudlet::closeHost(\"" << name << "\") INFO - a map operation is still running, so the profile will be closed once it has stopped.";
+        }
+        pH->mpMap->requestMapOperationAbort();
+        const QPointer<Host> pClosingHost(pH);
+        QTimer::singleShot(50ms, this, [this, name, pClosingHost]() {
+            if (mHostManager.getHost(name) != pClosingHost) {
+                // Somebody else closed it while we waited, and the name now
+                // belongs to a profile that was never asked to close.
+                return;
+            }
+            closeHost(name);
+            // The callers that defer to us run their own follow-up before this
+            // retry comes round, when the profile is still open and it does
+            // nothing. Left out, closing the last profile mid-operation ends
+            // with no profile and no connection dialog either.
+            updateMainWindowToolbarState();
+            if (!mHostManager.getHostCount() && !mIsGoingDown) {
+                disableToolbarButtons();
+                slot_showConnectionDialog();
+            }
+        });
+        return;
+    }
+
     migrateDebugConsole(pH);
 
     // Clean up any main window dock widgets for this profile
@@ -2118,6 +2184,56 @@ void mudlet::switchToProfileTab(int index)
     if (index >= 0 && index < mpTabBar->count()) {
         mpTabBar->setCurrentIndex(index);
     }
+}
+
+// Whether this key press would activate one of the profile tab switching
+// shortcuts. Comparing it to them literally is not enough - a shortcut can be
+// spelt differently to the press that activates it:
+bool mudlet::profileSwitchShortcutMatches(const QKeyEvent* ke) const
+{
+    if (!ke) {
+        return false;
+    }
+
+    const auto key = static_cast<Qt::Key>(ke->key());
+    const Qt::KeyboardModifiers modifiers = ke->modifiers();
+
+    // QShortcutMap retries with the modifiers the platform consumed producing
+    // the character stripped off, so Ctrl and a numpad digit activates Ctrl+1,
+    // and so does Ctrl+Shift+1 on layouts needing Shift for a top-row digit
+    // (French AZERTY) - the same reason handleCtrlTabChange() ignores Shift.
+    QList<QKeySequence> candidates;
+    const Qt::KeyboardModifiers strippable[] = {Qt::NoModifier, Qt::KeypadModifier, Qt::ShiftModifier, Qt::ShiftModifier | Qt::KeypadModifier};
+    for (const auto stripped : strippable) {
+        const QKeySequence candidate(QKeyCombination(modifiers & ~stripped, key));
+        if (!candidates.contains(candidate)) {
+            candidates.append(candidate);
+        }
+    }
+
+    if (key == Qt::Key_Backtab) {
+        // Shift+Tab produces the Backtab keysym while the sequences are spelt
+        // with Key_Tab. Shift is normally still set here, but Qt's own Backtab
+        // handling does not rely on that, so put it back rather than assume:
+        candidates.append(QKeySequence(QKeyCombination(modifiers | Qt::ShiftModifier, Qt::Key_Tab)));
+    }
+
+    auto shadows = [&candidates](const QKeySequence& sequence) {
+        // A shortcut cleared in the preferences is empty, and would match any candidate that was too
+        return !sequence.isEmpty() && candidates.contains(sequence);
+    };
+
+    if (shadows(mKeySequenceNextProfile) || shadows(mKeySequencePreviousProfile)) {
+        return true;
+    }
+
+    for (const auto& sequence : mKeySequencesSwitchToProfile) {
+        if (shadows(sequence)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 // Moved as much as possible to activateProfile()...
@@ -7520,6 +7636,18 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
 void mudlet::armForceClose()
 {
     QTimer::singleShot(0ms, this, [this]() {
+        // Deferring by one event loop iteration is meant to land outside Lua,
+        // but the pump runs the event loop from inside Lua, so it can land
+        // right back in it. Retrying terminates: the pump is capped at 30s.
+        for (auto pHost : mHostManager) {
+            if (pHost->getLuaInterpreter()->pumpingEvents()) {
+                qWarning() << "mudlet::armForceClose() - the test-mode event pump is running, waiting for it to finish";
+                QTimer::singleShot(50ms, this, [this]() {
+                    armForceClose();
+                });
+                return;
+            }
+        }
         forceClose();
     });
 }
@@ -7554,8 +7682,6 @@ void mudlet::showedCharacterModeWarning()
     mCharacterModeWarningsShown = std::min(mCharacterModeWarningsShown + 1, mCharacterModeWarningsMax);
 }
 
-// When Mudlet was first used on this installation, as UTC ISO-8601. Absent on
-// installations that predate the key - see rememberFirstLaunch().
 static const QLatin1String settingsKeyFirstLaunch("firstLaunchDate");
 static constexpr int experiencedPlayerMonths = 6;
 
@@ -7566,9 +7692,7 @@ static bool anyProfilesExist(const QString& profilesPath)
         return false;
     }
     if (!QFileInfo(profilesPath).isReadable()) {
-        // An unlistable directory looks exactly like an empty one, and reading
-        // it as empty would stamp a long-time user with today's date as their
-        // first launch - permanently, since that is only ever written once.
+        // Unlistable reads as empty, which would stamp an existing user with today as their first launch
         qWarning() << "anyProfilesExist() WARNING - the profiles directory exists but cannot be read:" << profilesPath
                    << "- assuming it holds profiles, so an existing user is not mistaken for a new one.";
         return true;
@@ -7576,29 +7700,20 @@ static bool anyProfilesExist(const QString& profilesPath)
     return !profiles.entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty();
 }
 
-// Evidence that Mudlet has run here before the first-launch key existed: a
-// profile, or any other setting already on file. Either rules out a first-ever
-// run, including for someone who kept their settings but not their profiles -
-// a restored backup, or a move to a new machine.
+// Settings count as well as profiles: someone who kept their Mudlet.ini but not
+// their profiles is still not on their first run.
 static bool mudletUsedBefore(const QSettings& settings, const QString& profilesPath)
 {
     return anyProfilesExist(profilesPath) || !settings.allKeys().isEmpty();
 }
 
-// Intended to be called exactly once, from init(), after setupConfig() has made
-// the settings available and before any profile or setting of this run can be
-// written - only then does "no trace of earlier use" really mean the user is
-// starting today.
-//
-// Where there is such a trace the start date is not recoverable, so nothing is
-// recorded and evaluateExperiencedPlayer() falls back instead. No timestamp can
-// stand in: Mudlet's own writes refresh them, and whether a copied or restored
-// profile keeps its modification times depends entirely on the tool used, while
-// its birth time is reset either way.
+// Called only from init(), before anything of this run has been written. Where
+// there is a trace of earlier use the start date is unrecoverable - no timestamp
+// survives Mudlet's own writes, nor a copy to another machine - so nothing is
+// recorded and evaluateExperiencedPlayer() falls back.
 /*static*/ void mudlet::rememberFirstLaunch(QSettings& settings, const QString& profilesPath, const QDateTime& now)
 {
-    // The parse is deliberately not consulted: re-recording an unreadable value
-    // would restart the six month clock today, which is the harmful direction.
+    // Not conditioned on the value parsing: re-recording would restart the clock today
     if (settings.contains(settingsKeyFirstLaunch) || mudletUsedBefore(settings, profilesPath)) {
         return;
     }
@@ -7606,24 +7721,11 @@ static bool mudletUsedBefore(const QSettings& settings, const QString& profilesP
     settings.setValue(settingsKeyFirstLaunch, now.toUTC().toString(Qt::ISODate));
     settings.sync();
     if (settings.status() != QSettings::NoError) {
-        // Worth saying out loud: the write is never retried, because by the next
-        // run the user has a profile and is indistinguishable from an upgrader.
-        // A newcomer who hits this loses their onboarding for good.
         qWarning() << "mudlet::rememberFirstLaunch() WARNING - could not record the first launch date in" << settings.fileName() << "- QSettings status:" << settings.status()
                    << "- this installation will later be taken for an experienced user's.";
     }
 }
 
-// Returns true if the player has been using Mudlet long enough that first-time
-// guidance - the interface tour, the starter UI, the one-line hints - would be
-// an interruption rather than a help.
-//
-// This used to be inferred from profile directory modification times, which
-// measured the opposite of what was wanted: the per-profile data writes (url,
-// port, password, profile.ini, command history) all land directly in the
-// profile directory and bump its mtime on every session, so only a profile left
-// untouched for the whole window ever looked old. An active player of ten
-// years' standing classified as brand new.
 /*static*/ bool mudlet::evaluateExperiencedPlayer(const QSettings& settings, const QString& profilesPath, const QDateTime& now)
 {
     const QString recorded = settings.value(settingsKeyFirstLaunch).toString();
@@ -7632,17 +7734,12 @@ static bool mudletUsedBefore(const QSettings& settings, const QString& profilesP
         return firstLaunch <= now.addMonths(-experiencedPlayerMonths);
     }
     if (!recorded.isEmpty()) {
-        // The value is meant to be legible and hand-editable, so say when a
-        // hand-edit did not take rather than ignoring it in silence.
         qWarning().nospace().noquote() << "evaluateExperiencedPlayer() WARNING - \"" << settingsKeyFirstLaunch << "\" holds \"" << recorded
                                        << "\", which is not ISO 8601 - falling back to looking for signs of earlier use.";
     }
 
-    // No usable record: an installation that predates the key, or one whose
-    // record was lost or corrupted. Either way the only signal left is whether
-    // Mudlet has been used here before. Erring towards 'experienced' is
-    // deliberate - interrupting a veteran with a beginner tour is far worse
-    // than a newcomer missing one.
+    // Erring towards 'experienced' is deliberate: interrupting a veteran with a
+    // beginner tour is worse than a newcomer missing one.
     return mudletUsedBefore(settings, profilesPath);
 }
 
@@ -7655,9 +7752,7 @@ bool mudlet::experiencedMudletPlayer()
 
     const auto* settings = getQSettings();
     if (!settings) {
-        // setupConfig() has not created them yet, so answer 'experienced',
-        // which shows nothing. Deliberately not cached: the answer is a guess,
-        // and caching it would pin every gate for the rest of the process.
+        // Not cached: a guess, and caching it would pin every gate for the process
         qWarning() << "mudlet::experiencedMudletPlayer() WARNING - called before setupConfig(), so assuming an experienced player and showing no first-run guidance.";
         return true;
     }
@@ -7780,20 +7875,37 @@ void mudlet::slot_detachedWindowClosed(const QString& profileName)
         updateMainWindowTitle();
 
         // Properly close the host to avoid dangling connections
-        Host* pHost = mHostManager.getHost(profileName);
-        if (pHost) {
-            if (pHost->requestClose()) {
-                QTimer::singleShot(0ms, this, [this, profileName] {
-                    closeHost(profileName);
-                    // Check to see if there are any profiles left...
-                    if (!mHostManager.getHostCount() && !mIsGoingDown) {
-                        disableToolbarButtons();
-                        slot_showConnectionDialog();
-                        setWindowTitle(scmVersion);
-                    }
-                });
+        closeHostOfClosedDetachedWindow(profileName);
+    }
+}
+
+// Unlike the tab-close slots, the window and its bookkeeping are already gone by
+// the time we get here, so dropping the close while the pump runs would leave
+// the profile loaded with no way to reach it. Wait the pump out instead.
+void mudlet::closeHostOfClosedDetachedWindow(const QString& profileName)
+{
+    Host* pHost = mHostManager.getHost(profileName);
+    if (!pHost) {
+        return;
+    }
+
+    if (closeHeldOffByEventPump(pHost)) {
+        QTimer::singleShot(50ms, this, [this, profileName]() {
+            closeHostOfClosedDetachedWindow(profileName);
+        });
+        return;
+    }
+
+    if (pHost->requestClose()) {
+        QTimer::singleShot(0ms, this, [this, profileName] {
+            closeHost(profileName);
+            // Check to see if there are any profiles left...
+            if (!mHostManager.getHostCount() && !mIsGoingDown) {
+                disableToolbarButtons();
+                slot_showConnectionDialog();
+                setWindowTitle(scmVersion);
             }
-        }
+        });
     }
 }
 

@@ -938,9 +938,6 @@ describe("Tests the text-to-speech Lua API", function()
         -- and the engine changes state inside say(), so the event carried the
         -- previous utterance. The handler has to be armed up front because the
         -- event is raised before ttsSpeak() returns.
-        -- The event only fires on a state transition, so the skip between the
-        -- two utterances is required: speaking over an utterance that is still
-        -- running raises no second event at all.
         local started = {}
         collect("ttsSpeechStarted", started)
 
@@ -951,6 +948,25 @@ describe("Tests the text-to-speech Lua API", function()
         ttsSkip()
         ttsSpeak("second spoken line")
         assert.same({"first spoken line", "second spoken line"}, started)
+      end)
+
+      it("announces an utterance spoken over one that is still running", function()
+        if noMockEngine() then
+          return
+        end
+        -- #9659: the events are raised off the engine's state edges, and an
+        -- engine that is already speaking has no edge to report when it is
+        -- handed something else - so a script tracking what is being spoken was
+        -- never told the text had changed, while ttsGetCurrentLine() moved on
+        -- underneath it. No ttsSkip() here: the interruption is the point.
+        local started = {}
+        collect("ttsSpeechStarted", started)
+
+        ttsClearQueue()
+        ttsSpeak("the utterance being spoken over")
+        ttsSpeak("the utterance spoken over it")
+        assert.same({"the utterance being spoken over", "the utterance spoken over it"}, started)
+        assert.equals("the utterance spoken over it", ttsGetCurrentLine())
       end)
 
       it("ttsSpeechStarted carries the queued line the drain started speaking", function()
@@ -976,17 +992,24 @@ describe("Tests the text-to-speech Lua API", function()
         if noMockEngine() then
           return
         end
-        -- Guards the ordering the two specs above rely on: ttsSpeak() records
-        -- the text before say(), so an engine that drained the queue from
-        -- inside say() would leave the queued line reported as the current one
-        -- instead of the utterance actually asked for. Speaking over a busy
-        -- engine does not pass through Ready, so no drain happens.
+        -- The utterance a script asks for outright has to survive the queue:
+        -- an engine reporting Ready for the utterance say() interrupted used to
+        -- be read as an idle engine, which drained the queued line straight
+        -- over the requested one (#9659). The mock engine reports no such Ready,
+        -- so what this spec can hold onto is the state ttsSpeak() leaves behind
+        -- - the guard itself is exercised by TtsInterruptingSpeakTest, which
+        -- delivers that Ready the way a real engine does.
+        local started = {}
+        collect("ttsSpeechStarted", started)
+
         ttsClearQueue()
         ttsSpeak("the busy utterance")
         ttsQueue("still queued")
         ttsSpeak("the direct utterance")
         assert.equals(1, #ttsGetQueue())
         assert.equals("the direct utterance", ttsGetCurrentLine())
+        -- ...and the queued line was not what got announced:
+        assert.same({"the busy utterance", "the direct utterance"}, started)
       end)
 
       it("ttsSetVoiceByName reports success for a voice it switched to", function()

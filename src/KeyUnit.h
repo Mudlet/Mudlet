@@ -69,6 +69,8 @@ public:
     void uninstall(const QString&);
     void _uninstall(TKey* pChild, const QString& packageName);
     bool processDataStream(const Qt::Key, const Qt::KeyboardModifiers);
+    // Query-only counterpart to processDataStream(), which executes what it matches
+    bool wouldMatch(const Qt::Key, const Qt::KeyboardModifiers) const;
     void markCleanup(TKey* pT);
     void doCleanup();
     int processingDepth() const { return mProcessingDepth; }

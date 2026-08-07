@@ -485,12 +485,8 @@ private slots:
         QVERIFY2(!unit->getKey(id), "the key should have been freed exactly once");
     }
 
-    // The other half of the corpse-is-still-findable-by-name premise: killTrigger()
-    // skips an item that is only waiting to be freed, but enableTrigger() used to
-    // re-activate every same-named entry unconditionally. That resurrects the
-    // corpse, contradicting the guarantee TTrigger::match() states where it expires
-    // a trigger ("an enableTrigger() before the deferred free cannot resurrect a
-    // trigger that has already spent its last fire").
+    // killTrigger() skips an item that is only waiting to be freed; enableTrigger()
+    // has to as well, or it resurrects the corpse.
     void test_triggerEnableByNameCannotReviveKilled()
     {
         auto* unit = mpHost->getTriggerUnit();
@@ -512,9 +508,8 @@ private slots:
         QVERIFY2(!unit->getTrigger(id), "the killed trigger should still have been freed");
     }
 
-    // The same thing as a user meets it: a one-shot trigger has spent its single
-    // fire on this line, and a script running later on the same line enables it by
-    // name. It must not fire a second time when the line is fed again.
+    // As a user meets it: a one-shot has spent its fire and a script later on the
+    // same line enables it by name.
     void test_triggerEnableByNameCannotReviveExpiredOneShot()
     {
         mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("oneShotFires = 0\n"
@@ -534,14 +529,10 @@ private slots:
         QCOMPARE(readGlobalInt(qsl("oneShotFires")), 1);
     }
 
-    // The other deferred-delete container needs the same treatment: uninstall()
-    // at a non-zero processing depth deactivates its package's triggers, drops
-    // them from mCleanupSet to keep the two paths disjoint, and leaves them in
-    // uninstallList to be freed at depth 0. They stay in the lookup table for
-    // that window, so enableTrigger() would otherwise bring a trigger belonging
-    // to an already-uninstalled package back to life. The container is populated
-    // directly, as the cases below do: reaching this state from Lua needs a
-    // package-owned temporary item, which no current import path produces.
+    // uninstall() at a non-zero processing depth leaves its package's triggers in
+    // uninstallList rather than mCleanupSet, still in the lookup table. Populated
+    // directly: reaching that state from Lua needs a package-owned temporary item,
+    // which no current import path produces.
     void test_triggerEnableByNameCannotReviveAnUninstalledTrigger()
     {
         auto* unit = mpHost->getTriggerUnit();
@@ -563,9 +554,7 @@ private slots:
     }
 
     // The skip must not stop the walk: a corpse and a live trigger can share a
-    // name (tempComplexRegexTrigger() takes a user-supplied one), and #9366's
-    // guarantee that enable-by-name reaches every same-named trigger still holds
-    // for the ones that are actually alive.
+    // name, and enable-by-name still has to reach every live one.
     void test_triggerEnableByNameStillReachesALiveSameNamedTrigger()
     {
         auto* unit = mpHost->getTriggerUnit();

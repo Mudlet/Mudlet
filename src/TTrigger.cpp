@@ -1098,17 +1098,11 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
             mExpiryCount--;
 
             if (mExpiryCount == 0) {
-                // The delete is deferred until the outermost processDataStream()
-                // pass ends, so an expired trigger that is still active would fire
-                // again from any pass that re-enters in the meantime (a later
-                // trigger's script calling feedTriggers(), most commonly).
-                // setIsActive(false) rather than deactivate(), matching
-                // TriggerUnit::killTrigger(): it also clears the user-active state.
-                // What stops an enableTrigger() before the deferred free from
-                // resurrecting a trigger that has spent its last fire is the
-                // markCleanup() below: TriggerUnit::enableTrigger() skips anything
-                // in mCleanupSet, as clearing the user-active state alone would
-                // not - enableTrigger() sets it straight back.
+                // The delete is deferred to the end of the outermost pass, so an
+                // expired trigger left active would fire again from any pass that
+                // re-enters meanwhile. What stops enableTrigger() resurrecting it
+                // in that window is the markCleanup() below, not the deactivation:
+                // enableTrigger() skips anything in mCleanupSet.
                 setIsActive(false);
                 mpHost->getTriggerUnit()->markCleanup(this);
 

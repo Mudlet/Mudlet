@@ -23,17 +23,10 @@
  * the one-line hints - so getting it wrong either buries a newcomer's
  * onboarding or drops a beginner tour on top of a ten-year veteran's session.
  *
- * The heuristic this replaced read profile *directory* mtimes, which record
- * when a profile was last written rather than how long it has existed; see
- * mudlet::evaluateExperiencedPlayer() for why that is backwards.
- * test_upgraderWithFreshlyWrittenProfilesIsExperienced is that exact shape and
- * is the regression this file exists for.
- *
  * mudlet::rememberFirstLaunch() and mudlet::evaluateExperiencedPlayer() take
- * their settings, profiles path and "now" as arguments, so the cases below run
+ * their settings, profiles path and "now" as arguments, so most cases run
  * without a mudlet instance. The last two drive a real init() instead, to pin
- * the production wiring: that init() records the date, and that the memoised
- * experiencedMudletPlayer() reads back the same key from the same path.
+ * the production wiring.
  *
  * Run with: ctest -R ExperiencedPlayerGateTest -V
  */
@@ -61,8 +54,7 @@ private:
     QByteArray mSavedXdg;
     // Outlives the two live-singleton cases, which share one mudlet instance
     QTemporaryDir mLiveConfig;
-    // Fixed, so the six month arithmetic is not at the mercy of the day the
-    // suite happens to run on
+    // Fixed, so the six month arithmetic does not depend on the day the suite runs
     const QDateTime mNow = QDateTime(QDate(2026, 8, 5), QTime(12, 0), QTimeZone::UTC);
     const QString mKey = qsl("firstLaunchDate");
 
@@ -78,8 +70,7 @@ private:
 
     void setFirstLaunch(QSettings& settings, const QDateTime& when) const { settings.setValue(mKey, when.toUTC().toString(Qt::ISODate)); }
 
-    // setupConfig() consults portable.txt before the XDG logic, so the
-    // live-singleton cases skip rather than report a baffling failure
+    // setupConfig() consults portable.txt before the XDG logic
     bool portableMarkerPresent() const
     {
         return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
@@ -96,7 +87,7 @@ private slots:
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
-    // --- a brand new installation --------------------------------------------
+    // --- a brand new installation ---
 
     void test_freshInstallRecordsTodayAndIsNew()
     {
@@ -111,8 +102,6 @@ private slots:
         QVERIFY2(!mudlet::evaluateExperiencedPlayer(settings, profilesPathIn(config.path()), mNow), "a first-ever launch must be treated as a new player");
     }
 
-    // A profiles directory that exists but holds nothing is still a first run -
-    // an aborted earlier launch must not cost the user their onboarding.
     void test_emptyProfilesDirectoryIsStillAFirstRun()
     {
         QTemporaryDir config;
@@ -126,7 +115,7 @@ private slots:
         QVERIFY(!mudlet::evaluateExperiencedPlayer(settings, profilesPathIn(config.path()), mNow));
     }
 
-    // --- the recorded date, once there is one --------------------------------
+    // --- the recorded date, once there is one ---
 
     void test_recentlyRecordedFirstLaunchIsNew()
     {
@@ -166,8 +155,6 @@ private slots:
         QVERIFY(mudlet::evaluateExperiencedPlayer(settings, profiles, mNow));
     }
 
-    // A clock set forward and back, or settings carried between machines, can
-    // leave a first launch in the future. That is not tenure.
     void test_futureDatedFirstLaunchIsNotExperienced()
     {
         QTemporaryDir config;
@@ -178,11 +165,8 @@ private slots:
         QVERIFY(!mudlet::evaluateExperiencedPlayer(settings, profilesPathIn(config.path()), mNow));
     }
 
-    // --- upgrading users, who have no recorded first launch ------------------
+    // --- upgrading users, who have no recorded first launch ---
 
-    // The regression: profiles written seconds ago by an installation that has
-    // been in use for years. The old directory-mtime heuristic classified this
-    // player as brand new, handing a veteran the beginner tour.
     void test_upgraderWithFreshlyWrittenProfilesIsExperienced()
     {
         QTemporaryDir config;
@@ -201,10 +185,8 @@ private slots:
         QVERIFY2(mudlet::evaluateExperiencedPlayer(settings, profilesPathIn(config.path()), mNow), "an installation with profiles but no recorded first launch predates the key, so it is experienced");
     }
 
-    // Timestamps are not consulted at all, which is what makes a profile copied
-    // to a new machine or restored from a backup come out right: whether the
-    // modification times survive depends entirely on the tool used, and the
-    // birth time is reset either way.
+    // A restored profile may or may not keep its modification times, and never
+    // keeps its birth time, so no timestamp is consulted
     void test_restoredFromBackupIsExperienced()
     {
         QTemporaryDir config;
@@ -215,9 +197,6 @@ private slots:
         QVERIFY(mudlet::evaluateExperiencedPlayer(settings, profilesPathIn(config.path()), mNow));
     }
 
-    // Settings restored without their profiles - a move to a new machine, or a
-    // user who deleted their last profile. Mudlet has clearly run here before,
-    // so they must not be stamped with today as their first launch.
     void test_settingsWithoutProfilesStillCountAsEarlierUse()
     {
         QTemporaryDir config;
@@ -232,10 +211,6 @@ private slots:
         QVERIFY(mudlet::evaluateExperiencedPlayer(settings, profilesPathIn(config.path()), mNow));
     }
 
-    // A profiles directory that cannot be listed is indistinguishable from an
-    // empty one, so it must be read the safe way round - otherwise a home
-    // directory that mounted late would brand a veteran as a newcomer, for six
-    // months, with no way back.
     void test_unreadableProfilesDirectoryIsTakenAsPopulated()
     {
         QTemporaryDir config;
@@ -250,14 +225,11 @@ private slots:
         }
 
         const bool experienced = mudlet::evaluateExperiencedPlayer(settings, profiles, mNow);
-        // Restore before asserting, so a failure does not leave QTemporaryDir
-        // unable to clean up after itself
+        // Restore before asserting, or a failure leaves QTemporaryDir unable to clean up
         QVERIFY(QFile::setPermissions(profiles, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner));
         QVERIFY(experienced);
     }
 
-    // Upgrading must not invent a first launch date - that would start the six
-    // month clock now and hand the veteran a tour six months from today.
     void test_upgradeDoesNotRecordAFirstLaunch()
     {
         QTemporaryDir config;
@@ -284,10 +256,6 @@ private slots:
         QCOMPARE(settings.value(mKey).toString(), original.toString(Qt::ISODate));
     }
 
-    // A corrupted or mistyped value must not be trusted as a date; it falls
-    // through to the earlier-use check, exactly like an upgrade does. It is also
-    // left alone rather than re-recorded, since re-recording would restart the
-    // six month clock today.
     void test_unparseableRecordFallsBackToTheEarlierUseCheck()
     {
         QTemporaryDir config;
@@ -318,22 +286,18 @@ private slots:
         QVERIFY2(QString::fromUtf8(ini.readAll()).contains(qsl("firstLaunchDate=2024-08-05T12:00:00Z")), "the date is stored as plain ISO 8601, so it can be read and edited by hand");
     }
 
-    // --- the live singleton --------------------------------------------------
+    // --- the live singleton ---
 
-    // The whole fix rests on init() recording the date at a point where no
-    // profile can exist yet. Nothing else in the suite would notice that call
-    // being moved or dropped, and if it were, every fresh install would take
-    // the "used before" fallback and be classified experienced - silently
-    // killing the onboarding for exactly the people it is for.
+    // Nothing else in the suite notices the init() call being moved or dropped,
+    // which would make every fresh install take the "used before" fallback
     void test_initRecordsTheFirstLaunchOnAFreshInstall()
     {
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - setupConfig() takes the portable branch");
         }
         QVERIFY(mLiveConfig.isValid());
-        // An empty $XDG_CONFIG_HOME/mudlet is the opt-in marker; on a machine
-        // with a legacy ~/.config/mudlet, setupConfig() would otherwise keep
-        // using that
+        // An empty $XDG_CONFIG_HOME/mudlet is the opt-in marker, without which
+        // setupConfig() keeps using a legacy ~/.config/mudlet
         const QString configDir = qsl("%1/mudlet").arg(mLiveConfig.path());
         QVERIFY(QDir().mkpath(configDir));
         qputenv("XDG_CONFIG_HOME", mLiveConfig.path().toUtf8());
@@ -351,12 +315,8 @@ private slots:
         QCOMPARE(QDateTime::fromString(mudlet::getQSettings()->value(mKey).toString(), Qt::ISODate).isValid(), true);
     }
 
-    // The direction that actually broke, through the memoised production path:
-    // an installation with a profile and no recorded date must come out
-    // experienced. Pins the key name and the profiles path that
-    // experiencedMudletPlayer() picks for itself, which the case above cannot -
-    // there, both branches would answer "new".
-    //
+    // Pins the key and profiles path experiencedMudletPlayer() picks for itself,
+    // which the case above cannot - there both branches would answer "new".
     // Runs last: experiencedMudletPlayer() memoises for the life of the process.
     void test_experiencedThroughTheRealSettings()
     {
