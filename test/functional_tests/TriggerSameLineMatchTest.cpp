@@ -461,6 +461,36 @@ private slots:
         QVERIFY2(bufferContains(qsl("BOUNDFIRES=%1#").arg(limit + 1)), qPrintable(qsl("Expected the chain to run to its own end, %1 fires").arg(limit + 1)));
     }
 
+    // Once the line that created a trigger is done with, that trigger is as
+    // ordinary as any other and what it creates starts fresh chains - otherwise
+    // it would carry its creator's chain around for the rest of the session.
+    void test_aTriggerOutlivingItsLineStartsFreshChains()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        const int bulkCount = static_cast<int>(TriggerUnit::scmMaxSameLineCreations) + 1;
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("laterFires = 0\n"
+                                                               "tempRegexTrigger('^egate$', [==[\n"
+                                                               "  tempRegexTrigger('^esecond$', [=[\n"
+                                                               "    for i = 1, %1 do\n"
+                                                               "      tempRegexTrigger('^epay$', [[laterFires = laterFires + 1]])\n"
+                                                               "    end\n"
+                                                               "  ]=], 1)\n"
+                                                               "]==], 1)\n"
+                                                               "feedTriggers('egate\\n')\n"
+                                                               "feedTriggers('esecond\\n')\n"
+                                                               "feedTriggers('epay\\n')\n"
+                                                               "echo('LATERFIRES=' .. laterFires .. '#\\n')\n")
+                                                                   .arg(bulkCount));
+
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(!bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "A trigger created on an earlier line is not part of a chain any more and must arm freely");
+        QVERIFY2(bufferContains(qsl("LATERFIRES=%1#").arg(bulkCount)), qPrintable(qsl("Expected all %1 triggers armed on the later line to survive and fire").arg(bulkCount)));
+    }
+
     // The outer line's own mid-pass triggers were registered before the nested
     // pass began, so its abort must not take them.
     void test_nestedPassAbortLeavesTheOuterLineAlone()
