@@ -13,6 +13,7 @@ set(UNIT_TESTS
     TEntityResolverTest
     TEntityHandlerTest
     LuaLiteralTest
+    UntrustedTextTest
     TLinkStoreTest
     TMxpTagParserTest
     TMxpSendTagHandlerTest

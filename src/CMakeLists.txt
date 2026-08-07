@@ -213,6 +213,7 @@ set(mudlet_SRCS
     TTrigger.cpp
     TUiTour.cpp
     TVar.cpp
+    UntrustedText.cpp
     VarUnit.cpp
     WideComboBox.cpp
     XMLexport.cpp
@@ -448,6 +449,7 @@ set(mudlet_HDRS
     TTrigger.h
     TUiTour.h
     TVar.h
+    UntrustedText.h
     utils.h
     VarUnit.h
     widechar_width.h

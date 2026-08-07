@@ -33,6 +33,7 @@
 #include "THyperlinkSelectionManager.h"
 #include "TStringUtils.h"
 #include "TTextEdit.h"
+#include "UntrustedText.h"
 #include "TTextProperties.h"
 #include "widechar_width.h"
 #include "TEncodingHelper.h"
@@ -3350,7 +3351,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             QString customTooltip;
 
             if (queryParams.contains(qsl("tooltip"))) {
-                customTooltip = queryParams.value(qsl("tooltip"));
+                customTooltip = UntrustedText::forDisplay(queryParams.value(qsl("tooltip")));
             }
 
             // Note: title is now parsed directly into mCurrentHyperlinkStyling by parseJsonHyperlinkConfig
@@ -3409,13 +3410,13 @@ void TBuffer::decodeOSC(const QString& sequence)
                 mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionSend;
                 mCurrentHyperlinkStyling.baseCommand = innerCommand;
                 command = {qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand))};
-                hint = {qsl("%1: %2").arg(QObject::tr("Send"), innerCommand)};
+                hint = {qsl("%1: %2").arg(QObject::tr("Send"), UntrustedText::forDisplay(innerCommand))};
             } else if (baseUrl.startsWith(qsl("prompt:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
                 mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionPrompt;
                 mCurrentHyperlinkStyling.baseCommand = innerCommand;
                 command = {qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand))};
-                hint = {qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand)};
+                hint = {qsl("%1: %2").arg(QObject::tr("Prompt"), UntrustedText::forDisplay(innerCommand))};
             } else {
                 QUrl qurl(baseUrl);
                 QString scheme = qurl.scheme().toLower();
@@ -3424,7 +3425,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionOpenUrl;
                     mCurrentHyperlinkStyling.baseCommand = baseUrl;
                     command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
-                    hint = {qsl("%1: %2").arg(QObject::tr("Open browser to"), baseUrl)};
+                    hint = {qsl("%1: %2").arg(QObject::tr("Open browser to"), UntrustedText::forDisplay(baseUrl))};
                 } else {
                     qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
                     return;
@@ -3459,11 +3460,11 @@ void TBuffer::decodeOSC(const QString& sequence)
                     if (menuCommand.startsWith(qsl("send:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(5).toUtf8());
                         menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand)));
-                        menuHints.append(menuLabel);
+                        menuHints.append(UntrustedText::forDisplay(menuLabel));
                     } else if (menuCommand.startsWith(qsl("prompt:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
                         menuCommands.append(qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand)));
-                        menuHints.append(menuLabel);
+                        menuHints.append(UntrustedText::forDisplay(menuLabel));
                     } else if (menuCommand == qsl("-")) {
                         // Special case: "-" creates a menu separator
                         menuCommands.append(QString());
@@ -3471,7 +3472,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     } else {
                         // Treat as direct command
                         menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(menuCommand)));
-                        menuHints.append(menuLabel);
+                        menuHints.append(UntrustedText::forDisplay(menuLabel));
                     }
                 }
 
@@ -3867,14 +3868,14 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
     if (root.contains(qsl("title"))) {
         QJsonValue titleValue = root[qsl("title")];
         if (titleValue.isString()) {
-            styling.menuTitle = titleValue.toString();
+            styling.menuTitle = UntrustedText::forDisplay(titleValue.toString());
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug() << "[OSC] Title parameter added:" << titleValue.toString();
 #endif
         } else if (titleValue.isObject()) {
             QJsonObject titleObj = titleValue.toObject();
             if (titleObj.contains(qsl("text")) && titleObj[qsl("text")].isString()) {
-                styling.menuTitle = titleObj[qsl("text")].toString();
+                styling.menuTitle = UntrustedText::forDisplay(titleObj[qsl("text")].toString());
             }
             if (titleObj.contains(qsl("style")) && titleObj[qsl("style")].isObject()) {
                 parseJsonStateStyle(titleObj[qsl("style")].toObject(), styling.menuTitleStyle);
