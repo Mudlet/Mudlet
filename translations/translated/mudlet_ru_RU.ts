@@ -71,19 +71,19 @@
       <location filename="../src/GMCPAuthenticator.cpp" line="294"/>
       <source>[ WARN ]  - Could not save your sign-in for next time; you may need to sign in again.</source>
       <extracomment>Shown when the user opted to stay signed in but saving the sign-in token failed, so they will have to sign in again next time.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Не удалось сохранить вход в систему в следующий раз; возможно вам придется войти снова.</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="329"/>
       <source>[ INFO ]  - Resuming your %1 sign-in with the game.</source>
       <extracomment>Shown when Mudlet asks the game to restart the browser sign-in with the remembered provider; %1 is the provider name (e.g. Discord).</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Возобновление входа в игру с %1.</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="420"/>
       <source>[ WARN ]  - The game sent an invalid sign-in link; cannot continue.</source>
       <extracomment>Shown when the game sends a sign-in link with an unsupported or invalid address (not an http/https web link).</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Игра отправила неверную ссылку на вход в игру; не удается продолжить.</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="433"/>
