@@ -126,6 +126,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(listWidget_profiles, &QWidget::customContextMenuRequested, this, &dlgConnectionProfiles::slot_profileContextMenu);
 
     mpTabBar = new QTabBar(this);
+    // QTabWidget gives this dialog a second QTabBar, so this one needs a name
+    mpTabBar->setObjectName(qsl("gamesTabBar"));
     //: Tab showing only the games the user already has profiles for
     mpTabBar->insertTab(scmMyGamesTab, tr("My games"));
     //: Tab showing every game Mudlet has a built-in profile for
@@ -1672,10 +1674,37 @@ void dlgConnectionProfiles::generateCustomProfile(const QString& profileName) co
     listWidget_profiles->addItem(pItem);
 }
 
+// fillout_form() destroys and rebuilds every item, so callers that have let the
+// event loop run cannot hold on to one.
+void dlgConnectionProfiles::setIconOfListedProfile(const QString& profileName, const QIcon& icon) const
+{
+    const auto pItems = findData(*listWidget_profiles, profileName, csmNameRole);
+    if (pItems.isEmpty()) {
+        return;
+    }
+    pItems.first()->setIcon(icon);
+}
+
+// Empty when nothing is selected. The context-menu actions re-check rather than
+// trust slot_profileContextMenu(): menu.exec() runs a nested event loop, and the
+// profile-copy completion handler calls fillout_form() from it, which can clear
+// the selection - or leave a different profile current, in which case the action
+// still mis-targets. Only the crash of acting on nothing is handled here.
+QString dlgConnectionProfiles::selectedProfileName() const
+{
+    const auto* pItem = listWidget_profiles->currentItem();
+    return pItem ? pItem->data(csmNameRole).toString() : QString();
+}
+
 void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
 {
+    // "My games" on a fresh install lists nothing, so nothing is current
+    const auto profileName = selectedProfileName();
+    if (profileName.isEmpty()) {
+        return;
+    }
+
     const QPoint globalPos = listWidget_profiles->mapToGlobal(pos);
-    auto profileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
 
     QMenu menu;
     if (hasCustomIcon(profileName)) {
@@ -1699,7 +1728,10 @@ void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
 
 void dlgConnectionProfiles::slot_setCustomIcon()
 {
-    auto profileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
+    const auto profileName = selectedProfileName();
+    if (profileName.isEmpty()) {
+        return;
+    }
 
     QSettings& settings = *mudlet::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
@@ -1718,11 +1750,15 @@ void dlgConnectionProfiles::slot_setCustomIcon()
     }
 
     auto icon = QIcon(QPixmap(imageLocation).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
-    listWidget_profiles->currentItem()->setIcon(icon);
+    // the file dialog ran a nested event loop, so the current item may have moved
+    setIconOfListedProfile(profileName, icon);
 }
 void dlgConnectionProfiles::slot_setCustomColor()
 {
-    auto profileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
+    const auto profileName = selectedProfileName();
+    if (profileName.isEmpty()) {
+        return;
+    }
     QColor color = QColorDialog::getColor(getCustomColor(profileName).value_or(QColor(255, 255, 255)));
     if (color.isValid()) {
         auto profileColorPath = mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
@@ -1736,12 +1772,15 @@ void dlgConnectionProfiles::slot_setCustomColor()
         if (!file.commit()) {
             qDebug() << "dlgConnectionProfiles::slot_setCustomColor: error saving custom icon color: " << file.errorString();
         }
-        listWidget_profiles->currentItem()->setIcon(customIcon(profileName, {color}));
+        setIconOfListedProfile(profileName, customIcon(profileName, {color}));
     }
 }
 void dlgConnectionProfiles::slot_resetCustomIcon()
 {
-    auto profileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
+    const auto profileName = selectedProfileName();
+    if (profileName.isEmpty()) {
+        return;
+    }
 
     const bool success = mudlet::self()->resetProfileIcon(profileName).first;
     if (!success) {
@@ -1788,10 +1827,31 @@ void dlgConnectionProfiles::slot_copyProfile()
     mpCopyProfile->setText(tr("Copying..."));
     mpCopyProfile->setEnabled(false);
     auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(enums::profileHomePath, oldname), mudlet::getMudletPath(enums::profileHomePath, profile_name));
-    auto watcher = new QFutureWatcher<bool>;
-    connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
-        mProfileList << profile_name;
-        slot_itemClicked(pItem);
+    auto watcher = new QFutureWatcher<bool>(this);
+    connect(watcher, &QFutureWatcher<bool>::finished, this, [this, profile_name, oldPassword, watcher]() {
+        if (!mProfileList.contains(profile_name)) {
+            mProfileList << profile_name;
+        }
+
+        // The dialog stays usable while the copy runs, and switching the games
+        // tab calls fillout_form(), which destroys every item - including the
+        // one made for this copy. Hence look it up by name rather than hold it.
+        auto pCopiedItems = findData(*listWidget_profiles, profile_name, csmNameRole);
+        if (pCopiedItems.isEmpty()) {
+            // that rebuild scanned the profiles directory before the copy
+            // landed in it
+            fillout_form();
+            pCopiedItems = findData(*listWidget_profiles, profile_name, csmNameRole);
+        }
+        if (!pCopiedItems.isEmpty()) {
+            auto* pCopiedItem = pCopiedItems.first();
+            if (listWidget_profiles->currentItem() == pCopiedItem) {
+                slot_itemClicked(pCopiedItem);
+            } else {
+                // reaches slot_itemClicked() through currentItemChanged
+                listWidget_profiles->setCurrentItem(pCopiedItem);
+            }
+        }
 
         // restore the password, which won't be copied by the disk copy if stored in the credential manager
         // Temporarily block textChanged signal to avoid triggering save on programmatic setText

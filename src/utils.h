@@ -74,6 +74,30 @@ public:
         return copyLen;
     }
 
+    // As copyString(), but for UTF-8 data that has to stay valid UTF-8: the copy
+    // stops at the last character that fits whole rather than at the last byte,
+    // so no trailing half-character is left behind. Use it wherever a truncated
+    // copy is handed on to something that decodes it - Discord discards an
+    // entire presence frame whose JSON payload carries an incomplete sequence.
+    // Returns the number of bytes copied (excluding the null terminator).
+    static size_t copyUtf8String(char* dest, size_t destSize, const char* src, size_t srcLen)
+    {
+        if (destSize == 0) {
+            return 0;
+        }
+        size_t copyLen = (srcLen < destSize) ? srcLen : destSize - 1;
+        // Every byte after the first of a multi-byte character has the form
+        // 10xxxxxx, so a cut in front of one is a cut inside a character: walk
+        // back to where that character starts. A cut that took everything (or
+        // that landed on a character start) needs no adjustment.
+        while (copyLen > 0 && copyLen < srcLen && (static_cast<unsigned char>(src[copyLen]) & 0xC0u) == 0x80u) {
+            --copyLen;
+        }
+        std::memcpy(dest, src, copyLen);
+        dest[copyLen] = '\0';
+        return copyLen;
+    }
+
     // This construct will be very useful for formatting tooltips and by
     // defining a static function/method here we can save using the same
     // qsl all over the place:

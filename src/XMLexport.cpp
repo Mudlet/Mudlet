@@ -47,6 +47,7 @@
 #include <QMetaEnum>
 
 #include <sstream>
+#include <utility>
 
 XMLexport::XMLexport(Host* pH)
 : mpHost(pH)
@@ -85,8 +86,7 @@ XMLexport::XMLexport(TKey* pT)
 
 // Builds the module's XML document into mExportDoc. This reads the live
 // trigger/timer/alias/action/script/key lists, so it must run on the main thread;
-// serializing a copy of it (cloneExportDocument()) to disk can then happen on a
-// background thread.
+// serializing it to disk can then happen on a background thread.
 void XMLexport::writeModuleXML(const QString& moduleName)
 {
     auto pHost = mpHost;
@@ -95,7 +95,7 @@ void XMLexport::writeModuleXML(const QString& moduleName)
     auto triggerPackage = mudletPackage.append_child("TriggerPackage");
     //we go a level down for all these functions so as to not infinitely nest the module
     for (auto& it : pHost->mTriggerUnit.mTriggerRootNodeList) {
-        if (!it || it->mPackageName != moduleName) {
+        if (!it || pHost->mTriggerUnit.uninstallList.contains(it) || it->mPackageName != moduleName) {
             continue;
         }
         if (!it->isTemporary() && it->mModuleMember) {
@@ -105,7 +105,7 @@ void XMLexport::writeModuleXML(const QString& moduleName)
 
     auto timerPackage = mudletPackage.append_child("TimerPackage");
     for (auto& it : pHost->mTimerUnit.mTimerRootNodeList) {
-        if (!it || it->mPackageName != moduleName) {
+        if (!it || pHost->mTimerUnit.uninstallList.contains(it) || it->mPackageName != moduleName) {
             continue;
         }
         if (!it->isTemporary() && it->mModuleMember) {
@@ -115,7 +115,7 @@ void XMLexport::writeModuleXML(const QString& moduleName)
 
     auto aliasPackage = mudletPackage.append_child("AliasPackage");
     for (auto& it : pHost->mAliasUnit.mAliasRootNodeList) {
-        if (!it || it->mPackageName != moduleName) {
+        if (!it || pHost->mAliasUnit.uninstallList.contains(it) || it->mPackageName != moduleName) {
             continue;
         }
         if (!it->isTemporary() && it->mModuleMember) {
@@ -125,7 +125,7 @@ void XMLexport::writeModuleXML(const QString& moduleName)
 
     auto actionPackage = mudletPackage.append_child("ActionPackage");
     for (auto& it : pHost->mActionUnit.mActionRootNodeList) {
-        if (!it || it->mPackageName != moduleName) {
+        if (!it || pHost->mActionUnit.uninstallList.contains(it) || it->mPackageName != moduleName) {
             continue;
         }
         if (it->mModuleMember) {
@@ -135,7 +135,7 @@ void XMLexport::writeModuleXML(const QString& moduleName)
 
     auto scriptPackage = mudletPackage.append_child("ScriptPackage");
     for (auto& it : pHost->mScriptUnit.mScriptRootNodeList) {
-        if (!it || it->mPackageName != moduleName) {
+        if (!it || pHost->mScriptUnit.uninstallList.contains(it) || it->mPackageName != moduleName) {
             continue;
         }
         if (it->mModuleMember) {
@@ -145,7 +145,7 @@ void XMLexport::writeModuleXML(const QString& moduleName)
 
     auto keyPackage = mudletPackage.append_child("KeyPackage");
     for (auto& it : pHost->mKeyUnit.mKeyRootNodeList) {
-        if (!it || it->mPackageName != moduleName) {
+        if (!it || pHost->mKeyUnit.uninstallList.contains(it) || it->mPackageName != moduleName) {
             continue;
         }
         if (!it->isTemporary() && it->mModuleMember) {
@@ -161,17 +161,12 @@ void XMLexport::writeModuleXML(const QString& moduleName)
     }
 }
 
-// Deep copy of the document built so far, so the write can outlive both this XMLexport
-// and the Host it belongs to. The copy is made while the main thread is already
-// quiescent, and each document owns its own tree, so the clone can be serialized off
-// the main thread without touching anything shared.
-std::shared_ptr<pugi::xml_document> XMLexport::cloneExportDocument() const
+// Hands the document over so the write can outlive both this XMLexport and its Host
+// without a second copy of the tree. mExportDoc is left valid but empty, and any
+// xml_node handle taken from it beforehand must not be used afterwards.
+std::shared_ptr<pugi::xml_document> XMLexport::takeExportDocument()
 {
-    auto clone = std::make_shared<pugi::xml_document>();
-    for (pugi::xml_node child = mExportDoc.first_child(); child; child = child.next_sibling()) {
-        clone->append_copy(child);
-    }
-    return clone;
+    return std::make_shared<pugi::xml_document>(std::move(mExportDoc));
 }
 
 bool XMLexport::exportHost(const QString& filename_pugi_xml)
@@ -188,15 +183,11 @@ bool XMLexport::exportHost(const QString& filename_pugi_xml)
     return true;
 }
 
-// Helper to encapsulate async save pattern: clone document, save in background thread,
-// notify host when complete
 void XMLexport::runAsyncSave(const QString& fileName, const QString& xmlSavedKey)
 {
-    // Clone the XML document on the main thread, then serialize and save it on a
-    // background thread that owns the clone outright.
     QPointer<Host> host = mpHost;
-    auto future = QtConcurrent::run([fileName, docClone = cloneExportDocument()]() {
-        return XMLexport::saveXmlDocToFile(fileName, *docClone);
+    auto future = QtConcurrent::run([fileName, doc = takeExportDocument()]() {
+        return XMLexport::saveXmlDocToFile(fileName, *doc);
     });
     // Parented to the profile for the same reason the module save's watcher is: the
     // deleteLater() below needs an event loop that is still running to be delivered,
@@ -325,11 +316,9 @@ bool XMLexport::saveXml(const QString& fileName)
     return success;
 }
 
-// Save an XML document to a file. This is thread-safe and can be called from a background thread
-// as long as the document is not being modified concurrently (which we ensure by passing a clone).
-// Static method so it can be called without keeping XMLexport alive.
-// Note: This is a static member method that doesn't access any instance state,
-// making it safe to call from background threads.
+// Callable from a background thread as long as nothing modifies the document
+// concurrently, which handing it over with takeExportDocument() ensures. Static so it
+// neither keeps the XMLexport alive nor touches any instance state.
 bool XMLexport::saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc)
 {
     QSaveFile file(fileName);
@@ -783,33 +772,37 @@ void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
         }
     }
 
-    // Refresh the variable tree so it reflects the current Lua state. The tree
-    // is otherwise only rebuilt at profile load and when the Variables editor
-    // populates it, so a variable (or saved table member) a script created
-    // afterwards would be missing here and silently dropped from the saved
-    // profile. Skip the refresh only while that editor view is on screen: it
-    // owns the tree and rebuilding it here would invalidate the widget the user
-    // is interacting with (its variables would stop responding until refreshed).
-    const bool variablesEditorOnScreen = pHost->mpEditorDialog && pHost->mpEditorDialog->variablesViewActive();
-    TVar* base = vu->getBase();
-    if (!variablesEditorOnScreen || !base) {
-        lI->getVars(false);
-        base = vu->getBase();
-    }
+    // Into a throwaway tree rather than the live one: the Variables editor's
+    // QTreeWidgetItems point into the live tree, so rebuilding it here would
+    // strand every one of them. Reusing it as it stands is no good either - only
+    // the editor rebuilds it, so anything a script did since is missing from it.
+    LuaInterface saveTimeInterface(lI->getState());
+    VarUnit* saveTimeUnit = saveTimeInterface.getVarUnit();
+    // A fresh tree carries no per-variable saved/hidden flags, so isSaved() and
+    // isHidden() have to answer from these name-keyed sets.
+    saveTimeUnit->savedVars = vu->savedVars;
+    saveTimeUnit->hidden = vu->hidden;
+    saveTimeUnit->hiddenByUser = vu->hiddenByUser;
+    saveTimeInterface.getVars(false);
 
-    if (base) {
+    if (TVar* base = saveTimeUnit->getBase()) {
         QListIterator<TVar*> itVariable(base->getChildren(false));
         while (itVariable.hasNext()) {
-            writeVariable(itVariable.next(), lI, vu, variablePackage);
+            writeVariable(itVariable.next(), &saveTimeInterface, saveTimeUnit, variablePackage);
         }
     }
+    saveTimeInterface.releaseVariableReferences();
 }
 
+// A unit busy executing an item of a package being uninstalled can only
+// deactivate it; it stays registered in uninstallList until doCleanup() flushes
+// it. Such an item is gone as far as the profile is concerned, so no writer that
+// walks a root node list may serialize it. The list is empty at any other time.
 void XMLexport::writeKeyPackage(const Host* pHost, pugi::xml_node& mudletPackage, bool skipModuleMembers)
 {
     auto keyPackage = mudletPackage.append_child("KeyPackage");
     for (auto it : pHost->mKeyUnit.mKeyRootNodeList) {
-        if (!it || it->isTemporary() || (skipModuleMembers && it->mModuleMember)) {
+        if (!it || pHost->mKeyUnit.uninstallList.contains(it) || it->isTemporary() || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
         writeKey(it, keyPackage);
@@ -820,7 +813,7 @@ void XMLexport::writeScriptPackage(const Host* pHost, pugi::xml_node& mudletPack
 {
     auto scriptPackage = mudletPackage.append_child("ScriptPackage");
     for (auto it : pHost->mScriptUnit.mScriptRootNodeList) {
-        if (!it || (skipModuleMembers && it->mModuleMember)) {
+        if (!it || pHost->mScriptUnit.uninstallList.contains(it) || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
         writeScript(it, scriptPackage);
@@ -831,7 +824,7 @@ void XMLexport::writeActionPackage(const Host* pHost, pugi::xml_node& mudletPack
 {
     auto actionPackage = mudletPackage.append_child("ActionPackage");
     for (auto it : pHost->mActionUnit.mActionRootNodeList) {
-        if (!it || (skipModuleMembers && it->mModuleMember)) {
+        if (!it || pHost->mActionUnit.uninstallList.contains(it) || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
         writeAction(it, actionPackage);
@@ -842,7 +835,7 @@ void XMLexport::writeAliasPackage(const Host* pHost, pugi::xml_node& mudletPacka
 {
     auto aliasPackage = mudletPackage.append_child("AliasPackage");
     for (auto it : pHost->mAliasUnit.mAliasRootNodeList) {
-        if (!it || (skipModuleMembers && it->mModuleMember)) {
+        if (!it || pHost->mAliasUnit.uninstallList.contains(it) || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
         if (!it->isTemporary()) {
@@ -855,7 +848,7 @@ void XMLexport::writeTimerPackage(const Host* pHost, pugi::xml_node& mudletPacka
 {
     auto timerPackage = mudletPackage.append_child("TimerPackage");
     for (auto it : pHost->mTimerUnit.mTimerRootNodeList) {
-        if (!it || (skipModuleMembers && it->mModuleMember)) {
+        if (!it || pHost->mTimerUnit.uninstallList.contains(it) || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
         if (!it->isTemporary()) {
@@ -868,7 +861,7 @@ void XMLexport::writeTriggerPackage(const Host* pHost, pugi::xml_node& mudletPac
 {
     auto triggerPackage = mudletPackage.append_child("TriggerPackage");
     for (auto it : pHost->mTriggerUnit.mTriggerRootNodeList) {
-        if (!it || (ignoreModuleMembers && it->mModuleMember)) {
+        if (!it || pHost->mTriggerUnit.uninstallList.contains(it) || (ignoreModuleMembers && it->mModuleMember)) {
             continue;
         }
         if (!it->isTemporary()) {

@@ -296,7 +296,12 @@ public:
     bool setWindowBackgroundImage(const QString&, int);
     bool resetWindowBackgroundImage();
     void updateMainFrameTransparency();
-    void updateWindowBackgroundCoverPixmap();
+    // False only when a scale failed; no source or an unsized widget defers to the next resize
+    bool updateWindowBackgroundCoverPixmap();
+    static QRect coverSourceRect(const QSize& sourceSize, const QSize& targetSize);
+    void setBorderColor(const QColor&);
+    QColor borderColor() const { return mBorderColor; }
+    void lowerMainDisplay();
     void setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference = QVector<int>());
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
@@ -498,6 +503,10 @@ private:
     // Whether to show (a 13 character by default) timestamp to the left of
     // each line of text:
     bool mShowTimeStamps = false;
+    // mpMainFrame's palette cannot hold this - it is rebuilt from scratch on every colour change
+    QColor mBorderColor = Qt::black;
+    // latches the 'cover' scale failure so a resize drag does not repeat the warning
+    bool mWindowBgCoverScaleFailed = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)

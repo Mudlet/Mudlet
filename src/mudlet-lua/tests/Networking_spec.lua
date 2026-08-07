@@ -294,8 +294,8 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
   -- checked too.
   --
   -- The requests are asynchronous: nothing is sent until the event loop runs,
-  -- which only happens inside waitForEvent(), so arming the wait after issuing
-  -- the request cannot miss the reply.
+  -- which only happens inside waitForEvent() and pumpEvents(), so arming the
+  -- wait after issuing the request cannot miss the reply.
   local httpPort = os.getenv("MUDLET_TEST_HTTP_PORT")
   -- the contents of CI/http-fixtures/fixture.txt
   local fixtureBody = "Mudlet self-test HTTP fixture.\n"
@@ -849,10 +849,8 @@ describe("MMCP effects against a scripted chat peer", function()
     return true
   end
 
-  -- Lets Mudlet's event loop run for ms without blocking it: waiting on an
-  -- event nothing raises is how a spec gives sockets and timers time to work.
   local function pump(ms)
-    waitForEvent("mmcpFixtureIdleEvent", ms)
+    pumpEvents(ms)
   end
 
   local function waitUntil(predicate, timeoutMs)
