@@ -34,56 +34,104 @@ class UntrustedTextTest : public QObject
 private slots:
     void initTestCase() {}
 
-    void testOrdinaryTextUnchanged()
-    {
-        QCOMPARE(UntrustedText::forDisplay(QStringLiteral("Open browser to: https://www.mudlet.org")), QStringLiteral("Open browser to: https://www.mudlet.org"));
-    }
+    void testOrdinaryTextUnchanged() { QCOMPARE(UntrustedText::forTarget(QStringLiteral("Open browser to: https://www.mudlet.org")), QStringLiteral("Open browser to: https://www.mudlet.org")); }
 
     void testNonLatinTextUnchanged()
     {
         // Sanitization must not damage legitimate non-Latin tooltips.
         const QString text = QStringLiteral("你好 مرحبا Здравствуй");
-        QCOMPARE(UntrustedText::forDisplay(text), text);
+        QCOMPARE(UntrustedText::forTarget(text), text);
     }
 
     void testAstralPlaneTextUnchanged()
     {
         // Surrogate pairs must round-trip: an emoji is two QChars, one code point.
         const QString text = QStringLiteral("a\U0001F600b");
-        QCOMPARE(UntrustedText::forDisplay(text), text);
+        QCOMPARE(UntrustedText::forTarget(text), text);
     }
 
-    void testRightToLeftOverrideEscaped()
-    {
-        QCOMPARE(UntrustedText::forDisplay(QStringLiteral("mudlet‮gro.live")), QStringLiteral("mudlet\\u{202E}gro.live"));
-    }
+    void testRightToLeftOverrideEscaped() { QCOMPARE(UntrustedText::forTarget(QStringLiteral("mudlet‮gro.live")), QStringLiteral("mudlet\\u{202E}gro.live")); }
 
-    void testZeroWidthEscaped()
-    {
-        QCOMPARE(UntrustedText::forDisplay(QStringLiteral("mud​let.org")), QStringLiteral("mud\\u{200B}let.org"));
-    }
+    void testZeroWidthEscaped() { QCOMPARE(UntrustedText::forTarget(QStringLiteral("mud​let.org")), QStringLiteral("mud\\u{200B}let.org")); }
 
-    void testByteOrderMarkEscaped()
-    {
-        QCOMPARE(UntrustedText::forDisplay(QStringLiteral("a﻿b")), QStringLiteral("a\\u{FEFF}b"));
-    }
+    void testByteOrderMarkEscaped() { QCOMPARE(UntrustedText::forTarget(QStringLiteral("a﻿b")), QStringLiteral("a\\u{FEFF}b")); }
 
     void testControlCharactersEscaped()
     {
         // A newline in a tooltip creates a second visual line that can forge
         // trusted-looking UI text below the real target.
-        QCOMPARE(UntrustedText::forDisplay(QStringLiteral("a\nb")), QStringLiteral("a\\u{A}b"));
-        QCOMPARE(UntrustedText::forDisplay(QStringLiteral("ab")), QStringLiteral("a\\u{85}b"));
+        QCOMPARE(UntrustedText::forTarget(QStringLiteral("a\nb")), QStringLiteral("a\\u{A}b"));
+        QCOMPARE(UntrustedText::forTarget(QStringLiteral("ab")), QStringLiteral("a\\u{85}b"));
     }
 
     void testLineSeparatorEscaped()
     {
-        QCOMPARE(UntrustedText::forDisplay(QStringLiteral("a b")), QStringLiteral("a\\u{2028}b"));
+        // The separator is written as an escape because editors that strip
+        // invisible characters have silently deleted the raw code point here.
+        QCOMPARE(UntrustedText::forTarget(QStringLiteral("a\u2028b")), QStringLiteral("a\\u{2028}b"));
     }
 
-    void testEmptyText()
+    void testEmptyText() { QCOMPARE(UntrustedText::forTarget(QString()), QString()); }
+
+    void testLiteralEscapeSequenceDisambiguated()
     {
-        QCOMPARE(UntrustedText::forDisplay(QString()), QString());
+        // Server text containing the six characters \u{202E} must not display
+        // the same as a sanitized real U+202E.
+        QCOMPARE(UntrustedText::forTarget(QStringLiteral("a\\u{202E}b")), QStringLiteral("a\\u{5C}u{202E}b"));
+        // A backslash not starting a \u{ sequence is left alone.
+        QCOMPARE(UntrustedText::forTarget(QStringLiteral("C:\\mud\\maps")), QStringLiteral("C:\\mud\\maps"));
+    }
+
+    // Emoji in tooltips and menu labels are a documented OSC 8 feature and are
+    // used in the wild. The strict policy escapes the joiners and tag
+    // characters they are assembled from, so authored text must not use it.
+    void testAuthoredTextKeepsEmoji_data()
+    {
+        QTest::addColumn<QString>("emoji");
+
+        QTest::newRow("rainbow flag") << QStringLiteral("\U0001F3F3️‍\U0001F308");
+        QTest::newRow("pirate flag") << QStringLiteral("\U0001F3F4‍☠️");
+        QTest::newRow("man cook") << QStringLiteral("\U0001F468‍\U0001F373");
+        QTest::newRow("family") << QStringLiteral("\U0001F468‍\U0001F469‍\U0001F467");
+        QTest::newRow("scotland flag") << QStringLiteral("\U0001F3F4\U000E0067\U000E0062\U000E0073\U000E0063\U000E0074\U000E007F");
+        QTest::newRow("plain emoji") << QStringLiteral("⚔️");
+        QTest::newRow("skin tone") << QStringLiteral("\U0001F44D\U0001F3FD");
+        QTest::newRow("regional flag") << QStringLiteral("\U0001F1EC\U0001F1E7");
+    }
+
+    void testAuthoredTextKeepsEmoji()
+    {
+        QFETCH(QString, emoji);
+        QCOMPARE(UntrustedText::forAuthoredText(emoji), emoji);
+    }
+
+    void testAuthoredTextKeepsPersianShaping()
+    {
+        // ZWNJ separates the prefix in this Persian verb; escaping it changes
+        // how the word is shaped and read.
+        const QString text = QStringLiteral("می‌رود");
+        QCOMPARE(UntrustedText::forAuthoredText(text), text);
+    }
+
+    void testTargetStillEscapesWhatAuthoredTextKeeps()
+    {
+        // The same characters must not survive in a link target, where they
+        // would hide part of what the user is being asked to trust.
+        QCOMPARE(UntrustedText::forTarget(QStringLiteral("a‍b")), QStringLiteral("a\\u{200D}b"));
+        QCOMPARE(UntrustedText::forTarget(QStringLiteral("a‌b")), QStringLiteral("a\\u{200C}b"));
+        QCOMPARE(UntrustedText::forTarget(QStringLiteral("a\U000E0067b")), QStringLiteral("a\\u{E0067}b"));
+    }
+
+    void testAuthoredTextStillEscapesReordering()
+    {
+        // Relaxing the joiners must not relax the characters that let a label
+        // misrepresent itself or forge a second line of UI.
+        QCOMPARE(UntrustedText::forAuthoredText(QStringLiteral("mudlet‮gro.live")), QStringLiteral("mudlet\\u{202E}gro.live"));
+        QCOMPARE(UntrustedText::forAuthoredText(QStringLiteral("a⁦b")), QStringLiteral("a\\u{2066}b"));
+        QCOMPARE(UntrustedText::forAuthoredText(QStringLiteral("a\nb")), QStringLiteral("a\\u{A}b"));
+        QCOMPARE(UntrustedText::forAuthoredText(QStringLiteral("a b")), QStringLiteral("a\\u{2028}b"));
+        QCOMPARE(UntrustedText::forAuthoredText(QStringLiteral("a​b")), QStringLiteral("a\\u{200B}b"));
+        QCOMPARE(UntrustedText::forAuthoredText(QStringLiteral("a﻿b")), QStringLiteral("a\\u{FEFF}b"));
     }
 
     void testClassification()
@@ -92,9 +140,36 @@ private slots:
         QVERIFY(UntrustedText::unsafeCharacter(0x200B));
         QVERIFY(UntrustedText::unsafeCharacter(0x0000));
         QVERIFY(UntrustedText::unsafeCharacter(0x009F));
+        // Bidi embeddings and overrides, and the isolates that replaced them.
+        QVERIFY(UntrustedText::unsafeCharacter(0x202A));
+        QVERIFY(UntrustedText::unsafeCharacter(0x202D));
+        QVERIFY(UntrustedText::unsafeCharacter(0x2066));
+        QVERIFY(UntrustedText::unsafeCharacter(0x2069));
+        // Arabic letter mark, zero-width joiners and the word joiner.
+        QVERIFY(UntrustedText::unsafeCharacter(0x061C));
+        QVERIFY(UntrustedText::unsafeCharacter(0x200C));
+        QVERIFY(UntrustedText::unsafeCharacter(0x200D));
+        QVERIFY(UntrustedText::unsafeCharacter(0x2060));
+        // Both ends of the invisible-by-design tag character block.
+        QVERIFY(UntrustedText::unsafeCharacter(0xE0000));
+        QVERIFY(UntrustedText::unsafeCharacter(0xE007F));
         QVERIFY(!UntrustedText::unsafeCharacter(0x0041));
         QVERIFY(!UntrustedText::unsafeCharacter(0x00A0));
         QVERIFY(!UntrustedText::unsafeCharacter(0x4F60));
+    }
+
+    void testAuthoredClassificationDiffersOnlyWhereIntended()
+    {
+        // The authored policy is the strict one minus exactly three things.
+        for (char32_t codePoint = 0; codePoint <= 0xE0100; ++codePoint) {
+            const bool relaxed = UntrustedText::unsafeCharacter(codePoint) && !UntrustedText::unsafeAuthoredCharacter(codePoint);
+            const bool expected = codePoint == 0x200C || codePoint == 0x200D || (codePoint >= 0xE0000 && codePoint <= 0xE007F);
+            if (relaxed != expected) {
+                QFAIL(qPrintable(QStringLiteral("policies diverge unexpectedly at U+%1").arg(QString::number(static_cast<uint>(codePoint), 16).toUpper())));
+            }
+            // Authored text may never mark something unsafe that strict does not.
+            QVERIFY(!(UntrustedText::unsafeAuthoredCharacter(codePoint) && !UntrustedText::unsafeCharacter(codePoint)));
+        }
     }
 };
 

@@ -22,20 +22,39 @@
 
 #include <QString>
 
+// Escapes characters a remote game server could use to make displayed text
+// misrepresent itself. Two policies, because the two kinds of text have
+// different needs:
+//
+//   forTarget()       - a command or URL the user reads to decide whether to
+//                       trust a link. Nothing invisible may survive here.
+//   forAuthoredText() - a tooltip, menu label or menu title the server author
+//                       wrote to be read. Same policy, except it keeps the
+//                       joiners and tag characters that multi-part emoji and
+//                       Persian, Arabic and Indic text are built from.
 class UntrustedText
 {
 public:
     // True for the enumerated set of code points that render as invisible,
     // zero-width, direction reordering, or line breaking text - not a general
-    // test for those properties. Such a character lets remote metadata display
-    // one target while the link carries another. The set is deliberately
-    // narrow; widen it in the implementation rather than assuming coverage.
+    // test for those properties. The set is deliberately narrow; widen it in
+    // the implementation rather than assuming coverage.
     static bool unsafeCharacter(char32_t codePoint);
 
-    // Replaces every unsafe code point with a visible \u{...} escape carrying
+    // As unsafeCharacter(), minus the zero-width joiner and non-joiner and the
+    // tag character block. Those three are load-bearing in text meant to be
+    // read: ZWJ builds 👨‍🍳 and 🏳️‍🌈, the tag block builds subdivision flags
+    // like 🏴󠁧󠁢󠁳󠁣󠁴󠁿, and ZWNJ is required for correct Persian and Indic shaping.
+    static bool unsafeAuthoredCharacter(char32_t codePoint);
+
+    // Replace every unsafe code point with a visible \u{...} escape carrying
     // its hex value, leaving all other text - including non-Latin scripts and
     // astral plane code points - untouched.
-    static QString forDisplay(const QString& text);
+    static QString forTarget(const QString& text);
+    static QString forAuthoredText(const QString& text);
+
+private:
+    static QString escapeWith(const QString& text, bool (*unsafe)(char32_t));
 };
 
 #endif // MUDLET_UNTRUSTEDTEXT_H

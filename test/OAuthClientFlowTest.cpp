@@ -292,6 +292,8 @@ void OAuthClientFlowTest::testDiscoveryFetchFailureFailsFlow()
     MiniClosingServer discovery;
     flow.start(discovery.discoveryUrl(), QStringLiteral("test-client"), {QStringLiteral("openid")}, false);
     QTRY_COMPARE_WITH_TIMEOUT(failedSpy.count(), 1, 15000);
+    // A failed discovery fetch must not have produced an authorization URL.
+    QVERIFY(mAuthorizationUrl.isEmpty());
 }
 
 void OAuthClientFlowTest::testNonLoopbackHttpDiscoveryUrlRejected()
@@ -303,6 +305,8 @@ void OAuthClientFlowTest::testNonLoopbackHttpDiscoveryUrlRejected()
     // before any network activity happens.
     flow.start(QUrl(QStringLiteral("http://example.com/.well-known/openid-configuration")), QStringLiteral("test-client"), {QStringLiteral("openid")}, false);
     QCOMPARE(failedSpy.count(), 1);
+    // The rejected discovery URL must not have produced an authorization URL.
+    QVERIFY(mAuthorizationUrl.isEmpty());
 }
 
 void OAuthClientFlowTest::testProviderErrorFailsFlow()

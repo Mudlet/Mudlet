@@ -39,8 +39,10 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
         return MXP_TAG_NOT_HANDLED;
     }
 
-    // Server-supplied, and lands in the same tooltip as an OSC 8 hint.
-    const QString hint = UntrustedText::forDisplay(tag->hasAttribute(qsl("hint")) ? tag->getAttributeValue(qsl("hint")) : href);
+    // Server-supplied, and lands in the same tooltip as an OSC 8 hint. An
+    // explicit hint is prose written to be read; falling back to the href makes
+    // this a link target the user is being asked to trust.
+    const QString hint = tag->hasAttribute(qsl("hint")) ? UntrustedText::forAuthoredText(tag->getAttributeValue(qsl("hint"))) : UntrustedText::forTarget(href);
 
     href = qsl("openUrl(%1)").arg(LuaLiteral::quote(href));
 

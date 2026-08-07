@@ -42,13 +42,27 @@ characters over the `[`, `]`, `=`, `a` alphabet. The exhaustive sweep exists bec
 hand-picked table originally missed payloads ending in `]`, which is a real shape — `say
 [OOC]`, `get sword from bag[1]`, `http://[::1]`.
 
-**Link metadata cannot lie about where a link goes.** Tooltips, menu labels, menu titles and
-the default hint that shows a link's target are passed through
-`UntrustedText::forDisplay()`, which rewrites invisible and direction-reordering code points
-— C0/C1 controls, bidi overrides and isolates, zero-width characters, line and paragraph
-separators, word joiner, BOM — into a visible `\u{202E}` form. Sanitizing where the metadata
-is parsed rather than where it is drawn means the hover tooltip, the right-click menu and the
-screen reader announcement are all covered by the one call.
+**Link metadata cannot lie about where a link goes.** Invisible and direction-reordering code
+points — C0/C1 controls, bidi overrides and isolates, zero-width characters, line and
+paragraph separators, word joiner, BOM — are rewritten into a visible `\u{202E}` form.
+Sanitizing where the metadata is parsed rather than where it is drawn means the hover
+tooltip, the right-click menu and the screen reader announcement are all covered at once.
+
+There are two policies, because the two kinds of text have different needs:
+
+- `UntrustedText::forTarget()` handles the command or URL shown in the default hint — the
+  text a user reads to decide whether to trust a link. Nothing invisible survives it.
+- `UntrustedText::forAuthoredText()` handles tooltips, menu labels and menu titles: prose the
+  server author wrote to be read. It applies the same policy except for the zero-width
+  joiner, the zero-width non-joiner and the tag character block.
+
+Those three exceptions are not a relaxation for convenience. ZWJ is what assembles
+multi-part emoji — 👨‍🍳, 🏳️‍🌈, 🏴‍☠️, family sequences — and the tag block is what assembles
+subdivision flags like 🏴󠁧󠁢󠁳󠁣󠁴󠁿. ZWNJ is structurally required for correct Persian, Arabic and
+Indic shaping; escaping it corrupts ordinary words. Emoji in menus are a documented feature
+of the protocol and are used in the wild, so escaping them everywhere broke working servers.
+They stay escaped in a link target, where they have no legitimate role and would serve only
+to hide part of what the user is being asked to trust.
 
 **Tooltips are not a markup channel.** `QToolTip` renders anything `Qt::mightBeRichText()`
 accepts as HTML. Server tooltip text is escaped and wrapped in an explicit document so that
@@ -72,8 +86,14 @@ ordinary game output is a broader question than OSC 8 and would need its own cha
 
 **The escaped set is enumerated, not exhaustive.** `UntrustedText::unsafeCharacter()` lists
 specific code points. Known invisible characters outside it include U+00AD soft hyphen,
-U+3164 Hangul filler, U+2800 braille blank and the U+E0000–E007F tag block. Widening the set
-is a data change; assume it is incomplete rather than assuming coverage.
+U+3164 Hangul filler and U+2800 braille blank. Widening the set is a data change; assume it
+is incomplete rather than assuming coverage.
+
+**Authored text can still contain invisible joiners.** `forAuthoredText()` deliberately
+permits ZWJ, ZWNJ and tag characters so emoji and Persian, Arabic and Indic text survive, so
+a tooltip or menu label can carry invisible content. This is accepted: a hostile server can
+already write a plainly untrue label in ASCII, and the text that states a link's actual
+target uses the strict policy.
 
 **Turning the preference off does not retract links already on screen.** The check happens
 as sequences are decoded, so links drawn before the change stay clickable until the buffer
@@ -137,8 +157,10 @@ Only these schemes are supported (others are rejected):
 * <code>http:</code>, <code>https:</code>, <code>ftp:</code>
 * <code>preset:</code> (for definitions only)
 
-Mudlet never hands an OSC 8 target to the operating system's URL handler, so custom schemes
-and <code>file:</code> targets cannot be used to launch a local application.
+Only allowlisted <code>http:</code>, <code>https:</code> and <code>ftp:</code> targets are
+passed to the operating system's URL handler via <code>openUrl(...)</code>. Custom schemes
+and <code>file:</code> targets are rejected and cannot be used to launch a local
+application.
 
 =====Limits=====
 
