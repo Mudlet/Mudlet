@@ -120,9 +120,7 @@ private slots:
         QCOMPARE(dlgConnectionProfiles::profileNameUsableAsIs(name), usable);
     }
 
-    // The guard deleting a profile relies on: a name that does not resolve to
-    // a folder directly inside the profiles directory gets no path at all, so
-    // nothing outside a single profile's own folder can be removed.
+    // No path at all means nothing for the deletion to act on
     void folderPath_data()
     {
         QTest::addColumn<QString>("name");
@@ -137,9 +135,7 @@ private slots:
         QTest::newRow("cyrillic") << qsl("Мудлет") << qsl("%1/Мудлет").arg(profilesPath);
         QTest::newRow("leading dot") << qsl(".hidden") << qsl("%1/.hidden").arg(profilesPath);
 
-        // the profiles directory itself
         QTest::newRow("current directory") << qsl(".") << QString();
-        // Mudlet's whole configuration directory
         QTest::newRow("parent directory") << qsl("..") << QString();
         QTest::newRow("grandparent directory") << qsl("../..") << QString();
         QTest::newRow("traversal back in") << qsl("../profiles/Achaea") << QString();
@@ -156,8 +152,7 @@ private slots:
         QCOMPARE(dlgConnectionProfiles::profileFolderPath(qsl("/home/user/.config/mudlet/profiles"), name), expectedPath);
     }
 
-    // The profiles directory is a native path, so the containment check has to
-    // hold for the roots the other platforms produce as well as a POSIX one
+    // The profiles directory is a native path, so every platform's root counts
     void folderPathHandlesNativeRoots_data()
     {
         QTest::addColumn<QString>("profilesPath");

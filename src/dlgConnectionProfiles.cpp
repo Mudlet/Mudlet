@@ -79,26 +79,21 @@ QChar dlgConnectionProfiles::firstInvalidProfileNameChar(const QString& name)
 // retrieve its password. Mirrors the pattern used there:
 const QRegularExpression dlgConnectionProfiles::scmUnusableProfileNameChars{qsl(R"REGEX(\.\.|[/\\<>:"|?*\x00-\x1f])REGEX")};
 
-// Whether an existing profile folder can be taken as-is instead of being put
-// through the stricter rules that apply to names typed into the dialog. A lone
-// "." is made entirely of permitted characters, yet every path built from it
-// addresses the profiles directory itself rather than a profile of its own -
+// A lone "." is made entirely of permitted characters, yet every path built
+// from it addresses the profiles directory rather than a profile of its own -
 // as does "..", which scmUnusableProfileNameChars already covers:
 bool dlgConnectionProfiles::profileNameUsableAsIs(const QString& name)
 {
     return !name.isEmpty() && name != qsl(".") && !name.contains(scmUnusableProfileNameChars);
 }
 
-// The folder holding a profile's data, or an empty string when the name does
-// not address a folder directly inside profilesPath. Resolved textually rather
-// than with QDir::canonicalPath() so that the answer does not depend on the
-// folder existing - the predefined games have no folder until they are saved -
-// and so that a profile folder which is a symbolic link keeps working.
+// Resolved textually rather than with QDir::canonicalPath() so that the answer
+// does not depend on the folder existing - a predefined game has none until it
+// is saved - and so that a symlinked profile folder still resolves.
 QString dlgConnectionProfiles::profileFolderPath(const QString& profilesPath, const QString& profile)
 {
-    // A name carrying a separator has to go before the parent check below, which
-    // QDir::cleanPath() would otherwise satisfy by collapsing "../profiles/Foo"
-    // straight back into the profiles directory:
+    // Must precede the parent check below, which QDir::cleanPath() would
+    // otherwise satisfy by collapsing "../profiles/Foo" straight back in:
     if (profile.isEmpty() || profile.contains(QLatin1Char('/')) || profile.contains(QLatin1Char('\\'))) {
         return {};
     }
@@ -1050,8 +1045,8 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
 
     QDir dir(profileFolder);
     if (!dir.removeRecursively()) {
-        // The profile is still on disk, so leave its stored password alone and
-        // leave it listed - removing either would strand the data that is left
+        // the profile is still on disk, so its password and its list entry stay:
+        // removing either would strand the data that is left
         qWarning().nospace() << "dlgConnectionProfiles::reallyDeleteProfile(\"" << profile << "\") ERROR - could not completely remove \"" << profileFolder << "\".";
         fillout_form();
         //: %1 is a profile name. Shown when some of the profile's files could not be deleted, e.g. because another program has them open
@@ -1123,14 +1118,10 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     }
 
-    // Everything a profile accumulates in use - saved games, maps, logs, media,
-    // packages - is a sub-directory, so a profile without one has never been
-    // played: that is how a predefined game looks until it is selected and has
-    // its connection details written out. Not all of a profile is directories
-    // though, so the loose files are matched against those details by name - a
-    // stored password or a personal dictionary sits among them and is the
-    // user's own. Listing what is expected, rather than what to watch out for,
-    // keeps an unrecognised file on the side of asking:
+    // A profile that has never been played holds nothing but the connection
+    // details written out when it was selected. Listing what is expected rather
+    // than what to watch out for keeps an unrecognised file - a stored password,
+    // a personal dictionary - on the side of asking:
     static const QStringList connectionDetailFiles{qsl("url"), qsl("port"), qsl("ssl_tsl"), qsl("description"), qsl("website"), qsl("autologin"), qsl("autoreconnect")};
     const QDir profileDir(mudlet::getMudletPath(enums::profileHomePath, profile));
     bool nothingToLose = !profileDir.exists() || profileDir.entryList(QDir::Dirs | QDir::Hidden | QDir::NoDotAndDotDot).isEmpty();
@@ -1176,9 +1167,8 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     }
 
-    // Each confirmation carries the profile it was raised for. It is not modal,
-    // so by the time it is answered the list selection may have moved on, and a
-    // second confirmation for a different profile may be open alongside it.
+    // The confirmation is not modal, so by the time it is answered the selection
+    // may have moved on, or a second confirmation may be open alongside it:
     connect(nameEntry, &QLineEdit::textChanged, delete_profile_dialog, [deleteButton, profile](const QString& text) {
         deleteButton->setEnabled(text == profile);
         if (deleteButton->isEnabled()) {
@@ -2226,8 +2216,8 @@ bool dlgConnectionProfiles::validateProfile()
         // whitespace too, as the entered name always arrives trimmed. Names
         // the rest of Mudlet cannot work with get no exemption: renaming them
         // is worse for the user than a profile whose password never saves.
-        // The exemption needs a folder that is genuinely the profile's own:
-        // "." and ".." also name something that exists, but not a profile.
+        // "." and ".." name something that exists without being a profile, so
+        // the exemption needs a folder that is genuinely the profile's own.
         const QString selectedName = pItem->data(csmNameRole).toString();
         const QString selectedFolder = profileFolderPath(mudlet::getMudletPath(enums::profilesPath), selectedName);
         const bool nameIsFolderOnDisk = (name == selectedName.trimmed()) && !selectedFolder.isEmpty() && QDir(selectedFolder).exists();
@@ -2242,11 +2232,8 @@ bool dlgConnectionProfiles::validateProfile()
             validName = false;
             valid = false;
         } else if (!nameIsFolderOnDisk && !name.isEmpty() && !profileNameUsableAsIs(name)) {
-            // Every character is permitted on its own, but the name as a whole
-            // still cannot be a folder of its own - there is nothing sensible
-            // to strip out of it, so leave it for the user to change. A folder
-            // that really is on disk is exempt even from this: it loads today,
-            // and refusing it would stop the user reaching their own data.
+            // Nothing to strip here, unlike the branch above: the characters
+            // are all permitted, it is the whole name that cannot be a folder
             notificationAreaIconLabelWarning->show();
             notificationAreaMessageBox->setText(
                     qsl("%1\n%2\n")

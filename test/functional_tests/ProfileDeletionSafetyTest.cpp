@@ -48,7 +48,6 @@ class ProfileDeletionSafetyTest : public QObject
 private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
-    // the profile that must survive every attempt below
     const QString mKeeper = qsl("QA Keeper");
 
     QString profilePath(const QString& profile) const { return mudlet::getMudletPath(enums::profileHomePath, profile); }
@@ -69,9 +68,7 @@ private:
         savedGame.close();
     }
 
-    // Adds a list entry for a profile that has no folder of its own, the way
-    // the dialog does for a name being typed into it. The list takes ownership,
-    // and rebuilding it drops the entry again.
+    // The list takes ownership, and rebuilding it drops the entry again
     void addListEntry(dlgConnectionProfiles* dlg, const QString& profile) const
     {
         auto* item = new QListWidgetItem();
@@ -81,8 +78,7 @@ private:
     }
 
     // slot_itemClicked() ignores a repeat of the profile it was last given
-    // within 100ms, and that guard is static - it outlives the dialog, so
-    // consecutive tests picking the same profile have to wait it out
+    // within 100ms, and that guard is static, so it outlives the dialog
     void selectProfile(dlgConnectionProfiles* dlg, const QString& profile) const
     {
         const auto items = dlg->findData(*dlg->listWidget_profiles, profile, dlgConnectionProfiles::csmNameRole);
@@ -94,9 +90,7 @@ private:
 
     QDialog* confirmation(dlgConnectionProfiles* dlg) const { return dlg->findChild<QDialog*>(qsl("delete_profile_confirmation")); }
 
-    // Answers a raised confirmation the way an intent-on-deleting user would:
-    // by typing the profile name in and pressing the delete button, which the
-    // .ui wires to the dialog's accept()
+    // The .ui wires the delete button's clicked() to the dialog's accept()
     void confirmRemovalOf(dlgConnectionProfiles* dlg, const QString& profile) const
     {
         auto* confirmationDialog = confirmation(dlg);
@@ -113,7 +107,6 @@ private:
         deleteButton->click();
     }
 
-    // Invokes the Remove handler and answers the confirmation, if one is raised
     void removeProfileAndConfirm(dlgConnectionProfiles* dlg, const QString& profile) const
     {
         dlg->slot_deleteProfile();
@@ -223,15 +216,12 @@ private slots:
         QVERIFY(dlgConnectionProfiles::profileFolderPath(profilesPath, qsl("..")).isEmpty());
         QVERIFY(dlgConnectionProfiles::profileFolderPath(profilesPath, qsl("%1/current").arg(mKeeper)).isEmpty());
 
-        // a predefined game has no folder until it is saved, and dismissing one
-        // still has to resolve to the folder it would have had
+        // a predefined game has no folder until it is saved
         const QString neverPlayed = qsl("QA Never Played");
         QVERIFY(!QDir(profilePath(neverPlayed)).exists());
         QCOMPARE(dlgConnectionProfiles::profileFolderPath(profilesPath, neverPlayed), qsl("%1/%2").arg(profilesPath, neverPlayed));
     }
 
-    // A profile whose folder holds no saved games but does hold something else
-    // still has data to lose, so it has to be confirmed
     void test_profileWithOnlyAMapIsConfirmedBeforeRemoval()
     {
         const QString mapped = qsl("QA Mapped");
@@ -250,9 +240,6 @@ private slots:
         closeDialog(dlg);
     }
 
-    // A pre-installed game that was never played has nothing to lose - only
-    // the connection details this dialog wrote into its folder - so removing
-    // it goes ahead without a confirmation
     void test_profileWithOnlyConnectionDetailsIsRemovedWithoutConfirmation()
     {
         const QString unplayed = qsl("QA Unplayed");
@@ -269,8 +256,7 @@ private slots:
         closeDialog(dlg);
     }
 
-    // A locally stored password sits loose in the profile folder rather than in
-    // a sub-directory, so the "nothing to lose" shortcut must not overlook it
+    // A stored password sits loose in the folder rather than in a sub-directory
     void test_profileWithOnlyAStoredPasswordIsConfirmedBeforeRemoval()
     {
         const QString secretive = qsl("QA Secretive");
@@ -289,8 +275,7 @@ private slots:
         closeDialog(dlg);
     }
 
-    // Two confirmations can be open together, so each must remove the profile
-    // it names rather than the one raised most recently
+    // Nothing stops a second confirmation being raised over the first
     void test_eachConfirmationRemovesItsOwnProfile()
     {
         const QString first = qsl("QA First");
@@ -310,7 +295,6 @@ private slots:
         QCOMPARE(confirmations.size(), 2);
         auto* secondConfirmation = confirmations.first() == firstConfirmation ? confirmations.last() : confirmations.first();
 
-        // answer the first one, which names the first profile
         auto* nameEntry = firstConfirmation->findChild<QLineEdit*>(qsl("delete_profile_lineedit"));
         auto* deleteButton = firstConfirmation->findChild<QPushButton*>(qsl("delete_button"));
         QVERIFY(nameEntry && deleteButton);
@@ -344,8 +328,7 @@ private slots:
         closeDialog(dlg);
     }
 
-    // A folder name Mudlet would not accept for a new profile is still a
-    // profile once it is on disk, and removing it must work
+    // A name Mudlet would turn down as a new profile is still a profile on disk
     void test_nonAsciiProfileIsStillRemovable()
     {
         const QString doomed = qsl("Мудлет café");
@@ -361,8 +344,7 @@ private slots:
         closeDialog(dlg);
     }
 
-    // The confirmation dialog is not modal, so the profile it names is the one
-    // that gets removed even if the list selection moves on behind it
+    // The confirmation is not modal, so the selection can move on behind it
     void test_confirmationRemovesTheProfileItNamed()
     {
         const QString doomed = qsl("QA Doomed Too");
@@ -397,23 +379,19 @@ private slots:
 
         auto* dlg = openDialog();
         selectProfile(dlg, mKeeper);
-        // without this the assertion below also holds for an unrelated reason,
-        // e.g. an empty server address
+        // else the assertion below also holds for an unrelated reason
         QVERIFY2(acceptButtonsEnabled(dlg), "the profile was already unusable before the name was edited");
 
         // setText() drives the same textChanged path as typing does
         dlg->profile_name_entry->setText(name);
         QVERIFY2(!acceptButtonsEnabled(dlg), qPrintable(qsl("'%1' was accepted as a profile name").arg(name)));
-        // the folder the profile came from must not have been renamed to it
         QVERIFY(QDir(profilePath(mKeeper)).exists());
 
         dlg->profile_name_entry->setText(mKeeper);
         closeDialog(dlg);
     }
 
-    // A folder on disk is the user's data whatever it is called, so selecting
-    // one must never refuse it - not even a name that would be turned down if
-    // it were typed in fresh
+    // A folder on disk is the user's data whatever it is called
     void test_folderOnDiskWithATurnedDownNameIsStillUsable()
     {
         const QString awkward = qsl("QA..Dots");
@@ -450,8 +428,7 @@ private slots:
         QCOMPARE(dlg->profile_name_entry->text(), name);
         QVERIFY2(acceptButtonsEnabled(dlg), qPrintable(qsl("'%1' was refused as a profile name").arg(name)));
 
-        // ~QDialog hiding the dialog fires editingFinished() into slot_saveName(),
-        // which renames the folder - so leave the on-disk name in the field
+        // ~QDialog fires editingFinished() into slot_saveName(), which renames
         dlg->profile_name_entry->setText(mKeeper);
         closeDialog(dlg);
     }
