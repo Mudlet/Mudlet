@@ -226,7 +226,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mEchoingText(other.mEchoingText)
 , mpConsole(other.mpConsole)
 , mGotESC(other.mGotESC)
-, mGotEscIntermediate(other.mGotEscIntermediate)
+, mGotEscCharset(other.mGotEscCharset)
 , mGotCSI(other.mGotCSI)
 , mGotOSC(other.mGotOSC)
 , mGotString(other.mGotString)
@@ -272,7 +272,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mWrapDetectSamples(other.mWrapDetectSamples)
 , mIncompleteSequenceBytes(other.mIncompleteSequenceBytes)
 , mLocalGotESC(other.mLocalGotESC)
-, mLocalGotEscIntermediate(other.mLocalGotEscIntermediate)
+, mLocalGotEscCharset(other.mLocalGotEscCharset)
 , mLocalGotCSI(other.mLocalGotCSI)
 , mLocalGotOSC(other.mLocalGotOSC)
 , mLocalGotString(other.mLocalGotString)
@@ -323,7 +323,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mEchoingText = other.mEchoingText;
         mpConsole = other.mpConsole;
         mGotESC = other.mGotESC;
-        mGotEscIntermediate = other.mGotEscIntermediate;
+        mGotEscCharset = other.mGotEscCharset;
         mGotCSI = other.mGotCSI;
         mGotOSC = other.mGotOSC;
         mGotString = other.mGotString;
@@ -369,7 +369,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mWrapDetectSamples = other.mWrapDetectSamples;
         mIncompleteSequenceBytes = other.mIncompleteSequenceBytes;
         mLocalGotESC = other.mLocalGotESC;
-        mLocalGotEscIntermediate = other.mLocalGotEscIntermediate;
+        mLocalGotEscCharset = other.mLocalGotEscCharset;
         mLocalGotCSI = other.mLocalGotCSI;
         mLocalGotOSC = other.mLocalGotOSC;
         mLocalGotString = other.mLocalGotString;
@@ -584,7 +584,7 @@ void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, 
 void TBuffer::swapParserSequenceState()
 {
     std::swap(mGotESC, mLocalGotESC);
-    std::swap(mGotEscIntermediate, mLocalGotEscIntermediate);
+    std::swap(mGotEscCharset, mLocalGotEscCharset);
     std::swap(mGotCSI, mLocalGotCSI);
     std::swap(mGotOSC, mLocalGotOSC);
     std::swap(mGotString, mLocalGotString);
@@ -627,6 +627,12 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     // What can appear in a CSI final byte position - (includes a backslash
     // which has to be doubled to include it in here):
     const QByteArray cFinal = QByteArrayLiteral("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+    // The complete two byte escape sequences (DECSC, DECRC, DECKPAM, DECKPNM,
+    // RIS, IND, NEL, HTS, RI, SS2, SS3 and a stray ST) that Mudlet does not
+    // act on but does have to swallow. Deliberately a closed set: anything
+    // else after an ESC is treated as text, because a stray ESC from the game
+    // must not eat what follows it:
+    const QByteArray cShortEscape = QByteArrayLiteral("78=>cDEHMNO\\");
 
     // As well as enabling the prepending of left-over bytes from last packet
     // from the MUD server this may help in high frequency interactions to
@@ -753,55 +759,53 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 }
 
                 mGotESC = true;
-                mGotEscIntermediate = false;
+                mGotEscCharset = false;
                 ++localBufferPosition;
                 continue;
             }
         }
 
-        if (mGotESC) {
-            if (!mGotEscIntermediate) {
-                // The introducers only introduce a sequence in the byte
-                // straight after the ESC:
-                if (ch == '[' || ch == ']') {
-                    mGotESC = false;
-                    mGotCSI = (ch == '[');
-                    mGotOSC = (ch == ']');
-                    ++localBufferPosition;
-                    continue;
-                }
-                if (ch == 'P' || ch == 'X' || ch == '^' || ch == '_') {
-                    // DCS, SOS, PM and APC string sequences carry data that
-                    // Mudlet does not use - consume them with the OSC code below
-                    // but skip decoding the payload:
-                    mGotESC = false;
-                    mGotOSC = true;
-                    mGotString = true;
-                    ++localBufferPosition;
-                    continue;
-                }
-            }
-            if (cIntermediate.indexOf(ch) >= 0) {
-                // ECMA-48 escape sequences are ESC, any number of intermediate
-                // bytes and then one final byte, so e.g. all three bytes of the
-                // ESC ( B character set designation get consumed together:
-                mGotEscIntermediate = true;
-                ++localBufferPosition;
-                continue;
-            }
-            mGotESC = false;
-            mGotEscIntermediate = false;
+        if (mGotEscCharset) {
+            mGotEscCharset = false;
             if (static_cast<unsigned char>(ch) >= 0x30 && static_cast<unsigned char>(ch) <= 0x7E) {
-                // The final byte of some other escape sequence (e.g. ESC 7
-                // or ESC M) that Mudlet does not handle - consume it silently
-                // as a real terminal would instead of showing it as text:
                 ++localBufferPosition;
                 continue;
             }
-            // Anything else cannot be part of an escape sequence - notably a
-            // multibyte character's lead byte, consuming which would orphan
-            // its continuation bytes - so abandon the sequence and let the
-            // byte be processed as data.
+            // Only a final byte can name a character set, so this was a stray
+            // ESC after all and the byte is text.
+        }
+
+        if (mGotESC) {
+            mGotESC = false;
+            if (ch == '[' || ch == ']') {
+                mGotCSI = (ch == '[');
+                mGotOSC = (ch == ']');
+                ++localBufferPosition;
+                continue;
+            }
+            if (ch == 'P' || ch == 'X' || ch == '^' || ch == '_') {
+                // DCS, SOS, PM and APC string sequences carry data that
+                // Mudlet does not use - consume them with the OSC code below
+                // but skip decoding the payload:
+                mGotOSC = true;
+                mGotString = true;
+                ++localBufferPosition;
+                continue;
+            }
+            if (ch == '(' || ch == ')' || ch == '*' || ch == '+') {
+                // An ISO 2022 character set designation such as ESC ( B; the
+                // byte after this one names the set:
+                mGotEscCharset = true;
+                ++localBufferPosition;
+                continue;
+            }
+            if (cShortEscape.indexOf(ch) >= 0) {
+                ++localBufferPosition;
+                continue;
+            }
+            // Any other byte is text: a stray ESC in the game's output must
+            // not swallow it, and consuming a multibyte character's lead byte
+            // would orphan its continuation bytes.
         }
 
         if (mGotCSI) {

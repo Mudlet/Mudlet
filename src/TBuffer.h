@@ -448,10 +448,9 @@ private:
     // First stage in decoding SGR/OCS sequences - set true when we see the
     // ASCII ESC character:
     bool mGotESC = false;
-    // Set once an ESC has been followed by at least one ECMA-48 intermediate
-    // byte, past which point the CSI, OSC and string sequence introducers are
-    // ordinary final bytes:
-    bool mGotEscIntermediate = false;
+    // Set between the ESC '(', ')', '*' or '+' of an ISO 2022 character set
+    // designation and the byte that names the set:
+    bool mGotEscCharset = false;
     // Second stage in decoding SGR sequences - set true when we see the ASCII
     // ESC character followed by the '[' one:
     bool mGotCSI = false;
@@ -540,7 +539,7 @@ private:
     // that such text cannot consume or clear a latch belonging to a sequence
     // split across Game Server packets (and vice versa):
     bool mLocalGotESC = false;
-    bool mLocalGotEscIntermediate = false;
+    bool mLocalGotEscCharset = false;
     bool mLocalGotCSI = false;
     bool mLocalGotOSC = false;
     bool mLocalGotString = false;
