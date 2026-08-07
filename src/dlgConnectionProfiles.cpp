@@ -41,6 +41,7 @@
 #include <QApplication>
 #include <QColorDialog>
 #include <QDir>
+#include <QFileInfo>
 #include <QPointer>
 #include <QRandomGenerator>
 #include <QSettings>
@@ -78,11 +79,32 @@ QChar dlgConnectionProfiles::firstInvalidProfileNameChar(const QString& name)
 // retrieve its password. Mirrors the pattern used there:
 const QRegularExpression dlgConnectionProfiles::scmUnusableProfileNameChars{qsl(R"REGEX(\.\.|[/\\<>:"|?*\x00-\x1f])REGEX")};
 
-// Whether an existing profile folder can be taken as-is instead of being put
-// through the stricter rules that apply to names typed into the dialog:
+// Whether a name can be used for a profile. A lone "." is made entirely of
+// permitted characters, yet every path built from it addresses the profiles
+// directory itself rather than a profile of its own - as does "..", which the
+// regex above already covers:
 bool dlgConnectionProfiles::profileNameUsableAsIs(const QString& name)
 {
-    return !name.isEmpty() && !name.contains(scmUnusableProfileNameChars);
+    return !name.isEmpty() && name != qsl(".") && !name.contains(scmUnusableProfileNameChars);
+}
+
+// The folder holding a profile's data, or an empty string when the name does
+// not address a folder directly inside profilesPath. Resolved textually rather
+// than with QDir::canonicalPath() so that the answer does not depend on the
+// folder existing - the predefined games have no folder until they are saved -
+// and so that a profile folder which is a symbolic link keeps working.
+QString dlgConnectionProfiles::profileFolderPath(const QString& profilesPath, const QString& profile)
+{
+    if (profile.isEmpty() || profile.contains(QLatin1Char('/')) || profile.contains(QLatin1Char('\\'))) {
+        return {};
+    }
+
+    const QString profilesDir = QDir::cleanPath(profilesPath);
+    const QString candidate = QDir::cleanPath(qsl("%1/%2").arg(profilesDir, profile));
+    if (candidate == profilesDir || QFileInfo(candidate).path() != profilesDir) {
+        return {};
+    }
+    return candidate;
 }
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
@@ -1001,8 +1023,7 @@ void dlgConnectionProfiles::slot_addProfile()
 // enables the deletion button once the correct text (profile name) is entered
 void dlgConnectionProfiles::slot_deleteProfileCheck(const QString& text)
 {
-    const QString profile = listWidget_profiles->currentItem()->data(csmNameRole).toString();
-    if (profile != text) {
+    if (mProfileToDelete != text) {
         delete_button->setEnabled(false);
     } else {
         delete_button->setEnabled(true);
@@ -1013,13 +1034,18 @@ void dlgConnectionProfiles::slot_deleteProfileCheck(const QString& text)
 // actually performs the deletion once the correct text has been entered
 void dlgConnectionProfiles::slot_reallyDeleteProfile()
 {
-    const QString profile = listWidget_profiles->currentItem()->data(csmNameRole).toString();
-    reallyDeleteProfile(profile);
+    reallyDeleteProfile(mProfileToDelete);
 }
 
 void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
 {
-    QDir dir(mudlet::getMudletPath(enums::profileHomePath, profile));
+    const QString profileFolder = profileFolderPath(mudlet::getMudletPath(enums::profilesPath), profile);
+    if (profileFolder.isEmpty()) {
+        qWarning().nospace() << "dlgConnectionProfiles::reallyDeleteProfile(\"" << profile << "\") ERROR - refusing to delete: that name does not belong to a folder inside the profiles directory.";
+        return;
+    }
+
+    QDir dir(profileFolder);
     dir.removeRecursively();
 
     // Clean up keychain entries for the deleted profile
@@ -1086,9 +1112,13 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     }
 
-    const QDir profileDirContents(mudlet::getMudletPath(enums::profileXmlFilesPath, profile));
-    if (!profileDirContents.exists() || profileDirContents.isEmpty()) {
-        // shortcut - don't show profile deletion confirmation if there is no data to delete
+    // Skip the confirmation only when there is nothing in the profile folder
+    // the user could miss. Everything they would - saved games, maps, logs,
+    // media, packages, locally stored passwords - lives in a sub-directory,
+    // while the loose files at the top are the connection details this dialog
+    // writes there itself, which a predefined game gets just by being listed:
+    const QDir profileDirContents(mudlet::getMudletPath(enums::profileHomePath, profile));
+    if (!profileDirContents.exists() || profileDirContents.entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty()) {
         reallyDeleteProfile(profile);
         return;
     }
@@ -1116,6 +1146,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     }
 
+    mProfileToDelete = profile;
     connect(delete_profile_lineedit, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_deleteProfileCheck);
     connect(delete_profile_dialog, &QDialog::accepted, this, &dlgConnectionProfiles::slot_reallyDeleteProfile);
 
@@ -2165,6 +2196,17 @@ bool dlgConnectionProfiles::validateProfile()
                     qsl("%1\n%2\n%3\n").arg(notificationAreaMessageBox->text(), tr("The %1 character is not permitted. Use one of the following:").arg(invalidChar), scmAllowedProfileNameChars));
             name.remove(invalidChar);
             profile_name_entry->setText(name);
+            validName = false;
+            valid = false;
+        } else if (!nameUnchangedAndOnDisk && !name.isEmpty() && !profileNameUsableAsIs(name)) {
+            // Every character is permitted on its own, but the name as a whole
+            // still cannot be a folder of its own - there is nothing sensible
+            // to strip out of it, so leave it for the user to change:
+            notificationAreaIconLabelWarning->show();
+            notificationAreaMessageBox->setText(qsl("%1\n%2\n")
+                                                        .arg(notificationAreaMessageBox->text(),
+                                                             //: Shown when a profile name cannot be used for a folder of its own, e.g. "." or a name containing ".."
+                                                             tr("This name cannot be used for a profile. Please pick a different one.")));
             validName = false;
             valid = false;
         }

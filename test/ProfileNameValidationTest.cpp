@@ -27,8 +27,11 @@
  * dialog. Guards the character-set half of the fix for profile folders
  * duplicated outside of Mudlet (e.g. a file manager appending " (2)" to a
  * copied folder) which used to be rejected, greying out the Connect/Offline
- * buttons. The on-disk exemption half is covered by
- * test/functional_tests/ProfileFolderNameTest.cpp.
+ * buttons, and the rule that a name has to address a folder of its own - "."
+ * and ".." name the profiles directory and Mudlet's configuration directory
+ * instead. The on-disk exemption half is covered by
+ * test/functional_tests/ProfileFolderNameTest.cpp, and the deletion path by
+ * test/functional_tests/ProfileDeletionSafetyTest.cpp.
  */
 class ProfileNameValidationTest : public QObject
 {
@@ -92,9 +95,14 @@ private slots:
         QTest::newRow("non-ascii") << qsl("café") << true;
         QTest::newRow("exclamation mark") << qsl("test!") << true;
         QTest::newRow("single dot") << qsl("my.profile") << true;
+        QTest::newRow("version number") << qsl("Achaea 2.0") << true;
+        QTest::newRow("leading dot") << qsl(".hidden") << true;
 
         QTest::newRow("empty") << QString() << false;
-        QTest::newRow("parent directory") << qsl("test..2") << false;
+        QTest::newRow("current directory") << qsl(".") << false;
+        QTest::newRow("parent directory") << qsl("..") << false;
+        QTest::newRow("parent directory in a path") << qsl("../..") << false;
+        QTest::newRow("embedded parent directory") << qsl("test..2") << false;
         QTest::newRow("path separator") << qsl("test/2") << false;
         QTest::newRow("windows path separator") << qsl("test\\2") << false;
         QTest::newRow("colon") << qsl("test:2") << false;
@@ -111,6 +119,49 @@ private slots:
         QFETCH(QString, name);
         QFETCH(bool, usable);
         QCOMPARE(dlgConnectionProfiles::profileNameUsableAsIs(name), usable);
+    }
+
+    // The guard deleting a profile relies on: a name that does not resolve to
+    // a folder directly inside the profiles directory gets no path at all, so
+    // nothing outside a single profile's own folder can be removed.
+    void folderPath_data()
+    {
+        QTest::addColumn<QString>("name");
+        QTest::addColumn<QString>("expectedPath");
+
+        const QString profilesPath = qsl("/home/user/.config/mudlet/profiles");
+
+        QTest::newRow("plain") << qsl("Achaea") << qsl("%1/Achaea").arg(profilesPath);
+        QTest::newRow("version number") << qsl("Achaea 2.0") << qsl("%1/Achaea 2.0").arg(profilesPath);
+        QTest::newRow("parentheses") << qsl("test (2)") << qsl("%1/test (2)").arg(profilesPath);
+        QTest::newRow("non-ascii") << qsl("café") << qsl("%1/café").arg(profilesPath);
+        QTest::newRow("cyrillic") << qsl("Мудлет") << qsl("%1/Мудлет").arg(profilesPath);
+        QTest::newRow("leading dot") << qsl(".hidden") << qsl("%1/.hidden").arg(profilesPath);
+
+        // the profiles directory itself
+        QTest::newRow("current directory") << qsl(".") << QString();
+        // Mudlet's whole configuration directory
+        QTest::newRow("parent directory") << qsl("..") << QString();
+        QTest::newRow("grandparent directory") << qsl("../..") << QString();
+        QTest::newRow("traversal back in") << qsl("../profiles/Achaea") << QString();
+        QTest::newRow("nested") << qsl("Achaea/current") << QString();
+        QTest::newRow("windows separator") << qsl("Achaea\\current") << QString();
+        QTest::newRow("absolute path") << qsl("/etc") << QString();
+        QTest::newRow("empty") << QString() << QString();
+    }
+
+    void folderPath()
+    {
+        QFETCH(QString, name);
+        QFETCH(QString, expectedPath);
+        QCOMPARE(dlgConnectionProfiles::profileFolderPath(qsl("/home/user/.config/mudlet/profiles"), name), expectedPath);
+    }
+
+    // A trailing separator on the profiles directory must not change the answer
+    void folderPathIgnoresTrailingSeparator()
+    {
+        QCOMPARE(dlgConnectionProfiles::profileFolderPath(qsl("/home/user/.config/mudlet/profiles/"), qsl("Achaea")), qsl("/home/user/.config/mudlet/profiles/Achaea"));
+        QCOMPARE(dlgConnectionProfiles::profileFolderPath(qsl("/home/user/.config/mudlet/profiles/"), qsl(".")), QString());
     }
 };
 

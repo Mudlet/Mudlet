@@ -54,6 +54,7 @@ public:
     static const int csmNameRole{Qt::UserRole};
     static QChar firstInvalidProfileNameChar(const QString& name);
     static bool profileNameUsableAsIs(const QString& name);
+    static QString profileFolderPath(const QString& profilesPath, const QString& profile);
     static const QString scmAllowedProfileNameChars;
     static const QRegularExpression scmUnusableProfileNameChars;
 
@@ -164,6 +165,10 @@ private:
     QPushButton* connect_button = nullptr;
     QLineEdit* delete_profile_lineedit = nullptr;
     QPushButton* delete_button = nullptr;
+    // The confirmation dialog is not modal, so the profile to delete is taken
+    // from here rather than from whatever happens to be selected by the time
+    // the user confirms:
+    QString mProfileToDelete;
     QString mDiscordApplicationId;
     QString mDiscordInviteURL;
     QAction* mpAction_revealPassword;

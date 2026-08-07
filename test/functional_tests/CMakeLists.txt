@@ -45,6 +45,7 @@ set(FUNCTIONAL_TEST_SOURCES
     HostWidgetDecouplingTest.cpp
     ActionSelfUninstallTest.cpp
     ProfileFolderNameTest.cpp
+    ProfileDeletionSafetyTest.cpp
     DialogTeardownTest.cpp
     TMediaLoopTest.cpp
     DefaultPackagesTest.cpp
