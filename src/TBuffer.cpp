@@ -24,6 +24,7 @@
 #include "TBuffer.h"
 
 #include "Host.h"
+#include "LuaLiteral.h"
 #include "mudlet.h"
 #include "TConsole.h"
 #include "TEvent.h"
@@ -3264,7 +3265,7 @@ void TBuffer::decodeOSC(const QString& sequence)
         }
 
         if (!rawUrl.isEmpty()) {
-            if (rawUrl.length() > 8192) {
+            if (rawUrl.length() > static_cast<int>(MAX_OSC_SEQUENCE_LENGTH)) {
                 qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << rawUrl;
                 return;
             }
@@ -3405,18 +3406,18 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             if (baseUrl.startsWith(qsl("send:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
-                command = {qsl("send([[%1]], false)").arg(innerCommand)};
+                command = {qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand))};
                 hint = {qsl("%1: %2").arg(QObject::tr("Send"), innerCommand)};
             } else if (baseUrl.startsWith(qsl("prompt:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
-                command = {qsl("sendCmdLine([[%1]])").arg(innerCommand)};
+                command = {qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand))};
                 hint = {qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand)};
             } else {
                 QUrl qurl(baseUrl);
                 QString scheme = qurl.scheme().toLower();
 
                 if (scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp")) {
-                    command = {qsl("openUrl([[%1]])").arg(baseUrl)};
+                    command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
                     hint = {qsl("%1: %2").arg(QObject::tr("Open browser to"), baseUrl)};
                 } else {
                     qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
@@ -3451,11 +3452,11 @@ void TBuffer::decodeOSC(const QString& sequence)
                     // Determine command type based on prefix
                     if (menuCommand.startsWith(qsl("send:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(5).toUtf8());
-                        menuCommands.append(qsl("send([[%1]], false)").arg(innerCommand));
+                        menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand)));
                         menuHints.append(menuLabel);
                     } else if (menuCommand.startsWith(qsl("prompt:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
-                        menuCommands.append(qsl("sendCmdLine([[%1]])").arg(innerCommand));
+                        menuCommands.append(qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand)));
                         menuHints.append(menuLabel);
                     } else if (menuCommand == qsl("-")) {
                         // Special case: "-" creates a menu separator
@@ -3463,7 +3464,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                         menuHints.append(QString());
                     } else {
                         // Treat as direct command
-                        menuCommands.append(qsl("send([[%1]], false)").arg(menuCommand));
+                        menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(menuCommand)));
                         menuHints.append(menuLabel);
                     }
                 }

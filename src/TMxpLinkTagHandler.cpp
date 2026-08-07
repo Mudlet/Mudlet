@@ -19,6 +19,7 @@
  ***************************************************************************/
 
 #include "TMxpLinkTagHandler.h"
+#include "LuaLiteral.h"
 #include "TMxpClient.h"
 
 // <A href=URL [hint=text] [expire=name]>
@@ -39,7 +40,7 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 
     const QString hint = tag->hasAttribute(qsl("hint")) ? tag->getAttributeValue(qsl("hint")) : href;
 
-    href = qsl("openUrl([[%1]])").arg(href);
+    href = qsl("openUrl(%1)").arg(LuaLiteral::quote(href));
 
     // Use the version of setLink that supports expire names
     if (!expireName.isEmpty()) {
