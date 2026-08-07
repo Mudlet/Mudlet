@@ -241,6 +241,7 @@ public:
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool isGoingDown() { return mIsGoingDown; }
+    bool closeHeldOffByEventPump(Host*) const;
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     bool loadWindowLayout();
@@ -787,6 +788,7 @@ private:
     QPointer<QDockWidget> mpCurrentMapDockWidget;
 
     // Helper methods for detached windows
+    void closeHostOfClosedDetachedWindow(const QString& profileName);
     void detachTab(int tabIndex, const QPoint& position);
     void reattachTab(const QString& profileName, int insertIndex = -1);
     TMainConsole* removeConsoleFromSplitter(const QString& profileName);

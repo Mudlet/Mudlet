@@ -4977,8 +4977,6 @@ int TLuaInterpreter::createEventArgsTableRef(const TEvent& pE)
 }
 
 // No documentation available in wiki - internal, test-only helper for waitForEvent()
-// If a waitForEvent() call is blocked waiting for this event, capture its
-// arguments and quit that call's nested event loop. Called from Host::raiseEvent().
 void TLuaInterpreter::captureEventForWaits(const TEvent& pE)
 {
     if (mPendingEventWaits.isEmpty() || pE.mArgumentList.isEmpty()) {
@@ -4991,9 +4989,6 @@ void TLuaInterpreter::captureEventForWaits(const TEvent& pE)
         }
         pWait->mArgsRef = createEventArgsTableRef(pE);
         pWait->mCaptured = true;
-        if (pWait->mpLoop) {
-            pWait->mpLoop->quit();
-        }
     }
 }
 
@@ -5409,6 +5404,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "tempLineTrigger", TLuaInterpreter::tempLineTrigger);
     lua_register(pGlobalLua, "raiseEvent", TLuaInterpreter::raiseEvent);
     lua_register(pGlobalLua, "waitForEvent", TLuaInterpreter::waitForEvent);
+    lua_register(pGlobalLua, "pumpEvents", TLuaInterpreter::pumpEvents);
     lua_register(pGlobalLua, "deleteLine", TLuaInterpreter::deleteLine);
     lua_register(pGlobalLua, "copy", TLuaInterpreter::copy);
     lua_register(pGlobalLua, "cut", TLuaInterpreter::cut);

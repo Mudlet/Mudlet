@@ -932,12 +932,15 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
             }
 
             mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
-
-            TEvent mapOpenEvent{};
-            mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
-            mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            mpHost->raiseEvent(mapOpenEvent);
+        } else {
+            mpMapper->updateAreaComboBox();
+            mpMapper->resetAreaComboBoxToPlayerRoomArea();
         }
+
+        TEvent mapOpenEvent{};
+        mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
+        mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(mapOpenEvent);
     }
     mpMapper->resize(width, height);
     mpMapper->move(x, y);
