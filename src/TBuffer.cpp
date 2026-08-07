@@ -272,6 +272,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mWrapDetectSamples(other.mWrapDetectSamples)
 , mIncompleteSequenceBytes(other.mIncompleteSequenceBytes)
 , mLocalGotESC(other.mLocalGotESC)
+, mLocalGotEscIntermediate(other.mLocalGotEscIntermediate)
 , mLocalGotCSI(other.mLocalGotCSI)
 , mLocalGotOSC(other.mLocalGotOSC)
 , mLocalGotString(other.mLocalGotString)
@@ -368,6 +369,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mWrapDetectSamples = other.mWrapDetectSamples;
         mIncompleteSequenceBytes = other.mIncompleteSequenceBytes;
         mLocalGotESC = other.mLocalGotESC;
+        mLocalGotEscIntermediate = other.mLocalGotEscIntermediate;
         mLocalGotCSI = other.mLocalGotCSI;
         mLocalGotOSC = other.mLocalGotOSC;
         mLocalGotString = other.mLocalGotString;
@@ -759,8 +761,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 
         if (mGotESC) {
             if (!mGotEscIntermediate) {
-                // The introducers only introduce anything in the byte straight
-                // after the ESC; anywhere later they are ordinary final bytes:
+                // The introducers only introduce a sequence in the byte
+                // straight after the ESC:
                 if (ch == '[' || ch == ']') {
                     mGotESC = false;
                     mGotCSI = (ch == '[');
@@ -797,8 +799,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 continue;
             }
             // Anything else cannot be part of an escape sequence - notably a
-            // UTF-8 lead byte, consuming which would orphan its continuation
-            // bytes - so abandon the sequence and process the byte normally:
+            // multibyte character's lead byte, consuming which would orphan
+            // its continuation bytes - so abandon the sequence and let the
+            // byte be processed as data.
         }
 
         if (mGotCSI) {

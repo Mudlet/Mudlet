@@ -1,6 +1,6 @@
--- Test for OSC sequence buffer underflow protection
--- This test verifies the fix for a buffer underflow bug in TBuffer::translateToPlainText()
--- when processing OSC (Operating System Command) sequences at the beginning of a buffer.
+-- How TBuffer::translateToPlainText() handles the out-of-band sequences that
+-- arrive mixed into the game's text: OSC, the DCS/SOS/PM/APC string sequences
+-- and escape sequences that Mudlet does not act on.
 
 describe("Tests TBuffer OSC sequence handling", function()
 
@@ -153,9 +153,11 @@ describe("Tests TBuffer OSC sequence handling", function()
 
   describe("Tests escape sequences that Mudlet does not handle", function()
 
-    -- the "\195\169" byte pairs below are a UTF-8 encoded 'e' acute
     local previousEncoding
 
+    -- these tests are not encoding agnostic: a single byte encoding would
+    -- decode the "\195\169" pairs below as two characters rather than as the
+    -- one 'e' acute whose lead byte the parser must not swallow
     setup(function()
       previousEncoding = getServerEncoding()
       setServerEncoding("UTF-8")
@@ -173,6 +175,26 @@ describe("Tests TBuffer OSC sequence handling", function()
     it("should consume an escape sequence carrying an intermediate byte", function()
       assert.is_true(feedTriggers("CHARSET1(\027(B)CHARSET1\n"))
       assert.equals("CHARSET1()CHARSET1", findRecentLine("CHARSET1"))
+    end)
+
+    it("should consume a run of intermediate bytes as one sequence", function()
+      assert.is_true(feedTriggers("MULTI1(\027 !B|)MULTI1\n"))
+      assert.equals("MULTI1(|)MULTI1", findRecentLine("MULTI1"))
+    end)
+
+    it("should not let a CSI introducer after an intermediate byte start a CSI", function()
+      assert.is_true(feedTriggers("GUARD1(\027([31mred\027[0m)GUARD1\n"))
+      assert.equals("GUARD1(31mred)GUARD1", findRecentLine("GUARD1"))
+    end)
+
+    it("should not let an APC introducer after an intermediate byte start a string sequence", function()
+      assert.is_true(feedTriggers("GUARD2(\027(_payload)GUARD2\n"))
+      assert.equals("GUARD2(payload)GUARD2", findRecentLine("GUARD2"))
+    end)
+
+    it("should restart the sequence when an escape follows an intermediate byte", function()
+      assert.is_true(feedTriggers("RELATCH1(\027(\027[31mred\027[0m)RELATCH1\n"))
+      assert.equals("RELATCH1(red)RELATCH1", findRecentLine("RELATCH1"))
     end)
 
     it("should consume the letter after a stray escape", function()
@@ -206,16 +228,35 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("NLESC2)", findRecentLine("NLESC2"))
     end)
 
+    it("should keep a line break that follows an intermediate byte", function()
+      assert.is_true(feedTriggers("NLESC3(\027(\nNLESC4)\n"))
+      assert.equals("NLESC3(", findRecentLine("NLESC3"))
+      assert.equals("NLESC4)", findRecentLine("NLESC4"))
+    end)
+
     it("should apply a trailing escape to the next packet", function()
       assert.is_true(feedTriggers("SPLITESC1(\027"))
       assert.is_true(feedTriggers("ABC)SPLITESC1\n"))
       assert.equals("SPLITESC1(BC)SPLITESC1", findRecentLine("SPLITESC1"))
     end)
 
+    it("should apply a trailing intermediate byte to the next packet", function()
+      assert.is_true(feedTriggers("SPLITINT1(\027("))
+      assert.is_true(feedTriggers("B)SPLITINT1\n"))
+      assert.equals("SPLITINT1()SPLITINT1", findRecentLine("SPLITINT1"))
+    end)
+
     it("should not eat a multibyte character starting the next packet", function()
       assert.is_true(feedTriggers("SPLITESC2(\027"))
       assert.is_true(feedTriggers("\195\169)SPLITESC2\n"))
       assert.equals("SPLITESC2(\195\169)SPLITESC2", findRecentLine("SPLITESC2"))
+    end)
+
+    it("should keep an 8-bit character that follows a stray escape", function()
+      setServerEncoding("ISO 8859-1")
+      assert.is_true(feedTriggers("LATIN1(\027\195\169)LATIN1\n"))
+      assert.equals("LATIN1(\195\169)LATIN1", findRecentLine("LATIN1"))
+      setServerEncoding("UTF-8")
     end)
 
   end)

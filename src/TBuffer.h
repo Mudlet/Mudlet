@@ -449,8 +449,8 @@ private:
     // ASCII ESC character:
     bool mGotESC = false;
     // Set once an ESC has been followed by at least one ECMA-48 intermediate
-    // byte, past which point '[', ']', 'P', 'X', '^' and '_' no longer
-    // introduce a CSI, OSC or string sequence:
+    // byte, past which point the CSI, OSC and string sequence introducers are
+    // ordinary final bytes:
     bool mGotEscIntermediate = false;
     // Second stage in decoding SGR sequences - set true when we see the ASCII
     // ESC character followed by the '[' one:
