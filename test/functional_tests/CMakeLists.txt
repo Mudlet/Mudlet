@@ -53,6 +53,7 @@ set(FUNCTIONAL_TEST_SOURCES
     DefaultPackagesTest.cpp
     ProfileSwitchShortcutTest.cpp
     ExperiencedPlayerGateTest.cpp
+    EmbeddedMapperCreationTest.cpp
 )
 
 # The updater sources are only built with USE_UPDATER, and on macOS the
