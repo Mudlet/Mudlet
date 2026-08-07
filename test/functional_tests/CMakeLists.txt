@@ -54,6 +54,7 @@ set(FUNCTIONAL_TEST_SOURCES
     DefaultPackagesTest.cpp
     ProfileSwitchShortcutTest.cpp
     ExperiencedPlayerGateTest.cpp
+    WindowBackgroundTest.cpp
     EmbeddedMapperCreationTest.cpp
 )
 

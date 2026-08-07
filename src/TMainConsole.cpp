@@ -1137,32 +1137,32 @@ bool TMainConsole::lowerWindow(const QString& name)
 
     if (pC) {
         pC->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     if (pL) {
         pL->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     if (pS) {
         pS->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     if (pN) {
         pN->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     if (pT) {
         pT->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     return false;
