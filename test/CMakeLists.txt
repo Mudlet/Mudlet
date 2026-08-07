@@ -24,6 +24,7 @@ set(UNIT_TESTS
     TMxpEdgeCasesTest
     TMxpElementDefinitionHandlerTest
     TLuaInterfaceTest
+    EventLoopPumpTest
     TVariableEditorTest
     SecureStringUtilsTest
     CredentialManagerTest
@@ -43,12 +44,17 @@ set(UNIT_TESTS
 foreach(test_name ${UNIT_TESTS})
     add_executable(${test_name} ${test_name}.cpp)
     add_dependencies(${test_name} ${LIB_MUDLET_TARGET})
-    target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
+    # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
+    target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
     add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
     )
 endforeach()
+
+# A regression in what EventLoopPumpTest covers hangs rather than fails, so cap
+# it well under ctest's default 25 minutes.
+set_tests_properties(EventLoopPumpTest PROPERTIES TIMEOUT 60)
 
 # TKeySequenceEditTest's focus traversal cases need an active window, which an X
 # server with no window manager never gives them, so a plain `xvfb-run ctest`
@@ -99,6 +105,14 @@ set_tests_properties(UpdaterChecksumTest PROPERTIES
 if(NOT WIN32)
     add_test(NAME ReleaseChecksumsTest
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/release-checksums-test.sh
+    )
+endif()
+
+# The updater reads its version from the release tag, so a tag like "Mudlet-5.0"
+# stops every existing user being offered the release, silently
+if(NOT WIN32)
+    add_test(NAME ReleaseTagVersionTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/release-tag-version-test.sh
     )
 endif()
 

@@ -485,7 +485,119 @@ private slots:
         QVERIFY2(!unit->getKey(id), "the key should have been freed exactly once");
     }
 
+    // killTrigger() skips an item that is only waiting to be freed; enableTrigger()
+    // has to as well, or it resurrects the corpse.
+    void test_triggerEnableByNameCannotReviveKilled()
+    {
+        auto* unit = mpHost->getTriggerUnit();
+        const int id = mpHost->mLuaInterpreter.startTempTrigger(qsl("resurrect_trigger"), QString(), -1);
+        QVERIFY(id > 0);
+        auto* pTrigger = unit->getTrigger(id);
+        QVERIFY(pTrigger);
+        const QString name = QString::number(id);
+        QVERIFY(pTrigger->isActive());
+
+        QVERIFY2(unit->killTrigger(name), "the temporary trigger should be killable by name");
+        QVERIFY2(!pTrigger->isActive(), "killTrigger() must deactivate as well as queue the delete");
+        QVERIFY2(unit->mCleanupSet.contains(pTrigger), "the killed trigger should be waiting to be freed");
+
+        QVERIFY2(!unit->enableTrigger(name), "enableTrigger() must not report success for a trigger that is only waiting to be freed");
+        QVERIFY2(!pTrigger->isActive(), "a killed trigger must stay dead until it is freed");
+
+        unit->doCleanup();
+        QVERIFY2(!unit->getTrigger(id), "the killed trigger should still have been freed");
+    }
+
+    // As a user meets it: a one-shot has spent its fire and a script later on the
+    // same line enables it by name.
+    void test_triggerEnableByNameCannotReviveExpiredOneShot()
+    {
+        mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("oneShotFires = 0\n"
+                                                            "reviverRan = false\n"
+                                                            "tempComplexRegexTrigger('watchOnce', '^ONESHOT$', [[oneShotFires = oneShotFires + 1]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)\n"
+                                                            "tempRegexTrigger('^ONESHOT$', [[\n"
+                                                            "  if not reviverRan then\n"
+                                                            "    reviverRan = true\n"
+                                                            "    enableTrigger('watchOnce')\n"
+                                                            "    feedTriggers('ONESHOT\\n')\n"
+                                                            "  end\n"
+                                                            "]], 1)\n"
+                                                            "feedTriggers('ONESHOT\\n')\n"));
+
+        QCOMPARE(mpHost->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(readGlobalBool(qsl("reviverRan")), "the script that calls enableTrigger() has to have run for this to test anything");
+        QCOMPARE(readGlobalInt(qsl("oneShotFires")), 1);
+    }
+
+    // uninstall() at a non-zero processing depth leaves its package's triggers in
+    // uninstallList rather than mCleanupSet, still in the lookup table. Populated
+    // directly: reaching that state from Lua needs a package-owned temporary item,
+    // which no current import path produces.
+    void test_triggerEnableByNameCannotReviveAnUninstalledTrigger()
+    {
+        auto* unit = mpHost->getTriggerUnit();
+        const int id = mpHost->mLuaInterpreter.startTempTrigger(qsl("uninstall_revive_trigger"), QString(), -1);
+        QVERIFY(id > 0);
+        auto* pTrigger = unit->getTrigger(id);
+        QVERIFY(pTrigger);
+        const QString name = QString::number(id);
+
+        pTrigger->setIsActive(false);
+        unit->uninstallList.append(pTrigger);
+        QVERIFY2(!unit->mCleanupSet.contains(pTrigger), "uninstall() keeps the two deferred-delete containers disjoint");
+
+        QVERIFY2(!unit->enableTrigger(name), "enableTrigger() must not report success for a trigger an uninstall is waiting to free");
+        QVERIFY2(!pTrigger->isActive(), "a trigger whose package has been uninstalled must stay inactive");
+
+        unit->doCleanup();
+        QVERIFY2(!unit->getTrigger(id), "the uninstalled trigger should still have been freed");
+    }
+
+    // The skip must not stop the walk: a corpse and a live trigger can share a
+    // name, and enable-by-name still has to reach every live one.
+    void test_triggerEnableByNameStillReachesALiveSameNamedTrigger()
+    {
+        auto* unit = mpHost->getTriggerUnit();
+        const QStringList permPatterns{qsl("mixed_corpse_perm")};
+        auto [permId, message] = mpHost->mLuaInterpreter.startPermSubstringTrigger(qsl("mixed corpse placeholder"), QString(), permPatterns, QString());
+        QVERIFY2(permId > 0, qPrintable(message));
+        const QString sharedName = QString::number(permId + 1);
+        unit->getTrigger(permId)->setName(sharedName);
+
+        const int tempId = mpHost->mLuaInterpreter.startTempTrigger(qsl("mixed_corpse_temp"), QString());
+        QCOMPARE(tempId, permId + 1);
+        QCOMPARE(lookupCount(unit->mLookupTable.count(sharedName)), 2);
+
+        QVERIFY2(unit->killTrigger(sharedName), "the temporary trigger should be the one killed");
+        unit->getTrigger(permId)->setIsActive(false);
+
+        QVERIFY2(unit->enableTrigger(sharedName), "enableTrigger must walk past the corpse to the live trigger filed under the same name");
+        QVERIFY2(unit->getTrigger(permId)->isActive(), "the live same-named trigger should have been enabled");
+        QVERIFY2(!unit->getTrigger(tempId)->isActive(), "the killed trigger must stay dead");
+
+        unit->doCleanup();
+        QVERIFY(!unit->getTrigger(tempId));
+    }
+
     // Helpers (reused from the ResetProfileTest pattern)
+
+    int readGlobalInt(const QString& name)
+    {
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        lua_getglobal(L, name.toUtf8().constData());
+        const int value = static_cast<int>(lua_tointeger(L, -1));
+        lua_pop(L, 1);
+        return value;
+    }
+
+    bool readGlobalBool(const QString& name)
+    {
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        lua_getglobal(L, name.toUtf8().constData());
+        const bool value = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        return value;
+    }
 
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {

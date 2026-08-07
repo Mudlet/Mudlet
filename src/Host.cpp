@@ -456,6 +456,15 @@ Host::~Host()
     // is being taken apart runs against freed members (#9653):
     mDeferredSaveTimer.stop();
 
+    // The editor is a parentless top-level window, so delete it here while the
+    // units it references are still alive. Null the QPointer first: it only
+    // clears itself once ~QObject is reached, so anything looking at
+    // mpEditorDialog mid-teardown would find a half-destroyed widget:
+    if (auto* pEditor = mpEditorDialog.data()) {
+        mpEditorDialog = nullptr;
+        delete pEditor;
+    }
+
     // This needs to be cleared here while the Host object is still valid,
     // otherwise it'll be cleared when the Host object is being destroyed,
     // which can lead to a crash when closing multiple profiles at once.
@@ -701,10 +710,9 @@ QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
         writer->writeModuleXML(moduleName);
         // The writer stays in `writers` purely as the save-in-progress token that
         // xmlSaved() retires on the main thread, so the XMLexport - a QObject with
-        // main-thread affinity - is only ever destroyed there. What gets written out
-        // is the job's own copy of the document, which outlives both of them.
+        // main-thread affinity - is only ever destroyed there.
         writers.insert(xmlFilename, writer);
-        jobs.append({writer->cloneExportDocument(), moduleName, filename, xmlFilename, backup ? backupPath + moduleName : QString()});
+        jobs.append({writer->takeExportDocument(), moduleName, filename, xmlFilename, backup ? backupPath + moduleName : QString()});
 
         if (entry.at(1).toInt()) {
             mModulesToSync << moduleName;
@@ -900,12 +908,10 @@ bool Host::resetProfile_phase1()
         return false;
     }
 
-    // A test-mode waitForEvent() is blocked in a nested event loop on this
-    // profile's lua_State; phase2 would lua_close() that state underneath it (a
-    // use-after-free). Refuse until the wait finishes. Always empty (so a no-op)
-    // outside MUDLET_TEST_MODE, where waitForEvent() is inert.
-    if (mLuaInterpreter.hasPendingEventWaits()) {
-        qWarning() << "Host::resetProfile_phase1() called while a waitForEvent() is blocked, ignoring";
+    // Phase 2 lua_close()s the very state the pump is running Lua code on, so
+    // refuse rather than reset into a use-after-free.
+    if (mLuaInterpreter.pumpingEvents()) {
+        qWarning() << "Host::resetProfile_phase1() called while the test-mode event pump is running, ignoring";
         return false;
     }
 

@@ -988,6 +988,23 @@ describe("Trigger processing", function()
             assert.are.equal(1, fires, "a trigger with expireAfter = 1 must not fire a second time")
         end)
 
+        it("does not let enableTrigger revive a trigger that is waiting to be freed", function()
+            -- a killed trigger stays findable by name until the deferred delete
+            -- runs, so enabling it again would resurrect it
+            local name = "Spec Enable Resurrection"
+            _G.EnableResurrectionSpec = 0
+            finally(function() _G.EnableResurrectionSpec = nil end)
+
+            tempComplexRegexTrigger(name, "^enable_resurrection$",
+                [[_G.EnableResurrectionSpec = _G.EnableResurrectionSpec + 1]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            assert.is_true(killTrigger(name))
+            assert.is_false(enableTrigger(name), "a killed trigger must not be re-enabled before it is freed")
+
+            feedTriggers("\nenable_resurrection\n")
+
+            assert.are.equal(0, _G.EnableResurrectionSpec, "a killed trigger must not fire, whatever enableTrigger was told")
+        end)
+
         it("keeps a same-named permanent trigger in the lookup table", function()
             local name = "Spec Name Eviction"
             _G.NameEvictionSpec = 0
