@@ -126,6 +126,8 @@ private:
     void loadCustomProfile(const QString&) const;
     void generateCustomProfile(const QString&) const;
     void setCustomIcon(const QString&, QListWidgetItem*) const;
+    void setIconOfListedProfile(const QString& profileName, const QIcon& icon) const;
+    QString selectedProfileName() const;
     template <typename L>
     void loadSecuredPassword(const QString& profile, L callback);
     void migrateSecuredPassword(const QString& oldProfile, const QString& newProfile);
