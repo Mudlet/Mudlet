@@ -624,7 +624,7 @@ private:
         const QString path = qsl("%1/module-export.xml").arg(mConfigDir.path());
         XMLexport writer(mpHost);
         writer.writeModuleXML(moduleName);
-        if (!XMLexport::saveXmlDocToFile(path, *writer.cloneExportDocument())) {
+        if (!XMLexport::saveXmlDocToFile(path, *writer.takeExportDocument())) {
             return {};
         }
         return readBack(path);
