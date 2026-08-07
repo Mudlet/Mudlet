@@ -105,9 +105,7 @@ bool TKey::match(const Qt::Key key, const Qt::KeyboardModifiers modifier, const 
 
 bool TKey::wouldMatch(const Qt::Key key, const Qt::KeyboardModifiers modifier) const
 {
-    // isActive() is also false for a half-destroyed key, so this covers the
-    // dereference below. Nothing runs during this walk, so unlike match() there
-    // is no re-entrancy to guard against:
+    // Also covers the dereference below - isActive() is false once mpMyChildrenList is gone
     if (!isActive()) {
         return false;
     }
