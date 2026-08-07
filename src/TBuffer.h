@@ -448,6 +448,10 @@ private:
     // First stage in decoding SGR/OCS sequences - set true when we see the
     // ASCII ESC character:
     bool mGotESC = false;
+    // Set once an ESC has been followed by at least one ECMA-48 intermediate
+    // byte, past which point '[', ']', 'P', 'X', '^' and '_' no longer
+    // introduce a CSI, OSC or string sequence:
+    bool mGotEscIntermediate = false;
     // Second stage in decoding SGR sequences - set true when we see the ASCII
     // ESC character followed by the '[' one:
     bool mGotCSI = false;
@@ -529,13 +533,14 @@ private:
     // translateToPlainText()}:
     std::string mIncompleteSequenceBytes;
 
-    // The parser sequence state (mGotESC, mGotCSI, mGotOSC, mGotString and
+    // The parser sequence state (the mGot... latches and
     // mIncompleteSequenceBytes) for whichever of the two data channels - Game
     // Server stream or locally generated text - is not currently being
     // processed; translateToPlainText() swaps it in around a local feed so
     // that such text cannot consume or clear a latch belonging to a sequence
     // split across Game Server packets (and vice versa):
     bool mLocalGotESC = false;
+    bool mLocalGotEscIntermediate = false;
     bool mLocalGotCSI = false;
     bool mLocalGotOSC = false;
     bool mLocalGotString = false;

@@ -226,6 +226,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mEchoingText(other.mEchoingText)
 , mpConsole(other.mpConsole)
 , mGotESC(other.mGotESC)
+, mGotEscIntermediate(other.mGotEscIntermediate)
 , mGotCSI(other.mGotCSI)
 , mGotOSC(other.mGotOSC)
 , mGotString(other.mGotString)
@@ -321,6 +322,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mEchoingText = other.mEchoingText;
         mpConsole = other.mpConsole;
         mGotESC = other.mGotESC;
+        mGotEscIntermediate = other.mGotEscIntermediate;
         mGotCSI = other.mGotCSI;
         mGotOSC = other.mGotOSC;
         mGotString = other.mGotString;
@@ -580,6 +582,7 @@ void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, 
 void TBuffer::swapParserSequenceState()
 {
     std::swap(mGotESC, mLocalGotESC);
+    std::swap(mGotEscIntermediate, mLocalGotEscIntermediate);
     std::swap(mGotCSI, mLocalGotCSI);
     std::swap(mGotOSC, mLocalGotOSC);
     std::swap(mGotString, mLocalGotString);
@@ -588,9 +591,8 @@ void TBuffer::swapParserSequenceState()
 
 void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServer)
 {
-    // mGotESC/mGotCSI/mGotOSC/mGotString and mIncompleteSequenceBytes persist
-    // between calls so that a sequence split across Game Server packets still
-    // parses.
+    // The mGot... latches and mIncompleteSequenceBytes persist between calls so
+    // that a sequence split across Game Server packets still parses.
     // Locally generated text (feedTriggers(), MMCP chat messages, MXP
     // insertions) runs through the same parser, so swap in a separate set of
     // that state for the duration of such a feed - otherwise local text
@@ -749,38 +751,54 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 }
 
                 mGotESC = true;
+                mGotEscIntermediate = false;
                 ++localBufferPosition;
                 continue;
             }
         }
 
         if (mGotESC) {
+            if (!mGotEscIntermediate) {
+                // The introducers only introduce anything in the byte straight
+                // after the ESC; anywhere later they are ordinary final bytes:
+                if (ch == '[' || ch == ']') {
+                    mGotESC = false;
+                    mGotCSI = (ch == '[');
+                    mGotOSC = (ch == ']');
+                    ++localBufferPosition;
+                    continue;
+                }
+                if (ch == 'P' || ch == 'X' || ch == '^' || ch == '_') {
+                    // DCS, SOS, PM and APC string sequences carry data that
+                    // Mudlet does not use - consume them with the OSC code below
+                    // but skip decoding the payload:
+                    mGotESC = false;
+                    mGotOSC = true;
+                    mGotString = true;
+                    ++localBufferPosition;
+                    continue;
+                }
+            }
+            if (cIntermediate.indexOf(ch) >= 0) {
+                // ECMA-48 escape sequences are ESC, any number of intermediate
+                // bytes and then one final byte, so e.g. all three bytes of the
+                // ESC ( B character set designation get consumed together:
+                mGotEscIntermediate = true;
+                ++localBufferPosition;
+                continue;
+            }
             mGotESC = false;
-            if (ch == '[' || ch == ']') {
-                mGotCSI = (ch == '[');
-                mGotOSC = (ch == ']');
-                ++localBufferPosition;
-                continue;
-            }
-            if (ch == 'P' || ch == 'X' || ch == '^' || ch == '_') {
-                // DCS, SOS, PM and APC string sequences carry data that
-                // Mudlet does not use - consume them with the OSC code below
-                // but skip decoding the payload:
-                mGotOSC = true;
-                mGotString = true;
-                ++localBufferPosition;
-                continue;
-            }
-            if (static_cast<unsigned char>(ch) >= 0x20) {
+            mGotEscIntermediate = false;
+            if (static_cast<unsigned char>(ch) >= 0x30 && static_cast<unsigned char>(ch) <= 0x7E) {
                 // The final byte of some other escape sequence (e.g. ESC 7
                 // or ESC M) that Mudlet does not handle - consume it silently
                 // as a real terminal would instead of showing it as text:
                 ++localBufferPosition;
                 continue;
             }
-            // A control character straight after the ESC means the escape
-            // sequence is malformed - abandon it (the latch was already
-            // cleared above) and process the character normally:
+            // Anything else cannot be part of an escape sequence - notably a
+            // UTF-8 lead byte, consuming which would orphan its continuation
+            // bytes - so abandon the sequence and process the byte normally:
         }
 
         if (mGotCSI) {

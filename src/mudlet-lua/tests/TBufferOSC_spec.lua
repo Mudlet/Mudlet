@@ -3,7 +3,20 @@
 -- when processing OSC (Operating System Command) sequences at the beginning of a buffer.
 
 describe("Tests TBuffer OSC sequence handling", function()
-  
+
+  -- feedTriggers writes to the main console; fish the line carrying our
+  -- unique marker back out of the buffer to see what actually rendered
+  local function findRecentLine(needle)
+    local lastLine = getLastLineNumber("main")
+    local lines = getLines("main", math.max(0, lastLine - 15), lastLine + 1)
+    for i = #lines, 1, -1 do
+      if lines[i]:find(needle, 1, true) then
+        return lines[i]
+      end
+    end
+    return nil
+  end
+
   describe("Tests the protection against buffer underflow in OSC sequences", function()
     
     it("should handle OSC sequences at buffer start without crashing", function()
@@ -95,19 +108,6 @@ describe("Tests TBuffer OSC sequence handling", function()
 
   describe("Tests ANSI string sequence handling (DCS, SOS, PM, APC)", function()
 
-    -- feedTriggers writes to the main console; fish the line carrying our
-    -- unique marker back out of the buffer to see what actually rendered
-    local function findRecentLine(needle)
-      local lastLine = getLastLineNumber("main")
-      local lines = getLines("main", math.max(0, lastLine - 15), lastLine + 1)
-      for i = #lines, 1, -1 do
-        if lines[i]:find(needle, 1, true) then
-          return lines[i]
-        end
-      end
-      return nil
-    end
-
     it("should swallow an APC sequence terminated by ST", function()
       assert.is_true(feedTriggers("APCST1(\027_secret apc payload\027\\)APCST1\n"))
       assert.equals("APCST1()APCST1", findRecentLine("APCST1"))
@@ -147,6 +147,75 @@ describe("Tests TBuffer OSC sequence handling", function()
     it("should not treat text after an unhandled two-byte escape as a sequence", function()
       assert.is_true(feedTriggers("STICKY1(\027" .. "7[not-a-csi)STICKY1\n"))
       assert.equals("STICKY1([not-a-csi)STICKY1", findRecentLine("STICKY1"))
+    end)
+
+  end)
+
+  describe("Tests escape sequences that Mudlet does not handle", function()
+
+    -- the "\195\169" byte pairs below are a UTF-8 encoded 'e' acute
+    local previousEncoding
+
+    setup(function()
+      previousEncoding = getServerEncoding()
+      setServerEncoding("UTF-8")
+    end)
+
+    teardown(function()
+      setServerEncoding(previousEncoding)
+    end)
+
+    it("should consume the genuine two-byte escapes", function()
+      assert.is_true(feedTriggers("TWOBYTE1(\027" .. "7|\027M|\027c)TWOBYTE1\n"))
+      assert.equals("TWOBYTE1(||)TWOBYTE1", findRecentLine("TWOBYTE1"))
+    end)
+
+    it("should consume an escape sequence carrying an intermediate byte", function()
+      assert.is_true(feedTriggers("CHARSET1(\027(B)CHARSET1\n"))
+      assert.equals("CHARSET1()CHARSET1", findRecentLine("CHARSET1"))
+    end)
+
+    it("should consume the letter after a stray escape", function()
+      assert.is_true(feedTriggers("STRAY1(\027ABC)STRAY1\n"))
+      assert.equals("STRAY1(BC)STRAY1", findRecentLine("STRAY1"))
+    end)
+
+    it("should consume the digit after a stray escape", function()
+      assert.is_true(feedTriggers("STRAY2(\027" .. "1234)STRAY2\n"))
+      assert.equals("STRAY2(234)STRAY2", findRecentLine("STRAY2"))
+    end)
+
+    it("should consume one byte per stray escape", function()
+      assert.is_true(feedTriggers("STRAY3(\027A\027BCD)STRAY3\n"))
+      assert.equals("STRAY3(CD)STRAY3", findRecentLine("STRAY3"))
+    end)
+
+    it("should keep a multibyte character that follows a stray escape", function()
+      assert.is_true(feedTriggers("UTF8ESC1(caf\027\195\169)UTF8ESC1\n"))
+      assert.equals("UTF8ESC1(caf\195\169)UTF8ESC1", findRecentLine("UTF8ESC1"))
+    end)
+
+    it("should keep a multibyte character that follows an intermediate byte", function()
+      assert.is_true(feedTriggers("UTF8ESC2(\027(\195\169)UTF8ESC2\n"))
+      assert.equals("UTF8ESC2(\195\169)UTF8ESC2", findRecentLine("UTF8ESC2"))
+    end)
+
+    it("should keep a line break that follows a stray escape", function()
+      assert.is_true(feedTriggers("NLESC1(\027\nNLESC2)\n"))
+      assert.equals("NLESC1(", findRecentLine("NLESC1"))
+      assert.equals("NLESC2)", findRecentLine("NLESC2"))
+    end)
+
+    it("should apply a trailing escape to the next packet", function()
+      assert.is_true(feedTriggers("SPLITESC1(\027"))
+      assert.is_true(feedTriggers("ABC)SPLITESC1\n"))
+      assert.equals("SPLITESC1(BC)SPLITESC1", findRecentLine("SPLITESC1"))
+    end)
+
+    it("should not eat a multibyte character starting the next packet", function()
+      assert.is_true(feedTriggers("SPLITESC2(\027"))
+      assert.is_true(feedTriggers("\195\169)SPLITESC2\n"))
+      assert.equals("SPLITESC2(\195\169)SPLITESC2", findRecentLine("SPLITESC2"))
     end)
 
   end)
