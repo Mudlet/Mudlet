@@ -1582,7 +1582,13 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
                 QStringList tooltip = mpBuffer->mLinkStore.getHints(linkIndex);
                 QStringList commands = mpBuffer->mLinkStore.getLinks(linkIndex);
                 // If a special tooltip hint was given, use that one.
-                QToolTip::showText(event->globalPosition().toPoint(), tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed));
+                // The server chooses this text and QToolTip renders anything
+                // Qt::mightBeRichText() accepts as HTML, so escape it and wrap it
+                // in an explicit document rather than letting that guess decide
+                // whether the markup is live. white-space:pre keeps the line
+                // breaks the plain-text path used to give.
+                const QString tooltipText = tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed);
+                QToolTip::showText(event->globalPosition().toPoint(), qsl("<html><body style='white-space:pre'>%1</body></html>").arg(tooltipText.toHtmlEscaped()));
 
                 // Update hover state for CSS pseudo-class support
                 // Don't set hover state for disabled links - they should stay disabled
