@@ -2187,8 +2187,12 @@ bool dlgConnectionProfiles::validateProfile()
         // whitespace too, as the entered name always arrives trimmed. Names
         // the rest of Mudlet cannot work with get no exemption: renaming them
         // is worse for the user than a profile whose password never saves.
+        // The exemption needs a folder that is genuinely the profile's own:
+        // "." and ".." also name something that exists, but not a profile.
         const QString selectedName = pItem->data(csmNameRole).toString();
-        const bool nameUnchangedAndOnDisk = (name == selectedName.trimmed()) && profileNameUsableAsIs(name) && QDir(mudlet::getMudletPath(enums::profileHomePath, selectedName)).exists();
+        const QString selectedFolder = profileFolderPath(mudlet::getMudletPath(enums::profilesPath), selectedName);
+        const bool nameIsFolderOnDisk = (name == selectedName.trimmed()) && !selectedFolder.isEmpty() && QDir(selectedFolder).exists();
+        const bool nameUnchangedAndOnDisk = nameIsFolderOnDisk && profileNameUsableAsIs(name);
         const QChar invalidChar = nameUnchangedAndOnDisk ? QChar() : firstInvalidProfileNameChar(name);
         if (!invalidChar.isNull()) {
             notificationAreaIconLabelWarning->show();
@@ -2198,10 +2202,12 @@ bool dlgConnectionProfiles::validateProfile()
             profile_name_entry->setText(name);
             validName = false;
             valid = false;
-        } else if (!nameUnchangedAndOnDisk && !name.isEmpty() && !profileNameUsableAsIs(name)) {
+        } else if (!nameIsFolderOnDisk && !name.isEmpty() && !profileNameUsableAsIs(name)) {
             // Every character is permitted on its own, but the name as a whole
             // still cannot be a folder of its own - there is nothing sensible
-            // to strip out of it, so leave it for the user to change:
+            // to strip out of it, so leave it for the user to change. A folder
+            // that really is on disk is exempt even from this: it loads today,
+            // and refusing it would stop the user reaching their own data.
             notificationAreaIconLabelWarning->show();
             notificationAreaMessageBox->setText(qsl("%1\n%2\n")
                                                         .arg(notificationAreaMessageBox->text(),

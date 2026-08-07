@@ -330,6 +330,26 @@ private slots:
         closeDialog(dlg);
     }
 
+    // A folder on disk is the user's data whatever it is called, so selecting
+    // one must never refuse it - not even a name that would be turned down if
+    // it were typed in fresh
+    void test_folderOnDiskWithATurnedDownNameIsStillUsable()
+    {
+        const QString awkward = qsl("QA..Dots");
+        QVERIFY(!dlgConnectionProfiles::profileNameUsableAsIs(awkward));
+        makeProfileWithSavedGame(awkward);
+        mudlet::self()->writeProfileData(awkward, qsl("url"), qsl("mudlet.org"));
+        mudlet::self()->writeProfileData(awkward, qsl("port"), qsl("23"));
+
+        auto* dlg = openDialog();
+        selectProfile(dlg, awkward);
+
+        QCOMPARE(dlg->profile_name_entry->text(), awkward);
+        QVERIFY2(acceptButtonsEnabled(dlg), "a profile folder already on disk was refused");
+        QVERIFY2(QDir(profilePath(awkward)).exists(), "the folder was renamed behind the user's back");
+        closeDialog(dlg);
+    }
+
     void test_typedNamesThatAreProfilesAreAccepted_data()
     {
         QTest::addColumn<QString>("name");
